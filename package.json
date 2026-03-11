@@ -1,5 +1,5 @@
 {
-  "name": "agent-ide",
+  "name": "ouroboros",
   "version": "0.1.0",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "main": "out/main/index.js",
@@ -44,8 +44,8 @@
     "vitest": "^2.1.0"
   },
   "build": {
-    "appId": "com.arcflow.agent-ide",
-    "productName": "Agent IDE",
+    "appId": "com.arcflow.ouroboros",
+    "productName": "Ouroboros",
     "directories": {
       "output": "dist"
     },

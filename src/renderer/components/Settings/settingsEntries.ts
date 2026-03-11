@@ -20,7 +20,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   // ── General ───────────────────────────────────────────────────────────────
   {
     label: 'Default Project Folder',
-    description: 'The folder Agent IDE opens by default when no project is loaded.',
+    description: 'The folder Ouroboros opens by default when no project is loaded.',
     section: 'general',
     sectionLabel: 'General',
   },
@@ -32,7 +32,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   },
   {
     label: 'Auto-install hook scripts',
-    description: 'Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Agent IDE receives live tool events.',
+    description: 'Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Ouroboros receives live tool events.',
     section: 'general',
     sectionLabel: 'General',
   },

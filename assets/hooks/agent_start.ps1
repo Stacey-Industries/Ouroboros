@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Agent IDE hook — fires when Claude Code spawns a sub-agent.
+    Ouroboros hook — fires when Claude Code spawns a sub-agent.
 .DESCRIPTION
     Reads the agent start data from stdin (JSON), extracts a task label
-    from the prompt field, and sends an agent_start event to Agent IDE.
-    Exits silently if the Agent IDE is not running.
+    from the prompt field, and sends an agent_start event to Ouroboros.
+    Exits silently if the Ouroboros is not running.
 #>
 
 param()
@@ -98,7 +98,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Agent IDE not running — exit silently
+        # Ouroboros not running — exit silently
     }
 }
 

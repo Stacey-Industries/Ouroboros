@@ -1,4 +1,4 @@
-# Agent IDE — Build Plan
+# Ouroboros — Build Plan
 
 ## Overview
 Electron desktop app for launching and monitoring Claude Code sessions.

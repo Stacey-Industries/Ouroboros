@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Agent IDE hook — fires before Claude Code executes a tool.
+# Ouroboros hook — fires before Claude Code executes a tool.
 #
 # Reads tool call data from stdin (JSON), then sends a pre_tool_use
-# event to the Agent IDE via Unix domain socket or TCP fallback.
-# Exits silently if the Agent IDE is not running.
+# event to the Ouroboros via Unix domain socket or TCP fallback.
+# Exits silently if the Ouroboros is not running.
 #
 # Requires: bash 4+, python3 or jq (for JSON), nc (netcat) or /dev/tcp
 

@@ -1,14 +1,14 @@
-# Agent IDE — Vision
+# Ouroboros — Vision
 
 ## What Is This App?
 
-Agent IDE is an Electron desktop application for launching, monitoring, and interacting with Claude Code sessions. Think of it as a lightweight IDE built around AI agent workflows — you open a project, the agent works in the terminal and edits files, and you watch everything happen in real time.
+Ouroboros is an Electron desktop application for launching, monitoring, and interacting with Claude Code sessions. Think of it as a lightweight IDE built around AI agent workflows — you open a project, the agent works in the terminal and edits files, and you watch everything happen in real time.
 
 The unique differentiator is the **Agent Monitor**: when Claude Code spawns subagents, their activity (tool calls, status, errors) streams live into a dedicated panel. You see the full tree of agent work as it happens.
 
 ## Who Is It For?
 
-Developers who use Claude Code as their primary coding tool. Rather than switching between a terminal, an editor, and a file browser, Agent IDE puts all three in one window with the agent's activity front and center.
+Developers who use Claude Code as their primary coding tool. Rather than switching between a terminal, an editor, and a file browser, Ouroboros puts all three in one window with the agent's activity front and center.
 
 ## Design North Stars
 
@@ -85,4 +85,4 @@ What's missing is **richness**. The terminal is a raw xterm.js embed with no com
 
 ## What Success Looks Like
 
-A developer opens Agent IDE, points it at a project, and starts a Claude Code session. The terminal feels as good as Warp. The file viewer updates as the agent edits, showing diffs inline. The agent monitor gives full visibility into what Claude is doing and why. The whole experience is smooth, dark, and fast — an app you'd choose to use over VS Code + a terminal.
+A developer opens Ouroboros, points it at a project, and starts a Claude Code session. The terminal feels as good as Warp. The file viewer updates as the agent edits, showing diffs inline. The agent monitor gives full visibility into what Claude is doing and why. The whole experience is smooth, dark, and fast — an app you'd choose to use over VS Code + a terminal.

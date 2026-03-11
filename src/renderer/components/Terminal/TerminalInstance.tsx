@@ -979,6 +979,7 @@ export function TerminalInstance({
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: 'block',
+      cursorInactiveStyle: 'none',
       scrollback: 5000,
       allowProposedApi: true,
       theme: buildXtermTheme(),

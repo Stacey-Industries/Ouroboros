@@ -171,7 +171,7 @@ export function AppLayout({
             fontWeight: 500,
           }}
         >
-          Agent IDE
+          Ouroboros
         </span>
         {/* Reserve space for native Windows overlay controls on the right */}
         <div className="flex-1" />

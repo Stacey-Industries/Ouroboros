@@ -498,7 +498,7 @@ export function StatusBar({
       <div className="flex items-center flex-shrink-0">
         <StatusItem>UTF-8</StatusItem>
         <Divider />
-        <StatusItem>Agent IDE</StatusItem>
+        <StatusItem>Ouroboros</StatusItem>
       </div>
     </div>
   );

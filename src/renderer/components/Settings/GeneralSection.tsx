@@ -192,7 +192,7 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
       <section>
         <SectionLabel>Default Project Folder</SectionLabel>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-          The folder Agent IDE opens by default when no project is loaded.
+          The folder Ouroboros opens by default when no project is loaded.
         </p>
         <div
           style={{
@@ -327,7 +327,7 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
           checked={draft.autoInstallHooks}
           onChange={(val) => onChange('autoInstallHooks', val)}
           label="Auto-install hook scripts"
-          description="Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Agent IDE receives live tool events."
+          description="Automatically copies Claude Code hook scripts to ~/.claude/hooks/ on launch so Ouroboros receives live tool events."
         />
       </section>
 
@@ -387,7 +387,7 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
       <section>
         <SectionLabel>Updates</SectionLabel>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Check for a new version of Agent IDE. Updates are downloaded automatically when available.
+          Check for a new version of Ouroboros. Updates are downloaded automatically when available.
         </p>
         <button
           onClick={() => void handleCheckForUpdates()}

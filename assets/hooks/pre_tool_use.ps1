@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Agent IDE hook — fires before Claude Code executes a tool.
+    Ouroboros hook — fires before Claude Code executes a tool.
 .DESCRIPTION
-    Reads tool call data from stdin (JSON), connects to the Agent IDE
+    Reads tool call data from stdin (JSON), connects to the Ouroboros
     named pipe, and sends a pre_tool_use event.
-    Exits silently if the Agent IDE is not running.
+    Exits silently if the Ouroboros is not running.
 #>
 
 param()
@@ -84,7 +84,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Agent IDE not running — exit silently
+        # Ouroboros not running — exit silently
     }
 }
 

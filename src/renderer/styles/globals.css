@@ -228,3 +228,20 @@
     border-bottom: 2px solid var(--accent);
   }
 }
+
+/* ─── xterm overrides (unlayered to beat xterm.css specificity) ───────────── */
+.xterm :focus-visible {
+  outline: none !important;
+}
+/* Ghost cursor suppression:
+   xterm's DOM renderer shows the cursor two ways:
+   1. Cell bg/fg color swap (xterm-bg-257) — the visible cursor the user sees
+   2. An extra <span class="xterm-cursor"> overlay — a duplicate we don't need
+   Additionally, the helper textarea (positioned at cursor location for IME)
+   shows a native browser caret. clip-path kills it without affecting input. */
+.xterm-helper-textarea {
+  clip-path: inset(100%) !important;
+}
+.xterm-cursor {
+  visibility: hidden !important;
+}

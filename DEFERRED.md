@@ -1,4 +1,4 @@
-# Agent IDE — Deferred Items (v2+)
+# Ouroboros — Deferred Items (v2+)
 
 Items intentionally excluded from v1 to reduce scope. Revisit after v1 ships.
 

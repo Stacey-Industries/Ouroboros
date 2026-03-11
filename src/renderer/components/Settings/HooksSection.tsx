@@ -182,7 +182,7 @@ export function HooksSection({ draft, onChange }: HooksSectionProps): React.Reac
           {info.transport}
         </div>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-          On Windows, Agent IDE uses a named pipe. TCP is the fallback on other platforms.
+          On Windows, Ouroboros uses a named pipe. TCP is the fallback on other platforms.
         </p>
       </section>
 

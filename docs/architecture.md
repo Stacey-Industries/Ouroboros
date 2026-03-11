@@ -2,7 +2,7 @@
 
 ## Three-Process Model
 
-Agent IDE follows Electron's standard three-process architecture with strict isolation:
+Ouroboros follows Electron's standard three-process architecture with strict isolation:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -239,7 +239,7 @@ FileViewerManager
   onFileChange(cb) ←──on── files:change ←──send── chokidar watcher
 ```
 
-### Hook Events (Claude Code → Agent IDE)
+### Hook Events (Claude Code → Ouroboros)
 ```
 Claude Code Hook Script
   └─ Writes NDJSON to named pipe \\.\pipe\agent-ide-hooks

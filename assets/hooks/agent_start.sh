@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Agent IDE hook — fires when Claude Code spawns a sub-agent.
+# Ouroboros hook — fires when Claude Code spawns a sub-agent.
 #
 # Reads agent start data from stdin (JSON), extracts a task label
-# from the prompt field, and sends an agent_start event to Agent IDE.
-# Exits silently if the Agent IDE is not running.
+# from the prompt field, and sends an agent_start event to Ouroboros.
+# Exits silently if the Ouroboros is not running.
 
 set -euo pipefail
 

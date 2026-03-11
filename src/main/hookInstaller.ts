@@ -85,7 +85,7 @@ function getAssetsHooksDir(): string {
 // ─── Settings.json hook registration ─────────────────────────────────────────
 
 /**
- * Merges Agent IDE hook commands into ~/.claude/settings.json so Claude Code
+ * Merges Ouroboros hook commands into ~/.claude/settings.json so Claude Code
  * actually invokes them. Safe to call multiple times — deduplicates by command.
  */
 function registerHooksInSettings(hooksDir: string): void {
@@ -214,8 +214,8 @@ export async function installHooks(): Promise<InstallResult> {
   // Notify the user on first install
   if (firstInstall && Notification.isSupported()) {
     const n = new Notification({
-      title: 'Agent IDE',
-      body: `Hook scripts installed to ${hooksDir}.\nAgent IDE will now receive live tool events from Claude Code.`,
+      title: 'Ouroboros',
+      body: `Hook scripts installed to ${hooksDir}.\nOuroboros will now receive live tool events from Claude Code.`,
       silent: false
     })
     n.show()

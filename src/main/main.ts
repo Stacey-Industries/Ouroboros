@@ -256,7 +256,7 @@ function stopPerfMetrics(): void {
   }
 }
 
-app.setName('Agent IDE')
+app.setName('Ouroboros')
 
 app.whenReady().then(async () => {
   mainWindow = createWindow()

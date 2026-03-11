@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Agent IDE hook — fires after Claude Code executes a tool.
+# Ouroboros hook — fires after Claude Code executes a tool.
 #
 # Reads tool result data from stdin (JSON), then sends a post_tool_use
-# event to the Agent IDE via Unix domain socket or TCP fallback.
-# Exits silently if the Agent IDE is not running.
+# event to the Ouroboros via Unix domain socket or TCP fallback.
+# Exits silently if the Ouroboros is not running.
 
 set -euo pipefail
 

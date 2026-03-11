@@ -1,10 +1,10 @@
-# Agent IDE — Claude Code Guidelines
+# Ouroboros — Claude Code Guidelines
 
 ## What This Is
 Electron desktop app for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation.
 
 ## Meta-Development Warning
-**This project is developed from within itself.** Claude Code runs as a terminal session inside the Agent IDE — the very app being edited. This means:
+**This project is developed from within itself.** Claude Code runs as a terminal session inside the Ouroboros — the very app being edited. This means:
 - **NEVER kill Electron processes or run `taskkill /IM electron.exe`** — that kills the host IDE and terminates this session.
 - **NEVER `npm run dev` expecting a fresh window** — a running instance is already open (the one you're inside). Starting a second instance is fine for testing but don't assume the current window needs restarting.
 - Hot-reload (`npm run dev` / vite HMR) updates the renderer in-place without killing the window. Prefer that over full restarts.

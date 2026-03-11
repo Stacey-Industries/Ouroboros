@@ -1,4 +1,4 @@
-# Agent IDE — Deferred Features
+# Ouroboros — Deferred Features
 
 Completed features have been stripped from this file. See git history for the full implementation log.
 
