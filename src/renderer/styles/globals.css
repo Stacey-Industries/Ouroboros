@@ -1,0 +1,230 @@
+@import './fonts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Layout sizing tokens (static — not theme-driven) ──────────────────────── */
+
+:root {
+  --titlebar-height: 32px;
+  --sidebar-left-default: 260px;
+  --sidebar-right-default: 340px;
+  --terminal-default: 220px;
+  --resize-handle-size: 4px;
+}
+
+/* ─── Base resets ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow: hidden; /* Electron app — no scrollbars on body */
+    user-select: none; /* Most IDE content is non-selectable */
+  }
+
+  /* Allow selection in text content areas */
+  .selectable,
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
+  }
+
+  /* Titlebar drag region (set in AppLayout) */
+  .titlebar-drag {
+    -webkit-app-region: drag;
+  }
+  .titlebar-no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--bg-tertiary);
+  }
+
+  /* Focus ring — exclude xterm internals (helper textarea, decorations) */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .xterm :focus-visible,
+  .xterm:focus-visible {
+    outline: none;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: var(--selection);
+    color: var(--text);
+  }
+
+  /* Code / monospace */
+  code,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* ─── Layout utilities ──────────────────────────────────────────────────────── */
+
+@layer utilities {
+  .app-fill {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .panel-bg {
+    background-color: var(--bg);
+  }
+
+  .panel-bg-raised {
+    background-color: var(--bg-secondary);
+  }
+
+  .panel-bg-overlay {
+    background-color: var(--bg-tertiary);
+  }
+
+  .border-surface {
+    border-color: var(--border);
+  }
+
+  .border-surface-muted {
+    border-color: var(--border-muted);
+  }
+
+  .text-ink {
+    color: var(--text);
+  }
+
+  .text-ink-muted {
+    color: var(--text-muted);
+  }
+
+  .text-ink-faint {
+    color: var(--text-faint);
+  }
+
+  /* Resize handles */
+  .resize-handle-x {
+    width: var(--resize-handle-size);
+    cursor: ew-resize;
+    background: transparent;
+    transition: background 150ms ease;
+  }
+  .resize-handle-x:hover,
+  .resize-handle-x.dragging {
+    background: var(--accent-muted);
+  }
+
+  .resize-handle-y {
+    height: var(--resize-handle-size);
+    cursor: ns-resize;
+    background: transparent;
+    transition: background 150ms ease;
+  }
+  .resize-handle-y:hover,
+  .resize-handle-y.dragging {
+    background: var(--accent-muted);
+  }
+}
+
+/* ─── Component base styles ─────────────────────────────────────────────────── */
+
+@layer components {
+  /* Sidebar panel */
+  .sidebar {
+    @apply flex flex-col overflow-hidden;
+    background: var(--bg-secondary);
+    border-color: var(--border);
+  }
+
+  /* Toolbar / header within a panel */
+  .panel-header {
+    @apply flex items-center gap-2 px-3 shrink-0;
+    height: 36px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Generic button */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded text-sm font-medium transition-colors;
+    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
+    @apply disabled:opacity-40 disabled:pointer-events-none;
+    padding: 4px 10px;
+  }
+
+  .btn-ghost {
+    @apply btn;
+    color: var(--text-muted);
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: var(--accent-muted);
+    color: var(--text);
+  }
+
+  .btn-primary {
+    @apply btn;
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    color: var(--bg);
+  }
+
+  /* Tab bar item */
+  .tab-item {
+    @apply flex items-center gap-1.5 px-3 py-1 text-sm cursor-pointer shrink-0;
+    @apply border-r border-surface-border transition-colors;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    min-width: 80px;
+    max-width: 180px;
+  }
+  .tab-item:hover {
+    color: var(--text);
+    background: var(--bg-tertiary);
+  }
+  .tab-item.active {
+    color: var(--text);
+    background: var(--bg);
+    border-bottom: 2px solid var(--accent);
+  }
+}

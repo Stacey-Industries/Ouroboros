@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "mcp__codebase-memory-mcp__index_repository",
+      "mcp__codebase-memory-mcp__get_architecture",
+      "mcp__codebase-memory-mcp__manage_adr",
+      "WebFetch(domain:www.warp.dev)",
+      "WebFetch(domain:zed.dev)",
+      "WebFetch(domain:docs.warp.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "mcp__codebase-memory-mcp__index_status"
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+import type { Theme } from './types';
+
+export const cursorTheme: Theme = {
+  id: 'cursor',
+  name: 'Cursor',
+  fontFamily: {
+    mono: '"Menlo", "SF Mono", "JetBrains Mono", monospace',
+    ui: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+  },
+  colors: {
+    bg: '#1e1e2e',
+    bgSecondary: '#242434',
+    bgTertiary: '#2d2d44',
+    border: '#383854',
+    borderMuted: '#2a2a40',
+    text: '#cdd6f4',
+    textSecondary: '#a6adc8',
+    textMuted: '#585b70',
+    textFaint: '#3c3c54',
+    accent: '#89b4fa',
+    accentHover: '#b4d0ff',
+    accentMuted: 'rgba(137, 180, 250, 0.15)',
+    success: '#a6e3a1',
+    warning: '#f9e2af',
+    error: '#f38ba8',
+    purple: '#cba6f7',
+    purpleMuted: 'rgba(203, 166, 247, 0.2)',
+    selection: 'rgba(137, 180, 250, 0.2)',
+    focusRing: 'rgba(137, 180, 250, 0.5)',
+    termBg: '#181825',
+    termFg: '#cdd6f4',
+    termCursor: '#89b4fa',
+    termSelection: 'rgba(137, 180, 250, 0.25)',
+  },
+};
