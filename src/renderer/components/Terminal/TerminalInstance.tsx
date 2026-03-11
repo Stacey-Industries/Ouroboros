@@ -808,6 +808,10 @@ export function TerminalInstance({
     try {
       const proposed = addon.proposeDimensions()
       if (!proposed) return
+      // Skip if dimensions haven't actually changed — calling fit() when
+      // cols/rows are the same still triggers term.resize() internally,
+      // which recalculates the viewport and can reset scroll position to top.
+      if (proposed.cols === term.cols && proposed.rows === term.rows) return
       // Instant visual update — local to renderer, no IPC cost
       addon.fit()
       const { cols, rows } = term
@@ -1390,10 +1394,28 @@ export function TerminalInstance({
         })
         return false // Don't let xterm pass Ctrl+R to the shell (we show our overlay)
       }
-      // Ctrl+V — paste from clipboard (xterm has no native paste; it would send ^V to the PTY)
+      // Ctrl+C — copy selection if text is selected, otherwise send SIGINT
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === 'c') {
+        const selection = term.getSelection()
+        if (selection) {
+          void navigator.clipboard.writeText(selection)
+          term.clearSelection()
+          return false // Don't send SIGINT when copying
+        }
+        return true // No selection — let SIGINT through
+      }
+      // Ctrl+V — paste from clipboard manually and suppress the browser paste event
+      // to prevent double-paste (xterm's textarea also catches the native paste)
       if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === 'v') {
+        e.preventDefault() // Kill the native paste event on the helper textarea
         void navigator.clipboard.readText().then((text) => {
-          if (text) void window.electronAPI.pty.write(sessionId, text)
+          if (text) {
+            if (text.length > PASTE_CONFIRM_THRESHOLD) {
+              setPendingPaste(text)
+            } else {
+              void window.electronAPI.pty.write(sessionId, text)
+            }
+          }
         })
         return false // Suppress ^V being sent to the PTY
       }
