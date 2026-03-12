@@ -88,6 +88,10 @@ export function FileViewerTabs({
               // Middle-click closes the tab
               if (e.button === 1) {
                 e.preventDefault();
+                if (file.isDirty) {
+                  const confirmed = window.confirm(`"${file.name}" has unsaved changes. Close anyway?`);
+                  if (!confirmed) return;
+                }
                 onClose(file.path);
               }
             }}
@@ -133,6 +137,20 @@ export function FileViewerTabs({
               />
             )}
 
+            {/* Unsaved-edits indicator */}
+            {file.isDirty && !file.isDirtyOnDisk && (
+              <span
+                title="Unsaved changes"
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent)',
+                  flexShrink: 0,
+                }}
+              />
+            )}
+
             {/* Filename */}
             <span
               style={{
@@ -142,13 +160,17 @@ export function FileViewerTabs({
                 whiteSpace: 'nowrap',
               }}
             >
-              {file.name}
+              {file.name}{file.isDirty ? ' *' : ''}
             </span>
 
             {/* Close button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (file.isDirty) {
+                  const confirmed = window.confirm(`"${file.name}" has unsaved changes. Close anyway?`);
+                  if (!confirmed) return;
+                }
                 onClose(file.path);
               }}
               aria-label={`Close ${file.name}`}

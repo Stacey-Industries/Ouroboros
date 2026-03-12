@@ -373,14 +373,22 @@ const ExportButton = memo(function ExportButton({ session }: ExportButtonProps):
 export interface AgentCardProps {
   session: AgentSession;
   onDismiss: (id: string) => void;
+  onUpdateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
+  onReviewChanges?: (sessionId: string) => void;
+  onReplay?: (sessionId: string) => void;
 }
 
 export const AgentCard = memo(function AgentCard({
   session,
   onDismiss,
+  onUpdateNotes,
+  onReviewChanges,
+  onReplay,
 }: AgentCardProps): React.ReactElement {
   const [expanded, setExpanded] = useState(session.status === 'running');
   const [showLog, setShowLog] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(session.notes ?? '');
   const [cardView, setCardView] = useState<CardView>('feed');
 
   const isRunning = session.status === 'running';
@@ -454,6 +462,96 @@ export const AgentCard = memo(function AgentCard({
           </span>
         )}
 
+        {/* Bookmark toggle */}
+        {onUpdateNotes && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateNotes(session.id, session.notes ?? '', !session.bookmarked);
+            }}
+            className="shrink-0 p-0.5 rounded transition-colors"
+            style={{
+              color: session.bookmarked ? 'var(--accent)' : 'var(--text-faint)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            title={session.bookmarked ? 'Remove bookmark' : 'Bookmark this session'}
+            aria-label={session.bookmarked ? 'Remove bookmark' : 'Bookmark session'}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill={session.bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2">
+              <path d="M2 1h6v8L5 7 2 9V1z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Notes toggle */}
+        {onUpdateNotes && (isDone || session.restored) && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowNotes((v) => !v);
+            }}
+            className="shrink-0 p-0.5 rounded transition-colors"
+            style={{
+              color: session.notes ? 'var(--accent)' : 'var(--text-faint)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            title="Add/edit notes"
+            aria-label="Toggle notes"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M1 2h8M1 5h5M1 8h6" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
+
+        {/* Replay button — for completed sessions with tool calls */}
+        {isDone && session.toolCalls.length > 0 && onReplay && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReplay(session.id); }}
+            className="shrink-0 p-0.5 rounded transition-colors"
+            style={{
+              color: 'var(--text-faint)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'; }}
+            title="Replay this session step by step"
+            aria-label="Replay session"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <path d="M2 1.5l6.5 3.5-6.5 3.5z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Review Changes button — for completed sessions with a snapshot */}
+        {isDone && session.snapshotHash && onReviewChanges && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReviewChanges(session.id); }}
+            className="shrink-0 p-0.5 rounded transition-colors"
+            style={{
+              color: 'var(--text-faint)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)'; }}
+            title="Review changes made by this agent"
+            aria-label="Review changes"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M1 3h8M1 5h4M6 5l2 2-2 2M1 7h3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+
         {/* Export button — always available for done sessions or historical sessions */}
         {(isDone || session.restored) && <ExportButton session={session} />}
 
@@ -519,6 +617,49 @@ export const AgentCard = memo(function AgentCard({
           }}
         >
           {session.error}
+        </div>
+      )}
+
+      {/* Notes editor */}
+      {showNotes && onUpdateNotes && (
+        <div
+          className="mx-2.5 mb-2 p-2 rounded"
+          style={{
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <textarea
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={() => onUpdateNotes(session.id, notesDraft, session.bookmarked)}
+            placeholder="Add notes about this session..."
+            rows={2}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text)',
+              fontSize: '11px',
+              fontFamily: 'var(--font-ui)',
+              outline: 'none',
+              resize: 'vertical',
+              minHeight: '36px',
+              lineHeight: 1.5,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+      )}
+
+      {/* Inline note display (when notes exist but editor is closed) */}
+      {!showNotes && session.notes && (
+        <div
+          className="mx-6 mb-1.5 text-[10px] italic truncate"
+          style={{ color: 'var(--text-muted)' }}
+          title={session.notes}
+        >
+          {session.notes}
         </div>
       )}
 

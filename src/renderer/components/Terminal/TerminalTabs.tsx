@@ -18,6 +18,8 @@ export interface TerminalSession {
   id: string
   title: string
   status: 'running' | 'exited'
+  /** True if this terminal auto-launched Claude Code */
+  isClaude?: boolean
   /** When set, this tab shows a split-pane layout with a second PTY session */
   splitSessionId?: string
   splitStatus?: 'running' | 'exited'
@@ -29,6 +31,7 @@ export interface TerminalTabsProps {
   onActivate: (id: string) => void
   onClose: (id: string) => void
   onNew: () => void
+  onNewClaude: () => void
   /** Called when the user reorders tabs. Receives new ordered session list. */
   onReorder?: (reordered: TerminalSession[]) => void
 }
@@ -151,6 +154,17 @@ function TabItem({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
     >
+      {/* Claude session indicator */}
+      {session.isClaude && (
+        <span
+          className="flex-shrink-0 text-[var(--accent)]"
+          style={{ fontSize: '10px', lineHeight: 1 }}
+          title="Claude Code session"
+        >
+          ◆
+        </span>
+      )}
+
       {/* Exited dot indicator */}
       {isExited && (
         <span
@@ -193,6 +207,7 @@ export function TerminalTabs({
   onActivate,
   onClose,
   onNew,
+  onNewClaude,
   onReorder,
 }: TerminalTabsProps): React.ReactElement {
   const draggingIdRef = useRef<string | null>(null)
@@ -280,6 +295,25 @@ export function TerminalTabs({
           "
         >
           <PlusIcon />
+        </button>
+      </Tooltip>
+
+      {/* New Claude terminal */}
+      <Tooltip text="New Claude terminal (Ctrl+Shift+C)" position="bottom">
+        <button
+          onClick={onNewClaude}
+          aria-label="New Claude Code terminal"
+          className="
+            flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full
+            text-[var(--accent)] hover:text-[var(--text)]
+            hover:bg-[var(--bg-tertiary)]
+            transition-colors duration-100
+            border-r border-[var(--border)]
+            text-[10px] font-medium
+          "
+        >
+          <span style={{ fontSize: '10px' }}>◆</span>
+          <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Claude</span>
         </button>
       </Tooltip>
     </div>

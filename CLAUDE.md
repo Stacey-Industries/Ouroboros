@@ -1,7 +1,7 @@
 # Ouroboros — Claude Code Guidelines
 
 ## What This Is
-Electron desktop app for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation.
+Agent-first Electron desktop IDE for launching/monitoring Claude Code sessions. Three-process architecture (main → preload → renderer) with strict context isolation. **Built by Claude Code, running inside itself.** The agent makes implementation decisions autonomously; the human steers direction and reviews.
 
 ## Meta-Development Warning
 **This project is developed from within itself.** Claude Code runs as a terminal session inside the Ouroboros — the very app being edited. This means:

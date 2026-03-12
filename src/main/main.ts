@@ -1,13 +1,13 @@
-import { app, BrowserWindow, session, screen } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { registerIpcHandlers, cleanupIpcHandlers } from './ipc'
 import { killAllPtySessions } from './pty'
 import { startHooksServer, stopHooksServer } from './hooks'
 import { installHooks } from './hookInstaller'
+import { initExtensions } from './extensions'
 import { buildApplicationMenu } from './menu'
-import { getConfigValue, setConfigValue } from './config'
-import type { WindowBounds } from './config'
+import { createWindow, getAllActiveWindows } from './windowManager'
 
 // ─── Auto-updater (electron-updater — optional dep) ───────────────────────────
 
@@ -75,160 +75,18 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null
 
-/**
- * Validate that the saved window bounds are still visible on one of the
- * currently connected displays. Returns the bounds if valid, null otherwise.
- */
-function validateBounds(bounds: WindowBounds): WindowBounds | null {
-  if (bounds.x === undefined || bounds.y === undefined) return null
-
-  const displays = screen.getAllDisplays()
-  const isOnScreen = displays.some((display) => {
-    const { x, y, width, height } = display.workArea
-    return (
-      bounds.x! >= x &&
-      bounds.y! >= y &&
-      bounds.x! + bounds.width <= x + width &&
-      bounds.y! + bounds.height <= y + height
-    )
-  })
-
-  return isOnScreen ? bounds : null
-}
-
-function createWindow(): BrowserWindow {
-  const preloadPath = path.join(__dirname, '../preload/index.js')
-
-  // Restore saved window bounds
-  const savedBounds = getConfigValue('windowBounds')
-  const validatedBounds = savedBounds ? validateBounds(savedBounds) : null
-  const initialWidth = validatedBounds?.width ?? 1280
-  const initialHeight = validatedBounds?.height ?? 800
-  const initialX = validatedBounds?.x
-  const initialY = validatedBounds?.y
-
-  const win = new BrowserWindow({
-    width: initialWidth,
-    height: initialHeight,
-    ...(initialX !== undefined && initialY !== undefined ? { x: initialX, y: initialY } : {}),
-    minWidth: 900,
-    minHeight: 600,
-    show: false,
-    backgroundColor: '#0d1117',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    titleBarOverlay:
-      process.platform === 'win32'
-        ? {
-            color: '#0d1117',
-            symbolColor: '#e6edf3',
-            height: 32
-          }
-        : undefined,
-    webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      experimentalFeatures: false
-    }
-  })
-
-  // CSP — strict for production
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'", // unsafe-inline for xterm; wasm-unsafe-eval for Shiki syntax highlighter
-            "style-src 'self' 'unsafe-inline'",
-            "font-src 'self' data:",
-            "img-src 'self' data: blob:",
-            "connect-src 'self' ws://localhost:* http://localhost:*",
-            "worker-src blob:"
-          ].join('; ')
-        ]
-      }
-    })
-  })
-
-  // Dev vs production loading
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'))
-  }
-
-  // Show only when ready to avoid white flash
-  win.once('ready-to-show', () => {
-    // Restore maximized state after showing so bounds are applied first
-    if (savedBounds?.isMaximized) {
-      win.maximize()
-    }
-    win.show()
-    if (process.env.NODE_ENV === 'development') {
-      win.webContents.openDevTools({ mode: 'detach' })
-    }
-  })
-
-  // Debounced save of window bounds on resize/move
-  let saveBoundsTimer: ReturnType<typeof setTimeout> | null = null
-
-  function scheduleSaveBounds(): void {
-    if (saveBoundsTimer !== null) clearTimeout(saveBoundsTimer)
-    saveBoundsTimer = setTimeout(() => {
-      saveBoundsTimer = null
-      if (win.isMaximized()) return // Don't overwrite bounds when maximized
-      const { x, y, width, height } = win.getBounds()
-      setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-    }, 500)
-  }
-
-  win.on('resize', scheduleSaveBounds)
-  win.on('move', scheduleSaveBounds)
-
-  win.on('maximize', () => {
-    const current = getConfigValue('windowBounds')
-    setConfigValue('windowBounds', { ...current, isMaximized: true })
-  })
-
-  win.on('unmaximize', () => {
-    const { x, y, width, height } = win.getBounds()
-    setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-  })
-
-  win.on('close', () => {
-    // Cancel any pending save and do a final synchronous bounds save
-    if (saveBoundsTimer !== null) {
-      clearTimeout(saveBoundsTimer)
-      saveBoundsTimer = null
-    }
-    if (!win.isMaximized()) {
-      const { x, y, width, height } = win.getBounds()
-      setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-    }
-    cleanupIpcHandlers()
-    killAllPtySessions()
-  })
-
-  return win
-}
-
 // ─── Performance metrics ──────────────────────────────────────────────────────
 
 let perfInterval: ReturnType<typeof setInterval> | null = null
 
-function startPerfMetrics(win: BrowserWindow): void {
+/** Broadcasts perf metrics to all open windows. */
+function startPerfMetrics(): void {
   if (perfInterval !== null) return
   perfInterval = setInterval(() => {
-    if (win.isDestroyed()) return
     try {
       const mem = process.memoryUsage()
       const appMetrics = app.getAppMetrics()
-      win.webContents.send('perf:metrics', {
+      const payload = {
         timestamp: Date.now(),
         memory: {
           heapUsed: mem.heapUsed,
@@ -242,7 +100,12 @@ function startPerfMetrics(win: BrowserWindow): void {
           cpu: m.cpu,
           memory: m.memory,
         })),
-      })
+      }
+      for (const win of getAllActiveWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('perf:metrics', payload)
+        }
+      }
     } catch {
       // Non-fatal — window might be closing
     }
@@ -259,10 +122,15 @@ function stopPerfMetrics(): void {
 app.setName('Ouroboros')
 
 app.whenReady().then(async () => {
+  // Create the first window via the window manager
   mainWindow = createWindow()
 
   buildApplicationMenu(mainWindow)
-  registerIpcHandlers(mainWindow)
+
+  // IPC handlers are registered globally inside createWindow() via the
+  // window manager. The call below is a no-op for additional windows but
+  // ensures the first registration happens for the initial window.
+  // (createWindow already calls registerIpcHandlers internally.)
 
   try {
     await startHooksServer(mainWindow)
@@ -276,6 +144,12 @@ app.whenReady().then(async () => {
     console.error('[main] hook installer error:', err)
   }
 
+  try {
+    await initExtensions()
+  } catch (err) {
+    console.error('[main] extensions init error:', err)
+  }
+
   // ── Render-process crash logging ───────────────────────────────────────────
   app.on('render-process-gone', (_event, _webContents, details) => {
     const msg = `Reason: ${details.reason}\nExitCode: ${details.exitCode}`
@@ -283,34 +157,41 @@ app.whenReady().then(async () => {
     void writeCrashLog('renderer:render-process-gone', msg)
   })
 
-  // ── Auto-updater setup ─────────────────────────────────────────────────────
+  // ── Auto-updater setup — broadcast to all windows ─────────────────────────
   if (autoUpdater) {
-    const win = mainWindow
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
 
+    const broadcastUpdater = (payload: unknown) => {
+      for (const win of getAllActiveWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('updater:event', payload)
+        }
+      }
+    }
+
     autoUpdater.on('checking-for-update', () => {
-      win.webContents.send('updater:event', { type: 'checking-for-update' })
+      broadcastUpdater({ type: 'checking-for-update' })
     })
     autoUpdater.on('update-available', (info: unknown) => {
-      win.webContents.send('updater:event', { type: 'update-available', info })
+      broadcastUpdater({ type: 'update-available', info })
     })
     autoUpdater.on('update-not-available', (info: unknown) => {
-      win.webContents.send('updater:event', { type: 'update-not-available', info })
+      broadcastUpdater({ type: 'update-not-available', info })
     })
     autoUpdater.on('download-progress', (progress: unknown) => {
-      win.webContents.send('updater:event', { type: 'download-progress', progress })
+      broadcastUpdater({ type: 'download-progress', progress })
     })
     autoUpdater.on('update-downloaded', (info: unknown) => {
-      win.webContents.send('updater:event', { type: 'update-downloaded', info })
+      broadcastUpdater({ type: 'update-downloaded', info })
     })
     autoUpdater.on('error', (err: Error) => {
-      win.webContents.send('updater:event', { type: 'error', error: err.message })
+      broadcastUpdater({ type: 'error', error: err.message })
     })
   }
 
   // ── Performance metrics ────────────────────────────────────────────────────
-  startPerfMetrics(mainWindow)
+  startPerfMetrics()
 
   app.on('activate', () => {
     // macOS: re-create window when dock icon is clicked
@@ -319,11 +200,13 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Second instance focus
+  // Second instance focus — focus most recent window
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
+    const windows = getAllActiveWindows()
+    if (windows.length > 0) {
+      const win = windows[windows.length - 1]
+      if (win.isMinimized()) win.restore()
+      win.focus()
     }
   })
 })
@@ -331,6 +214,7 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', async () => {
   stopPerfMetrics()
   await stopHooksServer()
+  cleanupIpcHandlers()
   killAllPtySessions()
 
   if (process.platform !== 'darwin') {
@@ -338,7 +222,8 @@ app.on('window-all-closed', async () => {
   }
 })
 
-// Security: prevent new windows
+// Security: prevent new windows from web content (window.open, target=_blank, etc.)
+// Note: This does NOT block BrowserWindow creation from the main process (windowManager).
 app.on('web-contents-created', (_event, contents) => {
   contents.setWindowOpenHandler(() => {
     return { action: 'deny' }

@@ -87,7 +87,7 @@ export function AgentMonitorPane({
           {collapsed ? <ChevronLeftIcon /> : <ChevronRightIcon />}
         </button>
         <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] ml-1 flex-1">
-          Agents
+          Panel
         </span>
       </div>
 

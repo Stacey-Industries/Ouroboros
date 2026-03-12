@@ -38,6 +38,8 @@ export interface UsePanelCollapseReturn {
   toggle: (panel: CollapseTarget) => void;
   collapse: (panel: CollapseTarget) => void;
   expand: (panel: CollapseTarget) => void;
+  /** Apply a complete collapse state (used by workspace layout switching) */
+  applyState: (state: CollapseState) => void;
 }
 
 export interface UsePanelCollapseOptions {
@@ -104,6 +106,14 @@ export function usePanelCollapse(options?: UsePanelCollapseOptions): UsePanelCol
     [],
   );
 
+  const applyState = useCallback(
+    (state: CollapseState) => {
+      setCollapsed(state);
+      saveCollapseState(state);
+    },
+    [],
+  );
+
   // Keyboard shortcuts — default bindings, overrideable via keybindingsRef
   useEffect(() => {
     // Default shortcuts for panel toggles
@@ -138,5 +148,5 @@ export function usePanelCollapse(options?: UsePanelCollapseOptions): UsePanelCol
     return () => window.removeEventListener('keydown', handler);
   }, [toggle]);
 
-  return { collapsed, toggle, collapse, expand };
+  return { collapsed, toggle, collapse, expand, applyState };
 }

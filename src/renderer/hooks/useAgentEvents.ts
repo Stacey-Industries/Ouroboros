@@ -32,7 +32,8 @@ type AgentAction =
   | { type: 'LINK_SUBAGENT'; parentSessionId: string; childSessionId: string }
   | { type: 'DISMISS'; sessionId: string }
   | { type: 'CLEAR_COMPLETED' }
-  | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] };
+  | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
+  | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,17 @@ function reducer(state: AgentState, action: AgentAction): AgentState {
       };
     }
 
+    case 'SET_NOTES': {
+      return {
+        ...state,
+        sessions: state.sessions.map((s) =>
+          s.id === action.sessionId
+            ? { ...s, notes: action.notes, bookmarked: action.bookmarked ?? s.bookmarked }
+            : s,
+        ),
+      };
+    }
+
     default:
       return state;
   }
@@ -315,6 +327,7 @@ export interface UseAgentEventsReturn {
   activeCount: number;
   clearCompleted: () => void;
   dismiss: (sessionId: string) => void;
+  updateNotes: (sessionId: string, notes: string, bookmarked?: boolean) => void;
   currentSessions: AgentSession[];
   historicalSessions: AgentSession[];
 }
@@ -357,6 +370,8 @@ export function useAgentEvents(): UseAgentEventsReturn {
           cacheReadTokens: typeof obj['cacheReadTokens'] === 'number' ? obj['cacheReadTokens'] : undefined,
           cacheWriteTokens: typeof obj['cacheWriteTokens'] === 'number' ? obj['cacheWriteTokens'] : undefined,
           model: typeof obj['model'] === 'string' ? obj['model'] : undefined,
+          notes: typeof obj['notes'] === 'string' ? obj['notes'] : undefined,
+          bookmarked: typeof obj['bookmarked'] === 'boolean' ? obj['bookmarked'] : undefined,
           restored: true,
         });
 
@@ -535,10 +550,19 @@ export function useAgentEvents(): UseAgentEventsReturn {
     }
   }, []);
 
+  const updateNotes = useCallback((sessionId: string, notes: string, bookmarked?: boolean) => {
+    dispatch({ type: 'SET_NOTES', sessionId, notes, bookmarked });
+    // Re-save the session to disk with updated notes
+    const session = state.sessions.find((s) => s.id === sessionId);
+    if (session && window.electronAPI?.sessions?.save) {
+      window.electronAPI.sessions.save({ ...session, notes, bookmarked: bookmarked ?? session.bookmarked }).catch(() => {});
+    }
+  }, [state.sessions]);
+
   const activeCount = state.sessions.filter((s) => s.status === 'running').length;
 
   const currentSessions = state.sessions.filter((s) => !s.restored);
   const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  return { agents: state.sessions, activeCount, clearCompleted, dismiss, currentSessions, historicalSessions };
+  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
 }

@@ -12,6 +12,7 @@ export interface TerminalPaneProps {
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onNew: () => void;
+  onNewClaude: () => void;
   onReorder?: (reordered: TerminalSession[]) => void;
   children?: React.ReactNode;
   /** Inline style from focus manager (e.g. box-shadow ring) */
@@ -73,6 +74,7 @@ export function TerminalPane({
   onActivate,
   onClose,
   onNew,
+  onNewClaude,
   onReorder,
   children,
   focusStyle,
@@ -106,6 +108,7 @@ export function TerminalPane({
           onActivate={onActivate}
           onClose={onClose}
           onNew={onNew}
+          onNewClaude={onNewClaude}
           onReorder={onReorder}
         />
 

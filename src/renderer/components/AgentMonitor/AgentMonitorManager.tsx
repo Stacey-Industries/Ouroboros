@@ -10,12 +10,20 @@
 
 import React, { memo, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import type { AgentSession } from './types';
+import type { NotificationSettings, AgentTemplate } from '../../types/electron';
+import { resolveTemplate } from '../../utils/templateResolver';
+import { useProject } from '../../contexts/ProjectContext';
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import { useToastContext } from '../../contexts/ToastContext';
+import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
+import { useCostTracking } from '../../hooks/useCostTracking';
 import { AgentSummaryBar } from './AgentSummaryBar';
 import { AgentCard } from './AgentCard';
 import { AgentTree, hasTreeStructure } from './AgentTree';
+import { CostDashboard } from './CostDashboard';
 import { EmptyState as SharedEmptyState } from '../shared';
+import { buildCompletionNotification } from './notificationBuilder';
+import { MultiSessionLauncher, MultiSessionMonitor } from '../MultiSession';
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
@@ -34,11 +42,17 @@ const EmptyState = memo(function EmptyState(): React.ReactElement {
 interface PreviousSessionsSectionProps {
   sessions: AgentSession[];
   onDismiss: (id: string) => void;
+  onUpdateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
+  onReviewChanges?: (sessionId: string) => void;
+  onReplay?: (sessionId: string) => void;
 }
 
 const PreviousSessionsSection = memo(function PreviousSessionsSection({
   sessions,
   onDismiss,
+  onUpdateNotes,
+  onReviewChanges,
+  onReplay,
 }: PreviousSessionsSectionProps): React.ReactElement | null {
   const [collapsed, setCollapsed] = useState(true);
 
@@ -101,6 +115,9 @@ const PreviousSessionsSection = memo(function PreviousSessionsSection({
               key={session.id}
               session={session}
               onDismiss={onDismiss}
+              onUpdateNotes={onUpdateNotes}
+              onReviewChanges={onReviewChanges}
+              onReplay={onReplay}
             />
           ))}
         </div>
@@ -303,13 +320,51 @@ const ComparePanel = memo(function ComparePanel({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export const AgentMonitorManager = memo(function AgentMonitorManager(): React.ReactElement {
-  const { agents, clearCompleted, dismiss, currentSessions, historicalSessions } = useAgentEventsContext();
+  const { agents, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions } = useAgentEventsContext();
   const { toast } = useToastContext();
+  const { projectRoot } = useProject();
+  const { getSnapshotHash } = useDiffSnapshots();
+
+  // Auto-record cost entries when sessions complete
+  useCostTracking(agents);
   const [filterQuery, setFilterQuery] = useState('');
   const [compareMode, setCompareMode] = useState(false);
+  const [costMode, setCostMode] = useState(false);
+  const [multiSessionMode, setMultiSessionMode] = useState<'off' | 'launcher' | 'monitor'>('off');
+  const [multiBatchLabels, setMultiBatchLabels] = useState<string[]>([]);
+
+  // Load agent templates from config
+  const [templates, setTemplates] = useState<AgentTemplate[]>([]);
+  useEffect(() => {
+    window.electronAPI?.config?.get('agentTemplates').then((t) => {
+      if (t) setTemplates(t);
+    }).catch(() => { /* use empty */ });
+  }, []);
   const [compareSessionIds, setCompareSessionIds] = useState<[string | null, string | null]>([null, null]);
 
-  const handleToggleCompare = useCallback(() => setCompareMode((v) => !v), []);
+  const handleToggleCompare = useCallback(() => {
+    setCompareMode((v) => !v);
+    setCostMode(false);
+    setMultiSessionMode('off');
+  }, []);
+  const handleToggleCost = useCallback(() => {
+    setCostMode((v) => !v);
+    setCompareMode(false);
+    setMultiSessionMode('off');
+  }, []);
+  const handleToggleMultiSession = useCallback(() => {
+    setMultiSessionMode((v) => (v === 'off' ? 'launcher' : 'off'));
+    setCompareMode(false);
+    setCostMode(false);
+  }, []);
+  const handleMultiSessionLaunched = useCallback((labels: string[]) => {
+    setMultiBatchLabels(labels);
+    setMultiSessionMode('monitor');
+  }, []);
+  const handleMultiSessionClose = useCallback(() => {
+    setMultiSessionMode('off');
+    setMultiBatchLabels([]);
+  }, []);
   const handleSelectCompareA = useCallback(
     (id: string) => setCompareSessionIds(([, b]) => [id, b]),
     [],
@@ -319,31 +374,48 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
     [],
   );
 
+  // Listen for DOM event to open multi-session launcher from command palette
+  useEffect(() => {
+    function onOpenMultiSession(): void {
+      setMultiSessionMode('launcher');
+      setCompareMode(false);
+      setCostMode(false);
+    }
+    window.addEventListener('agent-ide:open-multi-session', onOpenMultiSession);
+    return () => window.removeEventListener('agent-ide:open-multi-session', onOpenMultiSession);
+  }, []);
+
   // Track which sessions we've already notified about to avoid duplicate toasts/desktop notifications
   const notifiedRef = useRef<Set<string>>(new Set());
+  const notifSettingsRef = useRef<NotificationSettings>({ level: 'all', alwaysNotify: false });
+
+  // Load notification settings once on mount (and keep ref current)
+  useEffect(() => {
+    window.electronAPI?.config?.get('notifications').then((settings) => {
+      if (settings) notifSettingsRef.current = settings;
+    }).catch(() => { /* use defaults */ });
+  }, []);
 
   useEffect(() => {
+    const { level, alwaysNotify } = notifSettingsRef.current;
+    if (level === 'none') return;
+
     for (const session of agents) {
-      if (session.status === 'complete' && !notifiedRef.current.has(session.id)) {
-        notifiedRef.current.add(session.id);
-        toast(`Agent completed: ${session.taskLabel}`, 'success');
-        // Desktop notification — only fires when window is not focused (enforced in main process)
-        window.electronAPI?.app?.notify?.({
-          title: 'Agent completed',
-          body: session.taskLabel,
-        }).catch(() => { /* non-fatal */ });
-      } else if (session.status === 'error' && !notifiedRef.current.has(session.id)) {
-        notifiedRef.current.add(session.id);
-        toast(
-          `Agent error: ${session.error ?? session.taskLabel}`,
-          'error',
-        );
-        // Desktop notification — only fires when window is not focused (enforced in main process)
-        window.electronAPI?.app?.notify?.({
-          title: 'Agent error',
-          body: session.error ?? session.taskLabel,
-        }).catch(() => { /* non-fatal */ });
-      }
+      // Skip restored (persisted from prior sessions) — only notify for live events
+      if (session.restored) continue;
+      if (notifiedRef.current.has(session.id)) continue;
+      if (session.status !== 'complete' && session.status !== 'error') continue;
+      if (level === 'errors-only' && session.status === 'complete') continue;
+
+      notifiedRef.current.add(session.id);
+
+      const { title, body } = buildCompletionNotification(session);
+      const toastType = session.status === 'error' ? 'error' : 'success';
+      toast(`${title}: ${session.taskLabel}`, toastType);
+
+      // Desktop notification — force bypasses the focus check in main process
+      window.electronAPI?.app?.notify?.({ title, body, force: alwaysNotify })
+        .catch(() => { /* non-fatal */ });
     }
   }, [agents, toast]);
 
@@ -362,8 +434,114 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
   const hasFilteredSessions = filteredCurrentSessions.length > 0 || filteredHistoricalSessions.length > 0;
   const useTree = hasCurrentSessions && !filterQuery && hasTreeStructure(filteredCurrentSessions);
 
+  const handleExecuteTemplate = useCallback((template: AgentTemplate) => {
+    const ctx = {
+      projectRoot,
+      projectName: projectRoot?.replace(/\\/g, '/').split('/').pop() ?? '',
+      openFile: null as string | null,
+      openFileName: null as string | null,
+    };
+    const resolvedPrompt = resolveTemplate(template.promptTemplate, ctx);
+    window.dispatchEvent(new CustomEvent('agent-ide:spawn-claude-template', {
+      detail: {
+        prompt: resolvedPrompt,
+        label: template.name,
+        cliOverrides: template.cliOverrides,
+      },
+    }));
+  }, [projectRoot]);
+
+  // Enrich sessions with snapshot hashes from the diff snapshot hook
+  const enrichedAgents = useMemo(() => {
+    return agents.map((s) => {
+      const hash = getSnapshotHash(s.id);
+      if (hash && !s.snapshotHash) return { ...s, snapshotHash: hash };
+      return s;
+    });
+  }, [agents, getSnapshotHash]);
+
+  const enrichedCurrent = useMemo(() => {
+    return filteredCurrentSessions.map((s) => {
+      const hash = getSnapshotHash(s.id);
+      if (hash && !s.snapshotHash) return { ...s, snapshotHash: hash };
+      return s;
+    });
+  }, [filteredCurrentSessions, getSnapshotHash]);
+
+  const enrichedHistorical = useMemo(() => {
+    return filteredHistoricalSessions.map((s) => {
+      const hash = getSnapshotHash(s.id);
+      if (hash && !s.snapshotHash) return { ...s, snapshotHash: hash };
+      return s;
+    });
+  }, [filteredHistoricalSessions, getSnapshotHash]);
+
+  const handleReplay = useCallback((sessionId: string) => {
+    const session = enrichedAgents.find((s) => s.id === sessionId);
+    if (!session) return;
+    window.dispatchEvent(new CustomEvent('agent-ide:open-session-replay', {
+      detail: { session },
+    }));
+  }, [enrichedAgents]);
+
+  const handleReviewChanges = useCallback((sessionId: string) => {
+    const session = enrichedAgents.find((s) => s.id === sessionId);
+    if (!session?.snapshotHash || !projectRoot) {
+      toast('No snapshot available for this session', 'error');
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('agent-ide:open-diff-review', {
+      detail: { sessionId, snapshotHash: session.snapshotHash, projectRoot },
+    }));
+  }, [enrichedAgents, projectRoot, toast]);
+
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Quick actions — always visible when templates exist */}
+      {templates.length > 0 && (
+        <div
+          className="flex items-center gap-1 px-2 py-1.5 flex-shrink-0 overflow-x-auto"
+          style={{ borderBottom: '1px solid var(--border-muted)' }}
+        >
+          <span
+            className="text-[10px] font-medium shrink-0"
+            style={{ color: 'var(--text-faint)' }}
+          >
+            Quick:
+          </span>
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => handleExecuteTemplate(t)}
+              className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-muted)',
+                fontSize: '10px',
+                fontFamily: 'var(--font-ui)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-tertiary)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+              }}
+              title={t.promptTemplate}
+            >
+              {t.icon && <span>{t.icon}</span>}
+              <span>{t.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Summary bar — only when there are sessions */}
       {hasAnySessions && (
         <div className="flex-shrink-0">
@@ -380,6 +558,78 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
           <div className="flex-1 min-w-0">
             <SearchInput value={filterQuery} onChange={setFilterQuery} />
           </div>
+          {/* Cost dashboard toggle button */}
+          <button
+            onClick={handleToggleCost}
+            title={costMode ? 'Exit cost dashboard' : 'Show cost analytics dashboard'}
+            className="shrink-0 flex items-center justify-center rounded"
+            style={{
+              padding: '4px',
+              color: costMode ? 'var(--accent)' : 'var(--text-faint)',
+              background: costMode ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 150ms ease, background 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!costMode) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+            }}
+            onMouseLeave={(e) => {
+              if (!costMode) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)';
+            }}
+            aria-pressed={costMode}
+            aria-label="Toggle cost dashboard"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <path d="M8 2V14" strokeLinecap="round" />
+              <path d="M5.5 4.5C5.5 4.5 6.5 3.5 8 3.5C9.5 3.5 10.5 4.3 10.5 5.5C10.5 6.7 9.5 7.2 8 7.5C6.5 7.8 5.5 8.3 5.5 9.5C5.5 10.7 6.5 11.5 8 11.5C9.5 11.5 10.5 10.5 10.5 10.5" strokeLinecap="round" />
+            </svg>
+          </button>
+          {/* Multi-Session toggle button */}
+          <button
+            onClick={handleToggleMultiSession}
+            title={multiSessionMode !== 'off' ? 'Exit multi-session mode' : 'Launch parallel Claude Code sessions'}
+            className="shrink-0 flex items-center justify-center rounded"
+            style={{
+              padding: '4px',
+              color: multiSessionMode !== 'off' ? 'var(--accent)' : 'var(--text-faint)',
+              background: multiSessionMode !== 'off' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 150ms ease, background 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              if (multiSessionMode === 'off') (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+            }}
+            onMouseLeave={(e) => {
+              if (multiSessionMode === 'off') (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)';
+            }}
+            aria-pressed={multiSessionMode !== 'off'}
+            aria-label="Toggle multi-session mode"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <rect x="1" y="1" width="5" height="6" rx="1" />
+              <rect x="10" y="1" width="5" height="6" rx="1" />
+              <rect x="1" y="9" width="5" height="6" rx="1" />
+              <rect x="10" y="9" width="5" height="6" rx="1" />
+            </svg>
+          </button>
           {/* Compare toggle button */}
           <button
             onClick={handleToggleCompare}
@@ -418,8 +668,27 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
         </div>
       )}
 
-      {/* Compare mode layout */}
-      {compareMode ? (
+      {/* Multi-session launcher overlay */}
+      {multiSessionMode === 'launcher' ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <MultiSessionLauncher
+            onClose={handleMultiSessionClose}
+            onLaunched={handleMultiSessionLaunched}
+          />
+        </div>
+      ) : multiSessionMode === 'monitor' ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <MultiSessionMonitor
+            batchLabels={multiBatchLabels}
+            onClose={handleMultiSessionClose}
+          />
+        </div>
+      ) : /* Cost dashboard layout */
+      costMode ? (
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <CostDashboard sessions={agents} />
+        </div>
+      ) : compareMode ? (
         <div
           className="flex-1 min-h-0"
           style={{ display: 'flex', gap: '0', height: '100%', overflow: 'hidden' }}
@@ -447,17 +716,20 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
             hasFilteredSessions ? (
               <>
                 {useTree ? (
-                  <AgentTree sessions={filteredCurrentSessions} onDismiss={dismiss} />
+                  <AgentTree sessions={enrichedCurrent} onDismiss={dismiss} />
                 ) : (
-                  filteredCurrentSessions.map((session) => (
+                  enrichedCurrent.map((session) => (
                     <AgentCard
                       key={session.id}
                       session={session}
                       onDismiss={dismiss}
+                      onUpdateNotes={updateNotes}
+                      onReviewChanges={handleReviewChanges}
+                      onReplay={handleReplay}
                     />
                   ))
                 )}
-                <PreviousSessionsSection sessions={filteredHistoricalSessions} onDismiss={dismiss} />
+                <PreviousSessionsSection sessions={enrichedHistorical} onDismiss={dismiss} onUpdateNotes={updateNotes} onReviewChanges={handleReviewChanges} onReplay={handleReplay} />
               </>
             ) : filterQuery ? (
               /* Query active but no matches */

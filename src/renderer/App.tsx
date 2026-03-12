@@ -38,10 +38,14 @@ import {
   Breadcrumb,
   FileViewer,
 } from './components/FileViewer';
+import { MultiBufferManager, useMultiBufferManager, AddExcerptForm } from './components/FileViewer/MultiBufferManager';
+import { MultiBufferView } from './components/FileViewer/MultiBufferView';
 
 import { TerminalManager } from './components/Terminal/TerminalManager';
 import type { TerminalSession } from './components/Terminal/TerminalTabs';
 import { AgentMonitorManager } from './components/AgentMonitor/AgentMonitorManager';
+import { GitPanel } from './components/GitPanel';
+import { RightSidebarTabs } from './components/Layout/RightSidebarTabs';
 
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
 import { FilePicker } from './components/CommandPalette/FilePicker';
@@ -59,8 +63,12 @@ import { AgentEventsProvider } from './contexts/AgentEventsContext';
 
 import { useGitBranch } from './hooks/useGitBranch';
 import { useUpdater } from './hooks/useUpdater';
-import type { AppTheme } from './types/electron';
+import type { AppTheme, AgentTemplate, WorkspaceLayout } from './types/electron';
+import { resolveTemplate } from './utils/templateResolver';
 import { PerformanceOverlay } from './components/shared/PerformanceOverlay';
+import { DiffReviewProvider, useDiffReview, DiffReviewPanel } from './components/DiffReview';
+import { SessionReplayPanel } from './components/SessionReplay';
+import type { AgentSession as AgentMonitorSession } from './components/AgentMonitor/types';
 
 // ─── Guard: is the Electron bridge available? ─────────────────────────────────
 
@@ -135,21 +143,134 @@ function SidebarFileTree(): React.ReactElement {
 
 // ─── Editor tab bar — reads open files from FileViewerManager context ─────────
 // This is passed as the `editorTabBar` slot of AppLayout / CentrePane.
+// Also shows multi-buffer tabs alongside file tabs.
 
 function EditorTabBar(): React.ReactElement {
   const { openFiles, activeIndex, setActive, closeFile } = useFileViewerManager();
+  const { multiBuffers, openMultiBuffer, closeMultiBuffer } = useMultiBufferManager();
 
-  if (openFiles.length === 0) {
-    return <div style={{ flex: 1 }} aria-hidden="true" />;
-  }
+  const handleNewMultiBuffer = useCallback(() => {
+    const id = openMultiBuffer();
+    // Dispatch event so the centre pane switches to multi-buffer view
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:activate-multi-buffer', { detail: { id } }),
+    );
+  }, [openMultiBuffer]);
+
+  const handleActivateMultiBuffer = useCallback((id: string) => {
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:activate-multi-buffer', { detail: { id } }),
+    );
+  }, []);
+
+  const handleCloseMultiBuffer = useCallback((id: string) => {
+    closeMultiBuffer(id);
+    // If this was the active multi-buffer, switch back to file view
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:deactivate-multi-buffer'),
+    );
+  }, [closeMultiBuffer]);
+
+  const handleActivateFile = useCallback((filePath: string) => {
+    // Deactivate any multi-buffer first
+    window.dispatchEvent(new CustomEvent('agent-ide:deactivate-multi-buffer'));
+    setActive(filePath);
+  }, [setActive]);
 
   return (
-    <FileViewerTabs
-      files={openFiles}
-      activeIndex={activeIndex}
-      onActivate={setActive}
-      onClose={closeFile}
-    />
+    <div style={{ display: 'flex', flex: 1, height: '100%', alignItems: 'stretch' }}>
+      {/* File tabs */}
+      {openFiles.length > 0 && (
+        <FileViewerTabs
+          files={openFiles}
+          activeIndex={activeIndex}
+          onActivate={handleActivateFile}
+          onClose={closeFile}
+        />
+      )}
+
+      {/* Multi-buffer tabs */}
+      {multiBuffers.map((mb) => (
+        <div
+          key={mb.id}
+          role="tab"
+          tabIndex={0}
+          title={mb.config.name}
+          onClick={() => handleActivateMultiBuffer(mb.id)}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleCloseMultiBuffer(mb.id); } }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActivateMultiBuffer(mb.id); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '0 10px 0 12px',
+            height: '100%',
+            flexShrink: 0,
+            cursor: 'pointer',
+            userSelect: 'none',
+            borderRight: '1px solid var(--border)',
+            borderBottom: '2px solid transparent',
+            backgroundColor: 'var(--bg-secondary)',
+            color: 'var(--text-muted)',
+            fontSize: '0.8125rem',
+            fontFamily: 'var(--font-ui)',
+            minWidth: '80px',
+            maxWidth: '200px',
+            transition: 'background-color 100ms ease, color 100ms ease',
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{'\u2630'}</span>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {mb.config.name}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleCloseMultiBuffer(mb.id); }}
+            aria-label={`Close ${mb.config.name}`}
+            tabIndex={-1}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '16px', height: '16px', borderRadius: '3px',
+              border: 'none', background: 'transparent',
+              color: 'var(--text-faint)', cursor: 'pointer', padding: 0, flexShrink: 0,
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      ))}
+
+      {/* New Multi-Buffer button */}
+      <button
+        onClick={handleNewMultiBuffer}
+        title="New Multi-Buffer"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '28px',
+          height: '100%',
+          flexShrink: 0,
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--text-faint)',
+          cursor: 'pointer',
+          fontSize: '0.875rem',
+          fontFamily: 'var(--font-ui)',
+          padding: 0,
+          borderRight: '1px solid var(--border)',
+        }}
+      >
+        {'\u2630'}+
+      </button>
+
+      {/* Spacer */}
+      {openFiles.length === 0 && multiBuffers.length === 0 && (
+        <div style={{ flex: 1 }} aria-hidden="true" />
+      )}
+      <div style={{ flex: 1 }} />
+    </div>
   );
 }
 
@@ -180,9 +301,43 @@ function useStatusBarProps(): {
 // ─── Editor content: Breadcrumb + FileViewer ──────────────────────────────────
 
 function EditorContent(): React.ReactElement {
-  const { activeFile, openFile } = useFileViewerManager();
+  const { activeFile, openFile, saveFile, setDirty } = useFileViewerManager();
+  const { multiBuffers, addExcerpt, removeExcerpt } = useMultiBufferManager();
   const { projectRoot } = useProject();
   const { toast } = useToastContext();
+
+  // Track which multi-buffer is active (null = normal file view)
+  const [activeMultiBufferId, setActiveMultiBufferId] = useState<string | null>(null);
+  const [showAddExcerpt, setShowAddExcerpt] = useState(false);
+
+  // Listen for activation/deactivation events from the tab bar
+  useEffect(() => {
+    function onActivate(e: Event): void {
+      const { id } = (e as CustomEvent<{ id: string }>).detail;
+      setActiveMultiBufferId(id);
+    }
+    function onDeactivate(): void {
+      setActiveMultiBufferId(null);
+      setShowAddExcerpt(false);
+    }
+    window.addEventListener('agent-ide:activate-multi-buffer', onActivate);
+    window.addEventListener('agent-ide:deactivate-multi-buffer', onDeactivate);
+    return () => {
+      window.removeEventListener('agent-ide:activate-multi-buffer', onActivate);
+      window.removeEventListener('agent-ide:deactivate-multi-buffer', onDeactivate);
+    };
+  }, []);
+
+  // If the active multi-buffer was closed, fall back to file view
+  const activeMB = activeMultiBufferId
+    ? multiBuffers.find((mb) => mb.id === activeMultiBufferId) ?? null
+    : null;
+
+  useEffect(() => {
+    if (activeMultiBufferId && !activeMB) {
+      setActiveMultiBufferId(null);
+    }
+  }, [activeMultiBufferId, activeMB]);
 
   const handleReload = useCallback(async (): Promise<void> => {
     if (!activeFile) return;
@@ -191,6 +346,96 @@ function EditorContent(): React.ReactElement {
     toast(`Reloaded ${name} from disk`, 'info');
   }, [activeFile, openFile, toast]);
 
+  const handleSave = useCallback(async (content: string): Promise<void> => {
+    if (!activeFile) return;
+    await saveFile(activeFile.path, content);
+    const name = activeFile.path.replace(/\\/g, '/').split('/').pop() ?? activeFile.path;
+    toast(`Saved ${name}`, 'info');
+  }, [activeFile, saveFile, toast]);
+
+  const handleDirtyChange = useCallback((dirty: boolean): void => {
+    if (!activeFile) return;
+    setDirty(activeFile.path, dirty);
+  }, [activeFile, setDirty]);
+
+  const handleOpenFileFromExcerpt = useCallback((filePath: string) => {
+    setActiveMultiBufferId(null);
+    void openFile(filePath);
+  }, [openFile]);
+
+  const handleRemoveExcerpt = useCallback((index: number) => {
+    if (!activeMultiBufferId) return;
+    removeExcerpt(activeMultiBufferId, index);
+  }, [activeMultiBufferId, removeExcerpt]);
+
+  const handleAddExcerpt = useCallback((excerpt: import('./types/electron').BufferExcerpt) => {
+    if (!activeMultiBufferId) return;
+    addExcerpt(activeMultiBufferId, excerpt);
+    setShowAddExcerpt(false);
+  }, [activeMultiBufferId, addExcerpt]);
+
+  // Multi-buffer view
+  if (activeMB) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+        {/* Action bar */}
+        <div
+          style={{
+            flexShrink: 0,
+            height: '28px',
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 8px',
+            gap: '8px',
+            fontFamily: 'var(--font-ui)',
+            fontSize: '0.8125rem',
+          }}
+        >
+          <span style={{ color: 'var(--text-muted)' }}>Multi-Buffer:</span>
+          <span style={{ color: 'var(--text)', fontWeight: 600 }}>{activeMB.config.name}</span>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => setShowAddExcerpt((prev) => !prev)}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: '3px',
+              color: 'var(--accent)',
+              padding: '2px 8px',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+            }}
+          >
+            + Add Excerpt
+          </button>
+        </div>
+
+        {/* Add excerpt form */}
+        {showAddExcerpt && (
+          <AddExcerptForm
+            onAdd={handleAddExcerpt}
+            onCancel={() => setShowAddExcerpt(false)}
+          />
+        )}
+
+        {/* Multi-buffer content */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <MultiBufferView
+            name={activeMB.config.name}
+            excerpts={activeMB.config.excerpts}
+            fileContents={activeMB.fileContents}
+            onRemoveExcerpt={handleRemoveExcerpt}
+            onOpenFile={handleOpenFileFromExcerpt}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Normal file view
   return (
     <div
       style={{
@@ -229,6 +474,9 @@ function EditorContent(): React.ReactElement {
           originalContent={activeFile?.originalContent ?? null}
           projectRoot={projectRoot}
           isImage={activeFile?.isImage ?? false}
+          onSave={handleSave}
+          onDirtyChange={handleDirtyChange}
+          isDirty={activeFile?.isDirty ?? false}
         />
       </div>
     </div>
@@ -292,6 +540,68 @@ function FilePickerConnected({
   );
 }
 
+// ─── CentrePaneConnected — switches between EditorContent, DiffReview, and SessionReplay ──
+
+function CentrePaneConnected(): React.ReactElement {
+  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
+  const [replaySession, setReplaySession] = useState<AgentMonitorSession | null>(null);
+
+  // Listen for diff review open event
+  useEffect(() => {
+    function onOpen(e: Event): void {
+      const detail = (e as CustomEvent<{ sessionId: string; snapshotHash: string; projectRoot: string }>).detail;
+      if (detail) {
+        setReplaySession(null); // Close replay if open
+        openReview(detail.sessionId, detail.snapshotHash, detail.projectRoot);
+      }
+    }
+
+    window.addEventListener('agent-ide:diff-review-open', onOpen);
+    return () => window.removeEventListener('agent-ide:diff-review-open', onOpen);
+  }, [openReview]);
+
+  // Listen for session replay open event
+  useEffect(() => {
+    function onOpen(e: Event): void {
+      const detail = (e as CustomEvent<{ session: AgentMonitorSession }>).detail;
+      if (detail?.session) {
+        closeReview(); // Close diff review if open
+        setReplaySession(detail.session);
+      }
+    }
+
+    window.addEventListener('agent-ide:open-session-replay', onOpen);
+    return () => window.removeEventListener('agent-ide:open-session-replay', onOpen);
+  }, [closeReview]);
+
+  // Diff review takes priority if both are somehow open
+  if (state) {
+    return (
+      <DiffReviewPanel
+        state={state}
+        onAcceptHunk={acceptHunk}
+        onRejectHunk={rejectHunk}
+        onAcceptAllFile={acceptAllFile}
+        onRejectAllFile={rejectAllFile}
+        onAcceptAll={acceptAll}
+        onRejectAll={rejectAll}
+        onClose={closeReview}
+      />
+    );
+  }
+
+  if (replaySession) {
+    return (
+      <SessionReplayPanel
+        session={replaySession}
+        onClose={() => setReplaySession(null)}
+      />
+    );
+  }
+
+  return <EditorContent />;
+}
+
 // ─── InnerApp — rendered once config is ready, inside ProjectProvider ─────────
 
 interface InnerAppProps {
@@ -304,12 +614,132 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
   const { projectRoot, projectRoots, setProjectRoot, addProjectRoot } = useProject();
 
   const { isOpen: paletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
-  const { commands, recentIds, execute } = useCommandRegistry();
+  const { commands, recentIds, execute, registerCommand } = useCommandRegistry();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filePickerOpen, setFilePickerOpen] = useState(false);
   const [symbolSearchOpen, setSymbolSearchOpen] = useState(false);
   const [perfOverlayVisible, setPerfOverlayVisible] = useState(false);
+
+  // ── Workspace layouts ─────────────────────────────────────────────────────
+  const [workspaceLayouts, setWorkspaceLayouts] = useState<WorkspaceLayout[]>([]);
+  const [activeLayoutName, setActiveLayoutName] = useState('Default');
+
+  // Load layouts from config on mount
+  useEffect(() => {
+    if (!hasElectronAPI()) return;
+    void (async () => {
+      try {
+        const layouts = await window.electronAPI.config.get('workspaceLayouts');
+        const activeName = await window.electronAPI.config.get('activeLayoutName');
+        if (Array.isArray(layouts) && layouts.length > 0) {
+          setWorkspaceLayouts(layouts);
+        }
+        if (activeName) {
+          setActiveLayoutName(activeName);
+        }
+      } catch {
+        // Config not available — use defaults
+      }
+    })();
+  }, []);
+
+  const handleSelectLayout = useCallback((layout: WorkspaceLayout) => {
+    setActiveLayoutName(layout.name);
+    // Dispatch DOM event so AppLayout can apply sizes + collapse state
+    window.dispatchEvent(new CustomEvent('agent-ide:apply-layout', { detail: layout }));
+    if (hasElectronAPI()) {
+      void window.electronAPI.config.set('activeLayoutName', layout.name);
+    }
+  }, []);
+
+  const handleSaveLayout = useCallback((name: string) => {
+    // We'll read current sizes via a DOM event round-trip isn't needed;
+    // instead pass a callback that reads localStorage (same source as useResizable).
+    let currentSizes = { leftSidebar: 240, rightSidebar: 300, terminal: 250 };
+    let currentCollapse = { leftSidebar: false, rightSidebar: false, terminal: false };
+    try {
+      const stored = localStorage.getItem('agent-ide:panel-sizes');
+      if (stored) currentSizes = { ...currentSizes, ...JSON.parse(stored) };
+      const storedCollapse = localStorage.getItem('agent-ide:panel-collapse');
+      if (storedCollapse) currentCollapse = { ...currentCollapse, ...JSON.parse(storedCollapse) };
+    } catch { /* ignore */ }
+
+    const newLayout: WorkspaceLayout = {
+      name,
+      panelSizes: currentSizes,
+      visiblePanels: {
+        leftSidebar: !currentCollapse.leftSidebar,
+        rightSidebar: !currentCollapse.rightSidebar,
+        terminal: !currentCollapse.terminal,
+      },
+      builtIn: false,
+    };
+
+    setWorkspaceLayouts((prev) => {
+      const updated = [...prev, newLayout];
+      if (hasElectronAPI()) {
+        void window.electronAPI.config.set('workspaceLayouts', updated);
+      }
+      return updated;
+    });
+    setActiveLayoutName(name);
+    if (hasElectronAPI()) {
+      void window.electronAPI.config.set('activeLayoutName', name);
+    }
+  }, []);
+
+  const handleUpdateLayout = useCallback((name: string) => {
+    let currentSizes = { leftSidebar: 240, rightSidebar: 300, terminal: 250 };
+    let currentCollapse = { leftSidebar: false, rightSidebar: false, terminal: false };
+    try {
+      const stored = localStorage.getItem('agent-ide:panel-sizes');
+      if (stored) currentSizes = { ...currentSizes, ...JSON.parse(stored) };
+      const storedCollapse = localStorage.getItem('agent-ide:panel-collapse');
+      if (storedCollapse) currentCollapse = { ...currentCollapse, ...JSON.parse(storedCollapse) };
+    } catch { /* ignore */ }
+
+    setWorkspaceLayouts((prev) => {
+      const updated = prev.map((l) =>
+        l.name === name
+          ? {
+              ...l,
+              panelSizes: currentSizes,
+              visiblePanels: {
+                leftSidebar: !currentCollapse.leftSidebar,
+                rightSidebar: !currentCollapse.rightSidebar,
+                terminal: !currentCollapse.terminal,
+              },
+            }
+          : l,
+      );
+      if (hasElectronAPI()) {
+        void window.electronAPI.config.set('workspaceLayouts', updated);
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleDeleteLayout = useCallback((name: string) => {
+    setWorkspaceLayouts((prev) => {
+      const updated = prev.filter((l) => l.name !== name);
+      if (hasElectronAPI()) {
+        void window.electronAPI.config.set('workspaceLayouts', updated);
+      }
+      return updated;
+    });
+    // If the deleted layout was active, switch to Default
+    setActiveLayoutName((prev) => {
+      if (prev === name) {
+        const newName = 'Default';
+        if (hasElectronAPI()) {
+          void window.electronAPI.config.set('activeLayoutName', newName);
+        }
+        return newName;
+      }
+      return prev;
+    });
+  }, []);
 
   // Auto-updater — subscribes to update events and shows toasts
   useUpdater();
@@ -346,6 +776,98 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
   // Keep recentProjects in local state so ProjectPicker updates immediately
   // without waiting for a config round-trip.
   const [recentProjects, setRecentProjects] = useState<string[]>(initialRecentProjects);
+
+  // ── Register agent templates as command palette commands ─────────────────
+
+  useEffect(() => {
+    if (!hasElectronAPI()) return;
+
+    void window.electronAPI.config.get('agentTemplates').then((templates: AgentTemplate[]) => {
+      if (!templates || templates.length === 0) return;
+
+      const children: Command[] = templates.map((t) => ({
+        id: `agent-template:${t.id}`,
+        label: t.name,
+        category: 'terminal' as const,
+        icon: t.icon ?? '◆',
+        action: () => {
+          // Resolve template variables with current context
+          const ctx = {
+            projectRoot,
+            projectName: projectRoot?.replace(/\\/g, '/').split('/').pop() ?? '',
+            openFile: null as string | null,
+            openFileName: null as string | null,
+          };
+          const resolvedPrompt = resolveTemplate(t.promptTemplate, ctx);
+          window.dispatchEvent(new CustomEvent('agent-ide:spawn-claude-template', {
+            detail: {
+              prompt: resolvedPrompt,
+              label: t.name,
+              cliOverrides: t.cliOverrides,
+            },
+          }));
+        },
+      }));
+
+      registerCommand({
+        id: 'agent:templates',
+        label: 'Agent Templates',
+        category: 'terminal',
+        icon: '◆',
+        action: () => { /* submenu */ },
+        children,
+      });
+    });
+  }, [projectRoot, registerCommand]);
+
+  // ── Register layout switching commands ──────────────────────────────────────
+
+  useEffect(() => {
+    const children: Command[] = workspaceLayouts.map((layout, idx) => ({
+      id: `layout:switch:${layout.name}`,
+      label: layout.name,
+      category: 'view' as const,
+      shortcut: idx < 3 ? `Ctrl+Alt+${idx + 1}` : undefined,
+      icon: layout.name === activeLayoutName ? '●' : '○',
+      action: () => handleSelectLayout(layout),
+    }));
+
+    registerCommand({
+      id: 'layout:switch',
+      label: 'Switch Layout',
+      category: 'view',
+      icon: '⊞',
+      action: () => { /* submenu */ },
+      children,
+    });
+
+    registerCommand({
+      id: 'layout:save-current',
+      label: 'Save Current Layout',
+      category: 'view',
+      icon: '⊞',
+      action: () => {
+        const name = prompt('Enter a name for this layout:');
+        if (name && name.trim()) {
+          handleSaveLayout(name.trim());
+        }
+      },
+    });
+  }, [workspaceLayouts, activeLayoutName, registerCommand, handleSelectLayout, handleSaveLayout]);
+
+  // ── Register multi-session command ─────────────────────────────────────────
+
+  useEffect(() => {
+    registerCommand({
+      id: 'agent:multi-session',
+      label: 'Launch Multi-Session',
+      category: 'terminal',
+      icon: '\u2B58',
+      action: () => {
+        window.dispatchEvent(new CustomEvent('agent-ide:open-multi-session'));
+      },
+    });
+  }, [registerCommand]);
 
   // ── Handle project switch ────────────────────────────────────────────────
 
@@ -420,6 +942,56 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
 
     try {
       await window.electronAPI.pty.spawn(id, { cwd });
+
+      const exitCleanup = window.electronAPI.pty.onExit(id, () => {
+        exitCleanup();
+        setSessions((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, status: 'exited' } : s)),
+        );
+        clearKillTimers(id);
+      });
+    } catch {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, status: 'exited', title: `${s.title} [error]` } : s,
+        ),
+      );
+    }
+  }, []);
+
+  const spawnClaudeSession = useCallback(async (
+    optionalCwd?: string,
+    options?: { initialPrompt?: string; cliOverrides?: Record<string, unknown>; label?: string }
+  ): Promise<void> => {
+    const id = generateSessionId();
+    const index = spawnCountRef.current;
+    spawnCountRef.current += 1;
+
+    let cwd: string | undefined = optionalCwd;
+    if (!cwd) {
+      try {
+        cwd = await window.electronAPI.config.get('defaultProjectRoot');
+      } catch {
+        // Config not available; fall back to undefined (PTY uses os.homedir())
+      }
+    }
+
+    const newSession: TerminalSession = {
+      id,
+      title: options?.label ?? `Claude ${index + 1}`,
+      status: 'running',
+      isClaude: true,
+    };
+
+    setSessions((prev) => [...prev, newSession]);
+    setActiveSessionId(id);
+
+    try {
+      await window.electronAPI.pty.spawnClaude(id, {
+        cwd,
+        initialPrompt: options?.initialPrompt,
+        cliOverrides: options?.cliOverrides,
+      });
 
       const exitCleanup = window.electronAPI.pty.onExit(id, () => {
         exitCleanup();
@@ -709,6 +1281,26 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
       setSymbolSearchOpen(true);
     }
 
+    function onOpenDiffReview(e: Event): void {
+      const detail = (e as CustomEvent<{ sessionId: string; snapshotHash: string; projectRoot: string }>).detail;
+      if (detail?.sessionId && detail?.snapshotHash && detail?.projectRoot) {
+        // This is handled by the DiffReviewProvider — we dispatch to it via a second event
+        // that the DiffReviewConnected component listens for.
+        window.dispatchEvent(new CustomEvent('agent-ide:diff-review-open', { detail }));
+      }
+    }
+
+    function onSpawnClaudeTemplate(e: Event): void {
+      const detail = (e as CustomEvent<{ prompt: string; label?: string; cliOverrides?: Record<string, unknown> }>).detail;
+      if (detail?.prompt) {
+        void spawnClaudeSession(undefined, {
+          initialPrompt: detail.prompt,
+          label: detail.label,
+          cliOverrides: detail.cliOverrides,
+        });
+      }
+    }
+
     // Keyboard shortcuts — respect user-configured keybindings from config
     function getEffectiveShortcut(actionId: string): string {
       if (keybindings[actionId]) return keybindings[actionId];
@@ -731,9 +1323,23 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
       } else if (pressed === 'Ctrl+T') {
         e.preventDefault();
         setSymbolSearchOpen((prev) => !prev);
+      } else if (pressed === 'Ctrl+Shift+N') {
+        e.preventDefault();
+        if (hasElectronAPI()) {
+          void window.electronAPI.window.create();
+        }
       } else if (pressed === 'Ctrl+Shift+P') {
         e.preventDefault();
         setPerfOverlayVisible((prev) => !prev);
+      } else if (pressed === 'Ctrl+Shift+C') {
+        e.preventDefault();
+        void spawnClaudeSession();
+      } else if (pressed === 'Ctrl+Alt+1' || pressed === 'Ctrl+Alt+2' || pressed === 'Ctrl+Alt+3') {
+        e.preventDefault();
+        const idx = parseInt(pressed.slice(-1), 10) - 1;
+        if (workspaceLayouts[idx]) {
+          handleSelectLayout(workspaceLayouts[idx]);
+        }
       }
     }
 
@@ -743,6 +1349,8 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
     window.addEventListener('agent-ide:new-terminal', onNewTerminal);
     window.addEventListener('agent-ide:open-file-picker', onOpenFilePicker);
     window.addEventListener('agent-ide:open-symbol-search', onOpenSymbolSearch);
+    window.addEventListener('agent-ide:open-diff-review', onOpenDiffReview);
+    window.addEventListener('agent-ide:spawn-claude-template', onSpawnClaudeTemplate);
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
@@ -752,9 +1360,11 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
       window.removeEventListener('agent-ide:new-terminal', onNewTerminal);
       window.removeEventListener('agent-ide:open-file-picker', onOpenFilePicker);
       window.removeEventListener('agent-ide:open-symbol-search', onOpenSymbolSearch);
+      window.removeEventListener('agent-ide:open-diff-review', onOpenDiffReview);
+      window.removeEventListener('agent-ide:spawn-claude-template', onSpawnClaudeTemplate);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [handleProjectChange, setTheme, spawnSession, keybindings]);
+  }, [handleProjectChange, setTheme, spawnSession, spawnClaudeSession, keybindings, workspaceLayouts, handleSelectLayout]);
 
   // ── Command palette executor ──────────────────────────────────────────────
 
@@ -831,6 +1441,7 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
     onActivate: setActiveSessionId,
     onClose: handleTerminalClose,
     onNew: () => void spawnSession(),
+    onNewClaude: () => void spawnClaudeSession(),
     onReorder: handleTerminalReorder,
   };
 
@@ -838,10 +1449,22 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
 
   return (
     <FileViewerManager projectRoot={projectRoot}>
+      <MultiBufferManager>
+      <DiffReviewProvider>
       <AppLayoutConnected
         terminalControl={terminalControl}
         projectRoot={projectRoot}
         keybindings={keybindings}
+        layoutProps={{
+          layouts: workspaceLayouts,
+          activeLayoutName,
+          currentPanelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
+          currentVisiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
+          onSelectLayout: handleSelectLayout,
+          onSaveLayout: handleSaveLayout,
+          onUpdateLayout: handleUpdateLayout,
+          onDeleteLayout: handleDeleteLayout,
+        }}
         sidebarHeader={
           <ProjectPicker
             currentPath={projectRoot}
@@ -861,8 +1484,13 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
         }
         sidebarContent={<SidebarFileTree />}
         editorTabBar={<EditorTabBar />}
-        editorContent={<EditorContent />}
-        agentCards={<AgentMonitorManager />}
+        editorContent={<CentrePaneConnected />}
+        agentCards={
+          <RightSidebarTabs
+            monitorContent={<AgentMonitorManager />}
+            gitContent={<GitPanel />}
+          />
+        }
         terminalContent={
           <TerminalManager
             sessions={sessions}
@@ -910,6 +1538,8 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
 
       {/* Performance overlay — toggled by Ctrl+Shift+P */}
       <PerformanceOverlay visible={perfOverlayVisible} />
+      </DiffReviewProvider>
+      </MultiBufferManager>
     </FileViewerManager>
   );
 }

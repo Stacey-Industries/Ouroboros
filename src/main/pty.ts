@@ -2,7 +2,7 @@ import * as pty from 'node-pty'
 import { BrowserWindow, dialog } from 'electron'
 import os from 'os'
 import fs from 'fs/promises'
-import { getConfigValue } from './config'
+import { getConfigValue, type ClaudeCliSettings } from './config'
 
 export interface PtySession {
   id: string
@@ -31,6 +31,9 @@ const recordings = new Map<string, RecordingState>()
 
 const sessions = new Map<string, PtySession>()
 
+// Track which window (by BrowserWindow.id) owns each PTY session
+const sessionWindowMap = new Map<string, number>()
+
 function getDefaultShell(): string {
   if (process.platform === 'win32') {
     // Prefer PowerShell for better ConPTY + PSReadLine history support
@@ -57,6 +60,7 @@ export interface SpawnOptions {
   cols?: number
   rows?: number
   env?: Record<string, string>
+  startupCommand?: string
 }
 
 export function spawnPty(
@@ -138,6 +142,7 @@ export function spawnPty(
 
     const session: PtySession = { id, process: proc, cwd, shell }
     sessions.set(id, session)
+    sessionWindowMap.set(id, win.id)
 
     proc.onData((data: string) => {
       if (!win.isDestroyed()) {
@@ -147,10 +152,20 @@ export function spawnPty(
 
     proc.onExit(({ exitCode, signal }) => {
       sessions.delete(id)
+      sessionWindowMap.delete(id)
       if (!win.isDestroyed()) {
         win.webContents.send(`pty:exit:${id}`, { exitCode, signal })
       }
     })
+
+    if (options.startupCommand) {
+      // Delay to let shell profile/rc files finish loading
+      setTimeout(() => {
+        if (sessions.has(id)) {
+          proc.write(options.startupCommand + '\r')
+        }
+      }, 600)
+    }
 
     return { success: true }
   } catch (err) {
@@ -199,6 +214,7 @@ export function killPty(id: string): { success: boolean; error?: string } {
   try {
     session.process.kill()
     sessions.delete(id)
+    sessionWindowMap.delete(id)
     return { success: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -214,6 +230,24 @@ export function killAllPtySessions(): void {
       // Ignore kill errors on shutdown
     }
     sessions.delete(id)
+    sessionWindowMap.delete(id)
+  }
+}
+
+/** Kill only PTY sessions owned by a specific window (used on per-window close). */
+export function killPtySessionsForWindow(windowId: number): void {
+  for (const [sessionId, winId] of sessionWindowMap) {
+    if (winId !== windowId) continue
+    const session = sessions.get(sessionId)
+    if (session) {
+      try {
+        session.process.kill()
+      } catch {
+        // Ignore kill errors on shutdown
+      }
+      sessions.delete(sessionId)
+    }
+    sessionWindowMap.delete(sessionId)
   }
 }
 
@@ -361,4 +395,176 @@ export async function stopPtyRecording(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) }
   }
+}
+
+// ─── Claude CLI command builder ───────────────────────────────────────────────
+
+/** Returns just the flag arguments (no 'claude' prefix) for direct spawn use. */
+export function buildClaudeArgs(settings: ClaudeCliSettings): string[] {
+  const args: string[] = []
+
+  if (settings.permissionMode && settings.permissionMode !== 'default') {
+    args.push('--permission-mode', settings.permissionMode)
+  }
+  if (settings.model) {
+    args.push('--model', settings.model)
+  }
+  if (settings.effort) {
+    args.push('--effort', settings.effort)
+  }
+  if (settings.verbose) {
+    args.push('--verbose')
+  }
+  if (settings.maxBudgetUsd > 0) {
+    args.push('--max-budget-usd', String(settings.maxBudgetUsd))
+  }
+  if (settings.allowedTools) {
+    args.push('--allowedTools', settings.allowedTools)
+  }
+  if (settings.disallowedTools) {
+    args.push('--disallowedTools', settings.disallowedTools)
+  }
+  if (settings.appendSystemPrompt) {
+    args.push('--append-system-prompt', settings.appendSystemPrompt)
+  }
+  for (const dir of settings.addDirs ?? []) {
+    args.push('--add-dir', dir)
+  }
+  if (settings.chrome) {
+    args.push('--chrome')
+  }
+  if (settings.worktree) {
+    args.push('--worktree')
+  }
+  if (settings.dangerouslySkipPermissions) {
+    args.push('--dangerously-skip-permissions')
+  }
+
+  return args
+}
+
+/**
+ * Spawns a Claude Code session directly — no visible shell prompt, no typed command.
+ *
+ * On Windows: spawns PowerShell with -Command so Claude starts immediately.
+ * On Unix: spawns the `claude` binary directly.
+ */
+export function spawnClaudePty(
+  id: string,
+  win: BrowserWindow,
+  settings: ClaudeCliSettings,
+  options: SpawnOptions & { initialPrompt?: string } = {}
+): { success: boolean; error?: string } {
+  if (sessions.has(id)) {
+    return { success: false, error: `Session ${id} already exists` }
+  }
+
+  const cwd = options.cwd ?? os.homedir()
+  const cols = options.cols ?? 80
+  const rows = options.rows ?? 24
+
+  const claudeArgs = buildClaudeArgs(settings)
+
+  let shell: string
+  let args: string[]
+
+  if (process.platform === 'win32') {
+    // PowerShell: -NoLogo -NoExit -Command runs claude immediately,
+    // then leaves the shell open after claude exits (useful for follow-up commands).
+    const claudeCmd = ['claude', ...claudeArgs].join(' ')
+    shell = 'powershell.exe'
+    args = ['-NoLogo', '-NoExit', '-Command', claudeCmd]
+  } else {
+    // Unix: spawn claude directly — no shell wrapper needed.
+    shell = 'claude'
+    args = claudeArgs
+  }
+
+  try {
+    const proc = pty.spawn(shell, args, {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd,
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+        ...options.env
+      } as Record<string, string>
+    })
+
+    const session: PtySession = { id, process: proc, cwd, shell }
+    sessions.set(id, session)
+    sessionWindowMap.set(id, win.id)
+
+    proc.onData((data: string) => {
+      if (!win.isDestroyed()) win.webContents.send(`pty:data:${id}`, data)
+    })
+
+    proc.onExit(({ exitCode, signal }) => {
+      sessions.delete(id)
+      sessionWindowMap.delete(id)
+      if (!win.isDestroyed()) win.webContents.send(`pty:exit:${id}`, { exitCode, signal })
+    })
+
+    // Write initial prompt to Claude after startup delay (Claude CLI needs time to initialize)
+    if (options.initialPrompt) {
+      setTimeout(() => {
+        if (sessions.has(id)) {
+          proc.write(options.initialPrompt + '\r')
+        }
+      }, 1500)
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { success: false, error: message }
+  }
+}
+
+export function buildClaudeCommand(settings: ClaudeCliSettings): string {
+  const parts: string[] = ['claude']
+
+  if (settings.permissionMode && settings.permissionMode !== 'default') {
+    parts.push(`--permission-mode ${settings.permissionMode}`)
+  }
+  if (settings.model) {
+    parts.push(`--model ${settings.model}`)
+  }
+  if (settings.effort) {
+    parts.push(`--effort ${settings.effort}`)
+  }
+  if (settings.verbose) {
+    parts.push('--verbose')
+  }
+  if (settings.maxBudgetUsd > 0) {
+    parts.push(`--max-budget-usd ${settings.maxBudgetUsd}`)
+  }
+  if (settings.allowedTools) {
+    parts.push(`--allowedTools "${settings.allowedTools}"`)
+  }
+  if (settings.disallowedTools) {
+    parts.push(`--disallowedTools "${settings.disallowedTools}"`)
+  }
+  if (settings.appendSystemPrompt) {
+    // Escape quotes in the prompt
+    const escaped = settings.appendSystemPrompt.replace(/"/g, '\\"')
+    parts.push(`--append-system-prompt "${escaped}"`)
+  }
+  if (settings.addDirs.length > 0) {
+    parts.push(`--add-dir ${settings.addDirs.map(d => `"${d}"`).join(' ')}`)
+  }
+  if (settings.chrome) {
+    parts.push('--chrome')
+  }
+  if (settings.worktree) {
+    parts.push('--worktree')
+  }
+  if (settings.dangerouslySkipPermissions) {
+    parts.push('--dangerously-skip-permissions')
+  }
+
+  return parts.join(' ')
 }

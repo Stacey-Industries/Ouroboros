@@ -22,6 +22,12 @@ export interface AgentSession {
   cacheWriteTokens?: number;
   model?: string;          // e.g. "claude-sonnet-4-20250514"
   restored?: boolean;      // true when loaded from disk (not from a live event)
+  /** User notes / bookmarks for this session */
+  notes?: string;
+  /** Whether this session is bookmarked for quick reference */
+  bookmarked?: boolean;
+  /** Git HEAD hash captured at session start — used for diff review */
+  snapshotHash?: string;
 }
 
 export interface ToolCallEvent {

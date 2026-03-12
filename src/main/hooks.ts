@@ -15,6 +15,7 @@
 import net from 'net'
 import { BrowserWindow } from 'electron'
 import { getConfigValue } from './config'
+import { getAllActiveWindows } from './windowManager'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -96,25 +97,35 @@ function isValidPayload(obj: unknown): obj is HookPayload {
 // ─── Dispatch to renderer ─────────────────────────────────────────────────────
 
 function dispatchToRenderer(payload: HookPayload): void {
-  const win = mainWindow
-  if (!win || win.isDestroyed()) {
-    console.log(`[hooks] queuing event (no window): ${payload.type} session=${payload.sessionId}`)
-    if (pendingQueue.length < MAX_PENDING_QUEUE) {
-      pendingQueue.push(payload)
+  // Get all active windows from the window manager
+  const activeWindows = getAllActiveWindows()
+
+  if (activeWindows.length === 0) {
+    // Fallback: check the mainWindow reference
+    const win = mainWindow
+    if (!win || win.isDestroyed()) {
+      console.log(`[hooks] queuing event (no window): ${payload.type} session=${payload.sessionId}`)
+      if (pendingQueue.length < MAX_PENDING_QUEUE) {
+        pendingQueue.push(payload)
+      }
+      return
     }
-    return
   }
 
   // Flush buffered events first, in order
   if (pendingQueue.length > 0) {
     const flushing = pendingQueue.splice(0)
     for (const p of flushing) {
-      win.webContents.send('hooks:event', p)
+      for (const win of activeWindows) {
+        if (!win.isDestroyed()) win.webContents.send('hooks:event', p)
+      }
     }
   }
 
-  console.log(`[hooks] dispatching to renderer: ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`)
-  win.webContents.send('hooks:event', payload)
+  console.log(`[hooks] dispatching to ${activeWindows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`)
+  for (const win of activeWindows) {
+    if (!win.isDestroyed()) win.webContents.send('hooks:event', payload)
+  }
 }
 
 // ─── Per-connection NDJSON handler ────────────────────────────────────────────

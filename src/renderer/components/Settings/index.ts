@@ -17,3 +17,4 @@ export { ProfilesSection } from './ProfilesSection';
 export type { ProfilesSectionProps } from './ProfilesSection';
 export { FileFilterSection } from './FileFilterSection';
 export { ExtensionsSection } from './ExtensionsSection';
+export { ClaudeSection } from './ClaudeSection';

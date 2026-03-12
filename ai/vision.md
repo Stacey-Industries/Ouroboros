@@ -6,9 +6,20 @@ Ouroboros is an Electron desktop application for launching, monitoring, and inte
 
 The unique differentiator is the **Agent Monitor**: when Claude Code spawns subagents, their activity (tool calls, status, errors) streams live into a dedicated panel. You see the full tree of agent work as it happens.
 
+## Developed by Agent, for Agent Workflows
+
+Ouroboros is self-hosted: Claude Code builds this IDE from within a running instance of itself. This recursive development loop ("the snake eating its tail") is not a gimmick — it's a forcing function. Every feature is stress-tested by the agent that builds it, and every friction point is felt immediately.
+
+This means:
+- **The agent is the primary developer.** Human oversight steers direction; the agent makes implementation decisions, plans architecture, and writes code autonomously.
+- **The IDE is the agent's workspace.** Features are designed to make agent-driven development faster, more observable, and more trustworthy — not to replace a general-purpose editor.
+- **The development loop is the product.** If building Ouroboros inside Ouroboros is painful, the product is broken. Dogfooding is continuous and automatic.
+
+Long-term, Ouroboros will expose IDE-native tools that Claude Code can interact with programmatically — blurring the line between "IDE the agent runs inside" and "tool the agent wields."
+
 ## Who Is It For?
 
-Developers who use Claude Code as their primary coding tool. Rather than switching between a terminal, an editor, and a file browser, Ouroboros puts all three in one window with the agent's activity front and center.
+Developers who use Claude Code as their primary coding tool and want to move toward increasingly autonomous agent workflows. Rather than switching between a terminal, an editor, and a file browser, Ouroboros puts all three in one window with the agent's activity front and center. The human role shifts from writing code to reviewing, steering, and approving agent work.
 
 ## Design North Stars
 
@@ -40,9 +51,13 @@ Both Warp and Zed follow the "Tesla door handle" principle — features surface 
 ### 4. Agent-First Workflow
 This isn't a general-purpose IDE. The agent is the primary actor:
 - The **terminal** is where the agent executes commands
-- The **file viewer** is where you review the agent's work (read-only by design — the agent edits, you verify)
+- The **file viewer** is where you review the agent's work — transitioning from read-only observation to inline editing with full LSP support, so you can make quick corrections without leaving the IDE
 - The **agent monitor** shows the full picture of what's happening across all spawned agents
 - The **file tree** helps you navigate to what the agent touched
+- **Agent templates** let you launch common workflows with one click
+- **Diff review mode** surfaces everything the agent changed for human accept/reject
+- **Session replay** lets you scrub through completed agent work to understand decisions
+- The IDE itself becomes a **tool the agent can interact with** — not just a container it runs inside
 
 ## Architecture Reference
 
@@ -52,11 +67,13 @@ For implementation details, see:
 - `docs/data-model.md` — Agent sessions, tool calls, config schema
 - `CLAUDE.md` — Coding conventions, patterns, known issues
 
-## Current State (March 2025)
+## Current State (March 2026)
 
-The app is functional but basic. All core panels work — terminal, file viewer, file tree, agent monitor, command palette, settings. Five themes ship. The architecture is clean and well-typed.
+The app is feature-rich and maturing. All core panels work — terminal (multi-tab, context menus, recording), file viewer (syntax highlighting, search, minimap, diff view, blame, symbol outline, markdown preview, image viewer, commit history, conflict resolver), file tree (hierarchical with git status), agent monitor (card/tree/feed/timeline/event-log views with cost calculation), command palette (fuzzy search, nested menus, recent commands), settings (10 sections including Claude Code config, themes, keybindings, hooks, profiles). Five themes ship plus a custom theme editor.
 
-What's missing is **richness**. The terminal is a raw xterm.js embed with no command blocks, no history navigation, no completions. The file tree is flat (no nested folders). The file viewer is read-only with syntax highlighting but no search, folding, or minimap. The agent monitor shows tool calls but not their output. Settings exist but are minimal. The UI is functional but doesn't pop like Warp or Zed.
+The architecture is clean, well-typed, and indexed in a codebase knowledge graph. Full git integration exists at the IPC level (status, diff, blame, log, branches, staging). The settings system supports Claude Code configuration (permission mode, model override, effort level, system prompts, tool allowlists, budget limits).
+
+What's next is **agent workflow depth**: diff review mode for accept/reject of agent changes, agent templates for one-click common tasks, session replay, multi-session orchestration, cost dashboards, and eventually IDE-native tools that Claude Code can call programmatically.
 
 ## Design Language
 

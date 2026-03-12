@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Sidebar, CollapsedSidebarStrip } from './Sidebar';
 import { CentrePane } from './CentrePane';
 import { AgentMonitorPane, CollapsedAgentStrip } from './AgentMonitorPane';
@@ -6,10 +6,11 @@ import { TerminalPane } from './TerminalPane';
 import { useResizable } from './useResizable';
 import { usePanelCollapse } from './usePanelCollapse';
 import { StatusBar } from './StatusBar';
-import type { StatusBarProps } from './StatusBar';
+import type { StatusBarProps, StatusBarLayoutProps } from './StatusBar';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
 import { useFocusPanel } from '../../contexts/FocusContext';
 import type { FocusPanel } from '../../contexts/FocusContext';
+import type { WorkspaceLayout, PanelSizes } from '../../types/electron';
 
 // ------------------------------------------------------------------
 // Named slot props — callers compose children into these buckets
@@ -36,6 +37,7 @@ export interface TerminalPaneControl {
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onNew: () => void;
+  onNewClaude: () => void;
   onReorder?: (reordered: TerminalSession[]) => void;
 }
 
@@ -48,6 +50,10 @@ export interface AppLayoutProps extends AppLayoutSlots {
   statusBar?: StatusBarProps;
   /** User-configured keybindings passed through to usePanelCollapse */
   keybindings?: Record<string, string>;
+  /** Layout props for workspace layout switching */
+  layoutProps?: StatusBarLayoutProps;
+  /** Callback to apply a layout (sets sizes + collapse state) */
+  onApplyLayout?: (layout: WorkspaceLayout) => void;
 }
 
 /**
@@ -76,10 +82,27 @@ export function AppLayout({
   runningAgentCount = 0,
   statusBar,
   keybindings,
+  layoutProps,
 }: AppLayoutProps): React.ReactElement {
-  const { sizes, startResize, resetSize } = useResizable();
-  const { collapsed, toggle } = usePanelCollapse({ keybindings });
+  const { sizes, startResize, resetSize, applySizes } = useResizable();
+  const { collapsed, toggle, applyState: applyCollapseState } = usePanelCollapse({ keybindings });
   const { focusedPanel, setFocusedPanel } = useFocusPanel();
+
+  // Listen for layout-apply events from the workspace layout system
+  useEffect(() => {
+    function onApplyLayout(e: Event): void {
+      const layout = (e as CustomEvent<WorkspaceLayout>).detail;
+      if (!layout) return;
+      applySizes(layout.panelSizes);
+      applyCollapseState({
+        leftSidebar: !layout.visiblePanels.leftSidebar,
+        rightSidebar: !layout.visiblePanels.rightSidebar,
+        terminal: !layout.visiblePanels.terminal,
+      });
+    }
+    window.addEventListener('agent-ide:apply-layout', onApplyLayout);
+    return () => window.removeEventListener('agent-ide:apply-layout', onApplyLayout);
+  }, [applySizes, applyCollapseState]);
 
   // Helper: generates a thin inset ring on the focused panel
   function panelFocusStyle(panel: FocusPanel): React.CSSProperties {
@@ -284,6 +307,7 @@ export function AppLayout({
         onActivate={terminalControl.onActivate}
         onClose={terminalControl.onClose}
         onNew={terminalControl.onNew}
+        onNewClaude={terminalControl.onNewClaude}
         onReorder={terminalControl.onReorder}
         focusStyle={panelFocusStyle('terminal')}
         onFocus={() => setFocusedPanel('terminal')}
@@ -292,7 +316,18 @@ export function AppLayout({
       </TerminalPane>
 
       {/* ── STATUS BAR ── */}
-      <StatusBar {...statusBar} />
+      <StatusBar
+        {...statusBar}
+        layout={layoutProps ? {
+          ...layoutProps,
+          currentPanelSizes: sizes,
+          currentVisiblePanels: {
+            leftSidebar: !collapsed.leftSidebar,
+            rightSidebar: !collapsed.rightSidebar,
+            terminal: !collapsed.terminal,
+          },
+        } : undefined}
+      />
     </div>
   );
 }

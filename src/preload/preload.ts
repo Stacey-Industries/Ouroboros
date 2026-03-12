@@ -7,12 +7,13 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig, SessionsAPI, UpdaterEvent, PerfMetrics, SymbolAPI } from '../renderer/types/electron'
+import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig, SessionsAPI, CostAPI, UpdaterEvent, PerfMetrics, SymbolAPI, WindowAPI, ExtensionsAPI, LspAPI, LspDiagnostic, LspServerStatus } from '../renderer/types/electron'
 
 // ─── PTY ────────────────────────────────────────────────────────────────────
 
 const ptyAPI: ElectronAPI['pty'] = {
   spawn: (id, options) => ipcRenderer.invoke('pty:spawn', id, options),
+  spawnClaude: (id, options) => ipcRenderer.invoke('pty:spawnClaude', id, options),
   write: (id, data) => ipcRenderer.invoke('pty:write', id, data),
   resize: (id, cols, rows) => ipcRenderer.invoke('pty:resize', id, cols, rows),
   kill: (id) => ipcRenderer.invoke('pty:kill', id),
@@ -175,6 +176,17 @@ const gitAPI: ElectronAPI['git'] = {
   checkout: (root, branch) => ipcRenderer.invoke('git:checkout', root, branch),
   stage: (root, filePath) => ipcRenderer.invoke('git:stage', root, filePath),
   unstage: (root, filePath) => ipcRenderer.invoke('git:unstage', root, filePath),
+  stageAll: (root) => ipcRenderer.invoke('git:stageAll', root),
+  unstageAll: (root) => ipcRenderer.invoke('git:unstageAll', root),
+  commit: (root, message) => ipcRenderer.invoke('git:commit', root, message),
+  discardFile: (root, filePath) => ipcRenderer.invoke('git:discardFile', root, filePath),
+  statusDetailed: (root) => ipcRenderer.invoke('git:statusDetailed', root),
+  snapshot: (root) => ipcRenderer.invoke('git:snapshot', root),
+  diffReview: (root, commitHash) => ipcRenderer.invoke('git:diffReview', root, commitHash),
+  fileAtCommit: (root, commitHash, filePath) => ipcRenderer.invoke('git:fileAtCommit', root, commitHash, filePath),
+  applyHunk: (root, patchContent) => ipcRenderer.invoke('git:applyHunk', root, patchContent),
+  revertHunk: (root, patchContent) => ipcRenderer.invoke('git:revertHunk', root, patchContent),
+  revertFile: (root, commitHash, filePath) => ipcRenderer.invoke('git:revertFile', root, commitHash, filePath),
 }
 
 // ─── Sessions ────────────────────────────────────────────────────────────────
@@ -184,6 +196,14 @@ const sessionsAPI: SessionsAPI = {
   load: () => ipcRenderer.invoke('sessions:load'),
   delete: (sessionId) => ipcRenderer.invoke('sessions:delete', sessionId),
   export: (session, format) => ipcRenderer.invoke('sessions:export', session, format),
+}
+
+// ─── Cost History ─────────────────────────────────────────────────────────────
+
+const costAPI: ElectronAPI['cost'] = {
+  addEntry: (entry) => ipcRenderer.invoke('cost:addEntry', entry),
+  getHistory: () => ipcRenderer.invoke('cost:getHistory'),
+  clearHistory: () => ipcRenderer.invoke('cost:clearHistory'),
 }
 
 // ─── Shell History ────────────────────────────────────────────────────────────
@@ -232,6 +252,68 @@ const symbolAPI: SymbolAPI = {
   search: (root) => ipcRenderer.invoke('symbol:search', root),
 }
 
+// ─── Window management ──────────────────────────────────────────────────────
+
+const windowAPI: WindowAPI = {
+  create: (projectRoot) => ipcRenderer.invoke('window:new', projectRoot),
+  list: () => ipcRenderer.invoke('window:list'),
+  focus: (windowId) => ipcRenderer.invoke('window:focus', windowId),
+  close: (windowId) => ipcRenderer.invoke('window:close', windowId),
+}
+
+// ─── Extensions ──────────────────────────────────────────────────────────────
+
+const extensionsAPI: ExtensionsAPI = {
+  list: () => ipcRenderer.invoke('extensions:list'),
+  enable: (name) => ipcRenderer.invoke('extensions:enable', name),
+  disable: (name) => ipcRenderer.invoke('extensions:disable', name),
+  install: (sourcePath) => ipcRenderer.invoke('extensions:install', sourcePath),
+  uninstall: (name) => ipcRenderer.invoke('extensions:uninstall', name),
+  getLog: (name) => ipcRenderer.invoke('extensions:getLog', name),
+  openFolder: () => ipcRenderer.invoke('extensions:openFolder'),
+
+  onNotification: (callback) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { extensionName: string; message: string }) =>
+      callback(data)
+    ipcRenderer.on('extensions:notification', handler)
+    return () => ipcRenderer.removeListener('extensions:notification', handler)
+  },
+}
+
+// ─── LSP ─────────────────────────────────────────────────────────────────────
+
+const lspAPI: LspAPI = {
+  start: (root, language) => ipcRenderer.invoke('lsp:start', root, language),
+  stop: (root, language) => ipcRenderer.invoke('lsp:stop', root, language),
+  completion: (root, filePath, line, character) =>
+    ipcRenderer.invoke('lsp:completion', root, filePath, line, character),
+  hover: (root, filePath, line, character) =>
+    ipcRenderer.invoke('lsp:hover', root, filePath, line, character),
+  definition: (root, filePath, line, character) =>
+    ipcRenderer.invoke('lsp:definition', root, filePath, line, character),
+  diagnostics: (root, filePath) => ipcRenderer.invoke('lsp:diagnostics', root, filePath),
+  didOpen: (root, filePath, content) => ipcRenderer.invoke('lsp:didOpen', root, filePath, content),
+  didChange: (root, filePath, content) => ipcRenderer.invoke('lsp:didChange', root, filePath, content),
+  didClose: (root, filePath) => ipcRenderer.invoke('lsp:didClose', root, filePath),
+  getStatus: () => ipcRenderer.invoke('lsp:getStatus'),
+
+  onDiagnostics: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: { filePath: string; diagnostics: LspDiagnostic[] }
+    ) => callback(data)
+    ipcRenderer.on('lsp:diagnostics', handler)
+    return () => ipcRenderer.removeListener('lsp:diagnostics', handler)
+  },
+
+  onStatusChange: (callback) => {
+    const handler = (_event: Electron.IpcRendererEvent, servers: LspServerStatus[]) =>
+      callback(servers)
+    ipcRenderer.on('lsp:statusChange', handler)
+    return () => ipcRenderer.removeListener('lsp:statusChange', handler)
+  },
+}
+
 // ─── Expose ─────────────────────────────────────────────────────────────────
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -244,9 +326,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   theme: themeAPI,
   git: gitAPI,
   sessions: sessionsAPI,
+  cost: costAPI,
   shellHistory: shellHistoryAPI,
   updater: updaterAPI,
   crash: crashAPI,
   perf: perfAPI,
   symbol: symbolAPI,
+  lsp: lspAPI,
+  window: windowAPI,
+  extensions: extensionsAPI,
 } satisfies ElectronAPI)

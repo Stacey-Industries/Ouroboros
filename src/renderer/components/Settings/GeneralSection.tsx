@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { AppConfig } from '../../types/electron';
+import type { AppConfig, NotificationSettings } from '../../types/electron';
 import { ToggleSwitch } from './ToggleSwitch';
 
 interface GeneralSectionProps {
@@ -331,6 +331,59 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
         />
       </section>
 
+      {/* Agent notifications */}
+      <section>
+        <SectionLabel>Agent Notifications</SectionLabel>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          Desktop notifications when agent sessions complete or encounter errors.
+        </p>
+
+        {/* Notification level */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <label
+            htmlFor="notif-level"
+            style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}
+          >
+            Notification level
+          </label>
+          <select
+            id="notif-level"
+            value={(draft.notifications ?? { level: 'all' }).level}
+            onChange={(e) => {
+              const current: NotificationSettings = draft.notifications ?? { level: 'all', alwaysNotify: false };
+              onChange('notifications', { ...current, level: e.target.value });
+            }}
+            style={{
+              flex: 1,
+              maxWidth: '200px',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text)',
+              fontSize: '12px',
+              fontFamily: 'var(--font-ui)',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">All (complete + errors)</option>
+            <option value="errors-only">Errors only</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+
+        {/* Always notify toggle */}
+        <ToggleSwitch
+          checked={(draft.notifications ?? { alwaysNotify: false }).alwaysNotify}
+          onChange={(val) => {
+            const current: NotificationSettings = draft.notifications ?? { level: 'all', alwaysNotify: false };
+            onChange('notifications', { ...current, alwaysNotify: val });
+          }}
+          label="Always notify"
+          description="Show desktop notifications even when the app window is focused. When off, notifications only appear when Ouroboros is in the background."
+        />
+      </section>
+
       {/* Import / Export settings */}
       <section>
         <SectionLabel>Settings Backup</SectionLabel>
@@ -434,6 +487,69 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
             </button>
           )}
         </div>
+      </section>
+
+      {/* ── Language Server Protocol ────────────────────────────────────────── */}
+      <section style={{ marginTop: '24px' }}>
+        <SectionLabel>Language Server Protocol (LSP)</SectionLabel>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Connect to language servers for code intelligence: completions, diagnostics, hover, and go-to-definition.
+        </p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+          <label style={{ fontSize: '13px', color: 'var(--text)', flex: 1 }}>
+            Enable LSP
+          </label>
+          <ToggleSwitch
+            checked={draft.lspEnabled ?? false}
+            onChange={(v) => onChange('lspEnabled', v)}
+          />
+        </div>
+
+        {draft.lspEnabled && (
+          <div style={{ marginTop: '4px' }}>
+            <label
+              style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}
+            >
+              Custom Language Server Commands
+            </label>
+            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '8px', lineHeight: 1.4 }}>
+              One entry per line: language=command (e.g. &quot;rust=rust-analyzer&quot; or &quot;python=pylsp&quot;).
+              Built-in defaults: typescript-language-server, pylsp, rust-analyzer, gopls.
+            </p>
+            <textarea
+              value={Object.entries(draft.lspServers ?? {}).map(([k, v]) => `${k}=${v}`).join('\n')}
+              onChange={(e) => {
+                const lines = e.target.value.split('\n').filter((l) => l.includes('='));
+                const parsed: Record<string, string> = {};
+                for (const line of lines) {
+                  const eqIdx = line.indexOf('=');
+                  if (eqIdx > 0) {
+                    const key = line.slice(0, eqIdx).trim();
+                    const val = line.slice(eqIdx + 1).trim();
+                    if (key && val) parsed[key] = val;
+                  }
+                }
+                onChange('lspServers', parsed);
+              }}
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text)',
+                fontSize: '12px',
+                fontFamily: 'var(--font-mono)',
+                resize: 'vertical',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+              placeholder={'typescript=typescript-language-server --stdio\npython=pylsp'}
+            />
+          </div>
+        )}
       </section>
 
     </div>

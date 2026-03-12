@@ -1,4 +1,5 @@
-import { Menu, MenuItemConstructorOptions, app, shell, BrowserWindow } from 'electron'
+import { Menu, MenuItemConstructorOptions, app, shell, BrowserWindow, dialog } from 'electron'
+import { createWindow, setWindowProjectRoot } from './windowManager'
 
 export function buildApplicationMenu(win: BrowserWindow): void {
   const isMac = process.platform === 'darwin'
@@ -31,6 +32,28 @@ export function buildApplicationMenu(win: BrowserWindow): void {
           accelerator: 'CmdOrCtrl+O',
           click: () => {
             win.webContents.send('menu:open-folder')
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => {
+            createWindow()
+          }
+        },
+        {
+          label: 'Open in New Window…',
+          click: async () => {
+            const result = await dialog.showOpenDialog(win, {
+              properties: ['openDirectory', 'createDirectory'],
+              title: 'Open Folder in New Window'
+            })
+            if (!result.canceled && result.filePaths.length > 0) {
+              const projectRoot = result.filePaths[0]
+              const newWin = createWindow(projectRoot)
+              setWindowProjectRoot(newWin.id, projectRoot)
+            }
           }
         },
         { type: 'separator' },

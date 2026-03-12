@@ -10,8 +10,11 @@ import fs from 'fs/promises'
 import path from 'path'
 import { execFile } from 'child_process'
 import chokidar, { FSWatcher } from 'chokidar'
-import { spawnPty, writeToPty, resizePty, killPty, getPtyCwd, startPtyRecording, stopPtyRecording, getActiveSessions } from './pty'
+import { spawnPty, spawnClaudePty, writeToPty, resizePty, killPty, getPtyCwd, startPtyRecording, stopPtyRecording, getActiveSessions } from './pty'
 import { getConfig, getConfigValue, setConfigValue, store, AppConfig } from './config'
+import { createWindow, setWindowProjectRoot, getWindowInfos, focusWindow, closeWindow } from './windowManager'
+import { saveCostEntry, getCostHistory, clearCostHistory, CostEntry } from './costHistory'
+import { startServer as lspStart, stopServer as lspStop, stopAllServers as lspStopAll, getCompletion as lspCompletion, getHover as lspHover, getDefinition as lspDefinition, getDiagnostics as lspDiagnostics, didOpen as lspDidOpen, didChange as lspDidChange, didClose as lspDidClose, getRunningServers as lspGetStatus, setMainWindow as lspSetMainWindow } from './lsp'
 
 // Optional auto-updater
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,6 +32,128 @@ const watchers = new Map<string, FSWatcher>()
 
 // Settings file watcher
 let settingsFileWatcher: FSWatcher | null = null
+
+// ─── Unified diff parser ─────────────────────────────────────────────────────
+
+interface ParsedHunk {
+  header: string
+  oldStart: number
+  oldCount: number
+  newStart: number
+  newCount: number
+  lines: string[]
+  rawPatch: string
+}
+
+interface ParsedFileDiff {
+  filePath: string
+  relativePath: string
+  status: 'modified' | 'added' | 'deleted' | 'renamed'
+  hunks: ParsedHunk[]
+  oldPath?: string
+}
+
+function parseDiffOutput(diffText: string, root: string): ParsedFileDiff[] {
+  if (!diffText.trim()) return []
+
+  const files: ParsedFileDiff[] = []
+  // Split on "diff --git" boundaries
+  const fileDiffs = diffText.split(/^(?=diff --git )/m).filter(Boolean)
+
+  for (const fileDiff of fileDiffs) {
+    const lines = fileDiff.split('\n')
+    if (lines.length === 0) continue
+
+    // Parse the "diff --git a/path b/path" header
+    const headerMatch = lines[0].match(/^diff --git a\/(.+?) b\/(.+)$/)
+    if (!headerMatch) continue
+
+    const aPath = headerMatch[1]
+    const bPath = headerMatch[2]
+    const relativePath = bPath
+
+    // Determine file status from the index/mode lines
+    let status: 'modified' | 'added' | 'deleted' | 'renamed' = 'modified'
+    let oldPath: string | undefined
+
+    for (const line of lines.slice(1, 6)) {
+      if (line.startsWith('new file mode')) {
+        status = 'added'
+      } else if (line.startsWith('deleted file mode')) {
+        status = 'deleted'
+      } else if (line.startsWith('rename from')) {
+        status = 'renamed'
+        oldPath = line.replace('rename from ', '')
+      }
+    }
+
+    if (aPath !== bPath && !oldPath) {
+      status = 'renamed'
+      oldPath = aPath
+    }
+
+    // Find diff header block (everything before the first hunk) for rawPatch prefix
+    let diffHeaderEnd = 0
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].startsWith('@@')) {
+        diffHeaderEnd = i
+        break
+      }
+    }
+    // If no hunks found, diffHeaderEnd stays 0 — the file might be binary or empty
+    const diffHeader = lines.slice(0, diffHeaderEnd).join('\n') + '\n'
+
+    // Parse hunks
+    const hunks: ParsedHunk[] = []
+    let i = diffHeaderEnd
+
+    while (i < lines.length) {
+      if (lines[i].startsWith('@@')) {
+        const hunkHeader = lines[i]
+        const hunkMatch = hunkHeader.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
+        if (!hunkMatch) { i++; continue }
+
+        const oldStart = parseInt(hunkMatch[1], 10)
+        const oldCount = hunkMatch[2] !== undefined ? parseInt(hunkMatch[2], 10) : 1
+        const newStart = parseInt(hunkMatch[3], 10)
+        const newCount = hunkMatch[4] !== undefined ? parseInt(hunkMatch[4], 10) : 1
+
+        // Collect all lines belonging to this hunk
+        const hunkLines: string[] = []
+        i++
+        while (i < lines.length && !lines[i].startsWith('@@') && !lines[i].startsWith('diff --git')) {
+          hunkLines.push(lines[i])
+          i++
+        }
+
+        // Build rawPatch: diff header + this single hunk (for git apply)
+        const rawPatch = diffHeader + hunkHeader + '\n' + hunkLines.join('\n') + '\n'
+
+        hunks.push({
+          header: hunkHeader,
+          oldStart,
+          oldCount,
+          newStart,
+          newCount,
+          lines: hunkLines,
+          rawPatch,
+        })
+      } else {
+        i++
+      }
+    }
+
+    files.push({
+      filePath: path.resolve(root, relativePath),
+      relativePath,
+      status,
+      hunks,
+      oldPath,
+    })
+  }
+
+  return files
+}
 
 // ─── Session markdown formatter ───────────────────────────────────────────────
 
@@ -124,13 +249,47 @@ function buildMarkdown(s: Record<string, unknown>): string {
   return lines.join('\n')
 }
 
-export function registerIpcHandlers(win: BrowserWindow): void {
+/** Resolve the BrowserWindow that sent an IPC event. */
+function senderWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win) throw new Error('IPC event from unknown window')
+  return win
+}
+
+let handlersRegistered = false
+
+/**
+ * Register all ipcMain handlers. Handlers are registered globally (once) and
+ * use `event.sender` to determine the calling window. Returns a cleanup
+ * function that removes the handlers; only the *last* cleanup call actually
+ * unregisters (since handlers are shared across windows).
+ */
+export function registerIpcHandlers(win: BrowserWindow): () => void {
+  if (handlersRegistered) {
+    // Handlers already registered — return no-op cleanup.
+    // Actual cleanup happens in cleanupIpcHandlers().
+    return () => { /* no-op — handled globally */ }
+  }
+  handlersRegistered = true
+
   // ─── PTY ──────────────────────────────────────────────────────────────────
 
   ipcMain.handle(
     'pty:spawn',
-    (_event, id: string, options: { cwd?: string; cols?: number; rows?: number }) => {
-      return spawnPty(id, win, options)
+    (event, id: string, options: { cwd?: string; cols?: number; rows?: number; startupCommand?: string }) => {
+      return spawnPty(id, senderWindow(event), options)
+    }
+  )
+
+  ipcMain.handle(
+    'pty:spawnClaude',
+    (event, id: string, options: { cwd?: string; cols?: number; rows?: number; initialPrompt?: string; cliOverrides?: Record<string, unknown> }) => {
+      const win = senderWindow(event)
+      const baseSettings = getConfigValue('claudeCliSettings')
+      const settings = options?.cliOverrides
+        ? { ...baseSettings, ...options.cliOverrides } as typeof baseSettings
+        : baseSettings
+      return spawnClaudePty(id, win, settings, options)
     }
   )
 
@@ -150,12 +309,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     return getPtyCwd(id)
   })
 
-  ipcMain.handle('pty:startRecording', (_event, id: string) => {
-    return startPtyRecording(id, win)
+  ipcMain.handle('pty:startRecording', (event, id: string) => {
+    return startPtyRecording(id, senderWindow(event))
   })
 
-  ipcMain.handle('pty:stopRecording', (_event, id: string) => {
-    return stopPtyRecording(id, win)
+  ipcMain.handle('pty:stopRecording', (event, id: string) => {
+    return stopPtyRecording(id, senderWindow(event))
   })
 
   ipcMain.handle('pty:listSessions', () => {
@@ -183,9 +342,9 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   // ─── Config export ────────────────────────────────────────────────────────
 
-  ipcMain.handle('config:export', async () => {
+  ipcMain.handle('config:export', async (event) => {
     try {
-      const result = await dialog.showSaveDialog(win, {
+      const result = await dialog.showSaveDialog(senderWindow(event), {
         title: 'Export Settings',
         defaultPath: 'agent-ide-settings.json',
         filters: [{ name: 'JSON', extensions: ['json'] }],
@@ -203,9 +362,9 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   // ─── Config import ────────────────────────────────────────────────────────
 
-  ipcMain.handle('config:import', async () => {
+  ipcMain.handle('config:import', async (event) => {
     try {
-      const result = await dialog.showOpenDialog(win, {
+      const result = await dialog.showOpenDialog(senderWindow(event), {
         title: 'Import Settings',
         filters: [{ name: 'JSON', extensions: ['json'] }],
         properties: ['openFile'],
@@ -290,10 +449,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
             }
           }
         }
-        // Notify renderer of the external change
+        // Notify all renderer windows of the external change
         const updated = getConfig()
-        if (!win.isDestroyed()) {
-          win.webContents.send('config:externalChange', updated)
+        for (const bw of BrowserWindow.getAllWindows()) {
+          if (!bw.isDestroyed()) {
+            bw.webContents.send('config:externalChange', updated)
+          }
         }
       } catch {
         // Ignore parse errors from in-progress edits
@@ -361,21 +522,18 @@ export function registerIpcHandlers(win: BrowserWindow): void {
         awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 }
       })
 
-      watcher.on('add', (filePath) => {
-        win.webContents.send('files:change', { type: 'add', path: filePath })
-      })
-      watcher.on('change', (filePath) => {
-        win.webContents.send('files:change', { type: 'change', path: filePath })
-      })
-      watcher.on('unlink', (filePath) => {
-        win.webContents.send('files:change', { type: 'unlink', path: filePath })
-      })
-      watcher.on('addDir', (dirPath) => {
-        win.webContents.send('files:change', { type: 'addDir', path: dirPath })
-      })
-      watcher.on('unlinkDir', (dirPath) => {
-        win.webContents.send('files:change', { type: 'unlinkDir', path: dirPath })
-      })
+      const broadcastFileChange = (type: string, filePath: string) => {
+        for (const bw of BrowserWindow.getAllWindows()) {
+          if (!bw.isDestroyed()) {
+            bw.webContents.send('files:change', { type, path: filePath })
+          }
+        }
+      }
+      watcher.on('add', (filePath) => broadcastFileChange('add', filePath))
+      watcher.on('change', (filePath) => broadcastFileChange('change', filePath))
+      watcher.on('unlink', (filePath) => broadcastFileChange('unlink', filePath))
+      watcher.on('addDir', (dirPath) => broadcastFileChange('addDir', dirPath))
+      watcher.on('unlinkDir', (dirPath) => broadcastFileChange('unlinkDir', dirPath))
       watcher.on('error', (err) => {
         console.error('[watcher] error:', err)
       })
@@ -474,8 +632,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
   })
 
-  ipcMain.handle('files:selectFolder', async () => {
-    const result = await dialog.showOpenDialog(win, {
+  ipcMain.handle('files:selectFolder', async (event) => {
+    const result = await dialog.showOpenDialog(senderWindow(event), {
       properties: ['openDirectory', 'createDirectory'],
       title: 'Select Project Folder'
     })
@@ -810,6 +968,250 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     })
   })
 
+  // ─── Git panel handlers ────────────────────────────────────────────────────
+
+  ipcMain.handle('git:statusDetailed', (_event, root: string) => {
+    return new Promise((resolve) => {
+      execFile(
+        'git',
+        ['status', '--porcelain=v1'],
+        { cwd: root, maxBuffer: 1024 * 1024 },
+        (err, stdout) => {
+          if (err) {
+            resolve({ success: false, error: err.message })
+            return
+          }
+
+          const staged: Record<string, string> = {}
+          const unstaged: Record<string, string> = {}
+          const lines = stdout.split('\n').filter((l) => l.length > 0)
+
+          for (const line of lines) {
+            const indexStatus = line[0]
+            const workTreeStatus = line[1]
+            let filePath = line.slice(3)
+
+            // Handle renames: "R  old -> new"
+            const arrowIdx = filePath.indexOf(' -> ')
+            if (arrowIdx !== -1) {
+              filePath = filePath.slice(arrowIdx + 4)
+            }
+
+            // Normalise path separators
+            filePath = filePath.replace(/\\/g, '/')
+
+            // Index (staged) status
+            if (indexStatus !== ' ' && indexStatus !== '?') {
+              staged[filePath] = indexStatus
+            }
+
+            // Worktree (unstaged) status
+            if (workTreeStatus !== ' ' && workTreeStatus !== undefined) {
+              if (indexStatus === '?' && workTreeStatus === '?') {
+                unstaged[filePath] = '?'
+              } else if (workTreeStatus !== '?') {
+                unstaged[filePath] = workTreeStatus
+              }
+            }
+          }
+
+          resolve({ success: true, staged, unstaged })
+        }
+      )
+    })
+  })
+
+  ipcMain.handle('git:commit', (_event, root: string, message: string) => {
+    return new Promise((resolve) => {
+      execFile('git', ['commit', '-m', message], { cwd: root }, (err, _stdout, stderr) => {
+        if (err) {
+          resolve({ success: false, error: stderr.trim() || err.message })
+          return
+        }
+        resolve({ success: true })
+      })
+    })
+  })
+
+  ipcMain.handle('git:stageAll', (_event, root: string) => {
+    return new Promise((resolve) => {
+      execFile('git', ['add', '-A'], { cwd: root }, (err, _stdout, stderr) => {
+        if (err) {
+          resolve({ success: false, error: stderr.trim() || err.message })
+          return
+        }
+        resolve({ success: true })
+      })
+    })
+  })
+
+  ipcMain.handle('git:unstageAll', (_event, root: string) => {
+    return new Promise((resolve) => {
+      execFile('git', ['reset', 'HEAD'], { cwd: root }, (err, _stdout, stderr) => {
+        if (err) {
+          resolve({ success: false, error: stderr.trim() || err.message })
+          return
+        }
+        resolve({ success: true })
+      })
+    })
+  })
+
+  ipcMain.handle('git:discardFile', (_event, root: string, filePath: string) => {
+    return new Promise((resolve) => {
+      // First check if the file is untracked
+      execFile(
+        'git',
+        ['ls-files', '--error-unmatch', filePath],
+        { cwd: root },
+        (lsErr) => {
+          if (lsErr) {
+            // File is untracked — remove it
+            const fullPath = require('path').resolve(root, filePath)
+            require('fs').unlink(fullPath, (unlinkErr: NodeJS.ErrnoException | null) => {
+              if (unlinkErr) {
+                resolve({ success: false, error: unlinkErr.message })
+                return
+              }
+              resolve({ success: true })
+            })
+          } else {
+            // File is tracked — checkout from HEAD
+            execFile(
+              'git',
+              ['checkout', 'HEAD', '--', filePath],
+              { cwd: root },
+              (err, _stdout, stderr) => {
+                if (err) {
+                  resolve({ success: false, error: stderr.trim() || err.message })
+                  return
+                }
+                resolve({ success: true })
+              }
+            )
+          }
+        }
+      )
+    })
+  })
+
+  // ─── Diff Review handlers ──────────────────────────────────────────────────
+
+  ipcMain.handle('git:snapshot', (_event, root: string) => {
+    return new Promise((resolve) => {
+      execFile('git', ['rev-parse', 'HEAD'], { cwd: root }, (err, stdout) => {
+        if (err) {
+          resolve({ success: false, error: err.message })
+          return
+        }
+        resolve({ success: true, commitHash: stdout.trim() })
+      })
+    })
+  })
+
+  ipcMain.handle('git:diffReview', (_event, root: string, commitHash: string) => {
+    return new Promise((resolve) => {
+      // Get unified diff since the snapshot commit (includes untracked via diff against empty tree trick)
+      execFile(
+        'git',
+        ['diff', commitHash, '--unified=3', '--no-color'],
+        { cwd: root, maxBuffer: 1024 * 1024 * 10 },
+        (err, stdout) => {
+          if (err) {
+            resolve({ success: false, error: err.message })
+            return
+          }
+
+          const files = parseDiffOutput(stdout, root)
+          resolve({ success: true, files })
+        }
+      )
+    })
+  })
+
+  ipcMain.handle('git:fileAtCommit', (_event, root: string, commitHash: string, filePath: string) => {
+    return new Promise((resolve) => {
+      // Convert absolute path to relative for git show
+      const relPath = path.relative(root, filePath).replace(/\\/g, '/')
+      execFile(
+        'git',
+        ['show', `${commitHash}:${relPath}`],
+        { cwd: root, maxBuffer: 1024 * 1024 * 4 },
+        (err, stdout) => {
+          if (err) {
+            // File didn't exist at that commit (new file)
+            resolve({ success: true, content: '' })
+            return
+          }
+          resolve({ success: true, content: stdout })
+        }
+      )
+    })
+  })
+
+  ipcMain.handle('git:applyHunk', (_event, root: string, patchContent: string) => {
+    return new Promise((resolve) => {
+      const tmpFile = path.join(app.getPath('temp'), `ouroboros-hunk-${Date.now()}.patch`)
+      void fs.writeFile(tmpFile, patchContent, 'utf-8').then(() => {
+        execFile(
+          'git',
+          ['apply', '--whitespace=nowarn', tmpFile],
+          { cwd: root },
+          (err, _stdout, stderr) => {
+            void fs.unlink(tmpFile).catch(() => {})
+            if (err) {
+              resolve({ success: false, error: stderr.trim() || err.message })
+              return
+            }
+            resolve({ success: true })
+          }
+        )
+      }).catch((writeErr) => {
+        resolve({ success: false, error: writeErr instanceof Error ? writeErr.message : String(writeErr) })
+      })
+    })
+  })
+
+  ipcMain.handle('git:revertHunk', (_event, root: string, patchContent: string) => {
+    return new Promise((resolve) => {
+      const tmpFile = path.join(app.getPath('temp'), `ouroboros-hunk-${Date.now()}.patch`)
+      void fs.writeFile(tmpFile, patchContent, 'utf-8').then(() => {
+        execFile(
+          'git',
+          ['apply', '-R', '--whitespace=nowarn', tmpFile],
+          { cwd: root },
+          (err, _stdout, stderr) => {
+            void fs.unlink(tmpFile).catch(() => {})
+            if (err) {
+              resolve({ success: false, error: stderr.trim() || err.message })
+              return
+            }
+            resolve({ success: true })
+          }
+        )
+      }).catch((writeErr) => {
+        resolve({ success: false, error: writeErr instanceof Error ? writeErr.message : String(writeErr) })
+      })
+    })
+  })
+
+  ipcMain.handle('git:revertFile', (_event, root: string, commitHash: string, filePath: string) => {
+    return new Promise((resolve) => {
+      execFile(
+        'git',
+        ['checkout', commitHash, '--', filePath],
+        { cwd: root },
+        (err, _stdout, stderr) => {
+          if (err) {
+            resolve({ success: false, error: stderr.trim() || err.message })
+            return
+          }
+          resolve({ success: true })
+        }
+      )
+    })
+  })
+
   ipcMain.handle('git:blame', (_event, root: string, filePath: string) => {
     return new Promise((resolve) => {
       execFile(
@@ -943,10 +1345,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
   })
 
-  ipcMain.handle('app:notify', (_event, options: { title: string; body: string; icon?: string }) => {
+  ipcMain.handle('app:notify', (_event, options: { title: string; body: string; icon?: string; force?: boolean }) => {
     try {
-      // Only notify when the app window is not focused
-      if (BrowserWindow.getFocusedWindow() !== null) {
+      // Only notify when the app window is not focused (unless force is set)
+      if (!options.force && BrowserWindow.getFocusedWindow() !== null) {
         return { success: true, skipped: true }
       }
       if (!Notification.isSupported()) {
@@ -974,10 +1376,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle(
     'titlebar:setOverlayColors',
-    (_event, color: string, symbolColor: string) => {
+    (event, color: string, symbolColor: string) => {
       try {
         if (process.platform === 'win32') {
-          win.setTitleBarOverlay({ color, symbolColor, height: 32 })
+          senderWindow(event).setTitleBarOverlay({ color, symbolColor, height: 32 })
         }
         return { success: true }
       } catch (err) {
@@ -989,8 +1391,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('theme:set', (_event, theme: AppConfig['activeTheme']) => {
     try {
       setConfigValue('activeTheme', theme)
-      // Broadcast to any other windows
-      win.webContents.send('theme:changed', theme)
+      // Broadcast to all windows
+      for (const bw of BrowserWindow.getAllWindows()) {
+        if (!bw.isDestroyed()) {
+          bw.webContents.send('theme:changed', theme)
+        }
+      }
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
@@ -1086,7 +1492,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
   })
 
-  ipcMain.handle('sessions:export', async (_event, session: unknown, format: 'json' | 'markdown') => {
+  ipcMain.handle('sessions:export', async (event, session: unknown, format: 'json' | 'markdown') => {
     try {
       const s = session as Record<string, unknown>
       const sessionId = typeof s['id'] === 'string' ? s['id'] : 'session'
@@ -1094,7 +1500,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
         ? `session-${sessionId.slice(0, 8)}.json`
         : `session-${sessionId.slice(0, 8)}.md`
 
-      const result = await dialog.showSaveDialog(win, {
+      const result = await dialog.showSaveDialog(senderWindow(event), {
         defaultPath: defaultName,
         filters: format === 'json'
           ? [{ name: 'JSON', extensions: ['json'] }]
@@ -1140,6 +1546,35 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
     try {
       autoUpdater.quitAndInstall()
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // ─── Cost history ─────────────────────────────────────────────────────────
+
+  ipcMain.handle('cost:addEntry', async (_event, entry: CostEntry) => {
+    try {
+      await saveCostEntry(entry)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('cost:getHistory', async () => {
+    try {
+      const entries = await getCostHistory()
+      return { success: true, entries }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('cost:clearHistory', async () => {
+    try {
+      await clearCostHistory()
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
@@ -1388,6 +1823,162 @@ export function registerIpcHandlers(win: BrowserWindow): void {
       return { success: false, error: String(err) }
     }
   })
+
+  // ─── Window management ──────────────────────────────────────────────────
+
+  ipcMain.handle('window:new', (_event, projectRoot?: string) => {
+    try {
+      const newWin = createWindow(projectRoot)
+      if (projectRoot) {
+        setWindowProjectRoot(newWin.id, projectRoot)
+      }
+      return { success: true, windowId: newWin.id }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('window:list', async () => {
+    try {
+      return { success: true, windows: getWindowInfos() }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('window:focus', async (_event, windowId: number) => {
+    try {
+      focusWindow(windowId)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('window:close', async (_event, windowId: number) => {
+    try {
+      closeWindow(windowId)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // ─── Extensions ───────────────────────────────────────────────────────────
+
+  ipcMain.handle('extensions:list', async () => {
+    try {
+      const { listExtensions } = await import('./extensions')
+      return { success: true, extensions: listExtensions() }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:enable', async (_event, name: string) => {
+    try {
+      const { enableExtension } = await import('./extensions')
+      return await enableExtension(name)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:disable', async (_event, name: string) => {
+    try {
+      const { disableExtension } = await import('./extensions')
+      return await disableExtension(name)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:install', async (_event, sourcePath: string) => {
+    try {
+      const { installExtension } = await import('./extensions')
+      return await installExtension(sourcePath)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:uninstall', async (_event, name: string) => {
+    try {
+      const { uninstallExtension } = await import('./extensions')
+      return await uninstallExtension(name)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:getLog', async (_event, name: string) => {
+    try {
+      const { getExtensionLog } = await import('./extensions')
+      return getExtensionLog(name)
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('extensions:openFolder', async () => {
+    try {
+      const { getExtensionsDirPath } = await import('./extensions')
+      const extensionsPath = getExtensionsDirPath()
+      await fs.mkdir(extensionsPath, { recursive: true })
+      await shell.openPath(extensionsPath)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // ─── LSP ─────────────────────────────────────────────────────────────────
+
+  // Set the main window reference for LSP diagnostics broadcasting
+  lspSetMainWindow(win)
+
+  ipcMain.handle('lsp:start', async (_event, root: string, language: string) => {
+    return await lspStart(root, language)
+  })
+
+  ipcMain.handle('lsp:stop', async (_event, root: string, language: string) => {
+    return await lspStop(root, language)
+  })
+
+  ipcMain.handle('lsp:completion', async (_event, root: string, filePath: string, line: number, character: number) => {
+    return await lspCompletion(root, filePath, line, character)
+  })
+
+  ipcMain.handle('lsp:hover', async (_event, root: string, filePath: string, line: number, character: number) => {
+    return await lspHover(root, filePath, line, character)
+  })
+
+  ipcMain.handle('lsp:definition', async (_event, root: string, filePath: string, line: number, character: number) => {
+    return await lspDefinition(root, filePath, line, character)
+  })
+
+  ipcMain.handle('lsp:diagnostics', async (_event, root: string, filePath: string) => {
+    return lspDiagnostics(root, filePath)
+  })
+
+  ipcMain.handle('lsp:didOpen', async (_event, root: string, filePath: string, content: string) => {
+    await lspDidOpen(root, filePath, content)
+  })
+
+  ipcMain.handle('lsp:didChange', async (_event, root: string, filePath: string, content: string) => {
+    await lspDidChange(root, filePath, content)
+  })
+
+  ipcMain.handle('lsp:didClose', async (_event, root: string, filePath: string) => {
+    await lspDidClose(root, filePath)
+  })
+
+  ipcMain.handle('lsp:getStatus', async () => {
+    return { success: true, servers: lspGetStatus() }
+  })
+
+  // Return a cleanup function
+  return () => { cleanupIpcHandlers() }
 }
 
 export function cleanupIpcHandlers(): void {
@@ -1396,6 +1987,9 @@ export function cleanupIpcHandlers(): void {
     watcher.close().catch(() => {})
   }
   watchers.clear()
+
+  // Stop all LSP servers
+  lspStopAll().catch(() => {})
 
   // Close settings file watcher
   if (settingsFileWatcher) {
@@ -1406,12 +2000,14 @@ export function cleanupIpcHandlers(): void {
   // Remove all handlers
   const channels = [
     'pty:spawn',
+    'pty:spawnClaude',
     'pty:write',
     'pty:resize',
     'pty:kill',
     'pty:getCwd',
     'pty:startRecording',
     'pty:stopRecording',
+    'pty:listSessions',
     'config:getAll',
     'config:get',
     'config:set',
@@ -1426,6 +2022,7 @@ export function cleanupIpcHandlers(): void {
     'files:mkdir',
     'files:rename',
     'files:copyFile',
+    'files:writeFile',
     'files:delete',
     'files:selectFolder',
     'app:getVersion',
@@ -1446,10 +2043,26 @@ export function cleanupIpcHandlers(): void {
     'git:show',
     'git:branches',
     'git:checkout',
+    'git:stage',
+    'git:unstage',
+    'git:statusDetailed',
+    'git:commit',
+    'git:stageAll',
+    'git:unstageAll',
+    'git:discardFile',
+    'git:snapshot',
+    'git:diffReview',
+    'git:fileAtCommit',
+    'git:applyHunk',
+    'git:revertHunk',
+    'git:revertFile',
     'sessions:save',
     'sessions:load',
     'sessions:delete',
     'sessions:export',
+    'cost:addEntry',
+    'cost:getHistory',
+    'cost:clearHistory',
     'updater:check',
     'updater:install',
     'app:getCrashLogs',
@@ -1459,9 +2072,32 @@ export function cleanupIpcHandlers(): void {
     'perf:ping',
     'shellHistory:read',
     'symbol:search',
+    'window:new',
+    'window:list',
+    'window:focus',
+    'window:close',
+    'extensions:list',
+    'extensions:enable',
+    'extensions:disable',
+    'extensions:install',
+    'extensions:uninstall',
+    'extensions:getLog',
+    'extensions:openFolder',
+    'lsp:start',
+    'lsp:stop',
+    'lsp:completion',
+    'lsp:hover',
+    'lsp:definition',
+    'lsp:diagnostics',
+    'lsp:didOpen',
+    'lsp:didChange',
+    'lsp:didClose',
+    'lsp:getStatus',
   ]
 
   for (const channel of channels) {
     ipcMain.removeHandler(channel)
   }
+
+  handlersRegistered = false
 }

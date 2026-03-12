@@ -21,6 +21,65 @@ export interface WindowBounds {
   isMaximized: boolean
 }
 
+export interface ClaudeCliSettings {
+  /** Permission mode: 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' */
+  permissionMode: string
+  /** Model override: '' means CLI default. e.g. 'sonnet', 'opus', 'haiku', or full model ID */
+  model: string
+  /** Effort level: '' | 'low' | 'medium' | 'high' | 'max' */
+  effort: string
+  /** Extra system prompt appended to default */
+  appendSystemPrompt: string
+  /** Verbose output */
+  verbose: boolean
+  /** Max budget in USD (0 = unlimited) */
+  maxBudgetUsd: number
+  /** Allowed tools (comma-separated, empty = all) */
+  allowedTools: string
+  /** Disallowed tools (comma-separated, empty = none) */
+  disallowedTools: string
+  /** Additional directories to allow tool access */
+  addDirs: string[]
+  /** Enable Claude in Chrome integration */
+  chrome: boolean
+  /** Use git worktree for sessions */
+  worktree: boolean
+  /** Dangerously skip all permission checks */
+  dangerouslySkipPermissions: boolean
+}
+
+export interface AgentTemplate {
+  id: string
+  name: string
+  icon?: string
+  /** Supports {{projectRoot}}, {{projectName}}, {{openFile}}, {{openFileName}} */
+  promptTemplate: string
+  /** Optional per-template CLI overrides (merged with global settings) */
+  cliOverrides?: Partial<ClaudeCliSettings>
+}
+
+export interface NotificationSettings {
+  /** 'all' | 'errors-only' | 'none' */
+  level: string
+  /** Whether to notify even when the app is focused */
+  alwaysNotify: boolean
+}
+
+export interface WorkspaceLayout {
+  name: string
+  panelSizes: PanelSizes
+  /** Which panels are visible */
+  visiblePanels: {
+    leftSidebar: boolean
+    rightSidebar: boolean
+    terminal: boolean
+  }
+  /** Optional: which right sidebar tab is active */
+  rightSidebarTab?: string
+  /** Whether this is a built-in layout that cannot be deleted */
+  builtIn?: boolean
+}
+
 export interface AppConfig {
   recentProjects: string[]
   defaultProjectRoot: string
@@ -54,6 +113,71 @@ export interface AppConfig {
   customPrompt: string
   /** 'default' | 'minimal' | 'powerline' | 'git' | 'custom' */
   promptPreset: string
+  /** Claude CLI launch settings */
+  claudeCliSettings: ClaudeCliSettings
+  /** Desktop notification preferences for agent events */
+  notifications: NotificationSettings
+  /** Pre-configured Claude Code launch profiles */
+  agentTemplates: AgentTemplate[]
+  /** Saved workspace layouts (panel arrangements) */
+  workspaceLayouts: WorkspaceLayout[]
+  /** Name of the currently active workspace layout */
+  activeLayoutName: string
+  /** Global toggle for the extension system */
+  extensionsEnabled: boolean
+  /** Names of extensions that have been explicitly disabled */
+  disabledExtensions: string[]
+  /** Whether LSP integration is enabled */
+  lspEnabled: boolean
+  /** Custom language server commands keyed by language id */
+  lspServers: Record<string, string>
+}
+
+// ─── Extension types ──────────────────────────────────────────────────────────
+
+export interface ExtensionInfo {
+  name: string
+  version: string
+  description: string
+  author: string
+  enabled: boolean
+  status: 'active' | 'inactive' | 'error'
+  permissions: string[]
+  errorMessage?: string
+}
+
+export interface ExtensionListResult extends IpcResult {
+  extensions?: ExtensionInfo[]
+}
+
+export interface ExtensionLogResult extends IpcResult {
+  log?: string[]
+}
+
+export interface ExtensionsAPI {
+  list: () => Promise<ExtensionListResult>
+  enable: (name: string) => Promise<IpcResult>
+  disable: (name: string) => Promise<IpcResult>
+  install: (sourcePath: string) => Promise<IpcResult>
+  uninstall: (name: string) => Promise<IpcResult>
+  getLog: (name: string) => Promise<ExtensionLogResult>
+  openFolder: () => Promise<IpcResult>
+  /** Returns a cleanup function — fires when an extension sends a notification */
+  onNotification: (callback: (data: { extensionName: string; message: string }) => void) => () => void
+}
+
+// ─── Multi-buffer types ──────────────────────────────────────────────────────
+
+export interface BufferExcerpt {
+  filePath: string
+  startLine: number
+  endLine: number
+  label?: string
+}
+
+export interface MultiBufferConfig {
+  name: string
+  excerpts: BufferExcerpt[]
 }
 
 // ─── File system types ───────────────────────────────────────────────────────
@@ -139,7 +263,12 @@ export interface ActiveSessionInfo {
 export interface PtyAPI {
   spawn: (
     id: string,
-    options?: { cwd?: string; cols?: number; rows?: number }
+    options?: { cwd?: string; cols?: number; rows?: number; startupCommand?: string }
+  ) => Promise<PtySpawnResult>
+  /** Spawns a Claude Code session directly using stored claudeCliSettings — no shell prompt flicker. */
+  spawnClaude: (
+    id: string,
+    options?: { cwd?: string; cols?: number; rows?: number; initialPrompt?: string; cliOverrides?: Partial<ClaudeCliSettings> }
   ) => Promise<PtySpawnResult>
   write: (id: string, data: string) => Promise<IpcResult>
   resize: (id: string, cols: number, rows: number) => Promise<IpcResult>
@@ -230,6 +359,8 @@ export interface NotifyOptions {
   title: string
   body: string
   icon?: string
+  /** When true, show notification even if the app window is focused */
+  force?: boolean
 }
 
 export interface NotifyResult extends IpcResult {
@@ -293,6 +424,46 @@ export interface GitDiffResult extends IpcResult {
   lines?: DiffLineInfo[]
 }
 
+// ─── Diff review types (per-hunk accept/reject) ─────────────────────────────
+
+export interface DiffHunk {
+  /** Raw @@ header line, e.g. "@@ -10,7 +10,8 @@" */
+  header: string
+  oldStart: number
+  oldCount: number
+  newStart: number
+  newCount: number
+  /** All lines in the hunk including context, prefixed with +/-/space */
+  lines: string[]
+  /** Full patch text for this hunk (including diff header + ---/+++ + hunk) for git apply */
+  rawPatch: string
+}
+
+export type DiffFileStatus = 'modified' | 'added' | 'deleted' | 'renamed'
+
+export interface FileDiff {
+  /** Absolute file path */
+  filePath: string
+  /** Path relative to project root */
+  relativePath: string
+  status: DiffFileStatus
+  hunks: DiffHunk[]
+  /** For renames: the old path */
+  oldPath?: string
+}
+
+export interface GitSnapshotResult extends IpcResult {
+  commitHash?: string
+}
+
+export interface GitDiffReviewResult extends IpcResult {
+  files?: FileDiff[]
+}
+
+export interface GitFileAtCommitResult extends IpcResult {
+  content?: string
+}
+
 // ─── Git blame types ─────────────────────────────────────────────────────────
 
 export interface BlameLine {
@@ -331,9 +502,15 @@ export interface GitBranchesResult extends IpcResult {
   branches?: string[]
 }
 
+export interface GitStatusDetailedResult extends IpcResult {
+  staged?: Record<string, string>
+  unstaged?: Record<string, string>
+}
+
 export interface GitAPI {
   isRepo: (root: string) => Promise<GitIsRepoResult>
   status: (root: string) => Promise<GitStatusResult>
+  statusDetailed: (root: string) => Promise<GitStatusDetailedResult>
   branch: (root: string) => Promise<GitBranchResult>
   diff: (root: string, filePath: string) => Promise<GitDiffResult>
   blame: (root: string, filePath: string) => Promise<GitBlameResult>
@@ -343,6 +520,26 @@ export interface GitAPI {
   checkout: (root: string, branch: string) => Promise<IpcResult>
   stage: (root: string, filePath: string) => Promise<IpcResult>
   unstage: (root: string, filePath: string) => Promise<IpcResult>
+  /** Stage all changes */
+  stageAll: (root: string) => Promise<IpcResult>
+  /** Unstage all changes */
+  unstageAll: (root: string) => Promise<IpcResult>
+  /** Create a commit with the given message */
+  commit: (root: string, message: string) => Promise<IpcResult>
+  /** Discard changes to a file (checkout HEAD version or delete untracked) */
+  discardFile: (root: string, filePath: string) => Promise<IpcResult>
+  /** Record current HEAD hash as a snapshot reference point */
+  snapshot: (root: string) => Promise<GitSnapshotResult>
+  /** Get unified diff of all changes since a given commit hash, parsed into per-file hunks */
+  diffReview: (root: string, commitHash: string) => Promise<GitDiffReviewResult>
+  /** Get file content at a specific commit */
+  fileAtCommit: (root: string, commitHash: string, filePath: string) => Promise<GitFileAtCommitResult>
+  /** Apply a single hunk patch (accept a change) */
+  applyHunk: (root: string, patchContent: string) => Promise<IpcResult>
+  /** Reverse-apply a single hunk patch (reject a change, restoring original) */
+  revertHunk: (root: string, patchContent: string) => Promise<IpcResult>
+  /** Fully revert a file to its state at a given commit */
+  revertFile: (root: string, commitHash: string, filePath: string) => Promise<IpcResult>
 }
 
 // ─── Shell history API ───────────────────────────────────────────────────────
@@ -439,6 +636,31 @@ export interface PerfAPI {
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void
 }
 
+// ─── Cost history types ──────────────────────────────────────────────────────
+
+export interface CostEntry {
+  date: string
+  sessionId: string
+  taskLabel: string
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  estimatedCost: number
+  timestamp: number
+}
+
+export interface CostHistoryResult extends IpcResult {
+  entries?: CostEntry[]
+}
+
+export interface CostAPI {
+  addEntry: (entry: CostEntry) => Promise<IpcResult>
+  getHistory: () => Promise<CostHistoryResult>
+  clearHistory: () => Promise<IpcResult>
+}
+
 // ─── Sessions API ────────────────────────────────────────────────────────────
 
 export interface SaveSessionResult extends IpcResult {
@@ -480,6 +702,73 @@ export interface SymbolAPI {
   search: (root: string) => Promise<SymbolSearchResult>
 }
 
+// ─── LSP types ────────────────────────────────────────────────────────────────
+
+export interface LspCompletionItem {
+  label: string
+  kind: string
+  detail?: string
+  insertText?: string
+  documentation?: string
+}
+
+export interface LspLocation {
+  filePath: string
+  line: number
+  character: number
+}
+
+export interface LspDiagnostic {
+  message: string
+  severity: 'error' | 'warning' | 'info' | 'hint'
+  range: { startLine: number; startChar: number; endLine: number; endChar: number }
+}
+
+export type LspServerStatusType = 'starting' | 'running' | 'error' | 'stopped'
+
+export interface LspServerStatus {
+  root: string
+  language: string
+  status: LspServerStatusType
+}
+
+export interface LspCompletionResult extends IpcResult {
+  items?: LspCompletionItem[]
+}
+
+export interface LspHoverResult extends IpcResult {
+  contents?: string
+}
+
+export interface LspDefinitionResult extends IpcResult {
+  location?: LspLocation
+}
+
+export interface LspDiagnosticsResult extends IpcResult {
+  diagnostics?: LspDiagnostic[]
+}
+
+export interface LspStatusResult extends IpcResult {
+  servers?: LspServerStatus[]
+}
+
+export interface LspAPI {
+  start: (root: string, language: string) => Promise<IpcResult>
+  stop: (root: string, language: string) => Promise<IpcResult>
+  completion: (root: string, filePath: string, line: number, character: number) => Promise<LspCompletionResult>
+  hover: (root: string, filePath: string, line: number, character: number) => Promise<LspHoverResult>
+  definition: (root: string, filePath: string, line: number, character: number) => Promise<LspDefinitionResult>
+  diagnostics: (root: string, filePath: string) => Promise<LspDiagnosticsResult>
+  didOpen: (root: string, filePath: string, content: string) => Promise<void>
+  didChange: (root: string, filePath: string, content: string) => Promise<void>
+  didClose: (root: string, filePath: string) => Promise<void>
+  getStatus: () => Promise<LspStatusResult>
+  /** Returns a cleanup function — fires when diagnostics are published */
+  onDiagnostics: (callback: (event: { filePath: string; diagnostics: LspDiagnostic[] }) => void) => () => void
+  /** Returns a cleanup function — fires when server status changes */
+  onStatusChange: (callback: (servers: LspServerStatus[]) => void) => () => void
+}
+
 // ─── Root API ────────────────────────────────────────────────────────────────
 
 export interface ElectronAPI {
@@ -492,11 +781,41 @@ export interface ElectronAPI {
   theme: ThemeAPI
   git: GitAPI
   sessions: SessionsAPI
+  cost: CostAPI
   shellHistory: ShellHistoryAPI
   updater: UpdaterAPI
   crash: CrashAPI
   perf: PerfAPI
   symbol: SymbolAPI
+  lsp: LspAPI
+  window: WindowAPI
+  extensions: ExtensionsAPI
+}
+
+// ─── Window API ──────────────────────────────────────────────────────────────
+
+export interface WindowInfo {
+  id: number
+  projectRoot: string | null
+}
+
+export interface WindowListResult extends IpcResult {
+  windows?: WindowInfo[]
+}
+
+export interface WindowNewResult extends IpcResult {
+  windowId?: number
+}
+
+export interface WindowAPI {
+  /** Create a new window, optionally opened to a project root */
+  create: (projectRoot?: string) => Promise<WindowNewResult>
+  /** List all open windows with their project roots */
+  list: () => Promise<WindowListResult>
+  /** Focus a specific window by its ID */
+  focus: (windowId: number) => Promise<IpcResult>
+  /** Close a specific window by its ID */
+  close: (windowId: number) => Promise<IpcResult>
 }
 
 // Augment the global Window interface

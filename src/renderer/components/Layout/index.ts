@@ -23,4 +23,7 @@ export { usePanelCollapse } from './usePanelCollapse';
 export type { UsePanelCollapseReturn, CollapseTarget, CollapseState } from './usePanelCollapse';
 
 export { StatusBar } from './StatusBar';
-export type { StatusBarProps } from './StatusBar';
+export type { StatusBarProps, StatusBarLayoutProps } from './StatusBar';
+
+export { LayoutSwitcher } from './LayoutSwitcher';
+export type { LayoutSwitcherProps } from './LayoutSwitcher';

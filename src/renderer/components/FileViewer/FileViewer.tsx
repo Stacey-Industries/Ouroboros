@@ -29,6 +29,7 @@ import { injectLinks, ensureLinkStyles, attachLinkClickHandler } from './linkDet
 import { CommitHistory } from './CommitHistory';
 import { ConflictResolver, hasConflictMarkers, parseConflictBlocks } from './ConflictResolver';
 import type { ConflictBlock } from './ConflictResolver';
+import { InlineEditor } from './InlineEditor';
 
 export interface FileViewerProps {
   filePath: string | null;
@@ -45,6 +46,12 @@ export interface FileViewerProps {
   projectRoot?: string | null;
   /** When true, renders the file using ImageViewer instead of text */
   isImage?: boolean;
+  /** Called when the user saves a file in edit mode */
+  onSave?: (content: string) => void;
+  /** Called when dirty state changes in the inline editor */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Whether the file has unsaved edits */
+  isDirty?: boolean;
 }
 
 // ─── Language detection ───────────────────────────────────────────────────────
@@ -235,6 +242,9 @@ export const FileViewer = memo(function FileViewer({
   originalContent,
   projectRoot,
   isImage,
+  onSave,
+  onDirtyChange,
+  isDirty,
 }: FileViewerProps): React.ReactElement {
   // Derive the active Shiki theme from the IDE theme selection
   const { theme: ideTheme } = useTheme();
@@ -300,6 +310,9 @@ export const FileViewer = memo(function FileViewer({
 
   // Conflict blocks — populated when file contains git conflict markers
   const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
+
+  // Inline edit mode
+  const [editMode, setEditMode] = useState(false);
 
   // Git diff gutter data
   const { diffLines } = useGitDiff(projectRoot ?? null, filePath, content);
@@ -461,6 +474,7 @@ export const FileViewer = memo(function FileViewer({
     setShowGoToLine(false);
     setViewMode('code');
     setShowHistory(false);
+    setEditMode(false);
   }, [filePath]);
 
   // ── Listen for agent-ide:scroll-to-line (dispatched after symbol search open) ──
@@ -981,14 +995,71 @@ export const FileViewer = memo(function FileViewer({
               History
             </button>
           )}
+
+          {/* Spacer to push edit button to the right */}
+          <div style={{ flex: 1 }} />
+
+          {/* Edit mode toggle + dirty indicator */}
+          {onSave && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {isDirty && (
+                <span
+                  title="Unsaved changes"
+                  style={{
+                    display: 'inline-block',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent)',
+                  }}
+                />
+              )}
+              <button
+                onClick={() => {
+                  if (editMode && isDirty) {
+                    const confirmed = window.confirm('You have unsaved changes. Discard them?');
+                    if (!confirmed) return;
+                    // Clear dirty state
+                    onDirtyChange?.(false);
+                  }
+                  setEditMode((prev) => !prev);
+                }}
+                title={editMode ? 'Exit edit mode' : 'Edit file'}
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '0.6875rem',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 500,
+                  border: '1px solid',
+                  borderColor: editMode ? 'var(--accent)' : 'var(--border)',
+                  borderRadius: '4px',
+                  backgroundColor: editMode ? 'var(--accent)' : 'transparent',
+                  color: editMode ? 'var(--bg)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  lineHeight: '1.5',
+                }}
+              >
+                {editMode ? 'Exit Edit' : 'Edit'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Main content row: code/diff area + symbol outline panel */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
 
-      {/* History view — commit log for this file */}
-      {showHistory && filePath && projectRoot ? (
+      {/* Inline editor — replaces all other views when in edit mode */}
+      {editMode && filePath && content != null && onSave ? (
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <InlineEditor
+            content={content}
+            filePath={filePath}
+            onSave={onSave}
+            onDirtyChange={onDirtyChange ?? (() => {})}
+          />
+        </div>
+      ) : showHistory && filePath && projectRoot ? (
         <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <CommitHistory filePath={filePath} projectRoot={projectRoot} />
         </div>

@@ -1,7 +1,21 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useToastContext } from '../../contexts/ToastContext';
+import type { WorkspaceLayout, PanelSizes } from '../../types/electron';
+import { LayoutSwitcher } from './LayoutSwitcher';
+import { LspStatus } from './LspStatus';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
+
+export interface StatusBarLayoutProps {
+  layouts: WorkspaceLayout[];
+  activeLayoutName: string;
+  currentPanelSizes: PanelSizes;
+  currentVisiblePanels: { leftSidebar: boolean; rightSidebar: boolean; terminal: boolean };
+  onSelectLayout: (layout: WorkspaceLayout) => void;
+  onSaveLayout: (name: string) => void;
+  onUpdateLayout: (name: string) => void;
+  onDeleteLayout: (name: string) => void;
+}
 
 export interface StatusBarProps {
   /** Absolute path to the currently active file */
@@ -14,6 +28,8 @@ export interface StatusBarProps {
   language?: string;
   /** Current git branch name */
   gitBranch?: string | null;
+  /** Layout switcher props */
+  layout?: StatusBarLayoutProps;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -429,7 +445,10 @@ export function StatusBar({
   lineCount,
   language,
   gitBranch,
+  layout,
 }: StatusBarProps): React.ReactElement {
+  const [layoutOpen, setLayoutOpen] = useState(false);
+
   const relPath = useMemo(
     () => (activeFilePath ? relativePath(activeFilePath, projectRoot) : null),
     [activeFilePath, projectRoot],
@@ -496,10 +515,91 @@ export function StatusBar({
 
       {/* ── Right side ── */}
       <div className="flex items-center flex-shrink-0">
+        {/* Layout switcher button */}
+        {layout && (
+          <>
+            <button
+              onClick={() => setLayoutOpen((prev) => !prev)}
+              title={`Layout: ${layout.activeLayoutName}`}
+              aria-haspopup="listbox"
+              aria-expanded={layoutOpen}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0 8px',
+                height: '22px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                transition: 'color 120ms ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+              }}
+            >
+              <LayoutIcon />
+              <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {layout.activeLayoutName}
+              </span>
+            </button>
+            {layoutOpen && (
+              <LayoutSwitcher
+                layouts={layout.layouts}
+                activeLayoutName={layout.activeLayoutName}
+                currentPanelSizes={layout.currentPanelSizes}
+                currentVisiblePanels={layout.currentVisiblePanels}
+                onSelect={(l) => {
+                  layout.onSelectLayout(l);
+                  setLayoutOpen(false);
+                }}
+                onSave={(name) => {
+                  layout.onSaveLayout(name);
+                }}
+                onUpdate={(name) => {
+                  layout.onUpdateLayout(name);
+                }}
+                onDelete={(name) => {
+                  layout.onDeleteLayout(name);
+                }}
+                onClose={() => setLayoutOpen(false)}
+              />
+            )}
+            <Divider />
+          </>
+        )}
+        <LspStatus />
+        <Divider />
         <StatusItem>UTF-8</StatusItem>
         <Divider />
         <StatusItem>Ouroboros</StatusItem>
       </div>
     </div>
+  );
+}
+
+// ─── Layout Icon ────────────────────────────────────────────────────────────────
+
+function LayoutIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="1" y="1" width="14" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="1" y1="11" x2="15" y2="11" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
   );
 }

@@ -19,6 +19,62 @@ export interface TerminalSessionSnapshot {
   title: string
 }
 
+export interface ClaudeCliSettings {
+  /** Permission mode: 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' */
+  permissionMode: string
+  /** Model override: '' means CLI default. e.g. 'sonnet', 'opus', 'haiku', or full model ID */
+  model: string
+  /** Effort level: '' | 'low' | 'medium' | 'high' | 'max' */
+  effort: string
+  /** Extra system prompt appended to default */
+  appendSystemPrompt: string
+  /** Verbose output */
+  verbose: boolean
+  /** Max budget in USD (0 = unlimited) */
+  maxBudgetUsd: number
+  /** Allowed tools (comma-separated, empty = all) */
+  allowedTools: string
+  /** Disallowed tools (comma-separated, empty = none) */
+  disallowedTools: string
+  /** Additional directories to allow tool access */
+  addDirs: string[]
+  /** Enable Claude in Chrome integration */
+  chrome: boolean
+  /** Use git worktree for sessions */
+  worktree: boolean
+  /** Dangerously skip all permission checks */
+  dangerouslySkipPermissions: boolean
+}
+
+export interface NotificationSettings {
+  /** 'all' | 'errors-only' | 'none' */
+  level: string
+  /** Whether to notify even when the app is focused */
+  alwaysNotify: boolean
+}
+
+export interface AgentTemplate {
+  id: string
+  name: string
+  icon?: string
+  /** Supports {{projectRoot}}, {{projectName}}, {{openFile}}, {{openFileName}} */
+  promptTemplate: string
+  /** Optional per-template CLI overrides (merged with global settings) */
+  cliOverrides?: Partial<ClaudeCliSettings>
+}
+
+export interface WorkspaceLayout {
+  name: string
+  panelSizes: PanelSizes
+  visiblePanels: {
+    leftSidebar: boolean
+    rightSidebar: boolean
+    terminal: boolean
+  }
+  rightSidebarTab?: string
+  builtIn?: boolean
+}
+
 export interface AppConfig {
   recentProjects: string[]
   defaultProjectRoot: string
@@ -52,6 +108,24 @@ export interface AppConfig {
   customPrompt: string
   /** 'default' | 'minimal' | 'powerline' | 'git' | 'custom' */
   promptPreset: string
+  /** Claude CLI launch settings */
+  claudeCliSettings: ClaudeCliSettings
+  /** Desktop notification preferences for agent events */
+  notifications: NotificationSettings
+  /** Pre-configured Claude Code launch profiles */
+  agentTemplates: AgentTemplate[]
+  /** Saved workspace layouts (panel arrangements) */
+  workspaceLayouts: WorkspaceLayout[]
+  /** Name of the currently active workspace layout */
+  activeLayoutName: string
+  /** Global toggle for the extension system */
+  extensionsEnabled: boolean
+  /** Names of extensions that have been explicitly disabled */
+  disabledExtensions: string[]
+  /** Whether LSP integration is enabled */
+  lspEnabled: boolean
+  /** Custom language server commands keyed by language id (e.g. { "rust": "rust-analyzer" }) */
+  lspServers: Record<string, string>
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,6 +259,136 @@ const schema: any = {
   promptPreset: {
     type: 'string',
     default: 'default'
+  },
+  claudeCliSettings: {
+    type: 'object',
+    properties: {
+      permissionMode: { type: 'string', default: 'default' },
+      model: { type: 'string', default: '' },
+      effort: { type: 'string', default: '' },
+      appendSystemPrompt: { type: 'string', default: '' },
+      verbose: { type: 'boolean', default: false },
+      maxBudgetUsd: { type: 'number', default: 0 },
+      allowedTools: { type: 'string', default: '' },
+      disallowedTools: { type: 'string', default: '' },
+      addDirs: { type: 'array', items: { type: 'string' }, default: [] },
+      chrome: { type: 'boolean', default: false },
+      worktree: { type: 'boolean', default: false },
+      dangerouslySkipPermissions: { type: 'boolean', default: false }
+    },
+    default: {
+      permissionMode: 'default',
+      model: '',
+      effort: '',
+      appendSystemPrompt: '',
+      verbose: false,
+      maxBudgetUsd: 0,
+      allowedTools: '',
+      disallowedTools: '',
+      addDirs: [],
+      chrome: false,
+      worktree: false,
+      dangerouslySkipPermissions: false
+    }
+  },
+  notifications: {
+    type: 'object',
+    properties: {
+      level: { type: 'string', default: 'all' },
+      alwaysNotify: { type: 'boolean', default: false }
+    },
+    default: {
+      level: 'all',
+      alwaysNotify: false
+    }
+  },
+  agentTemplates: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        icon: { type: 'string' },
+        promptTemplate: { type: 'string' },
+        cliOverrides: { type: 'object' }
+      }
+    },
+    default: [
+      { id: 'builtin:review-pr', name: 'Review PR', icon: '\ud83d\udd0d', promptTemplate: 'Review the current PR for bugs, logic errors, and improvements. Show a summary of findings.' },
+      { id: 'builtin:write-tests', name: 'Write Tests', icon: '\u2705', promptTemplate: 'Write comprehensive tests for {{openFile}}. Cover edge cases and error paths.' },
+      { id: 'builtin:explain', name: 'Explain Codebase', icon: '\ud83d\udcda', promptTemplate: 'Give me a high-level overview of this codebase — architecture, key patterns, and how the main components fit together.' },
+      { id: 'builtin:refactor', name: 'Refactor File', icon: '\u2728', promptTemplate: 'Refactor {{openFile}} to improve readability, performance, and maintainability. Explain what you changed and why.' },
+      { id: 'builtin:fix-build', name: 'Fix Build', icon: '\ud83d\udee0\ufe0f', promptTemplate: 'Run the build, identify any errors, and fix them. Show me what you changed.' }
+    ]
+  },
+  workspaceLayouts: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        panelSizes: {
+          type: 'object',
+          properties: {
+            leftSidebar: { type: 'number' },
+            rightSidebar: { type: 'number' },
+            terminal: { type: 'number' }
+          }
+        },
+        visiblePanels: {
+          type: 'object',
+          properties: {
+            leftSidebar: { type: 'boolean' },
+            rightSidebar: { type: 'boolean' },
+            terminal: { type: 'boolean' }
+          }
+        },
+        rightSidebarTab: { type: 'string' },
+        builtIn: { type: 'boolean' }
+      }
+    },
+    default: [
+      {
+        name: 'Default',
+        panelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
+        visiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
+        builtIn: true
+      },
+      {
+        name: 'Monitoring',
+        panelSizes: { leftSidebar: 0, rightSidebar: 400, terminal: 250 },
+        visiblePanels: { leftSidebar: false, rightSidebar: true, terminal: true },
+        builtIn: true
+      },
+      {
+        name: 'Review',
+        panelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 0 },
+        visiblePanels: { leftSidebar: true, rightSidebar: true, terminal: false },
+        builtIn: true
+      }
+    ]
+  },
+  activeLayoutName: {
+    type: 'string',
+    default: 'Default'
+  },
+  extensionsEnabled: {
+    type: 'boolean',
+    default: true
+  },
+  disabledExtensions: {
+    type: 'array',
+    items: { type: 'string' },
+    default: []
+  },
+  lspEnabled: {
+    type: 'boolean',
+    default: false
+  },
+  lspServers: {
+    type: 'object',
+    default: {}
   }
 }
 

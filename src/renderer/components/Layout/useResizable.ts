@@ -96,6 +96,8 @@ export interface UseResizableReturn {
   sizes: PanelSizes;
   startResize: (panel: PanelId, direction: 'horizontal' | 'vertical', startValue: number, startPos: number) => void;
   resetSize: (panel: PanelId) => void;
+  /** Apply a complete set of panel sizes (used by workspace layout switching) */
+  applySizes: (newSizes: PanelSizes) => void;
 }
 
 export function useResizable(): UseResizableReturn {
@@ -169,6 +171,14 @@ export function useResizable(): UseResizableReturn {
     [sizes],
   );
 
+  const applySizes = useCallback(
+    (newSizes: PanelSizes) => {
+      setSizes(newSizes);
+      saveSizes(newSizes);
+    },
+    [],
+  );
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -178,5 +188,5 @@ export function useResizable(): UseResizableReturn {
     };
   }, [handleMouseMove, handleMouseUp]);
 
-  return { sizes, startResize, resetSize };
+  return { sizes, startResize, resetSize, applySizes };
 }

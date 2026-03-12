@@ -12,11 +12,12 @@ import { KeybindingsSection } from './KeybindingsSection';
 import { ProfilesSection } from './ProfilesSection';
 import { FileFilterSection } from './FileFilterSection';
 import { ExtensionsSection } from './ExtensionsSection';
+import { ClaudeSection } from './ClaudeSection';
 import { SETTINGS_ENTRIES, type SettingsEntry } from './settingsEntries';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
-type TabId = 'general' | 'appearance' | 'fonts' | 'terminal' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions';
+type TabId = 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions';
 
 interface Tab {
   id: TabId;
@@ -28,6 +29,7 @@ const TABS: Tab[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'fonts', label: 'Fonts' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'claude', label: 'Claude Code' },
   { id: 'keybindings', label: 'Keybindings' },
   { id: 'hooks', label: 'Hooks' },
   { id: 'profiles', label: 'Profiles' },
@@ -626,6 +628,9 @@ export function SettingsModal({
               )}
               {activeTab === 'terminal' && (
                 <TerminalSection draft={draft} onChange={handleChange} />
+              )}
+              {activeTab === 'claude' && (
+                <ClaudeSection draft={draft} onChange={handleChange} />
               )}
               {activeTab === 'keybindings' && (
                 <KeybindingsSection draft={draft} onChange={handleChange} />

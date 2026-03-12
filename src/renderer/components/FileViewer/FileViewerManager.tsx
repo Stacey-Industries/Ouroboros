@@ -23,6 +23,8 @@ export interface OpenFile {
   originalContent: string | null;
   /** True when the file is a recognized image type — renders ImageViewer instead of text */
   isImage?: boolean;
+  /** True when the file has unsaved edits in the inline editor */
+  isDirty?: boolean;
 }
 
 interface FileViewerState {
@@ -32,6 +34,8 @@ interface FileViewerState {
   openFile: (filePath: string) => Promise<void>;
   closeFile: (filePath: string) => void;
   setActive: (filePath: string) => void;
+  saveFile: (filePath: string, content: string) => Promise<void>;
+  setDirty: (filePath: string, dirty: boolean) => void;
 }
 
 const FileViewerContext = createContext<FileViewerState | null>(null);
@@ -284,6 +288,37 @@ export function FileViewerManager({
     });
   }, []);
 
+  const saveFile = useCallback(async (filePath: string, content: string): Promise<void> => {
+    const result = await window.electronAPI.files.createFile(filePath, content);
+    if (!result.success) {
+      console.error('[FileViewerManager] saveFile failed:', result.error);
+      return;
+    }
+    // Update the stored content and clear dirty state
+    setOpenFiles((prev) =>
+      prev.map((f) => {
+        if (f.path !== filePath) return f;
+        return {
+          ...f,
+          content,
+          isDirty: false,
+          isDirtyOnDisk: false,
+          originalContent: content,
+        };
+      })
+    );
+  }, []);
+
+  const setDirty = useCallback((filePath: string, dirty: boolean) => {
+    setOpenFiles((prev) =>
+      prev.map((f) => {
+        if (f.path !== filePath) return f;
+        if (f.isDirty === dirty) return f;
+        return { ...f, isDirty: dirty };
+      })
+    );
+  }, []);
+
   const activeFile = openFiles[activeIndex] ?? null;
 
   const value: FileViewerState = {
@@ -293,6 +328,8 @@ export function FileViewerManager({
     openFile,
     closeFile,
     setActive,
+    saveFile,
+    setDirty,
   };
 
   return (

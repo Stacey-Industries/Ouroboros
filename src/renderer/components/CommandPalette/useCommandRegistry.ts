@@ -179,6 +179,30 @@ function buildBuiltinCommands(): Command[] {
       },
     },
 
+    // ── Window ────────────────────────────────────────────────────────────────
+    {
+      id: 'window:new',
+      label: 'New Window',
+      category: 'app',
+      shortcut: 'Ctrl+Shift+N',
+      icon: '+',
+      action: async () => {
+        await window.electronAPI.window.create();
+      },
+    },
+    {
+      id: 'window:new-with-folder',
+      label: 'Open Folder in New Window',
+      category: 'file',
+      icon: '📁',
+      action: async () => {
+        const result = await window.electronAPI.files.selectFolder();
+        if (result.success && !result.cancelled && result.path) {
+          await window.electronAPI.window.create(result.path);
+        }
+      },
+    },
+
     // ── App ──────────────────────────────────────────────────────────────────
     {
       id: 'app:settings',
