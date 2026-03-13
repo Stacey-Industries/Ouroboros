@@ -172,12 +172,66 @@ export const FileTreeSkeleton = memo(function FileTreeSkeleton(): React.ReactEle
 
 // ── CodeSkeleton ──────────────────────────────────────────────────────────────
 
+const CODE_SKELETON_LINE_WIDTHS = ['80%', '65%', '90%', '45%', '75%', '55%', '85%', '40%', '70%', '60%', '50%', '72%'];
+
+function CodeSkeletonGutter({ lineCount }: { lineCount: number }): React.ReactElement {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        width: '44px',
+        paddingTop: '16px',
+        borderRight: '1px solid var(--border-muted)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '9px',
+        paddingRight: '12px',
+      }}
+    >
+      {Array.from({ length: lineCount }, (_, i) => (
+        <SkeletonLine
+          key={i}
+          width={18}
+          height={8}
+          style={{ animationDelay: `${i * 0.06}s`, opacity: 0.5 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CodeSkeletonContent({
+  lineWidths,
+}: {
+  lineWidths: Array<string | number>;
+}): React.ReactElement {
+  return (
+    <div
+      style={{
+        flex: 1,
+        padding: '16px 16px 16px 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '9px',
+      }}
+    >
+      {lineWidths.map((width, i) => (
+        <SkeletonLine
+          key={i}
+          width={width}
+          height={8}
+          style={{ animationDelay: `${i * 0.06}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * Skeleton that mimics a code editor with gutter and code lines.
  */
 export const CodeSkeleton = memo(function CodeSkeleton(): React.ReactElement {
-  const lineWidths = ['80%', '65%', '90%', '45%', '75%', '55%', '85%', '40%', '70%', '60%', '50%', '72%'];
-
   return (
     <div
       aria-hidden="true"
@@ -187,49 +241,8 @@ export const CodeSkeleton = memo(function CodeSkeleton(): React.ReactElement {
         fontFamily: 'var(--font-mono)',
       }}
     >
-      {/* Gutter */}
-      <div
-        style={{
-          flexShrink: 0,
-          width: '44px',
-          paddingTop: '16px',
-          borderRight: '1px solid var(--border-muted)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '9px',
-          paddingRight: '12px',
-        }}
-      >
-        {lineWidths.map((_, i) => (
-          <SkeletonLine
-            key={i}
-            width={18}
-            height={8}
-            style={{ animationDelay: `${i * 0.06}s`, opacity: 0.5 }}
-          />
-        ))}
-      </div>
-
-      {/* Code area */}
-      <div
-        style={{
-          flex: 1,
-          padding: '16px 16px 16px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '9px',
-        }}
-      >
-        {lineWidths.map((w, i) => (
-          <SkeletonLine
-            key={i}
-            width={w}
-            height={8}
-            style={{ animationDelay: `${i * 0.06}s` }}
-          />
-        ))}
-      </div>
+      <CodeSkeletonGutter lineCount={CODE_SKELETON_LINE_WIDTHS.length} />
+      <CodeSkeletonContent lineWidths={CODE_SKELETON_LINE_WIDTHS} />
     </div>
   );
 });

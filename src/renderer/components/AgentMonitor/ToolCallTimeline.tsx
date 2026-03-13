@@ -2,7 +2,7 @@
  * ToolCallTimeline.tsx — Gantt-style horizontal timeline for tool calls.
  */
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import type { ToolCallEvent } from './types';
 import type { TooltipData } from './TimelineTooltip';
 import { formatDurationShort } from './timelineHelpers';
@@ -28,6 +28,60 @@ function computeTotalDuration(
   return Math.max(1, lastEnd - sessionStartedAt);
 }
 
+const TIMELINE_PULSE_STYLES = `
+  @keyframes timeline-pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 0.5; }
+  }
+`;
+
+function useTimelineClock(sessionRunning: boolean): number {
+  const [nowMs, setNowMs] = useState(Date.now);
+
+  useEffect(() => {
+    if (!sessionRunning) return;
+    const intervalId = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, [sessionRunning]);
+
+  return nowMs;
+}
+
+function TimelineRows({
+  toolCalls,
+  sessionStartedAt,
+  totalDurationMs,
+  nowMs,
+  onHover,
+}: {
+  toolCalls: ToolCallEvent[];
+  sessionStartedAt: number;
+  totalDurationMs: number;
+  nowMs: number;
+  onHover: (data: TooltipData | null) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <div className="overflow-y-auto overflow-x-hidden px-3 pt-2 pb-1" style={{ maxHeight: '320px' }}>
+        <div className="flex flex-col gap-0.5">
+          {toolCalls.map((call) => (
+            <TimelineBar
+              key={call.id}
+              call={call}
+              sessionStartMs={sessionStartedAt}
+              totalDurationMs={totalDurationMs}
+              nowMs={nowMs}
+              onHover={onHover}
+            />
+          ))}
+        </div>
+        <XAxis totalDurationMs={totalDurationMs} />
+      </div>
+      <Legend />
+    </>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export interface ToolCallTimelineProps {
@@ -41,17 +95,8 @@ export const ToolCallTimeline = memo(function ToolCallTimeline({
   sessionStartedAt,
   sessionRunning,
 }: ToolCallTimelineProps): React.ReactElement {
-  const [nowMs, setNowMs] = useState(Date.now);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nowMs = useTimelineClock(sessionRunning);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-
-  useEffect(() => {
-    if (!sessionRunning) return;
-    intervalRef.current = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
-    };
-  }, [sessionRunning]);
 
   const hasTimingData = toolCalls.some(
     (tc) => tc.duration !== undefined || tc.status === 'pending',
@@ -69,32 +114,15 @@ export const ToolCallTimeline = memo(function ToolCallTimeline({
 
   return (
     <div className="flex flex-col">
-      <style>{`
-        @keyframes timeline-pulse {
-          0%, 100% { opacity: 0.85; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
-
+      <style>{TIMELINE_PULSE_STYLES}</style>
       <TimelineHeader count={toolCalls.length} totalMs={totalDurationMs} />
-
-      <div className="overflow-y-auto overflow-x-hidden px-3 pt-2 pb-1" style={{ maxHeight: '320px' }}>
-        <div className="flex flex-col gap-0.5">
-          {toolCalls.map((call) => (
-            <TimelineBar
-              key={call.id}
-              call={call}
-              sessionStartMs={sessionStartedAt}
-              totalDurationMs={totalDurationMs}
-              nowMs={nowMs}
-              onHover={setTooltip}
-            />
-          ))}
-        </div>
-        <XAxis totalDurationMs={totalDurationMs} />
-      </div>
-
-      <Legend />
+      <TimelineRows
+        toolCalls={toolCalls}
+        sessionStartedAt={sessionStartedAt}
+        totalDurationMs={totalDurationMs}
+        nowMs={nowMs}
+        onHover={setTooltip}
+      />
       {tooltip && <Tooltip data={tooltip} />}
     </div>
   );

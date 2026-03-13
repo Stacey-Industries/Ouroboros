@@ -1,5 +1,5 @@
 /**
- * ipc.ts — Orchestrator that registers all ipcMain handlers by delegating
+ * ipc.ts â€” Orchestrator that registers all ipcMain handlers by delegating
  * to domain-specific modules in ./ipc-handlers/.
  *
  * Channels mirror the contextBridge API shape in preload.ts.
@@ -27,24 +27,8 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow {
   return win
 }
 
-let handlersRegistered = false
-let allChannels: string[] = []
-
-/**
- * Register all ipcMain handlers. Handlers are registered globally (once) and
- * use `event.sender` to determine the calling window. Returns a cleanup
- * function that removes the handlers; only the *last* cleanup call actually
- * unregisters (since handlers are shared across windows).
- */
-export function registerIpcHandlers(win: BrowserWindow): () => void {
-  if (handlersRegistered) {
-    // Handlers already registered — return no-op cleanup.
-    // Actual cleanup happens in cleanupIpcHandlers().
-    return () => { /* no-op — handled globally */ }
-  }
-  handlersRegistered = true
-
-  allChannels = [
+function registerDomainHandlers(win: BrowserWindow): string[] {
+  return [
     ...registerPtyHandlers(senderWindow),
     ...registerConfigHandlers(senderWindow),
     ...registerFileHandlers(senderWindow),
@@ -56,39 +40,48 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
   ]
+}
 
-  // ─── Code Mode ────────────────────────────────────────────────────────────
+async function withCodeModeManager<T>(
+  action: (manager: typeof import('./codemode/codemodeManager')) => Promise<T> | T
+): Promise<T | { success: false; error: string }> {
+  try {
+    const manager = await import('./codemode/codemodeManager')
+    return await action(manager)
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
 
-  ipcMain.handle('codemode:enable', async (_event, args: { serverNames: string[]; scope: 'global' | 'project'; projectRoot?: string }) => {
-    try {
-      const { enableCodeMode } = await import('./codemode/codemodeManager')
-      return await enableCodeMode(args.serverNames, args.scope, args.projectRoot)
-    } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+function registerCodeModeHandlers(channels: string[]): void {
+  ipcMain.handle('codemode:enable', (_event, args: { serverNames: string[]; scope: 'global' | 'project'; projectRoot?: string }) =>
+    withCodeModeManager((manager) => manager.enableCodeMode(args.serverNames, args.scope, args.projectRoot))
+  )
+  ipcMain.handle('codemode:disable', () => withCodeModeManager((manager) => manager.disableCodeMode()))
+  ipcMain.handle('codemode:status', () =>
+    withCodeModeManager((manager) => ({ success: true, ...manager.getCodeModeStatus() }))
+  )
+  channels.push('codemode:enable', 'codemode:disable', 'codemode:status')
+}
 
-  ipcMain.handle('codemode:disable', async () => {
-    try {
-      const { disableCodeMode } = await import('./codemode/codemodeManager')
-      return await disableCodeMode()
-    } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+let handlersRegistered = false
+let allChannels: string[] = []
 
-  ipcMain.handle('codemode:status', async () => {
-    try {
-      const { getCodeModeStatus } = await import('./codemode/codemodeManager')
-      return { success: true, ...getCodeModeStatus() }
-    } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+/**
+ * Register all ipcMain handlers. Handlers are registered globally (once) and
+ * use `event.sender` to determine the calling window. Returns a cleanup
+ * function that removes the handlers; only the *last* cleanup call actually
+ * unregisters (since handlers are shared across windows).
+ */
+export function registerIpcHandlers(win: BrowserWindow): () => void {
+  if (handlersRegistered) {
+    return () => { /* no-op â€” handled globally */ }
+  }
 
-  allChannels.push('codemode:enable', 'codemode:disable', 'codemode:status')
+  handlersRegistered = true
+  allChannels = registerDomainHandlers(win)
+  registerCodeModeHandlers(allChannels)
 
-  // Return a cleanup function
   return () => { cleanupIpcHandlers() }
 }
 

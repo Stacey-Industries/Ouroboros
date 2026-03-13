@@ -1,12 +1,12 @@
 /**
- * hookInstaller.ts — Auto-installs Claude Code hook scripts on first launch.
+ * hookInstaller.ts â€” Auto-installs Claude Code hook scripts on first launch.
  *
  * Behaviour:
  *  - Copies platform-appropriate scripts into ~/.claude/hooks/
  *  - On macOS/Linux: chmod +x the .sh scripts
  *  - Writes a version marker (~/.claude/hooks/.agent-ide-version)
  *  - Skips installation if the version marker matches CURRENT_HOOK_VERSION
- *  - Respects config.autoInstallHooks — if false, does nothing
+ *  - Respects config.autoInstallHooks â€” if false, does nothing
  *  - Shows an Electron notification on first install
  */
 
@@ -16,13 +16,13 @@ import os from 'os'
 import { app, Notification } from 'electron'
 import { getConfigValue } from './config'
 
-// ─── Version ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Version â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Bump this string whenever the hook scripts change so existing installs update.
 export const CURRENT_HOOK_VERSION = '1.0.6'
 
 const VERSION_MARKER_FILE = '.agent-ide-version'
 
-// ─── Hook file manifests ──────────────────────────────────────────────────────
+// â”€â”€â”€ Hook file manifests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface HookEntry {
   /** Source filename inside assets/hooks/ */
@@ -34,45 +34,41 @@ interface HookEntry {
 }
 
 const WINDOWS_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.ps1',   dest: 'pre_tool_use.ps1',   executable: false },
-  { src: 'post_tool_use.ps1',  dest: 'post_tool_use.ps1',  executable: false },
-  { src: 'agent_start.ps1',    dest: 'agent_start.ps1',    executable: false },
-  { src: 'session_start.ps1',  dest: 'session_start.ps1',  executable: false }
+  { src: 'pre_tool_use.ps1', dest: 'pre_tool_use.ps1', executable: false },
+  { src: 'post_tool_use.ps1', dest: 'post_tool_use.ps1', executable: false },
+  { src: 'agent_start.ps1', dest: 'agent_start.ps1', executable: false },
+  { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false }
 ]
 
 const UNIX_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.sh',    dest: 'pre_tool_use.sh',    executable: true },
-  { src: 'post_tool_use.sh',   dest: 'post_tool_use.sh',   executable: true },
-  { src: 'agent_start.sh',     dest: 'agent_start.sh',     executable: true },
-  { src: 'session_start.sh',   dest: 'session_start.sh',   executable: true }
+  { src: 'pre_tool_use.sh', dest: 'pre_tool_use.sh', executable: true },
+  { src: 'post_tool_use.sh', dest: 'post_tool_use.sh', executable: true },
+  { src: 'agent_start.sh', dest: 'agent_start.sh', executable: true },
+  { src: 'session_start.sh', dest: 'session_start.sh', executable: true }
 ]
 
-// ─── Claude Code hook event types to register ────────────────────────────────
+// â”€â”€â”€ Claude Code hook event types to register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ClaudeHookEntry {
   type: 'command'
   command: string
 }
+
 interface ClaudeHookMatcher {
   hooks: ClaudeHookEntry[]
   matcher?: string
 }
 
-// ─── Path helpers ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Path helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getClaudeHooksDir(): string {
   return path.join(os.homedir(), '.claude', 'hooks')
 }
 
 function getAssetsHooksDir(): string {
-  // In production the app is in out/main/index.js; assets/ is packaged alongside.
-  // In dev, __dirname is src/main/.
   const candidates = [
-    // Production (electron-builder copies assets/ to resources/)
     path.join(process.resourcesPath ?? '', 'assets', 'hooks'),
-    // electron-vite dev (assets/ is in project root)
     path.join(app.getAppPath(), 'assets', 'hooks'),
-    // Direct dist layout
     path.join(__dirname, '..', '..', 'assets', 'hooks')
   ]
 
@@ -80,72 +76,96 @@ function getAssetsHooksDir(): string {
     if (fs.existsSync(candidate)) return candidate
   }
 
-  // Fall back to the last candidate and let callers handle missing files
   return candidates[1]
 }
 
-// ─── Settings.json hook registration ─────────────────────────────────────────
+function getPlatformHooks(): HookEntry[] {
+  return process.platform === 'win32' ? WINDOWS_HOOKS : UNIX_HOOKS
+}
 
-/**
- * Merges Ouroboros hook commands into ~/.claude/settings.json so Claude Code
- * actually invokes them. Safe to call multiple times — deduplicates by command.
- */
-function registerHooksInSettings(hooksDir: string): void {
-  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json')
+function buildHookCommands(hooksDir: string): Record<string, string> {
+  if (process.platform === 'win32') {
+    return {
+      PreToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'pre_tool_use.ps1')}"`,
+      PostToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'post_tool_use.ps1')}"`,
+      SubagentStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_start.ps1')}"`,
+      SessionStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
+    }
+  }
 
-  // Build the commands for this platform
-  const hookCommands: Record<string, string> = process.platform === 'win32'
-    ? {
-        PreToolUse:    `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'pre_tool_use.ps1')}"`,
-        PostToolUse:   `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'post_tool_use.ps1')}"`,
-        SubagentStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_start.ps1')}"`,
-        SessionStart:  `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
-      }
-    : {
-        PreToolUse:    path.join(hooksDir, 'pre_tool_use.sh'),
-        PostToolUse:   path.join(hooksDir, 'post_tool_use.sh'),
-        SubagentStart: path.join(hooksDir, 'agent_start.sh'),
-        SessionStart:  path.join(hooksDir, 'session_start.sh'),
-      }
+  return {
+    PreToolUse: path.join(hooksDir, 'pre_tool_use.sh'),
+    PostToolUse: path.join(hooksDir, 'post_tool_use.sh'),
+    SubagentStart: path.join(hooksDir, 'agent_start.sh'),
+    SessionStart: path.join(hooksDir, 'session_start.sh'),
+  }
+}
 
-  // Read existing settings (or start fresh)
-  let settings: Record<string, unknown> = {}
+function readClaudeSettings(settingsPath: string): Record<string, unknown> {
+  let settings: unknown = {}
+
   try {
     if (fs.existsSync(settingsPath)) {
       settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
     }
   } catch {
-    // Malformed or missing — start fresh
+    return {}
   }
 
-  if (typeof settings !== 'object' || settings === null) settings = {}
+  return typeof settings === 'object' && settings !== null ? settings as Record<string, unknown> : {}
+}
 
-  // Ensure hooks section exists
-  if (!settings['hooks'] || typeof settings['hooks'] !== 'object') {
-    settings['hooks'] = {}
+function ensureHooksMap(settings: Record<string, unknown>): Record<string, ClaudeHookMatcher[]> {
+  const hooks = settings['hooks']
+  if (typeof hooks === 'object' && hooks !== null) {
+    return hooks as Record<string, ClaudeHookMatcher[]>
   }
-  const hooks = settings['hooks'] as Record<string, ClaudeHookMatcher[]>
 
-  // For each event type, add the command if not already present
-  for (const [eventType, command] of Object.entries(hookCommands)) {
-    if (!Array.isArray(hooks[eventType])) {
-      hooks[eventType] = []
-    }
+  settings['hooks'] = {}
+  return settings['hooks'] as Record<string, ClaudeHookMatcher[]>
+}
 
-    // Deduplicate — skip if command already registered
-    const alreadyRegistered = hooks[eventType].some((entry) =>
-      entry.hooks?.some((h) => h.command === command)
-    )
-    if (alreadyRegistered) continue
+function ensureHookMatchers(hooks: Record<string, ClaudeHookMatcher[]>, eventType: string): ClaudeHookMatcher[] {
+  if (Array.isArray(hooks[eventType])) {
+    return hooks[eventType]
+  }
 
-    hooks[eventType].push({ hooks: [{ type: 'command', command }] })
+  hooks[eventType] = []
+  return hooks[eventType]
+}
+
+function registerHookCommand(entries: ClaudeHookMatcher[], command: string): boolean {
+  const alreadyRegistered = entries.some((entry) =>
+    entry.hooks?.some((hook) => hook.command === command)
+  )
+
+  if (alreadyRegistered) return false
+
+  entries.push({ hooks: [{ type: 'command', command }] })
+  return true
+}
+
+// â”€â”€â”€ Settings.json hook registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/**
+ * Merges Ouroboros hook commands into ~/.claude/settings.json so Claude Code
+ * actually invokes them. Safe to call multiple times â€” deduplicates by command.
+ */
+function registerHooksInSettings(hooksDir: string): void {
+  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json')
+  const settings = readClaudeSettings(settingsPath)
+  const hooks = ensureHooksMap(settings)
+
+  for (const [eventType, command] of Object.entries(buildHookCommands(hooksDir))) {
+    const entries = ensureHookMatchers(hooks, eventType)
+    if (!registerHookCommand(entries, command)) continue
     console.log(`[hookInstaller] registered ${eventType} hook in settings.json`)
   }
 
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8')
 }
 
-// ─── Installer ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Installer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface InstallResult {
   installed: boolean
@@ -154,85 +174,98 @@ export interface InstallResult {
   skippedReason?: string
 }
 
-export async function installHooks(): Promise<InstallResult> {
-  const autoInstall = getConfigValue('autoInstallHooks') as boolean
-  if (!autoInstall) {
-    return {
-      installed: false,
-      firstInstall: false,
-      hooksDir: getClaudeHooksDir(),
-      skippedReason: 'autoInstallHooks disabled in config'
-    }
+function createSkippedInstallResult(hooksDir: string, skippedReason: string): InstallResult {
+  return {
+    installed: false,
+    firstInstall: false,
+    hooksDir,
+    skippedReason,
+  }
+}
+
+function installHookFile(entry: HookEntry, assetsDir: string, hooksDir: string): void {
+  const srcPath = path.join(assetsDir, entry.src)
+  const destPath = path.join(hooksDir, entry.dest)
+
+  if (!fs.existsSync(srcPath)) {
+    console.warn(`[hookInstaller] source script not found: ${srcPath}`)
+    return
   }
 
-  const hooksDir  = getClaudeHooksDir()
-  const assetsDir = getAssetsHooksDir()
-  const markerPath = path.join(hooksDir, VERSION_MARKER_FILE)
+  fs.copyFileSync(srcPath, destPath)
 
-  // Check version marker
-  const installedVersion = readVersionMarker(markerPath)
-  if (installedVersion === CURRENT_HOOK_VERSION) {
-    return {
-      installed: false,
-      firstInstall: false,
-      hooksDir,
-      skippedReason: `hooks already at version ${CURRENT_HOOK_VERSION}`
-    }
+  if (entry.executable && process.platform !== 'win32') {
+    fs.chmodSync(destPath, 0o755)
   }
 
-  const firstInstall = installedVersion === null
+  console.log(`[hookInstaller] installed ${entry.dest} -> ${destPath}`)
+}
 
-  // Ensure target directory exists
+function installHookFiles(assetsDir: string, hooksDir: string): void {
   fs.mkdirSync(hooksDir, { recursive: true })
 
-  const hooks = process.platform === 'win32' ? WINDOWS_HOOKS : UNIX_HOOKS
-
-  for (const entry of hooks) {
-    const srcPath  = path.join(assetsDir, entry.src)
-    const destPath = path.join(hooksDir, entry.dest)
-
-    if (!fs.existsSync(srcPath)) {
-      console.warn(`[hookInstaller] source script not found: ${srcPath}`)
-      continue
-    }
-
-    fs.copyFileSync(srcPath, destPath)
-
-    if (entry.executable && process.platform !== 'win32') {
-      fs.chmodSync(destPath, 0o755)
-    }
-
-    console.log(`[hookInstaller] installed ${entry.dest} -> ${destPath}`)
+  for (const entry of getPlatformHooks()) {
+    installHookFile(entry, assetsDir, hooksDir)
   }
+}
 
-  // Write version marker
+function writeVersionMarker(markerPath: string): void {
   fs.writeFileSync(markerPath, CURRENT_HOOK_VERSION, 'utf8')
+}
 
-  // Register hooks in ~/.claude/settings.json so Claude Code actually calls them
+function syncHooksIntoSettings(hooksDir: string): void {
   try {
     registerHooksInSettings(hooksDir)
   } catch (err) {
     console.warn('[hookInstaller] could not update settings.json:', err)
   }
+}
 
-  // Notify the user on first install
-  if (firstInstall && Notification.isSupported()) {
-    const n = new Notification({
-      title: 'Ouroboros',
-      body: `Hook scripts installed to ${hooksDir}.\nOuroboros will now receive live tool events from Claude Code.`,
-      silent: false
-    })
-    n.show()
+function maybeShowInstallNotification(firstInstall: boolean, hooksDir: string): void {
+  if (!firstInstall || !Notification.isSupported()) return
+
+  const notification = new Notification({
+    title: 'Ouroboros',
+    body: `Hook scripts installed to ${hooksDir}.\nOuroboros will now receive live tool events from Claude Code.`,
+    silent: false
+  })
+
+  notification.show()
+}
+
+function logInstallComplete(firstInstall: boolean): void {
+  console.log(
+    `[hookInstaller] ${firstInstall ? 'first' : 'updated'} install complete â€” version ${CURRENT_HOOK_VERSION}`
+  )
+}
+
+export async function installHooks(): Promise<InstallResult> {
+  const hooksDir = getClaudeHooksDir()
+  const autoInstall = getConfigValue('autoInstallHooks') as boolean
+
+  if (!autoInstall) {
+    return createSkippedInstallResult(hooksDir, 'autoInstallHooks disabled in config')
   }
 
-  console.log(
-    `[hookInstaller] ${firstInstall ? 'first' : 'updated'} install complete — version ${CURRENT_HOOK_VERSION}`
-  )
+  const markerPath = path.join(hooksDir, VERSION_MARKER_FILE)
+  const installedVersion = readVersionMarker(markerPath)
+
+  if (installedVersion === CURRENT_HOOK_VERSION) {
+    return createSkippedInstallResult(hooksDir, `hooks already at version ${CURRENT_HOOK_VERSION}`)
+  }
+
+  const firstInstall = installedVersion === null
+
+  installHookFiles(getAssetsHooksDir(), hooksDir)
+  writeVersionMarker(markerPath)
+  syncHooksIntoSettings(hooksDir)
+  maybeShowInstallNotification(firstInstall, hooksDir)
+  logInstallComplete(firstInstall)
 
   return { installed: true, firstInstall, hooksDir }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function readVersionMarker(markerPath: string): string | null {
   try {
@@ -251,8 +284,8 @@ export function hooksAreUpToDate(): boolean {
 
 /** Removes all installed hook scripts and the version marker. */
 export function uninstallHooks(): void {
-  const hooksDir  = getClaudeHooksDir()
-  const allHooks  = [...WINDOWS_HOOKS, ...UNIX_HOOKS]
+  const hooksDir = getClaudeHooksDir()
+  const allHooks = [...WINDOWS_HOOKS, ...UNIX_HOOKS]
 
   for (const entry of allHooks) {
     const destPath = path.join(hooksDir, entry.dest)

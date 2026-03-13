@@ -12,8 +12,13 @@ export interface CodeContentProps {
   codeRef: React.RefObject<HTMLDivElement | null>;
 }
 
+interface CodeTextLayout {
+  whiteSpace: string;
+  wordBreak: 'break-all' | undefined;
+}
+
 /**
- * Code content area — renders syntax-highlighted or plain-text lines.
+ * Code content area â€” renders syntax-highlighted or plain-text lines.
  */
 export const CodeContent = memo(function CodeContent({
   rows,
@@ -25,48 +30,95 @@ export const CodeContent = memo(function CodeContent({
   toggleFold,
   codeRef,
 }: CodeContentProps): React.ReactElement {
-  const whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
-  const wordBreak = wordWrap ? 'break-all' as const : undefined;
-  const paddingRight = showMinimap && lineCount >= 50 ? '86px' : '16px';
-
   return (
     <div
       ref={codeRef}
       className="selectable"
-      style={{
-        flex: 1,
-        padding: '16px 16px 16px 12px',
-        paddingRight,
-        minWidth: 0,
-      }}
+      style={getCodeContentStyle(showMinimap, lineCount)}
     >
-      {rows.map((row) => {
-        if (row.type === 'fold-placeholder') {
-          return (
-            <FoldPlaceholder
-              key={`code-fp-${row.startLine}`}
-              startLine={row.startLine}
-              count={row.count}
-              toggleFold={toggleFold}
-            />
-          );
-        }
-        return (
-          <CodeLine
-            key={`code-${row.index}`}
-            index={row.index}
-            lineHtml={shikiLines ? (shikiLines[row.index] ?? '') : null}
-            plainText={lines[row.index]}
-            whiteSpace={whiteSpace}
-            wordBreak={wordBreak}
-          />
-        );
-      })}
+      <CodeRows
+        rows={rows}
+        lines={lines}
+        shikiLines={shikiLines}
+        textLayout={getCodeTextLayout(wordWrap)}
+        toggleFold={toggleFold}
+      />
     </div>
   );
 });
 
-// ── Fold placeholder ──
+interface CodeRowsProps {
+  rows: CodeRow[];
+  lines: string[];
+  shikiLines: string[] | null;
+  textLayout: CodeTextLayout;
+  toggleFold: (startLine: number) => void;
+}
+
+function CodeRows({
+  rows,
+  lines,
+  shikiLines,
+  textLayout,
+  toggleFold,
+}: CodeRowsProps): React.ReactElement {
+  return (
+    <>
+      {rows.map((row) =>
+        renderCodeRow({ row, lines, shikiLines, textLayout, toggleFold })
+      )}
+    </>
+  );
+}
+
+function renderCodeRow({
+  row,
+  lines,
+  shikiLines,
+  textLayout,
+  toggleFold,
+}: CodeRowsProps & { row: CodeRow }): React.ReactElement {
+  if (row.type === 'fold-placeholder') {
+    return (
+      <FoldPlaceholder
+        key={`code-fp-${row.startLine}`}
+        startLine={row.startLine}
+        count={row.count}
+        toggleFold={toggleFold}
+      />
+    );
+  }
+
+  return (
+    <CodeLine
+      key={`code-${row.index}`}
+      index={row.index}
+      lineHtml={shikiLines ? (shikiLines[row.index] ?? '') : null}
+      plainText={lines[row.index]}
+      whiteSpace={textLayout.whiteSpace}
+      wordBreak={textLayout.wordBreak}
+    />
+  );
+}
+
+function getCodeTextLayout(wordWrap: boolean): CodeTextLayout {
+  return {
+    whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
+    wordBreak: wordWrap ? 'break-all' : undefined,
+  };
+}
+
+function getCodeContentStyle(
+  showMinimap: boolean,
+  lineCount: number
+): React.CSSProperties {
+  return {
+    flex: 1,
+    padding: '16px 16px 16px 12px',
+    paddingRight: showMinimap && lineCount >= 50 ? '86px' : '16px',
+    minWidth: 0,
+  };
+}
 
 interface FoldPlaceholderProps {
   startLine: number;
@@ -100,8 +152,6 @@ function FoldPlaceholder({
     </div>
   );
 }
-
-// ── Single code line ──
 
 interface CodeLineProps {
   index: number;

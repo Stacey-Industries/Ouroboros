@@ -42,14 +42,19 @@ export interface AppLayoutProps extends AppLayoutSlots {
   onApplyLayout?: (layout: WorkspaceLayout) => void;
 }
 
-export function AppLayout(props: AppLayoutProps): React.ReactElement {
-  const { sizes, startResize, resetSize, applySizes } = useResizable();
-  const { collapsed, toggle, applyState } = usePanelCollapse({ keybindings: props.keybindings });
-  const { focusedPanel, setFocusedPanel } = useFocusPanel();
+interface PanelCollapseState {
+  leftSidebar: boolean;
+  rightSidebar: boolean;
+  terminal: boolean;
+}
 
+function useApplyLayoutEvent(
+  applySizes: (sizes: WorkspaceLayout['panelSizes']) => void,
+  applyState: (state: PanelCollapseState) => void,
+): void {
   useEffect(() => {
-    function onApply(e: Event): void {
-      const layout = (e as CustomEvent<WorkspaceLayout>).detail;
+    function onApply(event: Event): void {
+      const layout = (event as CustomEvent<WorkspaceLayout>).detail;
       if (!layout) return;
       applySizes(layout.panelSizes);
       applyState({
@@ -58,9 +63,17 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
         terminal: !layout.visiblePanels.terminal,
       });
     }
+
     window.addEventListener('agent-ide:apply-layout', onApply);
     return () => window.removeEventListener('agent-ide:apply-layout', onApply);
   }, [applySizes, applyState]);
+}
+
+export function AppLayout(props: AppLayoutProps): React.ReactElement {
+  const { sizes, startResize, resetSize, applySizes } = useResizable();
+  const { collapsed, toggle, applyState } = usePanelCollapse({ keybindings: props.keybindings });
+  const { focusedPanel, setFocusedPanel } = useFocusPanel();
+  useApplyLayoutEvent(applySizes, applyState);
 
   const pfs = useCallback(
     (panel: FocusPanel): React.CSSProperties =>

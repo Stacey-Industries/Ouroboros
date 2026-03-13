@@ -11,7 +11,7 @@ export interface DiffGutterProps {
 }
 
 /**
- * Diff gutter — thin colored markers for added/modified/deleted lines.
+ * Diff gutter â€” thin colored markers for added/modified/deleted lines.
  */
 export const DiffGutter = memo(function DiffGutter({
   rows,
@@ -36,24 +36,21 @@ export const DiffGutter = memo(function DiffGutter({
         userSelect: 'none',
       }}
     >
-      {rows.map((row) => {
-        if (row.type === 'fold-placeholder') {
-          return <div key={`dg-fp-${row.startLine}`} style={{ height: '1.6em' }} />;
-        }
-        return (
+      {rows.map((row) =>
+        row.type === 'fold-placeholder' ? (
+          <div key={`dg-fp-${row.startLine}`} style={{ height: '1.6em' }} />
+        ) : (
           <DiffGutterLine
             key={`dg-${row.index}`}
             index={row.index}
             kind={diffMap.get(row.index + 1)}
             diffGutterWidth={diffGutterWidth}
           />
-        );
-      })}
+        )
+      )}
     </div>
   );
 });
-
-// ── Individual diff gutter line ──
 
 interface DiffGutterLineProps {
   index: number;
@@ -66,41 +63,52 @@ function DiffGutterLine({
   kind,
   diffGutterWidth,
 }: DiffGutterLineProps): React.ReactElement {
-  if (!kind) {
-    return <div key={`dg-${index}`} style={{ height: '1.6em' }} />;
-  }
+  if (!kind) return <DiffSpacer index={index} />;
+  if (kind === 'deleted') return <DeletedDiffMarker />;
+  return <ChangedDiffMarker kind={kind} diffGutterWidth={diffGutterWidth} />;
+}
 
-  if (kind === 'deleted') {
-    return (
-      <div
-        title="Line(s) deleted after this line"
+function DiffSpacer({ index }: { index: number }): React.ReactElement {
+  return <div style={{ height: '1.6em' }} data-line={index} />;
+}
+
+function DeletedDiffMarker(): React.ReactElement {
+  return (
+    <div
+      title="Line(s) deleted after this line"
+      style={{
+        height: '1.6em',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <span
         style={{
-          height: '1.6em',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          width: 0,
+          height: 0,
+          borderLeft: '3px solid transparent',
+          borderRight: '3px solid transparent',
+          borderTop: '5px solid #f85149',
+          display: 'block',
         }}
-      >
-        <span
-          style={{
-            width: 0,
-            height: 0,
-            borderLeft: '3px solid transparent',
-            borderRight: '3px solid transparent',
-            borderTop: '5px solid #f85149',
-            display: 'block',
-          }}
-        />
-      </div>
-    );
-  }
+      />
+    </div>
+  );
+}
 
-  const color = kind === 'added' ? '#3fb950' : '#58a6ff';
-  const tooltip = kind === 'added' ? 'Added line' : 'Modified line';
+function ChangedDiffMarker({
+  kind,
+  diffGutterWidth,
+}: {
+  kind: Exclude<DiffLineInfo['kind'], 'deleted'>;
+  diffGutterWidth: number;
+}): React.ReactElement {
+  const marker = getChangedDiffMarker(kind);
 
   return (
     <div
-      title={tooltip}
+      title={marker.tooltip}
       style={{
         height: '1.6em',
         display: 'flex',
@@ -110,10 +118,19 @@ function DiffGutterLine({
       <div
         style={{
           width: `${diffGutterWidth}px`,
-          backgroundColor: color,
+          backgroundColor: marker.color,
           borderRadius: '1px',
         }}
       />
     </div>
   );
+}
+
+function getChangedDiffMarker(kind: Exclude<DiffLineInfo['kind'], 'deleted'>): {
+  color: string;
+  tooltip: string;
+} {
+  return kind === 'added'
+    ? { color: '#3fb950', tooltip: 'Added line' }
+    : { color: '#58a6ff', tooltip: 'Modified line' };
 }

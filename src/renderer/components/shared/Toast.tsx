@@ -145,24 +145,110 @@ interface ToastItemViewProps {
   onDismiss: (id: string) => void;
 }
 
+function useToastProgressPause(
+  elRef: React.RefObject<HTMLDivElement | null>,
+  paused: boolean,
+): void {
+  useEffect(() => {
+    if (!elRef.current) return;
+    const bar = elRef.current.querySelector('[data-toast-progress]') as HTMLElement | null;
+    if (bar) bar.style.animationPlayState = paused ? 'paused' : 'running';
+  }, [elRef, paused]);
+}
+
+function buildToastItemStyle(typeColor: string, dismissing: boolean): React.CSSProperties {
+  return {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    padding: '10px 12px',
+    minWidth: '280px',
+    maxWidth: '400px',
+    background: 'var(--bg-secondary, var(--bg))',
+    border: '1px solid var(--border)',
+    borderLeft: `3px solid ${typeColor}`,
+    borderRadius: '6px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+    fontFamily: 'var(--font-ui)',
+    fontSize: '0.8125rem',
+    lineHeight: '1.4',
+    color: 'var(--text)',
+    overflow: 'hidden',
+    animation: dismissing ? 'toast-fade-out 300ms ease-in forwards' : 'toast-slide-in 300ms ease-out',
+  };
+}
+
+function buildToastActionStyle(typeColor: string): React.CSSProperties {
+  return {
+    display: 'inline-block',
+    marginLeft: '8px',
+    padding: '0 4px',
+    border: 'none',
+    borderRadius: '3px',
+    background: 'transparent',
+    color: typeColor,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    fontWeight: 600,
+    textDecoration: 'underline',
+    textUnderlineOffset: '2px',
+  };
+}
+
+function ToastMessage({
+  item,
+  typeColor,
+}: {
+  item: ToastItem;
+  typeColor: string;
+}): React.ReactElement {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ wordBreak: 'break-word' }}>{item.message}</span>
+      {item.action && (
+        <button type="button" onClick={item.action.onClick} style={buildToastActionStyle(typeColor)}>
+          {item.action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ToastProgressBar({
+  item,
+  typeColor,
+}: {
+  item: ToastItem;
+  typeColor: string;
+}): React.ReactElement | null {
+  if (item.duration <= 0 || item.dismissing) return null;
+
+  return (
+    <div
+      data-toast-progress
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        height: '2px',
+        background: typeColor,
+        opacity: 0.5,
+        animation: `toast-progress ${item.duration}ms linear forwards`,
+      }}
+    />
+  );
+}
+
 const ToastItemView = memo(function ToastItemView({
   item,
   onDismiss,
 }: ToastItemViewProps): React.ReactElement {
   const typeColor = getTypeColor(item.type);
   const elRef = useRef<HTMLDivElement>(null);
-
-  // Pause progress bar on hover
   const [paused, setPaused] = useState(false);
-
-  // When paused changes, update the animation play state on the progress bar
-  useEffect(() => {
-    if (!elRef.current) return;
-    const bar = elRef.current.querySelector('[data-toast-progress]') as HTMLElement | null;
-    if (bar) {
-      bar.style.animationPlayState = paused ? 'paused' : 'running';
-    }
-  }, [paused]);
+  useToastProgressPause(elRef, paused);
 
   return (
     <div
@@ -170,80 +256,14 @@ const ToastItemView = memo(function ToastItemView({
       role="alert"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '8px',
-        padding: '10px 12px',
-        minWidth: '280px',
-        maxWidth: '400px',
-        background: 'var(--bg-secondary, var(--bg))',
-        border: '1px solid var(--border)',
-        borderLeft: `3px solid ${typeColor}`,
-        borderRadius: '6px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '0.8125rem',
-        lineHeight: '1.4',
-        color: 'var(--text)',
-        overflow: 'hidden',
-        animation: item.dismissing
-          ? 'toast-fade-out 300ms ease-in forwards'
-          : 'toast-slide-in 300ms ease-out',
-      }}
+      style={buildToastItemStyle(typeColor, item.dismissing)}
     >
-      {/* Icon */}
       <div style={{ flexShrink: 0, marginTop: '1px' }}>
         <ToastIcon type={item.type} />
       </div>
-
-      {/* Message + optional action */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ wordBreak: 'break-word' }}>{item.message}</span>
-        {item.action && (
-          <button
-            type="button"
-            onClick={item.action.onClick}
-            style={{
-              display: 'inline-block',
-              marginLeft: '8px',
-              padding: '0 4px',
-              border: 'none',
-              borderRadius: '3px',
-              background: 'transparent',
-              color: typeColor,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: 'inherit',
-              fontWeight: 600,
-              textDecoration: 'underline',
-              textUnderlineOffset: '2px',
-            }}
-          >
-            {item.action.label}
-          </button>
-        )}
-      </div>
-
-      {/* Close button */}
+      <ToastMessage item={item} typeColor={typeColor} />
       <CloseButton onClick={() => onDismiss(item.id)} />
-
-      {/* Progress bar */}
-      {item.duration > 0 && !item.dismissing && (
-        <div
-          data-toast-progress
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            height: '2px',
-            background: typeColor,
-            opacity: 0.5,
-            animation: `toast-progress ${item.duration}ms linear forwards`,
-          }}
-        />
-      )}
+      <ToastProgressBar item={item} typeColor={typeColor} />
     </div>
   );
 });

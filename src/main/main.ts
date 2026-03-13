@@ -10,7 +10,7 @@ import { initExtensions } from './extensions'
 import { buildApplicationMenu } from './menu'
 import { createWindow, getAllActiveWindows } from './windowManager'
 
-// ─── Auto-updater (electron-updater — optional dep) ───────────────────────────
+// â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let autoUpdater: any = null
@@ -20,10 +20,10 @@ try {
   const updaterModule = require('electron-updater')
   autoUpdater = updaterModule.autoUpdater
 } catch {
-  console.log('[updater] electron-updater not installed — auto-update disabled')
+  console.log('[updater] electron-updater not installed â€” auto-update disabled')
 }
 
-// ─── Crash logging ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Crash logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function getCrashLogDir(): Promise<string> {
   const dir = path.join(app.getPath('userData'), 'crashes')
@@ -76,9 +76,17 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null
 
-// ─── Performance metrics ──────────────────────────────────────────────────────
+// â”€â”€â”€ Performance metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 let perfInterval: ReturnType<typeof setInterval> | null = null
+
+function broadcastToActiveWindows(channel: string, payload: unknown): void {
+  for (const win of getAllActiveWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, payload)
+    }
+  }
+}
 
 /** Broadcasts perf metrics to all open windows. */
 function startPerfMetrics(): void {
@@ -87,7 +95,7 @@ function startPerfMetrics(): void {
     try {
       const mem = process.memoryUsage()
       const appMetrics = app.getAppMetrics()
-      const payload = {
+      broadcastToActiveWindows('perf:metrics', {
         timestamp: Date.now(),
         memory: {
           heapUsed: mem.heapUsed,
@@ -101,14 +109,9 @@ function startPerfMetrics(): void {
           cpu: m.cpu,
           memory: m.memory,
         })),
-      }
-      for (const win of getAllActiveWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('perf:metrics', payload)
-        }
-      }
+      })
     } catch {
-      // Non-fatal — window might be closing
+      // Non-fatal â€” window might be closing
     }
   }, 5000)
 }
@@ -120,104 +123,71 @@ function stopPerfMetrics(): void {
   }
 }
 
-app.setName('Ouroboros')
-
-app.whenReady().then(async () => {
-  // Create the first window via the window manager
-  mainWindow = createWindow()
-
-  buildApplicationMenu(mainWindow)
-
-  // IPC handlers are registered globally inside createWindow() via the
-  // window manager. The call below is a no-op for additional windows but
-  // ensures the first registration happens for the initial window.
-  // (createWindow already calls registerIpcHandlers internally.)
-
+async function runStartupStep(errorMessage: string, step: () => Promise<void>): Promise<void> {
   try {
-    await startHooksServer(mainWindow)
+    await step()
   } catch (err) {
-    console.error('[main] failed to start hooks server:', err)
+    console.error(errorMessage, err)
   }
+}
 
-  try {
-    const toolAddr = await startIdeToolServer()
-    console.log(`[main] IDE tool server started at ${toolAddr.address}`)
-  } catch (err) {
-    console.error('[main] failed to start IDE tool server:', err)
-  }
+async function startIdeTools(): Promise<void> {
+  const toolAddr = await startIdeToolServer()
+  console.log(`[main] IDE tool server started at ${toolAddr.address}`)
+}
 
-  try {
-    await installHooks()
-  } catch (err) {
-    console.error('[main] hook installer error:', err)
-  }
+async function startBackgroundServices(win: BrowserWindow): Promise<void> {
+  await runStartupStep('[main] failed to start hooks server:', async () => startHooksServer(win))
+  await runStartupStep('[main] failed to start IDE tool server:', startIdeTools)
+  await runStartupStep('[main] hook installer error:', installHooks)
+  await runStartupStep('[main] extensions init error:', initExtensions)
+}
 
-  try {
-    await initExtensions()
-  } catch (err) {
-    console.error('[main] extensions init error:', err)
-  }
-
-  // ── Render-process crash logging ───────────────────────────────────────────
+function registerRenderProcessCrashLogging(): void {
   app.on('render-process-gone', (_event, _webContents, details) => {
     const msg = `Reason: ${details.reason}\nExitCode: ${details.exitCode}`
     console.error('[crash] render-process-gone:', msg)
     void writeCrashLog('renderer:render-process-gone', msg)
   })
+}
 
-  // ── Auto-updater setup — broadcast to all windows ─────────────────────────
-  if (autoUpdater) {
-    autoUpdater.autoDownload = false
-    autoUpdater.autoInstallOnAppQuit = true
+function registerAutoUpdaterEvents(): void {
+  autoUpdater.on('checking-for-update', () => broadcastToActiveWindows('updater:event', { type: 'checking-for-update' }))
+  autoUpdater.on('update-available', (info: unknown) => broadcastToActiveWindows('updater:event', { type: 'update-available', info }))
+  autoUpdater.on('update-not-available', (info: unknown) => broadcastToActiveWindows('updater:event', { type: 'update-not-available', info }))
+  autoUpdater.on('download-progress', (progress: unknown) => broadcastToActiveWindows('updater:event', { type: 'download-progress', progress }))
+  autoUpdater.on('update-downloaded', (info: unknown) => broadcastToActiveWindows('updater:event', { type: 'update-downloaded', info }))
+  autoUpdater.on('error', (err: Error) => broadcastToActiveWindows('updater:event', { type: 'error', error: err.message }))
+}
 
-    const broadcastUpdater = (payload: unknown) => {
-      for (const win of getAllActiveWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('updater:event', payload)
-        }
-      }
-    }
-
-    autoUpdater.on('checking-for-update', () => {
-      broadcastUpdater({ type: 'checking-for-update' })
-    })
-    autoUpdater.on('update-available', (info: unknown) => {
-      broadcastUpdater({ type: 'update-available', info })
-    })
-    autoUpdater.on('update-not-available', (info: unknown) => {
-      broadcastUpdater({ type: 'update-not-available', info })
-    })
-    autoUpdater.on('download-progress', (progress: unknown) => {
-      broadcastUpdater({ type: 'download-progress', progress })
-    })
-    autoUpdater.on('update-downloaded', (info: unknown) => {
-      broadcastUpdater({ type: 'update-downloaded', info })
-    })
-    autoUpdater.on('error', (err: Error) => {
-      broadcastUpdater({ type: 'error', error: err.message })
-    })
-
-    // Check for updates after a short delay (only in packaged builds)
-    if (app.isPackaged) {
-      setTimeout(() => {
-        autoUpdater.checkForUpdates().catch((err: Error) => {
-          console.log('[updater] Auto-check failed:', err.message)
-        })
-      }, 5000)
-    }
+function scheduleAutoUpdateCheck(): void {
+  if (!app.isPackaged) {
+    return
   }
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err: Error) => {
+      console.log('[updater] Auto-check failed:', err.message)
+    })
+  }, 5000)
+}
 
-  // ── Performance metrics ────────────────────────────────────────────────────
-  startPerfMetrics()
+function configureAutoUpdater(): void {
+  if (!autoUpdater) {
+    return
+  }
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+  registerAutoUpdaterEvents()
+  scheduleAutoUpdateCheck()
+}
 
+function registerWindowLifecycleHandlers(): void {
   app.on('activate', () => {
-    // macOS: re-create window when dock icon is clicked
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow()
     }
   })
 
-  // Second instance focus — focus most recent window
   app.on('second-instance', () => {
     const windows = getAllActiveWindows()
     if (windows.length > 0) {
@@ -226,7 +196,20 @@ app.whenReady().then(async () => {
       win.focus()
     }
   })
-})
+}
+
+async function initializeApplication(): Promise<void> {
+  mainWindow = createWindow()
+  buildApplicationMenu(mainWindow)
+  await startBackgroundServices(mainWindow)
+  registerRenderProcessCrashLogging()
+  configureAutoUpdater()
+  startPerfMetrics()
+  registerWindowLifecycleHandlers()
+}
+
+app.setName('Ouroboros')
+app.whenReady().then(initializeApplication)
 
 app.on('window-all-closed', async () => {
   stopPerfMetrics()

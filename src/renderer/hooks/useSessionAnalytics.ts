@@ -77,21 +77,15 @@ function extractFilePath(input: string): string | null {
   return trimmed;
 }
 
-function computeSessionMetrics(session: AgentSession): SessionMetrics {
-  const durationMs = session.completedAt
-    ? session.completedAt - session.startedAt
-    : Date.now() - session.startedAt;
-
-  const toolCallCount = session.toolCalls.length;
-  const totalTokens = session.inputTokens + session.outputTokens;
-
-  // Count file edits and track per-file edit counts
+function tallyToolCalls(toolCalls: ToolCallEvent[]): {
+  fileEditCounts: Record<string, number>;
+  errorCount: number;
+} {
   const fileEditCounts: Record<string, number> = {};
   let errorCount = 0;
 
-  for (const tc of session.toolCalls) {
+  for (const tc of toolCalls) {
     if (tc.status === 'error') errorCount++;
-
     if (FILE_EDIT_TOOLS.has(tc.toolName)) {
       const filePath = extractFilePath(tc.input);
       if (filePath) {
@@ -100,30 +94,43 @@ function computeSessionMetrics(session: AgentSession): SessionMetrics {
     }
   }
 
-  const fileEditCount = Object.keys(fileEditCounts).length > 0
-    ? Object.values(fileEditCounts).reduce((sum, c) => sum + c, 0)
-    : 0;
+  return { fileEditCounts, errorCount };
+}
 
-  // Retry count: files edited 3+ times indicate retries
-  const retryCount = Object.values(fileEditCounts)
+function countFileEdits(fileEditCounts: Record<string, number>): number {
+  const vals = Object.values(fileEditCounts);
+  return vals.length > 0 ? vals.reduce((sum, c) => sum + c, 0) : 0;
+}
+
+function countRetries(fileEditCounts: Record<string, number>): number {
+  return Object.values(fileEditCounts)
     .filter((count) => count >= 3)
     .reduce((sum, count) => sum + (count - 2), 0);
+}
 
-  const efficiencyScore = fileEditCount > 0 ? totalTokens / fileEditCount : Infinity;
+function computeSessionMetrics(session: AgentSession): SessionMetrics {
+  const durationMs = session.completedAt
+    ? session.completedAt - session.startedAt
+    : Date.now() - session.startedAt;
+
+  const totalTokens = session.inputTokens + session.outputTokens;
+  const { fileEditCounts, errorCount } = tallyToolCalls(session.toolCalls);
+  const fileEditCount = countFileEdits(fileEditCounts);
+  const retryCount = countRetries(fileEditCounts);
 
   return {
     sessionId: session.id,
     taskLabel: session.taskLabel,
     status: session.status,
     durationMs,
-    toolCallCount,
+    toolCallCount: session.toolCalls.length,
     fileEditCount,
     totalTokens,
     inputTokens: session.inputTokens,
     outputTokens: session.outputTokens,
     errorCount,
     retryCount,
-    efficiencyScore,
+    efficiencyScore: fileEditCount > 0 ? totalTokens / fileEditCount : Infinity,
     model: session.model,
     startedAt: session.startedAt,
     completedAt: session.completedAt,

@@ -1,5 +1,5 @@
 /**
- * EmptyState.tsx — Reusable empty state component with SVG illustration.
+ * EmptyState.tsx - Reusable empty state component with SVG illustration.
  *
  * Displays a monochrome icon, title, optional description, and optional action button.
  * All colors use CSS custom properties for theme compatibility.
@@ -7,7 +7,50 @@
 
 import React, { memo } from 'react';
 
-// ── SVG Icons ────────────────────────────────────────────────────────────────
+const containerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  gap: '12px',
+  padding: '24px',
+  userSelect: 'none',
+  color: 'var(--text-faint)',
+};
+
+const iconWrapperStyle: React.CSSProperties = { opacity: 0.35 };
+const titleStyle: React.CSSProperties = {
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  color: 'var(--text-muted)',
+};
+
+const descriptionStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  color: 'var(--text-faint)',
+  textAlign: 'center',
+  maxWidth: '240px',
+  lineHeight: '1.5',
+};
+
+const actionButtonStyle: React.CSSProperties = {
+  marginTop: '4px',
+  padding: '6px 16px',
+  fontSize: '0.75rem',
+  borderRadius: '4px',
+  border: 'none',
+  backgroundColor: 'var(--accent)',
+  color: 'var(--bg)',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
+  fontWeight: 500,
+  transition: 'background-color 100ms',
+};
+
+const AGENT_EYE_POSITIONS = [19, 29] as const;
+const AGENT_ANTENNA_PATHS = ['M20 14V10', 'M28 14V10'] as const;
+const AGENT_SIDE_PORT_PATHS = ['M8 22H12', 'M36 22H40', 'M8 28H12', 'M36 28H40'] as const;
 
 /** Folder icon for "no project open" state */
 function FolderIcon(): React.ReactElement {
@@ -26,11 +69,7 @@ function FolderIcon(): React.ReactElement {
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path
-        d="M8 20H40"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
+      <path d="M8 20H40" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -79,41 +118,26 @@ function AgentIcon(): React.ReactElement {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect
-        x="12"
-        y="14"
-        width="24"
-        height="22"
-        rx="4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <circle cx="19" cy="24" r="2" fill="currentColor" />
-      <circle cx="29" cy="24" r="2" fill="currentColor" />
+      <rect x="12" y="14" width="24" height="22" rx="4" stroke="currentColor" strokeWidth="1.5" />
+      {AGENT_EYE_POSITIONS.map((cx) => <circle key={cx} cx={cx} cy="24" r="2" fill="currentColor" />)}
       <path
         d="M19 31C19 31 21 34 24 34C27 34 29 31 29 31"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-      <path
-        d="M20 14V10M28 14V10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      {AGENT_ANTENNA_PATHS.map((d) => (
+        <path key={d} d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      ))}
       <path
         d="M24 10C24 8.89543 24.8954 8 26 8H22C23.1046 8 24 8.89543 24 10"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-      <path
-        d="M8 22H12M36 22H40M8 28H12M36 28H40"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      {AGENT_SIDE_PORT_PATHS.map((d) => (
+        <path key={d} d={d} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      ))}
     </svg>
   );
 }
@@ -138,11 +162,7 @@ function TerminalIcon(): React.ReactElement {
         stroke="currentColor"
         strokeWidth="1.5"
       />
-      <path
-        d="M6 16H42"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
+      <path d="M6 16H42" stroke="currentColor" strokeWidth="1.5" />
       <path
         d="M14 24L20 28L14 32"
         stroke="currentColor"
@@ -150,17 +170,10 @@ function TerminalIcon(): React.ReactElement {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path
-        d="M24 32H32"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M24 32H32" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
-
-// ── Icon registry ─────────────────────────────────────────────────────────────
 
 const ICONS = {
   folder: FolderIcon,
@@ -170,8 +183,6 @@ const ICONS = {
 } as const;
 
 export type EmptyStateIcon = keyof typeof ICONS;
-
-// ── EmptyState component ─────────────────────────────────────────────────────
 
 export interface EmptyStateProps {
   /** Which SVG icon to display */
@@ -187,8 +198,41 @@ export interface EmptyStateProps {
   };
 }
 
+function EmptyStateDescription({
+  description,
+}: {
+  description?: string;
+}): React.ReactElement | null {
+  return description ? <span style={descriptionStyle}>{description}</span> : null;
+}
+
+function handleActionHover(target: HTMLButtonElement, hovering: boolean): void {
+  target.style.backgroundColor = hovering ? 'var(--accent-hover)' : 'var(--accent)';
+}
+
+function EmptyStateAction({
+  action,
+}: {
+  action: NonNullable<EmptyStateProps['action']>;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={action.onClick}
+      style={actionButtonStyle}
+      onMouseEnter={(e) => {
+        handleActionHover(e.currentTarget, true);
+      }}
+      onMouseLeave={(e) => {
+        handleActionHover(e.currentTarget, false);
+      }}
+    >
+      {action.label}
+    </button>
+  );
+}
+
 /**
- * EmptyState — displays a centered illustration with message and optional action.
+ * EmptyState - displays a centered illustration with message and optional action.
  */
 export const EmptyState = memo(function EmptyState({
   icon,
@@ -199,73 +243,13 @@ export const EmptyState = memo(function EmptyState({
   const IconComponent = ICONS[icon];
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '12px',
-        padding: '24px',
-        userSelect: 'none',
-        color: 'var(--text-faint)',
-      }}
-    >
-      <div style={{ opacity: 0.35 }}>
+    <div style={containerStyle}>
+      <div style={iconWrapperStyle}>
         <IconComponent />
       </div>
-
-      <span
-        style={{
-          fontSize: '0.875rem',
-          fontWeight: 500,
-          color: 'var(--text-muted)',
-        }}
-      >
-        {title}
-      </span>
-
-      {description && (
-        <span
-          style={{
-            fontSize: '0.75rem',
-            color: 'var(--text-faint)',
-            textAlign: 'center',
-            maxWidth: '240px',
-            lineHeight: '1.5',
-          }}
-        >
-          {description}
-        </span>
-      )}
-
-      {action && (
-        <button
-          onClick={action.onClick}
-          style={{
-            marginTop: '4px',
-            padding: '6px 16px',
-            fontSize: '0.75rem',
-            borderRadius: '4px',
-            border: 'none',
-            backgroundColor: 'var(--accent)',
-            color: 'var(--bg)',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 500,
-            transition: 'background-color 100ms',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent)';
-          }}
-        >
-          {action.label}
-        </button>
-      )}
+      <span style={titleStyle}>{title}</span>
+      <EmptyStateDescription description={description} />
+      {action && <EmptyStateAction action={action} />}
     </div>
   );
 });

@@ -3,8 +3,7 @@ import { RangeHighlight } from './HighlightedText';
 import type { SymbolEntry } from '../../types/electron';
 
 const ITEM_HEIGHT = 40;
-
-// ─── Badge colors ────────────────────────────────────────────────────────────
+const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   function:  { bg: 'rgba(88, 166, 255, 0.18)',  text: '#58a6ff', label: 'fn'  },
@@ -18,12 +17,6 @@ const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> 
 
 const DEFAULT_BADGE = { bg: 'rgba(140, 140, 140, 0.18)', text: '#8c8c8c' };
 
-function getBadge(type: string): { bg: string; text: string; label: string } {
-  return BADGE_COLORS[type] ?? { ...DEFAULT_BADGE, label: type.slice(0, 3) };
-}
-
-// ─── SymbolItem ──────────────────────────────────────────────────────────────
-
 export interface SymbolItemProps {
   entry: SymbolEntry;
   isSelected: boolean;
@@ -31,6 +24,35 @@ export interface SymbolItemProps {
   pathIndices: ReadonlyArray<readonly [number, number]>;
   onClick: () => void;
   onMouseEnter: () => void;
+}
+
+function getBadge(type: string): { bg: string; text: string; label: string } {
+  return BADGE_COLORS[type] ?? { ...DEFAULT_BADGE, label: type.slice(0, 3) };
+}
+
+function getDirectoryPart(relativePath: string): string {
+  return relativePath.includes('/')
+    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
+    : '';
+}
+
+function getItemStyle(isSelected: boolean): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '6px 12px',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    margin: '0 4px',
+    height: `${ITEM_HEIGHT}px`,
+    boxSizing: 'border-box',
+    backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
+    color: isSelected ? 'var(--bg)' : 'var(--text)',
+    transition: 'background-color 80ms ease',
+    userSelect: 'none',
+    minWidth: 0,
+  };
 }
 
 export const SymbolItem = memo(function SymbolItem({
@@ -42,9 +64,9 @@ export const SymbolItem = memo(function SymbolItem({
   onMouseEnter,
 }: SymbolItemProps): React.ReactElement {
   const badge = getBadge(entry.type);
-  const dirPart = entry.relativePath.includes('/')
-    ? entry.relativePath.slice(0, entry.relativePath.lastIndexOf('/'))
-    : '';
+  const dirPart = getDirectoryPart(entry.relativePath);
+  const highlightedNameIndices = isSelected ? EMPTY_INDICES : nameIndices;
+  const highlightedPathIndices = isSelected ? EMPTY_INDICES : pathIndices;
 
   return (
     <div
@@ -53,26 +75,11 @@ export const SymbolItem = memo(function SymbolItem({
       aria-selected={isSelected}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 12px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        margin: '0 4px',
-        height: `${ITEM_HEIGHT}px`,
-        boxSizing: 'border-box',
-        backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-        color: isSelected ? 'var(--bg)' : 'var(--text)',
-        transition: 'background-color 80ms ease',
-        userSelect: 'none',
-        minWidth: 0,
-      }}
+      style={getItemStyle(isSelected)}
     >
       <TypeBadge badge={badge} isSelected={isSelected} />
-      <SymbolName name={entry.name} indices={isSelected ? [] : nameIndices} />
-      <SymbolPath path={dirPart || entry.relativePath} indices={isSelected ? [] : pathIndices} isSelected={isSelected} />
+      <SymbolName name={entry.name} indices={highlightedNameIndices} />
+      <SymbolPath path={dirPart || entry.relativePath} indices={highlightedPathIndices} isSelected={isSelected} />
       <LineNumber line={entry.line} isSelected={isSelected} />
     </div>
   );

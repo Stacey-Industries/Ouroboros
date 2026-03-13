@@ -11,9 +11,87 @@ export interface FoldGutterProps {
   toggleFold: (startLine: number) => void;
 }
 
-/**
- * Fold gutter — shows collapse/expand indicators for foldable regions.
- */
+const FOLD_GUTTER_LINE_STYLE: React.CSSProperties = {
+  height: '1.6em',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const FOLD_PLACEHOLDER_STYLE: React.CSSProperties = { height: '1.6em' };
+
+const FOLD_BUTTON_STYLE: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  margin: 0,
+  cursor: 'pointer',
+  fontSize: '0.625rem',
+  lineHeight: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '16px',
+  height: '16px',
+  borderRadius: '2px',
+};
+
+function getFoldGutterStyle(
+  foldGutterWidth: number,
+  gutterWidth: number
+): React.CSSProperties {
+  return {
+    flexShrink: 0,
+    width: `${foldGutterWidth}px`,
+    paddingTop: '16px',
+    paddingBottom: '16px',
+    backgroundColor: 'var(--bg)',
+    position: 'sticky',
+    left: `${gutterWidth}px`,
+    zIndex: 2,
+    userSelect: 'none',
+  };
+}
+
+function handleFoldButtonMouseOver(
+  event: React.MouseEvent<HTMLButtonElement>
+): void {
+  event.currentTarget.style.backgroundColor = 'var(--border-muted)';
+}
+
+function handleFoldButtonMouseOut(
+  event: React.MouseEvent<HTMLButtonElement>
+): void {
+  event.currentTarget.style.backgroundColor = 'transparent';
+}
+
+interface FoldGutterRowContext {
+  collapsedFolds: Set<number>;
+  foldableLines: Map<number, FoldRange>;
+  gutterHover: boolean;
+  toggleFold: (startLine: number) => void;
+}
+
+function renderFoldGutterRow(
+  row: CodeRow,
+  context: FoldGutterRowContext
+): React.ReactElement {
+  if (row.type === 'fold-placeholder') {
+    return <div key={`fg-fp-${row.startLine}`} style={FOLD_PLACEHOLDER_STYLE} />;
+  }
+
+  return (
+    <FoldGutterLine
+      key={`fg-${row.index}`}
+      index={row.index}
+      foldableLines={context.foldableLines}
+      collapsedFolds={context.collapsedFolds}
+      gutterHover={context.gutterHover}
+      toggleFold={context.toggleFold}
+    />
+  );
+}
+
 export const FoldGutter = memo(function FoldGutter({
   rows,
   gutterWidth,
@@ -23,44 +101,24 @@ export const FoldGutter = memo(function FoldGutter({
   toggleFold,
 }: FoldGutterProps): React.ReactElement {
   const [hover, setHover] = useState(false);
+  const rowContext = {
+    collapsedFolds,
+    foldableLines,
+    gutterHover: hover,
+    toggleFold,
+  };
 
   return (
     <div
       aria-hidden="true"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{
-        flexShrink: 0,
-        width: `${foldGutterWidth}px`,
-        paddingTop: '16px',
-        paddingBottom: '16px',
-        backgroundColor: 'var(--bg)',
-        position: 'sticky',
-        left: `${gutterWidth}px`,
-        zIndex: 2,
-        userSelect: 'none',
-      }}
+      style={getFoldGutterStyle(foldGutterWidth, gutterWidth)}
     >
-      {rows.map((row) => {
-        if (row.type === 'fold-placeholder') {
-          return <div key={`fg-fp-${row.startLine}`} style={{ height: '1.6em' }} />;
-        }
-        return (
-          <FoldGutterLine
-            key={`fg-${row.index}`}
-            index={row.index}
-            foldableLines={foldableLines}
-            collapsedFolds={collapsedFolds}
-            gutterHover={hover}
-            toggleFold={toggleFold}
-          />
-        );
-      })}
+      {rows.map((row) => renderFoldGutterRow(row, rowContext))}
     </div>
   );
 });
-
-// ── Individual fold gutter line ──
 
 interface FoldGutterLineProps {
   index: number;
@@ -70,6 +128,33 @@ interface FoldGutterLineProps {
   toggleFold: (startLine: number) => void;
 }
 
+interface FoldToggleButtonProps {
+  index: number;
+  isCollapsed: boolean;
+  toggleFold: (startLine: number) => void;
+}
+
+function FoldToggleButton({
+  index,
+  isCollapsed,
+  toggleFold,
+}: FoldToggleButtonProps): React.ReactElement {
+  return (
+    <button
+      onClick={() => toggleFold(index)}
+      title={isCollapsed ? 'Expand' : 'Collapse'}
+      style={{
+        ...FOLD_BUTTON_STYLE,
+        color: isCollapsed ? 'var(--text-muted)' : 'var(--text-faint)',
+      }}
+      onMouseOver={handleFoldButtonMouseOver}
+      onMouseOut={handleFoldButtonMouseOut}
+    >
+      {isCollapsed ? '\u25B6' : '\u25BC'}
+    </button>
+  );
+}
+
 function FoldGutterLine({
   index,
   foldableLines,
@@ -77,51 +162,18 @@ function FoldGutterLine({
   gutterHover,
   toggleFold,
 }: FoldGutterLineProps): React.ReactElement {
-  const foldRange = foldableLines.get(index);
   const isCollapsed = collapsedFolds.has(index);
-  const showIndicator = !!foldRange && (isCollapsed || gutterHover);
+  const showIndicator = foldableLines.has(index) && (isCollapsed || gutterHover);
 
   return (
-    <div
-      style={{
-        height: '1.6em',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {showIndicator && (
-        <button
-          onClick={() => toggleFold(index)}
-          title={isCollapsed ? 'Expand' : 'Collapse'}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            margin: 0,
-            cursor: 'pointer',
-            color: isCollapsed ? 'var(--text-muted)' : 'var(--text-faint)',
-            fontSize: '0.625rem',
-            lineHeight: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '16px',
-            height: '16px',
-            borderRadius: '2px',
-          }}
-          onMouseOver={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              'var(--border-muted)';
-          }}
-          onMouseOut={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              'transparent';
-          }}
-        >
-          {isCollapsed ? '\u25B6' : '\u25BC'}
-        </button>
-      )}
+    <div style={FOLD_GUTTER_LINE_STYLE}>
+      {showIndicator ? (
+        <FoldToggleButton
+          index={index}
+          isCollapsed={isCollapsed}
+          toggleFold={toggleFold}
+        />
+      ) : null}
     </div>
   );
 }

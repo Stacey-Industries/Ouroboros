@@ -1,11 +1,21 @@
 /**
- * useTerminalHistory — manages shell history loading, Fuse fuzzy search index,
+ * useTerminalHistory â€” manages shell history loading, Fuse fuzzy search index,
  * inline history suggestions (as-you-type), and Up/Down arrow history navigation.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import Fuse from 'fuse.js'
 import type { Completion } from './CompletionOverlay'
+
+const HISTORY_SUGGESTION_POS = { x: 8, y: 40 }
+
+interface SuggestionSearchIndex {
+  fuseRef: React.MutableRefObject<Fuse<string> | null>
+  histSuggestDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  isHistorySuggestionRef: React.MutableRefObject<boolean>
+}
+
+interface SuggestionSearchParams extends UseTerminalHistoryParams, SuggestionSearchIndex {}
 
 export interface HistoryRefs {
   /** Commands in newest-first order (index 0 = most recent) */
@@ -49,47 +59,31 @@ export interface UseTerminalHistoryResult {
   cmdSearch: CommandSearchState
 }
 
-export function useTerminalHistory(params: UseTerminalHistoryParams): UseTerminalHistoryResult {
-  const {
-    setCompletions,
-    setCompletionIndex,
-    setCompletionVisible,
-    setCompletionPos,
-    completionVisibleRef,
-    completionIndexRef,
-    completionsRef,
-  } = params
-
-  // ── App-level command history (Up/Down arrow navigation) ───────────────
+function useHistoryRefs(): HistoryRefs {
   const historyRef = useRef<string[]>([])
   const histPosRef = useRef<number>(-1)
   const currentLineRef = useRef<string>('')
   const sessionCommandsRef = useRef<string[]>([])
 
-  // ── Command search (Ctrl+R) state ─────────────────────────────────────
+  return { historyRef, histPosRef, currentLineRef, sessionCommandsRef }
+}
+
+function useCommandSearchState(): CommandSearchState {
   const [showCmdSearch, setShowCmdSearch] = useState(false)
   const [cmdHistory, setCmdHistory] = useState<string[]>([])
 
-  // ── Inline history suggestions (as-you-type) ─────────────────────────
-  const shellHistoryRef = useRef<string[]>([])
+  return { showCmdSearch, setShowCmdSearch, cmdHistory, setCmdHistory }
+}
+
+function useSuggestionSearchIndex(): SuggestionSearchIndex {
   const fuseRef = useRef<Fuse<string> | null>(null)
   const histSuggestDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isHistorySuggestionRef = useRef(false)
 
-  // ── Load shell history and build Fuse index ──────────────────────────
   useEffect(() => {
     void window.electronAPI.shellHistory.read().then((result) => {
-      const commands = result.commands ?? []
-      const seen = new Set<string>()
-      const deduped: string[] = []
-      for (const c of commands) {
-        if (c && !seen.has(c)) {
-          seen.add(c)
-          deduped.push(c)
-        }
-      }
-      shellHistoryRef.current = deduped
-      fuseRef.current = new Fuse(deduped, {
+      const commands = dedupeCommands(result.commands ?? [])
+      fuseRef.current = new Fuse(commands, {
         threshold: 0.4,
         distance: 100,
         minMatchCharLength: 2,
@@ -98,90 +92,102 @@ export function useTerminalHistory(params: UseTerminalHistoryParams): UseTermina
     })
   }, [])
 
-  // ── Search history and show inline suggestions ────────────────────────
+  useEffect(() => () => clearPendingDebounce(histSuggestDebounceRef), [])
+
+  return { fuseRef, histSuggestDebounceRef, isHistorySuggestionRef }
+}
+
+function useHistorySuggestionSearch(params: SuggestionSearchParams): HistorySuggestionControls {
+  const { completionVisibleRef, histSuggestDebounceRef, isHistorySuggestionRef } = params
+
   const searchHistorySuggestions = useCallback((input: string) => {
-    clearPreviousDebounce()
-    if (!shouldShowSuggestions(input)) return
-    if (completionVisibleRef.current && !isHistorySuggestionRef.current) return
+    clearPendingDebounce(histSuggestDebounceRef)
+
+    const trimmed = input.trim()
+    if (trimmed.length < 2) {
+      dismissHistorySuggestions(params)
+      return
+    }
+
+    if (completionVisibleRef.current && !isHistorySuggestionRef.current) {
+      return
+    }
 
     histSuggestDebounceRef.current = setTimeout(() => {
       histSuggestDebounceRef.current = null
-      performFuseSearch(input.trim())
+      performFuseSearch(trimmed, params)
     }, 150)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [completionVisibleRef, histSuggestDebounceRef, isHistorySuggestionRef, params])
 
   const searchHistorySuggestionsRef = useRef<((input: string) => void) | null>(null)
   useEffect(() => {
     searchHistorySuggestionsRef.current = searchHistorySuggestions
   }, [searchHistorySuggestions])
 
-  // ── Clean up debounce on unmount ──────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (histSuggestDebounceRef.current !== null) {
-        clearTimeout(histSuggestDebounceRef.current)
-      }
-    }
-  }, [])
+  return { searchHistorySuggestions, searchHistorySuggestionsRef, isHistorySuggestionRef }
+}
 
-  return {
-    historyRefs: { historyRef, histPosRef, currentLineRef, sessionCommandsRef },
-    suggestionControls: {
-      searchHistorySuggestions,
-      searchHistorySuggestionsRef,
-      isHistorySuggestionRef,
-    },
-    cmdSearch: { showCmdSearch, setShowCmdSearch, cmdHistory, setCmdHistory },
-  }
+export function useTerminalHistory(params: UseTerminalHistoryParams): UseTerminalHistoryResult {
+  const historyRefs = useHistoryRefs()
+  const cmdSearch = useCommandSearchState()
+  const suggestionSearchIndex = useSuggestionSearchIndex()
+  const suggestionControls = useHistorySuggestionSearch({ ...params, ...suggestionSearchIndex })
 
-  // ── Helpers (hoisted for readability) ─────────────────────────────────
+  return { historyRefs, suggestionControls, cmdSearch }
+}
 
-  function clearPreviousDebounce(): void {
-    if (histSuggestDebounceRef.current !== null) {
-      clearTimeout(histSuggestDebounceRef.current)
-      histSuggestDebounceRef.current = null
+function dedupeCommands(commands: string[]): string[] {
+  const seen = new Set<string>()
+  const deduped: string[] = []
+
+  for (const command of commands) {
+    if (command && !seen.has(command)) {
+      seen.add(command)
+      deduped.push(command)
     }
   }
 
-  function shouldShowSuggestions(input: string): boolean {
-    if (input.trim().length < 2) {
-      if (isHistorySuggestionRef.current) {
-        dismissSuggestions()
-      }
-      return false
-    }
-    return true
+  return deduped
+}
+
+function clearPendingDebounce(
+  histSuggestDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+): void {
+  if (histSuggestDebounceRef.current !== null) {
+    clearTimeout(histSuggestDebounceRef.current)
+    histSuggestDebounceRef.current = null
+  }
+}
+
+function dismissHistorySuggestions(params: SuggestionSearchParams): void {
+  if (!params.isHistorySuggestionRef.current) return
+
+  params.setCompletionVisible(false)
+  params.completionVisibleRef.current = false
+  params.setCompletions([])
+  params.completionsRef.current = []
+  params.isHistorySuggestionRef.current = false
+}
+
+function performFuseSearch(trimmed: string, params: SuggestionSearchParams): void {
+  const fuse = params.fuseRef.current
+  if (!fuse) return
+
+  const suggestions = fuse.search(trimmed, { limit: 8 })
+    .filter((result) => result.item !== trimmed)
+    .map((result) => ({ value: result.item, type: 'cmd' as const }))
+
+  if (suggestions.length === 0) {
+    dismissHistorySuggestions(params)
+    return
   }
 
-  function dismissSuggestions(): void {
-    setCompletionVisible(false)
-    completionVisibleRef.current = false
-    setCompletions([])
-    isHistorySuggestionRef.current = false
-  }
-
-  function performFuseSearch(trimmed: string): void {
-    const fuse = fuseRef.current
-    if (!fuse) return
-
-    const results = fuse.search(trimmed, { limit: 8 })
-    const suggestions: Completion[] = results
-      .filter((r) => r.item !== trimmed)
-      .map((r) => ({ value: r.item, type: 'cmd' as const }))
-
-    if (suggestions.length === 0) {
-      if (isHistorySuggestionRef.current) dismissSuggestions()
-      return
-    }
-
-    setCompletions(suggestions)
-    completionsRef.current = suggestions
-    setCompletionIndex(0)
-    completionIndexRef.current = 0
-    setCompletionVisible(true)
-    completionVisibleRef.current = true
-    isHistorySuggestionRef.current = true
-    setCompletionPos({ x: 8, y: 40 })
-  }
+  params.setCompletions(suggestions)
+  params.completionsRef.current = suggestions
+  params.setCompletionIndex(0)
+  params.completionIndexRef.current = 0
+  params.setCompletionVisible(true)
+  params.completionVisibleRef.current = true
+  params.isHistorySuggestionRef.current = true
+  params.setCompletionPos(HISTORY_SUGGESTION_POS)
 }

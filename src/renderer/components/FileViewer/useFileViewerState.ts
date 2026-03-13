@@ -22,6 +22,20 @@ import { useScrollToLine } from './useScrollToLine';
 import { useFileViewerKeyboard } from './useFileViewerKeyboard';
 import type { ScrollMetrics } from './useScrollMetrics';
 import type { FoldRange } from './useFoldRanges';
+import {
+  createDiffMap,
+  createFileViewerState,
+  createKeyboardInput,
+  parseConflictContent,
+  toggleCollapsedFold,
+  type ViewerConflicts,
+  type ViewerDerivedState,
+  type ViewerFolds,
+  type ViewerRefs,
+  type ViewerToggles,
+  type ViewerUiState,
+  type ViewerUiResetters,
+} from './useFileViewerState.helpers';
 
 export interface FileViewerStateInput {
   filePath: string | null;
@@ -31,19 +45,12 @@ export interface FileViewerStateInput {
 }
 
 export interface FileViewerState {
-  // Refs
   codeRef: React.RefObject<HTMLDivElement | null>;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
-
-  // Theme
   ideThemeId: string;
-
-  // Highlighting
   highlightedHtml: string | null;
   highlightLang: string | null;
-
-  // Toggles
   wordWrap: boolean;
   setWordWrap: (v: boolean | ((prev: boolean) => boolean)) => void;
   showMinimap: boolean;
@@ -52,8 +59,6 @@ export interface FileViewerState {
   setShowBlame: (v: boolean | ((prev: boolean) => boolean)) => void;
   showOutline: boolean;
   setShowOutline: (v: boolean | ((prev: boolean) => boolean)) => void;
-
-  // UI state
   showSearch: boolean;
   setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
   showGoToLine: boolean;
@@ -70,23 +75,28 @@ export interface FileViewerState {
   setClaudeMdEnhanced: (v: boolean | ((prev: boolean) => boolean)) => void;
   conflictBlocks: ConflictBlock[];
   collapsedFolds: Set<number>;
-
-  // Derived
   isClaudeMd: boolean;
   isMarkdown: boolean;
   hasDiff: boolean;
-
-  // Git data
   diffLines: DiffLineInfo[];
   diffMap: Map<number, DiffLineInfo['kind']>;
   blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
   foldableLines: Map<number, FoldRange>;
   scrollMetrics: ScrollMetrics;
   outlineSymbols: ReturnType<typeof useSymbolOutline>;
-
-  // Actions
   toggleFold: (startLine: number) => void;
   handleConflictResolved: (newContent: string) => void;
+}
+
+interface ViewerData {
+  highlightedHtml: string | null;
+  highlightLang: string | null;
+  diffLines: DiffLineInfo[];
+  diffMap: Map<number, DiffLineInfo['kind']>;
+  blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
+  foldableLines: Map<number, FoldRange>;
+  scrollMetrics: ScrollMetrics;
+  outlineSymbols: ReturnType<typeof useSymbolOutline>;
 }
 
 /**
@@ -94,25 +104,82 @@ export interface FileViewerState {
  * This is the single hook that owns the component's brain.
  */
 export function useFileViewerState(input: FileViewerStateInput): FileViewerState {
-  const { filePath, content, originalContent, projectRoot } = input;
   const { theme: ideTheme } = useTheme();
+  const refs = useViewerRefs();
+  const toggles = useViewerToggles();
+  const ui = useViewerUiState();
+  const derived = useViewerDerivedState(input);
+  const data = useViewerData(input, ideTheme.id, refs.scrollRef, toggles.showBlame);
+  const conflicts = useConflictState(input.filePath, input.content);
+  const folds = useCollapsedFoldState(input.filePath, input.content);
 
-  const codeRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Highlighting
-  const { highlightedHtml, highlightLang } = useHighlighting(
-    filePath, content, ideTheme.id
+  useLinkHandling(refs.codeRef, input.filePath, input.projectRoot);
+  useResetViewerUi(input.filePath, useViewerUiResetters(ui));
+  useExpandFoldsForSearch(ui.showSearch, folds.setCollapsedFolds);
+  useScrollToLine(input.filePath, refs.scrollRef, refs.codeRef);
+  useFileViewerKeyboard(
+    createKeyboardInput({
+      refs,
+      foldableLines: data.foldableLines,
+      hasDiff: derived.hasDiff,
+      ui,
+      folds,
+      setWordWrap: toggles.setWordWrap,
+    })
   );
 
-  // Persisted toggles
+  return createFileViewerState({
+    refs,
+    ideThemeId: ideTheme.id,
+    toggles,
+    ui,
+    derived,
+    data,
+    conflicts,
+    folds,
+  });
+}
+
+function useViewerUiResetters(ui: ViewerUiState): ViewerUiResetters {
+  return useMemo(
+    () => ({
+      setShowSearch: ui.setShowSearch,
+      setShowGoToLine: ui.setShowGoToLine,
+      setViewMode: ui.setViewMode,
+      setShowHistory: ui.setShowHistory,
+      setEditMode: ui.setEditMode,
+    }),
+    [ui.setEditMode, ui.setShowGoToLine, ui.setShowHistory, ui.setShowSearch, ui.setViewMode]
+  );
+}
+
+function useViewerRefs(): ViewerRefs {
+  return {
+    codeRef: useRef<HTMLDivElement>(null),
+    scrollRef: useRef<HTMLDivElement>(null),
+    containerRef: useRef<HTMLDivElement>(null),
+  };
+}
+
+function useViewerToggles(): ViewerToggles {
   const [wordWrap, setWordWrap] = usePersistedToggle('fileviewer:wordWrap', false);
   const [showMinimap, setShowMinimap] = usePersistedToggle('fileviewer:minimap', true);
   const [showBlame, setShowBlame] = usePersistedToggle('fileviewer:blame', false);
   const [showOutline, setShowOutline] = usePersistedToggle('fileviewer:outline', false);
 
-  // UI state
+  return {
+    wordWrap,
+    setWordWrap,
+    showMinimap,
+    setShowMinimap,
+    showBlame,
+    setShowBlame,
+    showOutline,
+    setShowOutline,
+  };
+}
+
+function useViewerUiState(): ViewerUiState {
   const [showSearch, setShowSearch] = useState(false);
   const [showGoToLine, setShowGoToLine] = useState(false);
   const [searchMatchLines, setSearchMatchLines] = useState<number[]>([]);
@@ -120,110 +187,144 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
   const [showHistory, setShowHistory] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [claudeMdEnhanced, setClaudeMdEnhanced] = useState(true);
-  const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
-  const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
 
-  // Derived
-  const isClaudeMd = filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath);
-  const isMarkdown = filePath != null && /\.(md|markdown)$/i.test(filePath);
-  const hasDiff = originalContent != null && content != null && originalContent !== content;
+  return {
+    showSearch,
+    setShowSearch,
+    showGoToLine,
+    setShowGoToLine,
+    searchMatchLines,
+    setSearchMatchLines,
+    viewMode,
+    setViewMode,
+    showHistory,
+    setShowHistory,
+    editMode,
+    setEditMode,
+    claudeMdEnhanced,
+    setClaudeMdEnhanced,
+  };
+}
 
-  // Git data
-  const { diffLines } = useGitDiff(projectRoot ?? null, filePath, content);
-  const { blameLines } = useGitBlame(projectRoot ?? null, filePath, showBlame);
-  const { foldableLines } = useFoldRanges(content);
+function useViewerDerivedState({
+  filePath,
+  content,
+  originalContent,
+}: FileViewerStateInput): ViewerDerivedState {
+  return {
+    isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath),
+    isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath),
+    hasDiff: originalContent != null && content != null && originalContent !== content,
+  };
+}
+
+function useViewerData(
+  input: FileViewerStateInput,
+  ideThemeId: string,
+  scrollRef: React.RefObject<HTMLDivElement | null>,
+  showBlame: boolean
+): ViewerData {
+  const { highlightedHtml, highlightLang } = useHighlighting(
+    input.filePath,
+    input.content,
+    ideThemeId
+  );
+  const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
+  const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
+  const { foldableLines } = useFoldRanges(input.content);
   const scrollMetrics = useScrollMetrics(scrollRef);
-  const outlineLanguage = filePath ? getLanguage(filePath) : 'text';
-  const outlineSymbols = useSymbolOutline(content, outlineLanguage);
+  const outlineSymbols = useSymbolOutline(input.content, input.filePath ? getLanguage(input.filePath) : 'text');
+  const diffMap = useMemo(() => createDiffMap(diffLines), [diffLines]);
 
-  useScrollToLine(filePath, scrollRef, codeRef);
+  return {
+    highlightedHtml,
+    highlightLang,
+    diffLines,
+    diffMap,
+    blameLines,
+    foldableLines,
+    scrollMetrics,
+    outlineSymbols,
+  };
+}
 
-  const diffMap = useMemo(() => {
-    const map = new Map<number, DiffLineInfo['kind']>();
-    for (const dl of diffLines) map.set(dl.line, dl.kind);
-    return map;
-  }, [diffLines]);
-
-  // Effects
-  useEffect(() => { ensureLinkStyles(); }, []);
+function useConflictState(
+  filePath: string | null,
+  content: string | null
+): ViewerConflicts {
+  const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
 
   useEffect(() => {
-    const el = codeRef.current;
-    if (!el) return;
-    return attachLinkClickHandler(el, () => filePath, () => projectRoot ?? null);
-  });
+    setConflictBlocks(
+      parseConflictContent(content, hasConflictMarkers, parseConflictBlocks)
+    );
+  }, [content]);
 
-  useEffect(() => {
-    setShowSearch(false);
-    setShowGoToLine(false);
-    setViewMode('code');
-    setShowHistory(false);
-    setEditMode(false);
+  const handleConflictResolved = useCallback((newContent: string) => {
+    setConflictBlocks(
+      parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks)
+    );
+    if (!filePath) return;
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:reload-file', { detail: { filePath } })
+    );
   }, [filePath]);
 
-  useEffect(() => {
-    if (!content || !hasConflictMarkers(content)) {
-      setConflictBlocks([]);
-      return;
-    }
-    setConflictBlocks(parseConflictBlocks(content.split('\n')));
-  }, [content]);
+  return { conflictBlocks, handleConflictResolved };
+}
+
+function useCollapsedFoldState(
+  filePath: string | null,
+  content: string | null
+): ViewerFolds {
+  const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setCollapsedFolds(new Set());
   }, [filePath, content]);
 
-  useEffect(() => {
-    if (showSearch && collapsedFolds.size > 0) {
-      setCollapsedFolds(new Set());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSearch]);
-
   const toggleFold = useCallback((startLine: number) => {
-    setCollapsedFolds((prev) => {
-      const next = new Set(prev);
-      if (next.has(startLine)) next.delete(startLine);
-      else next.add(startLine);
-      return next;
-    });
+    setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine));
   }, []);
 
-  const handleConflictResolved = useCallback((newContent: string) => {
-    if (!hasConflictMarkers(newContent)) {
-      setConflictBlocks([]);
-    } else {
-      setConflictBlocks(parseConflictBlocks(newContent.split('\n')));
-    }
-    if (filePath) {
-      window.dispatchEvent(
-        new CustomEvent('agent-ide:reload-file', { detail: { filePath } })
-      );
-    }
-  }, [filePath]);
+  return { collapsedFolds, setCollapsedFolds, toggleFold };
+}
 
-  useFileViewerKeyboard({
-    containerRef, scrollRef, hasDiff,
-    foldableLines, collapsedFolds, setCollapsedFolds,
-    setShowSearch, setShowGoToLine, setViewMode, setWordWrap,
-  });
+function useLinkHandling(
+  codeRef: React.RefObject<HTMLDivElement | null>,
+  filePath: string | null,
+  projectRoot?: string | null
+): void {
+  useEffect(() => {
+    ensureLinkStyles();
+  }, []);
 
-  return {
-    codeRef, scrollRef, containerRef,
-    ideThemeId: ideTheme.id,
-    highlightedHtml, highlightLang,
-    wordWrap, setWordWrap, showMinimap, setShowMinimap,
-    showBlame, setShowBlame, showOutline, setShowOutline,
-    showSearch, setShowSearch, showGoToLine, setShowGoToLine,
-    searchMatchLines, setSearchMatchLines,
-    viewMode, setViewMode,
-    showHistory, setShowHistory,
-    editMode, setEditMode,
-    claudeMdEnhanced, setClaudeMdEnhanced,
-    conflictBlocks, collapsedFolds,
-    isClaudeMd, isMarkdown, hasDiff,
-    diffLines, diffMap, blameLines, foldableLines,
-    scrollMetrics, outlineSymbols,
-    toggleFold, handleConflictResolved,
-  };
+  useEffect(() => {
+    const element = codeRef.current;
+    if (!element) return;
+    return attachLinkClickHandler(element, () => filePath, () => projectRoot ?? null);
+  }, [codeRef, filePath, projectRoot]);
+}
+
+function useResetViewerUi(
+  filePath: string | null,
+  resetters: ViewerUiResetters
+): void {
+  useEffect(() => {
+    resetters.setShowSearch(false);
+    resetters.setShowGoToLine(false);
+    resetters.setViewMode('code');
+    resetters.setShowHistory(false);
+    resetters.setEditMode(false);
+  }, [filePath, resetters]);
+}
+
+function useExpandFoldsForSearch(
+  showSearch: boolean,
+  setCollapsedFolds: React.Dispatch<React.SetStateAction<Set<number>>>
+): void {
+  useEffect(() => {
+    if (!showSearch) return;
+    setCollapsedFolds((previous) => (previous.size === 0 ? previous : new Set()));
+  }, [showSearch, setCollapsedFolds]);
 }

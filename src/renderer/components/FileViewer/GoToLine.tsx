@@ -13,145 +13,226 @@ export interface GoToLineProps {
   onClose: () => void;
 }
 
-export function GoToLine({
+const popupBaseStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '8px',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  zIndex: 20,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '6px 12px',
+  backgroundColor: 'var(--bg-secondary)',
+  borderRadius: '6px',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+  transition: 'border-color 0.15s',
+};
+
+const inputBaseStyle: React.CSSProperties = {
+  width: '120px',
+  height: '26px',
+  padding: '0 6px',
+  backgroundColor: 'var(--bg)',
+  color: 'var(--text)',
+  borderRadius: '3px',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.8125rem',
+  outline: 'none',
+  transition: 'border-color 0.15s',
+};
+
+const lineRangeStyle: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  fontSize: '0.75rem',
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
+};
+
+export function GoToLine(props: GoToLineProps): React.ReactElement | null {
+  const controller = useGoToLineController(props);
+  if (!props.visible) return null;
+
+  return (
+    <GoToLinePanel
+      lineCount={props.lineCount}
+      value={controller.value}
+      hasError={controller.hasError}
+      inputRef={controller.inputRef}
+      onChange={controller.handleChange}
+      onKeyDown={controller.handleKeyDown}
+    />
+  );
+}
+
+function useGoToLineController({
+  visible,
   lineCount,
   scrollContainer,
   codeContainer,
-  visible,
   onClose,
-}: GoToLineProps): React.ReactElement | null {
+}: GoToLineProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
   const [hasError, setHasError] = useState(false);
 
-  // Focus input on open
   useEffect(() => {
-    if (visible && inputRef.current) {
-      setValue('');
-      setHasError(false);
-      inputRef.current.focus();
-    }
+    if (!visible) return;
+    setValue('');
+    setHasError(false);
+    inputRef.current?.focus();
   }, [visible]);
 
   const handleGo = useCallback(() => {
-    const lineNum = parseInt(value, 10);
-    if (isNaN(lineNum) || lineNum < 1 || lineNum > lineCount) {
-      setHasError(true);
-      return;
-    }
-
+    const lineNum = parseTargetLine(value, lineCount);
+    if (lineNum === null) return setHasError(true);
     setHasError(false);
-
-    if (scrollContainer) {
-      // Compute line height from the rendered content.
-      // Lines use 1.6em at 0.8125rem (13px) = ~20.8px
-      // But we can measure more accurately from the gutter divs.
-      const gutterLines = scrollContainer.querySelectorAll('[aria-hidden="true"] > div');
-      let lineHeight = 20.8; // fallback
-      if (gutterLines.length > 0) {
-        lineHeight = (gutterLines[0] as HTMLElement).offsetHeight;
-      }
-
-      const paddingTop = 16; // matches the 16px padding on gutter/code
-      const scrollTarget = paddingTop + (lineNum - 1) * lineHeight;
-
-      scrollContainer.scrollTo({
-        top: scrollTarget - scrollContainer.clientHeight / 3,
-        behavior: 'smooth',
-      });
-
-      // Briefly highlight the target line
-      highlightLine({ scrollContainer, codeContainer, lineNum, lineHeight, paddingTop });
-    }
-
+    goToLine(lineNum, scrollContainer, codeContainer);
     onClose();
   }, [value, lineCount, scrollContainer, codeContainer, onClose]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        handleGo();
-      }
-    },
+    (event: React.KeyboardEvent) => handleGoToLineKeyDown(event, onClose, handleGo),
     [handleGo, onClose]
   );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value);
     setHasError(false);
   }, []);
 
-  if (!visible) return null;
+  return { inputRef, value, hasError, handleChange, handleKeyDown };
+}
 
+interface GoToLinePanelProps {
+  lineCount: number;
+  value: string;
+  hasError: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown: (event: React.KeyboardEvent) => void;
+}
+
+function GoToLinePanel({
+  lineCount,
+  value,
+  hasError,
+  inputRef,
+  onChange,
+  onKeyDown,
+}: GoToLinePanelProps): React.ReactElement {
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '8px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 20,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 12px',
-        backgroundColor: 'var(--bg-secondary)',
-        border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
-        borderRadius: '6px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '0.8125rem',
-        transition: 'border-color 0.15s',
-      }}
-      onKeyDown={handleKeyDown}
-    >
-      <input
+    <div style={getPopupStyle(hasError)} onKeyDown={onKeyDown}>
+      <GoToLineInput
         ref={inputRef}
-        type="text"
         value={value}
-        onChange={handleChange}
-        placeholder="Go to line..."
-        spellCheck={false}
-        style={{
-          width: '120px',
-          height: '26px',
-          padding: '0 6px',
-          backgroundColor: 'var(--bg)',
-          color: 'var(--text)',
-          border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
-          borderRadius: '3px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.8125rem',
-          outline: 'none',
-          transition: 'border-color 0.15s',
-        }}
-        onFocus={(e) => {
-          if (!hasError) e.target.style.borderColor = 'var(--accent)';
-        }}
-        onBlur={(e) => {
-          if (!hasError) e.target.style.borderColor = 'var(--border)';
-        }}
+        hasError={hasError}
+        onChange={onChange}
       />
-      <span
-        style={{
-          color: 'var(--text-faint)',
-          fontSize: '0.75rem',
-          whiteSpace: 'nowrap',
-          userSelect: 'none',
-        }}
-      >
-        1 &ndash; {lineCount}
-      </span>
+      <span style={lineRangeStyle}>1 &ndash; {lineCount}</span>
     </div>
   );
 }
 
-// ── Line highlight animation ─────────────────────────────────────────────────
+const GoToLineInput = React.forwardRef<HTMLInputElement, {
+  value: string;
+  hasError: boolean;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}>(function GoToLineInput({ value, hasError, onChange }, ref): React.ReactElement {
+  return (
+    <input
+      ref={ref}
+      type="text"
+      value={value}
+      onChange={onChange}
+      placeholder="Go to line..."
+      spellCheck={false}
+      style={getInputStyle(hasError)}
+      onFocus={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--accent)')}
+      onBlur={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--border)')}
+    />
+  );
+});
+
+function parseTargetLine(value: string, lineCount: number): number | null {
+  const lineNum = Number.parseInt(value, 10);
+  return Number.isNaN(lineNum) || lineNum < 1 || lineNum > lineCount ? null : lineNum;
+}
+
+function goToLine(
+  lineNum: number,
+  scrollContainer: HTMLElement | null,
+  codeContainer: HTMLElement | null
+): void {
+  if (!scrollContainer) return;
+
+  const metrics = getRenderedLineMetrics(scrollContainer);
+  const scrollTarget = metrics.paddingTop + (lineNum - 1) * metrics.lineHeight;
+
+  scrollContainer.scrollTo({
+    top: scrollTarget - scrollContainer.clientHeight / 3,
+    behavior: 'smooth',
+  });
+
+  highlightLine({
+    scrollContainer,
+    codeContainer,
+    lineNum,
+    lineHeight: metrics.lineHeight,
+    paddingTop: metrics.paddingTop,
+  });
+}
+
+function getRenderedLineMetrics(scrollContainer: HTMLElement): {
+  lineHeight: number;
+  paddingTop: number;
+} {
+  const gutterLines = scrollContainer.querySelectorAll('[aria-hidden="true"] > div');
+  const lineHeight = gutterLines.length > 0 ? (gutterLines[0] as HTMLElement).offsetHeight : 20.8;
+  return { lineHeight, paddingTop: 16 };
+}
+
+function handleGoToLineKeyDown(
+  event: React.KeyboardEvent,
+  onClose: () => void,
+  onGo: () => void
+): void {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+    return;
+  }
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    onGo();
+  }
+}
+
+function getPopupStyle(hasError: boolean): React.CSSProperties {
+  return {
+    ...popupBaseStyle,
+    border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
+  };
+}
+
+function getInputStyle(hasError: boolean): React.CSSProperties {
+  return {
+    ...inputBaseStyle,
+    border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
+  };
+}
+
+function updateInputBorderColor(
+  input: HTMLInputElement,
+  hasError: boolean,
+  borderColor: string
+): void {
+  if (!hasError) input.style.borderColor = borderColor;
+}
 
 interface HighlightLineOptions {
   scrollContainer: HTMLElement;
@@ -162,9 +243,9 @@ interface HighlightLineOptions {
 }
 
 function highlightLine(options: HighlightLineOptions): void {
-  const { scrollContainer, lineNum, lineHeight, paddingTop } = options;
-  // Create an overlay div positioned at the target line
+  const { scrollContainer, codeContainer, lineNum, lineHeight, paddingTop } = options;
   const highlight = document.createElement('div');
+
   highlight.className = 'fv-goto-highlight';
   highlight.style.position = 'absolute';
   highlight.style.left = '0';
@@ -177,24 +258,18 @@ function highlightLine(options: HighlightLineOptions): void {
   highlight.style.transition = 'opacity 0.8s ease-out';
   highlight.style.zIndex = '5';
 
-  // The scroll container has position: relative, but we need to place the
-  // highlight inside the content flow. Use the first child (the flex row).
-  const contentRow = scrollContainer.firstElementChild as HTMLElement | null;
-  if (contentRow) {
-    contentRow.style.position = 'relative';
-    contentRow.appendChild(highlight);
-  } else {
-    scrollContainer.appendChild(highlight);
-  }
+  const highlightParent =
+    codeContainer ?? (scrollContainer.firstElementChild as HTMLElement | null) ?? scrollContainer;
 
-  // Trigger fade-out after a short delay
+  highlightParent.style.position = 'relative';
+  highlightParent.appendChild(highlight);
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       highlight.style.opacity = '0';
     });
   });
 
-  // Remove the element after animation completes
   setTimeout(() => {
     highlight.remove();
   }, 1200);

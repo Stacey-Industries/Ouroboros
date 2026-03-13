@@ -16,91 +16,135 @@ export function ToggleSwitch({
   disabled = false,
 }: ToggleSwitchProps): React.ReactElement {
   const id = useId();
+  const labelId = `${id}-label`;
+  const descriptionId = description ? `${id}-description` : undefined;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <button
+    <div style={wrapperStyle(disabled)}>
+      <SwitchButton
         id={id}
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
+        checked={checked}
+        labelId={labelId}
+        descriptionId={descriptionId}
         disabled={disabled}
-        onClick={() => onChange(!checked)}
-        style={{
-          flexShrink: 0,
-          position: 'relative',
-          width: '36px',
-          height: '20px',
-          borderRadius: '10px',
-          border: 'none',
-          padding: 0,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: checked ? 'var(--accent)' : 'var(--bg-tertiary)',
-          transition: 'background-color 180ms ease',
-          outline: 'none',
-          marginTop: '1px',
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent), 0 0 0 4px transparent';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: '2px',
-            left: checked ? '18px' : '2px',
-            width: '16px',
-            height: '16px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--text)',
-            transition: 'left 180ms ease',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-          }}
-        />
-      </button>
-
-      <label
-        htmlFor={id}
-        style={{
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          flex: 1,
-        }}
-        onClick={() => !disabled && onChange(!checked)}
-      >
-        <div
-          style={{
-            fontSize: '13px',
-            fontWeight: 500,
-            color: 'var(--text)',
-            lineHeight: 1.4,
-          }}
-        >
-          {label}
-        </div>
-        {description && (
-          <div
-            style={{
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              marginTop: '2px',
-              lineHeight: 1.5,
-            }}
-          >
-            {description}
-          </div>
-        )}
-      </label>
+        onToggle={() => onChange(!checked)}
+      />
+      <SwitchText
+        controlId={id}
+        label={label}
+        labelId={labelId}
+        description={description}
+        descriptionId={descriptionId}
+        disabled={disabled}
+      />
     </div>
   );
 }
+
+function SwitchButton({
+  id,
+  checked,
+  labelId,
+  descriptionId,
+  disabled,
+  onToggle,
+}: {
+  id: string;
+  checked: boolean;
+  labelId: string;
+  descriptionId?: string;
+  disabled: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={labelId}
+      aria-describedby={descriptionId}
+      disabled={disabled}
+      onClick={onToggle}
+      style={switchButtonStyle(checked, disabled)}
+    >
+      <span aria-hidden="true" style={switchKnobStyle(checked)} />
+    </button>
+  );
+}
+
+function SwitchText({
+  controlId,
+  label,
+  labelId,
+  description,
+  descriptionId,
+  disabled,
+}: {
+  controlId: string;
+  label: string;
+  labelId: string;
+  description?: string;
+  descriptionId?: string;
+  disabled: boolean;
+}): React.ReactElement {
+  return (
+    <label htmlFor={controlId} style={textWrapperStyle(disabled)}>
+      <div id={labelId} style={labelStyle}>{label}</div>
+      {description && <div id={descriptionId} style={descriptionStyle}>{description}</div>}
+    </label>
+  );
+}
+
+const wrapperStyle = (disabled: boolean): React.CSSProperties => ({
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px',
+  opacity: disabled ? 0.5 : 1,
+});
+
+const switchButtonStyle = (checked: boolean, disabled: boolean): React.CSSProperties => ({
+  flexShrink: 0,
+  position: 'relative',
+  width: '36px',
+  height: '20px',
+  borderRadius: '10px',
+  border: '1px solid transparent',
+  padding: 0,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  backgroundColor: checked ? 'var(--accent)' : 'var(--bg-tertiary)',
+  transition: 'background-color 180ms ease',
+  marginTop: '1px',
+  outlineOffset: '2px',
+});
+
+const switchKnobStyle = (checked: boolean): React.CSSProperties => ({
+  position: 'absolute',
+  top: '2px',
+  left: checked ? '18px' : '2px',
+  width: '16px',
+  height: '16px',
+  borderRadius: '50%',
+  backgroundColor: 'var(--text)',
+  transition: 'left 180ms ease',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+});
+
+const textWrapperStyle = (disabled: boolean): React.CSSProperties => ({
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  flex: 1,
+});
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '13px',
+  fontWeight: 500,
+  color: 'var(--text)',
+  lineHeight: 1.4,
+};
+
+const descriptionStyle: React.CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--text-muted)',
+  marginTop: '2px',
+  lineHeight: 1.5,
+};

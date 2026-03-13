@@ -1,21 +1,16 @@
 /**
- * ApprovalContext.tsx — Manages the pre-execution approval queue.
+ * ApprovalContext.tsx - Manages the pre-execution approval queue.
  *
  * Listens for approval:request events from the main process and maintains
  * a queue of pending requests. Renders the ApprovalDialog overlay when
  * there are pending approvals.
- *
- * Must be mounted inside a component tree that has access to window.electronAPI.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ApprovalDialog } from '../components/AgentMonitor/ApprovalDialog';
 import type { ApprovalRequest } from '../types/electron';
 
-// ─── Context ─────────────────────────────────────────────────────────────────
-
 interface ApprovalContextValue {
-  /** Number of pending approval requests */
   pendingCount: number;
 }
 
@@ -25,44 +20,40 @@ export function useApprovalContext(): ApprovalContextValue {
   return useContext(ApprovalCtx);
 }
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+function playApprovalTone(audioCtxRef: React.MutableRefObject<AudioContext | null>): void {
+  try {
+    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.value = 0.1;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch {
+    // Audio is optional.
+  }
+}
 
-export function ApprovalProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+function useApprovalRequests(): [ApprovalRequest[], React.Dispatch<React.SetStateAction<ApprovalRequest[]>>] {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Subscribe to approval events
   useEffect(() => {
     if (!window.electronAPI?.approval) return;
 
     const cleanupRequest = window.electronAPI.approval.onRequest((request) => {
       setRequests((prev) => {
-        // Avoid duplicates
-        if (prev.some((r) => r.requestId === request.requestId)) return prev;
+        if (prev.some((queued) => queued.requestId === request.requestId)) return prev;
         return [...prev, request];
       });
-
-      // Play a subtle notification sound
-      try {
-        if (!audioCtxRef.current) {
-          audioCtxRef.current = new AudioContext();
-        }
-        const ctx = audioCtxRef.current;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.value = 0.1;
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } catch {
-        // Audio not available — ignore
-      }
+      playApprovalTone(audioCtxRef);
     });
 
     const cleanupResolved = window.electronAPI.approval.onResolved((resolved) => {
-      setRequests((prev) => prev.filter((r) => r.requestId !== resolved.requestId));
+      setRequests((prev) => prev.filter((request) => request.requestId !== resolved.requestId));
     });
 
     return () => {
@@ -71,46 +62,51 @@ export function ApprovalProvider({ children }: { children: React.ReactNode }): R
     };
   }, []);
 
-  const handleApprove = useCallback((requestId: string) => {
-    // Optimistic removal from queue
-    setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+  return [requests, setRequests];
+}
 
+function useApprovalActions(
+  setRequests: React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
+): Pick<React.ComponentProps<typeof ApprovalDialog>, 'onApprove' | 'onReject' | 'onAlwaysAllow'> {
+  const removeRequest = useCallback((requestId: string): void => {
+    setRequests((prev) => prev.filter((request) => request.requestId !== requestId));
+  }, [setRequests]);
+
+  const onApprove = useCallback((requestId: string) => {
+    removeRequest(requestId);
     window.electronAPI?.approval?.respond(requestId, 'approve').catch((err) => {
       console.error('[ApprovalProvider] failed to send approve:', err);
     });
-  }, []);
+  }, [removeRequest]);
 
-  const handleReject = useCallback((requestId: string, reason?: string) => {
-    setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
-
+  const onReject = useCallback((requestId: string, reason?: string) => {
+    removeRequest(requestId);
     window.electronAPI?.approval?.respond(requestId, 'reject', reason).catch((err) => {
       console.error('[ApprovalProvider] failed to send reject:', err);
     });
-  }, []);
+  }, [removeRequest]);
 
-  const handleAlwaysAllow = useCallback((requestId: string, sessionId: string, toolName: string) => {
-    // Approve this request + add always-allow rule
-    setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
-
+  const onAlwaysAllow = useCallback((requestId: string, sessionId: string, toolName: string) => {
+    removeRequest(requestId);
     Promise.all([
       window.electronAPI?.approval?.respond(requestId, 'approve'),
       window.electronAPI?.approval?.alwaysAllow(sessionId, toolName),
     ]).catch((err) => {
       console.error('[ApprovalProvider] failed to always-allow:', err);
     });
-  }, []);
+  }, [removeRequest]);
+
+  return { onApprove, onReject, onAlwaysAllow };
+}
+
+export function ApprovalProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+  const [requests, setRequests] = useApprovalRequests();
+  const approvalHandlers = useApprovalActions(setRequests);
 
   return (
     <ApprovalCtx.Provider value={{ pendingCount: requests.length }}>
       {children}
-      {requests.length > 0 && (
-        <ApprovalDialog
-          requests={requests}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onAlwaysAllow={handleAlwaysAllow}
-        />
-      )}
+      {requests.length > 0 && <ApprovalDialog requests={requests} {...approvalHandlers} />}
     </ApprovalCtx.Provider>
   );
 }

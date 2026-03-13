@@ -12,6 +12,14 @@ interface CommandSearchProps {
   onClose: () => void
 }
 
+interface KeyDownContext {
+  filtered: string[]
+  selectedIndex: number
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>
+  onSelect: (cmd: string) => void
+  onClose: () => void
+}
+
 const overlayStyle: React.CSSProperties = {
   position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30,
   display: 'flex', flexDirection: 'column', maxHeight: '50%',
@@ -65,14 +73,8 @@ function CommandItem({ cmd, isSelected, onSelect, onHover }: {
   )
 }
 
-function handleKeyDown(
-  e: React.KeyboardEvent,
-  filtered: string[],
-  selectedIndex: number,
-  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
-  onSelect: (cmd: string) => void,
-  onClose: () => void,
-): void {
+function handleKeyDown(e: React.KeyboardEvent, context: KeyDownContext): void {
+  const { filtered, selectedIndex, setSelectedIndex, onSelect, onClose } = context
   if (e.key === 'Escape') { e.preventDefault(); onClose() }
   else if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1)) }
   else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((i) => Math.max(i - 1, 0)) }
@@ -92,7 +94,7 @@ export function CommandSearchOverlay({ commands, onSelect, onClose }: CommandSea
   return (
     <div
       style={overlayStyle}
-      onKeyDown={(e) => handleKeyDown(e, filtered, selectedIndex, setSelectedIndex, onSelect, onClose)}
+      onKeyDown={(e) => handleKeyDown(e, { filtered, selectedIndex, setSelectedIndex, onSelect, onClose })}
     >
       <div style={inputRowStyle}>
         <span style={{ color: 'var(--accent, #58a6ff)', fontSize: 11, flexShrink: 0 }}>bck-i-search:</span>

@@ -1,5 +1,5 @@
 /**
- * fileViewerUtils — shared utility functions for the FileViewer component.
+ * fileViewerUtils â€” shared utility functions for the FileViewer component.
  *
  * Extracted from FileViewer.tsx to reduce file size and improve testability.
  * Contains language detection, Shiki theme mapping, highlighter singleton,
@@ -9,66 +9,62 @@
 import type { Highlighter, BundledTheme } from 'shiki';
 import type { FoldRange } from './useFoldRanges';
 
-// ─── Language detection ───────────────────────────────────────────────────────
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'tsx',
+  js: 'javascript',
+  jsx: 'jsx',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  json: 'json',
+  jsonc: 'jsonc',
+  yaml: 'yaml',
+  yml: 'yaml',
+  toml: 'toml',
+  html: 'html',
+  htm: 'html',
+  xml: 'xml',
+  svg: 'xml',
+  css: 'css',
+  scss: 'scss',
+  sass: 'sass',
+  less: 'less',
+  md: 'markdown',
+  mdx: 'mdx',
+  py: 'python',
+  rs: 'rust',
+  go: 'go',
+  rb: 'ruby',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+  fish: 'fish',
+  bat: 'batch',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
+  cs: 'csharp',
+  java: 'java',
+  kt: 'kotlin',
+  swift: 'swift',
+  php: 'php',
+  sql: 'sql',
+  prisma: 'prisma',
+  graphql: 'graphql',
+  gql: 'graphql',
+  dockerfile: 'dockerfile',
+  txt: 'text',
+  log: 'text',
+  env: 'ini',
+};
 
 export function getLanguage(filePath: string): string {
-  const lower = filePath.toLowerCase();
-  const ext = lower.split('.').pop() ?? '';
-  const langMap: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'tsx',
-    js: 'javascript',
-    jsx: 'jsx',
-    mjs: 'javascript',
-    cjs: 'javascript',
-    json: 'json',
-    jsonc: 'jsonc',
-    yaml: 'yaml',
-    yml: 'yaml',
-    toml: 'toml',
-    html: 'html',
-    htm: 'html',
-    xml: 'xml',
-    svg: 'xml',
-    css: 'css',
-    scss: 'scss',
-    sass: 'sass',
-    less: 'less',
-    md: 'markdown',
-    mdx: 'mdx',
-    py: 'python',
-    rs: 'rust',
-    go: 'go',
-    rb: 'ruby',
-    sh: 'bash',
-    bash: 'bash',
-    zsh: 'bash',
-    fish: 'fish',
-    bat: 'batch',
-    c: 'c',
-    h: 'c',
-    cpp: 'cpp',
-    cc: 'cpp',
-    cxx: 'cpp',
-    hpp: 'cpp',
-    cs: 'csharp',
-    java: 'java',
-    kt: 'kotlin',
-    swift: 'swift',
-    php: 'php',
-    sql: 'sql',
-    prisma: 'prisma',
-    graphql: 'graphql',
-    gql: 'graphql',
-    dockerfile: 'dockerfile',
-    txt: 'text',
-    log: 'text',
-    env: 'ini',
-  };
-  return langMap[ext] ?? 'text';
+  const ext = filePath.toLowerCase().split('.').pop() ?? '';
+  return LANGUAGE_BY_EXTENSION[ext] ?? 'text';
 }
-
-// ─── IDE theme -> Shiki theme mapping ─────────────────────────────────────────
 
 const IDE_TO_SHIKI_THEME: Record<string, BundledTheme> = {
   retro: 'monokai',
@@ -85,24 +81,20 @@ export function getShikiTheme(ideThemeId: string): BundledTheme {
   return IDE_TO_SHIKI_THEME[ideThemeId] ?? DEFAULT_SHIKI_THEME;
 }
 
-// ─── Shiki highlighter singleton ─────────────────────────────────────────────
-
 let highlighterPromise: Promise<Highlighter> | null = null;
 
 export async function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
     highlighterPromise = import('shiki').then(({ createHighlighter }) =>
       createHighlighter({
-        // Pre-load all IDE-mapped Shiki themes so switching is instant
         themes: Object.values(IDE_TO_SHIKI_THEME) as BundledTheme[],
-        langs: [], // load on demand via loadLanguage
+        langs: [],
       })
     );
   }
+
   return highlighterPromise;
 }
-
-// ─── Shiki output parsing ────────────────────────────────────────────────────
 
 /**
  * Parse Shiki's HTML output into per-line HTML strings.
@@ -112,22 +104,18 @@ export async function getHighlighter(): Promise<Highlighter> {
 export function parseShikiLines(html: string): string[] {
   const codeMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
   if (!codeMatch) return [];
+
   const inner = codeMatch[1];
-  // Split on line-span boundaries instead of using a lazy regex.
-  // Shiki lines contain nested <span> tokens, so [\s\S]*? would stop
-  // at the first inner </span> and truncate the rest of the line.
   const parts = inner.split(/<span class="line">/);
   const result: string[] = [];
+
   for (const part of parts) {
     if (!part) continue;
-    // Strip the trailing </span> that closes the line wrapper
-    const trimmed = part.replace(/<\/span>\s*$/, '');
-    result.push(trimmed);
+    result.push(part.replace(/<\/span>\s*$/, ''));
   }
+
   return result;
 }
-
-// ─── Fold helpers ────────────────────────────────────────────────────────────
 
 /**
  * Given a set of collapsed fold start-lines, compute which lines are visible.

@@ -1,6 +1,15 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 
 export type PanelId = 'leftSidebar' | 'rightSidebar' | 'terminal';
+type ResizeDirection = 'horizontal' | 'vertical';
 
 export interface PanelSizes {
   leftSidebar: number;
@@ -52,7 +61,7 @@ function saveSizes(sizes: PanelSizes): void {
 
 /**
  * Creates (or reuses) a lightweight DOM element that acts as a drag preview line.
- * During drag the panels stay frozen — only this 2px line moves with the mouse.
+ * During drag the panels stay frozen - only this 2px line moves with the mouse.
  * On mouseup the line is hidden and the panel snaps to the final position.
  */
 let previewLine: HTMLDivElement | null = null;
@@ -68,17 +77,17 @@ function getPreviewLine(): HTMLDivElement {
   return previewLine;
 }
 
-function showPreviewLine(direction: 'horizontal' | 'vertical', pos: number): void {
+function showPreviewLine(direction: ResizeDirection, pos: number): void {
   const el = getPreviewLine();
   if (direction === 'vertical') {
-    // Vertical divider → line tracks clientX
+    // Vertical divider tracks clientX.
     el.style.top = '0';
     el.style.bottom = '0';
     el.style.left = `${pos}px`;
     el.style.width = '2px';
     el.style.height = '';
   } else {
-    // Horizontal divider → line tracks clientY
+    // Horizontal divider tracks clientY.
     el.style.left = '0';
     el.style.right = '0';
     el.style.top = `${pos}px`;
@@ -94,99 +103,125 @@ function hidePreviewLine(): void {
 
 export interface UseResizableReturn {
   sizes: PanelSizes;
-  startResize: (panel: PanelId, direction: 'horizontal' | 'vertical', startValue: number, startPos: number) => void;
+  startResize: (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => void;
   resetSize: (panel: PanelId) => void;
   /** Apply a complete set of panel sizes (used by workspace layout switching) */
   applySizes: (newSizes: PanelSizes) => void;
 }
 
-export function useResizable(): UseResizableReturn {
-  const [sizes, setSizes] = useState<PanelSizes>(loadSizes);
-  const dragStateRef = useRef<{
-    panel: PanelId;
-    direction: 'horizontal' | 'vertical';
-    startValue: number;
-    startPos: number;
-    currentSize: number;
-  } | null>(null);
+interface DragState {
+  panel: PanelId;
+  direction: ResizeDirection;
+  startValue: number;
+  startPos: number;
+  currentSize: number;
+}
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const state = dragStateRef.current;
-    if (!state) return;
+function clampPanelSize(panel: PanelId, value: number): number {
+  return Math.max(MIN_SIZES[panel], Math.min(MAX_SIZES[panel], value));
+}
 
-    const { panel, direction, startValue, startPos } = state;
+function getResizeDelta(direction: ResizeDirection, event: MouseEvent, startPos: number): number {
+  return direction === 'vertical' ? event.clientX - startPos : event.clientY - startPos;
+}
 
-    const delta =
-      direction === 'vertical'
-        ? e.clientX - startPos
-        : e.clientY - startPos;
+function getResizeSign(panel: PanelId): number {
+  return panel === 'rightSidebar' || panel === 'terminal' ? -1 : 1;
+}
 
-    const sign =
-      panel === 'rightSidebar' || panel === 'terminal' ? -1 : 1;
+function updatePreviewLine(direction: ResizeDirection, event: MouseEvent): void {
+  showPreviewLine(direction, direction === 'vertical' ? event.clientX : event.clientY);
+}
 
-    const raw = startValue + sign * delta;
-    const clamped = Math.max(MIN_SIZES[panel], Math.min(MAX_SIZES[panel], raw));
-    state.currentSize = clamped;
+function commitDragSize(
+  dragState: DragState | null,
+  setSizes: Dispatch<SetStateAction<PanelSizes>>,
+): void {
+  if (!dragState) return;
 
-    // Only move the lightweight preview line — panels stay frozen
-    const pos = direction === 'vertical' ? e.clientX : e.clientY;
-    showPreviewLine(direction, pos);
-  }, []);
+  setSizes((prev) => {
+    const committed = { ...prev, [dragState.panel]: dragState.currentSize };
+    saveSizes(committed);
+    return committed;
+  });
+}
+
+function resetDocumentDragState(): void {
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+}
+
+function removeDragListeners(
+  handleMouseMove: (event: MouseEvent) => void,
+  handleMouseUp: () => void,
+): void {
+  document.removeEventListener('mousemove', handleMouseMove);
+  document.removeEventListener('mouseup', handleMouseUp);
+}
+
+function useResizeDrag(
+  setSizes: Dispatch<SetStateAction<PanelSizes>>,
+  dragStateRef: MutableRefObject<DragState | null>,
+): UseResizableReturn['startResize'] {
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    const dragState = dragStateRef.current;
+    if (!dragState) return;
+
+    dragState.currentSize = clampPanelSize(
+      dragState.panel,
+      dragState.startValue + getResizeSign(dragState.panel) * getResizeDelta(dragState.direction, event, dragState.startPos),
+    );
+    updatePreviewLine(dragState.direction, event);
+  }, [dragStateRef]);
 
   const handleMouseUp = useCallback(() => {
     hidePreviewLine();
-
-    if (dragStateRef.current) {
-      const { panel, currentSize } = dragStateRef.current;
-      setSizes(prev => {
-        const committed = { ...prev, [panel]: currentSize };
-        saveSizes(committed);
-        return committed;
-      });
-    }
+    commitDragSize(dragStateRef.current, setSizes);
     dragStateRef.current = null;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
+    resetDocumentDragState();
+    removeDragListeners(handleMouseMove, handleMouseUp);
+  }, [dragStateRef, handleMouseMove, setSizes]);
 
   const startResize = useCallback(
-    (panel: PanelId, direction: 'horizontal' | 'vertical', startValue: number, startPos: number) => {
+    (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => {
       dragStateRef.current = { panel, direction, startValue, startPos, currentSize: startValue };
       document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
       document.body.style.userSelect = 'none';
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [handleMouseMove, handleMouseUp],
+    [dragStateRef, handleMouseMove, handleMouseUp],
   );
 
-  const resetSize = useCallback(
-    (panel: PanelId) => {
-      const next = { ...sizes, [panel]: DEFAULT_SIZES[panel] };
-      setSizes(next);
-      saveSizes(next);
-    },
-    [sizes],
-  );
-
-  const applySizes = useCallback(
-    (newSizes: PanelSizes) => {
-      setSizes(newSizes);
-      saveSizes(newSizes);
-    },
-    [],
-  );
-
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      dragStateRef.current = null;
       hidePreviewLine();
+      resetDocumentDragState();
+      removeDragListeners(handleMouseMove, handleMouseUp);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [dragStateRef, handleMouseMove, handleMouseUp]);
+
+  return startResize;
+}
+
+export function useResizable(): UseResizableReturn {
+  const [sizes, setSizes] = useState<PanelSizes>(loadSizes);
+  const dragStateRef = useRef<DragState | null>(null);
+  const startResize = useResizeDrag(setSizes, dragStateRef);
+
+  const resetSize = useCallback((panel: PanelId) => {
+    setSizes((prev) => {
+      const next = { ...prev, [panel]: DEFAULT_SIZES[panel] };
+      saveSizes(next);
+      return next;
+    });
+  }, []);
+
+  const applySizes = useCallback((newSizes: PanelSizes) => {
+    setSizes(newSizes);
+    saveSizes(newSizes);
+  }, []);
 
   return { sizes, startResize, resetSize, applySizes };
 }

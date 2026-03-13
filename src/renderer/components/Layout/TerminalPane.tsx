@@ -22,6 +22,10 @@ export interface TerminalPaneProps {
 }
 
 const MIN_HEIGHT = 120;
+type TerminalPaneHeaderProps = Pick<
+  TerminalPaneProps,
+  'collapsed' | 'onToggleCollapse' | 'sessions' | 'activeSessionId' | 'onActivate' | 'onClose' | 'onNew' | 'onNewClaude' | 'onReorder'
+>;
 
 function ChevronDownIcon(): React.ReactElement {
   return (
@@ -65,8 +69,31 @@ function ChevronUpIcon(): React.ReactElement {
   );
 }
 
-export function TerminalPane({
-  height,
+function TerminalCollapseButton({
+  collapsed,
+  onToggleCollapse,
+}: Pick<TerminalPaneProps, 'collapsed' | 'onToggleCollapse'>): React.ReactElement {
+  const toggleLabel = collapsed ? 'Expand terminal (Ctrl+J)' : 'Collapse terminal (Ctrl+J)';
+
+  return (
+    <Tooltip text={toggleLabel} position="bottom">
+      <button
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? 'Expand terminal' : 'Collapse terminal'}
+        className="
+          flex-shrink-0 flex items-center justify-center w-7 h-full
+          text-[var(--text-muted)] hover:text-[var(--text)]
+          hover:bg-[var(--bg-tertiary)]
+          transition-colors duration-100
+        "
+      >
+        {collapsed ? <ChevronUpIcon /> : <ChevronDownIcon />}
+      </button>
+    </Tooltip>
+  );
+}
+
+function TerminalPaneHeader({
   collapsed,
   onToggleCollapse,
   sessions,
@@ -76,10 +103,49 @@ export function TerminalPane({
   onNew,
   onNewClaude,
   onReorder,
-  children,
-  focusStyle,
-  onFocus,
-}: TerminalPaneProps): React.ReactElement {
+}: TerminalPaneHeaderProps): React.ReactElement {
+  return (
+    <div
+      className="
+        flex items-center h-7 min-h-[28px] flex-shrink-0
+        bg-[var(--bg-secondary)] border-b border-[var(--border)]
+        overflow-x-auto overflow-y-hidden
+      "
+    >
+      <TerminalTabs
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onActivate={onActivate}
+        onClose={onClose}
+        onNew={onNew}
+        onNewClaude={onNewClaude}
+        onReorder={onReorder}
+      />
+      <div className="flex-1" />
+      <TerminalCollapseButton
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+      />
+    </div>
+  );
+}
+
+function getTerminalPaneHeaderProps(props: TerminalPaneProps): TerminalPaneHeaderProps {
+  return {
+    collapsed: props.collapsed,
+    onToggleCollapse: props.onToggleCollapse,
+    sessions: props.sessions,
+    activeSessionId: props.activeSessionId,
+    onActivate: props.onActivate,
+    onClose: props.onClose,
+    onNew: props.onNew,
+    onNewClaude: props.onNewClaude,
+    onReorder: props.onReorder,
+  };
+}
+
+export function TerminalPane(props: TerminalPaneProps): React.ReactElement {
+  const { height, collapsed, children, focusStyle, onFocus } = props;
   const clampedHeight = Math.max(MIN_HEIGHT, height);
 
   return (
@@ -92,44 +158,7 @@ export function TerminalPane({
       aria-label="Terminal"
       onClick={onFocus}
     >
-      {/* Tab bar */}
-      <div
-        className="
-          flex items-center h-7 min-h-[28px] flex-shrink-0
-          bg-[var(--bg-secondary)] border-b border-[var(--border)]
-          overflow-x-auto overflow-y-hidden
-        "
-      >
-        {/* TerminalTabs handles tabs + new button */}
-        <TerminalTabs
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onActivate={onActivate}
-          onClose={onClose}
-          onNew={onNew}
-          onNewClaude={onNewClaude}
-          onReorder={onReorder}
-        />
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Collapse toggle */}
-        <Tooltip text={collapsed ? 'Expand terminal (Ctrl+J)' : 'Collapse terminal (Ctrl+J)'} position="bottom">
-          <button
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? 'Expand terminal' : 'Collapse terminal'}
-            className="
-              flex-shrink-0 flex items-center justify-center w-7 h-full
-              text-[var(--text-muted)] hover:text-[var(--text)]
-              hover:bg-[var(--bg-tertiary)]
-              transition-colors duration-100
-            "
-          >
-            {collapsed ? <ChevronUpIcon /> : <ChevronDownIcon />}
-          </button>
-        </Tooltip>
-      </div>
+      <TerminalPaneHeader {...getTerminalPaneHeaderProps(props)} />
 
       {/* Terminal content */}
       {!collapsed && (

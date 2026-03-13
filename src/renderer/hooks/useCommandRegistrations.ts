@@ -55,14 +55,19 @@ export function useAgentTemplateCommands(
   }, [projectRoot, registerCommand]);
 }
 
-export function useLayoutCommands(
-  workspaceLayouts: WorkspaceLayout[],
-  activeLayoutName: string,
-  registerCommand: (cmd: Command) => void,
-  handleSelectLayout: (layout: WorkspaceLayout) => void,
-  handleSaveLayout: (name: string) => void,
-): void {
+export interface LayoutCommandsOptions {
+  workspaceLayouts: WorkspaceLayout[];
+  activeLayoutName: string;
+  registerCommand: (cmd: Command) => void;
+  handleSelectLayout: (layout: WorkspaceLayout) => void;
+  handleSaveLayout: (name: string) => void;
+}
+
+export function useLayoutCommands(opts: LayoutCommandsOptions): void {
+  const { workspaceLayouts, activeLayoutName, registerCommand, handleSelectLayout, handleSaveLayout } = opts;
+
   useEffect(() => {
+    if (!workspaceLayouts) return;
     const children: Command[] = workspaceLayouts.map((layout, idx) => ({
       id: `layout:switch:${layout.name}`,
       label: layout.name,

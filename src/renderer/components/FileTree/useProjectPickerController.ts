@@ -35,6 +35,54 @@ async function pickFolder(onSelect: (path: string) => void): Promise<void> {
   }
 }
 
+function useDismissOnOutsideClick(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  open: boolean,
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+): void {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [containerRef, open, setOpen]);
+}
+
+function useFolderPickerAction(
+  onSelect: (path: string) => void,
+  setBusy: React.Dispatch<React.SetStateAction<boolean>>,
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+): () => Promise<void> {
+  return useCallback(async () => {
+    setOpen(false);
+    setBusy(true);
+
+    try {
+      await pickFolder(onSelect);
+    } finally {
+      setBusy(false);
+    }
+  }, [onSelect, setBusy, setOpen]);
+}
+
+function useRecentProjectSelector(
+  onSelectProject: (path: string) => void,
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+): (path: string) => void {
+  return useCallback((path: string) => {
+    onSelectProject(path);
+    setOpen(false);
+  }, [onSelectProject, setOpen]);
+}
+
 export function useProjectPickerController({
   currentPath,
   recentProjects,
@@ -52,56 +100,15 @@ export function useProjectPickerController({
   const [busy, setBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  useDismissOnOutsideClick(containerRef, open, setOpen);
 
   const toggleOpen = useCallback(() => {
     setOpen((previous) => !previous);
   }, []);
-
-  const openFolder = useCallback(async () => {
-    setOpen(false);
-    setBusy(true);
-
-    try {
-      await pickFolder(onSelectProject);
-    } finally {
-      setBusy(false);
-    }
-  }, [onSelectProject]);
-
-  const addFolder = useCallback(async () => {
-    setOpen(false);
-    setBusy(true);
-
-    try {
-      await pickFolder(onAddProject ?? onSelectProject);
-    } finally {
-      setBusy(false);
-    }
-  }, [onAddProject, onSelectProject]);
-
-  const selectRecent = useCallback((path: string) => {
-    onSelectProject(path);
-    setOpen(false);
-  }, [onSelectProject]);
-
-  const recents = useMemo(
-    () => getRecentProjects(recentProjects, currentPath),
-    [currentPath, recentProjects],
-  );
+  const openFolder = useFolderPickerAction(onSelectProject, setBusy, setOpen);
+  const addFolder = useFolderPickerAction(onAddProject ?? onSelectProject, setBusy, setOpen);
+  const selectRecent = useRecentProjectSelector(onSelectProject, setOpen);
+  const recents = useMemo(() => getRecentProjects(recentProjects, currentPath), [currentPath, recentProjects]);
 
   return {
     busy,

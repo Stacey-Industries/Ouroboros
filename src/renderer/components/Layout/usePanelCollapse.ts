@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import type { MutableRefObject } from 'react';
 
 export type CollapseTarget = 'leftSidebar' | 'rightSidebar' | 'terminal';
 
@@ -8,146 +9,167 @@ export interface CollapseState {
   terminal: boolean;
 }
 
-function loadCollapseState(): CollapseState {
-  try {
-    const stored = localStorage.getItem('agent-ide:panel-collapse');
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<CollapseState>;
-      return {
-        leftSidebar: parsed.leftSidebar ?? false,
-        rightSidebar: parsed.rightSidebar ?? false,
-        terminal: parsed.terminal ?? false,
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return { leftSidebar: false, rightSidebar: false, terminal: false };
-}
-
-function saveCollapseState(state: CollapseState): void {
-  try {
-    localStorage.setItem('agent-ide:panel-collapse', JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
-
 export interface UsePanelCollapseReturn {
   collapsed: CollapseState;
   toggle: (panel: CollapseTarget) => void;
   collapse: (panel: CollapseTarget) => void;
   expand: (panel: CollapseTarget) => void;
-  /** Apply a complete collapse state (used by workspace layout switching) */
   applyState: (state: CollapseState) => void;
 }
 
 export interface UsePanelCollapseOptions {
-  /** User-configured keybindings (action-id → shortcut string, e.g. "Ctrl+J") */
   keybindings?: Record<string, string>;
 }
 
-/**
- * Parse a shortcut string like "Ctrl+J" or "Ctrl+\\" into modifier flags and key.
- * Returns null if the format is unrecognised.
- */
-function parseShortcut(shortcut: string): { ctrl: boolean; shift: boolean; alt: boolean; key: string } | null {
+interface ShortcutConfig {
+  panel: CollapseTarget;
+  shortcut: string;
+}
+
+interface ParsedShortcut {
+  ctrl: boolean;
+  shift: boolean;
+  alt: boolean;
+  key: string;
+}
+
+const STORAGE_KEY = 'agent-ide:panel-collapse';
+const DEFAULT_STATE: CollapseState = {
+  leftSidebar: false,
+  rightSidebar: false,
+  terminal: false,
+};
+const DEFAULT_SHORTCUTS: Record<string, ShortcutConfig> = {
+  'view:toggle-sidebar': { panel: 'leftSidebar', shortcut: 'Ctrl+B' },
+  'view:toggle-terminal': { panel: 'terminal', shortcut: 'Ctrl+J' },
+  'view:toggle-agent-monitor': { panel: 'rightSidebar', shortcut: 'Ctrl+\\' },
+};
+
+function cloneDefaultState(): CollapseState {
+  return { ...DEFAULT_STATE };
+}
+
+function normalizeCollapseState(parsed?: Partial<CollapseState>): CollapseState {
+  return {
+    leftSidebar: parsed?.leftSidebar ?? DEFAULT_STATE.leftSidebar,
+    rightSidebar: parsed?.rightSidebar ?? DEFAULT_STATE.rightSidebar,
+    terminal: parsed?.terminal ?? DEFAULT_STATE.terminal,
+  };
+}
+
+function loadCollapseState(): CollapseState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? normalizeCollapseState(JSON.parse(stored) as Partial<CollapseState>) : cloneDefaultState();
+  } catch {
+    return cloneDefaultState();
+  }
+}
+
+function saveCollapseState(state: CollapseState): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+type CollapseUpdate = CollapseState | ((prev: CollapseState) => CollapseState);
+
+function usePersistentCollapseState(): [CollapseState, (next: CollapseUpdate) => void] {
+  const [collapsed, setCollapsed] = useState<CollapseState>(loadCollapseState);
+
+  const update = useCallback((next: CollapseUpdate) => {
+    setCollapsed((prev) => {
+      const resolved = typeof next === 'function'
+        ? (next as (state: CollapseState) => CollapseState)(prev)
+        : next;
+      saveCollapseState(resolved);
+      return resolved;
+    });
+  }, []);
+
+  return [collapsed, update];
+}
+
+function updatePanelState(state: CollapseState, panel: CollapseTarget, collapsed: boolean): CollapseState {
+  if (state[panel] === collapsed) {
+    return state;
+  }
+  return { ...state, [panel]: collapsed };
+}
+
+function parseShortcut(shortcut: string): ParsedShortcut | null {
   const parts = shortcut.split('+');
   const key = parts[parts.length - 1];
-  if (!key) return null;
-  const ctrl = parts.includes('Ctrl');
-  const shift = parts.includes('Shift');
-  const alt = parts.includes('Alt');
-  return { ctrl, shift, alt, key: key.toLowerCase() };
+  if (!key) {
+    return null;
+  }
+  return {
+    ctrl: parts.includes('Ctrl'),
+    shift: parts.includes('Shift'),
+    alt: parts.includes('Alt'),
+    key: key.toLowerCase(),
+  };
+}
+
+function matchesShortcut(event: KeyboardEvent, parsed: ParsedShortcut): boolean {
+  const key = event.key.toLowerCase();
+  const ctrl = event.ctrlKey || event.metaKey;
+  return ctrl === parsed.ctrl
+    && event.shiftKey === parsed.shift
+    && event.altKey === parsed.alt
+    && key === parsed.key;
+}
+
+function getShortcutTarget(event: KeyboardEvent, keybindings: Record<string, string>): CollapseTarget | null {
+  for (const [actionId, config] of Object.entries(DEFAULT_SHORTCUTS)) {
+    const shortcut = keybindings[actionId] ?? config.shortcut;
+    const parsed = parseShortcut(shortcut);
+    if (parsed && matchesShortcut(event, parsed)) {
+      return config.panel;
+    }
+  }
+  return null;
+}
+
+function usePanelCollapseShortcuts(
+  toggle: (panel: CollapseTarget) => void,
+  keybindingsRef: MutableRefObject<Record<string, string>>,
+): void {
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const target = getShortcutTarget(event, keybindingsRef.current);
+      if (!target) {
+        return;
+      }
+      event.preventDefault();
+      toggle(target);
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [toggle, keybindingsRef]);
 }
 
 export function usePanelCollapse(options?: UsePanelCollapseOptions): UsePanelCollapseReturn {
   const keybindingsRef = useRef<Record<string, string>>(options?.keybindings ?? {});
   keybindingsRef.current = options?.keybindings ?? {};
-  const [collapsed, setCollapsed] = useState<CollapseState>(loadCollapseState);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const update = useCallback((next: CollapseState) => {
-    setCollapsed(next);
-    saveCollapseState(next);
-  }, []);
+  const [collapsed, setCollapsed] = usePersistentCollapseState();
+  const toggle = useCallback((panel: CollapseTarget) => {
+    setCollapsed((prev) => ({ ...prev, [panel]: !prev[panel] }));
+  }, [setCollapsed]);
+  const collapse = useCallback((panel: CollapseTarget) => {
+    setCollapsed((prev) => updatePanelState(prev, panel, true));
+  }, [setCollapsed]);
+  const expand = useCallback((panel: CollapseTarget) => {
+    setCollapsed((prev) => updatePanelState(prev, panel, false));
+  }, [setCollapsed]);
+  const applyState = useCallback((state: CollapseState) => {
+    setCollapsed(state);
+  }, [setCollapsed]);
 
-  const toggle = useCallback(
-    (panel: CollapseTarget) => {
-      setCollapsed((prev) => {
-        const next = { ...prev, [panel]: !prev[panel] };
-        saveCollapseState(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const collapse = useCallback(
-    (panel: CollapseTarget) => {
-      setCollapsed((prev) => {
-        if (prev[panel]) return prev;
-        const next = { ...prev, [panel]: true };
-        saveCollapseState(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const expand = useCallback(
-    (panel: CollapseTarget) => {
-      setCollapsed((prev) => {
-        if (!prev[panel]) return prev;
-        const next = { ...prev, [panel]: false };
-        saveCollapseState(next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const applyState = useCallback(
-    (state: CollapseState) => {
-      setCollapsed(state);
-      saveCollapseState(state);
-    },
-    [],
-  );
-
-  // Keyboard shortcuts — default bindings, overrideable via keybindingsRef
-  useEffect(() => {
-    // Default shortcuts for panel toggles
-    const DEFAULTS: Record<string, { panel: CollapseTarget; shortcut: string }> = {
-      'view:toggle-sidebar':       { panel: 'leftSidebar', shortcut: 'Ctrl+B' },
-      'view:toggle-terminal':      { panel: 'terminal',    shortcut: 'Ctrl+J' },
-      'view:toggle-agent-monitor': { panel: 'rightSidebar', shortcut: 'Ctrl+\\' },
-    };
-
-    const handler = (e: KeyboardEvent) => {
-      const ctrl = e.ctrlKey || e.metaKey;
-      if (!ctrl) return;
-
-      for (const [actionId, config] of Object.entries(DEFAULTS)) {
-        const shortcutStr = keybindingsRef.current[actionId] ?? config.shortcut;
-        const parsed = parseShortcut(shortcutStr);
-        if (!parsed) continue;
-
-        const keyMatch = e.key.toLowerCase() === parsed.key || e.key === parsed.key;
-        const shiftMatch = parsed.shift ? e.shiftKey : !e.shiftKey;
-        const altMatch = parsed.alt ? e.altKey : !e.altKey;
-
-        if (ctrl && keyMatch && shiftMatch && altMatch) {
-          e.preventDefault();
-          toggle(config.panel);
-          return;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [toggle]);
-
+  usePanelCollapseShortcuts(toggle, keybindingsRef);
   return { collapsed, toggle, collapse, expand, applyState };
 }

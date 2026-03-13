@@ -1,63 +1,102 @@
-/**
- * EditorContent — renders breadcrumb + FileViewer or multi-buffer view.
- *
- * Extracted from App.tsx. Reads active file from FileViewerManager context
- * and multi-buffer state from MultiBufferManager context.
- */
-
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  useFileViewerManager,
-  Breadcrumb,
-  FileViewer,
-} from '../FileViewer';
+import { useFileViewerManager, Breadcrumb, FileViewer } from '../FileViewer';
 import { useMultiBufferManager, AddExcerptForm } from '../FileViewer/MultiBufferManager';
 import { MultiBufferView } from '../FileViewer/MultiBufferView';
 import { useProject } from '../../contexts/ProjectContext';
 import { useToastContext } from '../../contexts/ToastContext';
 import type { BufferExcerpt } from '../../types/electron';
 
-// ── Multi-buffer action bar ───────────────────────────────────
+type ActiveFile = ReturnType<typeof useFileViewerManager>['activeFile'];
+type ActiveMultiBuffer = ReturnType<typeof useMultiBufferManager>['multiBuffers'][number] | null;
+
+interface FileViewState {
+  path: string | null;
+  content: string | null;
+  isLoading: boolean;
+  error: string | null;
+  isDirtyOnDisk: boolean;
+  originalContent: string | null;
+  isImage: boolean;
+  isDirty: boolean;
+}
+
+interface MultiBufferActionBarProps { name: string; showAddExcerpt: boolean; onToggleAdd: () => void; }
+interface FileViewerActionArgs {
+  activeFile: ActiveFile; openFile: ReturnType<typeof useFileViewerManager>['openFile']; saveFile: ReturnType<typeof useFileViewerManager>['saveFile'];
+  setDirty: ReturnType<typeof useFileViewerManager>['setDirty']; toast: ReturnType<typeof useToastContext>['toast']; setActiveMultiBufferId: (id: string | null) => void;
+}
+
+const ACTION_BAR_STYLE: React.CSSProperties = {
+  flexShrink: 0,
+  height: '28px',
+  borderBottom: '1px solid var(--border)',
+  backgroundColor: 'var(--bg-secondary)',
+  display: 'flex',
+  alignItems: 'center',
+  padding: '0 8px',
+  gap: '8px',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+};
+const ACTION_BUTTON_STYLE: React.CSSProperties = {
+  background: 'none',
+  border: '1px solid var(--border)',
+  borderRadius: '3px',
+  color: 'var(--accent)',
+  padding: '2px 8px',
+  fontSize: '0.75rem',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
+};
+const CONTENT_BODY_STYLE: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'hidden' };
+const EMPTY_FILE_VIEW: FileViewState = {
+  path: null,
+  content: null,
+  isLoading: false,
+  error: null,
+  isDirtyOnDisk: false,
+  originalContent: null,
+  isImage: false,
+  isDirty: false,
+};
+
+function getFileLabel(filePath: string): string {
+  return filePath.replace(/\\/g, '/').split('/').pop() ?? filePath;
+}
+
+function normalizeFileView(activeFile: ActiveFile): FileViewState {
+  if (!activeFile) {
+    return EMPTY_FILE_VIEW;
+  }
+
+  return {
+    path: activeFile.path,
+    content: activeFile.content,
+    isLoading: activeFile.isLoading,
+    error: activeFile.error,
+    isDirtyOnDisk: activeFile.isDirtyOnDisk,
+    originalContent: activeFile.originalContent,
+    isImage: activeFile.isImage,
+    isDirty: activeFile.isDirty,
+  };
+}
 
 function MultiBufferActionBar({
   name,
   showAddExcerpt,
   onToggleAdd,
-}: {
-  name: string;
-  showAddExcerpt: boolean;
-  onToggleAdd: () => void;
-}): React.ReactElement {
+}: MultiBufferActionBarProps): React.ReactElement {
+  const actionLabel = showAddExcerpt ? 'Cancel' : '+ Add Excerpt';
+
   return (
-    <div
-      style={{
-        flexShrink: 0, height: '28px',
-        borderBottom: '1px solid var(--border)',
-        backgroundColor: 'var(--bg-secondary)',
-        display: 'flex', alignItems: 'center',
-        padding: '0 8px', gap: '8px',
-        fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
-      }}
-    >
+    <div style={ACTION_BAR_STYLE}>
       <span style={{ color: 'var(--text-muted)' }}>Multi-Buffer:</span>
       <span style={{ color: 'var(--text)', fontWeight: 600 }}>{name}</span>
       <div style={{ flex: 1 }} />
-      <button
-        onClick={onToggleAdd}
-        style={{
-          background: 'none', border: '1px solid var(--border)',
-          borderRadius: '3px', color: 'var(--accent)',
-          padding: '2px 8px', fontSize: '0.75rem',
-          cursor: 'pointer', fontFamily: 'var(--font-ui)',
-        }}
-      >
-        {showAddExcerpt ? 'Cancel' : '+ Add Excerpt'}
-      </button>
+      <button onClick={onToggleAdd} style={ACTION_BUTTON_STYLE}>{actionLabel}</button>
     </div>
   );
 }
-
-// ── Multi-buffer content view ─────────────────────────────────
 
 function MultiBufferContentView({
   activeMB,
@@ -67,9 +106,9 @@ function MultiBufferContentView({
   onRemoveExcerpt,
   onOpenFile,
 }: {
-  activeMB: { config: { name: string; excerpts: BufferExcerpt[] }; fileContents: Map<string, string> };
+  activeMB: NonNullable<ActiveMultiBuffer>;
   showAddExcerpt: boolean;
-  setShowAddExcerpt: (v: boolean) => void;
+  setShowAddExcerpt: (value: boolean) => void;
   onAddExcerpt: (excerpt: BufferExcerpt) => void;
   onRemoveExcerpt: (index: number) => void;
   onOpenFile: (path: string) => void;
@@ -81,13 +120,8 @@ function MultiBufferContentView({
         showAddExcerpt={showAddExcerpt}
         onToggleAdd={() => setShowAddExcerpt(!showAddExcerpt)}
       />
-      {showAddExcerpt && (
-        <AddExcerptForm
-          onAdd={onAddExcerpt}
-          onCancel={() => setShowAddExcerpt(false)}
-        />
-      )}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {showAddExcerpt ? <AddExcerptForm onAdd={onAddExcerpt} onCancel={() => setShowAddExcerpt(false)} /> : null}
+      <div style={CONTENT_BODY_STYLE}>
         <MultiBufferView
           name={activeMB.config.name}
           excerpts={activeMB.config.excerpts}
@@ -100,25 +134,24 @@ function MultiBufferContentView({
   );
 }
 
-// ── Hooks for multi-buffer events ─────────────────────────────
-
 function useMultiBufferEvents(): {
   activeMultiBufferId: string | null;
   setActiveMultiBufferId: (id: string | null) => void;
   showAddExcerpt: boolean;
-  setShowAddExcerpt: (v: boolean) => void;
+  setShowAddExcerpt: (value: boolean) => void;
 } {
   const [activeMultiBufferId, setActiveMultiBufferId] = useState<string | null>(null);
   const [showAddExcerpt, setShowAddExcerpt] = useState(false);
 
   useEffect(() => {
-    function onActivate(e: Event): void {
-      setActiveMultiBufferId((e as CustomEvent<{ id: string }>).detail.id);
-    }
-    function onDeactivate(): void {
+    const onActivate = (event: Event) => {
+      setActiveMultiBufferId((event as CustomEvent<{ id: string }>).detail.id);
+    };
+    const onDeactivate = () => {
       setActiveMultiBufferId(null);
       setShowAddExcerpt(false);
-    }
+    };
+
     window.addEventListener('agent-ide:activate-multi-buffer', onActivate);
     window.addEventListener('agent-ide:deactivate-multi-buffer', onDeactivate);
     return () => {
@@ -130,7 +163,28 @@ function useMultiBufferEvents(): {
   return { activeMultiBufferId, setActiveMultiBufferId, showAddExcerpt, setShowAddExcerpt };
 }
 
-// ── Normal file view ──────────────────────────────────────────
+function FileContentHeader({
+  filePath,
+  projectRoot,
+}: {
+  filePath: string | null;
+  projectRoot: string | null;
+}): React.ReactElement {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        height: '28px',
+        borderBottom: '1px solid var(--border)',
+        backgroundColor: 'var(--bg-secondary)',
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      <Breadcrumb filePath={filePath} projectRoot={projectRoot} />
+    </div>
+  );
+}
 
 function FileContentView({
   activeFile,
@@ -139,79 +193,77 @@ function FileContentView({
   onSave,
   onDirtyChange,
 }: {
-  activeFile: ReturnType<typeof useFileViewerManager>['activeFile'];
+  activeFile: ActiveFile;
   projectRoot: string | null;
   onReload: () => Promise<void>;
   onSave: (content: string) => Promise<void>;
   onDirtyChange: (dirty: boolean) => void;
 }): React.ReactElement {
+  const fileView = normalizeFileView(activeFile);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div
-        style={{
-          flexShrink: 0, height: '28px',
-          borderBottom: '1px solid var(--border)',
-          backgroundColor: 'var(--bg-secondary)',
-          display: 'flex', alignItems: 'center',
-        }}
-      >
-        <Breadcrumb filePath={activeFile?.path ?? null} projectRoot={projectRoot} />
-      </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <FileContentHeader filePath={fileView.path} projectRoot={projectRoot} />
+      <div style={CONTENT_BODY_STYLE}>
         <FileViewer
-          filePath={activeFile?.path ?? null}
-          content={activeFile?.content ?? null}
-          isLoading={activeFile?.isLoading ?? false}
-          error={activeFile?.error ?? null}
-          isDirtyOnDisk={activeFile?.isDirtyOnDisk ?? false}
+          filePath={fileView.path}
+          content={fileView.content}
+          isLoading={fileView.isLoading}
+          error={fileView.error}
+          isDirtyOnDisk={fileView.isDirtyOnDisk}
           onReload={onReload}
-          originalContent={activeFile?.originalContent ?? null}
+          originalContent={fileView.originalContent}
           projectRoot={projectRoot}
-          isImage={activeFile?.isImage ?? false}
+          isImage={fileView.isImage}
           onSave={onSave}
           onDirtyChange={onDirtyChange}
-          isDirty={activeFile?.isDirty ?? false}
+          isDirty={fileView.isDirty}
         />
       </div>
     </div>
   );
 }
 
-// ── Main EditorContent component ──────────────────────────────
-
-export function EditorContent(): React.ReactElement {
-  const { activeFile, openFile, saveFile, setDirty } = useFileViewerManager();
-  const { multiBuffers, addExcerpt, removeExcerpt } = useMultiBufferManager();
-  const { projectRoot } = useProject();
-  const { toast } = useToastContext();
-  const { activeMultiBufferId, setActiveMultiBufferId, showAddExcerpt, setShowAddExcerpt } = useMultiBufferEvents();
-
-  // If the active multi-buffer was closed, fall back
+function useActiveMultiBuffer(
+  multiBuffers: ReturnType<typeof useMultiBufferManager>['multiBuffers'],
+  activeMultiBufferId: string | null,
+  setActiveMultiBufferId: (id: string | null) => void,
+): ActiveMultiBuffer {
   const activeMB = activeMultiBufferId
-    ? multiBuffers.find((mb) => mb.id === activeMultiBufferId) ?? null
+    ? multiBuffers.find((buffer) => buffer.id === activeMultiBufferId) ?? null
     : null;
 
   useEffect(() => {
-    if (activeMultiBufferId && !activeMB) setActiveMultiBufferId(null);
-  }, [activeMultiBufferId, activeMB, setActiveMultiBufferId]);
+    if (activeMultiBufferId && !activeMB) {
+      setActiveMultiBufferId(null);
+    }
+  }, [activeMB, activeMultiBufferId, setActiveMultiBufferId]);
 
-  const handleReload = useCallback(async (): Promise<void> => {
+  return activeMB;
+}
+
+function useFileViewerActions({
+  activeFile,
+  openFile,
+  saveFile,
+  setDirty,
+  toast,
+  setActiveMultiBufferId,
+}: FileViewerActionArgs) {
+  const handleReload = useCallback(async () => {
     if (!activeFile) return;
     await openFile(activeFile.path);
-    const name = activeFile.path.replace(/\\/g, '/').split('/').pop() ?? activeFile.path;
-    toast(`Reloaded ${name} from disk`, 'info');
+    toast(`Reloaded ${getFileLabel(activeFile.path)} from disk`, 'info');
   }, [activeFile, openFile, toast]);
 
-  const handleSave = useCallback(async (content: string): Promise<void> => {
+  const handleSave = useCallback(async (content: string) => {
     if (!activeFile) return;
     await saveFile(activeFile.path, content);
-    const name = activeFile.path.replace(/\\/g, '/').split('/').pop() ?? activeFile.path;
-    toast(`Saved ${name}`, 'info');
+    toast(`Saved ${getFileLabel(activeFile.path)}`, 'info');
   }, [activeFile, saveFile, toast]);
 
-  const handleDirtyChange = useCallback((dirty: boolean): void => {
-    if (!activeFile) return;
-    setDirty(activeFile.path, dirty);
+  const handleDirtyChange = useCallback((dirty: boolean) => {
+    if (activeFile) setDirty(activeFile.path, dirty);
   }, [activeFile, setDirty]);
 
   const handleOpenFileFromExcerpt = useCallback((filePath: string) => {
@@ -219,9 +271,17 @@ export function EditorContent(): React.ReactElement {
     void openFile(filePath);
   }, [openFile, setActiveMultiBufferId]);
 
+  return { handleReload, handleSave, handleDirtyChange, handleOpenFileFromExcerpt };
+}
+
+function useExcerptActions(
+  activeMultiBufferId: string | null,
+  addExcerpt: ReturnType<typeof useMultiBufferManager>['addExcerpt'],
+  removeExcerpt: ReturnType<typeof useMultiBufferManager>['removeExcerpt'],
+  setShowAddExcerpt: (value: boolean) => void,
+) {
   const handleRemoveExcerpt = useCallback((index: number) => {
-    if (!activeMultiBufferId) return;
-    removeExcerpt(activeMultiBufferId, index);
+    if (activeMultiBufferId) removeExcerpt(activeMultiBufferId, index);
   }, [activeMultiBufferId, removeExcerpt]);
 
   const handleAddExcerpt = useCallback((excerpt: BufferExcerpt) => {
@@ -230,26 +290,35 @@ export function EditorContent(): React.ReactElement {
     setShowAddExcerpt(false);
   }, [activeMultiBufferId, addExcerpt, setShowAddExcerpt]);
 
-  if (activeMB) {
-    return (
-      <MultiBufferContentView
-        activeMB={activeMB}
-        showAddExcerpt={showAddExcerpt}
-        setShowAddExcerpt={setShowAddExcerpt}
-        onAddExcerpt={handleAddExcerpt}
-        onRemoveExcerpt={handleRemoveExcerpt}
-        onOpenFile={handleOpenFileFromExcerpt}
-      />
-    );
-  }
+  return { handleRemoveExcerpt, handleAddExcerpt };
+}
 
-  return (
+export function EditorContent(): React.ReactElement {
+  const { activeFile, openFile, saveFile, setDirty } = useFileViewerManager();
+  const { multiBuffers, addExcerpt, removeExcerpt } = useMultiBufferManager();
+  const { projectRoot } = useProject();
+  const { toast } = useToastContext();
+  const { activeMultiBufferId, setActiveMultiBufferId, showAddExcerpt, setShowAddExcerpt } = useMultiBufferEvents();
+  const activeMB = useActiveMultiBuffer(multiBuffers, activeMultiBufferId, setActiveMultiBufferId);
+  const fileActions = useFileViewerActions({ activeFile, openFile, saveFile, setDirty, toast, setActiveMultiBufferId });
+  const excerptActions = useExcerptActions(activeMultiBufferId, addExcerpt, removeExcerpt, setShowAddExcerpt);
+
+  return activeMB ? (
+    <MultiBufferContentView
+      activeMB={activeMB}
+      showAddExcerpt={showAddExcerpt}
+      setShowAddExcerpt={setShowAddExcerpt}
+      onAddExcerpt={excerptActions.handleAddExcerpt}
+      onRemoveExcerpt={excerptActions.handleRemoveExcerpt}
+      onOpenFile={fileActions.handleOpenFileFromExcerpt}
+    />
+  ) : (
     <FileContentView
       activeFile={activeFile}
       projectRoot={projectRoot}
-      onReload={handleReload}
-      onSave={handleSave}
-      onDirtyChange={handleDirtyChange}
+      onReload={fileActions.handleReload}
+      onSave={fileActions.handleSave}
+      onDirtyChange={fileActions.handleDirtyChange}
     />
   );
 }

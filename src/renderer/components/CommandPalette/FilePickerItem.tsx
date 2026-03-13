@@ -3,6 +3,7 @@ import { RangeHighlight } from './HighlightedText';
 import { getFileIcon } from '../FileTree/fileIcons';
 
 const ITEM_HEIGHT = 36;
+const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];
 
 export interface FilePickerItemProps {
   name: string;
@@ -12,6 +13,31 @@ export interface FilePickerItemProps {
   pathIndices: ReadonlyArray<readonly [number, number]>;
   onClick: () => void;
   onMouseEnter: () => void;
+}
+
+function getDirectoryPart(relativePath: string): string {
+  return relativePath.includes('/')
+    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
+    : '';
+}
+
+function getItemStyle(isSelected: boolean): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '6px 12px',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    margin: '0 4px',
+    height: `${ITEM_HEIGHT}px`,
+    boxSizing: 'border-box',
+    backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
+    color: isSelected ? 'var(--bg)' : 'var(--text)',
+    transition: 'background-color 80ms ease',
+    userSelect: 'none',
+    minWidth: 0,
+  };
 }
 
 export const FilePickerItem = memo(function FilePickerItem({
@@ -24,9 +50,9 @@ export const FilePickerItem = memo(function FilePickerItem({
   onMouseEnter,
 }: FilePickerItemProps): React.ReactElement {
   const icon = getFileIcon(name);
-  const dirPart = relativePath.includes('/')
-    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
-    : '';
+  const dirPart = getDirectoryPart(relativePath);
+  const highlightedNameIndices = isSelected ? EMPTY_INDICES : nameIndices;
+  const highlightedPathIndices = isSelected ? EMPTY_INDICES : pathIndices;
 
   return (
     <div
@@ -34,26 +60,11 @@ export const FilePickerItem = memo(function FilePickerItem({
       aria-selected={isSelected}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 12px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        margin: '0 4px',
-        height: `${ITEM_HEIGHT}px`,
-        boxSizing: 'border-box',
-        backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-        color: isSelected ? 'var(--bg)' : 'var(--text)',
-        transition: 'background-color 80ms ease',
-        userSelect: 'none',
-        minWidth: 0,
-      }}
+      style={getItemStyle(isSelected)}
     >
       <ColorDot color={icon.color} dimmed={isSelected} />
-      <FileName name={name} indices={isSelected ? [] : nameIndices} />
-      {dirPart && <DirPath dir={dirPart} indices={isSelected ? [] : pathIndices} isSelected={isSelected} />}
+      <FileName name={name} indices={highlightedNameIndices} />
+      {dirPart && <DirPath dir={dirPart} indices={highlightedPathIndices} isSelected={isSelected} />}
     </div>
   );
 });

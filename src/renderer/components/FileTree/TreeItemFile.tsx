@@ -21,8 +21,61 @@ export interface TreeItemFileProps {
   heatLevel?: string;
 }
 
+function FileName({
+  node,
+  isEditing,
+  editValue,
+  onEditConfirm,
+  onEditCancel,
+  statusColor,
+  matchRanges,
+}: Pick<
+  TreeItemFileProps,
+  'node' | 'isEditing' | 'editValue' | 'onEditConfirm' | 'onEditCancel' | 'statusColor' | 'matchRanges'
+>): React.ReactElement {
+  if (isEditing && onEditConfirm && onEditCancel) {
+    return (
+      <InlineEditInput
+        initialValue={editValue ?? node.name}
+        onConfirm={onEditConfirm}
+        onCancel={onEditCancel}
+      />
+    );
+  }
+
+  return (
+    <FileLabel
+      name={node.name}
+      statusColor={statusColor}
+      matchRanges={matchRanges}
+    />
+  );
+}
+
+function FileMeta({
+  node,
+  statusColor,
+  statusLbl,
+  searchMode,
+  heatDot,
+  heatLevel,
+}: Pick<
+  TreeItemFileProps,
+  'node' | 'statusColor' | 'statusLbl' | 'searchMode' | 'heatDot' | 'heatLevel'
+>): React.ReactElement {
+  return (
+    <>
+      {statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
+      {searchMode && <SearchPath relativePath={node.relativePath} />}
+      {heatDot && <HeatDot color={heatDot} glow={heatLevel === 'fire'} />}
+    </>
+  );
+}
+
 export function TreeItemFile({
-  node, isEditing, editValue,
+  node,
+  isEditing,
+  editValue,
   onEditConfirm, onEditCancel,
   statusColor, statusLbl,
   searchMode, matchRanges,
@@ -32,14 +85,25 @@ export function TreeItemFile({
     <>
       <span style={{ width: '16px', flexShrink: 0 }} />
       <FileTypeIcon filename={node.name} />
-      {isEditing && onEditConfirm && onEditCancel ? (
-        <InlineEditInput initialValue={editValue ?? node.name} onConfirm={onEditConfirm} onCancel={onEditCancel} />
-      ) : (
-        <FileLabel name={node.name} statusColor={statusColor} matchRanges={matchRanges} />
+      <FileName
+        node={node}
+        isEditing={isEditing}
+        editValue={editValue}
+        onEditConfirm={onEditConfirm}
+        onEditCancel={onEditCancel}
+        statusColor={statusColor}
+        matchRanges={matchRanges}
+      />
+      {!isEditing && (
+        <FileMeta
+          node={node}
+          statusColor={statusColor}
+          statusLbl={statusLbl}
+          searchMode={searchMode}
+          heatDot={heatDot}
+          heatLevel={heatLevel}
+        />
       )}
-      {!isEditing && statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
-      {!isEditing && searchMode && <SearchPath relativePath={node.relativePath} />}
-      {!isEditing && heatDot && <HeatDot color={heatDot} glow={heatLevel === 'fire'} />}
     </>
   );
 }

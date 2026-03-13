@@ -43,41 +43,8 @@ export const FileViewerToolbar = memo(function FileViewerToolbar(
 ): React.ReactElement {
   return (
     <div style={containerStyle}>
-      <ToolbarButton
-        label="Wrap"
-        active={props.wordWrap}
-        onClick={() => props.setWordWrap((p: boolean) => !p)}
-        title="Toggle word wrap (Alt+Z)"
-      />
-      <ToolbarButton
-        label="Minimap"
-        active={props.showMinimap}
-        onClick={() => props.setShowMinimap((p: boolean) => !p)}
-        title="Toggle minimap"
-      />
-      <ToolbarButton
-        label="Blame"
-        active={props.showBlame}
-        onClick={() => props.setShowBlame((p: boolean) => !p)}
-        title="Toggle git blame annotations"
-      />
-      <ToolbarButton
-        label="Outline"
-        active={props.showOutline}
-        onClick={() => props.setShowOutline((p: boolean) => !p)}
-        title="Toggle symbol outline"
-      />
-      {props.projectRoot && (
-        <ToolbarButton
-          label="History"
-          active={props.showHistory}
-          onClick={() => props.setShowHistory((p: boolean) => !p)}
-          title="Toggle commit history for this file"
-        />
-      )}
-
+      <ViewerToggleButtons props={props} />
       <div style={{ flex: 1 }} />
-
       <EditControls
         editMode={props.editMode}
         setEditMode={props.setEditMode}
@@ -92,7 +59,74 @@ export const FileViewerToolbar = memo(function FileViewerToolbar(
   );
 });
 
-// ── Edit controls sub-component ──
+interface ToolbarToggleDefinition {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  title: string;
+}
+
+function ViewerToggleButtons({
+  props,
+}: {
+  props: FileViewerToolbarProps;
+}): React.ReactElement {
+  const buttons = getToolbarToggleButtons(props);
+
+  return (
+    <>
+      {buttons.map((button) => (
+        <ToolbarButton key={button.label} {...button} />
+      ))}
+    </>
+  );
+}
+
+function getToolbarToggleButtons(
+  props: FileViewerToolbarProps
+): ToolbarToggleDefinition[] {
+  const buttons: ToolbarToggleDefinition[] = [
+    {
+      label: 'Wrap',
+      active: props.wordWrap,
+      onClick: () => props.setWordWrap(toggleBoolean),
+      title: 'Toggle word wrap (Alt+Z)',
+    },
+    {
+      label: 'Minimap',
+      active: props.showMinimap,
+      onClick: () => props.setShowMinimap(toggleBoolean),
+      title: 'Toggle minimap',
+    },
+    {
+      label: 'Blame',
+      active: props.showBlame,
+      onClick: () => props.setShowBlame(toggleBoolean),
+      title: 'Toggle git blame annotations',
+    },
+    {
+      label: 'Outline',
+      active: props.showOutline,
+      onClick: () => props.setShowOutline(toggleBoolean),
+      title: 'Toggle symbol outline',
+    },
+  ];
+
+  if (props.projectRoot) {
+    buttons.push({
+      label: 'History',
+      active: props.showHistory,
+      onClick: () => props.setShowHistory(toggleBoolean),
+      title: 'Toggle commit history for this file',
+    });
+  }
+
+  return buttons;
+}
+
+function toggleBoolean(value: boolean): boolean {
+  return !value;
+}
 
 interface EditControlsProps {
   editMode: boolean;
@@ -130,10 +164,12 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
         <ToolbarButton
           label={props.claudeMdEnhanced ? 'Enhanced' : 'Plain'}
           active={props.claudeMdEnhanced}
-          onClick={() => props.setClaudeMdEnhanced((p: boolean) => !p)}
-          title={props.claudeMdEnhanced
-            ? 'Switch to plain editor'
-            : 'Switch to enhanced CLAUDE.md editor'}
+          onClick={() => props.setClaudeMdEnhanced(toggleBoolean)}
+          title={
+            props.claudeMdEnhanced
+              ? 'Switch to plain editor'
+              : 'Switch to enhanced CLAUDE.md editor'
+          }
         />
       )}
     </div>

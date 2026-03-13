@@ -1,11 +1,9 @@
 /**
- * TerminalToolbar — floating action buttons rendered over the terminal:
+ * TerminalToolbar â€” floating action buttons rendered over the terminal:
  * Sync, Split, Recording, and Multi-line input toggle.
  */
 
 import React from 'react'
-
-// ── Shared button style ─────────────────────────────────────────────────────
 
 const BASE_STYLE: React.CSSProperties = {
   position: 'absolute',
@@ -31,9 +29,20 @@ const MUTED_STYLE: React.CSSProperties = {
   color: 'var(--text-muted, #888)',
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+interface RecordingVisualState {
+  backgroundColor: string
+  border: string
+  color: string
+  label: string
+  title: string
+}
 
-export function SyncButton({ syncInput, isHovered, showSearch, onToggleSync }: {
+export function SyncButton({
+  syncInput,
+  isHovered,
+  showSearch,
+  onToggleSync,
+}: {
   syncInput: boolean
   isHovered: boolean
   showSearch: boolean
@@ -41,6 +50,7 @@ export function SyncButton({ syncInput, isHovered, showSearch, onToggleSync }: {
 }): React.ReactElement | null {
   if (showSearch) return null
   if (!syncInput && !isHovered) return null
+
   return (
     <button
       onClick={onToggleSync}
@@ -48,15 +58,9 @@ export function SyncButton({ syncInput, isHovered, showSearch, onToggleSync }: {
       style={{
         ...BASE_STYLE,
         right: isHovered ? 155 : 6,
-        border: syncInput
-          ? '1px solid var(--accent, #58a6ff)'
-          : '1px solid var(--border, #333)',
-        backgroundColor: syncInput
-          ? 'rgba(88,166,255,0.15)'
-          : 'var(--bg-secondary, #1e1e1e)',
-        color: syncInput
-          ? 'var(--accent, #58a6ff)'
-          : 'var(--text-muted, #888)',
+        border: syncInput ? '1px solid var(--accent, #58a6ff)' : '1px solid var(--border, #333)',
+        backgroundColor: syncInput ? 'rgba(88,166,255,0.15)' : 'var(--bg-secondary, #1e1e1e)',
+        color: syncInput ? 'var(--accent, #58a6ff)' : 'var(--text-muted, #888)',
       }}
     >
       <SyncIcon />
@@ -65,13 +69,19 @@ export function SyncButton({ syncInput, isHovered, showSearch, onToggleSync }: {
   )
 }
 
-export function SplitButton({ sessionId, isHovered, showSearch, onSplit }: {
+export function SplitButton({
+  sessionId,
+  isHovered,
+  showSearch,
+  onSplit,
+}: {
   sessionId: string
   isHovered: boolean
   showSearch: boolean
   onSplit: (id: string) => void
 }): React.ReactElement | null {
   if (!isHovered || showSearch) return null
+
   return (
     <button
       onClick={() => onSplit(sessionId)}
@@ -83,7 +93,13 @@ export function SplitButton({ sessionId, isHovered, showSearch, onSplit }: {
   )
 }
 
-export function RecordingButton({ sessionId, isRecording, isHovered, showSearch, onToggleRecording }: {
+export function RecordingButton({
+  sessionId,
+  isRecording,
+  isHovered,
+  showSearch,
+  onToggleRecording,
+}: {
   sessionId: string
   isRecording: boolean
   isHovered: boolean
@@ -91,40 +107,35 @@ export function RecordingButton({ sessionId, isRecording, isHovered, showSearch,
   onToggleRecording: (id: string) => void
 }): React.ReactElement | null {
   if (!isRecording && !isHovered) return null
+
+  const visualState = getRecordingVisualState(isRecording)
+
   return (
     <>
       <button
         onClick={() => onToggleRecording(sessionId)}
-        title={isRecording ? 'Stop recording' : 'Start recording terminal session'}
-        style={{
-          ...BASE_STYLE,
-          right: isHovered && !showSearch ? 70 : 6,
-          border: isRecording
-            ? '1px solid var(--recording-dot, #e53935)'
-            : '1px solid var(--border, #333)',
-          backgroundColor: isRecording
-            ? 'rgba(229,57,53,0.12)'
-            : 'var(--bg-secondary, #1e1e1e)',
-          color: isRecording
-            ? 'var(--recording-dot, #e53935)'
-            : 'var(--text-muted, #888)',
-          transition: 'opacity 0.15s ease',
-        }}
+        title={visualState.title}
+        style={getRecordingButtonStyle(visualState, isHovered, showSearch)}
       >
         <RecordingDot isRecording={isRecording} />
-        {isRecording ? 'Stop' : 'Rec'}
+        {visualState.label}
       </button>
       {isRecording && <RecordingPulseStyle />}
     </>
   )
 }
 
-export function MultiLineButton({ isHovered, showSearch, onClick }: {
+export function MultiLineButton({
+  isHovered,
+  showSearch,
+  onClick,
+}: {
   isHovered: boolean
   showSearch: boolean
   onClick: () => void
 }): React.ReactElement | null {
   if (!isHovered || showSearch) return null
+
   return (
     <button
       onClick={onClick}
@@ -142,7 +153,40 @@ export function MultiLineButton({ isHovered, showSearch, onClick }: {
   )
 }
 
-// ── Icons ───────────────────────────────────────────────────────────────────
+function getRecordingVisualState(isRecording: boolean): RecordingVisualState {
+  if (isRecording) {
+    return {
+      title: 'Stop recording',
+      label: 'Stop',
+      border: '1px solid var(--recording-dot, #e53935)',
+      backgroundColor: 'rgba(229,57,53,0.12)',
+      color: 'var(--recording-dot, #e53935)',
+    }
+  }
+
+  return {
+    title: 'Start recording terminal session',
+    label: 'Rec',
+    border: '1px solid var(--border, #333)',
+    backgroundColor: 'var(--bg-secondary, #1e1e1e)',
+    color: 'var(--text-muted, #888)',
+  }
+}
+
+function getRecordingButtonStyle(
+  visualState: RecordingVisualState,
+  isHovered: boolean,
+  showSearch: boolean,
+): React.CSSProperties {
+  return {
+    ...BASE_STYLE,
+    right: isHovered && !showSearch ? 70 : 6,
+    border: visualState.border,
+    backgroundColor: visualState.backgroundColor,
+    color: visualState.color,
+    transition: 'opacity 0.15s ease',
+  }
+}
 
 function SyncIcon(): React.ReactElement {
   return (

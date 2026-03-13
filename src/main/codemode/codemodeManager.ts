@@ -110,6 +110,81 @@ export async function getMcpServers(projectRoot?: string): Promise<McpServerEntr
   return entries
 }
 
+function getServerMaps(settings: Record<string, unknown>): {
+  mcpServers: Record<string, McpServerConfig>
+  disabledMcp: Record<string, McpServerConfig>
+} {
+  return {
+    mcpServers: (settings.mcpServers ?? {}) as Record<string, McpServerConfig>,
+    disabledMcp: (settings.disabledMcpServers ?? {}) as Record<string, McpServerConfig>,
+  }
+}
+
+function collectServersToProxy(
+  serverNames: string[],
+  mcpServers: Record<string, McpServerConfig>
+): Record<string, McpServerConfig> {
+  const serversToProxy: Record<string, McpServerConfig> = {}
+  for (const name of serverNames) {
+    if (mcpServers[name]) {
+      serversToProxy[name] = mcpServers[name]
+    }
+  }
+  return serversToProxy
+}
+
+async function writeProxyConfig(serversToProxy: Record<string, McpServerConfig>): Promise<void> {
+  const proxyConfig = { servers: serversToProxy }
+  await fs.writeFile(PROXY_CONFIG_PATH, JSON.stringify(proxyConfig, null, 2), 'utf-8')
+}
+
+function buildProxyServerEntry(): McpServerConfig {
+  const proxyServerPath = path.join(__dirname, 'proxyServer.js')
+  return {
+    command: 'node',
+    args: [proxyServerPath, PROXY_CONFIG_PATH],
+  }
+}
+
+function moveProxiedServersToDisabled(
+  serverNames: string[],
+  mcpServers: Record<string, McpServerConfig>,
+  disabledMcp: Record<string, McpServerConfig>
+): Set<string> {
+  const newDisabledByUs = new Set<string>()
+  for (const name of serverNames) {
+    disabledMcp[name] = mcpServers[name]
+    delete mcpServers[name]
+    newDisabledByUs.add(name)
+  }
+  return newDisabledByUs
+}
+
+async function persistServerMaps(
+  settingsPath: string,
+  settings: Record<string, unknown>,
+  mcpServers: Record<string, McpServerConfig>,
+  disabledMcp: Record<string, McpServerConfig>
+): Promise<void> {
+  settings.mcpServers = mcpServers
+  settings.disabledMcpServers = disabledMcp
+  await writeSettingsFile(settingsPath, settings)
+}
+
+function updateCodeModeState(
+  scope: 'global' | 'project',
+  projectRoot: string | undefined,
+  proxiedServers: string[],
+  newDisabledByUs: Set<string>
+): void {
+  codemodeEnabled = true
+  proxiedServerNames = proxiedServers
+  disabledByUs = newDisabledByUs
+  activeScope = scope
+  activeProjectRoot = projectRoot
+  generatedTypesCache = ''
+}
+
 // ─── Enable Code Mode ─────────────────────────────────────────────────────────
 
 export async function enableCodeMode(
@@ -125,54 +200,21 @@ export async function enableCodeMode(
     const settingsPath = getSettingsPath(scope, projectRoot)
     const settings = await readSettingsFile(settingsPath)
 
-    const mcpServers = (settings.mcpServers ?? {}) as Record<string, McpServerConfig>
-    const disabledMcp = (settings.disabledMcpServers ?? {}) as Record<string, McpServerConfig>
-
-    // Filter to the requested server names that are currently enabled
-    const serversToProxy: Record<string, McpServerConfig> = {}
-    for (const name of serverNames) {
-      if (mcpServers[name]) {
-        serversToProxy[name] = mcpServers[name]
-      }
-    }
+    const { mcpServers, disabledMcp } = getServerMaps(settings)
+    const serversToProxy = collectServersToProxy(serverNames, mcpServers)
 
     if (Object.keys(serversToProxy).length === 0) {
       return { success: false, error: 'None of the requested MCP servers were found in settings.' }
     }
 
-    // Write the proxy config file
-    const proxyConfig = { servers: serversToProxy }
-    await fs.writeFile(PROXY_CONFIG_PATH, JSON.stringify(proxyConfig, null, 2), 'utf-8')
+    await writeProxyConfig(serversToProxy)
+    mcpServers['__codemode_proxy'] = buildProxyServerEntry()
 
-    // The proxy server script sits alongside this compiled file
-    const proxyServerPath = path.join(__dirname, 'proxyServer.js')
+    const proxiedNames = Object.keys(serversToProxy)
+    const newDisabledByUs = moveProxiedServersToDisabled(proxiedNames, mcpServers, disabledMcp)
 
-    // Add the __codemode_proxy entry
-    mcpServers['__codemode_proxy'] = {
-      command: 'node',
-      args: [proxyServerPath, PROXY_CONFIG_PATH],
-    }
-
-    // Move proxied servers to disabledMcpServers
-    const newDisabledByUs = new Set<string>()
-    for (const name of Object.keys(serversToProxy)) {
-      disabledMcp[name] = mcpServers[name]
-      delete mcpServers[name]
-      newDisabledByUs.add(name)
-    }
-
-    // Write settings back
-    settings.mcpServers = mcpServers
-    settings.disabledMcpServers = disabledMcp
-    await writeSettingsFile(settingsPath, settings)
-
-    // Update module state
-    codemodeEnabled = true
-    proxiedServerNames = Object.keys(serversToProxy)
-    disabledByUs = newDisabledByUs
-    activeScope = scope
-    activeProjectRoot = projectRoot
-    generatedTypesCache = ''
+    await persistServerMaps(settingsPath, settings, mcpServers, disabledMcp)
+    updateCodeModeState(scope, projectRoot, proxiedNames, newDisabledByUs)
 
     return { success: true }
   } catch (err) {

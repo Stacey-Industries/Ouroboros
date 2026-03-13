@@ -38,10 +38,13 @@ export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
   useErrorCapture();
 
   useAgentTemplateCommands(deps.projectRoot, deps.registerCommand);
-  useLayoutCommands(
-    deps.workspaceLayouts, deps.activeLayoutName,
-    deps.registerCommand, deps.handleSelectLayout, deps.handleSaveLayout,
-  );
+  useLayoutCommands({
+    workspaceLayouts: deps.workspaceLayouts,
+    activeLayoutName: deps.activeLayoutName,
+    registerCommand: deps.registerCommand,
+    handleSelectLayout: deps.handleSelectLayout,
+    handleSaveLayout: deps.handleSaveLayout,
+  });
   useMultiSessionCommand(deps.registerCommand);
 
   useMenuEvents({

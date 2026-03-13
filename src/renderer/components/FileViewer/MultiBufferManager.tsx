@@ -1,20 +1,28 @@
 import React, {
   createContext,
-  useContext,
-  useState,
   useCallback,
+  useContext,
   useEffect,
-  memo,
+  useState,
 } from 'react';
 import type { BufferExcerpt, MultiBufferConfig } from '../../types/electron';
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+export { AddExcerptForm } from './MultiBufferAddExcerptForm';
+export type { AddExcerptFormProps } from './MultiBufferAddExcerptForm';
 
-export interface MultiBufferTab {
-  id: string;
-  config: MultiBufferConfig;
-  /** Loaded file contents keyed by file path */
-  fileContents: Map<string, { content: string | null; isLoading: boolean; error: string | null }>;
+type FileContentState = {
+  content: string | null;
+  isLoading: boolean;
+  error: string | null;
+};
+
+type SetMultiBuffers = React.Dispatch<React.SetStateAction<MultiBufferTab[]>>;
+type LoadFileContent = (filePath: string, multiBufferId: string) => Promise<void>;
+
+interface ReadFileResult {
+  success: boolean;
+  content?: string | null;
+  error?: string;
 }
 
 interface MultiBufferState {
@@ -26,151 +34,171 @@ interface MultiBufferState {
   renameMultiBuffer: (id: string, name: string) => void;
 }
 
-const MultiBufferContext = createContext<MultiBufferState | null>(null);
-
-let nextId = 1;
-function generateId(): string {
-  return `mb-${nextId++}-${Date.now()}`;
+export interface MultiBufferTab {
+  id: string;
+  config: MultiBufferConfig;
+  /** Loaded file contents keyed by file path */
+  fileContents: Map<string, FileContentState>;
 }
-
-// ─── Provider ───────────────────────────────────────────────────────────────
 
 export interface MultiBufferManagerProps {
   children: React.ReactNode;
 }
 
-export function MultiBufferManager({ children }: MultiBufferManagerProps): React.ReactElement {
-  const [multiBuffers, setMultiBuffers] = useState<MultiBufferTab[]>([]);
+const MultiBufferContext = createContext<MultiBufferState | null>(null);
 
-  // Load file content for an excerpt
-  const loadFileContent = useCallback(async (filePath: string, mbId: string) => {
-    // Mark as loading
+let nextId = 1;
+
+function generateId(): string {
+  return `mb-${nextId++}-${Date.now()}`;
+}
+
+function updateMultiBuffers(
+  buffers: MultiBufferTab[],
+  id: string,
+  updater: (buffer: MultiBufferTab) => MultiBufferTab,
+): MultiBufferTab[] {
+  return buffers.map((buffer) => (buffer.id === id ? updater(buffer) : buffer));
+}
+
+function withFileContent(
+  buffer: MultiBufferTab,
+  filePath: string,
+  nextState: FileContentState,
+): MultiBufferTab {
+  const fileContents = new Map(buffer.fileContents);
+  fileContents.set(filePath, nextState);
+  return { ...buffer, fileContents };
+}
+
+function ensureLoadingFileContent(buffer: MultiBufferTab, filePath: string): MultiBufferTab {
+  if (buffer.fileContents.has(filePath)) return buffer;
+  return withFileContent(buffer, filePath, { content: null, isLoading: true, error: null });
+}
+
+function appendExcerpt(buffer: MultiBufferTab, excerpt: BufferExcerpt): MultiBufferTab {
+  return {
+    ...buffer,
+    config: { ...buffer.config, excerpts: [...buffer.config.excerpts, excerpt] },
+  };
+}
+
+function removeExcerptAtIndex(buffer: MultiBufferTab, excerptIndex: number): MultiBufferTab {
+  const excerpts = buffer.config.excerpts.filter((_, index) => index !== excerptIndex);
+  return { ...buffer, config: { ...buffer.config, excerpts } };
+}
+
+function renameBuffer(buffer: MultiBufferTab, name: string): MultiBufferTab {
+  return { ...buffer, config: { ...buffer.config, name } };
+}
+
+function createMultiBufferTab(config?: MultiBufferConfig): MultiBufferTab {
+  return {
+    id: generateId(),
+    config: config ?? { name: 'Untitled Multi-Buffer', excerpts: [] },
+    fileContents: new Map(),
+  };
+}
+
+function queueExcerptLoads(
+  config: MultiBufferConfig,
+  multiBufferId: string,
+  loadFileContent: LoadFileContent,
+): void {
+  const uniquePaths = [...new Set(config.excerpts.map((excerpt) => excerpt.filePath))];
+  for (const filePath of uniquePaths) {
+    void loadFileContent(filePath, multiBufferId);
+  }
+}
+
+function toFileContentState(result: ReadFileResult): FileContentState {
+  if (result.success) {
+    return { content: result.content ?? '', isLoading: false, error: null };
+  }
+  return { content: null, isLoading: false, error: result.error ?? 'Failed to read file' };
+}
+
+async function readFileContentState(filePath: string): Promise<FileContentState> {
+  try {
+    const result = await window.electronAPI.files.readFile(filePath);
+    return toFileContentState(result as ReadFileResult);
+  } catch (error) {
+    return { content: null, isLoading: false, error: String(error) };
+  }
+}
+
+function useFileContentLoader(setMultiBuffers: SetMultiBuffers): LoadFileContent {
+  return useCallback(async (filePath: string, multiBufferId: string) => {
     setMultiBuffers((prev) =>
-      prev.map((mb) => {
-        if (mb.id !== mbId) return mb;
-        const next = new Map(mb.fileContents);
-        if (!next.has(filePath)) {
-          next.set(filePath, { content: null, isLoading: true, error: null });
-        }
-        return { ...mb, fileContents: next };
-      }),
+      updateMultiBuffers(prev, multiBufferId, (buffer) => ensureLoadingFileContent(buffer, filePath)),
     );
+    const nextState = await readFileContentState(filePath);
+    setMultiBuffers((prev) =>
+      updateMultiBuffers(prev, multiBufferId, (buffer) => withFileContent(buffer, filePath, nextState)),
+    );
+  }, [setMultiBuffers]);
+}
 
-    try {
-      const result = await window.electronAPI.files.readFile(filePath);
-      setMultiBuffers((prev) =>
-        prev.map((mb) => {
-          if (mb.id !== mbId) return mb;
-          const next = new Map(mb.fileContents);
-          if (result.success) {
-            next.set(filePath, { content: result.content ?? '', isLoading: false, error: null });
-          } else {
-            next.set(filePath, { content: null, isLoading: false, error: result.error ?? 'Failed to read file' });
-          }
-          return { ...mb, fileContents: next };
-        }),
-      );
-    } catch (err) {
-      setMultiBuffers((prev) =>
-        prev.map((mb) => {
-          if (mb.id !== mbId) return mb;
-          const next = new Map(mb.fileContents);
-          next.set(filePath, { content: null, isLoading: false, error: String(err) });
-          return { ...mb, fileContents: next };
-        }),
-      );
-    }
-  }, []);
-
+function useBufferLifecycleActions(setMultiBuffers: SetMultiBuffers, loadFileContent: LoadFileContent) {
   const openMultiBuffer = useCallback((config?: MultiBufferConfig): string => {
-    const id = generateId();
-    const cfg = config ?? { name: 'Untitled Multi-Buffer', excerpts: [] };
-    const tab: MultiBufferTab = {
-      id,
-      config: cfg,
-      fileContents: new Map(),
-    };
+    const tab = createMultiBufferTab(config);
     setMultiBuffers((prev) => [...prev, tab]);
-
-    // Load content for any pre-existing excerpts
-    if (cfg.excerpts.length > 0) {
-      const uniquePaths = [...new Set(cfg.excerpts.map((e) => e.filePath))];
-      for (const fp of uniquePaths) {
-        void loadFileContent(fp, id);
-      }
-    }
-
-    return id;
-  }, [loadFileContent]);
+    queueExcerptLoads(tab.config, tab.id, loadFileContent);
+    return tab.id;
+  }, [loadFileContent, setMultiBuffers]);
 
   const closeMultiBuffer = useCallback((id: string) => {
-    setMultiBuffers((prev) => prev.filter((mb) => mb.id !== id));
-  }, []);
+    setMultiBuffers((prev) => prev.filter((buffer) => buffer.id !== id));
+  }, [setMultiBuffers]);
 
+  return { openMultiBuffer, closeMultiBuffer };
+}
+
+function useBufferConfigActions(setMultiBuffers: SetMultiBuffers, loadFileContent: LoadFileContent) {
   const addExcerpt = useCallback((id: string, excerpt: BufferExcerpt) => {
-    setMultiBuffers((prev) =>
-      prev.map((mb) => {
-        if (mb.id !== id) return mb;
-        return {
-          ...mb,
-          config: {
-            ...mb.config,
-            excerpts: [...mb.config.excerpts, excerpt],
-          },
-        };
-      }),
-    );
-    // Load file content if not already loaded
+    setMultiBuffers((prev) => updateMultiBuffers(prev, id, (buffer) => appendExcerpt(buffer, excerpt)));
     void loadFileContent(excerpt.filePath, id);
-  }, [loadFileContent]);
+  }, [loadFileContent, setMultiBuffers]);
 
   const removeExcerpt = useCallback((id: string, excerptIndex: number) => {
     setMultiBuffers((prev) =>
-      prev.map((mb) => {
-        if (mb.id !== id) return mb;
-        const excerpts = mb.config.excerpts.filter((_, i) => i !== excerptIndex);
-        return {
-          ...mb,
-          config: { ...mb.config, excerpts },
-        };
-      }),
+      updateMultiBuffers(prev, id, (buffer) => removeExcerptAtIndex(buffer, excerptIndex)),
     );
-  }, []);
+  }, [setMultiBuffers]);
 
   const renameMultiBuffer = useCallback((id: string, name: string) => {
-    setMultiBuffers((prev) =>
-      prev.map((mb) => {
-        if (mb.id !== id) return mb;
-        return { ...mb, config: { ...mb.config, name } };
-      }),
-    );
-  }, []);
+    setMultiBuffers((prev) => updateMultiBuffers(prev, id, (buffer) => renameBuffer(buffer, name)));
+  }, [setMultiBuffers]);
 
-  // Listen for agent-ide:open-multi-buffer DOM CustomEvents
+  return { addExcerpt, removeExcerpt, renameMultiBuffer };
+}
+
+function useOpenMultiBufferListener(openMultiBuffer: MultiBufferState['openMultiBuffer']): void {
   useEffect(() => {
-    function onOpenMultiBuffer(e: Event): void {
-      const detail = (e as CustomEvent<MultiBufferConfig | undefined>).detail;
-      openMultiBuffer(detail);
+    function onOpenMultiBuffer(event: Event): void {
+      openMultiBuffer((event as CustomEvent<MultiBufferConfig | undefined>).detail);
     }
-
     window.addEventListener('agent-ide:open-multi-buffer', onOpenMultiBuffer);
     return () => window.removeEventListener('agent-ide:open-multi-buffer', onOpenMultiBuffer);
   }, [openMultiBuffer]);
+}
 
-  const value: MultiBufferState = {
-    multiBuffers,
-    openMultiBuffer,
-    closeMultiBuffer,
-    addExcerpt,
-    removeExcerpt,
-    renameMultiBuffer,
-  };
-
-  return (
-    <MultiBufferContext.Provider value={value}>
-      {children}
-    </MultiBufferContext.Provider>
+function useMultiBufferState(): MultiBufferState {
+  const [multiBuffers, setMultiBuffers] = useState<MultiBufferTab[]>([]);
+  const loadFileContent = useFileContentLoader(setMultiBuffers);
+  const { openMultiBuffer, closeMultiBuffer } = useBufferLifecycleActions(setMultiBuffers, loadFileContent);
+  const { addExcerpt, removeExcerpt, renameMultiBuffer } = useBufferConfigActions(
+    setMultiBuffers,
+    loadFileContent,
   );
+
+  useOpenMultiBufferListener(openMultiBuffer);
+  return { multiBuffers, openMultiBuffer, closeMultiBuffer, addExcerpt, removeExcerpt, renameMultiBuffer };
+}
+
+export function MultiBufferManager({ children }: MultiBufferManagerProps): React.ReactElement {
+  const value = useMultiBufferState();
+  return <MultiBufferContext.Provider value={value}>{children}</MultiBufferContext.Provider>;
 }
 
 export function useMultiBufferManager(): MultiBufferState {
@@ -180,154 +208,3 @@ export function useMultiBufferManager(): MultiBufferState {
   }
   return ctx;
 }
-
-// ─── Add Excerpt Form ───────────────────────────────────────────────────────
-
-export interface AddExcerptFormProps {
-  onAdd: (excerpt: BufferExcerpt) => void;
-  onCancel: () => void;
-}
-
-export const AddExcerptForm = memo(function AddExcerptForm({
-  onAdd,
-  onCancel,
-}: AddExcerptFormProps): React.ReactElement {
-  const [filePath, setFilePath] = useState('');
-  const [startLine, setStartLine] = useState('1');
-  const [endLine, setEndLine] = useState('50');
-  const [label, setLabel] = useState('');
-
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    if (!filePath.trim()) return;
-    const start = parseInt(startLine, 10);
-    const end = parseInt(endLine, 10);
-    if (isNaN(start) || isNaN(end) || start < 1 || end < start) return;
-
-    onAdd({
-      filePath: filePath.trim(),
-      startLine: start,
-      endLine: end,
-      label: label.trim() || undefined,
-    });
-  }, [filePath, startLine, endLine, label, onAdd]);
-
-  const inputStyle: React.CSSProperties = {
-    background: 'var(--bg)',
-    border: '1px solid var(--border)',
-    borderRadius: '3px',
-    color: 'var(--text)',
-    padding: '4px 8px',
-    fontSize: '0.8125rem',
-    fontFamily: 'var(--font-mono)',
-    outline: 'none',
-    width: '100%',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    color: 'var(--text-muted)',
-    fontSize: '0.75rem',
-    fontFamily: 'var(--font-ui)',
-    marginBottom: '2px',
-  };
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        padding: '12px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
-        fontFamily: 'var(--font-ui)',
-      }}
-    >
-      <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text)' }}>
-        Add Excerpt
-      </div>
-
-      <div>
-        <div style={labelStyle}>File path (absolute)</div>
-        <input
-          type="text"
-          value={filePath}
-          onChange={(e) => setFilePath(e.target.value)}
-          placeholder="/path/to/file.ts"
-          style={inputStyle}
-          autoFocus
-        />
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={labelStyle}>Start line</div>
-          <input
-            type="number"
-            value={startLine}
-            onChange={(e) => setStartLine(e.target.value)}
-            min="1"
-            style={inputStyle}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={labelStyle}>End line</div>
-          <input
-            type="number"
-            value={endLine}
-            onChange={(e) => setEndLine(e.target.value)}
-            min="1"
-            style={inputStyle}
-          />
-        </div>
-      </div>
-
-      <div>
-        <div style={labelStyle}>Label (optional)</div>
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. handleClick"
-          style={inputStyle}
-        />
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{
-            background: 'none',
-            border: '1px solid var(--border)',
-            borderRadius: '3px',
-            color: 'var(--text-muted)',
-            padding: '4px 12px',
-            fontSize: '0.8125rem',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-ui)',
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          style={{
-            background: 'var(--accent)',
-            border: 'none',
-            borderRadius: '3px',
-            color: 'var(--bg)',
-            padding: '4px 12px',
-            fontSize: '0.8125rem',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontFamily: 'var(--font-ui)',
-          }}
-        >
-          Add
-        </button>
-      </div>
-    </form>
-  );
-});

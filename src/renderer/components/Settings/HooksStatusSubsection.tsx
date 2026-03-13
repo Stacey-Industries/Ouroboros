@@ -1,5 +1,5 @@
 /**
- * HooksStatusSubsection.tsx — Hook status display and transport info.
+ * HooksStatusSubsection.tsx - Hook status display and transport info.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -23,57 +23,91 @@ interface Props {
 }
 
 export function HooksStatusSubsection({ draft, onChange }: Props): React.ReactElement {
-  const [info, setInfo] = useState<HooksInfo>({ status: 'checking', version: null, transport: 'Detecting...' });
-  const [isReinstalling, setIsReinstalling] = useState(false);
-
-  const detectHooks = useCallback(async () => {
-    setInfo((prev) => ({ ...prev, status: 'checking' }));
-    try {
-      const platform = await window.electronAPI.app.getPlatform();
-      const transport = platform === 'win32'
-        ? 'Named Pipe (\\\\.\\pipe\\agent-ide-hooks)'
-        : `TCP (localhost:${draft.hooksServerPort})`;
-      const config = await window.electronAPI.config.getAll();
-      if (!config.autoInstallHooks) {
-        setInfo({ status: 'not-installed', version: null, transport });
-        return;
-      }
-      setInfo({ status: 'installed', version: CURRENT_HOOK_VERSION, transport });
-    } catch (err) {
-      setInfo({ status: 'error', version: null, transport: 'Unknown', errorMessage: err instanceof Error ? err.message : String(err) });
-    }
-  }, [draft.hooksServerPort]);
-
-  useEffect(() => { void detectHooks(); }, [detectHooks]);
-
-  async function handleReinstall(): Promise<void> {
-    setIsReinstalling(true);
-    try {
-      await window.electronAPI.config.set('autoInstallHooks', true);
-      onChange('autoInstallHooks', true);
-      await new Promise((r) => setTimeout(r, 400));
-      await detectHooks();
-    } finally { setIsReinstalling(false); }
-  }
+  const { info, isReinstalling, reinstall } = useHooksStatusState(
+    draft.hooksServerPort,
+    () => onChange('autoInstallHooks', true),
+  );
 
   return (
     <>
       <section>
         <SectionLabel>Hook Scripts Status</SectionLabel>
-        <StatusCard info={info} isReinstalling={isReinstalling} onReinstall={() => void handleReinstall()} />
-        {info.status === 'not-installed' && (
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Hook scripts are not installed. Enable auto-install in General settings, then restart.
-          </p>
-        )}
+        <StatusCard info={info} isReinstalling={isReinstalling} onReinstall={reinstall} />
+        <MissingHooksNote status={info.status} />
       </section>
       <TransportSection transport={info.transport} />
     </>
   );
 }
 
-function StatusCard({ info, isReinstalling, onReinstall }: {
-  info: HooksInfo; isReinstalling: boolean; onReinstall: () => void;
+function useHooksStatusState(
+  hooksServerPort: number,
+  onEnableAutoInstall: () => void,
+): { info: HooksInfo; isReinstalling: boolean; reinstall: () => void } {
+  const [info, setInfo] = useState<HooksInfo>(defaultHooksInfo);
+  const [isReinstalling, setIsReinstalling] = useState(false);
+  const refresh = useCallback(async () => {
+    setInfo((prev) => ({ ...prev, status: 'checking' }));
+    setInfo(await detectHooks(hooksServerPort));
+  }, [hooksServerPort]);
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const reinstall = useCallback(() => {
+    void reinstallHooks(setIsReinstalling, refresh, onEnableAutoInstall);
+  }, [onEnableAutoInstall, refresh]);
+
+  return { info, isReinstalling, reinstall };
+}
+
+async function detectHooks(hooksServerPort: number): Promise<HooksInfo> {
+  try {
+    const platform = await window.electronAPI.app.getPlatform();
+    const transport = getTransport(platform, hooksServerPort);
+    const config = await window.electronAPI.config.getAll();
+    return config.autoInstallHooks
+      ? { status: 'installed', version: CURRENT_HOOK_VERSION, transport }
+      : { status: 'not-installed', version: null, transport };
+  } catch (err) {
+    return { status: 'error', version: null, transport: 'Unknown', errorMessage: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function reinstallHooks(
+  setIsReinstalling: React.Dispatch<React.SetStateAction<boolean>>,
+  refresh: () => Promise<void>,
+  onEnableAutoInstall: () => void,
+): Promise<void> {
+  setIsReinstalling(true);
+  try {
+    await window.electronAPI.config.set('autoInstallHooks', true);
+    onEnableAutoInstall();
+    await wait(400);
+    await refresh();
+  } finally {
+    setIsReinstalling(false);
+  }
+}
+
+function MissingHooksNote({ status }: { status: HookStatus }): React.ReactElement | null {
+  if (status !== 'not-installed') {
+    return null;
+  }
+
+  return (
+    <p style={noteStyle}>
+      Hook scripts are not installed. Enable auto-install in General settings, then restart.
+    </p>
+  );
+}
+
+function StatusCard({
+  info,
+  isReinstalling,
+  onReinstall,
+}: {
+  info: HooksInfo;
+  isReinstalling: boolean;
+  onReinstall: () => void;
 }): React.ReactElement {
   return (
     <div style={cardStyle}>
@@ -104,7 +138,7 @@ function TransportSection({ transport }: { transport: string }): React.ReactElem
 
 function StatusDot({ status }: { status: HookStatus }): React.ReactElement {
   const color = status === 'installed' ? 'var(--success)' : status === 'not-installed' ? 'var(--text-muted)' : status === 'error' ? 'var(--error)' : 'var(--warning)';
-  return <div aria-hidden="true" style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, flexShrink: 0, boxShadow: status === 'installed' ? `0 0 6px ${color}` : 'none' }} />;
+  return <div aria-hidden="true" style={statusDotStyle(color, status === 'installed')} />;
 }
 
 function statusLabel(status: HookStatus): string {
@@ -112,15 +146,41 @@ function statusLabel(status: HookStatus): string {
   return labels[status];
 }
 
+function getTransport(platform: string, hooksServerPort: number): string {
+  return platform === 'win32' ? 'Named Pipe (\\\\.\\pipe\\agent-ide-hooks)' : `TCP (localhost:${hooksServerPort})`;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function statusDotStyle(color: string, highlight: boolean): React.CSSProperties {
+  return {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    backgroundColor: color,
+    flexShrink: 0,
+    boxShadow: highlight ? `0 0 6px ${color}` : 'none',
+  };
+}
+
+const defaultHooksInfo: HooksInfo = { status: 'checking', version: null, transport: 'Detecting...' };
 const cardStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-secondary)' };
 const versionStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' };
 const errorStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--error)', marginTop: '2px' };
 const transportBoxStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' };
+const noteStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' };
 
 function reinstallBtnStyle(isReinstalling: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-    background: 'var(--bg-tertiary)', color: isReinstalling ? 'var(--text-muted)' : 'var(--text)',
-    fontSize: '12px', cursor: isReinstalling ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg-tertiary)',
+    color: isReinstalling ? 'var(--text-muted)' : 'var(--text)',
+    fontSize: '12px',
+    cursor: isReinstalling ? 'not-allowed' : 'pointer',
+    whiteSpace: 'nowrap',
   };
 }

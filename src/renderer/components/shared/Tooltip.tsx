@@ -1,21 +1,25 @@
 /**
- * Tooltip.tsx — Consistent hover tooltip component.
+ * Tooltip.tsx - Consistent hover tooltip component.
  *
- * Wraps any child element and shows a tooltip after a 500ms hover delay.
- * Positioned above by default, flips if near the edge.
- * Uses CSS custom properties for theme compatibility.
+ * Wraps any child element and shows a tooltip after a hover delay.
+ * Positioned above by default and flips if needed near viewport edges.
  */
 
-import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  cloneTooltipChild,
+  computePosition,
+  type TooltipCoords,
+  type TooltipPosition,
+} from './Tooltip.helpers';
 
-// ── Inject tooltip styles once ──────────────────────────────────────────────
+const TOOLTIP_STYLE_ID = '__tooltip-styles__';
+export type { TooltipPosition } from './Tooltip.helpers';
 
-if (typeof document !== 'undefined') {
-  const styleId = '__tooltip-styles__';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
+if (typeof document !== 'undefined' && !document.getElementById(TOOLTIP_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = TOOLTIP_STYLE_ID;
+  style.textContent = `
 @keyframes tooltip-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -54,7 +58,6 @@ if (typeof document !== 'undefined') {
   transform: rotate(45deg);
 }
 
-/* Arrow for top position (arrow points down) */
 .agent-ide-tooltip--top .agent-ide-tooltip__arrow {
   bottom: -4px;
   left: 50%;
@@ -63,7 +66,6 @@ if (typeof document !== 'undefined') {
   border-left: none;
 }
 
-/* Arrow for bottom position (arrow points up) */
 .agent-ide-tooltip--bottom .agent-ide-tooltip__arrow {
   top: -4px;
   left: 50%;
@@ -72,7 +74,6 @@ if (typeof document !== 'undefined') {
   border-right: none;
 }
 
-/* Arrow for left position (arrow points right) */
 .agent-ide-tooltip--left .agent-ide-tooltip__arrow {
   right: -4px;
   top: 50%;
@@ -81,7 +82,6 @@ if (typeof document !== 'undefined') {
   border-left: none;
 }
 
-/* Arrow for right position (arrow points left) */
 .agent-ide-tooltip--right .agent-ide-tooltip__arrow {
   left: -4px;
   top: 50%;
@@ -90,13 +90,8 @@ if (typeof document !== 'undefined') {
   border-right: none;
 }
 `;
-    document.head.appendChild(style);
-  }
+  document.head.appendChild(style);
 }
-
-// ── Types ───────────────────────────────────────────────────────────────────
-
-export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
 export interface TooltipProps {
   /** The text to show in the tooltip */
@@ -111,61 +106,96 @@ export interface TooltipProps {
   disabled?: boolean;
 }
 
-// ── Positioning logic ───────────────────────────────────────────────────────
+function useTooltipVisibility(delay: number, disabled: boolean): {
+  visible: boolean;
+  coords: TooltipCoords | null;
+  setCoords: React.Dispatch<React.SetStateAction<TooltipCoords | null>>;
+  triggerRef: React.MutableRefObject<HTMLElement | null>;
+  tooltipRef: React.MutableRefObject<HTMLDivElement | null>;
+  clearTimer: () => void;
+  show: () => void;
+  hide: () => void;
+} {
+  const [visible, setVisible] = useState(false);
+  const [coords, setCoords] = useState<TooltipCoords | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-const GAP = 6; // px between trigger and tooltip
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
-function computePosition(
-  triggerRect: DOMRect,
-  tooltipRect: DOMRect,
-  preferred: TooltipPosition,
-): { top: number; left: number; resolved: TooltipPosition } {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const show = useCallback(() => {
+    if (disabled) {
+      return;
+    }
 
-  // Try preferred, flip if it doesn't fit
-  let resolved = preferred;
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      setVisible(true);
+    }, delay);
+  }, [clearTimer, delay, disabled]);
 
-  if (preferred === 'top' && triggerRect.top - tooltipRect.height - GAP < 0) {
-    resolved = 'bottom';
-  } else if (preferred === 'bottom' && triggerRect.bottom + tooltipRect.height + GAP > vh) {
-    resolved = 'top';
-  } else if (preferred === 'left' && triggerRect.left - tooltipRect.width - GAP < 0) {
-    resolved = 'right';
-  } else if (preferred === 'right' && triggerRect.right + tooltipRect.width + GAP > vw) {
-    resolved = 'left';
-  }
+  const hide = useCallback(() => {
+    clearTimer();
+    setVisible(false);
+    setCoords(null);
+  }, [clearTimer]);
 
-  let top = 0;
-  let left = 0;
-
-  switch (resolved) {
-    case 'top':
-      top = triggerRect.top - tooltipRect.height - GAP;
-      left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
-      break;
-    case 'bottom':
-      top = triggerRect.bottom + GAP;
-      left = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
-      break;
-    case 'left':
-      top = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
-      left = triggerRect.left - tooltipRect.width - GAP;
-      break;
-    case 'right':
-      top = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
-      left = triggerRect.right + GAP;
-      break;
-  }
-
-  // Clamp to viewport
-  left = Math.max(4, Math.min(left, vw - tooltipRect.width - 4));
-  top = Math.max(4, Math.min(top, vh - tooltipRect.height - 4));
-
-  return { top, left, resolved };
+  return { visible, coords, setCoords, triggerRef, tooltipRef, clearTimer, show, hide };
 }
 
-// ── Component ───────────────────────────────────────────────────────────────
+function useTooltipPositioning(args: {
+  visible: boolean;
+  position: TooltipPosition;
+  triggerRef: React.MutableRefObject<HTMLElement | null>;
+  tooltipRef: React.MutableRefObject<HTMLDivElement | null>;
+  setCoords: React.Dispatch<React.SetStateAction<TooltipCoords | null>>;
+}): void {
+  const { visible, position, triggerRef, tooltipRef, setCoords } = args;
+  useEffect(() => {
+    if (!visible || !triggerRef.current || !tooltipRef.current) {
+      return;
+    }
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    setCoords(computePosition(triggerRect, tooltipRect, position));
+  }, [position, setCoords, tooltipRef, triggerRef, visible]);
+}
+
+function useTooltipCleanup(clearTimer: () => void): void {
+  useEffect(() => clearTimer, [clearTimer]);
+}
+
+function TooltipPopup(args: {
+  visible: boolean;
+  coords: TooltipCoords | null;
+  position: TooltipPosition;
+  text: string;
+  tooltipRef: React.MutableRefObject<HTMLDivElement | null>;
+}): React.ReactElement | null {
+  const { visible, coords, position, text, tooltipRef } = args;
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <div
+      ref={tooltipRef}
+      className={`agent-ide-tooltip agent-ide-tooltip--${coords?.resolved ?? position}`}
+      style={{ top: coords ? coords.top : -9999, left: coords ? coords.left : -9999 }}
+      role="tooltip"
+    >
+      <div className="agent-ide-tooltip__body">{text}</div>
+      <div className="agent-ide-tooltip__arrow" />
+    </div>
+  );
+}
 
 export const Tooltip = memo(function Tooltip({
   text,
@@ -174,94 +204,27 @@ export const Tooltip = memo(function Tooltip({
   children,
   disabled = false,
 }: TooltipProps): React.ReactElement {
-  const [visible, setVisible] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; resolved: TooltipPosition } | null>(null);
-  const triggerRef = useRef<HTMLElement | null>(null);
-  const tooltipRef = useRef<HTMLDivElement | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const show = useCallback(() => {
-    if (disabled) return;
-    timerRef.current = setTimeout(() => {
-      setVisible(true);
-    }, delay);
-  }, [delay, disabled]);
-
-  const hide = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setVisible(false);
-    setCoords(null);
-  }, []);
-
-  // Position the tooltip once it becomes visible
-  useEffect(() => {
-    if (!visible || !triggerRef.current || !tooltipRef.current) return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const pos = computePosition(triggerRect, tooltipRect, position);
-    setCoords(pos);
-  }, [visible, position]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  // Clone the child to attach event listeners and ref
-  const child = React.cloneElement(children, {
-    ref: (node: HTMLElement | null) => {
-      triggerRef.current = node;
-      // Forward ref if the child has one
-      const childRef = (children as React.ReactElement & { ref?: React.Ref<HTMLElement> }).ref;
-      if (typeof childRef === 'function') {
-        childRef(node);
-      } else if (childRef && typeof childRef === 'object') {
-        (childRef as React.MutableRefObject<HTMLElement | null>).current = node;
-      }
-    },
-    onMouseEnter: (e: React.MouseEvent) => {
-      show();
-      children.props.onMouseEnter?.(e);
-    },
-    onMouseLeave: (e: React.MouseEvent) => {
-      hide();
-      children.props.onMouseLeave?.(e);
-    },
-    onFocus: (e: React.FocusEvent) => {
-      show();
-      children.props.onFocus?.(e);
-    },
-    onBlur: (e: React.FocusEvent) => {
-      hide();
-      children.props.onBlur?.(e);
-    },
-  } as Record<string, unknown>);
+  const tooltip = useTooltipVisibility(delay, disabled);
+  useTooltipPositioning({
+    visible: tooltip.visible,
+    position,
+    triggerRef: tooltip.triggerRef,
+    tooltipRef: tooltip.tooltipRef,
+    setCoords: tooltip.setCoords,
+  });
+  useTooltipCleanup(tooltip.clearTimer);
+  const child = cloneTooltipChild({ children, triggerRef: tooltip.triggerRef, show: tooltip.show, hide: tooltip.hide });
 
   return (
     <>
       {child}
-      {visible && (
-        <div
-          ref={tooltipRef}
-          className={`agent-ide-tooltip agent-ide-tooltip--${coords?.resolved ?? position}`}
-          style={{
-            top: coords ? coords.top : -9999,
-            left: coords ? coords.left : -9999,
-          }}
-          role="tooltip"
-        >
-          <div className="agent-ide-tooltip__body">{text}</div>
-          <div className="agent-ide-tooltip__arrow" />
-        </div>
-      )}
+      <TooltipPopup
+        visible={tooltip.visible}
+        coords={tooltip.coords}
+        position={position}
+        text={text}
+        tooltipRef={tooltip.tooltipRef}
+      />
     </>
   );
 });

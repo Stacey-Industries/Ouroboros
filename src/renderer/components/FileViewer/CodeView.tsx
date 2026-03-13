@@ -55,22 +55,24 @@ const scrollContainerStyle: React.CSSProperties = {
  * The main code view area with gutters, overlays, and syntax-highlighted content.
  */
 export const CodeView = memo(function CodeView(props: CodeViewProps): React.ReactElement {
-  const lineHeight = parseFloat(
-    getComputedStyle(document.documentElement).fontSize
-  ) * 1.6;
-
+  const lineHeight = getEditorLineHeight();
   const handleScrollToLine = useCallback(
-    (line: number) => {
-      const el = props.scrollRef.current;
-      if (!el) return;
-      const targetY = (line - 1) * lineHeight + 16;
-      el.scrollTo({ top: targetY - el.clientHeight / 2, behavior: 'smooth' });
-    },
+    (line: number) => scrollToLine(props.scrollRef, line, lineHeight),
     [props.scrollRef, lineHeight]
   );
 
   return (
     <div ref={props.scrollRef} style={scrollContainerStyle}>
+      {renderSearchAndNavigation(props)}
+      {renderMapOverlays(props, lineHeight, handleScrollToLine)}
+      {renderViewport(props)}
+    </div>
+  );
+});
+
+function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement {
+  return (
+    <>
       <SearchBar
         codeContainer={props.codeRef.current}
         scrollContainer={props.scrollRef.current}
@@ -85,6 +87,17 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
         visible={props.showGoToLine}
         onClose={() => props.setShowGoToLine(false)}
       />
+    </>
+  );
+}
+
+function renderMapOverlays(
+  props: CodeViewProps,
+  lineHeight,
+  onScrollToLine,
+): React.ReactElement {
+  return (
+    <>
       {props.lineCount >= 50 && (
         <Minimap
           lines={props.lines}
@@ -101,39 +114,74 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
         searchMatchLines={props.searchMatchLines}
         diffLines={props.diffLines}
         foldedLines={[...props.collapsedFolds]}
-        onScrollToLine={handleScrollToLine}
+        onScrollToLine={onScrollToLine}
       />
-      <div style={{ display: 'flex', minWidth: props.wordWrap ? undefined : 'max-content' }}>
-        <LineNumberGutter rows={props.rows} gutterWidth={props.gutterWidth} />
-        <FoldGutter
-          rows={props.rows}
-          gutterWidth={props.gutterWidth}
-          foldGutterWidth={props.foldGutterWidth}
-          foldableLines={props.foldableLines}
-          collapsedFolds={props.collapsedFolds}
-          toggleFold={props.toggleFold}
-        />
-        <DiffGutter
-          rows={props.rows}
-          diffMap={props.diffMap}
-          gutterWidth={props.gutterWidth}
-          foldGutterWidth={props.foldGutterWidth}
-          diffGutterWidth={props.diffGutterWidth}
-        />
-        {props.showBlame && props.blameLines.length > 0 && (
-          <BlameGutter blameLines={props.blameLines} rows={props.rows} />
-        )}
-        <CodeContent
-          rows={props.rows}
-          lines={props.lines}
-          shikiLines={props.shikiLines}
-          wordWrap={props.wordWrap}
-          showMinimap={props.showMinimap}
-          lineCount={props.lineCount}
-          toggleFold={props.toggleFold}
-          codeRef={props.codeRef}
-        />
-      </div>
+    </>
+  );
+}
+
+function renderViewport(props: CodeViewProps): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', minWidth: props.wordWrap ? undefined : 'max-content' }}>
+      {renderGutters(props)}
+      {renderCodeBody(props)}
     </div>
   );
-});
+}
+
+function renderGutters(props: CodeViewProps): React.ReactElement {
+  return (
+    <>
+      <LineNumberGutter rows={props.rows} gutterWidth={props.gutterWidth} />
+      <FoldGutter
+        rows={props.rows}
+        gutterWidth={props.gutterWidth}
+        foldGutterWidth={props.foldGutterWidth}
+        foldableLines={props.foldableLines}
+        collapsedFolds={props.collapsedFolds}
+        toggleFold={props.toggleFold}
+      />
+      <DiffGutter
+        rows={props.rows}
+        diffMap={props.diffMap}
+        gutterWidth={props.gutterWidth}
+        foldGutterWidth={props.foldGutterWidth}
+        diffGutterWidth={props.diffGutterWidth}
+      />
+      {props.showBlame && props.blameLines.length > 0 && (
+        <BlameGutter blameLines={props.blameLines} rows={props.rows} />
+      )}
+    </>
+  );
+}
+
+function renderCodeBody(props: CodeViewProps): React.ReactElement {
+  return (
+    <CodeContent
+      rows={props.rows}
+      lines={props.lines}
+      shikiLines={props.shikiLines}
+      wordWrap={props.wordWrap}
+      showMinimap={props.showMinimap}
+      lineCount={props.lineCount}
+      toggleFold={props.toggleFold}
+      codeRef={props.codeRef}
+    />
+  );
+}
+
+function getEditorLineHeight(): number {
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.6;
+}
+
+function scrollToLine(
+  scrollRef: RefObject<HTMLDivElement | null>,
+  line: number,
+  lineHeight: number
+): void {
+  const el = scrollRef.current;
+  if (!el) return;
+
+  const targetY = (line - 1) * lineHeight + 16;
+  el.scrollTo({ top: targetY - el.clientHeight / 2, behavior: 'smooth' });
+}

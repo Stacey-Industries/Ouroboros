@@ -50,16 +50,20 @@ const titleButtonStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
-export function TitleBar(): React.ReactElement {
+interface TitleBarAction {
+  eventName: string;
+  title: string;
+  Icon: () => React.ReactElement;
+}
+
+const TITLE_BAR_ACTIONS: TitleBarAction[] = [
+  { eventName: 'agent-ide:open-settings-panel', title: 'Settings (Ctrl+,)', Icon: SettingsGearIcon },
+  { eventName: 'agent-ide:open-usage-panel', title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
+];
+
+function TitleBarBranding(): React.ReactElement {
   return (
-    <div
-      className="titlebar-drag flex-shrink-0 flex items-center"
-      style={{
-        height: 'var(--titlebar-height, 32px)',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
-      }}
-    >
+    <>
       <img
         className="titlebar-no-drag select-none"
         src={ouroborosLogo}
@@ -73,24 +77,38 @@ export function TitleBar(): React.ReactElement {
       >
         Ouroboros
       </span>
-      <button
-        className="titlebar-no-drag"
-        title="Settings (Ctrl+,)"
-        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:open-settings-panel'))}
-        style={titleButtonStyle}
-        {...hoverStyle}
-      >
-        <SettingsGearIcon />
-      </button>
-      <button
-        className="titlebar-no-drag"
-        title="Usage (Ctrl+U)"
-        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:open-usage-panel'))}
-        style={titleButtonStyle}
-        {...hoverStyle}
-      >
-        <UsageBarIcon />
-      </button>
+    </>
+  );
+}
+
+function TitleBarActionButton({ eventName, title, Icon }: TitleBarAction): React.ReactElement {
+  return (
+    <button
+      className="titlebar-no-drag"
+      title={title}
+      onClick={() => window.dispatchEvent(new CustomEvent(eventName))}
+      style={titleButtonStyle}
+      {...hoverStyle}
+    >
+      <Icon />
+    </button>
+  );
+}
+
+export function TitleBar(): React.ReactElement {
+  return (
+    <div
+      className="titlebar-drag flex-shrink-0 flex items-center"
+      style={{
+        height: 'var(--titlebar-height, 32px)',
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      <TitleBarBranding />
+      {TITLE_BAR_ACTIONS.map((action) => (
+        <TitleBarActionButton key={action.eventName} {...action} />
+      ))}
       <div className="flex-1" />
       <div style={{ width: 140 }} />
     </div>
