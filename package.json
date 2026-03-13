@@ -10,6 +10,8 @@
     "preview": "electron-vite preview",
     "build:unpack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -50,6 +52,7 @@
     "vscode-languageserver-protocol": "^3.17.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/dompurify": "^3.0.5",
     "@types/node": "^20.17.0",
     "@types/react": "^18.3.12",
@@ -59,11 +62,15 @@
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.57.0",
     "vitest": "^2.1.0"
   },
   "build": {
