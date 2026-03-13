@@ -55,7 +55,6 @@ export const SemanticScrollbar = memo(function SemanticScrollbar({
   scrollTop,
   containerHeight,
   scrollHeight,
-  lineHeight,
   searchMatchLines,
   diffLines,
   foldedLines,

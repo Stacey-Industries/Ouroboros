@@ -96,7 +96,7 @@ export interface AppConfig {
   keybindings: Record<string, string>
   showBgGradient: boolean
   customThemeColors: Record<string, string>
-  terminalSessions: Array<{ cwd: string; title: string }>
+  terminalSessions: Array<{ cwd: string; title: string; isClaude?: boolean; claudeSessionId?: string }>
   customCSS: string
   /** Absolute paths pinned to the top of the file tree */
   bookmarks: string[]
@@ -131,6 +131,32 @@ export interface AppConfig {
   lspEnabled: boolean
   /** Custom language server commands keyed by language id */
   lspServers: Record<string, string>
+  /** Auto-launch a Claude Code session on startup instead of a plain shell */
+  claudeAutoLaunch: boolean
+  /** Tool names that require user approval before execution (e.g. ['Write', 'Bash']) */
+  approvalRequired: string[]
+  /** Auto-approve after N seconds (0 = never auto-approve) */
+  approvalTimeout: number
+  /** Workspace time-travel snapshots (capped at 100) */
+  workspaceSnapshots: WorkspaceSnapshot[]
+  /** Enable Warp-style command block overlay on terminals */
+  commandBlocksEnabled: boolean
+  /** Custom regex pattern for prompt detection (heuristic fallback) */
+  promptPattern: string
+}
+
+// ─── Workspace snapshot types ─────────────────────────────────────────────────
+
+export interface WorkspaceSnapshot {
+  id: string
+  commitHash: string
+  sessionId: string
+  sessionLabel?: string
+  timestamp: number
+  type: 'session-start' | 'session-end' | 'manual'
+  fileCount?: number
+  /** Project root this snapshot belongs to. Missing on legacy snapshots. */
+  projectRoot?: string
 }
 
 // ─── Extension types ──────────────────────────────────────────────────────────
@@ -141,8 +167,9 @@ export interface ExtensionInfo {
   description: string
   author: string
   enabled: boolean
-  status: 'active' | 'inactive' | 'error'
+  status: 'active' | 'inactive' | 'pending' | 'error'
   permissions: string[]
+  activationEvents: string[]
   errorMessage?: string
 }
 
@@ -162,6 +189,10 @@ export interface ExtensionsAPI {
   uninstall: (name: string) => Promise<IpcResult>
   getLog: (name: string) => Promise<ExtensionLogResult>
   openFolder: () => Promise<IpcResult>
+  /** Manually activate a pending extension (for debugging) */
+  activate: (name: string) => Promise<IpcResult>
+  /** Notify the extension system that a command was executed (fires onCommand activation events) */
+  commandExecuted: (commandId: string) => Promise<IpcResult>
   /** Returns a cleanup function — fires when an extension sends a notification */
   onNotification: (callback: (data: { extensionName: string; message: string }) => void) => () => void
 }
@@ -199,7 +230,7 @@ export interface DirEntry {
 
 // ─── Agent / hooks types ─────────────────────────────────────────────────────
 
-export type AgentEventType = 'tool_call' | 'tool_result' | 'message' | 'error' | 'status'
+export type AgentEventType = 'agent_start' | 'pre_tool_use' | 'post_tool_use' | 'agent_end' | 'agent_stop' | 'session_start' | 'session_stop'
 
 export interface AgentEvent {
   type: AgentEventType
@@ -207,6 +238,30 @@ export interface AgentEvent {
   agentId?: string
   timestamp: number
   payload: unknown
+}
+
+export interface TokenUsage {
+  input_tokens?: number
+  output_tokens?: number
+  cache_read_input_tokens?: number
+  cache_creation_input_tokens?: number
+}
+
+export interface HookPayload {
+  type: AgentEventType
+  sessionId: string
+  timestamp: number
+  toolName?: string
+  toolCallId?: string
+  input?: Record<string, unknown>
+  output?: Record<string, unknown>
+  prompt?: string
+  error?: string
+  parentSessionId?: string
+  usage?: TokenUsage
+  model?: string
+  /** Unique request ID for approval flow (only on pre_tool_use events) */
+  requestId?: string
 }
 
 export interface ToolCallPayload {
@@ -268,7 +323,7 @@ export interface PtyAPI {
   /** Spawns a Claude Code session directly using stored claudeCliSettings — no shell prompt flicker. */
   spawnClaude: (
     id: string,
-    options?: { cwd?: string; cols?: number; rows?: number; initialPrompt?: string; cliOverrides?: Partial<ClaudeCliSettings> }
+    options?: { cwd?: string; cols?: number; rows?: number; initialPrompt?: string; cliOverrides?: Partial<ClaudeCliSettings>; resumeMode?: string }
   ) => Promise<PtySpawnResult>
   write: (id: string, data: string) => Promise<IpcResult>
   resize: (id: string, cols: number, rows: number) => Promise<IpcResult>
@@ -323,6 +378,8 @@ export interface ConfigAPI {
 export interface FilesAPI {
   /** Write raw content to a file (used for drag-and-drop from OS) */
   writeFile: (filePath: string, data: Uint8Array) => Promise<IpcResult>
+  /** Save UTF-8 text content to an existing file (used by the inline editor) */
+  saveFile: (filePath: string, content: string) => Promise<IpcResult>
   readFile: (filePath: string) => Promise<ReadFileResult>
   readDir: (dirPath: string) => Promise<ReadDirResult>
   watchDir: (dirPath: string) => Promise<IpcResult>
@@ -346,9 +403,35 @@ export interface FilesAPI {
 
 export interface HooksAPI {
   /** Returns a cleanup function */
-  onAgentEvent: (callback: (event: AgentEvent) => void) => () => void
+  onAgentEvent: (callback: (event: HookPayload) => void) => () => void
   /** Returns a cleanup function — only fires for tool_call events */
-  onToolCall: (callback: (event: AgentEvent) => void) => () => void
+  onToolCall: (callback: (event: HookPayload) => void) => () => void
+}
+
+// ─── Approval API ────────────────────────────────────────────────────────────
+
+export interface ApprovalRequest {
+  requestId: string
+  toolName: string
+  toolInput: Record<string, unknown>
+  sessionId: string
+  timestamp: number
+}
+
+export interface ApprovalResolved {
+  requestId: string
+  decision: 'approve' | 'reject'
+}
+
+export interface ApprovalAPI {
+  /** Approve or reject a pending approval request */
+  respond: (requestId: string, decision: 'approve' | 'reject', reason?: string) => Promise<IpcResult>
+  /** Add a session-scoped "always allow" rule for a tool */
+  alwaysAllow: (sessionId: string, toolName: string) => Promise<IpcResult>
+  /** Returns a cleanup function — fires when a new approval request arrives */
+  onRequest: (callback: (request: ApprovalRequest) => void) => () => void
+  /** Returns a cleanup function — fires when an approval is resolved (from any window) */
+  onResolved: (callback: (resolved: ApprovalResolved) => void) => () => void
 }
 
 // ─── App API ─────────────────────────────────────────────────────────────────
@@ -507,6 +590,19 @@ export interface GitStatusDetailedResult extends IpcResult {
   unstaged?: Record<string, string>
 }
 
+// ─── Time-travel types ────────────────────────────────────────────────────────
+
+export interface GitChangedFilesResult extends IpcResult {
+  files?: Array<{ path: string; status: string; additions: number; deletions: number }>
+}
+
+export interface GitStashResult extends IpcResult {
+  stashRef?: string
+  dirtyCount?: number
+  branch?: string
+  previousBranch?: string
+}
+
 export interface GitAPI {
   isRepo: (root: string) => Promise<GitIsRepoResult>
   status: (root: string) => Promise<GitStatusResult>
@@ -540,6 +636,16 @@ export interface GitAPI {
   revertHunk: (root: string, patchContent: string) => Promise<IpcResult>
   /** Fully revert a file to its state at a given commit */
   revertFile: (root: string, commitHash: string, filePath: string) => Promise<IpcResult>
+  /** Get diff between two commits (unified diff parsed into per-file hunks) */
+  diffBetween: (root: string, fromHash: string, toHash: string) => Promise<GitDiffReviewResult>
+  /** Get list of files changed between two commits with line counts */
+  changedFilesBetween: (root: string, fromHash: string, toHash: string) => Promise<GitChangedFilesResult>
+  /** Stash current changes and checkout a specific commit */
+  restoreSnapshot: (root: string, commitHash: string) => Promise<GitStashResult>
+  /** Create a manual snapshot (commit all changes with a label) */
+  createSnapshot: (root: string, label?: string) => Promise<GitSnapshotResult>
+  /** Count dirty (uncommitted) files */
+  dirtyCount: (root: string) => Promise<{ success: boolean; count: number; error?: string }>
 }
 
 // ─── Shell history API ───────────────────────────────────────────────────────
@@ -580,6 +686,8 @@ export interface UpdaterEvent {
 
 export interface UpdaterAPI {
   check: () => Promise<IpcResult>
+  /** Download an available update (only after update-available event) */
+  download: () => Promise<IpcResult>
   install: () => Promise<IpcResult>
   /** Returns a cleanup function */
   onUpdateEvent: (callback: (event: UpdaterEvent) => void) => () => void
@@ -763,10 +871,187 @@ export interface LspAPI {
   didChange: (root: string, filePath: string, content: string) => Promise<void>
   didClose: (root: string, filePath: string) => Promise<void>
   getStatus: () => Promise<LspStatusResult>
-  /** Returns a cleanup function — fires when diagnostics are published */
+  /** Returns a cleanup function — fires when diagnostics are pushed (channel: lsp:diagnostics:push) */
   onDiagnostics: (callback: (event: { filePath: string; diagnostics: LspDiagnostic[] }) => void) => () => void
   /** Returns a cleanup function — fires when server status changes */
   onStatusChange: (callback: (servers: LspServerStatus[]) => void) => () => void
+}
+
+// ─── Usage reader types (reads Claude Code's local JSONL data) ──────────────
+
+export interface SessionUsage {
+  sessionId: string
+  startedAt: number
+  lastActiveAt: number
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  estimatedCost: number
+  messageCount: number
+}
+
+export interface UsageTotals {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  estimatedCost: number
+  sessionCount: number
+  messageCount: number
+}
+
+export interface UsageSummary {
+  sessions: SessionUsage[]
+  totals: UsageTotals
+}
+
+export interface UsageSummaryResult extends IpcResult {
+  summary?: UsageSummary
+}
+
+export interface SessionMessageUsage {
+  timestamp: number
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+}
+
+export interface SessionDetail {
+  sessionId: string
+  messages: SessionMessageUsage[]
+  totals: {
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    cacheWriteTokens: number
+    totalTokens: number
+    estimatedCost: number
+    model: string
+    messageCount: number
+    durationMs: number
+  }
+}
+
+export interface SessionDetailResult extends IpcResult {
+  detail?: SessionDetail | null
+}
+
+export interface RecentSessionsResult extends IpcResult {
+  sessions?: SessionDetail[]
+}
+
+export interface WindowedUsageBucket {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  totalTokens: number
+  estimatedCost: number
+}
+
+export interface WindowedUsage {
+  fiveHour: WindowedUsageBucket & { windowStart: number }
+  weekly: WindowedUsageBucket & { windowStart: number }
+  sonnetFiveHour: WindowedUsageBucket
+}
+
+export interface WindowedUsageResult extends IpcResult {
+  windowed?: WindowedUsage
+}
+
+export interface UsageAPI {
+  getSummary: (options?: { projectFilter?: string; since?: number; maxSessions?: number }) => Promise<UsageSummaryResult>
+  getSessionDetail: (sessionId: string) => Promise<SessionDetailResult>
+  getRecentSessions: (count?: number) => Promise<RecentSessionsResult>
+  getWindowedUsage: () => Promise<WindowedUsageResult>
+}
+
+// ─── MCP types ───────────────────────────────────────────────────────────────
+
+export interface McpServerConfig {
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  /** URL for SSE/streamable-http transport servers */
+  url?: string
+}
+
+export interface McpServerEntry {
+  name: string
+  config: McpServerConfig
+  scope: 'global' | 'project'
+  enabled: boolean
+}
+
+export interface McpGetServersResult extends IpcResult {
+  servers?: McpServerEntry[]
+}
+
+export interface McpAPI {
+  getServers: (projectRoot?: string) => Promise<McpGetServersResult>
+  addServer: (name: string, config: McpServerConfig, scope: 'global' | 'project', projectRoot?: string) => Promise<IpcResult>
+  removeServer: (name: string, scope: 'global' | 'project', projectRoot?: string) => Promise<IpcResult>
+  updateServer: (name: string, config: McpServerConfig, scope: 'global' | 'project', projectRoot?: string) => Promise<IpcResult>
+  toggleServer: (name: string, enabled: boolean, scope: 'global' | 'project', projectRoot?: string) => Promise<IpcResult>
+}
+
+// ─── Context builder types ───────────────────────────────────────────────────
+
+export interface ProjectContext {
+  name: string
+  language: string
+  framework: string | null
+  packageManager: 'npm' | 'yarn' | 'pnpm' | 'cargo' | 'pip' | 'go' | 'bun' | null
+  entryPoints: string[]
+  keyDirs: Array<{ path: string; purpose: string }>
+  keyConfigs: string[]
+  testFramework: string | null
+  buildCommands: Array<{ name: string; command: string }>
+  dependencies: Array<{ name: string; version: string }>
+  hasClaudeMd: boolean
+  detectedPatterns: string[]
+}
+
+export interface ContextGenerateOptions {
+  includeCommands?: boolean
+  includeDeps?: boolean
+  includeStructure?: boolean
+  maxDeps?: number
+}
+
+export interface ContextScanResult extends IpcResult {
+  context?: ProjectContext
+}
+
+export interface ContextGenerateResult extends IpcResult {
+  content?: string
+  context?: ProjectContext
+}
+
+export interface ContextAPI {
+  scan: (projectRoot: string) => Promise<ContextScanResult>
+  generate: (projectRoot: string, options?: ContextGenerateOptions) => Promise<ContextGenerateResult>
+}
+
+// ─── IDE Tools API (reverse channel for Claude Code queries) ─────────────────
+
+export interface IdeToolQuery {
+  queryId: string
+  method: string
+  params?: unknown
+}
+
+export interface IdeToolsAPI {
+  /** Respond to a query from the IDE tool server */
+  respond: (queryId: string, result: unknown, error?: string) => Promise<IpcResult>
+  /** Returns a cleanup function — fires when the tool server sends a query */
+  onQuery: (callback: (query: IdeToolQuery) => void) => () => void
+  /** Get the tool server address (pipe path or socket path) */
+  getAddress: () => Promise<{ address: string | null }>
 }
 
 // ─── Code Mode types ─────────────────────────────────────────────────────
@@ -790,12 +1075,14 @@ export interface ElectronAPI {
   config: ConfigAPI
   files: FilesAPI
   hooks: HooksAPI
+  approval: ApprovalAPI
   app: AppAPI
   shell: ShellAPI
   theme: ThemeAPI
   git: GitAPI
   sessions: SessionsAPI
   cost: CostAPI
+  usage: UsageAPI
   shellHistory: ShellHistoryAPI
   updater: UpdaterAPI
   crash: CrashAPI
@@ -804,6 +1091,9 @@ export interface ElectronAPI {
   lsp: LspAPI
   window: WindowAPI
   extensions: ExtensionsAPI
+  mcp: McpAPI
+  context: ContextAPI
+  ideTools: IdeToolsAPI
   codemode: CodeModeAPI
 }
 

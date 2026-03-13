@@ -14,8 +14,143 @@ export interface FoldRange {
 // ── Bracket-based fold detection ─────────────────────────────────────────────
 
 const OPEN_BRACKETS: Record<string, string> = { '{': '}', '(': ')', '[': ']' };
-const CLOSE_TO_OPEN: Record<string, string> = { '}': '{', ')': '(', ']': '[' };
 
+function addRange(
+  ranges: FoldRange[],
+  seen: Set<string>,
+  start: number,
+  end: number,
+): void {
+  if (end <= start) return;
+  const key = `${start}:${end}`;
+  if (seen.has(key)) return;
+  seen.add(key);
+  ranges.push({ start, end });
+}
+
+interface BracketPair {
+  openChar: string;
+  closeChar: string;
+}
+
+interface BracketScanState {
+  ranges: FoldRange[];
+  seen: Set<string>;
+  stack: number[];
+}
+
+function getQuoteChar(ch: string): string | null {
+  return ch === '"' || ch === "'" || ch === '`' ? ch : null;
+}
+
+function updateStringState(
+  line: string,
+  charIndex: number,
+  ch: string,
+  inString: string | null,
+): { next: string | null; consumed: boolean } {
+  if (!inString) {
+    const quote = getQuoteChar(ch);
+    return quote ? { next: quote, consumed: true } : { next: null, consumed: false };
+  }
+  if (ch === inString && line[charIndex - 1] !== '\\') {
+    return { next: null, consumed: true };
+  }
+  return { next: inString, consumed: true };
+}
+
+function isLineComment(line: string, charIndex: number, ch: string): boolean {
+  return ch === '/' && line[charIndex + 1] === '/';
+}
+
+function handleBracketChar(
+  ch: string,
+  lineIndex: number,
+  pair: BracketPair,
+  state: BracketScanState,
+): boolean {
+  if (ch === pair.openChar) {
+    state.stack.push(lineIndex);
+    return true;
+  }
+  if (ch !== pair.closeChar || state.stack.length === 0) return false;
+  const startLine = state.stack.pop();
+  if (startLine !== undefined) addRange(state.ranges, state.seen, startLine, lineIndex);
+  return true;
+}
+
+function scanBracketLine(
+  line: string,
+  lineIndex: number,
+  pair: BracketPair,
+  state: BracketScanState,
+): void {
+  let inString: string | null = null;
+  for (let charIndex = 0; charIndex < line.length; charIndex++) {
+    const ch = line[charIndex];
+    const stringState = updateStringState(line, charIndex, ch, inString);
+    inString = stringState.next;
+    if (stringState.consumed) {
+      continue;
+    }
+    if (isLineComment(line, charIndex, ch)) break;
+    handleBracketChar(ch, lineIndex, pair, state);
+  }
+}
+
+function collectBracketRanges(
+  lines: string[],
+  ranges: FoldRange[],
+  seen: Set<string>,
+): void {
+  for (const [openChar, closeChar] of Object.entries(OPEN_BRACKETS)) {
+    const state: BracketScanState = { ranges, seen, stack: [] };
+    const pair = { openChar, closeChar };
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      scanBracketLine(lines[lineIndex], lineIndex, pair, state);
+    }
+  }
+}
+
+function isIndentBlockHeader(line: string): boolean {
+  return (
+    line.endsWith(':') ||
+    /^(def |class |if |elif |else:|for |while |with |try:|except |finally:| *async )/.test(line)
+  );
+}
+
+function findIndentedBlockEnd(
+  lines: string[],
+  startIndex: number,
+  baseIndent: number,
+): number {
+  let end = startIndex + 1;
+  for (let lineIndex = startIndex + 2; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    if (line.trim().length === 0) continue;
+    if (getIndent(line) <= baseIndent) break;
+    end = lineIndex;
+  }
+  return end;
+}
+
+function collectIndentRanges(
+  lines: string[],
+  ranges: FoldRange[],
+  seen: Set<string>,
+): void {
+  const bracketStarts = new Set(ranges.map((range) => range.start));
+  for (let lineIndex = 0; lineIndex < lines.length - 1; lineIndex++) {
+    if (bracketStarts.has(lineIndex)) continue;
+    const line = lines[lineIndex];
+    if (line.trim().length === 0) continue;
+    const baseIndent = getIndent(line);
+    const nextLine = lines[lineIndex + 1];
+    if (nextLine.trim().length === 0 || getIndent(nextLine) <= baseIndent) continue;
+    if (!isIndentBlockHeader(line.trim())) continue;
+    addRange(ranges, seen, lineIndex, findIndentedBlockEnd(lines, lineIndex, baseIndent));
+  }
+}
 /**
  * Detect foldable ranges by matching brackets and by indentation.
  * Returns an array of FoldRange sorted by start line.
@@ -23,100 +158,8 @@ const CLOSE_TO_OPEN: Record<string, string> = { '}': '{', ')': '(', ']': '[' };
 function detectFoldRanges(lines: string[]): FoldRange[] {
   const ranges: FoldRange[] = [];
   const seen = new Set<string>();
-
-  // ── Pass 1: Bracket matching ──
-  // For each bracket type, walk the file and match open/close pairs.
-  for (const openChar of Object.keys(OPEN_BRACKETS)) {
-    const closeChar = OPEN_BRACKETS[openChar];
-    const stack: number[] = []; // stack of line indices where this bracket opened
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // Walk characters, skipping strings and comments (simple heuristic)
-      let inString: string | null = null;
-      for (let c = 0; c < line.length; c++) {
-        const ch = line[c];
-
-        // Simple string/comment skip
-        if (inString) {
-          if (ch === inString && line[c - 1] !== '\\') inString = null;
-          continue;
-        }
-        if (ch === '"' || ch === "'" || ch === '`') {
-          inString = ch;
-          continue;
-        }
-        // Skip line comments
-        if (ch === '/' && line[c + 1] === '/') break;
-
-        if (ch === openChar) {
-          stack.push(i);
-        } else if (ch === closeChar && stack.length > 0) {
-          const startLine = stack.pop()!;
-          // Only create a fold if it spans at least 2 lines
-          if (i > startLine) {
-            const key = `${startLine}:${i}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              ranges.push({ start: startLine, end: i });
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ── Pass 2: Indentation-based folds (Python, YAML, etc.) ──
-  // A line followed by one or more lines with strictly greater indentation is foldable.
-  // Only add if no bracket-based fold already starts on that line.
-  const bracketStarts = new Set(ranges.map((r) => r.start));
-
-  for (let i = 0; i < lines.length - 1; i++) {
-    if (bracketStarts.has(i)) continue;
-
-    const line = lines[i];
-    if (line.trim().length === 0) continue;
-
-    const baseIndent = getIndent(line);
-    const nextIndent = getIndent(lines[i + 1]);
-
-    // The next non-empty line must have greater indentation
-    if (lines[i + 1].trim().length === 0 || nextIndent <= baseIndent) continue;
-
-    // Check if the line looks like a block header
-    const trimmed = line.trim();
-    const isBlockHeader =
-      trimmed.endsWith(':') || // Python / YAML
-      /^(def |class |if |elif |else:|for |while |with |try:|except |finally:| *async )/.test(trimmed);
-
-    if (!isBlockHeader) continue;
-
-    // Find the end of the indented block
-    let end = i + 1;
-    for (let j = i + 2; j < lines.length; j++) {
-      const jLine = lines[j];
-      if (jLine.trim().length === 0) {
-        // Empty lines don't break the block, but if followed by
-        // a line at base indent or less, stop here.
-        continue;
-      }
-      if (getIndent(jLine) > baseIndent) {
-        end = j;
-      } else {
-        break;
-      }
-    }
-
-    if (end > i) {
-      const key = `${i}:${end}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        ranges.push({ start: i, end });
-      }
-    }
-  }
-
-  // Sort by start line, then by end (larger ranges first for nesting)
+  collectBracketRanges(lines, ranges, seen);
+  collectIndentRanges(lines, ranges, seen);
   ranges.sort((a, b) => a.start - b.start || b.end - a.end);
   return ranges;
 }

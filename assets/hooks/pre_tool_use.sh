@@ -2,8 +2,9 @@
 # Ouroboros hook — fires before Claude Code executes a tool.
 #
 # Reads tool call data from stdin (JSON), then sends a pre_tool_use
-# event to the Ouroboros via Unix domain socket or TCP fallback.
-# Exits silently if the Ouroboros is not running.
+# event to Ouroboros with a unique requestId. If approval is required,
+# polls for a response file before exiting.
+# Exits silently if Ouroboros is not running.
 #
 # Requires: bash 4+, python3 or jq (for JSON), nc (netcat) or /dev/tcp
 
@@ -13,6 +14,9 @@ SOCKET_PATH="${TMPDIR:-/tmp}/agent-ide-hooks.sock"
 TCP_HOST="127.0.0.1"
 TCP_PORT="${AGENT_IDE_HOOKS_PORT:-3333}"
 TIMEOUT=1   # seconds — must be fast
+APPROVALS_DIR="${HOME}/.ouroboros/approvals"
+POLL_INTERVAL=0.5  # seconds
+MAX_POLL_SECONDS=120
 
 # ── Read stdin ────────────────────────────────────────────────────────────────
 stdin_data=""
@@ -23,6 +27,15 @@ if read -t "$TIMEOUT" -r line 2>/dev/null; then
         stdin_data="${stdin_data}
 ${more}"
     done
+fi
+
+# ── Generate unique request ID ────────────────────────────────────────────────
+if command -v python3 &>/dev/null; then
+    request_id=$(python3 -c "import uuid; print(uuid.uuid4().hex[:16])")
+elif [ -f /proc/sys/kernel/random/uuid ]; then
+    request_id=$(cat /proc/sys/kernel/random/uuid | tr -d '-' | head -c 16)
+else
+    request_id="$(date +%s%N | md5sum 2>/dev/null | head -c 16 || echo "$(date +%s)$$")"
 fi
 
 # ── Extract tool name ─────────────────────────────────────────────────────────
@@ -49,25 +62,39 @@ else
     safe_input="{}"
 fi
 
-payload="{\"type\":\"pre_tool_use\",\"sessionId\":$(printf '%s' "$session_id" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "$session_id"),\"toolName\":$(printf '%s' "$tool_name" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "$tool_name"),\"input\":${safe_input},\"timestamp\":${timestamp_ms}}"
+# JSON-encode strings
+if command -v python3 &>/dev/null; then
+    j_session=$(printf '%s' "$session_id" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    j_tool=$(printf '%s' "$tool_name" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    j_reqid=$(printf '%s' "$request_id" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+else
+    j_session="\"${session_id}\""
+    j_tool="\"${tool_name}\""
+    j_reqid="\"${request_id}\""
+fi
+
+payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"input\":${safe_input},\"requestId\":${j_reqid},\"timestamp\":${timestamp_ms}}"
 ndjson_line="${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
+sent=false
+
 send_payload() {
     local data="$1"
 
     # 1. Try Unix domain socket via nc
     if [ -S "$SOCKET_PATH" ] && command -v nc &>/dev/null; then
-        printf '%s' "$data" | nc -U -w 1 "$SOCKET_PATH" 2>/dev/null && return 0
+        printf '%s' "$data" | nc -U -w 1 "$SOCKET_PATH" 2>/dev/null && { sent=true; return 0; }
     fi
 
     # 2. Try TCP via nc
     if command -v nc &>/dev/null; then
-        printf '%s' "$data" | nc -w 1 "$TCP_HOST" "$TCP_PORT" 2>/dev/null && return 0
+        printf '%s' "$data" | nc -w 1 "$TCP_HOST" "$TCP_PORT" 2>/dev/null && { sent=true; return 0; }
     fi
 
     # 3. Try /dev/tcp bash built-in (no nc required)
     if (printf '%s' "$data" > /dev/tcp/"$TCP_HOST"/"$TCP_PORT") 2>/dev/null; then
+        sent=true
         return 0
     fi
 
@@ -75,11 +102,57 @@ send_payload() {
     if command -v curl &>/dev/null; then
         printf '%s' "$data" | curl -s --max-time 1 \
             --data-binary @- \
-            "http://${TCP_HOST}:${TCP_PORT}/" 2>/dev/null
+            "http://${TCP_HOST}:${TCP_PORT}/" 2>/dev/null && { sent=true; return 0; }
     fi
 
-    return 0  # Always exit 0 — don't block Claude Code
+    return 0
 }
 
 send_payload "$ndjson_line" || true
+
+# If we couldn't reach Ouroboros, approve by default
+if [ "$sent" != "true" ]; then
+    exit 0
+fi
+
+# ── Poll for approval response ────────────────────────────────────────────────
+response_path="${APPROVALS_DIR}/${request_id}.response"
+elapsed=0
+
+while [ "$elapsed" -lt "$MAX_POLL_SECONDS" ]; do
+    if [ -f "$response_path" ]; then
+        response_text=$(cat "$response_path" 2>/dev/null || echo "")
+        rm -f "$response_path" 2>/dev/null || true
+
+        if [ -n "$response_text" ]; then
+            decision=""
+            reason=""
+
+            if command -v jq &>/dev/null; then
+                decision=$(printf '%s' "$response_text" | jq -r '.decision // "approve"' 2>/dev/null || echo "approve")
+                reason=$(printf '%s' "$response_text" | jq -r '.reason // ""' 2>/dev/null || echo "")
+            elif command -v python3 &>/dev/null; then
+                decision=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('decision','approve'))" 2>/dev/null || echo "approve")
+                reason=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('reason',''))" 2>/dev/null || echo "")
+            fi
+
+            if [ "$decision" = "reject" ]; then
+                if [ -n "$reason" ]; then
+                    echo "$reason"
+                else
+                    echo "Rejected by user in Ouroboros IDE"
+                fi
+                exit 2
+            fi
+
+            # Approved
+            exit 0
+        fi
+    fi
+
+    sleep "$POLL_INTERVAL"
+    elapsed=$((elapsed + 1))
+done
+
+# Timeout — approve by default
 exit 0

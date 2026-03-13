@@ -59,7 +59,6 @@ const ACTIVE_MATCH_CLASS = 'fv-search-match-active';
 
 export function SearchBar({
   codeContainer,
-  scrollContainer,
   visible,
   onClose,
   onMatchLinesChange,
@@ -309,7 +308,7 @@ export function SearchBar({
       setActiveMatchIndex(0);
       onMatchLinesChange?.([]);
     }
-  }, [visible, clearHighlights]);
+  }, [visible, clearHighlights, onMatchLinesChange]);
 
   if (!visible) return null;
 

@@ -1,0 +1,270 @@
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import type { SessionUsage, UsageSummary } from '../../types/electron';
+import {
+  HISTORY_RANGES,
+  TimeRange,
+  formatCost,
+  formatDate,
+  formatTokens,
+  getTimeSince,
+  modelShortName,
+  summarizeModels,
+  timeAgo,
+} from './UsagePanelShared';
+
+async function requestUsageSummary(timeRange: TimeRange): Promise<{ summary: UsageSummary | null; error: string | null }> {
+  if (!window.electronAPI?.usage?.getSummary) {
+    return { summary: null, error: 'Usage API not available' };
+  }
+
+  try {
+    const result = await window.electronAPI.usage.getSummary({ since: getTimeSince(timeRange), maxSessions: 200 });
+    if (result.success && result.summary) return { summary: result.summary, error: null };
+    return { summary: null, error: result.error ?? 'Failed to load usage data' };
+  } catch (error) {
+    return { summary: null, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+function useUsageSummary(range: TimeRange): {
+  summary: UsageSummary | null;
+  isLoading: boolean;
+  error: string | null;
+  reload: () => Promise<void>;
+  setRange: (nextRange: TimeRange) => void;
+} {
+  const [summary, setSummary] = useState<UsageSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRange, setSelectedRange] = useState(range);
+  const loadUsage = useCallback(async (timeRange: TimeRange) => {
+    setIsLoading(true);
+    setError(null);
+    const result = await requestUsageSummary(timeRange);
+    setSummary(result.summary);
+    setError(result.error);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadUsage(selectedRange);
+  }, [loadUsage, selectedRange]);
+
+  return {
+    summary,
+    isLoading,
+    error,
+    reload: () => loadUsage(selectedRange),
+    setRange: setSelectedRange,
+  };
+}
+
+function HistoryToolbar({
+  activeRange,
+  onRangeChange,
+  onRefresh,
+}: {
+  activeRange: TimeRange;
+  onRangeChange: (nextRange: TimeRange) => void;
+  onRefresh: () => Promise<void>;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-shrink-0 items-center gap-1.5 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+      {HISTORY_RANGES.map((range) => (
+        <button
+          key={range.key}
+          onClick={() => onRangeChange(range.key)}
+          className="rounded px-2 py-0.5 text-[10px] transition-colors"
+          style={{
+            background: activeRange === range.key ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+            color: activeRange === range.key ? 'var(--accent)' : 'var(--text-faint)',
+            border: activeRange === range.key ? '1px solid var(--accent)' : '1px solid transparent',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-ui)',
+          }}
+        >
+          {range.label}
+        </button>
+      ))}
+      <div className="flex-1" />
+      <button
+        onClick={() => void onRefresh()}
+        className="rounded px-2 py-0.5 text-[10px] transition-colors"
+        style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+      >
+        Refresh
+      </button>
+    </div>
+  );
+}
+
+function HistorySummaryCards({ summary }: { summary: UsageSummary }): React.ReactElement {
+  const { totals } = summary;
+  const cards = [
+    { label: 'Sessions', value: String(totals.sessionCount), sub: `${totals.messageCount} messages` },
+    { label: 'Input Tokens', value: formatTokens(totals.inputTokens), sub: null },
+    { label: 'Output Tokens', value: formatTokens(totals.outputTokens), sub: null },
+    { label: 'Cache Read', value: formatTokens(totals.cacheReadTokens), sub: null },
+    { label: 'Cache Write', value: formatTokens(totals.cacheWriteTokens), sub: null },
+    { label: 'Est. Cost', value: formatCost(totals.estimatedCost), sub: null },
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      {cards.map((card) => (
+        <div key={card.label} className="flex flex-col items-center rounded-md px-2 py-2" style={{ background: 'var(--bg-tertiary)' }}>
+          <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>{card.label}</span>
+          <span className="text-[15px] font-bold tabular-nums" style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{card.value}</span>
+          {card.sub && <span className="text-[9px]" style={{ color: 'var(--text-faint)' }}>{card.sub}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
+  const models = useMemo(() => summarizeModels(sessions), [sessions]);
+  const maxTokens = models.length > 0 ? Math.max(...models.map((model) => model.tokens)) : 1;
+
+  return (
+    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Model Distribution</div>
+      <div className="flex flex-col gap-1.5">
+        {models.map((model) => (
+          <div key={model.name} className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold" style={{ color: model.color, width: '50px', flexShrink: 0 }}>{model.name}</span>
+            <div className="h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: 'var(--bg)' }}>
+              <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.max((model.tokens / maxTokens) * 100, 2)}%`, background: model.color, opacity: 0.7 }} />
+            </div>
+            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', width: '50px', textAlign: 'right', flexShrink: 0 }}>{formatTokens(model.tokens)}</span>
+            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)', width: '44px', textAlign: 'right', flexShrink: 0 }}>{formatCost(model.cost)}</span>
+          </div>
+        ))}
+        {models.length === 0 && <span className="text-[10px] italic" style={{ color: 'var(--text-faint)' }}>No data</span>}
+      </div>
+    </div>
+  );
+}
+
+function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.ReactElement {
+  return (
+    <div className="px-2 py-1.5 text-[10px]" style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5" style={{ color: 'var(--text-muted)' }}>
+        <span>Model: <span style={{ color: 'var(--text)' }}>{session.model}</span></span>
+        <span>Input: <span style={{ color: 'var(--text)' }}>{formatTokens(session.inputTokens)}</span></span>
+        <span>Output: <span style={{ color: 'var(--text)' }}>{formatTokens(session.outputTokens)}</span></span>
+        <span>Cache Read: <span style={{ color: 'var(--text)' }}>{formatTokens(session.cacheReadTokens)}</span></span>
+        <span>Cache Write: <span style={{ color: 'var(--text)' }}>{formatTokens(session.cacheWriteTokens)}</span></span>
+        <span>Messages: <span style={{ color: 'var(--text)' }}>{session.messageCount}</span></span>
+      </div>
+      <div className="mt-1 flex gap-x-4" style={{ color: 'var(--text-faint)' }}>
+        <span>Started: <span style={{ color: 'var(--text)' }}>{formatDate(session.startedAt)}</span></span>
+        <span>Last active: <span style={{ color: 'var(--text)' }}>{formatDate(session.lastActiveAt)}</span></span>
+      </div>
+    </div>
+  );
+}
+
+function HistorySessionRow({
+  session,
+  isExpanded,
+  onToggle,
+}: {
+  session: SessionUsage;
+  isExpanded: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
+  const totalTokens = session.inputTokens + session.outputTokens;
+
+  return (
+    <div>
+      <button
+        className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors"
+        style={{ fontFamily: 'var(--font-mono)', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-muted)', cursor: 'pointer', color: 'var(--text)', textAlign: 'left', padding: '4px 0' }}
+        onClick={onToggle}
+      >
+        <span style={{ width: '70px', flexShrink: 0, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>{timeAgo(session.lastActiveAt)}</span>
+        <span className="min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ui)' }}>{session.sessionId.slice(0, 8)}</span>
+        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right', color: 'var(--text)' }}>{modelShortName(session.model)}</span>
+        <span style={{ width: '56px', flexShrink: 0, textAlign: 'right', color: 'var(--text-muted)' }}>{formatTokens(totalTokens)}</span>
+        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right', color: 'var(--accent)', fontWeight: 600 }}>{formatCost(session.estimatedCost)}</span>
+      </button>
+      {isExpanded && <HistorySessionExpandedDetails session={session} />}
+    </div>
+  );
+}
+
+function HistorySessionList({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  if (sessions.length === 0) {
+    return <div className="px-4 py-6 text-center text-[11px] italic" style={{ color: 'var(--text-faint)' }}>No sessions found in Claude Code&apos;s local data</div>;
+  }
+
+  return (
+    <div className="px-4 py-2">
+      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Sessions ({sessions.length})</div>
+      <div className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)', borderBottom: '1px solid var(--border-muted)' }}>
+        <span style={{ width: '70px', flexShrink: 0 }}>When</span>
+        <span className="min-w-0 flex-1">Session</span>
+        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>Model</span>
+        <span style={{ width: '56px', flexShrink: 0, textAlign: 'right' }}>Tokens</span>
+        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>Cost</span>
+      </div>
+      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+        {sessions.map((session) => (
+          <HistorySessionRow
+            key={session.sessionId}
+            session={session}
+            isExpanded={expanded === session.sessionId}
+            onToggle={() => setExpanded((current) => current === session.sessionId ? null : session.sessionId)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HistoryContent({
+  summary,
+  isLoading,
+  error,
+  onRetry,
+}: {
+  summary: UsageSummary | null;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => Promise<void>;
+}): React.ReactElement | null {
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-12"><span className="text-[11px] italic" style={{ color: 'var(--text-faint)' }}>Scanning Claude Code session files...</span></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-12">
+        <span className="text-[11px]" style={{ color: 'var(--error, #f87171)' }}>{error}</span>
+        <button onClick={() => void onRetry()} className="rounded px-3 py-1 text-[10px]" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer' }}>Retry</button>
+      </div>
+    );
+  }
+
+  return summary ? <><HistorySummaryCards summary={summary} /><ModelDistribution sessions={summary.sessions} /><HistorySessionList sessions={summary.sessions} /></> : null;
+}
+
+export const UsageHistoryTab = memo(function UsageHistoryTab(): React.ReactElement {
+  const [activeRange, setActiveRange] = useState<TimeRange>('30d');
+  const { summary, isLoading, error, reload, setRange } = useUsageSummary(activeRange);
+  const handleRangeChange = useCallback((nextRange: TimeRange) => {
+    setActiveRange(nextRange);
+    setRange(nextRange);
+  }, [setRange]);
+
+  return (
+    <>
+      <HistoryToolbar activeRange={activeRange} onRangeChange={handleRangeChange} onRefresh={reload} />
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <HistoryContent summary={summary} isLoading={isLoading} error={error} onRetry={reload} />
+      </div>
+    </>
+  );
+});

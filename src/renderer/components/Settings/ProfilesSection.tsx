@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { AppConfig } from '../../types/electron';
+import { SectionLabel } from './settingsStyles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,29 +45,6 @@ function useToast(): [ToastState | null, (msg: string, kind: ToastState['kind'])
   return [toast, show];
 }
 
-// ─── SectionLabel ─────────────────────────────────────────────────────────────
-
-function SectionLabel({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div
-      style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted)',
-        marginBottom: '8px',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 // ─── ProfilesSection ──────────────────────────────────────────────────────────
 
 export interface ProfilesSectionProps {
@@ -108,7 +86,8 @@ export function ProfilesSection({ draft, onChange }: ProfilesSectionProps): Reac
   }
 
   function handleDeleteProfile(name: string): void {
-    const { [name]: _removed, ...rest } = profiles;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { [name]: _, ...rest } = profiles;
     onChange('profiles', rest as AppConfig['profiles']);
     showToast(`Profile "${name}" deleted.`, 'success');
   }

@@ -9,7 +9,7 @@
  */
 
 import React, { createContext, useContext, useCallback, useReducer, useMemo } from 'react';
-import type { DiffReviewState, ReviewFile, ReviewHunk, HunkDecision } from './types';
+import type { DiffReviewState, ReviewFile, HunkDecision } from './types';
 import type { FileDiff } from '../../types/electron';
 
 // ─── Context ─────────────────────────────────────────────────────────────────

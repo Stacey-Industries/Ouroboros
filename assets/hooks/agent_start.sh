@@ -22,44 +22,90 @@ ${more}"
     done
 fi
 
-# ── Extract task label from prompt ───────────────────────────────────────────
+# ── Extract subagent session ID, prompt, and model from stdin ────────────────
+# CLAUDE_SESSION_ID env var = the PARENT session's ID.
+# stdin JSON contains the SUBAGENT's data, including its own session_id.
 task_label="Sub-agent"
+subagent_session_id=""
+model_id=""
+raw_prompt=""
 
 if [ -n "$stdin_data" ]; then
     if command -v jq &>/dev/null; then
+        subagent_session_id=$(printf '%s' "$stdin_data" | \
+            jq -r '.session_id // .sessionId // empty' 2>/dev/null || echo "")
+        model_id=$(printf '%s' "$stdin_data" | \
+            jq -r '.model_id // .model // empty' 2>/dev/null || echo "")
         raw_prompt=$(printf '%s' "$stdin_data" | \
             jq -r '.prompt // .message // .task // empty' 2>/dev/null || echo "")
         if [ -n "$raw_prompt" ]; then
-            # Collapse whitespace and truncate to 120 chars
             task_label=$(printf '%s' "$raw_prompt" | tr -s '[:space:]' ' ' | cut -c1-120)
         fi
     elif command -v python3 &>/dev/null; then
-        task_label=$(printf '%s' "$stdin_data" | python3 -c "
+        eval "$(printf '%s' "$stdin_data" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
-    p = d.get('prompt') or d.get('message') or d.get('task') or 'Sub-agent'
-    p = ' '.join(p.split())
-    print(p[:120])
+    sid = d.get('session_id') or d.get('sessionId') or ''
+    mid = d.get('model_id') or d.get('model') or ''
+    p = d.get('prompt') or d.get('message') or d.get('task') or ''
+    label = ' '.join(p.split())[:120] if p else 'Sub-agent'
+    # Shell-safe output
+    print(f'subagent_session_id={json.dumps(sid)}')
+    print(f'model_id={json.dumps(mid)}')
+    print(f'raw_prompt={json.dumps(p)}')
+    print(f'task_label={json.dumps(label)}')
 except Exception:
-    print('Sub-agent')
-" 2>/dev/null || echo "Sub-agent")
+    print('task_label=\"Sub-agent\"')
+" 2>/dev/null || echo 'task_label="Sub-agent"')"
     fi
 fi
 
+# Use subagent's session_id from stdin; fall back to a generated ID if missing
+if [ -n "$subagent_session_id" ]; then
+    session_id="$subagent_session_id"
+else
+    session_id="subagent-$(date +%s%N 2>/dev/null | md5sum 2>/dev/null | head -c 12 || echo "$$")"
+fi
+
+# Parent = the session that spawned this subagent (from env var)
+parent_session_id="${CLAUDE_SESSION_ID:-}"
+
 # ── Build payload ─────────────────────────────────────────────────────────────
-session_id="${CLAUDE_SESSION_ID:-unknown}"
 timestamp_ms=$(date +%s%3N 2>/dev/null || python3 -c "import time; print(int(time.time()*1000))" 2>/dev/null || echo "0")
 
 if command -v python3 &>/dev/null; then
     j_session=$(printf '%s' "$session_id"  | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
     j_label=$(printf '%s'   "$task_label"  | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    j_parent=""
+    if [ -n "$parent_session_id" ]; then
+        j_parent=$(printf '%s' "$parent_session_id" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    fi
+    j_prompt=""
+    if [ -n "$raw_prompt" ]; then
+        j_prompt=$(printf '%s' "$raw_prompt" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    fi
+    j_model=""
+    if [ -n "$model_id" ]; then
+        j_model=$(printf '%s' "$model_id" | python3 -c 'import sys,json;print(json.dumps(sys.stdin.read()))')
+    fi
 else
     j_session="\"${session_id}\""
     j_label="\"${task_label}\""
+    j_parent=""
+    if [ -n "$parent_session_id" ]; then j_parent="\"${parent_session_id}\""; fi
+    j_prompt=""
+    if [ -n "$raw_prompt" ]; then j_prompt="\"${raw_prompt}\""; fi
+    j_model=""
+    if [ -n "$model_id" ]; then j_model="\"${model_id}\""; fi
 fi
 
-payload="{\"type\":\"agent_start\",\"sessionId\":${j_session},\"taskLabel\":${j_label},\"timestamp\":${timestamp_ms}}"
+# Build JSON with optional fields
+payload="{\"type\":\"agent_start\",\"sessionId\":${j_session},\"taskLabel\":${j_label},\"timestamp\":${timestamp_ms}"
+if [ -n "$j_parent" ]; then payload="${payload},\"parentSessionId\":${j_parent}"; fi
+if [ -n "$j_prompt" ]; then payload="${payload},\"prompt\":${j_prompt}"; fi
+if [ -n "$j_model" ]; then payload="${payload},\"model\":${j_model}"; fi
+payload="${payload}}"
 ndjson_line="${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────

@@ -43,11 +43,11 @@ export default tseslint.config(
       'react/jsx-uses-react': 'off',
 
       // Custom complexity/size warnings
-      'max-lines-per-function': ['warn', { max: 40, skipBlankLines: true, skipComments: true }],
-      'complexity': ['warn', 10],
-      'max-lines': ['warn', { max: 300, skipBlankLines: true, skipComments: true }],
-      'max-depth': ['warn', 3],
-      'max-params': ['warn', 4],
+      'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
+      'complexity': ['error', 10],
+      'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 3],
+      'max-params': ['error', 4],
     },
   },
 );

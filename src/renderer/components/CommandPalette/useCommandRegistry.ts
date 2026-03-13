@@ -233,6 +233,28 @@ function buildBuiltinCommands(): Command[] {
         window.dispatchEvent(new CustomEvent('agent-ide:toggle-devtools'));
       },
     },
+
+    // ── Context Builder ──────────────────────────────────────────────────────
+    {
+      id: 'app:context-builder',
+      label: 'Build Project Context',
+      category: 'app',
+      icon: '⬡',
+      action: () => {
+        window.dispatchEvent(new CustomEvent('agent-ide:open-context-builder'));
+      },
+    },
+
+    // ── Time Travel ──────────────────────────────────────────────────────────
+    {
+      id: 'git:time-travel',
+      label: 'Time Travel: Browse Snapshots',
+      category: 'git',
+      icon: '⏱',
+      action: () => {
+        window.dispatchEvent(new CustomEvent('agent-ide:open-time-travel'));
+      },
+    },
   ];
 }
 
@@ -257,6 +279,8 @@ export function useCommandRegistry(): UseCommandRegistryReturn {
   const execute = useCallback(async (command: Command): Promise<void> => {
     setRecentIds((prev) => pushRecent(command.id, prev));
     await command.action();
+    // Notify the extension system so onCommand activation events fire
+    window.electronAPI.extensions.commandExecuted(command.id).catch(() => {});
   }, []);
 
   const registerCommand = useCallback((command: Command): void => {

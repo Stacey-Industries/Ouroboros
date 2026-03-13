@@ -35,7 +35,7 @@ export const AgentSummaryBar = memo(function AgentSummaryBar({
     for (const s of sessions) {
       inputTokens += s.inputTokens;
       outputTokens += s.outputTokens;
-      const cost = estimateCost(s.inputTokens, s.outputTokens, s.model, s.cacheReadTokens, s.cacheWriteTokens);
+      const cost = estimateCost({ inputTokens: s.inputTokens, outputTokens: s.outputTokens, model: s.model, cacheReadTokens: s.cacheReadTokens, cacheWriteTokens: s.cacheWriteTokens });
       totalCost += cost.totalCost;
     }
 

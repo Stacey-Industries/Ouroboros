@@ -24,17 +24,22 @@ vi.mock('electron', () => ({
 }))
 
 // ── Mock 'fs' ─────────────────────────────────────────────────────────────────
-const mockFs = {
-  existsSync: vi.fn<[string], boolean>(),
-  mkdirSync:  vi.fn<[string, { recursive?: boolean }], void>(),
-  copyFileSync: vi.fn<[string, string], void>(),
-  chmodSync:  vi.fn<[string, number], void>(),
-  writeFileSync: vi.fn<[string, string, string], void>(),
-  readFileSync: vi.fn<[string, string], string>(),
-  rmSync:     vi.fn<[string, { force?: boolean }], void>()
-}
+const { mockFs } = vi.hoisted(() => ({
+  mockFs: {
+    existsSync: vi.fn<[string], boolean>(),
+    mkdirSync: vi.fn<[string, { recursive?: boolean }], void>(),
+    copyFileSync: vi.fn<[string, string], void>(),
+    chmodSync: vi.fn<[string, number], void>(),
+    writeFileSync: vi.fn<[string, string, string], void>(),
+    readFileSync: vi.fn<[string, string], string>(),
+    rmSync: vi.fn<[string, { force?: boolean }], void>()
+  }
+}))
 
-vi.mock('fs', () => mockFs)
+vi.mock('fs', () => ({
+  default: mockFs,
+  ...mockFs,
+}))
 
 // ── Import after mocks are set up ─────────────────────────────────────────────
 import {

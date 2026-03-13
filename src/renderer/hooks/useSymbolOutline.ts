@@ -18,123 +18,162 @@ export interface OutlineSymbol {
   depth: number;
 }
 
-// ── Language → symbol extraction ─────────────────────────────────────────────
+interface NamedPattern {
+  re: RegExp;
+  kind: SymbolKind;
+  nameGroup?: number;
+}
+
+type SymbolExtractor = (lines: string[]) => OutlineSymbol[];
+
+const JS_TS_TOP_LEVEL_PATTERNS: NamedPattern[] = [
+  {
+    re: /^(?:export\s+default\s+)?(?:export\s+)?async\s+function\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
+    kind: 'function',
+  },
+  {
+    re: /^(?:export\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
+    kind: 'function',
+  },
+  {
+    re: /^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
+    kind: 'class',
+  },
+  {
+    re: /^(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
+    kind: 'interface',
+  },
+  {
+    re: /^(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*[=<]/,
+    kind: 'type',
+  },
+  {
+    re: /^(?:export\s+)?(?:const\s+)?enum\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
+    kind: 'class',
+  },
+  {
+    re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s+)?\(/,
+    kind: 'function',
+  },
+  {
+    re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s+)?function/,
+    kind: 'function',
+  },
+];
+
+const JS_TS_METHOD_PATTERNS: NamedPattern[] = [
+  {
+    re: /^(\s+)(?:(?:public|private|protected|static|override|abstract|async)\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/,
+    kind: 'method',
+    nameGroup: 2,
+  },
+  {
+    re: /^(\s+)(?:(?:public|private|protected|static)\s+)*(?:get|set)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/,
+    kind: 'method',
+    nameGroup: 2,
+  },
+];
+
+const RUST_PATTERNS: Array<{
+  re: RegExp;
+  createSymbol: (match: RegExpMatchArray, line: number, indent: number) => OutlineSymbol;
+}> = [
+  {
+    re: /^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)/,
+    createSymbol: (match, line, indent) => ({
+      name: match[1],
+      kind: indent > 0 ? 'method' : 'function',
+      line,
+      depth: indent > 0 ? 1 : 0,
+    }),
+  },
+  {
+    re: /^(?:pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)/,
+    createSymbol: (match, line) => ({ name: match[1], kind: 'class', line, depth: 0 }),
+  },
+  {
+    re: /^(?:pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)/,
+    createSymbol: (match, line) => ({ name: match[1], kind: 'class', line, depth: 0 }),
+  },
+  {
+    re: /^impl(?:<[^>]*>)?\s+(?:[A-Za-z_][A-Za-z0-9_:]*\s+for\s+)?([A-Za-z_][A-Za-z0-9_]*)/,
+    createSymbol: (match, line) => ({ name: `impl ${match[1]}`, kind: 'interface', line, depth: 0 }),
+  },
+  {
+    re: /^(?:pub(?:\([^)]*\))?\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)/,
+    createSymbol: (match, line) => ({ name: match[1], kind: 'interface', line, depth: 0 }),
+  },
+];
+
+function getTrimmedLineInfo(line: string): { trimmed: string; indent: number } {
+  const trimmed = line.trimStart();
+  return { trimmed, indent: line.length - trimmed.length };
+}
+
+function isBlankOrComment(trimmed: string): boolean {
+  return !trimmed || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
+}
+
+function matchNamedPattern(text: string, patterns: NamedPattern[]): { kind: SymbolKind; name: string } | null {
+  for (const { re, kind, nameGroup = 1 } of patterns) {
+    const match = text.match(re);
+    if (match?.[nameGroup]) return { kind, name: match[nameGroup] };
+  }
+
+  return null;
+}
+
+function buildSymbol(
+  match: { kind: SymbolKind; name: string } | null,
+  line: number,
+  depth: number,
+): OutlineSymbol | null {
+  return match ? { name: match.name, kind: match.kind, line, depth } : null;
+}
+
+function buildClassRanges(lines: string[]): Array<{ start: number; indent: number }> {
+  return lines.reduce<Array<{ start: number; indent: number }>>((ranges, line, index) => {
+    const { trimmed, indent } = getTrimmedLineInfo(line);
+    if (/^(?:export\s+)?(?:abstract\s+)?class\s+/.test(trimmed)) ranges.push({ start: index, indent });
+    return ranges;
+  }, []);
+}
+
+function isInsideClass(
+  lineIndex: number,
+  lineIndent: number,
+  classRanges: Array<{ start: number; indent: number }>,
+): boolean {
+  return classRanges.some((classRange) => lineIndex > classRange.start && lineIndent > classRange.indent);
+}
+
+function extractJsTsMethodSymbol(line: string, lineNumber: number): OutlineSymbol | null {
+  const match = matchNamedPattern(line, JS_TS_METHOD_PATTERNS);
+  if (!match || /^(if|for|while|switch|return|const|let|var|new|import|export)$/.test(match.name)) {
+    return null;
+  }
+
+  return buildSymbol(match, lineNumber, 1);
+}
 
 function extractJsTsSymbols(lines: string[]): OutlineSymbol[] {
   const symbols: OutlineSymbol[] = [];
+  const classRanges = buildClassRanges(lines);
 
-  // Patterns for JS/TS (applied per line)
-  const patterns: Array<{ re: RegExp; kind: SymbolKind }> = [
-    // export default function foo / export default async function
-    {
-      re: /^(?:export\s+default\s+)?(?:export\s+)?async\s+function\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
-      kind: 'function',
-    },
-    // function foo
-    {
-      re: /^(?:export\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
-      kind: 'function',
-    },
-    // class Foo / abstract class Foo
-    {
-      re: /^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
-      kind: 'class',
-    },
-    // interface Foo
-    {
-      re: /^(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
-      kind: 'interface',
-    },
-    // type Foo =
-    {
-      re: /^(?:export\s+)?type\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*[=<]/,
-      kind: 'type',
-    },
-    // enum Foo
-    {
-      re: /^(?:export\s+)?(?:const\s+)?enum\s+([A-Za-z_$][A-Za-z0-9_$]*)/,
-      kind: 'class',
-    },
-    // const/let/var foo = () => / const foo = async () =>
-    {
-      re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s+)?\(/,
-      kind: 'function',
-    },
-    // const/let/var foo = async function
-    {
-      re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s+)?function/,
-      kind: 'function',
-    },
-  ];
+  for (const [index, line] of lines.entries()) {
+    const { trimmed, indent } = getTrimmedLineInfo(line);
+    if (isBlankOrComment(trimmed)) continue;
 
-  // Method patterns — inside class body (indented)
-  const methodPatterns: Array<{ re: RegExp; kind: SymbolKind }> = [
-    // async foo() / foo() — method declarations
-    {
-      re: /^(\s+)(?:(?:public|private|protected|static|override|abstract|async)\s+)*([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/,
-      kind: 'method',
-    },
-    // get/set accessor
-    {
-      re: /^(\s+)(?:(?:public|private|protected|static)\s+)*(?:get|set)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/,
-      kind: 'method',
-    },
-  ];
-
-  // Detect class range to classify indented items as methods
-  const classRanges: Array<{ start: number; indent: number }> = [];
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trimStart();
-    if (/^(?:export\s+)?(?:abstract\s+)?class\s+/.test(trimmed)) {
-      const indent = lines[i].length - trimmed.length;
-      classRanges.push({ start: i, indent });
-    }
-  }
-
-  function insideClass(lineIdx: number, lineIndent: number): boolean {
-    for (const cr of classRanges) {
-      if (lineIdx > cr.start && lineIndent > cr.indent) return true;
-    }
-    return false;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trimStart();
-    const lineIndent = line.length - trimmed.length;
-
-    // Skip comments and blank lines
-    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+    const topLevelSymbol =
+      indent === 0 ? buildSymbol(matchNamedPattern(trimmed, JS_TS_TOP_LEVEL_PATTERNS), index, 0) : null;
+    if (topLevelSymbol) {
+      symbols.push(topLevelSymbol);
       continue;
     }
 
-    let matched = false;
-
-    // Top-level patterns (only match at indent 0 or export)
-    if (lineIndent === 0) {
-      for (const { re, kind } of patterns) {
-        const m = trimmed.match(re);
-        if (m) {
-          symbols.push({ name: m[1], kind, line: i, depth: 0 });
-          matched = true;
-          break;
-        }
-      }
-    }
-
-    // Method patterns (inside class body)
-    if (!matched && lineIndent > 0 && insideClass(i, lineIndent)) {
-      for (const { re, kind } of methodPatterns) {
-        const m = line.match(re);
-        if (m) {
-          const name = m[2] ?? m[1];
-          // Skip constructor noise and common non-method tokens
-          if (/^(if|for|while|switch|return|const|let|var|new|import|export)$/.test(name)) continue;
-          symbols.push({ name, kind, line: i, depth: 1 });
-          matched = true;
-          break;
-        }
-      }
+    if (indent > 0 && isInsideClass(index, indent, classRanges)) {
+      const methodSymbol = extractJsTsMethodSymbol(line, index);
+      if (methodSymbol) symbols.push(methodSymbol);
     }
   }
 
@@ -175,14 +214,12 @@ function extractCssSymbols(lines: string[]): OutlineSymbol[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // @media / @keyframes / @layer
     const atMatch = trimmed.match(/^(@(?:media|keyframes|layer|supports|import|charset)[^{;]*)/);
     if (atMatch) {
       symbols.push({ name: atMatch[1].trim(), kind: 'type', line: i, depth: 0 });
       continue;
     }
 
-    // .selector { or #id { or element { — selector lines ending with {
     if (trimmed.endsWith('{')) {
       const selector = trimmed.slice(0, -1).trim();
       if (selector && !selector.startsWith('//') && !selector.startsWith('*')) {
@@ -200,55 +237,31 @@ function extractMarkdownSymbols(lines: string[]): OutlineSymbol[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const m = line.match(/^(#{1,6})\s+(.+)/);
-    if (m) {
-      const depth = m[1].length - 1; // h1 → 0, h2 → 1, etc.
-      symbols.push({ name: m[2].trim(), kind: 'heading', line: i, depth });
-    }
+    const match = line.match(/^(#{1,6})\s+(.+)/);
+    if (match) symbols.push({ name: match[2].trim(), kind: 'heading', line: i, depth: match[1].length - 1 });
   }
 
   return symbols;
+}
+
+function extractRustSymbol(trimmed: string, line: number, indent: number): OutlineSymbol | null {
+  for (const pattern of RUST_PATTERNS) {
+    const match = trimmed.match(pattern.re);
+    if (match) return pattern.createSymbol(match, line, indent);
+  }
+
+  return null;
 }
 
 function extractRustSymbols(lines: string[]): OutlineSymbol[] {
   const symbols: OutlineSymbol[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trimStart();
+    const { trimmed, indent } = getTrimmedLineInfo(lines[i]);
     if (!trimmed || trimmed.startsWith('//')) continue;
 
-    const indent = line.length - trimmed.length;
-
-    const fnMatch = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)/);
-    if (fnMatch) {
-      const kind: SymbolKind = indent > 0 ? 'method' : 'function';
-      symbols.push({ name: fnMatch[1], kind, line: i, depth: indent > 0 ? 1 : 0 });
-      continue;
-    }
-
-    const structMatch = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)/);
-    if (structMatch) {
-      symbols.push({ name: structMatch[1], kind: 'class', line: i, depth: 0 });
-      continue;
-    }
-
-    const enumMatch = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)/);
-    if (enumMatch) {
-      symbols.push({ name: enumMatch[1], kind: 'class', line: i, depth: 0 });
-      continue;
-    }
-
-    const implMatch = trimmed.match(/^impl(?:<[^>]*>)?\s+(?:[A-Za-z_][A-Za-z0-9_:]*\s+for\s+)?([A-Za-z_][A-Za-z0-9_]*)/);
-    if (implMatch) {
-      symbols.push({ name: `impl ${implMatch[1]}`, kind: 'interface', line: i, depth: 0 });
-      continue;
-    }
-
-    const traitMatch = trimmed.match(/^(?:pub(?:\([^)]*\))?\s+)?trait\s+([A-Za-z_][A-Za-z0-9_]*)/);
-    if (traitMatch) {
-      symbols.push({ name: traitMatch[1], kind: 'interface', line: i, depth: 0 });
-    }
+    const symbol = extractRustSymbol(trimmed, i, indent);
+    if (symbol) symbols.push(symbol);
   }
 
   return symbols;
@@ -264,8 +277,7 @@ function extractGoSymbols(lines: string[]): OutlineSymbol[] {
 
     const fnMatch = trimmed.match(/^func\s+(?:\([^)]+\)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
     if (fnMatch) {
-      // Receiver method vs top-level function
-      const isMethod = trimmed.match(/^func\s+\(/);
+      const isMethod = trimmed.startsWith('func (');
       symbols.push({ name: fnMatch[1], kind: isMethod ? 'method' : 'function', line: i, depth: isMethod ? 1 : 0 });
       continue;
     }
@@ -280,49 +292,38 @@ function extractGoSymbols(lines: string[]): OutlineSymbol[] {
   return symbols;
 }
 
-// ── Dispatch by language ──────────────────────────────────────────────────────
+const LANGUAGE_EXTRACTORS: Record<string, SymbolExtractor> = {
+  typescript: extractJsTsSymbols,
+  tsx: extractJsTsSymbols,
+  javascript: extractJsTsSymbols,
+  jsx: extractJsTsSymbols,
+  python: extractPythonSymbols,
+  css: extractCssSymbols,
+  scss: extractCssSymbols,
+  sass: extractCssSymbols,
+  less: extractCssSymbols,
+  markdown: extractMarkdownSymbols,
+  mdx: extractMarkdownSymbols,
+  rust: extractRustSymbols,
+  go: extractGoSymbols,
+};
 
 function extractSymbols(content: string, language: string): OutlineSymbol[] {
   if (!content.trim()) return [];
 
-  const lines = content.split('\n');
-
-  switch (language) {
-    case 'typescript':
-    case 'tsx':
-    case 'javascript':
-    case 'jsx':
-      return extractJsTsSymbols(lines);
-    case 'python':
-      return extractPythonSymbols(lines);
-    case 'css':
-    case 'scss':
-    case 'sass':
-    case 'less':
-      return extractCssSymbols(lines);
-    case 'markdown':
-    case 'mdx':
-      return extractMarkdownSymbols(lines);
-    case 'rust':
-      return extractRustSymbols(lines);
-    case 'go':
-      return extractGoSymbols(lines);
-    default:
-      return [];
-  }
+  const extractor = LANGUAGE_EXTRACTORS[language];
+  return extractor ? extractor(content.split('\n')) : [];
 }
 
-// ── Hook ─────────────────────────────────────────────────────────────────────
-
 /**
- * useSymbolOutline — extracts structural symbols from file content.
+ * useSymbolOutline extracts structural symbols from file content.
  *
  * Memoized: only recomputes when content or language changes.
  * Returns an empty array if the language is unsupported or content is empty.
  */
 export function useSymbolOutline(
   content: string | null,
-  language: string
+  language: string,
 ): OutlineSymbol[] {
   return useMemo(() => {
     if (!content) return [];

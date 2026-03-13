@@ -12,7 +12,7 @@
  * Positioned absolutely relative to the terminal container.
  */
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import type { Terminal } from '@xterm/xterm'
 import type { CommandBlock } from './useCommandBlocks'
 
@@ -29,9 +29,11 @@ interface CommandBlockOverlayProps {
 function getCellHeight(term: Terminal): number {
   // Access internal render dimensions for accurate cell height
   try {
-    const core = (term as any)._core
-    if (core?._renderService?.dimensions?.css?.cell?.height) {
-      return core._renderService.dimensions.css.cell.height
+    const core = (term as unknown as Record<string, unknown>)._core as Record<string, unknown> | undefined
+    const renderService = core?._renderService as Record<string, unknown> | undefined
+    const dimensions = renderService?.dimensions as { css?: { cell?: { height?: number } } } | undefined
+    if (dimensions?.css?.cell?.height) {
+      return dimensions.css.cell.height
     }
   } catch { /* fallback */ }
   // Fallback: estimate from container
@@ -68,14 +70,11 @@ export function CommandBlockOverlay({
   onCopyOutput,
   activeBlockIndex,
 }: CommandBlockOverlayProps): React.ReactElement | null {
-  if (!terminal || blocks.length === 0) return null
-
-  const cellHeight = getCellHeight(terminal)
-  const viewportY = terminal.buffer.active.viewportY
-  const viewportRows = terminal.rows
-
-  // Only render blocks visible in the viewport
+  // useMemo must be called unconditionally (React hooks rules)
   const visibleBlocks = useMemo(() => {
+    if (!terminal || blocks.length === 0) return []
+    const viewportY = terminal.buffer.active.viewportY
+    const viewportRows = terminal.rows
     const viewTop = viewportY
     const viewBottom = viewportY + viewportRows
 
@@ -85,7 +84,12 @@ export function CommandBlockOverlay({
         // Block is visible if any part of it overlaps with the viewport
         return block.endLine >= viewTop && block.startLine <= viewBottom
       })
-  }, [blocks, viewportY, viewportRows])
+  }, [blocks, terminal])
+
+  if (!terminal || blocks.length === 0) return null
+
+  const cellHeight = getCellHeight(terminal)
+  const viewportY = terminal.buffer.active.viewportY
 
   if (visibleBlocks.length === 0) return null
 

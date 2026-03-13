@@ -61,7 +61,7 @@ export function GoToLine({
       });
 
       // Briefly highlight the target line
-      highlightLine(scrollContainer, codeContainer, lineNum, lineHeight, paddingTop);
+      highlightLine({ scrollContainer, codeContainer, lineNum, lineHeight, paddingTop });
     }
 
     onClose();
@@ -153,13 +153,16 @@ export function GoToLine({
 
 // ── Line highlight animation ─────────────────────────────────────────────────
 
-function highlightLine(
-  scrollContainer: HTMLElement,
-  codeContainer: HTMLElement | null,
-  lineNum: number,
-  lineHeight: number,
-  paddingTop: number
-): void {
+interface HighlightLineOptions {
+  scrollContainer: HTMLElement;
+  codeContainer: HTMLElement | null;
+  lineNum: number;
+  lineHeight: number;
+  paddingTop: number;
+}
+
+function highlightLine(options: HighlightLineOptions): void {
+  const { scrollContainer, lineNum, lineHeight, paddingTop } = options;
   // Create an overlay div positioned at the target line
   const highlight = document.createElement('div');
   highlight.className = 'fv-goto-highlight';

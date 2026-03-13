@@ -13,67 +13,51 @@ interface CopyButtonProps {
   visible: boolean
 }
 
+/** Extract up to 50 lines before cursor, trimming trailing blanks. */
+function extractRecentOutput(terminal: Terminal): string {
+  const buffer = terminal.buffer.active
+  const cursorRow = buffer.cursorY
+  const lines: string[] = []
+  const startRow = Math.max(0, cursorRow - 50)
+  for (let i = startRow; i < cursorRow; i++) {
+    const line = buffer.getLine(i)
+    lines.push(line ? line.translateToString(true) : '')
+  }
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+    lines.pop()
+  }
+  return lines.join('\n')
+}
+
+function getTextToCopy(terminal: Terminal): string {
+  return terminal.getSelection() || extractRecentOutput(terminal)
+}
+
 export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
   function handleCopy(): void {
     if (!terminal) return
-
-    const selection = terminal.getSelection()
-    let textToCopy = selection
-
-    if (!textToCopy) {
-      // Nothing selected — copy last output block (lines before current cursor row)
-      const buffer = terminal.buffer.active
-      const cursorRow = buffer.cursorY
-      // Collect up to 50 lines before cursor, trimming trailing empty lines
-      const lines: string[] = []
-      const startRow = Math.max(0, cursorRow - 50)
-      for (let i = startRow; i < cursorRow; i++) {
-        const line = buffer.getLine(i)
-        lines.push(line ? line.translateToString(true) : '')
-      }
-      // Remove trailing blank lines
-      while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
-        lines.pop()
-      }
-      textToCopy = lines.join('\n')
-    }
-
-    if (textToCopy) {
-      void navigator.clipboard.writeText(textToCopy).then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      })
-    }
+    const text = getTextToCopy(terminal)
+    if (!text) return
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
   }
 
   return (
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy terminal output'}
+      className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1 px-2 py-0.5
+        rounded border border-[var(--border)] bg-[var(--bg-secondary)]
+        font-[var(--font-ui)] text-[11px] cursor-pointer select-none whitespace-nowrap
+        shadow-sm transition-opacity duration-150"
       style={{
-        position: 'absolute',
-        top: 6,
-        right: 6,
-        zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '3px 8px',
-        borderRadius: 4,
-        border: '1px solid var(--border, #333)',
-        backgroundColor: 'var(--bg-secondary, #1e1e1e)',
         color: copied ? 'var(--accent, #58a6ff)' : 'var(--text-muted, #888)',
-        fontFamily: 'var(--font-ui, sans-serif)',
-        fontSize: 11,
-        cursor: 'pointer',
         opacity: visible ? 1 : 0,
         pointerEvents: visible ? 'auto' : 'none',
-        transition: 'opacity 0.15s ease, color 0.1s ease',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-        userSelect: 'none',
-        whiteSpace: 'nowrap',
       }}
     >
       {copied ? 'Copied!' : 'Copy'}

@@ -160,11 +160,9 @@ const MAX_HISTORY = 50
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const RichInput = memo(function RichInput({
-  sessionId,
   onSubmit,
   onCancel,
   visible,
-  shellType,
 }: RichInputProps): React.ReactElement | null {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)

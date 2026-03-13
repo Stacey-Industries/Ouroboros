@@ -138,7 +138,7 @@ export function useFileHeatMap(enabled: boolean): UseFileHeatMapReturn {
       }
       setHeatMap(newHeatMap);
     }
-  }, [enabled, currentSessions]);
+  }, [enabled, currentSessions, heatMap.size]);
 
   // Periodic decay re-evaluation
   useEffect(() => {

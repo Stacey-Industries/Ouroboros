@@ -113,11 +113,16 @@ export function parseShikiLines(html: string): string[] {
   const codeMatch = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
   if (!codeMatch) return [];
   const inner = codeMatch[1];
-  const lineRegex = /<span class="line">([\s\S]*?)<\/span>/g;
+  // Split on line-span boundaries instead of using a lazy regex.
+  // Shiki lines contain nested <span> tokens, so [\s\S]*? would stop
+  // at the first inner </span> and truncate the rest of the line.
+  const parts = inner.split(/<span class="line">/);
   const result: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = lineRegex.exec(inner)) !== null) {
-    result.push(m[1]);
+  for (const part of parts) {
+    if (!part) continue;
+    // Strip the trailing </span> that closes the line wrapper
+    const trimmed = part.replace(/<\/span>\s*$/, '');
+    result.push(trimmed);
   }
   return result;
 }

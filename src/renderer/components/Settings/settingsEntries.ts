@@ -11,7 +11,7 @@ export interface SettingsEntry {
   /** Optional extra text to match against (not always shown) */
   description?: string
   /** Which settings tab this entry lives in */
-  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'codemode'
+  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'codemode'
   /** Display-friendly section name */
   sectionLabel: string
 }
@@ -395,5 +395,25 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     description: 'Configure custom language server commands per language. For example, use "rust-analyzer" for Rust or "pylsp" for Python.',
     section: 'general',
     sectionLabel: 'General',
+  },
+
+  // ── MCP Servers ────────────────────────────────────────────────────────────
+  {
+    label: 'MCP Servers',
+    description: 'Configure Model Context Protocol servers that provide additional tools and capabilities to Claude Code.',
+    section: 'mcp',
+    sectionLabel: 'MCP Servers',
+  },
+  {
+    label: 'Add MCP Server',
+    description: 'Add a new MCP server with command, arguments, environment variables, and scope (global or project).',
+    section: 'mcp',
+    sectionLabel: 'MCP Servers',
+  },
+  {
+    label: 'MCP Server Scope',
+    description: 'Global servers are available in all projects. Project servers are specific to the current project.',
+    section: 'mcp',
+    sectionLabel: 'MCP Servers',
   },
 ]

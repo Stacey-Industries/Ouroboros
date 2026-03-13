@@ -50,9 +50,10 @@ export function useToast(): UseToastReturn {
 
   // Clean up all timers on unmount
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current.clear();
+      timers.forEach(clearTimeout);
+      timers.clear();
     };
   }, []);
 

@@ -145,83 +145,78 @@ function resolveFilePath(rawPath: string, projectRoot: string | null): string {
   return p;
 }
 
+// ── Match to ILink conversion ──────────────────────────────────────────────
+
+function computeLinkLength(match: FileMatch): number {
+  let fullLength = match.pathLength;
+  if (match.line != null) {
+    fullLength += `:${match.line}`.length;
+    if (match.col != null) {
+      fullLength += `:${match.col}`.length;
+    }
+  }
+  return fullLength;
+}
+
+function matchToLink(
+  match: FileMatch,
+  lineNumber: number,
+  projectRoot: string | null,
+): ILink {
+  const fullLength = computeLinkLength(match);
+  return {
+    range: {
+      start: { x: match.startIndex + 1, y: lineNumber },
+      end: { x: match.startIndex + fullLength, y: lineNumber },
+    },
+    text: match.path,
+    decorations: { underline: true, pointerCursor: true },
+    activate(_event: MouseEvent, text: string): void {
+      const resolved = resolveFilePath(text, projectRoot);
+      window.dispatchEvent(
+        new CustomEvent('agent-ide:open-file', {
+          detail: { filePath: resolved, line: match.line, col: match.col },
+        })
+      );
+    },
+  };
+}
+
+// ── provideLinks callback ─────────────────────────────────────────────────
+
+function provideLinks(
+  term: Terminal,
+  getProjectRoot: () => string | null,
+  lineNumber: number,
+  callback: (links: ILink[] | undefined) => void,
+): void {
+  const line = term.buffer.active.getLine(lineNumber - 1);
+  if (!line) { callback(undefined); return; }
+
+  const lineText = line.translateToString(true);
+  if (!lineText.trim()) { callback(undefined); return; }
+
+  const matches = findFileMatches(lineText);
+  if (matches.length === 0) { callback(undefined); return; }
+
+  const projectRoot = getProjectRoot();
+  callback(matches.map((m) => matchToLink(m, lineNumber, projectRoot)));
+}
+
 // ── Link provider registration ───────────────────────────────────────────────
 
 /**
  * Register a file path link provider on the given terminal.
  * Returns a dispose function to unregister.
- *
- * @param term - The xterm Terminal instance.
- * @param getProjectRoot - Getter returning the current project root path.
  */
 export function registerFilePathLinks(
   term: Terminal,
-  getProjectRoot: () => string | null
+  getProjectRoot: () => string | null,
 ): { dispose(): void } {
   const provider: ILinkProvider = {
-    provideLinks(lineNumber: number, callback: (links: ILink[] | undefined) => void): void {
-      const buffer = term.buffer.active;
-      const line = buffer.getLine(lineNumber - 1);
-      if (!line) {
-        callback(undefined);
-        return;
-      }
-
-      const lineText = line.translateToString(true);
-      if (!lineText.trim()) {
-        callback(undefined);
-        return;
-      }
-
-      const matches = findFileMatches(lineText);
-      if (matches.length === 0) {
-        callback(undefined);
-        return;
-      }
-
-      const projectRoot = getProjectRoot();
-
-      const links: ILink[] = matches.map((match) => {
-        // xterm link range: x is 1-based column, y is the buffer line number (1-based)
-        // Include :line:col in the clickable range if present
-        let fullLength = match.pathLength;
-        if (match.line != null) {
-          // Account for ":line" text
-          const lineStr = `:${match.line}`;
-          fullLength += lineStr.length;
-          if (match.col != null) {
-            fullLength += `:${match.col}`.length;
-          }
-        }
-
-        return {
-          range: {
-            start: { x: match.startIndex + 1, y: lineNumber },
-            end: { x: match.startIndex + fullLength, y: lineNumber },
-          },
-          text: match.path,
-          decorations: {
-            underline: true,
-            pointerCursor: true,
-          },
-          activate(_event: MouseEvent, text: string): void {
-            const resolved = resolveFilePath(text, projectRoot);
-            window.dispatchEvent(
-              new CustomEvent('agent-ide:open-file', {
-                detail: {
-                  filePath: resolved,
-                  line: match.line,
-                  col: match.col,
-                },
-              })
-            );
-          },
-        };
-      });
-
-      callback(links);
+    provideLinks(ln: number, cb: (links: ILink[] | undefined) => void) {
+      provideLinks(term, getProjectRoot, ln, cb);
     },
   };
-
   return term.registerLinkProvider(provider);
 }

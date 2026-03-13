@@ -1,9 +1,10 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
-import { registerIpcHandlers, cleanupIpcHandlers } from './ipc'
+import { cleanupIpcHandlers } from './ipc'
 import { killAllPtySessions } from './pty'
 import { startHooksServer, stopHooksServer } from './hooks'
+import { startIdeToolServer, stopIdeToolServer } from './ideToolServer'
 import { installHooks } from './hookInstaller'
 import { initExtensions } from './extensions'
 import { buildApplicationMenu } from './menu'
@@ -139,6 +140,13 @@ app.whenReady().then(async () => {
   }
 
   try {
+    const toolAddr = await startIdeToolServer()
+    console.log(`[main] IDE tool server started at ${toolAddr.address}`)
+  } catch (err) {
+    console.error('[main] failed to start IDE tool server:', err)
+  }
+
+  try {
     await installHooks()
   } catch (err) {
     console.error('[main] hook installer error:', err)
@@ -159,7 +167,7 @@ app.whenReady().then(async () => {
 
   // ── Auto-updater setup — broadcast to all windows ─────────────────────────
   if (autoUpdater) {
-    autoUpdater.autoDownload = true
+    autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = true
 
     const broadcastUpdater = (payload: unknown) => {
@@ -188,6 +196,15 @@ app.whenReady().then(async () => {
     autoUpdater.on('error', (err: Error) => {
       broadcastUpdater({ type: 'error', error: err.message })
     })
+
+    // Check for updates after a short delay (only in packaged builds)
+    if (app.isPackaged) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err: Error) => {
+          console.log('[updater] Auto-check failed:', err.message)
+        })
+      }, 5000)
+    }
   }
 
   // ── Performance metrics ────────────────────────────────────────────────────
@@ -214,6 +231,7 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', async () => {
   stopPerfMetrics()
   await stopHooksServer()
+  await stopIdeToolServer()
   cleanupIpcHandlers()
   killAllPtySessions()
 

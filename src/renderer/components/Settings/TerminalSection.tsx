@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { AppConfig } from '../../types/electron';
+import { SectionLabel } from './settingsStyles';
 
 interface TerminalSectionProps {
   draft: AppConfig;
@@ -28,6 +29,31 @@ const PRESET_PREVIEWS: Record<string, string> = {
 
 const PRESET_ORDER = ['default', 'minimal', 'git', 'powerline', 'custom']
 
+interface ShellPreset {
+  label: string
+  path: string
+  platform: 'win32' | 'darwin' | 'linux' | 'all'
+  note?: string
+}
+
+const SHELL_PRESETS: ShellPreset[] = [
+  // Windows
+  { label: 'PowerShell 5', path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', platform: 'win32' },
+  { label: 'PowerShell 7', path: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe', platform: 'win32' },
+  { label: 'cmd.exe', path: 'C:\\Windows\\System32\\cmd.exe', platform: 'win32' },
+  { label: 'Git Bash', path: 'C:\\Program Files\\Git\\bin\\bash.exe', platform: 'win32' },
+  { label: 'WSL', path: 'C:\\Windows\\System32\\wsl.exe', platform: 'win32' },
+  // macOS
+  { label: 'zsh', path: '/bin/zsh', platform: 'darwin' },
+  { label: 'bash', path: '/bin/bash', platform: 'darwin' },
+  { label: 'fish', path: '/usr/local/bin/fish', platform: 'darwin', note: '/usr/local/bin/fish' },
+  // Linux
+  { label: 'bash', path: '/bin/bash', platform: 'linux' },
+  { label: 'zsh', path: '/usr/bin/zsh', platform: 'linux' },
+  { label: 'fish', path: '/usr/bin/fish', platform: 'linux' },
+  { label: 'sh', path: '/bin/sh', platform: 'linux' },
+]
+
 const SAMPLE_LINES = [
   '$ claude --version',
   'claude 1.0.0 (build 2025-01-15)',
@@ -40,14 +66,21 @@ const SAMPLE_LINES = [
 ];
 
 export function TerminalSection({ draft, onChange }: TerminalSectionProps): React.ReactElement {
+  const [platform, setPlatform] = useState<string>('win32');
+
+  // Detect platform once for shell preset filtering
+  useEffect(() => {
+    window.electronAPI.app.getPlatform().then((p) => setPlatform(p));
+  }, []);
+
   // Seed the shell config from the platform default if it's empty
   useEffect(() => {
     if (draft.shell) return;
-    window.electronAPI.app.getPlatform().then((platform) => {
+    window.electronAPI.app.getPlatform().then((p) => {
       let defaultShell: string;
-      if (platform === 'win32') {
+      if (p === 'win32') {
         defaultShell = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
-      } else if (platform === 'darwin') {
+      } else if (p === 'darwin') {
         defaultShell = '/bin/zsh';
       } else {
         defaultShell = '/bin/bash';
@@ -55,6 +88,8 @@ export function TerminalSection({ draft, onChange }: TerminalSectionProps): Reac
       onChange('shell', defaultShell);
     });
   }, [draft.shell, onChange]);
+
+  const platformPresets = SHELL_PRESETS.filter((p) => p.platform === platform || p.platform === 'all');
 
   const fontSize = draft.terminalFontSize ?? DEFAULT_FONT_SIZE;
 
@@ -145,6 +180,34 @@ export function TerminalSection({ draft, onChange }: TerminalSectionProps): Reac
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>
           Shell executable used for new terminal sessions.
         </p>
+
+        {/* Quick-select presets */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+          {platformPresets.map((preset) => {
+            const isActive = draft.shell === preset.path;
+            return (
+              <button
+                key={preset.path}
+                onClick={() => onChange('shell', preset.path)}
+                title={preset.path}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: isActive ? 'var(--accent)' : 'transparent',
+                  color: isActive ? 'var(--bg)' : 'var(--text)',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                  transition: 'all 0.1s',
+                }}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
         <input
           type="text"
           value={draft.shell ?? ''}
@@ -165,7 +228,7 @@ export function TerminalSection({ draft, onChange }: TerminalSectionProps): Reac
           }}
         />
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-          Auto-detected from your system when empty. Saved to config and used for new terminal sessions.
+          Click a preset or enter a custom path. Changes apply to new terminal sessions.
         </p>
       </section>
 
@@ -285,23 +348,6 @@ export function TerminalSection({ draft, onChange }: TerminalSectionProps): Reac
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <div
-      style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted)',
-        marginBottom: '8px',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
 
 interface StepButtonProps {
   onClick: () => void;

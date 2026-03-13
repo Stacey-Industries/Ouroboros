@@ -1,0 +1,31 @@
+/**
+ * ResizeDivider.tsx — Thin resize divider with hover/active accent highlight.
+ * Used between panels in AppLayout.
+ */
+
+import React from 'react';
+
+export interface ResizeDividerProps {
+  direction: 'horizontal' | 'vertical';
+  onMouseDown: (e: React.MouseEvent) => void;
+  onDoubleClick: () => void;
+  label: string;
+}
+
+export function ResizeDivider({ direction, onMouseDown, onDoubleClick, label }: ResizeDividerProps): React.ReactElement {
+  const isVertical = direction === 'vertical';
+  return (
+    <div
+      className={`group relative flex-shrink-0 ${isVertical ? 'w-[5px] cursor-col-resize' : 'h-[5px] cursor-row-resize w-full'} select-none z-10`}
+      onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
+      role="separator"
+      aria-orientation={direction}
+      aria-label={label}
+      style={{ touchAction: 'none' }}
+    >
+      <div className={`absolute ${isVertical ? 'inset-y-0 -left-1 -right-1' : 'inset-x-0 -top-1 -bottom-1'}`} />
+      <div className={`absolute ${isVertical ? 'inset-y-0 left-[2px] w-[1px]' : 'inset-x-0 top-[2px] h-[1px]'} bg-[var(--border)] transition-colors duration-100 group-hover:bg-[var(--accent)] group-active:bg-[var(--accent)]`} />
+    </div>
+  );
+}

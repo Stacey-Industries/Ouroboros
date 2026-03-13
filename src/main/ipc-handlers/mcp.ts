@@ -78,6 +78,7 @@ function extractServers(
 }
 
 /** Try to get project root from the stored config. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getProjectRoot(_win: BrowserWindow): string | null {
   try {
     const roots: string[] = store.get('multiRoots', [])

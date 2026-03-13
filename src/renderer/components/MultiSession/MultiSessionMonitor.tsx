@@ -135,13 +135,13 @@ const SessionCell = memo(function SessionCell({
 
   const statusCfg = STATUS_CONFIG[session.status];
   const latestCalls = session.toolCalls.slice(-3);
-  const cost = estimateCost(
-    session.inputTokens,
-    session.outputTokens,
-    session.model,
-    session.cacheReadTokens,
-    session.cacheWriteTokens,
-  );
+  const cost = estimateCost({
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+    model: session.model,
+    cacheReadTokens: session.cacheReadTokens,
+    cacheWriteTokens: session.cacheWriteTokens,
+  });
 
   return (
     <div
@@ -302,7 +302,6 @@ export const MultiSessionMonitor = memo(function MultiSessionMonitor({
 
     // Only update if the matched set changed
     setBatchSessionIds((prev) => {
-      const prevSet = new Set(prev);
       const newSet = new Set(matched);
       if (prev.length === matched.length && prev.every((id) => newSet.has(id))) {
         return prev;
@@ -328,13 +327,13 @@ export const MultiSessionMonitor = memo(function MultiSessionMonitor({
 
     let totalCost = 0;
     for (const s of resolved) {
-      totalCost += estimateCost(
-        s.inputTokens,
-        s.outputTokens,
-        s.model,
-        s.cacheReadTokens,
-        s.cacheWriteTokens,
-      ).totalCost;
+      totalCost += estimateCost({
+        inputTokens: s.inputTokens,
+        outputTokens: s.outputTokens,
+        model: s.model,
+        cacheReadTokens: s.cacheReadTokens,
+        cacheWriteTokens: s.cacheWriteTokens,
+      }).totalCost;
     }
 
     return {
@@ -346,7 +345,7 @@ export const MultiSessionMonitor = memo(function MultiSessionMonitor({
     };
   }, [batchSessions, batchLabels.length]);
 
-  const handleViewFull = useCallback((_sessionId: string) => {
+  const handleViewFull = useCallback(() => {
     // Exit multi-session view — the main agent monitor will show all sessions
     onClose();
   }, [onClose]);

@@ -72,6 +72,7 @@ export interface HookPayload {
   error?: string;         // for agent_end with error
   parentSessionId?: string; // for agent_start — links subagent to parent
   timestamp: number;
+  requestId?: string;      // unique ID for pre_tool_use approval flow
   usage?: TokenUsage;     // token usage data (may appear on agent_end or any event)
   model?: string;         // model identifier (e.g. "claude-sonnet-4-20250514")
 }

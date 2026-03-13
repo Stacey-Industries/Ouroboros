@@ -82,7 +82,7 @@ export const StepDetail = memo(function StepDetail({
               <MetadataRow label="Output Tokens" value={formatTokenCount(session.outputTokens)} />
               <MetadataRow
                 label="Estimated Cost"
-                value={formatCost(estimateCost(session.model ?? 'claude-sonnet-4-20250514', session.inputTokens, session.outputTokens, session.cacheReadTokens, session.cacheWriteTokens))}
+                value={formatCost(estimateCost({ inputTokens: session.inputTokens, outputTokens: session.outputTokens, model: session.model ?? 'claude-sonnet-4-20250514', cacheReadTokens: session.cacheReadTokens, cacheWriteTokens: session.cacheWriteTokens }).totalCost)}
               />
             </>
           )}

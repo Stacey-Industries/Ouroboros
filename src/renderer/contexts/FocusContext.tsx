@@ -12,6 +12,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -67,10 +68,12 @@ export function FocusProvider({ children }: { children: React.ReactNode }): Reac
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const value: FocusContextValue = {
-    focusedPanel,
-    setFocusedPanel: useCallback((panel: FocusPanel) => setFocusedPanel(panel), []),
-  };
+  const stableSetFocusedPanel = useCallback((panel: FocusPanel) => setFocusedPanel(panel), []);
+
+  const value = useMemo<FocusContextValue>(
+    () => ({ focusedPanel, setFocusedPanel: stableSetFocusedPanel }),
+    [focusedPanel, stableSetFocusedPanel],
+  );
 
   return (
     <FocusContext.Provider value={value}>

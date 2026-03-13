@@ -11,6 +11,7 @@ import { handleRendererQueryResponse, getIdeToolServerAddress } from '../ideTool
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function registerIdeToolsHandlers(_senderWindow: SenderWindow): string[] {
   const channels: string[] = []
 

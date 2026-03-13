@@ -16,12 +16,14 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": ["src/renderer/*"]
+      "@renderer/*": ["src/renderer/*"],
+      "@shared/*": ["src/shared/*"]
     },
     "skipLibCheck": true
   },
   "include": [
     "src/renderer/**/*",
+    "src/shared/**/*",
     "src/renderer/types/**/*"
   ]
 }

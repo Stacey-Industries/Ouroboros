@@ -29,13 +29,13 @@ export function useCostTracking(sessions: AgentSession[]): void {
 
       recordedRef.current.add(session.id)
 
-      const cost = estimateCost(
-        session.inputTokens,
-        session.outputTokens,
-        session.model,
-        session.cacheReadTokens,
-        session.cacheWriteTokens,
-      )
+      const cost = estimateCost({
+        inputTokens: session.inputTokens,
+        outputTokens: session.outputTokens,
+        model: session.model,
+        cacheReadTokens: session.cacheReadTokens,
+        cacheWriteTokens: session.cacheWriteTokens,
+      })
 
       const now = new Date(session.completedAt ?? Date.now())
       const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`

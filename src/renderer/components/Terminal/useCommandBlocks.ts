@@ -72,18 +72,18 @@ export interface UseCommandBlocksResult {
 
 const DEFAULT_PROMPT_PATTERNS = [
   // bash default: "user@host:path$ " or just "$ "
-  /^(?:\S+@\S+[:\s][^\$]*|)\$\s$/,
+  /^(?:\S+@\S+[:\s][^$]*|)\$\s$/,
   // simple "$ " at start
   /^\$\s/,
   // zsh default: "user@host % " or "% "
-  /^(?:\S+@\S+\s[^\%]*|)%\s$/,
+  /^(?:\S+@\S+\s[^%]*|)%\s$/,
   /^%\s/,
   // PowerShell: "PS C:\path> "
   /^PS\s+[A-Z]:\\[^>]*>\s*$/,
   // Generic "> " prompt (PowerShell, some custom shells)
   /^>\s$/,
   // fish: "user@host ~/path> "
-  /^\S+@\S+\s+[~\/][^>]*>\s*$/,
+  /^\S+@\S+\s+[~/][^>]*>\s*$/,
 ]
 
 const MAX_BLOCKS = 500

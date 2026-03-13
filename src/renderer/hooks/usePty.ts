@@ -36,11 +36,12 @@ export function usePty(): UsePtyReturn {
   const cleanupsRef = useRef<Set<() => void>>(new Set())
 
   useEffect(() => {
+    const cleanups = cleanupsRef.current
     return () => {
-      for (const cleanup of cleanupsRef.current) {
+      for (const cleanup of cleanups) {
         cleanup()
       }
-      cleanupsRef.current.clear()
+      cleanups.clear()
     }
   }, [])
 

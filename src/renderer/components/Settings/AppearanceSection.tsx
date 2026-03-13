@@ -168,7 +168,6 @@ function CustomCSSSection({ draft, onChange }: CustomCSSSectionProps): React.Rea
   // Sync local state when the modal reopens with a fresh draft
   useEffect(() => {
     setLocalCSS(draft.customCSS ?? '');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.customCSS]);
 
   // Count approximate rule count for the preview indicator

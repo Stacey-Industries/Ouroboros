@@ -211,16 +211,13 @@ export function useTheme(): UseThemeReturn {
       }
     });
     return cleanup;
-  // showBgGradient is intentionally excluded — changes handled by the themeId/showBgGradient effect
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showBgGradient]);
 
   const setTheme = useCallback(async (id: string) => {
     const resolved = (id in themes ? id : defaultThemeId) as AppTheme;
     setThemeId(resolved);
     applyThemeToDom(getTheme(resolved), showBgGradient);
     await writeThemeToStore(resolved);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showBgGradient]);
 
   const setShowBgGradient = useCallback((value: boolean) => {

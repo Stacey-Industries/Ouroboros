@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AppConfig } from '../../types/electron';
+import { SectionLabel } from './settingsStyles';
 
 interface FontSectionProps {
   draft: AppConfig;
@@ -175,23 +176,6 @@ export function FontSection({ draft, onChange }: FontSectionProps): React.ReactE
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <div
-      style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted)',
-        marginBottom: '8px',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',

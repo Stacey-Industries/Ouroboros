@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, memo } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import type { OutlineSymbol, SymbolKind } from '../../hooks/useSymbolOutline';
 
 export interface SymbolOutlineProps {

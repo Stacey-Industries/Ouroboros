@@ -413,7 +413,7 @@ export const MultiBufferView = memo(function MultiBufferView({
       >
         <span style={{ fontSize: '1.25rem' }}>No excerpts</span>
         <span style={{ fontSize: '0.8125rem' }}>
-          Use "Add Excerpt" to compose code from multiple files
+          Use &quot;Add Excerpt&quot; to compose code from multiple files
         </span>
       </div>
     );

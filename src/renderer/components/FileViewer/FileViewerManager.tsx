@@ -242,7 +242,7 @@ export function FileViewerManager({
   // Listen for agent-ide:open-file DOM events (dispatched by SymbolSearch)
   useEffect(() => {
     function onOpenFile(e: Event): void {
-      const { filePath, line } = (e as CustomEvent<{ filePath: string; line?: number }>).detail;
+      const { filePath, line, col } = (e as CustomEvent<{ filePath: string; line?: number; col?: number }>).detail;
       if (!filePath) return;
 
       void openFile(filePath).then(() => {
@@ -251,7 +251,7 @@ export function FileViewerManager({
           requestAnimationFrame(() => {
             window.dispatchEvent(
               new CustomEvent('agent-ide:scroll-to-line', {
-                detail: { filePath, line },
+                detail: { filePath, line, col },
               }),
             );
           });
@@ -289,7 +289,7 @@ export function FileViewerManager({
   }, []);
 
   const saveFile = useCallback(async (filePath: string, content: string): Promise<void> => {
-    const result = await window.electronAPI.files.createFile(filePath, content);
+    const result = await window.electronAPI.files.saveFile(filePath, content);
     if (!result.success) {
       console.error('[FileViewerManager] saveFile failed:', result.error);
       return;

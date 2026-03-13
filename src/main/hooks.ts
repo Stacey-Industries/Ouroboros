@@ -1,29 +1,23 @@
 /**
- * hooks.ts — Named pipe / TCP server for Claude Code hook events.
+ * hooks.ts - Named pipe / TCP server for Claude Code hook events.
  *
  * Claude Code hook scripts write NDJSON events to this server.
  * Each connected socket represents one Claude Code session (or hook invocation).
- *
- * Protocol: newline-delimited JSON (NDJSON)
- * Windows primary:   named pipe  \\.\pipe\agent-ide-hooks
- * Fallback (any OS): TCP on localhost:<hooksServerPort> (default 3333)
- *
- * HookPayload schema:
- *   { type, sessionId, toolName?, input?, output?, taskLabel?, durationMs?, timestamp }
  */
 
-import net from 'net'
 import { BrowserWindow } from 'electron'
+import net from 'net'
+import { clearSessionRules, requestApproval, respondToApproval, toolRequiresApproval } from './approvalManager'
 import { getConfigValue } from './config'
+import { dispatchActivationEvent } from './extensions'
 import { getAllActiveWindows } from './windowManager'
-
-// ─── Public types ─────────────────────────────────────────────────────────────
 
 export type HookEventType =
   | 'pre_tool_use'
   | 'post_tool_use'
   | 'agent_start'
   | 'agent_stop'
+  | 'agent_end'
   | 'session_start'
   | 'session_stop'
 
@@ -36,9 +30,12 @@ export interface HookPayload {
   taskLabel?: string
   durationMs?: number
   timestamp: number
+  requestId?: string
+  parentSessionId?: string
+  prompt?: string
+  model?: string
 }
 
-// Keep the old AgentEvent interface for any existing renderer code that references it.
 export interface AgentEvent {
   type: 'tool_call' | 'tool_result' | 'message' | 'error' | 'status'
   sessionId?: string
@@ -56,10 +53,8 @@ export interface ToolCallEvent extends AgentEvent {
   }
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const PIPE_NAME = '\\\\.\\pipe\\agent-ide-hooks'
-const MAX_BUFFER_BYTES = 1_048_576 // 1 MB per connection — drop if exceeded
+const MAX_BUFFER_BYTES = 1_048_576
 const MAX_PENDING_QUEUE = 500
 
 const VALID_TYPES = new Set<string>([
@@ -72,175 +67,233 @@ const VALID_TYPES = new Set<string>([
   'session_stop'
 ])
 
-// ─── Module state ─────────────────────────────────────────────────────────────
-
 let connectionCounter = 0
 let server: net.Server | null = null
 let mainWindow: BrowserWindow | null = null
 
-/** Events buffered while the renderer window is not yet ready. */
 const pendingQueue: HookPayload[] = []
 
-// ─── Validation ───────────────────────────────────────────────────────────────
-
 function isValidPayload(obj: unknown): obj is HookPayload {
-  if (!obj || typeof obj !== 'object') return false
-  const p = obj as Record<string, unknown>
+  if (!obj || typeof obj !== 'object') {
+    return false
+  }
 
-  if (typeof p.sessionId !== 'string' || !p.sessionId) return false
-  if (typeof p.timestamp !== 'number') return false
-  if (typeof p.type !== 'string' || !VALID_TYPES.has(p.type)) return false
+  const payload = obj as Record<string, unknown>
+  if (typeof payload.sessionId !== 'string' || !payload.sessionId) {
+    return false
+  }
+  if (typeof payload.timestamp !== 'number') {
+    return false
+  }
+  if (typeof payload.type !== 'string' || !VALID_TYPES.has(payload.type)) {
+    return false
+  }
 
   return true
 }
 
-// ─── Dispatch to renderer ─────────────────────────────────────────────────────
+function isRenderableWindow(window: BrowserWindow | null): window is BrowserWindow {
+  return Boolean(window && !window.isDestroyed())
+}
 
-function dispatchToRenderer(payload: HookPayload): void {
-  // Get all active windows from the window manager
-  const activeWindows = getAllActiveWindows()
-
-  if (activeWindows.length === 0) {
-    // Fallback: check the mainWindow reference
-    const win = mainWindow
-    if (!win || win.isDestroyed()) {
-      console.log(`[hooks] queuing event (no window): ${payload.type} session=${payload.sessionId}`)
-      if (pendingQueue.length < MAX_PENDING_QUEUE) {
-        pendingQueue.push(payload)
-      }
-      return
-    }
-  }
-
-  // Flush buffered events first, in order
-  if (pendingQueue.length > 0) {
-    const flushing = pendingQueue.splice(0)
-    for (const p of flushing) {
-      for (const win of activeWindows) {
-        if (!win.isDestroyed()) win.webContents.send('hooks:event', p)
-      }
-    }
-  }
-
-  console.log(`[hooks] dispatching to ${activeWindows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`)
-  for (const win of activeWindows) {
-    if (!win.isDestroyed()) win.webContents.send('hooks:event', payload)
+function queuePendingPayload(payload: HookPayload): void {
+  console.log(`[hooks] queuing event (no window): ${payload.type} session=${payload.sessionId}`)
+  if (pendingQueue.length < MAX_PENDING_QUEUE) {
+    pendingQueue.push(payload)
   }
 }
 
-// ─── Per-connection NDJSON handler ────────────────────────────────────────────
+function getDispatchWindows(): BrowserWindow[] {
+  const activeWindows = getAllActiveWindows().filter((window) => !window.isDestroyed())
+  if (activeWindows.length > 0) {
+    return activeWindows
+  }
+  return isRenderableWindow(mainWindow) ? [mainWindow] : []
+}
+
+function sendPayload(windows: BrowserWindow[], payload: HookPayload): void {
+  for (const window of windows) {
+    window.webContents.send('hooks:event', payload)
+  }
+}
+
+function flushPendingQueue(windows: BrowserWindow[]): void {
+  if (pendingQueue.length === 0) {
+    return
+  }
+
+  const flushing = pendingQueue.splice(0)
+  for (const payload of flushing) {
+    sendPayload(windows, payload)
+  }
+}
+
+function dispatchLifecycleEvent(payload: HookPayload): void {
+  if (payload.type === 'session_start') {
+    dispatchActivationEvent('onSessionStart', { sessionId: payload.sessionId }).catch(() => {})
+    return
+  }
+
+  if (payload.type === 'session_stop' || payload.type === 'agent_stop' || payload.type === 'agent_end') {
+    dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {})
+  }
+}
+
+function handleApprovalRequest(payload: HookPayload): void {
+  if (payload.type !== 'pre_tool_use' || !payload.toolName || !payload.requestId) {
+    return
+  }
+
+  if (!toolRequiresApproval(payload.toolName, payload.sessionId)) {
+    respondToApproval(payload.requestId, { decision: 'approve' })
+    return
+  }
+
+  requestApproval({
+    requestId: payload.requestId,
+    toolName: payload.toolName,
+    toolInput: (payload.input ?? {}) as Record<string, unknown>,
+    sessionId: payload.sessionId,
+    timestamp: payload.timestamp,
+  })
+}
+
+function clearApprovalRulesForEndedSession(payload: HookPayload): void {
+  if (payload.type === 'agent_stop' || payload.type === 'agent_end') {
+    clearSessionRules(payload.sessionId)
+  }
+}
+
+function dispatchToRenderer(payload: HookPayload): void {
+  const windows = getDispatchWindows()
+  if (windows.length === 0) {
+    queuePendingPayload(payload)
+    return
+  }
+
+  flushPendingQueue(windows)
+  console.log(`[hooks] dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`)
+  sendPayload(windows, payload)
+  dispatchLifecycleEvent(payload)
+  handleApprovalRequest(payload)
+  clearApprovalRulesForEndedSession(payload)
+}
+
+function parseHookLine(line: string, connId: number): HookPayload | null {
+  try {
+    const parsed = JSON.parse(line)
+    if (!isValidPayload(parsed)) {
+      console.warn(`[hooks] #${connId} invalid payload shape - skipping`, JSON.stringify(parsed))
+      return null
+    }
+
+    console.log(`[hooks] #${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`)
+    return parsed
+  } catch {
+    console.warn(`[hooks] #${connId} malformed JSON - skipping line`)
+    return null
+  }
+}
+
+function processSocketChunk(socket: net.Socket, connId: number, rawBuffer: string, chunk: string): string {
+  const nextBuffer = rawBuffer + chunk
+  if (Buffer.byteLength(nextBuffer, 'utf8') > MAX_BUFFER_BYTES) {
+    console.warn(`[hooks] #${connId} buffer overflow - dropping connection`)
+    socket.destroy()
+    return ''
+  }
+
+  let buffer = nextBuffer
+  let newlineIndex = buffer.indexOf('\n')
+  while (newlineIndex !== -1) {
+    const line = buffer.slice(0, newlineIndex).trim()
+    buffer = buffer.slice(newlineIndex + 1)
+
+    if (line) {
+      const payload = parseHookLine(line, connId)
+      if (payload) {
+        dispatchToRenderer(payload)
+      }
+    }
+
+    newlineIndex = buffer.indexOf('\n')
+  }
+
+  return buffer
+}
 
 function handleSocket(socket: net.Socket, connId: number): void {
   console.log(`[hooks] connection #${connId} opened`)
 
   let rawBuffer = ''
-
   socket.setEncoding('utf8')
-  socket.setTimeout(60_000) // 60 s idle timeout — hook scripts are short-lived
+  socket.setTimeout(60_000)
 
   socket.on('data', (chunk: string) => {
-    rawBuffer += chunk
-
-    // Guard against runaway buffers
-    if (Buffer.byteLength(rawBuffer, 'utf8') > MAX_BUFFER_BYTES) {
-      console.warn(`[hooks] #${connId} buffer overflow — dropping connection`)
-      socket.destroy()
-      rawBuffer = ''
-      return
-    }
-
-    // Process every complete (newline-terminated) line
-    let nlIdx: number
-    while ((nlIdx = rawBuffer.indexOf('\n')) !== -1) {
-      const line = rawBuffer.slice(0, nlIdx).trim()
-      rawBuffer = rawBuffer.slice(nlIdx + 1)
-
-      if (!line) continue
-
-      let parsed: unknown
-      try {
-        parsed = JSON.parse(line)
-      } catch {
-        console.warn(`[hooks] #${connId} malformed JSON — skipping line`)
-        continue
-      }
-
-      if (!isValidPayload(parsed)) {
-        console.warn(`[hooks] #${connId} invalid payload shape — skipping`, JSON.stringify(parsed))
-        continue
-      }
-
-      console.log(`[hooks] #${connId} valid payload: type=${(parsed as Record<string,unknown>)['type']} session=${(parsed as Record<string,unknown>)['sessionId']}`)
-      dispatchToRenderer(parsed)
-    }
+    rawBuffer = processSocketChunk(socket, connId, rawBuffer, chunk)
   })
-
   socket.on('timeout', () => {
     socket.end()
   })
-
-  socket.on('error', (err: NodeJS.ErrnoException) => {
-    // EPIPE / ECONNRESET happen when Claude Code exits mid-hook — not errors we care about
-    if (err.code !== 'EPIPE' && err.code !== 'ECONNRESET') {
-      console.error(`[hooks] #${connId} socket error: ${err.message}`)
+  socket.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code !== 'EPIPE' && error.code !== 'ECONNRESET') {
+      console.error(`[hooks] #${connId} socket error: ${error.message}`)
     }
   })
-
   socket.on('close', () => {
     console.log(`[hooks] connection #${connId} closed`)
   })
 }
 
-// ─── Server helpers ───────────────────────────────────────────────────────────
-
 function createNetServer(): net.Server {
-  const s = net.createServer((socket) => handleSocket(socket, ++connectionCounter))
-  s.maxConnections = 64
-  return s
+  const nextServer = net.createServer((socket) => handleSocket(socket, ++connectionCounter))
+  nextServer.maxConnections = 64
+  return nextServer
 }
 
-function listenPipe(s: net.Server, pipePath: string): Promise<void> {
+function listenPipe(nextServer: net.Server, pipePath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    s.once('error', reject)
-    s.listen(pipePath, () => {
-      s.removeListener('error', reject)
+    nextServer.once('error', reject)
+    nextServer.listen(pipePath, () => {
+      nextServer.removeListener('error', reject)
       resolve()
     })
   })
 }
 
-function listenTcp(s: net.Server, port: number): Promise<void> {
+function listenTcp(nextServer: net.Server, port: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    s.once('error', reject)
-    s.listen(port, '127.0.0.1', () => {
-      s.removeListener('error', reject)
+    nextServer.once('error', reject)
+    nextServer.listen(port, '127.0.0.1', () => {
+      nextServer.removeListener('error', reject)
       resolve()
     })
   })
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+function flushPendingQueueToWindow(window: BrowserWindow): void {
+  if (pendingQueue.length === 0 || window.isDestroyed()) {
+    return
+  }
 
-export async function startHooksServer(win: BrowserWindow): Promise<{ port: number | string }> {
-  mainWindow = win
+  const flushing = pendingQueue.splice(0)
+  for (const payload of flushing) {
+    window.webContents.send('hooks:event', payload)
+  }
+}
 
-  // Flush the pending queue once the renderer finishes loading
-  win.webContents.on('did-finish-load', () => {
-    if (pendingQueue.length > 0) {
-      const flushing = pendingQueue.splice(0)
-      for (const p of flushing) {
-        if (!win.isDestroyed()) win.webContents.send('hooks:event', p)
-      }
-    }
+export async function startHooksServer(window: BrowserWindow): Promise<{ port: number | string }> {
+  mainWindow = window
+  window.webContents.on('did-finish-load', () => {
+    flushPendingQueueToWindow(window)
   })
 
   if (server) {
-    const addr = server.address()
-    const port = typeof addr === 'string' ? addr : (addr as net.AddressInfo).port
+    const address = server.address()
+    const port = typeof address === 'string' ? address : (address as net.AddressInfo).port
     return { port }
   }
 
-  // 1. Try named pipe (Windows)
   if (process.platform === 'win32') {
     const pipeServer = createNetServer()
     try {
@@ -248,14 +301,13 @@ export async function startHooksServer(win: BrowserWindow): Promise<{ port: numb
       server = pipeServer
       console.log(`[hooks] listening on named pipe ${PIPE_NAME}`)
       return { port: PIPE_NAME }
-    } catch (err: unknown) {
-      const nodeErr = err as NodeJS.ErrnoException
-      console.warn(`[hooks] named pipe unavailable (${nodeErr.code ?? 'unknown'}) — falling back to TCP`)
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException
+      console.warn(`[hooks] named pipe unavailable (${nodeError.code ?? 'unknown'}) - falling back to TCP`)
       pipeServer.close()
     }
   }
 
-  // 2. TCP fallback (also used on macOS / Linux)
   const port = getConfigValue('hooksServerPort') as number
   const tcpServer = createNetServer()
   await listenTcp(tcpServer, port)
@@ -270,6 +322,7 @@ export function stopHooksServer(): Promise<void> {
       resolve()
       return
     }
+
     server.close(() => {
       server = null
       console.log('[hooks] server stopped')
@@ -278,11 +331,17 @@ export function stopHooksServer(): Promise<void> {
   })
 }
 
-/** Returns the active server address string, or null if not yet started. */
 export function getHooksAddress(): string | null {
-  if (!server) return null
-  const addr = server.address()
-  if (!addr) return null
-  if (typeof addr === 'string') return addr
-  return `127.0.0.1:${(addr as net.AddressInfo).port}`
+  if (!server) {
+    return null
+  }
+
+  const address = server.address()
+  if (!address) {
+    return null
+  }
+  if (typeof address === 'string') {
+    return address
+  }
+  return `127.0.0.1:${address.port}`
 }

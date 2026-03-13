@@ -34,13 +34,13 @@ export function buildCompletionNotification(session: AgentSession): { title: str
   }
 
   // Cost
-  const cost = estimateCost(
-    session.inputTokens,
-    session.outputTokens,
-    session.model,
-    session.cacheReadTokens,
-    session.cacheWriteTokens,
-  );
+  const cost = estimateCost({
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+    model: session.model,
+    cacheReadTokens: session.cacheReadTokens,
+    cacheWriteTokens: session.cacheWriteTokens,
+  });
   if (cost.totalCost > 0) {
     parts.push(formatCost(cost.totalCost));
   }

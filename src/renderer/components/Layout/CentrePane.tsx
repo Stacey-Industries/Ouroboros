@@ -11,7 +11,6 @@ export interface CentrePaneProps {
 
 export function CentrePane({ tabBar, children, focusStyle, onFocus }: CentrePaneProps): React.ReactElement {
   return (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className="flex flex-col flex-1 h-full min-w-0 bg-[var(--bg)]"
       aria-label="Editor pane"

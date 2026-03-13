@@ -7,14 +7,18 @@
  * are silently dropped.
  */
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { useAgentEvents } from '../hooks/useAgentEvents';
 import type { UseAgentEventsReturn } from '../hooks/useAgentEvents';
 
 const AgentEventsContext = createContext<UseAgentEventsReturn | null>(null);
 
 export function AgentEventsProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  const value = useAgentEvents();
+  const { agents, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions } = useAgentEvents();
+  const value = useMemo<UseAgentEventsReturn>(
+    () => ({ agents, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions }),
+    [agents, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions],
+  );
   return (
     <AgentEventsContext.Provider value={value}>
       {children}

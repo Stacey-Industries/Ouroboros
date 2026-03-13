@@ -109,3 +109,14 @@ Hard-won lessons — not documented elsewhere:
 - `docs/architecture.md` — Full architecture, component tree, state management, ownership rules, security model
 - `docs/api-contract.md` — Complete IPC channel reference, file operations, PTY API
 - `docs/data-model.md` — Config schema, state types, event types
+
+## Key Files
+| File | Role |
+|---|---|
+| `src/main.ts` | Entry point |
+| `src/index.ts` | Public API |
+
+## Commands
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm test` — run tests

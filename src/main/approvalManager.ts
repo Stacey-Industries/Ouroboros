@@ -14,7 +14,6 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { BrowserWindow } from 'electron'
 import { getConfigValue } from './config'
 import { getAllActiveWindows } from './windowManager'
 
@@ -60,6 +59,17 @@ function getResponseFilePath(requestId: string): string {
   return path.join(APPROVALS_DIR, `${requestId}.response`)
 }
 
+function removeExpiredResponseFile(filePath: string, cutoff: number): void {
+  try {
+    const stat = fs.statSync(filePath)
+    if (stat.mtimeMs < cutoff) {
+      fs.rmSync(filePath, { force: true })
+    }
+  } catch {
+    // Ignore individual file errors
+  }
+}
+
 /**
  * Clean up old response files (older than 5 minutes).
  * Called periodically to avoid accumulating stale files.
@@ -73,15 +83,7 @@ function cleanupOldResponses(): void {
 
     for (const file of files) {
       if (!file.endsWith('.response')) continue
-      const filePath = path.join(APPROVALS_DIR, file)
-      try {
-        const stat = fs.statSync(filePath)
-        if (stat.mtimeMs < cutoff) {
-          fs.rmSync(filePath, { force: true })
-        }
-      } catch {
-        // Ignore individual file errors
-      }
+      removeExpiredResponseFile(path.join(APPROVALS_DIR, file), cutoff)
     }
   } catch {
     // Non-critical — ignore

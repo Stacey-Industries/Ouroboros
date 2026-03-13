@@ -18,7 +18,7 @@ import { getConfigValue } from './config'
 
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump this string whenever the hook scripts change so existing installs update.
-export const CURRENT_HOOK_VERSION = '1.0.2'
+export const CURRENT_HOOK_VERSION = '1.0.6'
 
 const VERSION_MARKER_FILE = '.agent-ide-version'
 
@@ -34,15 +34,17 @@ interface HookEntry {
 }
 
 const WINDOWS_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.ps1',  dest: 'pre_tool_use.ps1',  executable: false },
-  { src: 'post_tool_use.ps1', dest: 'post_tool_use.ps1', executable: false },
-  { src: 'agent_start.ps1',   dest: 'agent_start.ps1',   executable: false }
+  { src: 'pre_tool_use.ps1',   dest: 'pre_tool_use.ps1',   executable: false },
+  { src: 'post_tool_use.ps1',  dest: 'post_tool_use.ps1',  executable: false },
+  { src: 'agent_start.ps1',    dest: 'agent_start.ps1',    executable: false },
+  { src: 'session_start.ps1',  dest: 'session_start.ps1',  executable: false }
 ]
 
 const UNIX_HOOKS: HookEntry[] = [
-  { src: 'pre_tool_use.sh',   dest: 'pre_tool_use.sh',   executable: true },
-  { src: 'post_tool_use.sh',  dest: 'post_tool_use.sh',  executable: true },
-  { src: 'agent_start.sh',    dest: 'agent_start.sh',    executable: true }
+  { src: 'pre_tool_use.sh',    dest: 'pre_tool_use.sh',    executable: true },
+  { src: 'post_tool_use.sh',   dest: 'post_tool_use.sh',   executable: true },
+  { src: 'agent_start.sh',     dest: 'agent_start.sh',     executable: true },
+  { src: 'session_start.sh',   dest: 'session_start.sh',   executable: true }
 ]
 
 // ─── Claude Code hook event types to register ────────────────────────────────
@@ -97,11 +99,13 @@ function registerHooksInSettings(hooksDir: string): void {
         PreToolUse:    `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'pre_tool_use.ps1')}"`,
         PostToolUse:   `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'post_tool_use.ps1')}"`,
         SubagentStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_start.ps1')}"`,
+        SessionStart:  `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
       }
     : {
         PreToolUse:    path.join(hooksDir, 'pre_tool_use.sh'),
         PostToolUse:   path.join(hooksDir, 'post_tool_use.sh'),
         SubagentStart: path.join(hooksDir, 'agent_start.sh'),
+        SessionStart:  path.join(hooksDir, 'session_start.sh'),
       }
 
   // Read existing settings (or start fresh)

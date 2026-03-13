@@ -120,7 +120,7 @@ export function SearchOverlay({
           textAlign: 'center',
         }}
       >
-        No files match "{query}"
+        No files match &quot;{query}&quot;
       </div>
     );
   }

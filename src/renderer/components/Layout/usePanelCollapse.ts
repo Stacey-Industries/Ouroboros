@@ -66,6 +66,7 @@ export function usePanelCollapse(options?: UsePanelCollapseOptions): UsePanelCol
   keybindingsRef.current = options?.keybindings ?? {};
   const [collapsed, setCollapsed] = useState<CollapseState>(loadCollapseState);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const update = useCallback((next: CollapseState) => {
     setCollapsed(next);
     saveCollapseState(next);

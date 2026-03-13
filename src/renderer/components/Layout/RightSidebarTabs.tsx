@@ -1,24 +1,34 @@
 /**
  * RightSidebarTabs.tsx — Tab switcher for the right sidebar.
  *
- * Renders tab headers ("Monitor" | "Git") and conditionally shows either
- * the Agent Monitor or Git Panel content.
+ * Renders tab headers ("Monitor" | "Git" | "Analytics") and conditionally
+ * shows the corresponding panel content.
  */
 
 import React, { useState, memo } from 'react';
 
-export type RightSidebarTab = 'monitor' | 'git';
+export type RightSidebarTab = 'monitor' | 'git' | 'analytics';
 
 export interface RightSidebarTabsProps {
   monitorContent: React.ReactNode;
   gitContent: React.ReactNode;
+  analyticsContent?: React.ReactNode;
 }
 
 export const RightSidebarTabs = memo(function RightSidebarTabs({
   monitorContent,
   gitContent,
+  analyticsContent,
 }: RightSidebarTabsProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<RightSidebarTab>('monitor');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'monitor': return monitorContent;
+      case 'git': return gitContent;
+      case 'analytics': return analyticsContent ?? null;
+    }
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -37,11 +47,16 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
           isActive={activeTab === 'git'}
           onClick={() => setActiveTab('git')}
         />
+        <TabButton
+          label="Analytics"
+          isActive={activeTab === 'analytics'}
+          onClick={() => setActiveTab('analytics')}
+        />
       </div>
 
       {/* Tab content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {activeTab === 'monitor' ? monitorContent : gitContent}
+        {renderContent()}
       </div>
     </div>
   );

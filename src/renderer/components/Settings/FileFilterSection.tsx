@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import type { AppConfig } from '../../types/electron';
+import { SectionLabel } from './settingsStyles';
 
 interface FileFilterSectionProps {
   draft: AppConfig;
@@ -20,7 +21,7 @@ export function FileFilterSection({
   const [inputError, setInputError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const patterns: string[] = draft.fileTreeIgnorePatterns ?? [];
+  const patterns = useMemo(() => draft.fileTreeIgnorePatterns ?? [], [draft.fileTreeIgnorePatterns]);
 
   const validate = useCallback((value: string): string | null => {
     const trimmed = value.trim();
@@ -179,23 +180,6 @@ export function FileFilterSection({
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <div
-      style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted)',
-        marginBottom: '8px',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
 
 function Tag({
   label,

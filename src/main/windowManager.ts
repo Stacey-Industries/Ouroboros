@@ -9,7 +9,7 @@ import { BrowserWindow, screen, session } from 'electron'
 import path from 'path'
 import { getConfigValue, setConfigValue } from './config'
 import type { WindowBounds } from './config'
-import { registerIpcHandlers, cleanupIpcHandlers } from './ipc'
+import { registerIpcHandlers } from './ipc'
 import { killPtySessionsForWindow } from './pty'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
