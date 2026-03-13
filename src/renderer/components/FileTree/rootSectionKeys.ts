@@ -37,28 +37,56 @@ export function handleTreeKeyDown(e: React.KeyboardEvent, deps: KeyHandlerDeps):
 }
 
 function handleNavKeys(e: React.KeyboardEvent, deps: KeyHandlerDeps): boolean {
-  const { displayItems, setFocusIndex, focusIndex } = deps;
-  const item = displayItems[focusIndex];
+  const item = deps.displayItems[deps.focusIndex];
+
+  return (
+    handleVerticalNavKeys(e, deps) ||
+    handleSelectionKeys(e, item, deps) ||
+    handleFolderNavKeys(e, item, deps)
+  );
+}
+
+function handleVerticalNavKeys(
+  e: React.KeyboardEvent,
+  deps: KeyHandlerDeps
+): boolean {
+  const { displayItems, setFocusIndex } = deps;
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    setFocusIndex((p) => Math.min(p + 1, displayItems.length - 1));
+    setFocusIndex((prev) => Math.min(prev + 1, displayItems.length - 1));
     return true;
   }
   if (e.key === 'ArrowUp') {
     e.preventDefault();
-    setFocusIndex((p) => Math.max(p - 1, 0));
+    setFocusIndex((prev) => Math.max(prev - 1, 0));
     return true;
   }
+  return false;
+}
+
+function handleSelectionKeys(
+  e: React.KeyboardEvent,
+  item: { node: TreeNode } | undefined,
+  deps: KeyHandlerDeps
+): boolean {
   if (e.key === 'Enter') {
     e.preventDefault();
     if (item) deps.handleItemClick(item.node);
     return true;
   }
   if (e.key === 'Escape') {
-    setFocusIndex(0);
+    deps.setFocusIndex(0);
     return true;
   }
+  return false;
+}
+
+function handleFolderNavKeys(
+  e: React.KeyboardEvent,
+  item: { node: TreeNode } | undefined,
+  deps: KeyHandlerDeps
+): boolean {
   if (e.key === 'ArrowRight' && item?.node.isDirectory && !item.node.isExpanded) {
     e.preventDefault();
     void deps.toggleFolder(item.node);

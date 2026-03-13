@@ -25,6 +25,15 @@ export interface WindowInfo {
   projectRoot: string | null
 }
 
+interface WindowCreationState {
+  isFirst: boolean
+  savedBounds: WindowBounds | null
+  width: number
+  height: number
+  x?: number
+  y?: number
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 const windows = new Map<number, ManagedWindow>()
@@ -59,6 +68,188 @@ function getCascadeOffset(): { x?: number; y?: number } {
   const count = windows.size
   if (count === 0) return {}
   return { x: 40 + count * 30, y: 40 + count * 30 }
+}
+
+function getSavedWindowBounds(isFirst: boolean): WindowBounds | null {
+  if (!isFirst) return null
+  return getConfigValue('windowBounds')
+}
+
+function getInitialWindowSize(bounds: WindowBounds | null): Pick<WindowCreationState, 'width' | 'height'> {
+  if (!bounds) {
+    return { width: 1280, height: 800 }
+  }
+
+  return {
+    width: bounds.width,
+    height: bounds.height,
+  }
+}
+
+function getInitialWindowPlacement(bounds: WindowBounds | null, isFirst: boolean): Pick<WindowCreationState, 'x' | 'y'> {
+  if (bounds?.x !== undefined && bounds.y !== undefined) {
+    return { x: bounds.x, y: bounds.y }
+  }
+
+  if (isFirst) return {}
+  return getCascadeOffset()
+}
+
+function getWindowCreationState(): WindowCreationState {
+  const isFirst = windows.size === 0
+  const savedBounds = getSavedWindowBounds(isFirst)
+  const validatedBounds = savedBounds ? validateBounds(savedBounds) : null
+  const size = getInitialWindowSize(validatedBounds)
+  const placement = getInitialWindowPlacement(validatedBounds, isFirst)
+
+  return {
+    isFirst,
+    savedBounds,
+    width: size.width,
+    height: size.height,
+    x: placement.x,
+    y: placement.y,
+  }
+}
+
+function getWindowPosition(state: WindowCreationState): { x?: number; y?: number } {
+  if (state.x === undefined || state.y === undefined) return {}
+  return { x: state.x, y: state.y }
+}
+
+function createBrowserWindow(preloadPath: string, state: WindowCreationState): BrowserWindow {
+  return new BrowserWindow({
+    width: state.width,
+    height: state.height,
+    ...getWindowPosition(state),
+    minWidth: 900,
+    minHeight: 600,
+    show: false,
+    backgroundColor: '#0d1117',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    titleBarOverlay:
+      process.platform === 'win32'
+        ? {
+            color: '#0d1117',
+            symbolColor: '#e6edf3',
+            height: 32
+          }
+        : undefined,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false
+    }
+  })
+}
+
+function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number {
+  const winId = win.id
+
+  windows.set(winId, {
+    id: winId,
+    win,
+    projectRoot: projectRoot ?? null,
+  })
+  windowCleanups.set(winId, registerIpcHandlers(win))
+
+  return winId
+}
+
+function loadWindowContent(win: BrowserWindow): void {
+  const rendererUrl = process.env['ELECTRON_RENDERER_URL']
+  if (rendererUrl) {
+    win.loadURL(rendererUrl)
+    return
+  }
+
+  win.loadFile(path.join(__dirname, '../renderer/index.html'))
+}
+
+function openDevToolsInDevelopment(win: BrowserWindow): void {
+  if (process.env.NODE_ENV !== 'development') return
+  win.webContents.openDevTools({ mode: 'detach' })
+}
+
+function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
+  win.once('ready-to-show', () => {
+    if (state.isFirst && state.savedBounds?.isMaximized) {
+      win.maximize()
+    }
+    win.show()
+    openDevToolsInDevelopment(win)
+  })
+}
+
+function clearBoundsTimer(winId: number): void {
+  const timer = boundsTimers.get(winId)
+  if (timer === undefined) return
+  clearTimeout(timer)
+  boundsTimers.delete(winId)
+}
+
+function saveWindowBounds(win: BrowserWindow, isMaximized: boolean): void {
+  const { x, y, width, height } = win.getBounds()
+  setConfigValue('windowBounds', { x, y, width, height, isMaximized })
+}
+
+function markWindowMaximized(): void {
+  const current = getConfigValue('windowBounds')
+  setConfigValue('windowBounds', { ...current, isMaximized: true })
+}
+
+function createBoundsSaveHandler(win: BrowserWindow, winId: number): () => void {
+  return () => {
+    clearBoundsTimer(winId)
+    boundsTimers.set(
+      winId,
+      setTimeout(() => {
+        boundsTimers.delete(winId)
+        if (win.isDestroyed() || win.isMaximized()) return
+        saveWindowBounds(win, false)
+      }, 500)
+    )
+  }
+}
+
+function setupWindowBoundsHandlers(win: BrowserWindow, winId: number): void {
+  const scheduleSaveBounds = createBoundsSaveHandler(win, winId)
+
+  win.on('resize', scheduleSaveBounds)
+  win.on('move', scheduleSaveBounds)
+  win.on('maximize', markWindowMaximized)
+  win.on('unmaximize', () => {
+    saveWindowBounds(win, false)
+  })
+}
+
+function cleanupIpcHandlers(winId: number): void {
+  const cleanup = windowCleanups.get(winId)
+  if (!cleanup) return
+  cleanup()
+  windowCleanups.delete(winId)
+}
+
+function setupWindowCloseHandler(win: BrowserWindow, winId: number): void {
+  win.on('close', () => {
+    clearBoundsTimer(winId)
+    if (!win.isMaximized()) {
+      saveWindowBounds(win, false)
+    }
+    cleanupIpcHandlers(winId)
+    killPtySessionsForWindow(winId)
+    windows.delete(winId)
+  })
+}
+
+function setupWindowLifecycle(win: BrowserWindow, winId: number, state: WindowCreationState): void {
+  setupReadyToShow(win, state)
+  setupWindowBoundsHandlers(win, winId)
+  setupWindowCloseHandler(win, winId)
 }
 
 // ─── CSP (only install once) ─────────────────────────────────────────────────
@@ -97,134 +288,17 @@ function ensureCSP(): void {
  */
 export function createWindow(projectRoot?: string): BrowserWindow {
   ensureCSP()
-
+  const state = getWindowCreationState()
   const preloadPath = path.join(__dirname, '../preload/index.js')
+  const win = createBrowserWindow(preloadPath, state)
+  const winId = registerManagedWindow(win, projectRoot)
 
-  // For the first window, restore saved bounds. For subsequent windows, cascade.
-  const isFirst = windows.size === 0
-  const savedBounds = isFirst ? getConfigValue('windowBounds') : null
-  const validatedBounds = savedBounds ? validateBounds(savedBounds) : null
-  const cascade = isFirst ? {} : getCascadeOffset()
-
-  const initialWidth = validatedBounds?.width ?? 1280
-  const initialHeight = validatedBounds?.height ?? 800
-  const initialX = validatedBounds?.x ?? cascade.x
-  const initialY = validatedBounds?.y ?? cascade.y
-
-  const win = new BrowserWindow({
-    width: initialWidth,
-    height: initialHeight,
-    ...(initialX !== undefined && initialY !== undefined ? { x: initialX, y: initialY } : {}),
-    minWidth: 900,
-    minHeight: 600,
-    show: false,
-    backgroundColor: '#0d1117',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    titleBarOverlay:
-      process.platform === 'win32'
-        ? {
-            color: '#0d1117',
-            symbolColor: '#e6edf3',
-            height: 32
-          }
-        : undefined,
-    webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      experimentalFeatures: false
-    }
-  })
-
-  const winId = win.id
-
-  // Track this window
-  const managed: ManagedWindow = {
-    id: winId,
-    win,
-    projectRoot: projectRoot ?? null,
-  }
-  windows.set(winId, managed)
-
-  // Register per-window IPC handlers
-  const cleanup = registerIpcHandlers(win)
-  windowCleanups.set(winId, cleanup)
-
-  // Dev vs production loading
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'))
-  }
-
-  // Show when ready
-  win.once('ready-to-show', () => {
-    if (isFirst && savedBounds?.isMaximized) {
-      win.maximize()
-    }
-    win.show()
-    if (process.env.NODE_ENV === 'development') {
-      win.webContents.openDevTools({ mode: 'detach' })
-    }
-  })
+  loadWindowContent(win)
+  setupWindowLifecycle(win, winId, state)
 
   // ── Debounced bounds persistence (only for the focused window) ────────────
 
-  function scheduleSaveBounds(): void {
-    const existing = boundsTimers.get(winId)
-    if (existing !== undefined) clearTimeout(existing)
-    boundsTimers.set(
-      winId,
-      setTimeout(() => {
-        boundsTimers.delete(winId)
-        if (win.isDestroyed() || win.isMaximized()) return
-        const { x, y, width, height } = win.getBounds()
-        setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-      }, 500)
-    )
-  }
-
-  win.on('resize', scheduleSaveBounds)
-  win.on('move', scheduleSaveBounds)
-
-  win.on('maximize', () => {
-    const current = getConfigValue('windowBounds')
-    setConfigValue('windowBounds', { ...current, isMaximized: true })
-  })
-
-  win.on('unmaximize', () => {
-    const { x, y, width, height } = win.getBounds()
-    setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-  })
-
   // ── Cleanup on close ──────────────────────────────────────────────────────
-
-  win.on('close', () => {
-    // Cancel pending save
-    const timer = boundsTimers.get(winId)
-    if (timer !== undefined) {
-      clearTimeout(timer)
-      boundsTimers.delete(winId)
-    }
-    // Final bounds save
-    if (!win.isMaximized()) {
-      const { x, y, width, height } = win.getBounds()
-      setConfigValue('windowBounds', { x, y, width, height, isMaximized: false })
-    }
-    // Cleanup IPC handlers for this window
-    const ipcCleanup = windowCleanups.get(winId)
-    if (ipcCleanup) {
-      ipcCleanup()
-      windowCleanups.delete(winId)
-    }
-    // Kill PTY sessions associated with this window
-    killPtySessionsForWindow(winId)
-    // Remove from tracked windows
-    windows.delete(winId)
-  })
 
   return win
 }

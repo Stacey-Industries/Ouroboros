@@ -78,6 +78,107 @@ function HighlightedName({
   return <>{parts}</>;
 }
 
+function getRowStyle(
+  isActive: boolean,
+  isFocused: boolean
+): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '4px 12px',
+    cursor: 'pointer',
+    backgroundColor: isActive
+      ? 'var(--bg-tertiary)'
+      : isFocused
+      ? 'rgba(88, 166, 255, 0.08)'
+      : 'transparent',
+    borderLeft: isActive
+      ? '2px solid var(--accent)'
+      : '2px solid transparent',
+    userSelect: 'none',
+    minHeight: '32px',
+    boxSizing: 'border-box',
+  };
+}
+
+function FileIndicator({
+  color,
+  label,
+}: {
+  color: string;
+  label: string;
+}): React.ReactElement {
+  return (
+    <span
+      aria-hidden="true"
+      title={label}
+      style={{
+        flexShrink: 0,
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        backgroundColor: color,
+      }}
+    />
+  );
+}
+
+function FileDetails({
+  file,
+  matchRanges,
+}: {
+  file: FileEntry;
+  matchRanges?: MatchRange[];
+}): React.ReactElement {
+  return (
+    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+      <span
+        style={{
+          display: 'block',
+          fontSize: '0.8125rem',
+          color: 'var(--text)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        <HighlightedName name={file.name} ranges={matchRanges} />
+      </span>
+      {file.dir && (
+        <span
+          style={{
+            display: 'block',
+            fontSize: '0.6875rem',
+            color: 'var(--text-faint)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {file.dir}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function FileSize({ size }: { size: number }): React.ReactElement {
+  return (
+    <span
+      style={{
+        flexShrink: 0,
+        fontSize: '0.6875rem',
+        color: 'var(--text-faint)',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {formatSize(size)}
+    </span>
+  );
+}
+
 export function FileListItem({
   file,
   isActive,
@@ -92,80 +193,11 @@ export function FileListItem({
       role="option"
       aria-selected={isActive}
       onClick={() => onClick(file)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '4px 12px',
-        cursor: 'pointer',
-        backgroundColor: isActive
-          ? 'var(--bg-tertiary)'
-          : isFocused
-          ? 'rgba(88, 166, 255, 0.08)'
-          : 'transparent',
-        borderLeft: isActive
-          ? '2px solid var(--accent)'
-          : '2px solid transparent',
-        userSelect: 'none',
-        minHeight: '32px',
-        boxSizing: 'border-box',
-      }}
+      style={getRowStyle(isActive, isFocused)}
     >
-      {/* File type indicator dot */}
-      <span
-        aria-hidden="true"
-        title={icon.label}
-        style={{
-          flexShrink: 0,
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: icon.color,
-        }}
-      />
-
-      {/* Filename + directory */}
-      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <span
-          style={{
-            display: 'block',
-            fontSize: '0.8125rem',
-            color: isActive ? 'var(--text)' : 'var(--text)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
-          <HighlightedName name={file.name} ranges={matchRanges} />
-        </span>
-        {file.dir && (
-          <span
-            style={{
-              display: 'block',
-              fontSize: '0.6875rem',
-              color: 'var(--text-faint)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {file.dir}
-          </span>
-        )}
-      </span>
-
-      {/* File size */}
-      <span
-        style={{
-          flexShrink: 0,
-          fontSize: '0.6875rem',
-          color: 'var(--text-faint)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {formatSize(file.size)}
-      </span>
+      <FileIndicator color={icon.color} label={icon.label} />
+      <FileDetails file={file} matchRanges={matchRanges} />
+      <FileSize size={file.size} />
     </div>
   );
 }

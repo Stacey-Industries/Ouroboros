@@ -15,19 +15,22 @@ export interface RightSidebarTabsProps {
   analyticsContent?: React.ReactNode;
 }
 
+const RIGHT_SIDEBAR_TABS: Array<{ id: RightSidebarTab; label: string }> = [
+  { id: 'monitor', label: 'Monitor' },
+  { id: 'git', label: 'Git' },
+  { id: 'analytics', label: 'Analytics' },
+];
+
 export const RightSidebarTabs = memo(function RightSidebarTabs({
   monitorContent,
   gitContent,
   analyticsContent,
 }: RightSidebarTabsProps): React.ReactElement {
   const [activeTab, setActiveTab] = useState<RightSidebarTab>('monitor');
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'monitor': return monitorContent;
-      case 'git': return gitContent;
-      case 'analytics': return analyticsContent ?? null;
-    }
+  const tabContent: Record<RightSidebarTab, React.ReactNode> = {
+    monitor: monitorContent,
+    git: gitContent,
+    analytics: analyticsContent ?? null,
   };
 
   return (
@@ -37,26 +40,19 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
         className="flex-shrink-0 flex border-b border-[var(--border)]"
         style={{ backgroundColor: 'var(--bg-secondary)' }}
       >
-        <TabButton
-          label="Monitor"
-          isActive={activeTab === 'monitor'}
-          onClick={() => setActiveTab('monitor')}
-        />
-        <TabButton
-          label="Git"
-          isActive={activeTab === 'git'}
-          onClick={() => setActiveTab('git')}
-        />
-        <TabButton
-          label="Analytics"
-          isActive={activeTab === 'analytics'}
-          onClick={() => setActiveTab('analytics')}
-        />
+        {RIGHT_SIDEBAR_TABS.map(({ id, label }) => (
+          <TabButton
+            key={id}
+            label={label}
+            isActive={activeTab === id}
+            onClick={() => setActiveTab(id)}
+          />
+        ))}
       </div>
 
       {/* Tab content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {renderContent()}
+        {tabContent[activeTab]}
       </div>
     </div>
   );

@@ -1,0 +1,81 @@
+import React from 'react';
+import type { FileTreeItemProps, TreeNode } from './FileTreeItem';
+
+export interface TreeItemDragHandlers {
+  isDragOver: boolean;
+  draggable: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+}
+
+export interface FileTreeItemRowProps {
+  node: TreeNode;
+  depth: number;
+  isActive: boolean;
+  isEditing?: boolean;
+  backgroundColor: string;
+  heatTitle?: string;
+  drag: TreeItemDragHandlers;
+  onClick: FileTreeItemProps['onClick'];
+  onDoubleClick?: FileTreeItemProps['onDoubleClick'];
+  onContextMenu?: FileTreeItemProps['onContextMenu'];
+  children: React.ReactNode;
+}
+
+function rowStyle(
+  depth: number,
+  backgroundColor: string,
+  isDragOver: boolean,
+  isActive: boolean
+): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    paddingLeft: `${depth * 16 + 4}px`,
+    paddingRight: '8px',
+    cursor: 'pointer',
+    backgroundColor,
+    outline: isDragOver ? '1px dashed var(--accent)' : undefined,
+    borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+    userSelect: 'none',
+    height: '28px',
+    boxSizing: 'border-box',
+    position: 'relative',
+  };
+}
+
+export function FileTreeItemRow({ node, depth, isActive, isEditing, backgroundColor, heatTitle, drag, onClick, onDoubleClick, onContextMenu, children }: FileTreeItemRowProps): React.ReactElement {
+  return (
+    <div
+      role="option"
+      aria-selected={isActive}
+      draggable={drag.draggable}
+      onDragStart={drag.onDragStart}
+      onDragEnter={drag.onDragEnter}
+      onDragOver={drag.onDragOver}
+      onDragLeave={drag.onDragLeave}
+      onDrop={drag.onDrop}
+      onClick={(e) => {
+        if (!isEditing) onClick(node, e);
+      }}
+      onDoubleClick={() => {
+        if (!isEditing && onDoubleClick) onDoubleClick(node);
+      }}
+      onContextMenu={(e) => {
+        if (onContextMenu && !isEditing) {
+          e.preventDefault();
+          e.stopPropagation();
+          onContextMenu(e, node);
+        }
+      }}
+      title={heatTitle}
+      style={rowStyle(depth, backgroundColor, drag.isDragOver, isActive)}
+    >
+      {children}
+    </div>
+  );
+}

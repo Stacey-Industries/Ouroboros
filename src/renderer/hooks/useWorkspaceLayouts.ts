@@ -4,7 +4,7 @@
  * Extracted from InnerApp to reduce complexity.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { WorkspaceLayout } from '../types/electron';
 
 function hasElectronAPI(): boolean {
@@ -35,95 +35,81 @@ function readCurrentPanelState(): {
   return { sizes, collapse };
 }
 
+async function loadLayoutsFromConfig(
+  setLayouts: React.Dispatch<React.SetStateAction<WorkspaceLayout[]>>,
+  setActive: React.Dispatch<React.SetStateAction<string>>,
+): Promise<void> {
+  try {
+    const layouts = await window.electronAPI.config.get('workspaceLayouts');
+    const activeName = await window.electronAPI.config.get('activeLayoutName');
+    if (Array.isArray(layouts) && layouts.length > 0) setLayouts(layouts);
+    if (activeName) setActive(activeName);
+  } catch { /* defaults */ }
+}
+
+function buildVisiblePanels(collapse: { leftSidebar: boolean; rightSidebar: boolean; terminal: boolean }) {
+  return {
+    leftSidebar: !collapse.leftSidebar,
+    rightSidebar: !collapse.rightSidebar,
+    terminal: !collapse.terminal,
+  };
+}
+
+function persistLayouts(layouts: WorkspaceLayout[]): void {
+  if (hasElectronAPI()) void window.electronAPI.config.set('workspaceLayouts', layouts);
+}
+
+function persistActiveLayout(name: string): void {
+  if (hasElectronAPI()) void window.electronAPI.config.set('activeLayoutName', name);
+}
+
+function buildLayoutFromCurrentState(name: string): WorkspaceLayout {
+  const { sizes, collapse } = readCurrentPanelState();
+  return { name, panelSizes: sizes, visiblePanels: buildVisiblePanels(collapse), builtIn: false };
+}
+
+function mergeCurrentStateIntoLayout(layout: WorkspaceLayout): WorkspaceLayout {
+  const { sizes, collapse } = readCurrentPanelState();
+  return { ...layout, panelSizes: sizes, visiblePanels: buildVisiblePanels(collapse) };
+}
+
 export function useWorkspaceLayouts(): UseWorkspaceLayoutsReturn {
   const [workspaceLayouts, setWorkspaceLayouts] = useState<WorkspaceLayout[]>([]);
   const [activeLayoutName, setActiveLayoutName] = useState('Default');
 
-  // Load layouts from config on mount
   useEffect(() => {
     if (!hasElectronAPI()) return;
-    void (async () => {
-      try {
-        const layouts = await window.electronAPI.config.get('workspaceLayouts');
-        const activeName = await window.electronAPI.config.get('activeLayoutName');
-        if (Array.isArray(layouts) && layouts.length > 0) setWorkspaceLayouts(layouts);
-        if (activeName) setActiveLayoutName(activeName);
-      } catch { /* defaults */ }
-    })();
+    void loadLayoutsFromConfig(setWorkspaceLayouts, setActiveLayoutName);
   }, []);
 
   const handleSelectLayout = useCallback((layout: WorkspaceLayout) => {
     setActiveLayoutName(layout.name);
     window.dispatchEvent(new CustomEvent('agent-ide:apply-layout', { detail: layout }));
-    if (hasElectronAPI()) {
-      void window.electronAPI.config.set('activeLayoutName', layout.name);
-    }
+    persistActiveLayout(layout.name);
   }, []);
 
   const handleSaveLayout = useCallback((name: string) => {
-    const { sizes, collapse } = readCurrentPanelState();
-    const newLayout: WorkspaceLayout = {
-      name,
-      panelSizes: sizes,
-      visiblePanels: {
-        leftSidebar: !collapse.leftSidebar,
-        rightSidebar: !collapse.rightSidebar,
-        terminal: !collapse.terminal,
-      },
-      builtIn: false,
-    };
-
-    setWorkspaceLayouts((prev) => {
-      const updated = [...prev, newLayout];
-      if (hasElectronAPI()) void window.electronAPI.config.set('workspaceLayouts', updated);
-      return updated;
-    });
+    const newLayout = buildLayoutFromCurrentState(name);
+    setWorkspaceLayouts((prev) => { const u = [...prev, newLayout]; persistLayouts(u); return u; });
     setActiveLayoutName(name);
-    if (hasElectronAPI()) void window.electronAPI.config.set('activeLayoutName', name);
+    persistActiveLayout(name);
   }, []);
 
   const handleUpdateLayout = useCallback((name: string) => {
-    const { sizes, collapse } = readCurrentPanelState();
     setWorkspaceLayouts((prev) => {
-      const updated = prev.map((l) =>
-        l.name === name
-          ? {
-              ...l,
-              panelSizes: sizes,
-              visiblePanels: {
-                leftSidebar: !collapse.leftSidebar,
-                rightSidebar: !collapse.rightSidebar,
-                terminal: !collapse.terminal,
-              },
-            }
-          : l,
-      );
-      if (hasElectronAPI()) void window.electronAPI.config.set('workspaceLayouts', updated);
+      const updated = prev.map((l) => (l.name === name ? mergeCurrentStateIntoLayout(l) : l));
+      persistLayouts(updated);
       return updated;
     });
   }, []);
 
   const handleDeleteLayout = useCallback((name: string) => {
-    setWorkspaceLayouts((prev) => {
-      const updated = prev.filter((l) => l.name !== name);
-      if (hasElectronAPI()) void window.electronAPI.config.set('workspaceLayouts', updated);
-      return updated;
-    });
+    setWorkspaceLayouts((prev) => { const u = prev.filter((l) => l.name !== name); persistLayouts(u); return u; });
     setActiveLayoutName((prev) => {
-      if (prev === name) {
-        if (hasElectronAPI()) void window.electronAPI.config.set('activeLayoutName', 'Default');
-        return 'Default';
-      }
+      if (prev === name) { persistActiveLayout('Default'); return 'Default'; }
       return prev;
     });
   }, []);
 
-  return {
-    workspaceLayouts,
-    activeLayoutName,
-    handleSelectLayout,
-    handleSaveLayout,
-    handleUpdateLayout,
-    handleDeleteLayout,
-  };
+  return { workspaceLayouts, activeLayoutName, handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout };
 }

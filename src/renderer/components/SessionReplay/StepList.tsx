@@ -31,10 +31,106 @@ function formatDurationShort(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+const LIST_STYLE: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  overflow: 'auto',
+  borderRight: '1px solid var(--border)',
+  backgroundColor: 'var(--bg-secondary)',
+  minWidth: '180px',
+  maxWidth: '240px',
+};
+
+const HEADER_STYLE: React.CSSProperties = {
+  padding: '6px 8px',
+  fontSize: '0.6875rem',
+  fontWeight: 600,
+  color: 'var(--text-faint)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  borderBottom: '1px solid var(--border)',
+  userSelect: 'none',
+};
+
+const ROW_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '4px 8px',
+  cursor: 'pointer',
+  borderBottom: '1px solid var(--border-muted)',
+  transition: 'background-color 0.1s',
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-mono)',
+};
+
+const STEP_INDEX_STYLE: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  fontSize: '0.5625rem',
+  width: '16px',
+  textAlign: 'right',
+  flexShrink: 0,
+};
+
+const STEP_LABEL_STYLE: React.CSSProperties = {
+  flex: 1,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  color: 'var(--text-muted)',
+  fontSize: '0.625rem',
+};
+
+const STEP_DURATION_STYLE: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  fontSize: '0.5625rem',
+  flexShrink: 0,
+};
+
+const START_BADGE_STYLE: React.CSSProperties = {
+  color: 'var(--accent)',
+  fontSize: '0.625rem',
+  flexShrink: 0,
+};
+
+const TOOL_BADGE_STYLE: React.CSSProperties = {
+  fontSize: '0.625rem',
+  fontWeight: 600,
+  flexShrink: 0,
+  width: '32px',
+};
+
+function getRowStyle(isActive: boolean): React.CSSProperties {
+  return {
+    ...ROW_STYLE,
+    backgroundColor: isActive ? 'rgba(88, 166, 255, 0.1)' : 'transparent',
+    borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+  };
+}
+
+function updateRowHover(
+  target: HTMLDivElement,
+  isActive: boolean,
+  entering: boolean,
+): void {
+  if (!isActive) {
+    target.style.backgroundColor = entering ? 'rgba(255,255,255,0.03)' : 'transparent';
+  }
+}
+
 interface StepListProps {
   steps: ReplayStep[];
   currentStep: number;
   onSelect: (index: number) => void;
+}
+
+interface StepRowProps {
+  step: ReplayStep;
+  index: number;
+  isActive: boolean;
+  onSelect: (index: number) => void;
+  rowRef?: React.Ref<HTMLDivElement>;
 }
 
 export const StepList = memo(function StepList({
@@ -42,122 +138,88 @@ export const StepList = memo(function StepList({
   currentStep,
   onSelect,
 }: StepListProps): React.ReactElement {
-  const listRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to active step
   useEffect(() => {
-    if (activeRef.current) {
+    if (activeRef.current !== null) {
       activeRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [currentStep]);
 
   return (
-    <div
-      ref={listRef}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'auto',
-        borderRight: '1px solid var(--border)',
-        backgroundColor: 'var(--bg-secondary)',
-        minWidth: '180px',
-        maxWidth: '240px',
-      }}
-    >
-      <div
-        style={{
-          padding: '6px 8px',
-          fontSize: '0.6875rem',
-          fontWeight: 600,
-          color: 'var(--text-faint)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          borderBottom: '1px solid var(--border)',
-          userSelect: 'none',
-        }}
-      >
-        Steps ({steps.length})
-      </div>
-
-      {steps.map((step, idx) => {
-        const isActive = idx === currentStep;
-        const tc = step.toolCall;
-
-        return (
-          <div
-            key={idx}
-            ref={isActive ? activeRef : undefined}
-            onClick={() => onSelect(idx)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 8px',
-              cursor: 'pointer',
-              backgroundColor: isActive ? 'rgba(88, 166, 255, 0.1)' : 'transparent',
-              borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-              borderBottom: '1px solid var(--border-muted)',
-              transition: 'background-color 0.1s',
-              fontSize: '0.6875rem',
-              fontFamily: 'var(--font-mono)',
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)';
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            {/* Step number */}
-            <span style={{ color: 'var(--text-faint)', fontSize: '0.5625rem', width: '16px', textAlign: 'right', flexShrink: 0 }}>
-              {idx}
-            </span>
-
-            {/* Tool badge or session icon */}
-            {step.type === 'session_start' ? (
-              <span style={{ color: 'var(--accent)', fontSize: '0.625rem', flexShrink: 0 }}>
-                START
-              </span>
-            ) : tc ? (
-              <span
-                style={{
-                  color: toolColor(tc.toolName),
-                  fontSize: '0.625rem',
-                  fontWeight: 600,
-                  flexShrink: 0,
-                  width: '32px',
-                }}
-              >
-                {tc.toolName.slice(0, 4)}
-              </span>
-            ) : null}
-
-            {/* Label */}
-            <span
-              style={{
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                color: 'var(--text-muted)',
-                fontSize: '0.625rem',
-              }}
-              title={step.label}
-            >
-              {step.label}
-            </span>
-
-            {/* Duration */}
-            {tc?.duration !== undefined && (
-              <span style={{ color: 'var(--text-faint)', fontSize: '0.5625rem', flexShrink: 0 }}>
-                {formatDurationShort(tc.duration)}
-              </span>
-            )}
-          </div>
-        );
-      })}
+    <div style={LIST_STYLE}>
+      <StepListHeader count={steps.length} />
+      {steps.map((step, idx) => (
+        <StepRow
+          key={idx}
+          step={step}
+          index={idx}
+          isActive={idx === currentStep}
+          onSelect={onSelect}
+          rowRef={idx === currentStep ? activeRef : undefined}
+        />
+      ))}
     </div>
   );
 });
+
+function StepListHeader({ count }: { count: number }): React.ReactElement {
+  return <div style={HEADER_STYLE}>Steps ({count})</div>;
+}
+
+function StepRow({
+  step,
+  index,
+  isActive,
+  onSelect,
+  rowRef,
+}: StepRowProps): React.ReactElement {
+  const duration = step.toolCall?.duration;
+
+  return (
+    <div
+      ref={rowRef}
+      onClick={() => onSelect(index)}
+      style={getRowStyle(isActive)}
+      onMouseEnter={(event) => updateRowHover(event.currentTarget, isActive, true)}
+      onMouseLeave={(event) => updateRowHover(event.currentTarget, isActive, false)}
+    >
+      <StepIndex index={index} />
+      <StepToolBadge step={step} />
+      <StepLabel label={step.label} />
+      {duration === undefined ? null : <StepDuration duration={duration} />}
+    </div>
+  );
+}
+
+function StepIndex({ index }: { index: number }): React.ReactElement {
+  return <span style={STEP_INDEX_STYLE}>{index}</span>;
+}
+
+function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | null {
+  if (step.type === 'session_start') {
+    return <span style={START_BADGE_STYLE}>START</span>;
+  }
+
+  if (step.toolCall === undefined) {
+    return null;
+  }
+
+  return (
+    <span style={{ ...TOOL_BADGE_STYLE, color: toolColor(step.toolCall.toolName) }}>
+      {step.toolCall.toolName.slice(0, 4)}
+    </span>
+  );
+}
+
+function StepLabel({ label }: { label: string }): React.ReactElement {
+  return (
+    <span style={STEP_LABEL_STYLE} title={label}>
+      {label}
+    </span>
+  );
+}
+
+function StepDuration({ duration }: { duration: number }): React.ReactElement {
+  return <span style={STEP_DURATION_STYLE}>{formatDurationShort(duration)}</span>;
+}

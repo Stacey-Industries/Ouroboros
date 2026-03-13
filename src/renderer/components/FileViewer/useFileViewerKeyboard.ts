@@ -20,14 +20,14 @@ interface KeyboardConfig {
 
 function getCurrentLine(scrollEl: HTMLElement): number {
   const topLine = Math.floor(
-    (scrollEl.scrollTop - PADDING_TOP + LINE_HEIGHT / 2) / LINE_HEIGHT
+    (scrollEl.scrollTop - PADDING_TOP + LINE_HEIGHT / 2) / LINE_HEIGHT,
   );
   return Math.max(0, topLine);
 }
 
 function findContainingFold(
   lines: Iterable<[number, FoldRange]>,
-  currentLine: number
+  currentLine: number,
 ): number | null {
   let best: number | null = null;
   for (const [startLine, range] of lines) {
@@ -39,7 +39,7 @@ function findContainingFold(
 
 function findNearestAfter(
   lines: Iterable<number>,
-  currentLine: number
+  currentLine: number,
 ): number | null {
   let best: number | null = null;
   for (const startLine of lines) {
@@ -51,7 +51,7 @@ function findNearestAfter(
 
 function findNearestBefore(
   lines: Iterable<number>,
-  currentLine: number
+  currentLine: number,
 ): number | null {
   let best: number | null = null;
   for (const startLine of lines) {
@@ -74,10 +74,9 @@ function handleCollapseFold(cfg: KeyboardConfig): void {
   }
   if (bestFold === null) return;
 
-  const foldLine = bestFold;
   cfg.setCollapsedFolds((prev) => {
     const next = new Set(prev);
-    next.add(foldLine);
+    next.add(bestFold);
     return next;
   });
 }
@@ -87,9 +86,8 @@ function handleExpandFold(cfg: KeyboardConfig): void {
   if (!scrollEl) return;
 
   const currentLine = getCurrentLine(scrollEl);
-
-  // Build entries only from collapsed folds
   const collapsedEntries: Array<[number, FoldRange]> = [];
+
   for (const startLine of cfg.collapsedFolds) {
     const range = cfg.foldableLines.get(startLine);
     if (range) collapsedEntries.push([startLine, range]);
@@ -105,12 +103,93 @@ function handleExpandFold(cfg: KeyboardConfig): void {
   }
   if (bestFold === null) return;
 
-  const foldLine = bestFold;
   cfg.setCollapsedFolds((prev) => {
     const next = new Set(prev);
-    next.delete(foldLine);
+    next.delete(bestFold);
     return next;
   });
+}
+
+function isViewerShortcutTarget(
+  cfg: KeyboardConfig,
+  target: EventTarget | null,
+): target is HTMLElement {
+  const container = cfg.containerRef.current;
+  if (!container || !(target instanceof HTMLElement)) return false;
+  return container.contains(target) || target === document.body;
+}
+
+function stopHandledShortcut(event: KeyboardEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function isModifierPressed(event: KeyboardEvent): boolean {
+  return event.ctrlKey || event.metaKey;
+}
+
+function handleFoldShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!isModifierPressed(event) || !event.shiftKey) return false;
+
+  if (event.key === '[') {
+    event.preventDefault();
+    handleCollapseFold(cfg);
+    return true;
+  }
+
+  if (event.key === ']') {
+    event.preventDefault();
+    handleExpandFold(cfg);
+    return true;
+  }
+
+  return false;
+}
+
+function handleSearchShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!isModifierPressed(event) || event.key !== 'f') return false;
+  stopHandledShortcut(event);
+  cfg.setShowGoToLine(false);
+  cfg.setShowSearch(true);
+  return true;
+}
+
+function handleGoToLineShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!isModifierPressed(event) || event.key !== 'g') return false;
+  stopHandledShortcut(event);
+  cfg.setShowSearch(false);
+  cfg.setShowGoToLine(true);
+  return true;
+}
+
+function handleDiffShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!isModifierPressed(event) || event.key !== 'd') return false;
+  stopHandledShortcut(event);
+
+  if (cfg.hasDiff) {
+    cfg.setViewMode((prev) => (prev === 'code' ? 'diff' : 'code'));
+  }
+
+  return true;
+}
+
+function handleWordWrapShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!event.altKey || event.key !== 'z') return false;
+  stopHandledShortcut(event);
+  cfg.setWordWrap((prev) => !prev);
+  return true;
+}
+
+function handleFileViewerKeyDown(
+  cfg: KeyboardConfig,
+  event: KeyboardEvent,
+): void {
+  if (!isViewerShortcutTarget(cfg, event.target)) return;
+  if (handleFoldShortcut(cfg, event)) return;
+  if (handleSearchShortcut(cfg, event)) return;
+  if (handleGoToLineShortcut(cfg, event)) return;
+  if (handleDiffShortcut(cfg, event)) return;
+  handleWordWrapShortcut(cfg, event);
 }
 
 /**
@@ -124,53 +203,8 @@ function handleExpandFold(cfg: KeyboardConfig): void {
  */
 export function useFileViewerKeyboard(cfg: KeyboardConfig): void {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const container = cfg.containerRef.current;
-      if (!container) return;
-
-      const target = e.target as HTMLElement;
-      const inside = container.contains(target);
-      if (!inside && target !== document.body) return;
-
-      const mod = e.ctrlKey || e.metaKey;
-
-      if (mod && e.shiftKey && e.key === '[') {
-        e.preventDefault();
-        handleCollapseFold(cfg);
-        return;
-      }
-      if (mod && e.shiftKey && e.key === ']') {
-        e.preventDefault();
-        handleExpandFold(cfg);
-        return;
-      }
-      if (mod && e.key === 'f') {
-        e.preventDefault();
-        e.stopPropagation();
-        cfg.setShowGoToLine(false);
-        cfg.setShowSearch(true);
-        return;
-      }
-      if (mod && e.key === 'g') {
-        e.preventDefault();
-        e.stopPropagation();
-        cfg.setShowSearch(false);
-        cfg.setShowGoToLine(true);
-        return;
-      }
-      if (mod && e.key === 'd') {
-        e.preventDefault();
-        e.stopPropagation();
-        if (cfg.hasDiff) {
-          cfg.setViewMode((prev) => (prev === 'code' ? 'diff' : 'code'));
-        }
-        return;
-      }
-      if (e.altKey && e.key === 'z') {
-        e.preventDefault();
-        e.stopPropagation();
-        cfg.setWordWrap((prev) => !prev);
-      }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleFileViewerKeyDown(cfg, event);
     };
 
     document.addEventListener('keydown', handleKeyDown);

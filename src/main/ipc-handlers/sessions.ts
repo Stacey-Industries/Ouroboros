@@ -1,235 +1,292 @@
 /**
- * ipc-handlers/sessions.ts — Session persistence IPC handlers
+ * ipc-handlers/sessions.ts - Session persistence IPC handlers
  */
 
-import { ipcMain, dialog, BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { app } from 'electron'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
+type SessionRecord = Record<string, unknown>
+type SessionToolCall = Record<string, unknown>
+type ExportFormat = 'json' | 'markdown'
+type IpcHandler = Parameters<typeof ipcMain.handle>[1]
+type HandlerSuccess<T extends object = Record<string, never>> = { success: true } & T
+type HandlerFailure = { success: false; error: string }
 
 const sessionsDir = path.join(app.getPath('userData'), 'sessions')
 const MAX_SESSION_FILES = 100
 
-/** Ensure the sessions directory exists. */
 async function ensureSessionsDir(): Promise<void> {
   await fs.mkdir(sessionsDir, { recursive: true })
 }
 
-/** Prune oldest session files when count exceeds MAX_SESSION_FILES. */
 async function pruneOldSessions(): Promise<void> {
   try {
     const entries = await fs.readdir(sessionsDir)
-    const jsonFiles = entries.filter((f) => f.endsWith('.json'))
+    const jsonFiles = entries.filter((entry) => entry.endsWith('.json'))
     if (jsonFiles.length <= MAX_SESSION_FILES) return
 
-    // Sort by name (which starts with sessionId-timestamp, so lexicographic == chronological for same-length timestamps)
-    // More reliably, sort by mtime
     const stats = await Promise.all(
-      jsonFiles.map(async (f) => ({
-        name: f,
-        mtime: (await fs.stat(path.join(sessionsDir, f))).mtime.getTime(),
-      }))
+      jsonFiles.map(async (entry) => ({
+        name: entry,
+        mtime: (await fs.stat(path.join(sessionsDir, entry))).mtime.getTime(),
+      })),
     )
-    stats.sort((a, b) => a.mtime - b.mtime)
+
+    stats.sort((left, right) => left.mtime - right.mtime)
     const toDelete = stats.slice(0, stats.length - MAX_SESSION_FILES)
-    await Promise.all(toDelete.map((f) => fs.unlink(path.join(sessionsDir, f.name)).catch(() => {})))
+    await Promise.all(toDelete.map((entry) => fs.unlink(path.join(sessionsDir, entry.name)).catch(() => {})))
   } catch {
-    // Non-fatal
+    // Non-fatal.
   }
 }
 
-// ─── Session markdown formatter ───────────────────────────────────────────────
+function getStringValue(record: SessionRecord, key: string): string | undefined {
+  const value = record[key]
+  return typeof value === 'string' ? value : undefined
+}
 
-function buildMarkdown(s: Record<string, unknown>): string {
-  const lines: string[] = []
+function getNumberValue(record: SessionRecord, key: string): number | undefined {
+  const value = record[key]
+  return typeof value === 'number' ? value : undefined
+}
 
-  const id = typeof s['id'] === 'string' ? s['id'] : 'unknown'
-  const label = typeof s['taskLabel'] === 'string' ? s['taskLabel'] : 'Unknown task'
-  const status = typeof s['status'] === 'string' ? s['status'] : 'unknown'
-  const model = typeof s['model'] === 'string' ? s['model'] : undefined
-  const startedAt = typeof s['startedAt'] === 'number' ? new Date(s['startedAt']).toISOString() : 'unknown'
-  const completedAt = typeof s['completedAt'] === 'number' ? new Date(s['completedAt']).toISOString() : undefined
-  const inputTokens = typeof s['inputTokens'] === 'number' ? s['inputTokens'] : 0
-  const outputTokens = typeof s['outputTokens'] === 'number' ? s['outputTokens'] : 0
-  const error = typeof s['error'] === 'string' ? s['error'] : undefined
+function getIsoDate(record: SessionRecord, key: string): string | undefined {
+  const value = getNumberValue(record, key)
+  return value === undefined ? undefined : new Date(value).toISOString()
+}
 
-  lines.push(`# Session: ${label}`)
-  lines.push('')
-  lines.push('## Session Info')
-  lines.push('')
-  lines.push(`| Field | Value |`)
-  lines.push(`|-------|-------|`)
-  lines.push(`| ID | \`${id}\` |`)
-  lines.push(`| Status | ${status} |`)
+function getToolCalls(record: SessionRecord): SessionToolCall[] {
+  return Array.isArray(record['toolCalls']) ? (record['toolCalls'] as SessionToolCall[]) : []
+}
+
+function appendCodeBlock(lines: string[], value: string): void {
+  lines.push('```')
+  lines.push(value)
+  lines.push('```')
+}
+
+function buildSessionInfoLines(session: SessionRecord): string[] {
+  const lines = [
+    `# Session: ${getStringValue(session, 'taskLabel') ?? 'Unknown task'}`,
+    '',
+    '## Session Info',
+    '',
+    '| Field | Value |',
+    '|-------|-------|',
+    `| ID | \`${getStringValue(session, 'id') ?? 'unknown'}\` |`,
+    `| Status | ${getStringValue(session, 'status') ?? 'unknown'} |`,
+  ]
+
+  const model = getStringValue(session, 'model')
+  const completedAt = getIsoDate(session, 'completedAt')
   if (model) lines.push(`| Model | ${model} |`)
-  lines.push(`| Started | ${startedAt} |`)
+  lines.push(`| Started | ${getIsoDate(session, 'startedAt') ?? 'unknown'} |`)
   if (completedAt) lines.push(`| Completed | ${completedAt} |`)
-  lines.push(`| Input Tokens | ${inputTokens.toLocaleString()} |`)
-  lines.push(`| Output Tokens | ${outputTokens.toLocaleString()} |`)
-  if (error) {
-    lines.push('')
-    lines.push('## Error')
-    lines.push('')
-    lines.push('```')
-    lines.push(error)
-    lines.push('```')
-  }
+  lines.push(`| Input Tokens | ${(getNumberValue(session, 'inputTokens') ?? 0).toLocaleString()} |`)
+  lines.push(`| Output Tokens | ${(getNumberValue(session, 'outputTokens') ?? 0).toLocaleString()} |`)
 
-  const toolCalls = Array.isArray(s['toolCalls']) ? s['toolCalls'] as Record<string, unknown>[] : []
+  return lines
+}
 
-  if (toolCalls.length > 0) {
-    lines.push('')
-    lines.push('## Tool Calls')
-    lines.push('')
-    lines.push('| # | Tool | Input | Status | Duration |')
-    lines.push('|---|------|-------|--------|----------|')
+function appendErrorSection(lines: string[], error: string | undefined): void {
+  if (!error) return
 
-    toolCalls.forEach((tc, i) => {
-      const toolName = typeof tc['toolName'] === 'string' ? tc['toolName'] : ''
-      const input = typeof tc['input'] === 'string' ? tc['input'].replace(/\|/g, '\\|') : ''
-      const tcStatus = typeof tc['status'] === 'string' ? tc['status'] : ''
-      const duration = typeof tc['duration'] === 'number' ? `${tc['duration']}ms` : '-'
-      lines.push(`| ${i + 1} | ${toolName} | ${input} | ${tcStatus} | ${duration} |`)
-    })
+  lines.push('', '## Error', '')
+  appendCodeBlock(lines, error)
+}
 
-    lines.push('')
-    lines.push('## Full Event Log')
-    lines.push('')
+function appendToolCallTable(lines: string[], toolCalls: SessionToolCall[]): void {
+  lines.push('', '## Tool Calls', '')
+  lines.push('| # | Tool | Input | Status | Duration |')
+  lines.push('|---|------|-------|--------|----------|')
 
-    toolCalls.forEach((tc, i) => {
-      const toolName = typeof tc['toolName'] === 'string' ? tc['toolName'] : 'Unknown'
-      const tcStatus = typeof tc['status'] === 'string' ? tc['status'] : ''
-      const timestamp = typeof tc['timestamp'] === 'number' ? new Date(tc['timestamp']).toISOString() : ''
+  toolCalls.forEach((toolCall, index) => {
+    const toolName = getStringValue(toolCall, 'toolName') ?? ''
+    const input = (getStringValue(toolCall, 'input') ?? '').replace(/\|/g, '\\|')
+    const status = getStringValue(toolCall, 'status') ?? ''
+    const duration = getNumberValue(toolCall, 'duration')
 
-      lines.push(`### ${i + 1}. ${toolName} (${tcStatus})`)
-      lines.push('')
-      if (timestamp) lines.push(`**Time:** ${timestamp}`)
-      lines.push('')
+    lines.push(`| ${index + 1} | ${toolName} | ${input} | ${status} | ${duration ?? '-'}${duration ? 'ms' : ''} |`)
+  })
+}
 
-      const input = typeof tc['input'] === 'string' ? tc['input'] : ''
-      if (input) {
-        lines.push('**Input:**')
-        lines.push('')
-        lines.push('```')
-        lines.push(input)
-        lines.push('```')
-        lines.push('')
-      }
+function appendInputSection(lines: string[], input: string | undefined): void {
+  if (!input) return
 
-      const output = typeof tc['output'] === 'string' ? tc['output'] : undefined
-      if (output) {
-        const truncated = output.length > 2000 ? output.slice(0, 2000) + '\n...(truncated)' : output
-        lines.push('**Output:**')
-        lines.push('')
-        lines.push('```')
-        lines.push(truncated)
-        lines.push('```')
-        lines.push('')
-      }
-    })
-  }
+  lines.push('**Input:**', '')
+  appendCodeBlock(lines, input)
+  lines.push('')
+}
+
+function appendOutputSection(lines: string[], output: string | undefined): void {
+  if (!output) return
+
+  const truncated = output.length > 2000 ? `${output.slice(0, 2000)}\n...(truncated)` : output
+  lines.push('**Output:**', '')
+  appendCodeBlock(lines, truncated)
+  lines.push('')
+}
+
+function appendToolCallDetails(lines: string[], toolCall: SessionToolCall, index: number): void {
+  const toolName = getStringValue(toolCall, 'toolName') ?? 'Unknown'
+  const status = getStringValue(toolCall, 'status') ?? ''
+  const timestamp = getIsoDate(toolCall, 'timestamp')
+
+  lines.push(`### ${index + 1}. ${toolName} (${status})`, '')
+  if (timestamp) lines.push(`**Time:** ${timestamp}`)
+  lines.push('')
+  appendInputSection(lines, getStringValue(toolCall, 'input'))
+  appendOutputSection(lines, getStringValue(toolCall, 'output'))
+}
+
+function appendToolCallSections(lines: string[], toolCalls: SessionToolCall[]): void {
+  if (toolCalls.length === 0) return
+
+  appendToolCallTable(lines, toolCalls)
+  lines.push('', '## Full Event Log', '')
+  toolCalls.forEach((toolCall, index) => appendToolCallDetails(lines, toolCall, index))
+}
+
+function buildMarkdown(session: SessionRecord): string {
+  const lines = buildSessionInfoLines(session)
+
+  appendErrorSection(lines, getStringValue(session, 'error'))
+  appendToolCallSections(lines, getToolCalls(session))
 
   return lines.join('\n')
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function runHandler<T extends object>(action: () => Promise<T>): Promise<HandlerSuccess<T> | HandlerFailure> {
+  try {
+    return { success: true, ...(await action()) }
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) }
+  }
+}
+
+function registerHandler(channels: string[], channel: string, handler: IpcHandler): void {
+  ipcMain.handle(channel, handler)
+  channels.push(channel)
+}
+
+function toSessionRecord(session: unknown): SessionRecord {
+  return session as SessionRecord
+}
+
+function buildSessionFilePath(session: unknown): string {
+  const record = toSessionRecord(session)
+  const sessionId = getStringValue(record, 'id') ?? 'unknown'
+  const timestamp = getNumberValue(record, 'startedAt') ?? Date.now()
+  return path.join(sessionsDir, `${sessionId}-${timestamp}.json`)
+}
+
+async function readSessionFile(fileName: string): Promise<unknown | null> {
+  try {
+    const raw = await fs.readFile(path.join(sessionsDir, fileName), 'utf-8')
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+async function loadStoredSessions(): Promise<unknown[]> {
+  await ensureSessionsDir()
+
+  const entries = await fs.readdir(sessionsDir)
+  const jsonFiles = entries.filter((entry) => entry.endsWith('.json'))
+  const loadedSessions = await Promise.all(jsonFiles.map((fileName) => readSessionFile(fileName)))
+  return loadedSessions.reduce<unknown[]>((sessions, session) => {
+    if (session !== null) sessions.push(session)
+    return sessions
+  }, [])
+}
+
+async function deleteStoredSession(sessionId: string): Promise<void> {
+  await ensureSessionsDir()
+
+  const entries = await fs.readdir(sessionsDir)
+  const matching = entries.filter((entry) => entry.startsWith(`${sessionId}-`) && entry.endsWith('.json'))
+  await Promise.all(matching.map((entry) => fs.unlink(path.join(sessionsDir, entry))))
+}
+
+function getDefaultExportName(session: SessionRecord, format: ExportFormat): string {
+  const sessionId = (getStringValue(session, 'id') ?? 'session').slice(0, 8)
+  const extension = format === 'json' ? 'json' : 'md'
+  return `session-${sessionId}.${extension}`
+}
+
+function getExportFilters(format: ExportFormat): { name: string; extensions: string[] }[] {
+  return format === 'json'
+    ? [{ name: 'JSON', extensions: ['json'] }]
+    : [{ name: 'Markdown', extensions: ['md'] }]
+}
+
+function buildExportContent(session: unknown, format: ExportFormat): string {
+  return format === 'json' ? JSON.stringify(session, null, 2) : buildMarkdown(toSessionRecord(session))
+}
+
+async function exportSession(
+  senderWindow: SenderWindow,
+  event: IpcMainInvokeEvent,
+  session: unknown,
+  format: ExportFormat,
+): Promise<{ cancelled: true } | { filePath: string }> {
+  const result = await dialog.showSaveDialog(senderWindow(event), {
+    defaultPath: getDefaultExportName(toSessionRecord(session), format),
+    filters: getExportFilters(format),
+    title: 'Export Session',
+  })
+
+  if (result.canceled || !result.filePath) return { cancelled: true }
+
+  await fs.writeFile(result.filePath, buildExportContent(session, format), 'utf-8')
+  return { filePath: result.filePath }
+}
+
+function registerSaveHandler(channels: string[]): void {
+  registerHandler(channels, 'sessions:save', async (_event, session: unknown) => runHandler(async () => {
+    await ensureSessionsDir()
+
+    const filePath = buildSessionFilePath(session)
+    await fs.writeFile(filePath, JSON.stringify(session, null, 2), 'utf-8')
+    await pruneOldSessions()
+
+    return { filePath }
+  }))
+}
+
+function registerLoadHandler(channels: string[]): void {
+  registerHandler(channels, 'sessions:load', async () => runHandler(async () => ({
+    sessions: await loadStoredSessions(),
+  })))
+}
+
+function registerDeleteHandler(channels: string[]): void {
+  registerHandler(channels, 'sessions:delete', async (_event, sessionId: string) => runHandler(async () => {
+    await deleteStoredSession(sessionId)
+    return {}
+  }))
+}
+
+function registerExportHandler(channels: string[], senderWindow: SenderWindow): void {
+  registerHandler(channels, 'sessions:export', async (event, session: unknown, format: ExportFormat) => runHandler(
+    () => exportSession(senderWindow, event, session, format),
+  ))
 }
 
 export function registerSessionHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = []
 
-  ipcMain.handle('sessions:save', async (_event, session: unknown) => {
-    try {
-      await ensureSessionsDir()
-
-      const s = session as Record<string, unknown>
-      const sessionId = typeof s['id'] === 'string' ? s['id'] : 'unknown'
-      const timestamp = typeof s['startedAt'] === 'number' ? s['startedAt'] : Date.now()
-      const fileName = `${sessionId}-${timestamp}.json`
-      const filePath = path.join(sessionsDir, fileName)
-
-      await fs.writeFile(filePath, JSON.stringify(session, null, 2), 'utf-8')
-      await pruneOldSessions()
-
-      return { success: true, filePath }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-  channels.push('sessions:save')
-
-  ipcMain.handle('sessions:load', async () => {
-    try {
-      await ensureSessionsDir()
-
-      const entries = await fs.readdir(sessionsDir)
-      const jsonFiles = entries.filter((f) => f.endsWith('.json'))
-
-      const sessions: unknown[] = []
-      for (const file of jsonFiles) {
-        try {
-          const raw = await fs.readFile(path.join(sessionsDir, file), 'utf-8')
-          sessions.push(JSON.parse(raw))
-        } catch {
-          // Skip malformed files
-        }
-      }
-
-      return { success: true, sessions }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-  channels.push('sessions:load')
-
-  ipcMain.handle('sessions:delete', async (_event, sessionId: string) => {
-    try {
-      await ensureSessionsDir()
-
-      const entries = await fs.readdir(sessionsDir)
-      const matching = entries.filter((f) => f.startsWith(`${sessionId}-`) && f.endsWith('.json'))
-
-      await Promise.all(matching.map((f) => fs.unlink(path.join(sessionsDir, f))))
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-  channels.push('sessions:delete')
-
-  ipcMain.handle('sessions:export', async (event, session: unknown, format: 'json' | 'markdown') => {
-    try {
-      const s = session as Record<string, unknown>
-      const sessionId = typeof s['id'] === 'string' ? s['id'] : 'session'
-      const defaultName = format === 'json'
-        ? `session-${sessionId.slice(0, 8)}.json`
-        : `session-${sessionId.slice(0, 8)}.md`
-
-      const result = await dialog.showSaveDialog(senderWindow(event), {
-        defaultPath: defaultName,
-        filters: format === 'json'
-          ? [{ name: 'JSON', extensions: ['json'] }]
-          : [{ name: 'Markdown', extensions: ['md'] }],
-        title: 'Export Session',
-      })
-
-      if (result.canceled || !result.filePath) {
-        return { success: true, cancelled: true }
-      }
-
-      let content: string
-      if (format === 'json') {
-        content = JSON.stringify(session, null, 2)
-      } else {
-        content = buildMarkdown(s)
-      }
-
-      await fs.writeFile(result.filePath, content, 'utf-8')
-      return { success: true, filePath: result.filePath }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-  channels.push('sessions:export')
+  registerSaveHandler(channels)
+  registerLoadHandler(channels)
+  registerDeleteHandler(channels)
+  registerExportHandler(channels, senderWindow)
 
   return channels
 }

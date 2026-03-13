@@ -10,6 +10,52 @@ export interface UseGitStatusReturn {
 
 const POLL_INTERVAL_MS = 3000;
 
+function setupFileChangeWatcher(
+  fetchStatus: (root: string) => void,
+  isRepoRef: React.MutableRefObject<boolean>,
+  projectRoot: string,
+  activeRef: { current: boolean },
+): (() => void) | null {
+  try {
+    return window.electronAPI.files.onFileChange(() => {
+      if (activeRef.current && isRepoRef.current && projectRoot) {
+        fetchStatus(projectRoot);
+      }
+    });
+  } catch {
+    return null;
+  }
+}
+
+interface RepoPollingRefs {
+  isRepoRef: React.MutableRefObject<boolean>;
+  intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
+  activeRef: { current: boolean };
+}
+
+function startRepoPolling(
+  projectRoot: string,
+  fetchStatus: (root: string) => void,
+  setIsRepo: (v: boolean) => void,
+  refs: RepoPollingRefs,
+): void {
+  const { isRepoRef, intervalRef, activeRef } = refs;
+  window.electronAPI.git.isRepo(projectRoot).then((result) => {
+    if (!activeRef.current) return;
+
+    const repo = !!(result.success && result.isRepo);
+    setIsRepo(repo);
+    isRepoRef.current = repo;
+
+    if (repo) {
+      fetchStatus(projectRoot);
+      intervalRef.current = setInterval(() => {
+        if (activeRef.current) fetchStatus(projectRoot);
+      }, POLL_INTERVAL_MS);
+    }
+  });
+}
+
 /**
  * useGitStatus — polls `git status --porcelain` for a project root.
  *
@@ -25,7 +71,6 @@ export function useGitStatus(projectRoot: string | null): UseGitStatusReturn {
 
   const fetchStatus = useCallback(async (root: string): Promise<void> => {
     if (!isRepoRef.current) return;
-
     try {
       const result = await window.electronAPI.git.status(root);
       if (result.success && result.files) {
@@ -35,9 +80,7 @@ export function useGitStatus(projectRoot: string | null): UseGitStatusReturn {
         }
         setGitStatus(map);
       }
-    } catch {
-      // git not available or error — silently ignore
-    }
+    } catch { /* silently ignore */ }
   }, []);
 
   useEffect(() => {
@@ -48,41 +91,12 @@ export function useGitStatus(projectRoot: string | null): UseGitStatusReturn {
       return;
     }
 
-    let active = true;
-
-    // Check if it's a repo, then start polling
-    window.electronAPI.git.isRepo(projectRoot).then((result) => {
-      if (!active) return;
-
-      const repo = !!(result.success && result.isRepo);
-      setIsRepo(repo);
-      isRepoRef.current = repo;
-
-      if (repo) {
-        // Initial fetch
-        fetchStatus(projectRoot);
-
-        // Start polling
-        intervalRef.current = setInterval(() => {
-          if (active) fetchStatus(projectRoot);
-        }, POLL_INTERVAL_MS);
-      }
-    });
-
-    // Also refresh on file change events
-    let cleanupWatcher: (() => void) | null = null;
-    try {
-      cleanupWatcher = window.electronAPI.files.onFileChange(() => {
-        if (active && isRepoRef.current && projectRoot) {
-          fetchStatus(projectRoot);
-        }
-      });
-    } catch {
-      // file watcher not available
-    }
+    const activeRef = { current: true };
+    startRepoPolling(projectRoot, fetchStatus, setIsRepo, { isRepoRef, intervalRef, activeRef });
+    const cleanupWatcher = setupFileChangeWatcher(fetchStatus, isRepoRef, projectRoot, activeRef);
 
     return () => {
-      active = false;
+      activeRef.current = false;
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;

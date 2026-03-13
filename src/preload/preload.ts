@@ -1,5 +1,5 @@
 /**
- * preload.ts — contextBridge IPC surface.
+ * preload.ts â€” contextBridge IPC surface.
  *
  * This file runs in an isolated context with access to both the Node.js
  * and browser environments. It exposes a typed API to the renderer via
@@ -7,9 +7,10 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig, SessionsAPI, UpdaterEvent, PerfMetrics, SymbolAPI, WindowAPI, ExtensionsAPI, LspAPI, LspDiagnostic, LspServerStatus, ApprovalRequest, ApprovalResolved, McpAPI, IdeToolQuery, IdeToolsAPI, CodeModeAPI, CodeModeStatusResult } from '../renderer/types/electron'
+import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig } from '../renderer/types/electron'
+import { supplementalApis } from './preloadSupplementalApis'
 
-// ─── PTY ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ PTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const ptyAPI: ElectronAPI['pty'] = {
   spawn: (id, options) => ipcRenderer.invoke('pty:spawn', id, options),
@@ -26,7 +27,6 @@ const ptyAPI: ElectronAPI['pty'] = {
     const channel = `pty:data:${id}`
     const handler = (_event: Electron.IpcRendererEvent, data: string) => callback(data)
     ipcRenderer.on(channel, handler)
-    // Return cleanup function
     return () => ipcRenderer.removeListener(channel, handler)
   },
 
@@ -49,7 +49,7 @@ const ptyAPI: ElectronAPI['pty'] = {
   }
 }
 
-// ─── Config ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const configAPI: ElectronAPI['config'] = {
   getAll: () => ipcRenderer.invoke('config:getAll'),
@@ -66,7 +66,7 @@ const configAPI: ElectronAPI['config'] = {
   },
 }
 
-// ─── Files ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const filesAPI: ElectronAPI['files'] = {
   writeFile: (filePath, data) => ipcRenderer.invoke('files:writeFile', filePath, data),
@@ -90,7 +90,7 @@ const filesAPI: ElectronAPI['files'] = {
   }
 }
 
-// ─── Hooks ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const hooksAPI: ElectronAPI['hooks'] = {
   onAgentEvent: (callback) => {
@@ -111,7 +111,7 @@ const hooksAPI: ElectronAPI['hooks'] = {
   }
 }
 
-// ─── App ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const appAPI: ElectronAPI['app'] = {
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
@@ -143,14 +143,14 @@ const appAPI: ElectronAPI['app'] = {
   }
 }
 
-// ─── Shell ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const shellAPI: ElectronAPI['shell'] = {
   showItemInFolder: (fullPath) => ipcRenderer.invoke('shell:showItemInFolder', fullPath),
   openExtensionsFolder: () => ipcRenderer.invoke('shell:openExtensionsFolder'),
 }
 
-// ─── Theme ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const themeAPI: ElectronAPI['theme'] = {
   get: () => ipcRenderer.invoke('theme:get'),
@@ -163,7 +163,7 @@ const themeAPI: ElectronAPI['theme'] = {
   }
 }
 
-// ─── Git ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Git â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const gitAPI: ElectronAPI['git'] = {
   isRepo: (root) => ipcRenderer.invoke('git:isRepo', root),
@@ -195,234 +195,18 @@ const gitAPI: ElectronAPI['git'] = {
   dirtyCount: (root) => ipcRenderer.invoke('git:dirtyCount', root),
 }
 
-// ─── Sessions ────────────────────────────────────────────────────────────────
-
-const sessionsAPI: SessionsAPI = {
-  save: (session) => ipcRenderer.invoke('sessions:save', session),
-  load: () => ipcRenderer.invoke('sessions:load'),
-  delete: (sessionId) => ipcRenderer.invoke('sessions:delete', sessionId),
-  export: (session, format) => ipcRenderer.invoke('sessions:export', session, format),
-}
-
-// ─── Cost History ─────────────────────────────────────────────────────────────
-
-const costAPI: ElectronAPI['cost'] = {
-  addEntry: (entry) => ipcRenderer.invoke('cost:addEntry', entry),
-  getHistory: () => ipcRenderer.invoke('cost:getHistory'),
-  clearHistory: () => ipcRenderer.invoke('cost:clearHistory'),
-}
-
-// ─── Usage Reader ────────────────────────────────────────────────────────────
-
-const usageAPI: ElectronAPI['usage'] = {
-  getSummary: (options) => ipcRenderer.invoke('usage:getSummary', options),
-  getSessionDetail: (sessionId) => ipcRenderer.invoke('usage:getSessionDetail', sessionId),
-  getRecentSessions: (count) => ipcRenderer.invoke('usage:getRecentSessions', count),
-  getWindowedUsage: () => ipcRenderer.invoke('usage:getWindowedUsage'),
-}
-
-// ─── Shell History ────────────────────────────────────────────────────────────
-
-const shellHistoryAPI: ElectronAPI['shellHistory'] = {
-  read: () => ipcRenderer.invoke('shellHistory:read'),
-}
-
-// ─── Updater ─────────────────────────────────────────────────────────────────
-
-const updaterAPI: ElectronAPI['updater'] = {
-  check: () => ipcRenderer.invoke('updater:check'),
-  download: () => ipcRenderer.invoke('updater:download'),
-  install: () => ipcRenderer.invoke('updater:install'),
-
-  onUpdateEvent: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, evt: UpdaterEvent) => callback(evt)
-    ipcRenderer.on('updater:event', handler)
-    return () => ipcRenderer.removeListener('updater:event', handler)
-  },
-}
-
-// ─── Crash reporting ─────────────────────────────────────────────────────────
-
-const crashAPI: ElectronAPI['crash'] = {
-  getCrashLogs: () => ipcRenderer.invoke('app:getCrashLogs'),
-  clearCrashLogs: () => ipcRenderer.invoke('app:clearCrashLogs'),
-  openCrashLogDir: () => ipcRenderer.invoke('app:openCrashLogDir'),
-  logError: (source, message, stack) => ipcRenderer.invoke('app:logError', source, message, stack),
-}
-
-// ─── Performance ─────────────────────────────────────────────────────────────
-
-const perfAPI: ElectronAPI['perf'] = {
-  ping: () => ipcRenderer.invoke('perf:ping'),
-
-  onMetrics: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, metrics: PerfMetrics) => callback(metrics)
-    ipcRenderer.on('perf:metrics', handler)
-    return () => ipcRenderer.removeListener('perf:metrics', handler)
-  },
-}
-
-// ─── Symbol search ────────────────────────────────────────────────────────────
-
-const symbolAPI: SymbolAPI = {
-  search: (root) => ipcRenderer.invoke('symbol:search', root),
-}
-
-// ─── Window management ──────────────────────────────────────────────────────
-
-const windowAPI: WindowAPI = {
-  create: (projectRoot) => ipcRenderer.invoke('window:new', projectRoot),
-  list: () => ipcRenderer.invoke('window:list'),
-  focus: (windowId) => ipcRenderer.invoke('window:focus', windowId),
-  close: (windowId) => ipcRenderer.invoke('window:close', windowId),
-}
-
-// ─── Extensions ──────────────────────────────────────────────────────────────
-
-const extensionsAPI: ExtensionsAPI = {
-  list: () => ipcRenderer.invoke('extensions:list'),
-  enable: (name) => ipcRenderer.invoke('extensions:enable', name),
-  disable: (name) => ipcRenderer.invoke('extensions:disable', name),
-  install: (sourcePath) => ipcRenderer.invoke('extensions:install', sourcePath),
-  uninstall: (name) => ipcRenderer.invoke('extensions:uninstall', name),
-  getLog: (name) => ipcRenderer.invoke('extensions:getLog', name),
-  openFolder: () => ipcRenderer.invoke('extensions:openFolder'),
-  activate: (name) => ipcRenderer.invoke('extensions:activate', name),
-  commandExecuted: (commandId) => ipcRenderer.invoke('extensions:commandExecuted', commandId),
-
-  onNotification: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: { extensionName: string; message: string }) =>
-      callback(data)
-    ipcRenderer.on('extensions:notification', handler)
-    return () => ipcRenderer.removeListener('extensions:notification', handler)
-  },
-}
-
-// ─── LSP ─────────────────────────────────────────────────────────────────────
-
-const lspAPI: LspAPI = {
-  start: (root, language) => ipcRenderer.invoke('lsp:start', root, language),
-  stop: (root, language) => ipcRenderer.invoke('lsp:stop', root, language),
-  completion: (root, filePath, line, character) =>
-    ipcRenderer.invoke('lsp:completion', { root, filePath, line, character }),
-  hover: (root, filePath, line, character) =>
-    ipcRenderer.invoke('lsp:hover', { root, filePath, line, character }),
-  definition: (root, filePath, line, character) =>
-    ipcRenderer.invoke('lsp:definition', { root, filePath, line, character }),
-  diagnostics: (root, filePath) => ipcRenderer.invoke('lsp:diagnostics', root, filePath),
-  didOpen: (root, filePath, content) => ipcRenderer.invoke('lsp:didOpen', root, filePath, content),
-  didChange: (root, filePath, content) => ipcRenderer.invoke('lsp:didChange', root, filePath, content),
-  didClose: (root, filePath) => ipcRenderer.invoke('lsp:didClose', root, filePath),
-  getStatus: () => ipcRenderer.invoke('lsp:getStatus'),
-
-  onDiagnostics: (callback) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      data: { filePath: string; diagnostics: LspDiagnostic[] }
-    ) => callback(data)
-    ipcRenderer.on('lsp:diagnostics:push', handler)
-    return () => ipcRenderer.removeListener('lsp:diagnostics:push', handler)
-  },
-
-  onStatusChange: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, servers: LspServerStatus[]) =>
-      callback(servers)
-    ipcRenderer.on('lsp:statusChange', handler)
-    return () => ipcRenderer.removeListener('lsp:statusChange', handler)
-  },
-}
-
-// ─── Approval ────────────────────────────────────────────────────────────────
-
-const approvalAPI: ElectronAPI['approval'] = {
-  respond: (requestId, decision, reason) =>
-    ipcRenderer.invoke('approval:respond', requestId, decision, reason),
-
-  alwaysAllow: (sessionId, toolName) =>
-    ipcRenderer.invoke('approval:alwaysAllow', sessionId, toolName),
-
-  onRequest: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, request: ApprovalRequest) =>
-      callback(request)
-    ipcRenderer.on('approval:request', handler)
-    return () => ipcRenderer.removeListener('approval:request', handler)
-  },
-
-  onResolved: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, resolved: ApprovalResolved) =>
-      callback(resolved)
-    ipcRenderer.on('approval:resolved', handler)
-    return () => ipcRenderer.removeListener('approval:resolved', handler)
-  },
-}
-
-// ─── MCP ─────────────────────────────────────────────────────────────────────
-
-const mcpAPI: McpAPI = {
-  getServers: (projectRoot) => ipcRenderer.invoke('mcp:getServers', projectRoot ? { projectRoot } : undefined),
-  addServer: (name, config, scope, projectRoot) => ipcRenderer.invoke('mcp:addServer', { name, config, scope, projectRoot }),
-  removeServer: (name, scope, projectRoot) => ipcRenderer.invoke('mcp:removeServer', { name, scope, projectRoot }),
-  updateServer: (name, config, scope, projectRoot) => ipcRenderer.invoke('mcp:updateServer', { name, config, scope, projectRoot }),
-  toggleServer: (name, enabled, scope, projectRoot) => ipcRenderer.invoke('mcp:toggleServer', { name, enabled, scope, projectRoot }),
-}
-
-// ─── Context Builder ─────────────────────────────────────────────────────────
-
-const contextAPI: ElectronAPI['context'] = {
-  scan: (projectRoot) => ipcRenderer.invoke('context:scan', projectRoot),
-  generate: (projectRoot, options) => ipcRenderer.invoke('context:generate', projectRoot, options),
-}
-
-// ─── IDE Tools (reverse channel for Claude Code queries) ─────────────────────
-
-const ideToolsAPI: IdeToolsAPI = {
-  respond: (queryId, result, error) =>
-    ipcRenderer.invoke('ideTools:respond', queryId, result, error),
-
-  onQuery: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, query: IdeToolQuery) =>
-      callback(query)
-    ipcRenderer.on('ide:query', handler)
-    return () => ipcRenderer.removeListener('ide:query', handler)
-  },
-
-  getAddress: () => ipcRenderer.invoke('ideTools:getAddress'),
-}
-
-// ─── Code Mode ───────────────────────────────────────────────────────────
-
-const codemodeAPI: ElectronAPI['codemode'] = {
-  enable: (serverNames, scope, projectRoot) =>
-    ipcRenderer.invoke('codemode:enable', { serverNames, scope, projectRoot }),
-  disable: () => ipcRenderer.invoke('codemode:disable'),
-  getStatus: () => ipcRenderer.invoke('codemode:status'),
-}
-
-// ─── Expose ─────────────────────────────────────────────────────────────────
-
-contextBridge.exposeInMainWorld('electronAPI', {
+const electronAPI: ElectronAPI = {
   pty: ptyAPI,
   config: configAPI,
   files: filesAPI,
   hooks: hooksAPI,
-  approval: approvalAPI,
   app: appAPI,
   shell: shellAPI,
   theme: themeAPI,
   git: gitAPI,
-  sessions: sessionsAPI,
-  cost: costAPI,
-  usage: usageAPI,
-  shellHistory: shellHistoryAPI,
-  updater: updaterAPI,
-  crash: crashAPI,
-  perf: perfAPI,
-  symbol: symbolAPI,
-  lsp: lspAPI,
-  window: windowAPI,
-  extensions: extensionsAPI,
-  mcp: mcpAPI,
-  context: contextAPI,
-  ideTools: ideToolsAPI,
-  codemode: codemodeAPI,
-} satisfies ElectronAPI)
+  ...supplementalApis,
+}
+
+// â”€â”€â”€ Expose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+contextBridge.exposeInMainWorld('electronAPI', electronAPI)

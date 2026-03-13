@@ -20,8 +20,57 @@ export interface TreeItemDirectoryProps {
   heatLevel?: string;
 }
 
+function DirectoryName({
+  node,
+  isEditing,
+  editValue,
+  onEditConfirm,
+  onEditCancel,
+  statusColor,
+}: Pick<
+  TreeItemDirectoryProps,
+  'node' | 'isEditing' | 'editValue' | 'onEditConfirm' | 'onEditCancel' | 'statusColor'
+>): React.ReactElement {
+  if (isEditing && onEditConfirm && onEditCancel) {
+    return (
+      <InlineEditInput
+        initialValue={editValue ?? node.name}
+        onConfirm={onEditConfirm}
+        onCancel={onEditCancel}
+      />
+    );
+  }
+
+  return <DirLabel name={node.name} statusColor={statusColor} />;
+}
+
+function DirectoryMeta({
+  node,
+  statusColor,
+  statusLbl,
+  isBookmarked,
+  heatDot,
+  heatLevel,
+}: Pick<
+  TreeItemDirectoryProps,
+  'node' | 'statusColor' | 'statusLbl' | 'isBookmarked' | 'heatDot' | 'heatLevel'
+>): React.ReactElement {
+  return (
+    <>
+      {!node.isExpanded && node.children !== undefined && (
+        <ChildCount count={node.children.length} />
+      )}
+      {statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
+      {isBookmarked && <PinDot />}
+      {heatDot && <HeatDot color={heatDot} glow={heatLevel === 'fire'} />}
+    </>
+  );
+}
+
 export function TreeItemDirectory({
-  node, isEditing, editValue,
+  node,
+  isEditing,
+  editValue,
   onEditConfirm, onEditCancel,
   statusColor, statusLbl,
   isBookmarked, heatDot, heatLevel,
@@ -30,17 +79,24 @@ export function TreeItemDirectory({
     <>
       <Chevron expanded={!!node.isExpanded} />
       <FolderTypeIcon name={node.name} open={!!node.isExpanded} />
-      {isEditing && onEditConfirm && onEditCancel ? (
-        <InlineEditInput initialValue={editValue ?? node.name} onConfirm={onEditConfirm} onCancel={onEditCancel} />
-      ) : (
-        <DirLabel name={node.name} statusColor={statusColor} />
+      <DirectoryName
+        node={node}
+        isEditing={isEditing}
+        editValue={editValue}
+        onEditConfirm={onEditConfirm}
+        onEditCancel={onEditCancel}
+        statusColor={statusColor}
+      />
+      {!isEditing && (
+        <DirectoryMeta
+          node={node}
+          statusColor={statusColor}
+          statusLbl={statusLbl}
+          isBookmarked={isBookmarked}
+          heatDot={heatDot}
+          heatLevel={heatLevel}
+        />
       )}
-      {!isEditing && !node.isExpanded && node.children !== undefined && (
-        <ChildCount count={node.children.length} />
-      )}
-      {!isEditing && statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
-      {!isEditing && isBookmarked && <PinDot />}
-      {!isEditing && heatDot && <HeatDot color={heatDot} glow={heatLevel === 'fire'} />}
       {node.isLoading && <LoadingDots />}
     </>
   );

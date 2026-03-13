@@ -10,43 +10,59 @@ function sanitizeIdentifier(name: string): string {
   return name.replace(/[^a-zA-Z0-9_$]/g, '_').replace(/^(\d)/, '_$1')
 }
 
+const PRIMITIVE_SCHEMA_TYPES: Record<string, string> = {
+  string: 'string',
+  number: 'number',
+  integer: 'number',
+  boolean: 'boolean',
+  null: 'null',
+}
+
+function schemaVariantsToType(schema: JsonSchemaProperty): string | null {
+  const variants = schema.anyOf ?? schema.oneOf
+  if (!variants) {
+    return null
+  }
+  const mapped = variants.map(schemaToType)
+  return mapped.length > 1 ? `(${mapped.join(' | ')})` : mapped[0] ?? 'unknown'
+}
+
+function enumSchemaToType(schema: JsonSchemaProperty): string | null {
+  return schema.enum ? schema.enum.map((v) => JSON.stringify(v)).join(' | ') : null
+}
+
+function unsupportedSchemaToType(schema: JsonSchemaProperty): string | null {
+  return schema.allOf || schema.$ref ? 'unknown' : null
+}
+
+function arraySchemaToType(schema: JsonSchemaProperty): string {
+  if (!schema.items) {
+    return 'unknown[]'
+  }
+  const inner = schemaToType(schema.items)
+  return inner.includes('|') ? `(${inner})[]` : `${inner}[]`
+}
+
+function schemaTypeToType(schema: JsonSchemaProperty): string {
+  if (schema.type === 'array') {
+    return arraySchemaToType(schema)
+  }
+
+  if (schema.type === 'object') {
+    return objectToInlineType(schema.properties ?? {}, schema.required ?? [])
+  }
+
+  return PRIMITIVE_SCHEMA_TYPES[schema.type ?? ''] ?? 'unknown'
+}
+
 /** Map a JSON Schema property to a TypeScript type string */
 function schemaToType(schema: JsonSchemaProperty): string {
-  if (schema.enum) {
-    return schema.enum.map((v) => JSON.stringify(v)).join(' | ')
-  }
-
-  if (schema.anyOf || schema.oneOf) {
-    const variants = schema.anyOf ?? schema.oneOf!
-    const mapped = variants.map(schemaToType)
-    return mapped.length > 1 ? `(${mapped.join(' | ')})` : mapped[0] ?? 'unknown'
-  }
-
-  if (schema.allOf || schema.$ref) {
-    return 'unknown'
-  }
-
-  switch (schema.type) {
-    case 'string':
-      return 'string'
-    case 'number':
-    case 'integer':
-      return 'number'
-    case 'boolean':
-      return 'boolean'
-    case 'null':
-      return 'null'
-    case 'array':
-      if (schema.items) {
-        const inner = schemaToType(schema.items)
-        return inner.includes('|') ? `(${inner})[]` : `${inner}[]`
-      }
-      return 'unknown[]'
-    case 'object':
-      return objectToInlineType(schema.properties ?? {}, schema.required ?? [])
-    default:
-      return 'unknown'
-  }
+  return (
+    enumSchemaToType(schema)
+    ?? schemaVariantsToType(schema)
+    ?? unsupportedSchemaToType(schema)
+    ?? schemaTypeToType(schema)
+  )
 }
 
 /** Build an inline object type from JSON Schema properties */

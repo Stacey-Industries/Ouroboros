@@ -155,6 +155,31 @@ export const CONFIG_FILES = [
   'Cargo.toml', 'go.mod', 'Gemfile', '.gitignore',
 ]
 
+const MONOREPO_MARKERS = [
+  'pnpm-workspace.yaml',
+  'lerna.json',
+  'turbo.json',
+  'nx.json',
+]
+
+const DEPENDENCY_PATTERNS = [
+  { label: 'Tailwind CSS', matches: (allDeps: Record<string, string>) => Boolean(allDeps['tailwindcss']) },
+  { label: 'Prisma ORM', matches: (allDeps: Record<string, string>) => Boolean(allDeps['prisma'] || allDeps['@prisma/client']) },
+  { label: 'Drizzle ORM', matches: (allDeps: Record<string, string>) => Boolean(allDeps['drizzle-orm']) },
+  { label: 'tRPC', matches: (allDeps: Record<string, string>) => Boolean(allDeps['trpc'] || allDeps['@trpc/server']) },
+  {
+    label: 'GraphQL',
+    matches: (allDeps: Record<string, string>) =>
+      Boolean(allDeps['graphql'] || allDeps['@apollo/client'] || allDeps['@graphql-tools/schema']),
+  },
+  {
+    label: 'Docker',
+    matches: (allDeps: Record<string, string>, keyConfigs: string[]) =>
+      Boolean(allDeps['docker-compose'] || keyConfigs.some((c) => c.startsWith('docker'))),
+  },
+  { label: 'Electron app', matches: (allDeps: Record<string, string>) => Boolean(allDeps['electron']) },
+]
+
 // ─── Detection functions ─────────────────────────────────────────────────────
 
 export function detectFramework(allDeps: Record<string, string>): string | null {
@@ -186,46 +211,78 @@ export function detectTestFramework(allDeps: Record<string, string>): string | n
   return null
 }
 
+async function detectTypeScriptPatterns(
+  allDeps: Record<string, string>,
+  projectRoot: string
+): Promise<string[]> {
+  if (!allDeps['typescript']) {
+    return []
+  }
+
+  const patterns: string[] = []
+  const tsconfig = await readJsonSafe(path.join(projectRoot, 'tsconfig.json'))
+  const compilerOptions = tsconfig?.compilerOptions as Record<string, unknown> | undefined
+  if (compilerOptions?.strict === true) {
+    patterns.push('TypeScript strict mode')
+  }
+  const moduleType = compilerOptions?.module
+  if (typeof moduleType === 'string' && ['esnext', 'es2020', 'es2022', 'nodenext', 'node16'].includes(moduleType)) {
+    patterns.push('ESM modules')
+  }
+  return patterns
+}
+
+async function readPackageJson(projectRoot: string): Promise<Record<string, unknown> | null> {
+  return readJsonSafe(path.join(projectRoot, 'package.json'))
+}
+
+async function isMonorepoProject(
+  projectRoot: string,
+  pkg: Record<string, unknown> | null
+): Promise<boolean> {
+  if (pkg?.workspaces) {
+    return true
+  }
+  for (const marker of MONOREPO_MARKERS) {
+    if (await fileExists(path.join(projectRoot, marker))) {
+      return true
+    }
+  }
+  return false
+}
+
+async function detectProjectPatterns(projectRoot: string): Promise<string[]> {
+  const pkg = await readPackageJson(projectRoot)
+  const patterns: string[] = []
+  if (pkg?.type === 'module') {
+    patterns.push('ESM modules')
+  }
+  if (await isMonorepoProject(projectRoot, pkg)) {
+    patterns.push('Monorepo')
+  }
+  return patterns
+}
+
+function detectDependencyPatterns(
+  allDeps: Record<string, string>,
+  keyConfigs: string[]
+): string[] {
+  return DEPENDENCY_PATTERNS
+    .filter(({ matches }) => matches(allDeps, keyConfigs))
+    .map(({ label }) => label)
+}
+
 export async function detectPatterns(
   allDeps: Record<string, string>,
   projectRoot: string,
   keyConfigs: string[],
 ): Promise<string[]> {
-  const patterns: string[] = []
-
-  if (allDeps['typescript']) {
-    const tsconfig = await readJsonSafe(path.join(projectRoot, 'tsconfig.json'))
-    if (tsconfig) {
-      const co = tsconfig.compilerOptions as Record<string, unknown> | undefined
-      if (co?.strict === true) patterns.push('TypeScript strict mode')
-      const mod = co?.module as string | undefined
-      if (['esnext', 'es2020', 'es2022', 'nodenext', 'node16'].includes(mod ?? '')) {
-        patterns.push('ESM modules')
-      }
-    }
-  }
-
-  const pkg = await readJsonSafe(path.join(projectRoot, 'package.json'))
-  if (pkg?.type === 'module' && !patterns.includes('ESM modules')) {
-    patterns.push('ESM modules')
-  }
-
-  const isMonorepo = pkg?.workspaces
-    || await fileExists(path.join(projectRoot, 'pnpm-workspace.yaml'))
-    || await fileExists(path.join(projectRoot, 'lerna.json'))
-    || await fileExists(path.join(projectRoot, 'turbo.json'))
-    || await fileExists(path.join(projectRoot, 'nx.json'))
-  if (isMonorepo) patterns.push('Monorepo')
-
-  if (allDeps['tailwindcss']) patterns.push('Tailwind CSS')
-  if (allDeps['prisma'] || allDeps['@prisma/client']) patterns.push('Prisma ORM')
-  if (allDeps['drizzle-orm']) patterns.push('Drizzle ORM')
-  if (allDeps['trpc'] || allDeps['@trpc/server']) patterns.push('tRPC')
-  if (allDeps['graphql'] || allDeps['@apollo/client'] || allDeps['@graphql-tools/schema']) patterns.push('GraphQL')
-  if (allDeps['docker-compose'] || keyConfigs.some((c) => c.startsWith('docker'))) patterns.push('Docker')
-  if (allDeps['electron']) patterns.push('Electron app')
-
-  return patterns
+  const patterns = new Set<string>([
+    ...(await detectTypeScriptPatterns(allDeps, projectRoot)),
+    ...(await detectProjectPatterns(projectRoot)),
+    ...detectDependencyPatterns(allDeps, keyConfigs),
+  ])
+  return Array.from(patterns)
 }
 
 export async function detectCommonPatterns(

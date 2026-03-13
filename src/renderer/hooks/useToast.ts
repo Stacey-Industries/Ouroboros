@@ -5,7 +5,7 @@
  * and manual dismiss/dismissAll support.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,97 +44,98 @@ const DISMISS_ANIMATION_MS = 300;
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
+function generateToastId(): string {
+  return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function createToastItem(
+  id: string, message: string, type: ToastType, options?: ToastOptions,
+): ToastItem {
+  return {
+    id, message, type,
+    duration: options?.duration ?? DEFAULT_DURATION,
+    createdAt: Date.now(),
+    action: options?.action,
+  };
+}
+
+function applyFifoOverflow(
+  next: ToastItem[],
+  timers: Map<string, ReturnType<typeof setTimeout>>,
+): ToastItem[] {
+  if (next.length <= MAX_VISIBLE) return next;
+  const overflow = next.slice(0, next.length - MAX_VISIBLE);
+  overflow.forEach((t) => {
+    const existingTimer = timers.get(t.id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      timers.delete(t.id);
+    }
+  });
+  return next.slice(next.length - MAX_VISIBLE);
+}
+
+function startDismissAnimation(
+  setToasts: React.Dispatch<React.SetStateAction<ToastItem[]>>,
+  id: string,
+): void {
+  setToasts((prev) =>
+    prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
+  );
+  setTimeout(() => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, DISMISS_ANIMATION_MS);
+}
+
+function clearTimerForId(
+  timers: Map<string, ReturnType<typeof setTimeout>>, id: string,
+): void {
+  const timer = timers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    timers.delete(id);
+  }
+}
+
 export function useToast(): UseToastReturn {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Clean up all timers on unmount
   useEffect(() => {
     const timers = timersRef.current;
-    return () => {
-      timers.forEach(clearTimeout);
-      timers.clear();
-    };
+    return () => { timers.forEach(clearTimeout); timers.clear(); };
   }, []);
 
   const scheduleAutoDismiss = useCallback((id: string, duration: number) => {
     if (duration <= 0) return;
-
     const timer = setTimeout(() => {
       timersRef.current.delete(id);
-      // Start dismiss animation
-      setToasts((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
-      );
-      // Remove after animation completes
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, DISMISS_ANIMATION_MS);
+      startDismissAnimation(setToasts, id);
     }, duration);
-
     timersRef.current.set(id, timer);
   }, []);
 
   const addToast = useCallback(
     (message: string, type: ToastType = 'info', options?: ToastOptions): string => {
-      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const duration = options?.duration ?? DEFAULT_DURATION;
-
-      const item: ToastItem = {
-        id,
-        message,
-        type,
-        duration,
-        createdAt: Date.now(),
-        action: options?.action,
-      };
-
-      setToasts((prev) => {
-        const next = [...prev, item];
-        // FIFO: dismiss oldest when exceeding max
-        if (next.length > MAX_VISIBLE) {
-          const overflow = next.slice(0, next.length - MAX_VISIBLE);
-          overflow.forEach((t) => {
-            const existingTimer = timersRef.current.get(t.id);
-            if (existingTimer) {
-              clearTimeout(existingTimer);
-              timersRef.current.delete(t.id);
-            }
-          });
-          return next.slice(next.length - MAX_VISIBLE);
-        }
-        return next;
-      });
-
-      scheduleAutoDismiss(id, duration);
+      const id = generateToastId();
+      const item = createToastItem(id, message, type, options);
+      setToasts((prev) => applyFifoOverflow([...prev, item], timersRef.current));
+      scheduleAutoDismiss(id, item.duration);
       return id;
     },
     [scheduleAutoDismiss],
   );
 
   const dismiss = useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
-    // Start dismiss animation
-    setToasts((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
-    );
-    // Remove after animation
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, DISMISS_ANIMATION_MS);
+    clearTimerForId(timersRef.current, id);
+    startDismissAnimation(setToasts, id);
   }, []);
 
   const dismissAll = useCallback(() => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current.clear();
     setToasts((prev) => prev.map((t) => ({ ...t, dismissing: true })));
-    setTimeout(() => {
-      setToasts([]);
-    }, DISMISS_ANIMATION_MS);
+    setTimeout(() => { setToasts([]); }, DISMISS_ANIMATION_MS);
   }, []);
 
   return { toasts, toast: addToast, dismiss, dismissAll };

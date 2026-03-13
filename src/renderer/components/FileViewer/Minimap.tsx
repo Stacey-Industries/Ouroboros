@@ -10,13 +10,13 @@ export interface MinimapProps {
 }
 
 const MINIMAP_WIDTH = 70;
-const LINE_HEIGHT = 2; // pixels per line in minimap
+const LINE_HEIGHT = 2;
 const LINE_GAP = 1;
 const MINIMAP_LINE_TOTAL = LINE_HEIGHT + LINE_GAP;
-const MAX_LINE_CHARS = 120; // max chars we represent visually
+const MAX_LINE_CHARS = 120;
 
 /**
- * Minimap — a canvas-based code overview panel rendered on the right side
+ * Minimap â€” a canvas-based code overview panel rendered on the right side
  * of the file viewer. Shows colored bars approximating line lengths and
  * a viewport indicator that can be clicked/dragged to scroll.
  */
@@ -27,126 +27,92 @@ export const Minimap = memo(function Minimap({
 }: MinimapProps): React.ReactElement | null {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  const [viewportRect, setViewportRect] = useState({ top: 0, height: 0 });
-
   const totalMinimapHeight = lines.length * MINIMAP_LINE_TOTAL;
 
-  // Draw the minimap content on canvas
-  const drawContent = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  useMinimapCanvas(canvasRef, lines, totalMinimapHeight, visible);
+  const viewportRect = useMinimapViewport(scrollContainer, totalMinimapHeight, visible);
+  const handleMouseDown = useMinimapDrag(containerRef, scrollContainer, totalMinimapHeight);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  if (!visible) return null;
 
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = MINIMAP_WIDTH;
-    const displayHeight = totalMinimapHeight;
+  return (
+    <MinimapPanel
+      containerRef={containerRef}
+      canvasRef={canvasRef}
+      viewportRect={viewportRect}
+      onMouseDown={handleMouseDown}
+    />
+  );
+});
 
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
-    ctx.scale(dpr, dpr);
+function useMinimapCanvas(
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  lines: string[],
+  totalMinimapHeight: number,
+  visible: boolean
+): void {
+  const drawCanvas = useCallback(() => {
+    drawMinimapCanvas(canvasRef.current, lines, totalMinimapHeight);
+  }, [canvasRef, lines, totalMinimapHeight]);
 
-    ctx.clearRect(0, 0, displayWidth, displayHeight);
+  useEffect(() => {
+    if (visible) drawCanvas();
+  }, [visible, drawCanvas]);
 
-    // Read CSS custom property colors
-    const computedStyle = getComputedStyle(document.documentElement);
-    const textColor = computedStyle.getPropertyValue('--text-muted').trim() || '#888';
+  useEffect(() => {
+    if (!visible) return;
+    window.addEventListener('resize', drawCanvas);
+    return () => window.removeEventListener('resize', drawCanvas);
+  }, [visible, drawCanvas]);
+}
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.replace(/^\s+/, '');
-      if (trimmed.length === 0) continue;
-
-      const indent = line.length - trimmed.length;
-      const charWidth = (MINIMAP_WIDTH - 4) / MAX_LINE_CHARS;
-      const x = 2 + indent * charWidth;
-      const w = Math.min(trimmed.length, MAX_LINE_CHARS - indent) * charWidth;
-      const y = i * MINIMAP_LINE_TOTAL;
-
-      ctx.fillStyle = textColor;
-      ctx.globalAlpha = 0.4;
-      ctx.fillRect(x, y, Math.max(w, 2), LINE_HEIGHT);
-    }
-
-    ctx.globalAlpha = 1;
-  }, [lines, totalMinimapHeight]);
-
-  // Update viewport indicator based on scroll position
+function useMinimapViewport(
+  scrollContainer: HTMLDivElement | null,
+  totalMinimapHeight: number,
+  visible: boolean
+): { top: number; height: number } {
+  const [viewportRect, setViewportRect] = useState({ top: 0, height: 0 });
   const updateViewport = useCallback(() => {
-    if (!scrollContainer) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-    if (scrollHeight === 0) return;
-
-    const ratio = totalMinimapHeight / scrollHeight;
-    const top = scrollTop * ratio;
-    const height = clientHeight * ratio;
-
-    setViewportRect({ top, height: Math.max(height, 10) });
+    setViewportRect(getViewportRect(scrollContainer, totalMinimapHeight));
   }, [scrollContainer, totalMinimapHeight]);
 
-  // Draw content when lines change
-  useEffect(() => {
-    if (visible) drawContent();
-  }, [visible, drawContent]);
-
-  // Listen to scroll events on the main code container
   useEffect(() => {
     if (!scrollContainer || !visible) return;
-
     updateViewport();
     const handleScroll = () => updateViewport();
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, [scrollContainer, visible, updateViewport]);
 
-  // Also update on resize
   useEffect(() => {
     if (!visible) return;
-    const handleResize = () => {
-      drawContent();
-      updateViewport();
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [visible, drawContent, updateViewport]);
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, [visible, updateViewport]);
 
-  // Scroll the main editor when clicking/dragging on the minimap
-  const scrollToMinimapY = useCallback(
-    (clientY: number) => {
-      if (!scrollContainer || !containerRef.current) return;
+  return viewportRect;
+}
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const y = clientY - rect.top + containerRef.current.scrollTop;
-      const ratio = y / totalMinimapHeight;
-      const targetScroll =
-        ratio * scrollContainer.scrollHeight - scrollContainer.clientHeight / 2;
+function useMinimapDrag(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  scrollContainer: HTMLDivElement | null,
+  totalMinimapHeight: number
+): (event: React.MouseEvent) => void {
+  const isDraggingRef = useRef(false);
 
-      scrollContainer.scrollTop = Math.max(
-        0,
-        Math.min(targetScroll, scrollContainer.scrollHeight - scrollContainer.clientHeight)
-      );
-    },
-    [scrollContainer, totalMinimapHeight]
-  );
+  return useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      isDraggingRef.current = true;
+      scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, event.clientY);
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      isDragging.current = true;
-      scrollToMinimapY(e.clientY);
-
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (isDragging.current) {
-          scrollToMinimapY(ev.clientY);
-        }
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!isDraggingRef.current) return;
+        scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, moveEvent.clientY);
       };
+
       const handleMouseUp = () => {
-        isDragging.current = false;
+        isDraggingRef.current = false;
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
@@ -154,45 +120,137 @@ export const Minimap = memo(function Minimap({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [scrollToMinimapY]
+    [containerRef, scrollContainer, totalMinimapHeight]
   );
+}
 
-  if (!visible) return null;
+interface MinimapPanelProps {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  viewportRect: { top: number; height: number };
+  onMouseDown: (event: React.MouseEvent) => void;
+}
 
+function MinimapPanel({
+  containerRef,
+  canvasRef,
+  viewportRect,
+  onMouseDown,
+}: MinimapPanelProps): React.ReactElement {
   return (
-    <div
-      ref={containerRef}
-      onMouseDown={handleMouseDown}
-      style={{
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: `${MINIMAP_WIDTH}px`,
-        height: '100%',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        zIndex: 3,
-        backgroundColor: 'var(--bg)',
-        borderLeft: '1px solid var(--border-muted)',
-        opacity: 0.85,
-      }}
-    >
+    <div ref={containerRef} onMouseDown={onMouseDown} style={minimapContainerStyle}>
       <canvas ref={canvasRef} />
-      {/* Viewport indicator */}
-      <div
-        style={{
-          position: 'absolute',
-          top: `${viewportRect.top}px`,
-          left: 0,
-          right: 0,
-          height: `${viewportRect.height}px`,
-          backgroundColor: 'var(--accent)',
-          opacity: 0.15,
-          borderTop: '1px solid var(--accent)',
-          borderBottom: '1px solid var(--accent)',
-          pointerEvents: 'none',
-        }}
-      />
+      <div style={getViewportIndicatorStyle(viewportRect)} />
     </div>
   );
-});
+}
+
+function drawMinimapCanvas(
+  canvas: HTMLCanvasElement | null,
+  lines: string[],
+  totalMinimapHeight: number
+): void {
+  if (!canvas) return;
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = MINIMAP_WIDTH * dpr;
+  canvas.height = totalMinimapHeight * dpr;
+  canvas.style.width = `${MINIMAP_WIDTH}px`;
+  canvas.style.height = `${totalMinimapHeight}px`;
+  context.scale(dpr, dpr);
+  context.clearRect(0, 0, MINIMAP_WIDTH, totalMinimapHeight);
+  drawMinimapLines(context, lines);
+}
+
+function drawMinimapLines(
+  context: CanvasRenderingContext2D,
+  lines: string[]
+): void {
+  const charWidth = (MINIMAP_WIDTH - 4) / MAX_LINE_CHARS;
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index].replace(/^\s+/, '');
+    if (trimmed.length === 0) continue;
+
+    const indent = lines[index].length - trimmed.length;
+    context.fillStyle = textColor;
+    context.globalAlpha = 0.4;
+    context.fillRect(
+      2 + indent * charWidth,
+      index * MINIMAP_LINE_TOTAL,
+      Math.max(Math.min(trimmed.length, MAX_LINE_CHARS - indent) * charWidth, 2),
+      LINE_HEIGHT
+    );
+  }
+
+  context.globalAlpha = 1;
+}
+
+function getViewportRect(
+  scrollContainer: HTMLDivElement | null,
+  totalMinimapHeight: number
+): { top: number; height: number } {
+  if (!scrollContainer || scrollContainer.scrollHeight === 0) {
+    return { top: 0, height: 0 };
+  }
+
+  const ratio = totalMinimapHeight / scrollContainer.scrollHeight;
+  return {
+    top: scrollContainer.scrollTop * ratio,
+    height: Math.max(scrollContainer.clientHeight * ratio, 10),
+  };
+}
+
+function scrollToMinimapPointer(
+  container: HTMLDivElement | null,
+  scrollContainer: HTMLDivElement | null,
+  totalMinimapHeight: number,
+  clientY: number
+): void {
+  if (!container || !scrollContainer) return;
+
+  const rect = container.getBoundingClientRect();
+  const y = clientY - rect.top + container.scrollTop;
+  const ratio = y / totalMinimapHeight;
+  const targetScroll = ratio * scrollContainer.scrollHeight - scrollContainer.clientHeight / 2;
+
+  scrollContainer.scrollTop = Math.max(
+    0,
+    Math.min(targetScroll, scrollContainer.scrollHeight - scrollContainer.clientHeight)
+  );
+}
+
+const minimapContainerStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  width: `${MINIMAP_WIDTH}px`,
+  height: '100%',
+  overflow: 'hidden',
+  cursor: 'pointer',
+  zIndex: 3,
+  backgroundColor: 'var(--bg)',
+  borderLeft: '1px solid var(--border-muted)',
+  opacity: 0.85,
+};
+
+function getViewportIndicatorStyle(viewportRect: {
+  top: number;
+  height: number;
+}): React.CSSProperties {
+  return {
+    position: 'absolute',
+    top: `${viewportRect.top}px`,
+    left: 0,
+    right: 0,
+    height: `${viewportRect.height}px`,
+    backgroundColor: 'var(--accent)',
+    opacity: 0.15,
+    borderTop: '1px solid var(--accent)',
+    borderBottom: '1px solid var(--accent)',
+    pointerEvents: 'none',
+  };
+}

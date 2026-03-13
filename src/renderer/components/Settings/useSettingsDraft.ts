@@ -21,46 +21,55 @@ export interface SettingsDraftApi {
   originalGradientRef: React.MutableRefObject<boolean>;
 }
 
-export function useSettingsDraft(): SettingsDraftApi {
-  const { set } = useConfig();
-  const { setTheme, setShowBgGradient } = useTheme();
-
-  const [draft, setDraft] = useState<AppConfig | null>(null);
-  const originalThemeRef = useRef<string | null>(null);
-  const originalGradientRef = useRef<boolean>(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const handleChange = useCallback(
-    <K extends keyof AppConfig>(key: K, value: AppConfig[K]): void => {
-      setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
-      if (key === 'showBgGradient') {
-        setShowBgGradient(value as boolean);
-      }
-    },
-    [setShowBgGradient],
-  );
+function useDraftChangeHandlers(
+  setDraft: React.Dispatch<React.SetStateAction<AppConfig | null>>,
+  setShowBgGradient: (visible: boolean) => void,
+  setTheme: (id: string) => Promise<void>,
+): Pick<SettingsDraftApi, 'handleChange' | 'handleImport' | 'handlePreviewTheme'> {
+  const handleChange = useCallback(<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void => {
+    setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+    if (key === 'showBgGradient') setShowBgGradient(value as boolean);
+  }, [setDraft, setShowBgGradient]);
 
   const handleImport = useCallback((imported: AppConfig): void => {
     setDraft({ ...imported });
-  }, []);
+  }, [setDraft]);
 
-  const handlePreviewTheme = useCallback(
-    (themeId: string): void => {
-      void setTheme(themeId);
-    },
-    [setTheme],
-  );
+  const handlePreviewTheme = useCallback((themeId: string): void => {
+    void setTheme(themeId);
+  }, [setTheme]);
 
-  function handleCancel(onClose: () => void): void {
-    if (originalThemeRef.current) {
-      void setTheme(originalThemeRef.current);
-    }
+  return { handleChange, handleImport, handlePreviewTheme };
+}
+
+interface DraftSaveHandlersArgs {
+  draft: AppConfig | null;
+  set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<void>;
+  setTheme: (id: string) => Promise<void>;
+  setShowBgGradient: (visible: boolean) => void;
+  originalThemeRef: React.MutableRefObject<string | null>;
+  originalGradientRef: React.MutableRefObject<boolean>;
+  setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
+  setSaveError: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+function useDraftSaveHandlers({
+  draft,
+  set,
+  setTheme,
+  setShowBgGradient,
+  originalThemeRef,
+  originalGradientRef,
+  setIsSaving,
+  setSaveError,
+}: DraftSaveHandlersArgs): Pick<SettingsDraftApi, 'handleCancel' | 'handleSave'> {
+  const handleCancel = useCallback((onClose: () => void): void => {
+    if (originalThemeRef.current) void setTheme(originalThemeRef.current);
     setShowBgGradient(originalGradientRef.current);
     onClose();
-  }
+  }, [originalGradientRef, originalThemeRef, setShowBgGradient, setTheme]);
 
-  async function handleSave(onClose: () => void): Promise<void> {
+  const handleSave = useCallback(async (onClose: () => void): Promise<void> => {
     if (!draft) return;
     setIsSaving(true);
     setSaveError(null);
@@ -76,7 +85,35 @@ export function useSettingsDraft(): SettingsDraftApi {
     } finally {
       setIsSaving(false);
     }
-  }
+  }, [draft, originalGradientRef, originalThemeRef, set, setIsSaving, setSaveError, setShowBgGradient, setTheme]);
+
+  return { handleCancel, handleSave };
+}
+
+export function useSettingsDraft(): SettingsDraftApi {
+  const { set } = useConfig();
+  const { setTheme, setShowBgGradient } = useTheme();
+
+  const [draft, setDraft] = useState<AppConfig | null>(null);
+  const originalThemeRef = useRef<string | null>(null);
+  const originalGradientRef = useRef<boolean>(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { handleChange, handleImport, handlePreviewTheme } = useDraftChangeHandlers(
+    setDraft,
+    setShowBgGradient,
+    setTheme,
+  );
+  const { handleCancel, handleSave } = useDraftSaveHandlers({
+    draft,
+    set,
+    setTheme,
+    setShowBgGradient,
+    originalThemeRef,
+    originalGradientRef,
+    setIsSaving,
+    setSaveError,
+  });
 
   return {
     draft, setDraft,

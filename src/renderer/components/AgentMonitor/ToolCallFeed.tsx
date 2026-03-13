@@ -50,11 +50,13 @@ interface ToolCallFeedProps {
   toolCalls: ToolCallEvent[];
 }
 
-export const ToolCallFeed = memo(function ToolCallFeed({
-  toolCalls,
-}: ToolCallFeedProps): React.ReactElement {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+function useExpandedToolCalls(toolCalls: ToolCallEvent[]): {
+  expandedIds: Set<string>;
+  allExpanded: boolean;
+  handleToggle: (id: string) => void;
+  handleExpandAll: () => void;
+  handleCollapseAll: () => void;
+} {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const handleToggle = useCallback((id: string) => {
@@ -67,19 +69,47 @@ export const ToolCallFeed = memo(function ToolCallFeed({
   }, []);
 
   const handleExpandAll = useCallback(() => {
-    setExpandedIds(new Set(toolCalls.map((tc) => tc.id)));
+    setExpandedIds(new Set(toolCalls.map((toolCall) => toolCall.id)));
   }, [toolCalls]);
 
   const handleCollapseAll = useCallback(() => setExpandedIds(new Set()), []);
 
-  const allExpanded = toolCalls.length > 0 && expandedIds.size >= toolCalls.length;
+  return {
+    expandedIds,
+    allExpanded: toolCalls.length > 0 && expandedIds.size >= toolCalls.length,
+    handleToggle,
+    handleExpandAll,
+    handleCollapseAll,
+  };
+}
 
+function useAutoScrollToBottom(
+  itemCount: number,
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  bottomRef: React.RefObject<HTMLDivElement | null>,
+): void {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
     if (isAtBottom) bottomRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [toolCalls.length]);
+  }, [itemCount, bottomRef, containerRef]);
+}
+
+export const ToolCallFeed = memo(function ToolCallFeed({
+  toolCalls,
+}: ToolCallFeedProps): React.ReactElement {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const {
+    expandedIds,
+    allExpanded,
+    handleToggle,
+    handleExpandAll,
+    handleCollapseAll,
+  } = useExpandedToolCalls(toolCalls);
+
+  useAutoScrollToBottom(toolCalls.length, containerRef, bottomRef);
 
   if (toolCalls.length === 0) {
     return (

@@ -8,7 +8,7 @@
  * Returns a snapshot that updates every 5 s (aligned with main-process emission).
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PerfMetrics } from '../types/electron';
 
 function hasElectronAPI(): boolean {
@@ -38,15 +38,46 @@ const INITIAL: PerformanceSnapshot = {
   updatedAt: 0,
 };
 
+function computeAvgFrameTime(frameTimes: number[]): number {
+  if (frameTimes.length === 0) return 0;
+  return frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+}
+
+async function measureIpcLatency(): Promise<number | null> {
+  if (!hasElectronAPI()) return null;
+  try {
+    const t0 = performance.now();
+    const result = await window.electronAPI.perf.ping();
+    const t1 = performance.now();
+    if (result.success) return Math.round(t1 - t0);
+  } catch {
+    // Ignore
+  }
+  return null;
+}
+
+function buildSnapshot(
+  metrics: PerfMetrics,
+  frameTimeMs: number,
+  ipcLatencyMs: number | null,
+): PerformanceSnapshot {
+  return {
+    heapUsed: metrics.memory.heapUsed,
+    heapTotal: metrics.memory.heapTotal,
+    rss: metrics.memory.rss,
+    frameTimeMs,
+    ipcLatencyMs,
+    updatedAt: metrics.timestamp,
+  };
+}
+
 export function usePerformance(): PerformanceSnapshot {
   const [snapshot, setSnapshot] = useState<PerformanceSnapshot>(INITIAL);
 
-  // Frame-time measurement
   const frameTimesRef = useRef<number[]>([]);
   const lastFrameTsRef = useRef<number>(0);
   const rafHandleRef = useRef<number | null>(null);
 
-  // Start rAF loop to measure frame times
   useEffect(() => {
     let alive = true;
 
@@ -64,56 +95,23 @@ export function usePerformance(): PerformanceSnapshot {
     }
 
     rafHandleRef.current = requestAnimationFrame(onFrame);
-
     return () => {
       alive = false;
-      if (rafHandleRef.current !== null) {
-        cancelAnimationFrame(rafHandleRef.current);
-      }
+      if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current);
     };
   }, []);
 
-  // Measure IPC latency every 5 s
-  const measureLatency = useCallback(async (): Promise<number | null> => {
-    if (!hasElectronAPI()) return null;
-    try {
-      const t0 = performance.now();
-      const result = await window.electronAPI.perf.ping();
-      const t1 = performance.now();
-      if (result.success) {
-        return Math.round(t1 - t0);
-      }
-    } catch {
-      // Ignore
-    }
-    return null;
-  }, []);
-
-  // Subscribe to main-process metric pushes
   useEffect(() => {
     if (!hasElectronAPI()) return;
 
     const cleanup = window.electronAPI.perf.onMetrics(async (metrics: PerfMetrics) => {
-      const frameTimes = frameTimesRef.current;
-      const avgFrameTime =
-        frameTimes.length > 0
-          ? frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length
-          : 0;
-
-      const ipcLatencyMs = await measureLatency();
-
-      setSnapshot({
-        heapUsed: metrics.memory.heapUsed,
-        heapTotal: metrics.memory.heapTotal,
-        rss: metrics.memory.rss,
-        frameTimeMs: Math.round(avgFrameTime * 10) / 10,
-        ipcLatencyMs,
-        updatedAt: metrics.timestamp,
-      });
+      const avg = computeAvgFrameTime(frameTimesRef.current);
+      const ipcLatencyMs = await measureIpcLatency();
+      setSnapshot(buildSnapshot(metrics, Math.round(avg * 10) / 10, ipcLatencyMs));
     });
 
     return cleanup;
-  }, [measureLatency]);
+  }, []);
 
   return snapshot;
 }

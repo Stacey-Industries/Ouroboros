@@ -24,11 +24,192 @@ function toolColor(name: string): string {
   return TOOL_COLOR[name] ?? 'var(--text-faint)';
 }
 
+const CONTAINER_STYLE: React.CSSProperties = { padding: '4px 8px' };
+
+const TRACK_STYLE: React.CSSProperties = {
+  position: 'relative',
+  height: '24px',
+  background: 'var(--bg-tertiary)',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  overflow: 'hidden',
+};
+
+const LABELS_STYLE: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: '2px 0',
+  fontSize: '0.625rem',
+  color: 'var(--text-faint)',
+  fontFamily: 'var(--font-mono)',
+  userSelect: 'none',
+};
+
+const SEGMENT_BASE_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: '4px',
+  bottom: '4px',
+  borderRadius: '2px',
+  transition: 'opacity 0.15s',
+  minWidth: '3px',
+};
+
+const PLAYHEAD_BASE_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  width: '2px',
+  background: 'var(--accent)',
+  boxShadow: '0 0 6px var(--accent)',
+  transition: 'left 0.15s ease',
+  zIndex: 1,
+};
+
 interface ReplayTimelineProps {
   steps: ReplayStep[];
   currentStep: number;
   totalDurationMs: number;
   onSeek: (stepIndex: number) => void;
+}
+
+function clampPct(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function getPercent(value: number, totalDurationMs: number, min = 0): number {
+  if (totalDurationMs <= 0) {
+    return min;
+  }
+
+  return Math.max(min, (value / totalDurationMs) * 100);
+}
+
+function findClosestStepIndex(steps: ReplayStep[], targetMs: number): number {
+  let closest = 0;
+  let closestDist = Infinity;
+
+  for (let i = 0; i < steps.length; i += 1) {
+    const dist = Math.abs(steps[i].elapsedMs - targetMs);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = i;
+    }
+  }
+
+  return closest;
+}
+
+function useTimelineSeekHandler(
+  trackRef: React.RefObject<HTMLDivElement | null>,
+  steps: ReplayStep[],
+  totalDurationMs: number,
+  onSeek: (stepIndex: number) => void,
+): (event: React.MouseEvent) => void {
+  return useCallback((event: React.MouseEvent) => {
+    const track = trackRef.current;
+    if (!track || totalDurationMs <= 0) return;
+
+    const rect = track.getBoundingClientRect();
+    const pct = clampPct((event.clientX - rect.left) / rect.width);
+    onSeek(findClosestStepIndex(steps, pct * totalDurationMs));
+  }, [onSeek, steps, totalDurationMs, trackRef]);
+}
+
+function getSegmentStyle(
+  startPct: number,
+  widthPct: number,
+  isActive: boolean,
+  color: string,
+): React.CSSProperties {
+  return {
+    ...SEGMENT_BASE_STYLE,
+    left: `${startPct}%`,
+    width: `${widthPct}%`,
+    background: color,
+    opacity: isActive ? 1 : 0.5,
+    border: isActive ? '1px solid var(--text)' : 'none',
+  };
+}
+
+function getPlayheadStyle(playheadPct: number): React.CSSProperties {
+  return {
+    ...PLAYHEAD_BASE_STYLE,
+    left: `${playheadPct}%`,
+  };
+}
+
+function ReplayTimelineSegments({
+  steps,
+  currentStep,
+  totalDurationMs,
+  onSeek,
+}: ReplayTimelineProps): React.ReactElement {
+  return (
+    <>
+      {steps.map((step, idx) => {
+        if (step.type !== 'tool_call' || !step.toolCall) return null;
+
+        const startPct = getPercent(step.elapsedMs, totalDurationMs);
+        const widthPct = getPercent(step.toolCall.duration ?? 100, totalDurationMs, 0.5);
+        const style = getSegmentStyle(
+          startPct,
+          widthPct,
+          idx === currentStep,
+          toolColor(step.toolCall.toolName),
+        );
+
+        return (
+          <div
+            key={step.toolCall.id}
+            onClick={(event) => { event.stopPropagation(); onSeek(idx); }}
+            style={style}
+            title={`${step.toolCall.toolName}: ${step.toolCall.input}`}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function ReplayTimelineTrack({
+  trackRef,
+  handleClick,
+  steps,
+  currentStep,
+  totalDurationMs,
+  onSeek,
+  playheadPct,
+}: ReplayTimelineProps & {
+  trackRef: React.RefObject<HTMLDivElement | null>;
+  handleClick: (event: React.MouseEvent) => void;
+  playheadPct: number;
+}): React.ReactElement {
+  return (
+    <div ref={trackRef} onClick={handleClick} style={TRACK_STYLE}>
+      <ReplayTimelineSegments
+        steps={steps}
+        currentStep={currentStep}
+        totalDurationMs={totalDurationMs}
+        onSeek={onSeek}
+      />
+      <div style={getPlayheadStyle(playheadPct)} />
+    </div>
+  );
+}
+
+function ReplayTimelineLabels({
+  currentElapsedMs,
+  totalDurationMs,
+}: {
+  currentElapsedMs: number;
+  totalDurationMs: number;
+}): React.ReactElement {
+  return (
+    <div style={LABELS_STYLE}>
+      <span>{formatElapsed(currentElapsedMs)}</span>
+      <span>{formatElapsed(totalDurationMs)}</span>
+    </div>
+  );
 }
 
 export const ReplayTimeline = memo(function ReplayTimeline({
@@ -38,115 +219,22 @@ export const ReplayTimeline = memo(function ReplayTimeline({
   onSeek,
 }: ReplayTimelineProps): React.ReactElement {
   const trackRef = useRef<HTMLDivElement>(null);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    const track = trackRef.current;
-    if (!track || totalDurationMs <= 0) return;
-
-    const rect = track.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const targetMs = pct * totalDurationMs;
-
-    // Find the closest step to the clicked time
-    let closest = 0;
-    let closestDist = Infinity;
-    for (let i = 0; i < steps.length; i++) {
-      const dist = Math.abs(steps[i].elapsedMs - targetMs);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = i;
-      }
-    }
-    onSeek(closest);
-  }, [steps, totalDurationMs, onSeek]);
-
-  // Playhead position
-  const playheadPct = totalDurationMs > 0 && steps[currentStep]
-    ? (steps[currentStep].elapsedMs / totalDurationMs) * 100
-    : 0;
+  const handleClick = useTimelineSeekHandler(trackRef, steps, totalDurationMs, onSeek);
+  const currentElapsedMs = steps[currentStep]?.elapsedMs ?? 0;
+  const playheadPct = getPercent(currentElapsedMs, totalDurationMs);
 
   return (
-    <div style={{ padding: '4px 8px' }}>
-      {/* Track */}
-      <div
-        ref={trackRef}
-        onClick={handleClick}
-        style={{
-          position: 'relative',
-          height: '24px',
-          background: 'var(--bg-tertiary)',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Tool call segments */}
-        {steps.map((step, idx) => {
-          if (step.type !== 'tool_call' || !step.toolCall) return null;
-          const startPct = totalDurationMs > 0
-            ? (step.elapsedMs / totalDurationMs) * 100
-            : 0;
-          const durMs = step.toolCall.duration ?? 100;
-          const widthPct = totalDurationMs > 0
-            ? Math.max(0.5, (durMs / totalDurationMs) * 100)
-            : 0.5;
-
-          const isActive = idx === currentStep;
-          const color = toolColor(step.toolCall.toolName);
-
-          return (
-            <div
-              key={step.toolCall.id}
-              onClick={(e) => { e.stopPropagation(); onSeek(idx); }}
-              style={{
-                position: 'absolute',
-                top: '4px',
-                bottom: '4px',
-                left: `${startPct}%`,
-                width: `${widthPct}%`,
-                background: color,
-                borderRadius: '2px',
-                opacity: isActive ? 1 : 0.5,
-                border: isActive ? '1px solid var(--text)' : 'none',
-                transition: 'opacity 0.15s',
-                minWidth: '3px',
-              }}
-              title={`${step.toolCall.toolName}: ${step.toolCall.input}`}
-            />
-          );
-        })}
-
-        {/* Playhead */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: `${playheadPct}%`,
-            width: '2px',
-            background: 'var(--accent)',
-            boxShadow: '0 0 6px var(--accent)',
-            transition: 'left 0.15s ease',
-            zIndex: 1,
-          }}
-        />
-      </div>
-
-      {/* Time labels */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '2px 0',
-          fontSize: '0.625rem',
-          color: 'var(--text-faint)',
-          fontFamily: 'var(--font-mono)',
-          userSelect: 'none',
-        }}
-      >
-        <span>{formatElapsed(steps[currentStep]?.elapsedMs ?? 0)}</span>
-        <span>{formatElapsed(totalDurationMs)}</span>
-      </div>
+    <div style={CONTAINER_STYLE}>
+      <ReplayTimelineTrack
+        trackRef={trackRef}
+        handleClick={handleClick}
+        steps={steps}
+        currentStep={currentStep}
+        totalDurationMs={totalDurationMs}
+        onSeek={onSeek}
+        playheadPct={playheadPct}
+      />
+      <ReplayTimelineLabels currentElapsedMs={currentElapsedMs} totalDurationMs={totalDurationMs} />
     </div>
   );
 });

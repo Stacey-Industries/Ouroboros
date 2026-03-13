@@ -10,6 +10,45 @@ import type { AgentSession } from '../components/AgentMonitor/types'
 import type { CostEntry } from '../types/electron'
 import { estimateCost } from '../components/AgentMonitor/costCalculator'
 
+function isFinishedSession(session: AgentSession): boolean {
+  return session.status === 'complete' || session.status === 'error'
+}
+
+function shouldRecord(session: AgentSession, recorded: Set<string>): boolean {
+  return isFinishedSession(session) && !recorded.has(session.id) && !session.restored
+}
+
+function formatDateStr(timestamp: number | undefined): string {
+  const now = new Date(timestamp ?? Date.now())
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function buildCostEntry(session: AgentSession): CostEntry {
+  const cost = estimateCost({
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+    model: session.model,
+    cacheReadTokens: session.cacheReadTokens,
+    cacheWriteTokens: session.cacheWriteTokens,
+  })
+
+  return {
+    date: formatDateStr(session.completedAt),
+    sessionId: session.id,
+    taskLabel: session.taskLabel,
+    model: session.model ?? 'unknown',
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+    cacheReadTokens: session.cacheReadTokens ?? 0,
+    cacheWriteTokens: session.cacheWriteTokens ?? 0,
+    estimatedCost: cost.totalCost,
+    timestamp: session.completedAt ?? Date.now(),
+  }
+}
+
 /**
  * Monitors agent sessions and auto-records cost entries when they finish.
  */
@@ -20,39 +59,11 @@ export function useCostTracking(sessions: AgentSession[]): void {
     if (!window.electronAPI?.cost?.addEntry) return
 
     for (const session of sessions) {
-      // Only record completed or errored sessions
-      if (session.status !== 'complete' && session.status !== 'error') continue
-      // Skip already-recorded sessions
-      if (recordedRef.current.has(session.id)) continue
-      // Skip restored sessions (they were already recorded in a prior app run)
-      if (session.restored) continue
+      if (!shouldRecord(session, recordedRef.current)) continue
 
       recordedRef.current.add(session.id)
 
-      const cost = estimateCost({
-        inputTokens: session.inputTokens,
-        outputTokens: session.outputTokens,
-        model: session.model,
-        cacheReadTokens: session.cacheReadTokens,
-        cacheWriteTokens: session.cacheWriteTokens,
-      })
-
-      const now = new Date(session.completedAt ?? Date.now())
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-
-      const entry: CostEntry = {
-        date: dateStr,
-        sessionId: session.id,
-        taskLabel: session.taskLabel,
-        model: session.model ?? 'unknown',
-        inputTokens: session.inputTokens,
-        outputTokens: session.outputTokens,
-        cacheReadTokens: session.cacheReadTokens ?? 0,
-        cacheWriteTokens: session.cacheWriteTokens ?? 0,
-        estimatedCost: cost.totalCost,
-        timestamp: session.completedAt ?? Date.now(),
-      }
-
+      const entry = buildCostEntry(session)
       window.electronAPI.cost.addEntry(entry).catch(() => {
         // Non-fatal — ignore save errors
       })

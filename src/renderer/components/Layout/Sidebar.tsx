@@ -54,6 +54,32 @@ function ChevronRightIcon(): React.ReactElement {
   );
 }
 
+function SidebarHeader({
+  collapsed,
+  header,
+  onToggleCollapse,
+}: Pick<SidebarProps, 'collapsed' | 'header' | 'onToggleCollapse'>): React.ReactElement {
+  return (
+    <div className="flex-shrink-0 flex items-center justify-between h-10 px-3 border-b border-[var(--border)]">
+      <div className="flex-1 min-w-0">
+        {header}
+      </div>
+      <button
+        onClick={onToggleCollapse}
+        title={collapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
+        className="
+          flex-shrink-0 ml-1 p-1 rounded
+          text-[var(--text-muted)] hover:text-[var(--text)]
+          hover:bg-[var(--bg-tertiary)]
+          transition-colors duration-100
+        "
+      >
+        {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+      </button>
+    </div>
+  );
+}
+
 export function Sidebar({
   width,
   collapsed,
@@ -79,23 +105,11 @@ export function Sidebar({
       )}
 
       {/* Header: project picker slot */}
-      <div className="flex-shrink-0 flex items-center justify-between h-10 px-3 border-b border-[var(--border)]">
-        <div className="flex-1 min-w-0">
-          {header}
-        </div>
-        <button
-          onClick={onToggleCollapse}
-          title={collapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
-          className="
-            flex-shrink-0 ml-1 p-1 rounded
-            text-[var(--text-muted)] hover:text-[var(--text)]
-            hover:bg-[var(--bg-tertiary)]
-            transition-colors duration-100
-          "
-        >
-          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-        </button>
-      </div>
+      <SidebarHeader
+        collapsed={collapsed}
+        header={header}
+        onToggleCollapse={onToggleCollapse}
+      />
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">

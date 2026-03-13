@@ -15,6 +15,15 @@ const SEARCH_INPUT_STYLE: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
+const FILE_RESULTS_STYLE: React.CSSProperties = {
+  flex: 1,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  position: 'relative',
+};
+
+type FileListBodyMode = 'empty-project' | 'empty-search' | 'error' | 'loading' | 'results' | 'idle';
+
 function SearchInput({
   controller,
   projectRoot,
@@ -51,6 +60,10 @@ function SearchInput({
   );
 }
 
+function shouldShowSummary(projectRoot: string | null, controller: FileListController): boolean {
+  return !controller.isLoading && !controller.error && Boolean(projectRoot);
+}
+
 function Summary({
   query,
   totalFiles,
@@ -78,6 +91,26 @@ function Summary({
   );
 }
 
+function SummaryBlock({
+  controller,
+  projectRoot,
+}: {
+  controller: FileListController;
+  projectRoot: string | null;
+}): React.ReactElement | null {
+  if (!shouldShowSummary(projectRoot, controller)) {
+    return null;
+  }
+
+  return (
+    <Summary
+      query={controller.query}
+      totalFiles={controller.allFiles.length}
+      filteredCount={controller.filteredItems.length}
+    />
+  );
+}
+
 function Message({
   children,
   color,
@@ -96,6 +129,31 @@ function Message({
   );
 }
 
+function VisibleFileItems({
+  activeFilePath,
+  controller,
+  onFileSelect,
+}: {
+  activeFilePath: string | null;
+  controller: FileListController;
+  onFileSelect: (filePath: string) => void;
+}): React.ReactElement {
+  return (
+    <>
+      {controller.visibleItems.map(({ absoluteIndex, file, ranges }) => (
+        <FileListItem
+          key={file.path}
+          file={file}
+          isActive={file.path === activeFilePath}
+          isFocused={absoluteIndex === controller.focusIndex}
+          matchRanges={ranges}
+          onClick={(selectedFile) => onFileSelect(selectedFile.path)}
+        />
+      ))}
+    </>
+  );
+}
+
 function FileResults({
   activeFilePath,
   controller,
@@ -111,12 +169,7 @@ function FileResults({
       role="listbox"
       aria-label="Files"
       onScroll={controller.handleScroll}
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        position: 'relative',
-      }}
+      style={FILE_RESULTS_STYLE}
     >
       <div style={{ height: controller.totalHeight, position: 'relative' }}>
         <div
@@ -127,20 +180,69 @@ function FileResults({
             right: 0,
           }}
         >
-          {controller.visibleItems.map(({ absoluteIndex, file, ranges }) => (
-            <FileListItem
-              key={file.path}
-              file={file}
-              isActive={file.path === activeFilePath}
-              isFocused={absoluteIndex === controller.focusIndex}
-              matchRanges={ranges}
-              onClick={(selectedFile) => onFileSelect(selectedFile.path)}
-            />
-          ))}
+          <VisibleFileItems
+            activeFilePath={activeFilePath}
+            controller={controller}
+            onFileSelect={onFileSelect}
+          />
         </div>
       </div>
     </div>
   );
+}
+
+function getBodyMode(
+  projectRoot: string | null,
+  controller: FileListController,
+): FileListBodyMode {
+  if (controller.isLoading) {
+    return 'loading';
+  }
+
+  if (controller.error) {
+    return 'error';
+  }
+
+  if (!projectRoot) {
+    return 'empty-project';
+  }
+
+  if (controller.filteredItems.length > 0) {
+    return 'results';
+  }
+
+  return controller.query ? 'empty-search' : 'idle';
+}
+
+function FileListBody({
+  activeFilePath,
+  controller,
+  onFileSelect,
+  projectRoot,
+}: {
+  activeFilePath: string | null;
+  controller: FileListController;
+  onFileSelect: (filePath: string) => void;
+  projectRoot: string | null;
+}): React.ReactElement | null {
+  switch (getBodyMode(projectRoot, controller)) {
+    case 'loading':
+      return <Message color="var(--text-muted)" padding="16px 12px">Loading files...</Message>;
+    case 'error':
+      return <Message color="var(--error)" padding="12px">{controller.error}</Message>;
+    case 'empty-project':
+      return (
+        <Message color="var(--text-faint)" padding="24px 12px" textAlign="center">
+          <>No folder open.<br />Use the picker above to open a project.</>
+        </Message>
+      );
+    case 'results':
+      return <FileResults activeFilePath={activeFilePath} controller={controller} onFileSelect={onFileSelect} />;
+    case 'empty-search':
+      return <Message color="var(--text-faint)" padding="16px 12px" textAlign="center">No files match &quot;{controller.query}&quot;</Message>;
+    default:
+      return null;
+  }
 }
 
 export function FileListView({
@@ -154,65 +256,19 @@ export function FileListView({
   onFileSelect: (filePath: string) => void;
   controller: FileListController;
 }): React.ReactElement {
-  const showSummary = !controller.isLoading && !controller.error && Boolean(projectRoot);
-  const showResults = !controller.isLoading && !controller.error && controller.filteredItems.length > 0;
-  const showEmptyProject = !projectRoot && !controller.isLoading;
-  const showEmptySearch = !controller.isLoading
-    && !controller.error
-    && Boolean(projectRoot)
-    && Boolean(controller.query)
-    && controller.filteredItems.length === 0;
-
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
       onKeyDown={controller.handleKeyDown}
     >
       <SearchInput controller={controller} projectRoot={projectRoot} />
-
-      {showSummary && (
-        <Summary
-          query={controller.query}
-          totalFiles={controller.allFiles.length}
-          filteredCount={controller.filteredItems.length}
-        />
-      )}
-
-      {controller.isLoading && (
-        <Message color="var(--text-muted)" padding="16px 12px">
-          Loading files...
-        </Message>
-      )}
-
-      {controller.error && (
-        <Message color="var(--error)" padding="12px">
-          {controller.error}
-        </Message>
-      )}
-
-      {showEmptyProject && (
-        <Message color="var(--text-faint)" padding="24px 12px" textAlign="center">
-          <>
-            No folder open.
-            <br />
-            Use the picker above to open a project.
-          </>
-        </Message>
-      )}
-
-      {showResults && (
-        <FileResults
-          activeFilePath={activeFilePath}
-          controller={controller}
-          onFileSelect={onFileSelect}
-        />
-      )}
-
-      {showEmptySearch && (
-        <Message color="var(--text-faint)" padding="16px 12px" textAlign="center">
-          No files match &quot;{controller.query}&quot;
-        </Message>
-      )}
+      <SummaryBlock controller={controller} projectRoot={projectRoot} />
+      <FileListBody
+        activeFilePath={activeFilePath}
+        controller={controller}
+        onFileSelect={onFileSelect}
+        projectRoot={projectRoot}
+      />
     </div>
   );
 }

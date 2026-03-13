@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import type { BlameLine } from '../../types/electron';
 
 export interface BlameGutterProps {
@@ -10,14 +10,130 @@ export interface BlameGutterProps {
   >;
 }
 
-/**
- * Format a Unix timestamp as a relative date string.
- */
+type BlameGutterRow = BlameGutterProps['rows'][number];
+
+interface TooltipInfo {
+  blame: BlameLine;
+  top: number;
+  left: number;
+}
+
+interface BlameRowProps {
+  row: BlameGutterRow;
+  blameMap: Map<number, BlameLine>;
+  firstInGroup: Set<number>;
+  onClick: (event: React.MouseEvent, blame: BlameLine) => void;
+}
+
+interface BlameAnnotationRowProps {
+  blame: BlameLine;
+  backgroundColor: string;
+  onClick: (event: React.MouseEvent, blame: BlameLine) => void;
+}
+
+interface BlameTooltipProps {
+  tooltipInfo: TooltipInfo | null;
+  onClose: () => void;
+}
+
+const GUTTER_STYLE: React.CSSProperties = {
+  flexShrink: 0,
+  width: '150px',
+  paddingTop: '16px',
+  paddingBottom: '16px',
+  overflow: 'hidden',
+  userSelect: 'none',
+  borderRight: '1px solid var(--border-muted)',
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-ui)',
+  lineHeight: '1.6',
+};
+
+const EMPTY_ROW_STYLE: React.CSSProperties = {
+  height: '1.6em',
+};
+
+const BLAME_ROW_STYLE: React.CSSProperties = {
+  height: '1.6em',
+  paddingLeft: '6px',
+  paddingRight: '6px',
+};
+
+const BLAME_ANNOTATION_STYLE: React.CSSProperties = {
+  ...BLAME_ROW_STYLE,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  color: 'var(--text-faint)',
+};
+
+const BLAME_AUTHOR_STYLE: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const BLAME_DATE_STYLE: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  flexShrink: 0,
+};
+
+const TOOLTIP_BACKDROP_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 999,
+};
+
+const TOOLTIP_CARD_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  zIndex: 1000,
+  backgroundColor: 'var(--bg-secondary)',
+  border: '1px solid var(--border)',
+  borderRadius: '6px',
+  padding: '10px 14px',
+  fontSize: '0.75rem',
+  fontFamily: 'var(--font-ui)',
+  color: 'var(--text)',
+  maxWidth: '350px',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+  lineHeight: '1.5',
+};
+
+const TOOLTIP_HEADER_STYLE: React.CSSProperties = {
+  display: 'flex',
+  gap: '8px',
+  marginBottom: '4px',
+};
+
+const TOOLTIP_HASH_STYLE: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  color: 'var(--accent)',
+  fontSize: '0.6875rem',
+};
+
+const TOOLTIP_AUTHOR_STYLE: React.CSSProperties = {
+  color: 'var(--text-muted)',
+};
+
+const TOOLTIP_DATE_STYLE: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  fontSize: '0.6875rem',
+};
+
+const TOOLTIP_SUMMARY_STYLE: React.CSSProperties = {
+  marginTop: '6px',
+  color: 'var(--text)',
+  fontWeight: 500,
+};
+
 function relativeDate(timestamp: number): string {
   if (!timestamp) return '';
   const now = Date.now() / 1000;
   const diff = now - timestamp;
-
   if (diff < 60) return 'now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -27,230 +143,150 @@ function relativeDate(timestamp: number): string {
   return `${Math.floor(diff / 31536000)}y ago`;
 }
 
-/**
- * Get a short author name (first name or first 10 chars).
- */
 function shortAuthor(author: string): string {
   if (!author) return '';
   const firstName = author.split(/\s+/)[0];
   return firstName.length > 10 ? firstName.slice(0, 10) : firstName;
 }
 
-/**
- * Generate subtle alternating background colors based on commit hash.
- * Returns a color with very low opacity for visual grouping.
- */
 function commitColor(hash: string): string {
   if (!hash || hash === '0000000000000000000000000000000000000000') {
     return 'transparent';
   }
-  // Use first 6 chars of hash to derive a hue
   const hue = parseInt(hash.slice(0, 6), 16) % 360;
   return `hsla(${hue}, 40%, 50%, 0.06)`;
 }
 
-/**
- * BlameGutter — renders inline git blame annotations alongside code lines.
- *
- * Groups consecutive lines with the same commit and only shows the
- * annotation on the first line of each group.
- */
+function buildBlameMap(blameLines: BlameLine[]): Map<number, BlameLine> {
+  const map = new Map<number, BlameLine>();
+  for (const blameLine of blameLines) {
+    map.set(blameLine.line, blameLine);
+  }
+  return map;
+}
+
+function buildFirstInGroup(
+  rows: BlameGutterRow[],
+  blameMap: Map<number, BlameLine>,
+): Set<number> {
+  const firstInGroup = new Set<number>();
+  let previousHash: string | null = null;
+
+  for (const row of rows) {
+    if (row.type !== 'line') {
+      previousHash = null;
+      continue;
+    }
+    const hash = blameMap.get(row.index + 1)?.hash ?? null;
+    if (hash !== previousHash) firstInGroup.add(row.index);
+    previousHash = hash;
+  }
+
+  return firstInGroup;
+}
+
+function getRowKey(row: BlameGutterRow): string {
+  return row.type === 'line' ? `blame-${row.index}` : `blame-fp-${row.startLine}`;
+}
+
+function getTooltipInfo(event: React.MouseEvent, blame: BlameLine): TooltipInfo {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  return { blame, top: rect.bottom + 4, left: rect.left };
+}
+
+function formatBlameTitle(blame: BlameLine): string {
+  return `${blame.author}, ${relativeDate(blame.date)} - ${blame.summary}`;
+}
+
+const BlameAnnotationRow = memo(function BlameAnnotationRow({
+  blame,
+  backgroundColor,
+  onClick,
+}: BlameAnnotationRowProps): React.ReactElement {
+  return (
+    <div
+      onClick={(event) => onClick(event, blame)}
+      style={{ ...BLAME_ANNOTATION_STYLE, backgroundColor }}
+      title={formatBlameTitle(blame)}
+    >
+      <span style={BLAME_AUTHOR_STYLE}>{shortAuthor(blame.author)}</span>
+      <span style={BLAME_DATE_STYLE}>{relativeDate(blame.date)}</span>
+    </div>
+  );
+});
+
+const BlameRow = memo(function BlameRow({
+  row,
+  blameMap,
+  firstInGroup,
+  onClick,
+}: BlameRowProps): React.ReactElement {
+  if (row.type === 'fold-placeholder') {
+    return <div style={EMPTY_ROW_STYLE} />;
+  }
+
+  const blame = blameMap.get(row.index + 1);
+  const backgroundColor = blame ? commitColor(blame.hash) : 'transparent';
+
+  if (!blame || !firstInGroup.has(row.index)) {
+    return <div style={{ ...BLAME_ROW_STYLE, backgroundColor }} />;
+  }
+
+  return (
+    <BlameAnnotationRow
+      blame={blame}
+      backgroundColor={backgroundColor}
+      onClick={onClick}
+    />
+  );
+});
+
+const BlameTooltip = memo(function BlameTooltip({
+  tooltipInfo,
+  onClose,
+}: BlameTooltipProps): React.ReactElement | null {
+  if (!tooltipInfo) return null;
+
+  const { blame, top, left } = tooltipInfo;
+  return (
+    <>
+      <div onClick={onClose} style={TOOLTIP_BACKDROP_STYLE} />
+      <div style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}>
+        <div style={TOOLTIP_HEADER_STYLE}>
+          <span style={TOOLTIP_HASH_STYLE}>{blame.hash.slice(0, 8)}</span>
+          <span style={TOOLTIP_AUTHOR_STYLE}>{blame.author}</span>
+        </div>
+        <div style={TOOLTIP_DATE_STYLE}>
+          {new Date(blame.date * 1000).toLocaleString()}
+        </div>
+        <div style={TOOLTIP_SUMMARY_STYLE}>{blame.summary}</div>
+      </div>
+    </>
+  );
+});
+
 export const BlameGutter = memo(function BlameGutter({
   blameLines,
   rows,
 }: BlameGutterProps): React.ReactElement {
-  const [tooltipInfo, setTooltipInfo] = useState<{
-    blame: BlameLine;
-    top: number;
-    left: number;
-  } | null>(null);
-
-  // Build a map from 1-based line number to blame info
-  const blameMap = useMemo(() => {
-    const map = new Map<number, BlameLine>();
-    for (const bl of blameLines) {
-      map.set(bl.line, bl);
-    }
-    return map;
-  }, [blameLines]);
-
-  // Determine which rows are the "first" in a group of same-commit lines
-  const firstInGroup = useMemo(() => {
-    const set = new Set<number>();
-    let prevHash: string | null = null;
-
-    for (const row of rows) {
-      if (row.type !== 'line') {
-        prevHash = null;
-        continue;
-      }
-      const blame = blameMap.get(row.index + 1); // blame uses 1-based lines
-      const hash = blame?.hash ?? null;
-      if (hash !== prevHash) {
-        set.add(row.index);
-      }
-      prevHash = hash;
-    }
-    return set;
-  }, [rows, blameMap]);
-
-  const handleClick = (
-    e: React.MouseEvent,
-    blame: BlameLine
-  ) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setTooltipInfo({
-      blame,
-      top: rect.bottom + 4,
-      left: rect.left,
-    });
-  };
-
-  const handleCloseTooltip = () => {
-    setTooltipInfo(null);
-  };
+  const [tooltipInfo, setTooltipInfo] = useState<TooltipInfo | null>(null);
+  const blameMap = useMemo(() => buildBlameMap(blameLines), [blameLines]);
+  const firstInGroup = useMemo(() => buildFirstInGroup(rows, blameMap), [rows, blameMap]);
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        style={{
-          flexShrink: 0,
-          width: '150px',
-          paddingTop: '16px',
-          paddingBottom: '16px',
-          overflow: 'hidden',
-          userSelect: 'none',
-          borderRight: '1px solid var(--border-muted)',
-          fontSize: '0.6875rem',
-          fontFamily: 'var(--font-ui)',
-          lineHeight: '1.6',
-        }}
-      >
-        {rows.map((row) => {
-          if (row.type === 'fold-placeholder') {
-            return (
-              <div
-                key={`blame-fp-${row.startLine}`}
-                style={{ height: '1.6em' }}
-              />
-            );
-          }
-
-          const blame = blameMap.get(row.index + 1);
-          const isFirst = firstInGroup.has(row.index);
-          const bgColor = blame ? commitColor(blame.hash) : 'transparent';
-
-          if (!blame || !isFirst) {
-            return (
-              <div
-                key={`blame-${row.index}`}
-                style={{
-                  height: '1.6em',
-                  backgroundColor: bgColor,
-                  paddingLeft: '6px',
-                  paddingRight: '6px',
-                }}
-              />
-            );
-          }
-
-          return (
-            <div
-              key={`blame-${row.index}`}
-              onClick={(e) => handleClick(e, blame)}
-              style={{
-                height: '1.6em',
-                backgroundColor: bgColor,
-                paddingLeft: '6px',
-                paddingRight: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                color: 'var(--text-faint)',
-              }}
-              title={`${blame.author}, ${relativeDate(blame.date)} — ${blame.summary}`}
-            >
-              <span
-                style={{
-                  color: 'var(--text-muted)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {shortAuthor(blame.author)}
-              </span>
-              <span style={{ color: 'var(--text-faint)', flexShrink: 0 }}>
-                {relativeDate(blame.date)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Tooltip overlay */}
-      {tooltipInfo && (
-        <>
-          {/* Backdrop to close tooltip */}
-          <div
-            onClick={handleCloseTooltip}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 999,
-            }}
+      <div aria-hidden="true" style={GUTTER_STYLE}>
+        {rows.map((row) => (
+          <BlameRow
+            key={getRowKey(row)}
+            row={row}
+            blameMap={blameMap}
+            firstInGroup={firstInGroup}
+            onClick={(event, blame) => setTooltipInfo(getTooltipInfo(event, blame))}
           />
-          <div
-            style={{
-              position: 'fixed',
-              top: `${tooltipInfo.top}px`,
-              left: `${tooltipInfo.left}px`,
-              zIndex: 1000,
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              padding: '10px 14px',
-              fontSize: '0.75rem',
-              fontFamily: 'var(--font-ui)',
-              color: 'var(--text)',
-              maxWidth: '350px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-              lineHeight: '1.5',
-            }}
-          >
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--accent)',
-                  fontSize: '0.6875rem',
-                }}
-              >
-                {tooltipInfo.blame.hash.slice(0, 8)}
-              </span>
-              <span style={{ color: 'var(--text-muted)' }}>
-                {tooltipInfo.blame.author}
-              </span>
-            </div>
-            <div style={{ color: 'var(--text-faint)', fontSize: '0.6875rem' }}>
-              {new Date(tooltipInfo.blame.date * 1000).toLocaleString()}
-            </div>
-            <div
-              style={{
-                marginTop: '6px',
-                color: 'var(--text)',
-                fontWeight: 500,
-              }}
-            >
-              {tooltipInfo.blame.summary}
-            </div>
-          </div>
-        </>
-      )}
+        ))}
+      </div>
+      <BlameTooltip tooltipInfo={tooltipInfo} onClose={() => setTooltipInfo(null)} />
     </>
   );
 });

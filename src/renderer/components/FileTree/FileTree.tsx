@@ -1,17 +1,13 @@
 /**
- * FileTree — multi-root hierarchical tree view.
- *
- * Each root is rendered as a collapsible RootSection with its own independent
- * tree state, git status polling, search, and file operations.
+ * FileTree - multi-root hierarchical tree view.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { EmptyState } from '../shared';
 import { useToastContext } from '../../contexts/ToastContext';
-import { SearchOverlay } from './SearchOverlay';
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
-import { RootSection } from './RootSection';
-import { PinnedSection } from './PinnedSection';
+import { FileTreeBody } from './FileTreeBody';
+import { FileTreeSearchBar } from './FileTreeSearchBar';
 
 export interface FileTreeProps {
   projectRoots: string[];
@@ -21,29 +17,45 @@ export interface FileTreeProps {
   projectRoot?: string | null;
 }
 
-export function FileTree({
-  projectRoots, activeFilePath, onFileSelect,
-  onRemoveRoot, projectRoot: singleRootProp,
-}: FileTreeProps): React.ReactElement {
-  const roots = useMemo(() => {
-    if (projectRoots.length > 0) return projectRoots;
-    if (singleRootProp) return [singleRootProp];
-    return [];
-  }, [projectRoots, singleRootProp]);
+type ToastFn = ReturnType<typeof useToastContext>['toast'];
 
-  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(new Set(roots));
-  const [bookmarks, setBookmarks] = useState<string[]>([]);
-  const [extraIgnorePatterns, setExtraIgnorePatterns] = useState<string[]>([]);
-  const [heatMapEnabled, setHeatMapEnabled] = useState(false);
-  const [query, setQuery] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToastContext();
-  const { getHeatLevel, heatMap } = useFileHeatMap(heatMapEnabled);
+const treeContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+};
+
+function resolveRoots(
+  projectRoots: string[],
+  singleRootProp?: string | null
+): string[] {
+  if (projectRoots.length > 0) return projectRoots;
+  if (singleRootProp) return [singleRootProp];
+  return [];
+}
+
+function useResolvedRoots(
+  projectRoots: string[],
+  singleRootProp?: string | null
+): string[] {
+  return useMemo(
+    () => resolveRoots(projectRoots, singleRootProp),
+    [projectRoots, singleRootProp]
+  );
+}
+
+function useExpandedRoots(roots: string[]): {
+  expandedRoots: Set<string>;
+  toggleRoot: (root: string) => void;
+} {
+  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(
+    new Set(roots)
+  );
 
   useEffect(() => {
     setExpandedRoots((prev) => {
       const next = new Set(prev);
-      for (const r of roots) if (!next.has(r)) next.add(r);
+      for (const root of roots) next.add(root);
       return next;
     });
   }, [roots]);
@@ -51,103 +63,161 @@ export function FileTree({
   const toggleRoot = useCallback((root: string) => {
     setExpandedRoots((prev) => {
       const next = new Set(prev);
-      if (next.has(root)) next.delete(root); else next.add(root);
+      if (next.has(root)) next.delete(root);
+      else next.add(root);
       return next;
     });
   }, []);
 
+  return { expandedRoots, toggleRoot };
+}
+
+function useFileTreeConfig(): {
+  bookmarks: string[];
+  setBookmarks: React.Dispatch<React.SetStateAction<string[]>>;
+  extraIgnorePatterns: string[];
+} {
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [extraIgnorePatterns, setExtraIgnorePatterns] = useState<string[]>([]);
+
   useEffect(() => {
-    void window.electronAPI.config.get('bookmarks').then((v) => setBookmarks((v as string[]) ?? []));
-    void window.electronAPI.config.get('fileTreeIgnorePatterns').then((v) => setExtraIgnorePatterns((v as string[]) ?? []));
-    const cleanup = window.electronAPI.config.onExternalChange((cfg) => {
-      setBookmarks(cfg.bookmarks ?? []);
-      setExtraIgnorePatterns(cfg.fileTreeIgnorePatterns ?? []);
+    void window.electronAPI.config
+      .get('bookmarks')
+      .then((value) => setBookmarks((value as string[]) ?? []));
+    void window.electronAPI.config
+      .get('fileTreeIgnorePatterns')
+      .then((value) => setExtraIgnorePatterns((value as string[]) ?? []));
+    return window.electronAPI.config.onExternalChange((config) => {
+      setBookmarks(config.bookmarks ?? []);
+      setExtraIgnorePatterns(config.fileTreeIgnorePatterns ?? []);
     });
-    return cleanup;
   }, []);
 
-  const handleUnpin = useCallback(async (path: string) => {
-    const updated = bookmarks.filter((p) => p !== path);
-    const result = await window.electronAPI.config.set('bookmarks', updated);
-    if (result.success) {
+  return { bookmarks, setBookmarks, extraIgnorePatterns };
+}
+
+function pinnedName(path: string): string {
+  return path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? path;
+}
+
+function useUnpinHandler(
+  bookmarks: string[],
+  setBookmarks: React.Dispatch<React.SetStateAction<string[]>>,
+  toast: ToastFn
+): (path: string) => Promise<void> {
+  return useCallback(
+    async (path: string) => {
+      const updated = bookmarks.filter((bookmark) => bookmark !== path);
+      const result = await window.electronAPI.config.set('bookmarks', updated);
+      if (!result.success) {
+        toast(`Unpin failed: ${result.error}`, 'error');
+        return;
+      }
       setBookmarks(updated);
-      const name = path.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? path;
-      toast(`Removed "${name}" from Pinned`, 'success');
-    } else {
-      toast(`Unpin failed: ${result.error}`, 'error');
-    }
-  }, [bookmarks, toast]);
+      toast(`Removed "${pinnedName(path)}" from Pinned`, 'success');
+    },
+    [bookmarks, setBookmarks, toast]
+  );
+}
 
-  if (roots.length === 0) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <EmptyState icon="folder" title="Open a folder to get started" description="Use the project picker above or open a folder from the File menu." />
-      </div>
-    );
-  }
+function useSearchQuery(
+  onFileSelect: (filePath: string) => void
+): {
+  query: string;
+  setQuery: React.Dispatch<React.SetStateAction<string>>;
+  handleSearchSelect: (path: string) => void;
+} {
+  const [query, setQuery] = useState('');
+  const handleSearchSelect = useCallback(
+    (path: string) => {
+      onFileSelect(path);
+      setQuery('');
+    },
+    [onFileSelect]
+  );
+  return { query, setQuery, handleSearchSelect };
+}
 
+function EmptyFileTree(): React.ReactElement {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <SearchBar query={query} setQuery={setQuery} inputRef={inputRef} heatMapEnabled={heatMapEnabled} setHeatMapEnabled={setHeatMapEnabled} heatMapCount={heatMap.size} />
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
-        <PinnedSection bookmarks={bookmarks} activeFilePath={activeFilePath} onFileSelect={onFileSelect} onUnpin={(p) => void handleUnpin(p)} />
-        {roots.map((root) => (
-          <RootSection key={root} root={root} isExpanded={expandedRoots.has(root)} onToggle={() => toggleRoot(root)} activeFilePath={activeFilePath} onFileSelect={onFileSelect} onRemove={roots.length > 1 && onRemoveRoot ? () => onRemoveRoot(root) : undefined} bookmarks={bookmarks} extraIgnorePatterns={extraIgnorePatterns} getHeatLevel={heatMapEnabled ? getHeatLevel : undefined} />
-        ))}
-        {query.trim().length > 0 && (
-          <SearchOverlay roots={roots} query={query} activeFilePath={activeFilePath} onFileSelect={(p) => { onFileSelect(p); setQuery(''); }} />
-        )}
-      </div>
+    <div style={treeContainerStyle}>
+      <EmptyState
+        icon="folder"
+        title="Open a folder to get started"
+        description="Use the project picker above or open a folder from the File menu."
+      />
     </div>
   );
 }
 
-// ─── SearchBar sub-component ──────────────────────────────────────────────────
-
-interface SearchBarProps {
+interface FileTreeContentProps {
   query: string;
-  setQuery: (q: string) => void;
+  setQuery: React.Dispatch<React.SetStateAction<string>>;
   inputRef: React.RefObject<HTMLInputElement | null>;
   heatMapEnabled: boolean;
-  setHeatMapEnabled: (fn: (prev: boolean) => boolean) => void;
   heatMapCount: number;
+  onToggleHeatMap: () => void;
+  bodyProps: React.ComponentProps<typeof FileTreeBody>;
 }
 
-function SearchBar({ query, setQuery, inputRef, heatMapEnabled, setHeatMapEnabled, heatMapCount }: SearchBarProps): React.ReactElement {
+function FileTreeContent({
+  query,
+  setQuery,
+  inputRef,
+  heatMapEnabled,
+  heatMapCount,
+  onToggleHeatMap,
+  bodyProps,
+}: FileTreeContentProps): React.ReactElement {
   return (
-    <div style={{ padding: '6px 8px', flexShrink: 0, borderBottom: '1px solid var(--border-muted)' }}>
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search files..."
-          aria-label="Filter files"
-          className="selectable"
-          style={{ flex: 1, minWidth: 0, padding: '4px 8px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', outline: 'none', boxSizing: 'border-box' }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
-        />
-        <HeatMapToggle enabled={heatMapEnabled} toggle={() => setHeatMapEnabled((p) => !p)} count={heatMapCount} />
-      </div>
+    <div style={treeContainerStyle}>
+      <FileTreeSearchBar
+        query={query}
+        setQuery={setQuery}
+        inputRef={inputRef}
+        heatMapEnabled={heatMapEnabled}
+        heatMapCount={heatMapCount}
+        onToggleHeatMap={onToggleHeatMap}
+      />
+      <FileTreeBody query={query} {...bodyProps} />
     </div>
   );
 }
 
-function HeatMapToggle({ enabled, toggle, count }: { enabled: boolean; toggle: () => void; count: number }): React.ReactElement {
-  const title = enabled ? `Heat map ON - ${count} file${count !== 1 ? 's' : ''} tracked (click to disable)` : 'Show file edit heat map';
+export function FileTree({ projectRoots, activeFilePath, onFileSelect, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
+  const roots = useResolvedRoots(projectRoots, singleRootProp);
+  const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
+  const { bookmarks, setBookmarks, extraIgnorePatterns } = useFileTreeConfig();
+  const { query, setQuery, handleSearchSelect } = useSearchQuery(onFileSelect);
+  const [heatMapEnabled, setHeatMapEnabled] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToastContext();
+  const { getHeatLevel, heatMap } = useFileHeatMap(heatMapEnabled);
+  const handleUnpin = useUnpinHandler(bookmarks, setBookmarks, toast);
+
+  if (roots.length === 0) return <EmptyFileTree />;
+
   return (
-    <button
-      onClick={toggle}
-      title={title}
-      aria-label={enabled ? 'Disable heat map overlay' : 'Enable heat map overlay'}
-      aria-pressed={enabled}
-      style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', padding: 0, background: enabled ? 'rgba(239, 68, 68, 0.15)' : 'transparent', border: enabled ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: enabled ? '#ef4444' : 'var(--text-faint)', transition: 'all 150ms' }}
-    >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 1C8 1 3 6 3 10a5 5 0 0 0 10 0c0-4-5-9-5-9zM6.5 12.5a2 2 0 0 1-1-1.73c0-1.5 2.5-4.27 2.5-4.27s2.5 2.77 2.5 4.27a2 2 0 0 1-1 1.73" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill={enabled ? 'currentColor' : 'none'} fillOpacity={enabled ? 0.3 : 0} />
-      </svg>
-    </button>
+    <FileTreeContent
+      query={query}
+      setQuery={setQuery}
+      inputRef={inputRef}
+      heatMapEnabled={heatMapEnabled}
+      heatMapCount={heatMap.size}
+      onToggleHeatMap={() => setHeatMapEnabled((prev) => !prev)}
+      bodyProps={{
+        roots,
+        activeFilePath,
+        bookmarks,
+        expandedRoots,
+        extraIgnorePatterns,
+        onFileSelect,
+        onToggleRoot: toggleRoot,
+        onRemoveRoot,
+        onSearchSelect: handleSearchSelect,
+        onUnpin: (path) => void handleUnpin(path),
+        getHeatLevel: heatMapEnabled ? getHeatLevel : undefined,
+      }}
+    />
   );
 }

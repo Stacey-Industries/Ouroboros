@@ -152,65 +152,74 @@ interface UseThemeReturn {
   setShowBgGradient: (value: boolean) => void;
 }
 
+function hydrateThemeOnMount(
+  setThemeId: (id: string) => void,
+  setGradient: (v: boolean) => void,
+  cancelled: { current: boolean },
+): void {
+  Promise.all([
+    readThemeFromStore(),
+    readShowBgGradient(),
+    readCustomThemeColors(),
+  ]).then(([id, gradient, customColors]) => {
+    if (cancelled.current) return;
+    setThemeId(id);
+    setGradient(gradient);
+    if (Object.keys(customColors).length > 0) {
+      Object.assign(customTheme.colors, customColors);
+    }
+    applyThemeToDom(getTheme(id), gradient);
+  });
+}
+
+function hydrateFontConfigOnMount(cancelled: { current: boolean }): void {
+  try {
+    const api = window.electronAPI;
+    if (api?.config?.getAll) {
+      api.config.getAll().then((cfg) => {
+        if (!cancelled.current && cfg) {
+          applyFontConfig(cfg.fontUI ?? '', cfg.fontMono ?? '', cfg.fontSizeUI ?? 13);
+        }
+      }).catch(() => {/* ignore */});
+    }
+  } catch {
+    // IPC not available — ignore
+  }
+}
+
+function persistBgGradient(value: boolean): void {
+  try {
+    window.electronAPI?.config?.set('showBgGradient', value);
+  } catch {
+    // ignore
+  }
+}
+
 export function useTheme(): UseThemeReturn {
   const [themeId, setThemeId] = useState<string>(defaultThemeId);
   const [showBgGradient, setShowBgGradientState] = useState<boolean>(true);
 
-  // On mount, load persisted theme, gradient setting, custom colors, and font config
   useEffect(() => {
-    let cancelled = false;
-
-    Promise.all([
-      readThemeFromStore(),
-      readShowBgGradient(),
-      readCustomThemeColors(),
-    ]).then(([id, gradient, customColors]) => {
-      if (cancelled) return;
-      setThemeId(id);
-      setShowBgGradientState(gradient);
-      // Hydrate custom theme colors into the mutable object before applying
-      if (Object.keys(customColors).length > 0) {
-        Object.assign(customTheme.colors, customColors);
-      }
-      applyThemeToDom(getTheme(id), gradient);
-    });
-
-    // Apply persisted font config
-    try {
-      const api = window.electronAPI;
-      if (api?.config?.getAll) {
-        api.config.getAll().then((cfg) => {
-          if (!cancelled && cfg) {
-            applyFontConfig(cfg.fontUI ?? '', cfg.fontMono ?? '', cfg.fontSizeUI ?? 13);
-          }
-        }).catch(() => {/* ignore */});
-      }
-    } catch {
-      // IPC not available — ignore
-    }
-
-    return () => {
-      cancelled = true;
-    };
+    const cancelled = { current: false };
+    hydrateThemeOnMount(setThemeId, setShowBgGradientState, cancelled);
+    hydrateFontConfigOnMount(cancelled);
+    return () => { cancelled.current = true; };
   }, []);
 
-  // Re-apply whenever themeId or gradient toggle changes
   useEffect(() => {
     const theme = getTheme(themeId);
     applyThemeToDom(theme, showBgGradient);
     updateTitleBarOverlay(theme);
   }, [themeId, showBgGradient]);
 
-  // Listen for theme changes from other parts of the app (settings modal, etc.)
   useEffect(() => {
     if (!window.electronAPI?.theme?.onChange) return;
-    const cleanup = window.electronAPI.theme.onChange((newTheme) => {
+    return window.electronAPI.theme.onChange((newTheme) => {
       if (newTheme in themes) {
         setThemeId(newTheme);
         applyThemeToDom(getTheme(newTheme), showBgGradient);
       }
     });
-    return cleanup;
   }, [showBgGradient]);
 
   const setTheme = useCallback(async (id: string) => {
@@ -222,19 +231,8 @@ export function useTheme(): UseThemeReturn {
 
   const setShowBgGradient = useCallback((value: boolean) => {
     setShowBgGradientState(value);
-    // Persist via config IPC
-    try {
-      window.electronAPI?.config?.set('showBgGradient', value);
-    } catch {
-      // ignore
-    }
+    persistBgGradient(value);
   }, []);
 
-  return {
-    theme: getTheme(themeId),
-    setTheme,
-    themes: themeList,
-    showBgGradient,
-    setShowBgGradient,
-  };
+  return { theme: getTheme(themeId), setTheme, themes: themeList, showBgGradient, setShowBgGradient };
 }

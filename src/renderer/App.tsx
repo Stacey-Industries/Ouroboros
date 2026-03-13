@@ -56,57 +56,160 @@ interface InnerAppProps {
   keybindings: Record<string, string>;
 }
 
+interface InnerAppUiState {
+  filePickerOpen: boolean;
+  setFilePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  symbolSearchOpen: boolean;
+  setSymbolSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  perfOverlayVisible: boolean;
+  setPerfOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+interface InnerAppLifecycleArgs {
+  ctx: ReturnType<typeof useProject>;
+  layouts: ReturnType<typeof useWorkspaceLayouts>;
+  palette: ReturnType<typeof useCommandPalette>;
+  project: ReturnType<typeof useProjectManagement>;
+  registerCommand: ReturnType<typeof useCommandRegistry>['registerCommand'];
+  setTheme: ReturnType<typeof useTheme>['setTheme'];
+  terminal: ReturnType<typeof useTerminalSessions>;
+  uiState: InnerAppUiState;
+  keybindings: Record<string, string>;
+}
+
+interface InnerAppLayoutArgs {
+  ctx: ReturnType<typeof useProject>;
+  project: ReturnType<typeof useProjectManagement>;
+  keybindings: Record<string, string>;
+  layouts: ReturnType<typeof useWorkspaceLayouts>;
+  terminal: ReturnType<typeof useTerminalSessions>;
+  palette: ReturnType<typeof useCommandPalette>;
+  commands: ReturnType<typeof useCommandRegistry>['commands'];
+  recentIds: ReturnType<typeof useCommandRegistry>['recentIds'];
+  handleExecute: (command: Command) => Promise<void>;
+  uiState: InnerAppUiState;
+}
+
+function useInnerAppUiState(): InnerAppUiState {
+  const [filePickerOpen, setFilePickerOpen] = useState(false);
+  const [symbolSearchOpen, setSymbolSearchOpen] = useState(false);
+  const [perfOverlayVisible, setPerfOverlayVisible] = useState(false);
+
+  return {
+    filePickerOpen,
+    setFilePickerOpen,
+    symbolSearchOpen,
+    setSymbolSearchOpen,
+    perfOverlayVisible,
+    setPerfOverlayVisible,
+  };
+}
+
+function useInnerAppLifecycle({
+  ctx,
+  layouts,
+  palette,
+  project,
+  registerCommand,
+  setTheme,
+  terminal,
+  uiState,
+  keybindings,
+}: InnerAppLifecycleArgs): void {
+  useInnerAppEffects({
+    projectRoot: ctx.projectRoot,
+    registerCommand,
+    ...layouts,
+    setTheme: (id) => void setTheme(id),
+    handleProjectChange: project.handleProjectChange,
+    openPalette: palette.open,
+    spawnSession: terminal.spawnSession,
+    spawnClaudeSession: terminal.spawnClaudeSession,
+    ...uiState,
+    keybindings,
+  });
+}
+
+function useCommandExecution(
+  execute: ReturnType<typeof useCommandRegistry>['execute'],
+): (command: Command) => Promise<void> {
+  return useCallback(async (command: Command): Promise<void> => {
+    await execute(command);
+  }, [execute]);
+}
+
+function buildInnerAppLayoutProps({
+  ctx,
+  project,
+  keybindings,
+  layouts,
+  terminal,
+  palette,
+  commands,
+  recentIds,
+  handleExecute,
+  uiState,
+}: InnerAppLayoutArgs): AppLayoutProps {
+  return {
+    projectRoot: ctx.projectRoot,
+    projectRoots: ctx.projectRoots,
+    addProjectRoot: ctx.addProjectRoot,
+    recentProjects: project.recentProjects,
+    setRecentProjects: project.setRecentProjects,
+    handleProjectChange: project.handleProjectChange,
+    keybindings,
+    ...layouts,
+    terminalControl: buildTerminalControl(terminal),
+    ...terminal,
+    paletteOpen: palette.isOpen,
+    closePalette: palette.close,
+    commands,
+    recentIds,
+    handleExecute,
+    filePickerOpen: uiState.filePickerOpen,
+    setFilePickerOpen: uiState.setFilePickerOpen,
+    symbolSearchOpen: uiState.symbolSearchOpen,
+    setSymbolSearchOpen: uiState.setSymbolSearchOpen,
+    perfOverlayVisible: uiState.perfOverlayVisible,
+  };
+}
+
 function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.ReactElement {
   const { setTheme } = useTheme();
   const ctx = useProject();
   const palette = useCommandPalette();
   const { commands, recentIds, execute, registerCommand } = useCommandRegistry();
-  const [filePickerOpen, setFilePickerOpen] = useState(false);
-  const [symbolSearchOpen, setSymbolSearchOpen] = useState(false);
-  const [perfOverlayVisible, setPerfOverlayVisible] = useState(false);
   const layouts = useWorkspaceLayouts();
   const terminal = useTerminalSessions();
   const project = useProjectManagement(initialRecentProjects, ctx.setProjectRoot);
+  const uiState = useInnerAppUiState();
+  const handleExecute = useCommandExecution(execute);
 
-  useInnerAppEffects({
-    projectRoot: ctx.projectRoot, registerCommand,
-    ...layouts, setTheme: (id) => void setTheme(id),
-    handleProjectChange: project.handleProjectChange,
-    openPalette: palette.open,
-    spawnSession: terminal.spawnSession,
-    spawnClaudeSession: terminal.spawnClaudeSession,
-    setFilePickerOpen, setSymbolSearchOpen, setPerfOverlayVisible,
+  useInnerAppLifecycle({
+    ctx,
+    layouts,
+    palette,
+    project,
+    registerCommand,
+    setTheme,
+    terminal,
+    uiState,
     keybindings,
   });
 
-  const handleExecute = useCallback(async (command: Command): Promise<void> => {
-    await execute(command);
-  }, [execute]);
-
-  return (
-    <InnerAppLayout
-      projectRoot={ctx.projectRoot}
-      projectRoots={ctx.projectRoots}
-      addProjectRoot={ctx.addProjectRoot}
-      recentProjects={project.recentProjects}
-      setRecentProjects={project.setRecentProjects}
-      handleProjectChange={project.handleProjectChange}
-      keybindings={keybindings}
-      {...layouts}
-      terminalControl={buildTerminalControl(terminal)}
-      {...terminal}
-      paletteOpen={palette.isOpen}
-      closePalette={palette.close}
-      commands={commands}
-      recentIds={recentIds}
-      handleExecute={handleExecute}
-      filePickerOpen={filePickerOpen}
-      setFilePickerOpen={setFilePickerOpen}
-      symbolSearchOpen={symbolSearchOpen}
-      setSymbolSearchOpen={setSymbolSearchOpen}
-      perfOverlayVisible={perfOverlayVisible}
-    />
-  );
+  return <InnerAppLayout {...buildInnerAppLayoutProps({
+    ctx,
+    project,
+    keybindings,
+    layouts,
+    terminal,
+    palette,
+    commands,
+    recentIds,
+    handleExecute,
+    uiState,
+  })}
+  />;
 }
 
 function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>): AppLayoutProps['terminalControl'] {

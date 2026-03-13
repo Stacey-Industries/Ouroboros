@@ -1,4 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  ImageStatusBar,
+  ImageViewerToolbar,
+  ImageViewport,
+  getImageStyle,
+  getZoomLabel,
+} from './ImageViewer.parts';
 
 export interface ImageViewerProps {
   filePath: string;
@@ -7,11 +14,60 @@ export interface ImageViewerProps {
 
 type ZoomMode = 'fit' | '100' | 'custom';
 
+const rootStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  overflow: 'hidden',
+  backgroundColor: 'var(--bg)',
+};
+
 /**
- * ImageViewer — renders local image files using the file:// protocol.
+ * ImageViewer â€” renders local image files using the file:// protocol.
  * Supports fit-to-window, 100%, zoom in/out, and shows pixel dimensions.
  */
-export function ImageViewer({ filePath, fileSize }: ImageViewerProps): React.ReactElement {
+export function ImageViewer({
+  filePath,
+  fileSize,
+}: ImageViewerProps): React.ReactElement {
+  const viewer = useImageViewerState(filePath);
+
+  return (
+    <div style={rootStyle}>
+      <ImageViewerToolbar
+        zoomMode={viewer.zoomMode}
+        zoomLabel={getZoomLabel(viewer.zoomMode, viewer.customZoom)}
+        onFit={viewer.setFit}
+        onActualSize={viewer.setActualSize}
+        onZoomOut={viewer.zoomOut}
+        onZoomIn={viewer.zoomIn}
+      />
+      <ImageViewport
+        fileUrl={viewer.fileUrl}
+        filePath={filePath}
+        loadError={viewer.loadError}
+        imgRef={viewer.imgRef}
+        onLoad={viewer.handleLoad}
+        onError={viewer.handleError}
+        zoomMode={viewer.zoomMode}
+        imgStyle={getImageStyle(
+          viewer.zoomMode,
+          viewer.naturalWidth,
+          viewer.naturalHeight,
+          viewer.customZoom
+        )}
+      />
+      <ImageStatusBar
+        naturalWidth={viewer.naturalWidth}
+        naturalHeight={viewer.naturalHeight}
+        fileSize={fileSize}
+        zoomLabel={getZoomLabel(viewer.zoomMode, viewer.customZoom)}
+      />
+    </div>
+  );
+}
+
+function useImageViewerState(filePath: string) {
   const [naturalWidth, setNaturalWidth] = useState<number | null>(null);
   const [naturalHeight, setNaturalHeight] = useState<number | null>(null);
   const [zoomMode, setZoomMode] = useState<ZoomMode>('fit');
@@ -19,25 +75,6 @@ export function ImageViewer({ filePath, fileSize }: ImageViewerProps): React.Rea
   const [loadError, setLoadError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Normalize the path to a file:// URL.
-  // On Windows paths use backslashes; convert to forward slashes.
-  const fileUrl = filePath.startsWith('file://')
-    ? filePath
-    : 'file:///' + filePath.replace(/\\/g, '/').replace(/^\//, '');
-
-  const handleLoad = useCallback(() => {
-    const img = imgRef.current;
-    if (!img) return;
-    setNaturalWidth(img.naturalWidth);
-    setNaturalHeight(img.naturalHeight);
-    setLoadError(false);
-  }, []);
-
-  const handleError = useCallback(() => {
-    setLoadError(true);
-  }, []);
-
-  // Reset state when file changes
   useEffect(() => {
     setNaturalWidth(null);
     setNaturalHeight(null);
@@ -46,196 +83,42 @@ export function ImageViewer({ filePath, fileSize }: ImageViewerProps): React.Rea
     setLoadError(false);
   }, [filePath]);
 
-  const zoomIn = useCallback(() => {
-    setZoomMode('custom');
-    setCustomZoom((prev) => Math.min(prev * 1.25, 8));
+  const handleLoad = useCallback(() => {
+    const image = imgRef.current;
+    if (!image) return;
+    setNaturalWidth(image.naturalWidth);
+    setNaturalHeight(image.naturalHeight);
+    setLoadError(false);
   }, []);
 
-  const zoomOut = useCallback(() => {
-    setZoomMode('custom');
-    setCustomZoom((prev) => Math.max(prev / 1.25, 0.05));
-  }, []);
-
-  const setFit = useCallback(() => {
-    setZoomMode('fit');
-  }, []);
-
-  const set100 = useCallback(() => {
-    setZoomMode('100');
-  }, []);
-
-  // Compute displayed zoom percentage for status bar
-  const zoomLabel = (() => {
-    if (zoomMode === 'fit') return 'Fit';
-    if (zoomMode === '100') return '100%';
-    return `${Math.round(customZoom * 100)}%`;
-  })();
-
-  // Image style based on zoom mode
-  const imgStyle: React.CSSProperties = (() => {
-    if (zoomMode === 'fit') {
-      return {
-        maxWidth: '100%',
-        maxHeight: '100%',
-        objectFit: 'contain',
-        display: 'block',
-      };
-    }
-    if (zoomMode === '100') {
-      return {
-        width: naturalWidth ?? 'auto',
-        height: naturalHeight ?? 'auto',
-        display: 'block',
-      };
-    }
-    // custom
-    return {
-      width: naturalWidth != null ? naturalWidth * customZoom : 'auto',
-      height: naturalHeight != null ? naturalHeight * customZoom : 'auto',
-      display: 'block',
-    };
-  })();
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return {
+    naturalWidth,
+    naturalHeight,
+    zoomMode,
+    customZoom,
+    loadError,
+    imgRef,
+    fileUrl: toFileUrl(filePath),
+    handleLoad,
+    handleError: useCallback(() => setLoadError(true), []),
+    zoomIn: useCallback(() => adjustCustomZoom(setZoomMode, setCustomZoom, 1.25), []),
+    zoomOut: useCallback(() => adjustCustomZoom(setZoomMode, setCustomZoom, 1 / 1.25), []),
+    setFit: useCallback(() => setZoomMode('fit'), []),
+    setActualSize: useCallback(() => setZoomMode('100'), []),
   };
+}
 
-  const btnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '2px 8px',
-    fontSize: '0.6875rem',
-    fontFamily: 'var(--font-ui)',
-    fontWeight: 500,
-    border: '1px solid',
-    borderColor: active ? 'var(--accent)' : 'var(--border)',
-    borderRadius: '4px',
-    backgroundColor: active ? 'var(--accent)' : 'transparent',
-    color: active ? 'var(--bg)' : 'var(--text-muted)',
-    cursor: 'pointer',
-    lineHeight: '1.5',
-  });
+function toFileUrl(filePath: string): string {
+  return filePath.startsWith('file://')
+    ? filePath
+    : `file:///${filePath.replace(/\\/g, '/').replace(/^\//, '')}`;
+}
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'hidden',
-        backgroundColor: 'var(--bg)',
-      }}
-    >
-      {/* Toolbar */}
-      <div
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '3px 12px',
-          borderBottom: '1px solid var(--border-muted)',
-          backgroundColor: 'var(--bg-secondary)',
-          userSelect: 'none',
-        }}
-      >
-        <button onClick={setFit} title="Fit to window" style={btnStyle(zoomMode === 'fit')}>
-          Fit
-        </button>
-        <button onClick={set100} title="100% (actual size)" style={btnStyle(zoomMode === '100')}>
-          100%
-        </button>
-        <button onClick={zoomOut} title="Zoom out" style={btnStyle(false)}>
-          −
-        </button>
-        <button onClick={zoomIn} title="Zoom in" style={btnStyle(false)}>
-          +
-        </button>
-        <span
-          style={{
-            fontSize: '0.6875rem',
-            color: 'var(--text-faint)',
-            fontFamily: 'var(--font-ui)',
-            marginLeft: '4px',
-          }}
-        >
-          {zoomLabel}
-        </span>
-      </div>
-
-      {/* Image area */}
-      <div
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          display: 'flex',
-          alignItems: zoomMode === 'fit' ? 'center' : 'flex-start',
-          justifyContent: zoomMode === 'fit' ? 'center' : 'flex-start',
-          padding: '16px',
-          backgroundColor: 'var(--bg)',
-        }}
-      >
-        {loadError ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              color: 'var(--error, #f85149)',
-              fontSize: '0.875rem',
-              textAlign: 'center',
-            }}
-          >
-            <span style={{ fontSize: '1.5rem' }}>⚠</span>
-            <span>Failed to load image</span>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-faint)',
-                fontFamily: 'var(--font-mono)',
-                wordBreak: 'break-all',
-              }}
-            >
-              {fileUrl}
-            </span>
-          </div>
-        ) : (
-          <img
-            ref={imgRef}
-            src={fileUrl}
-            alt={filePath}
-            onLoad={handleLoad}
-            onError={handleError}
-            style={imgStyle}
-            draggable={false}
-          />
-        )}
-      </div>
-
-      {/* Status bar */}
-      <div
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '2px 12px',
-          borderTop: '1px solid var(--border-muted)',
-          backgroundColor: 'var(--bg-secondary)',
-          fontSize: '0.6875rem',
-          color: 'var(--text-faint)',
-          userSelect: 'none',
-        }}
-      >
-        {naturalWidth != null && naturalHeight != null && (
-          <span>
-            {naturalWidth} × {naturalHeight} px
-          </span>
-        )}
-        {fileSize != null && <span>{formatBytes(fileSize)}</span>}
-        <span>{zoomLabel}</span>
-      </div>
-    </div>
-  );
+function adjustCustomZoom(
+  setZoomMode: React.Dispatch<React.SetStateAction<ZoomMode>>,
+  setCustomZoom: React.Dispatch<React.SetStateAction<number>>,
+  factor: number
+): void {
+  setZoomMode('custom');
+  setCustomZoom((previous) => Math.min(Math.max(previous * factor, 0.05), 8));
 }

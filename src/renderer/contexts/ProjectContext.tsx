@@ -1,29 +1,16 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
 export interface ProjectContextValue {
-  /** All open project roots */
   projectRoots: string[];
-  /** Primary (first) root — backwards compatible */
   projectRoot: string | null;
-  /** Human-readable name derived from the primary root's last path segment. */
   projectName: string;
-  /** Replace all roots with a single root (backwards-compatible setProjectRoot). */
   setProjectRoot: (path: string) => void;
-  /** Add a root to the workspace without replacing existing roots. */
   addProjectRoot: (path: string) => void;
-  /** Remove a root from the workspace. */
   removeProjectRoot: (path: string) => void;
-  /** Clear all roots (close all folders). */
   clearProject: () => void;
 }
 
-// ─── Context ─────────────────────────────────────────────────────────────────
-
 const ProjectContext = createContext<ProjectContextValue | null>(null);
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function basename(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? filePath;
@@ -34,10 +21,62 @@ function persistRoots(roots: string[]): void {
   void window.electronAPI.config.set('multiRoots', roots);
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+function mergeSavedRoots(savedRoots: string[], initialRoot: string | null): string[] {
+  if (!initialRoot || savedRoots.includes(initialRoot)) return savedRoots;
+  return [initialRoot, ...savedRoots.filter((root) => root !== initialRoot)];
+}
+
+function useProjectRootState(
+  initialRoot: string | null,
+): [string[], React.Dispatch<React.SetStateAction<string[]>>] {
+  const [projectRoots, setProjectRoots] = useState<string[]>(() => initialRoot ? [initialRoot] : []);
+  const initialRootRef = useRef(initialRoot);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('electronAPI' in window)) return;
+
+    void window.electronAPI.config.get('multiRoots').then((saved) => {
+      const savedRoots = saved as string[] | undefined;
+      if (Array.isArray(savedRoots) && savedRoots.length > 0) {
+        setProjectRoots(mergeSavedRoots(savedRoots, initialRootRef.current));
+      }
+    });
+  }, []);
+
+  return [projectRoots, setProjectRoots];
+}
+
+function useProjectRootActions(
+  setProjectRoots: React.Dispatch<React.SetStateAction<string[]>>,
+): Pick<ProjectContextValue, 'setProjectRoot' | 'addProjectRoot' | 'removeProjectRoot' | 'clearProject'> {
+  const updateRoots = useCallback((updater: (roots: string[]) => string[]) => {
+    setProjectRoots((prev) => {
+      const next = updater(prev);
+      persistRoots(next);
+      return next;
+    });
+  }, [setProjectRoots]);
+
+  const setProjectRoot = useCallback((path: string): void => {
+    updateRoots(() => [path]);
+  }, [updateRoots]);
+
+  const addProjectRoot = useCallback((path: string): void => {
+    updateRoots((prev) => prev.includes(path) ? prev : [...prev, path]);
+  }, [updateRoots]);
+
+  const removeProjectRoot = useCallback((path: string): void => {
+    updateRoots((prev) => prev.filter((root) => root !== path));
+  }, [updateRoots]);
+
+  const clearProject = useCallback((): void => {
+    updateRoots(() => []);
+  }, [updateRoots]);
+
+  return { setProjectRoot, addProjectRoot, removeProjectRoot, clearProject };
+}
 
 export interface ProjectProviderProps {
-  /** Initial project root (e.g. from persisted config). */
   initialRoot?: string | null;
   children: React.ReactNode;
 }
@@ -46,77 +85,17 @@ export function ProjectProvider({
   initialRoot = null,
   children,
 }: ProjectProviderProps): React.ReactElement {
-  const [projectRoots, setProjectRoots] = useState<string[]>(
-    initialRoot ? [initialRoot] : []
-  );
+  const [projectRoots, setProjectRoots] = useProjectRootState(initialRoot);
+  const projectActions = useProjectRootActions(setProjectRoots);
+  const projectRoot = projectRoots[0] ?? null;
+  const projectName = projectRoot ? basename(projectRoot) : '';
 
-  // Load persisted multiRoots from config on mount (may override initialRoot)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('electronAPI' in window)) return;
-
-    void window.electronAPI.config.get('multiRoots').then((saved) => {
-      const saved_ = saved as string[] | undefined;
-      if (Array.isArray(saved_) && saved_.length > 0) {
-        // Merge: put saved roots first, then add initialRoot if not already present
-        const merged = saved_.includes(initialRoot ?? '')
-          ? saved_
-          : initialRoot
-          ? [initialRoot, ...saved_.filter((r) => r !== initialRoot)]
-          : saved_;
-        setProjectRoots(merged);
-      }
-      // If no saved multiRoots, keep whatever initialRoot gave us
-    });
-  // Only run once on mount — intentionally omitting initialRoot from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const setProjectRoot = useCallback((path: string): void => {
-    setProjectRoots([path]);
-    persistRoots([path]);
-  }, []);
-
-  const addProjectRoot = useCallback((path: string): void => {
-    setProjectRoots((prev) => {
-      if (prev.includes(path)) return prev;
-      const next = [...prev, path];
-      persistRoots(next);
-      return next;
-    });
-  }, []);
-
-  const removeProjectRoot = useCallback((path: string): void => {
-    setProjectRoots((prev) => {
-      const next = prev.filter((r) => r !== path);
-      persistRoots(next);
-      return next;
-    });
-  }, []);
-
-  const clearProject = useCallback((): void => {
-    setProjectRoots([]);
-    persistRoots([]);
-  }, []);
-
-  const projectRoot = useMemo(() => projectRoots[0] ?? null, [projectRoots]);
-
-  const projectName = useMemo(
-    () => (projectRoot ? basename(projectRoot) : ''),
-    [projectRoot],
-  );
-
-  const value = useMemo<ProjectContextValue>(
-    () => ({
-      projectRoots,
-      projectRoot,
-      projectName,
-      setProjectRoot,
-      addProjectRoot,
-      removeProjectRoot,
-      clearProject,
-    }),
-    [projectRoots, projectRoot, projectName, setProjectRoot, addProjectRoot, removeProjectRoot, clearProject],
-  );
+  const value = useMemo<ProjectContextValue>(() => ({
+    projectRoots,
+    projectRoot,
+    projectName,
+    ...projectActions,
+  }), [projectActions, projectName, projectRoot, projectRoots]);
 
   return (
     <ProjectContext.Provider value={value}>
@@ -125,12 +104,8 @@ export function ProjectProvider({
   );
 }
 
-// ─── Consumer hook ────────────────────────────────────────────────────────────
-
 export function useProject(): ProjectContextValue {
   const ctx = useContext(ProjectContext);
-  if (!ctx) {
-    throw new Error('useProject must be used inside <ProjectProvider>');
-  }
+  if (!ctx) throw new Error('useProject must be used inside <ProjectProvider>');
   return ctx;
 }

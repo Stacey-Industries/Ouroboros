@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
 import type { FileEntry, MatchRange } from './FileListItem';
+import { useResetFileListQuery, useVirtualFileList } from './fileListControllerHelpers';
 
-const ITEM_HEIGHT = 32;
-const OVERSCAN = 5;
 const IGNORED_DIRECTORIES = new Set([
   'node_modules',
   'dist',
@@ -43,6 +42,18 @@ export interface FileListController {
   handleKeyDown: (event: React.KeyboardEvent) => void;
   handleQueryChange: (value: string) => void;
   handleScroll: (event: React.UIEvent<HTMLDivElement>) => void;
+}
+
+interface FileListNavigationState {
+  focusIndex: number;
+  handleKeyDown: (event: React.KeyboardEvent) => void;
+  setFocusIndex: React.Dispatch<React.SetStateAction<number>>;
+}
+
+interface ProjectFilesState {
+  allFiles: FileEntry[];
+  error: string | null;
+  isLoading: boolean;
 }
 
 function normalizePath(value: string): string {
@@ -139,23 +150,19 @@ function buildMatchRanges(
   return ranges.length > 0 ? ranges : undefined;
 }
 
-export function useFileListController({
-  projectRoot,
-  onFileSelect,
-}: {
-  projectRoot: string | null;
-  onFileSelect: (filePath: string) => void;
-}): FileListController {
+function createFuse(allFiles: FileEntry[]): Fuse<FileEntry> {
+  return new Fuse(allFiles, {
+    keys: ['relativePath', 'name'],
+    threshold: 0.4,
+    includeMatches: true,
+    minMatchCharLength: 1,
+  });
+}
+
+function useProjectFiles(projectRoot: string | null): ProjectFilesState {
   const [allFiles, setAllFiles] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [focusIndex, setFocusIndex] = useState(0);
-  const [scrollTop, setScrollTop] = useState(0);
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const containerHeight = useRef(400);
 
   useEffect(() => {
     if (!projectRoot) {
@@ -164,48 +171,27 @@ export function useFileListController({
     }
 
     let cancelled = false;
+    const results: FileEntry[] = [];
     setIsLoading(true);
     setError(null);
-    setQuery('');
-    setFocusIndex(0);
 
-    const results: FileEntry[] = [];
-    const normalizedRoot = normalizePath(projectRoot);
-
-    collectFiles(normalizedRoot, projectRoot, results)
-      .then(() => {
-        if (!cancelled) {
-          setAllFiles(sortFiles(results));
-        }
-      })
-      .catch((errorValue) => {
-        if (!cancelled) {
-          setError(String(errorValue));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
+    collectFiles(normalizePath(projectRoot), projectRoot, results)
+      .then(() => !cancelled && setAllFiles(sortFiles(results)))
+      .catch((errorValue) => !cancelled && setError(String(errorValue)))
+      .finally(() => !cancelled && setIsLoading(false));
 
     return () => {
       cancelled = true;
     };
   }, [projectRoot]);
 
-  const fuse = useMemo(
-    () =>
-      new Fuse(allFiles, {
-        keys: ['relativePath', 'name'],
-        threshold: 0.4,
-        includeMatches: true,
-        minMatchCharLength: 1,
-      }),
-    [allFiles],
-  );
+  return { allFiles, error, isLoading };
+}
 
-  const filteredItems = useMemo((): FileMatchItem[] => {
+function useFilteredItems(allFiles: FileEntry[], query: string): FileMatchItem[] {
+  const fuse = useMemo(() => createFuse(allFiles), [allFiles]);
+
+  return useMemo((): FileMatchItem[] => {
     if (!query.trim()) {
       return allFiles.map((file) => ({ file }));
     }
@@ -215,71 +201,69 @@ export function useFileListController({
       ranges: buildMatchRanges(result.matches),
     }));
   }, [allFiles, fuse, query]);
+}
+
+function useFileListNavigation(
+  filteredItems: FileMatchItem[],
+  onFileSelect: (filePath: string) => void,
+  setQuery: React.Dispatch<React.SetStateAction<string>>,
+): FileListNavigationState {
+  const [focusIndex, setFocusIndex] = useState(0);
 
   useEffect(() => {
     setFocusIndex((previous) => Math.min(previous, Math.max(0, filteredItems.length - 1)));
   }, [filteredItems.length]);
 
-  useEffect(() => {
-    const itemTop = focusIndex * ITEM_HEIGHT;
-    const itemBottom = itemTop + ITEM_HEIGHT;
-    const visibleBottom = scrollTop + containerHeight.current;
-
-    if (itemTop < scrollTop) {
-      listRef.current?.scrollTo({ top: itemTop });
-    } else if (itemBottom > visibleBottom) {
-      listRef.current?.scrollTo({ top: itemBottom - containerHeight.current });
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setFocusIndex((previous) => Math.min(previous + 1, filteredItems.length - 1));
+      return;
     }
-  }, [focusIndex, scrollTop]);
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setFocusIndex((previous) => Math.min(previous + 1, filteredItems.length - 1));
-        return;
-      }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setFocusIndex((previous) => Math.max(previous - 1, 0));
+      return;
+    }
 
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setFocusIndex((previous) => Math.max(previous - 1, 0));
-        return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const item = filteredItems[focusIndex];
+      if (item) {
+        onFileSelect(item.file.path);
       }
+      return;
+    }
 
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const item = filteredItems[focusIndex];
-        if (item) {
-          onFileSelect(item.file.path);
-        }
-        return;
-      }
+    if (event.key === 'Escape') {
+      setQuery('');
+      setFocusIndex(0);
+    }
+  }, [filteredItems, focusIndex, onFileSelect, setQuery]);
 
-      if (event.key === 'Escape') {
-        setQuery('');
-        setFocusIndex(0);
-      }
-    },
-    [filteredItems, focusIndex, onFileSelect],
-  );
+  return { focusIndex, handleKeyDown, setFocusIndex };
+}
+
+export function useFileListController({
+  projectRoot,
+  onFileSelect,
+}: {
+  projectRoot: string | null;
+  onFileSelect: (filePath: string) => void;
+}): FileListController {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { allFiles, error, isLoading } = useProjectFiles(projectRoot);
+  const filteredItems = useFilteredItems(allFiles, query);
+  const { focusIndex, handleKeyDown, setFocusIndex } = useFileListNavigation(filteredItems, onFileSelect, setQuery);
+  const { handleScroll, listRef, topOffset, totalHeight, visibleItems } = useVirtualFileList(filteredItems, focusIndex);
+  useResetFileListQuery(projectRoot, setQuery, setFocusIndex);
 
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value);
     setFocusIndex(0);
-  }, []);
-
-  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    containerHeight.current = event.currentTarget.clientHeight;
-    setScrollTop(event.currentTarget.scrollTop);
-  }, []);
-
-  const visibleStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
-  const visibleCount = Math.ceil(containerHeight.current / ITEM_HEIGHT) + OVERSCAN * 2;
-  const visibleEnd = Math.min(filteredItems.length, visibleStart + visibleCount);
-  const visibleItems = filteredItems.slice(visibleStart, visibleEnd).map((item, index) => ({
-    ...item,
-    absoluteIndex: visibleStart + index,
-  }));
+  }, [setFocusIndex]);
 
   return {
     allFiles,
@@ -290,8 +274,8 @@ export function useFileListController({
     isLoading,
     listRef,
     query,
-    topOffset: visibleStart * ITEM_HEIGHT,
-    totalHeight: filteredItems.length * ITEM_HEIGHT,
+    topOffset,
+    totalHeight,
     visibleItems,
     handleKeyDown,
     handleQueryChange,

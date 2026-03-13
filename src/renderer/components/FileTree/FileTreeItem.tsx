@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import type { GitFileStatus } from '../../types/electron';
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
-import { gitStatusColor, gitStatusLabel, heatTintColor, heatDotColor, rowBackground } from './treeItemHelpers';
+import {
+  gitStatusColor,
+  gitStatusLabel,
+  heatTintColor,
+  heatDotColor,
+  rowBackground,
+} from './treeItemHelpers';
 import { TreeItemDirectory } from './TreeItemDirectory';
 import { TreeItemFile } from './TreeItemFile';
-
-// ─── Types (re-exported for consumers) ────────────────────────────────────────
+import { FileTreeItemRow } from './FileTreeItemRow';
 
 export interface FileEntry {
   path: string;
@@ -58,91 +63,172 @@ export interface FileTreeItemProps {
   onDrop?: (e: React.DragEvent, targetNode: TreeNode) => void;
 }
 
-// ─── Indent guides ────────────────────────────────────────────────────────────
+type DragSetter = React.Dispatch<React.SetStateAction<boolean>>;
 
-function IndentGuides({ depth, searchMode }: { depth: number; searchMode?: boolean }): React.ReactElement | null {
+function IndentGuides({
+  depth,
+  searchMode,
+}: {
+  depth: number;
+  searchMode?: boolean;
+}): React.ReactElement | null {
   if (depth <= 0 || searchMode) return null;
   return (
     <>
-      {Array.from({ length: depth }, (_, i) => (
-        <span key={`guide-${i}`} style={{ position: 'absolute', left: `${i * 16 + 12}px`, top: 0, bottom: 0, width: '1px', backgroundColor: 'var(--border-muted)', opacity: 0.4 }} />
+      {Array.from({ length: depth }, (_, index) => (
+        <span
+          key={`guide-${index}`}
+          style={{
+            position: 'absolute',
+            left: `${index * 16 + 12}px`,
+            top: 0,
+            bottom: 0,
+            width: '1px',
+            backgroundColor: 'var(--border-muted)',
+            opacity: 0.4,
+          }}
+        />
       ))}
     </>
   );
 }
 
-// ─── Drag handlers ────────────────────────────────────────────────────────────
-
-function useDragHandlers(node: TreeNode, isEditing: boolean | undefined, onDragOver?: FileTreeItemProps['onDragOver'], onDrop?: FileTreeItemProps['onDrop']) {
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handlers = {
-    isDragOver,
-    onDragStart: (e: React.DragEvent) => {
-      e.dataTransfer.setData('text/plain', node.path);
-      e.dataTransfer.setData('application/json', JSON.stringify({ path: node.path, isDirectory: node.isDirectory, name: node.name }));
-      e.dataTransfer.effectAllowed = 'move';
-    },
-    onDragEnter: (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); },
-    onDragOver: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move';
-      if (onDragOver) onDragOver(e, node);
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
-    },
-    onDrop: (e: React.DragEvent) => {
-      e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
-      if (onDrop) onDrop(e, node);
-    },
-    draggable: !isEditing,
-  };
-
-  return handlers;
+function startDrag(e: React.DragEvent, node: TreeNode): void {
+  e.dataTransfer.setData('text/plain', node.path);
+  e.dataTransfer.setData(
+    'application/json',
+    JSON.stringify({ path: node.path, isDirectory: node.isDirectory, name: node.name })
+  );
+  e.dataTransfer.effectAllowed = 'move';
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function enterDrag(e: React.DragEvent, setIsDragOver: DragSetter): void {
+  e.preventDefault();
+  setIsDragOver(true);
+}
 
-export const FileTreeItem = React.memo(function FileTreeItem(props: FileTreeItemProps): React.ReactElement {
-  const { node, depth, isActive, isFocused, isEditing, isSelected, heatData } = props;
+function dragOverNode(
+  e: React.DragEvent,
+  node: TreeNode,
+  onDragOver?: FileTreeItemProps['onDragOver']
+): void {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files')
+    ? 'copy'
+    : 'move';
+  if (onDragOver) onDragOver(e, node);
+}
+
+function leaveDrag(e: React.DragEvent, setIsDragOver: DragSetter): void {
+  if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false);
+}
+
+function dropOnNode(
+  e: React.DragEvent,
+  node: TreeNode,
+  setIsDragOver: DragSetter,
+  onDrop?: FileTreeItemProps['onDrop']
+): void {
+  e.preventDefault();
+  e.stopPropagation();
+  setIsDragOver(false);
+  if (onDrop) onDrop(e, node);
+}
+
+function useDragHandlers(
+  node: TreeNode,
+  isEditing: boolean | undefined,
+  onDragOver?: FileTreeItemProps['onDragOver'],
+  onDrop?: FileTreeItemProps['onDrop']
+) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  return {
+    isDragOver,
+    draggable: !isEditing,
+    onDragStart: (e: React.DragEvent) => startDrag(e, node),
+    onDragEnter: (e: React.DragEvent) => enterDrag(e, setIsDragOver),
+    onDragOver: (e: React.DragEvent) => dragOverNode(e, node, onDragOver),
+    onDragLeave: (e: React.DragEvent) => leaveDrag(e, setIsDragOver),
+    onDrop: (e: React.DragEvent) => dropOnNode(e, node, setIsDragOver, onDrop),
+  };
+}
+
+function renderTreeItemContent(
+  props: FileTreeItemProps,
+  statusColor: string | undefined,
+  statusLbl: string | undefined,
+  heatDot: string | undefined
+): React.ReactElement {
+  if (props.node.isDirectory) {
+    return (
+      <TreeItemDirectory
+        node={props.node}
+        isEditing={!!props.isEditing}
+        editValue={props.editValue}
+        onEditConfirm={props.onEditConfirm}
+        onEditCancel={props.onEditCancel}
+        statusColor={statusColor}
+        statusLbl={statusLbl}
+        isBookmarked={props.isBookmarked}
+        heatDot={heatDot}
+        heatLevel={props.heatData?.heatLevel}
+      />
+    );
+  }
+
+  return (
+    <TreeItemFile
+      node={props.node}
+      isEditing={!!props.isEditing}
+      editValue={props.editValue}
+      onEditConfirm={props.onEditConfirm}
+      onEditCancel={props.onEditCancel}
+      statusColor={statusColor}
+      statusLbl={statusLbl}
+      searchMode={props.searchMode}
+      matchRanges={props.matchRanges}
+      heatDot={heatDot}
+      heatLevel={props.heatData?.heatLevel}
+    />
+  );
+}
+
+export const FileTreeItem = React.memo(function FileTreeItem(
+  props: FileTreeItemProps
+): React.ReactElement {
+  const { node, depth, isActive, isFocused, isEditing, isSelected, heatData } =
+    props;
   const drag = useDragHandlers(node, isEditing, props.onDragOver, props.onDrop);
   const statusColor = gitStatusColor(props.gitStatus);
   const statusLbl = gitStatusLabel(props.gitStatus);
-  const heatTint = heatTintColor(heatData?.heatLevel);
   const heatDot = heatDotColor(heatData?.heatLevel);
-  const bg = rowBackground({ isDragOver: drag.isDragOver, isActive, isSelected: !!isSelected, isFocused, heatTint });
-  const heatTitle = heatData ? `${heatData.editCount} edit${heatData.editCount !== 1 ? 's' : ''} this session (${heatData.heatLevel})` : undefined;
+  const backgroundColor = rowBackground({
+    isDragOver: drag.isDragOver,
+    isActive,
+    isSelected: !!isSelected,
+    isFocused,
+    heatTint: heatTintColor(heatData?.heatLevel),
+  });
+  const heatTitle = heatData
+    ? `${heatData.editCount} edit${heatData.editCount !== 1 ? 's' : ''} this session (${heatData.heatLevel})`
+    : undefined;
 
   return (
-    <div
-      role="option"
-      aria-selected={isActive}
-      draggable={drag.draggable}
-      onDragStart={drag.onDragStart}
-      onDragEnter={drag.onDragEnter}
-      onDragOver={drag.onDragOver}
-      onDragLeave={drag.onDragLeave}
-      onDrop={drag.onDrop}
-      onClick={(e) => { if (!isEditing) props.onClick(node, e); }}
-      onDoubleClick={() => { if (!isEditing && props.onDoubleClick) props.onDoubleClick(node); }}
-      onContextMenu={(e) => { if (props.onContextMenu && !isEditing) { e.preventDefault(); e.stopPropagation(); props.onContextMenu(e, node); } }}
-      title={heatTitle}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '4px',
-        paddingLeft: `${depth * 16 + 4}px`, paddingRight: '8px',
-        cursor: 'pointer', backgroundColor: bg,
-        outline: drag.isDragOver ? '1px dashed var(--accent)' : undefined,
-        borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-        userSelect: 'none', height: '28px', boxSizing: 'border-box', position: 'relative',
-      }}
+    <FileTreeItemRow
+      node={node}
+      depth={depth}
+      isActive={isActive}
+      isEditing={isEditing}
+      backgroundColor={backgroundColor}
+      heatTitle={heatTitle}
+      drag={drag}
+      onClick={props.onClick}
+      onDoubleClick={props.onDoubleClick}
+      onContextMenu={props.onContextMenu}
     >
       <IndentGuides depth={depth} searchMode={props.searchMode} />
-      {node.isDirectory ? (
-        <TreeItemDirectory node={node} isEditing={!!isEditing} editValue={props.editValue} onEditConfirm={props.onEditConfirm} onEditCancel={props.onEditCancel} statusColor={statusColor} statusLbl={statusLbl} isBookmarked={props.isBookmarked} heatDot={heatDot} heatLevel={heatData?.heatLevel} />
-      ) : (
-        <TreeItemFile node={node} isEditing={!!isEditing} editValue={props.editValue} onEditConfirm={props.onEditConfirm} onEditCancel={props.onEditCancel} statusColor={statusColor} statusLbl={statusLbl} searchMode={props.searchMode} matchRanges={props.matchRanges} heatDot={heatDot} heatLevel={heatData?.heatLevel} />
-      )}
-    </div>
+      {renderTreeItemContent(props, statusColor, statusLbl, heatDot)}
+    </FileTreeItemRow>
   );
 });

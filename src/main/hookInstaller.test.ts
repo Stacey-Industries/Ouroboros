@@ -72,21 +72,14 @@ function resetMocks() {
   mockFs.readFileSync.mockReturnValue('')
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+async function setAutoInstallHooks(value: boolean): Promise<void> {
+  const { getConfigValue } = await import('./config')
+  vi.mocked(getConfigValue).mockReturnValue(value as never)
+}
 
-describe('CURRENT_HOOK_VERSION', () => {
-  it('is a semver string', () => {
-    expect(CURRENT_HOOK_VERSION).toMatch(/^\d+\.\d+\.\d+$/)
-  })
-})
-
-describe('installHooks()', () => {
-  beforeEach(resetMocks)
-  afterEach(() => vi.restoreAllMocks())
-
+function registerInstallHooksSkipTests(): void {
   it('skips when autoInstallHooks is false', async () => {
-    const { getConfigValue } = await import('./config')
-    vi.mocked(getConfigValue).mockReturnValue(false as never)
+    await setAutoInstallHooks(false)
 
     const result = await installHooks()
 
@@ -96,10 +89,7 @@ describe('installHooks()', () => {
   })
 
   it('skips when version marker matches current version', async () => {
-    const { getConfigValue } = await import('./config')
-    vi.mocked(getConfigValue).mockReturnValue(true as never)
-
-    // Marker file exists and is up-to-date
+    await setAutoInstallHooks(true)
     mockFs.existsSync.mockImplementation((p: string) =>
       p === markerPath || (typeof p === 'string' && p.includes('assets'))
     )
@@ -111,15 +101,12 @@ describe('installHooks()', () => {
     expect(result.skippedReason).toMatch(CURRENT_HOOK_VERSION)
     expect(mockFs.copyFileSync).not.toHaveBeenCalled()
   })
+}
 
+function registerInstallHooksInstallTests(): void {
   it('performs a first install when no marker exists', async () => {
-    const { getConfigValue } = await import('./config')
-    vi.mocked(getConfigValue).mockReturnValue(true as never)
-
-    // Marker does not exist; source scripts do
-    mockFs.existsSync.mockImplementation((p: string) =>
-      typeof p === 'string' && p.includes('assets')
-    )
+    await setAutoInstallHooks(true)
+    mockFs.existsSync.mockImplementation((p: string) => typeof p === 'string' && p.includes('assets'))
     mockFs.readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
     const result = await installHooks()
@@ -128,18 +115,11 @@ describe('installHooks()', () => {
     expect(result.firstInstall).toBe(true)
     expect(mockFs.mkdirSync).toHaveBeenCalledWith(claudeHooksDir, { recursive: true })
     expect(mockFs.copyFileSync).toHaveBeenCalled()
-    expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-      markerPath,
-      CURRENT_HOOK_VERSION,
-      'utf8'
-    )
+    expect(mockFs.writeFileSync).toHaveBeenCalledWith(markerPath, CURRENT_HOOK_VERSION, 'utf8')
   })
 
   it('updates existing install when version is stale', async () => {
-    const { getConfigValue } = await import('./config')
-    vi.mocked(getConfigValue).mockReturnValue(true as never)
-
-    // Marker exists but has old version
+    await setAutoInstallHooks(true)
     mockFs.existsSync.mockImplementation((p: string) =>
       p === markerPath || (typeof p === 'string' && p.includes('assets'))
     )
@@ -151,22 +131,35 @@ describe('installHooks()', () => {
     expect(result.firstInstall).toBe(false)
     expect(mockFs.copyFileSync).toHaveBeenCalled()
   })
+}
 
+function registerInstallHooksMissingSourceTest(): void {
   it('skips individual script if source file is missing', async () => {
-    const { getConfigValue } = await import('./config')
-    vi.mocked(getConfigValue).mockReturnValue(true as never)
-
-    // No marker, no source scripts
+    await setAutoInstallHooks(true)
     mockFs.existsSync.mockReturnValue(false)
     mockFs.readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
     const result = await installHooks()
 
-    // Still marks as installed (directory created, marker written)
     expect(result.installed).toBe(true)
-    // But no file copies happened (sources were missing)
     expect(mockFs.copyFileSync).not.toHaveBeenCalled()
   })
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('CURRENT_HOOK_VERSION', () => {
+  it('is a semver string', () => {
+    expect(CURRENT_HOOK_VERSION).toMatch(/^\d+\.\d+\.\d+$/)
+  })
+})
+
+describe('installHooks()', () => {
+  beforeEach(resetMocks)
+  afterEach(() => vi.restoreAllMocks())
+  registerInstallHooksSkipTests()
+  registerInstallHooksInstallTests()
+  registerInstallHooksMissingSourceTest()
 })
 
 describe('hooksAreUpToDate()', () => {

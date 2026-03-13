@@ -37,6 +37,51 @@ function computeBarLayout(
   return { leftPct, widthPct };
 }
 
+const TRACK_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  inset: '4px 0',
+  background: 'var(--bg-tertiary)',
+  borderRadius: '2px',
+};
+
+function buildBarStyle(
+  leftPct: number,
+  widthPct: number,
+  status: ToolCallEvent['status'],
+  color: string,
+): React.CSSProperties {
+  return {
+    position: 'absolute',
+    top: '2px',
+    bottom: '2px',
+    left: `${leftPct}%`,
+    width: `${widthPct}%`,
+    background: color,
+    borderRadius: '2px',
+    opacity: status === 'pending' ? 0.85 : 0.7,
+    cursor: 'default',
+    animation: status === 'pending' ? 'timeline-pulse 1.5s ease-in-out infinite' : undefined,
+    transition: status === 'pending' ? 'width 200ms linear' : undefined,
+    boxShadow: status === 'error' ? '0 0 0 1px var(--error)' : undefined,
+  };
+}
+
+function useTimelineBarHover(
+  tooltipBase: Omit<TooltipData, 'x' | 'y'>,
+  onHover: (data: TooltipData | null) => void,
+): {
+  handleHover: (event: React.MouseEvent) => void;
+  handleLeave: () => void;
+} {
+  const handleHover = useCallback((event: React.MouseEvent) => {
+    onHover({ ...tooltipBase, x: event.clientX, y: event.clientY });
+  }, [onHover, tooltipBase]);
+
+  const handleLeave = useCallback(() => onHover(null), [onHover]);
+
+  return { handleHover, handleLeave };
+}
+
 export const TimelineBar = memo(function TimelineBar({
   call,
   sessionStartMs,
@@ -47,45 +92,20 @@ export const TimelineBar = memo(function TimelineBar({
   const color = timelineColor(call.toolName);
   const startOffsetMs = call.timestamp - sessionStartMs;
   const { leftPct, widthPct } = computeBarLayout(call, sessionStartMs, totalDurationMs, nowMs);
-
   const tooltipBase = useMemo(
     () => ({ toolName: call.toolName, status: call.status, duration: call.duration, startOffsetMs }),
     [call.toolName, call.status, call.duration, startOffsetMs],
   );
-
-  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
-    onHover({ ...tooltipBase, x: e.clientX, y: e.clientY });
-  }, [onHover, tooltipBase]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    onHover({ ...tooltipBase, x: e.clientX, y: e.clientY });
-  }, [onHover, tooltipBase]);
-
-  const handleMouseLeave = useCallback(() => onHover(null), [onHover]);
+  const { handleHover, handleLeave } = useTimelineBarHover(tooltipBase, onHover);
 
   return (
     <div style={{ position: 'relative', height: '14px', flexShrink: 0 }}>
+      <div style={TRACK_STYLE} />
       <div
-        style={{ position: 'absolute', inset: '4px 0', background: 'var(--bg-tertiary)', borderRadius: '2px' }}
-      />
-      <div
-        onMouseEnter={handleMouseEnter}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          position: 'absolute',
-          top: '2px',
-          bottom: '2px',
-          left: `${leftPct}%`,
-          width: `${widthPct}%`,
-          background: color,
-          borderRadius: '2px',
-          opacity: call.status === 'pending' ? 0.85 : 0.7,
-          cursor: 'default',
-          animation: call.status === 'pending' ? 'timeline-pulse 1.5s ease-in-out infinite' : undefined,
-          transition: call.status === 'pending' ? 'width 200ms linear' : undefined,
-          boxShadow: call.status === 'error' ? '0 0 0 1px var(--error)' : undefined,
-        }}
+        onMouseEnter={handleHover}
+        onMouseMove={handleHover}
+        onMouseLeave={handleLeave}
+        style={buildBarStyle(leftPct, widthPct, call.status, color)}
       />
     </div>
   );

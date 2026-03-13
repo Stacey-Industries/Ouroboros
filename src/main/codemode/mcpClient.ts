@@ -1,5 +1,5 @@
 /**
- * Minimal MCP client — connects to upstream MCP servers over stdio.
+ * Minimal MCP client - connects to upstream MCP servers over stdio.
  * Uses JSON-RPC 2.0 with content-length framing (no external deps).
  */
 
@@ -13,11 +13,33 @@ export interface McpServerConfig {
   url?: string
 }
 
-// ---------------------------------------------------------------------------
-// Content-length framed message parser
-// ---------------------------------------------------------------------------
-
 const HEADER_SEP = Buffer.from('\r\n\r\n')
+const TIMEOUT_MS = 30_000
+
+type LogFn = (...args: unknown[]) => void
+type SendRequest = (method: string, params?: object) => Promise<unknown>
+type PendingRequest = {
+  resolve: (value: unknown) => void
+  reject: (error: Error) => void
+}
+type JsonRpcResponse = {
+  id?: number
+  result?: unknown
+  error?: { code: number; message: string }
+}
+
+interface ConnectionState {
+  dead: boolean
+  readBuffer: Buffer
+}
+
+interface DisposeUpstreamOptions {
+  name: string
+  child: ChildProcess
+  log: LogFn
+  pending: Map<number, PendingRequest>
+  state: ConnectionState
+}
 
 export function parseMessages(
   data: Buffer,
@@ -33,18 +55,13 @@ export function parseMessages(
     const header = buf.subarray(0, sepIdx).toString('utf-8')
     const match = /Content-Length:\s*(\d+)/i.exec(header)
     if (!match) {
-      // Malformed header — skip past separator and retry
       buf = buf.subarray(sepIdx + HEADER_SEP.length)
       continue
     }
 
     const contentLen = parseInt(match[1], 10)
     const bodyStart = sepIdx + HEADER_SEP.length
-
-    if (buf.length < bodyStart + contentLen) {
-      // Not enough data yet — wait for more
-      break
-    }
+    if (buf.length < bodyStart + contentLen) break
 
     const body = buf.subarray(bodyStart, bodyStart + contentLen).toString('utf-8')
     buf = buf.subarray(bodyStart + contentLen)
@@ -58,10 +75,6 @@ export function parseMessages(
 
   return { messages, remaining: buf }
 }
-
-// ---------------------------------------------------------------------------
-// JSON-RPC helpers
-// ---------------------------------------------------------------------------
 
 let nextId = 1
 
@@ -83,66 +96,90 @@ function makeNotification(method: string, params?: object): Buffer {
   return encodeMessage(msg)
 }
 
-// ---------------------------------------------------------------------------
-// connectUpstream — spawn an MCP server and handshake
-// ---------------------------------------------------------------------------
+function createLogger(name: string): LogFn {
+  return (...args) => console.log(`[codemode:${name}]`, ...args)
+}
 
-const TIMEOUT_MS = 30_000
-
-export async function connectUpstream(
-  name: string,
-  config: McpServerConfig,
-): Promise<UpstreamServer> {
-  const log = (...args: unknown[]) => console.log(`[codemode:${name}]`, ...args)
-
+function getCommand(name: string, config: McpServerConfig): string {
   if (config.url) {
     throw new Error('SSE transport not yet implemented')
   }
-
   if (!config.command) {
     throw new Error(`[codemode:${name}] No command specified in server config`)
   }
+  return config.command
+}
 
-  log('spawning', config.command, config.args ?? [])
+function requirePipe<T>(pipe: T | null | undefined, name: string, label: string): T {
+  if (!pipe) {
+    throw new Error(`[codemode:${name}] Missing ${label} pipe`)
+  }
+  return pipe
+}
 
-  const child: ChildProcess = spawn(config.command, config.args ?? [], {
+function spawnUpstreamProcess(
+  name: string,
+  config: McpServerConfig,
+  log: LogFn,
+): ChildProcess {
+  const command = getCommand(name, config)
+  log('spawning', command, config.args ?? [])
+  const child = spawn(command, config.args ?? [], {
     env: { ...process.env, ...config.env },
     stdio: ['pipe', 'pipe', 'pipe'],
   })
+  child.stderr?.on('data', (data: Buffer) => log('stderr:', data.toString().trimEnd()))
+  return child
+}
 
-  // Forward stderr for debugging
-  child.stderr?.on('data', (d: Buffer) => log('stderr:', d.toString().trimEnd()))
+function settlePendingResponse(
+  pending: Map<number, PendingRequest>,
+  message: JsonRpcResponse,
+): void {
+  if (message.id == null) return
+  const request = pending.get(message.id)
+  if (!request) return
 
-  let dead = false
-  child.on('exit', (code) => {
-    dead = true
-    log('exited with code', code)
-  })
+  pending.delete(message.id)
+  if (message.error) {
+    request.reject(new Error(`MCP error ${message.error.code}: ${message.error.message}`))
+    return
+  }
 
-  // Pending response callbacks keyed by request id
-  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>()
-  let readBuf = Buffer.alloc(0)
+  request.resolve(message.result)
+}
 
-  child.stdout!.on('data', (chunk: Buffer) => {
-    const { messages, remaining } = parseMessages(chunk, readBuf)
-    readBuf = remaining
-
-    for (const msg of messages) {
-      const m = msg as { id?: number; result?: unknown; error?: { code: number; message: string } }
-      if (m.id != null && pending.has(m.id)) {
-        const p = pending.get(m.id)!
-        pending.delete(m.id)
-        if (m.error) {
-          p.reject(new Error(`MCP error ${m.error.code}: ${m.error.message}`))
-        } else {
-          p.resolve(m.result)
-        }
-      }
+function attachOutputReader(
+  stdout: NodeJS.ReadableStream,
+  pending: Map<number, PendingRequest>,
+  state: ConnectionState,
+): void {
+  stdout.on('data', (chunk: Buffer) => {
+    const { messages, remaining } = parseMessages(chunk, state.readBuffer)
+    state.readBuffer = remaining
+    for (const message of messages) {
+      settlePendingResponse(pending, message as JsonRpcResponse)
     }
   })
+}
 
-  function sendRequest(method: string, params?: object): Promise<unknown> {
-    if (dead) return Promise.reject(new Error(`[codemode:${name}] Server process is dead`))
+function attachExitLogger(child: ChildProcess, log: LogFn, state: ConnectionState): void {
+  child.on('exit', (code) => {
+    state.dead = true
+    log('exited with code', code)
+  })
+}
+
+function createSendRequest(
+  name: string,
+  stdin: NodeJS.WritableStream,
+  pending: Map<number, PendingRequest>,
+  isDead: () => boolean,
+): SendRequest {
+  return (method, params) => {
+    if (isDead()) {
+      return Promise.reject(new Error(`[codemode:${name}] Server process is dead`))
+    }
 
     const { id, buf } = makeRequest(method, params)
     return new Promise<unknown>((resolve, reject) => {
@@ -152,54 +189,105 @@ export async function connectUpstream(
       }, TIMEOUT_MS)
 
       pending.set(id, {
-        resolve: (v) => { clearTimeout(timer); resolve(v) },
-        reject: (e) => { clearTimeout(timer); reject(e) },
+        resolve: (value) => {
+          clearTimeout(timer)
+          resolve(value)
+        },
+        reject: (error) => {
+          clearTimeout(timer)
+          reject(error)
+        },
       })
 
-      child.stdin!.write(buf)
+      stdin.write(buf)
     })
   }
+}
 
-  // --- Handshake ---
-
-  log('initializing…')
+async function initializeUpstream(
+  log: LogFn,
+  stdin: NodeJS.WritableStream,
+  sendRequest: SendRequest,
+): Promise<McpToolSchema[]> {
+  log('initializing...')
   const initResult = await sendRequest('initialize', {
     protocolVersion: '2024-11-05',
     capabilities: {},
     clientInfo: { name: 'codemode-proxy', version: '1.0.0' },
-  }) as { capabilities?: object; serverInfo?: { name?: string } }
+  }) as { serverInfo?: { name?: string } }
   log('initialized, server:', initResult?.serverInfo?.name ?? 'unknown')
+  stdin.write(makeNotification('notifications/initialized'))
+  return listTools(log, sendRequest)
+}
 
-  // Send initialized notification (no id, no response expected)
-  child.stdin!.write(makeNotification('notifications/initialized'))
+async function listTools(log: LogFn, sendRequest: SendRequest): Promise<McpToolSchema[]> {
+  log('listing tools...')
+  const result = await sendRequest('tools/list', {}) as { tools?: McpToolSchema[] }
+  const tools = result?.tools ?? []
+  log(`discovered ${tools.length} tool(s):`, tools.map((tool) => tool.name).join(', '))
+  return tools
+}
 
-  // Discover tools
-  log('listing tools…')
-  const toolsResult = (await sendRequest('tools/list', {})) as { tools?: McpToolSchema[] }
-  const tools: McpToolSchema[] = toolsResult?.tools ?? []
-  log(`discovered ${tools.length} tool(s):`, tools.map((t) => t.name).join(', '))
+function disposeUpstream({
+  name,
+  child,
+  log,
+  pending,
+  state,
+}: DisposeUpstreamOptions): void {
+  log('disposing')
+  state.dead = true
+  for (const [, request] of pending) {
+    request.reject(new Error(`[codemode:${name}] Server disposed`))
+  }
+  pending.clear()
+  try {
+    child.kill()
+  } catch {
+    // already dead
+  }
+}
 
-  // --- Build UpstreamServer ---
-
+function createUpstreamServer(
+  name: string,
+  tools: McpToolSchema[],
+  sendRequest: SendRequest,
+  dispose: () => void,
+): UpstreamServer {
   return {
     name,
     tools,
-
     async callTool(toolName: string, args: Record<string, unknown>): Promise<unknown> {
-      const result = (await sendRequest('tools/call', { name: toolName, arguments: args })) as {
+      const result = await sendRequest('tools/call', { name: toolName, arguments: args }) as {
         content?: unknown
       }
       return result?.content
     },
-
-    dispose() {
-      log('disposing')
-      dead = true
-      for (const [, p] of pending) {
-        p.reject(new Error(`[codemode:${name}] Server disposed`))
-      }
-      pending.clear()
-      try { child.kill() } catch { /* already dead */ }
-    },
+    dispose,
   }
+}
+
+export async function connectUpstream(
+  name: string,
+  config: McpServerConfig,
+): Promise<UpstreamServer> {
+  const log = createLogger(name)
+  const child = spawnUpstreamProcess(name, config, log)
+  const stdin = requirePipe(child.stdin, name, 'stdin')
+  const stdout = requirePipe(child.stdout, name, 'stdout')
+  const pending = new Map<number, PendingRequest>()
+  const state: ConnectionState = { dead: false, readBuffer: Buffer.alloc(0) }
+
+  attachExitLogger(child, log, state)
+  attachOutputReader(stdout, pending, state)
+
+  const sendRequest = createSendRequest(name, stdin, pending, () => state.dead)
+  const tools = await initializeUpstream(log, stdin, sendRequest)
+
+  return createUpstreamServer(
+    name,
+    tools,
+    sendRequest,
+    () => disposeUpstream({ name, child, log, pending, state }),
+  )
 }

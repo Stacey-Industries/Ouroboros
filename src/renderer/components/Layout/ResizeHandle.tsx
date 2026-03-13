@@ -11,6 +11,98 @@ export interface ResizeHandleProps {
   maxSize?: number;
 }
 
+type ResizeDirection = ResizeHandleProps['direction'];
+
+interface HandleLayout {
+  ariaOrientation: 'horizontal' | 'vertical';
+  containerClassName: string;
+  hitAreaClassName: string;
+  lineClassName: string;
+  gripClassName: string;
+}
+
+const GRIP_DOTS = [0, 1, 2, 3, 4];
+
+const HANDLE_LAYOUTS: Record<ResizeDirection, HandleLayout> = {
+  vertical: {
+    ariaOrientation: 'vertical',
+    containerClassName: 'group relative flex-shrink-0 w-[5px] cursor-col-resize select-none z-10',
+    hitAreaClassName: 'absolute inset-y-0 -left-1 -right-1',
+    lineClassName: `
+      absolute inset-y-0 left-[2px] w-[1px]
+      bg-[var(--border)]
+      transition-colors duration-100
+      group-hover:bg-[var(--accent)]
+      group-active:bg-[var(--accent)]
+    `,
+    gripClassName: `
+      absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+      flex flex-col gap-[3px]
+      opacity-0 group-hover:opacity-60 transition-opacity duration-100
+    `,
+  },
+  horizontal: {
+    ariaOrientation: 'horizontal',
+    containerClassName: 'group relative flex-shrink-0 h-[5px] cursor-row-resize select-none z-10 w-full',
+    hitAreaClassName: 'absolute inset-x-0 -top-1 -bottom-1',
+    lineClassName: `
+      absolute inset-x-0 top-[2px] h-[1px]
+      bg-[var(--border)]
+      transition-colors duration-100
+      group-hover:bg-[var(--accent)]
+      group-active:bg-[var(--accent)]
+    `,
+    gripClassName: `
+      absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+      flex flex-row gap-[3px]
+      opacity-0 group-hover:opacity-60 transition-opacity duration-100
+    `,
+  },
+};
+
+function DragGripDots({ direction }: { direction: ResizeDirection }): React.ReactElement {
+  return (
+    <div className={HANDLE_LAYOUTS[direction].gripClassName}>
+      {GRIP_DOTS.map((dot) => (
+        <div key={dot} className="w-[3px] h-[3px] rounded-full bg-[var(--text-muted)]" />
+      ))}
+    </div>
+  );
+}
+
+interface ResizeHandleFrameProps {
+  direction: ResizeDirection;
+  handleRef: React.RefObject<HTMLDivElement | null>;
+  onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
+}
+
+function ResizeHandleFrame({
+  direction,
+  handleRef,
+  onMouseDown,
+  onDoubleClick,
+}: ResizeHandleFrameProps): React.ReactElement {
+  const layout = HANDLE_LAYOUTS[direction];
+
+  return (
+    <div
+      ref={handleRef}
+      onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
+      role="separator"
+      aria-orientation={layout.ariaOrientation}
+      aria-label="Resize panel"
+      className={layout.containerClassName}
+      style={{ touchAction: 'none' }}
+    >
+      <div className={layout.hitAreaClassName} />
+      <div className={layout.lineClassName} />
+      <DragGripDots direction={direction} />
+    </div>
+  );
+}
+
 export function ResizeHandle({
   direction,
   panel,
@@ -18,108 +110,31 @@ export function ResizeHandle({
   onResizeStart,
   onDoubleClick,
 }: ResizeHandleProps): React.ReactElement {
-  const isVertical = direction === 'vertical';
   const handleRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startPos = isVertical ? e.clientX : e.clientY;
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const startPos = direction === 'vertical' ? event.clientX : event.clientY;
       onResizeStart(panel, direction, currentSize, startPos);
     },
-    [isVertical, panel, direction, currentSize, onResizeStart],
+    [currentSize, direction, onResizeStart, panel],
   );
 
   const handleDblClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
       onDoubleClick(panel);
     },
     [panel, onDoubleClick],
   );
 
-  if (isVertical) {
-    return (
-      <div
-        ref={handleRef}
-        onMouseDown={handleMouseDown}
-        onDoubleClick={handleDblClick}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize panel"
-        className="group relative flex-shrink-0 w-[5px] cursor-col-resize select-none z-10"
-        style={{ touchAction: 'none' }}
-      >
-        {/* Hit area */}
-        <div className="absolute inset-y-0 -left-1 -right-1" />
-        {/* Visual line */}
-        <div
-          className="
-            absolute inset-y-0 left-[2px] w-[1px]
-            bg-[var(--border)]
-            transition-colors duration-100
-            group-hover:bg-[var(--accent)]
-            group-active:bg-[var(--accent)]
-          "
-        />
-        {/* Drag grip dots */}
-        <div
-          className="
-            absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-            flex flex-col gap-[3px]
-            opacity-0 group-hover:opacity-60 transition-opacity duration-100
-          "
-        >
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="w-[3px] h-[3px] rounded-full bg-[var(--text-muted)]"
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Horizontal (between content area and terminal)
   return (
-    <div
-      ref={handleRef}
+    <ResizeHandleFrame
+      direction={direction}
+      handleRef={handleRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDblClick}
-      role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize panel"
-      className="group relative flex-shrink-0 h-[5px] cursor-row-resize select-none z-10 w-full"
-      style={{ touchAction: 'none' }}
-    >
-      {/* Hit area */}
-      <div className="absolute inset-x-0 -top-1 -bottom-1" />
-      {/* Visual line */}
-      <div
-        className="
-          absolute inset-x-0 top-[2px] h-[1px]
-          bg-[var(--border)]
-          transition-colors duration-100
-          group-hover:bg-[var(--accent)]
-          group-active:bg-[var(--accent)]
-        "
-      />
-      {/* Drag grip dots */}
-      <div
-        className="
-          absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-          flex flex-row gap-[3px]
-          opacity-0 group-hover:opacity-60 transition-opacity duration-100
-        "
-      >
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="w-[3px] h-[3px] rounded-full bg-[var(--text-muted)]"
-          />
-        ))}
-      </div>
-    </div>
+    />
   );
 }

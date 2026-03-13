@@ -1,20 +1,68 @@
 import type { Command } from './types';
 
+interface DispatchCommandConfig {
+  id: string;
+  label: string;
+  category: Command['category'];
+  icon: string;
+  shortcut?: string;
+  eventName: string;
+}
+
+function dispatchIdeEvent(eventName: string, detail?: string): void {
+  window.dispatchEvent(new CustomEvent(eventName, detail ? { detail } : undefined));
+}
+
+function createDispatchCommand(config: DispatchCommandConfig): Command {
+  return {
+    id: config.id,
+    label: config.label,
+    category: config.category,
+    shortcut: config.shortcut,
+    icon: config.icon,
+    action: () => {
+      dispatchIdeEvent(config.eventName);
+    },
+  };
+}
+
+function createWindowCommand(): Command {
+  return {
+    id: 'window:new',
+    label: 'New Window',
+    category: 'app',
+    shortcut: 'Ctrl+Shift+N',
+    icon: '+',
+    action: async () => window.electronAPI.window.create(),
+  };
+}
+
+function createReloadCommand(): Command {
+  return {
+    id: 'app:reload',
+    label: 'Reload Window',
+    category: 'app',
+    shortcut: 'Ctrl+Shift+R',
+    icon: 'â†º',
+    action: () => window.location.reload(),
+  };
+}
+
 /** Theme submenu commands. */
 function themeCommands(): Command {
   const themes = [
-    { id: 'retro', label: 'Retro', icon: '🟢' },
-    { id: 'modern', label: 'Modern', icon: '🔵' },
-    { id: 'warp', label: 'Warp', icon: '🟣' },
-    { id: 'cursor', label: 'Cursor', icon: '⚫' },
-    { id: 'kiro', label: 'Kiro', icon: '🟡' },
+    { id: 'retro', label: 'Retro', icon: 'ðŸŸ¢' },
+    { id: 'modern', label: 'Modern', icon: 'ðŸ”µ' },
+    { id: 'warp', label: 'Warp', icon: 'ðŸŸ£' },
+    { id: 'cursor', label: 'Cursor', icon: 'âš«' },
+    { id: 'kiro', label: 'Kiro', icon: 'ðŸŸ¡' },
   ];
 
   return {
     id: 'theme',
     label: 'Theme',
     category: 'view',
-    icon: '🎨',
+    icon: 'ðŸŽ¨',
     action: () => { /* submenu */ },
     children: themes.map((t) => ({
       id: `theme:${t.id}`,
@@ -22,7 +70,7 @@ function themeCommands(): Command {
       category: 'view' as const,
       icon: t.icon,
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:set-theme', { detail: t.id }));
+        dispatchIdeEvent('agent-ide:set-theme', t.id);
       },
     })),
   };
@@ -36,9 +84,9 @@ function viewCommands(): Command[] {
       label: 'Toggle Left Sidebar',
       category: 'view',
       shortcut: 'Ctrl+B',
-      icon: '⬛',
+      icon: 'â¬›',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:toggle-sidebar'));
+        dispatchIdeEvent('agent-ide:toggle-sidebar');
       },
     },
     {
@@ -46,9 +94,9 @@ function viewCommands(): Command[] {
       label: 'Toggle Agent Monitor',
       category: 'view',
       shortcut: 'Ctrl+\\',
-      icon: '🤖',
+      icon: 'ðŸ¤–',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:toggle-agent-monitor'));
+        dispatchIdeEvent('agent-ide:toggle-agent-monitor');
       },
     },
   ];
@@ -70,16 +118,16 @@ function terminalCommands(): Command {
         shortcut: 'Ctrl+Shift+`',
         icon: '+',
         action: () => {
-          window.dispatchEvent(new CustomEvent('agent-ide:new-terminal'));
+          dispatchIdeEvent('agent-ide:new-terminal');
         },
       },
       {
         id: 'terminal:close-tab',
         label: 'Close Tab',
         category: 'terminal',
-        icon: '×',
+        icon: 'Ã—',
         action: () => {
-          window.dispatchEvent(new CustomEvent('agent-ide:close-terminal'));
+          dispatchIdeEvent('agent-ide:close-terminal');
         },
       },
       {
@@ -87,9 +135,9 @@ function terminalCommands(): Command {
         label: 'Toggle Panel',
         category: 'terminal',
         shortcut: 'Ctrl+J',
-        icon: '⬛',
+        icon: 'â¬›',
         action: () => {
-          window.dispatchEvent(new CustomEvent('agent-ide:toggle-terminal'));
+          dispatchIdeEvent('agent-ide:toggle-terminal');
         },
       },
     ],
@@ -103,9 +151,9 @@ function fileCommands(): Command[] {
       id: 'file:open-folder',
       label: 'Open Project Folder',
       category: 'file',
-      icon: '📁',
+      icon: 'ðŸ“',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-folder'));
+        dispatchIdeEvent('agent-ide:open-folder');
       },
     },
     {
@@ -113,16 +161,16 @@ function fileCommands(): Command[] {
       label: 'Go to File',
       category: 'file',
       shortcut: 'Ctrl+P',
-      icon: '📄',
+      icon: 'ðŸ“„',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-file-picker'));
+        dispatchIdeEvent('agent-ide:open-file-picker');
       },
     },
     {
       id: 'window:new-with-folder',
       label: 'Open Folder in New Window',
       category: 'file',
-      icon: '📁',
+      icon: 'ðŸ“',
       action: async () => {
         const result = await window.electronAPI.files.selectFolder();
         if (result.success && !result.cancelled && result.path) {
@@ -136,54 +184,30 @@ function fileCommands(): Command[] {
 /** App and window commands (flat). */
 function appCommands(): Command[] {
   return [
-    {
-      id: 'window:new',
-      label: 'New Window',
-      category: 'app',
-      shortcut: 'Ctrl+Shift+N',
-      icon: '+',
-      action: async () => {
-        await window.electronAPI.window.create();
-      },
-    },
-    {
+    createWindowCommand(),
+    createDispatchCommand({
       id: 'app:settings',
       label: 'Open Settings',
       category: 'app',
       shortcut: 'Ctrl+,',
-      icon: '⚙',
-      action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-settings'));
-      },
-    },
-    {
-      id: 'app:reload',
-      label: 'Reload Window',
-      category: 'app',
-      shortcut: 'Ctrl+Shift+R',
-      icon: '↺',
-      action: () => {
-        window.location.reload();
-      },
-    },
-    {
+      icon: 'âš™',
+      eventName: 'agent-ide:open-settings',
+    }),
+    createReloadCommand(),
+    createDispatchCommand({
       id: 'app:devtools',
       label: 'Toggle DevTools',
       category: 'app',
-      icon: '🔧',
-      action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:toggle-devtools'));
-      },
-    },
-    {
+      icon: 'ðŸ”§',
+      eventName: 'agent-ide:toggle-devtools',
+    }),
+    createDispatchCommand({
       id: 'app:context-builder',
       label: 'Build Project Context',
       category: 'app',
-      icon: '⬡',
-      action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-context-builder'));
-      },
-    },
+      icon: 'â¬¡',
+      eventName: 'agent-ide:open-context-builder',
+    }),
   ];
 }
 
@@ -194,9 +218,9 @@ function gitCommands(): Command[] {
       id: 'git:time-travel',
       label: 'Time Travel: Browse Snapshots',
       category: 'git',
-      icon: '⏱',
+      icon: 'â±',
       action: () => {
-        window.dispatchEvent(new CustomEvent('agent-ide:open-time-travel'));
+        dispatchIdeEvent('agent-ide:open-time-travel');
       },
     },
   ];

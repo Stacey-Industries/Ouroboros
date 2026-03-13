@@ -12,98 +12,107 @@ import { useEffect, useRef } from 'react'
 import { useProject } from '../contexts/ProjectContext'
 import type { IdeToolQuery } from '../types/electron'
 
-/**
- * Hook that listens for IDE tool queries from the main process and responds
- * with current renderer state.
- */
-export function useIdeToolResponder(options: {
-  /** Returns list of currently open file tabs */
+interface IdeToolResponderOptions {
   getOpenFiles: () => Array<{ path: string; dirty?: boolean }>
-  /** Returns the currently active/visible file info */
   getActiveFile: () => { path: string; cursorLine?: number; cursorCol?: number } | null
-  /** Returns unsaved content for a file path, or null if not dirty */
   getUnsavedContent: (filePath: string) => string | null
-  /** Returns current editor selection text, or null */
   getSelection: () => { text: string; filePath?: string; startLine?: number; endLine?: number } | null
-  /** Returns recent terminal output lines */
   getTerminalOutput: (sessionId?: string, lines?: number) => string[]
-}): void {
-  const { projectRoot } = useProject()
-  const optionsRef = useRef(options)
-  optionsRef.current = options
+}
 
-  const projectRootRef = useRef(projectRoot)
-  projectRootRef.current = projectRoot
+type IdeToolRespond = (result: unknown, error?: string) => void
+type IdeToolHandler = (
+  params: unknown,
+  context: { options: IdeToolResponderOptions; projectRoot: string | null; respond: IdeToolRespond },
+) => void
+
+function useLatestRef<T>(value: T) {
+  const ref = useRef(value)
+  ref.current = value
+  return ref
+}
+
+function createResponder(queryId: string): IdeToolRespond {
+  return (result, error) => {
+    window.electronAPI.ideTools.respond(queryId, result, error).catch((err) => {
+      console.error('[ideToolResponder] Failed to send response:', err)
+    })
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function getProjectInfo(projectRoot: string | null) {
+  return {
+    root: projectRoot,
+    name: projectRoot ? projectRoot.split(/[\\/]/).pop() ?? null : null,
+  }
+}
+
+function getPathParam(params: unknown): string | null {
+  const path = (params as { path?: unknown } | undefined)?.path
+  return typeof path === 'string' ? path : null
+}
+
+function getTerminalOutputParams(params: unknown): { sessionId?: string; lines?: number } {
+  const values = params as { sessionId?: unknown; lines?: unknown } | undefined
+  return {
+    sessionId: typeof values?.sessionId === 'string' ? values.sessionId : undefined,
+    lines: typeof values?.lines === 'number' ? values.lines : undefined,
+  }
+}
+
+const ideToolHandlers: Record<string, IdeToolHandler> = {
+  getOpenFiles: (_params, context) => context.respond(context.options.getOpenFiles()),
+  getActiveFile: (_params, context) => context.respond(context.options.getActiveFile()),
+  getUnsavedContent: (params, context) => {
+    const filePath = getPathParam(params)
+    if (!filePath) {
+      context.respond(null, 'Missing param: path')
+      return
+    }
+    context.respond(context.options.getUnsavedContent(filePath))
+  },
+  getSelection: (_params, context) => context.respond(context.options.getSelection()),
+  getProjectInfo: (_params, context) => context.respond(getProjectInfo(context.projectRoot)),
+  getTerminalOutput: (params, context) => {
+    const { sessionId, lines } = getTerminalOutputParams(params)
+    context.respond(context.options.getTerminalOutput(sessionId, lines))
+  },
+  getAllDiagnostics: (_params, context) => context.respond([]),
+}
+
+function handleIdeToolQuery(
+  query: IdeToolQuery,
+  options: IdeToolResponderOptions,
+  projectRoot: string | null,
+): void {
+  const respond = createResponder(query.queryId)
+  const handler = ideToolHandlers[query.method]
+
+  if (!handler) {
+    respond(null, `Unknown renderer query method: ${query.method}`)
+    return
+  }
+
+  try {
+    handler(query.params, { options, projectRoot, respond })
+  } catch (error) {
+    respond(null, getErrorMessage(error))
+  }
+}
+
+export function useIdeToolResponder(options: IdeToolResponderOptions): void {
+  const { projectRoot } = useProject()
+  const optionsRef = useLatestRef(options)
+  const projectRootRef = useLatestRef(projectRoot)
 
   useEffect(() => {
     if (!window.electronAPI.ideTools) return
-
-    const cleanup = window.electronAPI.ideTools.onQuery((query: IdeToolQuery) => {
-      const { queryId, method, params } = query
-      const opts = optionsRef.current
-      const root = projectRootRef.current
-
-      const respond = (result: unknown, error?: string) => {
-        window.electronAPI.ideTools.respond(queryId, result, error).catch((err) => {
-          console.error('[ideToolResponder] Failed to send response:', err)
-        })
-      }
-
-      try {
-        switch (method) {
-          case 'getOpenFiles': {
-            respond(opts.getOpenFiles())
-            break
-          }
-
-          case 'getActiveFile': {
-            respond(opts.getActiveFile())
-            break
-          }
-
-          case 'getUnsavedContent': {
-            const p = params as { path?: string } | undefined
-            if (!p?.path) {
-              respond(null, 'Missing param: path')
-              break
-            }
-            respond(opts.getUnsavedContent(p.path))
-            break
-          }
-
-          case 'getSelection': {
-            respond(opts.getSelection())
-            break
-          }
-
-          case 'getProjectInfo': {
-            respond({
-              root,
-              name: root ? root.split(/[\\/]/).pop() : null,
-            })
-            break
-          }
-
-          case 'getTerminalOutput': {
-            const tp = params as { sessionId?: string; lines?: number } | undefined
-            respond(opts.getTerminalOutput(tp?.sessionId, tp?.lines))
-            break
-          }
-
-          case 'getAllDiagnostics': {
-            // LSP diagnostics are managed in the main process; return empty from renderer
-            respond([])
-            break
-          }
-
-          default:
-            respond(null, `Unknown renderer query method: ${method}`)
-        }
-      } catch (err) {
-        respond(null, (err as Error).message || String(err))
-      }
+    return window.electronAPI.ideTools.onQuery((query) => {
+      handleIdeToolQuery(query, optionsRef.current, projectRootRef.current)
     })
-
-    return cleanup
-  }, [])
+  }, [optionsRef, projectRootRef])
 }

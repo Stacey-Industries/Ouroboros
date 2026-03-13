@@ -1,71 +1,90 @@
 /**
- * ipc-handlers/pty.ts — PTY IPC handlers
+ * ipc-handlers/pty.ts â€” PTY IPC handlers
  */
 
 import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron'
-import { spawnPty, spawnClaudePty, writeToPty, resizePty, killPty, getPtyCwd, startPtyRecording, stopPtyRecording, getActiveSessions } from '../pty'
+import {
+  spawnPty,
+  spawnClaudePty,
+  writeToPty,
+  resizePty,
+  killPty,
+  getPtyCwd,
+  startPtyRecording,
+  stopPtyRecording,
+  getActiveSessions,
+} from '../pty'
 import { getConfigValue } from '../config'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 
-export function registerPtyHandlers(senderWindow: SenderWindow): string[] {
-  const channels: string[] = []
+interface PtySpawnOptions {
+  cwd?: string
+  cols?: number
+  rows?: number
+  startupCommand?: string
+}
 
-  ipcMain.handle(
-    'pty:spawn',
-    (event, id: string, options: { cwd?: string; cols?: number; rows?: number; startupCommand?: string }) => {
-      return spawnPty(id, senderWindow(event), options)
-    }
+interface ClaudeSpawnOptions extends PtySpawnOptions {
+  initialPrompt?: string
+  cliOverrides?: Record<string, unknown>
+  resumeMode?: string
+}
+
+function getClaudeCliSettings(options?: ClaudeSpawnOptions) {
+  const baseSettings = getConfigValue('claudeCliSettings')
+  return options?.cliOverrides
+    ? { ...baseSettings, ...options.cliOverrides } as typeof baseSettings
+    : baseSettings
+}
+
+function registerSpawnHandlers(channels: string[], senderWindow: SenderWindow): void {
+  ipcMain.handle('pty:spawn', (event, id: string, options: PtySpawnOptions) =>
+    spawnPty(id, senderWindow(event), options)
   )
   channels.push('pty:spawn')
 
-  ipcMain.handle(
-    'pty:spawnClaude',
-    (event, id: string, options: { cwd?: string; cols?: number; rows?: number; initialPrompt?: string; cliOverrides?: Record<string, unknown>; resumeMode?: string }) => {
-      const win = senderWindow(event)
-      const baseSettings = getConfigValue('claudeCliSettings')
-      const settings = options?.cliOverrides
-        ? { ...baseSettings, ...options.cliOverrides } as typeof baseSettings
-        : baseSettings
-      return spawnClaudePty(id, win, settings, options)
-    }
+  ipcMain.handle('pty:spawnClaude', (event, id: string, options: ClaudeSpawnOptions) =>
+    spawnClaudePty(id, senderWindow(event), getClaudeCliSettings(options), options)
   )
   channels.push('pty:spawnClaude')
+}
 
-  ipcMain.handle('pty:write', (_event, id: string, data: string) => {
-    return writeToPty(id, data)
-  })
+function registerSessionHandlers(channels: string[]): void {
+  ipcMain.handle('pty:write', (_event, id: string, data: string) => writeToPty(id, data))
   channels.push('pty:write')
 
-  ipcMain.handle('pty:resize', (_event, id: string, cols: number, rows: number) => {
-    return resizePty(id, cols, rows)
-  })
+  ipcMain.handle('pty:resize', (_event, id: string, cols: number, rows: number) =>
+    resizePty(id, cols, rows)
+  )
   channels.push('pty:resize')
 
-  ipcMain.handle('pty:kill', (_event, id: string) => {
-    return killPty(id)
-  })
+  ipcMain.handle('pty:kill', (_event, id: string) => killPty(id))
   channels.push('pty:kill')
 
-  ipcMain.handle('pty:getCwd', (_event, id: string) => {
-    return getPtyCwd(id)
-  })
+  ipcMain.handle('pty:getCwd', (_event, id: string) => getPtyCwd(id))
   channels.push('pty:getCwd')
 
-  ipcMain.handle('pty:startRecording', (event, id: string) => {
-    return startPtyRecording(id, senderWindow(event))
-  })
+  ipcMain.handle('pty:listSessions', () => getActiveSessions())
+  channels.push('pty:listSessions')
+}
+
+function registerRecordingHandlers(channels: string[], senderWindow: SenderWindow): void {
+  ipcMain.handle('pty:startRecording', (event, id: string) =>
+    startPtyRecording(id, senderWindow(event))
+  )
   channels.push('pty:startRecording')
 
-  ipcMain.handle('pty:stopRecording', (event, id: string) => {
-    return stopPtyRecording(id, senderWindow(event))
-  })
+  ipcMain.handle('pty:stopRecording', (event, id: string) =>
+    stopPtyRecording(id, senderWindow(event))
+  )
   channels.push('pty:stopRecording')
+}
 
-  ipcMain.handle('pty:listSessions', () => {
-    return getActiveSessions()
-  })
-  channels.push('pty:listSessions')
-
+export function registerPtyHandlers(senderWindow: SenderWindow): string[] {
+  const channels: string[] = []
+  registerSpawnHandlers(channels, senderWindow)
+  registerSessionHandlers(channels)
+  registerRecordingHandlers(channels, senderWindow)
   return channels
 }

@@ -1,12 +1,9 @@
 /**
- * InlineEditInput — input field for inline rename / new file creation.
- *
- * Extracted from FileTreeItem.tsx.
+ * InlineEditInput - input field for inline rename / new file creation.
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
-/** Characters not allowed in file/folder names */
 // eslint-disable-next-line no-control-regex
 const INVALID_NAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/;
 
@@ -23,6 +20,164 @@ export interface InlineEditInputProps {
   onCancel: () => void;
 }
 
+function trimmedValue(value: string): string {
+  return value.trim();
+}
+
+function selectInitialName(
+  input: HTMLInputElement,
+  initialValue: string
+): void {
+  const dotIndex = initialValue.lastIndexOf('.');
+  if (dotIndex > 0) {
+    input.setSelectionRange(0, dotIndex);
+    return;
+  }
+  input.select();
+}
+
+function useInitialSelection(
+  inputRef: React.RefObject<HTMLInputElement | null>,
+  initialValue: string
+): void {
+  useEffect(() => {
+    if (!inputRef.current) return;
+    inputRef.current.focus();
+    selectInitialName(inputRef.current, initialValue);
+  }, [initialValue, inputRef]);
+}
+
+function submitInlineEdit(
+  value: string,
+  setError: React.Dispatch<React.SetStateAction<string | null>>,
+  onConfirm: (value: string) => void
+): void {
+  const error = validate(value);
+  if (error) {
+    setError(error);
+    return;
+  }
+  onConfirm(trimmedValue(value));
+}
+
+function useKeyDownHandler(
+  submitValue: () => void,
+  onCancel: () => void
+): (e: React.KeyboardEvent) => void {
+  return useCallback(
+    (e: React.KeyboardEvent) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitValue();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    },
+    [onCancel, submitValue]
+  );
+}
+
+function useBlurHandler({
+  value,
+  initialValue,
+  onConfirm,
+  onCancel,
+}: {
+  value: string;
+  initialValue: string;
+  onConfirm: (value: string) => void;
+  onCancel: () => void;
+}): () => void {
+  return useCallback(() => {
+    const nextValue = trimmedValue(value);
+    const error = validate(value);
+    if (error || nextValue === initialValue) {
+      onCancel();
+      return;
+    }
+    onConfirm(nextValue);
+  }, [initialValue, onCancel, onConfirm, value]);
+}
+
+function useInlineEditHandlers({
+  value,
+  initialValue,
+  onConfirm,
+  onCancel,
+  setError,
+}: {
+  value: string;
+  initialValue: string;
+  onConfirm: (value: string) => void;
+  onCancel: () => void;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+}): {
+  handleBlur: () => void;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+} {
+  const submitValue = useCallback(
+    () => submitInlineEdit(value, setError, onConfirm),
+    [onConfirm, setError, value]
+  );
+
+  return {
+    handleBlur: useBlurHandler({ value, initialValue, onConfirm, onCancel }),
+    handleKeyDown: useKeyDownHandler(submitValue, onCancel),
+  };
+}
+
+function inputStyle(error: string | null): React.CSSProperties {
+  return {
+    width: '100%',
+    padding: '0 4px',
+    background: 'var(--bg)',
+    border: error ? '1px solid var(--error, #e55)' : '1px solid var(--accent)',
+    borderRadius: '2px',
+    color: 'var(--text)',
+    fontSize: '0.8125rem',
+    fontFamily: 'var(--font-mono)',
+    outline: 'none',
+    boxSizing: 'border-box',
+    height: '20px',
+    lineHeight: '20px',
+  };
+}
+
+function InlineEditField({
+  inputRef,
+  value,
+  error,
+  onChange,
+  onBlur,
+  onKeyDown,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  value: string;
+  error: string | null;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+}): React.ReactElement {
+  return (
+    <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onBlur={onBlur}
+        style={inputStyle(error)}
+      />
+      {error && <EditError message={error} />}
+    </div>
+  );
+}
+
 export function InlineEditInput({
   initialValue,
   onConfirm,
@@ -31,69 +186,28 @@ export function InlineEditInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!inputRef.current) return;
-    inputRef.current.focus();
-    const dotIndex = initialValue.lastIndexOf('.');
-    if (dotIndex > 0) {
-      inputRef.current.setSelectionRange(0, dotIndex);
-    } else {
-      inputRef.current.select();
-    }
-  }, [initialValue]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      e.stopPropagation();
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const err = validate(value);
-        if (err) { setError(err); return; }
-        onConfirm(value.trim());
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-    },
-    [value, onConfirm, onCancel]
-  );
-
-  const handleBlur = useCallback(() => {
-    const err = validate(value);
-    if (err || value.trim() === initialValue) {
-      onCancel();
-    } else {
-      onConfirm(value.trim());
-    }
-  }, [value, initialValue, onConfirm, onCancel]);
+  useInitialSelection(inputRef, initialValue);
+  const { handleBlur, handleKeyDown } = useInlineEditHandlers({
+    value,
+    initialValue,
+    onConfirm,
+    onCancel,
+    setError,
+  });
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+    setError(null);
+  }, []);
 
   return (
-    <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => { setValue(e.target.value); setError(null); }}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        style={{
-          width: '100%',
-          padding: '0 4px',
-          background: 'var(--bg)',
-          border: error ? '1px solid var(--error, #e55)' : '1px solid var(--accent)',
-          borderRadius: '2px',
-          color: 'var(--text)',
-          fontSize: '0.8125rem',
-          fontFamily: 'var(--font-mono)',
-          outline: 'none',
-          boxSizing: 'border-box',
-          height: '20px',
-          lineHeight: '20px',
-        }}
-      />
-      {error && <EditError message={error} />}
-    </div>
+    <InlineEditField
+      inputRef={inputRef}
+      value={value}
+      error={error}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+    />
   );
 }
 

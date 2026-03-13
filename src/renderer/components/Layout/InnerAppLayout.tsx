@@ -74,6 +74,26 @@ export interface InnerAppLayoutProps {
   perfOverlayVisible: boolean;
 }
 
+type ProjectPickerSlotProps = Pick<
+  InnerAppLayoutProps,
+  'projectRoot' | 'recentProjects' | 'handleProjectChange' | 'addProjectRoot' | 'setRecentProjects'
+> & {
+  rootCount: number;
+};
+
+type TerminalPanelContentProps = Pick<
+  InnerAppLayoutProps,
+  'sessions' | 'activeSessionId' | 'recordingSessions' | 'handleTerminalRestart' | 'handleTerminalClose' |
+  'handleTerminalTitleChange' | 'spawnSession' | 'handleToggleRecording' | 'handleSplit' | 'handleCloseSplit'
+>;
+
+type LayoutOverlaysProps = Pick<
+  InnerAppLayoutProps,
+  'paletteOpen' | 'closePalette' | 'commands' | 'recentIds' | 'handleExecute' |
+  'filePickerOpen' | 'setFilePickerOpen' | 'projectRoot' |
+  'symbolSearchOpen' | 'setSymbolSearchOpen' | 'perfOverlayVisible'
+>;
+
 function ProjectPickerSlot({
   projectRoot,
   recentProjects,
@@ -81,14 +101,7 @@ function ProjectPickerSlot({
   addProjectRoot,
   setRecentProjects,
   rootCount,
-}: {
-  projectRoot: string | null;
-  recentProjects: string[];
-  handleProjectChange: (path: string) => Promise<void>;
-  addProjectRoot: (path: string) => void;
-  setRecentProjects: React.Dispatch<React.SetStateAction<string[]>>;
-  rootCount: number;
-}): React.ReactElement {
+}: ProjectPickerSlotProps): React.ReactElement {
   const handleAddProject = useCallback((path: string) => {
     addProjectRoot(path);
     const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
@@ -107,99 +120,127 @@ function ProjectPickerSlot({
   );
 }
 
-export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
+function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutProps'] {
   const {
-    projectRoot, projectRoots, addProjectRoot,
-    recentProjects, setRecentProjects, handleProjectChange,
-    keybindings, workspaceLayouts, activeLayoutName,
-    handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout,
-    terminalControl, sessions, activeSessionId,
-    recordingSessions, handleTerminalRestart, handleTerminalClose,
-    handleTerminalTitleChange, spawnSession, handleToggleRecording,
-    handleSplit, handleCloseSplit,
-    paletteOpen, closePalette, commands, recentIds, handleExecute,
-    filePickerOpen, setFilePickerOpen, symbolSearchOpen, setSymbolSearchOpen,
-    perfOverlayVisible,
+    workspaceLayouts,
+    activeLayoutName,
+    handleSelectLayout,
+    handleSaveLayout,
+    handleUpdateLayout,
+    handleDeleteLayout,
   } = props;
 
+  return {
+    layouts: workspaceLayouts,
+    activeLayoutName,
+    currentPanelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
+    currentVisiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
+    onSelectLayout: handleSelectLayout,
+    onSaveLayout: handleSaveLayout,
+    onUpdateLayout: handleUpdateLayout,
+    onDeleteLayout: handleDeleteLayout,
+  };
+}
+
+function LayoutProviders({
+  projectRoot,
+  children,
+}: React.PropsWithChildren<{
+  projectRoot: string | null;
+}>): React.ReactElement {
   return (
     <FileViewerManager projectRoot={projectRoot}>
       <IdeToolBridge />
       <MultiBufferManager>
-      <DiffReviewProvider>
-      <AppLayoutConnected
-        terminalControl={terminalControl}
-        projectRoot={projectRoot}
-        keybindings={keybindings}
-        layoutProps={{
-          layouts: workspaceLayouts,
-          activeLayoutName,
-          currentPanelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
-          currentVisiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
-          onSelectLayout: handleSelectLayout,
-          onSaveLayout: handleSaveLayout,
-          onUpdateLayout: handleUpdateLayout,
-          onDeleteLayout: handleDeleteLayout,
-        }}
-        sidebarHeader={
-          <ProjectPickerSlot
-            projectRoot={projectRoot}
-            recentProjects={recentProjects}
-            handleProjectChange={handleProjectChange}
-            addProjectRoot={addProjectRoot}
-            setRecentProjects={setRecentProjects}
-            rootCount={projectRoots.length}
-          />
-        }
-        sidebarContent={<SidebarFileTree />}
-        editorTabBar={<EditorTabBar />}
-        editorContent={<CentrePaneConnected />}
-        agentCards={
-          <RightSidebarTabs
-            monitorContent={<AgentMonitorManager />}
-            gitContent={<GitPanel />}
-            analyticsContent={<AnalyticsDashboard />}
-          />
-        }
-        terminalContent={
-          <TerminalManager
-            sessions={sessions}
-            activeSessionId={activeSessionId}
-            onRestart={handleTerminalRestart}
-            onClose={handleTerminalClose}
-            onTitleChange={handleTerminalTitleChange}
-            onSpawn={() => void spawnSession()}
-            recordingSessions={recordingSessions}
-            onToggleRecording={(id) => void handleToggleRecording(id)}
-            onSplit={(id) => void handleSplit(id)}
-            onCloseSplit={handleCloseSplit}
-          />
-        }
-      />
-
-      <CommandPalette
-        isOpen={paletteOpen}
-        onClose={closePalette}
-        commands={commands}
-        recentIds={recentIds}
-        onExecute={handleExecute}
-      />
-
-      <FilePickerConnected
-        isOpen={filePickerOpen}
-        onClose={() => setFilePickerOpen(false)}
-        projectRoot={projectRoot}
-      />
-
-      <SymbolSearch
-        isOpen={symbolSearchOpen}
-        onClose={() => setSymbolSearchOpen(false)}
-        projectRoot={projectRoot}
-      />
-
-      <PerformanceOverlay visible={perfOverlayVisible} />
-      </DiffReviewProvider>
+        <DiffReviewProvider>{children}</DiffReviewProvider>
       </MultiBufferManager>
     </FileViewerManager>
+  );
+}
+
+function AgentSidebarContent(): React.ReactElement {
+  return (
+    <RightSidebarTabs
+      monitorContent={<AgentMonitorManager />}
+      gitContent={<GitPanel />}
+      analyticsContent={<AnalyticsDashboard />}
+    />
+  );
+}
+
+function TerminalPanelContent({
+  sessions,
+  activeSessionId,
+  recordingSessions,
+  handleTerminalRestart,
+  handleTerminalClose,
+  handleTerminalTitleChange,
+  spawnSession,
+  handleToggleRecording,
+  handleSplit,
+  handleCloseSplit,
+}: TerminalPanelContentProps): React.ReactElement {
+  return (
+    <TerminalManager
+      sessions={sessions}
+      activeSessionId={activeSessionId}
+      onRestart={handleTerminalRestart}
+      onClose={handleTerminalClose}
+      onTitleChange={handleTerminalTitleChange}
+      onSpawn={() => void spawnSession()}
+      recordingSessions={recordingSessions}
+      onToggleRecording={(id) => void handleToggleRecording(id)}
+      onSplit={(id) => void handleSplit(id)}
+      onCloseSplit={handleCloseSplit}
+    />
+  );
+}
+
+function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
+  return (
+    <AppLayoutConnected
+      terminalControl={props.terminalControl}
+      projectRoot={props.projectRoot}
+      keybindings={props.keybindings}
+      layoutProps={createLayoutProps(props)}
+      sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
+      sidebarContent={<SidebarFileTree />}
+      editorTabBar={<EditorTabBar />}
+      editorContent={<CentrePaneConnected />}
+      agentCards={<AgentSidebarContent />}
+      terminalContent={<TerminalPanelContent {...props} />}
+    />
+  );
+}
+
+function LayoutOverlays({
+  paletteOpen,
+  closePalette,
+  commands,
+  recentIds,
+  handleExecute,
+  filePickerOpen,
+  setFilePickerOpen,
+  projectRoot,
+  symbolSearchOpen,
+  setSymbolSearchOpen,
+  perfOverlayVisible,
+}: LayoutOverlaysProps): React.ReactElement {
+  return (
+    <>
+      <CommandPalette isOpen={paletteOpen} onClose={closePalette} commands={commands} recentIds={recentIds} onExecute={handleExecute} />
+      <FilePickerConnected isOpen={filePickerOpen} onClose={() => setFilePickerOpen(false)} projectRoot={projectRoot} />
+      <SymbolSearch isOpen={symbolSearchOpen} onClose={() => setSymbolSearchOpen(false)} projectRoot={projectRoot} />
+      <PerformanceOverlay visible={perfOverlayVisible} />
+    </>
+  );
+}
+
+export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
+  return (
+    <LayoutProviders projectRoot={props.projectRoot}>
+      <LayoutChrome {...props} />
+      <LayoutOverlays {...props} />
+    </LayoutProviders>
   );
 }

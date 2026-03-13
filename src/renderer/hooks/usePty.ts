@@ -6,7 +6,7 @@
  * Never imports Node modules — all IPC goes through the contextBridge.
  */
 
-import { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 
 type ExitResult = { exitCode: number | null; signal: number | null }
 
@@ -31,62 +31,51 @@ interface UsePtyReturn {
   onExit: (sessionId: string, callback: (result: ExitResult) => void) => () => void
 }
 
+async function spawnPty(id: string, cwd?: string): Promise<string> {
+  const result = await window.electronAPI.pty.spawn(id, { cwd })
+  if (!result.success && !result.already) {
+    throw new Error(result.error ?? `Failed to spawn PTY session ${id}`)
+  }
+  return id
+}
+
+function makeTrackedSubscriber<T>(
+  cleanupsRef: React.MutableRefObject<Set<() => void>>,
+  subscribe: (sessionId: string, cb: (arg: T) => void) => () => void,
+): (sessionId: string, callback: (arg: T) => void) => () => void {
+  return (sessionId, callback) => {
+    const cleanup = subscribe(sessionId, callback)
+    cleanupsRef.current.add(cleanup)
+    return () => {
+      cleanup()
+      cleanupsRef.current.delete(cleanup)
+    }
+  }
+}
+
 export function usePty(): UsePtyReturn {
-  // Track all active listener cleanups so we can tear them down on unmount.
   const cleanupsRef = useRef<Set<() => void>>(new Set())
 
   useEffect(() => {
     const cleanups = cleanupsRef.current
     return () => {
-      for (const cleanup of cleanups) {
-        cleanup()
-      }
+      for (const cleanup of cleanups) cleanup()
       cleanups.clear()
     }
   }, [])
 
-  const spawn = useCallback(async (id: string, cwd?: string): Promise<string> => {
-    const result = await window.electronAPI.pty.spawn(id, { cwd })
-    if (!result.success && !result.already) {
-      throw new Error(result.error ?? `Failed to spawn PTY session ${id}`)
-    }
-    return id
-  }, [])
-
-  const write = useCallback((sessionId: string, data: string): void => {
-    // Fire-and-forget — callers write at high frequency (keystroke-level)
-    void window.electronAPI.pty.write(sessionId, data)
-  }, [])
-
-  const resize = useCallback((sessionId: string, cols: number, rows: number): void => {
-    void window.electronAPI.pty.resize(sessionId, cols, rows)
-  }, [])
-
-  const kill = useCallback((sessionId: string): void => {
-    void window.electronAPI.pty.kill(sessionId)
-  }, [])
-
+  const spawn = useCallback((id: string, cwd?: string) => spawnPty(id, cwd), [])
+  const write = useCallback((sid: string, d: string) => { void window.electronAPI.pty.write(sid, d) }, [])
+  const resize = useCallback((sid: string, c: number, r: number) => { void window.electronAPI.pty.resize(sid, c, r) }, [])
+  const kill = useCallback((sid: string) => { void window.electronAPI.pty.kill(sid) }, [])
   const onData = useCallback(
-    (sessionId: string, callback: (data: string) => void): (() => void) => {
-      const cleanup = window.electronAPI.pty.onData(sessionId, callback)
-      cleanupsRef.current.add(cleanup)
-      return () => {
-        cleanup()
-        cleanupsRef.current.delete(cleanup)
-      }
-    },
+    (sessionId: string, callback: (data: string) => void) =>
+      makeTrackedSubscriber<string>(cleanupsRef, window.electronAPI.pty.onData)(sessionId, callback),
     []
   )
-
   const onExit = useCallback(
-    (sessionId: string, callback: (result: ExitResult) => void): (() => void) => {
-      const cleanup = window.electronAPI.pty.onExit(sessionId, callback)
-      cleanupsRef.current.add(cleanup)
-      return () => {
-        cleanup()
-        cleanupsRef.current.delete(cleanup)
-      }
-    },
+    (sessionId: string, callback: (result: ExitResult) => void) =>
+      makeTrackedSubscriber<ExitResult>(cleanupsRef, window.electronAPI.pty.onExit)(sessionId, callback),
     []
   )
 
