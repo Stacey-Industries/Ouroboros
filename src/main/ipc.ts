@@ -1977,6 +1977,35 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
     return { success: true, servers: lspGetStatus() }
   })
 
+  // ─── Code Mode ────────────────────────────────────────────────────────────
+
+  ipcMain.handle('codemode:enable', async (_event, args: { serverNames: string[]; scope: 'global' | 'project'; projectRoot?: string }) => {
+    try {
+      const { enableCodeMode } = await import('./codemode/codemodeManager')
+      return await enableCodeMode(args.serverNames, args.scope, args.projectRoot)
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('codemode:disable', async () => {
+    try {
+      const { disableCodeMode } = await import('./codemode/codemodeManager')
+      return await disableCodeMode()
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('codemode:status', async () => {
+    try {
+      const { getCodeModeStatus } = await import('./codemode/codemodeManager')
+      return { success: true, ...getCodeModeStatus() }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
   // Return a cleanup function
   return () => { cleanupIpcHandlers() }
 }
@@ -2093,6 +2122,9 @@ export function cleanupIpcHandlers(): void {
     'lsp:didChange',
     'lsp:didClose',
     'lsp:getStatus',
+    'codemode:enable',
+    'codemode:disable',
+    'codemode:status',
   ]
 
   for (const channel of channels) {

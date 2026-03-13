@@ -12,12 +12,13 @@ import { KeybindingsSection } from './KeybindingsSection';
 import { ProfilesSection } from './ProfilesSection';
 import { FileFilterSection } from './FileFilterSection';
 import { ExtensionsSection } from './ExtensionsSection';
+import { CodeModeSection } from './CodeModeSection';
 import { ClaudeSection } from './ClaudeSection';
 import { SETTINGS_ENTRIES, type SettingsEntry } from './settingsEntries';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
-type TabId = 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions';
+type TabId = 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'codemode';
 
 interface Tab {
   id: TabId;
@@ -35,6 +36,7 @@ const TABS: Tab[] = [
   { id: 'profiles', label: 'Profiles' },
   { id: 'files', label: 'Files' },
   { id: 'extensions', label: 'Extensions' },
+  { id: 'codemode', label: 'Code Mode' },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -646,6 +648,9 @@ export function SettingsModal({
               )}
               {activeTab === 'extensions' && (
                 <ExtensionsSection />
+              )}
+              {activeTab === 'codemode' && (
+                <CodeModeSection />
               )}
             </div>
           )}
