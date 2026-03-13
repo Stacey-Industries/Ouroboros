@@ -17,7 +17,6 @@
 import React, {
   useCallback,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
@@ -34,7 +33,6 @@ import { FileTree } from './components/FileTree/FileTree';
 import {
   FileViewerManager,
   useFileViewerManager,
-  FileViewerTabs,
   Breadcrumb,
   FileViewer,
 } from './components/FileViewer';
@@ -42,7 +40,6 @@ import { MultiBufferManager, useMultiBufferManager, AddExcerptForm } from './com
 import { MultiBufferView } from './components/FileViewer/MultiBufferView';
 
 import { TerminalManager } from './components/Terminal/TerminalManager';
-import type { TerminalSession } from './components/Terminal/TerminalTabs';
 import { AgentMonitorManager } from './components/AgentMonitor/AgentMonitorManager';
 import { GitPanel } from './components/GitPanel';
 import { RightSidebarTabs } from './components/Layout/RightSidebarTabs';
@@ -70,52 +67,14 @@ import { DiffReviewProvider, useDiffReview, DiffReviewPanel } from './components
 import { SessionReplayPanel } from './components/SessionReplay';
 import type { AgentSession as AgentMonitorSession } from './components/AgentMonitor/types';
 
+import { LoadingScreen } from './components/Layout/LoadingScreen';
+import { EditorTabBar } from './components/Layout/EditorTabBar';
+import { useSessionManager } from './hooks/useSessionManager';
+
 // ─── Guard: is the Electron bridge available? ─────────────────────────────────
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
-}
-
-// ─── Loading screen ───────────────────────────────────────────────────────────
-
-function LoadingScreen(): React.ReactElement {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'var(--bg, #0d1117)',
-        color: 'var(--text-muted, #8b949e)',
-        flexDirection: 'column',
-        gap: '12px',
-      }}
-    >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        style={{ animation: 'spin 1s linear infinite' }}
-      >
-        <circle cx="12" cy="12" r="10" stroke="var(--border, #30363d)" strokeWidth="2" />
-        <path
-          d="M12 2a10 10 0 0 1 10 10"
-          stroke="var(--accent, #58a6ff)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span style={{ fontSize: '13px', fontFamily: 'var(--font-ui, system-ui)' }}>
-        Loading…
-      </span>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
 }
 
 // ─── Sidebar content: FileTree wired to ProjectContext + FileViewerManager ─────
@@ -138,139 +97,6 @@ function SidebarFileTree(): React.ReactElement {
       onFileSelect={handleFileSelect}
       onRemoveRoot={removeProjectRoot}
     />
-  );
-}
-
-// ─── Editor tab bar — reads open files from FileViewerManager context ─────────
-// This is passed as the `editorTabBar` slot of AppLayout / CentrePane.
-// Also shows multi-buffer tabs alongside file tabs.
-
-function EditorTabBar(): React.ReactElement {
-  const { openFiles, activeIndex, setActive, closeFile } = useFileViewerManager();
-  const { multiBuffers, openMultiBuffer, closeMultiBuffer } = useMultiBufferManager();
-
-  const handleNewMultiBuffer = useCallback(() => {
-    const id = openMultiBuffer();
-    // Dispatch event so the centre pane switches to multi-buffer view
-    window.dispatchEvent(
-      new CustomEvent('agent-ide:activate-multi-buffer', { detail: { id } }),
-    );
-  }, [openMultiBuffer]);
-
-  const handleActivateMultiBuffer = useCallback((id: string) => {
-    window.dispatchEvent(
-      new CustomEvent('agent-ide:activate-multi-buffer', { detail: { id } }),
-    );
-  }, []);
-
-  const handleCloseMultiBuffer = useCallback((id: string) => {
-    closeMultiBuffer(id);
-    // If this was the active multi-buffer, switch back to file view
-    window.dispatchEvent(
-      new CustomEvent('agent-ide:deactivate-multi-buffer'),
-    );
-  }, [closeMultiBuffer]);
-
-  const handleActivateFile = useCallback((filePath: string) => {
-    // Deactivate any multi-buffer first
-    window.dispatchEvent(new CustomEvent('agent-ide:deactivate-multi-buffer'));
-    setActive(filePath);
-  }, [setActive]);
-
-  return (
-    <div style={{ display: 'flex', flex: 1, height: '100%', alignItems: 'stretch' }}>
-      {/* File tabs */}
-      {openFiles.length > 0 && (
-        <FileViewerTabs
-          files={openFiles}
-          activeIndex={activeIndex}
-          onActivate={handleActivateFile}
-          onClose={closeFile}
-        />
-      )}
-
-      {/* Multi-buffer tabs */}
-      {multiBuffers.map((mb) => (
-        <div
-          key={mb.id}
-          role="tab"
-          tabIndex={0}
-          title={mb.config.name}
-          onClick={() => handleActivateMultiBuffer(mb.id)}
-          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleCloseMultiBuffer(mb.id); } }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActivateMultiBuffer(mb.id); }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '0 10px 0 12px',
-            height: '100%',
-            flexShrink: 0,
-            cursor: 'pointer',
-            userSelect: 'none',
-            borderRight: '1px solid var(--border)',
-            borderBottom: '2px solid transparent',
-            backgroundColor: 'var(--bg-secondary)',
-            color: 'var(--text-muted)',
-            fontSize: '0.8125rem',
-            fontFamily: 'var(--font-ui)',
-            minWidth: '80px',
-            maxWidth: '200px',
-            transition: 'background-color 100ms ease, color 100ms ease',
-          }}
-        >
-          <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{'\u2630'}</span>
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {mb.config.name}
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleCloseMultiBuffer(mb.id); }}
-            aria-label={`Close ${mb.config.name}`}
-            tabIndex={-1}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '16px', height: '16px', borderRadius: '3px',
-              border: 'none', background: 'transparent',
-              color: 'var(--text-faint)', cursor: 'pointer', padding: 0, flexShrink: 0,
-            }}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      ))}
-
-      {/* New Multi-Buffer button */}
-      <button
-        onClick={handleNewMultiBuffer}
-        title="New Multi-Buffer"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '28px',
-          height: '100%',
-          flexShrink: 0,
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--text-faint)',
-          cursor: 'pointer',
-          fontSize: '0.875rem',
-          fontFamily: 'var(--font-ui)',
-          padding: 0,
-          borderRight: '1px solid var(--border)',
-        }}
-      >
-        {'\u2630'}+
-      </button>
-
-      {/* Spacer */}
-      {openFiles.length === 0 && multiBuffers.length === 0 && (
-        <div style={{ flex: 1 }} aria-hidden="true" />
-      )}
-      <div style={{ flex: 1 }} />
-    </div>
   );
 }
 
@@ -890,338 +716,21 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
     [recentProjects, setProjectRoot],
   );
 
-  // ── Terminal session state (lifted from TerminalManager) ──────────────────
-  // Declared before menu event useEffect so spawnSession is in scope.
-
-  const [sessions, setSessions] = useState<TerminalSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const spawnCountRef = useRef(0);
-  const killTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>[]>>(new Map());
-
-  // ── Recording state ────────────────────────────────────────────────────────
-  const [recordingSessions, setRecordingSessions] = useState<Set<string>>(new Set());
-
-  function generateSessionId(): string {
-    return `term-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  }
-
-  function buildSessionLabel(index: number): string {
-    return `Terminal ${index + 1}`;
-  }
-
-  function clearKillTimers(sessionId: string): void {
-    const timers = killTimersRef.current.get(sessionId);
-    if (timers) {
-      timers.forEach(clearTimeout);
-      killTimersRef.current.delete(sessionId);
-    }
-  }
-
-  const spawnSession = useCallback(async (optionalCwd?: string): Promise<void> => {
-    const id = generateSessionId();
-    const index = spawnCountRef.current;
-    spawnCountRef.current += 1;
-
-    let cwd: string | undefined = optionalCwd;
-    if (!cwd) {
-      try {
-        cwd = await window.electronAPI.config.get('defaultProjectRoot');
-      } catch {
-        // Config not available; fall back to undefined (PTY uses os.homedir())
-      }
-    }
-
-    const newSession: TerminalSession = {
-      id,
-      title: buildSessionLabel(index),
-      status: 'running',
-    };
-
-    setSessions((prev) => [...prev, newSession]);
-    setActiveSessionId(id);
-
-    try {
-      await window.electronAPI.pty.spawn(id, { cwd });
-
-      const exitCleanup = window.electronAPI.pty.onExit(id, () => {
-        exitCleanup();
-        setSessions((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, status: 'exited' } : s)),
-        );
-        clearKillTimers(id);
-      });
-    } catch {
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, status: 'exited', title: `${s.title} [error]` } : s,
-        ),
-      );
-    }
-  }, []);
-
-  const spawnClaudeSession = useCallback(async (
-    optionalCwd?: string,
-    options?: { initialPrompt?: string; cliOverrides?: Record<string, unknown>; label?: string }
-  ): Promise<void> => {
-    const id = generateSessionId();
-    const index = spawnCountRef.current;
-    spawnCountRef.current += 1;
-
-    let cwd: string | undefined = optionalCwd;
-    if (!cwd) {
-      try {
-        cwd = await window.electronAPI.config.get('defaultProjectRoot');
-      } catch {
-        // Config not available; fall back to undefined (PTY uses os.homedir())
-      }
-    }
-
-    const newSession: TerminalSession = {
-      id,
-      title: options?.label ?? `Claude ${index + 1}`,
-      status: 'running',
-      isClaude: true,
-    };
-
-    setSessions((prev) => [...prev, newSession]);
-    setActiveSessionId(id);
-
-    try {
-      await window.electronAPI.pty.spawnClaude(id, {
-        cwd,
-        initialPrompt: options?.initialPrompt,
-        cliOverrides: options?.cliOverrides,
-      });
-
-      const exitCleanup = window.electronAPI.pty.onExit(id, () => {
-        exitCleanup();
-        setSessions((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, status: 'exited' } : s)),
-        );
-        clearKillTimers(id);
-      });
-    } catch {
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, status: 'exited', title: `${s.title} [error]` } : s,
-        ),
-      );
-    }
-  }, []);
-
-  const gracefulKill = useCallback((sessionId: string): void => {
-    clearKillTimers(sessionId);
-    void window.electronAPI.pty.write(sessionId, '\x03');
-    const t1 = setTimeout(() => {
-      void window.electronAPI.pty.kill(sessionId);
-    }, 3000);
-    const t2 = setTimeout(() => {
-      void window.electronAPI.pty.kill(sessionId);
-    }, 6000);
-    killTimersRef.current.set(sessionId, [t1, t2]);
-  }, []);
-
-  const handleTerminalClose = useCallback(
-    (sessionId: string): void => {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) return;
-
-      if (session.status === 'running') {
-        gracefulKill(sessionId);
-      }
-
-      setSessions((prev) => {
-        const next = prev.filter((s) => s.id !== sessionId);
-        if (activeSessionId === sessionId && next.length > 0) {
-          const closedIdx = prev.findIndex((s) => s.id === sessionId);
-          const nextActive = next[Math.min(closedIdx, next.length - 1)];
-          setActiveSessionId(nextActive.id);
-        } else if (next.length === 0) {
-          setActiveSessionId(null);
-        }
-        return next;
-      });
-    },
-    [sessions, activeSessionId, gracefulKill],
-  );
-
-  const handleTerminalRestart = useCallback(
-    async (sessionId: string): Promise<void> => {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session || session.status !== 'exited') return;
-
-      let cwd: string | undefined;
-      try {
-        cwd = await window.electronAPI.config.get('defaultProjectRoot');
-      } catch {
-        // ignore
-      }
-
-      try {
-        await window.electronAPI.pty.spawn(sessionId, { cwd });
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === sessionId
-              ? { ...s, status: 'running', title: s.title.replace(/ \[exited\]$/, '').replace(/ \[error\]$/, '') }
-              : s,
-          ),
-        );
-
-        const exitCleanup = window.electronAPI.pty.onExit(sessionId, () => {
-          exitCleanup();
-          setSessions((prev) =>
-            prev.map((s) => (s.id === sessionId ? { ...s, status: 'exited' } : s)),
-          );
-          clearKillTimers(sessionId);
-        });
-      } catch {
-        // Still exited — no-op
-      }
-    },
-    [sessions],
-  );
-
-  const handleTerminalTitleChange = useCallback((sessionId: string, title: string): void => {
-    if (!title) return;
-    setSessions((prev) =>
-      prev.map((s) => (s.id === sessionId ? { ...s, title } : s)),
-    );
-  }, []);
-
-  // ── Restore terminal sessions from persisted config on mount ──────────────
-  const hasRestoredSessionsRef = useRef(false);
-
-  useEffect(() => {
-    if (!hasElectronAPI()) return;
-    if (hasRestoredSessionsRef.current) return;
-    hasRestoredSessionsRef.current = true;
-
-    void (async () => {
-      try {
-        // Check for already-running PTY sessions in main process (e.g. after hot reload).
-        // If found, reconnect the renderer UI to them without spawning new processes.
-        const active = await window.electronAPI.pty.listSessions();
-        if (active.length > 0) {
-          const reconnected: TerminalSession[] = active.map((s, i) => ({
-            id: s.id,
-            title: buildSessionLabel(i),
-            status: 'running',
-          }));
-          setSessions(reconnected);
-          setActiveSessionId(reconnected[0].id);
-          spawnCountRef.current = reconnected.length;
-          for (const s of reconnected) {
-            const exitCleanup = window.electronAPI.pty.onExit(s.id, () => {
-              exitCleanup();
-              setSessions((prev) =>
-                prev.map((sess) => (sess.id === s.id ? { ...sess, status: 'exited' } : sess)),
-              );
-              clearKillTimers(s.id);
-            });
-          }
-          return;
-        }
-
-        const saved = await window.electronAPI.config.get('terminalSessions');
-        if (!Array.isArray(saved) || saved.length === 0) {
-          // No saved sessions — spawn a default one
-          void spawnSession();
-          return;
-        }
-        // Restore saved sessions in order
-        for (const snap of saved) {
-          if (snap && typeof snap.cwd === 'string') {
-            await spawnSession(snap.cwd);
-          }
-        }
-      } catch {
-        // Config unavailable — spawn default
-        void spawnSession();
-      }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Persist terminal CWDs every 5 seconds ────────────────────────────────
-  const sessionsRef = useRef(sessions);
-  sessionsRef.current = sessions;
-
-  useEffect(() => {
-    if (!hasElectronAPI()) return;
-
-    const interval = setInterval(() => {
-      const running = sessionsRef.current.filter((s) => s.status === 'running');
-      if (running.length === 0) return;
-
-      void (async () => {
-        const snapshots = await Promise.all(
-          running.map(async (s) => {
-            try {
-              const res = await window.electronAPI.pty.getCwd(s.id);
-              return { cwd: res.cwd ?? '', title: s.title };
-            } catch {
-              return { cwd: '', title: s.title };
-            }
-          })
-        );
-        try {
-          await window.electronAPI.config.set('terminalSessions', snapshots);
-        } catch {
-          // Best-effort — ignore write failures
-        }
-      })();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── Recording toggle handler ───────────────────────────────────────────────
-  const handleToggleRecording = useCallback(async (sessionId: string): Promise<void> => {
-    const isCurrentlyRecording = recordingSessions.has(sessionId);
-    if (isCurrentlyRecording) {
-      await window.electronAPI.pty.stopRecording(sessionId);
-      // The main process sends pty:recordingState event which updates state via onRecordingState.
-      // But we also optimistically update here in case the event is delayed.
-      setRecordingSessions((prev) => {
-        const next = new Set(prev);
-        next.delete(sessionId);
-        return next;
-      });
-    } else {
-      await window.electronAPI.pty.startRecording(sessionId);
-      setRecordingSessions((prev) => {
-        const next = new Set(prev);
-        next.add(sessionId);
-        return next;
-      });
-    }
-  }, [recordingSessions]);
-
-  // ── Sync recording state from main process events ─────────────────────────
-  useEffect(() => {
-    if (!hasElectronAPI()) return;
-    const cleanups: Array<() => void> = [];
-
-    for (const session of sessions) {
-      const cleanup = window.electronAPI.pty.onRecordingState(
-        session.id,
-        ({ recording }) => {
-          setRecordingSessions((prev) => {
-            const next = new Set(prev);
-            if (recording) {
-              next.add(session.id);
-            } else {
-              next.delete(session.id);
-            }
-            return next;
-          });
-        }
-      );
-      cleanups.push(cleanup);
-    }
-
-    return () => cleanups.forEach((c) => c());
-  }, [sessions]);
+  // ── Terminal session state (via useSessionManager hook) ──────────────────
+  const {
+    sessions,
+    activeSessionId,
+    spawnSession,
+    spawnClaudeSession,
+    handleTerminalClose,
+    handleTerminalRestart,
+    handleTerminalTitleChange,
+    handleSplit,
+    handleCloseSplit,
+    recordingSessions,
+    handleToggleRecording,
+    terminalControl,
+  } = useSessionManager();
 
   // ── Electron menu events ─────────────────────────────────────────────────
 
@@ -1374,76 +883,6 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
     },
     [execute],
   );
-
-  // ── Split pane handlers ────────────────────────────────────────────────────
-
-  const handleSplit = useCallback(async (primarySessionId: string): Promise<void> => {
-    const splitId = generateSessionId();
-
-    let cwd: string | undefined;
-    try {
-      cwd = await window.electronAPI.config.get('defaultProjectRoot');
-    } catch {
-      // ignore
-    }
-
-    try {
-      await window.electronAPI.pty.spawn(splitId, { cwd });
-
-      const exitCleanup = window.electronAPI.pty.onExit(splitId, () => {
-        exitCleanup();
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === primarySessionId ? { ...s, splitStatus: 'exited' } : s
-          )
-        );
-        clearKillTimers(splitId);
-      });
-
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === primarySessionId
-            ? { ...s, splitSessionId: splitId, splitStatus: 'running' }
-            : s
-        )
-      );
-    } catch {
-      // Spawn failed — don't show split
-    }
-  }, []);
-
-  const handleCloseSplit = useCallback((primarySessionId: string): void => {
-    setSessions((prev) => {
-      const session = prev.find((s) => s.id === primarySessionId);
-      if (session?.splitSessionId) {
-        gracefulKill(session.splitSessionId);
-      }
-      return prev.map((s) =>
-        s.id === primarySessionId
-          ? { ...s, splitSessionId: undefined, splitStatus: undefined }
-          : s
-      );
-    });
-  }, [gracefulKill]);
-
-  // ── Terminal control for AppLayout ──────────────────────────────────────
-
-  const handleTerminalReorder = useCallback(
-    (reordered: TerminalSession[]): void => {
-      setSessions(reordered);
-    },
-    [],
-  );
-
-  const terminalControl: AppLayoutProps['terminalControl'] = {
-    sessions,
-    activeSessionId,
-    onActivate: setActiveSessionId,
-    onClose: handleTerminalClose,
-    onNew: () => void spawnSession(),
-    onNewClaude: () => void spawnClaudeSession(),
-    onReorder: handleTerminalReorder,
-  };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
