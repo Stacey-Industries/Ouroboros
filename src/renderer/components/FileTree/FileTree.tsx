@@ -1322,7 +1322,7 @@ function PinnedSection({
  * remove button is hidden (you can't remove the last root this way — use the
  * project picker instead).
  */
-export function FileTree({
+export const FileTree = React.memo(function FileTree({
   projectRoots,
   activeFilePath,
   onFileSelect,
@@ -1490,7 +1490,7 @@ export function FileTree({
       </div>
     </div>
   );
-}
+})
 
 // ─── SearchOverlay ────────────────────────────────────────────────────────────
 

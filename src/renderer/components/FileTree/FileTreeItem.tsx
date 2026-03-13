@@ -286,7 +286,7 @@ function InlineEditInput({
   );
 }
 
-export function FileTreeItem({
+export const FileTreeItem = React.memo(function FileTreeItem({
   node,
   depth,
   isActive,
@@ -550,4 +550,4 @@ export function FileTreeItem({
       )}
     </div>
   );
-}
+})
