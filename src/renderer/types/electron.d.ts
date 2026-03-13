@@ -769,6 +769,20 @@ export interface LspAPI {
   onStatusChange: (callback: (servers: LspServerStatus[]) => void) => () => void
 }
 
+// ─── Code Mode types ─────────────────────────────────────────────────────
+
+export interface CodeModeStatusResult extends IpcResult {
+  enabled?: boolean
+  proxiedServers?: string[]
+  generatedTypes?: string
+}
+
+export interface CodeModeAPI {
+  enable: (serverNames: string[], scope: 'global' | 'project', projectRoot?: string) => Promise<IpcResult>
+  disable: () => Promise<IpcResult>
+  getStatus: () => Promise<CodeModeStatusResult>
+}
+
 // ─── Root API ────────────────────────────────────────────────────────────────
 
 export interface ElectronAPI {
@@ -790,6 +804,7 @@ export interface ElectronAPI {
   lsp: LspAPI
   window: WindowAPI
   extensions: ExtensionsAPI
+  codemode: CodeModeAPI
 }
 
 // ─── Window API ──────────────────────────────────────────────────────────────

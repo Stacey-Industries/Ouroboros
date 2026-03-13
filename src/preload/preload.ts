@@ -7,7 +7,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig, SessionsAPI, CostAPI, UpdaterEvent, PerfMetrics, SymbolAPI, WindowAPI, ExtensionsAPI, LspAPI, LspDiagnostic, LspServerStatus } from '../renderer/types/electron'
+import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig, SessionsAPI, CostAPI, UpdaterEvent, PerfMetrics, SymbolAPI, WindowAPI, ExtensionsAPI, LspAPI, LspDiagnostic, LspServerStatus, CodeModeAPI, CodeModeStatusResult } from '../renderer/types/electron'
 
 // ─── PTY ────────────────────────────────────────────────────────────────────
 
@@ -314,6 +314,15 @@ const lspAPI: LspAPI = {
   },
 }
 
+// ─── Code Mode ───────────────────────────────────────────────────────────
+
+const codemodeAPI: ElectronAPI['codemode'] = {
+  enable: (serverNames, scope, projectRoot) =>
+    ipcRenderer.invoke('codemode:enable', { serverNames, scope, projectRoot }),
+  disable: () => ipcRenderer.invoke('codemode:disable'),
+  getStatus: () => ipcRenderer.invoke('codemode:status'),
+}
+
 // ─── Expose ─────────────────────────────────────────────────────────────────
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -335,4 +344,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   lsp: lspAPI,
   window: windowAPI,
   extensions: extensionsAPI,
+  codemode: codemodeAPI,
 } satisfies ElectronAPI)

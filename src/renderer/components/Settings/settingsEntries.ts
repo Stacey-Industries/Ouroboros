@@ -11,7 +11,7 @@ export interface SettingsEntry {
   /** Optional extra text to match against (not always shown) */
   description?: string
   /** Which settings tab this entry lives in */
-  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions'
+  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'codemode'
   /** Display-friendly section name */
   sectionLabel: string
 }
@@ -367,6 +367,20 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
     description: 'Extensions declare permissions in manifest.json: files.read, files.write, terminal.write, config.read, ui.notify, commands.register.',
     section: 'extensions',
     sectionLabel: 'Extensions',
+  },
+
+  // ── Code Mode ──────────────────────────────────────────────────────────────
+  {
+    label: 'Code Mode',
+    description: 'Collapse MCP tools into a single execute_code tool with TypeScript types. Reduces context token usage.',
+    section: 'codemode',
+    sectionLabel: 'Code Mode',
+  },
+  {
+    label: 'Code Mode Server Names',
+    description: 'Comma-separated list of MCP server names to proxy through Code Mode.',
+    section: 'codemode',
+    sectionLabel: 'Code Mode',
   },
 
   // ── Language Server Protocol (LSP) ────────────────────────────────────────
