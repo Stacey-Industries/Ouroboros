@@ -164,7 +164,7 @@ export function spawnPty(
         if (sessions.has(id)) {
           proc.write(options.startupCommand + '\r')
         }
-      }, 600)
+      }, 100)
     }
 
     return { success: true }
@@ -514,7 +514,7 @@ export function spawnClaudePty(
         if (sessions.has(id)) {
           proc.write(options.initialPrompt + '\r')
         }
-      }, 1500)
+      }, 300)
     }
 
     return { success: true }

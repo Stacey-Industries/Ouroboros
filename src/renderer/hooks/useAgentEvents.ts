@@ -10,7 +10,7 @@
  *   agent_end → marks session complete or error
  */
 
-import { useReducer, useEffect, useCallback, useRef } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { AgentSession, ToolCallEvent, HookPayload, TokenUsage } from '../components/AgentMonitor/types';
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -559,10 +559,11 @@ export function useAgentEvents(): UseAgentEventsReturn {
     }
   }, [state.sessions]);
 
-  const activeCount = state.sessions.filter((s) => s.status === 'running').length;
+  return useMemo(() => {
+    const activeCount = state.sessions.filter((s) => s.status === 'running').length;
+    const currentSessions = state.sessions.filter((s) => !s.restored);
+    const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  const currentSessions = state.sessions.filter((s) => !s.restored);
-  const historicalSessions = state.sessions.filter((s) => s.restored === true);
-
-  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
+    return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
+  }, [state.sessions, clearCompleted, dismiss, updateNotes]);
 }

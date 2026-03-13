@@ -253,15 +253,19 @@ export function TerminalManager({
       className="flex flex-col w-full h-full overflow-hidden"
       style={{ backgroundColor: 'var(--term-bg, var(--bg))' }}
     >
-      {/* Terminal instances — all rendered but only active one is visible */}
+      {/* Terminal instances — only active terminal is mounted (lazy-mount).
+           PTY sessions stay alive in main process; xterm restores from PTY history on switch. */}
       <div className="flex-1 min-h-0 relative">
         {sessions.map((session) => {
           const isActiveSession = session.id === activeSessionId
+          // Lazy-mount: only render the active terminal's React component.
+          // Inactive terminals are unmounted to save memory; the PTY session
+          // remains alive in the main process.
+          if (!isActiveSession) return null
           return (
             <div
               key={session.id}
               className="absolute inset-0"
-              style={{ display: isActiveSession ? 'block' : 'none' }}
             >
               {session.splitSessionId ? (
                 // ── Split pane layout ─────────────────────────────────────

@@ -18,7 +18,7 @@
  * - Never import Node modules -- all IPC via preload bridge
  */
 
-import React, { useEffect, useRef, useCallback, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
@@ -691,7 +691,7 @@ function PasteConfirmBanner({ text, onConfirm, onCancel }: PasteConfirmBannerPro
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function TerminalInstance({
+export const TerminalInstance = React.memo(function TerminalInstance({
   sessionId,
   isActive,
   onTitleChange,
@@ -724,8 +724,7 @@ export function TerminalInstance({
   // ── Sync input refs — kept current so onData closure always sees latest ─────
   const syncInputRef = useRef(syncInput)
   const allSessionIdsRef = useRef(allSessionIds)
-  useEffect(() => { syncInputRef.current = syncInput }, [syncInput])
-  useEffect(() => { allSessionIdsRef.current = allSessionIds }, [allSessionIds])
+  // Ref syncing consolidated into single useLayoutEffect below
 
   const [showSearch, setShowSearch] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -782,8 +781,7 @@ export function TerminalInstance({
   // Stable ref for handleTabCompletion used inside bootstrap effect (avoid stale closure)
   const handleTabCompletionRef = useRef<(() => Promise<void>) | null>(null)
 
-  // Keep cwd ref in sync whenever the prop changes
-  useEffect(() => { cwdRef.current = cwd ?? '' }, [cwd])
+  // cwd ref synced in consolidated useLayoutEffect below
 
   // ── Write buffer: batch PTY data into one term.write() per animation frame ──
   // Claude Code's TUI moves the cursor across multiple rows during each redraw.
@@ -792,10 +790,7 @@ export function TerminalInstance({
   const writeBufferRef = useRef('')
   const writeRafRef = useRef(0)
 
-  // Keep completion refs in sync with state so onKey closure sees current values
-  useEffect(() => { completionVisibleRef.current = completionVisible }, [completionVisible])
-  useEffect(() => { completionIndexRef.current = completionIndex }, [completionIndex])
-  useEffect(() => { completionsRef.current = completions }, [completions])
+  // Completion refs synced in consolidated useLayoutEffect below
 
   // ── Core fit logic (visual + IPC) ──────────────────────────────────────────
   // fitNow: does the actual xterm fit() and schedules a debounced IPC resize.
@@ -964,9 +959,18 @@ export function TerminalInstance({
     setCompletionPos({ x: 8, y: 40 })
   }, [sessionId, generateCompletions])
 
-  // Keep callback ref current so the bootstrap onKey closure always calls the latest version
-  // (must come after handleTabCompletion is defined)
-  useEffect(() => { handleTabCompletionRef.current = handleTabCompletion }, [handleTabCompletion])
+  // ── Consolidated ref sync ──────────────────────────────────────────────────
+  // All ref-syncing for closure-captured values merged into a single useLayoutEffect
+  // to reduce React commit-phase overhead.
+  useLayoutEffect(() => {
+    syncInputRef.current = syncInput
+    allSessionIdsRef.current = allSessionIds
+    cwdRef.current = cwd ?? ''
+    completionVisibleRef.current = completionVisible
+    completionIndexRef.current = completionIndex
+    completionsRef.current = completions
+    handleTabCompletionRef.current = handleTabCompletion
+  }, [syncInput, allSessionIds, cwd, completionVisible, completionIndex, completions, handleTabCompletion])
 
   // ── Bootstrap (create + open terminal) ─────────────────────────────────────
 
@@ -1162,9 +1166,23 @@ export function TerminalInstance({
     // cursors. TUI apps like Claude Code rapidly reposition the cursor across
     // multiple rows during a single redraw; batching ensures xterm only renders
     // the cursor at the final position of each frame.
+    const WRITE_BUFFER_CAP = 64_000
     const dataCleanup = window.electronAPI.pty.onData(sessionId, (data) => {
       const stripped = parseAndStripOsc133(data)
       writeBufferRef.current += stripped
+      // If the buffer exceeds the cap, flush immediately instead of waiting
+      // for the next animation frame to avoid unbounded memory growth during
+      // large bursts of output (e.g. cat-ing a big file).
+      if (writeBufferRef.current.length > WRITE_BUFFER_CAP) {
+        if (writeRafRef.current) {
+          cancelAnimationFrame(writeRafRef.current)
+          writeRafRef.current = 0
+        }
+        const buf = writeBufferRef.current
+        writeBufferRef.current = ''
+        term.write(buf)
+        return
+      }
       if (!writeRafRef.current) {
         writeRafRef.current = requestAnimationFrame(() => {
           writeRafRef.current = 0
@@ -1925,4 +1943,4 @@ export function TerminalInstance({
       )}
     </div>
   )
-}
+})
