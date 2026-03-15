@@ -4,7 +4,7 @@ import * as pty from 'node-pty'
 import { type ClaudeCliSettings, getConfigValue } from './config'
 import { dispatchActivationEvent } from './extensions'
 import { buildClaudeArgs } from './ptyClaude'
-import { buildBaseEnv, buildShellEnv, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
+import { buildBaseEnv, buildShellEnvWithIntegration, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
 import { startPtyRecording as startRecording, stopPtyRecording as stopRecording, type RecordingState } from './ptyRecording'
 
 export interface PtySession {
@@ -130,12 +130,17 @@ export function spawnPty(
   const shell = (getConfigValue('shell') as string) || getDefaultShell()
   const { cwd, cols, rows } = resolveSpawnOptions(options)
   try {
-    const proc = pty.spawn(shell, getDefaultArgs(shell), {
+    const { env: shellEnv, shellArgs } = buildShellEnvWithIntegration(shell, options.env)
+    // shellArgs is non-null for PowerShell (replaces default args to dot-source
+    // the integration script). For bash/zsh, shellArgs is null and integration
+    // is injected via environment variables (BASH_ENV, etc.)
+    const finalArgs = shellArgs ?? getDefaultArgs(shell)
+    const proc = pty.spawn(shell, finalArgs, {
       name: 'xterm-256color',
       cols,
       rows,
       cwd,
-      env: buildShellEnv(shell, options.env),
+      env: shellEnv,
     })
 
     registerSession({ id, proc, cwd, shell, win })

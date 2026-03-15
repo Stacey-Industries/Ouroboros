@@ -185,6 +185,9 @@ function ChromeBody({
         codeViewProps={codeViewProps}
         scrollRef={s.scrollRef}
         codeRef={s.codeRef}
+        wordWrap={s.wordWrap}
+        showMinimap={s.showMinimap}
+        formatOnSave={s.formatOnSave}
       />
       <OutlinePanel s={s} />
     </div>

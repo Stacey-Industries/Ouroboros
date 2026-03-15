@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { FitAddon } from '@xterm/addon-fit'
 import type { SearchAddon } from '@xterm/addon-search'
+import type { ProgressAddon } from '@xterm/addon-progress'
+import type { SerializeAddon } from '@xterm/addon-serialize'
 import type { Terminal } from '@xterm/xterm'
+import type { ShellIntegrationAddon } from './shellIntegrationAddon'
 import { useProject } from '../../contexts/ProjectContext'
 import type { SelectionTooltipState } from './SelectionTooltip'
 import {
@@ -51,6 +54,8 @@ interface SetupBridgeArgs {
   setPendingPaste: Dispatch<SetStateAction<string | null>>
   setRichInputActive: Dispatch<SetStateAction<boolean>>
   setSelectionTooltip: Dispatch<SetStateAction<SelectionTooltipState>>
+  initialFontSize?: number
+  initialCursorStyle?: 'block' | 'underline' | 'bar'
 }
 
 function normalizeTerminalProps(props: TerminalInstanceProps): NormalizedTerminalProps {
@@ -77,16 +82,16 @@ function normalizeTerminalProps(props: TerminalInstanceProps): NormalizedTermina
   }
 }
 
-function useTerminalCoreRefs(): Pick<
-  TerminalRefsState,
-  'containerRef' | 'terminalRef' | 'fitAddonRef' | 'searchAddonRef' | 'isReadyRef'
-> {
+function useTerminalCoreRefs() {
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const searchAddonRef = useRef<SearchAddon | null>(null)
+  const shellIntegrationAddonRef = useRef<ShellIntegrationAddon | null>(null)
+  const progressAddonRef = useRef<ProgressAddon | null>(null)
+  const serializeAddonRef = useRef<SerializeAddon | null>(null)
   const isReadyRef = useRef(false)
-  return { containerRef, terminalRef, fitAddonRef, searchAddonRef, isReadyRef }
+  return { containerRef, terminalRef, fitAddonRef, searchAddonRef, shellIntegrationAddonRef, progressAddonRef, serializeAddonRef, isReadyRef }
 }
 
 function useTerminalSearchState(): Pick<
@@ -119,6 +124,7 @@ function useTerminalRefs(args: TerminalRefsArgs): TerminalRefsState {
   const commandBlocks = useCommandBlocks({
     enabled: args.commandBlocksEnabled,
     promptPattern: args.promptPattern,
+    shellIntegrationAddonRef: coreRefs.shellIntegrationAddonRef,
   })
   const latestRefs = useTerminalLatestRefs(args, commandBlocks)
 
@@ -172,13 +178,20 @@ export function useTerminalHistoryState(
 }
 
 function createSetupRefs(
-  foundation: TerminalFoundation,
+  foundation: TerminalFoundation & {
+    shellIntegrationAddonRef?: { current: ShellIntegrationAddon | null }
+    progressAddonRef?: { current: ProgressAddon | null }
+    serializeAddonRef?: { current: SerializeAddon | null }
+  },
 ): Parameters<typeof useTerminalSetup>[0]['refs'] {
   return {
     containerRef: foundation.containerRef,
     terminalRef: foundation.terminalRef,
     fitAddonRef: foundation.fitAddonRef,
     searchAddonRef: foundation.searchAddonRef,
+    shellIntegrationAddonRef: foundation.shellIntegrationAddonRef ?? { current: null },
+    progressAddonRef: foundation.progressAddonRef ?? { current: null },
+    serializeAddonRef: foundation.serializeAddonRef ?? { current: null },
     isReadyRef: foundation.isReadyRef,
   }
 }
@@ -210,6 +223,8 @@ function createSetupOptions(args: SetupBridgeArgs): Parameters<typeof useTermina
     allSessionIdsRef: args.foundation.allSessionIdsRef,
     projectRootRef: args.foundation.projectRootRef,
     commandBlocksRef: args.foundation.commandBlocksRef,
+    initialFontSize: args.initialFontSize,
+    initialCursorStyle: args.initialCursorStyle,
   }
 }
 

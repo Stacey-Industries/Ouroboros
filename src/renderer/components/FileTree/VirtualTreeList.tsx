@@ -4,13 +4,18 @@
  * Extracted from RootSection to reduce complexity.
  */
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { FileTreeItem } from './FileTreeItem';
 import type { TreeNode } from './FileTreeItem';
 import type { GitFileStatus } from '../../types/electron';
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
 import { ITEM_HEIGHT, OVERSCAN, basename } from './fileTreeUtils';
 import type { EditState } from './fileTreeUtils';
+import { useFileTreeStore } from './fileTreeStore';
+import type { DiagnosticSeverity } from './fileTreeStore';
+
+/** Threshold in px/frame above which we consider the user is scrolling fast. */
+const FAST_SCROLL_DELTA = 500;
 
 export interface VirtualTreeListProps {
   root: string;
@@ -35,17 +40,54 @@ export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement
   const listRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = useRef(400);
+  const lastScrollTopRef = useRef(0);
+  const [isFastScrolling, setIsFastScrolling] = useState(false);
+  const fastScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const newScrollTop = e.currentTarget.scrollTop;
+    const delta = Math.abs(newScrollTop - lastScrollTopRef.current);
+    lastScrollTopRef.current = newScrollTop;
     containerHeight.current = e.currentTarget.clientHeight;
+    setScrollTop(newScrollTop);
+
+    if (delta > FAST_SCROLL_DELTA) {
+      setIsFastScrolling(true);
+      // Clear previous timer if any
+      if (fastScrollTimerRef.current !== null) {
+        clearTimeout(fastScrollTimerRef.current);
+      }
+      // Fill in skipped items after scroll stops
+      fastScrollTimerRef.current = setTimeout(() => {
+        setIsFastScrolling(false);
+        fastScrollTimerRef.current = null;
+      }, 150);
+    }
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (fastScrollTimerRef.current !== null) {
+        clearTimeout(fastScrollTimerRef.current);
+      }
+    };
   }, []);
 
   const totalHeight = props.displayItems.length * ITEM_HEIGHT;
   const visibleStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
   const visibleCount = Math.ceil(containerHeight.current / ITEM_HEIGHT) + OVERSCAN * 2;
   const visibleEnd = Math.min(props.displayItems.length, visibleStart + visibleCount);
-  const visibleSlice = props.displayItems.slice(visibleStart, visibleEnd);
+
+  // During fast scrolling, skip odd-indexed items to reduce render load.
+  // We keep track of the original indices so focus/selection highlighting
+  // still maps correctly.
+  const rawSlice = props.displayItems.slice(visibleStart, visibleEnd);
+  const indexedSlice: Array<{ item: { node: TreeNode }; originalIndex: number }> = isFastScrolling
+    ? rawSlice
+        .map((item, i) => ({ item, originalIndex: visibleStart + i }))
+        .filter((_, i) => i % 2 === 0)
+    : rawSlice.map((item, i) => ({ item, originalIndex: visibleStart + i }));
 
   return (
     <div
@@ -59,11 +101,11 @@ export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement
     >
       <div style={{ height: totalHeight, position: 'relative' }}>
         <div style={{ position: 'absolute', top: visibleStart * ITEM_HEIGHT, left: 0, right: 0 }}>
-          {visibleSlice.map((item, i) => (
+          {indexedSlice.map(({ item, originalIndex }) => (
             <VirtualRow
               key={item.node.path === '__new_item_placeholder__' ? '__new_item_placeholder__' : item.node.path}
               item={item}
-              index={visibleStart + i}
+              index={originalIndex}
               {...props}
             />
           ))}
@@ -78,12 +120,36 @@ interface VirtualRowProps extends VirtualTreeListProps {
   index: number;
 }
 
+/** Severity priority for directory aggregation */
+const DIAG_PRIO: Record<string, number> = { error: 4, warning: 3, info: 2, hint: 1 };
+
+function useDiagnosticSeverity(node: TreeNode): DiagnosticSeverity | undefined {
+  return useFileTreeStore((s) => {
+    if (!node.isDirectory) {
+      return s.diagnostics.get(node.path);
+    }
+    // Aggregate worst severity from children
+    const prefix = node.path.replace(/\\/g, '/') + '/';
+    let worst: DiagnosticSeverity | undefined;
+    let worstP = 0;
+    for (const [fp, sev] of s.diagnostics) {
+      if (fp.replace(/\\/g, '/').startsWith(prefix)) {
+        const p = DIAG_PRIO[sev] ?? 0;
+        if (p > worstP) { worstP = p; worst = sev; }
+      }
+    }
+    return worst;
+  });
+}
+
 function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement {
   const { node } = item;
   const isPlaceholder = node.path === '__new_item_placeholder__';
   const isRenaming = p.editState?.mode === 'rename' && p.editState.targetPath === node.path;
   const isEditing = isPlaceholder || isRenaming;
   const nodeGitStatus = getNodeGitStatusLocal(node, p.gitStatus);
+  const diagnosticSeverity = useDiagnosticSeverity(node);
+  const isDirty = useFileTreeStore((s) => s.dirtyFiles.has(node.path));
 
   return (
     <FileTreeItem
@@ -100,6 +166,8 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       editValue={isEditing ? p.editState?.initialValue : undefined}
       onEditConfirm={isEditing ? (n: string) => void p.handleEditConfirm(n) : undefined}
       onEditCancel={isEditing ? p.handleEditCancel : undefined}
+      diagnosticSeverity={diagnosticSeverity}
+      isDirty={isDirty}
       onClick={p.handleItemClick}
       onDoubleClick={p.handleDoubleClick}
       onContextMenu={p.handleContextMenu}

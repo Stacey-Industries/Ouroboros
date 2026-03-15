@@ -1,4 +1,5 @@
 import React from 'react';
+import { useFileTreeStore, useDirtyFileCount } from './fileTreeStore';
 
 export interface FileTreeSearchBarProps {
   query: string;
@@ -112,6 +113,89 @@ function HeatMapToggle({
   );
 }
 
+// ─── File nesting toggle (4B) ────────────────────────────────────────────────
+
+function nestingButtonStyle(enabled: boolean): React.CSSProperties {
+  return {
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '26px',
+    height: '26px',
+    padding: 0,
+    background: enabled ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+    border: enabled
+      ? '1px solid rgba(59, 130, 246, 0.3)'
+      : '1px solid var(--border)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    color: enabled ? '#3b82f6' : 'var(--text-faint)',
+    transition: 'all 150ms',
+  };
+}
+
+function NestingIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M4 3h8M6 6h6M6 9h6M4 12h8"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3 5.5v4"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeDasharray="2 2"
+      />
+    </svg>
+  );
+}
+
+function NestingToggle(): React.ReactElement {
+  const nestingEnabled = useFileTreeStore((s) => s.nestingEnabled);
+  const toggleNesting = useFileTreeStore((s) => s.toggleNesting);
+
+  return (
+    <button
+      onClick={toggleNesting}
+      title={nestingEnabled ? 'Disable file nesting' : 'Enable file nesting (group related files)'}
+      aria-label={nestingEnabled ? 'Disable file nesting' : 'Enable file nesting'}
+      aria-pressed={nestingEnabled}
+      style={nestingButtonStyle(nestingEnabled)}
+    >
+      <NestingIcon />
+    </button>
+  );
+}
+
+// ─── Dirty file count (4C) ───────────────────────────────────────────────────
+
+function DirtyFileCount(): React.ReactElement | null {
+  const count = useDirtyFileCount();
+  if (count === 0) return null;
+
+  return (
+    <span
+      title={`${count} unsaved file${count !== 1 ? 's' : ''}`}
+      style={{
+        flexShrink: 0,
+        fontSize: '0.6875rem',
+        color: '#f59e0b',
+        fontWeight: 600,
+        fontFamily: 'var(--font-mono)',
+        lineHeight: 1,
+        padding: '2px 4px',
+      }}
+    >
+      {count} unsaved
+    </span>
+  );
+}
+
 export function FileTreeSearchBar({
   query,
   setQuery,
@@ -135,12 +219,14 @@ export function FileTreeSearchBar({
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
         />
+        <NestingToggle />
         <HeatMapToggle
           enabled={heatMapEnabled}
           count={heatMapCount}
           onToggle={onToggleHeatMap}
         />
       </div>
+      <DirtyFileCount />
     </div>
   );
 }

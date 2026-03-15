@@ -1,6 +1,6 @@
 import React from 'react';
 
-type ZoomMode = 'fit' | '100' | 'custom';
+export type ZoomMode = 'fit' | '100' | 'custom';
 
 const toolbarStyle: React.CSSProperties = {
   flexShrink: 0,
@@ -33,6 +33,9 @@ export interface ImageViewerToolbarProps {
   onActualSize: () => void;
   onZoomOut: () => void;
   onZoomIn: () => void;
+  isSvg?: boolean;
+  showSource?: boolean;
+  onToggleSource?: () => void;
 }
 
 export function ImageViewerToolbar({
@@ -42,6 +45,9 @@ export function ImageViewerToolbar({
   onActualSize,
   onZoomOut,
   onZoomIn,
+  isSvg,
+  showSource,
+  onToggleSource,
 }: ImageViewerToolbarProps): React.ReactElement {
   return (
     <div style={toolbarStyle}>
@@ -71,9 +77,25 @@ export function ImageViewerToolbar({
       >
         {zoomLabel}
       </span>
+      {isSvg && onToggleSource && (
+        <>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={onToggleSource}
+            title={showSource ? 'Show image' : 'View SVG source'}
+            style={getZoomButtonStyle(!!showSource)}
+          >
+            {showSource ? 'Image' : 'Source'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
+
+/** Checkerboard background pattern for transparency */
+const checkerboardBg =
+  'repeating-conic-gradient(#80808020 0% 25%, transparent 0% 50%) 0 0 / 16px 16px';
 
 export interface ImageViewportProps {
   fileUrl: string;
@@ -84,6 +106,19 @@ export interface ImageViewportProps {
   onError: () => void;
   zoomMode: ZoomMode;
   imgStyle: React.CSSProperties;
+  /** Pan offset (pixels) applied via CSS transform */
+  panOffset: { x: number; y: number };
+  /** Mouse handlers for pan */
+  onMouseDown: (e: React.MouseEvent) => void;
+  onMouseMove: (e: React.MouseEvent) => void;
+  onMouseUp: (e: React.MouseEvent) => void;
+  onMouseLeave: (e: React.MouseEvent) => void;
+  /** Scroll-wheel zoom */
+  onWheel: (e: React.WheelEvent) => void;
+  /** Whether panning is in progress (changes cursor) */
+  isPanning: boolean;
+  /** Container ref for scroll-wheel coordinate math */
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function ImageViewport({
@@ -95,21 +130,46 @@ export function ImageViewport({
   onError,
   zoomMode,
   imgStyle,
+  panOffset,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onMouseLeave,
+  onWheel,
+  isPanning,
+  containerRef,
 }: ImageViewportProps): React.ReactElement {
   return (
-    <div style={getImageAreaStyle(zoomMode)}>
+    <div
+      ref={containerRef}
+      style={getImageAreaStyle(zoomMode, isPanning)}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
+      onWheel={onWheel}
+    >
       {loadError ? (
         <ImageLoadError fileUrl={fileUrl} />
       ) : (
-        <img
-          ref={imgRef}
-          src={fileUrl}
-          alt={filePath}
-          onLoad={onLoad}
-          onError={onError}
-          style={imgStyle}
-          draggable={false}
-        />
+        <div
+          style={{
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+            background: checkerboardBg,
+            display: 'inline-block',
+            lineHeight: 0,
+          }}
+        >
+          <img
+            ref={imgRef}
+            src={fileUrl}
+            alt={filePath}
+            onLoad={onLoad}
+            onError={onError}
+            style={imgStyle}
+            draggable={false}
+          />
+        </div>
       )}
     </div>
   );
@@ -206,7 +266,7 @@ export function getImageStyle(
   };
 }
 
-function getImageAreaStyle(zoomMode: ZoomMode): React.CSSProperties {
+function getImageAreaStyle(zoomMode: ZoomMode, isPanning: boolean): React.CSSProperties {
   return {
     flex: 1,
     overflow: 'auto',
@@ -215,6 +275,7 @@ function getImageAreaStyle(zoomMode: ZoomMode): React.CSSProperties {
     justifyContent: zoomMode === 'fit' ? 'center' : 'flex-start',
     padding: '16px',
     backgroundColor: 'var(--bg)',
+    cursor: isPanning ? 'grabbing' : 'grab',
   };
 }
 
@@ -234,7 +295,7 @@ function getZoomButtonStyle(active: boolean): React.CSSProperties {
   };
 }
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;

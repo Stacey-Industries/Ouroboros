@@ -1,0 +1,122 @@
+import type { BrowserWindow } from 'electron'
+import type {
+  ContextPacket,
+  OrchestrationProvider,
+  ProviderArtifact,
+  ProviderCapabilities,
+  ProviderExecutionStatus,
+  ProviderProgressEvent,
+  ProviderSessionReference,
+  TaskRequest,
+} from '../types'
+
+export interface ProviderProgressSink {
+  emit: (event: ProviderProgressEvent) => void
+}
+
+export interface ProviderLaunchContext {
+  taskId: string
+  sessionId: string
+  attemptId: string
+  request: TaskRequest
+  contextPacket: ContextPacket
+  window?: BrowserWindow | null
+}
+
+export interface ProviderResumeContext {
+  taskId: string
+  sessionId: string
+  attemptId: string
+  request: TaskRequest
+  providerSession?: ProviderSessionReference
+  contextPacket?: ContextPacket
+  window?: BrowserWindow | null
+}
+
+export interface ProviderLaunchResult {
+  artifact: ProviderArtifact
+  session: ProviderSessionReference
+  responseText?: string
+  toolsUsed?: Array<{ name: string; input?: unknown }>
+  costUsd?: number
+  durationMs?: number
+}
+
+export interface ProviderArtifactInput {
+  provider: OrchestrationProvider
+  status: ProviderExecutionStatus
+  session: ProviderSessionReference
+  submittedAt: number
+  lastMessage?: string
+  completedAt?: number
+}
+
+export interface ProviderProgressEventInput {
+  provider: OrchestrationProvider
+  status: ProviderExecutionStatus
+  message: string
+  timestamp: number
+  session?: ProviderSessionReference
+  textDelta?: string
+  toolActivity?: { name: string; status: 'started' | 'running' | 'completed' | 'failed' }
+}
+
+export interface ProviderAdapter {
+  readonly provider: OrchestrationProvider
+  getCapabilities: () => ProviderCapabilities
+  submitTask: (context: ProviderLaunchContext, sink: ProviderProgressSink) => Promise<ProviderLaunchResult>
+  resumeTask: (context: ProviderResumeContext, sink: ProviderProgressSink) => Promise<ProviderLaunchResult>
+  cancelTask: (session: ProviderSessionReference) => Promise<void>
+}
+
+export interface ProviderAdapterRegistry {
+  get: (provider: OrchestrationProvider) => ProviderAdapter | null
+  list: () => ProviderAdapter[]
+}
+
+export function createProviderSessionReference(
+  provider: OrchestrationProvider,
+  values: Partial<Omit<ProviderSessionReference, 'provider'>> = {},
+): ProviderSessionReference {
+  return {
+    provider,
+    ...values,
+  }
+}
+
+export function createProviderArtifact(input: ProviderArtifactInput): ProviderArtifact {
+  return {
+    provider: input.provider,
+    status: input.status,
+    submittedAt: input.submittedAt,
+    completedAt: input.completedAt,
+    session: input.session,
+    lastMessage: input.lastMessage,
+  }
+}
+
+export function createProviderProgressEvent(input: ProviderProgressEventInput): ProviderProgressEvent {
+  return {
+    provider: input.provider,
+    status: input.status,
+    message: input.message,
+    session: input.session,
+    timestamp: input.timestamp,
+  }
+}
+
+export class StaticProviderAdapterRegistry implements ProviderAdapterRegistry {
+  private readonly adapters: Map<OrchestrationProvider, ProviderAdapter>
+
+  constructor(adapters: ProviderAdapter[]) {
+    this.adapters = new Map(adapters.map((adapter) => [adapter.provider, adapter]))
+  }
+
+  get(provider: OrchestrationProvider): ProviderAdapter | null {
+    return this.adapters.get(provider) ?? null
+  }
+
+  list(): ProviderAdapter[] {
+    return Array.from(this.adapters.values())
+  }
+}

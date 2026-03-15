@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { Terminal } from '@xterm/xterm'
 import type { CommandBlock, UseCommandBlocksOptions, UseCommandBlocksResult } from './useCommandBlocks'
+import type { ShellIntegrationAddon, ShellIntegrationEvent } from './shellIntegrationAddon'
 
 interface CommandBlockRefs {
   blocks: CommandBlock[]
@@ -244,6 +245,64 @@ function useResetBlocks(state: CommandBlockState): UseCommandBlocksResult['reset
   }, [state])
 }
 
+// ── OSC 633 (ShellIntegrationAddon) bridge ──────────────────────────────────
+
+/**
+ * Handle an OSC 633 event from the ShellIntegrationAddon.
+ * When the addon is active, it becomes the preferred source of truth for
+ * command blocks, superseding the manual OSC 133 parsing.
+ */
+function handleOsc633Event(
+  event: ShellIntegrationEvent,
+  state: CommandBlockState,
+): void {
+  switch (event.type) {
+    case 'promptStart':
+      // Mark OSC 633 as active (superset of OSC 133)
+      setOsc133State(state, true)
+      startNewBlock(state, event.row, 'osc133')
+      break
+    case 'commandStart':
+      if (state.refs.current.currentBlock) {
+        // Update command text from the commandLine event that preceded this
+      }
+      break
+    case 'commandExecuted':
+      updateOutputStartLine(state, event.row)
+      break
+    case 'commandFinished':
+      finishCurrentBlock(state, event.row, String(event.exitCode))
+      break
+    case 'commandLine':
+      if (state.refs.current.currentBlock) {
+        state.refs.current.currentBlock.command = event.text
+      }
+      break
+    // cwd events are informational; no block action needed
+  }
+}
+
+/**
+ * Hook that subscribes to the ShellIntegrationAddon's events when available.
+ * When OSC 633 events are detected, they take priority over manual OSC 133 parsing.
+ */
+function useOsc633Subscription(
+  enabled: boolean,
+  state: CommandBlockState,
+  addonRef?: { current: ShellIntegrationAddon | null },
+): void {
+  useEffect(() => {
+    if (!enabled || !addonRef?.current) return
+
+    const addon = addonRef.current
+    const unsubscribe = addon.onEvent((event) => {
+      handleOsc633Event(event, state)
+    })
+
+    return unsubscribe
+  }, [enabled, addonRef, state])
+}
+
 export function useCommandBlocksController(options: UseCommandBlocksOptions): UseCommandBlocksResult {
   const state = useCommandBlockState()
   const customPattern = compilePromptPattern(options.promptPattern)
@@ -255,5 +314,9 @@ export function useCommandBlocksController(options: UseCommandBlocksOptions): Us
   const toggleCollapse = useToggleCollapse(state)
   const getBlockOutput = useBlockOutput()
   const reset = useResetBlocks(state)
+
+  // Subscribe to OSC 633 events when ShellIntegrationAddon is available
+  useOsc633Subscription(options.enabled, state, options.shellIntegrationAddonRef)
+
   return { blocks: state.blocks, activeBlockIndex: state.activeBlockIndex, handleOsc133, handleData, navigateTo, navigateNext, navigatePrev, toggleCollapse, getBlockOutput, reset, osc133Active: state.osc133Active }
 }

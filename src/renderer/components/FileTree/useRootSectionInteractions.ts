@@ -9,6 +9,7 @@ import {
   pathJoin,
   parentDir,
 } from './fileTreeUtils';
+import { applyNesting } from './fileNestingRules';
 import type { EditState } from './fileTreeUtils';
 import {
   handleRenameOp,
@@ -19,6 +20,29 @@ import {
 } from './rootSectionHandlers';
 import { handleTreeKeyDown } from './rootSectionKeys';
 import type { RefreshDir, SetRootNodes } from './useRootTreeState';
+import { useFileTreeStore } from './fileTreeStore';
+
+/**
+ * Like flattenVisibleTree but also includes nested children (from file nesting)
+ * when the parent has isNestExpanded set.
+ */
+function flattenVisibleTreeWithNesting(nodes: TreeNode[]): TreeNode[] {
+  const result: TreeNode[] = [];
+  for (const node of nodes) {
+    result.push(node);
+    // Directory expansion
+    if (node.isDirectory && node.isExpanded && node.children) {
+      result.push(...flattenVisibleTreeWithNesting(node.children));
+    }
+    // File nesting expansion
+    if (node.hasNestedChildren && node.isNestExpanded && node.nestedChildren) {
+      for (const child of node.nestedChildren) {
+        result.push({ ...child, depth: node.depth + 1 });
+      }
+    }
+  }
+  return result;
+}
 
 type ToastFn = (message: string, type: 'success' | 'error') => void;
 type SetFocusIndex = Dispatch<SetStateAction<number>>;
@@ -135,19 +159,33 @@ function useEditConfirm({
 }
 
 export function useRootSelection(toggleFolder: (node: TreeNode) => Promise<void>, onFileSelect: (path: string) => void) {
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const storeSelect = useFileTreeStore((s) => s.select);
+  const selectedPaths = useFileTreeStore((s) => s.selectedPaths);
+  const toggleNestExpansion = useFileTreeStore((s) => s.toggleNestExpansion);
   const [focusIndex, setFocusIndex] = useState(0);
 
   const handleItemClick = useCallback((node: TreeNode, event?: React.MouseEvent) => {
-    if (event?.ctrlKey || event?.metaKey) {
-      setSelectedPaths((prev) => toggleSelectedPath(prev, node.path));
+    const ctrl = !!(event?.ctrlKey || event?.metaKey);
+    const shift = !!event?.shiftKey;
+
+    // With any modifier, just update selection
+    if (ctrl || shift) {
+      storeSelect(node.path, { ctrl, shift });
       return;
     }
 
-    setSelectedPaths(new Set());
-    if (node.isDirectory) void toggleFolder(node);
-    else onFileSelect(node.path);
-  }, [onFileSelect, toggleFolder]);
+    // Plain click: clear selection, select item, and perform action
+    storeSelect(node.path, { ctrl: false, shift: false });
+    if (node.isDirectory) {
+      void toggleFolder(node);
+    } else {
+      onFileSelect(node.path);
+      // Toggle nesting expansion for files with nested children (4B)
+      if (node.hasNestedChildren) {
+        toggleNestExpansion(node.path);
+      }
+    }
+  }, [onFileSelect, storeSelect, toggleFolder, toggleNestExpansion]);
 
   return { selectedPaths, focusIndex, setFocusIndex, handleItemClick };
 }
@@ -264,8 +302,39 @@ export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRo
   return { handleDeleted, handleDeleteFocused, handleBookmarkToggle, handleStage, handleUnstage };
 }
 
+/**
+ * Apply nestExpandedPaths to tree nodes, setting isNestExpanded on matching paths.
+ */
+function applyNestExpansionState(nodes: TreeNode[], expandedPaths: Set<string>): TreeNode[] {
+  return nodes.map((node) => {
+    let updated = node;
+    if (node.hasNestedChildren) {
+      const isExpanded = expandedPaths.has(node.path);
+      if (node.isNestExpanded !== isExpanded) {
+        updated = { ...node, isNestExpanded: isExpanded };
+      }
+    }
+    if (updated.isDirectory && updated.children) {
+      const newChildren = applyNestExpansionState(updated.children, expandedPaths);
+      if (newChildren !== updated.children) {
+        updated = { ...updated, children: newChildren };
+      }
+    }
+    return updated;
+  });
+}
+
 export function useDisplayItems(rootNodes: TreeNode[], editState: EditState | null): Array<{ node: TreeNode }> {
-  const flatRows = useMemo(() => flattenVisibleTree(rootNodes), [rootNodes]);
+  const nestingEnabled = useFileTreeStore((s) => s.nestingEnabled);
+  const nestExpandedPaths = useFileTreeStore((s) => s.nestExpandedPaths);
+
+  const processedNodes = useMemo(() => {
+    if (!nestingEnabled) return rootNodes;
+    const nested = applyNesting(rootNodes);
+    return applyNestExpansionState(nested, nestExpandedPaths);
+  }, [rootNodes, nestingEnabled, nestExpandedPaths]);
+
+  const flatRows = useMemo(() => flattenVisibleTreeWithNesting(processedNodes), [processedNodes]);
   return useMemo(() => buildDisplayItems(flatRows, editState), [editState, flatRows]);
 }
 

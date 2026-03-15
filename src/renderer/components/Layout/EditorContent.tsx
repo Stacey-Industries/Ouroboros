@@ -17,6 +17,9 @@ interface FileViewState {
   isDirtyOnDisk: boolean;
   originalContent: string | null;
   isImage: boolean;
+  isPdf: boolean;
+  isBinary: boolean;
+  binaryContent?: Uint8Array;
   isDirty: boolean;
 }
 
@@ -57,6 +60,8 @@ const EMPTY_FILE_VIEW: FileViewState = {
   isDirtyOnDisk: false,
   originalContent: null,
   isImage: false,
+  isPdf: false,
+  isBinary: false,
   isDirty: false,
 };
 
@@ -76,8 +81,11 @@ function normalizeFileView(activeFile: ActiveFile): FileViewState {
     error: activeFile.error,
     isDirtyOnDisk: activeFile.isDirtyOnDisk,
     originalContent: activeFile.originalContent,
-    isImage: activeFile.isImage,
-    isDirty: activeFile.isDirty,
+    isImage: activeFile.isImage ?? false,
+    isPdf: activeFile.isPdf ?? false,
+    isBinary: activeFile.isBinary ?? false,
+    binaryContent: activeFile.binaryContent,
+    isDirty: activeFile.isDirty ?? false,
   };
 }
 
@@ -215,6 +223,9 @@ function FileContentView({
           originalContent={fileView.originalContent}
           projectRoot={projectRoot}
           isImage={fileView.isImage}
+          isPdf={fileView.isPdf}
+          isBinary={fileView.isBinary}
+          binaryContent={fileView.binaryContent}
           onSave={onSave}
           onDirtyChange={onDirtyChange}
           isDirty={fileView.isDirty}

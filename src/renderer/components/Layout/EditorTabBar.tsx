@@ -216,7 +216,10 @@ function NewMultiBufferButton({
 }
 
 export function EditorTabBar(): React.ReactElement {
-  const { openFiles, activeIndex, setActive, closeFile } = useFileViewerManager();
+  const {
+    openFiles, activeIndex, setActive, closeFile,
+    pinTab, closeOthers, closeToRight, closeAll,
+  } = useFileViewerManager();
   const { multiBuffers, openMultiBuffer, closeMultiBuffer } = useMultiBufferManager();
   const {
     handleNewMultiBuffer,
@@ -233,6 +236,10 @@ export function EditorTabBar(): React.ReactElement {
           activeIndex={activeIndex}
           onActivate={handleActivateFile}
           onClose={closeFile}
+          onPin={pinTab}
+          onCloseOthers={closeOthers}
+          onCloseToRight={closeToRight}
+          onCloseAll={closeAll}
         />
       )}
       <MultiBufferTabs

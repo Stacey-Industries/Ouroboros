@@ -24,6 +24,8 @@ export function cleanupTerminalSetup(
   disposeAttachedHandlers(disposables)
   context.refs.searchAddonRef.current = null
   context.refs.fitAddonRef.current = null
+  context.refs.progressAddonRef.current = null
+  context.refs.serializeAddonRef.current = null
   unregisterTerminal(context.sessionId)
   term.dispose()
   context.refs.terminalRef.current = null

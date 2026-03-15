@@ -10,7 +10,7 @@ import type { GitFileStatus } from '../../types/electron';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const ITEM_HEIGHT = 28;
-export const OVERSCAN = 5;
+export const OVERSCAN = 10;
 
 /** Hardcoded directories to always skip */
 export const IGNORED_DIRS_BASE = new Set([
@@ -137,6 +137,26 @@ export function flattenVisibleTree(nodes: TreeNode[]): TreeNode[] {
       result.push(...flattenVisibleTree(node.children));
     }
   }
+  return result;
+}
+
+// ─── Memoized flatten for virtualization ─────────────────────────────────────
+
+/**
+ * Identity-based memoization for flattenVisibleTree.
+ * Returns a cached result when the rootNodes array reference hasn't changed.
+ * React's useMemo already handles this in most call sites, but this provides
+ * an additional layer for non-React callers and avoids redundant work when
+ * the same nodes reference is passed from multiple locations.
+ */
+let _flattenCache: { key: TreeNode[]; result: TreeNode[] } | null = null;
+
+export function flattenVisibleTreeCached(nodes: TreeNode[]): TreeNode[] {
+  if (_flattenCache && _flattenCache.key === nodes) {
+    return _flattenCache.result;
+  }
+  const result = flattenVisibleTree(nodes);
+  _flattenCache = { key: nodes, result };
   return result;
 }
 

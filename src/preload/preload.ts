@@ -72,6 +72,7 @@ const filesAPI: ElectronAPI['files'] = {
   writeFile: (filePath, data) => ipcRenderer.invoke('files:writeFile', filePath, data),
   saveFile: (filePath, content) => ipcRenderer.invoke('files:saveFile', filePath, content),
   readFile: (filePath) => ipcRenderer.invoke('files:readFile', filePath),
+  readBinaryFile: (filePath) => ipcRenderer.invoke('files:readBinaryFile', filePath),
   readDir: (dirPath) => ipcRenderer.invoke('files:readDir', dirPath),
   watchDir: (dirPath) => ipcRenderer.invoke('files:watchDir', dirPath),
   unwatchDir: (dirPath) => ipcRenderer.invoke('files:unwatchDir', dirPath),

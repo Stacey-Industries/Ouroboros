@@ -18,6 +18,8 @@ export interface TreeItemDirectoryProps {
   isBookmarked?: boolean;
   heatDot?: string;
   heatLevel?: string;
+  /** Worst diagnostic severity among children (4A) */
+  diagnosticSeverity?: 'error' | 'warning' | 'info' | 'hint';
 }
 
 function DirectoryName({
@@ -51,15 +53,17 @@ function DirectoryMeta({
   isBookmarked,
   heatDot,
   heatLevel,
+  diagnosticSeverity,
 }: Pick<
   TreeItemDirectoryProps,
-  'node' | 'statusColor' | 'statusLbl' | 'isBookmarked' | 'heatDot' | 'heatLevel'
+  'node' | 'statusColor' | 'statusLbl' | 'isBookmarked' | 'heatDot' | 'heatLevel' | 'diagnosticSeverity'
 >): React.ReactElement {
   return (
     <>
       {!node.isExpanded && node.children !== undefined && (
         <ChildCount count={node.children.length} />
       )}
+      {diagnosticSeverity && <DirDiagnosticIndicator severity={diagnosticSeverity} />}
       {statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
       {isBookmarked && <PinDot />}
       {heatDot && <HeatDot color={heatDot} glow={heatLevel === 'fire'} />}
@@ -74,6 +78,7 @@ export function TreeItemDirectory({
   onEditConfirm, onEditCancel,
   statusColor, statusLbl,
   isBookmarked, heatDot, heatLevel,
+  diagnosticSeverity,
 }: TreeItemDirectoryProps): React.ReactElement {
   return (
     <>
@@ -95,6 +100,7 @@ export function TreeItemDirectory({
           isBookmarked={isBookmarked}
           heatDot={heatDot}
           heatLevel={heatLevel}
+          diagnosticSeverity={diagnosticSeverity}
         />
       )}
       {node.isLoading && <LoadingDots />}
@@ -136,4 +142,49 @@ function HeatDot({ color, glow }: { color: string; glow: boolean }): React.React
 
 function LoadingDots(): React.ReactElement {
   return <span style={{ fontSize: '0.6875rem', color: 'var(--text-faint)', flexShrink: 0 }}>...</span>;
+}
+
+// ─── Directory diagnostic indicator (4A) ─────────────────────────────────────
+
+const DIR_DIAGNOSTIC_CONFIG: Record<string, { color: string; shape: 'circle' | 'triangle'; label: string }> = {
+  error:   { color: '#ef4444', shape: 'circle',   label: 'Contains errors' },
+  warning: { color: '#f59e0b', shape: 'triangle', label: 'Contains warnings' },
+  info:    { color: '#3b82f6', shape: 'circle',   label: 'Contains info' },
+  hint:    { color: '#6b7280', shape: 'circle',   label: 'Contains hints' },
+};
+
+function DirDiagnosticIndicator({ severity }: { severity: string }): React.ReactElement | null {
+  const config = DIR_DIAGNOSTIC_CONFIG[severity];
+  if (!config) return null;
+
+  if (config.shape === 'triangle') {
+    return (
+      <svg
+        width="8"
+        height="8"
+        viewBox="0 0 8 8"
+        style={{ flexShrink: 0, marginLeft: '4px' }}
+        aria-hidden="true"
+        title={config.label}
+      >
+        <polygon points="4,1 7,7 1,7" fill={config.color} opacity={0.7} />
+      </svg>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      title={config.label}
+      style={{
+        flexShrink: 0,
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        backgroundColor: config.color,
+        marginLeft: '4px',
+        opacity: 0.7,
+      }}
+    />
+  );
 }

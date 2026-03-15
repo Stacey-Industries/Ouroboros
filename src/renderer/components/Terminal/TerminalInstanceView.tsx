@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import type { Terminal } from '@xterm/xterm'
 import { TerminalContextMenu } from './TerminalContextMenu'
 import { CompletionOverlay } from './CompletionOverlay'
@@ -10,6 +10,8 @@ import { PasteConfirmBanner } from './PasteConfirmation'
 import { RichInput } from './RichInput'
 import { CommandBlockOverlay } from './CommandBlockOverlay'
 import { BlockNavigator } from './BlockNavigator'
+import { StickyScrollOverlay } from './StickyScrollOverlay'
+import { TerminalProgressBar } from './TerminalProgressBar'
 import {
   SyncButton,
   SplitButton,
@@ -139,11 +141,31 @@ function TerminalToolbarButtons({
   )
 }
 
+function TerminalProgressBarLayer({
+  controller,
+}: {
+  controller: TerminalInstanceController
+}): React.ReactElement | null {
+  const subscribe = useMemo(() => {
+    const addon = controller.progressAddonRef.current
+    if (!addon) return null
+    return (cb: (state: import('@xterm/addon-progress').IProgressState) => void) => addon.onChange(cb)
+  }, [controller.progressAddonRef])
+
+  return <TerminalProgressBar subscribe={subscribe} />
+}
+
 function TerminalCommandBlocks({
   controller,
 }: {
   controller: TerminalInstanceController
 }): React.ReactElement | null {
+  const handleCopyCommand = useCallback((block: import('./useCommandBlocks').CommandBlock) => {
+    if (block.command) {
+      void navigator.clipboard.writeText(block.command)
+    }
+  }, [])
+
   if (!controller.commandBlocksEnabled) {
     return null
   }
@@ -155,7 +177,14 @@ function TerminalCommandBlocks({
         terminal={controller.terminalRef.current}
         onToggleCollapse={controller.commandBlocks.toggleCollapse}
         onCopyOutput={controller.handleCopyBlockOutput}
+        onCopyCommand={handleCopyCommand}
         activeBlockIndex={controller.commandBlocks.activeBlockIndex}
+        sessionId={controller.sessionId}
+      />
+
+      <StickyScrollOverlay
+        blocks={controller.commandBlocks.blocks}
+        terminal={controller.terminalRef.current}
       />
 
       <BlockNavigator
@@ -298,6 +327,7 @@ export function TerminalInstanceView({
         data-session-id={controller.sessionId}
       />
 
+      <TerminalProgressBarLayer controller={controller} />
       <TerminalCommandBlocks controller={controller} />
       <TerminalCompletionLayer controller={controller} />
       <TerminalActionLayers controller={controller} isHovered={isHovered} />

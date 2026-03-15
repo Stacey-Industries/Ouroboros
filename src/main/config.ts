@@ -144,6 +144,8 @@ export interface AppConfig {
   approvalTimeout: number
   /** Workspace time-travel snapshots (capped at 100) */
   workspaceSnapshots: WorkspaceSnapshot[]
+  /** Terminal cursor style: 'block' | 'underline' | 'bar' */
+  terminalCursorStyle: 'block' | 'underline' | 'bar'
   /** Enable Warp-style command block overlay on terminals */
   commandBlocksEnabled: boolean
   /** Custom regex pattern for prompt detection (heuristic fallback) */
@@ -152,6 +154,8 @@ export interface AppConfig {
   richInputEnabled: boolean
   /** Submit key for the rich input: 'ctrl+enter' or 'shift+enter' */
   richInputSubmitKey: 'ctrl+enter' | 'shift+enter'
+  /** Format document before saving (requires a formatting provider in Monaco) */
+  formatOnSave: boolean
 }
 
 export const store = new Store<AppConfig>({ schema })

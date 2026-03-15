@@ -18,6 +18,8 @@ export interface ViewerToggles {
   setShowBlame: (value: boolean | ((prev: boolean) => boolean)) => void;
   showOutline: boolean;
   setShowOutline: (value: boolean | ((prev: boolean) => boolean)) => void;
+  formatOnSave: boolean;
+  setFormatOnSave: (value: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 export interface ViewerUiState {
@@ -186,6 +188,8 @@ function createViewerToggleState(
     setEditMode: ui.setEditMode,
     claudeMdEnhanced: ui.claudeMdEnhanced,
     setClaudeMdEnhanced: ui.setClaudeMdEnhanced,
+    formatOnSave: toggles.formatOnSave,
+    setFormatOnSave: toggles.setFormatOnSave,
   };
 }
 

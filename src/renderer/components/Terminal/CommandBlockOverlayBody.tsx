@@ -1,201 +1,353 @@
-import React, { useMemo } from 'react';
-import type { Terminal } from '@xterm/xterm';
-import type { CommandBlock } from './useCommandBlocks';
+/**
+ * CommandBlockOverlayBody — renders visual command separators, gutter icons,
+ * command labels, timestamps, per-block action bars, and collapse overlays.
+ *
+ * Phase 3A+3B: Enhanced command block UI (Warp-inspired).
+ */
+
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
+import type { Terminal } from '@xterm/xterm'
+import type { CommandBlock } from './useCommandBlocks'
+import { CommandBlockActions } from './CommandBlockActions'
 
 export interface CommandBlockOverlayProps {
-  blocks: CommandBlock[];
-  terminal: Terminal | null;
-  onToggleCollapse: (blockId: string) => void;
-  onCopyOutput: (block: CommandBlock) => void;
-  activeBlockIndex: number;
+  blocks: CommandBlock[]
+  terminal: Terminal | null
+  onToggleCollapse: (blockId: string) => void
+  onCopyOutput: (block: CommandBlock) => void
+  onCopyCommand: (block: CommandBlock) => void
+  activeBlockIndex: number
+  sessionId: string
 }
 
-type VisibleBlock = { block: CommandBlock; index: number };
-type BlockActionProps = Pick<CommandBlockOverlayProps, 'onCopyOutput' | 'onToggleCollapse'> & { block: CommandBlock };
-type BlockHeaderProps = BlockActionProps & { cellHeight: number };
-type DecorationProps = BlockHeaderProps & { activeBlockIndex: number; index: number; viewportY: number };
-type HeaderTextProps = { children: React.ReactNode; color?: string; style?: React.CSSProperties };
+type VisibleBlock = { block: CommandBlock; index: number }
 
-const overlayContainerStyle: React.CSSProperties = {
-  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 5, overflow: 'hidden',
-};
-const overlayButtonStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: 'var(--text-muted, #666)', cursor: 'pointer', padding: '1px 3px',
-  fontSize: 11, lineHeight: 1, borderRadius: 2, opacity: 0.6, display: 'flex', alignItems: 'center',
-};
-const headerTextStyle: React.CSSProperties = {
-  fontSize: 9, color: 'var(--text-muted, #666)', fontFamily: 'var(--font-mono, monospace)', userSelect: 'none', opacity: 0.7,
-};
-const exitCodeStyle: React.CSSProperties = {
-  ...headerTextStyle, color: 'var(--error, #e53935)', padding: '0 3px', borderRadius: 2, background: 'rgba(229,57,53,0.1)', opacity: 1,
-};
-const commandPreviewBaseStyle: React.CSSProperties = {
-  position: 'absolute', top: 0, left: 8, display: 'flex', alignItems: 'center', fontSize: 11, fontFamily: 'var(--font-mono, monospace)',
-  color: 'var(--accent, #58a6ff)', opacity: 0.8, userSelect: 'none', pointerEvents: 'none', maxWidth: '60%', overflow: 'hidden',
-  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-};
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getCellHeight(term: Terminal): number {
   try {
-    const core = (term as unknown as Record<string, unknown>)._core as Record<string, unknown> | undefined;
-    const renderService = core?._renderService as Record<string, unknown> | undefined;
-    const dimensions = renderService?.dimensions as { css?: { cell?: { height?: number } } } | undefined;
-    if (dimensions?.css?.cell?.height) {
-      return dimensions.css.cell.height;
-    }
-  } catch {
-    // Fall back to a height estimate when internals are unavailable.
+    const core = (term as unknown as Record<string, unknown>)._core as Record<string, unknown> | undefined
+    const renderService = core?._renderService as Record<string, unknown> | undefined
+    const dimensions = renderService?.dimensions as { css?: { cell?: { height?: number } } } | undefined
+    if (dimensions?.css?.cell?.height) return dimensions.css.cell.height
+  } catch { /* fall through */ }
+  return term.element ? term.element.clientHeight / term.rows : 17
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const delta = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+  if (delta < 5) return 'just now'
+  if (delta < 60) return `${delta}s ago`
+  if (delta < 3600) return `${Math.floor(delta / 60)}m ago`
+  if (delta < 86400) return `${Math.floor(delta / 3600)}h ago`
+  return `${Math.floor(delta / 86400)}d ago`
+}
+
+function formatDuration(ms: number | undefined): string {
+  if (ms === undefined) return ''
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const m = Math.floor(ms / 60000)
+  const s = Math.floor((ms % 60000) / 1000)
+  return `${m}m ${s}s`
+}
+
+function truncateCommand(cmd: string, max: number = 60): string {
+  if (cmd.length <= max) return cmd
+  return cmd.slice(0, max - 1) + '\u2026'
+}
+
+// ── Styles ───────────────────────────────────────────────────────────────────
+
+const overlayContainerStyle: React.CSSProperties = {
+  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+  pointerEvents: 'none', zIndex: 5, overflow: 'hidden',
+}
+
+const separatorLineStyle: React.CSSProperties = {
+  position: 'absolute', left: 28, right: 0, height: 1,
+  background: 'var(--border, #333)', opacity: 0.5,
+}
+
+const gutterStyle: React.CSSProperties = {
+  position: 'absolute', left: 4, width: 20, height: 20,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  zIndex: 7,
+}
+
+const commandLabelStyle: React.CSSProperties = {
+  position: 'absolute', left: 32, display: 'flex', alignItems: 'center', gap: 6,
+  fontSize: 10, fontFamily: 'var(--font-mono, monospace)', color: 'var(--accent, #58a6ff)',
+  opacity: 0.85, userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
+  textOverflow: 'ellipsis', maxWidth: '50%',
+}
+
+const timestampStyle: React.CSSProperties = {
+  position: 'absolute', right: 6, fontSize: 9,
+  fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #666)',
+  opacity: 0.7, userSelect: 'none',
+}
+
+const actionsContainerStyle: React.CSSProperties = {
+  position: 'absolute', right: 80, display: 'flex', alignItems: 'center',
+  opacity: 0, transition: 'opacity 0.15s ease',
+}
+
+const collapsedOverlayStyle: React.CSSProperties = {
+  position: 'absolute', left: 28, right: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--bg-secondary, rgba(30,30,30,0.85))',
+  backdropFilter: 'blur(2px)',
+  color: 'var(--text-muted, #888)', fontSize: 11,
+  fontFamily: 'var(--font-mono, monospace)',
+  cursor: 'pointer', pointerEvents: 'auto', userSelect: 'none',
+  borderLeft: '2px solid var(--border, #444)',
+}
+
+// ── Gutter Icon ──────────────────────────────────────────────────────────────
+
+function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
+  if (!block.complete) {
+    // Spinning loader for running command
+    return (
+      <svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: 'spin 1s linear infinite' }}>
+        <circle cx="8" cy="8" r="6" fill="none" stroke="var(--accent, #58a6ff)" strokeWidth="2" strokeDasharray="20 18" strokeLinecap="round" />
+      </svg>
+    )
   }
-  return term.element ? term.element.clientHeight / term.rows : 17;
+  if (block.exitCode === 0 || block.exitCode === undefined) {
+    // Green checkmark circle
+    return (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="var(--success, #4caf50)" strokeWidth="1.5" opacity="0.8" />
+        <path d="M5 8l2 2 4-4" stroke="var(--success, #4caf50)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  // Red X circle for non-zero exit code
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="7" stroke="var(--error, #e53935)" strokeWidth="1.5" opacity="0.8" />
+      <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="var(--error, #e53935)" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
 }
 
-function formatTimestamp(timestamp: number): string {
-  const date = new Date(timestamp);
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+// ── Spin keyframe (injected once) ────────────────────────────────────────────
+
+let spinStyleInjected = false
+function ensureSpinKeyframe(): void {
+  if (spinStyleInjected) return
+  spinStyleInjected = true
+  const style = document.createElement('style')
+  style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
+  document.head.appendChild(style)
 }
 
-function formatDuration(durationMs: number | undefined): string {
-  if (durationMs === undefined) return '';
-  if (durationMs < 1000) return `${durationMs}ms`;
-  if (durationMs < 60000) return `${(durationMs / 1000).toFixed(1)}s`;
-  const minutes = Math.floor(durationMs / 60000);
-  const seconds = Math.floor((durationMs % 60000) / 1000);
-  return `${minutes}m ${seconds}s`;
+// ── Single Block Decoration ──────────────────────────────────────────────────
+
+function CommandBlockDecoration({
+  block, index, cellHeight, viewportY, activeBlockIndex,
+  onToggleCollapse, onCopyOutput, onCopyCommand, sessionId,
+}: {
+  block: CommandBlock
+  index: number
+  cellHeight: number
+  viewportY: number
+  activeBlockIndex: number
+  onToggleCollapse: (blockId: string) => void
+  onCopyOutput: (block: CommandBlock) => void
+  onCopyCommand: (block: CommandBlock) => void
+  sessionId: string
+}): React.ReactElement {
+  const [hovered, setHovered] = useState(false)
+  const isActive = index === activeBlockIndex
+  const separatorY = (block.startLine - viewportY) * cellHeight
+
+  // Left border color for the output region
+  const borderColor = block.exitCode !== undefined && block.exitCode !== 0
+    ? 'var(--error, #e53935)'
+    : !block.complete
+      ? 'var(--accent, #58a6ff)'
+      : 'var(--success, #4caf50)'
+
+  const outputHeight = block.collapsed
+    ? cellHeight
+    : (block.endLine - block.startLine + 1) * cellHeight
+
+  const collapsedLines = block.collapsed
+    ? block.endLine - block.outputStartLine
+    : 0
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: separatorY,
+        left: 0, right: 0,
+        height: outputHeight,
+        pointerEvents: 'none',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Separator line */}
+      <div style={{ ...separatorLineStyle, top: 0 }} />
+
+      {/* Left border for output region */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: 2,
+        height: '100%',
+        background: borderColor,
+        opacity: isActive ? 0.9 : 0.4,
+        transition: 'opacity 0.15s ease',
+      }} />
+
+      {/* Gutter icon */}
+      <div style={{ ...gutterStyle, top: (cellHeight - 20) / 2 }}>
+        <GutterIcon block={block} />
+      </div>
+
+      {/* Command text label */}
+      {block.command && (
+        <div style={{ ...commandLabelStyle, top: (cellHeight - 14) / 2, height: 14 }} title={block.command}>
+          {truncateCommand(block.command)}
+        </div>
+      )}
+
+      {/* Timestamp (relative) */}
+      <div style={{ ...timestampStyle, top: (cellHeight - 12) / 2, height: 12, lineHeight: '12px' }}>
+        <RelativeTimestamp timestamp={block.timestamp} />
+        {block.duration !== undefined && block.duration > 500 && (
+          <span style={{ marginLeft: 6, color: block.duration > 10000 ? 'var(--warning, #f0a030)' : undefined }}>
+            {formatDuration(block.duration)}
+          </span>
+        )}
+      </div>
+
+      {/* Actions bar (appears on hover) */}
+      <div style={{
+        ...actionsContainerStyle,
+        top: (cellHeight - 18) / 2,
+        opacity: hovered ? 1 : 0,
+        pointerEvents: hovered ? 'auto' : 'none',
+      }}>
+        <CommandBlockActions
+          block={block}
+          sessionId={sessionId}
+          onCopyOutput={onCopyOutput}
+          onCopyCommand={onCopyCommand}
+          onToggleCollapse={onToggleCollapse}
+        />
+      </div>
+
+      {/* Collapsed overlay */}
+      {block.collapsed && collapsedLines > 0 && (
+        <div
+          style={{
+            ...collapsedOverlayStyle,
+            top: cellHeight,
+            height: '100%',
+            borderLeftColor: borderColor,
+          }}
+          onClick={() => onToggleCollapse(block.id)}
+          title="Click to expand"
+        >
+          {collapsedLines} line{collapsedLines !== 1 ? 's' : ''} collapsed — click to expand
+        </div>
+      )}
+    </div>
+  )
 }
 
-function getDuration(block: CommandBlock): number | undefined {
-  return block.duration !== undefined && block.duration > 500 ? block.duration : undefined;
+// ── Relative Timestamp (updates periodically) ────────────────────────────────
+
+function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
+  const [text, setText] = useState(() => formatRelativeTime(timestamp))
+  useEffect(() => {
+    const id = setInterval(() => setText(formatRelativeTime(timestamp)), 5000)
+    return () => clearInterval(id)
+  }, [timestamp])
+  return <span>{text}</span>
 }
 
-function getExitCode(block: CommandBlock): number | undefined {
-  return block.exitCode !== undefined && block.exitCode !== 0 ? block.exitCode : undefined;
-}
-
-function canCollapseBlock(block: CommandBlock): boolean {
-  return block.complete && block.endLine - block.startLine > 1;
-}
-
-function getHeaderStyle(cellHeight: number): React.CSSProperties {
-  return { position: 'absolute', top: 0, right: 4, display: 'flex', alignItems: 'center', gap: 4, height: cellHeight, pointerEvents: 'auto', zIndex: 6 };
-}
-
-function getDecorationStyle(block: CommandBlock, cellHeight: number, isActive: boolean, viewportY: number): React.CSSProperties {
-  const height = block.collapsed ? cellHeight : (block.endLine - block.startLine + 1) * cellHeight;
-  const borderColor = getExitCode(block) !== undefined ? 'var(--error, #e53935)' : isActive ? 'var(--accent, #58a6ff)' : 'var(--border, #444)';
-  return {
-    position: 'absolute', top: (block.startLine - viewportY) * cellHeight, left: 0, right: 0, height, borderLeft: `2px solid ${borderColor}`,
-    background: isActive ? 'rgba(88,166,255,0.04)' : 'transparent', transition: 'background 0.15s ease', pointerEvents: 'none',
-  };
-}
+// ── Visible Blocks Hook ──────────────────────────────────────────────────────
 
 function useVisibleBlocks(blocks: CommandBlock[], terminal: Terminal | null): VisibleBlock[] {
   return useMemo(() => {
-    if (!terminal || blocks.length === 0) return [];
-    const viewportTop = terminal.buffer.active.viewportY;
-    const viewportBottom = viewportTop + terminal.rows;
-    return blocks.map((block, index) => ({ block, index })).filter(({ block }) => block.endLine >= viewportTop && block.startLine <= viewportBottom);
-  }, [blocks, terminal]);
+    if (!terminal || blocks.length === 0) return []
+    const viewportTop = terminal.buffer.active.viewportY
+    const viewportBottom = viewportTop + terminal.rows
+    return blocks
+      .map((block, index) => ({ block, index }))
+      .filter(({ block }) => block.endLine >= viewportTop && block.startLine <= viewportBottom)
+  }, [blocks, terminal])
 }
 
-function OverlayButton({ children, onClick, title }: { children: React.ReactNode; onClick: () => void; title: string }): React.ReactElement {
-  return (
-    <button
-      onClick={(event) => { event.stopPropagation(); onClick(); }}
-      title={title}
-      style={overlayButtonStyle}
-      onMouseEnter={(event) => { event.currentTarget.style.opacity = '1'; }}
-      onMouseLeave={(event) => { event.currentTarget.style.opacity = '0.6'; }}
-    >
-      {children}
-    </button>
-  );
+// ── Scroll-aware position updates ────────────────────────────────────────────
+
+function useScrollViewportY(terminal: Terminal | null): number {
+  const [viewportY, setViewportY] = useState(0)
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    if (!terminal) return
+    setViewportY(terminal.buffer.active.viewportY)
+
+    const scrollDisposable = terminal.onScroll(() => {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        setViewportY(terminal.buffer.active.viewportY)
+      })
+    })
+
+    const writeDisposable = terminal.onWriteParsed(() => {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        setViewportY(terminal.buffer.active.viewportY)
+      })
+    })
+
+    return () => {
+      scrollDisposable.dispose()
+      writeDisposable.dispose()
+      cancelAnimationFrame(rafRef.current)
+    }
+  }, [terminal])
+
+  return viewportY
 }
 
-function HeaderText({ children, color, style }: HeaderTextProps): React.ReactElement {
-  return <span style={{ ...headerTextStyle, color: color ?? headerTextStyle.color, ...style }}>{children}</span>;
-}
-
-function CopyOutputButton({ block, onCopyOutput }: BlockActionProps): React.ReactElement {
-  return (
-    <OverlayButton onClick={() => onCopyOutput(block)} title="Copy command output">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="5" y="5" width="9" height="9" rx="1" />
-        <path d="M3 11V3a1 1 0 011-1h8" />
-      </svg>
-    </OverlayButton>
-  );
-}
-
-function CollapseButton({ block, onToggleCollapse }: BlockActionProps): React.ReactElement {
-  return (
-    <OverlayButton onClick={() => onToggleCollapse(block.id)} title={block.collapsed ? 'Expand block' : 'Collapse block'}>
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        style={{ transform: block.collapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}
-      >
-        <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </OverlayButton>
-  );
-}
-
-function CommandPreview({ block, cellHeight }: { block: CommandBlock; cellHeight: number }): React.ReactElement | null {
-  if (!block.collapsed || !block.command) return null;
-  return <div style={{ ...commandPreviewBaseStyle, height: cellHeight }}>{block.command}</div>;
-}
-
-function BlockHeader({ block, cellHeight, onCopyOutput, onToggleCollapse }: BlockHeaderProps): React.ReactElement {
-  const duration = getDuration(block);
-  const exitCode = getExitCode(block);
-  return (
-    <div style={getHeaderStyle(cellHeight)}>
-      <HeaderText>{formatTimestamp(block.timestamp)}</HeaderText>
-      {duration !== undefined && <HeaderText color={duration > 10000 ? 'var(--warning, #f0a030)' : undefined}>{formatDuration(duration)}</HeaderText>}
-      {exitCode !== undefined && <span style={exitCodeStyle}>exit {exitCode}</span>}
-      {block.complete && <CopyOutputButton block={block} onCopyOutput={onCopyOutput} onToggleCollapse={onToggleCollapse} />}
-      {canCollapseBlock(block) && <CollapseButton block={block} onCopyOutput={onCopyOutput} onToggleCollapse={onToggleCollapse} />}
-    </div>
-  );
-}
-
-function CommandBlockDecoration({
-  activeBlockIndex, block, cellHeight, index, onCopyOutput, onToggleCollapse, viewportY,
-}: DecorationProps): React.ReactElement {
-  const isActive = index === activeBlockIndex;
-  return (
-    <div style={getDecorationStyle(block, cellHeight, isActive, viewportY)}>
-      <BlockHeader block={block} cellHeight={cellHeight} onCopyOutput={onCopyOutput} onToggleCollapse={onToggleCollapse} />
-      <CommandPreview block={block} cellHeight={cellHeight} />
-    </div>
-  );
-}
+// ── Main Body ────────────────────────────────────────────────────────────────
 
 export function CommandBlockOverlayBody({
-  activeBlockIndex, blocks, onCopyOutput, onToggleCollapse, terminal,
+  activeBlockIndex, blocks, onCopyOutput, onCopyCommand, onToggleCollapse, terminal, sessionId,
 }: CommandBlockOverlayProps): React.ReactElement | null {
-  const visibleBlocks = useVisibleBlocks(blocks, terminal);
-  if (!terminal || visibleBlocks.length === 0) return null;
-  const cellHeight = getCellHeight(terminal);
-  const viewportY = terminal.buffer.active.viewportY;
+  ensureSpinKeyframe()
+
+  const visibleBlocks = useVisibleBlocks(blocks, terminal)
+  const viewportY = useScrollViewportY(terminal)
+
+  if (!terminal || visibleBlocks.length === 0) return null
+
+  const cellHeight = getCellHeight(terminal)
+
   return (
     <div style={overlayContainerStyle}>
       {visibleBlocks.map(({ block, index }) => (
         <CommandBlockDecoration
           key={block.id}
-          activeBlockIndex={activeBlockIndex}
           block={block}
-          cellHeight={cellHeight}
           index={index}
-          onCopyOutput={onCopyOutput}
-          onToggleCollapse={onToggleCollapse}
+          cellHeight={cellHeight}
           viewportY={viewportY}
+          activeBlockIndex={activeBlockIndex}
+          onToggleCollapse={onToggleCollapse}
+          onCopyOutput={onCopyOutput}
+          onCopyCommand={onCopyCommand}
+          sessionId={sessionId}
         />
       ))}
     </div>
-  );
+  )
 }

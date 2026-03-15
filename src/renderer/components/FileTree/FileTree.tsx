@@ -6,8 +6,12 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { EmptyState } from '../shared';
 import { useToastContext } from '../../contexts/ToastContext';
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
+import { useGitStatusDetailed } from '../../hooks/useGitStatusDetailed';
 import { FileTreeBody } from './FileTreeBody';
 import { FileTreeSearchBar } from './FileTreeSearchBar';
+import { GitBranchIndicator } from './GitBranchIndicator';
+import { GitStatusFilterBar, computeStatusCounts } from './GitStatusFilter';
+import { useFileTreeStore } from './fileTreeStore';
 
 export interface FileTreeProps {
   projectRoots: string[];
@@ -44,32 +48,29 @@ function useResolvedRoots(
   );
 }
 
+/**
+ * useExpandedRoots — backed by the Zustand fileTreeStore.
+ *
+ * expandedPaths in the store tracks ALL expanded paths (roots + subdirectories).
+ * This hook ensures newly-added roots are auto-expanded, then delegates
+ * toggle/read to the store.
+ */
 function useExpandedRoots(roots: string[]): {
   expandedRoots: Set<string>;
   toggleRoot: (root: string) => void;
 } {
-  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(
-    new Set(roots)
-  );
+  const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
+  const ensureExpanded = useFileTreeStore((s) => s.ensureExpanded);
+  const toggleExpand = useFileTreeStore((s) => s.toggleExpand);
 
+  // Auto-expand newly added roots
   useEffect(() => {
-    setExpandedRoots((prev) => {
-      const next = new Set(prev);
-      for (const root of roots) next.add(root);
-      return next;
-    });
-  }, [roots]);
+    for (const root of roots) {
+      ensureExpanded(root);
+    }
+  }, [roots, ensureExpanded]);
 
-  const toggleRoot = useCallback((root: string) => {
-    setExpandedRoots((prev) => {
-      const next = new Set(prev);
-      if (next.has(root)) next.delete(root);
-      else next.add(root);
-      return next;
-    });
-  }, []);
-
-  return { expandedRoots, toggleRoot };
+  return { expandedRoots: expandedPaths, toggleRoot: toggleExpand };
 }
 
 function useFileTreeConfig(): {
@@ -120,6 +121,14 @@ function useUnpinHandler(
   );
 }
 
+/**
+ * useSearchQuery — backed by the Zustand fileTreeStore.
+ *
+ * The search query now lives in the central store so other components
+ * (e.g. SearchOverlay, command palette) can read/write it without prop drilling.
+ * The setQuery wrapper is typed to match React.Dispatch<SetStateAction<string>>
+ * for backward compatibility with FileTreeSearchBar.
+ */
 function useSearchQuery(
   onFileSelect: (filePath: string) => void
 ): {
@@ -127,14 +136,31 @@ function useSearchQuery(
   setQuery: React.Dispatch<React.SetStateAction<string>>;
   handleSearchSelect: (path: string) => void;
 } {
-  const [query, setQuery] = useState('');
+  const query = useFileTreeStore((s) => s.searchQuery);
+  const storeSetQuery = useFileTreeStore((s) => s.setSearchQuery);
+
+  // Wrap the store setter to match React.Dispatch<SetStateAction<string>> signature
+  const setQuery: React.Dispatch<React.SetStateAction<string>> = useCallback(
+    (action: React.SetStateAction<string>) => {
+      if (typeof action === 'function') {
+        // Read current value from store for functional updates
+        const current = useFileTreeStore.getState().searchQuery;
+        storeSetQuery(action(current));
+      } else {
+        storeSetQuery(action);
+      }
+    },
+    [storeSetQuery]
+  );
+
   const handleSearchSelect = useCallback(
     (path: string) => {
       onFileSelect(path);
-      setQuery('');
+      storeSetQuery('');
     },
-    [onFileSelect]
+    [onFileSelect, storeSetQuery]
   );
+
   return { query, setQuery, handleSearchSelect };
 }
 
@@ -158,6 +184,8 @@ interface FileTreeContentProps {
   heatMapCount: number;
   onToggleHeatMap: () => void;
   bodyProps: React.ComponentProps<typeof FileTreeBody>;
+  /** Primary project root for git operations */
+  primaryRoot: string;
 }
 
 function FileTreeContent({
@@ -168,9 +196,15 @@ function FileTreeContent({
   heatMapCount,
   onToggleHeatMap,
   bodyProps,
+  primaryRoot,
 }: FileTreeContentProps): React.ReactElement {
+  const { status, isRepo, refresh } = useGitStatusDetailed(primaryRoot);
+  const counts = useMemo(() => computeStatusCounts(status), [status]);
+  const filter = useFileTreeStore((s) => s.filter);
+
   return (
     <div style={treeContainerStyle}>
+      <GitBranchIndicator projectRoot={primaryRoot} isRepo={isRepo} />
       <FileTreeSearchBar
         query={query}
         setQuery={setQuery}
@@ -179,7 +213,16 @@ function FileTreeContent({
         heatMapCount={heatMapCount}
         onToggleHeatMap={onToggleHeatMap}
       />
-      <FileTreeBody query={query} {...bodyProps} />
+      <GitStatusFilterBar counts={counts} isRepo={isRepo} />
+      <FileTreeBody
+        query={query}
+        {...bodyProps}
+        projectRoot={primaryRoot}
+        gitDetailedStatus={status}
+        gitIsRepo={isRepo}
+        gitRefresh={refresh}
+        gitFilter={filter}
+      />
     </div>
   );
 }
@@ -205,6 +248,7 @@ export function FileTree({ projectRoots, activeFilePath, onFileSelect, onRemoveR
       heatMapEnabled={heatMapEnabled}
       heatMapCount={heatMap.size}
       onToggleHeatMap={() => setHeatMapEnabled((prev) => !prev)}
+      primaryRoot={roots[0]}
       bodyProps={{
         roots,
         activeFilePath,

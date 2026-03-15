@@ -7,7 +7,10 @@ import type {
 import type { Terminal } from '@xterm/xterm'
 import type { FitAddon } from '@xterm/addon-fit'
 import type { SearchAddon } from '@xterm/addon-search'
+import type { ProgressAddon } from '@xterm/addon-progress'
+import type { SerializeAddon } from '@xterm/addon-serialize'
 import type { CommandBlock } from './terminalHelpers'
+import type { ShellIntegrationAddon } from './shellIntegrationAddon'
 import type { SelectionTooltipState } from './SelectionTooltip'
 import type { CompletionState } from './useTerminalCompletions'
 import type { HistoryRefs, HistorySuggestionControls } from './useTerminalHistory'
@@ -17,6 +20,9 @@ export interface TerminalRefs {
   terminalRef: MutableRefObject<Terminal | null>
   fitAddonRef: MutableRefObject<FitAddon | null>
   searchAddonRef: MutableRefObject<SearchAddon | null>
+  shellIntegrationAddonRef: MutableRefObject<ShellIntegrationAddon | null>
+  progressAddonRef: MutableRefObject<ProgressAddon | null>
+  serializeAddonRef: MutableRefObject<SerializeAddon | null>
   isReadyRef: MutableRefObject<boolean>
 }
 
@@ -48,6 +54,8 @@ export interface UseTerminalSetupParams {
   commandBlocksRef: MutableRefObject<{
     handleOsc133: (seq: string, param: string | undefined, term: Terminal) => void
     handleData: (data: string, term: Terminal) => void
+    navigatePrev: (term: Terminal) => void
+    navigateNext: (term: Terminal) => void
   }>
 }
 
@@ -72,6 +80,8 @@ export interface TerminalSetupRuntimeRefs {
 export interface TerminalSetupLifecycleContext extends UseTerminalSetupParams {
   runtimeRefs: TerminalSetupRuntimeRefs
   fit: () => void
+  initialFontSize?: number
+  initialCursorStyle?: 'block' | 'underline' | 'bar'
 }
 
 export interface AttachedTerminalDisposables {

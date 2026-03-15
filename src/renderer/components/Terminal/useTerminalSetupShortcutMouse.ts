@@ -10,7 +10,7 @@ import type {
   TerminalSetupRuntimeRefs,
 } from './useTerminalSetup.shared'
 
-type CustomShortcut = 'toggleSearch' | 'toggleRichInput' | 'openCmdSearch' | 'copyOrSigint' | 'paste' | null
+type CustomShortcut = 'toggleSearch' | 'toggleRichInput' | 'openCmdSearch' | 'copyOrSigint' | 'paste' | 'navBlockPrev' | 'navBlockNext' | 'fontZoomIn' | 'fontZoomOut' | 'fontZoomReset' | null
 
 export function setupCustomKeyHandler(
   context: TerminalSetupLifecycleContext,
@@ -73,6 +73,11 @@ function handleCustomKey(
   if (shortcut === 'toggleRichInput') return toggleTerminalFlag(context.callbacks.setRichInputActive)
   if (shortcut === 'openCmdSearch') return openCmdSearch(context)
   if (shortcut === 'copyOrSigint') return handleCopyOrSigint(context, term)
+  if (shortcut === 'navBlockPrev') return handleBlockNav(context, term, 'prev')
+  if (shortcut === 'navBlockNext') return handleBlockNav(context, term, 'next')
+  if (shortcut === 'fontZoomIn') return handleFontZoom(context, term, 1)
+  if (shortcut === 'fontZoomOut') return handleFontZoom(context, term, -1)
+  if (shortcut === 'fontZoomReset') return handleFontZoom(context, term, 0)
   handlePasteShortcut(context, event)
   return false
 }
@@ -80,6 +85,17 @@ function handleCustomKey(
 function getCustomShortcut(event: KeyboardEvent): CustomShortcut {
   if (matchesCtrlShift(event, 'F')) return 'toggleSearch'
   if (matchesCtrlShift(event, 'Enter')) return 'toggleRichInput'
+
+  // Ctrl+Up/Down for command block navigation
+  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'ArrowUp') return 'navBlockPrev'
+  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'ArrowDown') return 'navBlockNext'
+
+  // Font zoom: Ctrl+= / Ctrl+- / Ctrl+0
+  if (event.ctrlKey && !event.altKey && !event.shiftKey) {
+    if (event.code === 'Equal' || event.code === 'NumpadAdd') return 'fontZoomIn'
+    if (event.code === 'Minus' || event.code === 'NumpadSubtract') return 'fontZoomOut'
+    if (event.code === 'Digit0' || event.code === 'Numpad0') return 'fontZoomReset'
+  }
 
   const plainCtrlKey = getPlainCtrlKey(event)
   if (plainCtrlKey === 'r') return 'openCmdSearch'
@@ -120,6 +136,19 @@ function openCmdSearch(context: TerminalSetupLifecycleContext): false {
   return false
 }
 
+function handleBlockNav(
+  context: TerminalSetupLifecycleContext,
+  term: Terminal,
+  direction: 'prev' | 'next',
+): false {
+  if (direction === 'prev') {
+    context.commandBlocksRef.current.navigatePrev(term)
+  } else {
+    context.commandBlocksRef.current.navigateNext(term)
+  }
+  return false
+}
+
 function handleCopyOrSigint(
   context: TerminalSetupLifecycleContext,
   term: Terminal,
@@ -149,6 +178,34 @@ function handlePasteShortcut(
     }
     void window.electronAPI.pty.write(context.sessionId, text)
   })
+}
+
+const FONT_SIZE_MIN = 8
+const FONT_SIZE_MAX = 32
+const FONT_SIZE_DEFAULT = 14
+
+function handleFontZoom(
+  context: TerminalSetupLifecycleContext,
+  term: Terminal,
+  delta: -1 | 0 | 1,
+): false {
+  const currentSize = term.options.fontSize ?? FONT_SIZE_DEFAULT
+
+  let newSize: number
+  if (delta === 0) {
+    // Reset to default
+    newSize = FONT_SIZE_DEFAULT
+  } else {
+    newSize = Math.max(FONT_SIZE_MIN, Math.min(FONT_SIZE_MAX, currentSize + delta))
+  }
+
+  if (newSize !== currentSize) {
+    term.options.fontSize = newSize
+    // Trigger fit to recalculate terminal dimensions
+    context.fit()
+  }
+
+  return false
 }
 
 function scheduleClickReset(runtimeRefs: TerminalSetupRuntimeRefs): void {

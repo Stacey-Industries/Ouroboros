@@ -84,6 +84,8 @@ export interface FileViewerState {
   foldableLines: Map<number, FoldRange>;
   scrollMetrics: ScrollMetrics;
   outlineSymbols: ReturnType<typeof useSymbolOutline>;
+  formatOnSave: boolean;
+  setFormatOnSave: (v: boolean | ((prev: boolean) => boolean)) => void;
   toggleFold: (startLine: number) => void;
   handleConflictResolved: (newContent: string) => void;
 }
@@ -166,6 +168,7 @@ function useViewerToggles(): ViewerToggles {
   const [showMinimap, setShowMinimap] = usePersistedToggle('fileviewer:minimap', true);
   const [showBlame, setShowBlame] = usePersistedToggle('fileviewer:blame', false);
   const [showOutline, setShowOutline] = usePersistedToggle('fileviewer:outline', false);
+  const [formatOnSave, setFormatOnSave] = usePersistedToggle('fileviewer:formatOnSave', false);
 
   return {
     wordWrap,
@@ -176,6 +179,8 @@ function useViewerToggles(): ViewerToggles {
     setShowBlame,
     showOutline,
     setShowOutline,
+    formatOnSave,
+    setFormatOnSave,
   };
 }
 

@@ -2,6 +2,13 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { ImageAddon } from '@xterm/addon-image'
+import { ClipboardAddon } from '@xterm/addon-clipboard'
+import { SerializeAddon } from '@xterm/addon-serialize'
+import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
+import { ProgressAddon } from '@xterm/addon-progress'
+import { ShellIntegrationAddon } from './shellIntegrationAddon'
 import { registerFilePathLinks } from './terminalLinkProvider'
 import {
   getCssVar,
@@ -31,7 +38,7 @@ export function createBootstrapTerminal(
   context: TerminalSetupLifecycleContext,
 ): (container: HTMLDivElement) => () => void {
   return function bootstrapTerminal(container: HTMLDivElement): () => void {
-    const term = createTerminal()
+    const term = createTerminal(context.initialFontSize, context.initialCursorStyle)
     loadTerminalAddons(context, term, container)
     registerTerminal(context.sessionId, term)
     context.refs.terminalRef.current = term
@@ -41,13 +48,16 @@ export function createBootstrapTerminal(
   }
 }
 
-function createTerminal(): Terminal {
+function createTerminal(
+  fontSize?: number,
+  cursorStyle?: 'block' | 'underline' | 'bar',
+): Terminal {
   return new Terminal({
     fontFamily: getCssVar('--font-mono') || 'monospace',
-    fontSize: 13,
+    fontSize: fontSize ?? 13,
     lineHeight: 1.2,
     cursorBlink: true,
-    cursorStyle: 'block',
+    cursorStyle: cursorStyle ?? 'block',
     cursorInactiveStyle: 'none',
     scrollback: 5000,
     allowProposedApi: true,
@@ -70,6 +80,47 @@ function loadTerminalAddons(
   term.loadAddon(searchAddon)
   term.loadAddon(webLinksAddon)
   term.open(container)
+
+  // ── New addons (Phase 1C) ──────────────────────────────────────────────
+  // Image addon: Sixel + iTerm2 inline image support
+  try {
+    const imageAddon = new ImageAddon({ sixelPaletteLimit: 512, sixelSizeLimit: 25000000, enableSizeReports: true })
+    term.loadAddon(imageAddon)
+  } catch { /* image addon not critical */ }
+
+  // Clipboard addon: OSC 52 clipboard access
+  try {
+    term.loadAddon(new ClipboardAddon())
+  } catch { /* clipboard addon not critical */ }
+
+  // Serialize addon: buffer serialization for session save/restore
+  try {
+    const serializeAddon = new SerializeAddon()
+    term.loadAddon(serializeAddon)
+    context.refs.serializeAddonRef.current = serializeAddon
+  } catch { /* serialize addon not critical */ }
+
+  // Unicode graphemes addon: proper emoji/CJK rendering
+  try {
+    const unicodeAddon = new UnicodeGraphemesAddon()
+    term.loadAddon(unicodeAddon)
+    term.unicode.activeVersion = 'graphemes'
+  } catch { /* unicode graphemes addon not critical */ }
+
+  // Progress addon: OSC 9;4 progress bar detection
+  try {
+    const progressAddon = new ProgressAddon()
+    term.loadAddon(progressAddon)
+    context.refs.progressAddonRef.current = progressAddon
+  } catch { /* progress addon not critical */ }
+
+  // Shell integration addon: OSC 633 command boundary detection
+  try {
+    const shellIntegrationAddon = new ShellIntegrationAddon()
+    term.loadAddon(shellIntegrationAddon)
+    context.refs.shellIntegrationAddonRef.current = shellIntegrationAddon
+  } catch { /* shell integration addon not critical */ }
+
   context.refs.fitAddonRef.current = fitAddon
   context.refs.searchAddonRef.current = searchAddon
 }
@@ -122,12 +173,28 @@ function createReadyObserver(
   context: TerminalSetupLifecycleContext,
   container: HTMLDivElement,
 ): ResizeObserver {
+  const term = context.refs.terminalRef.current
   const ro = new ResizeObserver(() => context.fit())
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       context.refs.isReadyRef.current = true
       ro.observe(container)
       context.fit()
+
+      // ── WebGL renderer (Phase 1B) ────────────────────────────────────
+      // Load AFTER double-rAF to ensure terminal is fully initialized.
+      // Canvas renderer is the default fallback — no addon needed.
+      if (term) {
+        try {
+          const webgl = new WebglAddon()
+          webgl.onContextLoss(() => {
+            webgl.dispose()
+          })
+          term.loadAddon(webgl)
+        } catch {
+          // WebGL not available — canvas fallback is automatic
+        }
+      }
     })
   })
   return ro

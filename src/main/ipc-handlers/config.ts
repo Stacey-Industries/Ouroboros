@@ -19,7 +19,7 @@ interface ConfigHandlerEntry {
 /** Config keys that can be imported/synced from external JSON files. */
 const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'recentProjects', 'defaultProjectRoot', 'activeTheme', 'hooksServerPort',
-  'terminalFontSize', 'autoInstallHooks', 'shell', 'panelSizes', 'windowBounds',
+  'terminalFontSize', 'terminalCursorStyle', 'autoInstallHooks', 'shell', 'panelSizes', 'windowBounds',
   'fontUI', 'fontMono', 'fontSizeUI', 'keybindings', 'showBgGradient',
   'customThemeColors', 'terminalSessions', 'claudeCliSettings', 'customCSS',
   'bookmarks', 'fileTreeIgnorePatterns', 'profiles',

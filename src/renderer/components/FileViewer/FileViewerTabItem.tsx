@@ -1,20 +1,28 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useState, useRef, useEffect } from 'react';
 import type { OpenFile } from './FileViewerManager';
 
-interface FileViewerTabItemProps {
+export interface FileViewerTabItemProps {
   file: OpenFile;
   isActive: boolean;
   onActivate: (filePath: string) => void;
   onClose: (filePath: string) => void;
+  /** Pin a preview tab (double-click) */
+  onPin?: (filePath: string) => void;
+  /** Close all tabs except this one */
+  onCloseOthers?: (filePath: string) => void;
+  /** Close tabs to the right of this one */
+  onCloseToRight?: (filePath: string) => void;
+  /** Close all tabs */
+  onCloseAll?: () => void;
   tabRef?: React.Ref<HTMLDivElement>;
 }
 
-const TAB_LABEL_STYLE = {
+const TAB_LABEL_STYLE: React.CSSProperties = {
   flex: 1,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-} as const;
+};
 
 function confirmClose(file: OpenFile): boolean {
   if (!file.isDirty) return true;
@@ -51,7 +59,11 @@ function TabIndicator({ file }: { file: OpenFile }): React.ReactElement | null {
         width: '6px',
         height: '6px',
         borderRadius: '50%',
-        backgroundColor: file.isDirtyOnDisk ? 'var(--warning)' : 'var(--accent)',
+        backgroundColor: file.isDirtyOnDisk
+          ? 'var(--warning)'
+          : file.isDirty
+            ? '#e5a00d'
+            : 'var(--accent)',
         flexShrink: 0,
       }}
     />
@@ -83,7 +95,12 @@ function getTabStyle(isActive: boolean): React.CSSProperties {
 
 function TabLabel({ file }: { file: OpenFile }): React.ReactElement {
   return (
-    <span style={TAB_LABEL_STYLE}>
+    <span
+      style={{
+        ...TAB_LABEL_STYLE,
+        fontStyle: file.isPreview ? 'italic' : 'normal',
+      }}
+    >
       {file.name}
       {file.isDirty ? ' *' : ''}
     </span>
@@ -131,16 +148,161 @@ function CloseTabButton({
   );
 }
 
+// ── Tab Context Menu ────────────────────────────────────────────────────
+
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+}
+
+const CONTEXT_MENU_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  zIndex: 10000,
+  minWidth: '160px',
+  backgroundColor: 'var(--bg)',
+  border: '1px solid var(--border)',
+  borderRadius: '4px',
+  padding: '4px 0',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+};
+
+const MENU_ITEM_STYLE: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  padding: '4px 12px',
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text)',
+  textAlign: 'left',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  fontSize: 'inherit',
+};
+
+const MENU_SEPARATOR_STYLE: React.CSSProperties = {
+  height: '1px',
+  margin: '4px 0',
+  backgroundColor: 'var(--border)',
+};
+
+function TabContextMenu({
+  menu,
+  file,
+  onClose,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
+  onDismiss,
+}: {
+  menu: ContextMenuState;
+  file: OpenFile;
+  onClose: (filePath: string) => void;
+  onCloseOthers?: (filePath: string) => void;
+  onCloseToRight?: (filePath: string) => void;
+  onCloseAll?: () => void;
+  onDismiss: () => void;
+}): React.ReactElement | null {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu.visible) return;
+    function handleClickOutside(e: MouseEvent): void {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onDismiss();
+      }
+    }
+    function handleEscape(e: KeyboardEvent): void {
+      if (e.key === 'Escape') onDismiss();
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [menu.visible, onDismiss]);
+
+  if (!menu.visible) return null;
+
+  const items: Array<{ label: string; action: () => void } | 'separator'> = [
+    {
+      label: 'Close',
+      action: () => {
+        if (confirmClose(file)) onClose(file.path);
+        onDismiss();
+      },
+    },
+  ];
+
+  if (onCloseOthers) {
+    items.push({
+      label: 'Close Others',
+      action: () => { onCloseOthers(file.path); onDismiss(); },
+    });
+  }
+  if (onCloseToRight) {
+    items.push({
+      label: 'Close to the Right',
+      action: () => { onCloseToRight(file.path); onDismiss(); },
+    });
+  }
+  if (onCloseAll) {
+    items.push('separator');
+    items.push({
+      label: 'Close All',
+      action: () => { onCloseAll(); onDismiss(); },
+    });
+  }
+
+  return (
+    <div ref={menuRef} style={{ ...CONTEXT_MENU_STYLE, left: menu.x, top: menu.y }}>
+      {items.map((item, idx) => {
+        if (item === 'separator') {
+          return <div key={`sep-${idx}`} style={MENU_SEPARATOR_STYLE} />;
+        }
+        return (
+          <button
+            key={item.label}
+            style={MENU_ITEM_STYLE}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }}
+            onClick={item.action}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Tab Actions Hook ────────────────────────────────────────────────────
+
 function useTabActions({
   file,
   onActivate,
   onClose,
-}: Pick<FileViewerTabItemProps, 'file' | 'onActivate' | 'onClose'>): {
+  onPin,
+}: Pick<FileViewerTabItemProps, 'file' | 'onActivate' | 'onClose' | 'onPin'>): {
   handleActivate: () => void;
+  handleDoubleClick: () => void;
   handleAuxClick: (event: React.MouseEvent<HTMLDivElement>) => void;
   handleKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
 } {
   const handleActivate = useCallback(() => onActivate(file.path), [file.path, onActivate]);
+  const handleDoubleClick = useCallback(() => {
+    // Double-click pins a preview tab
+    if (file.isPreview && onPin) {
+      onPin(file.path);
+    }
+  }, [file.path, file.isPreview, onPin]);
   const handleAuxClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 1) return;
     event.preventDefault();
@@ -150,7 +312,7 @@ function useTabActions({
     if (event.key === 'Enter' || event.key === ' ') handleActivate();
   }, [handleActivate]);
 
-  return { handleActivate, handleAuxClick, handleKeyDown };
+  return { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown };
 }
 
 export const FileViewerTabItem = memo(function FileViewerTabItem({
@@ -158,29 +320,58 @@ export const FileViewerTabItem = memo(function FileViewerTabItem({
   isActive,
   onActivate,
   onClose,
+  onPin,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
   tabRef,
 }: FileViewerTabItemProps): React.ReactElement {
-  const { handleActivate, handleAuxClick, handleKeyDown } = useTabActions({
+  const { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown } = useTabActions({
     file,
     onActivate,
     onClose,
+    onPin,
   });
 
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0 });
+
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const dismissContextMenu = useCallback(() => {
+    setContextMenu({ visible: false, x: 0, y: 0 });
+  }, []);
+
   return (
-    <div
-      ref={tabRef}
-      role="tab"
-      aria-selected={isActive}
-      tabIndex={isActive ? 0 : -1}
-      title={file.path}
-      onClick={handleActivate}
-      onAuxClick={handleAuxClick}
-      onKeyDown={handleKeyDown}
-      style={getTabStyle(isActive)}
-    >
-      <TabIndicator file={file} />
-      <TabLabel file={file} />
-      <CloseTabButton file={file} isActive={isActive} onClose={onClose} />
-    </div>
+    <>
+      <div
+        ref={tabRef}
+        role="tab"
+        aria-selected={isActive}
+        tabIndex={isActive ? 0 : -1}
+        title={file.path}
+        onClick={handleActivate}
+        onDoubleClick={handleDoubleClick}
+        onAuxClick={handleAuxClick}
+        onKeyDown={handleKeyDown}
+        onContextMenu={handleContextMenu}
+        style={getTabStyle(isActive)}
+      >
+        <TabIndicator file={file} />
+        <TabLabel file={file} />
+        <CloseTabButton file={file} isActive={isActive} onClose={onClose} />
+      </div>
+      <TabContextMenu
+        menu={contextMenu}
+        file={file}
+        onClose={onClose}
+        onCloseOthers={onCloseOthers}
+        onCloseToRight={onCloseToRight}
+        onCloseAll={onCloseAll}
+        onDismiss={dismissContextMenu}
+      />
+    </>
   );
 });

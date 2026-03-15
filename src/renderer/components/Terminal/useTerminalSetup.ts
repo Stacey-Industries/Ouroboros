@@ -15,7 +15,10 @@ export type {
   UseTerminalSetupParams,
 } from './useTerminalSetup.shared'
 
-export function useTerminalSetup(params: UseTerminalSetupParams): {
+export function useTerminalSetup(params: UseTerminalSetupParams & {
+  initialFontSize?: number
+  initialCursorStyle?: 'block' | 'underline' | 'bar'
+}): {
   fit: () => void
   syncTheme: () => void
 } {
@@ -29,6 +32,8 @@ export function useTerminalSetup(params: UseTerminalSetupParams): {
     ...params,
     runtimeRefs,
     fit,
+    initialFontSize: params.initialFontSize,
+    initialCursorStyle: params.initialCursorStyle,
   })
 
   useEffect(() => {

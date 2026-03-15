@@ -102,8 +102,11 @@ export interface AppConfig {
   approvalRequired: string[]
   approvalTimeout: number
   workspaceSnapshots: WorkspaceSnapshot[]
+  terminalCursorStyle: 'block' | 'underline' | 'bar'
   commandBlocksEnabled: boolean
   promptPattern: string
+  /** Format document before saving (requires a formatting provider in Monaco) */
+  formatOnSave: boolean
 }
 
 export interface BufferExcerpt {
@@ -191,6 +194,10 @@ export interface IpcResult {
 
 export interface ReadFileResult extends IpcResult {
   content?: string
+}
+
+export interface ReadBinaryFileResult extends IpcResult {
+  data?: Uint8Array
 }
 
 export interface ReadDirResult extends IpcResult {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { FileChangeEvent } from '../../types/electron';
+import { disposeMonacoModel } from './MonacoEditor';
 
 interface FileReadResult { success: boolean; content?: string | null; error?: string; }
 
@@ -15,7 +16,9 @@ export interface OpenFile {
   error: string | null;
   isDirtyOnDisk: boolean;
   originalContent: string | null;
-  isImage?: boolean; isDirty?: boolean;
+  isImage?: boolean; isPdf?: boolean; isBinary?: boolean; binaryContent?: Uint8Array; isDirty?: boolean;
+  /** Preview tab: italic title, replaced by next preview open. Pinned on edit or double-click. */
+  isPreview?: boolean;
 }
 
 export interface FileViewerState {
@@ -23,8 +26,18 @@ export interface FileViewerState {
   activeIndex: number;
   activeFile: OpenFile | null;
   openFile: (filePath: string) => Promise<void>;
+  /** Open a file in preview mode (italic title, replaces other preview tabs) */
+  openFilePreview: (filePath: string) => Promise<void>;
   closeFile: (filePath: string) => void;
+  /** Close all tabs except the given one */
+  closeOthers: (filePath: string) => void;
+  /** Close all tabs to the right of the given one */
+  closeToRight: (filePath: string) => void;
+  /** Close all tabs */
+  closeAll: () => void;
   setActive: (filePath: string) => void;
+  /** Pin a preview tab (make it permanent) */
+  pinTab: (filePath: string) => void;
   saveFile: (filePath: string, content: string) => Promise<void>;
   setDirty: (filePath: string, dirty: boolean) => void;
 }
@@ -32,6 +45,7 @@ export interface FileViewerState {
 export interface FileViewerManagerProps { projectRoot: string | null; children: ReactNode; }
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif']);
+const PDF_EXTENSIONS = new Set(['pdf']);
 
 function basename(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? filePath;
@@ -46,7 +60,12 @@ function isImageFile(filePath: string): boolean {
   return IMAGE_EXTENSIONS.has(extension);
 }
 
-function createLoadingFile(filePath: string): OpenFile {
+function isPdfFile(filePath: string): boolean {
+  const extension = filePath.toLowerCase().split('.').pop() ?? '';
+  return PDF_EXTENSIONS.has(extension);
+}
+
+function createLoadingFile(filePath: string, isPreview = false): OpenFile {
   return {
     path: filePath,
     name: basename(filePath),
@@ -55,6 +74,7 @@ function createLoadingFile(filePath: string): OpenFile {
     error: null,
     isDirtyOnDisk: false,
     originalContent: null,
+    isPreview,
   };
 }
 
@@ -69,6 +89,8 @@ function toReadErrorFile(file: OpenFile, result: FileReadResult): OpenFile {
     error: result.error ?? 'Failed to read file',
     content: null,
     isImage: false,
+    isPdf: false,
+    isBinary: false,
   };
 }
 
@@ -79,16 +101,33 @@ function toImageViewerFile(file: OpenFile): OpenFile {
     error: null,
     content: null,
     isImage: true,
+    isPdf: false,
+    isBinary: false,
   };
 }
 
-function toBinaryFile(file: OpenFile): OpenFile {
+function toPdfFile(file: OpenFile): OpenFile {
   return {
     ...file,
     isLoading: false,
-    error: 'Binary file - cannot display',
+    error: null,
     content: null,
     isImage: false,
+    isPdf: true,
+    isBinary: false,
+  };
+}
+
+function toBinaryFile(file: OpenFile, binaryContent?: Uint8Array): OpenFile {
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: false,
+    isPdf: false,
+    isBinary: true,
+    binaryContent,
   };
 }
 
@@ -104,6 +143,8 @@ function toTextFile(file: OpenFile, content: string): OpenFile {
     isDirtyOnDisk: false,
     originalContent,
     isImage: false,
+    isPdf: false,
+    isBinary: false,
   };
 }
 
@@ -114,6 +155,9 @@ function toLoadedFile(file: OpenFile, filePath: string, result: FileReadResult):
   const content = result.content ?? '';
   if (isImageFile(filePath)) {
     return toImageViewerFile(file);
+  }
+  if (isPdfFile(filePath)) {
+    return toPdfFile(file);
   }
   if (looksLikeBinary(content)) {
     return toBinaryFile(file);
@@ -146,11 +190,32 @@ async function readFile(filePath: string): Promise<FileReadResult> {
   return window.electronAPI.files.readFile(filePath);
 }
 
-function primeOpenFile(filePath: string, setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex): void {
+function primeOpenFile(filePath: string, setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex, isPreview = false): void {
   setOpenFiles((prev) => {
     const existingIndex = prev.findIndex((file) => file.path === filePath);
-    setActiveIndex(existingIndex === -1 ? prev.length : existingIndex);
-    return existingIndex === -1 ? [...prev, createLoadingFile(filePath)] : prev;
+    if (existingIndex !== -1) {
+      // Already open — just activate it (and pin if not preview)
+      setActiveIndex(existingIndex);
+      if (!isPreview && prev[existingIndex].isPreview) {
+        // Pin the existing preview tab
+        return prev.map((f, i) => i === existingIndex ? { ...f, isPreview: false } : f);
+      }
+      return prev;
+    }
+
+    // If opening as preview, replace any existing preview tab
+    if (isPreview) {
+      const previewIndex = prev.findIndex((file) => file.isPreview);
+      if (previewIndex !== -1) {
+        const next = [...prev];
+        next[previewIndex] = createLoadingFile(filePath, true);
+        setActiveIndex(previewIndex);
+        return next;
+      }
+    }
+
+    setActiveIndex(prev.length);
+    return [...prev, createLoadingFile(filePath, isPreview)];
   });
 }
 
@@ -251,16 +316,44 @@ function useOpenFileListener(openFile: (filePath: string) => Promise<void>): voi
   }, [openFile]);
 }
 
-function useOpenFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+function useOpenFileActionInternal(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex, isPreview: boolean) {
   return useCallback(async (filePath: string): Promise<void> => {
-    primeOpenFile(filePath, setOpenFiles, setActiveIndex);
+    primeOpenFile(filePath, setOpenFiles, setActiveIndex, isPreview);
     const result = await readFile(filePath);
     commitOpenFileResult(filePath, result, setOpenFiles);
-  }, [setActiveIndex, setOpenFiles]);
+
+    // If binary file detected (not image/pdf), load binary content for hex viewer
+    if (result.success && !isImageFile(filePath) && !isPdfFile(filePath)) {
+      const content = result.content ?? '';
+      if (looksLikeBinary(content)) {
+        try {
+          const binResult = await window.electronAPI.files.readBinaryFile(filePath);
+          if (binResult.success && binResult.data) {
+            const binaryContent = new Uint8Array(binResult.data);
+            setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
+              ...file,
+              binaryContent,
+            })));
+          }
+        } catch {
+          // Binary content loading failed, hex viewer will show empty
+        }
+      }
+    }
+  }, [setActiveIndex, setOpenFiles, isPreview]);
+}
+
+function useOpenFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return useOpenFileActionInternal(setOpenFiles, setActiveIndex, false);
+}
+
+function useOpenFilePreviewAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return useOpenFileActionInternal(setOpenFiles, setActiveIndex, true);
 }
 
 function useCloseFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
   return useCallback((filePath: string) => {
+    disposeMonacoModel(filePath);
     setOpenFiles((prev) => {
       const removedIndex = prev.findIndex((file) => file.path === filePath);
       if (removedIndex === -1) {
@@ -271,6 +364,57 @@ function useCloseFileAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiv
       return next;
     });
   }, [setActiveIndex, setOpenFiles]);
+}
+
+function useCloseOthersAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return useCallback((filePath: string) => {
+    setOpenFiles((prev) => {
+      for (const file of prev) {
+        if (file.path !== filePath) {
+          disposeMonacoModel(file.path);
+        }
+      }
+      const kept = prev.filter((file) => file.path === filePath);
+      if (kept.length === 0) return prev;
+      setActiveIndex(0);
+      return kept;
+    });
+  }, [setActiveIndex, setOpenFiles]);
+}
+
+function useCloseToRightAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return useCallback((filePath: string) => {
+    setOpenFiles((prev) => {
+      const idx = prev.findIndex((file) => file.path === filePath);
+      if (idx === -1) return prev;
+      for (let i = idx + 1; i < prev.length; i++) {
+        disposeMonacoModel(prev[i].path);
+      }
+      const kept = prev.slice(0, idx + 1);
+      setActiveIndex((current) => Math.min(current, kept.length - 1));
+      return kept;
+    });
+  }, [setActiveIndex, setOpenFiles]);
+}
+
+function useCloseAllAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return useCallback(() => {
+    setOpenFiles((prev) => {
+      for (const file of prev) {
+        disposeMonacoModel(file.path);
+      }
+      return [];
+    });
+    setActiveIndex(0);
+  }, [setActiveIndex, setOpenFiles]);
+}
+
+function usePinTabAction(setOpenFiles: SetOpenFiles) {
+  return useCallback((filePath: string) => {
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => (
+      file.isPreview ? { ...file, isPreview: false } : file
+    )));
+  }, [setOpenFiles]);
 }
 
 function useSetActiveAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
@@ -304,9 +448,14 @@ function useSaveFileAction(setOpenFiles: SetOpenFiles) {
 
 function useSetDirtyAction(setOpenFiles: SetOpenFiles) {
   return useCallback((filePath: string, dirty: boolean) => {
-    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => (
-      file.isDirty === dirty ? file : { ...file, isDirty: dirty }
-    )));
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
+      const changes: Partial<OpenFile> = {};
+      if (file.isDirty !== dirty) changes.isDirty = dirty;
+      // Editing pins a preview tab
+      if (dirty && file.isPreview) changes.isPreview = false;
+      if (Object.keys(changes).length === 0) return file;
+      return { ...file, ...changes };
+    }));
   }, [setOpenFiles]);
 }
 
@@ -315,10 +464,15 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
   const [activeIndex, setActiveIndex] = useState(0);
   useProjectChangeListener(projectRoot, setOpenFiles);
   const openFile = useOpenFileAction(setOpenFiles, setActiveIndex);
+  const openFilePreview = useOpenFilePreviewAction(setOpenFiles, setActiveIndex);
   useReloadFileListener(setOpenFiles);
   useOpenFileListener(openFile);
   const closeFile = useCloseFileAction(setOpenFiles, setActiveIndex);
+  const closeOthers = useCloseOthersAction(setOpenFiles, setActiveIndex);
+  const closeToRight = useCloseToRightAction(setOpenFiles, setActiveIndex);
+  const closeAll = useCloseAllAction(setOpenFiles, setActiveIndex);
   const setActive = useSetActiveAction(setOpenFiles, setActiveIndex);
+  const pinTab = usePinTabAction(setOpenFiles);
   const saveFile = useSaveFileAction(setOpenFiles);
   const setDirty = useSetDirtyAction(setOpenFiles);
   return {
@@ -326,8 +480,13 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
     activeIndex,
     activeFile: openFiles[activeIndex] ?? null,
     openFile,
+    openFilePreview,
     closeFile,
+    closeOthers,
+    closeToRight,
+    closeAll,
     setActive,
+    pinTab,
     saveFile,
     setDirty,
   };

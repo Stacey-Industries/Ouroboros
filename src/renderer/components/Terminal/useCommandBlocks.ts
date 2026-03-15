@@ -23,6 +23,8 @@ export interface CommandBlock {
 export interface UseCommandBlocksOptions {
   enabled: boolean
   promptPattern?: string
+  /** Optional ref to ShellIntegrationAddon for OSC 633 support */
+  shellIntegrationAddonRef?: { current: import('./shellIntegrationAddon').ShellIntegrationAddon | null }
 }
 
 export interface UseCommandBlocksResult {

@@ -34,6 +34,12 @@ export interface TreeNode {
   children?: TreeNode[];
   isExpanded?: boolean;
   isLoading?: boolean;
+  /** File nesting: true when this file has nested children (e.g. .test, .d.ts) */
+  hasNestedChildren?: boolean;
+  /** File nesting: child files grouped under this parent */
+  nestedChildren?: TreeNode[];
+  /** File nesting: whether nested children are visible */
+  isNestExpanded?: boolean;
 }
 
 export interface FlatRow {
@@ -56,6 +62,10 @@ export interface FileTreeItemProps {
   isBookmarked?: boolean;
   isSelected?: boolean;
   heatData?: FileHeatData;
+  /** Diagnostic severity for this item (4A) */
+  diagnosticSeverity?: 'error' | 'warning' | 'info' | 'hint';
+  /** Whether this file has unsaved changes (4C) */
+  isDirty?: boolean;
   onClick: (node: TreeNode, e?: React.MouseEvent) => void;
   onDoubleClick?: (node: TreeNode) => void;
   onContextMenu?: (e: React.MouseEvent, node: TreeNode) => void;
@@ -173,6 +183,7 @@ function renderTreeItemContent(
         isBookmarked={props.isBookmarked}
         heatDot={heatDot}
         heatLevel={props.heatData?.heatLevel}
+        diagnosticSeverity={props.diagnosticSeverity}
       />
     );
   }
@@ -190,6 +201,8 @@ function renderTreeItemContent(
       matchRanges={props.matchRanges}
       heatDot={heatDot}
       heatLevel={props.heatData?.heatLevel}
+      diagnosticSeverity={props.diagnosticSeverity}
+      isDirty={props.isDirty}
     />
   );
 }

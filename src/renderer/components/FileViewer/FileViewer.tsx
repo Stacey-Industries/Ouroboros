@@ -4,6 +4,8 @@ import { parseShikiLines, computeVisibleLines } from './fileViewerUtils';
 import { EmptyState } from './EmptyState';
 import { LoadingState } from './LoadingState';
 import { ImageViewer } from './ImageViewer';
+import { PdfViewer } from './PdfViewer';
+import { HexViewer } from './HexViewer';
 import { ErrorDisplay } from './ErrorDisplay';
 import { useFileViewerState } from './useFileViewerState';
 import { FileViewerChrome } from './FileViewerChrome';
@@ -19,6 +21,9 @@ export interface FileViewerProps {
   originalContent?: string | null;
   projectRoot?: string | null;
   isImage?: boolean;
+  isPdf?: boolean;
+  isBinary?: boolean;
+  binaryContent?: Uint8Array;
   onSave?: (content: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
   isDirty?: boolean;
@@ -36,12 +41,15 @@ export const FileViewer = memo(function FileViewer(
 const FileViewerInner = memo(function FileViewerInner(
   props: FileViewerProps
 ): React.ReactElement {
-  const { filePath, content, isLoading, error, isImage } = props;
+  const { filePath, content, isLoading, error, isImage, isPdf, isBinary, binaryContent } = props;
   const s = useFileViewerState(props);
 
   if (!filePath && !isLoading) return <EmptyState />;
   if (isLoading) return <LoadingState />;
   if (isImage && filePath) return <ImageViewer filePath={filePath} />;
+  if (isPdf && filePath) return <PdfViewer filePath={filePath} />;
+  if (isBinary && filePath && binaryContent) return <HexViewer content={binaryContent} filePath={filePath} />;
+  if (isBinary && filePath) return <LoadingState />;
   if (error) return <ErrorDisplay error={error} />;
   if (content === null) return <EmptyState />;
 

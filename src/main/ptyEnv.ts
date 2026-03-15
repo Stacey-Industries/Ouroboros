@@ -1,5 +1,6 @@
 import os from 'os'
 import { getConfigValue } from './config'
+import { buildShellIntegrationEnv, detectShellType } from './shellIntegration/resolve'
 
 export interface ResolvedSpawnOptions {
   cwd: string
@@ -94,3 +95,19 @@ export function buildShellEnv(shell: string, extraEnv?: Record<string, string>):
     ...buildPromptEnv(),
   }
 }
+
+/**
+ * Build shell environment with shell integration scripts injected.
+ * Returns env vars and optional replacement args for the shell command.
+ * If shellArgs is null, use getDefaultArgs() as normal.
+ * If shellArgs is non-null, use those args instead of the defaults.
+ */
+export function buildShellEnvWithIntegration(
+  shell: string,
+  extraEnv?: Record<string, string>,
+): { env: Record<string, string>; shellArgs: string[] | null } {
+  const baseEnv = buildShellEnv(shell, extraEnv)
+  return buildShellIntegrationEnv(shell, baseEnv)
+}
+
+export { detectShellType } from './shellIntegration/resolve'

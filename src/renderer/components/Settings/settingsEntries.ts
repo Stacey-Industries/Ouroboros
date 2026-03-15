@@ -27,6 +27,10 @@ function createEntries(
   return definitions.map(([label, description]) => ({ label, description, section, sectionLabel }))
 }
 
+const EDITOR_ENTRIES = createEntries('general', 'General', [
+  ['Format on Save', 'Automatically format documents when saving (requires a language formatting provider).'],
+])
+
 const GENERAL_ENTRIES = createEntries('general', 'General', [
   ['Default Project Folder', 'The folder Ouroboros opens by default when no project is loaded.'],
   ['Recent Projects', 'List of recently opened project folders. Clear all recent projects.'],
@@ -123,6 +127,7 @@ const MCP_ENTRIES = createEntries('mcp', 'MCP Servers', [
 ])
 
 export const SETTINGS_ENTRIES: SettingsEntry[] = [
+  ...EDITOR_ENTRIES,
   ...GENERAL_ENTRIES,
   ...APPEARANCE_ENTRIES,
   ...FONT_ENTRIES,

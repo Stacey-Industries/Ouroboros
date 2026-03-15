@@ -8,6 +8,7 @@ import type {
   PtyCwdResult,
   PtySpawnResult,
   PtyStopRecordingResult,
+  ReadBinaryFileResult,
   ReadDirResult,
   ReadFileResult,
   SelectFolderResult
@@ -77,6 +78,7 @@ export interface FilesAPI {
   writeFile: (filePath: string, data: Uint8Array) => Promise<IpcResult>
   saveFile: (filePath: string, content: string) => Promise<IpcResult>
   readFile: (filePath: string) => Promise<ReadFileResult>
+  readBinaryFile: (filePath: string) => Promise<ReadBinaryFileResult>
   readDir: (dirPath: string) => Promise<ReadDirResult>
   watchDir: (dirPath: string) => Promise<IpcResult>
   unwatchDir: (dirPath: string) => Promise<IpcResult>

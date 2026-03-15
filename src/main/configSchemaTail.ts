@@ -23,6 +23,11 @@ export const tailSchema = {
     type: 'string',
     default: ''
   },
+  terminalCursorStyle: {
+    type: 'string',
+    enum: ['block', 'underline', 'bar'],
+    default: 'block'
+  },
   richInputEnabled: {
     type: 'boolean',
     default: true
@@ -31,5 +36,9 @@ export const tailSchema = {
     type: 'string',
     enum: ['ctrl+enter', 'shift+enter'],
     default: 'ctrl+enter'
+  },
+  formatOnSave: {
+    type: 'boolean',
+    default: false
   }
 }

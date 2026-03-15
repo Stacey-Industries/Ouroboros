@@ -121,6 +121,16 @@ async function handleReadFile(_event: IpcMainInvokeEvent, filePath: string) {
   }
 }
 
+async function handleReadBinaryFile(_event: IpcMainInvokeEvent, filePath: string) {
+  try {
+    const buffer = await fs.readFile(filePath)
+    dispatchFileOpenEvent(filePath).catch(() => {})
+    return { success: true, data: buffer }
+  } catch (err) {
+    return toErrorResult(err)
+  }
+}
+
 async function handleReadDir(_event: IpcMainInvokeEvent, dirPath: string) {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
@@ -257,6 +267,7 @@ export function registerFileHandlers(senderWindow: SenderWindow): string[] {
   const register = createRegistrar(channels)
 
   register('files:readFile', handleReadFile)
+  register('files:readBinaryFile', handleReadBinaryFile)
   register('files:readDir', handleReadDir)
   register('files:watchDir', handleWatchDir)
   register('files:unwatchDir', handleUnwatchDir)

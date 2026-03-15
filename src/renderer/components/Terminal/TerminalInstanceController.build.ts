@@ -20,6 +20,8 @@ type TerminalCoreController = Pick<
   | 'containerRef'
   | 'terminalRef'
   | 'searchAddonRef'
+  | 'progressAddonRef'
+  | 'serializeAddonRef'
   | 'showSearch'
   | 'closeSearch'
   | 'commandBlocks'
@@ -87,6 +89,8 @@ function buildTerminalCoreController(
     containerRef: foundation.containerRef,
     terminalRef: foundation.terminalRef,
     searchAddonRef: foundation.searchAddonRef,
+    progressAddonRef: foundation.progressAddonRef,
+    serializeAddonRef: foundation.serializeAddonRef,
     showSearch: foundation.showSearch,
     closeSearch: foundation.closeSearch,
     commandBlocks: foundation.commandBlocks,

@@ -16,6 +16,14 @@ export interface ContextMenuHandlers {
   handleUnstage: () => void;
 }
 
+export interface BulkMenuHandlers {
+  handleBulkDelete: () => void;
+  handleBulkCopyPaths: () => void;
+  handleBulkOpen: () => void;
+  handleBulkStage: () => void;
+  handleBulkUnstage: () => void;
+}
+
 export interface MenuBuilderOptions {
   confirmingDelete: boolean;
   gitStatus?: GitFileStatus;
@@ -25,6 +33,10 @@ export interface MenuBuilderOptions {
   onBookmarkToggle?: (node: TreeNode) => void;
   onStage?: (node: TreeNode) => void;
   onUnstage?: (node: TreeNode) => void;
+  /** Number of items currently selected (> 1 triggers bulk menu) */
+  selectionCount?: number;
+  /** Bulk operation handlers (only used when selectionCount > 1) */
+  bulkHandlers?: BulkMenuHandlers;
 }
 
 function addCreateItems(items: MenuItem[], handlers: ContextMenuHandlers): void {
@@ -87,6 +99,28 @@ function addGitItems(
   }
 }
 
+function addBulkItems(
+  items: MenuItem[],
+  count: number,
+  bulkHandlers: BulkMenuHandlers,
+  { confirmingDelete, onStage, onUnstage }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'onStage' | 'onUnstage'>,
+): void {
+  items.push({ label: `Open ${count} files`, action: bulkHandlers.handleBulkOpen });
+  items.push({ label: `Copy ${count} paths`, action: bulkHandlers.handleBulkCopyPaths, separator: true });
+  items.push({
+    label: confirmingDelete ? `Confirm delete ${count} items?` : `Delete ${count} items`,
+    action: bulkHandlers.handleBulkDelete,
+    danger: true,
+    separator: true,
+  });
+  if (onStage) {
+    items.push({ label: `Stage ${count} files`, action: bulkHandlers.handleBulkStage, separator: true });
+  }
+  if (onUnstage) {
+    items.push({ label: `Unstage ${count} files`, action: bulkHandlers.handleBulkUnstage, separator: !onStage });
+  }
+}
+
 export function buildMenuItems({
   confirmingDelete,
   gitStatus,
@@ -96,8 +130,17 @@ export function buildMenuItems({
   onBookmarkToggle,
   onStage,
   onUnstage,
+  selectionCount,
+  bulkHandlers,
 }: MenuBuilderOptions): MenuItem[] {
   const items: MenuItem[] = [];
+
+  // When multiple items are selected, show bulk menu instead of single-item menu
+  if (selectionCount && selectionCount > 1 && bulkHandlers) {
+    addBulkItems(items, selectionCount, bulkHandlers, { confirmingDelete, onStage, onUnstage });
+    return items;
+  }
+
   addCreateItems(items, handlers);
   addNodeItems(items, handlers, { confirmingDelete, isRoot });
   addClipboardItems(items, handlers);

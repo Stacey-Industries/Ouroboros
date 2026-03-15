@@ -245,3 +245,118 @@
 .xterm-cursor {
   visibility: hidden !important;
 }
+
+/* ─── Terminal progress bar animations ─────────────────────────────────────── */
+@keyframes terminal-progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@keyframes terminal-progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.terminal-progress-bar-indeterminate {
+  animation: terminal-progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+/* ─── Agent Chat animations ────────────────────────────────────────────────── */
+
+/* 4A: New message slide-in */
+@keyframes agent-chat-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-chat-message-enter {
+  animation: agent-chat-slide-in 200ms ease-out both;
+}
+
+/* 4A: Streaming cursor — blinking pipe */
+@keyframes agent-chat-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.agent-chat-streaming-cursor::after {
+  content: '|';
+  display: inline;
+  font-weight: 600;
+  color: var(--accent);
+  animation: agent-chat-cursor-blink 800ms ease-in-out infinite;
+}
+
+/* 4A: Tool card expand/collapse (max-height transition) */
+.agent-chat-tool-expand {
+  overflow: hidden;
+  transition: max-height 150ms ease-out, opacity 150ms ease-out;
+}
+
+.agent-chat-tool-expand[data-collapsed="true"] {
+  max-height: 0;
+  opacity: 0;
+}
+
+.agent-chat-tool-expand[data-collapsed="false"] {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* 4A: Thinking block collapse transition */
+.agent-chat-thinking-collapse {
+  overflow: hidden;
+  transition: max-height 200ms ease-out, opacity 200ms ease-out;
+}
+
+.agent-chat-thinking-collapse[data-collapsed="true"] {
+  max-height: 0;
+  opacity: 0;
+}
+
+.agent-chat-thinking-collapse[data-collapsed="false"] {
+  max-height: 1000px;
+  opacity: 1;
+}
+
+/* 4A: Status badge pulse */
+@keyframes agent-chat-status-pulse {
+  0% { background-color: var(--accent); color: var(--bg); }
+  100% { background-color: transparent; color: inherit; }
+}
+
+.agent-chat-status-pulse {
+  animation: agent-chat-status-pulse 300ms ease-out;
+}
+
+/* 4A: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .agent-chat-message-enter {
+    animation: none;
+  }
+
+  .agent-chat-streaming-cursor::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .agent-chat-tool-expand {
+    transition: none;
+  }
+
+  .agent-chat-thinking-collapse {
+    transition: none;
+  }
+
+  .agent-chat-status-pulse {
+    animation: none;
+  }
+
+  .agent-chat-thinking-pulse {
+    animation: none;
+  }
+}

@@ -7,8 +7,18 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { DiffView } from './DiffView';
 import { ConflictResolver } from './ConflictResolver';
 import { CodeView } from './CodeView';
+import { MonacoEditor } from './MonacoEditor';
+import { MonacoDiffEditor } from './MonacoDiffEditor';
+import { detectLanguage } from './monacoSetup';
 import type { CodeViewProps } from './CodeView';
 import type { ConflictBlock } from './ConflictResolver';
+
+/**
+ * Feature flag: when true, Monaco Editor is used for code views instead of the
+ * Shiki-based CodeView + CodeMirror InlineEditor. Set to `false` to revert to
+ * the legacy viewers if issues are found.
+ */
+const USE_MONACO = true;
 
 export interface ContentRouterProps {
   /** Current view mode */
@@ -47,6 +57,14 @@ export interface ContentRouterProps {
   codeViewProps: Omit<CodeViewProps, 'scrollRef' | 'codeRef'>;
   scrollRef: RefObject<HTMLDivElement | null>;
   codeRef: RefObject<HTMLDivElement | null>;
+
+  // ── Monaco-specific props ─────────────────────────────────────────────
+  /** Word wrap toggle state (drives Monaco wordWrap option) */
+  wordWrap?: boolean;
+  /** Minimap toggle state (drives Monaco minimap.enabled option) */
+  showMinimap?: boolean;
+  /** Format document before saving */
+  formatOnSave?: boolean;
 }
 
 type ConditionalRenderer = (props: ContentRouterProps) => React.ReactElement | null;
@@ -76,6 +94,7 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
     return null;
   }
 
+  // CLAUDE.md files always use the specialised editor (CodeMirror-based)
   if (props.isClaudeMd && props.claudeMdEnhanced) {
     return renderPanel(
       <ClaudeMdEditor
@@ -89,6 +108,24 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
     );
   }
 
+  // When Monaco is enabled, use it for edit mode (same component, readOnly=false)
+  if (USE_MONACO) {
+    return renderPanel(
+      <MonacoEditor
+        key={props.filePath}
+        filePath={props.filePath}
+        content={props.content}
+        readOnly={false}
+        onSave={props.onSave}
+        onDirtyChange={props.onDirtyChange ?? noop}
+        wordWrap={props.wordWrap}
+        showMinimap={props.showMinimap}
+        formatOnSave={props.formatOnSave}
+      />,
+    );
+  }
+
+  // Legacy: CodeMirror InlineEditor
   return renderPanel(
     <InlineEditor
       content={props.content}
@@ -120,6 +157,21 @@ function renderPreviewContent(props: ContentRouterProps): React.ReactElement | n
 function renderDiffContent(props: ContentRouterProps): React.ReactElement | null {
   if (props.viewMode !== 'diff' || !props.hasDiff || props.originalContent == null || props.content == null) {
     return null;
+  }
+
+  if (USE_MONACO) {
+    const language = props.filePath
+      ? detectLanguage(props.filePath)
+      : 'plaintext';
+    return renderPanel(
+      <MonacoDiffEditor
+        originalContent={props.originalContent}
+        modifiedContent={props.content}
+        language={language}
+        filePath={props.filePath ?? undefined}
+        readOnly={true}
+      />,
+    );
   }
 
   return renderPanel(
@@ -158,6 +210,23 @@ function resolveContent(props: ContentRouterProps): React.ReactElement {
     }
   }
 
+  // Default: code view (read-only)
+  if (USE_MONACO && props.filePath && props.content != null) {
+    return renderPanel(
+      <MonacoEditor
+        key={props.filePath}
+        filePath={props.filePath}
+        content={props.content}
+        readOnly={true}
+        onSave={props.onSave}
+        onDirtyChange={props.onDirtyChange}
+        wordWrap={props.wordWrap}
+        showMinimap={props.showMinimap}
+      />,
+    );
+  }
+
+  // Legacy: Shiki-based CodeView
   return <CodeView scrollRef={props.scrollRef} codeRef={props.codeRef} {...props.codeViewProps} />;
 }
 

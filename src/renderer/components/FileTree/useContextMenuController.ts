@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToastContext } from '../../contexts/ToastContext';
 import type { GitFileStatus } from '../../types/electron';
-import { buildMenuItems, type ContextMenuHandlers, type MenuBuilderOptions } from './contextMenuControllerHelpers';
+import { buildMenuItems, type BulkMenuHandlers, type ContextMenuHandlers, type MenuBuilderOptions } from './contextMenuControllerHelpers';
 import type { TreeNode } from './FileTreeItem';
 import type { ContextMenuState } from './ContextMenu';
+import { useFileTreeStore } from './fileTreeStore';
 
 export interface MenuItem {
   action: () => void;
@@ -19,6 +20,7 @@ type DirectoryAction = (parentDir: string) => void;
 
 interface UseContextMenuControllerProps {
   state: ContextMenuState;
+  projectRoot: string;
   onClose: () => void;
   onRename: (node: TreeNode) => void;
   onNewFile: (parentDir: string) => void;
@@ -247,6 +249,105 @@ function useContextMenuHandlers(options: ContextMenuHandlerOptions): ContextMenu
   return { handleBookmarkToggle, handleCopyPath, handleCopyRelativePath, handleDelete, handleNewFile, handleNewFolder, handleOpenInTerminal, handleRename, handleRevealInFileManager, handleStage, handleUnstage };
 }
 
+function useBulkHandlers(
+  onClose: () => void,
+  toast: ToastFn,
+  onDeleted: (node: TreeNode) => void,
+  root: string,
+  confirmingDelete: boolean,
+  setConfirmingDelete: React.Dispatch<React.SetStateAction<boolean>>,
+): BulkMenuHandlers {
+  const selectedPaths = useFileTreeStore((s) => s.selectedPaths);
+  const clearSelection = useFileTreeStore((s) => s.clearSelection);
+
+  const handleBulkDelete = useCallback(() => {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    const paths = Array.from(selectedPaths);
+    // Deduplicate: if a folder is selected, skip files inside it
+    const deduplicated = paths.filter((p) => {
+      return !paths.some((other) => other !== p && p.startsWith(other + '/') || p.startsWith(other + '\\'));
+    });
+
+    void Promise.all(
+      deduplicated.map((path) => window.electronAPI.files.delete(path)),
+    ).then((results) => {
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
+      if (failed === 0) {
+        toast(`Deleted ${succeeded} items`, 'success');
+      } else {
+        toast(`Deleted ${succeeded}, failed ${failed}`, 'error');
+      }
+      // Remove all deleted items from tree
+      for (let i = 0; i < deduplicated.length; i++) {
+        if (results[i].success) {
+          onDeleted({ name: deduplicated[i].split(/[\\/]/).pop() ?? '', path: deduplicated[i], relativePath: '', isDirectory: false, depth: 0 } as TreeNode);
+        }
+      }
+      clearSelection();
+    });
+    onClose();
+  }, [confirmingDelete, selectedPaths, clearSelection, onClose, onDeleted, setConfirmingDelete, toast]);
+
+  const handleBulkCopyPaths = useCallback(() => {
+    const paths = Array.from(selectedPaths).join('\n');
+    void navigator.clipboard.writeText(paths).then(() => {
+      toast(`Copied ${selectedPaths.size} paths`, 'success');
+    });
+    onClose();
+  }, [selectedPaths, onClose, toast]);
+
+  const handleBulkOpen = useCallback(() => {
+    const paths = Array.from(selectedPaths);
+    const MAX_OPEN = 20;
+    if (paths.length > MAX_OPEN) {
+      if (!window.confirm(`Open ${paths.length} files? This may slow down the editor.`)) {
+        onClose();
+        return;
+      }
+    }
+    // Dispatch open events for each file (non-directories only)
+    for (const path of paths) {
+      window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { path } }));
+    }
+    onClose();
+  }, [selectedPaths, onClose]);
+
+  const handleBulkStage = useCallback(() => {
+    const paths = Array.from(selectedPaths);
+    void Promise.all(
+      paths.map((path) => {
+        // Extract relative path from full path based on root
+        const rel = path.startsWith(root) ? path.slice(root.length).replace(/^[\\/]/, '') : path;
+        return window.electronAPI.git.stage(root, rel);
+      }),
+    ).then((results) => {
+      const succeeded = results.filter((r) => r.success).length;
+      toast(`Staged ${succeeded} files`, 'success');
+    });
+    onClose();
+  }, [selectedPaths, root, onClose, toast]);
+
+  const handleBulkUnstage = useCallback(() => {
+    const paths = Array.from(selectedPaths);
+    void Promise.all(
+      paths.map((path) => {
+        const rel = path.startsWith(root) ? path.slice(root.length).replace(/^[\\/]/, '') : path;
+        return window.electronAPI.git.unstage(root, rel);
+      }),
+    ).then((results) => {
+      const succeeded = results.filter((r) => r.success).length;
+      toast(`Unstaged ${succeeded} files`, 'success');
+    });
+    onClose();
+  }, [selectedPaths, root, onClose, toast]);
+
+  return { handleBulkDelete, handleBulkCopyPaths, handleBulkOpen, handleBulkStage, handleBulkUnstage };
+}
+
 function useMenuItems(
   node: TreeNode | null,
   options: Omit<MenuBuilderOptions, 'isRoot'>,
@@ -265,6 +366,7 @@ function useMenuItems(
 
 export function useContextMenuController({
   state,
+  projectRoot,
   ...options
 }: UseContextMenuControllerProps): {
   items: MenuItem[];
@@ -273,6 +375,7 @@ export function useContextMenuController({
   const { toast } = useToastContext();
   const menuRef = useRef<HTMLDivElement>(null);
   const [confirmingDelete, setConfirmingDelete] = useDeleteConfirmation(state.node, state.visible);
+  const selectionCount = useFileTreeStore((s) => s.selectedPaths.size);
 
   useDismissMenu(menuRef, options.onClose, state.visible);
 
@@ -284,6 +387,16 @@ export function useContextMenuController({
     state,
     toast,
   });
+
+  const bulkHandlers = useBulkHandlers(
+    options.onClose,
+    toast,
+    options.onDeleted,
+    projectRoot,
+    confirmingDelete,
+    setConfirmingDelete,
+  );
+
   const items = useMenuItems(state.node, {
     confirmingDelete,
     gitStatus: options.gitStatus,
@@ -292,6 +405,8 @@ export function useContextMenuController({
     onBookmarkToggle: options.onBookmarkToggle,
     onStage: options.onStage,
     onUnstage: options.onUnstage,
+    selectionCount,
+    bulkHandlers,
   });
 
   return { items, menuRef };
