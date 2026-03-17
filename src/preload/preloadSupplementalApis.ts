@@ -1,7 +1,20 @@
 import { ipcRenderer } from 'electron'
+import {
+  AGENT_CHAT_EVENT_CHANNELS,
+  AGENT_CHAT_INVOKE_CHANNELS,
+} from '../main/agentChat/events'
+import {
+  ORCHESTRATION_INVOKE_CHANNELS,
+} from '../main/orchestration/events'
 import type {
+  AgentChatEvent,
+  AgentChatMessageRecord,
+  AgentChatStreamChunk,
+  AgentChatThreadRecord,
+  AgentChatThreadStatusSnapshot,
   ApprovalRequest,
   ApprovalResolved,
+  ContextLayerProgress,
   ElectronAPI,
   IdeToolQuery,
   LspDiagnostic,
@@ -24,9 +37,14 @@ type SupplementalApiKey =
   | 'window'
   | 'extensions'
   | 'mcp'
+  | 'mcpStore'
+  | 'extensionStore'
   | 'context'
   | 'ideTools'
   | 'codemode'
+  | 'agentChat'
+  | 'orchestration'
+  | 'contextLayer'
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>
 
@@ -86,6 +104,8 @@ export const supplementalApis: SupplementalApis = {
 
   perf: {
     ping: () => ipcRenderer.invoke('perf:ping'),
+    subscribe: () => ipcRenderer.invoke('perf:subscribe'),
+    unsubscribe: () => ipcRenderer.invoke('perf:unsubscribe'),
     onMetrics: (callback) => onChannel<PerfMetrics>('perf:metrics', callback),
   },
 
@@ -141,6 +161,24 @@ export const supplementalApis: SupplementalApis = {
     toggleServer: (name, enabled, scope, projectRoot) => ipcRenderer.invoke('mcp:toggleServer', { name, enabled, scope, projectRoot }),
   },
 
+  mcpStore: {
+    search: (query, cursor) => ipcRenderer.invoke('mcpStore:search', query, cursor),
+    getServerDetails: (name) => ipcRenderer.invoke('mcpStore:getDetails', name),
+    installServer: (server, scope) => ipcRenderer.invoke('mcpStore:install', server, scope),
+    getInstalledServerNames: () => ipcRenderer.invoke('mcpStore:getInstalled'),
+  },
+
+  extensionStore: {
+    search: (query, offset) => ipcRenderer.invoke('extensionStore:search', query, offset),
+    getDetails: (ns, name) => ipcRenderer.invoke('extensionStore:getDetails', ns, name),
+    install: (ns, name, version) => ipcRenderer.invoke('extensionStore:install', ns, name, version),
+    uninstall: (id) => ipcRenderer.invoke('extensionStore:uninstall', id),
+    getInstalled: () => ipcRenderer.invoke('extensionStore:getInstalled'),
+    enableContributions: (id) => ipcRenderer.invoke('extensionStore:enableContributions', id),
+    disableContributions: (id) => ipcRenderer.invoke('extensionStore:disableContributions', id),
+    getThemeContributions: () => ipcRenderer.invoke('extensionStore:getThemeContributions'),
+  },
+
   context: {
     scan: (projectRoot) => ipcRenderer.invoke('context:scan', projectRoot),
     generate: (projectRoot, options) => ipcRenderer.invoke('context:generate', projectRoot, options),
@@ -158,5 +196,48 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke('codemode:enable', { serverNames, scope, projectRoot }),
     disable: () => ipcRenderer.invoke('codemode:disable'),
     getStatus: () => ipcRenderer.invoke('codemode:status'),
+  },
+
+  agentChat: {
+    createThread: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.createThread, request),
+    deleteThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteThread, threadId),
+    loadThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.loadThread, threadId),
+    listThreads: (workspaceRoot) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listThreads, workspaceRoot),
+    sendMessage: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.sendMessage, request),
+    resumeLatestThread: (workspaceRoot) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.resumeLatestThread, workspaceRoot),
+    getLinkedDetails: (link) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getLinkedDetails, link),
+    branchThread: (threadId, fromMessageId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.branchThread, threadId, fromMessageId),
+    getLinkedTerminal: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminal, threadId),
+    getBufferedChunks: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getBufferedChunks, threadId),
+    revertToSnapshot: (threadId, messageId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, threadId, messageId),
+    cancelTask: (taskId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+    onThreadUpdate: (callback) =>
+      onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
+    onMessageUpdate: (callback) =>
+      onChannel<AgentChatMessageRecord>(AGENT_CHAT_EVENT_CHANNELS.message, callback),
+    onStatusChange: (callback) =>
+      onChannel<AgentChatThreadStatusSnapshot>(AGENT_CHAT_EVENT_CHANNELS.status, callback),
+    onStreamChunk: (callback) =>
+      onChannel<AgentChatStreamChunk>(AGENT_CHAT_EVENT_CHANNELS.stream, callback),
+    onEvent: (callback) => onChannel<AgentChatEvent>(AGENT_CHAT_EVENT_CHANNELS.event, callback),
+  },
+
+  orchestration: {
+    previewContext: (request) => ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
+    buildContextPacket: (request) =>
+      ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.buildContextPacket, request),
+    cancelTask: (taskId) => ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.cancelTask, taskId),
+  },
+
+  contextLayer: {
+    onProgress: (callback) => onChannel<ContextLayerProgress>('contextLayer:progress', callback),
   },
 }

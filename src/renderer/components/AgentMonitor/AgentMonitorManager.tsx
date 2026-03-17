@@ -14,6 +14,14 @@ import { useCompletionNotifications } from './useCompletionNotifications';
 import { useAgentMonitorModes } from './useAgentMonitorModes';
 import { useAgentMonitorTemplates } from './useAgentMonitorTemplates';
 
+/**
+ * Show ALL agent sessions in the monitor. Main agent sessions are tagged
+ * for visual distinction, and subagent sessions (parentSessionId set) are
+ * shown nested or indented. Previously this filtered to subagents-only,
+ * which caused the monitor to appear empty when parentSessionId wasn't
+ * flowing through the hooks pipeline.
+ */
+
 export const AgentMonitorManager = memo(function AgentMonitorManager(): React.ReactElement {
   const { agents, clearCompleted, currentSessions, dismiss, historicalSessions, updateNotes } = useAgentEventsContext();
   const { toast } = useToastContext();

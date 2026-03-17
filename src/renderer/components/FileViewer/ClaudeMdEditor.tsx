@@ -7,21 +7,23 @@ export { parseClaudeMdSections } from './ClaudeMdEditor.utils';
 
 export interface ClaudeMdEditorProps {
   content: string;
+  savedContent: string;
   filePath: string;
   themeId: string;
   projectRoot?: string | null;
   onSave: (content: string) => void;
-  onDirtyChange: (dirty: boolean) => void;
+  onContentChange: (content: string) => void;
 }
 
 export const ClaudeMdEditor = memo(function ClaudeMdEditor({
   content,
+  savedContent,
   filePath,
   themeId,
   projectRoot,
   onSave,
-  onDirtyChange,
+  onContentChange,
 }: ClaudeMdEditorProps): React.ReactElement {
-  const model = useClaudeMdEditorModel({ content, filePath, onDirtyChange, onSave });
+  const model = useClaudeMdEditorModel({ content, savedContent, filePath, onContentChange, onSave });
   return <ClaudeMdEditorChrome content={content} filePath={filePath} model={model} projectRoot={projectRoot} themeId={themeId} />;
 });

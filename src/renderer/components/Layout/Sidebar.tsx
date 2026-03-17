@@ -60,7 +60,7 @@ function SidebarHeader({
   onToggleCollapse,
 }: Pick<SidebarProps, 'collapsed' | 'header' | 'onToggleCollapse'>): React.ReactElement {
   return (
-    <div className="flex-shrink-0 flex items-center justify-between h-10 px-3 border-b border-[var(--border)]">
+    <div className="flex-shrink-0 flex items-center justify-between h-9 px-3 border-b border-[var(--border)]">
       <div className="flex-1 min-w-0">
         {header}
       </div>
@@ -93,7 +93,7 @@ export function Sidebar({
     <div
       className="
         flex flex-col h-full overflow-hidden
-        bg-[var(--bg-secondary)] border-r border-[var(--border)]
+        bg-[var(--bg-secondary)] border-r border-[var(--border-muted,var(--border))]
       "
       style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, ...focusStyle }}
       aria-label="Left sidebar"
@@ -111,8 +111,8 @@ export function Sidebar({
         onToggleCollapse={onToggleCollapse}
       />
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      {/* Content — children manage their own scrolling */}
+      <div className="flex-1 overflow-hidden min-h-0">
         {children}
       </div>
     </div>
@@ -129,7 +129,7 @@ export function CollapsedSidebarStrip({
     <div
       className="
         flex flex-col items-center pt-2 h-full w-8 flex-shrink-0
-        bg-[var(--bg-secondary)] border-r border-[var(--border)]
+        bg-[var(--bg-secondary)] border-r border-[var(--border-muted,var(--border))]
         cursor-pointer
       "
       onClick={onExpand}

@@ -222,6 +222,21 @@ function buildThemeData(): monaco.editor.IStandaloneThemeData {
       'editorWidget.background': bgSecondary,
       'editorWidget.foreground': text,
       'editorWidget.border': border,
+      'editorWidget.resizeBorder': accent,
+
+      // Find widget input
+      'inputOption.activeBorder': accent,
+      'inputOption.activeBackground': accentMuted,
+      'inputOption.activeForeground': text,
+      'inputOption.hoverBackground': accentMuted,
+      'input.background': bg,
+      'input.foreground': text,
+      'input.border': border,
+      'input.placeholderForeground': textMuted,
+
+      // Find match highlight (current match stronger)
+      'editor.findMatchBorder': warning,
+      'editor.findMatchHighlightBorder': '#00000000',
 
       // Suggest / autocomplete
       'editorSuggestWidget.background': bgSecondary,

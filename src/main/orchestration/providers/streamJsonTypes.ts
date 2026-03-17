@@ -16,6 +16,11 @@ export interface StreamJsonToolUseBlock {
   input: Record<string, unknown>
 }
 
+export interface StreamJsonThinkingBlock {
+  type: 'thinking'
+  thinking: string
+}
+
 export interface StreamJsonToolResultBlock {
   type: 'tool_result'
   tool_use_id: string
@@ -25,6 +30,7 @@ export interface StreamJsonToolResultBlock {
 export type StreamJsonContentBlock =
   | StreamJsonTextBlock
   | StreamJsonToolUseBlock
+  | StreamJsonThinkingBlock
   | StreamJsonToolResultBlock
 
 // --- Top-level NDJSON events ---
@@ -88,6 +94,8 @@ export interface StreamJsonSpawnOptions {
   dangerouslySkipPermissions?: boolean
   resumeSessionId?: string
   continueSession?: boolean
+  /** Effort level override: 'low' | 'medium' | 'high' | 'max', or a numeric string for explicit --max-turns */
+  effort?: string
   env?: Record<string, string>
   onEvent?: (event: StreamJsonEvent) => void
 }

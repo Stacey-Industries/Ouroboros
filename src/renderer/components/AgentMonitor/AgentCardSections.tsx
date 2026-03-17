@@ -22,6 +22,7 @@ interface AgentCardLayoutProps {
   showNotes: boolean;
   notesDraft: string;
   cardView: CardView;
+  childCount?: number;
   isRunning: boolean;
   isDone: boolean;
   completedCallCount: number;
@@ -105,13 +106,37 @@ function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactE
   );
 }
 
-function AgentCardMeta({ session }: { session: AgentSession }): React.ReactElement {
+function SubagentBadge({ count }: { count: number }): React.ReactElement | null {
+  if (count < 1) return null;
+
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1"
+      style={{
+        color: 'var(--accent)',
+        background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
+        letterSpacing: '0.02em',
+      }}
+      title={`Spawned ${count} subagent${count !== 1 ? 's' : ''}`}
+    >
+      <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <path d="M5 1V5M5 5H9M5 5H1M5 5V9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+      {count} subagent{count !== 1 ? 's' : ''}
+    </span>
+  );
+}
+
+function AgentCardMeta({ session, childCount }: { session: AgentSession; childCount?: number }): React.ReactElement {
   return (
     <div className="px-6 pb-1 flex items-center gap-2">
       <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }} title={session.id}>
         {session.id.slice(0, 12)}
       </span>
       {session.restored && <span className="text-[9px] px-1 py-0.5 rounded" style={{ color: 'var(--text-faint)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-muted)', letterSpacing: '0.02em' }}>restored</span>}
+      {childCount !== undefined && childCount > 0 && <SubagentBadge count={childCount} />}
+      {session.parentSessionId && <span className="text-[9px] px-1 py-0.5 rounded" style={{ color: 'var(--text-faint)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-muted)', letterSpacing: '0.02em' }} title={`Parent: ${session.parentSessionId}`}>subagent</span>}
       <TokenUsageSummary session={session} />
     </div>
   );
@@ -227,6 +252,7 @@ export const AgentCardLayout = memo(function AgentCardLayout({
   showNotes,
   notesDraft,
   cardView,
+  childCount,
   isRunning,
   isDone,
   completedCallCount,
@@ -246,7 +272,7 @@ export const AgentCardLayout = memo(function AgentCardLayout({
   return (
     <div className="border-b" style={getCardContainerStyle(session.status)}>
       <AgentCardHeader session={session} expanded={expanded} isRunning={isRunning} isDone={isDone} completedCallCount={completedCallCount} displayDuration={displayDuration} onDismiss={onDismiss} onToggleNotes={onToggleNotes} onUpdateNotes={onUpdateNotes} onReviewChanges={onReviewChanges} onReplay={onReplay} onToggleExpanded={onToggleExpanded} />
-      <AgentCardMeta session={session} />
+      <AgentCardMeta session={session} childCount={childCount} />
       <SessionErrorBanner error={session.status === 'error' ? session.error : undefined} />
       <SessionNotes session={session} showNotes={showNotes} notesDraft={notesDraft} onNotesDraftChange={onNotesDraftChange} onSaveNotes={onSaveNotes} />
       <AgentCardExpandedContent session={session} expanded={expanded} cardView={cardView} showLog={showLog} latestCall={latestCall} isRunning={isRunning} onToggleLog={onToggleLog} onCardViewChange={onCardViewChange} />

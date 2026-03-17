@@ -40,7 +40,7 @@ function useCurrentHead(projectRoot?: string): [string | null, Dispatch<SetState
       .then((result) => {
         if (!cancelled && result.success && result.commitHash) setCurrentHead(result.commitHash);
       })
-      .catch(() => {});
+      .catch((error) => { console.error('[timeTravel] Failed to fetch git snapshot:', error) });
 
     return () => {
       cancelled = true;
@@ -102,7 +102,8 @@ function useChangedFiles(args: ChangedFilesArgs): { changedFiles: ChangedFile[];
       .then((files) => {
         if (!cancelled) setChangedFiles(files);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[timeTravel] Failed to load changed files:', error);
         if (!cancelled) setChangedFiles([]);
       })
       .finally(() => {

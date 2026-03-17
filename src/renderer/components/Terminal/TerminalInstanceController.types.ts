@@ -55,6 +55,7 @@ export interface TerminalInstanceController {
   closeContextMenu: () => void
   pendingPaste: string | null
   handlePasteConfirm: () => void
+  handlePasteSingleLine: () => void
   handlePasteCancel: () => void
   richInputActive: boolean
   openRichInput: () => void

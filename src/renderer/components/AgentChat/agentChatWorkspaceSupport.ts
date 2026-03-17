@@ -89,10 +89,23 @@ function mergeThreadStatus(
   const targetThread = threads.find((thread) => thread.id === status.threadId);
   if (!targetThread) return threads;
 
+  // Preserve linkedTerminalId from the existing thread when the incoming
+  // status update doesn't carry one.  Early session updates fire before
+  // the adapter has populated it, so we treat it as a "sticky" field.
+  const incoming = status.latestOrchestration;
+  const existing = targetThread.latestOrchestration;
+  const mergedOrchestration = incoming
+    ? {
+        ...incoming,
+        claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
+        linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
+      }
+    : existing;
+
   return mergeThreadCollection(threads, {
     ...targetThread,
     status: status.status,
-    latestOrchestration: status.latestOrchestration ?? targetThread.latestOrchestration,
+    latestOrchestration: mergedOrchestration,
     updatedAt: status.updatedAt,
   });
 }
@@ -242,10 +255,21 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
       setThreads((currentThreads) => mergeThreadStatus(currentThreads, status));
     });
 
+    // Listen for thread snapshots from the streaming bridge (DOM event).
+    // This fires just before 'complete' so the persisted assistant message
+    // appears in the thread before the streaming UI clears.
+    const handleSnapshot = (event: Event) => {
+      const thread = (event as CustomEvent).detail as AgentChatThreadRecord | undefined;
+      if (!thread || !thread.id) return;
+      setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
+    };
+    window.addEventListener('agent-chat:thread-snapshot', handleSnapshot);
+
     return () => {
       cleanupThread();
       cleanupMessage();
       cleanupStatus();
+      window.removeEventListener('agent-chat:thread-snapshot', handleSnapshot);
     };
   }, [projectRootRef, setActiveThreadId, setThreads]);
 }

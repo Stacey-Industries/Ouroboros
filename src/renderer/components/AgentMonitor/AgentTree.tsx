@@ -160,7 +160,7 @@ function TreeNodeContent({
 }): React.ReactElement {
   return (
     <div style={{ paddingLeft: `${indent}px` }}>
-      <AgentCard session={session} onDismiss={onDismiss} />
+      <AgentCard session={session} onDismiss={onDismiss} childCount={childCount} />
       {childCount > 0 && <div className="flex items-center" style={branchContainerStyle}><BranchToggle expanded={!isCollapsed} childCount={childCount} onToggle={onToggle} /></div>}
     </div>
   );

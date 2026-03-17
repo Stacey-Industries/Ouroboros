@@ -6,7 +6,7 @@
  * Passed as the `editorTabBar` slot of AppLayout / CentrePane.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   useFileViewerManager,
   FileViewerTabs,
@@ -25,6 +25,26 @@ const containerStyle: React.CSSProperties = {
 
 const spacerStyle: React.CSSProperties = { flex: 1 };
 
+const splitButtonStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '100%',
+  flexShrink: 0,
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text-faint)',
+  cursor: 'pointer',
+  padding: 0,
+  transition: 'color 150ms ease, background-color 150ms ease',
+};
+
+const splitButtonActiveStyle: React.CSSProperties = {
+  ...splitButtonStyle,
+  color: 'var(--accent)',
+};
+
 const multiBufferTabStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -40,9 +60,17 @@ const multiBufferTabStyle: React.CSSProperties = {
   color: 'var(--text-muted)',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
+  fontStyle: 'italic',
   minWidth: '80px',
   maxWidth: '200px',
-  transition: 'background-color 100ms ease, color 100ms ease',
+  transition: 'background-color 150ms ease, color 150ms ease',
+};
+
+const multiBufferTabActiveStyle: React.CSSProperties = {
+  ...multiBufferTabStyle,
+  backgroundColor: 'var(--bg)',
+  color: 'var(--text)',
+  borderBottom: '2px solid var(--accent)',
 };
 
 const multiBufferIconStyle: React.CSSProperties = {
@@ -54,6 +82,27 @@ const multiBufferLabelStyle: React.CSSProperties = {
   flex: 1,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const renameInputStyle: React.CSSProperties = {
+  flex: 1,
+  background: 'var(--bg)',
+  border: '1px solid var(--accent)',
+  borderRadius: '2px',
+  color: 'var(--text)',
+  fontSize: '0.8125rem',
+  fontFamily: 'var(--font-ui)',
+  fontStyle: 'italic',
+  padding: '0 4px',
+  outline: 'none',
+  minWidth: 0,
+};
+
+const excerptCountStyle: React.CSSProperties = {
+  fontSize: '0.625rem',
+  color: 'var(--text-faint)',
+  fontStyle: 'normal',
   whiteSpace: 'nowrap',
 };
 
@@ -140,15 +189,23 @@ function MultiBufferTabCloseIcon(): React.ReactElement {
 
 interface MultiBufferTabItemProps {
   buffer: MultiBufferTab;
+  isActive: boolean;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
+  onRename: (id: string, name: string) => void;
 }
 
 function MultiBufferTabItem({
   buffer,
+  isActive,
   onActivate,
   onClose,
+  onRename,
 }: MultiBufferTabItemProps): React.ReactElement {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(buffer.config.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const handleAuxClick = useCallback((event: React.MouseEvent) => {
     if (event.button !== 1) return;
     event.preventDefault();
@@ -164,18 +221,71 @@ function MultiBufferTabItem({
     onClose(buffer.id);
   }, [buffer.id, onClose]);
 
+  const handleDoubleClick = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    setRenameValue(buffer.config.name);
+    setIsRenaming(true);
+  }, [buffer.config.name]);
+
+  const commitRename = useCallback(() => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== buffer.config.name) {
+      onRename(buffer.id, trimmed);
+    }
+    setIsRenaming(false);
+  }, [buffer.id, buffer.config.name, onRename, renameValue]);
+
+  const handleRenameKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitRename();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setIsRenaming(false);
+    }
+  }, [commitRename]);
+
+  useEffect(() => {
+    if (isRenaming && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const excerptCount = buffer.config.excerpts.length;
+  const tabStyle = isActive ? multiBufferTabActiveStyle : multiBufferTabStyle;
+
   return (
     <div
       role="tab"
       tabIndex={0}
-      title={buffer.config.name}
+      aria-selected={isActive}
+      title={`${buffer.config.name} — double-click to rename`}
       onClick={() => onActivate(buffer.id)}
       onAuxClick={handleAuxClick}
       onKeyDown={handleKeyDown}
-      style={multiBufferTabStyle}
+      onDoubleClick={handleDoubleClick}
+      style={tabStyle}
     >
       <span style={multiBufferIconStyle}>{'\u2630'}</span>
-      <span style={multiBufferLabelStyle}>{buffer.config.name}</span>
+      {isRenaming ? (
+        <input
+          ref={inputRef}
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={handleRenameKeyDown}
+          onClick={(e) => e.stopPropagation()}
+          style={renameInputStyle}
+        />
+      ) : (
+        <>
+          <span style={multiBufferLabelStyle}>{buffer.config.name}</span>
+          {excerptCount > 0 ? (
+            <span style={excerptCountStyle}>({excerptCount})</span>
+          ) : null}
+        </>
+      )}
       <button onClick={handleCloseClick} aria-label={`Close ${buffer.config.name}`} tabIndex={-1} style={closeButtonStyle}>
         <MultiBufferTabCloseIcon />
       </button>
@@ -185,19 +295,30 @@ function MultiBufferTabItem({
 
 interface MultiBufferTabsProps {
   buffers: MultiBufferTab[];
+  activeId: string | null;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
+  onRename: (id: string, name: string) => void;
 }
 
 function MultiBufferTabs({
   buffers,
+  activeId,
   onActivate,
   onClose,
+  onRename,
 }: MultiBufferTabsProps): React.ReactElement {
   return (
     <>
       {buffers.map((buffer) => (
-        <MultiBufferTabItem key={buffer.id} buffer={buffer} onActivate={onActivate} onClose={onClose} />
+        <MultiBufferTabItem
+          key={buffer.id}
+          buffer={buffer}
+          isActive={buffer.id === activeId}
+          onActivate={onActivate}
+          onClose={onClose}
+          onRename={onRename}
+        />
       ))}
     </>
   );
@@ -209,24 +330,96 @@ function NewMultiBufferButton({
   onClick: () => void;
 }): React.ReactElement {
   return (
-    <button onClick={onClick} title="New Multi-Buffer" style={newMultiBufferButtonStyle}>
+    <button
+      onClick={onClick}
+      title="New Snippet Collection &#10;View code excerpts from multiple files side by side"
+      style={newMultiBufferButtonStyle}
+    >
       {'\u2630'}+
     </button>
   );
 }
 
+function SplitColumnsIcon(): React.ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect x="1" y="2" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function SplitEditorButton({
+  isSplit,
+  onSplit,
+  onCloseSplit,
+}: {
+  isSplit: boolean;
+  onSplit: () => void;
+  onCloseSplit: () => void;
+}): React.ReactElement {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <button
+      onClick={isSplit ? onCloseSplit : onSplit}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      title={isSplit ? 'Close Split Editor' : 'Split Editor Right'}
+      aria-label={isSplit ? 'Close Split Editor' : 'Split Editor Right'}
+      style={{
+        ...(isSplit ? splitButtonActiveStyle : splitButtonStyle),
+        color: isHovered ? 'var(--accent)' : (isSplit ? 'var(--accent)' : 'var(--text-faint)'),
+        backgroundColor: isHovered ? 'var(--bg-tertiary)' : 'transparent',
+      }}
+    >
+      <SplitColumnsIcon />
+    </button>
+  );
+}
+
+function useActiveMultiBufferId(): string | null {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onActivate = (event: Event) => {
+      setActiveId((event as CustomEvent<{ id: string }>).detail.id);
+    };
+    const onDeactivate = () => {
+      setActiveId(null);
+    };
+
+    window.addEventListener('agent-ide:activate-multi-buffer', onActivate);
+    window.addEventListener('agent-ide:deactivate-multi-buffer', onDeactivate);
+    return () => {
+      window.removeEventListener('agent-ide:activate-multi-buffer', onActivate);
+      window.removeEventListener('agent-ide:deactivate-multi-buffer', onDeactivate);
+    };
+  }, []);
+
+  return activeId;
+}
+
 export function EditorTabBar(): React.ReactElement {
   const {
     openFiles, activeIndex, setActive, closeFile,
-    pinTab, closeOthers, closeToRight, closeAll,
+    pinTab, unpinTab, togglePin, closeOthers, closeToRight, closeAll,
+    split, splitRight, closeSplit,
   } = useFileViewerManager();
-  const { multiBuffers, openMultiBuffer, closeMultiBuffer } = useMultiBufferManager();
+  const { multiBuffers, openMultiBuffer, closeMultiBuffer, renameMultiBuffer } = useMultiBufferManager();
   const {
     handleNewMultiBuffer,
     handleActivateMultiBuffer,
     handleCloseMultiBuffer,
     handleActivateFile,
   } = useEditorTabActions(setActive, openMultiBuffer, closeMultiBuffer);
+  const activeMultiBufferId = useActiveMultiBufferId();
 
   return (
     <div style={containerStyle}>
@@ -237,6 +430,8 @@ export function EditorTabBar(): React.ReactElement {
           onActivate={handleActivateFile}
           onClose={closeFile}
           onPin={pinTab}
+          onUnpin={unpinTab}
+          onTogglePin={togglePin}
           onCloseOthers={closeOthers}
           onCloseToRight={closeToRight}
           onCloseAll={closeAll}
@@ -244,14 +439,23 @@ export function EditorTabBar(): React.ReactElement {
       )}
       <MultiBufferTabs
         buffers={multiBuffers}
+        activeId={activeMultiBufferId}
         onActivate={handleActivateMultiBuffer}
         onClose={handleCloseMultiBuffer}
+        onRename={renameMultiBuffer}
       />
       <NewMultiBufferButton onClick={handleNewMultiBuffer} />
       {openFiles.length === 0 && multiBuffers.length === 0 && (
         <div style={spacerStyle} aria-hidden="true" />
       )}
       <div style={spacerStyle} />
+      {openFiles.length > 0 && (
+        <SplitEditorButton
+          isSplit={split.isSplit}
+          onSplit={() => splitRight()}
+          onCloseSplit={closeSplit}
+        />
+      )}
     </div>
   );
 }

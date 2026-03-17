@@ -45,8 +45,8 @@ export function useFormatOnSave(options: UseFormatOnSaveOptions): {
             .then(() => {
               onSave(editor.getValue());
             })
-            .catch(() => {
-              // Formatting failed — save anyway
+            .catch((error) => {
+              console.error('[fileViewer] Format on save failed, saving without formatting:', error);
               onSave(editor.getValue());
             });
           return;

@@ -26,6 +26,9 @@ export interface ContextMenuProps {
   onNewFile: (parentDir: string) => void;
   onNewFolder: (parentDir: string) => void;
   onDeleted: (node: TreeNode) => void;
+  onMultiDeleted?: (paths: string[]) => void;
+  onPushUndo?: (items: import('./useFileTreeUndo').UndoItem[]) => void;
+  selectedPaths?: Set<string>;
   isBookmarked?: boolean;
   onBookmarkToggle?: (node: TreeNode) => void;
   gitStatus?: GitFileStatus;

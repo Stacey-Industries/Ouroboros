@@ -3,6 +3,7 @@ import type {
   ContextGenerateOptions,
   ProjectContext,
 } from '../../types/electron';
+import { ContextSelectionSection } from './ContextSelectionSection';
 import { GeneratedContextSection } from './GeneratedContextSection';
 import {
   Badge,
@@ -31,14 +32,15 @@ const OPTION_ITEMS: Array<{
   key: keyof ContextGenerateOptions;
   label: string;
 }> = [
-  { key: 'includeCommands', label: 'Commands' },
-  { key: 'includeStructure', label: 'Structure' },
-  { key: 'includeDeps', label: 'Dependencies' },
-];
+    { key: 'includeCommands', label: 'Commands' },
+    { key: 'includeStructure', label: 'Structure' },
+    { key: 'includeDeps', label: 'Dependencies' },
+  ];
 
 type ContextBuilderBodyProps = Pick<
-ContextBuilderModel,
+  ContextBuilderModel,
   | 'context'
+  | 'contextSelection'
   | 'editedContent'
   | 'error'
   | 'handleCopyToClipboard'
@@ -49,21 +51,25 @@ ContextBuilderModel,
   | 'handleSetSystemPrompt'
   | 'handleUpdateClaudeMd'
   | 'options'
+  | 'projectRoot'
   | 'runScan'
   | 'scanning'
 >;
 
 export function ContextBuilderBody(props: ContextBuilderBodyProps): React.ReactElement {
+  const { context } = props;
+
   return (
     <div style={bodyStyle}>
       {props.error && <ErrorBanner error={props.error} />}
-      {props.context ? <ContextSections {...props} /> : <ContextBuilderState {...props} />}
+      {context ? <ContextSections {...props} context={context} /> : <ContextBuilderState {...props} />}
     </div>
   );
 }
 
 function ContextSections({
   context,
+  contextSelection,
   editedContent,
   handleCopyToClipboard,
   handleCreateClaudeMd,
@@ -73,18 +79,20 @@ function ContextSections({
   handleSetSystemPrompt,
   handleUpdateClaudeMd,
   options,
+  projectRoot,
   runScan,
   scanning,
 }: ContextBuilderBodyProps & { context: ProjectContext }): React.ReactElement {
   return (
     <>
-      <ProjectSummarySection context={context} />
-      <EntryPointsSection entryPoints={context.entryPoints} />
-      <StructureSection context={context} />
-      <BuildCommandsSection context={context} />
-      <ConfigFilesSection keyConfigs={context.keyConfigs} />
-      <GenerationOptionsSection handleOptionToggle={handleOptionToggle} options={options} />
-      <GeneratedContextSection
+      <ProjectDetailsSections context={context} />
+      <ContextControlsSection
+        contextSelection={contextSelection}
+        handleOptionToggle={handleOptionToggle}
+        options={options}
+        projectRoot={projectRoot}
+      />
+      <GeneratedContextBlock
         context={context}
         editedContent={editedContent}
         handleCopyToClipboard={handleCopyToClipboard}
@@ -98,6 +106,54 @@ function ContextSections({
       />
     </>
   );
+}
+
+function ProjectDetailsSections({ context }: { context: ProjectContext }): React.ReactElement {
+  return (
+    <>
+      <ProjectSummarySection context={context} />
+      <EntryPointsSection entryPoints={context.entryPoints} />
+      <StructureSection context={context} />
+      <BuildCommandsSection context={context} />
+      <ConfigFilesSection keyConfigs={context.keyConfigs} />
+    </>
+  );
+}
+
+function ContextControlsSection({
+  contextSelection,
+  handleOptionToggle,
+  options,
+  projectRoot,
+}: Pick<ContextBuilderBodyProps, 'contextSelection' | 'handleOptionToggle' | 'options' | 'projectRoot'>): React.ReactElement {
+  return (
+    <>
+      <GenerationOptionsSection handleOptionToggle={handleOptionToggle} options={options} />
+      {contextSelection && (
+        <ContextSelectionSection
+          contextSelection={contextSelection}
+          projectRoot={projectRoot}
+        />
+      )}
+    </>
+  );
+}
+
+function GeneratedContextBlock(props: Pick<
+  ContextBuilderBodyProps,
+  | 'editedContent'
+  | 'handleCopyToClipboard'
+  | 'handleCreateClaudeMd'
+  | 'handleEditedContentChange'
+  | 'handleResetEdits'
+  | 'handleSetSystemPrompt'
+  | 'handleUpdateClaudeMd'
+  | 'runScan'
+  | 'scanning'
+> & {
+  context: ProjectContext;
+}): React.ReactElement {
+  return <GeneratedContextSection {...props} />;
 }
 
 function ContextBuilderState({
@@ -221,7 +277,7 @@ function GenerationOptionsSection({
           <label key={option.key} style={optionLabelStyle}>
             <input
               type="checkbox"
-              checked={options[option.key]}
+              checked={Boolean(options[option.key])}
               onChange={() => handleOptionToggle(option.key)}
             />
             {option.label}

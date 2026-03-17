@@ -6,6 +6,7 @@ export { TerminalSection } from './TerminalSection';
 export { HooksSection } from './HooksSection';
 export { ToggleSwitch } from './ToggleSwitch';
 export { FontSection } from './FontSection';
+export { AgentSection } from './AgentSection';
 export { KeybindingsSection } from './KeybindingsSection';
 export { KEYBINDING_ACTIONS, keyEventToString } from './keybindingsData';
 export type { KeybindingAction } from './keybindingsData';

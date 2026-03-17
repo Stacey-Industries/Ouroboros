@@ -225,7 +225,8 @@ export function useSingleHunkActions(
     if (!state || !pendingHunk) return;
 
     dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'rejected' });
-    void window.electronAPI.git.revertHunk(state.projectRoot, pendingHunk.rawPatch).catch(() => {
+    void window.electronAPI.git.revertHunk(state.projectRoot, pendingHunk.rawPatch).catch((error) => {
+      console.error('[diffReview] Failed to revert hunk:', error);
       dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
     });
   }, [dispatch, state]);

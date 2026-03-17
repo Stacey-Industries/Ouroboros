@@ -1,39 +1,132 @@
 import { useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
-import { hasElectronAPI } from './useTerminalSessions.effects';
+import { hasElectronAPI, serializeSavedSessionSnapshots } from './useTerminalSessions.effects';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
 type RecordingSessionSetter = Dispatch<SetStateAction<Set<string>>>;
 
+const SESSION_PERSIST_DEBOUNCE_MS = 750;
+const SESSION_PERSIST_SAFETY_MS = 30000;
+
 interface SavedSessionSnapshot {
   cwd: string;
-  title?: string;
+  title: string;
   isClaude?: boolean;
   claudeSessionId?: string;
 }
 
-export function usePersistSessions(sessions: TerminalSession[]): void {
+function getRunningSessions(sessions: TerminalSession[]): TerminalSession[] {
+  return sessions.filter((session) => session.status === 'running');
+}
+
+function buildRunningTopologySignature(sessions: TerminalSession[]): string {
+  return JSON.stringify(
+    sessions.map((session) => ({
+      id: session.id,
+      isClaude: session.isClaude === true,
+      claudeSessionId: session.claudeSessionId ?? null,
+    })),
+  );
+}
+
+function serializeSnapshots(snapshots: SavedSessionSnapshot[]): string {
+  return serializeSavedSessionSnapshots(snapshots);
+}
+
+async function persistCurrentSessions(
+  sessionsRef: MutableRefObject<TerminalSession[]>,
+  lastPersistedSerializedRef: MutableRefObject<string | null>,
+  persistInFlightRef: MutableRefObject<boolean>,
+  hasPendingPersistRef: MutableRefObject<boolean>,
+): Promise<void> {
+  if (persistInFlightRef.current) {
+    hasPendingPersistRef.current = true;
+    return;
+  }
+
+  persistInFlightRef.current = true;
+
+  try {
+    const running = getRunningSessions(sessionsRef.current);
+    const snapshots = running.length > 0 ? await Promise.all(running.map(readSessionSnapshot)) : [];
+    const serialized = serializeSnapshots(snapshots);
+    if (serialized === lastPersistedSerializedRef.current) return;
+
+    await window.electronAPI.config.set('terminalSessions', snapshots);
+    lastPersistedSerializedRef.current = serialized;
+  } catch {
+    return;
+  } finally {
+    persistInFlightRef.current = false;
+
+    if (hasPendingPersistRef.current) {
+      hasPendingPersistRef.current = false;
+      void persistCurrentSessions(
+        sessionsRef,
+        lastPersistedSerializedRef,
+        persistInFlightRef,
+        hasPendingPersistRef,
+      );
+    }
+  }
+}
+
+export function usePersistSessions(
+  sessions: TerminalSession[],
+  enabled: boolean,
+  persistedSessionsSeed: string | null,
+): void {
   const sessionsRef = useRef(sessions);
+  const lastPersistedSerializedRef = useRef<string | null>(null);
+  const persistInFlightRef = useRef(false);
+  const hasPendingPersistRef = useRef(false);
   sessionsRef.current = sessions;
 
+  const runningTopologySignature = buildRunningTopologySignature(getRunningSessions(sessions));
+
   useEffect(() => {
-    if (!hasElectronAPI()) return;
+    if (!enabled || persistedSessionsSeed === null) return;
+    if (lastPersistedSerializedRef.current !== null) return;
+    lastPersistedSerializedRef.current = persistedSessionsSeed;
+  }, [enabled, persistedSessionsSeed]);
+
+  useEffect(() => {
+    if (!enabled || !hasElectronAPI()) return;
+
+    const timeout = setTimeout(() => {
+      void persistCurrentSessions(
+        sessionsRef,
+        lastPersistedSerializedRef,
+        persistInFlightRef,
+        hasPendingPersistRef,
+      );
+    }, SESSION_PERSIST_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [enabled, runningTopologySignature]);
+
+  useEffect(() => {
+    if (!enabled || !hasElectronAPI()) return;
 
     const interval = setInterval(() => {
-      const running = sessionsRef.current.filter((session) => session.status === 'running');
-      if (running.length > 0) void persistRunning(running);
-    }, 5000);
+      void persistCurrentSessions(
+        sessionsRef,
+        lastPersistedSerializedRef,
+        persistInFlightRef,
+        hasPendingPersistRef,
+      );
+    }, SESSION_PERSIST_SAFETY_MS);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [enabled]);
 }
 
 function createSessionSnapshot(session: TerminalSession, cwd: string): SavedSessionSnapshot {
   return {
     cwd,
     title: session.title,
-    isClaude: session.isClaude ?? false,
+    isClaude: session.isClaude === true,
     claudeSessionId: session.claudeSessionId,
   };
 }
@@ -44,15 +137,6 @@ async function readSessionSnapshot(session: TerminalSession): Promise<SavedSessi
     return createSessionSnapshot(session, result.cwd ?? '');
   } catch {
     return createSessionSnapshot(session, '');
-  }
-}
-
-async function persistRunning(running: TerminalSession[]): Promise<void> {
-  const snapshots = await Promise.all(running.map(readSessionSnapshot));
-  try {
-    await window.electronAPI.config.set('terminalSessions', snapshots);
-  } catch {
-    return;
   }
 }
 

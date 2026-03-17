@@ -1,4 +1,6 @@
-export type AppTheme = 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'custom'
+import type { AgentChatSettings } from '../../main/agentChat/types'
+
+export type AppTheme = 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'custom' | (string & {})
 
 export interface PanelSizes {
   leftSidebar: number
@@ -90,6 +92,7 @@ export interface AppConfig {
   customPrompt: string
   promptPreset: string
   claudeCliSettings: ClaudeCliSettings
+  agentChatSettings: AgentChatSettings
   notifications: NotificationSettings
   agentTemplates: AgentTemplate[]
   workspaceLayouts: WorkspaceLayout[]
@@ -107,6 +110,16 @@ export interface AppConfig {
   promptPattern: string
   /** Format document before saving (requires a formatting provider in Monaco) */
   formatOnSave: boolean
+  contextLayer: ContextLayerConfig
+}
+
+export interface ContextLayerConfig {
+  enabled: boolean
+  maxModules: number
+  maxSizeBytes: number
+  debounceMs: number
+  autoSummarize: boolean
+  moduleDepthLimit: number
 }
 
 export interface BufferExcerpt {

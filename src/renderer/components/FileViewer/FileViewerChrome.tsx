@@ -1,4 +1,5 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
+import type { Ref } from 'react';
 import { ContentRouter } from './ContentRouter';
 import { DirtyBanner } from './DirtyBanner';
 import { FileViewerToolbar } from './FileViewerToolbar';
@@ -88,20 +89,22 @@ interface ChromeHeaderProps {
   projectRoot?: string | null;
   isDirtyOnDisk?: boolean;
   onReload?: () => void;
+  currentContent?: string | null;
   isDirty?: boolean;
   onSave?: (content: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  onCancelEdit?: () => void;
   s: FileViewerState;
 }
 
 function buildToolbarProps(input: {
   projectRoot: string | null | undefined;
+  currentContent: string | null;
   isDirty: boolean | undefined;
   onSave: ((content: string) => void) | undefined;
-  onDirtyChange: ((dirty: boolean) => void) | undefined;
+  onCancelEdit: (() => void) | undefined;
   s: FileViewerState;
 }): React.ComponentProps<typeof FileViewerToolbar> {
-  const { projectRoot, isDirty, onSave, onDirtyChange, s } = input;
+  const { projectRoot, currentContent, isDirty, onSave, onCancelEdit, s } = input;
   return {
     wordWrap: s.wordWrap, setWordWrap: s.setWordWrap,
     showMinimap: s.showMinimap, setShowMinimap: s.setShowMinimap,
@@ -109,7 +112,7 @@ function buildToolbarProps(input: {
     showOutline: s.showOutline, setShowOutline: s.setShowOutline,
     showHistory: s.showHistory, setShowHistory: s.setShowHistory,
     projectRoot, editMode: s.editMode, setEditMode: s.setEditMode,
-    isDirty, onSave, onDirtyChange,
+    currentContent, isDirty, onSave, onCancelEdit,
     isClaudeMd: s.isClaudeMd,
     claudeMdEnhanced: s.claudeMdEnhanced,
     setClaudeMdEnhanced: s.setClaudeMdEnhanced,
@@ -120,12 +123,13 @@ function ChromeHeader({
   projectRoot,
   isDirtyOnDisk,
   onReload,
+  currentContent,
   isDirty,
   onSave,
-  onDirtyChange,
+  onCancelEdit,
   s,
 }: ChromeHeaderProps): React.ReactElement {
-  const toolbarProps = buildToolbarProps({ projectRoot, isDirty, onSave, onDirtyChange, s });
+  const toolbarProps = buildToolbarProps({ projectRoot, currentContent: currentContent ?? null, isDirty, onSave, onCancelEdit, s });
   return (
     <>
       {isDirtyOnDisk && <DirtyBanner onReload={onReload} />}
@@ -148,7 +152,7 @@ interface ChromeBodyProps {
   projectRoot?: string | null;
   originalContent?: string | null;
   onSave?: (content: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  onContentChange?: (content: string) => void;
   codeViewProps: Omit<CodeViewProps, 'scrollRef' | 'codeRef'>;
   s: FileViewerState;
 }
@@ -159,7 +163,7 @@ function ChromeBody({
   projectRoot,
   originalContent,
   onSave,
-  onDirtyChange,
+  onContentChange,
   codeViewProps,
   s,
 }: ChromeBodyProps): React.ReactElement {
@@ -175,7 +179,7 @@ function ChromeBody({
         ideThemeId={s.ideThemeId}
         projectRoot={projectRoot}
         onSave={onSave}
-        onDirtyChange={onDirtyChange}
+        onContentChange={onContentChange}
         showHistory={s.showHistory}
         isMarkdown={s.isMarkdown}
         hasDiff={s.hasDiff}
@@ -219,7 +223,8 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   projectRoot,
   originalContent,
   onSave,
-  onDirtyChange,
+  onContentChange,
+  onCancelEdit,
   isDirtyOnDisk,
   onReload,
   isDirty,
@@ -231,10 +236,15 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   rows,
 }: FileViewerChromeProps): React.ReactElement {
   const codeViewProps = buildCodeViewProps({ s, lines, lineCount, gutterWidth, shikiLines, rows });
+  // Wrap onSave so that Ctrl+S from Monaco also exits edit mode
+  const handleEditorSave = useCallback((c: string) => {
+    onSave?.(c);
+    s.setEditMode(false);
+  }, [onSave, s.setEditMode]);
   return (
-    <div ref={s.containerRef} style={rootStyle}>
-      <ChromeHeader projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload} isDirty={isDirty} onSave={onSave} onDirtyChange={onDirtyChange} s={s} />
-      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} onSave={onSave} onDirtyChange={onDirtyChange} codeViewProps={codeViewProps} s={s} />
+    <div ref={s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
+      <ChromeHeader projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload} currentContent={content} isDirty={isDirty} onSave={onSave} onCancelEdit={onCancelEdit} s={s} />
+      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} onSave={handleEditorSave} onContentChange={onContentChange} codeViewProps={codeViewProps} s={s} />
       {filePath && <StatusFooter filePath={filePath} lineCount={lineCount} s={s} />}
     </div>
   );

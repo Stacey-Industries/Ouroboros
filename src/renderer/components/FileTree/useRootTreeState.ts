@@ -11,6 +11,7 @@ import type {
   SetStateAction,
 } from 'react';
 import type { FileChangeEvent } from '../../types/electron';
+import { subscribeToDirectoryChanges } from '../../hooks/directoryWatchRegistry';
 import type { TreeNode } from './FileTreeItem';
 import {
   buildIgnorePredicate,
@@ -26,6 +27,7 @@ export type SetRootNodes = Dispatch<SetStateAction<TreeNode[]>>;
 
 interface RootLoaderArgs {
   root: string;
+  enabled: boolean;
   shouldIgnore: (name: string) => boolean;
   loadedDirsRef: MutableRefObject<Set<string>>;
   setRootNodes: SetRootNodes;
@@ -50,8 +52,13 @@ interface ToggleFolderArgs {
 
 interface WatcherArgs {
   root: string;
+  enabled: boolean;
   loadedDirsRef: MutableRefObject<Set<string>>;
   refreshDir: RefreshDir;
+}
+
+interface UseRootTreeStateOptions {
+  enabled?: boolean;
 }
 
 interface RefreshScheduleArgs {
@@ -122,6 +129,7 @@ function clearTimers(timers: Map<string, ReturnType<typeof setTimeout>>): void {
 
 function useRootLoader({
   root,
+  enabled,
   shouldIgnore,
   loadedDirsRef,
   setRootNodes,
@@ -129,10 +137,18 @@ function useRootLoader({
   setError,
 }: RootLoaderArgs): void {
   useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (loadedDirsRef.current.has(normPath(root))) {
+      return;
+    }
+
     let cancelled = false;
     setIsLoading(true);
     setError(null);
-    loadedDirsRef.current.clear();
 
     void loadRootChildren(root, shouldIgnore)
       .then((nodes) => {
@@ -154,7 +170,7 @@ function useRootLoader({
     return () => {
       cancelled = true;
     };
-  }, [loadedDirsRef, root, setError, setIsLoading, setRootNodes, shouldIgnore]);
+  }, [enabled, loadedDirsRef, root, setError, setIsLoading, setRootNodes, shouldIgnore]);
 }
 
 function useRefreshDir({
@@ -208,7 +224,7 @@ function useToggleFolder({
   }, [loadedDirsRef, root, setRootNodes, shouldIgnore]);
 }
 
-function useRootFileWatcher({ root, loadedDirsRef, refreshDir }: WatcherArgs): void {
+function useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir }: WatcherArgs): void {
   const refreshDirRef = useRef(refreshDir);
 
   useEffect(() => {
@@ -216,30 +232,32 @@ function useRootFileWatcher({ root, loadedDirsRef, refreshDir }: WatcherArgs): v
   }, [refreshDir]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     let active = true;
     let cleanupWatcher: (() => void) | null = null;
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
-    void window.electronAPI.files.watchDir(root).then((result) => {
-      if (!active || !result.success) return;
-      cleanupWatcher = window.electronAPI.files.onFileChange((change: FileChangeEvent) => {
+    if (active) {
+      cleanupWatcher = subscribeToDirectoryChanges(root, (change: FileChangeEvent) => {
         const dirToRefresh = findDirToRefresh(change.path, root, loadedDirsRef.current);
         if (active && dirToRefresh) {
           scheduleRefresh({ key: dirToRefresh, timers, root, refreshDirRef });
         }
       });
-    });
+    }
 
     return () => {
       active = false;
       cleanupWatcher?.();
       clearTimers(timers);
-      void window.electronAPI.files.unwatchDir(root).catch(() => {});
     };
-  }, [loadedDirsRef, root]);
+  }, [enabled, loadedDirsRef, root]);
 }
 
-export function useRootTreeState(root: string, extraIgnorePatterns: string[]) {
+export function useRootTreeState(root: string, extraIgnorePatterns: string[], { enabled = true }: UseRootTreeStateOptions = {}) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -248,8 +266,8 @@ export function useRootTreeState(root: string, extraIgnorePatterns: string[]) {
   const refreshDir = useRefreshDir({ root, rootNodes, shouldIgnore, loadedDirsRef, setRootNodes });
   const toggleFolder = useToggleFolder({ root, shouldIgnore, loadedDirsRef, setRootNodes });
 
-  useRootLoader({ root, shouldIgnore, loadedDirsRef, setRootNodes, setIsLoading, setError });
-  useRootFileWatcher({ root, loadedDirsRef, refreshDir });
+  useRootLoader({ root, enabled, shouldIgnore, loadedDirsRef, setRootNodes, setIsLoading, setError });
+  useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir });
 
   return { rootNodes, setRootNodes, isLoading, error, refreshDir, toggleFolder };
 }

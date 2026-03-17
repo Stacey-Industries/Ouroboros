@@ -1,14 +1,15 @@
 /**
- * TerminalToolbar â€” floating action buttons rendered over the terminal:
+ * TerminalToolbar -- floating action buttons rendered over the terminal:
  * Sync, Split, Recording, and Multi-line input toggle.
+ *
+ * Buttons are grouped in a flex container to prevent overlap. Previously
+ * each button was individually absolute-positioned with hardcoded `right`
+ * offsets which caused Rec and Split to overlap.
  */
 
 import React from 'react'
 
-const BASE_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  top: 6,
-  zIndex: 10,
+const BUTTON_STYLE: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 4,
@@ -20,10 +21,6 @@ const BASE_STYLE: React.CSSProperties = {
   boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
   userSelect: 'none' as const,
   whiteSpace: 'nowrap' as const,
-}
-
-const MUTED_STYLE: React.CSSProperties = {
-  ...BASE_STYLE,
   border: '1px solid var(--border, #333)',
   backgroundColor: 'var(--bg-secondary, #1e1e1e)',
   color: 'var(--text-muted, #888)',
@@ -56,8 +53,7 @@ export function SyncButton({
       onClick={onToggleSync}
       title="Sync input across terminals"
       style={{
-        ...BASE_STYLE,
-        right: isHovered ? 155 : 6,
+        ...BUTTON_STYLE,
         border: syncInput ? '1px solid var(--accent, #58a6ff)' : '1px solid var(--border, #333)',
         backgroundColor: syncInput ? 'rgba(88,166,255,0.15)' : 'var(--bg-secondary, #1e1e1e)',
         color: syncInput ? 'var(--accent, #58a6ff)' : 'var(--text-muted, #888)',
@@ -86,8 +82,9 @@ export function SplitButton({
     <button
       onClick={() => onSplit(sessionId)}
       title="Split terminal pane"
-      style={{ ...MUTED_STYLE, right: isHovered ? 110 : 6 }}
+      style={BUTTON_STYLE}
     >
+      <SplitIcon />
       Split
     </button>
   )
@@ -106,6 +103,7 @@ export function RecordingButton({
   showSearch: boolean
   onToggleRecording: (id: string) => void
 }): React.ReactElement | null {
+  if (showSearch) return null
   if (!isRecording && !isHovered) return null
 
   const visualState = getRecordingVisualState(isRecording)
@@ -115,7 +113,12 @@ export function RecordingButton({
       <button
         onClick={() => onToggleRecording(sessionId)}
         title={visualState.title}
-        style={getRecordingButtonStyle(visualState, isHovered, showSearch)}
+        style={{
+          ...BUTTON_STYLE,
+          border: visualState.border,
+          backgroundColor: visualState.backgroundColor,
+          color: visualState.color,
+        }}
       >
         <RecordingDot isRecording={isRecording} />
         {visualState.label}
@@ -141,10 +144,11 @@ export function MultiLineButton({
       onClick={onClick}
       title="Open multi-line input (Ctrl+Shift+Enter)"
       style={{
-        ...MUTED_STYLE,
-        top: undefined,
+        ...BUTTON_STYLE,
+        position: 'absolute',
         bottom: 6,
         right: 6,
+        zIndex: 10,
       }}
     >
       <MultiLineIcon />
@@ -173,25 +177,19 @@ function getRecordingVisualState(isRecording: boolean): RecordingVisualState {
   }
 }
 
-function getRecordingButtonStyle(
-  visualState: RecordingVisualState,
-  isHovered: boolean,
-  showSearch: boolean,
-): React.CSSProperties {
-  return {
-    ...BASE_STYLE,
-    right: isHovered && !showSearch ? 70 : 6,
-    border: visualState.border,
-    backgroundColor: visualState.backgroundColor,
-    color: visualState.color,
-    transition: 'opacity 0.15s ease',
-  }
-}
-
 function SyncIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 5h8M8 2l3 3-3 3M14 11H6M8 14l-3-3 3-3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function SplitIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="1" y="2" width="14" height="12" rx="1.5" strokeLinejoin="round"/>
+      <line x1="8" y1="2" x2="8" y2="14" strokeLinecap="round"/>
     </svg>
   )
 }

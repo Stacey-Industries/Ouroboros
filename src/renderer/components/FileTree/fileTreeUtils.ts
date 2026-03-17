@@ -15,9 +15,6 @@ export const OVERSCAN = 10;
 /** Hardcoded directories to always skip */
 export const IGNORED_DIRS_BASE = new Set([
   '.git',
-  'node_modules',
-  'dist',
-  'out',
   '__pycache__',
 ]);
 
@@ -33,7 +30,7 @@ export interface EditState {
 
 export function buildIgnorePredicate(extraPatterns: string[]): (name: string) => boolean {
   return (name: string): boolean => {
-    if (name.startsWith('.') || IGNORED_DIRS_BASE.has(name)) return true;
+    if (IGNORED_DIRS_BASE.has(name)) return true;
     for (const pattern of extraPatterns) {
       if (pattern.startsWith('*.')) {
         const suffix = pattern.slice(1);
@@ -71,7 +68,7 @@ export async function loadDirChildren(
   root: string,
   dirPath: string,
   depth: number,
-  shouldIgnore: (name: string) => boolean = (n) => n.startsWith('.') || IGNORED_DIRS_BASE.has(n)
+  shouldIgnore: (name: string) => boolean = (n) => IGNORED_DIRS_BASE.has(n)
 ): Promise<TreeNode[]> {
   const result = await window.electronAPI.files.readDir(dirPath);
   if (!result.success || !result.items) return [];
@@ -170,6 +167,7 @@ export function collectAllFiles(nodes: TreeNode[]): TreeNode[] {
       result.push(...collectAllFiles(node.children));
     }
   }
+
   return result;
 }
 
@@ -181,15 +179,11 @@ const STATUS_PRIORITY: Record<string, number> = {
   '?': 1,
 };
 
-export function getNodeGitStatus(
-  node: TreeNode,
+export function getDirectoryGitStatus(
+  relativePath: string,
   gitStatusMap: Map<string, GitFileStatus>
 ): GitFileStatus | undefined {
-  if (!node.isDirectory) {
-    return gitStatusMap.get(node.relativePath);
-  }
-
-  const prefix = node.relativePath + '/';
+  const prefix = relativePath + '/';
   let worst: GitFileStatus | undefined;
   let worstPriority = 0;
 
@@ -204,6 +198,17 @@ export function getNodeGitStatus(
   }
 
   return worst;
+}
+
+export function getNodeGitStatus(
+  node: TreeNode,
+  gitStatusMap: Map<string, GitFileStatus>
+): GitFileStatus | undefined {
+  if (!node.isDirectory) {
+    return gitStatusMap.get(node.relativePath);
+  }
+
+  return getDirectoryGitStatus(node.relativePath, gitStatusMap);
 }
 
 export function pathJoin(base: string, name: string): string {

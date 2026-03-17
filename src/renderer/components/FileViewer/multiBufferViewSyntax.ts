@@ -119,7 +119,8 @@ export function useHighlightedExcerptLines(
       .then((nextLines) => {
         if (!cancelled) setHighlightedLines(nextLines);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[multiBuffer] Syntax highlighting failed:', error);
         if (!cancelled) setHighlightedLines(null);
       });
 

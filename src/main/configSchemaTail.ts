@@ -1,3 +1,11 @@
+import {
+  AGENT_CHAT_CONTEXT_BEHAVIORS,
+  AGENT_CHAT_DEFAULT_VIEWS,
+  AGENT_CHAT_PROVIDERS,
+  AGENT_CHAT_SETTINGS_DEFAULTS,
+  AGENT_CHAT_VERIFICATION_PROFILES,
+} from './agentChat/settingsResolver'
+
 export const tailSchema = {
   workspaceSnapshots: {
     type: 'array',
@@ -28,17 +36,58 @@ export const tailSchema = {
     enum: ['block', 'underline', 'bar'],
     default: 'block'
   },
-  richInputEnabled: {
-    type: 'boolean',
-    default: true
-  },
-  richInputSubmitKey: {
-    type: 'string',
-    enum: ['ctrl+enter', 'shift+enter'],
-    default: 'ctrl+enter'
-  },
   formatOnSave: {
     type: 'boolean',
     default: false
+  },
+  contextLayer: {
+    type: 'object',
+    default: {
+      enabled: true,
+      maxModules: 50,
+      maxSizeBytes: 204800,
+      debounceMs: 5000,
+      autoSummarize: true,
+      moduleDepthLimit: 6,
+    },
+    properties: {
+      enabled: { type: 'boolean', default: true },
+      maxModules: { type: 'number', default: 50 },
+      maxSizeBytes: { type: 'number', default: 204800 },
+      debounceMs: { type: 'number', default: 5000 },
+      autoSummarize: { type: 'boolean', default: true },
+      moduleDepthLimit: { type: 'number', default: 6 },
+    },
+  },
+  installedVsxExtensions: {
+    type: 'array',
+    items: { type: 'object' },
+    default: []
+  },
+  disabledVsxExtensions: {
+    type: 'array',
+    items: { type: 'string' },
+    default: []
+  },
+  agentChatSettings: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      defaultProvider: { type: 'string', enum: [...AGENT_CHAT_PROVIDERS], default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider },
+      defaultVerificationProfile: {
+        type: 'string',
+        enum: [...AGENT_CHAT_VERIFICATION_PROFILES],
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultVerificationProfile,
+      },
+      contextBehavior: {
+        type: 'string',
+        enum: [...AGENT_CHAT_CONTEXT_BEHAVIORS],
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.contextBehavior,
+      },
+      showAdvancedControls: { type: 'boolean', default: AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls },
+      openDetailsOnFailure: { type: 'boolean', default: AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure },
+      defaultView: { type: 'string', enum: [...AGENT_CHAT_DEFAULT_VIEWS], default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultView }
+    },
+    default: { ...AGENT_CHAT_SETTINGS_DEFAULTS }
   }
 }

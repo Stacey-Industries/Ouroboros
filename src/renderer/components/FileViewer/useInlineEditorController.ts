@@ -32,10 +32,11 @@ interface InlineEditorRuntime {
   languageCompartment: MutableRefObject<Compartment>;
   highlightCompartment: MutableRefObject<Compartment>;
   lspCompartment: MutableRefObject<Compartment>;
-  initialContentRef: MutableRefObject<string>;
+  savedContentRef: MutableRefObject<string>;
   initialFilePathRef: MutableRefObject<string>;
   initialThemeIdRef: MutableRefObject<string>;
   onSaveRef: MutableRefObject<(content: string) => void>;
+  onContentChangeRef: MutableRefObject<(content: string) => void>;
   onDirtyChangeRef: MutableRefObject<(dirty: boolean) => void>;
   filePathRef: MutableRefObject<string>;
   projectRootRef: MutableRefObject<string | null | undefined>;
@@ -51,7 +52,7 @@ export function useInlineEditorController(props: InlineEditorProps) {
   useEditorMount(runtime);
   useEditorLspLifecycle(runtime, props.content, props.filePath, props.projectRoot);
   useEditorThemeSync(runtime.viewRef, runtime.highlightCompartment, props.themeId);
-  useEditorDocumentSync(runtime, props.content, props.filePath);
+  useEditorDocumentSync(runtime, props.content, props.savedContent, props.filePath);
 
   return { containerRef: runtime.containerRef, viewRef: runtime.viewRef };
 }
@@ -63,10 +64,11 @@ function useInlineEditorRuntime(props: InlineEditorProps): InlineEditorRuntime {
     languageCompartment: useRef(new Compartment()),
     highlightCompartment: useRef(new Compartment()),
     lspCompartment: useRef(new Compartment()),
-    initialContentRef: useRef(props.content),
+    savedContentRef: useRef(props.savedContent),
     initialFilePathRef: useRef(props.filePath),
     initialThemeIdRef: useRef(props.themeId),
     onSaveRef: useRef(props.onSave),
+    onContentChangeRef: useRef(props.onContentChange),
     onDirtyChangeRef: useRef(props.onDirtyChange),
     filePathRef: useRef(props.filePath),
     projectRootRef: useRef(props.projectRoot),
@@ -87,6 +89,7 @@ function syncRuntimeRefs(
   props: InlineEditorProps
 ): void {
   runtime.onSaveRef.current = props.onSave;
+  runtime.onContentChangeRef.current = props.onContentChange;
   runtime.onDirtyChangeRef.current = props.onDirtyChange;
   runtime.filePathRef.current = props.filePath;
   runtime.projectRootRef.current = props.projectRoot;
@@ -96,8 +99,9 @@ function createEditorSetup({ runtime }: { runtime: Omit<InlineEditorRuntime, 'se
   return {
     saveKeymap: createSaveKeymap(runtime.onSaveRef),
     updateListener: createUpdateListener({
-      initialContentRef: runtime.initialContentRef,
+      initialContentRef: runtime.savedContentRef,
       isDirtyRef: runtime.isDirtyRef,
+      onContentChangeRef: runtime.onContentChangeRef,
       onDirtyChangeRef: runtime.onDirtyChangeRef,
       didChangeTimerRef: runtime.didChangeTimerRef,
       projectRootRef: runtime.projectRootRef,
@@ -110,14 +114,14 @@ function createEditorSetup({ runtime }: { runtime: Omit<InlineEditorRuntime, 'se
 }
 
 function useEditorMount(runtime: InlineEditorRuntime): void {
-  const { containerRef, viewRef, languageCompartment, highlightCompartment, lspCompartment, initialContentRef, initialFilePathRef, initialThemeIdRef, didChangeTimerRef, setup } = runtime;
+  const { containerRef, viewRef, languageCompartment, highlightCompartment, lspCompartment, savedContentRef, initialFilePathRef, initialThemeIdRef, didChangeTimerRef, setup } = runtime;
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const mountedFilePath = initialFilePathRef.current;
     const view = createMountedEditorView({
-      initialContentRef,
+      initialContentRef: savedContentRef,
       initialThemeIdRef,
       languageCompartment,
       highlightCompartment,
@@ -140,7 +144,7 @@ function useEditorMount(runtime: InlineEditorRuntime): void {
     containerRef,
     didChangeTimerRef,
     highlightCompartment,
-    initialContentRef,
+    savedContentRef,
     initialFilePathRef,
     initialThemeIdRef,
     languageCompartment,
@@ -197,7 +201,7 @@ function useEditorLspLifecycle(
     if (!root || !currentFilePath || !hasLspApi()) return;
 
     const currentContent = viewRef.current?.state.doc.toString() ?? content;
-    window.electronAPI.lsp.didOpen(root, currentFilePath, currentContent).catch(() => {});
+    window.electronAPI.lsp.didOpen(root, currentFilePath, currentContent).catch((error) => { console.error('[inlineEditor] LSP didOpen notification failed:', error) });
     const cleanupDiagnostics = window.electronAPI.lsp.onDiagnostics((event) => {
       if (normalizeFilePath(event.filePath) !== normalizeFilePath(currentFilePath)) return;
       diagnosticsRef.current = event.diagnostics;
@@ -215,7 +219,7 @@ function useEditorLspLifecycle(
 
 function closeLspDocument(root: string, filePath: string): void {
   if (hasLspApi()) {
-    window.electronAPI.lsp.didClose(root, filePath).catch(() => {});
+    window.electronAPI.lsp.didClose(root, filePath).catch((error) => { console.error('[inlineEditor] LSP didClose notification failed:', error) });
   }
 }
 
@@ -236,11 +240,12 @@ function useEditorThemeSync(
 function useEditorDocumentSync(
   runtime: InlineEditorRuntime,
   content: string,
+  savedContent: string,
   filePath: string
 ): void {
   const {
     viewRef,
-    initialContentRef,
+    savedContentRef,
     isDirtyRef,
     onDirtyChangeRef,
     languageCompartment,
@@ -250,17 +255,25 @@ function useEditorDocumentSync(
     const view = viewRef.current;
     if (!view) return;
 
-    initialContentRef.current = content;
-    isDirtyRef.current = false;
-    onDirtyChangeRef.current(false);
+    const currentDoc = view.state.doc.toString();
+    savedContentRef.current = savedContent;
 
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
+    const nextDirty = currentDoc !== savedContent;
+    if (isDirtyRef.current !== nextDirty) {
+      isDirtyRef.current = nextDirty;
+      onDirtyChangeRef.current(nextDirty);
+    }
+
+    if (currentDoc !== content) {
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
+    }
+
     view.dispatch({
       effects: languageCompartment.current.reconfigure(
         createLanguageExtensions(getLanguageExtension(filePath))
       ),
     });
-  }, [content, filePath, initialContentRef, isDirtyRef, languageCompartment, onDirtyChangeRef, viewRef]);
+  }, [content, filePath, savedContent, savedContentRef, isDirtyRef, languageCompartment, onDirtyChangeRef, viewRef]);
 }
 
 function clearPendingDidChange(

@@ -1,17 +1,21 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentChatMessageRecord } from '../../types/electron';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { AgentChatMessageRecord, ImageAttachment, ImageMimeType } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import type { PinnedFile } from './useAgentChatContext';
 import type { MentionItem } from './MentionAutocomplete';
 import { AgentChatContextBar } from './AgentChatContextBar';
+import { ChatControlsBar, cyclePermissionMode, type ChatOverrides } from './ChatControlsBar';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
+import { SlashCommandMenu, buildChatSlashCommands, type SlashCommand, type SlashCommandContext } from './SlashCommandMenu';
 
 export interface AgentChatComposerProps {
   canSend: boolean;
   disabled: boolean;
   draft: string;
   isSending: boolean;
+  /** True when the active thread's agent is still working (submitting/running). */
+  threadIsBusy?: boolean;
   messages?: AgentChatMessageRecord[];
   onChange: (value: string) => void;
   onSubmit: () => Promise<void>;
@@ -30,6 +34,18 @@ export interface AgentChatComposerProps {
   onAddMention?: (mention: MentionItem) => void;
   onRemoveMention?: (key: string) => void;
   allFiles?: FileEntry[];
+  // Chat-level overrides
+  chatOverrides?: ChatOverrides;
+  onChatOverridesChange?: (overrides: ChatOverrides) => void;
+  /** Model ID from settings, used to label the "Default" option. */
+  settingsModel?: string;
+  /** Cumulative token usage for the active thread. */
+  threadTokenUsage?: { inputTokens: number; outputTokens: number };
+  /** Slash command callbacks for /clear, /compact, /new, etc. */
+  slashCommandContext?: SlashCommandContext;
+  /** Image attachments for the current message */
+  attachments?: ImageAttachment[];
+  onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
 }
 
 function findLastUserMessageContent(messages: AgentChatMessageRecord[] | undefined): string {
@@ -40,6 +56,18 @@ function findLastUserMessageContent(messages: AgentChatMessageRecord[] | undefin
     }
   }
   return '';
+}
+
+/**
+ * If the draft starts with `/` and contains no whitespace yet, return the query after `/`.
+ * e.g. "/cle" → "cle", "/clear something" → null, "hello /foo" → null.
+ */
+function extractSlashQuery(value: string): string | null {
+  if (!value.startsWith('/')) return null;
+  const rest = value.slice(1);
+  // Only match if it's a single token (no spaces — user is still typing the command)
+  if (rest.includes(' ') || rest.includes('\n')) return null;
+  return rest;
 }
 
 function extractMentionQuery(value: string, cursorPos: number): string | null {
@@ -58,18 +86,77 @@ function extractMentionQuery(value: string, cursorPos: number): string | null {
   return query;
 }
 
-function SendButton(props: { canSend: boolean; isSending: boolean; onClick: () => void }): React.ReactElement {
+function AttachmentChip({ attachment, onRemove }: { attachment: ImageAttachment; onRemove: () => void }): React.ReactElement {
+  const src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight"
+      style={{ backgroundColor: 'rgba(100,180,255,0.08)', borderColor: 'rgba(100,180,255,0.25)', color: 'var(--accent)' }}
+    >
+      <img src={src} alt="" className="h-4 w-4 rounded object-cover" />
+      <span className="max-w-[100px] truncate" style={{ fontFamily: 'var(--font-mono)' }}>{attachment.name}</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="ml-0.5 opacity-60 hover:opacity-100"
+        type="button"
+        title="Remove attachment"
+      >&times;</button>
+    </span>
+  );
+}
+
+function AttachmentChipsBar({ attachments, onRemove }: { attachments: ImageAttachment[]; onRemove: (name: string) => void }): React.ReactElement | null {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 px-1 pb-1.5 pt-1">
+      {attachments.map((att, i) => (
+        <AttachmentChip
+          key={`${att.name}-${i}`}
+          attachment={att}
+          onRemove={() => onRemove(att.name)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SendButton(props: { canSend: boolean; isSending: boolean; willQueue: boolean; onClick: () => void }): React.ReactElement {
+  // When the thread is busy, the button queues instead — show a queue icon
+  const label = props.willQueue ? 'Queue message' : 'Send message';
   return (
     <button
       onClick={props.onClick}
       disabled={!props.canSend}
-      className="absolute bottom-2 right-2 rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-30"
+      title={label}
+      className="absolute bottom-2 right-2 flex items-center justify-center rounded-full text-xs font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30"
       style={{
-        backgroundColor: props.canSend ? 'var(--accent)' : 'transparent',
-        color: props.canSend ? 'var(--bg)' : 'var(--text-muted)',
+        width: '28px',
+        height: '28px',
+        backgroundColor: props.canSend
+          ? (props.willQueue ? 'var(--bg-tertiary)' : 'var(--accent)')
+          : 'transparent',
+        color: props.canSend
+          ? (props.willQueue ? 'var(--accent)' : 'var(--bg)')
+          : 'var(--text-muted)',
+        border: props.canSend && props.willQueue ? '1.5px solid var(--accent)' : 'none',
+      }}
+      onMouseEnter={(e) => {
+        if (props.canSend) {
+          e.currentTarget.style.filter = 'brightness(1.15)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.filter = 'none';
       }}
     >
-      {props.isSending ? '\u2026' : '\u2191'}
+      {props.willQueue ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+        </svg>
+      ) : '\u2191'}
     </button>
   );
 }
@@ -117,6 +204,7 @@ export function AgentChatComposer({
   disabled,
   draft,
   isSending,
+  threadIsBusy = false,
   messages,
   onChange,
   onSubmit,
@@ -133,14 +221,52 @@ export function AgentChatComposer({
   onAddMention,
   onRemoveMention,
   allFiles = [],
+  chatOverrides,
+  onChatOverridesChange,
+  settingsModel,
+  threadTokenUsage,
+  slashCommandContext,
+  attachments = [],
+  onAttachmentsChange,
 }: AgentChatComposerProps): React.ReactElement {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [isMentionAutocompleteOpen, setIsMentionAutocompleteOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Use the new mention autocomplete system when onAddMention is provided
   const useMentionSystem = Boolean(onAddMention);
+
+  // Build slash commands from context callbacks
+  const slashCommands = useMemo(
+    () => buildChatSlashCommands(slashCommandContext ?? {}),
+    [slashCommandContext],
+  );
+
+  const handleSlashSelect = useCallback((cmd: SlashCommand) => {
+    // Special case: /diff adds a @diff mention instead of executing
+    if (cmd.id === 'diff' && onAddMention) {
+      onAddMention({
+        type: 'diff',
+        key: '@diff',
+        label: 'Git Diff',
+        path: '@diff',
+        estimatedTokens: 2000,
+      });
+    } else {
+      cmd.action();
+    }
+    // Clear the draft (remove the /command text)
+    if (cmd.clearDraft !== false) {
+      onChange('');
+    }
+    setIsSlashMenuOpen(false);
+    setSlashQuery(null);
+    textareaRef.current?.focus();
+  }, [onChange, onAddMention]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -197,8 +323,110 @@ export function AgentChatComposer({
     textareaRef.current?.focus();
   }, [draft, onChange, onAddMention]);
 
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(event.clipboardData.items);
+    const imageItems = items.filter((item) => item.type.startsWith('image/'));
+    if (imageItems.length === 0) return;
+    event.preventDefault();
+    const readers: Promise<ImageAttachment>[] = imageItems.map(
+      (item) =>
+        new Promise((resolve, reject) => {
+          const blob = item.getAsFile();
+          if (!blob) { reject(new Error('No file')); return; }
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            resolve({
+              name: blob.name || `screenshot-${Date.now()}.png`,
+              mimeType: blob.type as ImageMimeType,
+              base64Data: dataUrl.split(',')[1],
+              sizeBytes: blob.size,
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        }),
+    );
+    void Promise.allSettled(readers).then((results) => {
+      const newAtts = results
+        .filter((r): r is PromiseFulfilledResult<ImageAttachment> => r.status === 'fulfilled')
+        .map((r) => r.value);
+      if (newAtts.length > 0) onAttachmentsChange?.([...attachments, ...newAtts]);
+    });
+  }, [attachments, onAttachmentsChange]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (Array.from(e.dataTransfer.items).some((i) => i.type.startsWith('image/'))) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+    const readers: Promise<ImageAttachment>[] = files.map(
+      (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            resolve({
+              name: file.name,
+              mimeType: file.type as ImageMimeType,
+              base64Data: dataUrl.split(',')[1],
+              sizeBytes: file.size,
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        }),
+    );
+    void Promise.allSettled(readers).then((results) => {
+      const newAtts = results
+        .filter((r): r is PromiseFulfilledResult<ImageAttachment> => r.status === 'fulfilled')
+        .map((r) => r.value);
+      if (newAtts.length > 0) onAttachmentsChange?.([...attachments, ...newAtts]);
+    });
+  }, [attachments, onAttachmentsChange]);
+
+  const handlePickImage = useCallback(async () => {
+    if (!onAttachmentsChange) return;
+    if (!window.electronAPI?.files?.showImageDialog) return;
+    const result = await window.electronAPI.files.showImageDialog();
+    if (!result.success || result.cancelled || !result.attachments?.length) return;
+    onAttachmentsChange([...attachments, ...(result.attachments as ImageAttachment[])]);
+  }, [attachments, onAttachmentsChange]);
+
+  const handleRemoveAttachment = useCallback((name: string) => {
+    const idx = attachments.findIndex((a) => a.name === name);
+    if (idx === -1) return;
+    const next = [...attachments];
+    next.splice(idx, 1);
+    onAttachmentsChange?.(next);
+  }, [attachments, onAttachmentsChange]);
+
   const handleChange = useCallback((value: string) => {
     onChange(value);
+
+    // Check for slash command first
+    const sq = extractSlashQuery(value);
+    if (sq !== null) {
+      setSlashQuery(sq);
+      setIsSlashMenuOpen(true);
+      // Close other autocompletes
+      setIsMentionAutocompleteOpen(false);
+      setMentionQuery(null);
+      onCloseAutocomplete?.();
+      return;
+    }
+    setSlashQuery(null);
+    setIsSlashMenuOpen(false);
 
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -228,6 +456,13 @@ export function AgentChatComposer({
   }, [onChange, onAutocompleteQuery, onOpenAutocomplete, onCloseAutocomplete, useMentionSystem]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // When slash command menu is open, let it handle keyboard events
+    if (isSlashMenuOpen) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
+        return; // SlashCommandMenu's global handler deals with it
+      }
+    }
+
     // When the new mention autocomplete is open, let it handle keyboard events
     // (it uses a global keydown listener)
     if (useMentionSystem && isMentionAutocompleteOpen) {
@@ -266,6 +501,13 @@ export function AgentChatComposer({
       }
     }
 
+    // Shift+Tab cycles permission mode
+    if (event.key === 'Tab' && event.shiftKey && chatOverrides && onChatOverridesChange) {
+      event.preventDefault();
+      onChatOverridesChange({ ...chatOverrides, permissionMode: cyclePermissionMode(chatOverrides.permissionMode) });
+      return;
+    }
+
     // Original composer key handling
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -302,12 +544,15 @@ export function AgentChatComposer({
   }, [
     autocompleteResults,
     canSend,
+    chatOverrides,
     draft,
     handleFileSelect,
     isAutocompleteOpen,
     isMentionAutocompleteOpen,
+    isSlashMenuOpen,
     messages,
     onChange,
+    onChatOverridesChange,
     onCloseAutocomplete,
     onSubmit,
     selectedIndex,
@@ -327,7 +572,14 @@ export function AgentChatComposer({
   const mentionTotalTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
 
   return (
-    <div className="border-t px-3 pb-3 pt-2" style={{ borderColor: 'var(--border)' }}>
+    <div
+      className={`border-t pb-1 pt-2${isDragging ? ' ring-2 ring-inset ring-[var(--accent)]' : ''}`}
+      style={{ borderColor: 'var(--border)' }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="px-3">
       <AgentChatContextBar
         pinnedFiles={pinnedFiles}
         onRemoveFile={onRemoveFile ?? (() => {})}
@@ -340,7 +592,20 @@ export function AgentChatComposer({
           totalTokens={mentionTotalTokens}
         />
       )}
+      <AttachmentChipsBar attachments={attachments} onRemove={handleRemoveAttachment} />
       <div className="relative">
+        {isSlashMenuOpen && slashQuery !== null && (
+          <SlashCommandMenu
+            query={slashQuery}
+            commands={slashCommands}
+            onSelect={handleSlashSelect}
+            onClose={() => {
+              setIsSlashMenuOpen(false);
+              setSlashQuery(null);
+            }}
+            isOpen={isSlashMenuOpen}
+          />
+        )}
         {useMentionSystem && isMentionAutocompleteOpen && mentionQuery !== null && (
           <MentionAutocomplete
             query={mentionQuery}
@@ -366,6 +631,7 @@ export function AgentChatComposer({
           value={draft}
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onBlur={() => {
             // Delay close to allow click on dropdown items
             setTimeout(() => {
@@ -377,18 +643,52 @@ export function AgentChatComposer({
               }
             }, 200);
           }}
-          placeholder="Ask Claude... (@ to mention files, @folder: for dirs, @diff, @terminal)"
+          placeholder="Ask Claude... (/ for commands, @ to mention files)"
           disabled={disabled}
           rows={1}
-          className="w-full resize-none rounded-lg border bg-[var(--bg)] py-2.5 pl-3 pr-10 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ borderColor: 'var(--border)', fontFamily: 'var(--font-ui)', minHeight: '40px' }}
+          className={`w-full resize-none border bg-[var(--bg)] py-2.5 pl-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60${onAttachmentsChange ? ' pr-16' : ' pr-10'}`}
+          style={{
+            borderColor: 'var(--border-muted, var(--border))',
+            borderRadius: '8px',
+            fontFamily: 'var(--font-ui)',
+            minHeight: '40px',
+            transition: 'border-color 150ms ease, box-shadow 150ms ease',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'var(--accent)';
+            e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent-muted, rgba(88, 166, 255, 0.2))';
+          }}
+          onBlurCapture={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-muted, var(--border))';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
         />
+        {onAttachmentsChange && (
+          <button
+            type="button"
+            title="Attach image"
+            onClick={() => void handlePickImage()}
+            className="absolute bottom-2 right-10 flex h-[28px] w-[28px] items-center justify-center rounded transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
+        )}
         <SendButton
           canSend={canSend}
           isSending={isSending}
+          willQueue={threadIsBusy}
           onClick={() => void onSubmit()}
         />
       </div>
+      </div>
+      {chatOverrides && onChatOverridesChange && (
+        <ChatControlsBar overrides={chatOverrides} onChange={onChatOverridesChange} settingsModel={settingsModel} threadTokenUsage={threadTokenUsage} />
+      )}
     </div>
   );
 }

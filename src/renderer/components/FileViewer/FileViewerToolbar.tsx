@@ -15,9 +15,10 @@ export interface FileViewerToolbarProps {
   projectRoot?: string | null;
   editMode: boolean;
   setEditMode: (value: boolean) => void;
+  currentContent?: string | null;
   isDirty?: boolean;
   onSave?: (content: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  onCancelEdit?: () => void;
   isClaudeMd: boolean;
   claudeMdEnhanced: boolean;
   setClaudeMdEnhanced: (updater: boolean | ((prev: boolean) => boolean)) => void;
@@ -48,9 +49,10 @@ export const FileViewerToolbar = memo(function FileViewerToolbar(
       <EditControls
         editMode={props.editMode}
         setEditMode={props.setEditMode}
+        currentContent={props.currentContent}
         isDirty={props.isDirty}
         onSave={props.onSave}
-        onDirtyChange={props.onDirtyChange}
+        onCancelEdit={props.onCancelEdit}
         isClaudeMd={props.isClaudeMd}
         claudeMdEnhanced={props.claudeMdEnhanced}
         setClaudeMdEnhanced={props.setClaudeMdEnhanced}
@@ -131,9 +133,10 @@ function toggleBoolean(value: boolean): boolean {
 interface EditControlsProps {
   editMode: boolean;
   setEditMode: (value: boolean) => void;
+  currentContent?: string | null;
   isDirty?: boolean;
   onSave?: (content: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  onCancelEdit?: () => void;
   isClaudeMd: boolean;
   claudeMdEnhanced: boolean;
   setClaudeMdEnhanced: (updater: boolean | ((prev: boolean) => boolean)) => void;
@@ -143,12 +146,26 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
   if (!props.onSave) return null;
 
   const handleToggleEdit = () => {
-    if (props.editMode && props.isDirty) {
-      const confirmed = window.confirm('You have unsaved changes. Discard them?');
-      if (!confirmed) return;
-      props.onDirtyChange?.(false);
-    }
     props.setEditMode(!props.editMode);
+  };
+
+  const handleSave = () => {
+    if (props.currentContent == null) {
+      return;
+    }
+    props.onSave?.(props.currentContent);
+    props.setEditMode(false);
+  };
+
+  const handleCancel = () => {
+    if (props.isDirty) {
+      const confirmed = window.confirm('Discard your unsaved changes?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    props.onCancelEdit?.();
+    props.setEditMode(false);
   };
 
   return (
@@ -160,6 +177,22 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
         onClick={handleToggleEdit}
         title={props.editMode ? 'Exit edit mode' : 'Edit file'}
       />
+      {props.editMode && (
+        <>
+          <ToolbarButton
+            label="Save"
+            active={Boolean(props.isDirty)}
+            onClick={handleSave}
+            title="Save changes"
+          />
+          <ToolbarButton
+            label="Cancel"
+            active={false}
+            onClick={handleCancel}
+            title="Discard draft and exit edit mode"
+          />
+        </>
+      )}
       {props.isClaudeMd && props.editMode && (
         <ToolbarButton
           label={props.claudeMdEnhanced ? 'Enhanced' : 'Plain'}

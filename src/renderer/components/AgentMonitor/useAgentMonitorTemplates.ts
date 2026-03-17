@@ -13,7 +13,7 @@ export function useAgentMonitorTemplates(projectRoot?: string | null): UseAgentM
   useEffect(() => {
     window.electronAPI?.config?.get('agentTemplates').then((storedTemplates) => {
       if (storedTemplates) setTemplates(storedTemplates);
-    }).catch(() => {});
+    }).catch((error) => { console.error('[agentMonitor] Failed to load agent templates:', error) });
   }, []);
 
   const executeTemplate = useCallback((template: AgentTemplate) => {

@@ -12,7 +12,7 @@ export function useCompletionNotifications(agents: AgentSession[], toast: ToastF
   useEffect(() => {
     window.electronAPI?.config?.get('notifications').then((settings) => {
       if (settings) settingsRef.current = settings;
-    }).catch(() => {});
+    }).catch((error) => { console.error('[agentMonitor] Failed to load notification settings:', error) });
   }, []);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function useCompletionNotifications(agents: AgentSession[], toast: ToastF
       const { body, title } = buildCompletionNotification(session);
       const toastType = session.status === 'error' ? 'error' : 'success';
       toast(`${title}: ${session.taskLabel}`, toastType);
-      window.electronAPI?.app?.notify?.({ title, body, force: alwaysNotify }).catch(() => {});
+      window.electronAPI?.app?.notify?.({ title, body, force: alwaysNotify }).catch((error) => { console.error('[agentMonitor] Failed to send desktop notification:', error) });
     });
   }, [agents, toast]);
 }

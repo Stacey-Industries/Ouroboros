@@ -1,17 +1,22 @@
-import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  ImageAttachment,
 } from '../../types/electron';
-import { emitOrchestrationOpen } from '../../hooks/orchestrationUiHelpers';
-import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
+import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
+import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
+import type { ChatOverrides } from './ChatControlsBar';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
 import { clearPersistedDraft } from './useAgentChatDraftPersistence';
 
 export interface SendMessageArgs {
   activeThreadId: string | null;
+  attachments?: ImageAttachment[];
+  setAttachments?: Dispatch<SetStateAction<ImageAttachment[]>>;
+  chatOverrides?: ChatOverrides;
   contextFilePaths?: string[];
   draft: string;
   isSending: boolean;
@@ -35,6 +40,7 @@ interface AgentChatActionState {
   editAndResend: (message: AgentChatMessageRecord) => Promise<void>;
   openLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   retryMessage: (message: AgentChatMessageRecord) => Promise<void>;
+  revertMessage: (message: AgentChatMessageRecord) => Promise<void>;
   selectThread: (threadId: string | null) => void;
   sendMessage: () => Promise<void>;
   startNewChat: () => void;
@@ -44,6 +50,11 @@ interface AgentChatActionState {
 interface BuildWorkspaceModelArgs extends AgentChatActionState {
   activeThread: AgentChatThreadRecord | null;
   activeThreadId: string | null;
+  attachments: ImageAttachment[];
+  setAttachments: (attachments: ImageAttachment[]) => void;
+  chatOverrides: ChatOverrides;
+  setChatOverrides: (overrides: ChatOverrides) => void;
+  settingsModel: string;
   closeDetails: () => void;
   details: AgentChatLinkedDetailsResult | null;
   detailsError: string | null;
@@ -61,10 +72,31 @@ interface BuildWorkspaceModelArgs extends AgentChatActionState {
   setContextFilePaths: (paths: string[]) => void;
   setDraft: (value: string) => void;
   threads: AgentChatThreadRecord[];
+  queuedMessages: QueuedMessage[];
+  editQueuedMessage: (id: string) => void;
+  deleteQueuedMessage: (id: string) => void;
+  sendQueuedMessageNow: (id: string) => Promise<void>;
 }
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
+}
+
+/**
+ * Dispatch a DOM event that asks the FileViewerManager to save all dirty
+ * editor buffers.  Returns a promise that resolves once every dirty file
+ * has been flushed to disk (or immediately if there are none).
+ */
+async function saveAllDirtyBuffers(): Promise<void> {
+  const promises: Promise<void>[] = [];
+  window.dispatchEvent(
+    new CustomEvent(SAVE_ALL_DIRTY_EVENT, {
+      detail: { addPromise: (p: Promise<void>) => promises.push(p) },
+    }),
+  );
+  if (promises.length > 0) {
+    await Promise.all(promises);
+  }
 }
 
 function getErrorMessage(error: unknown): string {
@@ -85,35 +117,55 @@ async function resolveLinkedSessionId(link: AgentChatOrchestrationLink): Promise
 }
 
 export function useSendMessageAction(args: SendMessageArgs): () => Promise<void> {
+  const argsRef = useRef(args);
+  argsRef.current = args;
+
   return useCallback(async (): Promise<void> => {
-    if (!args.projectRoot || !hasElectronAPI()) {
-      args.setError('Open a project before chatting with the agent.');
+    const a = argsRef.current;
+    if (!a.projectRoot || !hasElectronAPI()) {
+      a.setError('Open a project before chatting with the agent.');
       return;
     }
 
-    const content = args.draft.trim();
-    if (!content || args.isSending) {
+    const content = a.draft.trim();
+    if ((!content && !(a.attachments?.length)) || a.isSending) {
       return;
     }
 
-    args.setIsSending(true);
-    args.setError(null);
+    a.setIsSending(true);
+    a.setError(null);
     // Optimistically clear the draft and show the user's message immediately.
     // Context building (the slow part) runs on the main process while the UI
     // already reflects the sent state.
-    args.setDraft('');
-    args.setPendingUserMessage(content);
+    a.setDraft('');
+    a.setPendingUserMessage(content);
+
+    // Yield a frame so React can flush the optimistic UI (pending bubble +
+    // streaming indicator) before we enter potentially slow IPC calls.
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
     try {
-      const contextSelection = args.contextFilePaths && args.contextFilePaths.length > 0
-        ? { userSelectedFiles: args.contextFilePaths }
+      // Flush dirty editor buffers to disk so Claude Code reads fresh content.
+      await saveAllDirtyBuffers();
+
+      const contextSelection = a.contextFilePaths && a.contextFilePaths.length > 0
+        ? { userSelectedFiles: a.contextFilePaths }
         : undefined;
 
+      const overrides: Record<string, string | undefined> = {};
+      if (a.chatOverrides?.model) overrides.model = a.chatOverrides.model;
+      if (a.chatOverrides?.effort) overrides.effort = a.chatOverrides.effort;
+      if (a.chatOverrides?.permissionMode && a.chatOverrides.permissionMode !== 'default') {
+        overrides.permissionMode = a.chatOverrides.permissionMode;
+      }
+
       const result = await window.electronAPI.agentChat.sendMessage({
-        threadId: args.activeThreadId ?? undefined,
-        workspaceRoot: args.projectRoot,
+        threadId: a.activeThreadId ?? undefined,
+        workspaceRoot: a.projectRoot,
         content,
+        attachments: a.attachments?.length ? a.attachments : undefined,
         contextSelection,
+        overrides: Object.keys(overrides).length > 0 ? overrides : undefined,
         metadata: {
           source: 'composer',
           usedAdvancedControls: Boolean(contextSelection),
@@ -124,19 +176,22 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
         throw new Error(result.error ?? 'Unable to send the chat message.');
       }
 
+      // Clear attachments after successful send
+      a.setAttachments?.([]);
+
       if (result.thread) {
-        args.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
-        args.setActiveThreadId(result.thread.id);
+        a.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
+        a.setActiveThreadId(result.thread.id);
       }
 
-      clearPersistedDraft(result.thread?.id ?? args.activeThreadId);
+      clearPersistedDraft(result.thread?.id ?? a.activeThreadId);
     } catch (sendError) {
-      args.setError(getErrorMessage(sendError));
+      a.setError(getErrorMessage(sendError));
     } finally {
-      args.setIsSending(false);
-      args.setPendingUserMessage(null);
+      a.setIsSending(false);
+      a.setPendingUserMessage(null);
     }
-  }, [args]);
+  }, []);
 }
 
 export function useOpenLinkedDetailsAction(
@@ -155,7 +210,8 @@ export function useOpenLinkedDetailsAction(
         throw new Error('The linked orchestration session is unavailable.');
       }
 
-      emitOrchestrationOpen(sessionId);
+      // Orchestration panel removed — linked details are now surfaced in chat
+      console.log('[agent-chat] linked orchestration session:', sessionId);
     } catch (detailsError) {
       setError(getErrorMessage(detailsError));
     }
@@ -190,23 +246,35 @@ export function useDeleteThreadAction(
   }, [setThreads, setActiveThreadId, setError]);
 }
 
-export function useEditAndResendAction(args: SendMessageArgs): (message: AgentChatMessageRecord) => Promise<void> {
+export function useEditAndResendAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> {
+  const argsRef = useRef(args);
+  argsRef.current = args;
+
   return useCallback(async (message: AgentChatMessageRecord): Promise<void> => {
-    if (!args.projectRoot || !hasElectronAPI()) {
-      args.setError('Open a project before chatting with the agent.');
+    const a = argsRef.current;
+    if (!a.projectRoot || !hasElectronAPI()) {
+      a.setError('Open a project before chatting with the agent.');
       return;
     }
 
     const content = message.content.trim();
-    if (!content || args.isSending) return;
+    if (!content || a.isSending) return;
 
-    args.setIsSending(true);
-    args.setError(null);
+    const threadStatus = a.activeThread?.status;
+    if (threadStatus === 'running' || threadStatus === 'submitting') {
+      a.setError('The agent is still working. Wait for it to finish or stop it first.');
+      return;
+    }
+
+    a.setIsSending(true);
+    a.setError(null);
 
     try {
+      await saveAllDirtyBuffers();
+
       const result = await window.electronAPI.agentChat.sendMessage({
-        threadId: args.activeThreadId ?? undefined,
-        workspaceRoot: args.projectRoot,
+        threadId: a.activeThreadId ?? undefined,
+        workspaceRoot: a.projectRoot,
         content,
         metadata: { source: 'composer', usedAdvancedControls: false },
       });
@@ -216,37 +284,49 @@ export function useEditAndResendAction(args: SendMessageArgs): (message: AgentCh
       }
 
       if (result.thread) {
-        args.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
-        args.setActiveThreadId(result.thread.id);
+        a.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
+        a.setActiveThreadId(result.thread.id);
       }
 
-      args.setDraft('');
-      clearPersistedDraft(result.thread?.id ?? args.activeThreadId);
+      a.setDraft('');
+      clearPersistedDraft(result.thread?.id ?? a.activeThreadId);
     } catch (sendError) {
-      args.setError(getErrorMessage(sendError));
+      a.setError(getErrorMessage(sendError));
     } finally {
-      args.setIsSending(false);
+      a.setIsSending(false);
     }
-  }, [args]);
+  }, []);
 }
 
-export function useRetryMessageAction(args: SendMessageArgs): (message: AgentChatMessageRecord) => Promise<void> {
+export function useRetryMessageAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> {
+  const argsRef = useRef(args);
+  argsRef.current = args;
+
   return useCallback(async (message: AgentChatMessageRecord): Promise<void> => {
-    if (!args.projectRoot || !hasElectronAPI()) {
-      args.setError('Open a project before chatting with the agent.');
+    const a = argsRef.current;
+    if (!a.projectRoot || !hasElectronAPI()) {
+      a.setError('Open a project before chatting with the agent.');
       return;
     }
 
     const content = message.content.trim();
-    if (!content || args.isSending) return;
+    if (!content || a.isSending) return;
 
-    args.setIsSending(true);
-    args.setError(null);
+    const threadStatus = a.activeThread?.status;
+    if (threadStatus === 'running' || threadStatus === 'submitting') {
+      a.setError('The agent is still working. Wait for it to finish or stop it first.');
+      return;
+    }
+
+    a.setIsSending(true);
+    a.setError(null);
 
     try {
+      await saveAllDirtyBuffers();
+
       const result = await window.electronAPI.agentChat.sendMessage({
-        threadId: args.activeThreadId ?? undefined,
-        workspaceRoot: args.projectRoot,
+        threadId: a.activeThreadId ?? undefined,
+        workspaceRoot: a.projectRoot,
         content,
         metadata: { source: 'retry', usedAdvancedControls: false },
       });
@@ -256,15 +336,15 @@ export function useRetryMessageAction(args: SendMessageArgs): (message: AgentCha
       }
 
       if (result.thread) {
-        args.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
-        args.setActiveThreadId(result.thread.id);
+        a.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
+        a.setActiveThreadId(result.thread.id);
       }
     } catch (sendError) {
-      args.setError(getErrorMessage(sendError));
+      a.setError(getErrorMessage(sendError));
     } finally {
-      args.setIsSending(false);
+      a.setIsSending(false);
     }
-  }, [args]);
+  }, []);
 }
 
 export function useBranchFromMessageAction(
@@ -300,11 +380,49 @@ export function useStopTaskAction(
     if (!taskId || !hasElectronAPI()) return;
 
     try {
-      await window.electronAPI.orchestration.cancelTask(taskId);
+      // Route through agentChat.cancelTask which uses the singleton
+      // orchestration that actually owns the running process. The generic
+      // orchestration.cancelTask creates a fresh adapter with empty maps
+      // and can never find the process to kill.
+      const api = window.electronAPI.agentChat;
+      if (api.cancelTask) {
+        await api.cancelTask(taskId);
+      } else {
+        await window.electronAPI.orchestration.cancelTask(taskId);
+      }
     } catch (stopError) {
       setError(getErrorMessage(stopError));
     }
   }, [activeThread, setError]);
+}
+
+export function useRevertMessageAction(
+  setError: Dispatch<SetStateAction<string | null>>,
+  setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>,
+): (message: AgentChatMessageRecord) => Promise<void> {
+  return useCallback(async (message: AgentChatMessageRecord): Promise<void> => {
+    if (!hasElectronAPI()) return;
+    if (!message.orchestration?.preSnapshotHash) {
+      setError('No snapshot was captured before this agent turn. Revert is unavailable.');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.agentChat.revertToSnapshot(message.threadId, message.id);
+      if (!result.success) {
+        setError(result.error ?? 'Revert failed.');
+        return;
+      }
+
+      // Refresh the thread list so the UI reflects the reverted file state
+      const threadsResult = await window.electronAPI.agentChat.listThreads();
+      if (threadsResult.success && threadsResult.threads) {
+        setThreads(threadsResult.threads);
+      }
+    } catch (revertError) {
+      setError(getErrorMessage(revertError));
+    }
+  }, [setError, setThreads]);
 }
 
 export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionState {
@@ -314,6 +432,7 @@ export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionS
   const deleteThread = useDeleteThreadAction(args.setThreads, args.setActiveThreadId, args.setError);
   const editAndResend = useEditAndResendAction(args);
   const retryMessage = useRetryMessageAction(args);
+  const revertMessage = useRevertMessageAction(args.setError, args.setThreads);
   const branchFromMessage = useBranchFromMessageAction(args.setThreads, args.setActiveThreadId, args.setError);
   const stopTask = useStopTaskAction(args.activeThread, args.setError);
 
@@ -323,6 +442,7 @@ export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionS
     editAndResend,
     openLinkedDetails,
     retryMessage,
+    revertMessage,
     selectThread: selectionActions.selectThread,
     sendMessage,
     startNewChat: selectionActions.startNewChat,
@@ -334,8 +454,15 @@ export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): Age
   return {
     activeThread: args.activeThread,
     activeThreadId: args.activeThreadId,
+    attachments: args.attachments,
+    setAttachments: args.setAttachments,
     branchFromMessage: args.branchFromMessage,
-    canSend: Boolean(args.projectRoot && args.draft.trim()) && !args.isSending,
+    // Allow sending when the thread is busy — the message will be queued.
+    // Only block during the brief IPC send call itself to prevent double-clicks.
+    canSend: Boolean(args.projectRoot && (args.draft.trim() || args.attachments.length > 0)) && !args.isSending,
+    chatOverrides: args.chatOverrides,
+    setChatOverrides: args.setChatOverrides,
+    settingsModel: args.settingsModel,
     pendingUserMessage: args.pendingUserMessage,
     closeDetails: args.closeDetails,
     deleteThread: args.deleteThread,
@@ -353,6 +480,7 @@ export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): Age
     openDetailsInOrchestration: args.openDetailsInOrchestration,
     projectRoot: args.projectRoot,
     retryMessage: args.retryMessage,
+    revertMessage: args.revertMessage,
     selectThread: args.selectThread,
     sendMessage: args.sendMessage,
     setContextFilePaths: args.setContextFilePaths,
@@ -362,5 +490,9 @@ export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): Age
     startNewChat: args.startNewChat,
     stopTask: args.stopTask,
     threads: args.threads,
+    queuedMessages: args.queuedMessages,
+    editQueuedMessage: args.editQueuedMessage,
+    deleteQueuedMessage: args.deleteQueuedMessage,
+    sendQueuedMessageNow: args.sendQueuedMessageNow,
   };
 }

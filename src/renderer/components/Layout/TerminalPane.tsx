@@ -107,8 +107,8 @@ function TerminalPaneHeader({
   return (
     <div
       className="
-        flex items-center h-7 min-h-[28px] flex-shrink-0
-        bg-[var(--bg-secondary)] border-b border-[var(--border)]
+        flex items-center h-8 min-h-[32px] flex-shrink-0
+        bg-[var(--bg-secondary)] border-b border-[var(--border-muted,var(--border))]
         overflow-x-auto overflow-y-hidden
       "
     >
@@ -151,10 +151,10 @@ export function TerminalPane(props: TerminalPaneProps): React.ReactElement {
   return (
     <div
       className="
-        flex flex-col w-full overflow-hidden flex-shrink-0
-        bg-[var(--term-bg,var(--bg))] border-t border-[var(--border)]
+        flex flex-col overflow-hidden flex-shrink-0
+        bg-[var(--term-bg,var(--bg))]
       "
-      style={{ height: collapsed ? 28 : clampedHeight, ...focusStyle }}
+      style={{ height: collapsed ? 32 : clampedHeight, ...focusStyle }}
       aria-label="Terminal"
       onClick={onFocus}
     >

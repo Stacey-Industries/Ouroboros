@@ -4,20 +4,14 @@ import { PaletteAnimations } from './paletteAnimations';
 import { PickerOverlay, PickerInput } from './PickerOverlay';
 import { PaletteFooter } from './PaletteOverlay';
 import { FilePickerItem } from './FilePickerItem';
-
-interface FileEntry {
-  name: string;
-  path: string;
-  relativePath: string;
-}
+import type { FileEntry } from '../FileTree/FileListItem';
+import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 
 const MAX_RESULTS = 30;
 const ITEM_HEIGHT = 36;
 const MAX_VISIBLE = 12;
 
-const IGNORED_DIRS = new Set(['.git', 'node_modules', 'dist', 'out', '__pycache__', '.next', '.cache', 'coverage', 'build']);
-
-const FUSE_OPTIONS: Fuse.IFuseOptions<FileEntry> = {
+const FUSE_OPTIONS = {
   keys: [{ name: 'name', weight: 0.6 }, { name: 'relativePath', weight: 0.4 }],
   threshold: 0.4, distance: 200, minMatchCharLength: 1, includeScore: true, includeMatches: true,
 };
@@ -32,7 +26,22 @@ export interface FilePickerProps {
   isOpen: boolean;
   onClose: () => void;
   projectRoot: string | null;
-  onOpenFile: (filePath: string) => void;
+  onSelectFile: (filePath: string) => void;
+  actionLabel?: string;
+  label?: string;
+  placeholder?: string;
+  prefix?: string;
+}
+
+interface ResolvedFilePickerProps {
+  actionLabel: string;
+  isOpen: boolean;
+  label: string;
+  onClose: () => void;
+  onSelectFile: (filePath: string) => void;
+  placeholder: string;
+  prefix: string;
+  projectRoot: string | null;
 }
 
 type PickerKeyboardConfig = {
@@ -43,45 +52,6 @@ type PickerKeyboardConfig = {
   onClose: () => void;
 };
 
-function normPath(p: string): string { return p.replace(/\\/g, '/'); }
-
-function relPath(root: string, absPath: string): string {
-  const normalizedRoot = normPath(root);
-  const normalizedPath = normPath(absPath);
-  return normalizedPath.startsWith(normalizedRoot) ? normalizedPath.slice(normalizedRoot.length).replace(/^\//, '') : normalizedPath;
-}
-
-async function scanFilesRecursive(
-  root: string,
-  dirPath: string,
-  files: FileEntry[],
-  maxFiles: number,
-): Promise<void> {
-  if (files.length >= maxFiles) return;
-  const result = await window.electronAPI.files.readDir(dirPath);
-  if (!result.success || !result.items) return;
-
-  const dirs: string[] = [];
-  for (const item of result.items) {
-    if (files.length >= maxFiles) break;
-    if (item.isDirectory) {
-      if (!IGNORED_DIRS.has(item.name)) dirs.push(item.path);
-      continue;
-    }
-
-    files.push({
-      name: item.name,
-      path: item.path,
-      relativePath: relPath(root, item.path),
-    });
-  }
-
-  for (const dir of dirs) {
-    if (files.length >= maxFiles) break;
-    await scanFilesRecursive(root, dir, files, maxFiles);
-  }
-}
-
 export function FilePicker(props: FilePickerProps): React.ReactElement | null {
   const { isOpen, onClose } = props;
   const picker = useFilePickerState(props);
@@ -91,11 +61,11 @@ export function FilePicker(props: FilePickerProps): React.ReactElement | null {
   return (
     <>
       <PaletteAnimations prefix="fp" />
-      <PickerOverlay label="File Picker" animPrefix="fp" maxWidth="560px" onClose={onClose}>
+      <PickerOverlay label={picker.label} animPrefix="fp" maxWidth="560px" onClose={onClose}>
         <PickerInput
           inputRef={picker.inputRef}
-          prefix="#"
-          placeholder="Go to file..."
+          prefix={picker.prefix}
+          placeholder={picker.placeholder}
           value={picker.query}
           isOpen={isOpen}
           controlsId="fp-listbox"
@@ -118,7 +88,7 @@ export function FilePicker(props: FilePickerProps): React.ReactElement | null {
 }
 
 function FileList({ listRef, matches, selectedIndex, emptyLabel, onSelect, onHover }: {
-  listRef: React.RefObject<HTMLDivElement | null>;
+  listRef: (node: HTMLDivElement | null) => void;
   matches: MatchResult[];
   selectedIndex: number;
   emptyLabel: string;
@@ -156,71 +126,98 @@ function FileList({ listRef, matches, selectedIndex, emptyLabel, onSelect, onHov
 }
 
 function useFilePickerState(props: FilePickerProps) {
-  const { isOpen, onClose, projectRoot, onOpenFile } = props;
+  const { actionLabel, isOpen, label, onClose, onSelectFile, placeholder, prefix, projectRoot } =
+    resolveFilePickerProps(props);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [allFiles, setAllFiles] = useState<FileEntry[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const { allFiles, isLoading: isScanning } = useProjectFileIndex({
+    roots: projectRoot ? [projectRoot] : [],
+    enabled: isOpen && !!projectRoot,
+  });
 
-  useScanFiles(isOpen, projectRoot, setAllFiles, setIsScanning);
   useResetOnOpen(isOpen, inputRef, setQuery, setSelectedIndex);
 
   const fuse = useMemo(() => new Fuse(allFiles, FUSE_OPTIONS), [allFiles]);
   const matches = useFileMatches(query, fuse, allFiles);
 
   useClampIndex(matches.length, setSelectedIndex);
-  useScrollIntoView(listRef, selectedIndex);
+  useScrollIntoView(listElement, selectedIndex);
 
-  const handleSelect = useFileSelection(onClose, onOpenFile);
+  const handleSelect = useFileSelection(onClose, onSelectFile);
   const handleKeyDown = usePickerKeyboard({ matches, selectedIndex, setSelectedIndex, handleSelect, onClose });
   const handleQueryChange = useQueryChange(setQuery, setSelectedIndex);
 
-  return {
-    query,
-    selectedIndex,
-    isScanning,
-    matches,
-    inputRef,
-    listRef,
-    emptyLabel: getEmptyLabel(projectRoot, isScanning, query),
-    footerHints: getFooterHints(allFiles.length),
-    handleSelect,
+  return buildFilePickerState({
+    actionLabel,
+    allFiles,
     handleKeyDown,
     handleQueryChange,
+    handleSelect,
+    inputRef,
+    isScanning,
+    label,
+    matches,
+    placeholder,
+    prefix,
+    projectRoot,
+    query,
+    selectedIndex,
+    setListElement,
     setSelectedIndex,
+  });
+}
+
+function resolveFilePickerProps(props: FilePickerProps): ResolvedFilePickerProps {
+  return {
+    actionLabel: props.actionLabel ?? 'open',
+    isOpen: props.isOpen,
+    label: props.label ?? 'File Picker',
+    onClose: props.onClose,
+    onSelectFile: props.onSelectFile,
+    placeholder: props.placeholder ?? 'Go to file...',
+    prefix: props.prefix ?? '#',
+    projectRoot: props.projectRoot,
   };
 }
 
-function useScanFiles(
-  isOpen: boolean,
-  projectRoot: string | null,
-  setAllFiles: (files: FileEntry[]) => void,
-  setIsScanning: (value: boolean) => void,
-): void {
-  useEffect(() => {
-    if (!isOpen || !projectRoot) return;
-
-    let cancelled = false;
-    const files: FileEntry[] = [];
-    setIsScanning(true);
-
-    scanFilesRecursive(projectRoot, projectRoot, files, 10000)
-      .then(() => {
-        if (!cancelled) {
-          setAllFiles(files);
-          setIsScanning(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setIsScanning(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, projectRoot, setAllFiles, setIsScanning]);
+function buildFilePickerState(args: {
+  actionLabel: string;
+  allFiles: FileEntry[];
+  handleKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleQueryChange: (value: string) => void;
+  handleSelect: (entry: FileEntry) => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  isScanning: boolean;
+  label: string;
+  matches: MatchResult[];
+  placeholder: string;
+  prefix: string;
+  projectRoot: string | null;
+  query: string;
+  selectedIndex: number;
+  setListElement: (node: HTMLDivElement | null) => void;
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  return {
+    actionLabel: args.actionLabel,
+    label: args.label,
+    query: args.query,
+    selectedIndex: args.selectedIndex,
+    isScanning: args.isScanning,
+    matches: args.matches,
+    inputRef: args.inputRef,
+    listRef: args.setListElement,
+    emptyLabel: getEmptyLabel(args.projectRoot, args.isScanning, args.query),
+    footerHints: getFooterHints(args.allFiles.length, args.actionLabel),
+    handleSelect: args.handleSelect,
+    handleKeyDown: args.handleKeyDown,
+    handleQueryChange: args.handleQueryChange,
+    placeholder: args.placeholder,
+    prefix: args.prefix,
+    setSelectedIndex: args.setSelectedIndex,
+  };
 }
 
 function useResetOnOpen(
@@ -266,23 +263,23 @@ function useClampIndex(
 }
 
 function useScrollIntoView(
-  listRef: React.RefObject<HTMLDivElement | null>,
+  listElement: HTMLDivElement | null,
   selectedIndex: number,
 ): void {
   useEffect(() => {
-    const item = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
+    const item = listElement?.children[selectedIndex] as HTMLElement | undefined;
     item?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex, listRef]);
+  }, [listElement, selectedIndex]);
 }
 
 function useFileSelection(
   onClose: () => void,
-  onOpenFile: (filePath: string) => void,
+  onSelectFile: (filePath: string) => void,
 ): (entry: FileEntry) => void {
   return useCallback((entry: FileEntry) => {
     onClose();
-    onOpenFile(entry.path);
-  }, [onClose, onOpenFile]);
+    onSelectFile(entry.path);
+  }, [onClose, onSelectFile]);
 }
 
 function useQueryChange(
@@ -319,8 +316,8 @@ function usePickerKeyboard({
   }, [matches, selectedIndex, setSelectedIndex, handleSelect, onClose]);
 }
 
-function getFooterHints(fileCount: number): string[] {
-  const hints = ['↑↓ navigate', '↵ open', 'esc close'];
+function getFooterHints(fileCount: number, actionLabel: string): string[] {
+  const hints = ['↑↓ navigate', `↵ ${actionLabel}`, 'esc close'];
   return fileCount > 0 ? [...hints, `${fileCount} files`] : hints;
 }
 

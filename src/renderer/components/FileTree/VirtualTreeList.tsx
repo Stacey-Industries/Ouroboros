@@ -9,7 +9,7 @@ import { FileTreeItem } from './FileTreeItem';
 import type { TreeNode } from './FileTreeItem';
 import type { GitFileStatus } from '../../types/electron';
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
-import { ITEM_HEIGHT, OVERSCAN, basename } from './fileTreeUtils';
+import { ITEM_HEIGHT, OVERSCAN, basename, getNodeGitStatus } from './fileTreeUtils';
 import type { EditState } from './fileTreeUtils';
 import { useFileTreeStore } from './fileTreeStore';
 import type { DiagnosticSeverity } from './fileTreeStore';
@@ -147,7 +147,7 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
   const isPlaceholder = node.path === '__new_item_placeholder__';
   const isRenaming = p.editState?.mode === 'rename' && p.editState.targetPath === node.path;
   const isEditing = isPlaceholder || isRenaming;
-  const nodeGitStatus = getNodeGitStatusLocal(node, p.gitStatus);
+  const nodeGitStatus = getNodeGitStatus(node, p.gitStatus);
   const diagnosticSeverity = useDiagnosticSeverity(node);
   const isDirty = useFileTreeStore((s) => s.dirtyFiles.has(node.path));
 
@@ -175,19 +175,4 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       onDrop={isPlaceholder ? undefined : p.handleDrop}
     />
   );
-}
-
-/** Inline git status lookup (avoids importing from fileTreeUtils to keep deps clear) */
-function getNodeGitStatusLocal(node: TreeNode, gitStatusMap: Map<string, GitFileStatus>): GitFileStatus | undefined {
-  if (!node.isDirectory) return gitStatusMap.get(node.relativePath);
-  const prefix = node.relativePath + '/';
-  const PRIO: Record<string, number> = { D: 4, M: 3, A: 2, R: 2, '?': 1 };
-  let worst: GitFileStatus | undefined;
-  let worstP = 0;
-  for (const [fp, st] of gitStatusMap) {
-    if (!fp.startsWith(prefix)) continue;
-    const p = PRIO[st] ?? 0;
-    if (p > worstP) { worstP = p; worst = st as GitFileStatus; }
-  }
-  return worst;
 }

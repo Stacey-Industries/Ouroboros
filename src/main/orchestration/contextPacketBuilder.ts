@@ -1,16 +1,14 @@
-import { randomUUID } from 'crypto'
-import { loadContextFileSnapshot } from './contextSelectionSupport'
+import { createHash, randomUUID } from 'crypto'
+import { loadContextFileSnapshot, type ContextFileSnapshot } from './contextSelectionSupport'
 import { selectContextFiles, type ContextSelectionResult } from './contextSelector'
 import {
   buildBudgetSummary,
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_FILES,
-  DEFAULT_MAX_SNIPPETS_PER_FILE,
-  DEFAULT_MAX_TOKENS,
   dedupeSnippetCandidates,
   deriveSnippetCandidates,
+  getModelBudgets,
   keepSnippetWithinBudget,
 } from './contextPacketBuilderSupport'
+import type { RepoIndexSnapshot } from './repoIndexer'
 import type {
   ContextPacket,
   ContextSnippet,
@@ -20,6 +18,67 @@ import type {
   RepoFacts,
   TaskRequest,
 } from './types'
+
+// ---------------------------------------------------------------------------
+// Session-level context packet cache
+// ---------------------------------------------------------------------------
+
+interface CachedContextPacket {
+  fingerprint: string
+  result: ContextPacketBuildResult
+  cachedAt: number
+}
+
+/** Cache keyed by workspace root (joined). Stores the last built context packet per workspace. */
+const contextPacketCache = new Map<string, CachedContextPacket>()
+
+/** Maximum age (ms) for a cached context packet before it is considered stale. */
+const CONTEXT_CACHE_TTL_MS = 60_000
+
+/**
+ * Compute a cheap fingerprint from request metadata and repo facts.
+ * This intentionally avoids reading file contents — it uses only paths,
+ * counts, and the user's goal text so that a fingerprint comparison is
+ * nearly free.
+ */
+function computeContextFingerprint(
+  request: TaskRequest,
+  repoFacts: RepoFacts,
+  liveIdeState?: LiveIdeState,
+): string {
+  const hash = createHash('sha1')
+
+  // Active file
+  hash.update(liveIdeState?.activeFile ?? '')
+
+  // Sorted open files
+  const openFiles = [...(liveIdeState?.openFiles ?? [])].sort()
+  hash.update(openFiles.join('\n'))
+
+  // Sorted dirty files
+  const dirtyFiles = [...(liveIdeState?.dirtyFiles ?? [])].sort()
+  hash.update(dirtyFiles.join('\n'))
+
+  // Git diff changed file count
+  hash.update(String(repoFacts.gitDiff.changedFileCount))
+
+  // Diagnostic error/warning counts
+  hash.update(`${repoFacts.diagnostics.totalErrors}:${repoFacts.diagnostics.totalWarnings}`)
+
+  // Mode and provider affect context selection
+  hash.update(request.mode)
+  hash.update(request.provider)
+
+  return hash.digest('hex')
+}
+
+/**
+ * Clear the context packet cache. Call this after git operations or other
+ * events that invalidate cached context (e.g. branch switch, commit).
+ */
+export function clearContextPacketCache(): void {
+  contextPacketCache.clear()
+}
 
 // ---------------------------------------------------------------------------
 // Goal keyword extraction — used to select relevant module summaries
@@ -81,10 +140,13 @@ function buildFilePayload(options: {
   selection: ContextSelectionResult
   maxSnippetsPerFile: number
   budget: ReturnType<typeof buildBudgetSummary>
+  cache?: Map<string, ContextFileSnapshot>
+  fullFileLineLimit?: number
+  targetedSnippetLineLimit?: number
 }): Promise<RankedContextFile | null> {
-  const { rankedFile, selection, maxSnippetsPerFile, budget } = options
+  const { rankedFile, selection, maxSnippetsPerFile, budget, cache } = options
   return (async () => {
-    const snapshot = await loadContextFileSnapshot(rankedFile.filePath)
+    const snapshot = await loadContextFileSnapshot(rankedFile.filePath, cache)
     const candidates = deriveSnippetCandidates(rankedFile, snapshot, selection.liveIdeState)
     const { snippets, truncationNotes } = dedupeSnippetCandidates(snapshot, candidates)
     const acceptedSnippets: ContextSnippet[] = []
@@ -94,7 +156,7 @@ function buildFilePayload(options: {
         fileTruncationNotes.push({ reason: 'budget', detail: `Dropped snippet ${snippet.label} because maxSnippetsPerFile=${maxSnippetsPerFile}` })
         continue
       }
-      const keptSnippet = keepSnippetWithinBudget({ budget, snapshot, snippet })
+      const keptSnippet = keepSnippetWithinBudget({ budget, snapshot, snippet, fullFileLineLimit: options.fullFileLineLimit, targetedSnippetLineLimit: options.targetedSnippetLineLimit })
       if (!keptSnippet) {
         fileTruncationNotes.push({ reason: 'budget', detail: `Dropped snippet ${snippet.label} because packet size budget would be exceeded` })
         budget.droppedContentNotes.push(`Dropped ${rankedFile.filePath}:${snippet.range.startLine}-${snippet.range.endLine} due to size budget`)
@@ -115,8 +177,11 @@ async function buildPacketFiles(options: {
   maxFiles: number
   maxSnippetsPerFile: number
   budget: ReturnType<typeof buildBudgetSummary>
+  cache?: Map<string, ContextFileSnapshot>
+  fullFileLineLimit?: number
+  targetedSnippetLineLimit?: number
 }): Promise<{ files: RankedContextFile[]; omittedCandidates: ContextPacket['omittedCandidates'] }> {
-  const { selection, maxFiles, maxSnippetsPerFile, budget } = options
+  const { selection, maxFiles, maxSnippetsPerFile, budget, cache } = options
   const files: RankedContextFile[] = []
   const omittedCandidates = [...selection.omittedCandidates]
   for (const rankedFile of selection.rankedFiles) {
@@ -125,7 +190,7 @@ async function buildPacketFiles(options: {
       budget.droppedContentNotes.push(`Skipped ${rankedFile.filePath} because maxFiles=${maxFiles} was reached`)
       continue
     }
-    const filePayload = await buildFilePayload({ rankedFile, selection, maxSnippetsPerFile, budget })
+    const filePayload = await buildFilePayload({ rankedFile, selection, maxSnippetsPerFile, budget, cache, fullFileLineLimit: options.fullFileLineLimit, targetedSnippetLineLimit: options.targetedSnippetLineLimit })
     if (!filePayload) {
       omittedCandidates.push({ filePath: rankedFile.filePath, reason: 'All snippets were omitted by packet budgeting rules' })
       budget.droppedContentNotes.push(`Omitted ${rankedFile.filePath} because no snippets fit within the budget`)
@@ -150,14 +215,39 @@ export async function buildContextPacket(options: {
   request: TaskRequest
   repoFacts: RepoFacts
   liveIdeState?: LiveIdeState
+  model?: string
+  repoSnapshot?: RepoIndexSnapshot
 }): Promise<ContextPacketBuildResult> {
+  // --- Session-level cache check ---
+  const cacheKey = options.request.workspaceRoots.slice().sort().join('|')
+  const fingerprint = computeContextFingerprint(options.request, options.repoFacts, options.liveIdeState)
+  const cached = contextPacketCache.get(cacheKey)
+
+  if (cached && cached.fingerprint === fingerprint && (Date.now() - cached.cachedAt) < CONTEXT_CACHE_TTL_MS) {
+    // Cache hit — return previous result with updated task metadata
+    console.log('[context-packet] Cache hit — reusing context packet (age: %dms)', Date.now() - cached.cachedAt)
+    const updatedPacket: ContextPacket = {
+      ...cached.result.packet,
+      id: randomUUID(),
+      createdAt: Date.now(),
+      task: buildPacketTask(options.request),
+    }
+    return { selection: cached.result.selection, packet: updatedPacket }
+  }
+
+  // --- Cache miss — full rebuild ---
+  const modelBudgets = getModelBudgets(options.model ?? '')
   const selection = await selectContextFiles(options)
-  const budget = buildBudgetSummary(options.request.budget?.maxBytes ?? DEFAULT_MAX_BYTES, options.request.budget?.maxTokens ?? DEFAULT_MAX_TOKENS)
+  const snapshotCache = new Map(Object.entries(selection.snapshots))
+  const budget = buildBudgetSummary(options.request.budget?.maxBytes ?? modelBudgets.maxBytes, options.request.budget?.maxTokens ?? modelBudgets.maxTokens)
   const { files, omittedCandidates } = await buildPacketFiles({
     selection,
-    maxFiles: options.request.budget?.maxFiles ?? DEFAULT_MAX_FILES,
-    maxSnippetsPerFile: options.request.budget?.maxSnippetsPerFile ?? DEFAULT_MAX_SNIPPETS_PER_FILE,
+    maxFiles: options.request.budget?.maxFiles ?? modelBudgets.maxFiles,
+    maxSnippetsPerFile: options.request.budget?.maxSnippetsPerFile ?? modelBudgets.maxSnippetsPerFile,
     budget,
+    cache: snapshotCache,
+    fullFileLineLimit: modelBudgets.fullFileLineLimit,
+    targetedSnippetLineLimit: modelBudgets.targetedSnippetLineLimit,
   })
   let packet: ContextPacket = {
     version: 1,
@@ -175,15 +265,18 @@ export async function buildContextPacket(options: {
   const layerController = getContextLayerController()
   if (layerController) {
     try {
-      const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(options.request.goal))
+      const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(options.request.goal), options.repoSnapshot)
       packet = enriched.packet
     } catch {
       // Context layer enrichment is optional — continue with unenriched packet
     }
   }
 
-  return {
-    selection,
-    packet,
-  }
+  const result: ContextPacketBuildResult = { selection, packet }
+
+  // Store in cache
+  contextPacketCache.set(cacheKey, { fingerprint, result, cachedAt: Date.now() })
+  console.log('[context-packet] Cache miss — built and cached new context packet')
+
+  return result
 }

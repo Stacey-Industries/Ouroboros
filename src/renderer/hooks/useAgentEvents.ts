@@ -18,6 +18,7 @@ import {
   deriveTaskLabel,
   getSubagentChildId,
   getToolEndDetails,
+  isSubagentTool,
   parsePersistedSessions,
   toHookPayload,
 } from './useAgentEvents.payload';
@@ -42,8 +43,14 @@ export function useAgentEvents(): UseAgentEventsReturn {
   useAgentEventSubscription(dispatch, liveSessionIdsRef);
 
   const clearCompleted = useCallback(() => {
+    const completedIds = state.sessions
+      .filter((s) => s.status === 'complete' || s.status === 'error')
+      .map((s) => s.id);
     dispatch({ type: 'CLEAR_COMPLETED' });
-  }, []);
+    for (const id of completedIds) {
+      window.electronAPI?.sessions?.delete?.(id).catch(() => {});
+    }
+  }, [state.sessions]);
 
   const dismiss = useCallback((sessionId: string) => {
     dispatch({ type: 'DISMISS', sessionId });
@@ -163,6 +170,7 @@ function dispatchLifecycleEvent(
   liveSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
   switch (payload.type) {
+    case 'session_start':
     case 'agent_start':
       dispatchAgentStart(payload, dispatch, liveSessionIdsRef);
       return;
@@ -174,6 +182,7 @@ function dispatchLifecycleEvent(
       return;
     case 'agent_end':
     case 'agent_stop':
+    case 'session_stop':
       dispatchAgentEnd(payload, dispatch);
       return;
     default:
@@ -211,19 +220,24 @@ function dispatchToolStart(payload: HookPayload, dispatch: Dispatch<AgentAction>
       parentSessionId: payload.sessionId,
       childSessionId,
     });
+  } else if (isSubagentTool(toolCall.toolName)) {
+    // No explicit child ID yet — record a temporal stamp so that if a new
+    // agent_start arrives shortly after, we can auto-link it as a child.
+    dispatch({
+      type: 'RECORD_SUBAGENT_TOOL',
+      parentSessionId: payload.sessionId,
+      timestamp: payload.timestamp,
+    });
   }
 }
 
 function dispatchToolEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  if (!payload.toolCallId) {
-    return;
-  }
-
   const details = getToolEndDetails(payload);
   dispatch({
     type: 'TOOL_END',
     sessionId: payload.sessionId,
     toolCallId: payload.toolCallId,
+    toolName: payload.toolName,
     duration: details.duration,
     status: details.status,
     output: details.output,

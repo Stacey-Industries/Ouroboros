@@ -127,7 +127,8 @@ function useAgentTemplates(): AgentTemplate[] {
           setTemplates(items);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[multiSession] Failed to load agent templates:', error);
         setTemplates([]);
       });
   }, []);

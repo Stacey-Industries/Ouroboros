@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 
@@ -64,11 +64,48 @@ interface SpawnLifecycleArgs {
   onQueued?: () => void;
 }
 
-interface SavedSessionSnapshot {
+export interface SavedSessionSnapshot {
   cwd: string;
   title?: string;
   isClaude?: boolean;
   claudeSessionId?: string;
+}
+
+interface RestoreState {
+  hasCompletedRestore: boolean;
+  persistedSessionsSeed: string | null;
+}
+
+function isSavedSessionSnapshot(value: unknown): value is SavedSessionSnapshot {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const snapshot = value as SavedSessionSnapshot;
+  return typeof snapshot.cwd === 'string'
+    && (snapshot.title === undefined || typeof snapshot.title === 'string')
+    && (snapshot.isClaude === undefined || typeof snapshot.isClaude === 'boolean')
+    && (snapshot.claudeSessionId === undefined || typeof snapshot.claudeSessionId === 'string');
+}
+
+async function readSavedSessionSnapshots(): Promise<SavedSessionSnapshot[]> {
+  const saved = await window.electronAPI.config.get('terminalSessions');
+  if (!Array.isArray(saved)) {
+    return [];
+  }
+
+  return saved.filter(isSavedSessionSnapshot);
+}
+
+export function serializeSavedSessionSnapshots(snapshots: SavedSessionSnapshot[]): string {
+  return JSON.stringify(
+    snapshots.map((snapshot) => ({
+      cwd: snapshot.cwd,
+      title: snapshot.title ?? '',
+      isClaude: snapshot.isClaude === true,
+      claudeSessionId: snapshot.claudeSessionId ?? null,
+    })),
+  );
 }
 
 export function hasElectronAPI(): boolean {
@@ -228,11 +265,20 @@ export function useRestoreSessions({
   setActiveSessionId,
   spawnCountRef,
   clearKillTimers,
-}: RestoreDependencies): void {
+}: RestoreDependencies): RestoreState {
+  const [restoreState, setRestoreState] = useState<RestoreState>({
+    hasCompletedRestore: false,
+    persistedSessionsSeed: null,
+  });
   const hasRestoredRef = useRef(false);
 
   useEffect(() => {
-    if (!hasElectronAPI() || hasRestoredRef.current) return;
+    if (!hasElectronAPI()) {
+      setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: null });
+      return;
+    }
+    if (hasRestoredRef.current) return;
+
     hasRestoredRef.current = true;
     void restoreSessionsAsync({
       spawnSession,
@@ -241,8 +287,22 @@ export function useRestoreSessions({
       setActiveSessionId,
       spawnCountRef,
       clearKillTimers,
+    }).then((persistedSessionsSeed) => {
+      setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed });
+    }).catch((error) => {
+      console.error('[terminal] Failed to restore terminal sessions:', error);
+      setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: null });
     });
   }, [clearKillTimers, setActiveSessionId, setSessions, spawnClaudeSession, spawnCountRef, spawnSession]);
+
+  return restoreState;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
 }
 
 async function restoreSessionsAsync({
@@ -252,56 +312,116 @@ async function restoreSessionsAsync({
   setActiveSessionId,
   spawnCountRef,
   clearKillTimers,
-}: RestoreDependencies): Promise<void> {
+}: RestoreDependencies): Promise<string | null> {
   try {
-    const active = await window.electronAPI.pty.listSessions();
+    const savedSnapshots = await readSavedSessionSnapshots();
+    const active = await withTimeout(window.electronAPI.pty.listSessions(), 5000, []);
     if (active.length > 0) {
-      reconnectSessions(active, { setSessions, setActiveSessionId, spawnCountRef, clearKillTimers });
-      return;
+      return reconnectSessions(active, savedSnapshots, { setSessions, setActiveSessionId, spawnCountRef, clearKillTimers });
     }
 
-    await spawnFromSavedOrDefault({ spawnSession, spawnClaudeSession });
+    await spawnFromSavedOrDefault(savedSnapshots, { spawnSession, spawnClaudeSession });
+    return savedSnapshots.length > 0 ? serializeSavedSessionSnapshots(savedSnapshots) : null;
   } catch {
     void spawnSession();
+    return null;
   }
 }
 
+function getRestoredSessionTitle(index: number, snapshot?: SavedSessionSnapshot): string {
+  if (snapshot?.title) {
+    return snapshot.title;
+  }
+
+  if (snapshot?.isClaude) {
+    return `Claude ${index + 1}`;
+  }
+
+  return buildSessionLabel(index);
+}
+
+function restoreSessionFromSnapshot(
+  activeSession: { id: string },
+  index: number,
+  savedSnapshot?: SavedSessionSnapshot,
+): TerminalSession {
+  return {
+    id: activeSession.id,
+    title: getRestoredSessionTitle(index, savedSnapshot),
+    status: 'running',
+    isClaude: savedSnapshot?.isClaude === true ? true : undefined,
+    claudeSessionId: savedSnapshot?.claudeSessionId,
+  };
+}
+
+function matchActiveSessionsToSavedOrder(
+  active: Array<{ id: string; cwd: string }>,
+  savedSnapshots: SavedSessionSnapshot[],
+): Array<{ activeSession: { id: string; cwd: string }; savedSnapshot: SavedSessionSnapshot }> | null {
+  if (savedSnapshots.length !== active.length) {
+    return null;
+  }
+
+  const activeByCwd = new Map<string, Array<{ id: string; cwd: string }>>();
+  active.forEach((session) => {
+    const bucket = activeByCwd.get(session.cwd);
+    if (bucket) bucket.push(session);
+    else activeByCwd.set(session.cwd, [session]);
+  });
+
+  const matches = savedSnapshots.map((savedSnapshot) => {
+    const bucket = activeByCwd.get(savedSnapshot.cwd);
+    const activeSession = bucket?.shift();
+    return activeSession ? { activeSession, savedSnapshot } : null;
+  });
+
+  if (matches.some((match) => match === null)) {
+    return null;
+  }
+
+  const hasUnmatchedActiveSessions = Array.from(activeByCwd.values()).some((bucket) => bucket.length > 0);
+  if (hasUnmatchedActiveSessions) {
+    return null;
+  }
+
+  return matches as Array<{ activeSession: { id: string; cwd: string }; savedSnapshot: SavedSessionSnapshot }>;
+}
+
 function reconnectSessions(
-  active: Array<{ id: string }>,
+  active: Array<{ id: string; cwd: string }>,
+  savedSnapshots: SavedSessionSnapshot[],
   {
     setSessions,
     setActiveSessionId,
     spawnCountRef,
     clearKillTimers,
   }: Pick<RestoreDependencies, 'setSessions' | 'setActiveSessionId' | 'spawnCountRef' | 'clearKillTimers'>,
-): void {
-  const reconnected: TerminalSession[] = active.map((session, index) => ({
-    id: session.id,
-    title: buildSessionLabel(index),
-    status: 'running',
-  }));
+): string | null {
+  const matchedSessions = matchActiveSessionsToSavedOrder(active, savedSnapshots);
+  const reconnected: TerminalSession[] = matchedSessions
+    ? matchedSessions.map(({ activeSession, savedSnapshot }, index) => restoreSessionFromSnapshot(activeSession, index, savedSnapshot))
+    : active.map((session, index) => restoreSessionFromSnapshot(session, index));
 
   setSessions(reconnected);
-  setActiveSessionId(reconnected[0].id);
+  setActiveSessionId(reconnected[0]?.id ?? null);
   spawnCountRef.current = reconnected.length;
   reconnected.forEach((session) => registerExitHandler(session.id, setSessions, clearKillTimers));
+  return matchedSessions ? serializeSavedSessionSnapshots(savedSnapshots) : null;
 }
 
 async function spawnFromSavedOrDefault(
+  savedSnapshots: SavedSessionSnapshot[],
   { spawnSession, spawnClaudeSession }: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession'>,
 ): Promise<void> {
   const autoLaunch = await window.electronAPI.config.get('claudeAutoLaunch');
-  const saved = await window.electronAPI.config.get('terminalSessions');
-  if (!Array.isArray(saved) || saved.length === 0) {
+  if (savedSnapshots.length === 0) {
     if (autoLaunch) void spawnClaudeSession();
     else void spawnSession();
     return;
   }
 
-  for (const snapshot of saved) {
-    if (snapshot && typeof snapshot.cwd === 'string') {
-      await spawnSavedSession(snapshot, autoLaunch, { spawnSession, spawnClaudeSession });
-    }
+  for (const snapshot of savedSnapshots) {
+    await spawnSavedSession(snapshot, autoLaunch, { spawnSession, spawnClaudeSession });
   }
 }
 

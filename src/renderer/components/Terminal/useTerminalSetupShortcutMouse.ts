@@ -5,6 +5,7 @@ import {
   INITIAL_SELECTION_TOOLTIP,
   classifySelection,
 } from './SelectionTooltip'
+import { writeChunkedPaste } from './terminalPasteHelpers'
 import type {
   TerminalSetupLifecycleContext,
   TerminalSetupRuntimeRefs,
@@ -176,7 +177,7 @@ function handlePasteShortcut(
       context.callbacks.setPendingPaste(text)
       return
     }
-    void window.electronAPI.pty.write(context.sessionId, text)
+    void writeChunkedPaste(context.sessionId, text)
   })
 }
 

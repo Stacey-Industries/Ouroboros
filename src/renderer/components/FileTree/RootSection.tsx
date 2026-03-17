@@ -14,6 +14,8 @@ export interface RootSectionProps {
   onToggle: () => void;
   activeFilePath: string | null;
   onFileSelect: (filePath: string) => void;
+  /** Called on double-click (opens permanent tab). Falls back to onFileSelect if not provided. */
+  onFileOpen?: (filePath: string) => void;
   onRemove?: () => void;
   bookmarks: string[];
   extraIgnorePatterns: string[];
@@ -98,8 +100,6 @@ function ExpandedRootSection({
   getHeatLevel?: (filePath: string) => FileHeatData | undefined;
   model: RootSectionModel;
 }): React.ReactElement {
-  const menuNode = model.contextMenu.node;
-
   return (
     <div onKeyDown={model.onKeyDown}>
       <RootSectionBody
@@ -109,20 +109,6 @@ function ExpandedRootSection({
         getHeatLevel={getHeatLevel}
         model={model}
       />
-      <ContextMenu
-        state={model.contextMenu}
-        projectRoot={root}
-        onClose={model.closeContextMenu}
-        onRename={model.handleRename}
-        onNewFile={model.handleNewFile}
-        onNewFolder={model.handleNewFolder}
-        onDeleted={model.handleDeleted}
-        isBookmarked={menuNode ? bookmarks.includes(menuNode.path) : false}
-        onBookmarkToggle={(node) => void model.handleBookmarkToggle(node)}
-        gitStatus={menuNode ? getNodeGitStatus(menuNode, model.gitStatus) : undefined}
-        onStage={(node) => void model.handleStage(node)}
-        onUnstage={(node) => void model.handleUnstage(node)}
-      />
     </div>
   );
 }
@@ -131,13 +117,28 @@ export function RootSection(props: RootSectionProps): React.ReactElement {
   const model = useRootSectionModel({
     root: props.root,
     onFileSelect: props.onFileSelect,
+    onFileOpen: props.onFileOpen,
     extraIgnorePatterns: props.extraIgnorePatterns,
+    enabled: props.isExpanded,
   });
+  const menuNode = model.contextMenu.node;
   const { handleContextMenu } = model;
   const handleHeaderContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     handleContextMenu(event, buildRootNode(props.root));
   }, [handleContextMenu, props.root]);
+  const handleContextMenuNewFile = useCallback((parentDir: string) => {
+    if (!props.isExpanded) {
+      props.onToggle();
+    }
+    model.handleNewFile(parentDir);
+  }, [model, props]);
+  const handleContextMenuNewFolder = useCallback((parentDir: string) => {
+    if (!props.isExpanded) {
+      props.onToggle();
+    }
+    model.handleNewFolder(parentDir);
+  }, [model, props]);
 
   return (
     <div style={{ borderBottom: '1px solid var(--border-muted)' }}>
@@ -157,6 +158,23 @@ export function RootSection(props: RootSectionProps): React.ReactElement {
           model={model}
         />
       ) : null}
+      <ContextMenu
+        state={model.contextMenu}
+        projectRoot={props.root}
+        onClose={model.closeContextMenu}
+        onRename={model.handleRename}
+        onNewFile={handleContextMenuNewFile}
+        onNewFolder={handleContextMenuNewFolder}
+        onDeleted={model.handleDeleted}
+        onMultiDeleted={model.handleMultiDeleted}
+        onPushUndo={model.pushUndo}
+        selectedPaths={model.selectedPaths}
+        isBookmarked={menuNode ? props.bookmarks.includes(menuNode.path) : false}
+        onBookmarkToggle={(node) => void model.handleBookmarkToggle(node)}
+        gitStatus={menuNode ? getNodeGitStatus(menuNode, model.gitStatus) : undefined}
+        onStage={(node) => void model.handleStage(node)}
+        onUnstage={(node) => void model.handleUnstage(node)}
+      />
     </div>
   );
 }

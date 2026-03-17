@@ -72,6 +72,15 @@ function CheckIcon(): React.ReactElement {
   );
 }
 
+function RevertIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  );
+}
+
 export function UserMessageActions({
   message,
   isLastUserMessage,
@@ -114,16 +123,36 @@ function useCopyMessage(content: string): { copied: boolean; copy: () => void } 
   return { copied, copy };
 }
 
+export interface AssistantMessageActionsProps {
+  message: AgentChatMessageRecord;
+  onBranch: (message: AgentChatMessageRecord) => void;
+  onRevert?: (message: AgentChatMessageRecord) => void;
+}
+
 export function AssistantMessageActions({
   message,
   onBranch,
-}: Pick<MessageActionsProps, 'message' | 'onBranch'>): React.ReactElement {
+  onRevert,
+}: AssistantMessageActionsProps): React.ReactElement {
   const { copied, copy } = useCopyMessage(message.content);
+  const hasSnapshot = !!message.orchestration?.preSnapshotHash;
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-hover:opacity-100">
       <ActionButton title={copied ? 'Copied!' : 'Copy message'} onClick={copy}>
         {copied ? <CheckIcon /> : <CopyIcon />}
       </ActionButton>
+      {hasSnapshot && onRevert && (
+        <button
+          title="Revert changes from this turn"
+          onClick={() => onRevert(message)}
+          className="rounded px-1.5 py-0.5 text-[var(--text-muted)] transition-all duration-100 hover:bg-[rgba(220,80,60,0.1)] hover:text-[rgb(220,80,60)]"
+        >
+          <div className="flex items-center gap-1">
+            <RevertIcon />
+            <span className="text-[10px] font-medium">Revert</span>
+          </div>
+        </button>
+      )}
       <button
         title="Branch from this message"
         onClick={() => onBranch(message)}

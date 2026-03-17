@@ -49,6 +49,8 @@ export function buildAgentChatOrchestrationLink(
     taskId: session.taskId,
     sessionId: session.id,
     attemptId: session.attempts.at(-1)?.id ?? session.latestResult?.attemptId,
+    claudeSessionId: session.providerSession?.sessionId,
+    linkedTerminalId: session.providerSession?.linkedTerminalId,
   }
 }
 

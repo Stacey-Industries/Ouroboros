@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AgentChatContentBlock,
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  ImageAttachment,
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { formatTimestamp, formatTimestampFull } from './agentChatFormatters';
@@ -15,12 +16,21 @@ import {
   AssistantMessageActions,
   UserMessageActions,
 } from './AgentChatMessageActions';
+import { CompletedChangeSummaryBar, extractChangeTallyFromBlocks, hasFileChanges } from './ChangeSummaryBar';
 import { MessageMarkdown } from './MessageMarkdown';
 import { AgentChatBranchIndicator } from './AgentChatBranchIndicator';
 import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
 import { useAgentChatStreaming } from './useAgentChatStreaming';
+import type { ChatOverrides } from './ChatControlsBar';
 import type { PinnedFile } from './useAgentChatContext';
 import type { MentionItem } from './MentionAutocomplete';
+import type { SlashCommandContext } from './SlashCommandMenu';
+import type { QueuedMessage } from './useAgentChatWorkspace';
+
+const FILE_MODIFYING_TOOLS_SET = new Set([
+  'Write', 'Edit', 'MultiEdit', 'write_file', 'edit_file', 'multi_edit',
+  'NotebookEdit', 'create_file',
+]);
 
 export interface AgentChatConversationProps {
   activeThread: AgentChatThreadRecord | null;
@@ -40,6 +50,7 @@ export interface AgentChatConversationProps {
   onEdit: (message: AgentChatMessageRecord) => void;
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
+  onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onOpenLinkedTask: () => void;
   onSend: () => Promise<void>;
@@ -61,6 +72,19 @@ export interface AgentChatConversationProps {
   allFiles?: FileEntry[];
   // Thread navigation (for branch indicator)
   onSelectThread?: (threadId: string) => void;
+  // Chat-level overrides
+  chatOverrides?: ChatOverrides;
+  onChatOverridesChange?: (overrides: ChatOverrides) => void;
+  settingsModel?: string;
+  slashCommandContext?: SlashCommandContext;
+  // Message queue
+  queuedMessages?: QueuedMessage[];
+  onEditQueuedMessage?: (id: string) => void;
+  onDeleteQueuedMessage?: (id: string) => void;
+  onSendQueuedMessageNow?: (id: string) => Promise<void>;
+  // Image attachments
+  attachments?: ImageAttachment[];
+  onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
 }
 
 function ContextSummaryRow({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
@@ -179,10 +203,10 @@ function UserMessage(props: {
         onRetry={props.onRetry}
         onBranch={props.onBranch}
       />
-      <div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
+      <div className="max-w-[85%] rounded-lg px-3.5 py-2.5" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)', borderRadius: '8px' }}>
         <div className="whitespace-pre-wrap text-sm leading-relaxed">{props.message.content || ' '}</div>
         <ContextSummaryRow message={props.message} />
-        <div className="mt-1 text-right text-[10px] opacity-60" title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div>
+        <div className="mt-1 text-right text-[10px]" style={{ color: 'var(--bg)', opacity: 0.6 }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div>
       </div>
     </div>
   );
@@ -234,22 +258,27 @@ function AssistantBlocksContent({ blocks }: { blocks: AgentChatContentBlock[] })
 
 function AssistantMessage(props: {
   message: AgentChatMessageRecord;
+  workspaceRoot?: string;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onBranch: (message: AgentChatMessageRecord) => void;
+  onRevert?: (message: AgentChatMessageRecord) => void;
 }): React.ReactElement {
   const hasBlocks = props.message.blocks && props.message.blocks.length > 0;
+  const snapshotHash = props.message.orchestration?.preSnapshotHash;
+  const showChangeSummary = snapshotHash && props.workspaceRoot && hasBlocks
+    && props.message.blocks && hasFileChanges(props.message.blocks);
 
   return (
     <div className="group flex justify-start">
-      <div className="max-w-[85%]">
+      <div className="max-w-[95%]">
         <div className="flex items-center gap-2 mb-1">
           <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
             C
           </div>
-          <span className="text-[11px] text-[var(--text-muted)]" title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
-          <AssistantMessageActions message={props.message} onBranch={props.onBranch} />
+          <span className="text-[10px]" style={{ color: 'var(--text-faint, var(--text-muted))' }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
+          <AssistantMessageActions message={props.message} onBranch={props.onBranch} onRevert={props.onRevert} />
         </div>
-        <div className="rounded-xl rounded-tl-sm px-3.5 py-2.5" style={{ backgroundColor: 'var(--bg)', borderLeft: '2px solid var(--accent)' }}>
+        <div className="pl-7 pb-1">
           {hasBlocks ? (
             <AssistantBlocksContent blocks={props.message.blocks!} />
           ) : (
@@ -259,6 +288,14 @@ function AssistantMessage(props: {
           <ErrorInline message={props.message} />
           <ToolsSummaryRow message={props.message} />
           <CostDurationRow message={props.message} />
+          {showChangeSummary && (
+            <CompletedChangeSummaryBar
+              snapshotHash={snapshotHash}
+              projectRoot={props.workspaceRoot!}
+              sessionId={props.message.id}
+              tally={extractChangeTallyFromBlocks(props.message.blocks!)}
+            />
+          )}
           <MessageActionLink message={props.message} onOpenLinkedDetails={props.onOpenLinkedDetails} />
         </div>
       </div>
@@ -293,12 +330,14 @@ function MessageCard(props: {
   editDraft: string;
   isLastUserMessage: boolean;
   threadStatus: string;
+  workspaceRoot?: string;
   onCancelEdit: () => void;
   onEdit: (message: AgentChatMessageRecord) => void;
   onEditDraftChange: (value: string) => void;
   onEditSubmit: () => void;
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
+  onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
 }): React.ReactElement {
   let content: React.ReactElement;
@@ -324,8 +363,10 @@ function MessageCard(props: {
     content = (
       <AssistantMessage
         message={props.message}
+        workspaceRoot={props.workspaceRoot}
         onOpenLinkedDetails={props.onOpenLinkedDetails}
         onBranch={props.onBranch}
+        onRevert={props.onRevert}
       />
     );
   } else {
@@ -362,8 +403,17 @@ function StreamingIndicator({
   return (
     <div className="flex items-center justify-between pl-7 pr-1">
       <div className="flex items-center gap-2">
-        <span className="agent-chat-streaming-cursor text-sm font-semibold" style={{ color: 'var(--accent)' }} />
-        <span className="text-xs text-[var(--text-muted)]">Claude is working...</span>
+        {[0, 150, 300].map((delay, i) => (
+          <span
+            key={i}
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: 'var(--accent)',
+              opacity: 0.8,
+              animation: `agent-chat-dot-bounce 1.2s ease-in-out ${delay}ms infinite`,
+            }}
+          />
+        ))}
       </div>
       {onStop && (
         <button
@@ -396,11 +446,19 @@ function InlineError({ error }: { error: string | null }): React.ReactElement | 
 function FailedBanner({ activeThread }: { activeThread: AgentChatThreadRecord }): React.ReactElement | null {
   if (activeThread.status !== 'failed' && activeThread.status !== 'cancelled') return null;
   const label = activeThread.status === 'failed' ? 'Task failed' : 'Task cancelled';
+  // Surface the error message from the last assistant message (if any)
+  const lastMsg = [...activeThread.messages].reverse().find((m) => m.role === 'assistant' && m.error);
+  const detail = lastMsg?.error?.message;
   return (
-    <div className="flex justify-center">
+    <div className="flex flex-col items-center gap-1">
       <div className="rounded-full px-3 py-1 text-[11px] font-medium" style={{ color: 'var(--error, #f85149)', backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
         {label}
       </div>
+      {detail && (
+        <div className="max-w-md px-3 py-1 text-center text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          {detail}
+        </div>
+      )}
     </div>
   );
 }
@@ -530,6 +588,80 @@ function EmptyConversationState(props: {
   );
 }
 
+function QueuedMessageBanner(props: {
+  messages: QueuedMessage[];
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onSendNow: (id: string) => Promise<void>;
+}): React.ReactElement | null {
+  if (props.messages.length === 0) return null;
+
+  return (
+    <div className="border-t px-3 py-1.5" style={{ borderColor: 'var(--border)' }}>
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+        Queued ({props.messages.length})
+      </div>
+      <div className="space-y-1">
+        {props.messages.map((msg) => (
+          <div
+            key={msg.id}
+            className="flex items-start gap-2 rounded-lg border px-2.5 py-1.5"
+            style={{
+              borderColor: 'var(--border)',
+              backgroundColor: 'var(--bg)',
+            }}
+          >
+            <div
+              className="min-w-0 flex-1 truncate text-xs"
+              style={{ color: 'var(--text)' }}
+              title={msg.content}
+            >
+              {msg.content.length > 80 ? `${msg.content.slice(0, 80)}...` : msg.content}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <button
+                onClick={() => props.onEdit(msg.id)}
+                title="Edit — move back to composer"
+                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => void props.onSendNow(msg.id)}
+                title="Send now — interrupt current task"
+                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
+                style={{ color: 'var(--accent)' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+              <button
+                onClick={() => props.onDelete(msg.id)}
+                title="Remove from queue"
+                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error, #f85149)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function useSmartAutoScroll(deps: unknown[]): {
   scrollRef: React.RefObject<HTMLDivElement>;
   onScroll: () => void;
@@ -575,6 +707,7 @@ function ConversationBody(props: {
   onEdit: (message: AgentChatMessageRecord) => void;
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
+  onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onStop?: () => Promise<void>;
   pendingUserMessage?: string | null;
@@ -584,6 +717,40 @@ function ConversationBody(props: {
   const streaming = useAgentChatStreaming(props.activeThread?.id ?? null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+
+  // Auto-open diff review when agent completes with file changes.
+  // Track previous streaming state to detect the false→true→false transition.
+  const wasStreamingRef = useRef(false);
+  useEffect(() => {
+    const wasStreaming = wasStreamingRef.current;
+    wasStreamingRef.current = streaming.isStreaming;
+
+    // Detect completion: was streaming → no longer streaming, has blocks with file changes
+    if (wasStreaming && !streaming.isStreaming && streaming.blocks.length > 0) {
+      const thread = props.activeThread;
+      if (!thread) return;
+      // Find the latest assistant message (just completed) to get its snapshot hash
+      const lastAssistant = [...thread.messages].reverse().find((m) => m.role === 'assistant');
+      const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
+      if (snapshotHash && thread.workspaceRoot) {
+        // Check if the streaming blocks include file-modifying tools
+        const hasFileEdits = streaming.blocks.some(
+          (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool.name),
+        );
+        if (hasFileEdits) {
+          window.dispatchEvent(
+            new CustomEvent('agent-ide:open-diff-review', {
+              detail: {
+                sessionId: lastAssistant!.id,
+                snapshotHash,
+                projectRoot: thread.workspaceRoot,
+              },
+            }),
+          );
+        }
+      }
+    }
+  }, [streaming.isStreaming, streaming.blocks, props.activeThread]);
 
   const { scrollRef, onScroll } = useSmartAutoScroll([
     props.activeThread?.messages.length,
@@ -617,13 +784,22 @@ function ConversationBody(props: {
   if (props.isLoading) return <LoadingState />;
 
   // No thread yet but a send is in progress — show the optimistic user message
-  // while context building runs on the main process.
+  // while context building runs on the main process.  Use the full streaming
+  // message component (with the snake animation) instead of the bare 3-dot
+  // indicator so the transition feels seamless.
   if (!props.activeThread) {
     if (props.isSending && props.pendingUserMessage) {
       return (
-        <div ref={scrollRef} onScroll={onScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-          <PendingUserBubble text={props.pendingUserMessage} />
-          <StreamingIndicator activeThread={null} onStop={props.onStop} />
+        <div ref={scrollRef} onScroll={onScroll} className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+          <div className="mt-auto space-y-4">
+            <PendingUserBubble text={props.pendingUserMessage} />
+            <AgentChatStreamingMessage
+              blocks={[]}
+              isStreaming={true}
+              activeTextContent=""
+              onStop={props.onStop}
+            />
+          </div>
         </div>
       );
     }
@@ -631,55 +807,97 @@ function ConversationBody(props: {
   }
 
   const threadIsActive = props.activeThread.status === 'submitting' || props.activeThread.status === 'running';
-  const showStreamingMessage = streaming.isStreaming && streaming.blocks.length > 0;
+  // Show streaming blocks while streaming OR while retained after completion
+  // (blocks are kept until the persisted message appears in the thread).
+  const streamingMessageInThread = streaming.streamingMessageId
+    ? props.activeThread.messages.some((m) => m.id === streaming.streamingMessageId)
+    : false;
+  // Mount AgentChatStreamingMessage whenever the agent is active — even before the first block
+  // arrives. This allows the rotating status text (Slithering…, Coiling… etc.) to show
+  // during the pre-stream waiting period instead of the generic 3-dot indicator.
+  const showStreamingMessage = (streaming.blocks.length > 0 || threadIsActive || streaming.isStreaming) && !streamingMessageInThread;
   const lastUserMessageId = findLastUserMessageId(props.activeThread.messages);
 
   return (
-    <div ref={scrollRef} onScroll={onScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-      {props.activeThread.branchInfo && props.onSelectThread && (
-        <AgentChatBranchIndicator
-          branchInfo={props.activeThread.branchInfo}
-          onSwitchToParent={props.onSelectThread}
-        />
-      )}
-      {props.activeThread.messages.map((message) => (
-        <MessageCard
-          key={message.id}
-          message={message}
-          editingMessageId={editingMessageId}
-          editDraft={editDraft}
-          isLastUserMessage={message.id === lastUserMessageId}
-          threadStatus={props.activeThread!.status}
-          onCancelEdit={handleCancelEdit}
-          onEdit={handleStartEdit}
-          onEditDraftChange={setEditDraft}
-          onEditSubmit={handleEditSubmit}
-          onRetry={props.onRetry}
-          onBranch={props.onBranch}
-          onOpenLinkedDetails={props.onOpenLinkedDetails}
-        />
-      ))}
-      {/* Show optimistic pending message for follow-up sends while thread is updating */}
-      {props.pendingUserMessage && props.isSending && (
-        <PendingUserBubble text={props.pendingUserMessage} />
-      )}
-      {showStreamingMessage ? (
-        <AgentChatStreamingMessage
-          blocks={streaming.blocks}
-          isStreaming={streaming.isStreaming}
-          activeTextContent={streaming.activeTextContent}
-        />
-      ) : (
-        (threadIsActive || (props.isSending && !props.pendingUserMessage)) &&
-          <StreamingIndicator activeThread={props.activeThread} onStop={props.onStop} />
-      )}
-      <FailedBanner activeThread={props.activeThread} />
-      <InlineError error={props.error} />
+    <div ref={scrollRef} onScroll={onScroll} className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+      <div className="mt-auto space-y-4">
+        {props.activeThread.branchInfo && props.onSelectThread && (
+          <AgentChatBranchIndicator
+            branchInfo={props.activeThread.branchInfo}
+            onSwitchToParent={props.onSelectThread}
+          />
+        )}
+        {props.activeThread.messages
+          .filter((message) => {
+            // Hide noisy intermediate status messages (context preparation, progress updates).
+            // Keep result/error statuses since they carry meaningful info.
+            if (message.role === 'status') {
+              const kind = (message as { statusKind?: string }).statusKind;
+              if (kind === 'context' || kind === 'progress' || kind === 'verification') return false;
+            }
+            return true;
+          })
+          .map((message) => (
+          <MessageCard
+            key={message.id}
+            message={message}
+            editingMessageId={editingMessageId}
+            editDraft={editDraft}
+            isLastUserMessage={message.id === lastUserMessageId}
+            threadStatus={props.activeThread!.status}
+            workspaceRoot={props.activeThread!.workspaceRoot}
+            onCancelEdit={handleCancelEdit}
+            onEdit={handleStartEdit}
+            onEditDraftChange={setEditDraft}
+            onEditSubmit={handleEditSubmit}
+            onRetry={props.onRetry}
+            onBranch={props.onBranch}
+            onRevert={props.onRevert}
+            onOpenLinkedDetails={props.onOpenLinkedDetails}
+          />
+        ))}
+        {/* Show optimistic pending message for follow-up sends while thread is updating */}
+        {props.pendingUserMessage && props.isSending && (
+          <PendingUserBubble text={props.pendingUserMessage} />
+        )}
+        {showStreamingMessage && (
+          <AgentChatStreamingMessage
+            blocks={streaming.blocks}
+            isStreaming={threadIsActive || streaming.isStreaming}
+            activeTextContent={streaming.activeTextContent}
+            onStop={props.onStop}
+          />
+        )}
+        <FailedBanner activeThread={props.activeThread} />
+        <InlineError error={props.error} />
+      </div>
     </div>
   );
 }
 
+/**
+ * Returns token usage for the active thread's chat session.
+ * - inputTokens: last turn's context window utilization (non-cached tokens)
+ * - outputTokens: cumulative output tokens across all turns in this session
+ */
+function useThreadTokenUsage(thread: AgentChatThreadRecord | null | undefined): { inputTokens: number; outputTokens: number } | undefined {
+  return useMemo(() => {
+    if (!thread?.messages) return undefined;
+    // Use the LAST assistant message's token usage — it carries the most recent
+    // per-turn input and cumulative output from the adapter.
+    let lastUsage: { inputTokens: number; outputTokens: number } | undefined;
+    for (const msg of thread.messages) {
+      if (msg.tokenUsage) {
+        lastUsage = msg.tokenUsage;
+      }
+    }
+    return lastUsage ?? undefined;
+  }, [thread?.messages]);
+}
+
 export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement {
+  const threadTokenUsage = useThreadTokenUsage(props.activeThread);
+
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)]">
       <ConversationBody
@@ -691,17 +909,27 @@ export function AgentChatConversation(props: AgentChatConversationProps): React.
         onEdit={props.onEdit}
         onRetry={props.onRetry}
         onBranch={props.onBranch}
+        onRevert={props.onRevert}
         onOpenLinkedDetails={props.onOpenLinkedDetails}
         onStop={props.onStop}
         pendingUserMessage={props.pendingUserMessage}
         onSelectThread={props.onSelectThread}
         onDraftChange={props.onDraftChange}
       />
+      {props.queuedMessages && props.queuedMessages.length > 0 && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow && (
+        <QueuedMessageBanner
+          messages={props.queuedMessages}
+          onEdit={props.onEditQueuedMessage}
+          onDelete={props.onDeleteQueuedMessage}
+          onSendNow={props.onSendQueuedMessageNow}
+        />
+      )}
       <AgentChatComposer
         canSend={props.canSend}
         disabled={!props.hasProject}
         draft={props.draft}
         isSending={props.isSending}
+        threadIsBusy={props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running'}
         messages={props.activeThread?.messages}
         onChange={props.onDraftChange}
         onSubmit={props.onSend}
@@ -718,6 +946,13 @@ export function AgentChatConversation(props: AgentChatConversationProps): React.
         onAddMention={props.onAddMention}
         onRemoveMention={props.onRemoveMention}
         allFiles={props.allFiles}
+        chatOverrides={props.chatOverrides}
+        onChatOverridesChange={props.onChatOverridesChange}
+        settingsModel={props.settingsModel}
+        threadTokenUsage={threadTokenUsage}
+        slashCommandContext={props.slashCommandContext}
+        attachments={props.attachments}
+        onAttachmentsChange={props.onAttachmentsChange}
       />
       <AgentChatDetailsDrawer
         activeLink={props.details?.link ?? props.activeThread?.latestOrchestration}

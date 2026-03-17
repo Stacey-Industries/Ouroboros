@@ -55,14 +55,14 @@ function saveSizes(sizes: PanelSizes): void {
     // ignore storage errors
   }
   if (typeof window !== 'undefined' && window.electronAPI?.config?.set) {
-    window.electronAPI.config.set('panelSizes', sizes).catch(() => {});
+    window.electronAPI.config.set('panelSizes', sizes).catch((error) => { console.error('[layout] Failed to persist panel sizes:', error) });
   }
 }
 
 /**
  * Creates (or reuses) a lightweight DOM element that acts as a drag preview line.
- * During drag the panels stay frozen - only this 2px line moves with the mouse.
- * On mouseup the line is hidden and the panel snaps to the final position.
+ * During drag the panels stay frozen - only this 2px line moves with the pointer.
+ * On pointerup the line is hidden and the panel snaps to the final position.
  */
 let previewLine: HTMLDivElement | null = null;
 
@@ -121,7 +121,7 @@ function clampPanelSize(panel: PanelId, value: number): number {
   return Math.max(MIN_SIZES[panel], Math.min(MAX_SIZES[panel], value));
 }
 
-function getResizeDelta(direction: ResizeDirection, event: MouseEvent, startPos: number): number {
+function getResizeDelta(direction: ResizeDirection, event: PointerEvent, startPos: number): number {
   return direction === 'vertical' ? event.clientX - startPos : event.clientY - startPos;
 }
 
@@ -129,7 +129,7 @@ function getResizeSign(panel: PanelId): number {
   return panel === 'rightSidebar' || panel === 'terminal' ? -1 : 1;
 }
 
-function updatePreviewLine(direction: ResizeDirection, event: MouseEvent): void {
+function updatePreviewLine(direction: ResizeDirection, event: PointerEvent): void {
   showPreviewLine(direction, direction === 'vertical' ? event.clientX : event.clientY);
 }
 
@@ -152,18 +152,19 @@ function resetDocumentDragState(): void {
 }
 
 function removeDragListeners(
-  handleMouseMove: (event: MouseEvent) => void,
-  handleMouseUp: () => void,
+  handlePointerMove: (event: PointerEvent) => void,
+  handlePointerUp: () => void,
 ): void {
-  document.removeEventListener('mousemove', handleMouseMove);
-  document.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('pointermove', handlePointerMove);
+  document.removeEventListener('pointerup', handlePointerUp);
+  document.removeEventListener('pointercancel', handlePointerUp);
 }
 
 function useResizeDrag(
   setSizes: Dispatch<SetStateAction<PanelSizes>>,
   dragStateRef: MutableRefObject<DragState | null>,
 ): UseResizableReturn['startResize'] {
-  const handleMouseMove = useCallback((event: MouseEvent) => {
+  const handlePointerMove = useCallback((event: PointerEvent) => {
     const dragState = dragStateRef.current;
     if (!dragState) return;
 
@@ -174,23 +175,24 @@ function useResizeDrag(
     updatePreviewLine(dragState.direction, event);
   }, [dragStateRef]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     hidePreviewLine();
     commitDragSize(dragStateRef.current, setSizes);
     dragStateRef.current = null;
     resetDocumentDragState();
-    removeDragListeners(handleMouseMove, handleMouseUp);
-  }, [dragStateRef, handleMouseMove, setSizes]);
+    removeDragListeners(handlePointerMove, handlePointerUp);
+  }, [dragStateRef, handlePointerMove, setSizes]);
 
   const startResize = useCallback(
     (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => {
       dragStateRef.current = { panel, direction, startValue, startPos, currentSize: startValue };
       document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
       document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
     },
-    [dragStateRef, handleMouseMove, handleMouseUp],
+    [dragStateRef, handlePointerMove, handlePointerUp],
   );
 
   useEffect(() => {
@@ -198,9 +200,9 @@ function useResizeDrag(
       dragStateRef.current = null;
       hidePreviewLine();
       resetDocumentDragState();
-      removeDragListeners(handleMouseMove, handleMouseUp);
+      removeDragListeners(handlePointerMove, handlePointerUp);
     };
-  }, [dragStateRef, handleMouseMove, handleMouseUp]);
+  }, [dragStateRef, handlePointerMove, handlePointerUp]);
 
   return startResize;
 }

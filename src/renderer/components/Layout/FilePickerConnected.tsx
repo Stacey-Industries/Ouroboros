@@ -31,7 +31,7 @@ export function FilePickerConnected({
       isOpen={isOpen}
       onClose={onClose}
       projectRoot={projectRoot}
-      onOpenFile={handleOpenFile}
+      onSelectFile={handleOpenFile}
     />
   );
 }

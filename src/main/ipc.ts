@@ -13,9 +13,13 @@ import {
   registerFileHandlers, cleanupFileWatchers,
   registerGitHandlers,
   registerAppHandlers,
+  registerAgentChatHandlers,
+  cleanupAgentChatHandlers,
   registerSessionHandlers,
   registerMiscHandlers, lspStopAll,
   registerMcpHandlers,
+  registerMcpStoreHandlers,
+  registerExtensionStoreHandlers,
   registerContextHandlers,
   registerIdeToolsHandlers,
 } from './ipc-handlers'
@@ -34,9 +38,12 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...registerFileHandlers(senderWindow),
     ...registerGitHandlers(senderWindow),
     ...registerAppHandlers(senderWindow),
+    ...registerAgentChatHandlers(win),
     ...registerSessionHandlers(senderWindow),
     ...registerMiscHandlers(senderWindow, win),
     ...registerMcpHandlers(senderWindow),
+    ...registerMcpStoreHandlers(senderWindow),
+    ...registerExtensionStoreHandlers(senderWindow),
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
   ]
@@ -51,6 +58,53 @@ async function withCodeModeManager<T>(
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : String(err) }
   }
+}
+
+/**
+ * Minimal orchestration IPC stubs — only the 3 methods still used:
+ * - previewContext / buildContextPacket: used by context builder
+ * - cancelTask: used by chat to abort a running Claude Code process
+ *
+ * The full orchestration task system (AgentLoopController, Anthropic API adapter,
+ * tool executor, subagent runner, session store) was removed as dead code.
+ */
+function registerOrchestrationStubHandlers(channels: string[]): void {
+  ipcMain.handle('orchestration:previewContext', async (_event, request: unknown) => {
+    try {
+      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
+      const { buildRepoFacts } = await import('./orchestration/repoIndexer')
+      const req = request as { workspaceRoots: string[] }
+      const repoFacts = await buildRepoFacts(req.workspaceRoots)
+      return buildContextPacket({ request: req, repoFacts })
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('orchestration:buildContextPacket', async (_event, request: unknown) => {
+    try {
+      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
+      const { buildRepoFacts } = await import('./orchestration/repoIndexer')
+      const req = request as { workspaceRoots: string[] }
+      const repoFacts = await buildRepoFacts(req.workspaceRoots)
+      return buildContextPacket({ request: req, repoFacts })
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle('orchestration:cancelTask', async (_event, taskId: unknown) => {
+    try {
+      const { createClaudeCodeAdapter } = await import('./orchestration/providers/claudeCodeAdapter')
+      const adapter = createClaudeCodeAdapter()
+      await adapter.cancelTask({ externalTaskId: taskId as string })
+      return { success: true }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  channels.push('orchestration:previewContext', 'orchestration:buildContextPacket', 'orchestration:cancelTask')
 }
 
 function registerCodeModeHandlers(channels: string[]): void {
@@ -81,6 +135,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   handlersRegistered = true
   allChannels = registerDomainHandlers(win)
   registerCodeModeHandlers(allChannels)
+  registerOrchestrationStubHandlers(allChannels)
 
   return () => { cleanupIpcHandlers() }
 }
@@ -92,8 +147,10 @@ export function cleanupIpcHandlers(): void {
   // Close settings file watcher
   cleanupConfigWatcher()
 
+  cleanupAgentChatHandlers()
+
   // Stop all LSP servers
-  lspStopAll().catch(() => {})
+  lspStopAll().catch((error) => { console.error('[ipc] Failed to stop LSP servers during cleanup:', error) })
 
   // Remove all handlers
   for (const channel of allChannels) {

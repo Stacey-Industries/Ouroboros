@@ -9,6 +9,8 @@ import { BrowserWindow } from 'electron'
 import net from 'net'
 import { clearSessionRules, requestApproval, respondToApproval, toolRequiresApproval } from './approvalManager'
 import { getConfigValue } from './config'
+import { getContextLayerController } from './contextLayer/contextLayerController'
+import { getGraphController } from './codebaseGraph/graphController'
 import { dispatchActivationEvent } from './extensions'
 import { getAllActiveWindows } from './windowManager'
 
@@ -73,6 +75,55 @@ let mainWindow: BrowserWindow | null = null
 
 const pendingQueue: HookPayload[] = []
 
+// ---------------------------------------------------------------------------
+// Session inference: map "unknown" sessionIds to the correct active session.
+//
+// Claude Code hook scripts don't always have access to the session context
+// when emitting tool events, so they send sessionId="unknown". We track
+// active sessions from lifecycle events and infer the correct session for
+// tool events that arrive without one.
+// ---------------------------------------------------------------------------
+const activeSessions = new Map<string, number>() // sessionId → lastSeen timestamp
+
+function trackSessionLifecycle(payload: HookPayload): void {
+  if (payload.type === 'session_start' || payload.type === 'agent_start') {
+    activeSessions.set(payload.sessionId, payload.timestamp)
+  } else if (payload.type === 'session_stop' || payload.type === 'agent_end') {
+    activeSessions.delete(payload.sessionId)
+  } else if (payload.sessionId !== 'unknown' && payload.sessionId !== '' && activeSessions.has(payload.sessionId)) {
+    // Update lastSeen for any event with a known session — improves inference
+    // accuracy when multiple sessions are active concurrently
+    activeSessions.set(payload.sessionId, payload.timestamp)
+  }
+}
+
+function inferSessionId(payload: HookPayload): HookPayload {
+  // Only infer for tool events with unknown/missing session IDs
+  if (payload.sessionId !== 'unknown' && payload.sessionId !== '') {
+    return payload
+  }
+  if (payload.type !== 'pre_tool_use' && payload.type !== 'post_tool_use') {
+    return payload
+  }
+
+  // Find the most recently active session
+  let bestId: string | null = null
+  let bestTime = -1
+  for (const [id, lastSeen] of activeSessions) {
+    if (lastSeen > bestTime) {
+      bestTime = lastSeen
+      bestId = id
+    }
+  }
+
+  if (bestId) {
+    console.log(`[hooks] inferred session for tool event: ${payload.sessionId} → ${bestId}`)
+    return { ...payload, sessionId: bestId }
+  }
+
+  return payload
+}
+
 function isValidPayload(obj: unknown): obj is HookPayload {
   if (!obj || typeof obj !== 'object') {
     return false
@@ -131,11 +182,23 @@ function flushPendingQueue(windows: BrowserWindow[]): void {
 function dispatchLifecycleEvent(payload: HookPayload): void {
   if (payload.type === 'session_start') {
     dispatchActivationEvent('onSessionStart', { sessionId: payload.sessionId }).catch(() => {})
+    getContextLayerController()?.onSessionStart()
+    getGraphController()?.onSessionStart()
     return
   }
 
   if (payload.type === 'session_stop' || payload.type === 'agent_stop' || payload.type === 'agent_end') {
     dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {})
+  }
+
+  // Only treat a session_stop as a potential git commit — a PTY Claude Code
+  // session may have committed files.  agent_end fires for every sub-agent
+  // completion (including internal chat API agents) and does not imply a git
+  // state change, so calling onGitCommit() there marks all modules dirty
+  // unnecessarily and causes a full re-index on every subsequent message.
+  if (payload.type === 'session_stop') {
+    getContextLayerController()?.onGitCommit()
+    getGraphController()?.onGitCommit()
   }
 }
 
@@ -164,7 +227,11 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
   }
 }
 
-function dispatchToRenderer(payload: HookPayload): void {
+function dispatchToRenderer(rawPayload: HookPayload): void {
+  // Track sessions from lifecycle events, then infer session for tool events
+  trackSessionLifecycle(rawPayload)
+  const payload = inferSessionId(rawPayload)
+
   const windows = getDispatchWindows()
   if (windows.length === 0) {
     queuePendingPayload(payload)

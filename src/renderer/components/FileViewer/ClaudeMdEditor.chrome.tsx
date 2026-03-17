@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import type { Ref } from 'react';
 import { InlineEditor } from './InlineEditor';
 import type { ClaudeMdEditorModel } from './ClaudeMdEditor.model';
 import { formatBytes, type ClaudeMdStats } from './ClaudeMdEditor.utils';
@@ -129,13 +130,15 @@ export const ClaudeMdEditorChrome = memo(function ClaudeMdEditorChrome({
         <ClaudeMdOutlineSidebar onInsertTemplate={model.handleInsertTemplate} onSelectSection={model.handleScrollToSection} sections={model.sections} />
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <InlineEditor
-            ref={model.editorRef}
+            ref={model.editorRef as Ref<import('./InlineEditor').InlineEditorHandle>}
             content={content}
+            savedContent={model.savedContent}
             filePath={filePath}
             themeId={themeId}
             projectRoot={projectRoot}
             onSave={model.handleSave}
-            onDirtyChange={model.handleDirtyChange}
+            onContentChange={model.handleContentChange}
+            onDirtyChange={() => { }}
           />
         </div>
         {model.showTemplates ? <ClaudeMdTemplateLibrary onInsertTemplate={model.handleInsertTemplate} /> : null}

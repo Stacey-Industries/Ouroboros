@@ -64,8 +64,8 @@ export function useCostTracking(sessions: AgentSession[]): void {
       recordedRef.current.add(session.id)
 
       const entry = buildCostEntry(session)
-      window.electronAPI.cost.addEntry(entry).catch(() => {
-        // Non-fatal — ignore save errors
+      window.electronAPI.cost.addEntry(entry).catch((error) => {
+        console.error('[costTracking] Failed to persist cost entry:', error)
       })
     }
   }, [sessions])

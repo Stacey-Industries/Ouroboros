@@ -71,7 +71,7 @@ function buildSnapshot(
   };
 }
 
-export function usePerformance(): PerformanceSnapshot {
+export function usePerformance(active = true): PerformanceSnapshot {
   const [snapshot, setSnapshot] = useState<PerformanceSnapshot>(INITIAL);
 
   const frameTimesRef = useRef<number[]>([]);
@@ -79,6 +79,16 @@ export function usePerformance(): PerformanceSnapshot {
   const rafHandleRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!active) {
+      frameTimesRef.current = [];
+      lastFrameTsRef.current = 0;
+      if (rafHandleRef.current !== null) {
+        cancelAnimationFrame(rafHandleRef.current);
+        rafHandleRef.current = null;
+      }
+      return;
+    }
+
     let alive = true;
 
     function onFrame(ts: number): void {
@@ -99,19 +109,29 @@ export function usePerformance(): PerformanceSnapshot {
       alive = false;
       if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current);
     };
-  }, []);
+  }, [active]);
 
   useEffect(() => {
-    if (!hasElectronAPI()) return;
+    if (!active || !hasElectronAPI()) return;
+
+    let alive = true;
+    void window.electronAPI.perf.subscribe();
 
     const cleanup = window.electronAPI.perf.onMetrics(async (metrics: PerfMetrics) => {
       const avg = computeAvgFrameTime(frameTimesRef.current);
       const ipcLatencyMs = await measureIpcLatency();
+      if (!alive) {
+        return;
+      }
       setSnapshot(buildSnapshot(metrics, Math.round(avg * 10) / 10, ipcLatencyMs));
     });
 
-    return cleanup;
-  }, []);
+    return () => {
+      alive = false;
+      cleanup();
+      void window.electronAPI.perf.unsubscribe();
+    };
+  }, [active]);
 
   return snapshot;
 }

@@ -5,6 +5,7 @@ import {
 } from './terminalHelpers'
 import type { CommandBlock } from './terminalHelpers'
 import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
+import { isPasteLikeInput, writeChunkedPaste } from './terminalPasteHelpers'
 import type {
   TerminalSetupLifecycleContext,
   TerminalSetupRuntimeRefs,
@@ -33,6 +34,12 @@ export function setupInputBridge(
     if (data === '\r' || data === '\n') trackCommandOnEnter(context, term)
     if (data.length > PASTE_CONFIRM_THRESHOLD) {
       context.callbacks.setPendingPaste(data)
+      return
+    }
+    // Detect paste-like input from xterm's onData (large single payload)
+    // and use chunked write with bracketed paste markers
+    if (isPasteLikeInput(data)) {
+      void writeChunkedPaste(context.sessionId, data)
       return
     }
     writeInputData(context, data)
@@ -168,6 +175,16 @@ function registerBlockDecoration(
         'height:100%',
       ].join(';')
     })
+
+    // Clean up decoration when marker is invalidated (e.g. line trimmed from scrollback)
+    marker.onDispose(() => {
+      try { dec.dispose() } catch { /* already disposed */ }
+      const arr = runtimeRefs.blockDecorationDisposablesRef.current
+      runtimeRefs.blockDecorationDisposablesRef.current = arr.filter(
+        (d) => d !== dec && d !== marker,
+      )
+    })
+
     runtimeRefs.blockDecorationDisposablesRef.current.push(dec, marker)
   } catch {
     // ignore decoration failures

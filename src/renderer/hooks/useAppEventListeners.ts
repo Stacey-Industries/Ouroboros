@@ -5,8 +5,19 @@
  * Extracted from InnerApp to reduce complexity.
  */
 
-import { useEffect } from 'react';
-import { keyEventToString, KEYBINDING_ACTIONS } from '../components/Settings/keybindingsData';
+import { useEffect, useRef } from 'react';
+import { useToastContext } from '../contexts/ToastContext';
+import {
+  OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+  OPEN_SETTINGS_PANEL_EVENT,
+  RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+} from './appEventNames';
+import {
+  createOpenLatestAgentChatDetailsHandler,
+  createResumeLatestAgentChatThreadHandler,
+  handleAgentChatStatusEvent,
+  type ToastFn,
+} from './agentChatUiHelpers';
 import type { AppTheme, WorkspaceLayout } from '../types/electron';
 
 function hasElectronAPI(): boolean {
@@ -14,6 +25,7 @@ function hasElectronAPI(): boolean {
 }
 
 export interface AppEventDeps {
+  projectRoot: string | null;
   setTheme: (id: AppTheme) => void;
   handleProjectChange: (path: string) => Promise<void>;
   openPalette: () => void;
@@ -31,17 +43,6 @@ export interface AppEventDeps {
 }
 
 type WindowEventEntry = [string, EventListener];
-type StaticKeyAction = Exclude<KeyAction, { type: 'layout'; index: number }>;
-type KeyboardShortcutDeps = Pick<
-  AppEventDeps,
-  | 'keybindings'
-  | 'setFilePickerOpen'
-  | 'setSymbolSearchOpen'
-  | 'setPerfOverlayVisible'
-  | 'spawnClaudeSession'
-  | 'workspaceLayouts'
-  | 'handleSelectLayout'
->;
 
 interface SpawnClaudeTemplateDetail {
   prompt?: string;
@@ -55,33 +56,12 @@ interface DiffReviewDetail {
   projectRoot?: string;
 }
 
-interface ShortcutMatcher {
-  action: StaticKeyAction;
-  binding?: string;
-  keybindingId?: string;
-}
-
-type KeyAction =
-  | 'settings' | 'filePicker' | 'symbolSearch'
-  | 'newWindow' | 'usage' | 'perfOverlay'
-  | 'spawnClaude' | { type: 'layout'; index: number };
-
-const STATIC_SHORTCUTS: ShortcutMatcher[] = [
-  { action: 'settings', keybindingId: 'app:settings' },
-  { action: 'filePicker', keybindingId: 'file:open-file' },
-  { action: 'symbolSearch', binding: 'Ctrl+T' },
-  { action: 'newWindow', binding: 'Ctrl+Shift+N' },
-  { action: 'usage', binding: 'Ctrl+U' },
-  { action: 'perfOverlay', binding: 'Ctrl+Shift+P' },
-  { action: 'spawnClaude', binding: 'Ctrl+Shift+C' },
-];
-
 function emitUsagePanel(): void {
   window.dispatchEvent(new CustomEvent('agent-ide:open-usage-panel'));
 }
 
 function emitSettingsPanel(): void {
-  window.dispatchEvent(new CustomEvent('agent-ide:open-settings-panel'));
+  window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_PANEL_EVENT));
 }
 
 function registerWindowEvents(events: WindowEventEntry[]): () => void {
@@ -152,20 +132,24 @@ function createClaudeTemplateHandler(
 }
 
 function createDomEventEntries(args: {
+  projectRoot: AppEventDeps['projectRoot'];
   setTheme: AppEventDeps['setTheme'];
   handleProjectChange: AppEventDeps['handleProjectChange'];
   spawnSession: AppEventDeps['spawnSession'];
   spawnClaudeSession: AppEventDeps['spawnClaudeSession'];
   setFilePickerOpen: AppEventDeps['setFilePickerOpen'];
   setSymbolSearchOpen: AppEventDeps['setSymbolSearchOpen'];
+  toast: ToastFn;
 }): WindowEventEntry[] {
   const {
+    projectRoot,
     setTheme,
     handleProjectChange,
     spawnSession,
     spawnClaudeSession,
     setFilePickerOpen,
     setSymbolSearchOpen,
+    toast,
   } = args;
 
   return [
@@ -177,51 +161,9 @@ function createDomEventEntries(args: {
     ['agent-ide:open-symbol-search', createBooleanOpener(setSymbolSearchOpen)],
     ['agent-ide:open-diff-review', createDiffReviewHandler()],
     ['agent-ide:spawn-claude-template', createClaudeTemplateHandler(spawnClaudeSession)],
+    [RESUME_LATEST_AGENT_CHAT_THREAD_EVENT, createResumeLatestAgentChatThreadHandler({ projectRoot, toast })],
+    [OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT, createOpenLatestAgentChatDetailsHandler({ projectRoot, toast })],
   ];
-}
-
-function getShortcut(
-  actionId: string,
-  keybindings: Record<string, string>,
-): string {
-  if (keybindings[actionId]) return keybindings[actionId];
-  return KEYBINDING_ACTIONS.find((action) => action.id === actionId)?.defaultShortcut ?? '';
-}
-
-function matchStaticKeyAction(
-  pressed: string,
-  keybindings: Record<string, string>,
-): StaticKeyAction | null {
-  for (const shortcut of STATIC_SHORTCUTS) {
-    const expected = shortcut.keybindingId
-      ? getShortcut(shortcut.keybindingId, keybindings)
-      : shortcut.binding;
-    if (pressed === expected) {
-      return shortcut.action;
-    }
-  }
-  return null;
-}
-
-function matchLayoutKeyAction(
-  pressed: string,
-  workspaceLayouts: WorkspaceLayout[],
-): KeyAction | null {
-  const layoutMatch = /^Ctrl\+Alt\+([1-3])$/.exec(pressed);
-  if (!layoutMatch) {
-    return null;
-  }
-
-  const index = Number(layoutMatch[1]) - 1;
-  return workspaceLayouts[index] ? { type: 'layout', index } : null;
-}
-
-function matchKeyAction(
-  pressed: string,
-  keybindings: Record<string, string>,
-  workspaceLayouts: WorkspaceLayout[],
-): KeyAction | null {
-  return matchStaticKeyAction(pressed, keybindings) ?? matchLayoutKeyAction(pressed, workspaceLayouts);
 }
 
 export function useMenuEvents(
@@ -246,7 +188,10 @@ export function useMenuEvents(
 }
 
 export function useDomEventListeners(deps: AppEventDeps): void {
+  const { toast } = useToastContext();
+  const seenAgentChatStatusesRef = useRef<Set<string>>(new Set());
   const {
+    projectRoot,
     setTheme,
     handleProjectChange,
     spawnSession,
@@ -257,77 +202,28 @@ export function useDomEventListeners(deps: AppEventDeps): void {
 
   useEffect(() => {
     return registerWindowEvents(createDomEventEntries({
+      projectRoot,
       setTheme,
       handleProjectChange,
       spawnSession,
       spawnClaudeSession,
       setFilePickerOpen,
       setSymbolSearchOpen,
+      toast,
     }));
-  }, [setTheme, handleProjectChange, spawnSession, spawnClaudeSession, setFilePickerOpen, setSymbolSearchOpen]);
-}
-
-export function useKeyboardShortcuts(deps: KeyboardShortcutDeps): void {
-  const {
-    keybindings,
-    setFilePickerOpen,
-    setSymbolSearchOpen,
-    setPerfOverlayVisible,
-    spawnClaudeSession,
-    workspaceLayouts,
-    handleSelectLayout,
-  } = deps;
+  }, [projectRoot, setTheme, handleProjectChange, spawnSession, spawnClaudeSession, setFilePickerOpen, setSymbolSearchOpen, toast]);
 
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent): void {
-      const pressed = keyEventToString(event);
-      if (!pressed) return;
-
-      const action = matchKeyAction(pressed, keybindings, workspaceLayouts);
-      if (!action) return;
-
-      event.preventDefault();
-      dispatchKeyAction(action, {
-        setFilePickerOpen,
-        setSymbolSearchOpen,
-        setPerfOverlayVisible,
-        spawnClaudeSession,
-        handleSelectLayout,
-        workspaceLayouts,
-      });
+    if (!hasElectronAPI()) {
+      return undefined;
     }
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [keybindings, setFilePickerOpen, setSymbolSearchOpen, setPerfOverlayVisible, spawnClaudeSession, workspaceLayouts, handleSelectLayout]);
-}
-
-function dispatchKeyAction(
-  action: KeyAction,
-  deps: {
-    setFilePickerOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setSymbolSearchOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setPerfOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    spawnClaudeSession: (cwd?: string) => Promise<void>;
-    handleSelectLayout: (layout: WorkspaceLayout) => void;
-    workspaceLayouts: WorkspaceLayout[];
-  },
-): void {
-  if (action === 'settings') {
-    emitSettingsPanel();
-  } else if (action === 'filePicker') {
-    deps.setFilePickerOpen((prev) => !prev);
-  } else if (action === 'symbolSearch') {
-    deps.setSymbolSearchOpen((prev) => !prev);
-  } else if (action === 'newWindow') {
-    if (hasElectronAPI()) void window.electronAPI.window.create();
-  } else if (action === 'usage') {
-    emitUsagePanel();
-  } else if (action === 'perfOverlay') {
-    deps.setPerfOverlayVisible((prev) => !prev);
-  } else if (action === 'spawnClaude') {
-    void deps.spawnClaudeSession();
-  } else if (typeof action === 'object') {
-    deps.handleSelectLayout(deps.workspaceLayouts[action.index]);
-  }
+    return window.electronAPI.agentChat.onStatusChange((status) => {
+      handleAgentChatStatusEvent({
+        seenStatuses: seenAgentChatStatusesRef.current,
+        status,
+        toast,
+      });
+    });
+  }, [toast]);
 }

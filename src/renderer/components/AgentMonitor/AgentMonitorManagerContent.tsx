@@ -1,10 +1,21 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { MultiSessionLauncher, MultiSessionMonitor } from '../MultiSession';
 import { CostDashboard } from './CostDashboard';
 import { AgentCard } from './AgentCard';
 import { AgentTree } from './AgentTree';
 import { ComparePanel, EmptyState, PreviousSessionsSection } from './AgentMonitorManagerPanels';
 import type { AgentSession } from './types';
+
+/** Build a map of sessionId -> number of direct children for the given sessions. */
+function buildChildCountMap(sessions: AgentSession[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const session of sessions) {
+    if (session.parentSessionId) {
+      map.set(session.parentSessionId, (map.get(session.parentSessionId) ?? 0) + 1);
+    }
+  }
+  return map;
+}
 
 interface AgentMonitorManagerContentProps {
   agents: AgentSession[];
@@ -42,9 +53,11 @@ const SessionCardList = memo(function SessionCardList({
   onUpdateNotes,
   sessions,
 }: SessionCardListProps): React.ReactElement {
+  const childCounts = useMemo(() => buildChildCountMap(sessions), [sessions]);
+
   return (
     <>
-      {sessions.map((session) => <AgentCard key={session.id} session={session} onDismiss={onDismiss} onUpdateNotes={onUpdateNotes} onReviewChanges={onReviewChanges} onReplay={onReplay} />)}
+      {sessions.map((session) => <AgentCard key={session.id} session={session} onDismiss={onDismiss} onUpdateNotes={onUpdateNotes} onReviewChanges={onReviewChanges} onReplay={onReplay} childCount={childCounts.get(session.id)} />)}
     </>
   );
 });

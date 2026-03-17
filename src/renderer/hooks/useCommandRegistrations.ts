@@ -8,10 +8,23 @@
 import { useEffect } from 'react';
 import type { AgentTemplate, WorkspaceLayout } from '../types/electron';
 import type { Command } from '../components/CommandPalette/types';
+import {
+  OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+  RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+} from './appEventNames';
 import { resolveTemplate } from '../utils/templateResolver';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
+}
+
+function dispatchDomEvent(eventName: string, detail?: unknown): void {
+  window.dispatchEvent(
+    detail === undefined
+      ? new CustomEvent(eventName)
+      : new CustomEvent(eventName, { detail }),
+  );
 }
 
 export function useAgentTemplateCommands(
@@ -114,3 +127,45 @@ export function useMultiSessionCommand(
     });
   }, [registerCommand]);
 }
+
+export function useAgentChatCommands(
+  projectRoot: string | null,
+  registerCommand: (cmd: Command) => void,
+): void {
+  useEffect(() => {
+    const detail = projectRoot ? { workspaceRoot: projectRoot } : undefined;
+
+    registerCommand({
+      id: 'agent-chat:open',
+      label: 'Open Agent Chat',
+      category: 'view',
+      icon: '💬',
+      action: () => {
+        dispatchDomEvent(OPEN_AGENT_CHAT_PANEL_EVENT);
+      },
+    });
+
+    registerCommand({
+      id: 'agent-chat:resume-latest-thread',
+      label: 'Resume Latest Agent Thread',
+      category: 'app',
+      icon: '💬',
+      when: () => Boolean(projectRoot),
+      action: () => {
+        dispatchDomEvent(RESUME_LATEST_AGENT_CHAT_THREAD_EVENT, detail);
+      },
+    });
+
+    registerCommand({
+      id: 'agent-chat:open-latest-details',
+      label: 'Open Latest Agent Task Details',
+      category: 'app',
+      icon: '◎',
+      when: () => Boolean(projectRoot),
+      action: () => {
+        dispatchDomEvent(OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT, detail);
+      },
+    });
+  }, [projectRoot, registerCommand]);
+}
+

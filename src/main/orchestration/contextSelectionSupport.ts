@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import net from 'net'
 import path from 'path'
+import { terminalOutputBuffer } from '../ptyOutputBuffer'
 import type {
   DirtyBufferSnapshot,
   EditorSelectionRange,
@@ -11,6 +12,29 @@ export interface ContextFileSnapshot {
   filePath: string
   content: string | null
   unsaved: boolean
+}
+
+/**
+ * Persistent module-level snapshot cache.
+ * Survives across multiple context packet builds within the same process.
+ * Dirty files are refreshed via `invalidateSnapshotCache`.
+ */
+const persistentSnapshotCache = new Map<string, ContextFileSnapshot>()
+
+/** Invalidate cached snapshots for specific files (e.g., after a file save). */
+export function invalidateSnapshotCache(filePaths?: string[]): void {
+  if (!filePaths) {
+    persistentSnapshotCache.clear()
+    return
+  }
+  for (const filePath of filePaths) {
+    persistentSnapshotCache.delete(toPathKey(filePath))
+  }
+}
+
+/** Get the persistent snapshot cache for use in context selection. */
+export function getPersistentSnapshotCache(): Map<string, ContextFileSnapshot> {
+  return persistentSnapshotCache
 }
 
 interface IdeToolResponse<T> {
@@ -104,13 +128,17 @@ export async function loadContextFileSnapshot(
   cache?: Map<string, ContextFileSnapshot>,
 ): Promise<ContextFileSnapshot> {
   const key = toPathKey(filePath)
-  const cached = cache?.get(key)
-  if (cached) return cached
+  const cached = cache?.get(key) ?? persistentSnapshotCache.get(key)
+  if (cached) {
+    cache?.set(key, cached)
+    return cached
+  }
 
   const liveResult = await invokeIdeTool<{ content?: unknown; unsaved?: unknown }>('ide.getFileContent', { path: filePath })
   if (typeof liveResult?.content === 'string') {
     const snapshot = { filePath, content: liveResult.content, unsaved: liveResult.unsaved === true }
     cache?.set(key, snapshot)
+    persistentSnapshotCache.set(key, snapshot)
     return snapshot
   }
 
@@ -118,6 +146,7 @@ export async function loadContextFileSnapshot(
     const content = await fs.readFile(filePath, 'utf-8')
     const snapshot = { filePath, content, unsaved: false }
     cache?.set(key, snapshot)
+    persistentSnapshotCache.set(key, snapshot)
     return snapshot
   } catch {
     const snapshot = { filePath, content: null, unsaved: false }
@@ -126,16 +155,46 @@ export async function loadContextFileSnapshot(
   }
 }
 
+/**
+ * Fast file snapshot loader that reads directly from disk (no IDE socket).
+ * Use for operations like keyword matching where unsaved buffer content is not needed.
+ * Falls back to the persistent cache first.
+ */
+export async function loadContextFileSnapshotFast(
+  filePath: string,
+  cache?: Map<string, ContextFileSnapshot>,
+): Promise<ContextFileSnapshot> {
+  const key = toPathKey(filePath)
+  const cached = cache?.get(key) ?? persistentSnapshotCache.get(key)
+  if (cached) {
+    cache?.set(key, cached)
+    return cached
+  }
+
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    const snapshot: ContextFileSnapshot = { filePath, content, unsaved: false }
+    cache?.set(key, snapshot)
+    persistentSnapshotCache.set(key, snapshot)
+    return snapshot
+  } catch {
+    const snapshot: ContextFileSnapshot = { filePath, content: null, unsaved: false }
+    cache?.set(key, snapshot)
+    return snapshot
+  }
+}
+
 function toSelectionRange(selection: unknown): EditorSelectionRange | undefined {
   if (!selection || typeof selection !== 'object') return undefined
-  const startLine = (selection as { startLine?: unknown }).startLine
-  const endLine = (selection as { endLine?: unknown }).endLine
+  const sel = selection as Record<string, unknown>
+  const startLine = sel.startLine
+  const endLine = sel.endLine
   if (typeof startLine !== 'number' || typeof endLine !== 'number') return undefined
   return {
     startLine,
-    startCharacter: 0,
+    startCharacter: typeof sel.startCharacter === 'number' ? sel.startCharacter : 0,
     endLine,
-    endCharacter: 0,
+    endCharacter: typeof sel.endCharacter === 'number' ? sel.endCharacter : 0,
   }
 }
 
@@ -193,6 +252,7 @@ export async function collectLiveIdeState(
   const selectionFile = await resolveSelectionFile(selectionResult, workspaceRoots)
   const selection = toSelectionRange(selectionResult)
   const dirtyBuffers = await buildDirtyBuffers(dirtyFiles, selectionFile, selection, cache)
+  const terminalSnapshots = terminalOutputBuffer.getAllRecentLines(100)
   return {
     activeFile: activeFile ?? selectionFile,
     selectedFiles,
@@ -200,22 +260,25 @@ export async function collectLiveIdeState(
     dirtyFiles,
     dirtyBuffers,
     selection,
+    terminalSnapshots: terminalSnapshots.length > 0 ? terminalSnapshots : undefined,
     collectedAt: Date.now(),
   }
 }
 
-export function extractKeywords(goal: string, stopWords: ReadonlySet<string>, limit = 8): string[] {
-  const matches = goal.toLowerCase().match(/[a-z0-9][a-z0-9_./-]*/g) ?? []
-  const keywords: string[] = []
-  const seen = new Set<string>()
-  for (const match of matches) {
-    const token = match.replace(/^\W+|\W+$/g, '')
-    if (token.length < 3 || stopWords.has(token) || seen.has(token)) continue
-    seen.add(token)
-    keywords.push(token)
-    if (keywords.length === limit) break
+export function extractKeywords(goal: string, stopWords: ReadonlySet<string>, limit = 12): string[] {
+  const tokens: string[] = []
+  for (const raw of goal.split(/\s+/)) {
+    const stripped = raw.replace(/^[^\w]+|[^\w]+$/g, '')
+    if (!stripped) continue
+    for (const part of stripped.split(/[-_]+/)) {
+      for (const sub of part.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ')) {
+        tokens.push(sub.toLowerCase())
+      }
+    }
   }
-  return keywords
+  return [...new Set(
+    tokens.filter(t => t.length >= 3 && !stopWords.has(t) && !/^\d+$/.test(t))
+  )].slice(0, limit)
 }
 
 export function findKeywordMatches(filePath: string, content: string | null, keywords: string[]): string[] {
@@ -225,7 +288,6 @@ export function findKeywordMatches(filePath: string, content: string | null, key
     if (pathValue.includes(keyword) || (content && new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(content))) {
       matches.push(keyword)
     }
-    if (matches.length === 3) break
   }
   return matches
 }

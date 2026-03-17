@@ -10,6 +10,7 @@ export const PASTE_CONFIRM_THRESHOLD = 1000
 interface PasteConfirmBannerProps {
   text: string
   onConfirm: () => void
+  onConfirmSingleLine: () => void
   onCancel: () => void
 }
 
@@ -32,6 +33,15 @@ const confirmBtnStyle: React.CSSProperties = {
   cursor: 'pointer', fontWeight: 600,
 }
 
+const singleLineBtnStyle: React.CSSProperties = {
+  padding: '3px 10px', borderRadius: 4,
+  border: '1px solid var(--accent, #58a6ff)',
+  backgroundColor: 'transparent',
+  color: 'var(--accent, #58a6ff)',
+  fontFamily: 'var(--font-ui, sans-serif)', fontSize: 12,
+  cursor: 'pointer',
+}
+
 const cancelBtnStyle: React.CSSProperties = {
   padding: '3px 10px', borderRadius: 4,
   border: '1px solid var(--border, #333)',
@@ -41,13 +51,29 @@ const cancelBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
-export function PasteConfirmBanner({ text, onConfirm, onCancel }: PasteConfirmBannerProps): React.ReactElement {
+function hasNewlines(text: string): boolean {
+  return text.includes('\n') || text.includes('\r')
+}
+
+function formatLineCount(text: string): string {
+  const lines = text.split(/\r?\n/).length
+  return lines > 1 ? ` (${lines} lines)` : ''
+}
+
+export function PasteConfirmBanner({ text, onConfirm, onConfirmSingleLine, onCancel }: PasteConfirmBannerProps): React.ReactElement {
+  const multiline = hasNewlines(text)
+
   return (
     <div style={bannerStyle}>
       <span style={{ flex: 1, color: 'var(--text-muted, #888)' }}>
-        Paste {text.length.toLocaleString()} characters?
+        Paste {text.length.toLocaleString()} characters{formatLineCount(text)}?
       </span>
-      <button onClick={onConfirm} autoFocus style={confirmBtnStyle}>Yes</button>
+      <button onClick={onConfirm} autoFocus style={confirmBtnStyle}>Paste</button>
+      {multiline && (
+        <button onClick={onConfirmSingleLine} style={singleLineBtnStyle}>
+          Single line
+        </button>
+      )}
       <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
     </div>
   )

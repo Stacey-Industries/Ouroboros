@@ -7,11 +7,14 @@
 /* ─── Layout sizing tokens (static — not theme-driven) ──────────────────────── */
 
 :root {
-  --titlebar-height: 32px;
+  --titlebar-height: 36px;
   --sidebar-left-default: 260px;
   --sidebar-right-default: 340px;
   --terminal-default: 220px;
   --resize-handle-size: 4px;
+  --panel-radius: 6px;
+  --header-height: 36px;
+  --tab-height: 34px;
 }
 
 /* ─── Base resets ───────────────────────────────────────────────────────────── */
@@ -67,11 +70,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--bg-secondary);
-    border-radius: 3px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--bg-tertiary);
+    background: rgba(255,255,255,0.2);
   }
 
   /* Focus ring — exclude xterm internals (helper textarea, decorations) */
@@ -229,7 +232,81 @@
   }
 }
 
+/* ─── Component polish utilities ───────────────────────────────────────────── */
+
+/* Smooth panel content transitions */
+.panel-transition {
+  transition: background-color 150ms ease,
+              border-color 150ms ease,
+              box-shadow 150ms ease;
+}
+
+/* Tab connected-to-content effect — hides the border between active tab and content */
+.tab-active-connected {
+  position: relative;
+}
+.tab-active-connected::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--bg);
+}
+
+/* ─── Monaco find widget overrides ────────────────────────────────────────── */
+/* These refine Monaco's built-in find/replace widget to match Ouroboros styling */
+
+.monaco-editor .find-widget {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  transition: top 150ms ease;
+}
+
+.monaco-editor .find-widget .monaco-inputbox {
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.monaco-editor .find-widget .monaco-inputbox .input {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+/* Toggle buttons (regex, case, whole word) */
+.monaco-editor .find-widget .button.toggle {
+  border-radius: 3px;
+}
+
+/* Match count label */
+.monaco-editor .find-widget .matchesCount {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Replace input row */
+.monaco-editor .find-widget .replace-part {
+  display: flex;
+  align-items: center;
+}
+
+/* Ensure the find widget appears above other overlays */
+.monaco-editor .find-widget {
+  z-index: 25;
+}
+
 /* ─── xterm overrides (unlayered to beat xterm.css specificity) ───────────── */
+
+/* Allow vertical touch scrolling in terminal, but prevent horizontal pan/zoom */
+.xterm {
+  touch-action: pan-y;
+}
+
 .xterm :focus-visible {
   outline: none !important;
 }
@@ -265,7 +342,7 @@
 @keyframes agent-chat-slide-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;
@@ -274,7 +351,19 @@
 }
 
 .agent-chat-message-enter {
-  animation: agent-chat-slide-in 200ms ease-out both;
+  animation: agent-chat-slide-in 140ms ease-out both;
+}
+
+/* 4A: Thinking dots (used in StreamingIndicator) */
+@keyframes agent-chat-dot-bounce {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 0.9; transform: translateY(-3px); }
+}
+
+/* 4A: Tally pulse — gentle glow for the change tally dot */
+@keyframes agent-chat-tally-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 /* 4A: Streaming cursor — blinking pipe */
@@ -359,4 +448,193 @@
   .agent-chat-thinking-pulse {
     animation: none;
   }
+
+  @keyframes agent-chat-dot-bounce {
+    0%, 100% { opacity: 0.5; transform: none; }
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * Chat markdown typography (Streamdown output)
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.agent-chat-markdown {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.agent-chat-markdown p {
+  margin: 0.35em 0;
+  line-height: 1.6;
+}
+
+.agent-chat-markdown p:first-child {
+  margin-top: 0;
+}
+
+.agent-chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.agent-chat-markdown h1,
+.agent-chat-markdown h2,
+.agent-chat-markdown h3,
+.agent-chat-markdown h4,
+.agent-chat-markdown h5,
+.agent-chat-markdown h6 {
+  margin: 0.75em 0 0.35em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.agent-chat-markdown h1 { font-size: 1.25em; }
+.agent-chat-markdown h2 { font-size: 1.15em; }
+.agent-chat-markdown h3 { font-size: 1.05em; }
+.agent-chat-markdown h4,
+.agent-chat-markdown h5,
+.agent-chat-markdown h6 { font-size: 1em; }
+
+.agent-chat-markdown h1:first-child,
+.agent-chat-markdown h2:first-child,
+.agent-chat-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.agent-chat-markdown ul,
+.agent-chat-markdown ol {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+
+.agent-chat-markdown li {
+  margin: 0.15em 0;
+  line-height: 1.55;
+}
+
+.agent-chat-markdown li > p {
+  margin: 0.15em 0;
+}
+
+/* Inline code */
+.agent-chat-markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background-color: var(--bg-tertiary, rgba(100, 100, 100, 0.12));
+  color: var(--text);
+}
+
+/* Fenced code blocks */
+.agent-chat-markdown pre {
+  position: relative;
+  margin: 0.5em 0;
+  padding: 0.65em 0.85em;
+  border-radius: 6px;
+  background-color: var(--bg-tertiary, rgba(30, 30, 40, 0.6));
+  border: 1px solid var(--border-muted, var(--border));
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.agent-chat-markdown pre code {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  font-size: 0.85em;
+  color: var(--text);
+}
+
+/* Blockquotes */
+.agent-chat-markdown blockquote {
+  margin: 0.5em 0;
+  padding: 0.25em 0 0.25em 0.75em;
+  border-left: 3px solid var(--accent, #58a6ff);
+  color: var(--text-muted);
+}
+
+.agent-chat-markdown blockquote p {
+  margin: 0.15em 0;
+}
+
+/* Horizontal rules */
+.agent-chat-markdown hr {
+  margin: 0.75em 0;
+  border: none;
+  border-top: 1px solid var(--border-muted, var(--border));
+}
+
+/* Links */
+.agent-chat-markdown a {
+  color: var(--accent, #58a6ff);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.agent-chat-markdown a:hover {
+  opacity: 0.85;
+}
+
+/* Tables */
+.agent-chat-markdown table {
+  margin: 0.5em 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  width: 100%;
+}
+
+.agent-chat-markdown th,
+.agent-chat-markdown td {
+  padding: 0.3em 0.6em;
+  border: 1px solid var(--border-muted, var(--border));
+  text-align: left;
+}
+
+.agent-chat-markdown th {
+  font-weight: 600;
+  background-color: var(--bg-tertiary, rgba(100, 100, 100, 0.08));
+}
+
+/* Strong / emphasis */
+.agent-chat-markdown strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.agent-chat-markdown em {
+  font-style: italic;
+}
+
+/* Images */
+.agent-chat-markdown img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.35em 0;
+}
+
+/* Streamdown copy button theming */
+.agent-chat-markdown [data-sd-copy] {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-muted, var(--border));
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.agent-chat-markdown pre:hover [data-sd-copy] {
+  opacity: 1;
+}
+
+.agent-chat-markdown [data-sd-copy]:hover {
+  color: var(--text);
+  background: var(--bg-hover, var(--bg-tertiary));
 }

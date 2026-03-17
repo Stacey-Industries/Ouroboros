@@ -4,11 +4,12 @@
  * Extracted from InnerApp's render method to reduce component size.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useReducer, type ErrorInfo } from 'react';
 import type { AppLayoutProps } from './AppLayout';
 import type { WorkspaceLayout } from '../../types/electron';
 import type { Command } from '../CommandPalette/types';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
+import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
 
 import { AppLayoutConnected } from './AppLayoutConnected';
 import { EditorTabBar } from './EditorTabBar';
@@ -19,15 +20,54 @@ import { FileViewerManager } from '../FileViewer';
 import { MultiBufferManager } from '../FileViewer/MultiBufferManager';
 import { DiffReviewProvider } from '../DiffReview';
 import { RightSidebarTabs } from './RightSidebarTabs';
-import { AgentMonitorManager } from '../AgentMonitor/AgentMonitorManager';
+import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
+import { AgentMonitorManager } from '../AgentMonitor';
 import { GitPanel } from '../GitPanel';
 import { AnalyticsDashboard } from '../Analytics';
 import { TerminalManager } from '../Terminal/TerminalManager';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import { PerformanceOverlay } from '../shared/PerformanceOverlay';
+// Inline ErrorBoundary — avoids cross-module resolution issues during Vite HMR
+// that can prevent the boundary from loading when it's needed most (crash recovery).
+class ChatErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ChatErrorBoundary] caught:', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center"
+          style={{ color: 'var(--text-muted)', minHeight: 120 }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--error, #f85149)' }}>
+            Chat crashed
+          </span>
+          <span className="text-xs">{this.state.error?.message ?? 'An unexpected error occurred.'}</span>
+          <button className="mt-1 rounded px-3 py-1 text-xs"
+            style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            onClick={() => this.setState({ hasError: false, error: null })}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { SidebarFileTree } from './SidebarFileTree';
+import { SidebarSections } from './SidebarSections';
 import { IdeToolBridge } from './IdeToolBridge';
+import { SearchPanel, GitSidebarPanel, ExtensionsPanel } from './SidebarViewPanels';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
@@ -158,12 +198,35 @@ function LayoutProviders({
   );
 }
 
-function AgentSidebarContent(): React.ReactElement {
+function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
+  // Force re-render counter — used to propagate model updates from AgentChatWorkspace
+  const [, forceRender] = useReducer((c: number) => c + 1, 0);
+  const modelRef = React.useRef<AgentChatWorkspaceModel | null>(null);
+
+  const handleModelReady = useCallback((model: AgentChatWorkspaceModel) => {
+    // Only trigger re-render when data the header cares about actually changes
+    const prev = modelRef.current;
+    const threadsChanged = prev?.threads !== model.threads;
+    const activeChanged = prev?.activeThreadId !== model.activeThreadId;
+    modelRef.current = model;
+    if (threadsChanged || activeChanged || !prev) {
+      forceRender();
+    }
+  }, []);
+
+  const chatModel = modelRef.current;
+
   return (
     <RightSidebarTabs
+      chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
       monitorContent={<AgentMonitorManager />}
       gitContent={<GitPanel />}
       analyticsContent={<AnalyticsDashboard />}
+      threads={chatModel?.threads}
+      activeThreadId={chatModel?.activeThreadId}
+      onSelectThread={chatModel?.selectThread}
+      onDeleteThread={chatModel ? (id) => void chatModel.deleteThread(id) : undefined}
+      onNewChat={chatModel?.startNewChat}
     />
   );
 }
@@ -196,6 +259,14 @@ function TerminalPanelContent({
   );
 }
 
+function SidebarViewHeader({ title }: { title: string }): React.ReactElement {
+  return (
+    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+      {title}
+    </span>
+  );
+}
+
 function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
   return (
     <AppLayoutConnected
@@ -204,10 +275,20 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={<SidebarFileTree />}
+      sidebarContent={<SidebarSections />}
+      sidebarViewContent={{
+        search: <SearchPanel />,
+        git: <GitSidebarPanel />,
+        extensions: <ExtensionsPanel />,
+      }}
+      sidebarViewHeaders={{
+        search: <SidebarViewHeader title="Search" />,
+        git: <SidebarViewHeader title="Source Control" />,
+        extensions: <SidebarViewHeader title="Extensions" />,
+      }}
       editorTabBar={<EditorTabBar />}
       editorContent={<CentrePaneConnected />}
-      agentCards={<AgentSidebarContent />}
+      agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<TerminalPanelContent {...props} />}
     />
   );

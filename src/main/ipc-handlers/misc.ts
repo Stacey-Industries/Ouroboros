@@ -6,6 +6,7 @@ import {
   registerCostHandlers,
   registerCrashLogHandlers,
   registerExtensionHandlers,
+  registerGraphHandlers,
   registerLspHandlers,
   registerPerfHandlers,
   registerShellHistoryHandlers,
@@ -33,6 +34,7 @@ export function registerMiscHandlers(senderWindow: SenderWindow, win: BrowserWin
   registerExtensionHandlers(channels)
   registerLspHandlers(channels, win)
   registerApprovalHandlers(channels)
+  registerGraphHandlers(channels)
 
   return channels
 }

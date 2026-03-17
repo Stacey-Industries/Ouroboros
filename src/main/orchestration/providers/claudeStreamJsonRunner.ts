@@ -43,18 +43,27 @@ export function buildStreamJsonArgs(options: StreamJsonSpawnOptions): StreamJson
     cliArgs.push('--resume', options.resumeSessionId)
   }
 
+  // Only cap turns for 'low' effort (quick lookup queries).
+  // All other effort levels run without --max-turns, matching Claude Code CLI
+  // behavior: the model decides when it's done.
+  if (options.effort === 'low') {
+    cliArgs.push('--max-turns', '5')
+  }
+
   // Prompt is piped via stdin (not passed as a positional arg) to avoid
   // shell-escaping issues and command-line length limits on Windows.
 
   if (process.platform === 'win32') {
-    // Wrap the entire command in a PowerShell invocation.
-    // Only CLI flags go on the command line — no user content to escape.
+    // Security: use single-quote escaping for each argument to prevent
+    // command injection through PowerShell metacharacters. Single-quoted
+    // strings in PowerShell are literal — no variable expansion or
+    // subexpression evaluation.
     const escaped = ['claude', ...cliArgs]
-      .map((a) => (a.includes(' ') || a.includes('"') ? `"${a.replace(/"/g, '`"')}"` : a))
+      .map((a) => `'${a.replace(/'/g, "''")}'`)
       .join(' ')
     return {
       command: 'powershell.exe',
-      args: ['-NoLogo', '-Command', escaped],
+      args: ['-NoLogo', '-Command', `& ${escaped}`],
     }
   }
 
@@ -71,6 +80,12 @@ function buildProcessEnv(extraEnv?: Record<string, string>): Record<string, stri
     ...extraEnv,
   } as Record<string, string>
 }
+
+// ---- Buffer size limit (security: prevent OOM from runaway output) ----------
+//
+// A broken or malicious Claude Code process could send unlimited data and
+// exhaust the IDE's memory.  Cap the accumulated buffer at 100 MB.
+const MAX_BUFFER_BYTES = 100 * 1024 * 1024
 
 // ---- NDJSON line parser ----------------------------------------------------
 
@@ -138,6 +153,14 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
     child.stdout?.on('data', (chunk: Buffer) => {
       stdoutBuf += chunk.toString()
 
+      // Security: prevent unbounded memory growth from a runaway process.
+      if (stdoutBuf.length > MAX_BUFFER_BYTES) {
+        console.error(`[stream-json] stdout buffer exceeded ${MAX_BUFFER_BYTES} bytes — killing process`)
+        reject(new Error('Stream buffer exceeded maximum allowed size (100 MB). Process killed.'))
+        try { child.kill() } catch { /* already dead */ }
+        return
+      }
+
       let newlineIdx: number
       while ((newlineIdx = stdoutBuf.indexOf('\n')) !== -1) {
         const line = stdoutBuf.slice(0, newlineIdx)
@@ -163,6 +186,11 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
     // --- stderr: accumulate for error reporting ---
     child.stderr?.on('data', (chunk: Buffer) => {
       stderrBuf += chunk.toString()
+
+      // Security: cap stderr buffer too to prevent OOM from verbose error output.
+      if (stderrBuf.length > MAX_BUFFER_BYTES) {
+        stderrBuf = stderrBuf.slice(-MAX_BUFFER_BYTES)
+      }
     })
 
     // --- Process close ---

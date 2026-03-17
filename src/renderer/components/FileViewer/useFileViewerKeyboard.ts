@@ -119,6 +119,16 @@ function isViewerShortcutTarget(
   return container.contains(target) || target === document.body;
 }
 
+/**
+ * Returns true when the event target is inside a Monaco editor instance.
+ * When Monaco is active, Ctrl+F and Ctrl+H should be handled by Monaco's
+ * built-in find/replace widget instead of the legacy Shiki SearchBar.
+ */
+function isInsideMonacoEditor(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.closest('.monaco-editor') !== null;
+}
+
 function stopHandledShortcut(event: KeyboardEvent): void {
   event.preventDefault();
   event.stopPropagation();
@@ -148,14 +158,26 @@ function handleFoldShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean 
 
 function handleSearchShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
   if (!isModifierPressed(event) || event.key !== 'f') return false;
+  // When Monaco is active, let its built-in find widget handle Ctrl+F
+  if (isInsideMonacoEditor(event.target)) return false;
   stopHandledShortcut(event);
   cfg.setShowGoToLine(false);
   cfg.setShowSearch(true);
   return true;
 }
 
+function handleReplaceShortcut(_cfg: KeyboardConfig, event: KeyboardEvent): boolean {
+  if (!isModifierPressed(event) || event.key !== 'h') return false;
+  // When Monaco is active, let its built-in find/replace widget handle Ctrl+H
+  if (isInsideMonacoEditor(event.target)) return false;
+  // For the legacy code view, Ctrl+H is not supported — do nothing but consume
+  return false;
+}
+
 function handleGoToLineShortcut(cfg: KeyboardConfig, event: KeyboardEvent): boolean {
   if (!isModifierPressed(event) || event.key !== 'g') return false;
+  // When Monaco is active, let its built-in Go To Line handle Ctrl+G
+  if (isInsideMonacoEditor(event.target)) return false;
   stopHandledShortcut(event);
   cfg.setShowSearch(false);
   cfg.setShowGoToLine(true);
@@ -187,6 +209,7 @@ function handleFileViewerKeyDown(
   if (!isViewerShortcutTarget(cfg, event.target)) return;
   if (handleFoldShortcut(cfg, event)) return;
   if (handleSearchShortcut(cfg, event)) return;
+  if (handleReplaceShortcut(cfg, event)) return;
   if (handleGoToLineShortcut(cfg, event)) return;
   if (handleDiffShortcut(cfg, event)) return;
   handleWordWrapShortcut(cfg, event);
@@ -194,12 +217,16 @@ function handleFileViewerKeyDown(
 
 /**
  * Keyboard shortcuts for FileViewer:
- * - Ctrl+F: search
+ * - Ctrl+F: search (legacy CodeView) / find widget (Monaco)
+ * - Ctrl+H: replace — delegated to Monaco's built-in find/replace widget
  * - Ctrl+G: go to line
  * - Ctrl+D: toggle diff
  * - Alt+Z: toggle word wrap
  * - Ctrl+Shift+[: collapse fold
  * - Ctrl+Shift+]: expand fold
+ *
+ * When Monaco is the active editor, Ctrl+F and Ctrl+H are NOT intercepted
+ * here — they pass through to Monaco's built-in find/replace widget.
  */
 export function useFileViewerKeyboard(cfg: KeyboardConfig): void {
   useEffect(() => {

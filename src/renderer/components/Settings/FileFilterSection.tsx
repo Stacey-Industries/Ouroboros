@@ -9,14 +9,14 @@ interface FileFilterSectionProps {
 
 interface FileFilterInputState {
   inputError: string | null;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   inputValue: string;
   handleAdd: () => void;
   handleChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
-const BASELINE_PATTERNS = ['.git', 'node_modules', 'dist', 'out', '__pycache__', '.*'];
+const BASELINE_PATTERNS = ['.git', '__pycache__'];
 
 const stackStyle: React.CSSProperties = {
   display: 'flex',
@@ -175,7 +175,7 @@ function BaselinePatternsSection(): React.ReactElement {
   return (
     <section>
       <SectionLabel>Always Ignored (built-in)</SectionLabel>
-      <p style={helperTextStyle}>These patterns are always active and cannot be removed.</p>
+      <p style={helperTextStyle}>These patterns are always active and cannot be removed. Dotfiles and common project folders stay visible unless you add them below.</p>
       <div style={tagListStyle}>{BASELINE_PATTERNS.map((pattern) => <FileFilterTag key={pattern} label={pattern} />)}</div>
     </section>
   );
@@ -190,7 +190,7 @@ function PatternInputRow({
   onKeyDown,
 }: {
   inputError: string | null;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   inputValue: string;
   onAdd: () => void;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;

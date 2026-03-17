@@ -42,3 +42,18 @@ export const themeList: Theme[] = [
   cursorTheme,
   kiroTheme,
 ];
+
+/** Register a theme from an installed VS Code extension */
+export function registerExtensionTheme(theme: Theme): void {
+  themes[theme.id] = theme
+}
+
+/** Remove a previously registered extension theme */
+export function unregisterExtensionTheme(id: string): void {
+  delete themes[id]
+}
+
+/** Get all registered theme IDs including extension themes */
+export function getAllThemeIds(): string[] {
+  return Object.keys(themes)
+}

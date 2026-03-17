@@ -15,8 +15,11 @@ import type {
   AgentChatDeleteResult,
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
+  AgentChatRevertResult,
   AgentChatSendMessageRequest,
   AgentChatSendResult,
+  AgentChatStreamChunk,
+  AgentChatThreadRecord,
   AgentChatThreadResult,
   AgentChatThreadsResult,
 } from './types'
@@ -40,6 +43,10 @@ export interface AgentChatService extends Pick<AgentChatAPI,
   | 'branchThread'> {
   bridge: AgentChatOrchestrationBridge
   threadStore: AgentChatThreadStore
+  /** Returns buffered stream chunks for reconnection after renderer refresh. */
+  getBufferedChunks: (threadId: string) => AgentChatStreamChunk[]
+  /** Revert file changes made during a specific assistant message's agent turn. */
+  revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>
 }
 
 export interface AgentChatServiceDeps
@@ -76,12 +83,37 @@ async function loadThreadResult(
     : { success: false, error: `Chat thread ${threadId} not found.` }
 }
 
+async function reconcileThreadStatus(
+  thread: AgentChatThreadRecord,
+  activeThreadIds: Set<string>,
+  threadStore: AgentChatThreadStore,
+): Promise<AgentChatThreadRecord> {
+  if (thread.status !== 'running' && thread.status !== 'submitting') return thread
+  if (activeThreadIds.has(thread.id)) return thread
+  // Thread claims to be running but the bridge has no active send — stale status
+  // from a refresh/crash. Reset to 'idle' so the user can chat again.
+  try {
+    return await threadStore.updateThread(thread.id, { status: 'idle' })
+  } catch {
+    return { ...thread, status: 'idle' }
+  }
+}
+
 async function listThreadsResult(
   threadStore: AgentChatThreadStore,
   workspaceRoot?: string,
+  bridge?: AgentChatOrchestrationBridge,
 ): Promise<AgentChatThreadsResult> {
   try {
-    return { success: true, threads: await threadStore.listThreads(workspaceRoot) }
+    const threads = await threadStore.listThreads(workspaceRoot)
+    if (bridge) {
+      const activeIds = new Set(bridge.getActiveThreadIds())
+      const reconciled = await Promise.all(
+        threads.map((t) => reconcileThreadStatus(t, activeIds, threadStore)),
+      )
+      return { success: true, threads: reconciled }
+    }
+    return { success: true, threads }
   } catch (error) {
     return { success: false, error: getErrorMessage(error) }
   }
@@ -91,17 +123,22 @@ async function resumeLatestThreadResult(
   threadStore: AgentChatThreadStore,
   orchestration: Pick<OrchestrationAPI, 'loadSession'>,
   workspaceRoot: string,
+  bridge?: AgentChatOrchestrationBridge,
 ): Promise<AgentChatThreadResult> {
   if (!isNonEmptyString(workspaceRoot)) {
     return { success: false, error: 'Workspace root is required to resume the latest chat thread.' }
   }
 
   try {
-    const thread = await hydrateLatestAgentChatThread({
+    let thread = await hydrateLatestAgentChatThread({
       orchestration,
       threadStore,
       workspaceRoot,
     })
+    if (thread && bridge) {
+      const activeIds = new Set(bridge.getActiveThreadIds())
+      thread = await reconcileThreadStatus(thread, activeIds, threadStore)
+    }
     return {
       success: true,
       thread: thread ?? undefined,
@@ -143,13 +180,19 @@ export function createAgentChatService(
       return loadThreadResult(threadStore, threadId)
     },
     listThreads(workspaceRoot?: string): Promise<AgentChatThreadsResult> {
-      return listThreadsResult(threadStore, workspaceRoot)
+      return listThreadsResult(threadStore, workspaceRoot, bridge)
     },
     sendMessage(request: AgentChatSendMessageRequest): Promise<AgentChatSendResult> {
       return bridge.sendMessage(request)
     },
     resumeLatestThread(workspaceRoot: string): Promise<AgentChatThreadResult> {
-      return resumeLatestThreadResult(threadStore, deps.orchestration, workspaceRoot)
+      return resumeLatestThreadResult(threadStore, deps.orchestration, workspaceRoot, bridge)
+    },
+    getBufferedChunks(threadId: string): AgentChatStreamChunk[] {
+      return bridge.getBufferedChunks(threadId)
+    },
+    revertToSnapshot(threadId: string, messageId: string): Promise<AgentChatRevertResult> {
+      return bridge.revertToSnapshot(threadId, messageId)
     },
     getLinkedDetails(link: AgentChatOrchestrationLink): Promise<AgentChatLinkedDetailsResult> {
       return bridge.getLinkedDetails(link)

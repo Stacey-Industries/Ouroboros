@@ -41,9 +41,22 @@ export function useTerminalFitHandlers(
       if (!proposed) return
       if (proposed.cols === term.cols && proposed.rows === term.rows) return
 
-      const savedViewportY = term.buffer.active.viewportY
+      const buffer = term.buffer.active
+      const isAtBottom = buffer.viewportY >= buffer.baseY
+      const offsetFromBottom = buffer.baseY - buffer.viewportY
+
       addon.fit()
-      if (savedViewportY > 0) term.scrollToLine(savedViewportY)
+
+      if (isAtBottom) {
+        // User was at bottom — stay at bottom after reflow
+        term.scrollToBottom()
+      } else if (offsetFromBottom > 0) {
+        // User was scrolled up — maintain distance from bottom
+        const newTarget = term.buffer.active.baseY - offsetFromBottom
+        if (newTarget >= 0) {
+          term.scrollToLine(newTarget)
+        }
+      }
       queuePtyResize(sessionId, term.cols, term.rows, runtimeRefs.resizeDebounceRef)
     } catch {
       // fit can throw if the container has zero dimensions

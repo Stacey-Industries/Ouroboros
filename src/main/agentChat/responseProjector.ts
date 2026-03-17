@@ -11,7 +11,10 @@ export interface ProjectAssistantMessageArgs {
   orchestrationLink?: AgentChatOrchestrationLink
   costUsd?: number
   durationMs?: number
+  tokenUsage?: { inputTokens: number; outputTokens: number }
   timestamp: number
+  /** Structured content blocks captured during streaming (tool cards, thinking, text) */
+  blocks?: import('./types').AgentChatContentBlock[]
 }
 
 export interface ProjectFailureMessageArgs {
@@ -79,6 +82,19 @@ export function projectProviderResultToAssistantMessage(
 
   if (args.durationMs != null) {
     message.durationSummary = formatDuration(args.durationMs)
+  }
+
+  if (args.tokenUsage) {
+    message.tokenUsage = args.tokenUsage
+  }
+
+  if (args.blocks && args.blocks.length > 0) {
+    // Seal any tool blocks still marked 'running' as 'complete'
+    message.blocks = args.blocks.map((block) =>
+      block.kind === 'tool_use' && block.status === 'running'
+        ? { ...block, status: 'complete' as const }
+        : block,
+    )
   }
 
   return message

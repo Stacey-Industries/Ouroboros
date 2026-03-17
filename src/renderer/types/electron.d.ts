@@ -5,6 +5,8 @@ export * from './electron-agent-chat'
 export * from './electron-runtime-apis'
 export * from './electron-git'
 export * from './electron-observability'
+export * from './electron-mcp-store'
+export * from './electron-extension-store'
 export * from './electron-workspace'
 
 declare global {

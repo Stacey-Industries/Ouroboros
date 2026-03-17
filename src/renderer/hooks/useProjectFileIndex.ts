@@ -29,8 +29,13 @@ export function useProjectFileIndex({
   const [isIndexing, setIsIndexing] = useState(false);
   const generationRef = useRef(0);
 
+  // Stabilize roots array reference — callers often pass inline `[projectRoot]`
+  // which creates a new array every render, causing infinite re-scan loops.
+  const rootsKey = roots.join('\0');
+  const stableRoots = useMemo(() => roots, [rootsKey]);
+
   const scanRoots = useCallback(async () => {
-    if (!enabled || roots.length === 0) {
+    if (!enabled || stableRoots.length === 0) {
       setAllFiles([]);
       return;
     }
@@ -45,7 +50,7 @@ export function useProjectFileIndex({
       const files: FileEntry[] = [];
       const visited = new Set<string>();
 
-      for (const root of roots) {
+      for (const root of stableRoots) {
         await walkDirectory(root, root, files, visited, 0);
       }
 
@@ -60,7 +65,7 @@ export function useProjectFileIndex({
         setIsIndexing(false);
       }
     }
-  }, [enabled, roots]);
+  }, [enabled, stableRoots]);
 
   useEffect(() => {
     void scanRoots();

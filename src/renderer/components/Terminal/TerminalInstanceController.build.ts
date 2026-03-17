@@ -41,6 +41,7 @@ interface ContextMenuBridge {
 interface PasteBridge {
   pendingPaste: string | null
   handlePasteConfirm: () => void
+  handlePasteSingleLine: () => void
   handlePasteCancel: () => void
 }
 
@@ -106,6 +107,7 @@ function buildTerminalInteractionController(
     closeContextMenu: args.contextMenuState.closeContextMenu,
     pendingPaste: args.pasteState.pendingPaste,
     handlePasteConfirm: args.pasteState.handlePasteConfirm,
+    handlePasteSingleLine: args.pasteState.handlePasteSingleLine,
     handlePasteCancel: args.pasteState.handlePasteCancel,
     richInputActive: args.richInputState.richInputActive,
     openRichInput: args.richInputState.openRichInput,

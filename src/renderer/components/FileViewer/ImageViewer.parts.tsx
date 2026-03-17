@@ -108,11 +108,11 @@ export interface ImageViewportProps {
   imgStyle: React.CSSProperties;
   /** Pan offset (pixels) applied via CSS transform */
   panOffset: { x: number; y: number };
-  /** Mouse handlers for pan */
-  onMouseDown: (e: React.MouseEvent) => void;
-  onMouseMove: (e: React.MouseEvent) => void;
-  onMouseUp: (e: React.MouseEvent) => void;
-  onMouseLeave: (e: React.MouseEvent) => void;
+  /** Pointer handlers for pan (supports mouse, touch, pen) */
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: (e: React.PointerEvent) => void;
+  onPointerLeave: (e: React.PointerEvent) => void;
   /** Scroll-wheel zoom */
   onWheel: (e: React.WheelEvent) => void;
   /** Whether panning is in progress (changes cursor) */
@@ -131,10 +131,10 @@ export function ImageViewport({
   zoomMode,
   imgStyle,
   panOffset,
-  onMouseDown,
-  onMouseMove,
-  onMouseUp,
-  onMouseLeave,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerLeave,
   onWheel,
   isPanning,
   containerRef,
@@ -142,11 +142,11 @@ export function ImageViewport({
   return (
     <div
       ref={containerRef}
-      style={getImageAreaStyle(zoomMode, isPanning)}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseLeave}
+      style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerLeave}
       onWheel={onWheel}
     >
       {loadError ? (

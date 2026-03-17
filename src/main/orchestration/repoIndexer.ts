@@ -2,11 +2,12 @@ import { execFile } from 'child_process'
 import { createHash } from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
+import { getStrategyForLanguage, getAllImportableExtensions } from '../contextLayer/languageStrategies'
 import { readTextSafe } from '../ipc-handlers/contextDetectors'
 import { scanProject } from '../ipc-handlers/contextScanner'
 import { uriToFilePath } from '../lspHelpers'
 import { servers } from '../lspState'
-import type { DiagnosticsFileSummary, DiagnosticsSummary, GitDiffFileSummary, GitDiffSummary, RecentEditsSummary, RepoFacts, WorkspaceRootFact } from './types'
+import type { DiagnosticMessage, DiagnosticsFileSummary, DiagnosticsSummary, GitDiffFileSummary, GitDiffHunk, GitDiffSummary, RecentCommit, RecentEditsSummary, RepoFacts, WorkspaceRootFact } from './types'
 
 const DEFAULT_MAX_RECENT_FILES = 20
 const DEFAULT_IMPORT_BYTES = 64 * 1024
@@ -32,7 +33,7 @@ const IGNORED_FILE_NAMES = new Set([
   '.DS_Store',
   'Thumbs.db',
 ])
-const IMPORTABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'])
+const IMPORTABLE_EXTENSIONS = getAllImportableExtensions()
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   '.ts': 'typescript',
   '.tsx': 'typescript',
@@ -119,6 +120,7 @@ export interface RootRepoIndexSnapshot {
   workspaceFact: WorkspaceRootFact
   gitDiff: GitDiffSummary
   diagnostics: DiagnosticsSummary
+  recentCommits: RecentCommit[]
   files: IndexedRepoFile[]
   directories: IndexedRepoDirectory[]
 }
@@ -222,10 +224,11 @@ export async function buildRepoIndexSnapshot(workspaceRoots: string[], options: 
 }
 
 async function indexWorkspaceRoot(rootPath: string, options: { indexedAt: number; maxImportBytes: number; maxRecentFiles: number }): Promise<RootRepoIndexSnapshot> {
-  const [projectContext, scanResult, gitDiff] = await Promise.all([
+  const [projectContext, scanResult, gitDiff, recentCommits] = await Promise.all([
     scanProject(rootPath),
     scanWorkspaceTree(rootPath, options.maxImportBytes),
     buildGitDiffSummary(rootPath, options.indexedAt),
+    buildRecentCommits(rootPath),
   ])
   const diagnostics = buildDiagnosticsSummary(rootPath, options.indexedAt)
   const diagnosticsByPath = new Map(diagnostics.files.map((entry) => [normalizePathForCompare(entry.filePath), toIndexedDiagnostics(entry)]))
@@ -260,6 +263,7 @@ async function indexWorkspaceRoot(rootPath: string, options: { indexedAt: number
     workspaceFact,
     gitDiff,
     diagnostics,
+    recentCommits,
     files,
     directories: scanResult.directories,
   }
@@ -360,10 +364,19 @@ async function extractImports(filePath: string, maxImportBytes: number): Promise
     return []
   }
 
-  return Array.from(parseImports(content)).sort((left, right) => left.localeCompare(right))
+  const language = detectLanguage(filePath)
+  return Array.from(parseImports(content, language)).sort((left, right) => left.localeCompare(right))
 }
 
-function parseImports(content: string): Set<string> {
+function parseImports(content: string, language: string): Set<string> {
+  // Try language-specific strategy first
+  const strategy = getStrategyForLanguage(language)
+  if (strategy) {
+    const extracted = strategy.extractImports(content)
+    return new Set(extracted)
+  }
+
+  // Fallback: original JS/TS patterns for unknown languages
   const imports = new Set<string>()
   const patterns = [
     /(?:import|export)\s+(?:[^'"`]+?\s+from\s+)?['"]([^'"\n]+)['"]/g,
@@ -383,6 +396,46 @@ function parseImports(content: string): Set<string> {
   }
 
   return imports
+}
+
+const MAX_HUNKS_PER_FILE = 20
+
+async function parseDiffHunks(rootPath: string): Promise<Map<string, GitDiffHunk[]>> {
+  const hunks = new Map<string, GitDiffHunk[]>()
+
+  try {
+    const stdout = await execGit(rootPath, [
+      'diff', 'HEAD', '--unified=0', '--diff-filter=ACMR',
+    ])
+
+    let currentFile: string | null = null
+
+    for (const line of stdout.split(/\r?\n/)) {
+      if (line.startsWith('+++ b/')) {
+        currentFile = path.resolve(rootPath, line.slice(6))
+        if (!hunks.has(currentFile)) hunks.set(currentFile, [])
+        continue
+      }
+
+      if (line.startsWith('@@') && currentFile) {
+        const match = line.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
+        if (match) {
+          const startLine = parseInt(match[1], 10)
+          const lineCount = match[2] !== undefined ? parseInt(match[2], 10) : 1
+          if (lineCount > 0) {
+            const fileHunks = hunks.get(currentFile)!
+            if (fileHunks.length < MAX_HUNKS_PER_FILE) {
+              fileHunks.push({ startLine, lineCount })
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // git diff failed — return empty map, fall back to top-of-file
+  }
+
+  return hunks
 }
 
 async function buildGitDiffSummary(rootPath: string, generatedAt: number): Promise<GitDiffSummary> {
@@ -410,6 +463,8 @@ async function buildGitDiffSummary(rootPath: string, generatedAt: number): Promi
     })
   }
 
+  const branch = typeof statusResponse.branch === 'string' && statusResponse.branch !== '' ? statusResponse.branch : undefined
+
   try {
     const diffStdout = await execGit(rootPath, ['diff', '--numstat', '--find-renames', 'HEAD'])
     for (const line of diffStdout.split(/\r?\n/)) {
@@ -430,10 +485,36 @@ async function buildGitDiffSummary(rootPath: string, generatedAt: number): Promi
       } : parsed)
     }
   } catch {
-    return summarizeGitDiff(Array.from(changedFiles.values()), generatedAt)
+    return summarizeGitDiff(Array.from(changedFiles.values()), generatedAt, branch)
   }
 
-  return summarizeGitDiff(Array.from(changedFiles.values()), generatedAt)
+  const hunksByFile = await parseDiffHunks(rootPath)
+  for (const [filePath, fileHunks] of hunksByFile) {
+    const key = normalizePathForCompare(filePath)
+    const existing = changedFiles.get(key)
+    if (existing) {
+      changedFiles.set(key, { ...existing, hunks: fileHunks })
+    }
+  }
+
+  return summarizeGitDiff(Array.from(changedFiles.values()), generatedAt, branch)
+}
+
+async function buildRecentCommits(rootPath: string, count = 5): Promise<RecentCommit[]> {
+  try {
+    const stdout = await execGit(rootPath, [
+      'log', `--oneline`, `-${count}`,
+      '--format=%H|%s|%aI',
+    ])
+    return stdout.trim().split(/\r?\n/).filter(Boolean).map(line => {
+      const [hash, ...rest] = line.split('|')
+      const message = rest.slice(0, -1).join('|')
+      const authorDate = rest[rest.length - 1]
+      return { hash: hash.slice(0, 8), message, authorDate }
+    })
+  } catch {
+    return []
+  }
 }
 
 function createEmptyGitDiffSummary(generatedAt: number): GitDiffSummary {
@@ -446,7 +527,7 @@ function createEmptyGitDiffSummary(generatedAt: number): GitDiffSummary {
   }
 }
 
-function summarizeGitDiff(changedFiles: GitDiffFileSummary[], generatedAt: number): GitDiffSummary {
+function summarizeGitDiff(changedFiles: GitDiffFileSummary[], generatedAt: number, currentBranch?: string): GitDiffSummary {
   const ordered = changedFiles.sort((left, right) => left.filePath.localeCompare(right.filePath))
   return {
     changedFiles: ordered,
@@ -454,6 +535,7 @@ function summarizeGitDiff(changedFiles: GitDiffFileSummary[], generatedAt: numbe
     totalDeletions: ordered.reduce((total, file) => total + file.deletions, 0),
     changedFileCount: ordered.length,
     comparedAgainst: 'HEAD',
+    currentBranch,
     generatedAt,
   }
 }
@@ -509,8 +591,14 @@ function normalizeRenamedDiffPath(filePath: string): string {
   return filePath.slice(filePath.lastIndexOf(' => ') + 4)
 }
 
+const MAX_MESSAGES_PER_FILE = 10
+const MAX_MESSAGES_TOTAL = 50
+
+const SEVERITY_PRIORITY: Record<string, number> = { error: 0, warning: 1, info: 2, hint: 3 }
+
 function buildDiagnosticsSummary(rootPath: string, generatedAt: number): DiagnosticsSummary {
   const byFile = new Map<string, DiagnosticsFileSummary>()
+  const messagesByFile = new Map<string, DiagnosticMessage[]>()
 
   for (const server of servers.values()) {
     if (normalizePathForCompare(server.root) !== normalizePathForCompare(rootPath) || server.status !== 'running') {
@@ -529,6 +617,7 @@ function buildDiagnosticsSummary(rootPath: string, generatedAt: number): Diagnos
         infos: 0,
         hints: 0,
       }
+      const messages = messagesByFile.get(filePath) ?? []
       for (const diagnostic of diagnostics) {
         if (diagnostic.severity === 'error') {
           existing.errors += 1
@@ -539,12 +628,54 @@ function buildDiagnosticsSummary(rootPath: string, generatedAt: number): Diagnos
         } else {
           existing.infos += 1
         }
+        messages.push({
+          severity: diagnostic.severity,
+          line: diagnostic.range.startLine + 1,  // Convert from 0-indexed LSP to 1-indexed
+          character: diagnostic.range.startChar,
+          message: diagnostic.message,
+        })
       }
       byFile.set(filePath, existing)
+      messagesByFile.set(filePath, messages)
+    }
+  }
+
+  // Sort messages per file by severity priority (errors first), then by line number,
+  // and cap at MAX_MESSAGES_PER_FILE per file.
+  for (const [filePath, messages] of messagesByFile) {
+    messages.sort(
+      (left, right) =>
+        (SEVERITY_PRIORITY[left.severity] ?? 3) - (SEVERITY_PRIORITY[right.severity] ?? 3) ||
+        left.line - right.line,
+    )
+    const fileSummary = byFile.get(filePath)
+    if (fileSummary) {
+      fileSummary.messages = messages.slice(0, MAX_MESSAGES_PER_FILE)
     }
   }
 
   const files = Array.from(byFile.values()).sort((left, right) => left.filePath.localeCompare(right.filePath))
+
+  // Enforce total message cap across all files (prioritize files with errors first)
+  let totalMessages = 0
+  const filesByPriority = [...files].sort(
+    (left, right) => right.errors - left.errors || right.warnings - left.warnings || left.filePath.localeCompare(right.filePath),
+  )
+  for (const file of filesByPriority) {
+    if (!file.messages || file.messages.length === 0) {
+      continue
+    }
+    if (totalMessages >= MAX_MESSAGES_TOTAL) {
+      file.messages = []
+      continue
+    }
+    const remaining = MAX_MESSAGES_TOTAL - totalMessages
+    if (file.messages.length > remaining) {
+      file.messages = file.messages.slice(0, remaining)
+    }
+    totalMessages += file.messages.length
+  }
+
   return {
     files,
     totalErrors: files.reduce((total, file) => total + file.errors, 0),
@@ -590,12 +721,14 @@ function aggregateRepoFacts(workspaceRoots: string[], rootSnapshots: RootRepoInd
   const gitDiff = aggregateGitDiff(rootSnapshots, generatedAt)
   const diagnostics = aggregateDiagnostics(rootSnapshots, generatedAt)
   const recentEdits = aggregateRecentEdits(rootSnapshots, generatedAt, maxRecentFiles)
+  const recentCommits = rootSnapshots.find(s => s.recentCommits.length > 0)?.recentCommits
   return {
     workspaceRoots,
     roots: rootSnapshots.map((snapshot) => snapshot.workspaceFact),
     gitDiff,
     diagnostics,
     recentEdits,
+    recentCommits,
   }
 }
 
@@ -607,12 +740,14 @@ function aggregateGitDiff(rootSnapshots: RootRepoIndexSnapshot[], generatedAt: n
     }
   }
   const files = Array.from(merged.values()).sort((left, right) => left.filePath.localeCompare(right.filePath))
+  const currentBranch = rootSnapshots.find(s => s.gitDiff.currentBranch)?.gitDiff.currentBranch
   return {
     changedFiles: files,
     totalAdditions: files.reduce((total, file) => total + file.additions, 0),
     totalDeletions: files.reduce((total, file) => total + file.deletions, 0),
     changedFileCount: files.length,
     comparedAgainst: files.length > 0 ? 'HEAD' : undefined,
+    currentBranch,
     generatedAt,
   }
 }
@@ -624,16 +759,40 @@ function aggregateDiagnostics(rootSnapshots: RootRepoIndexSnapshot[], generatedA
       const key = normalizePathForCompare(file.filePath)
       const existing = merged.get(key)
       if (!existing) {
-        merged.set(key, { ...file })
+        merged.set(key, { ...file, messages: file.messages ? [...file.messages] : undefined })
         continue
       }
       existing.errors += file.errors
       existing.warnings += file.warnings
       existing.infos += file.infos
       existing.hints += file.hints
+      if (file.messages && file.messages.length > 0) {
+        const combined = [...(existing.messages ?? []), ...file.messages]
+        combined.sort(
+          (left, right) =>
+            (SEVERITY_PRIORITY[left.severity] ?? 3) - (SEVERITY_PRIORITY[right.severity] ?? 3) ||
+            left.line - right.line,
+        )
+        existing.messages = combined.slice(0, MAX_MESSAGES_PER_FILE)
+      }
     }
   }
   const files = Array.from(merged.values()).sort((left, right) => left.filePath.localeCompare(right.filePath))
+
+  // After all per-file messages are merged and capped per-file,
+  // apply global 50-message cap across all files
+  let totalMessages = 0
+  for (const file of files) {
+    if (!file.messages) continue
+    const remaining = MAX_MESSAGES_TOTAL - totalMessages
+    if (remaining <= 0) {
+      file.messages = []
+    } else if (file.messages.length > remaining) {
+      file.messages = file.messages.slice(0, remaining)
+    }
+    totalMessages += file.messages.length
+  }
+
   return {
     files,
     totalErrors: files.reduce((total, file) => total + file.errors, 0),
@@ -750,7 +909,7 @@ function execGitStatus(cwd: string): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     execFile(
       'git',
-      ['status', '--porcelain=v1', '-uall'],
+      ['status', '--porcelain=v1', '-unormal'],
       { cwd, timeout: GIT_STATUS_TIMEOUT_MS, maxBuffer: 512 * 1024 },
       (error, stdout) => {
         if (error) {

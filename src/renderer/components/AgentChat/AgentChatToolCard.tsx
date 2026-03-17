@@ -17,6 +17,8 @@ export interface ToolActivity {
   name: string;
   status: 'running' | 'complete';
   filePath?: string;
+  inputSummary?: string;
+  editSummary?: { oldLines: number; newLines: number };
 }
 
 export interface AgentChatToolCardProps {
@@ -30,6 +32,10 @@ export interface AgentChatToolCardProps {
   duration?: number;
   /** Error output when tool failed (optional) */
   errorOutput?: string;
+  /** Short summary of the tool input (command, pattern, etc.) from streaming */
+  inputSummary?: string;
+  /** Edit change summary from streaming (line counts) */
+  editSummary?: { oldLines: number; newLines: number };
 }
 
 function SpinnerIcon(): React.ReactElement {
@@ -238,12 +244,23 @@ export function AgentChatToolCard({
   input,
   duration,
   errorOutput,
+  inputSummary,
+  editSummary,
 }: AgentChatToolCardProps): React.ReactElement {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [errorExpanded, setErrorExpanded] = useState(false);
   const showDiffPreview = isFileModifyingTool(name) && status === 'complete';
 
   const inputPreview = formatInputPreview(name, input);
+  // Derive the best display summary: structured input > streaming inputSummary > generic preview
+  const displaySummary = inputPreview || inputSummary || null;
+
+  // Build a concise inline label for the header row
+  const headerDetail = filePath
+    ? shortenPath(filePath)
+    : inputSummary
+      ? (inputSummary.length > 60 ? inputSummary.slice(0, 57) + '...' : inputSummary)
+      : null;
 
   return (
     <div
@@ -260,14 +277,21 @@ export function AgentChatToolCard({
         <ToolIcon name={name} />
         {status === 'running' ? <SpinnerIcon /> : <CheckIcon />}
         <span
-          className="truncate"
+          className="shrink-0"
           style={{ color: 'var(--text)', fontFamily: 'var(--font-ui)' }}
         >
           {formatToolActivity(name)}
         </span>
-        {filePath && (
-          <span className="truncate text-[10px] ml-1 max-w-[40%]" style={{ color: 'var(--text-muted)' }}>
-            {shortenPath(filePath)}
+        {headerDetail && (
+          <span className="truncate text-[10px] ml-0.5 min-w-0" style={{ color: 'var(--text-muted)' }}>
+            {headerDetail}
+          </span>
+        )}
+        {editSummary && (
+          <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            <span style={{ color: 'var(--error, #f85149)' }}>-{editSummary.oldLines}</span>
+            {' / '}
+            <span style={{ color: 'var(--success, #3fb950)' }}>+{editSummary.newLines}</span>
           </span>
         )}
         {duration != null && (
@@ -285,7 +309,7 @@ export function AgentChatToolCard({
       </button>
       {!collapsed && (
         <div
-          className="border-t px-2.5 py-2"
+          className="border-t px-2.5 py-2 space-y-1"
           style={{
             borderColor: 'var(--border)',
             color: 'var(--text-muted)',
@@ -293,22 +317,36 @@ export function AgentChatToolCard({
             fontSize: '11px',
           }}
         >
-          <div>Tool: {name}</div>
           {filePath && (
-            <div className="mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
-              File: {filePath}
+            <div className="truncate">
+              <span style={{ color: 'var(--text-faint, var(--text-muted))' }}>path </span>
+              <span style={{ color: 'var(--text)' }}>{filePath}</span>
             </div>
           )}
-          {inputPreview && !filePath && (
-            <div className="mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
-              {inputPreview}
+          {displaySummary && (
+            <pre
+              className="max-h-[120px] overflow-auto whitespace-pre-wrap rounded p-1.5"
+              style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', fontSize: '10px' }}
+            >
+              {displaySummary}
+            </pre>
+          )}
+          {editSummary && (
+            <div className="flex items-center gap-2">
+              <span style={{ color: 'var(--error, #f85149)' }}>-{editSummary.oldLines} line{editSummary.oldLines === 1 ? '' : 's'}</span>
+              <span style={{ color: 'var(--success, #3fb950)' }}>+{editSummary.newLines} line{editSummary.newLines === 1 ? '' : 's'}</span>
             </div>
           )}
           {showDiffPreview && filePath && (
             <AgentChatDiffPreview filePath={filePath} />
           )}
+          {!filePath && !displaySummary && !editSummary && !showDiffPreview && !errorOutput && (
+            <div style={{ color: 'var(--text-faint, var(--text-muted))' }}>
+              {status === 'running' ? 'Running...' : 'Completed'}
+            </div>
+          )}
           {errorOutput && (
-            <div className="mt-1.5">
+            <div>
               <button
                 onClick={() => setErrorExpanded((e) => !e)}
                 className="flex items-center gap-1 text-[10px] font-medium transition-colors hover:opacity-80"

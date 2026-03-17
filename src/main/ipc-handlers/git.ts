@@ -3,6 +3,8 @@ import { execFile } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
 import { dispatchActivationEvent } from '../extensions'
+import { getGraphController } from '../codebaseGraph/graphController'
+import { getContextLayerController } from '../contextLayer/contextLayerController'
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type DiffStatus = 'modified' | 'added' | 'deleted' | 'renamed'
 type DiffLineKind = 'added' | 'modified' | 'deleted'
@@ -245,7 +247,7 @@ async function applyPatch(root: string, patchContent: string, reverse: boolean =
   const tmpFile = path.join(app.getPath('temp'), `ouroboros-hunk-${Date.now()}.patch`)
   try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(reverse ? ['apply', '-R', '--whitespace=nowarn', tmpFile] : ['apply', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
   catch (err: unknown) { return { success: false, error: gitErrorMessage(err) } }
-  finally { void fs.unlink(tmpFile).catch(() => {}) }
+  finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
 }
 function gitIsRepo(root: string) { return respond(async () => { await gitExec(['rev-parse', '--git-dir'], { cwd: root }); return { isRepo: true } }, { fallback: { isRepo: false } }) }
 function gitStatus(root: string) { return respond(async () => ({ files: parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])).files })) }
@@ -258,7 +260,7 @@ function gitCheckout(root: string, branch: string) { return respond(async () => 
 function gitStage(root: string, filePath: string) { return respond(async () => { await gitExec(['add', filePath], { cwd: root }); return {} }, { gitError: true }) }
 function gitUnstage(root: string, filePath: string) { return respond(async () => { await gitExec(['restore', '--staged', filePath], { cwd: root }); return {} }, { gitError: true }) }
 function gitStatusDetailed(root: string) { return respond(async () => { const snapshot = parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])); return { staged: snapshot.staged, unstaged: snapshot.unstaged } }) }
-function gitCommit(root: string, message: string) { return respond(async () => { await gitExec(['commit', '-m', message], { cwd: root }); dispatchActivationEvent('onGitCommit', { root, message }).catch(() => {}); return {} }, { gitError: true }) }
+function gitCommit(root: string, message: string) { return respond(async () => { await gitExec(['commit', '-m', message], { cwd: root }); dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => { console.error('[git] Failed to dispatch onGitCommit activation event:', error) }); getGraphController()?.onGitCommit(); getContextLayerController()?.onGitCommit(); return {} }, { gitError: true }) }
 function gitStageAll(root: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); return {} }, { gitError: true }) }
 function gitUnstageAll(root: string) { return respond(async () => { await gitExec(['reset', 'HEAD'], { cwd: root }); return {} }, { gitError: true }) }
 function gitSnapshot(root: string) { return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) })) }
@@ -271,6 +273,7 @@ function gitRestoreSnapshot(root: string, commitHash: string) { return respond(a
 function gitCreateSnapshot(root: string, label?: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); await gitExec(['commit', '--allow-empty', '-m', `[Ouroboros Snapshot] ${label?.trim() || 'Manual snapshot'}`], { cwd: root }); return { commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) } }, { gitError: true }) }
 async function gitDirtyCount(root: string) { try { return { success: true, count: await getDirtyCount(root) } } catch (err: unknown) { return { success: false, count: 0, error: errorMessage(err) } } }
 function gitBlame(root: string, filePath: string) { return respond(async () => ({ lines: parseBlameOutput(await gitStdout(root, ['blame', '--porcelain', filePath], 4 * MB)) }), { fallback: { lines: [] } }) }
+function gitDiffRaw(root: string, filePath: string) { return respond(async () => ({ patch: (await gitStdout(root, ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath], 4 * MB)) }), { fallback: { patch: '' } }) }
 export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
   void _senderWindow
   const register = <T extends unknown[]>(channel: string, handler: (...args: T) => Promise<unknown>): string => { ipcMain.handle(channel, (_event, ...args) => handler(...(args as T))); return channel }
@@ -281,6 +284,6 @@ export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
     register('git:stageAll', gitStageAll), register('git:unstageAll', gitUnstageAll), register('git:discardFile', discardFile), register('git:snapshot', gitSnapshot),
     register('git:diffReview', gitDiffReview), register('git:fileAtCommit', gitFileAtCommit), register('git:applyHunk', (root: string, patchContent: string) => applyPatch(root, patchContent)), register('git:revertHunk', (root: string, patchContent: string) => applyPatch(root, patchContent, true)),
     register('git:revertFile', gitRevertFile), register('git:diffBetween', gitDiffBetween), register('git:changedFilesBetween', gitChangedFilesBetween), register('git:restoreSnapshot', gitRestoreSnapshot),
-    register('git:createSnapshot', gitCreateSnapshot), register('git:dirtyCount', gitDirtyCount), register('git:blame', gitBlame),
+    register('git:createSnapshot', gitCreateSnapshot), register('git:dirtyCount', gitDirtyCount), register('git:blame', gitBlame), register('git:diffRaw', gitDiffRaw),
   ]
 }

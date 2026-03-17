@@ -15,8 +15,41 @@ import { ContextBuilder } from '../ContextBuilder';
 import { TimeTravelPanelConnected } from './TimeTravelPanelConnected';
 import { EditorContent } from './EditorContent';
 import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
+import {
+  OPEN_SETTINGS_PANEL_EVENT,
+} from '../../hooks/appEventNames';
 
 type CentrePaneView = 'editor' | 'settings' | 'usage' | 'context-builder' | 'time-travel';
+
+function resetSpecialView(
+  closeReview: () => void,
+  setReplaySession: (s: AgentMonitorSession | null) => void,
+): void {
+  setReplaySession(null);
+  closeReview();
+}
+
+function bindSpecialViewListener(eventName: string, handler: EventListener, bind: 'addEventListener' | 'removeEventListener'): void {
+  window[bind](eventName, handler);
+}
+
+function bindSpecialViewListeners(listeners: Array<[string, EventListener]>, bind: 'addEventListener' | 'removeEventListener'): void {
+  listeners.forEach(([eventName, handler]) => bindSpecialViewListener(eventName, handler, bind));
+}
+
+function createSpecialViewListeners(handlers: {
+  onSettings: EventListener;
+  onUsage: EventListener;
+  onContextBuilder: EventListener;
+  onTimeTravel: EventListener;
+}): Array<[string, EventListener]> {
+  return [
+    [OPEN_SETTINGS_PANEL_EVENT, handlers.onSettings],
+    ['agent-ide:open-usage-panel', handlers.onUsage],
+    ['agent-ide:open-context-builder', handlers.onContextBuilder],
+    ['agent-ide:open-time-travel', handlers.onTimeTravel],
+  ];
+}
 
 function useDiffReviewEvents(
   openReview: (sessionId: string, snapshotHash: string, projectRoot: string) => void,
@@ -63,8 +96,7 @@ function useSpecialViewEvents(
 ): void {
   useEffect(() => {
     function toggle(view: CentrePaneView): void {
-      setReplaySession(null);
-      closeReview();
+      resetSpecialView(closeReview, setReplaySession);
       setSpecialView((prev) => (prev === view ? 'editor' : view));
     }
 
@@ -73,17 +105,29 @@ function useSpecialViewEvents(
     function onContextBuilder(): void { toggle('context-builder'); }
     function onTimeTravel(): void { toggle('time-travel'); }
 
-    window.addEventListener('agent-ide:open-settings-panel', onSettings);
-    window.addEventListener('agent-ide:open-usage-panel', onUsage);
-    window.addEventListener('agent-ide:open-context-builder', onContextBuilder);
-    window.addEventListener('agent-ide:open-time-travel', onTimeTravel);
+    const listeners = createSpecialViewListeners({
+      onSettings,
+      onUsage,
+      onContextBuilder,
+      onTimeTravel,
+    });
+    bindSpecialViewListeners(listeners, 'addEventListener');
     return () => {
-      window.removeEventListener('agent-ide:open-settings-panel', onSettings);
-      window.removeEventListener('agent-ide:open-usage-panel', onUsage);
-      window.removeEventListener('agent-ide:open-context-builder', onContextBuilder);
-      window.removeEventListener('agent-ide:open-time-travel', onTimeTravel);
+      bindSpecialViewListeners(listeners, 'removeEventListener');
     };
   }, [closeReview, setReplaySession, setSpecialView]);
+}
+
+function renderSpecialView(
+  specialView: CentrePaneView,
+  projectRoot: string | null,
+  closeSpecial: () => void,
+): React.ReactElement | null {
+  if (specialView === 'settings') return <SettingsPanel onClose={closeSpecial} />;
+  if (specialView === 'usage') return <UsagePanel onClose={closeSpecial} />;
+  if (specialView === 'context-builder' && projectRoot) return <ContextBuilder projectRoot={projectRoot} onClose={closeSpecial} />;
+  if (specialView === 'time-travel') return <TimeTravelPanelConnected onClose={closeSpecial} />;
+  return null;
 }
 
 export function CentrePaneConnected(): React.ReactElement {
@@ -115,14 +159,8 @@ export function CentrePaneConnected(): React.ReactElement {
     return <SessionReplayPanel session={replaySession} onClose={() => setReplaySession(null)} />;
   }
 
-  const closeSpecial = (): void => setSpecialView('editor');
-
-  if (specialView === 'settings') return <SettingsPanel onClose={closeSpecial} />;
-  if (specialView === 'usage') return <UsagePanel onClose={closeSpecial} />;
-  if (specialView === 'context-builder' && projectRoot) {
-    return <ContextBuilder projectRoot={projectRoot} onClose={closeSpecial} />;
-  }
-  if (specialView === 'time-travel') return <TimeTravelPanelConnected onClose={closeSpecial} />;
-
-  return <EditorContent />;
+  const closeSpecial = (): void => {
+    setSpecialView('editor');
+  };
+  return renderSpecialView(specialView, projectRoot, closeSpecial) ?? <EditorContent />;
 }

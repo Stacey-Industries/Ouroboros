@@ -7,8 +7,14 @@
 
 import { useUpdater } from './useUpdater';
 import { useErrorCapture } from './useErrorCapture';
-import { useAgentTemplateCommands, useLayoutCommands, useMultiSessionCommand } from './useCommandRegistrations';
-import { useMenuEvents, useDomEventListeners, useKeyboardShortcuts } from './useAppEventListeners';
+import {
+  useAgentChatCommands,
+  useAgentTemplateCommands,
+  useLayoutCommands,
+  useMultiSessionCommand,
+} from './useCommandRegistrations';
+import { useMenuEvents, useDomEventListeners } from './useAppEventListeners';
+import { useKeyboardShortcuts } from './useAppKeyboardShortcuts';
 import type { AppTheme, WorkspaceLayout } from '../types/electron';
 import type { Command } from '../components/CommandPalette/types';
 
@@ -33,10 +39,8 @@ export interface InnerAppEffectsDeps {
   keybindings: Record<string, string>;
 }
 
-export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
-  useUpdater();
-  useErrorCapture();
-
+function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
+  useAgentChatCommands(deps.projectRoot, deps.registerCommand);
   useAgentTemplateCommands(deps.projectRoot, deps.registerCommand);
   useLayoutCommands({
     workspaceLayouts: deps.workspaceLayouts,
@@ -46,6 +50,13 @@ export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
     handleSaveLayout: deps.handleSaveLayout,
   });
   useMultiSessionCommand(deps.registerCommand);
+}
+
+export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
+  useUpdater();
+  useErrorCapture();
+
+  useRegisteredCommands(deps);
 
   useMenuEvents({
     handleProjectChange: deps.handleProjectChange,
@@ -53,6 +64,7 @@ export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
     spawnSession: deps.spawnSession,
   });
   useDomEventListeners({
+    projectRoot: deps.projectRoot,
     setTheme: deps.setTheme,
     handleProjectChange: deps.handleProjectChange,
     openPalette: deps.openPalette,

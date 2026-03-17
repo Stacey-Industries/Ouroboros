@@ -84,19 +84,22 @@ function buildDisplayItems(flatRows: TreeNode[], editState: EditState | null): A
   }
 
   const index = base.findIndex((item) => item.node.path === editState.targetPath);
-  if (index === -1) {
-    return base;
-  }
 
   const placeholder: TreeNode = {
     name: '',
     path: '__new_item_placeholder__',
     relativePath: '',
     isDirectory: editState.mode === 'newFolder',
-    depth: base[index].node.depth + 1,
+    depth: index === -1 ? 0 : base[index].node.depth + 1,
     isExpanded: false,
     isLoading: false,
   };
+
+  // index === -1 means the target is the root directory itself (not in flatRows),
+  // so insert the placeholder at the top of the list.
+  if (index === -1) {
+    return [{ node: placeholder }, ...base];
+  }
 
   return [...base.slice(0, index + 1), { node: placeholder }, ...base.slice(index + 1)];
 }
@@ -261,21 +264,44 @@ export function useDropHandlers(root: string, toast: ToastFn, refreshDir: Refres
   return { handleDrop, handleRootDrop };
 }
 
-export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRootNodes) {
+export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRootNodes, pushUndo: (items: import('./useFileTreeUndo').UndoItem[]) => void) {
   const handleDeleted = useCallback((node: TreeNode) => {
     setRootNodes((prev) => removeNodeFromTree(prev, node.path));
   }, [setRootNodes]);
 
-  const handleDeleteFocused = useCallback(async (node: TreeNode) => {
-    if (!window.confirm(`Move "${node.name}" to trash?`)) return;
-    const result = await window.electronAPI.files.delete(node.path);
-    if (result.success) {
-      toast(`Moved "${node.name}" to trash`, 'success');
-      setRootNodes((prev) => removeNodeFromTree(prev, node.path));
-    } else {
-      toast(`Failed to delete: ${result.error}`, 'error');
+  const handleMultiDeleted = useCallback((paths: string[]) => {
+    setRootNodes((prev) => paths.reduce((tree, path) => removeNodeFromTree(tree, path), prev));
+  }, [setRootNodes]);
+
+  const handleDeleteFocused = useCallback(async (node: TreeNode, selectedPaths: Set<string>) => {
+    const combinedPaths = selectedPaths.size > 0
+      ? new Set([...selectedPaths, node.path])
+      : new Set([node.path]);
+    const pathsToDelete = Array.from(combinedPaths);
+    const nameMap = new Map<string, string>();
+    nameMap.set(node.path, node.name);
+    const label = pathsToDelete.length > 1 ? `${pathsToDelete.length} items` : `"${node.name}"`;
+    if (!window.confirm(`Delete ${label}? (Ctrl+Z to undo)`)) return;
+
+    const undoItems: import('./useFileTreeUndo').UndoItem[] = [];
+    const deleted: string[] = [];
+    for (const filePath of pathsToDelete) {
+      const name = nameMap.get(filePath) ?? (filePath.replace(/[\\/][^\\/]+$/, '') || filePath);
+      const result = await window.electronAPI.files.softDelete?.(filePath);
+      if (result?.success && result.tempPath) {
+        deleted.push(filePath);
+        undoItems.push({ tempPath: result.tempPath, originalPath: filePath, name });
+      } else {
+        toast(`Failed to delete: ${result?.error ?? 'unknown error'}`, 'error');
+      }
     }
-  }, [setRootNodes, toast]);
+
+    if (deleted.length > 0) {
+      setRootNodes((prev) => deleted.reduce((tree, p) => removeNodeFromTree(tree, p), prev));
+      pushUndo(undoItems);
+      toast(`Deleted ${deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`} — Ctrl+Z to undo`, 'success');
+    }
+  }, [pushUndo, setRootNodes, toast]);
 
   const handleBookmarkToggle = useCallback(async (node: TreeNode) => {
     const current = (await window.electronAPI.config.get('bookmarks') as string[]) ?? [];
@@ -299,7 +325,7 @@ export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRo
     toast(result.success ? `Unstaged "${node.name}"` : `Unstage failed: ${result.error}`, result.success ? 'success' : 'error');
   }, [root, toast]);
 
-  return { handleDeleted, handleDeleteFocused, handleBookmarkToggle, handleStage, handleUnstage };
+  return { handleDeleted, handleMultiDeleted, handleDeleteFocused, handleBookmarkToggle, handleStage, handleUnstage };
 }
 
 /**

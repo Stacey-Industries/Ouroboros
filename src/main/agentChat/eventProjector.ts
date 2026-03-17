@@ -77,6 +77,20 @@ async function syncThreadMetadata(args: {
 }): Promise<{ changed: boolean; thread: AgentChatThreadRecord }> {
   const link = buildAgentChatOrchestrationLink(args.session)
   const nextStatus = mapOrchestrationStatusToAgentChatStatus(args.session.status)
+
+  // Preserve sticky fields from the existing thread when the session
+  // update doesn't carry them yet.  Early session updates (beginProviderPhase)
+  // fire before the adapter has set these on providerSession.
+  if (link) {
+    const existing = args.thread.latestOrchestration
+    if (!link.linkedTerminalId && existing?.linkedTerminalId) {
+      link.linkedTerminalId = existing.linkedTerminalId
+    }
+    if (!link.claudeSessionId && existing?.claudeSessionId) {
+      link.claudeSessionId = existing.claudeSessionId
+    }
+  }
+
   if (args.thread.status === nextStatus && linksEqual(args.thread.latestOrchestration, link)) {
     return { changed: false, thread: args.thread }
   }

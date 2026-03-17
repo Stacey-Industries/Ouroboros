@@ -74,6 +74,11 @@ export interface ConfigAPI {
   onExternalChange: (callback: (config: AppConfig) => void) => () => void
 }
 
+export interface ShowImageDialogResult extends IpcResult {
+  cancelled?: boolean
+  attachments?: import('../../main/agentChat/types').ImageAttachment[]
+}
+
 export interface FilesAPI {
   writeFile: (filePath: string, data: Uint8Array) => Promise<IpcResult>
   saveFile: (filePath: string, content: string) => Promise<IpcResult>
@@ -88,6 +93,9 @@ export interface FilesAPI {
   rename: (oldPath: string, newPath: string) => Promise<IpcResult>
   copyFile: (sourcePath: string, destPath: string) => Promise<IpcResult>
   delete: (targetPath: string) => Promise<IpcResult>
+  softDelete: (targetPath: string) => Promise<IpcResult & { tempPath?: string }>
+  restoreDeleted: (tempPath: string, originalPath: string) => Promise<IpcResult>
+  showImageDialog: () => Promise<ShowImageDialogResult>
   onFileChange: (callback: (change: FileChangeEvent) => void) => () => void
 }
 

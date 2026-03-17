@@ -36,7 +36,7 @@ async function pruneOldSessions(): Promise<void> {
 
     stats.sort((left, right) => left.mtime - right.mtime)
     const toDelete = stats.slice(0, stats.length - MAX_SESSION_FILES)
-    await Promise.all(toDelete.map((entry) => fs.unlink(path.join(sessionsDir, entry.name)).catch(() => {})))
+    await Promise.all(toDelete.map((entry) => fs.unlink(path.join(sessionsDir, entry.name)).catch((error) => { console.error('[sessions] Failed to delete old session file:', entry.name, error) })))
   } catch {
     // Non-fatal.
   }

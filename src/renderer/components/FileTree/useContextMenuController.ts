@@ -26,6 +26,9 @@ interface UseContextMenuControllerProps {
   onNewFile: (parentDir: string) => void;
   onNewFolder: (parentDir: string) => void;
   onDeleted: (node: TreeNode) => void;
+  onMultiDeleted?: (paths: string[]) => void;
+  onPushUndo?: (items: import('./useFileTreeUndo').UndoItem[]) => void;
+  selectedPaths?: Set<string>;
   isBookmarked?: boolean;
   onBookmarkToggle?: (node: TreeNode) => void;
   gitStatus?: GitFileStatus;
@@ -97,14 +100,39 @@ async function deleteNode(
   onClose: () => void,
   onDeleted: (node: TreeNode) => void,
   toast: ToastFn,
+  selectedPaths?: Set<string>,
+  onMultiDeleted?: (paths: string[]) => void,
+  onPushUndo?: (items: import('./useFileTreeUndo').UndoItem[]) => void,
 ): Promise<void> {
-  const result = await window.electronAPI.files.delete(node.path);
+  const combinedPaths = selectedPaths && selectedPaths.size > 0
+    ? new Set([...selectedPaths, node.path])
+    : new Set([node.path]);
+  const isMultiSelect = combinedPaths.size > 1;
+  const pathsToDelete = Array.from(combinedPaths);
 
-  if (result.success) {
-    toast(`Moved "${node.name}" to trash`, 'success');
-    onDeleted(node);
-  } else {
-    toast(`Failed to delete: ${result.error}`, 'error');
+  const undoItems: import('./useFileTreeUndo').UndoItem[] = [];
+  const deleted: string[] = [];
+
+  for (const filePath of pathsToDelete) {
+    const name = filePath === node.path ? node.name : filePath.split(/[\\/]/).pop() ?? filePath;
+    const result = await window.electronAPI.files.softDelete?.(filePath);
+    if (result?.success && result.tempPath) {
+      deleted.push(filePath);
+      undoItems.push({ tempPath: result.tempPath, originalPath: filePath, name });
+    } else {
+      toast(`Failed to delete: ${result?.error ?? 'unknown error'}`, 'error');
+    }
+  }
+
+  if (deleted.length > 0) {
+    if (isMultiSelect && onMultiDeleted) {
+      onMultiDeleted(deleted);
+    } else {
+      onDeleted(node);
+    }
+    onPushUndo?.(undoItems);
+    const label = deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`;
+    toast(`Deleted ${label} — Ctrl+Z to undo`, 'success');
   }
 
   onClose();
@@ -213,11 +241,14 @@ function useDeleteAction({
   node,
   onClose,
   onDeleted,
+  onMultiDeleted,
+  onPushUndo,
+  selectedPaths,
   setConfirmingDelete,
   toast,
 }: Pick<
   ContextMenuHandlerOptions,
-  'confirmingDelete' | 'node' | 'onClose' | 'onDeleted' | 'setConfirmingDelete' | 'toast'
+  'confirmingDelete' | 'node' | 'onClose' | 'onDeleted' | 'onMultiDeleted' | 'onPushUndo' | 'selectedPaths' | 'setConfirmingDelete' | 'toast'
 >): () => void {
   return useCallback(() => {
     if (!node) {
@@ -229,12 +260,12 @@ function useDeleteAction({
       return;
     }
 
-    void deleteNode(node, onClose, onDeleted, toast);
-  }, [confirmingDelete, node, onClose, onDeleted, setConfirmingDelete, toast]);
+    void deleteNode(node, onClose, onDeleted, toast, selectedPaths, onMultiDeleted, onPushUndo);
+  }, [confirmingDelete, node, onClose, onDeleted, onMultiDeleted, onPushUndo, selectedPaths, setConfirmingDelete, toast]);
 }
 
 function useContextMenuHandlers(options: ContextMenuHandlerOptions): ContextMenuHandlers {
-  const { node, onBookmarkToggle, onClose, onDeleted, onNewFile, onNewFolder, onRename, onStage, onUnstage, setConfirmingDelete, toast, confirmingDelete } = options;
+  const { node, onBookmarkToggle, onClose, onDeleted, onMultiDeleted, onPushUndo, onNewFile, onNewFolder, onRename, onStage, onUnstage, selectedPaths, setConfirmingDelete, toast, confirmingDelete } = options;
   const handleCopyPath = useClipboardAction({ message: 'Copied path to clipboard', node, onClose, resolveValue: getNodePath, toast });
   const handleCopyRelativePath = useClipboardAction({ message: 'Copied relative path to clipboard', node, onClose, resolveValue: getNodeRelativePath, toast });
   const handleOpenInTerminal = useOpenInTerminalAction(node, onClose);
@@ -245,7 +276,7 @@ function useContextMenuHandlers(options: ContextMenuHandlerOptions): ContextMenu
   const handleNewFile = useParentDirectoryAction(node, onClose, onNewFile);
   const handleNewFolder = useParentDirectoryAction(node, onClose, onNewFolder);
   const handleRename = useNodeAction(node, onClose, onRename);
-  const handleDelete = useDeleteAction({ confirmingDelete, node, onClose, onDeleted, setConfirmingDelete, toast });
+  const handleDelete = useDeleteAction({ confirmingDelete, node, onClose, onDeleted, onMultiDeleted, onPushUndo, selectedPaths, setConfirmingDelete, toast });
   return { handleBookmarkToggle, handleCopyPath, handleCopyRelativePath, handleDelete, handleNewFile, handleNewFolder, handleOpenInTerminal, handleRename, handleRevealInFileManager, handleStage, handleUnstage };
 }
 
@@ -397,8 +428,14 @@ export function useContextMenuController({
     setConfirmingDelete,
   );
 
+  const combinedCount = options.selectedPaths && state.node
+    ? new Set([...options.selectedPaths, state.node.path]).size
+    : 0;
+  const isMultiSelect = combinedCount > 1;
+
   const items = useMenuItems(state.node, {
     confirmingDelete,
+    selectedCount: isMultiSelect ? combinedCount : undefined,
     gitStatus: options.gitStatus,
     handlers,
     isBookmarked: options.isBookmarked,

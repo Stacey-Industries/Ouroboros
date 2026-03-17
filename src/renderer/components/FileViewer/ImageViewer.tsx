@@ -110,10 +110,10 @@ export function ImageViewer({
           viewer.customZoom
         )}
         panOffset={viewer.panOffset}
-        onMouseDown={viewer.handleMouseDown}
-        onMouseMove={viewer.handleMouseMove}
-        onMouseUp={viewer.handleMouseUp}
-        onMouseLeave={viewer.handleMouseUp}
+        onPointerDown={viewer.handlePointerDown}
+        onPointerMove={viewer.handlePointerMove}
+        onPointerUp={viewer.handlePointerUp}
+        onPointerLeave={viewer.handlePointerUp}
         onWheel={viewer.handleWheel}
         isPanning={viewer.isPanning}
         containerRef={viewer.containerRef}
@@ -193,8 +193,9 @@ function useImageViewerState(filePath: string) {
     setLoadError(false);
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setIsPanning(true);
     panStartRef.current = {
       x: e.clientX,
@@ -205,7 +206,7 @@ function useImageViewerState(filePath: string) {
     e.preventDefault();
   }, [panOffset]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isPanning) return;
     const dx = e.clientX - panStartRef.current.x;
     const dy = e.clientY - panStartRef.current.y;
@@ -215,7 +216,7 @@ function useImageViewerState(filePath: string) {
     });
   }, [isPanning]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     setIsPanning(false);
   }, []);
 
@@ -239,9 +240,9 @@ function useImageViewerState(filePath: string) {
     fileUrl: toFileUrl(filePath),
     handleLoad,
     handleError: useCallback(() => setLoadError(true), []),
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
     handleWheel,
     zoomIn: useCallback(() => adjustCustomZoom(setZoomMode, setCustomZoom, 1.25), []),
     zoomOut: useCallback(() => adjustCustomZoom(setZoomMode, setCustomZoom, 1 / 1.25), []),

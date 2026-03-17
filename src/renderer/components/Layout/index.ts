@@ -1,6 +1,9 @@
 export { AppLayout } from './AppLayout';
 export type { AppLayoutProps, AppLayoutSlots, TerminalPaneControl } from './AppLayout';
 
+export { ActivityBar } from './ActivityBar';
+export type { ActivityBarProps, SidebarView } from './ActivityBar';
+
 export { ResizeHandle } from './ResizeHandle';
 export type { ResizeHandleProps } from './ResizeHandle';
 

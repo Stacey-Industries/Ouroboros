@@ -155,10 +155,15 @@ export function StickyScrollOverlay({ blocks, terminal }: StickyScrollOverlayPro
     })
 
     const writeD = terminal.onWriteParsed(() => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        setViewportY(terminal.buffer.active.viewportY)
-      })
+      // Only update viewportY tracking during writes if user is at bottom
+      // to avoid fighting with user scroll position (causes scroll jumping)
+      const buf = terminal.buffer.active
+      if (buf.viewportY >= buf.baseY) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(() => {
+          setViewportY(terminal.buffer.active.viewportY)
+        })
+      }
     })
 
     return () => {

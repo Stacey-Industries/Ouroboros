@@ -105,7 +105,7 @@ async function loadSnapshots(
 function saveSnapshots(snapshots: WorkspaceSnapshot[]): void {
   const setConfig = window.electronAPI?.config?.set;
   if (!setConfig) return;
-  void setConfig('workspaceSnapshots', snapshots).catch(() => {});
+  void setConfig('workspaceSnapshots', snapshots).catch((error) => { console.error('[diffSnapshots] Failed to persist workspace snapshots:', error) });
 }
 
 function upsertSnapshot(

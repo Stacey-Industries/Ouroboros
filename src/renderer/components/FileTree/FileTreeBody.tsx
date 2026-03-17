@@ -16,6 +16,8 @@ export interface FileTreeBodyProps {
   expandedRoots: Set<string>;
   extraIgnorePatterns: string[];
   onFileSelect: (filePath: string) => void;
+  /** Called on double-click (opens permanent tab). Falls back to onFileSelect if not provided. */
+  onFileOpen?: (filePath: string) => void;
   onToggleRoot: (root: string) => void;
   onRemoveRoot?: (root: string) => void;
   onSearchSelect: (path: string) => void;
@@ -35,6 +37,7 @@ export interface FileTreeBodyProps {
 
 const treeBodyStyle: React.CSSProperties = {
   flex: 1,
+  minHeight: 0,
   overflowY: 'auto',
   overflowX: 'hidden',
   position: 'relative',
@@ -45,6 +48,7 @@ function RootSections({
   expandedRoots,
   activeFilePath,
   onFileSelect,
+  onFileOpen,
   onToggleRoot,
   onRemoveRoot,
   bookmarks,
@@ -61,6 +65,7 @@ function RootSections({
           onToggle={() => onToggleRoot(root)}
           activeFilePath={activeFilePath}
           onFileSelect={onFileSelect}
+          onFileOpen={onFileOpen}
           onRemove={
             roots.length > 1 && onRemoveRoot ? () => onRemoveRoot(root) : undefined
           }
@@ -73,7 +78,7 @@ function RootSections({
   );
 }
 
-export function FileTreeBody({ query, roots, activeFilePath, bookmarks, expandedRoots, extraIgnorePatterns, onFileSelect, onToggleRoot, onRemoveRoot, onSearchSelect, onUnpin, getHeatLevel, projectRoot, gitDetailedStatus, gitIsRepo, gitRefresh, gitFilter }: FileTreeBodyProps): React.ReactElement {
+export function FileTreeBody({ query, roots, activeFilePath, bookmarks, expandedRoots, extraIgnorePatterns, onFileSelect, onFileOpen, onToggleRoot, onRemoveRoot, onSearchSelect, onUnpin, getHeatLevel, projectRoot, gitDetailedStatus, gitIsRepo, gitRefresh, gitFilter }: FileTreeBodyProps): React.ReactElement {
   const isFiltered = gitFilter != null && gitFilter !== 'all';
 
   return (
@@ -107,6 +112,7 @@ export function FileTreeBody({ query, roots, activeFilePath, bookmarks, expanded
             expandedRoots={expandedRoots}
             activeFilePath={activeFilePath}
             onFileSelect={onFileSelect}
+            onFileOpen={onFileOpen}
             onToggleRoot={onToggleRoot}
             onRemoveRoot={onRemoveRoot}
             bookmarks={bookmarks}

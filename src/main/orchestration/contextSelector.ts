@@ -1,3 +1,4 @@
+import fs from 'fs/promises'
 import path from 'path'
 import {
   type ContextFileSnapshot,
@@ -5,7 +6,8 @@ import {
   extractImportSpecifiers,
   extractKeywords,
   findKeywordMatches,
-  loadContextFileSnapshot,
+  getPersistentSnapshotCache,
+  loadContextFileSnapshotFast,
   referencesTarget,
   resolveWorkspaceFile,
   toPathKey,
@@ -15,6 +17,7 @@ import type {
   ContextConfidence,
   ContextReasonKind,
   ContextSelectionReason,
+  GitDiffHunk,
   LiveIdeState,
   OmittedContextCandidate,
   RankedContextFile,
@@ -60,9 +63,10 @@ const REASON_WEIGHTS: Record<ContextReasonKind, number> = {
   user_selected: 100,
   pinned: 95,
   included: 85,
-  active_file: 72,
-  open_file: 42,
+  active_file: 0,
+  open_file: 0,
   dirty_buffer: 68,
+  test_companion: 38,
   recent_edit: 32,
   git_diff: 56,
   diagnostic: 52,
@@ -190,7 +194,15 @@ async function addRepoFactCandidates(
 
 async function applyKeywordReasons(candidates: Map<string, MutableCandidate>, snapshots: Map<string, ContextFileSnapshot>, keywords: string[]): Promise<void> {
   for (const candidate of candidates.values()) {
-    const snapshot = await loadContextFileSnapshot(candidate.filePath, snapshots)
+    // Check file path first (free — no I/O needed)
+    const pathHits = findKeywordMatches(candidate.filePath, null, keywords)
+    if (pathHits.length >= 3) {
+      addReason(candidate, 'keyword_match', `Matches keywords: ${pathHits.join(', ')}`, REASON_WEIGHTS.keyword_match + pathHits.length - 1)
+      continue
+    }
+    // Only load content if path didn't match enough keywords.
+    // Use fast loader (fs.readFile) — no IDE socket needed for keyword matching.
+    const snapshot = await loadContextFileSnapshotFast(candidate.filePath, snapshots)
     const keywordHits = findKeywordMatches(candidate.filePath, snapshot.content, keywords)
     if (keywordHits.length > 0) addReason(candidate, 'keyword_match', `Matches keywords: ${keywordHits.join(', ')}`, REASON_WEIGHTS.keyword_match + keywordHits.length - 1)
   }
@@ -225,6 +237,44 @@ function applyImportAdjacency(
   }
 }
 
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function addTestCompanions(
+  candidates: Map<string, MutableCandidate>,
+  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void,
+): Promise<void> {
+  const candidatePaths = Array.from(candidates.keys()).map(key => candidates.get(key)!.filePath)
+
+  for (const candidatePath of candidatePaths) {
+    const normalized = path.normalize(candidatePath)
+    const ext = path.extname(normalized)
+    const base = path.basename(normalized, ext)
+
+    if (base.endsWith('.test') || base.endsWith('.spec')) continue
+
+    const dir = path.dirname(normalized)
+    const testPatterns = [
+      path.join(dir, `${base}.test${ext}`),
+      path.join(dir, `${base}.spec${ext}`),
+      path.join(dir, '__tests__', `${base}${ext}`),
+      path.join(dir, '__tests__', `${base}.test${ext}`),
+    ]
+
+    for (const testPath of testPatterns) {
+      if (await fileExists(testPath)) {
+        addCandidate(testPath, 'test_companion', `Test file for ${base}${ext}`)
+      }
+    }
+  }
+}
+
 function rankCandidates(candidates: Map<string, MutableCandidate>): RankedContextFile[] {
   return Array.from(candidates.values())
     .map((candidate) => {
@@ -249,8 +299,14 @@ function buildSelectionResult(options: {
   candidates: Map<string, MutableCandidate>
   omittedCandidates: OmittedContextCandidate[]
   snapshots: Map<string, ContextFileSnapshot>
+  diffHunksMap: Map<string, GitDiffHunk[]>
 }): ContextSelectionResult {
-  const { selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots } = options
+  const { selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, diffHunksMap } = options
+  const rankedFiles = rankCandidates(candidates)
+  for (const ranked of rankedFiles) {
+    const hunks = diffHunksMap.get(toPathKey(ranked.filePath))
+    if (hunks) ranked.hunks = hunks
+  }
   return {
     liveIdeState,
     rankingInputs: {
@@ -266,7 +322,7 @@ function buildSelectionResult(options: {
       diagnosticFiles,
       keywordMatches: keywords,
     },
-    rankedFiles: rankCandidates(candidates),
+    rankedFiles,
     omittedCandidates,
     snapshots: Object.fromEntries(Array.from(snapshots.values()).map((snapshot) => [toPathKey(snapshot.filePath), snapshot])),
   }
@@ -302,15 +358,23 @@ export async function selectContextFiles(options: {
   const omittedCandidates: OmittedContextCandidate[] = []
   const omittedKeys = new Set<string>()
   for (const filePath of selection.excludedFiles) pushOmitted(omittedCandidates, omittedKeys, filePath, 'Excluded by request')
-  const snapshots = new Map<string, ContextFileSnapshot>()
+  // Seed from persistent cache so we reuse snapshots from prior builds
+  const snapshots = new Map<string, ContextFileSnapshot>(getPersistentSnapshotCache())
   const liveIdeState = options.liveIdeState ?? await collectLiveIdeState(workspaceRoots, selection.selectedFiles, snapshots)
   const candidates = new Map<string, MutableCandidate>()
   const addCandidate = addCandidateFactory(candidates, excludedKeys, omittedCandidates, omittedKeys)
   addBaseCandidates(addCandidate, selection, liveIdeState)
   const { recentEdits, diffFiles, diagnosticFiles } = await addRepoFactCandidates(addCandidate, repoFacts, workspaceRoots)
+  await addTestCompanions(candidates, addCandidate)
   const keywords = extractKeywords(request.goal, STOP_WORDS)
   await applyKeywordReasons(candidates, snapshots, keywords)
   applyImportAdjacency(candidates, snapshots, buildSeedFiles(selection, liveIdeState, diffFiles, diagnosticFiles))
+  const diffHunksMap = new Map<string, GitDiffHunk[]>()
+  for (const file of repoFacts.gitDiff.changedFiles) {
+    if (file.hunks?.length) {
+      diffHunksMap.set(toPathKey(file.filePath), file.hunks)
+    }
+  }
   return buildSelectionResult({
     selection,
     liveIdeState,
@@ -321,5 +385,6 @@ export async function selectContextFiles(options: {
     candidates,
     omittedCandidates,
     snapshots,
+    diffHunksMap,
   })
 }

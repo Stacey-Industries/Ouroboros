@@ -1,6 +1,9 @@
+import { useCallback } from 'react';
 import { useGitStatus } from '../../hooks/useGitStatus';
 import { useToastContext } from '../../contexts/ToastContext';
 import { useRootTreeState } from './useRootTreeState';
+import { useFileTreeUndo } from './useFileTreeUndo';
+import type { TreeNode } from './FileTreeItem';
 import {
   useRootSelection,
   useContextMenuState,
@@ -15,7 +18,10 @@ import {
 interface UseRootSectionModelArgs {
   root: string;
   onFileSelect: (path: string) => void;
+  /** Called on double-click for files (opens permanent tab). Falls back to onFileSelect if not provided. */
+  onFileOpen?: (path: string) => void;
   extraIgnorePatterns: string[];
+  enabled?: boolean;
 }
 
 function buildKeyboardDeps(args: {
@@ -24,6 +30,7 @@ function buildKeyboardDeps(args: {
   tree: ReturnType<typeof useRootTreeState>;
   editing: ReturnType<typeof useRootEditing>;
   menuActions: ReturnType<typeof useMenuActions>;
+  undo: ReturnType<typeof useFileTreeUndo>;
   root: string;
 }) {
   return {
@@ -33,7 +40,9 @@ function buildKeyboardDeps(args: {
     handleItemClick: args.selection.handleItemClick,
     toggleFolder: args.tree.toggleFolder,
     handleRename: args.editing.handleRename,
-    handleDeleteFocused: args.menuActions.handleDeleteFocused,
+    handleDeleteFocused: (node: TreeNode) => args.menuActions.handleDeleteFocused(node, args.selection.selectedPaths),
+    selectedPaths: args.selection.selectedPaths,
+    handleUndo: args.undo.undo,
     handleNewFile: args.editing.handleNewFile,
     handleNewFolder: args.editing.handleNewFolder,
     editState: args.editing.editState,
@@ -51,6 +60,7 @@ function buildRootSectionResult(args: {
   dropHandlers: ReturnType<typeof useDropHandlers>;
   displayItems: ReturnType<typeof useDisplayItems>;
   onKeyDown: ReturnType<typeof useRootKeyboard>;
+  undo: ReturnType<typeof useFileTreeUndo>;
 }) {
   return {
     gitStatus: args.gitStatus,
@@ -71,29 +81,45 @@ function buildRootSectionResult(args: {
     handleEditConfirm: args.editing.handleEditConfirm,
     handleEditCancel: args.editing.handleEditCancel,
     handleDeleted: args.menuActions.handleDeleted,
+    handleMultiDeleted: args.menuActions.handleMultiDeleted,
     handleDrop: args.dropHandlers.handleDrop,
     handleRootDrop: args.dropHandlers.handleRootDrop,
     handleDeleteFocused: args.menuActions.handleDeleteFocused,
     handleBookmarkToggle: args.menuActions.handleBookmarkToggle,
     handleStage: args.menuActions.handleStage,
     handleUnstage: args.menuActions.handleUnstage,
+    handleUndo: args.undo.undo,
+    pushUndo: args.undo.pushUndo,
     onKeyDown: args.onKeyDown,
   };
 }
 
-export function useRootSectionModel({ root, onFileSelect, extraIgnorePatterns }: UseRootSectionModelArgs) {
+export function useRootSectionModel({ root, onFileSelect, onFileOpen, extraIgnorePatterns, enabled = true }: UseRootSectionModelArgs) {
   const { toast } = useToastContext();
-  const { gitStatus } = useGitStatus(root);
-  const tree = useRootTreeState(root, extraIgnorePatterns);
+  const { gitStatus } = useGitStatus(root, { enabled });
+  const tree = useRootTreeState(root, extraIgnorePatterns, { enabled });
   const selection = useRootSelection(tree.toggleFolder, onFileSelect);
   const menuState = useContextMenuState();
   const editing = useRootEditing({ rootNodes: tree.rootNodes, toggleFolder: tree.toggleFolder, refreshDir: tree.refreshDir, onFileSelect, toast });
   const displayItems = useDisplayItems(tree.rootNodes, editing.editState);
-  const menuActions = useMenuActions(root, toast, tree.setRootNodes);
+  const undo = useFileTreeUndo(tree.refreshDir, toast);
+  const menuActions = useMenuActions(root, toast, tree.setRootNodes, undo.pushUndo);
   const dropHandlers = useDropHandlers(root, toast, tree.refreshDir);
+
+  // Double-click: for files, open permanent tab; for directories, trigger rename
+  const handleDoubleClick = useCallback((node: TreeNode) => {
+    if (!node.isDirectory) {
+      const opener = onFileOpen ?? onFileSelect;
+      opener(node.path);
+    } else {
+      editing.handleRename(node);
+    }
+  }, [onFileOpen, onFileSelect, editing]);
 
   useFocusClamp(displayItems.length, selection.setFocusIndex);
 
-  const onKeyDown = useRootKeyboard(buildKeyboardDeps({ displayItems, selection, tree, editing, menuActions, root }));
-  return buildRootSectionResult({ gitStatus, tree, selection, menuState, editing, menuActions, dropHandlers, displayItems, onKeyDown });
+  const onKeyDown = useRootKeyboard(buildKeyboardDeps({ displayItems, selection, tree, editing, menuActions, undo, root }));
+  const result = buildRootSectionResult({ gitStatus, tree, selection, menuState, editing, menuActions, dropHandlers, displayItems, onKeyDown, undo });
+  // Override handleDoubleClick with our composite handler
+  return { ...result, handleDoubleClick };
 }

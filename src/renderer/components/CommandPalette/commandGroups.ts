@@ -1,3 +1,4 @@
+import { OPEN_SETTINGS_PANEL_EVENT, SPLIT_EDITOR_EVENT } from '../../hooks/appEventNames';
 import type { Command } from './types';
 
 interface DispatchCommandConfig {
@@ -99,6 +100,16 @@ function viewCommands(): Command[] {
         dispatchIdeEvent('agent-ide:toggle-agent-monitor');
       },
     },
+    {
+      id: 'view:split-editor',
+      label: 'Split Editor Right',
+      category: 'view',
+      shortcut: 'Ctrl+Shift+\\',
+      icon: '\u2503',
+      action: () => {
+        dispatchIdeEvent(SPLIT_EDITOR_EVENT);
+      },
+    },
   ];
 }
 
@@ -191,7 +202,7 @@ function appCommands(): Command[] {
       category: 'app',
       shortcut: 'Ctrl+,',
       icon: 'âš™',
-      eventName: 'agent-ide:open-settings',
+      eventName: OPEN_SETTINGS_PANEL_EVENT,
     }),
     createReloadCommand(),
     createDispatchCommand({

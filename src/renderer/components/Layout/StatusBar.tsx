@@ -66,9 +66,10 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
 };
 
 const STATUS_BAR_STYLE: React.CSSProperties = {
-  height: '22px',
+  height: '24px',
   backgroundColor: 'var(--bg-secondary)',
-  borderTop: '1px solid var(--border)',
+  borderTop: '1px solid color-mix(in srgb, var(--border) 30%, transparent)',
+  boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--border) 30%, transparent)',
   fontSize: '11px',
   fontFamily: 'var(--font-ui, system-ui)',
   overflow: 'visible',

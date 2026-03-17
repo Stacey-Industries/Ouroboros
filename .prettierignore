@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+build-resources/
+coverage/
+*.tsbuildinfo
+package-lock.json
+.ouroboros/
+.context/
+.claude/

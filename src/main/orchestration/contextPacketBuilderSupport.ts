@@ -5,6 +5,7 @@ import type {
   ContextSnippet,
   ContextSnippetRange,
   ContextTruncationNote,
+  GitDiffHunk,
   LiveIdeState,
   RankedContextFile,
 } from './types'
@@ -16,11 +17,57 @@ export const DEFAULT_MAX_SNIPPETS_PER_FILE = 4
 export const DEFAULT_FULL_FILE_LINE_LIMIT = 80
 export const DEFAULT_TARGETED_SNIPPET_LINE_LIMIT = 60
 
+export interface ContextBudgetProfile {
+  maxFiles: number
+  maxBytes: number
+  maxTokens: number
+  fullFileLineLimit: number
+  targetedSnippetLineLimit: number
+  maxSnippetsPerFile: number
+}
+
+export function getModelBudgets(model: string): ContextBudgetProfile {
+  const isOpus = model.includes('opus')
+  const isSonnet = model.includes('sonnet')
+
+  if (isOpus) {
+    return {
+      maxFiles: 20,
+      maxBytes: 128_000,
+      maxTokens: 32_000,
+      fullFileLineLimit: 250,
+      targetedSnippetLineLimit: 120,
+      maxSnippetsPerFile: 6,
+    }
+  }
+
+  if (isSonnet) {
+    return {
+      maxFiles: 14,
+      maxBytes: 72_000,
+      maxTokens: 18_000,
+      fullFileLineLimit: 120,
+      targetedSnippetLineLimit: 80,
+      maxSnippetsPerFile: 5,
+    }
+  }
+
+  return {
+    maxFiles: 10,
+    maxBytes: 48_000,
+    maxTokens: 12_000,
+    fullFileLineLimit: 80,
+    targetedSnippetLineLimit: 60,
+    maxSnippetsPerFile: 4,
+  }
+}
+
 interface SnippetContext {
   file: RankedContextFile
   snapshot: ContextFileSnapshot
   totalLines: number
   liveIdeState: LiveIdeState
+  hunks?: GitDiffHunk[]
 }
 
 function toPathKey(filePath: string): string {
@@ -163,6 +210,30 @@ function appendWindowReasonRange(
   target.push({ range: findLineWindow(totalLines, 1, DEFAULT_TARGETED_SNIPPET_LINE_LIMIT), source, label })
 }
 
+function appendDiffHunkRanges(
+  target: Array<{ range: ContextSnippetRange; source: ContextSnippet['source']; label: string }>,
+  hunks: GitDiffHunk[] | undefined,
+  totalLines: number,
+): void {
+  if (!hunks || hunks.length === 0) {
+    appendWindowReasonRange(target, totalLines, 'diff_hunk', 'Changed file (no hunk detail)')
+    return
+  }
+
+  const CONTEXT_PADDING = 5
+  for (const hunk of hunks.slice(0, 6)) {
+    const range: ContextSnippetRange = {
+      startLine: Math.max(1, hunk.startLine - CONTEXT_PADDING),
+      endLine: Math.min(totalLines, hunk.startLine + hunk.lineCount + CONTEXT_PADDING),
+    }
+    target.push({
+      range: clampRange(range, totalLines),
+      source: 'diff_hunk',
+      label: `Diff hunk at line ${hunk.startLine}`,
+    })
+  }
+}
+
 function appendExplicitReasonRange(
   target: Array<{ range: ContextSnippetRange; source: ContextSnippet['source']; label: string }>,
   totalLines: number,
@@ -182,7 +253,7 @@ function appendReasonRanges(
     if (reason.kind === 'dirty_buffer') appendDirtyReasonRanges(target, context)
     if (reason.kind === 'keyword_match') appendKeywordReasonRanges(target, reason.detail, context.snapshot.content)
     if (reason.kind === 'import_adjacency') appendImportReasonRanges(target, context.snapshot.content)
-    if (reason.kind === 'git_diff') appendWindowReasonRange(target, context.totalLines, 'diff_hunk', 'Current diff file context')
+    if (reason.kind === 'git_diff') appendDiffHunkRanges(target, context.hunks, context.totalLines)
     if (reason.kind === 'diagnostic') appendWindowReasonRange(target, context.totalLines, 'diagnostic', 'Diagnostics file context')
     if (reason.kind === 'user_selected' || reason.kind === 'pinned' || reason.kind === 'included') appendExplicitReasonRange(target, context.totalLines)
   }
@@ -196,7 +267,7 @@ export function deriveSnippetCandidates(
   if (typeof snapshot.content !== 'string') return []
   const totalLines = countLines(snapshot.content)
   if (totalLines === 0) return []
-  const context = { file, snapshot, totalLines, liveIdeState }
+  const context: SnippetContext = { file, snapshot, totalLines, liveIdeState, hunks: file.hunks }
   const ranges: Array<{ range: ContextSnippetRange; source: ContextSnippet['source']; label: string }> = []
   const selectionRange = getSelectionRange(file, liveIdeState)
   if (selectionRange) ranges.push({ range: clampRange(selectionRange, totalLines), source: 'selection', label: 'Current editor selection' })
@@ -249,11 +320,13 @@ export function keepSnippetWithinBudget(options: {
   budget: ContextBudgetSummary
   snapshot: ContextFileSnapshot
   snippet: ContextSnippet
+  fullFileLineLimit?: number
+  targetedSnippetLineLimit?: number
 }): ContextSnippet | null {
   const { budget, snapshot, snippet } = options
   const maxLines = snippet.source === 'full_file' || snippet.source === 'manual_pin'
-    ? DEFAULT_FULL_FILE_LINE_LIMIT
-    : DEFAULT_TARGETED_SNIPPET_LINE_LIMIT
+    ? (options.fullFileLineLimit ?? DEFAULT_FULL_FILE_LINE_LIMIT)
+    : (options.targetedSnippetLineLimit ?? DEFAULT_TARGETED_SNIPPET_LINE_LIMIT)
   const lineCount = Math.max(1, snippet.range.endLine - snippet.range.startLine + 1)
   const candidate = lineCount > maxLines && typeof snapshot.content === 'string'
     ? { ...snippet, range: { startLine: snippet.range.startLine, endLine: snippet.range.startLine + maxLines - 1 }, content: sliceLines(snapshot.content, { startLine: snippet.range.startLine, endLine: snippet.range.startLine + maxLines - 1 }) }

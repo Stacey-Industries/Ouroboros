@@ -119,7 +119,7 @@ function handleLinkTarget(
   if (!href) return;
 
   if (target.dataset.linkType === 'url') {
-    window.electronAPI?.app?.openExternal(href).catch(() => {});
+    window.electronAPI?.app?.openExternal(href).catch((error) => { console.error('[linkDetector] Failed to open external URL:', href, error) });
     return;
   }
 

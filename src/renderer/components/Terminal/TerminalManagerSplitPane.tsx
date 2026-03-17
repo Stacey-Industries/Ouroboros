@@ -55,17 +55,18 @@ function clampSplitRatio(nextRatio: number): number {
 export function useSplitResize(): {
   splitRatio: number
   containerRef: React.RefObject<HTMLDivElement | null>
-  handleDividerMouseDown: (event: React.MouseEvent) => void
+  handleDividerPointerDown: (event: React.PointerEvent) => void
 } {
   const [splitRatio, setSplitRatio] = useState(0.5)
   const isDraggingRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const handleDividerMouseDown = useCallback((event: React.MouseEvent) => {
+  const handleDividerPointerDown = useCallback((event: React.PointerEvent) => {
     event.preventDefault()
+    ;(event.target as HTMLElement).setPointerCapture(event.pointerId)
     isDraggingRef.current = true
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const handlePointerMove = (moveEvent: PointerEvent) => {
       const container = containerRef.current
       if (!isDraggingRef.current || !container) {
         return
@@ -76,28 +77,30 @@ export function useSplitResize(): {
       setSplitRatio(clampSplitRatio(nextRatio))
     }
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       isDraggingRef.current = false
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
+      document.removeEventListener('pointercancel', handlePointerUp)
     }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
+    document.addEventListener('pointercancel', handlePointerUp)
   }, [])
 
-  return { splitRatio, containerRef, handleDividerMouseDown }
+  return { splitRatio, containerRef, handleDividerPointerDown }
 }
 
 function SplitDivider({
-  onMouseDown,
+  onPointerDown,
 }: {
-  onMouseDown: (event: React.MouseEvent) => void
+  onPointerDown: (event: React.PointerEvent) => void
 }): React.ReactElement {
   return (
     <div
-      style={SPLIT_DIVIDER_STYLE}
-      onMouseDown={onMouseDown}
+      style={{ ...SPLIT_DIVIDER_STYLE, touchAction: 'none' }}
+      onPointerDown={onPointerDown}
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize split pane"
@@ -120,7 +123,7 @@ function SplitCloseButton({
 interface SplitPaneLayoutFrameProps {
   containerRef: React.RefObject<HTMLDivElement | null>
   splitRatio: number
-  handleDividerMouseDown: (event: React.MouseEvent) => void
+  handleDividerPointerDown: (event: React.PointerEvent) => void
   onClose: () => void
   leftPane: React.ReactNode
   rightPane: React.ReactNode
@@ -129,7 +132,7 @@ interface SplitPaneLayoutFrameProps {
 export function SplitPaneLayoutFrame({
   containerRef,
   splitRatio,
-  handleDividerMouseDown,
+  handleDividerPointerDown,
   onClose,
   leftPane,
   rightPane,
@@ -137,7 +140,7 @@ export function SplitPaneLayoutFrame({
   return (
     <div ref={containerRef} style={SPLIT_LAYOUT_STYLE}>
       <div style={getLeftPaneStyle(splitRatio)}>{leftPane}</div>
-      <SplitDivider onMouseDown={handleDividerMouseDown} />
+      <SplitDivider onPointerDown={handleDividerPointerDown} />
       <div style={SPLIT_RIGHT_PANE_STYLE}>
         <SplitCloseButton onClose={onClose} />
         {rightPane}

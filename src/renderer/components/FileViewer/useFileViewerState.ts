@@ -115,6 +115,7 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
   const conflicts = useConflictState(input.filePath, input.content);
   const folds = useCollapsedFoldState(input.filePath, input.content);
 
+  useScrollReset(input.filePath, refs.scrollRef);
   useLinkHandling(refs.codeRef, input.filePath, input.projectRoot);
   useResetViewerUi(input.filePath, useViewerUiResetters(ui));
   useExpandFoldsForSearch(ui.showSearch, folds.setCollapsedFolds);
@@ -293,6 +294,17 @@ function useCollapsedFoldState(
   }, []);
 
   return { collapsedFolds, setCollapsedFolds, toggleFold };
+}
+
+function useScrollReset(
+  filePath: string | null,
+  scrollRef: React.RefObject<HTMLDivElement | null>,
+): void {
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [filePath, scrollRef]);
 }
 
 function useLinkHandling(

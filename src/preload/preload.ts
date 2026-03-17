@@ -7,7 +7,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FileChangeEvent, AgentEvent, AppTheme, AppConfig } from '../renderer/types/electron'
+import type { ElectronAPI, FileChangeEvent, HookPayload, AppTheme, AppConfig } from '../renderer/types/electron'
 import { supplementalApis } from './preloadSupplementalApis'
 
 // â”€â”€â”€ PTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -82,6 +82,10 @@ const filesAPI: ElectronAPI['files'] = {
   rename: (oldPath, newPath) => ipcRenderer.invoke('files:rename', oldPath, newPath),
   copyFile: (sourcePath, destPath) => ipcRenderer.invoke('files:copyFile', sourcePath, destPath),
   delete: (targetPath) => ipcRenderer.invoke('files:delete', targetPath),
+  softDelete: (targetPath) => ipcRenderer.invoke('files:softDelete', targetPath),
+  restoreDeleted: (tempPath, originalPath) => ipcRenderer.invoke('files:restoreDeleted', tempPath, originalPath),
+
+  showImageDialog: () => ipcRenderer.invoke('files:showImageDialog'),
 
   onFileChange: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, change: FileChangeEvent) =>
@@ -95,16 +99,16 @@ const filesAPI: ElectronAPI['files'] = {
 
 const hooksAPI: ElectronAPI['hooks'] = {
   onAgentEvent: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, agentEvent: AgentEvent) =>
-      callback(agentEvent)
+    const handler = (_event: Electron.IpcRendererEvent, hookPayload: HookPayload) =>
+      callback(hookPayload)
     ipcRenderer.on('hooks:event', handler)
     return () => ipcRenderer.removeListener('hooks:event', handler)
   },
 
   onToolCall: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, agentEvent: AgentEvent) => {
-      if (agentEvent.type === 'tool_call') {
-        callback(agentEvent)
+    const handler = (_event: Electron.IpcRendererEvent, hookPayload: HookPayload) => {
+      if (hookPayload.type === 'pre_tool_use' || hookPayload.type === 'post_tool_use') {
+        callback(hookPayload)
       }
     }
     ipcRenderer.on('hooks:event', handler)
@@ -171,6 +175,7 @@ const gitAPI: ElectronAPI['git'] = {
   status: (root) => ipcRenderer.invoke('git:status', root),
   branch: (root) => ipcRenderer.invoke('git:branch', root),
   diff: (root, filePath) => ipcRenderer.invoke('git:diff', root, filePath),
+  diffRaw: (root, filePath) => ipcRenderer.invoke('git:diffRaw', root, filePath),
   blame: (root, filePath) => ipcRenderer.invoke('git:blame', root, filePath),
   log: (root, filePath, offset) => ipcRenderer.invoke('git:log', root, filePath, offset ?? 0),
   show: (root, hash, filePath) => ipcRenderer.invoke('git:show', root, hash, filePath),

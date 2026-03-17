@@ -8,7 +8,7 @@ export const AGENT_CHAT_CONTEXT_BEHAVIORS = ['auto', 'manual'] as const satisfie
 export const AGENT_CHAT_DEFAULT_VIEWS = ['chat', 'monitor'] as const satisfies readonly AgentChatDefaultView[]
 
 export const AGENT_CHAT_SETTINGS_DEFAULTS: AgentChatSettings = {
-  defaultProvider: 'anthropic-api',
+  defaultProvider: 'claude-code',
   defaultVerificationProfile: 'default',
   contextBehavior: 'auto',
   showAdvancedControls: false,

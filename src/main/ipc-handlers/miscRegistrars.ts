@@ -28,6 +28,7 @@ import {
   getUsageSummary,
   getWindowedUsage,
 } from '../usageReader'
+import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics'
 import {
   closeWindow,
   createWindow,
@@ -84,7 +85,7 @@ function fail(error: unknown): FailureResponse {
   return { success: false, error: getErrorMessage(error) }
 }
 
-async function runAction(action: () => Promise<void> | void): Promise<EmptySuccessResponse | FailureResponse> {
+async function runAction(action: () => Promise<unknown> | unknown): Promise<EmptySuccessResponse | FailureResponse> {
   try {
     await action()
     return ok()
@@ -104,7 +105,7 @@ async function runQuery<T extends object>(
 }
 
 function createUpdaterHandler(
-  action: (updater: AutoUpdaterLike) => Promise<void> | void
+  action: (updater: AutoUpdaterLike) => Promise<unknown> | unknown
 ): IpcHandler {
   return async () => {
     const updater = autoUpdater
@@ -148,7 +149,7 @@ async function clearCrashLogs(): Promise<void> {
   const logFiles = await getCrashLogFiles()
   await Promise.all(
     logFiles.map((fileName) =>
-      fs.unlink(path.join(crashLogDir, fileName)).catch(() => {})
+      fs.unlink(path.join(crashLogDir, fileName)).catch((error) => { console.error('[crash] Failed to delete crash log file:', fileName, error) })
     )
   )
 }
@@ -213,6 +214,7 @@ export function registerCrashLogHandlers(channels: ChannelList): void {
   registerChannel(channels, 'app:openCrashLogDir', async () => runAction(async () => {
     await fs.mkdir(crashLogDir, { recursive: true })
     await shell.openPath(crashLogDir)
+    return ok()
   }))
   registerChannel(channels, 'app:logError', async (_event, source: string, message: string, stack?: string) =>
     runAction(() => writeCrashLog(source, message, stack))
@@ -221,6 +223,8 @@ export function registerCrashLogHandlers(channels: ChannelList): void {
 
 export function registerPerfHandlers(channels: ChannelList): void {
   registerChannel(channels, 'perf:ping', () => ok({ ts: Date.now() }))
+  registerChannel(channels, 'perf:subscribe', (event) => subscribeToPerfMetrics(event))
+  registerChannel(channels, 'perf:unsubscribe', (event) => unsubscribeFromPerfMetrics(event))
 }
 
 export function registerShellHistoryHandlers(channels: ChannelList): void {
@@ -294,4 +298,84 @@ export function registerApprovalHandlers(channels: ChannelList): void {
   registerChannel(channels, 'approval:alwaysAllow', async (_event, sessionId: string, toolName: string) =>
     runAction(() => addAlwaysAllowRule(sessionId, toolName))
   )
+}
+
+export function registerGraphHandlers(channels: ChannelList): void {
+  registerChannel(channels, 'graph:getStatus', async () => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph controller not initialized' }
+    return { success: true as const, status: ctrl.getStatus() }
+  })
+
+  registerChannel(channels, 'graph:reindex', async () => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph controller not initialized' }
+    const context = ctrl.getGraphToolContext()
+    if (!context) return { success: false as const, error: 'Graph not ready' }
+
+    const result = await context.pipeline.index({
+      projectRoot: context.projectRoot,
+      projectName: context.projectName,
+      incremental: false,
+    })
+    return { success: result.success, result }
+  })
+
+  registerChannel(channels, 'graph:searchGraph', async (_event, query: string, limit?: number) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, results: ctrl.searchGraph(query, limit) }
+  })
+
+  registerChannel(channels, 'graph:queryGraph', async (_event, query: string) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, results: ctrl.queryGraph(query) }
+  })
+
+  registerChannel(channels, 'graph:traceCallPath', async (_event, fromId: string, toId: string, maxDepth?: number) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, result: ctrl.traceCallPath(fromId, toId, maxDepth) }
+  })
+
+  registerChannel(channels, 'graph:getArchitecture', async (_event, aspects?: string[]) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, architecture: ctrl.getArchitecture(aspects) }
+  })
+
+  registerChannel(channels, 'graph:getCodeSnippet', async (_event, symbolId: string) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, snippet: await ctrl.getCodeSnippet(symbolId) }
+  })
+
+  registerChannel(channels, 'graph:detectChanges', async () => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, changes: await ctrl.detectChanges() }
+  })
+
+  registerChannel(channels, 'graph:searchCode', async (_event, pattern: string, opts?: { fileGlob?: string; maxResults?: number }) => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, results: await ctrl.searchCode(pattern, opts) }
+  })
+
+  registerChannel(channels, 'graph:getGraphSchema', async () => {
+    const { getGraphController } = await import('../codebaseGraph/graphController')
+    const ctrl = getGraphController()
+    if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
+    return { success: true as const, schema: ctrl.getGraphSchema() }
+  })
 }

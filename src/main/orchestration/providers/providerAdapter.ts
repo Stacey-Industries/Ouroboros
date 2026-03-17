@@ -59,6 +59,9 @@ export interface ProviderProgressEventInput {
   session?: ProviderSessionReference
   textDelta?: string
   toolActivity?: { name: string; status: 'started' | 'running' | 'completed' | 'failed' }
+  tokenUsage?: { inputTokens: number; outputTokens: number }
+  costUsd?: number
+  durationMs?: number
 }
 
 export interface ProviderAdapter {
@@ -67,11 +70,6 @@ export interface ProviderAdapter {
   submitTask: (context: ProviderLaunchContext, sink: ProviderProgressSink) => Promise<ProviderLaunchResult>
   resumeTask: (context: ProviderResumeContext, sink: ProviderProgressSink) => Promise<ProviderLaunchResult>
   cancelTask: (session: ProviderSessionReference) => Promise<void>
-}
-
-export interface ProviderAdapterRegistry {
-  get: (provider: OrchestrationProvider) => ProviderAdapter | null
-  list: () => ProviderAdapter[]
 }
 
 export function createProviderSessionReference(
@@ -102,21 +100,9 @@ export function createProviderProgressEvent(input: ProviderProgressEventInput): 
     message: input.message,
     session: input.session,
     timestamp: input.timestamp,
+    tokenUsage: input.tokenUsage,
+    costUsd: input.costUsd,
+    durationMs: input.durationMs,
   }
 }
 
-export class StaticProviderAdapterRegistry implements ProviderAdapterRegistry {
-  private readonly adapters: Map<OrchestrationProvider, ProviderAdapter>
-
-  constructor(adapters: ProviderAdapter[]) {
-    this.adapters = new Map(adapters.map((adapter) => [adapter.provider, adapter]))
-  }
-
-  get(provider: OrchestrationProvider): ProviderAdapter | null {
-    return this.adapters.get(provider) ?? null
-  }
-
-  list(): ProviderAdapter[] {
-    return Array.from(this.adapters.values())
-  }
-}

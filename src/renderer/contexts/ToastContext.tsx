@@ -29,8 +29,17 @@ export function ToastProvider({ children }: ToastProviderProps): React.ReactElem
       toast: toastState.toast,
       dismiss: toastState.dismiss,
       dismissAll: toastState.dismissAll,
+      notifications: toastState.notifications,
+      unreadCount: toastState.unreadCount,
+      markAllRead: toastState.markAllRead,
+      removeNotification: toastState.removeNotification,
+      clearAllNotifications: toastState.clearAllNotifications,
     }),
-    [toastState.toasts, toastState.toast, toastState.dismiss, toastState.dismissAll],
+    [
+      toastState.toasts, toastState.toast, toastState.dismiss, toastState.dismissAll,
+      toastState.notifications, toastState.unreadCount, toastState.markAllRead,
+      toastState.removeNotification, toastState.clearAllNotifications,
+    ],
   );
 
   return (

@@ -9,6 +9,10 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   resumeLatestThread: 'agentChat:resumeLatestThread',
   getLinkedDetails: 'agentChat:getLinkedDetails',
   branchThread: 'agentChat:branchThread',
+  getLinkedTerminal: 'agentChat:getLinkedTerminal',
+  getBufferedChunks: 'agentChat:getBufferedChunks',
+  revertToSnapshot: 'agentChat:revertToSnapshot',
+  cancelTask: 'agentChat:cancelTask',
 } as const
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

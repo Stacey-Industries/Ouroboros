@@ -99,9 +99,7 @@ Hard-won lessons — not documented elsewhere:
 
 ## Known Issues / Tech Debt
 - TerminalPane and TerminalManager both render tab bars (double header) — needs state lifting to unify
-- `files:watchDir` is registered but never called from renderer — dirty-on-disk detection is passive only
 - Settings modal in App.tsx is inline — should use the Settings components in `components/Settings/`
-- `menu:settings` event sent from menu.ts but App.tsx listens for `agent-ide:open-settings` DOM event instead
 
 ## Project Context
 - `ai/vision.md` — Product vision, design north stars

@@ -94,10 +94,6 @@ function TerminalToolbarLayer({
         <TerminalSearchBar searchAddon={searchAddon} onClose={controller.closeSearch} />
       )}
 
-      {!controller.showSearch && (
-        <CopyButton terminal={controller.terminalRef.current} visible={isHovered} />
-      )}
-
       <TerminalToolbarButtons controller={controller} isHovered={isHovered} />
     </>
   )
@@ -111,7 +107,15 @@ function TerminalToolbarButtons({
   isHovered: boolean
 }): React.ReactElement {
   return (
-    <>
+    <div style={{
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      zIndex: 10,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+    }}>
       {controller.onToggleSync && (
         <SyncButton
           syncInput={controller.syncInput}
@@ -137,7 +141,11 @@ function TerminalToolbarButtons({
           onToggleRecording={controller.onToggleRecording}
         />
       )}
-    </>
+      {/* Copy button — last in row so it's rightmost */}
+      {!controller.showSearch && (
+        <CopyButton terminal={controller.terminalRef.current} visible={isHovered} />
+      )}
+    </div>
   )
 }
 
@@ -252,6 +260,7 @@ function TerminalOverlayModals({
         <PasteConfirmBanner
           text={controller.pendingPaste}
           onConfirm={controller.handlePasteConfirm}
+          onConfirmSingleLine={controller.handlePasteSingleLine}
           onCancel={controller.handlePasteCancel}
         />
       )}

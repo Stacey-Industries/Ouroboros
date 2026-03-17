@@ -5,7 +5,7 @@ export type { FileViewerTabsProps } from './FileViewerTabs';
 export { Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbProps } from './Breadcrumb';
 export { FileViewerManager, useFileViewerManager } from './FileViewerManager';
-export type { FileViewerManagerProps, OpenFile } from './FileViewerManager';
+export type { FileViewerManagerProps, OpenFile, SplitState } from './FileViewerManager';
 export { SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';
 export { GoToLine } from './GoToLine';

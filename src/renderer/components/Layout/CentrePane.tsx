@@ -12,7 +12,7 @@ export interface CentrePaneProps {
 export function CentrePane({ tabBar, children, focusStyle, onFocus }: CentrePaneProps): React.ReactElement {
   return (
     <div
-      className="flex flex-col flex-1 h-full min-w-0 bg-[var(--bg)]"
+      className="flex flex-col flex-1 min-h-0 min-w-0 bg-[var(--bg)]"
       aria-label="Editor pane"
       style={focusStyle}
       onClick={onFocus}

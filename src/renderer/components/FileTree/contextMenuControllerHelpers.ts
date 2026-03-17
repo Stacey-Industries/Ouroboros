@@ -26,6 +26,7 @@ export interface BulkMenuHandlers {
 
 export interface MenuBuilderOptions {
   confirmingDelete: boolean;
+  selectedCount?: number;
   gitStatus?: GitFileStatus;
   handlers: ContextMenuHandlers;
   isBookmarked?: boolean;
@@ -47,15 +48,16 @@ function addCreateItems(items: MenuItem[], handlers: ContextMenuHandlers): void 
 function addNodeItems(
   items: MenuItem[],
   handlers: ContextMenuHandlers,
-  { confirmingDelete, isRoot }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'isRoot'>,
+  { confirmingDelete, isRoot, selectedCount }: Pick<MenuBuilderOptions, 'confirmingDelete' | 'isRoot' | 'selectedCount'>,
 ): void {
   if (isRoot) {
     return;
   }
 
   items.push({ label: 'Rename', shortcut: 'F2', action: handlers.handleRename, separator: true });
+  const deleteBase = selectedCount && selectedCount > 1 ? `Delete ${selectedCount} Items` : 'Delete';
   items.push({
-    label: confirmingDelete ? 'Confirm Delete?' : 'Delete',
+    label: confirmingDelete ? 'Confirm Delete?' : deleteBase,
     shortcut: 'Del',
     action: handlers.handleDelete,
     danger: true,
@@ -123,6 +125,7 @@ function addBulkItems(
 
 export function buildMenuItems({
   confirmingDelete,
+  selectedCount,
   gitStatus,
   handlers,
   isBookmarked,
@@ -142,7 +145,7 @@ export function buildMenuItems({
   }
 
   addCreateItems(items, handlers);
-  addNodeItems(items, handlers, { confirmingDelete, isRoot });
+  addNodeItems(items, handlers, { confirmingDelete, isRoot, selectedCount });
   addClipboardItems(items, handlers);
   addBookmarkItem(items, handlers, { isBookmarked, onBookmarkToggle });
   addGitItems(items, handlers, { gitStatus, onStage, onUnstage });

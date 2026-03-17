@@ -5,12 +5,39 @@ import type { AgentChatThreadRecord } from './types'
 
 const TITLE_MAX_LENGTH = 60
 
+/**
+ * Returns true if a line is decorative formatting noise that shouldn't
+ * be used as a thread title — e.g. insight box headers/footers, fenced
+ * code markers, or lines made mostly of box-drawing characters.
+ */
+function isDecorativeLine(line: string): boolean {
+  // Backtick-wrapped decorative lines: `★ Insight ─────────`
+  if (/^`[^`]*`$/.test(line) && /[─═━\-★]{3,}/.test(line)) return true
+  // Lines that are entirely box-drawing / decorative chars
+  if (/^[─═━\-*★│┃|+\s]+$/.test(line) && line.length > 2) return true
+  // Fenced code block markers
+  if (/^```/.test(line)) return true
+  return false
+}
+
 function summarizeForTitle(assistantContent: string): string {
   const trimmed = assistantContent.trim()
   if (!trimmed) return ''
 
+  // Find the first meaningful line, skipping decorative formatting
+  const lines = trimmed.split(/\r?\n/)
+  let meaningful = ''
+  for (const line of lines) {
+    const stripped = line.trim()
+    if (!stripped) continue
+    if (isDecorativeLine(stripped)) continue
+    meaningful = stripped
+    break
+  }
+  if (!meaningful) meaningful = trimmed
+
   // Extract the first sentence (up to period, exclamation, or question mark followed by space or end)
-  const sentenceMatch = trimmed.match(/^(.+?[.!?])(?:\s|$)/)
+  const sentenceMatch = meaningful.match(/^(.+?[.!?])(?:\s|$)/)
   const firstSentence = sentenceMatch ? sentenceMatch[1].trim() : ''
 
   if (firstSentence && firstSentence.length <= TITLE_MAX_LENGTH) {
@@ -18,7 +45,7 @@ function summarizeForTitle(assistantContent: string): string {
   }
 
   // Fall back to first N chars
-  const slice = trimmed.slice(0, TITLE_MAX_LENGTH).trimEnd()
+  const slice = meaningful.slice(0, TITLE_MAX_LENGTH).trimEnd()
   // Try to break at a word boundary
   const lastSpace = slice.lastIndexOf(' ')
   if (lastSpace > TITLE_MAX_LENGTH * 0.5) {
@@ -142,7 +169,7 @@ export class AgentChatThreadStoreRuntime {
     await Promise.all(
       threads
         .slice(this.options.maxThreads)
-        .map((thread) => fs.unlink(this.getThreadFilePath(thread.id)).catch(() => undefined)),
+        .map((thread) => fs.unlink(this.getThreadFilePath(thread.id)).catch((error) => { console.error('[agentChat] Failed to delete excess thread file:', thread.id, error) })),
     )
   }
 }

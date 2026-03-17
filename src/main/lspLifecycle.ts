@@ -116,7 +116,7 @@ function scheduleRestart(root: string, language: string, previous: LspServerInst
           recordRestart(root, language, previous, now)
         }
       })
-      .catch(() => {})
+      .catch((error) => { console.error(`[LSP] Auto-restart failed for ${language} server:`, error) })
   }, 1000 * nextAttempt)
 }
 
@@ -299,7 +299,7 @@ export async function stopServer(root: string, language: string): Promise<LspAct
 
 export async function stopAllServers(): Promise<void> {
   const stopPromises = Array.from(servers.values()).map((instance) =>
-    stopServer(instance.root, instance.language).catch(() => {})
+    stopServer(instance.root, instance.language).catch((error) => { console.error(`[LSP] Failed to stop ${instance.language} server:`, error) })
   )
   await Promise.all(stopPromises)
 }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentChatDefaultView } from '../../types/electron';
-import { useConfig } from '../../hooks/useConfig';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
@@ -12,17 +11,22 @@ export interface AgentChatDefaultViewState {
 }
 
 export function useAgentChatDefaultView(): AgentChatDefaultViewState {
-  const { config } = useConfig();
   const [activeView, setActiveViewState] = useState<AgentChatDefaultView>('chat');
   const hasUserSelectionRef = useRef(false);
 
+  // Read default view from config on mount (lightweight inline read instead of useConfig hook)
   useEffect(() => {
-    if (!config || hasUserSelectionRef.current) {
-      return;
+    if (hasUserSelectionRef.current) return;
+    if (typeof window !== 'undefined' && 'electronAPI' in window) {
+      window.electronAPI.config.getAll()
+        .then((cfg) => {
+          if (!hasUserSelectionRef.current && cfg?.agentChatSettings?.defaultView) {
+            setActiveViewState(cfg.agentChatSettings.defaultView);
+          }
+        })
+        .catch(() => { /* default 'chat' */ });
     }
-
-    setActiveViewState(config.agentChatSettings.defaultView);
-  }, [config]);
+  }, []);
 
   const setActiveView = useCallback((view: AgentChatDefaultView) => {
     hasUserSelectionRef.current = true;

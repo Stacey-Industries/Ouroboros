@@ -85,6 +85,10 @@ export interface GitShowResult extends IpcResult {
   patch?: string
 }
 
+export interface GitDiffRawResult extends IpcResult {
+  patch?: string
+}
+
 export interface GitBranchesResult extends IpcResult {
   branches?: string[]
 }
@@ -111,6 +115,7 @@ export interface GitAPI {
   statusDetailed: (root: string) => Promise<GitStatusDetailedResult>
   branch: (root: string) => Promise<GitBranchResult>
   diff: (root: string, filePath: string) => Promise<GitDiffResult>
+  diffRaw: (root: string, filePath: string) => Promise<GitDiffRawResult>
   blame: (root: string, filePath: string) => Promise<GitBlameResult>
   log: (root: string, filePath: string, offset?: number) => Promise<GitLogResult>
   show: (root: string, hash: string, filePath: string) => Promise<GitShowResult>

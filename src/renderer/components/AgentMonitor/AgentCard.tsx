@@ -13,6 +13,8 @@ export interface AgentCardProps {
   onUpdateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
   onReviewChanges?: (sessionId: string) => void;
   onReplay?: (sessionId: string) => void;
+  /** Number of direct child (subagent) sessions spawned by this session. */
+  childCount?: number;
 }
 
 interface AgentCardDerivedState {
@@ -42,6 +44,7 @@ export const AgentCard = memo(function AgentCard({
   onUpdateNotes,
   onReviewChanges,
   onReplay,
+  childCount,
 }: AgentCardProps): React.ReactElement {
   const [expanded, setExpanded] = useState(session.status === 'running');
   const [showLog, setShowLog] = useState(false);
@@ -58,6 +61,7 @@ export const AgentCard = memo(function AgentCard({
       showNotes={showNotes}
       notesDraft={notesDraft}
       cardView={cardView}
+      childCount={childCount}
       onDismiss={onDismiss}
       onUpdateNotes={onUpdateNotes}
       onReviewChanges={onReviewChanges}

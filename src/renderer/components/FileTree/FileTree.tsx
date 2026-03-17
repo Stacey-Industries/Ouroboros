@@ -16,7 +16,10 @@ import { useFileTreeStore } from './fileTreeStore';
 export interface FileTreeProps {
   projectRoots: string[];
   activeFilePath: string | null;
+  /** Called on single-click (opens preview tab) */
   onFileSelect: (filePath: string) => void;
+  /** Called on double-click (opens permanent tab). Falls back to onFileSelect if not provided. */
+  onFileOpen?: (filePath: string) => void;
   onRemoveRoot?: (root: string) => void;
   projectRoot?: string | null;
 }
@@ -227,7 +230,7 @@ function FileTreeContent({
   );
 }
 
-export function FileTree({ projectRoots, activeFilePath, onFileSelect, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
+export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
   const roots = useResolvedRoots(projectRoots, singleRootProp);
   const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
   const { bookmarks, setBookmarks, extraIgnorePatterns } = useFileTreeConfig();
@@ -256,6 +259,7 @@ export function FileTree({ projectRoots, activeFilePath, onFileSelect, onRemoveR
         expandedRoots,
         extraIgnorePatterns,
         onFileSelect,
+        onFileOpen,
         onToggleRoot: toggleRoot,
         onRemoveRoot,
         onSearchSelect: handleSearchSelect,

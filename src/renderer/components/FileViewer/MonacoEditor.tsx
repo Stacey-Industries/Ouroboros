@@ -6,7 +6,7 @@
  * keybinding. It is designed to work alongside the existing Shiki/CodeMirror
  * viewers without replacing them.
  */
-import React, { useRef, useEffect, useCallback, memo } from 'react';
+import React, { useRef, useEffect, useCallback, useState, memo } from 'react';
 import * as monaco from 'monaco-editor';
 import { initMonaco, detectLanguage } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
@@ -17,6 +17,7 @@ import {
   type KeybindingMode,
 } from './monacoVimMode';
 import { saveEditorState, loadEditorState } from './editorStateStore';
+import { ScrollIndicator } from './ScrollIndicator';
 
 export interface MonacoEditorProps {
   /** Absolute file path — used for model URI and language detection */
@@ -103,6 +104,12 @@ export const MonacoEditor = memo(function MonacoEditor(
   const vimDisposeRef = useRef<(() => void) | null>(null);
   const savedContentRef = useRef<string>(content);
   const isDirtyRef = useRef(false);
+
+  // ── Scroll indicator state ───────────────────────────────────────────────
+  const [scrollMetrics, setScrollMetrics] = useState({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 });
+  const [isEditorHovered, setIsEditorHovered] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep the theme in sync with CSS vars
   useMonacoTheme();
@@ -228,6 +235,35 @@ export const MonacoEditor = memo(function MonacoEditor(
       onContentChange?.(currentContent);
     });
 
+    // ── Listen for goto-line events from Outline panel ──────────────────
+    const handleGotoLine = (e: Event): void => {
+      const detail = (e as CustomEvent<{ line: number; filePath?: string }>).detail;
+      if (!detail) return;
+      // Only respond if this editor is showing the target file (or no file specified)
+      if (detail.filePath && detail.filePath !== filePath) return;
+      editor.revealLineInCenter(detail.line);
+      editor.setPosition({ lineNumber: detail.line, column: 1 });
+      editor.focus();
+    };
+    window.addEventListener('agent-ide:goto-line', handleGotoLine);
+
+    // ── Track scroll metrics for ScrollIndicator ────────────────────────
+    const updateScrollMetrics = (): void => {
+      const scrollTop = editor.getScrollTop();
+      const scrollHeight = editor.getScrollHeight();
+      const layoutInfo = editor.getLayoutInfo();
+      setScrollMetrics({ scrollTop, scrollHeight, clientHeight: layoutInfo.height });
+    };
+    // Initial measurement after layout settles
+    requestAnimationFrame(updateScrollMetrics);
+    const scrollDisposable = editor.onDidScrollChange(() => {
+      updateScrollMetrics();
+      setIsScrolling(true);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => setIsScrolling(false), 800);
+    });
+    const layoutDisposable = editor.onDidLayoutChange(updateScrollMetrics);
+
     // ── Cleanup ──────────────────────────────────────────────────────────
     return () => {
       // Save editor state before disposing
@@ -243,11 +279,17 @@ export const MonacoEditor = memo(function MonacoEditor(
         // Ignore errors during state save
       }
 
+      // Remove goto-line listener
+      window.removeEventListener('agent-ide:goto-line', handleGotoLine);
+
       // Dispose vim/emacs mode before editor
       if (vimDisposeRef.current) {
         vimDisposeRef.current();
         vimDisposeRef.current = null;
       }
+      scrollDisposable.dispose();
+      layoutDisposable.dispose();
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
       disposable.dispose();
       editor.dispose();
       editorRef.current = null;
@@ -351,6 +393,9 @@ export const MonacoEditor = memo(function MonacoEditor(
     editorRef.current?.focus();
   }, []);
 
+  const handleEditorMouseEnter = useCallback(() => setIsEditorHovered(true), []);
+  const handleEditorMouseLeave = useCallback(() => setIsEditorHovered(false), []);
+
   return (
     <div
       className={className}
@@ -363,13 +408,27 @@ export const MonacoEditor = memo(function MonacoEditor(
       }}
     >
       <div
-        ref={containerRef}
-        onClick={handleContainerClick}
-        style={{
-          flex: 1,
-          overflow: 'hidden',
-        }}
-      />
+        style={{ flex: 1, overflow: 'hidden', position: 'relative' }}
+        onMouseEnter={handleEditorMouseEnter}
+        onMouseLeave={handleEditorMouseLeave}
+      >
+        <div
+          ref={containerRef}
+          onClick={handleContainerClick}
+          style={{
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+          }}
+        />
+        <ScrollIndicator
+          scrollTop={scrollMetrics.scrollTop}
+          scrollHeight={scrollMetrics.scrollHeight}
+          clientHeight={scrollMetrics.clientHeight}
+          isHovered={isEditorHovered}
+          isScrolling={isScrolling}
+        />
+      </div>
       {/* Vim mode status bar — rendered below the editor */}
       {keybindingMode === 'vim' && (
         <div

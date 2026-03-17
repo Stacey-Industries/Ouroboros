@@ -39,8 +39,8 @@ export interface ContentRouterProps {
   projectRoot?: string | null;
   /** Save handler */
   onSave?: (content: string) => void;
-  /** Dirty change handler */
-  onDirtyChange?: (dirty: boolean) => void;
+  /** Draft content change handler */
+  onContentChange?: (content: string) => void;
   /** Show history view */
   showHistory: boolean;
   /** Is markdown file */
@@ -80,7 +80,7 @@ const previewPanelStyle: React.CSSProperties = {
   display: 'flex',
 };
 
-const noop = (): void => {};
+const noop = (): void => { };
 
 function renderPanel(
   child: React.ReactElement,
@@ -99,11 +99,12 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
     return renderPanel(
       <ClaudeMdEditor
         content={props.content}
+        savedContent={props.originalContent ?? props.content}
         filePath={props.filePath}
         themeId={props.ideThemeId}
         projectRoot={props.projectRoot}
         onSave={props.onSave}
-        onDirtyChange={props.onDirtyChange ?? noop}
+        onContentChange={props.onContentChange ?? noop}
       />,
     );
   }
@@ -117,6 +118,7 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
         content={props.content}
         readOnly={false}
         onSave={props.onSave}
+        onContentChange={props.onContentChange ?? noop}
         onDirtyChange={props.onDirtyChange ?? noop}
         wordWrap={props.wordWrap}
         showMinimap={props.showMinimap}
@@ -129,11 +131,13 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
   return renderPanel(
     <InlineEditor
       content={props.content}
+      savedContent={props.originalContent ?? props.content}
       filePath={props.filePath}
       themeId={props.ideThemeId}
       projectRoot={props.projectRoot}
       onSave={props.onSave}
-      onDirtyChange={props.onDirtyChange ?? noop}
+      onContentChange={props.onContentChange ?? noop}
+      onDirtyChange={noop}
     />,
   );
 }

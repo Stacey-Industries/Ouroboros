@@ -291,26 +291,40 @@ function useScrollViewportY(terminal: Terminal | null): number {
   const rafRef = useRef(0)
 
   useEffect(() => {
-    if (!terminal) return
-    setViewportY(terminal.buffer.active.viewportY)
+    if (!terminal || !terminal.element) return
 
-    const scrollDisposable = terminal.onScroll(() => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        setViewportY(terminal.buffer.active.viewportY)
+    // Guard against subscribing to an already-disposed terminal.
+    // Disposed terminals have their internal DisposableStore marked as disposed,
+    // which causes onScroll/onWriteParsed getters to throw.
+    let scrollDisposable: { dispose(): void } | null = null
+    let writeDisposable: { dispose(): void } | null = null
+    try {
+      setViewportY(terminal.buffer.active.viewportY)
+      scrollDisposable = terminal.onScroll(() => {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(() => {
+          setViewportY(terminal.buffer.active.viewportY)
+        })
       })
-    })
 
-    const writeDisposable = terminal.onWriteParsed(() => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        setViewportY(terminal.buffer.active.viewportY)
+      writeDisposable = terminal.onWriteParsed(() => {
+        // Only update viewportY tracking during writes if user is at bottom
+        // to avoid fighting with user scroll position (causes scroll jumping)
+        const buf = terminal.buffer.active
+        if (buf.viewportY >= buf.baseY) {
+          cancelAnimationFrame(rafRef.current)
+          rafRef.current = requestAnimationFrame(() => {
+            setViewportY(terminal.buffer.active.viewportY)
+          })
+        }
       })
-    })
+    } catch {
+      // Terminal already disposed — skip subscription
+    }
 
     return () => {
-      scrollDisposable.dispose()
-      writeDisposable.dispose()
+      scrollDisposable?.dispose()
+      writeDisposable?.dispose()
       cancelAnimationFrame(rafRef.current)
     }
   }, [terminal])

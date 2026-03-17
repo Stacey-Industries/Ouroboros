@@ -31,6 +31,7 @@ interface CreateEditorExtensionsInput {
 interface CreateUpdateListenerInput {
   initialContentRef: MutableRefObject<string>;
   isDirtyRef: MutableRefObject<boolean>;
+  onContentChangeRef: MutableRefObject<(content: string) => void>;
   onDirtyChangeRef: MutableRefObject<(dirty: boolean) => void>;
   didChangeTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   projectRootRef: NullableStringRef;
@@ -90,7 +91,7 @@ function scheduleLspDidChange(
   if (!root || !filePath || !hasLspApi()) return;
   if (didChangeTimerRef.current) clearTimeout(didChangeTimerRef.current);
   didChangeTimerRef.current = setTimeout(() => {
-    window.electronAPI.lsp.didChange(root, filePath, content).catch(() => {});
+    window.electronAPI.lsp.didChange(root, filePath, content).catch((error) => { console.error('[inlineEditor] LSP didChange notification failed:', error) });
   }, 200);
 }
 
@@ -167,6 +168,7 @@ export function createUpdateListener(input: CreateUpdateListenerInput): Extensio
   return EditorView.updateListener.of((update) => {
     if (!update.docChanged) return;
     const currentContent = update.state.doc.toString();
+    input.onContentChangeRef.current(currentContent);
     updateDirtyState(currentContent, input.initialContentRef, input.isDirtyRef, input.onDirtyChangeRef);
     scheduleLspDidChange(currentContent, input.didChangeTimerRef, input.projectRootRef, input.filePathRef);
   });
@@ -224,12 +226,13 @@ export function createLspHoverTooltipSource(filePathRef: StringRef, projectRootR
     try {
       const position = cmOffsetToLspPos(view.state.doc, pos);
       const result = await window.electronAPI.lsp.hover(root, filePath, position.line, position.character);
-      if (!result.success || !result.contents) return null;
+      const contents = result.contents;
+      if (!result.success || typeof contents !== 'string' || contents.length === 0) return null;
 
       return {
         pos: view.state.wordAt(pos)?.from ?? pos,
         above: true,
-        create: () => ({ dom: createHoverTooltipDom(result.contents) }),
+        create: () => ({ dom: createHoverTooltipDom(contents) }),
       };
     } catch {
       return null;

@@ -48,14 +48,14 @@ function PlusIcon(): React.ReactElement {
 // ─── Tab class builder ────────────────────────────────────────────────────────
 
 function getTabClasses(isActive: boolean, isExited: boolean, isDragging: boolean, isDragOver: boolean): string {
-  const base = 'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-[var(--border)] shrink-0 transition-colors duration-100'
+  const base = 'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-[var(--border)] shrink-0 transition-all duration-150'
   const dragOver = isDragOver && !isDragging ? 'bg-[var(--bg-tertiary)] border-l-2 border-l-[var(--accent)]' : ''
   const dragging = isDragging ? 'opacity-40' : ''
   const state = isActive
-    ? 'bg-[var(--bg)] text-[var(--text)] after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-[var(--accent)]'
+    ? 'bg-[var(--term-bg,var(--bg))] text-[var(--text)] after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-[var(--accent)]'
     : isExited
-      ? 'text-[var(--text-muted)] opacity-60 hover:opacity-80 hover:bg-[var(--bg-tertiary)]'
-      : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)]'
+      ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] opacity-60 hover:opacity-80 hover:bg-[var(--bg-tertiary)]'
+      : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)]'
   return [base, dragOver, dragging, state].filter(Boolean).join(' ')
 }
 
@@ -176,10 +176,10 @@ export function TerminalTabs({
         />
       ))}
       <Tooltip text="New terminal (Ctrl+Shift+`)" position="bottom">
-        <button onClick={onNew} aria-label="New terminal tab" className="flex-shrink-0 flex items-center justify-center w-7 h-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-colors duration-100 border-r border-[var(--border)]"><PlusIcon /></button>
+        <button onClick={onNew} aria-label="New terminal tab" className="flex-shrink-0 flex items-center justify-center w-7 h-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-all duration-150 border-r border-[var(--border)] rounded-sm"><PlusIcon /></button>
       </Tooltip>
       <Tooltip text="New Claude terminal (Ctrl+Shift+C)" position="bottom">
-        <button onClick={onNewClaude} aria-label="New Claude Code terminal" className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-colors duration-100 border-r border-[var(--border)] text-[10px] font-medium">
+        <button onClick={onNewClaude} aria-label="New Claude Code terminal" className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-all duration-150 border-r border-[var(--border)] text-[10px] font-medium rounded-sm">
           <span style={{ fontSize: '10px' }}>&#9670;</span>
           <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Claude</span>
         </button>

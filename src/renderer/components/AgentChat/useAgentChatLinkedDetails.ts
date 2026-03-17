@@ -1,3 +1,4 @@
+/* @refresh reset */
 import {
   useCallback,
   useEffect,
@@ -8,8 +9,6 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react';
-import { useConfig } from '../../hooks/useConfig';
-import { emitOrchestrationOpen } from '../../hooks/orchestrationUiHelpers';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
@@ -154,7 +153,8 @@ function useOpenOrchestrationAction(args: {
       return;
     }
 
-    emitOrchestrationOpen(sessionId);
+    // Orchestration panel removed — linked details are now surfaced in chat
+    console.log('[agent-chat] linked orchestration session:', sessionId);
   }, [activeLink?.sessionId, details?.result?.sessionId, details?.session?.id, setError]);
 }
 
@@ -293,7 +293,18 @@ function useLinkedDetailsActions(args: {
 export function useAgentChatLinkedDetails({
   activeThread,
 }: UseAgentChatLinkedDetailsArgs): AgentChatLinkedDetailsState {
-  const { config } = useConfig();
+  // Read just the one boolean we need instead of the full useConfig() hook.
+  // useConfig() adds 4 hooks (useState x3 + useCallback) to every component
+  // that uses it, and during HMR the extra hook state can corrupt React's fiber.
+  const [autoOpenOnFailure, setAutoOpenOnFailure] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'electronAPI' in window) {
+      window.electronAPI.config.getAll()
+        .then((cfg) => setAutoOpenOnFailure(Boolean(cfg?.agentChatSettings?.openDetailsOnFailure)))
+        .catch(() => { /* default false */ });
+    }
+  }, []);
+
   const state = useLinkedDetailsStateContainer();
   const { preferredLink, preferredLinkKey } = usePreferredLinkedDetails(activeThread);
   const loadDetails = useLoadDetailsAction({ requestIdRef: state.requestIdRef, setters: state.setters });
@@ -301,7 +312,7 @@ export function useAgentChatLinkedDetails({
   useLinkedDetailsLifecycle({
     activeThread,
     autoOpenedRef: state.autoOpenedRef,
-    enabled: Boolean(config?.agentChatSettings.openDetailsOnFailure),
+    enabled: autoOpenOnFailure,
     loadDetails,
     preferredLink,
     preferredLinkKey,

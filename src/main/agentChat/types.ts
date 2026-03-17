@@ -40,6 +40,12 @@ export interface AgentChatOrchestrationLink {
   taskId?: string
   sessionId?: string
   attemptId?: string
+  /** Claude Code CLI session UUID (from stream-json init event, used for --resume) */
+  claudeSessionId?: string
+  /** PTY session ID backing this chat session (for chat-terminal unification) */
+  linkedTerminalId?: string
+  /** Git HEAD hash captured before the agent turn started — used for revert. */
+  preSnapshotHash?: string
 }
 
 export interface AgentChatContextSummary {
@@ -106,6 +112,8 @@ export interface AgentChatMessageRecord {
   toolsSummary?: string
   costSummary?: string
   durationSummary?: string
+  /** Token usage for this message's API call(s). */
+  tokenUsage?: { inputTokens: number; outputTokens: number }
   /** Structured content blocks — when present, renderers should prefer these over `content`. */
   blocks?: AgentChatContentBlock[]
 }
@@ -157,6 +165,12 @@ export interface AgentChatSendMessageOverrides {
   mode?: OrchestrationMode
   contextBehavior?: AgentChatContextBehavior
   openDetailsOnFailure?: boolean
+  /** Per-message model override (e.g. 'claude-sonnet-4-6', 'claude-opus-4-6') */
+  model?: string
+  /** Per-message effort override ('low' | 'medium' | 'high' | 'max') */
+  effort?: string
+  /** Per-message permission mode override ('acceptEdits' | 'plan' | 'auto' | 'bypassPermissions') */
+  permissionMode?: string
 }
 
 export interface AgentChatSendMessageMetadata {
@@ -164,10 +178,23 @@ export interface AgentChatSendMessageMetadata {
   usedAdvancedControls?: boolean
 }
 
+export type ImageMimeType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
+
+export interface ImageAttachment {
+  /** Original filename, e.g. "screenshot.png" */
+  name: string
+  mimeType: ImageMimeType
+  /** Raw base64 data WITHOUT the data:…;base64, prefix */
+  base64Data: string
+  /** Byte size of the decoded data */
+  sizeBytes: number
+}
+
 export interface AgentChatSendMessageRequest {
   threadId?: string
   workspaceRoot: string
   content: string
+  attachments?: ImageAttachment[]
   contextSelection?: Partial<TaskRequestContextSelection>
   overrides?: AgentChatSendMessageOverrides
   metadata?: AgentChatSendMessageMetadata
@@ -246,6 +273,18 @@ export interface AgentChatDeleteResult extends OperationResult {
   threadId?: string
 }
 
+export interface AgentChatLinkedTerminalResult extends OperationResult {
+  claudeSessionId?: string | null
+  linkedTerminalId?: string | null
+}
+
+export interface AgentChatRevertResult extends OperationResult {
+  /** Files that were restored to their pre-agent state. */
+  revertedFiles?: string[]
+  /** The git commit hash that was restored to. */
+  restoredToHash?: string
+}
+
 export interface AgentChatAPI {
   createThread: (request: AgentChatCreateThreadRequest) => Promise<AgentChatThreadResult>
   deleteThread: (threadId: string) => Promise<AgentChatDeleteResult>
@@ -255,6 +294,13 @@ export interface AgentChatAPI {
   resumeLatestThread: (workspaceRoot: string) => Promise<AgentChatThreadResult>
   getLinkedDetails: (link: AgentChatOrchestrationLink) => Promise<AgentChatLinkedDetailsResult>
   branchThread: (threadId: string, fromMessageId: string) => Promise<AgentChatThreadResult>
+  getLinkedTerminal: (threadId: string) => Promise<AgentChatLinkedTerminalResult>
+  /** Returns buffered stream chunks for a thread — used to replay state after renderer refresh. */
+  getBufferedChunks: (threadId: string) => Promise<AgentChatStreamChunk[]>
+  /** Revert file changes made during a specific assistant message's agent turn. */
+  revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>
+  /** Cancel a running task. Routes through the singleton orchestration that owns the process. */
+  cancelTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void

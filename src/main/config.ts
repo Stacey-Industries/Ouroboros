@@ -1,4 +1,6 @@
 import Store from 'electron-store'
+import type { AgentChatSettings } from './agentChat/types'
+import type { ContextLayerConfig } from './contextLayer/contextLayerTypes'
 import { schema } from './configSchema'
 
 export interface PanelSizes {
@@ -120,6 +122,7 @@ export interface AppConfig {
   promptPreset: string
   /** Claude CLI launch settings */
   claudeCliSettings: ClaudeCliSettings
+  agentChatSettings: AgentChatSettings
   /** Desktop notification preferences for agent events */
   notifications: NotificationSettings
   /** Pre-configured Claude Code launch profiles */
@@ -132,6 +135,19 @@ export interface AppConfig {
   extensionsEnabled: boolean
   /** Names of extensions that have been explicitly disabled */
   disabledExtensions: string[]
+  /** VS Code extensions installed from Open VSX registry */
+  installedVsxExtensions: Array<{
+    id: string; namespace: string; name: string; displayName: string;
+    version: string; description: string; installPath: string; installedAt: string;
+    contributes: {
+      themes?: Array<{ label: string; uiTheme: string; path: string }>
+      grammars?: Array<{ language: string; scopeName: string; path: string }>
+      snippets?: Array<{ language: string; path: string }>
+      languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>
+    }
+  }>
+  /** IDs of VSX extensions whose contributions are disabled */
+  disabledVsxExtensions: string[]
   /** Whether LSP integration is enabled */
   lspEnabled: boolean
   /** Custom language server commands keyed by language id */
@@ -150,12 +166,10 @@ export interface AppConfig {
   commandBlocksEnabled: boolean
   /** Custom regex pattern for prompt detection (heuristic fallback) */
   promptPattern: string
-  /** Enable the rich multi-line input for the terminal */
-  richInputEnabled: boolean
-  /** Submit key for the rich input: 'ctrl+enter' or 'shift+enter' */
-  richInputSubmitKey: 'ctrl+enter' | 'shift+enter'
   /** Format document before saving (requires a formatting provider in Monaco) */
   formatOnSave: boolean
+  /** Context layer settings for AI-assisted codebase understanding */
+  contextLayer: ContextLayerConfig
 }
 
 export const store = new Store<AppConfig>({ schema })
@@ -172,9 +186,3 @@ export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConf
   store.set(key, value)
 }
 
-export function addRecentProject(projectPath: string): void {
-  const recent = store.get('recentProjects') as string[]
-  const filtered = recent.filter((p) => p !== projectPath)
-  const updated = [projectPath, ...filtered].slice(0, 10)
-  store.set('recentProjects', updated)
-}

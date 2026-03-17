@@ -1,9 +1,11 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BufferExcerpt } from '../../types/electron';
 
 export interface AddExcerptFormProps {
   onAdd: (excerpt: BufferExcerpt) => void;
   onCancel: () => void;
+  /** Project root used for relative-path resolution and file suggestions */
+  projectRoot?: string | null;
 }
 
 interface ExcerptFieldProps {
@@ -14,6 +16,7 @@ interface ExcerptFieldProps {
   type?: 'text' | 'number';
   autoFocus?: boolean;
   min?: string;
+  error?: string | null;
 }
 
 interface RangeFieldsProps {
@@ -21,7 +24,11 @@ interface RangeFieldsProps {
   endLine: string;
   setStartLine: (value: string) => void;
   setEndLine: (value: string) => void;
+  startError: string | null;
+  endError: string | null;
 }
+
+// ── Styles ──────────────────────────────────────────────────────────────
 
 const FORM_STYLE: React.CSSProperties = {
   display: 'flex',
@@ -58,6 +65,11 @@ const INPUT_STYLE: React.CSSProperties = {
   width: '100%',
 };
 
+const INPUT_ERROR_STYLE: React.CSSProperties = {
+  ...INPUT_STYLE,
+  border: '1px solid var(--error, #f44)',
+};
+
 const RANGE_FIELDS_STYLE: React.CSSProperties = {
   display: 'flex',
   gap: '8px',
@@ -92,6 +104,86 @@ const SUBMIT_BUTTON_STYLE: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
 };
 
+const SUBMIT_BUTTON_DISABLED_STYLE: React.CSSProperties = {
+  ...SUBMIT_BUTTON_STYLE,
+  opacity: 0.5,
+  cursor: 'default',
+};
+
+const ERROR_TEXT_STYLE: React.CSSProperties = {
+  color: 'var(--error, #f44)',
+  fontSize: '0.6875rem',
+  fontFamily: 'var(--font-ui)',
+  marginTop: '2px',
+};
+
+const SUGGESTION_LIST_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
+  maxHeight: '160px',
+  overflowY: 'auto',
+  backgroundColor: 'var(--bg)',
+  border: '1px solid var(--border)',
+  borderTop: 'none',
+  borderRadius: '0 0 3px 3px',
+  zIndex: 100,
+  boxShadow: '0 4px 8px rgba(0,0,0,0.25)',
+};
+
+const SUGGESTION_ITEM_STYLE: React.CSSProperties = {
+  padding: '4px 8px',
+  fontSize: '0.75rem',
+  fontFamily: 'var(--font-mono)',
+  cursor: 'pointer',
+  color: 'var(--text)',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+
+const SUGGESTION_ITEM_ACTIVE_STYLE: React.CSSProperties = {
+  ...SUGGESTION_ITEM_STYLE,
+  backgroundColor: 'var(--accent)',
+  color: 'var(--bg)',
+};
+
+// ── Validation ──────────────────────────────────────────────────────────
+
+interface ValidationErrors {
+  filePath: string | null;
+  startLine: string | null;
+  endLine: string | null;
+}
+
+function validateForm(
+  filePath: string,
+  startLine: string,
+  endLine: string,
+): ValidationErrors {
+  const errors: ValidationErrors = { filePath: null, startLine: null, endLine: null };
+
+  if (!filePath.trim()) {
+    errors.filePath = 'File path is required';
+  }
+
+  const start = parseInt(startLine, 10);
+  const end = parseInt(endLine, 10);
+
+  if (startLine !== '' && (Number.isNaN(start) || start < 1)) {
+    errors.startLine = 'Must be a positive number';
+  }
+  if (endLine !== '' && (Number.isNaN(end) || end < 1)) {
+    errors.endLine = 'Must be a positive number';
+  }
+  if (!Number.isNaN(start) && !Number.isNaN(end) && start > end) {
+    errors.endLine = 'End line must be >= start line';
+  }
+
+  return errors;
+}
+
 function createExcerpt(
   filePath: string,
   startLine: string,
@@ -105,20 +197,113 @@ function createExcerpt(
   return { filePath: filePath.trim(), startLine: start, endLine: end, label: label.trim() || undefined };
 }
 
-function useExcerptFormState(onAdd: (excerpt: BufferExcerpt) => void) {
+// ── File suggestion hook ────────────────────────────────────────────────
+
+interface FileSuggestion {
+  path: string;
+  relativePath: string;
+}
+
+function useFileSuggestions(
+  query: string,
+  projectRoot: string | null | undefined,
+): FileSuggestion[] {
+  const [files, setFiles] = useState<FileSuggestion[]>([]);
+  const cacheRef = useRef<FileSuggestion[]>([]);
+  const loadedRef = useRef(false);
+
+  // Load project files once
+  useEffect(() => {
+    if (!projectRoot || loadedRef.current) return;
+    loadedRef.current = true;
+
+    void (async () => {
+      try {
+        const result = await window.electronAPI.files.readDir(projectRoot);
+        if (!result.success || !result.items) return;
+
+        const suggestions: FileSuggestion[] = [];
+        const visited = new Set<string>();
+
+        async function walk(dir: string, depth: number): Promise<void> {
+          if (depth > 5 || suggestions.length >= 2000 || visited.has(dir)) return;
+          visited.add(dir);
+          try {
+            const res = await window.electronAPI.files.readDir(dir);
+            if (!res.success || !res.items) return;
+            for (const item of res.items) {
+              if (suggestions.length >= 2000) return;
+              if (item.isDirectory) {
+                const skipDirs = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.cache', '.next', '__pycache__', 'coverage']);
+                if (skipDirs.has(item.name)) continue;
+                await walk(item.path, depth + 1);
+              } else {
+                const rel = item.path.replace(projectRoot!, '').replace(/^[\\/]/, '').replace(/\\/g, '/');
+                suggestions.push({ path: item.path, relativePath: rel });
+              }
+            }
+          } catch {
+            /* skip unreadable dirs */
+          }
+        }
+
+        await walk(projectRoot, 0);
+        cacheRef.current = suggestions;
+        setFiles(suggestions);
+      } catch {
+        /* silently fail */
+      }
+    })();
+  }, [projectRoot]);
+
+  return useMemo(() => {
+    if (!query.trim() || files.length === 0) return [];
+    const lower = query.toLowerCase().replace(/\\/g, '/');
+    return files
+      .filter((f) => f.relativePath.toLowerCase().includes(lower) || f.path.toLowerCase().replace(/\\/g, '/').includes(lower))
+      .slice(0, 15);
+  }, [query, files]);
+}
+
+// ── Form state hook ─────────────────────────────────────────────────────
+
+function useExcerptFormState(
+  onAdd: (excerpt: BufferExcerpt) => void,
+) {
   const [filePath, setFilePath] = useState('');
   const [startLine, setStartLine] = useState('1');
   const [endLine, setEndLine] = useState('50');
   const [label, setLabel] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const errors = useMemo(
+    () => validateForm(filePath, startLine, endLine),
+    [filePath, startLine, endLine],
+  );
+
+  const hasErrors = errors.filePath !== null || errors.startLine !== null || errors.endLine !== null;
 
   const handleSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault();
+    setHasSubmitted(true);
     const excerpt = createExcerpt(filePath, startLine, endLine, label);
-    if (excerpt) onAdd(excerpt);
+    if (!excerpt) {
+      setSubmitError('Please fix the errors above before adding.');
+      return;
+    }
+    setSubmitError(null);
+    onAdd(excerpt);
   }, [endLine, filePath, label, onAdd, startLine]);
 
-  return { filePath, startLine, endLine, label, setFilePath, setStartLine, setEndLine, setLabel, handleSubmit };
+  return {
+    filePath, startLine, endLine, label,
+    setFilePath, setStartLine, setEndLine, setLabel,
+    handleSubmit, hasSubmitted, submitError, errors, hasErrors,
+  };
 }
+
+// ── Components ──────────────────────────────────────────────────────────
 
 function ExcerptField({
   label,
@@ -128,6 +313,7 @@ function ExcerptField({
   type = 'text',
   autoFocus = false,
   min,
+  error,
 }: ExcerptFieldProps): React.ReactElement {
   return (
     <div>
@@ -137,10 +323,134 @@ function ExcerptField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        style={INPUT_STYLE}
+        style={error ? INPUT_ERROR_STYLE : INPUT_STYLE}
         autoFocus={autoFocus}
         min={min}
       />
+      {error ? <div style={ERROR_TEXT_STYLE}>{error}</div> : null}
+    </div>
+  );
+}
+
+function FilePathField({
+  value,
+  onChange,
+  error,
+  projectRoot,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error: string | null;
+  projectRoot: string | null | undefined;
+}): React.ReactElement {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const suggestions = useFileSuggestions(value, projectRoot);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent): void {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < suggestions.length) {
+      e.preventDefault();
+      onChange(suggestions[activeIndex].path);
+      setShowSuggestions(false);
+      setActiveIndex(-1);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveIndex(-1);
+    }
+  }, [showSuggestions, suggestions, activeIndex, onChange]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+    setShowSuggestions(true);
+    setActiveIndex(-1);
+  }, [onChange]);
+
+  const handleBrowse = useCallback(() => {
+    if (!window.electronAPI?.dialog) return;
+    void (async () => {
+      try {
+        const result = await (window.electronAPI.dialog as { showOpenDialog: (opts: Record<string, unknown>) => Promise<{ canceled: boolean; filePaths: string[] }> }).showOpenDialog({
+          properties: ['openFile'],
+          title: 'Select file for excerpt',
+        });
+        if (!result.canceled && result.filePaths.length > 0) {
+          onChange(result.filePaths[0]);
+        }
+      } catch {
+        /* dialog unavailable */
+      }
+    })();
+  }, [onChange]);
+
+  const hasBrowse = typeof window !== 'undefined' && window.electronAPI && 'dialog' in window.electronAPI;
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <div style={FIELD_LABEL_STYLE}>File path</div>
+      <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input
+            type="text"
+            value={value}
+            onChange={handleInputChange}
+            onFocus={() => setShowSuggestions(true)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a filename to search..."
+            style={error ? INPUT_ERROR_STYLE : INPUT_STYLE}
+            autoFocus
+          />
+          {showSuggestions && suggestions.length > 0 ? (
+            <div style={SUGGESTION_LIST_STYLE}>
+              {suggestions.map((s, i) => (
+                <div
+                  key={s.path}
+                  style={i === activeIndex ? SUGGESTION_ITEM_ACTIVE_STYLE : SUGGESTION_ITEM_STYLE}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(s.path);
+                    setShowSuggestions(false);
+                    setActiveIndex(-1);
+                  }}
+                  title={s.path}
+                >
+                  {s.relativePath}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {hasBrowse ? (
+          <button
+            type="button"
+            onClick={handleBrowse}
+            style={CANCEL_BUTTON_STYLE}
+            title="Browse for file"
+          >
+            Browse...
+          </button>
+        ) : null}
+      </div>
+      {error ? <div style={ERROR_TEXT_STYLE}>{error}</div> : null}
     </div>
   );
 }
@@ -150,6 +460,8 @@ function RangeFields({
   endLine,
   setStartLine,
   setEndLine,
+  startError,
+  endError,
 }: RangeFieldsProps): React.ReactElement {
   return (
     <div style={RANGE_FIELDS_STYLE}>
@@ -160,6 +472,7 @@ function RangeFields({
           value={startLine}
           onChange={setStartLine}
           min="1"
+          error={startError}
         />
       </div>
       <div style={{ flex: 1 }}>
@@ -169,20 +482,30 @@ function RangeFields({
           value={endLine}
           onChange={setEndLine}
           min="1"
+          error={endError}
         />
       </div>
     </div>
   );
 }
 
-function ExcerptActions({ onCancel }: Pick<AddExcerptFormProps, 'onCancel'>): React.ReactElement {
+function ExcerptActions({
+  onCancel,
+  disabled,
+}: {
+  onCancel: () => void;
+  disabled: boolean;
+}): React.ReactElement {
   return (
     <div style={ACTIONS_STYLE}>
       <button type="button" onClick={onCancel} style={CANCEL_BUTTON_STYLE}>
         Cancel
       </button>
-      <button type="submit" style={SUBMIT_BUTTON_STYLE}>
-        Add
+      <button
+        type="submit"
+        style={disabled ? SUBMIT_BUTTON_DISABLED_STYLE : SUBMIT_BUTTON_STYLE}
+      >
+        Add Excerpt
       </button>
     </div>
   );
@@ -191,24 +514,27 @@ function ExcerptActions({ onCancel }: Pick<AddExcerptFormProps, 'onCancel'>): Re
 export const AddExcerptForm = memo(function AddExcerptForm({
   onAdd,
   onCancel,
+  projectRoot,
 }: AddExcerptFormProps): React.ReactElement {
   const form = useExcerptFormState(onAdd);
+  const showErrors = form.hasSubmitted;
 
   return (
     <form onSubmit={form.handleSubmit} style={FORM_STYLE}>
       <div style={FORM_TITLE_STYLE}>Add Excerpt</div>
-      <ExcerptField
-        label="File path (absolute)"
+      <FilePathField
         value={form.filePath}
         onChange={form.setFilePath}
-        placeholder="/path/to/file.ts"
-        autoFocus
+        error={showErrors ? form.errors.filePath : null}
+        projectRoot={projectRoot}
       />
       <RangeFields
         startLine={form.startLine}
         endLine={form.endLine}
         setStartLine={form.setStartLine}
         setEndLine={form.setEndLine}
+        startError={showErrors ? form.errors.startLine : null}
+        endError={showErrors ? form.errors.endLine : null}
       />
       <ExcerptField
         label="Label (optional)"
@@ -216,7 +542,8 @@ export const AddExcerptForm = memo(function AddExcerptForm({
         onChange={form.setLabel}
         placeholder="e.g. handleClick"
       />
-      <ExcerptActions onCancel={onCancel} />
+      {form.submitError ? <div style={ERROR_TEXT_STYLE}>{form.submitError}</div> : null}
+      <ExcerptActions onCancel={onCancel} disabled={showErrors && form.hasErrors} />
     </form>
   );
 });

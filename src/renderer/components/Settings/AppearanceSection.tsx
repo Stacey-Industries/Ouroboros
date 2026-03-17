@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { customTheme, themeList } from '../../themes';
 import type { AppConfig, AppTheme } from '../../types/electron';
+import { useExtensionThemes } from '../../hooks/useExtensionThemes';
 import { AppearanceSectionContent } from './AppearanceSectionParts';
 
 interface AppearanceSectionProps {
@@ -15,8 +16,13 @@ export function AppearanceSection({
   onPreviewTheme,
 }: AppearanceSectionProps): React.ReactElement {
   const [editorOpen, setEditorOpen] = useState(false);
+  const extensionThemes = useExtensionThemes();
   const hasCustomColors = Boolean(draft.customThemeColors && Object.keys(draft.customThemeColors).length > 0);
-  const displayedThemes = hasCustomColors ? [...themeList, customTheme] : themeList;
+  const displayedThemes = [
+    ...themeList,
+    ...extensionThemes,
+    ...(hasCustomColors ? [customTheme] : []),
+  ];
 
   function handleThemeClick(themeId: string): void {
     onChange('activeTheme', themeId as AppTheme);

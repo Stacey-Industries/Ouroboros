@@ -1,31 +1,30 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AgentChatConversation } from './AgentChatConversation';
-import { AgentChatTabBar } from './AgentChatTabBar';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
 import { useAgentChatContext } from './useAgentChatContext';
+import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
 
 export interface AgentChatWorkspaceProps {
   projectRoot: string | null;
+  onModelReady?: (model: AgentChatWorkspaceModel) => void;
 }
 
-export function AgentChatWorkspace({ projectRoot }: AgentChatWorkspaceProps): React.ReactElement {
+export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
 
-  // Sync context file paths into the workspace model so they're included on send
   useEffect(() => {
     model.setContextFilePaths(context.filePaths);
   }, [context.filePaths, model.setContextFilePaths]);
 
+  const onModelReadyRef = useRef(onModelReady);
+  onModelReadyRef.current = onModelReady;
+  useEffect(() => {
+    onModelReadyRef.current?.(model);
+  }, [model.threads, model.activeThreadId, model.selectThread, model.startNewChat, model.deleteThread]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)]">
-      <AgentChatTabBar
-        activeThreadId={model.activeThreadId}
-        onDeleteThread={(threadId) => void model.deleteThread(threadId)}
-        onNewChat={model.startNewChat}
-        onSelectThread={model.selectThread}
-        threads={model.threads}
-      />
       <div className="flex-1 min-h-0 overflow-hidden">
         <AgentChatConversation
           activeThread={model.activeThread}
@@ -45,6 +44,7 @@ export function AgentChatWorkspace({ projectRoot }: AgentChatWorkspaceProps): Re
           onEdit={model.editAndResend}
           onRetry={model.retryMessage}
           onBranch={model.branchFromMessage}
+          onRevert={model.revertMessage}
           onOpenLinkedDetails={model.openLinkedDetails}
           onOpenLinkedTask={model.openDetailsInOrchestration}
           onSend={model.sendMessage}
@@ -63,6 +63,15 @@ export function AgentChatWorkspace({ projectRoot }: AgentChatWorkspaceProps): Re
           onRemoveMention={context.removeMention}
           allFiles={context.allFiles}
           onSelectThread={model.selectThread}
+          chatOverrides={model.chatOverrides}
+          onChatOverridesChange={model.setChatOverrides}
+          settingsModel={model.settingsModel}
+          queuedMessages={model.queuedMessages}
+          onEditQueuedMessage={model.editQueuedMessage}
+          onDeleteQueuedMessage={model.deleteQueuedMessage}
+          onSendQueuedMessageNow={model.sendQueuedMessageNow}
+          attachments={model.attachments}
+          onAttachmentsChange={model.setAttachments}
         />
       </div>
     </div>

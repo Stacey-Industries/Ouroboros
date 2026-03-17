@@ -323,6 +323,12 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
   if (managed) {
     managed.projectRoot = projectRoot
   }
+  // Eagerly warm the repo snapshot cache so context is ready before
+  // the user's first chat message.
+  try {
+    const { warmSnapshotCache } = require('./ipc-handlers/agentChat')
+    warmSnapshotCache([projectRoot])
+  } catch { /* agentChat module may not be loaded yet */ }
 }
 
 export function closeWindow(id: number): void {

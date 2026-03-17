@@ -73,14 +73,14 @@ function DragGripDots({ direction }: { direction: ResizeDirection }): React.Reac
 interface ResizeHandleFrameProps {
   direction: ResizeDirection;
   handleRef: React.RefObject<HTMLDivElement | null>;
-  onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 function ResizeHandleFrame({
   direction,
   handleRef,
-  onMouseDown,
+  onPointerDown,
   onDoubleClick,
 }: ResizeHandleFrameProps): React.ReactElement {
   const layout = HANDLE_LAYOUTS[direction];
@@ -88,7 +88,7 @@ function ResizeHandleFrame({
   return (
     <div
       ref={handleRef}
-      onMouseDown={onMouseDown}
+      onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
       role="separator"
       aria-orientation={layout.ariaOrientation}
@@ -112,9 +112,10 @@ export function ResizeHandle({
 }: ResizeHandleProps): React.ReactElement {
   const handleRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
       const startPos = direction === 'vertical' ? event.clientX : event.clientY;
       onResizeStart(panel, direction, currentSize, startPos);
     },
@@ -133,7 +134,7 @@ export function ResizeHandle({
     <ResizeHandleFrame
       direction={direction}
       handleRef={handleRef}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       onDoubleClick={handleDblClick}
     />
   );

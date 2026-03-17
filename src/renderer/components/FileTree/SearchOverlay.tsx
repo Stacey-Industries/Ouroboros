@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Fuse from 'fuse.js';
 import type { TreeNode, MatchRange } from './FileTreeItem';
 import { FileTreeItem } from './FileTreeItem';
-import { IGNORED_DIRS_BASE, relPath } from './fileTreeUtils';
+import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 
 export interface SearchOverlayProps {
   roots: string[];
+  extraIgnorePatterns: string[];
   query: string;
   activeFilePath: string | null;
   onFileSelect: (path: string) => void;
@@ -14,12 +15,6 @@ export interface SearchOverlayProps {
 interface SearchResult {
   node: TreeNode;
   ranges: MatchRange[];
-}
-
-interface SearchEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
 }
 
 interface SearchMatch {
@@ -45,36 +40,16 @@ const EMPTY_STATE_STYLE: React.CSSProperties = {
   textAlign: 'center',
 };
 
-function shouldScanEntry(name: string): boolean {
-  return !name.startsWith('.') && !IGNORED_DIRS_BASE.has(name);
-}
-
-function toSearchNode(root: string, entry: SearchEntry): TreeNode {
+function toSearchNode(entry: { name: string; path: string; relativePath: string }): TreeNode {
   return {
     name: entry.name,
     path: entry.path,
-    relativePath: relPath(root, entry.path),
+    relativePath: entry.relativePath,
     isDirectory: false,
     depth: 0,
     isExpanded: false,
     isLoading: false,
   };
-}
-
-async function scanDirectory(root: string, dirPath = root): Promise<TreeNode[]> {
-  const result = await window.electronAPI.files.readDir(dirPath);
-  if (!result.success || !result.items) {
-    return [];
-  }
-
-  const entries = result.items.filter((item) => shouldScanEntry(item.name));
-  const batches = entries.map((item) => (
-    item.isDirectory
-      ? scanDirectory(root, item.path)
-      : Promise.resolve([toSearchNode(root, item)])
-  ));
-  const files = await Promise.all(batches);
-  return files.flat();
 }
 
 function collectMatchRanges(matches?: readonly SearchMatch[]): MatchRange[] {
@@ -101,40 +76,23 @@ function buildSearchResults(fuse: Fuse<TreeNode>, query: string): SearchResult[]
   }));
 }
 
-function useSearchResults(roots: string[], query: string): SearchResult[] {
-  const [allFiles, setAllFiles] = useState<TreeNode[]>([]);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setAllFiles([]);
-      return;
-    }
-
-    let cancelled = false;
-    void Promise.all(roots.map((root) => scanDirectory(root))).then((results) => {
-      if (!cancelled) {
-        setAllFiles(results.flat());
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [query, roots]);
-
-  const fuse = useMemo(() => new Fuse(allFiles, {
+function useSearchResults(roots: string[], extraIgnorePatterns: string[], query: string): { isLoading: boolean; searchResults: SearchResult[] } {
+  const { allFiles, isLoading } = useProjectFileIndex({ roots, extraIgnorePatterns, enabled: query.trim().length > 0 });
+  const searchNodes = useMemo(() => allFiles.map((file) => toSearchNode(file)), [allFiles]);
+  const fuse = useMemo(() => new Fuse(searchNodes, {
     keys: ['relativePath', 'name'],
     threshold: 0.4,
     includeMatches: true,
     minMatchCharLength: 1,
-  }), [allFiles]);
+  }), [searchNodes]);
 
-  return useMemo(() => buildSearchResults(fuse, query), [fuse, query]);
+  const searchResults = useMemo(() => buildSearchResults(fuse, query), [fuse, query]);
+
+  return { isLoading, searchResults };
 }
 
-function SearchOverlayEmptyState({ query }: { query: string }): React.ReactElement {
-  return <div style={EMPTY_STATE_STYLE}>No files match &quot;{query}&quot;</div>;
+function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement {
+  return <div style={EMPTY_STATE_STYLE}>{label}</div>;
 }
 
 function SearchOverlayResults({
@@ -160,7 +118,7 @@ function SearchOverlayResults({
           isBookmarked={false}
           isEditing={false}
           onClick={(item) => onFileSelect(item.path)}
-          onContextMenu={() => {}}
+          onContextMenu={() => { }}
         />
       ))}
     </div>
@@ -169,12 +127,15 @@ function SearchOverlayResults({
 
 export function SearchOverlay({
   roots,
+  extraIgnorePatterns,
   query,
   activeFilePath,
   onFileSelect,
 }: SearchOverlayProps): React.ReactElement {
-  const searchResults = useSearchResults(roots, query);
-  return searchResults.length === 0
-    ? <SearchOverlayEmptyState query={query} />
-    : <SearchOverlayResults searchResults={searchResults} activeFilePath={activeFilePath} onFileSelect={onFileSelect} />;
+  const { isLoading, searchResults } = useSearchResults(roots, extraIgnorePatterns, query);
+  if (searchResults.length === 0) {
+    return <SearchOverlayEmptyState label={isLoading ? 'Indexing project files...' : `No files match "${query}"`} />;
+  }
+
+  return <SearchOverlayResults searchResults={searchResults} activeFilePath={activeFilePath} onFileSelect={onFileSelect} />;
 }

@@ -18,6 +18,7 @@ export const KEYBINDING_ACTIONS: KeybindingAction[] = [
   { id: 'view:toggle-agent-monitor', label: 'Toggle Agent Monitor', category: 'View',     defaultShortcut: 'Ctrl+\\' },
   { id: 'terminal:new-tab',          label: 'New Terminal Tab',     category: 'Terminal', defaultShortcut: 'Ctrl+Shift+`' },
   { id: 'editor:find',               label: 'Find in File',         category: 'Editor',   defaultShortcut: 'Ctrl+F' },
+  { id: 'editor:replace',            label: 'Find and Replace',     category: 'Editor',   defaultShortcut: 'Ctrl+H' },
   { id: 'editor:go-to-line',         label: 'Go to Line',           category: 'Editor',   defaultShortcut: 'Ctrl+G' },
   { id: 'editor:toggle-diff',        label: 'Toggle Diff View',     category: 'Editor',   defaultShortcut: 'Ctrl+D' },
   { id: 'editor:fold-all',           label: 'Fold All',             category: 'Editor',   defaultShortcut: 'Ctrl+Shift+[' },

@@ -2,7 +2,7 @@ import React, { createContext, useContext } from 'react';
 import type { FileViewerManagerProps, FileViewerState } from './FileViewerManager.internal';
 import { useFileViewerManagerState } from './FileViewerManager.internal';
 
-export type { FileViewerManagerProps, OpenFile } from './FileViewerManager.internal';
+export type { FileViewerManagerProps, OpenFile, SplitState } from './FileViewerManager.internal';
 
 const FileViewerContext = createContext<FileViewerState | null>(null);
 

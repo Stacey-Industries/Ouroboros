@@ -4,6 +4,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import type { Terminal } from '@xterm/xterm'
+import { writeChunkedPaste } from './terminalPasteHelpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ function buildMenuItems(
     }},
     { label: 'Paste', shortcut: 'Ctrl+V', separator: true, action() {
       void navigator.clipboard.readText().then((t) => {
-        if (t) { void window.electronAPI.pty.write(sessionId, t); terminal.focus() }
+        if (t) { void writeChunkedPaste(sessionId, t); terminal.focus() }
       })
       onClose()
     }},

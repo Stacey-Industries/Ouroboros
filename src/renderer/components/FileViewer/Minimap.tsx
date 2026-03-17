@@ -31,7 +31,7 @@ export const Minimap = memo(function Minimap({
 
   useMinimapCanvas(canvasRef, lines, totalMinimapHeight, visible);
   const viewportRect = useMinimapViewport(scrollContainer, totalMinimapHeight, visible);
-  const handleMouseDown = useMinimapDrag(containerRef, scrollContainer, totalMinimapHeight);
+  const handlePointerDown = useMinimapDrag(containerRef, scrollContainer, totalMinimapHeight);
 
   if (!visible) return null;
 
@@ -40,7 +40,7 @@ export const Minimap = memo(function Minimap({
       containerRef={containerRef}
       canvasRef={canvasRef}
       viewportRect={viewportRect}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     />
   );
 });
@@ -97,28 +97,31 @@ function useMinimapDrag(
   containerRef: React.RefObject<HTMLDivElement | null>,
   scrollContainer: HTMLDivElement | null,
   totalMinimapHeight: number
-): (event: React.MouseEvent) => void {
+): (event: React.PointerEvent) => void {
   const isDraggingRef = useRef(false);
 
   return useCallback(
-    (event: React.MouseEvent) => {
+    (event: React.PointerEvent) => {
       event.preventDefault();
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
       isDraggingRef.current = true;
       scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, event.clientY);
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
+      const handlePointerMove = (moveEvent: PointerEvent) => {
         if (!isDraggingRef.current) return;
         scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, moveEvent.clientY);
       };
 
-      const handleMouseUp = () => {
+      const handlePointerUp = () => {
         isDraggingRef.current = false;
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
+        document.removeEventListener('pointercancel', handlePointerUp);
       };
 
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
+      document.addEventListener('pointercancel', handlePointerUp);
     },
     [containerRef, scrollContainer, totalMinimapHeight]
   );
@@ -128,17 +131,17 @@ interface MinimapPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   viewportRect: { top: number; height: number };
-  onMouseDown: (event: React.MouseEvent) => void;
+  onPointerDown: (event: React.PointerEvent) => void;
 }
 
 function MinimapPanel({
   containerRef,
   canvasRef,
   viewportRect,
-  onMouseDown,
+  onPointerDown,
 }: MinimapPanelProps): React.ReactElement {
   return (
-    <div ref={containerRef} onMouseDown={onMouseDown} style={minimapContainerStyle}>
+    <div ref={containerRef} onPointerDown={onPointerDown} style={{ ...minimapContainerStyle, touchAction: 'none' }}>
       <canvas ref={canvasRef} />
       <div style={getViewportIndicatorStyle(viewportRect)} />
     </div>

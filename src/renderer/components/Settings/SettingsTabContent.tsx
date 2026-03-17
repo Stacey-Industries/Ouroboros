@@ -14,8 +14,11 @@ import { KeybindingsSection } from './KeybindingsSection';
 import { ProfilesSection } from './ProfilesSection';
 import { FileFilterSection } from './FileFilterSection';
 import { ExtensionsSection } from './ExtensionsSection';
+import { AgentSection } from './AgentSection';
 import { ClaudeSection } from './ClaudeSection';
 import { McpSection } from './McpSection';
+import { McpStoreSection } from './McpStoreSection';
+import { ExtensionStoreSection } from './ExtensionStoreSection';
 import { CodeModeSection } from './CodeModeSection';
 
 interface SettingsTabContentProps {
@@ -34,6 +37,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   appearance: ({ draft, onChange, onPreviewTheme }) => <AppearanceSection draft={draft} onChange={onChange} onPreviewTheme={onPreviewTheme} />,
   fonts: ({ draft, onChange }) => <FontSection draft={draft} onChange={onChange} />,
   terminal: ({ draft, onChange }) => <TerminalSection draft={draft} onChange={onChange} />,
+  agent: ({ draft, onChange }) => <AgentSection draft={draft} onChange={onChange} />,
   claude: ({ draft, onChange }) => <ClaudeSection draft={draft} onChange={onChange} />,
   keybindings: ({ draft, onChange }) => <KeybindingsSection draft={draft} onChange={onChange} />,
   hooks: ({ draft, onChange }) => <HooksSection draft={draft} onChange={onChange} />,
@@ -41,6 +45,8 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   files: ({ draft, onChange }) => <FileFilterSection draft={draft} onChange={onChange} />,
   extensions: () => <ExtensionsSection />,
   mcp: () => <McpSection />,
+  mcpStore: () => <McpStoreSection />,
+  extensionStore: () => <ExtensionStoreSection />,
   codemode: () => <CodeModeSection />,
 };
 

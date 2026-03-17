@@ -13,7 +13,7 @@
 import React, { useCallback, useState } from 'react';
 
 import { useConfig } from './hooks/useConfig';
-import { useTheme } from './hooks/useTheme';
+import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 import { useProjectManagement } from './hooks/useProjectManagement';
@@ -28,9 +28,8 @@ import { ApprovalProvider } from './contexts/ApprovalContext';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
 import type { Command } from './components/CommandPalette/types';
-import type { AppLayoutProps } from './components/Layout/AppLayout';
-
 import { InnerAppLayout } from './components/Layout/InnerAppLayout';
+import type { InnerAppLayoutProps } from './components/Layout/InnerAppLayout';
 import { LoadingScreen } from './components/Layout/LoadingScreen';
 
 
@@ -149,7 +148,7 @@ function buildInnerAppLayoutProps({
   recentIds,
   handleExecute,
   uiState,
-}: InnerAppLayoutArgs): AppLayoutProps {
+}: InnerAppLayoutArgs): InnerAppLayoutProps {
   return {
     projectRoot: ctx.projectRoot,
     projectRoots: ctx.projectRoots,
@@ -212,7 +211,7 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
   />;
 }
 
-function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>): AppLayoutProps['terminalControl'] {
+function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>): InnerAppLayoutProps['terminalControl'] {
   return {
     sessions: terminal.sessions,
     activeSessionId: terminal.activeSessionId,
@@ -221,6 +220,8 @@ function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>):
     onNew: () => void terminal.spawnSession(),
     onNewClaude: () => void terminal.spawnClaudeSession(),
     onReorder: terminal.handleTerminalReorder,
+    focusOrCreate: terminal.focusOrCreateSession,
+    onSpawnClaude: terminal.spawnClaudeSession,
   };
 }
 
@@ -255,7 +256,7 @@ function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: 
 
 export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
-  useTheme();
+  useThemeRuntimeBootstrap(config);
 
   if (configLoading || !config) return <LoadingScreen />;
 

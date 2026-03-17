@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 export interface BreadcrumbProps {
   filePath: string | null;
@@ -12,13 +12,16 @@ interface BreadcrumbData {
   absoluteSegments: string[];
 }
 
+/** Maximum number of visible segments before truncation kicks in. */
+const MAX_VISIBLE_SEGMENTS = 5;
+
 const emptyStateStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   padding: '0 12px',
   height: '100%',
   color: 'var(--text-faint)',
-  fontSize: '0.75rem',
+  fontSize: '11px',
   fontFamily: 'var(--font-mono)',
 };
 
@@ -30,7 +33,7 @@ const containerStyle: React.CSSProperties = {
   height: '100%',
   overflow: 'hidden',
   fontFamily: 'var(--font-mono)',
-  fontSize: '0.75rem',
+  fontSize: '11px',
   color: 'var(--text-muted)',
 };
 
@@ -46,16 +49,22 @@ const segmentsStyle: React.CSSProperties = {
 const directoryButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  padding: '0 2px',
-  color: 'var(--text-faint)',
+  padding: '1px 3px',
+  color: 'var(--text-muted)',
   fontSize: 'inherit',
   fontFamily: 'inherit',
   borderRadius: '3px',
   flexShrink: 0,
   whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  transition: 'color 100ms ease',
 };
 
 const currentSegmentStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
   color: 'var(--text)',
   fontWeight: 500,
   overflow: 'hidden',
@@ -67,6 +76,16 @@ const currentSegmentStyle: React.CSSProperties = {
 const chevronWrapperStyle: React.CSSProperties = {
   color: 'var(--text-faint)',
   flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+};
+
+const ellipsisStyle: React.CSSProperties = {
+  color: 'var(--text-faint)',
+  flexShrink: 0,
+  padding: '0 1px',
+  fontSize: 'inherit',
+  letterSpacing: '1px',
 };
 
 const copyButtonStyle: React.CSSProperties = {
@@ -81,6 +100,114 @@ const copyButtonStyle: React.CSSProperties = {
   flexShrink: 0,
   transition: 'color 100ms ease',
 };
+
+// ---------------------------------------------------------------------------
+// File-type icon mapping
+// ---------------------------------------------------------------------------
+
+type IconColor = string;
+
+function getExtension(filename: string): string {
+  const dotIndex = filename.lastIndexOf('.');
+  return dotIndex > 0 ? filename.slice(dotIndex).toLowerCase() : '';
+}
+
+function TsIcon({ color }: { color: IconColor }): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill={color} />
+      <text x="7" y="10.5" textAnchor="middle" fill="#fff" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">TS</text>
+    </svg>
+  );
+}
+
+function JsIcon({ color }: { color: IconColor }): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill={color} />
+      <text x="7" y="10.5" textAnchor="middle" fill="#fff" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">JS</text>
+    </svg>
+  );
+}
+
+function CssIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill="#8b5cf6" />
+      <text x="7" y="10" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="bold" fontFamily="sans-serif">#</text>
+    </svg>
+  );
+}
+
+function JsonIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill="#eab308" />
+      <text x="7" y="10.5" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold" fontFamily="sans-serif">{'{}'}</text>
+    </svg>
+  );
+}
+
+function MdIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill="#6b7280" />
+      <text x="7" y="10.5" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold" fontFamily="sans-serif">M</text>
+    </svg>
+  );
+}
+
+function HtmlIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="12" rx="2" fill="#e44d26" />
+      <text x="7" y="10" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="bold" fontFamily="sans-serif">&lt;/&gt;</text>
+    </svg>
+  );
+}
+
+function GenericFileIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M3 1.5h5.5L12 5v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.1" fill="none" />
+      <path d="M8.5 1.5V5H12" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+function FileTypeIcon({ filename }: { filename: string }): React.ReactElement {
+  const ext = getExtension(filename);
+  switch (ext) {
+    case '.ts':
+    case '.tsx':
+      return <TsIcon color="#3178c6" />;
+    case '.js':
+    case '.jsx':
+      return <JsIcon color="#f0db4f" />;
+    case '.mjs':
+    case '.cjs':
+      return <JsIcon color="#b8a936" />;
+    case '.css':
+    case '.scss':
+    case '.less':
+      return <CssIcon />;
+    case '.json':
+    case '.jsonc':
+      return <JsonIcon />;
+    case '.md':
+    case '.mdx':
+      return <MdIcon />;
+    case '.html':
+    case '.htm':
+      return <HtmlIcon />;
+    default:
+      return <GenericFileIcon />;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Path helpers
+// ---------------------------------------------------------------------------
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/');
@@ -108,6 +235,32 @@ function buildDirPath(data: BreadcrumbData, segmentIndex: number): string {
   return `/${data.absoluteSegments.slice(0, absoluteIndex + 1).join('/')}`;
 }
 
+/**
+ * Truncate segments when the path is longer than MAX_VISIBLE_SEGMENTS.
+ * Returns the visible slice (the last MAX_VISIBLE_SEGMENTS items) and the
+ * starting offset so we can still compute correct absolute paths.
+ */
+function truncateSegments(data: BreadcrumbData): {
+  visibleSegments: string[];
+  startOffset: number;
+  isTruncated: boolean;
+} {
+  const total = data.segments.length;
+  if (total <= MAX_VISIBLE_SEGMENTS) {
+    return { visibleSegments: data.segments, startOffset: 0, isTruncated: false };
+  }
+  const startOffset = total - MAX_VISIBLE_SEGMENTS;
+  return {
+    visibleSegments: data.segments.slice(startOffset),
+    startOffset,
+    isTruncated: true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// SVG icons (Chevron, Copy)
+// ---------------------------------------------------------------------------
+
 function CopyIcon(): React.ReactElement {
   return (
     <svg
@@ -132,24 +285,28 @@ function CopyIcon(): React.ReactElement {
 function ChevronIcon(): React.ReactElement {
   return (
     <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       style={{ flexShrink: 0 }}
     >
       <path
-        d="M3 2L6 5L3 8"
+        d="M2.5 1.5L5 4L2.5 6.5"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Copy-to-clipboard hook
+// ---------------------------------------------------------------------------
 
 function useCopyFeedback(filePath: string | null): {
   copied: boolean;
@@ -173,18 +330,21 @@ function useCopyFeedback(filePath: string | null): {
   return { copied, handleCopy };
 }
 
+// ---------------------------------------------------------------------------
+// Hover helpers
+// ---------------------------------------------------------------------------
+
 function setDirectoryButtonHoverState(
   target: HTMLButtonElement,
-  canNavigate: boolean,
   hovering: boolean,
 ): void {
-  if (!canNavigate) {
-    return;
-  }
-
-  target.style.color = hovering ? 'var(--text)' : 'var(--text-faint)';
-  target.style.backgroundColor = hovering ? 'var(--bg-tertiary)' : 'transparent';
+  target.style.color = hovering ? 'var(--text)' : 'var(--text-muted)';
+  target.style.textDecoration = hovering ? 'underline' : 'none';
 }
+
+// ---------------------------------------------------------------------------
+// Segment sub-components
+// ---------------------------------------------------------------------------
 
 function DirectorySegmentButton(props: {
   segment: string;
@@ -195,13 +355,13 @@ function DirectorySegmentButton(props: {
   return (
     <button
       onClick={() => onNavigateToDir?.(dirPath)}
-      title={`Navigate to ${segment}`}
-      style={{ ...directoryButtonStyle, cursor: onNavigateToDir ? 'pointer' : 'default' }}
+      title={`Reveal ${dirPath}`}
+      style={directoryButtonStyle}
       onMouseEnter={(e) => {
-        setDirectoryButtonHoverState(e.currentTarget, Boolean(onNavigateToDir), true);
+        setDirectoryButtonHoverState(e.currentTarget, true);
       }}
       onMouseLeave={(e) => {
-        setDirectoryButtonHoverState(e.currentTarget, Boolean(onNavigateToDir), false);
+        setDirectoryButtonHoverState(e.currentTarget, false);
       }}
     >
       {segment}
@@ -210,33 +370,50 @@ function DirectorySegmentButton(props: {
 }
 
 function CurrentSegmentLabel({ segment }: { segment: string }): React.ReactElement {
-  return <span style={currentSegmentStyle}>{segment}</span>;
+  return (
+    <span style={currentSegmentStyle}>
+      <FileTypeIcon filename={segment} />
+      {segment}
+    </span>
+  );
+}
+
+function ChevronSeparator(): React.ReactElement {
+  return (
+    <span style={chevronWrapperStyle}>
+      <ChevronIcon />
+    </span>
+  );
+}
+
+function EllipsisBadge(): React.ReactElement {
+  return <span style={ellipsisStyle} title="Path truncated">...</span>;
 }
 
 function BreadcrumbSegmentItem(props: {
   segment: string;
-  index: number;
+  /** The segment's index in the *original* (un-truncated) segments array. */
+  originalIndex: number;
+  totalSegments: number;
   data: BreadcrumbData;
   onNavigateToDir?: (dirPath: string) => void;
 }): React.ReactElement {
-  const { segment, index, data, onNavigateToDir } = props;
-  const isLast = index === data.segments.length - 1;
+  const { segment, originalIndex, totalSegments, data, onNavigateToDir } = props;
+  const isLast = originalIndex === totalSegments - 1;
 
   return (
     <React.Fragment>
       {isLast ? (
         <CurrentSegmentLabel segment={segment} />
       ) : (
-        <DirectorySegmentButton
-          segment={segment}
-          dirPath={buildDirPath(data, index)}
-          onNavigateToDir={onNavigateToDir}
-        />
-      )}
-      {!isLast && (
-        <span style={chevronWrapperStyle}>
-          <ChevronIcon />
-        </span>
+        <>
+          <DirectorySegmentButton
+            segment={segment}
+            dirPath={buildDirPath(data, originalIndex)}
+            onNavigateToDir={onNavigateToDir}
+          />
+          <ChevronSeparator />
+        </>
       )}
     </React.Fragment>
   );
@@ -247,20 +424,39 @@ function BreadcrumbSegments(props: {
   onNavigateToDir?: (dirPath: string) => void;
 }): React.ReactElement {
   const { data, onNavigateToDir } = props;
+  const { visibleSegments, startOffset, isTruncated } = useMemo(
+    () => truncateSegments(data),
+    [data],
+  );
+
   return (
     <div style={segmentsStyle}>
-      {data.segments.map((segment, index) => (
-        <BreadcrumbSegmentItem
-          key={`${segment}-${index}`}
-          segment={segment}
-          index={index}
-          data={data}
-          onNavigateToDir={onNavigateToDir}
-        />
-      ))}
+      {isTruncated && (
+        <>
+          <EllipsisBadge />
+          <ChevronSeparator />
+        </>
+      )}
+      {visibleSegments.map((segment, visibleIndex) => {
+        const originalIndex = startOffset + visibleIndex;
+        return (
+          <BreadcrumbSegmentItem
+            key={`${segment}-${originalIndex}`}
+            segment={segment}
+            originalIndex={originalIndex}
+            totalSegments={data.segments.length}
+            data={data}
+            onNavigateToDir={onNavigateToDir}
+          />
+        );
+      })}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Copy button
+// ---------------------------------------------------------------------------
 
 function setCopyButtonHoverState(target: HTMLButtonElement, copied: boolean, hovering: boolean): void {
   if (copied) {
@@ -295,6 +491,10 @@ function CopyPathButton(props: {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Top-level Breadcrumb component
+// ---------------------------------------------------------------------------
+
 function EmptyBreadcrumb(): React.ReactElement {
   return <div style={emptyStateStyle}>No file open</div>;
 }
@@ -316,6 +516,14 @@ function BreadcrumbLayout(props: {
 
 /**
  * Breadcrumb - displays the current file path as clickable segments.
+ *
+ * Features:
+ * - Clickable directory segments that dispatch navigation events
+ * - Chevron-right separators between segments
+ * - File-type icon before the filename
+ * - Truncation with "..." for paths longer than 5 segments
+ * - Hover: directory segments get --text color and subtle underline
+ * - Copy-to-clipboard button for the full path
  */
 export function Breadcrumb({
   filePath,

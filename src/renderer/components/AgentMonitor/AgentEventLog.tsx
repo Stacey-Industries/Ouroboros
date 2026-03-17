@@ -60,8 +60,8 @@ function useCopyLog(toolCalls: ToolCallEvent[], sessionId: string): {
     navigator.clipboard.writeText(header + lines).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {
-      // Clipboard API unavailable - silently ignore.
+    }).catch((error) => {
+      console.error('[agentEventLog] Failed to copy event log to clipboard:', error);
     });
   }, [toolCalls, sessionId]);
 

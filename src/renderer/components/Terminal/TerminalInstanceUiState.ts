@@ -4,6 +4,7 @@ import { INITIAL_TERMINAL_CONTEXT_MENU } from './TerminalContextMenu'
 import type { TerminalContextMenuState } from './TerminalContextMenu'
 import { INITIAL_SELECTION_TOOLTIP } from './SelectionTooltip'
 import type { SelectionTooltipState } from './SelectionTooltip'
+import { writeChunkedPaste } from './terminalPasteHelpers'
 import { useTerminalHistory } from './useTerminalHistory'
 
 export function useLatestRef<T>(value: T): React.MutableRefObject<T> {
@@ -65,13 +66,22 @@ export function usePendingPaste(sessionId: string): {
   pendingPaste: string | null
   setPendingPaste: React.Dispatch<React.SetStateAction<string | null>>
   handlePasteConfirm: () => void
+  handlePasteSingleLine: () => void
   handlePasteCancel: () => void
 } {
   const [pendingPaste, setPendingPaste] = useState<string | null>(null)
 
   const handlePasteConfirm = useCallback(() => {
     if (pendingPaste) {
-      void window.electronAPI.pty.write(sessionId, pendingPaste)
+      void writeChunkedPaste(sessionId, pendingPaste)
+    }
+    setPendingPaste(null)
+  }, [pendingPaste, sessionId])
+
+  const handlePasteSingleLine = useCallback(() => {
+    if (pendingPaste) {
+      const collapsed = pendingPaste.replace(/[\r\n]+/g, ' ').trim()
+      void writeChunkedPaste(sessionId, collapsed)
     }
     setPendingPaste(null)
   }, [pendingPaste, sessionId])
@@ -92,7 +102,7 @@ export function usePendingPaste(sessionId: string): {
     return () => document.removeEventListener('keydown', handler, true)
   }, [pendingPaste])
 
-  return { pendingPaste, setPendingPaste, handlePasteConfirm, handlePasteCancel }
+  return { pendingPaste, setPendingPaste, handlePasteConfirm, handlePasteSingleLine, handlePasteCancel }
 }
 
 export function useRichInputState(

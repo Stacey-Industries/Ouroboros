@@ -25,7 +25,8 @@ export interface FileViewerProps {
   isBinary?: boolean;
   binaryContent?: Uint8Array;
   onSave?: (content: string) => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  onContentChange?: (content: string) => void;
+  onCancelEdit?: () => void;
   isDirty?: boolean;
 }
 
@@ -35,7 +36,7 @@ export interface FileViewerProps {
 export const FileViewer = memo(function FileViewer(
   props: FileViewerProps
 ): React.ReactElement {
-  return <FileViewerInner {...props} key={props.filePath ?? '__empty__'} />;
+  return <FileViewerInner {...props} />;
 });
 
 const FileViewerInner = memo(function FileViewerInner(

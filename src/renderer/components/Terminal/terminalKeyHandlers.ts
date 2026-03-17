@@ -6,6 +6,7 @@
 
 import type { Terminal } from '@xterm/xterm'
 import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
+import { writeChunkedPaste } from './terminalPasteHelpers'
 import type { CompletionState } from './useTerminalCompletions'
 import type { HistoryRefs, HistorySuggestionControls } from './useTerminalHistory'
 
@@ -318,7 +319,7 @@ function handlePaste(e: KeyboardEvent, d: KeyHandlerDeps): void {
     if (text.length > PASTE_CONFIRM_THRESHOLD) {
       d.setPendingPaste(text)
     } else {
-      void window.electronAPI.pty.write(d.sessionId, text)
+      void writeChunkedPaste(d.sessionId, text)
     }
   })
 }

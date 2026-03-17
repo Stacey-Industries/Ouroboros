@@ -1,6 +1,8 @@
 import type { AgentChatAPI as MainAgentChatAPI } from '../../main/agentChat/types'
 
 export type {
+  ImageAttachment,
+  ImageMimeType,
   AgentChatBranchInfo,
   AgentChatContentBlock,
   AgentChatContextBehavior,
@@ -13,6 +15,7 @@ export type {
   AgentChatEvent,
   AgentChatEventBase,
   AgentChatLinkedDetailsResult,
+  AgentChatLinkedTerminalResult,
   AgentChatMessageRecord,
   AgentChatMessageRole,
   AgentChatMessageSource,

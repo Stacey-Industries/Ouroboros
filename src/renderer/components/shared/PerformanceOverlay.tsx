@@ -70,7 +70,7 @@ function PerformanceMetrics({
 }
 
 export function PerformanceOverlay({ visible }: PerformanceOverlayProps): React.ReactElement | null {
-  const snap = usePerformance();
+  const snap = usePerformance(visible);
 
   if (!visible) return null;
 

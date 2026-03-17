@@ -29,6 +29,7 @@ export type ContextReasonKind =
   | 'keyword_match'
   | 'import_adjacency'
   | 'dependency'
+  | 'test_companion'
 
 export type ContextConfidence = 'high' | 'medium' | 'low'
 
@@ -94,12 +95,20 @@ export interface TaskRequest {
   mode: OrchestrationMode
   provider: OrchestrationProvider
   verificationProfile: VerificationProfileName
+  /** Model identifier to use for this task (e.g. 'claude-opus-4-6'). When empty, the provider picks its default. */
+  model?: string
+  /** Effort level for this task ('low' | 'medium' | 'high' | 'max'). When empty, provider default is used. */
+  effort?: string
+  /** Permission mode override for this task ('default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions'). */
+  permissionMode?: string
   contextSelection?: Partial<TaskRequestContextSelection>
   budget?: ContextBudgetConstraints
   resumeFromSessionId?: string
   metadata?: TaskRequestMetadata
   /** Full conversation history for providers that support multi-turn context (e.g. anthropic-api). */
   conversationHistory?: ConversationMessage[]
+  /** Image attachments for the current-turn user message (vision). */
+  goalAttachments?: import('../agentChat/types').ImageAttachment[]
 }
 
 export interface WorkspaceRootFact {
@@ -112,11 +121,17 @@ export interface WorkspaceRootFact {
   indexedAt: number
 }
 
+export interface GitDiffHunk {
+  startLine: number
+  lineCount: number
+}
+
 export interface GitDiffFileSummary {
   filePath: string
   additions: number
   deletions: number
   status: 'added' | 'modified' | 'deleted' | 'renamed' | 'unknown'
+  hunks?: GitDiffHunk[]
 }
 
 export interface GitDiffSummary {
@@ -125,7 +140,16 @@ export interface GitDiffSummary {
   totalDeletions: number
   changedFileCount: number
   comparedAgainst?: string
+  currentBranch?: string
   generatedAt: number
+}
+
+export interface DiagnosticMessage {
+  severity: 'error' | 'warning' | 'info' | 'hint'
+  line: number
+  character?: number
+  message: string
+  source?: string
 }
 
 export interface DiagnosticsFileSummary {
@@ -134,6 +158,7 @@ export interface DiagnosticsFileSummary {
   warnings: number
   infos: number
   hints: number
+  messages?: DiagnosticMessage[]
 }
 
 export interface DiagnosticsSummary {
@@ -145,9 +170,21 @@ export interface DiagnosticsSummary {
   generatedAt: number
 }
 
+export interface TerminalSessionSnapshot {
+  sessionId: string
+  lines: string[]
+  capturedAt: number
+}
+
 export interface RecentEditsSummary {
   files: string[]
   generatedAt: number
+}
+
+export interface RecentCommit {
+  hash: string
+  message: string
+  authorDate: string
 }
 
 export interface RepoFacts {
@@ -156,6 +193,7 @@ export interface RepoFacts {
   gitDiff: GitDiffSummary
   diagnostics: DiagnosticsSummary
   recentEdits: RecentEditsSummary
+  recentCommits?: RecentCommit[]
 }
 
 export interface EditorSelectionRange {
@@ -180,6 +218,7 @@ export interface LiveIdeState {
   dirtyFiles: string[]
   dirtyBuffers: DirtyBufferSnapshot[]
   selection?: EditorSelectionRange
+  terminalSnapshots?: TerminalSessionSnapshot[]
   collectedAt: number
 }
 
@@ -213,6 +252,7 @@ export interface RankedContextFile {
   reasons: ContextSelectionReason[]
   snippets: ContextSnippet[]
   truncationNotes: ContextTruncationNote[]
+  hunks?: GitDiffHunk[]
 }
 
 export interface OmittedContextCandidate {
@@ -275,6 +315,7 @@ export interface ModuleContextSummary {
   keyResponsibilities: string[]
   gotchas: string[]
   exports: string[]
+  dependencies?: string[]
 }
 
 export interface ProviderCapabilities {
@@ -294,6 +335,8 @@ export interface ProviderSessionReference {
   sessionId?: string
   requestId?: string
   externalTaskId?: string
+  /** PTY session ID when the provider is backed by a real terminal */
+  linkedTerminalId?: string
 }
 
 export interface ProviderArtifact {
@@ -305,12 +348,23 @@ export interface ProviderArtifact {
   lastMessage?: string
 }
 
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+}
+
 export interface ProviderProgressEvent {
   provider: OrchestrationProvider
   status: ProviderExecutionStatus
   message: string
   session?: ProviderSessionReference
   timestamp: number
+  /** Cumulative token usage for this request (populated on 'completed' status). */
+  tokenUsage?: TokenUsage
+  /** Total cost in USD (populated on 'completed' status). */
+  costUsd?: number
+  /** Total duration in milliseconds (populated on 'completed' status). */
+  durationMs?: number
 }
 
 export interface DiffFileSummary {

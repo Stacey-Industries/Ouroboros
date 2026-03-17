@@ -45,6 +45,10 @@ function rowStyle(
     height: '28px',
     boxSizing: 'border-box',
     position: 'relative',
+    borderRadius: '4px',
+    marginLeft: '2px',
+    marginRight: '2px',
+    transition: 'background-color 100ms ease',
   };
 }
 

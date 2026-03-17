@@ -1,19 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { ContextGenerateOptions, ProjectContext } from '../../types/electron';
-
-const DEFAULT_OPTIONS: ContextGenerateOptions = {
-  includeCommands: true,
-  includeDeps: true,
-  includeStructure: true,
-  maxDeps: 20,
-};
+import { useContextSelectionModel, type ContextSelectionConfig, type ContextSelectionModel } from './useContextSelectionModel';
+import { useContextBuilderState, useTimedStatus, type ContextBuilderState } from './useContextBuilderModel.helpers';
 
 export interface ContextBuilderModel {
   context: ProjectContext | null;
+  contextSelection: ContextSelectionModel | null;
   editedContent: string;
   error: string | null;
   generatedContent: string;
   options: ContextGenerateOptions;
+  projectRoot: string;
   scanning: boolean;
   statusMessage: string | null;
   handleCopyToClipboard: () => Promise<void>;
@@ -24,21 +21,6 @@ export interface ContextBuilderModel {
   handleSetSystemPrompt: () => Promise<void>;
   handleUpdateClaudeMd: () => Promise<void>;
   runScan: () => Promise<void>;
-}
-
-interface ContextBuilderState {
-  context: ProjectContext | null;
-  setContext: React.Dispatch<React.SetStateAction<ProjectContext | null>>;
-  editedContent: string;
-  setEditedContent: React.Dispatch<React.SetStateAction<string>>;
-  error: string | null;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
-  generatedContent: string;
-  setGeneratedContent: React.Dispatch<React.SetStateAction<string>>;
-  options: ContextGenerateOptions;
-  setOptions: React.Dispatch<React.SetStateAction<ContextGenerateOptions>>;
-  scanning: boolean;
-  setScanning: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface ContextScanParams {
@@ -68,41 +50,6 @@ interface ClaudeMdActionParams {
 interface CreateClaudeMdActionParams extends ClaudeMdActionParams {
   context: ProjectContext | null;
   setContext: React.Dispatch<React.SetStateAction<ProjectContext | null>>;
-}
-
-function useTimedStatus(): [string | null, (message: string, durationMs?: number) => void] {
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
-  const showStatus = useCallback((message: string, durationMs = 2000) => {
-    setStatusMessage(message);
-    window.setTimeout(() => setStatusMessage(null), durationMs);
-  }, []);
-
-  return [statusMessage, showStatus];
-}
-
-function useContextBuilderState(): ContextBuilderState {
-  const [scanning, setScanning] = useState(false);
-  const [context, setContext] = useState<ProjectContext | null>(null);
-  const [generatedContent, setGeneratedContent] = useState('');
-  const [editedContent, setEditedContent] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [options, setOptions] = useState<ContextGenerateOptions>(DEFAULT_OPTIONS);
-
-  return {
-    context,
-    editedContent,
-    error,
-    generatedContent,
-    options,
-    scanning,
-    setContext,
-    setEditedContent,
-    setError,
-    setGeneratedContent,
-    setOptions,
-    setScanning,
-  };
 }
 
 function getClaudeMdPath(projectRoot: string): string {
@@ -247,11 +194,20 @@ function useOptionToggle(
   }, [setOptions]);
 }
 
-export function useContextBuilderModel(projectRoot: string): ContextBuilderModel {
-  const state = useContextBuilderState();
-  const [statusMessage, showStatus] = useTimedStatus();
+function useContextBuilderScanLifecycle(
+  projectRoot: string,
+  state: ContextBuilderState,
+): () => Promise<void> {
+  const runScan = useContextScan({
+    options: state.options,
+    projectRoot,
+    setContext: state.setContext,
+    setEditedContent: state.setEditedContent,
+    setError: state.setError,
+    setGeneratedContent: state.setGeneratedContent,
+    setScanning: state.setScanning,
+  });
 
-  const runScan = useContextScan({ projectRoot, options: state.options, ...state });
   useEffect(() => {
     void runScan();
   }, [runScan]);
@@ -264,6 +220,14 @@ export function useContextBuilderModel(projectRoot: string): ContextBuilderModel
     setGeneratedContent: state.setGeneratedContent,
   });
 
+  return runScan;
+}
+
+function useContextBuilderActions(
+  projectRoot: string,
+  showStatus: (message: string, durationMs?: number) => void,
+  state: ContextBuilderState,
+) {
   const handleCopyToClipboard = useCopyToClipboardAction(state.editedContent, showStatus);
   const handleSetSystemPrompt = useSetSystemPromptAction(state.editedContent, showStatus);
   const handleCreateClaudeMd = useCreateClaudeMdAction({ ...state, projectRoot, showStatus });
@@ -271,20 +235,60 @@ export function useContextBuilderModel(projectRoot: string): ContextBuilderModel
   const handleOptionToggle = useOptionToggle(state.setOptions);
 
   return {
-    context: state.context,
-    editedContent: state.editedContent,
-    error: state.error,
-    generatedContent: state.generatedContent,
     handleCopyToClipboard,
     handleCreateClaudeMd,
-    handleEditedContentChange: state.setEditedContent,
     handleOptionToggle,
-    handleResetEdits: () => state.setEditedContent(state.generatedContent),
     handleSetSystemPrompt,
     handleUpdateClaudeMd,
-    options: state.options,
-    runScan,
-    scanning: state.scanning,
-    statusMessage,
   };
+}
+
+function buildContextBuilderModel(args: {
+  actions: ReturnType<typeof useContextBuilderActions>;
+  contextSelection: ContextSelectionModel | null;
+  projectRoot: string;
+  runScan: () => Promise<void>;
+  state: ContextBuilderState;
+  statusMessage: string | null;
+}): ContextBuilderModel {
+  return {
+    context: args.state.context,
+    contextSelection: args.contextSelection,
+    editedContent: args.state.editedContent,
+    error: args.state.error,
+    generatedContent: args.state.generatedContent,
+    handleCopyToClipboard: args.actions.handleCopyToClipboard,
+    handleCreateClaudeMd: args.actions.handleCreateClaudeMd,
+    handleEditedContentChange: args.state.setEditedContent,
+    handleOptionToggle: args.actions.handleOptionToggle,
+    handleResetEdits: () => args.state.setEditedContent(args.state.generatedContent),
+    handleSetSystemPrompt: args.actions.handleSetSystemPrompt,
+    handleUpdateClaudeMd: args.actions.handleUpdateClaudeMd,
+    options: args.state.options,
+    projectRoot: args.projectRoot,
+    runScan: args.runScan,
+    scanning: args.state.scanning,
+    statusMessage: args.statusMessage,
+  };
+}
+
+export interface ContextBuilderModelOptions {
+  contextSelection?: ContextSelectionConfig | null;
+}
+
+export function useContextBuilderModel(projectRoot: string, options?: ContextBuilderModelOptions): ContextBuilderModel {
+  const state = useContextBuilderState();
+  const [statusMessage, showStatus] = useTimedStatus();
+  const contextSelectionModel = useContextSelectionModel(options?.contextSelection ?? undefined);
+  const runScan = useContextBuilderScanLifecycle(projectRoot, state);
+  const actions = useContextBuilderActions(projectRoot, showStatus, state);
+
+  return buildContextBuilderModel({
+    actions,
+    contextSelection: options?.contextSelection ? contextSelectionModel : null,
+    projectRoot,
+    runScan,
+    state,
+    statusMessage,
+  });
 }

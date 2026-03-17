@@ -2,7 +2,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { WebglAddon } from '@xterm/addon-webgl'
+
 import { ImageAddon } from '@xterm/addon-image'
 import { ClipboardAddon } from '@xterm/addon-clipboard'
 import { SerializeAddon } from '@xterm/addon-serialize'
@@ -59,7 +59,7 @@ function createTerminal(
     cursorBlink: true,
     cursorStyle: cursorStyle ?? 'block',
     cursorInactiveStyle: 'none',
-    scrollback: 5000,
+    scrollback: 50000,
     allowProposedApi: true,
     theme: buildXtermTheme(),
   })
@@ -180,21 +180,6 @@ function createReadyObserver(
       context.refs.isReadyRef.current = true
       ro.observe(container)
       context.fit()
-
-      // ── WebGL renderer (Phase 1B) ────────────────────────────────────
-      // Load AFTER double-rAF to ensure terminal is fully initialized.
-      // Canvas renderer is the default fallback — no addon needed.
-      if (term) {
-        try {
-          const webgl = new WebglAddon()
-          webgl.onContextLoss(() => {
-            webgl.dispose()
-          })
-          term.loadAddon(webgl)
-        } catch {
-          // WebGL not available — canvas fallback is automatic
-        }
-      }
     })
   })
   return ro

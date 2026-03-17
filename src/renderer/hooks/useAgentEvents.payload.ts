@@ -11,7 +11,20 @@ const SUBAGENT_TOOLS = new Set([
   'task',
   'agent',
   'subagent',
+  'TaskTool',
+  'AgentTool',
+  'spawn_agent',
+  'launch_agent',
+  'dispatch',
+  'Dispatch',
 ]);
+
+/** Fuzzy check: treat any tool whose name contains "agent" or "task" (case-insensitive) as a potential subagent tool. */
+export function isSubagentTool(toolName: string): boolean {
+  if (SUBAGENT_TOOLS.has(toolName)) return true;
+  const lower = toolName.toLowerCase();
+  return lower.includes('agent') || lower.includes('task');
+}
 
 const TOOL_INPUT_HEURISTICS: Record<string, string[]> = {
   Read: ['file_path', 'path'],
@@ -36,7 +49,21 @@ export function deriveTaskLabel(payload: HookPayload): string {
   }
 
   return getStringValue(payload as Record<string, unknown>, 'taskLabel')
+    ?? formatModelLabel(payload.model)
     ?? `Session ${payload.sessionId.slice(0, 8)}`;
+}
+
+/** Convert a model identifier like "claude-opus-4-6" into a human-friendly label. */
+function formatModelLabel(model?: string): string | undefined {
+  if (!model) return undefined;
+  // Strip common prefixes/suffixes: "claude-opus-4-6-20250514" → "Opus 4.6"
+  const match = model.match(/claude[- ](sonnet|opus|haiku)[- ](\d+)[- ](\d+)/i);
+  if (match) {
+    const family = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+    return `Claude ${family} ${match[2]}.${match[3]}`;
+  }
+  // Fallback: capitalize first letter
+  return model.charAt(0).toUpperCase() + model.slice(1);
 }
 
 export function createToolCall(payload: HookPayload): ToolCallEvent | null {
@@ -57,11 +84,22 @@ export function getSubagentChildId(
   toolName: string,
   input: Record<string, unknown>,
 ): string | undefined {
-  if (!SUBAGENT_TOOLS.has(toolName)) {
+  if (!isSubagentTool(toolName)) {
     return undefined;
   }
 
-  return getStringValue(input, 'session_id') ?? getStringValue(input, 'sessionId');
+  // Try all known field names where Claude Code may embed the child session ID
+  return getStringValue(input, 'session_id')
+    ?? getStringValue(input, 'sessionId')
+    ?? getStringValue(input, 'agent_id')
+    ?? getStringValue(input, 'agentId')
+    ?? getStringValue(input, 'id')
+    ?? getStringValue(input, 'task_id')
+    ?? getStringValue(input, 'taskId')
+    ?? getStringValue(input, 'child_session_id')
+    ?? getStringValue(input, 'childSessionId')
+    ?? getStringValue(input, 'spawned_session_id')
+    ?? getStringValue(input, 'subagent_id');
 }
 
 export function getToolEndDetails(payload: HookPayload): ToolEndDetails {

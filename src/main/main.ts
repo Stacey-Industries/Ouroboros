@@ -2,6 +2,13 @@ import { app, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { cleanupIpcHandlers } from './ipc'
+import {
+  clearPerfSubscribers,
+  cleanupPerfSubscriber,
+  initializePerfMetrics,
+  startPerfMetrics as startManagedPerfMetrics,
+  stopPerfMetrics as stopManagedPerfMetrics,
+} from './perfMetrics'
 import { killAllPtySessions } from './pty'
 import { startHooksServer, stopHooksServer } from './hooks'
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer'
@@ -9,6 +16,10 @@ import { installHooks } from './hookInstaller'
 import { initExtensions } from './extensions'
 import { buildApplicationMenu } from './menu'
 import { createWindow, getAllActiveWindows } from './windowManager'
+import { getConfigValue } from './config'
+import { initContextLayer } from './contextLayer/contextLayerController'
+import { buildRepoIndexSnapshot } from './orchestration/repoIndexer'
+import { GraphController, getGraphController, setGraphController } from './codebaseGraph/graphController'
 
 // â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -65,7 +76,9 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 // Suppress GPU errors in dev
 app.commandLine.appendSwitch('disable-gpu-sandbox')
-app.commandLine.appendSwitch('no-sandbox') // Remove in production signing
+if (!app.isPackaged) {
+  app.commandLine.appendSwitch('no-sandbox')
+}
 
 // Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock()
@@ -78,8 +91,6 @@ let mainWindow: BrowserWindow | null = null
 
 // â”€â”€â”€ Performance metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-let perfInterval: ReturnType<typeof setInterval> | null = null
-
 function broadcastToActiveWindows(channel: string, payload: unknown): void {
   for (const win of getAllActiveWindows()) {
     if (!win.isDestroyed()) {
@@ -90,40 +101,14 @@ function broadcastToActiveWindows(channel: string, payload: unknown): void {
 
 /** Broadcasts perf metrics to all open windows. */
 function startPerfMetrics(): void {
-  if (perfInterval !== null) return
-  perfInterval = setInterval(() => {
-    try {
-      const mem = process.memoryUsage()
-      const appMetrics = app.getAppMetrics()
-      broadcastToActiveWindows('perf:metrics', {
-        timestamp: Date.now(),
-        memory: {
-          heapUsed: mem.heapUsed,
-          heapTotal: mem.heapTotal,
-          rss: mem.rss,
-          external: mem.external,
-        },
-        processes: appMetrics.map((m) => ({
-          pid: m.pid,
-          type: m.type,
-          cpu: m.cpu,
-          memory: m.memory,
-        })),
-      })
-    } catch {
-      // Non-fatal â€” window might be closing
-    }
-  }, 5000)
+  startManagedPerfMetrics()
 }
 
 function stopPerfMetrics(): void {
-  if (perfInterval !== null) {
-    clearInterval(perfInterval)
-    perfInterval = null
-  }
+  stopManagedPerfMetrics()
 }
 
-async function runStartupStep(errorMessage: string, step: () => Promise<void>): Promise<void> {
+async function runStartupStep(errorMessage: string, step: () => Promise<unknown> | unknown): Promise<void> {
   try {
     await step()
   } catch (err) {
@@ -199,6 +184,7 @@ function registerWindowLifecycleHandlers(): void {
 }
 
 async function initializeApplication(): Promise<void> {
+  initializePerfMetrics({ getActiveWindows: getAllActiveWindows })
   mainWindow = createWindow()
   buildApplicationMenu(mainWindow)
   await startBackgroundServices(mainWindow)
@@ -206,16 +192,57 @@ async function initializeApplication(): Promise<void> {
   configureAutoUpdater()
   startPerfMetrics()
   registerWindowLifecycleHandlers()
+
+  const contextLayerConfig = getConfigValue('contextLayer') ?? {
+    enabled: true,
+    maxModules: 50,
+    maxSizeBytes: 200 * 1024,
+    debounceMs: 5000,
+    autoSummarize: true,
+  }
+  console.log('[context-layer] Starting initialization with config:', contextLayerConfig)
+  initContextLayer({
+    workspaceRoot: getConfigValue('defaultProjectRoot'),
+    buildRepoIndex: buildRepoIndexSnapshot,
+    config: contextLayerConfig,
+  }).then(() => {
+    console.log('[context-layer] Initialization complete')
+  }).catch((error: unknown) => {
+    console.warn('[context-layer] Initialization failed:', error)
+  })
+
+  // Codebase graph initialization (non-fatal)
+  initCodebaseGraph().catch((error) => {
+    console.error('[codebase-graph] Initialization failed:', error)
+  })
+}
+
+async function initCodebaseGraph(): Promise<void> {
+  const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined
+  if (!defaultRoot) {
+    console.log('[codebase-graph] No default project root configured, skipping graph init')
+    return
+  }
+
+  try {
+    const controller = new GraphController(defaultRoot)
+    await controller.initialize()
+    setGraphController(controller)
+    console.log('[codebase-graph] Controller initialized successfully')
+  } catch (err) {
+    console.warn('[codebase-graph] Failed to start:', err)
+    // Non-fatal -- app continues without graph
+  }
 }
 
 app.setName('Ouroboros')
 app.whenReady().then(initializeApplication)
 
 app.on('window-all-closed', async () => {
+  clearPerfSubscribers()
   stopPerfMetrics()
   await stopHooksServer()
   await stopIdeToolServer()
-  cleanupIpcHandlers()
   killAllPtySessions()
 
   if (process.platform !== 'darwin') {
@@ -223,9 +250,25 @@ app.on('window-all-closed', async () => {
   }
 })
 
+// Tear down IPC handlers and dispose resources on final quit.
+// Handlers are removed here (not in window-all-closed) so that in-flight
+// renderer IPC calls dispatched during beforeunload can still resolve.
+app.on('will-quit', async () => {
+  cleanupIpcHandlers()
+  try {
+    await getGraphController()?.dispose()
+  } catch (err) {
+    console.warn('[codebase-graph] Dispose error during shutdown:', err)
+  }
+})
+
 // Security: prevent new windows from web content (window.open, target=_blank, etc.)
 // Note: This does NOT block BrowserWindow creation from the main process (windowManager).
 app.on('web-contents-created', (_event, contents) => {
+  contents.on('destroyed', () => {
+    cleanupPerfSubscriber(contents.id)
+  })
+
   contents.setWindowOpenHandler(() => {
     return { action: 'deny' }
   })

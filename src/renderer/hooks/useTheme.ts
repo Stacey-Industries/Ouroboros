@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getTheme, themes, themeList, defaultThemeId, customTheme } from '../themes';
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import { getTheme, themes, themeList, defaultThemeId, customTheme, registerExtensionTheme, unregisterExtensionTheme } from '../themes';
 import type { Theme } from '../themes';
-import type { AppTheme } from '../types/electron';
+import type { AppConfig, AppTheme } from '../types/electron';
 
 export function applyFontConfig(fontUI: string, fontMono: string, fontSizeUI: number): void {
   const root = document.documentElement;
@@ -94,43 +94,92 @@ export function applyCustomThemeColors(colors: Record<string, string>): void {
   }
 }
 
-async function readThemeFromStore(): Promise<string> {
+interface ThemeRuntimeState {
+  themeId: string;
+  showBgGradient: boolean;
+  customThemeColors: Record<string, string>;
+  fontUI: string;
+  fontMono: string;
+  fontSizeUI: number;
+  hydrated: boolean;
+}
+
+type ThemeBootstrapConfig = Pick<
+  AppConfig,
+  'activeTheme' | 'showBgGradient' | 'customThemeColors' | 'fontUI' | 'fontMono' | 'fontSizeUI'
+>;
+
+const DEFAULT_BOOTSTRAP_CONFIG: ThemeBootstrapConfig = {
+  activeTheme: defaultThemeId,
+  showBgGradient: true,
+  customThemeColors: {},
+  fontUI: '',
+  fontMono: '',
+  fontSizeUI: 13,
+};
+
+let runtimeState: ThemeRuntimeState = {
+  themeId: defaultThemeId,
+  showBgGradient: true,
+  customThemeColors: {},
+  fontUI: '',
+  fontMono: '',
+  fontSizeUI: 13,
+  hydrated: false,
+};
+
+const runtimeListeners = new Set<(state: ThemeRuntimeState) => void>();
+let hydrationPromise: Promise<void> | null = null;
+let themeChangeCleanup: (() => void) | null = null;
+
+function cloneRuntimeState(): ThemeRuntimeState {
+  return {
+    themeId: runtimeState.themeId,
+    showBgGradient: runtimeState.showBgGradient,
+    customThemeColors: { ...runtimeState.customThemeColors },
+    fontUI: runtimeState.fontUI,
+    fontMono: runtimeState.fontMono,
+    fontSizeUI: runtimeState.fontSizeUI,
+    hydrated: runtimeState.hydrated,
+  };
+}
+
+function emitRuntimeState(): void {
+  const snapshot = cloneRuntimeState();
+  for (const listener of runtimeListeners) {
+    listener(snapshot);
+  }
+}
+
+function isValidThemeId(id: string): boolean {
+  return id in themes || id.startsWith('ext:');
+}
+
+function normalizeBootstrapConfig(config?: Partial<ThemeBootstrapConfig> | null): ThemeBootstrapConfig {
+  return {
+    activeTheme:
+      config?.activeTheme && isValidThemeId(config.activeTheme)
+        ? config.activeTheme
+        : DEFAULT_BOOTSTRAP_CONFIG.activeTheme,
+    showBgGradient: config?.showBgGradient ?? DEFAULT_BOOTSTRAP_CONFIG.showBgGradient,
+    customThemeColors: config?.customThemeColors ?? DEFAULT_BOOTSTRAP_CONFIG.customThemeColors,
+    fontUI: config?.fontUI ?? DEFAULT_BOOTSTRAP_CONFIG.fontUI,
+    fontMono: config?.fontMono ?? DEFAULT_BOOTSTRAP_CONFIG.fontMono,
+    fontSizeUI: config?.fontSizeUI ?? DEFAULT_BOOTSTRAP_CONFIG.fontSizeUI,
+  };
+}
+
+async function readThemeBootstrapConfig(): Promise<ThemeBootstrapConfig> {
   try {
     const api = window.electronAPI;
-    if (api?.theme?.get) {
-      const stored = await api.theme.get();
-      if (stored && stored in themes) {
-        return stored;
-      }
+    if (api?.config?.getAll) {
+      const stored = await api.config.getAll();
+      return normalizeBootstrapConfig(stored);
     }
   } catch {
     // IPC not available (e.g. dev/test env) — fall through to default
   }
-  return defaultThemeId;
-}
-
-async function readShowBgGradient(): Promise<boolean> {
-  try {
-    const api = window.electronAPI;
-    if (api?.config?.get) {
-      return (await api.config.get('showBgGradient')) as boolean ?? true;
-    }
-  } catch {
-    // ignore
-  }
-  return true;
-}
-
-async function readCustomThemeColors(): Promise<Record<string, string>> {
-  try {
-    const api = window.electronAPI;
-    if (api?.config?.get) {
-      return (await api.config.get('customThemeColors') as Record<string, string>) ?? {};
-    }
-  } catch {
-    // ignore
-  }
-  return {};
+  return DEFAULT_BOOTSTRAP_CONFIG;
 }
 
 async function writeThemeToStore(id: AppTheme): Promise<void> {
@@ -152,39 +201,118 @@ interface UseThemeReturn {
   setShowBgGradient: (value: boolean) => void;
 }
 
-function hydrateThemeOnMount(
-  setThemeId: (id: string) => void,
-  setGradient: (v: boolean) => void,
-  cancelled: { current: boolean },
-): void {
-  Promise.all([
-    readThemeFromStore(),
-    readShowBgGradient(),
-    readCustomThemeColors(),
-  ]).then(([id, gradient, customColors]) => {
-    if (cancelled.current) return;
-    setThemeId(id);
-    setGradient(gradient);
-    if (Object.keys(customColors).length > 0) {
-      Object.assign(customTheme.colors, customColors);
-    }
-    applyThemeToDom(getTheme(id), gradient);
+function applyRuntimeState(nextState: ThemeRuntimeState): void {
+  runtimeState = nextState;
+  if (Object.keys(nextState.customThemeColors).length > 0) {
+    Object.assign(customTheme.colors, nextState.customThemeColors);
+  }
+  const theme = getTheme(nextState.themeId);
+  applyThemeToDom(theme, nextState.showBgGradient);
+  applyFontConfig(nextState.fontUI, nextState.fontMono, nextState.fontSizeUI);
+  updateTitleBarOverlay(theme);
+  emitRuntimeState();
+}
+
+function setRuntimeState(partial: Partial<ThemeRuntimeState>): void {
+  applyRuntimeState({
+    ...runtimeState,
+    ...partial,
+    customThemeColors: partial.customThemeColors ?? runtimeState.customThemeColors,
   });
 }
 
-function hydrateFontConfigOnMount(cancelled: { current: boolean }): void {
+function registerThemeChangeListener(): void {
+  if (themeChangeCleanup || !window.electronAPI?.theme?.onChange) {
+    return;
+  }
+
+  themeChangeCleanup = window.electronAPI.theme.onChange((newTheme) => {
+    if (isValidThemeId(newTheme)) {
+      setRuntimeState({ themeId: newTheme, hydrated: true });
+    }
+  });
+}
+
+/**
+ * Fetch extension theme contributions from the main process and register
+ * them into the themes registry.  Called once at startup so that a saved
+ * `ext:*` activeTheme resolves before the first render.
+ */
+async function loadExtensionThemesIntoRegistry(): Promise<void> {
   try {
-    const api = window.electronAPI;
-    if (api?.config?.getAll) {
-      api.config.getAll().then((cfg) => {
-        if (!cancelled.current && cfg) {
-          applyFontConfig(cfg.fontUI ?? '', cfg.fontMono ?? '', cfg.fontSizeUI ?? 13);
-        }
-      }).catch(() => {/* ignore */});
+    const api = window.electronAPI?.extensionStore
+    if (!api?.getThemeContributions) return
+
+    const result = await api.getThemeContributions()
+    if (!result.success || !result.themes) return
+
+    // Clear any stale ext themes
+    for (const id of Object.keys(themes)) {
+      if (id.startsWith('ext:')) unregisterExtensionTheme(id)
+    }
+
+    for (const t of result.themes) {
+      registerExtensionTheme({
+        id: t.id,
+        name: t.name,
+        fontFamily: t.fontFamily,
+        colors: t.colors,
+      })
     }
   } catch {
-    // IPC not available — ignore
+    // Extension themes are optional — don't block startup
   }
+}
+
+async function hydrateThemeOnMount(config?: Partial<ThemeBootstrapConfig> | null): Promise<void> {
+  // Load extension themes BEFORE resolving activeTheme so ext:* IDs are valid
+  await loadExtensionThemesIntoRegistry();
+
+  const resolved = config ? normalizeBootstrapConfig(config) : await readThemeBootstrapConfig();
+  registerThemeChangeListener();
+  applyRuntimeState({
+    themeId: resolved.activeTheme,
+    showBgGradient: resolved.showBgGradient,
+    customThemeColors: resolved.customThemeColors,
+    fontUI: resolved.fontUI,
+    fontMono: resolved.fontMono,
+    fontSizeUI: resolved.fontSizeUI,
+    hydrated: true,
+  });
+}
+
+function ensureThemeRuntime(): void {
+  if (runtimeState.hydrated || hydrationPromise) {
+    return;
+  }
+
+  hydrationPromise = hydrateThemeOnMount().finally(() => {
+    hydrationPromise = null;
+  });
+}
+
+function subscribeToThemeRuntime(listener: (state: ThemeRuntimeState) => void): () => void {
+  runtimeListeners.add(listener);
+  return () => {
+    runtimeListeners.delete(listener);
+  };
+}
+
+export function useThemeRuntimeBootstrap(config: AppConfig | null): void {
+  useLayoutEffect(() => {
+    if (!config) {
+      return;
+    }
+
+    hydrationPromise = hydrateThemeOnMount(config).finally(() => {
+      hydrationPromise = null;
+    });
+  }, [config]);
+}
+
+/** Call after registering/unregistering extension themes to refresh consumers */
+export function notifyExtensionThemesChanged(): void {
+  emitRuntimeState();
 }
 
 function persistBgGradient(value: boolean): void {
@@ -196,43 +324,39 @@ function persistBgGradient(value: boolean): void {
 }
 
 export function useTheme(): UseThemeReturn {
-  const [themeId, setThemeId] = useState<string>(defaultThemeId);
-  const [showBgGradient, setShowBgGradientState] = useState<boolean>(true);
+  const [snapshot, setSnapshot] = useState<ThemeRuntimeState>(() => cloneRuntimeState());
 
   useEffect(() => {
-    const cancelled = { current: false };
-    hydrateThemeOnMount(setThemeId, setShowBgGradientState, cancelled);
-    hydrateFontConfigOnMount(cancelled);
-    return () => { cancelled.current = true; };
+    ensureThemeRuntime();
+    return subscribeToThemeRuntime((nextState) => {
+      setSnapshot(nextState);
+    });
   }, []);
 
-  useEffect(() => {
-    const theme = getTheme(themeId);
-    applyThemeToDom(theme, showBgGradient);
-    updateTitleBarOverlay(theme);
-  }, [themeId, showBgGradient]);
-
-  useEffect(() => {
-    if (!window.electronAPI?.theme?.onChange) return;
-    return window.electronAPI.theme.onChange((newTheme) => {
-      if (newTheme in themes) {
-        setThemeId(newTheme);
-        applyThemeToDom(getTheme(newTheme), showBgGradient);
-      }
-    });
-  }, [showBgGradient]);
-
   const setTheme = useCallback(async (id: string) => {
-    const resolved = (id in themes ? id : defaultThemeId) as AppTheme;
-    setThemeId(resolved);
-    applyThemeToDom(getTheme(resolved), showBgGradient);
+    const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
+    setRuntimeState({ themeId: resolved, hydrated: true });
     await writeThemeToStore(resolved);
-  }, [showBgGradient]);
+  }, []);
 
   const setShowBgGradient = useCallback((value: boolean) => {
-    setShowBgGradientState(value);
+    setRuntimeState({ showBgGradient: value, hydrated: true });
     persistBgGradient(value);
   }, []);
 
-  return { theme: getTheme(themeId), setTheme, themes: themeList, showBgGradient, setShowBgGradient };
+  // Build live theme list: built-ins + any registered extension themes
+  const allThemes = useMemo(() => {
+    const extThemes = Object.values(themes).filter((t) => t.id.startsWith('ext:'));
+    return [...themeList, ...extThemes];
+  // Re-derive when the theme ID changes (triggers after extension install/uninstall)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.themeId, snapshot.hydrated]);
+
+  return useMemo(() => ({
+    theme: getTheme(snapshot.themeId),
+    setTheme,
+    themes: allThemes,
+    showBgGradient: snapshot.showBgGradient,
+    setShowBgGradient,
+  }), [allThemes, setShowBgGradient, setTheme, snapshot.showBgGradient, snapshot.themeId]);
 }

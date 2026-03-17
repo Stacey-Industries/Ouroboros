@@ -43,6 +43,8 @@ export interface PerfPingResult extends IpcResult {
 
 export interface PerfAPI {
   ping: () => Promise<PerfPingResult>
+  subscribe: () => Promise<IpcResult>
+  unsubscribe: () => Promise<IpcResult>
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void
 }
 
@@ -257,4 +259,17 @@ export interface UsageAPI {
   getSessionDetail: (sessionId: string) => Promise<SessionDetailResult>
   getRecentSessions: (count?: number) => Promise<RecentSessionsResult>
   getWindowedUsage: () => Promise<WindowedUsageResult>
+}
+
+export interface ContextLayerProgress {
+  type: 'idle' | 'summarizing'
+  processed: number
+  failed: number
+  remaining: number
+  total: number
+  currentModule: string | null
+}
+
+export interface ContextLayerAPI {
+  onProgress: (callback: (progress: ContextLayerProgress) => void) => () => void
 }

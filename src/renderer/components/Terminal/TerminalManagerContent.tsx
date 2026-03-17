@@ -176,7 +176,7 @@ function TerminalPaneContent({
 }
 
 function SplitPaneLayout(props: ActiveTerminalContentProps): React.ReactElement {
-  const { splitRatio, containerRef, handleDividerMouseDown } = useSplitResize()
+  const { splitRatio, containerRef, handleDividerPointerDown } = useSplitResize()
   const splitId = props.session.splitSessionId!
   const closeSplit = () => props.onCloseSplit(props.session.id)
   const sharedProps = getSharedTerminalProps(props)
@@ -185,7 +185,7 @@ function SplitPaneLayout(props: ActiveTerminalContentProps): React.ReactElement 
     <SplitPaneLayoutFrame
       containerRef={containerRef}
       splitRatio={splitRatio}
-      handleDividerMouseDown={handleDividerMouseDown}
+      handleDividerPointerDown={handleDividerPointerDown}
       onClose={closeSplit}
       leftPane={(
         <TerminalPaneContent

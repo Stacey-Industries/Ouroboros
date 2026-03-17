@@ -56,7 +56,7 @@ const richInputHighlightStyle = HighlightStyle.define([
 const richInputEditorTheme = EditorView.theme({
   '&': { fontSize: 'var(--term-font-size, 13px)', backgroundColor: 'transparent', color: 'var(--term-fg, var(--text, #f8f8f2))' },
   '.cm-scroller': { fontFamily: 'var(--font-mono, monospace)', lineHeight: '1.5', overflow: 'auto', maxHeight: 'calc(1.5em * 10 + 16px)' },
-  '.cm-content': { caretColor: 'var(--term-cursor, var(--accent, #f8f8f0))', padding: '4px 0', minHeight: '1.5em' },
+  '.cm-content': { caretColor: 'var(--term-cursor, var(--accent, #f8f8f0))', padding: '8px 4px', minHeight: '4em' },
   '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--term-cursor, var(--accent, #f8f8f0))' },
   '&.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.25))' },
   '.cm-selectionBackground': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.15))' },
@@ -80,10 +80,12 @@ const toolbarSecondaryStyle: React.CSSProperties = {
 const toolbarTitleStyle: React.CSSProperties = { fontWeight: 600, letterSpacing: '0.02em' };
 const dividerStyle: React.CSSProperties = { color: 'var(--border, #444)' };
 const panelStyle: React.CSSProperties = {
-  borderTop: '1px solid var(--border, #333)', backgroundColor: 'var(--rich-input-bg, rgba(30,30,30,0.95))', display: 'flex',
+  position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+  borderTop: '2px solid var(--accent, #58a6ff)', backgroundColor: 'var(--rich-input-bg, rgba(30,30,30,0.97))', display: 'flex',
   flexDirection: 'column', overflow: 'hidden', animation: 'richInputSlideUp 0.15s ease-out',
+  minHeight: '120px', maxHeight: '50%',
 };
-const editorHostStyle: React.CSSProperties = { overflow: 'hidden', minHeight: 'calc(1.5em + 8px)' };
+const editorHostStyle: React.CSSProperties = { overflow: 'auto', minHeight: '6em', flex: '1 1 auto' };
 const richInputAnimationCss = '@keyframes richInputSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }';
 function getLineNumberButtonStyle(showLineNumbers: boolean): React.CSSProperties {
   return {
@@ -237,7 +239,15 @@ function useRichInputEditorMount({ containerRef, doCancel, doSubmit, highlightCo
 function useVisibleFocus(viewRef: ViewRef, visible: boolean): void {
   useEffect(() => {
     if (!visible || !viewRef.current) return;
-    requestAnimationFrame(() => { viewRef.current?.focus(); });
+    // Double-rAF to ensure CodeMirror DOM is fully ready (same pattern as xterm)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        viewRef.current?.focus();
+      });
+    });
+    // Fallback in case rAFs don't fire (e.g. tab not visible)
+    const timer = setTimeout(() => { viewRef.current?.focus(); }, 100);
+    return () => clearTimeout(timer);
   }, [viewRef, visible]);
 }
 function useLineNumberConfig(lineNumCompartment: CompartmentRef, showLineNumbers: boolean, viewRef: ViewRef): void {

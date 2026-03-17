@@ -12,6 +12,7 @@ import type { SerializeAddon } from '@xterm/addon-serialize'
 
 const MAX_SERIALIZED_LINES = 10_000
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+const AUTO_SAVE_INTERVAL_MS = 30_000 // 30 seconds
 
 interface SessionMetadata {
   sessionId: string
@@ -165,6 +166,20 @@ export function useTerminalPersistence(
     const handler = () => { void saveSession() }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
+  }, [saveSession])
+
+  // Periodic auto-save every 30s — ensures disk is always reasonably current
+  // even if beforeunload doesn't complete (async IPC race) or HMR unmount
+  // happens without a page unload event.
+  useEffect(() => {
+    const id = setInterval(() => { void saveSession() }, AUTO_SAVE_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [saveSession])
+
+  // Save on React unmount — fires during HMR module replacement, which does
+  // NOT trigger beforeunload. This is the only reliable save path for HMR.
+  useEffect(() => {
+    return () => { void saveSession() }
   }, [saveSession])
 
   return { saveSession, restoreSession }

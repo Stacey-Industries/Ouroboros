@@ -19,7 +19,9 @@ interface KeyHandlerDeps {
   handleItemClick: (node: TreeNode) => void;
   toggleFolder: (node: TreeNode) => Promise<void>;
   handleRename: (node: TreeNode) => void;
-  handleDeleteFocused: (node: TreeNode) => Promise<void>;
+  handleDeleteFocused: (node: TreeNode, selectedPaths: Set<string>) => Promise<void>;
+  selectedPaths: Set<string>;
+  handleUndo: () => Promise<void>;
   handleNewFile: (dir: string) => void;
   handleNewFolder: (dir: string) => void;
   root: string;
@@ -219,14 +221,17 @@ function handleActionKeys(e: React.KeyboardEvent, item: { node: TreeNode } | und
   }
   if (e.key === 'Delete') {
     e.preventDefault();
-    if (item?.node) void deps.handleDeleteFocused(item.node);
+    if (item?.node) void deps.handleDeleteFocused(item.node, deps.selectedPaths);
     return true;
   }
   return false;
 }
 
 function handleCreateKeys(e: React.KeyboardEvent, item: { node: TreeNode } | undefined, deps: KeyHandlerDeps): void {
-  if (e.key === 'n' && e.ctrlKey && !e.shiftKey) {
+  if (e.key === 'z' && e.ctrlKey) {
+    e.preventDefault();
+    void deps.handleUndo();
+  } else if (e.key === 'n' && e.ctrlKey && !e.shiftKey) {
     e.preventDefault();
     deps.handleNewFile(getFocusedDir(item, deps.root));
   } else if (e.key === 'N' && e.ctrlKey && e.shiftKey) {

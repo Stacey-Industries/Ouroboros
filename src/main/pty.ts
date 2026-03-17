@@ -3,9 +3,12 @@ import fs from 'fs/promises'
 import * as pty from 'node-pty'
 import { type ClaudeCliSettings, getConfigValue } from './config'
 import { dispatchActivationEvent } from './extensions'
+import { createAgentBridge, type AgentBridgeHandle } from './ptyAgentBridge'
 import { buildClaudeArgs } from './ptyClaude'
 import { buildBaseEnv, buildShellEnvWithIntegration, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
+import { terminalOutputBuffer } from './ptyOutputBuffer'
 import { startPtyRecording as startRecording, stopPtyRecording as stopRecording, type RecordingState } from './ptyRecording'
+import type { StreamJsonEvent, StreamJsonResultEvent } from './orchestration/providers/streamJsonTypes'
 
 export interface PtySession {
   id: string
@@ -47,6 +50,7 @@ interface SessionRegistration {
 function cleanupSession(id: string): void {
   sessions.delete(id)
   sessionWindowMap.delete(id)
+  terminalOutputBuffer.removeSession(id)
 }
 
 function handleSessionExit(
@@ -70,6 +74,7 @@ function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow):
     if (!win.isDestroyed()) {
       win.webContents.send(`pty:data:${id}`, data)
     }
+    terminalOutputBuffer.append(id, data)
   })
 
   proc.onExit(({ exitCode, signal }) => {
@@ -100,6 +105,22 @@ function notifyTerminalCreated(id: string, cwd: string): void {
   dispatchActivationEvent('onTerminalCreate', { id, cwd }).catch(() => {})
 }
 
+/**
+ * Escape a single argument for safe use inside a PowerShell command string.
+ * Handles all PowerShell metacharacters — not just backticks — to prevent
+ * command injection via crafted CLI arguments (e.g. appendSystemPrompt).
+ *
+ * Security: wraps every argument in single-quotes and doubles any embedded
+ * single-quotes, which is the only safe quoting strategy for PowerShell.
+ * Single-quoted strings in PowerShell are literal — no variable expansion,
+ * no backtick escapes, no subexpression evaluation.
+ */
+function escapePowerShellArg(arg: string): string {
+  // In PowerShell single-quoted strings, the only special character is
+  // the single-quote itself, which is escaped by doubling it.
+  return `'${arg.replace(/'/g, "''")}'`
+}
+
 function buildClaudeLaunchArgs(baseArgs: string[], resumeMode?: 'continue' | string): { shell: string; args: string[] } {
   const claudeArgs = [...baseArgs]
   if (resumeMode === 'continue') {
@@ -109,9 +130,12 @@ function buildClaudeLaunchArgs(baseArgs: string[], resumeMode?: 'continue' | str
   }
 
   if (process.platform === 'win32') {
+    // Security: use single-quote escaping for each argument to prevent
+    // command injection through PowerShell metacharacters.
+    const escaped = ['claude', ...claudeArgs].map(escapePowerShellArg).join(' ')
     return {
       shell: 'powershell.exe',
-      args: ['-NoLogo', '-NoExit', '-Command', ['claude', ...claudeArgs].join(' ')],
+      args: ['-NoLogo', '-NoExit', '-Command', `& ${escaped}`],
     }
   }
 
@@ -265,6 +289,223 @@ export async function stopPtyRecording(
   win: BrowserWindow
 ): Promise<{ success: boolean; filePath?: string; cancelled?: boolean; error?: string }> {
   return stopRecording(id, recordings, win)
+}
+
+// ---- Agent PTY (PTY-backed Claude session with structured event bridge) ---
+
+export interface AgentPtyOptions {
+  /** Claude CLI prompt to send */
+  prompt: string
+  /** Working directory */
+  cwd?: string
+  /** Terminal column count */
+  cols?: number
+  /** Terminal row count */
+  rows?: number
+  /** Extra environment variables */
+  env?: Record<string, string>
+  /** Claude CLI model override */
+  model?: string
+  /** Permission mode */
+  permissionMode?: string
+  /** Skip permissions */
+  dangerouslySkipPermissions?: boolean
+  /** Resume session ID */
+  resumeSessionId?: string
+  /** Continue latest session */
+  continueSession?: boolean
+  /** Effort level override: 'low' | 'medium' | 'high' | 'max', or a numeric string for explicit --max-turns */
+  effort?: string
+  /** Callback for structured events parsed from stream-json output */
+  onEvent?: (event: StreamJsonEvent) => void
+}
+
+export interface AgentPtyResult {
+  success: boolean
+  error?: string
+  /** PTY session ID (same as the `id` argument) */
+  sessionId?: string
+  /** The agent bridge handle — can be used to dispose resources */
+  bridge?: AgentBridgeHandle
+  /** Resolves when the Claude session completes (with result or null) */
+  result?: Promise<StreamJsonResultEvent | null>
+}
+
+/**
+ * Build the Claude CLI args for stream-json mode in a PTY context.
+ * Similar to `buildStreamJsonArgs` in claudeStreamJsonRunner.ts but adapted
+ * for PTY-based execution.
+ */
+function buildAgentPtyClaudeArgs(options: AgentPtyOptions): { shell: string; args: string[] } {
+  const cliArgs: string[] = [
+    '-p',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+  ]
+
+  if (options.model) {
+    cliArgs.push('--model', options.model)
+  }
+  if (options.permissionMode) {
+    cliArgs.push('--permission-mode', options.permissionMode)
+  }
+  if (options.dangerouslySkipPermissions) {
+    cliArgs.push('--dangerously-skip-permissions')
+  }
+  if (options.continueSession) {
+    cliArgs.push('--continue')
+  }
+  if (options.resumeSessionId) {
+    cliArgs.push('--resume', options.resumeSessionId)
+  }
+
+  // Map effort level to --max-turns flag
+  if (options.effort) {
+    const effortMap: Record<string, number> = { low: 3, medium: 10, high: 25 }
+    const mapped = effortMap[options.effort]
+    if (mapped !== undefined) {
+      cliArgs.push('--max-turns', String(mapped))
+    } else if (options.effort !== 'max') {
+      // Treat as a numeric string — pass directly
+      cliArgs.push('--max-turns', options.effort)
+    }
+    // 'max' means unlimited — no flag needed
+  }
+
+  if (process.platform === 'win32') {
+    // Security: use single-quote escaping for each argument to prevent
+    // command injection through PowerShell metacharacters.
+    const escaped = ['claude', ...cliArgs].map(escapePowerShellArg).join(' ')
+    return {
+      shell: 'powershell.exe',
+      args: ['-NoLogo', '-Command', `& ${escaped}`],
+    }
+  }
+
+  return { shell: 'claude', args: cliArgs }
+}
+
+/**
+ * Spawn a PTY session running Claude in stream-json mode.
+ *
+ * The PTY output flows two ways:
+ * 1. To the renderer via `pty:data:{id}` IPC (normal xterm rendering)
+ * 2. Through an AgentBridge that parses NDJSON lines into StreamJsonEvent objects
+ *
+ * The prompt is written to PTY stdin after a brief delay to let the process start,
+ * followed by EOF (Ctrl+D) to signal end of input.
+ */
+export function spawnAgentPty(
+  id: string,
+  win: BrowserWindow,
+  options: AgentPtyOptions,
+): AgentPtyResult {
+  if (sessions.has(id)) {
+    return { success: false, error: `Session ${id} already exists` }
+  }
+
+  const { cwd, cols, rows } = resolveSpawnOptions({
+    cwd: options.cwd,
+    cols: options.cols,
+    rows: options.rows,
+  })
+  const launch = buildAgentPtyClaudeArgs(options)
+
+  try {
+    const proc = pty.spawn(launch.shell, launch.args, {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd,
+      env: buildBaseEnv(options.env),
+    })
+
+    // Register the PTY session (attaches normal data/exit listeners for xterm)
+    registerSession({ id, proc, cwd, shell: launch.shell, win })
+
+    // Create the result promise before attaching the bridge
+    let resolveResult: (value: StreamJsonResultEvent | null) => void
+    let rejectResult: (reason: unknown) => void
+    let settled = false
+    const resultPromise = new Promise<StreamJsonResultEvent | null>((resolve, reject) => {
+      resolveResult = resolve
+      rejectResult = reject
+    })
+
+    // Create the agent bridge for parsing structured events from PTY output
+    const originalDispose = { fn: (() => {}) as () => void }
+    const bridge = createAgentBridge({
+      sessionId: id,
+      onEvent: (event) => {
+        options.onEvent?.(event)
+      },
+      onComplete: (result, exitCode) => {
+        if (settled) return
+        settled = true
+        if (result) {
+          resolveResult(result)
+        } else if (exitCode && exitCode !== 0) {
+          rejectResult(new Error(`Claude Code exited with code ${exitCode}`))
+        } else {
+          resolveResult(null)
+        }
+      },
+    })
+
+    // Wrap dispose to also resolve the promise if still pending
+    originalDispose.fn = bridge.dispose.bind(bridge)
+    bridge.dispose = () => {
+      if (!settled) {
+        settled = true
+        resolveResult(null)
+      }
+      originalDispose.fn()
+    }
+
+    // Capture early PTY output for diagnostics
+    let earlyOutput = ''
+    const captureLimit = 2000
+
+    // Tap into PTY data to also feed the bridge (dual streaming)
+    proc.onData((data: string) => {
+      if (earlyOutput.length < captureLimit) {
+        earlyOutput += data
+      }
+      bridge.feed(data)
+    })
+
+    // Wire exit to the bridge
+    proc.onExit(({ exitCode }) => {
+      if (exitCode && exitCode !== 0) {
+        console.error(`[agent-pty] session ${id} exited with code ${exitCode}. Early output:\n${earlyOutput.slice(0, captureLimit)}`)
+      }
+      bridge.handleExit(exitCode)
+    })
+
+    // Write prompt to PTY stdin after a brief delay for process startup.
+    // Send the prompt text followed by EOF so Claude reads from stdin.
+    // Windows: Ctrl+Z (\x1a) is EOF; Unix: Ctrl+D (\x04)
+    const eofChar = process.platform === 'win32' ? '\x1a' : '\x04'
+    setTimeout(() => {
+      if (sessions.has(id)) {
+        proc.write(options.prompt)
+        proc.write(eofChar)
+      }
+    }, 150)
+
+    notifyTerminalCreated(id, cwd)
+
+    return {
+      success: true,
+      sessionId: id,
+      bridge,
+      result: resultPromise,
+    }
+  } catch (error) {
+    cleanupSession(id)
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
+  }
 }
 
 export function spawnClaudePty(

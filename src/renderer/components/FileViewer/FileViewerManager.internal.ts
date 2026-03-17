@@ -1,9 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { FileChangeEvent } from '../../types/electron';
-import { disposeMonacoModel } from './MonacoEditor';
+import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
+// Lazy import to avoid eagerly loading Monaco (~40MB) at startup
+function disposeMonacoModel(filePath: string): void {
+  try {
+    const monaco = require('monaco-editor') as typeof import('monaco-editor');
+    const uri = monaco.Uri.parse(`file:///${filePath.replace(/\\/g, '/').replace(/^\/+/, '')}`);
+    const model = monaco.editor.getModel(uri);
+    if (model) model.dispose();
+  } catch {
+    // Monaco not loaded yet — nothing to dispose
+  }
+}
 
 interface FileReadResult { success: boolean; content?: string | null; error?: string; }
+interface SaveFileResult { success: boolean; error?: string; }
 
 type SetOpenFiles = Dispatch<SetStateAction<OpenFile[]>>;
 type SetActiveIndex = Dispatch<SetStateAction<number>>;
@@ -16,9 +28,25 @@ export interface OpenFile {
   error: string | null;
   isDirtyOnDisk: boolean;
   originalContent: string | null;
-  isImage?: boolean; isPdf?: boolean; isBinary?: boolean; binaryContent?: Uint8Array; isDirty?: boolean;
+  diskContent: string | null;
+  isImage?: boolean; isPdf?: boolean; isBinary?: boolean; binaryContent?: Uint8Array;
+  isDirty: boolean;
+  saveError: string | null;
   /** Preview tab: italic title, replaced by next preview open. Pinned on edit or double-click. */
   isPreview?: boolean;
+  /** Pinned tab: shows pin icon, sorts left, cannot be closed via close button. */
+  isPinned?: boolean;
+}
+
+export interface SplitState {
+  /** Whether the editor is split into two panes */
+  isSplit: boolean;
+  /** Which split pane is currently active (receives new file opens) */
+  activeSplit: 'left' | 'right';
+  /** File path shown in the right split pane (null if not split or empty right pane) */
+  rightFilePath: string | null;
+  /** Width ratio of left pane (0.0-1.0). 0.5 = equal widths. */
+  splitRatio: number;
 }
 
 export interface FileViewerState {
@@ -36,10 +64,29 @@ export interface FileViewerState {
   /** Close all tabs */
   closeAll: () => void;
   setActive: (filePath: string) => void;
-  /** Pin a preview tab (make it permanent) */
+  /** Pin a preview tab (make it permanent) or toggle pinned state */
   pinTab: (filePath: string) => void;
-  saveFile: (filePath: string, content: string) => Promise<void>;
+  /** Unpin a pinned tab */
+  unpinTab: (filePath: string) => void;
+  /** Toggle the isPinned flag on a tab */
+  togglePin: (filePath: string) => void;
+  saveFile: (filePath: string, content?: string) => Promise<SaveFileResult>;
   setDirty: (filePath: string, dirty: boolean) => void;
+  reloadFile: (filePath: string) => Promise<FileReadResult>;
+  updateDraft: (filePath: string, content: string) => void;
+  discardDraft: (filePath: string) => void;
+  /** Split editor state */
+  split: SplitState;
+  /** Open a right split pane (shows the current active file, or the specified file) */
+  splitRight: (filePath?: string) => void;
+  /** Close the right split pane */
+  closeSplit: () => void;
+  /** Set the active split pane */
+  setActiveSplit: (pane: 'left' | 'right') => void;
+  /** Set the split ratio (left pane width fraction) */
+  setSplitRatio: (ratio: number) => void;
+  /** Get the OpenFile for the right pane (or null) */
+  rightFile: OpenFile | null;
 }
 
 export interface FileViewerManagerProps { projectRoot: string | null; children: ReactNode; }
@@ -74,6 +121,9 @@ function createLoadingFile(filePath: string, isPreview = false): OpenFile {
     error: null,
     isDirtyOnDisk: false,
     originalContent: null,
+    diskContent: null,
+    isDirty: false,
+    saveError: null,
     isPreview,
   };
 }
@@ -91,6 +141,7 @@ function toReadErrorFile(file: OpenFile, result: FileReadResult): OpenFile {
     isImage: false,
     isPdf: false,
     isBinary: false,
+    saveError: null,
   };
 }
 
@@ -103,6 +154,7 @@ function toImageViewerFile(file: OpenFile): OpenFile {
     isImage: true,
     isPdf: false,
     isBinary: false,
+    saveError: null,
   };
 }
 
@@ -115,6 +167,7 @@ function toPdfFile(file: OpenFile): OpenFile {
     isImage: false,
     isPdf: true,
     isBinary: false,
+    saveError: null,
   };
 }
 
@@ -128,23 +181,24 @@ function toBinaryFile(file: OpenFile, binaryContent?: Uint8Array): OpenFile {
     isPdf: false,
     isBinary: true,
     binaryContent,
+    saveError: null,
   };
 }
 
 function toTextFile(file: OpenFile, content: string): OpenFile {
-  const originalContent = file.originalContent === null && file.content === null
-    ? content
-    : file.content ?? file.originalContent;
   return {
     ...file,
     isLoading: false,
     error: null,
     content,
     isDirtyOnDisk: false,
-    originalContent,
+    originalContent: content,
+    diskContent: content,
     isImage: false,
     isPdf: false,
     isBinary: false,
+    isDirty: false,
+    saveError: null,
   };
 }
 
@@ -169,7 +223,29 @@ function markDirtyOnDisk(file: OpenFile): OpenFile {
   return {
     ...file,
     isDirtyOnDisk: true,
-    originalContent: file.isDirtyOnDisk ? file.originalContent : (file.content ?? file.originalContent),
+  };
+}
+
+function applyDiskSnapshot(file: OpenFile, content: string): OpenFile {
+  return {
+    ...file,
+    content,
+    originalContent: content,
+    diskContent: content,
+    isDirty: false,
+    isDirtyOnDisk: false,
+    saveError: null,
+    error: null,
+  };
+}
+
+function applyDraftContent(file: OpenFile, content: string): OpenFile {
+  const baseline = file.originalContent ?? '';
+  return {
+    ...file,
+    content,
+    isDirty: content !== baseline,
+    saveError: null,
   };
 }
 
@@ -219,47 +295,50 @@ function primeOpenFile(filePath: string, setOpenFiles: SetOpenFiles, setActiveIn
   });
 }
 
+async function readTextFile(filePath: string): Promise<FileReadResult> {
+  const result = await readFile(filePath);
+  if (!result.success) {
+    return result;
+  }
+  const content = result.content ?? '';
+  if (looksLikeBinary(content)) {
+    return { success: false, error: 'Binary file - cannot display' };
+  }
+  return { success: true, content };
+}
+
 function commitOpenFileResult(filePath: string, result: FileReadResult, setOpenFiles: SetOpenFiles): void {
   setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => toLoadedFile(file, filePath, result)));
 }
 
-function markChangedFile(filePath: string, setOpenFiles: SetOpenFiles): void {
-  setOpenFiles((prev) => updateOpenFile(prev, filePath, markDirtyOnDisk));
+function markChangedFile(filePath: string, content: string, setOpenFiles: SetOpenFiles): void {
+  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
+    ...markDirtyOnDisk(file),
+    diskContent: content,
+  })));
 }
 
 function markDeletedFile(filePath: string, setOpenFiles: SetOpenFiles): void {
   setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({ ...file, isDirtyOnDisk: true })));
 }
 
-async function reloadChangedFile(filePath: string, setOpenFiles: SetOpenFiles): Promise<void> {
-  const result = await readFile(filePath);
+async function reloadFileContent(filePath: string, setOpenFiles: SetOpenFiles): Promise<FileReadResult> {
+  const result = await readTextFile(filePath);
   if (!result.success) {
-    return;
+    return result;
   }
   const newContent = result.content ?? '';
-  if (looksLikeBinary(newContent)) {
-    return;
-  }
-  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({ ...file, content: newContent })));
+  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => applyDiskSnapshot(file, newContent)));
+  return { success: true, content: newContent };
 }
 
-async function reloadFileContent(filePath: string, setOpenFiles: SetOpenFiles): Promise<void> {
-  const result = await readFile(filePath);
-  if (!result.success) {
-    return;
-  }
-  const newContent = result.content ?? '';
-  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
-    ...file,
-    content: newContent,
-    isDirtyOnDisk: false,
-  })));
-}
-
-function handleProjectFileChange(change: FileChangeEvent, setOpenFiles: SetOpenFiles): void {
+async function handleProjectFileChange(change: FileChangeEvent, setOpenFiles: SetOpenFiles): Promise<void> {
   if (change.type === 'change') {
-    markChangedFile(change.path, setOpenFiles);
-    void reloadChangedFile(change.path, setOpenFiles);
+    const result = await readTextFile(change.path);
+    if (!result.success) {
+      return;
+    }
+    markChangedFile(change.path, result.content ?? '', setOpenFiles);
     return;
   }
   if (change.type === 'unlink') {
@@ -273,7 +352,7 @@ function useProjectChangeListener(projectRoot: string | null, setOpenFiles: SetO
       return;
     }
     const cleanup = window.electronAPI.files.onFileChange((change: FileChangeEvent) => {
-      handleProjectFileChange(change, setOpenFiles);
+      void handleProjectFileChange(change, setOpenFiles);
     });
     return cleanup;
   }, [projectRoot, setOpenFiles]);
@@ -411,9 +490,31 @@ function useCloseAllAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActive
 
 function usePinTabAction(setOpenFiles: SetOpenFiles) {
   return useCallback((filePath: string) => {
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
+      const changes: Partial<OpenFile> = {};
+      if (file.isPreview) changes.isPreview = false;
+      if (!file.isPinned) changes.isPinned = true;
+      if (Object.keys(changes).length === 0) return file;
+      return { ...file, ...changes };
+    }));
+  }, [setOpenFiles]);
+}
+
+function useUnpinTabAction(setOpenFiles: SetOpenFiles) {
+  return useCallback((filePath: string) => {
     setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => (
-      file.isPreview ? { ...file, isPreview: false } : file
+      file.isPinned ? { ...file, isPinned: false } : file
     )));
+  }, [setOpenFiles]);
+}
+
+function useTogglePinAction(setOpenFiles: SetOpenFiles) {
+  return useCallback((filePath: string) => {
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
+      ...file,
+      isPinned: !file.isPinned,
+      isPreview: false, // pinning always makes it permanent
+    })));
   }, [setOpenFiles]);
 }
 
@@ -430,19 +531,36 @@ function useSetActiveAction(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiv
 }
 
 function useSaveFileAction(setOpenFiles: SetOpenFiles) {
-  return useCallback(async (filePath: string, content: string): Promise<void> => {
-    const result = await window.electronAPI.files.saveFile(filePath, content);
+  return useCallback(async (filePath: string, content?: string): Promise<SaveFileResult> => {
+    const targetFile = await new Promise<OpenFile | null>((resolve) => {
+      setOpenFiles((prev) => {
+        resolve(prev.find((file) => file.path === filePath) ?? null);
+        return prev;
+      });
+    });
+    const contentToSave = content ?? targetFile?.content ?? null;
+    if (!targetFile || contentToSave == null) {
+      return { success: false, error: 'No file content available to save' };
+    }
+    const result = await window.electronAPI.files.saveFile(filePath, contentToSave);
     if (!result.success) {
       console.error('[FileViewerManager] saveFile failed:', result.error);
-      return;
+      setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
+        ...applyDraftContent(file, contentToSave),
+        saveError: result.error ?? 'Failed to save file',
+      })));
+      return { success: false, error: result.error ?? 'Failed to save file' };
     }
     setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({
       ...file,
-      content,
+      content: contentToSave,
       isDirty: false,
       isDirtyOnDisk: false,
-      originalContent: content,
+      originalContent: contentToSave,
+      diskContent: contentToSave,
+      saveError: null,
     })));
+    return { success: true };
   }, [setOpenFiles]);
 }
 
@@ -459,9 +577,156 @@ function useSetDirtyAction(setOpenFiles: SetOpenFiles) {
   }, [setOpenFiles]);
 }
 
+function useReloadFileAction(setOpenFiles: SetOpenFiles) {
+  return useCallback(async (filePath: string): Promise<FileReadResult> => {
+    return reloadFileContent(filePath, setOpenFiles);
+  }, [setOpenFiles]);
+}
+
+function useUpdateDraftAction(setOpenFiles: SetOpenFiles) {
+  return useCallback((filePath: string, content: string) => {
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => (
+      file.content === content ? file : applyDraftContent(file, content)
+    )));
+  }, [setOpenFiles]);
+}
+
+function useDiscardDraftAction(setOpenFiles: SetOpenFiles) {
+  return useCallback((filePath: string) => {
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
+      const restoredContent = file.originalContent ?? file.content ?? '';
+      return {
+        ...file,
+        content: restoredContent,
+        isDirty: false,
+        saveError: null,
+      };
+    }));
+  }, [setOpenFiles]);
+}
+
+/**
+ * Listen for the `agent-ide:save-all-dirty` DOM event and save every dirty
+ * open buffer.  The event detail carries an `addPromise` callback so the
+ * dispatcher can await all saves before proceeding.
+ */
+function useSaveAllDirtyListener(
+  openFilesRef: React.RefObject<OpenFile[]>,
+  saveFile: (filePath: string, content?: string) => Promise<SaveFileResult>,
+): void {
+  useEffect(() => {
+    function onSaveAllDirty(event: Event): void {
+      const detail = (event as CustomEvent<{ addPromise?: (p: Promise<void>) => void }>).detail;
+      const files = openFilesRef.current ?? [];
+      const dirtyFiles = files.filter((f) => f.isDirty && f.content != null);
+      if (dirtyFiles.length === 0) return;
+
+      const savePromise = Promise.all(
+        dirtyFiles.map((f) => saveFile(f.path, f.content!).catch((error) => { console.error('[fileViewer] Failed to save dirty file:', f.path, error) })),
+      ).then(() => {});
+
+      if (typeof detail?.addPromise === 'function') {
+        detail.addPromise(savePromise);
+      }
+    }
+
+    window.addEventListener(SAVE_ALL_DIRTY_EVENT, onSaveAllDirty);
+    return () => window.removeEventListener(SAVE_ALL_DIRTY_EVENT, onSaveAllDirty);
+  }, [openFilesRef, saveFile]);
+}
+
+const DEFAULT_SPLIT_STATE: SplitState = {
+  isSplit: false,
+  activeSplit: 'left',
+  rightFilePath: null,
+  splitRatio: 0.5,
+};
+
+function useSplitState(openFiles: OpenFile[], activeIndex: number) {
+  const [split, setSplit] = useState<SplitState>(DEFAULT_SPLIT_STATE);
+
+  const splitRight = useCallback((filePath?: string) => {
+    setSplit((prev) => {
+      // If already split, just update the right file
+      const targetPath = filePath ?? openFiles[activeIndex]?.path ?? null;
+      return {
+        isSplit: true,
+        activeSplit: 'right',
+        rightFilePath: targetPath,
+        splitRatio: prev.isSplit ? prev.splitRatio : 0.5,
+      };
+    });
+  }, [openFiles, activeIndex]);
+
+  const closeSplit = useCallback(() => {
+    setSplit({
+      ...DEFAULT_SPLIT_STATE,
+      activeSplit: 'left',
+    });
+  }, []);
+
+  const setActiveSplit = useCallback((pane: 'left' | 'right') => {
+    setSplit((prev) => (prev.activeSplit === pane ? prev : { ...prev, activeSplit: pane }));
+  }, []);
+
+  const setSplitRatio = useCallback((ratio: number) => {
+    const clamped = Math.max(0.2, Math.min(0.8, ratio));
+    setSplit((prev) => ({ ...prev, splitRatio: clamped }));
+  }, []);
+
+  // If the right file gets closed from the tab bar, close the split
+  useEffect(() => {
+    if (!split.isSplit || !split.rightFilePath) return;
+    const rightStillOpen = openFiles.some((f) => f.path === split.rightFilePath);
+    if (!rightStillOpen) {
+      setSplit(DEFAULT_SPLIT_STATE);
+    }
+  }, [openFiles, split.isSplit, split.rightFilePath]);
+
+  const rightFile = split.isSplit && split.rightFilePath
+    ? openFiles.find((f) => f.path === split.rightFilePath) ?? null
+    : null;
+
+  return { split, splitRight, closeSplit, setActiveSplit, setSplitRatio, rightFile };
+}
+
+function useSplitEditorListener(
+  splitRight: (filePath?: string) => void,
+  closeSplit: () => void,
+  isSplit: boolean,
+): void {
+  useEffect(() => {
+    function onSplitEditor(event: Event): void {
+      const detail = (event as CustomEvent<{ filePath?: string }>).detail;
+      splitRight(detail?.filePath);
+    }
+    window.addEventListener('agent-ide:split-editor', onSplitEditor);
+    return () => window.removeEventListener('agent-ide:split-editor', onSplitEditor);
+  }, [splitRight]);
+
+  // Keyboard shortcut: Ctrl+Shift+\ toggles split
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '|') {
+        // Shift+\ produces '|' on most keyboards
+        e.preventDefault();
+        if (isSplit) {
+          closeSplit();
+        } else {
+          splitRight();
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [splitRight, closeSplit, isSplit]);
+}
+
 export function useFileViewerManagerState(projectRoot: string | null): FileViewerState {
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const openFilesRef = useRef(openFiles);
+  openFilesRef.current = openFiles;
   useProjectChangeListener(projectRoot, setOpenFiles);
   const openFile = useOpenFileAction(setOpenFiles, setActiveIndex);
   const openFilePreview = useOpenFilePreviewAction(setOpenFiles, setActiveIndex);
@@ -473,8 +738,19 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
   const closeAll = useCloseAllAction(setOpenFiles, setActiveIndex);
   const setActive = useSetActiveAction(setOpenFiles, setActiveIndex);
   const pinTab = usePinTabAction(setOpenFiles);
-  const saveFile = useSaveFileAction(setOpenFiles);
+  const unpinTab = useUnpinTabAction(setOpenFiles);
+  const togglePin = useTogglePinAction(setOpenFiles);
   const setDirty = useSetDirtyAction(setOpenFiles);
+  const saveFile = useSaveFileAction(setOpenFiles);
+  const reloadFile = useReloadFileAction(setOpenFiles);
+  const updateDraft = useUpdateDraftAction(setOpenFiles);
+  const discardDraft = useDiscardDraftAction(setOpenFiles);
+  useSaveAllDirtyListener(openFilesRef, saveFile);
+
+  const { split, splitRight, closeSplit, setActiveSplit, setSplitRatio, rightFile } =
+    useSplitState(openFiles, activeIndex);
+  useSplitEditorListener(splitRight, closeSplit, split.isSplit);
+
   return {
     openFiles,
     activeIndex,
@@ -487,7 +763,18 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
     closeAll,
     setActive,
     pinTab,
+    unpinTab,
+    togglePin,
     saveFile,
     setDirty,
+    reloadFile,
+    updateDraft,
+    discardDraft,
+    split,
+    splitRight,
+    closeSplit,
+    setActiveSplit,
+    setSplitRatio,
+    rightFile,
   };
 }

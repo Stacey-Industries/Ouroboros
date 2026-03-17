@@ -19,7 +19,6 @@ export const schema: any = {
   },
   activeTheme: {
     type: 'string',
-    enum: ['retro', 'modern', 'warp', 'cursor', 'kiro', 'custom'],
     default: 'modern'
   },
   hooksServerPort: {

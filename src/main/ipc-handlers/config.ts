@@ -7,6 +7,7 @@ import chokidar, { FSWatcher } from 'chokidar'
 import fs from 'fs/promises'
 import path from 'path'
 import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config'
+import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type ConfigInvokeHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown
@@ -23,6 +24,14 @@ const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'fontUI', 'fontMono', 'fontSizeUI', 'keybindings', 'showBgGradient',
   'customThemeColors', 'terminalSessions', 'claudeCliSettings', 'customCSS',
   'bookmarks', 'fileTreeIgnorePatterns', 'profiles',
+  'multiRoots', 'customPrompt', 'promptPreset',
+  'agentChatSettings', 'notifications', 'agentTemplates',
+  'workspaceLayouts', 'activeLayoutName', 'workspaceSnapshots',
+  'extensionsEnabled', 'disabledExtensions', 'installedVsxExtensions', 'disabledVsxExtensions',
+  'lspEnabled', 'lspServers', 'claudeAutoLaunch',
+  'approvalRequired', 'approvalTimeout',
+  'commandBlocksEnabled', 'promptPattern',
+  'formatOnSave', 'contextLayer',
 ]
 
 let settingsFileWatcher: FSWatcher | null = null
@@ -91,6 +100,19 @@ function createCoreHandlers(): ConfigHandlerEntry[] {
       handler: (_event, key, value) => {
         try {
           setConfigValue(key as keyof AppConfig, value as AppConfig[keyof AppConfig])
+          // Notify context layer controller on config change
+          if (key === 'contextLayer') {
+            import('../contextLayer/contextLayerController').then(({ getContextLayerController }) => {
+              const ctrl = getContextLayerController()
+              if (ctrl) {
+                ctrl.onConfigChange(value as ContextLayerConfig).catch((err: unknown) => {
+                  console.warn('[context-layer] onConfigChange failed:', err)
+                })
+              }
+            }).catch((err) => {
+              console.warn('[context-layer] failed to import controller:', err)
+            })
+          }
           return { success: true }
         } catch (error) {
           return { success: false, error: toErrorMessage(error) }

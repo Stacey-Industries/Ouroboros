@@ -5,12 +5,16 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
+import {
+  OPEN_ORCHESTRATION_PANEL_EVENT,
+  OPEN_SETTINGS_PANEL_EVENT,
+} from '../../hooks/appEventNames';
 import type { Command } from './types';
 
 const RECENT_KEY = 'agent-ide:command-recent';
 const MAX_RECENT = 5;
 
-const EMPTY_ACTION: Command['action'] = () => {};
+const EMPTY_ACTION: Command['action'] = () => { };
 
 const THEME_OPTIONS = [
   { id: 'retro', label: 'Retro', icon: '🟢' },
@@ -135,6 +139,13 @@ function buildViewCommands(): Command[] {
       icon: '🤖',
       eventName: 'agent-ide:toggle-agent-monitor',
     }),
+    createDomCommand({
+      id: 'view:orchestration',
+      label: 'Open Orchestration',
+      category: 'view',
+      icon: '◎',
+      eventName: OPEN_ORCHESTRATION_PANEL_EVENT,
+    }),
   ];
 }
 
@@ -182,7 +193,9 @@ function buildWindowCommands(): Command[] {
       category: 'app',
       shortcut: 'Ctrl+Shift+N',
       icon: '+',
-      action: async () => window.electronAPI.window.create(),
+      action: async () => {
+        await window.electronAPI.window.create();
+      },
     },
     {
       id: 'window:new-with-folder',
@@ -202,7 +215,7 @@ function buildAppCommands(): Command[] {
       category: 'app',
       shortcut: 'Ctrl+,',
       icon: '⚙',
-      eventName: 'agent-ide:open-settings',
+      eventName: OPEN_SETTINGS_PANEL_EVENT,
     }),
     {
       id: 'app:reload',
@@ -257,7 +270,7 @@ function useCommandExecutor(
   return useCallback(async (command: Command): Promise<void> => {
     setRecentIds((prev) => pushRecent(command.id, prev));
     await command.action();
-    window.electronAPI.extensions.commandExecuted(command.id).catch(() => {});
+    window.electronAPI.extensions.commandExecuted(command.id).catch((error) => { console.error('[commandPalette] Failed to record command execution:', command.id, error) });
   }, [setRecentIds]);
 }
 

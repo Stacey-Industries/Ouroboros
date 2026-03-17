@@ -11,7 +11,7 @@ export interface SettingsEntry {
   /** Optional extra text to match against (not always shown) */
   description?: string
   /** Which settings tab this entry lives in */
-  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'codemode'
+  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'agent' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'mcpStore' | 'extensionStore' | 'codemode'
   /** Display-friendly section name */
   sectionLabel: string
 }
@@ -62,6 +62,16 @@ const TERMINAL_ENTRIES = createEntries('terminal', 'Terminal', [
   ['Default Shell', 'Shell executable path used for new terminal sessions.'],
   ['Shell Prompt', 'Choose a prompt style: Default, Minimal, Git, Powerline, or Custom PS1.'],
   ['Custom Prompt (PS1)', 'Enter a custom PS1 string to use as the shell prompt in terminal sessions.'],
+])
+
+const AGENT_ENTRIES = createEntries('agent', 'Agent', [
+  ['Default Provider', 'Choose whether chat-first agent requests default to Claude Code or Codex.'],
+  ['Default Verification Profile', 'Choose whether the agent defaults to fast, default, or full verification.'],
+  ['Automatic Context Behavior', 'Control whether the chat-first agent starts with automatic or manual context gathering.'],
+  ['Show Advanced Controls by Default', 'Reveal provider and verification overrides in the chat composer without an extra click.'],
+  ['Open Details on Failure', 'Automatically open linked task details when an agent request fails or needs review.'],
+  ['Enable Context Layer', 'Generate and maintain a structural map of detected modules, injected into agent context automatically.'],
+  ['Auto-summarize Modules', 'Use the Anthropic API (Haiku) to generate natural-language descriptions of each module.'],
 ])
 
 const CLAUDE_ENTRIES = createEntries('claude', 'Claude Code', [
@@ -120,6 +130,19 @@ const CODE_MODE_ENTRIES = createEntries('codemode', 'Code Mode', [
   ['Code Mode Server Names', 'Comma-separated list of MCP server names to proxy through Code Mode.'],
 ])
 
+const MCP_STORE_ENTRIES = createEntries('mcpStore', 'MCP Store', [
+  ['Browse MCP Servers', 'Search and discover community MCP servers from the official registry.'],
+  ['Install MCP Server', 'One-click install MCP servers to Claude Code.'],
+  ['MCP Registry', 'Browse the official MCP server registry.'],
+])
+
+const EXTENSION_STORE_ENTRIES = createEntries('extensionStore', 'Extension Store', [
+  ['Browse Extensions', 'Search and install VS Code-compatible themes, grammars, and snippets from Open VSX.'],
+  ['Install Theme', 'Install color themes from the Open VSX registry.'],
+  ['Install Grammar', 'Add syntax highlighting for new languages.'],
+  ['Extension Store', 'Browse the Open VSX extension registry.'],
+])
+
 const MCP_ENTRIES = createEntries('mcp', 'MCP Servers', [
   ['MCP Servers', 'Configure Model Context Protocol servers that provide additional tools and capabilities to Claude Code.'],
   ['Add MCP Server', 'Add a new MCP server with command, arguments, environment variables, and scope (global or project).'],
@@ -132,6 +155,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...APPEARANCE_ENTRIES,
   ...FONT_ENTRIES,
   ...TERMINAL_ENTRIES,
+  ...AGENT_ENTRIES,
   ...CLAUDE_ENTRIES,
   ...KEYBINDING_ENTRIES,
   ...HOOK_ENTRIES,
@@ -139,4 +163,6 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...EXTENSION_ENTRIES,
   ...CODE_MODE_ENTRIES,
   ...MCP_ENTRIES,
+  ...MCP_STORE_ENTRIES,
+  ...EXTENSION_STORE_ENTRIES,
 ]

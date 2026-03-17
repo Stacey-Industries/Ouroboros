@@ -1,4 +1,5 @@
 import type { ExtensionsAPI, IpcResult } from './electron-foundation'
+import type { AgentChatAPI } from './electron-agent-chat'
 import type {
   ApprovalAPI,
   AppAPI,
@@ -9,8 +10,11 @@ import type {
   ShellAPI,
   ThemeAPI
 } from './electron-runtime-apis'
+import type { McpStoreAPI } from './electron-mcp-store'
+import type { ExtensionStoreAPI } from './electron-extension-store'
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git'
 import type {
+  ContextLayerAPI,
   CostAPI,
   CrashAPI,
   LspAPI,
@@ -126,6 +130,16 @@ export interface WindowAPI {
   close: (windowId: number) => Promise<IpcResult>
 }
 
+/**
+ * Minimal orchestration API — only methods still used by the chat bridge.
+ * The full task management UI and API were removed as dead code.
+ */
+export interface OrchestrationAPI {
+  previewContext: (request: unknown) => Promise<unknown>
+  buildContextPacket: (request: unknown) => Promise<unknown>
+  cancelTask: (taskId: string) => Promise<unknown>
+}
+
 export interface ElectronAPI {
   pty: PtyAPI
   config: ConfigAPI
@@ -148,7 +162,12 @@ export interface ElectronAPI {
   window: WindowAPI
   extensions: ExtensionsAPI
   mcp: McpAPI
+  mcpStore: McpStoreAPI
+  extensionStore: ExtensionStoreAPI
   context: ContextAPI
   ideTools: IdeToolsAPI
   codemode: CodeModeAPI
+  agentChat: AgentChatAPI
+  orchestration: OrchestrationAPI
+  contextLayer: ContextLayerAPI
 }

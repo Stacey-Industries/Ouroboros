@@ -43,13 +43,46 @@ function MultiBufferEmptyState(): React.ReactElement {
         height: '100%',
         color: 'var(--text-muted)',
         fontFamily: 'var(--font-ui)',
-        gap: '8px',
+        gap: '12px',
+        padding: '32px',
+        textAlign: 'center',
       }}
     >
-      <span style={{ fontSize: '1.25rem' }}>No excerpts</span>
-      <span style={{ fontSize: '0.8125rem' }}>
-        Use &quot;Add Excerpt&quot; to compose code from multiple files
+      <div
+        style={{
+          fontSize: '2rem',
+          opacity: 0.4,
+          lineHeight: 1,
+        }}
+      >
+        {'\u2630'}
+      </div>
+      <span style={{ fontSize: '1rem', color: 'var(--text)', fontWeight: 600 }}>
+        No excerpts yet
       </span>
+      <div
+        style={{
+          fontSize: '0.8125rem',
+          lineHeight: 1.5,
+          maxWidth: '340px',
+        }}
+      >
+        Click &quot;+ Add Excerpt&quot; above to add code snippets from your project files.
+        Each excerpt shows a specific line range from a file, letting you view
+        related code from multiple files side by side.
+      </div>
+      <div
+        style={{
+          marginTop: '8px',
+          fontSize: '0.75rem',
+          color: 'var(--text-faint)',
+          lineHeight: 1.5,
+          maxWidth: '300px',
+        }}
+      >
+        Tip: You can collapse, remove, or click through to the full file
+        for each excerpt.
+      </div>
     </div>
   );
 }

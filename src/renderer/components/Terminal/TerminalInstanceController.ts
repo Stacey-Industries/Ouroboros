@@ -46,7 +46,8 @@ function useTerminalConfig(): {
       if (typeof fs === 'number' && fs >= 8 && fs <= 32) setFontSize(fs)
       if (cs === 'block' || cs === 'underline' || cs === 'bar') setCursorStyle(cs)
       setLoaded(true)
-    }).catch(() => {
+    }).catch((error) => {
+      console.error('[terminal] Failed to load terminal config:', error)
       if (!cancelled) setLoaded(true)
     })
     return () => { cancelled = true }

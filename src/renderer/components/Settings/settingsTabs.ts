@@ -7,6 +7,7 @@ export type TabId =
   | 'appearance'
   | 'fonts'
   | 'terminal'
+  | 'agent'
   | 'claude'
   | 'keybindings'
   | 'hooks'
@@ -14,6 +15,8 @@ export type TabId =
   | 'files'
   | 'extensions'
   | 'mcp'
+  | 'mcpStore'
+  | 'extensionStore'
   | 'codemode';
 
 export interface Tab {
@@ -26,6 +29,7 @@ export const TABS: Tab[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'fonts', label: 'Fonts' },
   { id: 'terminal', label: 'Terminal' },
+  { id: 'agent', label: 'Agent' },
   { id: 'claude', label: 'Claude Code' },
   { id: 'keybindings', label: 'Keybindings' },
   { id: 'hooks', label: 'Hooks' },
@@ -33,5 +37,7 @@ export const TABS: Tab[] = [
   { id: 'files', label: 'Files' },
   { id: 'extensions', label: 'Extensions' },
   { id: 'mcp', label: 'MCP Servers' },
+  { id: 'mcpStore', label: 'MCP Store' },
+  { id: 'extensionStore', label: 'Extension Store' },
   { id: 'codemode', label: 'Code Mode' },
 ];

@@ -46,8 +46,8 @@ const EmptyState = memo(function EmptyState(): React.ReactElement {
   return (
     <SharedEmptyState
       icon="agent"
-      title="No agents running"
-      description="Agents will appear here when Claude Code runs tools in your project."
+      title="No agent sessions detected"
+      description="Agent sessions are tracked when Claude Code runs in a terminal below. Start a Claude Code session to see activity here."
     />
   );
 });

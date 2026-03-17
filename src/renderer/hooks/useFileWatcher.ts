@@ -8,6 +8,7 @@ import {
   type SetStateAction,
 } from 'react';
 import type { DirEntry, FileChangeEvent } from '../types/electron';
+import { subscribeToDirectoryChanges } from './directoryWatchRegistry';
 
 export interface WatchedFile {
   name: string;
@@ -25,7 +26,7 @@ export interface UseFileWatcherReturn {
 }
 
 const DEBOUNCE_MS = 100;
-const noop = (): void => {};
+const noop = (): void => { };
 
 type TimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
 type CleanupWatcher = () => void;
@@ -115,17 +116,11 @@ function isRelevantFileChange(change: FileChangeEvent, dirPath: string): boolean
 
 async function startDirectoryWatcher(options: DirectoryWatchStartOptions): Promise<CleanupWatcher> {
   try {
-    const result = await window.electronAPI.files.watchDir(options.dirPath);
     if (!options.isActive()) {
       return noop;
     }
 
-    if (!result.success) {
-      console.warn('[useFileWatcher] watchDir failed:', result.error);
-      return noop;
-    }
-
-    return window.electronAPI.files.onFileChange((change: FileChangeEvent) => {
+    return subscribeToDirectoryChanges(options.dirPath, (change: FileChangeEvent) => {
       if (!options.isActive() || !isRelevantFileChange(change, options.dirPath)) {
         return;
       }
@@ -142,7 +137,6 @@ async function startDirectoryWatcher(options: DirectoryWatchStartOptions): Promi
 }
 
 function stopDirectoryWatcher(
-  dirPath: string,
   cleanupWatcher: CleanupWatcher,
   currentDir: MutableRefObject<string | null>,
   debounceTimer: TimerRef,
@@ -150,7 +144,6 @@ function stopDirectoryWatcher(
   currentDir.current = null;
   clearDebounceTimer(debounceTimer);
   cleanupWatcher();
-  void window.electronAPI.files.unwatchDir(dirPath).catch(noop);
 }
 
 function setupDirectoryWatcher(options: DirectoryWatcherSetupOptions): CleanupWatcher {
@@ -180,7 +173,7 @@ function setupDirectoryWatcher(options: DirectoryWatcherSetupOptions): CleanupWa
 
   return () => {
     active = false;
-    stopDirectoryWatcher(options.dirPath, cleanupWatcher, options.currentDir, options.debounceTimer);
+    stopDirectoryWatcher(cleanupWatcher, options.currentDir, options.debounceTimer);
   };
 }
 

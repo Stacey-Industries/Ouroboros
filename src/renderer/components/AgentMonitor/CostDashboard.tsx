@@ -68,7 +68,7 @@ export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashb
     window.electronAPI.cost.getHistory().then((result) => {
       if (result.success && result.entries) setHistoricalEntries(result.entries);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch((error) => { console.error('[costDashboard] Failed to load cost history:', error); setIsLoading(false) });
   }, []);
 
   const allEntries = useMemo(() => mergeEntries(sessions, historicalEntries), [sessions, historicalEntries]);
@@ -83,7 +83,7 @@ export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashb
     if (!window.electronAPI?.cost?.clearHistory) return;
     window.electronAPI.cost.clearHistory().then((result) => {
       if (result.success) setHistoricalEntries([]);
-    }).catch(() => { /* non-fatal */ });
+    }).catch((error) => { console.error('[costDashboard] Failed to clear cost history:', error) });
   }, []);
 
   if (isLoading) {
