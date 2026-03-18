@@ -1,377 +1,268 @@
 /**
- * graphParser.ts — Regex-based TypeScript/JS parser for symbol extraction.
- * No external dependencies — fast and dependency-free.
+ * graphParser.ts — Public API for file parsing and graph construction.
+ * Delegates to sub-modules for AST extraction, regex fallback, and generic languages.
  */
 
-import fs from 'fs/promises'
-import path from 'path'
-import type { GraphNode, GraphEdge } from './graphTypes'
+import fs from 'fs/promises';
+import path from 'path';
+import type TreeSitterModule from 'web-tree-sitter';
 
-interface ParseResult {
-  nodes: GraphNode[]
-  edges: GraphEdge[]
-}
+import { extractSymbolsFromTree } from './graphParserAst';
+import { extractCallEdges } from './graphParserCallGraph';
+import { extractSymbolsGeneric, LANGUAGE_CONFIGS } from './graphParserGeneric';
+import { parseFileRegex } from './graphParserRegex';
+import {
+  makeNodeId,
+  MAX_FILE_SIZE,
+  type ParseResult,
+  type ParseResultWithTree,
+  SKIP_DIRS,
+} from './graphParserShared';
+import type { GraphEdge, GraphNode } from './graphTypes';
+import {
+  createParserForFile,
+  getGrammarForExtension,
+  getSupportedExtensions,
+  initTreeSitter,
+} from './treeSitterLoader';
 
-const PARSEABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx'])
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '.ouroboros'])
-const MAX_FILE_SIZE = 500 * 1024 // 500KB
+// Re-export for external consumers
+export { initTreeSitter };
 
-function makeNodeId(filePath: string, name: string, type: string, line: number): string {
-  return `${filePath}::${name}::${type}::${line}`
-}
+// ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Resolve an import specifier to a file path relative to the project.
- * Returns the relative path (without extension normalization for simplicity).
+ * Parse a single file and return graph nodes and edges.
+ * Uses tree-sitter when available for supported file types, falls back to regex.
  */
-function resolveImportPath(importSpec: string, currentFile: string, projectRoot: string): string | null {
-  if (!importSpec.startsWith('.')) {
-    // External package import — skip
-    return null
-  }
-  const dir = path.dirname(currentFile)
-  let resolved = path.resolve(dir, importSpec)
-  // Normalize to forward slashes and make relative to project root
-  resolved = path.relative(projectRoot, resolved).replace(/\\/g, '/')
-  return resolved
-}
-
-/**
- * Try to find the actual file for an import path (check extensions).
- */
-function findImportTarget(importRelPath: string, fileSet: Set<string>): string | null {
-  // Direct match
-  if (fileSet.has(importRelPath)) return importRelPath
-  // Try adding extensions
-  for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
-    if (fileSet.has(importRelPath + ext)) return importRelPath + ext
-  }
-  // Try /index
-  for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
-    const indexPath = importRelPath + '/index' + ext
-    if (fileSet.has(indexPath)) return indexPath
-  }
-  return null
-}
-
 export async function parseFile(filePath: string, projectRoot: string): Promise<ParseResult> {
-  const nodes: GraphNode[] = []
-  const edges: GraphEdge[] = []
-
-  const relPath = path.relative(projectRoot, filePath).replace(/\\/g, '/')
-
-  let content: string
-  try {
-    content = await fs.readFile(filePath, 'utf-8')
-  } catch {
-    return { nodes, edges }
+  const result = await parseFileWithTree(filePath, projectRoot);
+  if (result.tree) {
+    result.tree.delete();
   }
-
-  const lines = content.split('\n')
-
-  // File-level node
-  const fileNodeId = makeNodeId(relPath, path.basename(relPath), 'file', 0)
-  nodes.push({
-    id: fileNodeId,
-    type: 'file',
-    name: path.basename(relPath),
-    filePath: relPath,
-    line: 0,
-  })
-
-  // --- Function declarations ---
-  // export async function name(
-  // export function name(
-  // function name(
-  const funcDeclRe = /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/gm
-  let match: RegExpExecArray | null
-  while ((match = funcDeclRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'function', line)
-    nodes.push({ id: nodeId, type: 'function', name, filePath: relPath, line })
-    edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-    if (match[0].startsWith('export')) {
-      edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-    }
-  }
-
-  // --- Arrow function assignments ---
-  // export const name = (
-  // export const name = async (
-  // const name = (
-  // const name = async (
-  const arrowFuncRe = /^(?:export\s+)?(?:const|let|var)\s+(\w+)\s*(?::\s*[^=]+?)?\s*=\s*(?:async\s+)?\(/gm
-  while ((match = arrowFuncRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'function', line)
-    // Avoid duplicates if already captured
-    if (!nodes.some((n) => n.id === nodeId)) {
-      nodes.push({ id: nodeId, type: 'function', name, filePath: relPath, line })
-      edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-      if (match[0].startsWith('export')) {
-        edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-      }
-    }
-  }
-
-  // --- Arrow function with type annotation (no parens matched above) ---
-  // export const name: Type = async (
-  const arrowFuncTypedRe = /^(?:export\s+)?(?:const|let|var)\s+(\w+)\s*:\s*\S+\s*=\s*(?:async\s+)?\(/gm
-  while ((match = arrowFuncTypedRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'function', line)
-    if (!nodes.some((n) => n.id === nodeId)) {
-      nodes.push({ id: nodeId, type: 'function', name, filePath: relPath, line })
-      edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-      if (match[0].startsWith('export')) {
-        edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-      }
-    }
-  }
-
-  // --- Classes ---
-  const classRe = /^(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+([\w,\s]+))?/gm
-  while ((match = classRe.exec(content)) !== null) {
-    const name = match[1]
-    const extendsName = match[2]
-    const implementsRaw = match[3]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'class', line)
-    nodes.push({ id: nodeId, type: 'class', name, filePath: relPath, line })
-    edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-    if (match[0].startsWith('export')) {
-      edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-    }
-    if (extendsName) {
-      edges.push({ source: nodeId, target: `__unresolved::${extendsName}::class`, type: 'extends' })
-    }
-    if (implementsRaw) {
-      const implementsList = implementsRaw.split(',').map((s) => s.trim()).filter(Boolean)
-      for (const impl of implementsList) {
-        edges.push({ source: nodeId, target: `__unresolved::${impl}::interface`, type: 'implements' })
-      }
-    }
-  }
-
-  // --- Class methods ---
-  const methodRe = /^\s+(?:(?:public|private|protected|static|async|readonly)\s+)*(\w+)\s*\(/gm
-  // Only capture methods inside class blocks — simplistic approach
-  const classBlockRe = /^(?:export\s+)?(?:abstract\s+)?class\s+\w+[^{]*\{/gm
-  while ((match = classBlockRe.exec(content)) !== null) {
-    const classStart = match.index + match[0].length
-    const classLine = content.substring(0, match.index).split('\n').length
-    // Find closing brace (simplistic — count braces)
-    let depth = 1
-    let pos = classStart
-    while (pos < content.length && depth > 0) {
-      if (content[pos] === '{') depth++
-      else if (content[pos] === '}') depth--
-      pos++
-    }
-    const classBody = content.substring(classStart, pos)
-    const methodBodyRe = /^\s+(?:(?:public|private|protected|static|async|readonly|override|get|set)\s+)*(\w+)\s*\(/gm
-    let methodMatch: RegExpExecArray | null
-    while ((methodMatch = methodBodyRe.exec(classBody)) !== null) {
-      const methodName = methodMatch[1]
-      // Skip constructor, common keywords
-      if (['constructor', 'if', 'for', 'while', 'switch', 'catch', 'return', 'new', 'throw'].includes(methodName)) continue
-      const methodLine = classLine + classBody.substring(0, methodMatch.index).split('\n').length - 1
-      const nodeId = makeNodeId(relPath, methodName, 'function', methodLine)
-      if (!nodes.some((n) => n.id === nodeId)) {
-        nodes.push({ id: nodeId, type: 'function', name: methodName, filePath: relPath, line: methodLine })
-        edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-      }
-    }
-  }
-
-  // --- Interfaces ---
-  const interfaceRe = /^(?:export\s+)?interface\s+(\w+)/gm
-  while ((match = interfaceRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'interface', line)
-    nodes.push({ id: nodeId, type: 'interface', name, filePath: relPath, line })
-    edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-    if (match[0].startsWith('export')) {
-      edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-    }
-  }
-
-  // --- Type aliases ---
-  const typeRe = /^(?:export\s+)?type\s+(\w+)\s*(?:<[^>]*>)?\s*=/gm
-  while ((match = typeRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    const nodeId = makeNodeId(relPath, name, 'type_alias', line)
-    nodes.push({ id: nodeId, type: 'type_alias', name, filePath: relPath, line })
-    edges.push({ source: fileNodeId, target: nodeId, type: 'contains' })
-    if (match[0].startsWith('export')) {
-      edges.push({ source: fileNodeId, target: nodeId, type: 'exports' })
-    }
-  }
-
-  // --- Imports ---
-  const importRe = /^import\s+(?:type\s+)?(?:\{[^}]+\}|(\w+)|\*\s+as\s+(\w+)).*from\s+['"]([^'"]+)['"]/gm
-  while ((match = importRe.exec(content)) !== null) {
-    const importSpec = match[3]
-    const line = content.substring(0, match.index).split('\n').length
-    const resolved = resolveImportPath(importSpec, filePath, projectRoot)
-    if (resolved) {
-      // Edge from this file to the imported file (resolved later)
-      edges.push({
-        source: fileNodeId,
-        target: `__file::${resolved}`,
-        type: 'imports',
-      })
-    }
-  }
-
-  // --- Export default ---
-  const exportDefaultRe = /^export\s+default\s+(?:class|function|abstract\s+class)\s+(\w+)/gm
-  while ((match = exportDefaultRe.exec(content)) !== null) {
-    const name = match[1]
-    const line = content.substring(0, match.index).split('\n').length
-    // The symbol node should already exist; just add export edge if missing
-    const existing = nodes.find((n) => n.name === name && n.filePath === relPath)
-    if (existing) {
-      const hasExportEdge = edges.some(
-        (e) => e.source === fileNodeId && e.target === existing.id && e.type === 'exports'
-      )
-      if (!hasExportEdge) {
-        edges.push({ source: fileNodeId, target: existing.id, type: 'exports' })
-      }
-    }
-  }
-
-  // --- Re-exports: export { ... } from '...' ---
-  const reExportRe = /^export\s+\{[^}]*\}\s*from\s+['"]([^'"]+)['"]/gm
-  while ((match = reExportRe.exec(content)) !== null) {
-    const importSpec = match[1]
-    const resolved = resolveImportPath(importSpec, filePath, projectRoot)
-    if (resolved) {
-      edges.push({
-        source: fileNodeId,
-        target: `__file::${resolved}`,
-        type: 'imports',
-      })
-    }
-  }
-
-  return { nodes, edges }
+  return { nodes: result.nodes, edges: result.edges };
 }
+
+/**
+ * Parse a file and return the tree-sitter Tree along with nodes/edges.
+ * Caller is responsible for calling tree.delete() when done.
+ * Returns tree: null when regex fallback was used.
+ */
+export async function parseFileWithTree(
+  filePath: string,
+  projectRoot: string,
+  oldTree?: TreeSitterModule.Tree,
+): Promise<ParseResultWithTree> {
+  const ext = path.extname(filePath).toLowerCase();
+  const grammarName = getGrammarForExtension(ext);
+
+  if (!grammarName) {
+    const result = await parseFileRegex(filePath, projectRoot);
+    return { ...result, tree: null };
+  }
+
+  const parser = await tryCreateParser(filePath);
+  if (!parser) {
+    const result = await parseFileRegex(filePath, projectRoot);
+    return { ...result, tree: null };
+  }
+
+  return parseWithTreeSitter({ filePath, projectRoot, parser, grammarName, oldTree });
+}
+
+// ─── Internal Helpers ────────────────────────────────────────────────────────
+
+interface TreeSitterParseOpts {
+  filePath: string;
+  projectRoot: string;
+  parser: TreeSitterModule.Parser;
+  grammarName: string;
+  oldTree?: TreeSitterModule.Tree;
+}
+
+async function tryCreateParser(filePath: string): Promise<TreeSitterModule.Parser | null> {
+  try {
+    return await createParserForFile(filePath);
+  } catch {
+    return null;
+  }
+}
+
+async function parseWithTreeSitter(opts: TreeSitterParseOpts): Promise<ParseResultWithTree> {
+  const { filePath, projectRoot, parser, grammarName, oldTree } = opts;
+  const relPath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
+  let content: string;
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    content = await fs.readFile(filePath, 'utf-8');
+  } catch {
+    parser.delete();
+    return { nodes: [], edges: [], tree: null };
+  }
+
+  const tree = parser.parse(content, oldTree);
+  parser.delete();
+
+  if (!tree) {
+    return { nodes: [], edges: [], tree: null };
+  }
+
+  const result = routeExtractor({ tree, relPath, filePath, projectRoot, grammarName });
+  return { ...result, tree };
+}
+
+interface RouteExtractorOpts {
+  tree: TreeSitterModule.Tree;
+  relPath: string;
+  filePath: string;
+  projectRoot: string;
+  grammarName: string;
+}
+
+function routeExtractor(opts: RouteExtractorOpts): ParseResult {
+  const { tree, relPath, filePath, projectRoot, grammarName } = opts;
+  const isTypeScript =
+    grammarName === 'tree-sitter-typescript' || grammarName === 'tree-sitter-tsx';
+  const isJavaScript = grammarName === 'tree-sitter-javascript';
+
+  if (isTypeScript || isJavaScript) {
+    const result = extractSymbolsFromTree({ tree, relPath, filePath, projectRoot });
+    const callEdges = extractCallEdges(tree, result.nodes, relPath);
+    result.edges.push(...callEdges);
+    return result;
+  }
+
+  // eslint-disable-next-line security/detect-object-injection
+  const config = LANGUAGE_CONFIGS[grammarName];
+  if (config) {
+    return extractSymbolsGeneric({ tree, relPath, filePath, projectRoot, config });
+  }
+
+  // Supported grammar but no config — just create a file node
+  const fileNodeId = makeNodeId(relPath, path.basename(relPath), 'file', 0);
+  return {
+    nodes: [
+      { id: fileNodeId, type: 'file', name: path.basename(relPath), filePath: relPath, line: 0 },
+    ],
+    edges: [],
+  };
+}
+
+// ─── Directory Walking ───────────────────────────────────────────────────────
 
 /**
  * Walk a directory recursively, yielding file paths for parseable files.
  */
-export async function walkDirectory(dir: string, projectRoot: string): Promise<string[]> {
-  const results: string[] = []
-
-  async function walk(currentDir: string): Promise<void> {
-    let entries: import('fs').Dirent[]
-    try {
-      entries = await fs.readdir(currentDir, { withFileTypes: true })
-    } catch {
-      return
-    }
-
-    for (const entry of entries) {
-      const fullPath = path.join(currentDir, entry.name)
-
-      if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) {
-          await walk(fullPath)
-        }
-        continue
-      }
-
-      if (!entry.isFile()) continue
-
-      const ext = path.extname(entry.name)
-      if (!PARSEABLE_EXTENSIONS.has(ext)) continue
-
-      // Check file size
-      try {
-        const stat = await fs.stat(fullPath)
-        if (stat.size > MAX_FILE_SIZE) continue
-      } catch {
-        continue
-      }
-
-      results.push(fullPath)
-    }
+export async function walkDirectory(dir: string): Promise<string[]> {
+  const supportedExts = getSupportedExtensions();
+  for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
+    supportedExts.add(ext);
   }
 
-  await walk(dir)
-  return results
+  const results: string[] = [];
+  await walkDirectoryRecursive(dir, supportedExts, results);
+  return results;
 }
 
+async function walkDirectoryRecursive(
+  currentDir: string,
+  supportedExts: Set<string>,
+  results: string[],
+): Promise<void> {
+  let entries: import('fs').Dirent[];
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    entries = await fs.readdir(currentDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const fullPath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) {
+        await walkDirectoryRecursive(fullPath, supportedExts, results);
+      }
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!supportedExts.has(ext)) continue;
+    await addIfUnderSizeLimit(fullPath, results);
+  }
+}
+
+async function addIfUnderSizeLimit(fullPath: string, results: string[]): Promise<void> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const stat = await fs.stat(fullPath);
+    if (stat.size <= MAX_FILE_SIZE) {
+      results.push(fullPath);
+    }
+  } catch {
+    // skip inaccessible files
+  }
+}
+
+// ─── Edge Resolution ─────────────────────────────────────────────────────────
+
 /**
- * Resolve __file:: references in edges to actual file node IDs.
- * Also resolve __unresolved:: references for extends/implements.
+ * Resolve __file:: and __unresolved:: references in edges to actual node IDs.
  */
-export function resolveEdgeReferences(
-  allNodes: GraphNode[],
-  allEdges: GraphEdge[]
-): GraphEdge[] {
-  // Build lookup maps
-  const fileNodeIdByRelPath = new Map<string, string>()
-  const nodesByName = new Map<string, GraphNode[]>()
+export function resolveEdgeReferences(allNodes: GraphNode[], allEdges: GraphEdge[]): GraphEdge[] {
+  const { fileNodeIdByRelPath, nodesByName } = buildResolutionMaps(allNodes);
+  return allEdges.map((edge) => resolveEdge(edge, fileNodeIdByRelPath, nodesByName));
+}
+
+function buildResolutionMaps(allNodes: GraphNode[]): {
+  fileNodeIdByRelPath: Map<string, string>;
+  nodesByName: Map<string, GraphNode[]>;
+} {
+  const fileNodeIdByRelPath = new Map<string, string>();
+  const nodesByName = new Map<string, GraphNode[]>();
 
   for (const node of allNodes) {
     if (node.type === 'file') {
-      // Map multiple possible keys for the file
-      const base = node.filePath
-      fileNodeIdByRelPath.set(base, node.id)
-      // Also strip extension
-      const noExt = base.replace(/\.\w+$/, '')
-      fileNodeIdByRelPath.set(noExt, node.id)
-      // Also strip /index
-      const noIndex = noExt.replace(/\/index$/, '')
-      if (noIndex !== noExt) {
-        fileNodeIdByRelPath.set(noIndex, node.id)
-      }
+      fileNodeIdByRelPath.set(node.filePath, node.id);
+      const noExt = node.filePath.replace(/\.\w+$/, '');
+      fileNodeIdByRelPath.set(noExt, node.id);
+      const noIndex = noExt.replace(/\/index$/, '');
+      if (noIndex !== noExt) fileNodeIdByRelPath.set(noIndex, node.id);
     }
-    // Build name lookup for class/interface resolution
-    const existing = nodesByName.get(node.name) ?? []
-    existing.push(node)
-    nodesByName.set(node.name, existing)
+    const existing = nodesByName.get(node.name) ?? [];
+    existing.push(node);
+    nodesByName.set(node.name, existing);
   }
 
-  return allEdges.map((edge) => {
-    // Resolve __file:: targets
-    if (edge.target.startsWith('__file::')) {
-      const relPath = edge.target.substring('__file::'.length)
-      const resolved = fileNodeIdByRelPath.get(relPath)
-      if (resolved) {
-        return { ...edge, target: resolved }
-      }
-      // Try with forward slashes normalized
-      const normalized = relPath.replace(/\\/g, '/')
-      const resolvedNorm = fileNodeIdByRelPath.get(normalized)
-      if (resolvedNorm) {
-        return { ...edge, target: resolvedNorm }
-      }
-      // Unresolvable — keep as-is (will be a dangling edge)
-      return edge
-    }
+  return { fileNodeIdByRelPath, nodesByName };
+}
 
-    // Resolve __unresolved:: targets for extends/implements
-    if (edge.target.startsWith('__unresolved::')) {
-      const parts = edge.target.substring('__unresolved::'.length).split('::')
-      const name = parts[0]
-      const candidates = nodesByName.get(name)
-      if (candidates && candidates.length > 0) {
-        // Prefer matching type (class for extends, interface for implements)
-        const preferredType = parts[1] ?? 'class'
-        const best = candidates.find((c) => c.type === preferredType) ?? candidates[0]
-        return { ...edge, target: best.id }
-      }
-      return edge
-    }
+function resolveEdge(
+  edge: GraphEdge,
+  fileMap: Map<string, string>,
+  nameMap: Map<string, GraphNode[]>,
+): GraphEdge {
+  if (edge.target.startsWith('__file::')) {
+    return resolveFileEdge(edge, fileMap);
+  }
+  if (edge.target.startsWith('__unresolved::')) {
+    return resolveUnresolvedEdge(edge, nameMap);
+  }
+  return edge;
+}
 
-    return edge
-  })
+function resolveFileEdge(edge: GraphEdge, fileMap: Map<string, string>): GraphEdge {
+  const relPath = edge.target.substring('__file::'.length);
+  const resolved = fileMap.get(relPath) ?? fileMap.get(relPath.replace(/\\/g, '/'));
+  return resolved ? { ...edge, target: resolved } : edge;
+}
+
+function resolveUnresolvedEdge(edge: GraphEdge, nameMap: Map<string, GraphNode[]>): GraphEdge {
+  const parts = edge.target.substring('__unresolved::'.length).split('::');
+  const name = parts[0];
+  const candidates = nameMap.get(name);
+  if (!candidates || candidates.length === 0) return edge;
+  const preferredType = parts[1] ?? 'class';
+  const best = candidates.find((c) => c.type === preferredType) ?? candidates[0];
+  return { ...edge, target: best.id };
 }

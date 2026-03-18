@@ -135,7 +135,9 @@
     ],
     "npmRebuild": false,
     "asarUnpack": [
-      "**/node_modules/node-pty/**"
+      "**/node_modules/node-pty/**",
+      "**/node_modules/web-tree-sitter/**",
+      "**/node_modules/tree-sitter-wasms/**"
     ],
     "extraResources": [
       {
