@@ -1,0 +1,250 @@
+/**
+ * mobile.css — Responsive adjustments for web remote access mode.
+ *
+ * All rules are scoped under .web-mode so they NEVER affect the Electron app.
+ * The web-mode class is added by webPreload.ts on the <html> element.
+ */
+
+/* ─── Viewport height fix ──────────────────────────────────────────────── */
+/* 100vh on mobile Chrome includes the area behind the URL bar.
+   100dvh adapts to the actual visible viewport. Fallback for older browsers. */
+.web-mode [data-layout='app'] {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ─── Prevent iOS bounce scroll ──────────────────────────────────────────── */
+.web-mode {
+  overscroll-behavior: none;
+}
+
+/* ─── Safe area insets for notched phones ─────────────────────────────────── */
+.web-mode [data-layout='app'] {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ─── Title bar: no drag in web mode ──────────────────────────────────────── */
+.web-mode [data-layout='title-bar'] {
+  -webkit-app-region: none !important;
+  app-region: none !important;
+}
+
+/* ─── Responsive show/hide utilities ─────────────────────────────────────── */
+/* Default: mobile-only elements are hidden */
+.web-mobile-only {
+  display: none !important;
+}
+
+/* ─── Phone layout (< 768px) ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* ── Show mobile-only / hide desktop-only ── */
+  .web-mode .web-mobile-only {
+    display: flex !important;
+  }
+  .web-mode .web-mobile-hide {
+    display: none !important;
+  }
+
+  /* ── Activity bar: hidden on phones (replaced by bottom nav) ── */
+  .web-mode [data-layout='activity-bar'] {
+    display: none !important;
+  }
+
+  /* ── Resize handles: hidden (can't drag on touch) ── */
+  .web-mode [data-layout='resize-handle'] {
+    display: none !important;
+  }
+
+  /* ── Status bar: hidden on phones (replaced by bottom nav) ── */
+  .web-mode [data-layout='status-bar'] {
+    display: none !important;
+  }
+
+  /* ── Collapsed agent strip: hidden on phones ── */
+  .web-mode [data-layout='collapsed-agent-strip'] {
+    display: none !important;
+  }
+
+  /* ── Mobile bottom nav bar ── */
+  .web-mode [data-layout='mobile-nav'] {
+    display: flex !important;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────── */
+  /* ── Panel switching: show/hide panels based on active mobile tab ────── */
+  /* ─────────────────────────────────────────────────────────────────────── */
+
+  /* --- "files" tab active ------------------------------------------------ */
+  /* Hide centre column and right sidebar */
+  .web-mode [data-mobile-active='files'] [data-layout='centre-column'] {
+    display: none !important;
+  }
+  /* Left sidebar fills screen */
+  .web-mode [data-mobile-active='files'] [aria-label='Left sidebar'] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 1 !important;
+    border-right: none !important;
+  }
+
+  /* --- "editor" tab active ----------------------------------------------- */
+  /* Hide the terminal pane within the centre column */
+  .web-mode [data-mobile-active='editor'] [data-layout='centre-column'] [aria-label='Terminal'] {
+    display: none !important;
+  }
+  /* Editor pane fills the centre column */
+  .web-mode [data-mobile-active='editor'] [data-layout='centre-column'] [aria-label='Editor pane'] {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+  }
+  /* Centre column itself should fill available space */
+  .web-mode [data-mobile-active='editor'] [data-layout='centre-column'] {
+    flex: 1 !important;
+  }
+
+  /* --- "terminal" tab active --------------------------------------------- */
+  /* Hide the editor pane within the centre column */
+  .web-mode
+    [data-mobile-active='terminal']
+    [data-layout='centre-column']
+    [aria-label='Editor pane'] {
+    display: none !important;
+  }
+  /* Terminal fills the centre column — override inline height */
+  .web-mode [data-mobile-active='terminal'] [data-layout='centre-column'] [aria-label='Terminal'] {
+    flex: 1 1 0% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  /* Centre column itself should fill available space */
+  .web-mode [data-mobile-active='terminal'] [data-layout='centre-column'] {
+    flex: 1 !important;
+  }
+
+  /* --- "chat" tab active ------------------------------------------------- */
+  /* Hide the centre column */
+  .web-mode [data-mobile-active='chat'] [data-layout='centre-column'] {
+    display: none !important;
+  }
+  /* Right sidebar (agent pane) fills screen */
+  .web-mode [data-mobile-active='chat'] [aria-label='Agent sidebar'] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 1 1 0% !important;
+    border-left: none !important;
+  }
+
+  /* ── Ensure inactive sidebars don't leak through ── */
+  /* When editor or terminal is active, hide sidebars even if not collapsed */
+  .web-mode [data-mobile-active='editor'] [aria-label='Left sidebar'],
+  .web-mode [data-mobile-active='terminal'] [aria-label='Left sidebar'] {
+    display: none !important;
+  }
+  .web-mode [data-mobile-active='editor'] [aria-label='Agent sidebar'],
+  .web-mode [data-mobile-active='terminal'] [aria-label='Agent sidebar'] {
+    display: none !important;
+  }
+  /* When files is active, hide right sidebar */
+  .web-mode [data-mobile-active='files'] [aria-label='Agent sidebar'] {
+    display: none !important;
+  }
+  /* When chat is active, hide left sidebar */
+  .web-mode [data-mobile-active='chat'] [aria-label='Left sidebar'] {
+    display: none !important;
+  }
+
+  /* ── Prevent iOS auto-zoom on input focus (requires >= 16px font) ── */
+  .web-mode textarea,
+  .web-mode input[type='text'],
+  .web-mode input[type='password'],
+  .web-mode input[type='search'],
+  .web-mode select {
+    font-size: 16px !important;
+  }
+
+  /* ── Touch targets: minimum 44px for interactive elements in nav areas ── */
+  .web-mode [data-layout='mobile-nav'] button,
+  .web-mode [data-layout='title-bar'] > .web-mobile-only button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* ── Chat composer: better mobile UX ── */
+  .web-mode textarea {
+    min-height: 48px !important;
+  }
+
+  /* ── Title bar: compact mobile height ── */
+  .web-mode [data-layout='title-bar'] {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* ── Full-height panels: ensure panels stretch properly ── */
+  .web-mode [data-layout='app'] > div:nth-child(2) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Scrollable panel content ── */
+  .web-mode [aria-label='Left sidebar'] {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .web-mode [aria-label='Agent sidebar'] {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Smooth transitions for page switching ── */
+  .web-mode [data-layout='centre-column'],
+  .web-mode [aria-label='Left sidebar'],
+  .web-mode [aria-label='Agent sidebar'] {
+    transition: opacity 100ms ease;
+  }
+
+  /* ── Bottom nav: active indicator styling ── */
+  .web-mode [data-layout='mobile-nav'] {
+    background-color: var(--bg-secondary) !important;
+    border-top: 1px solid var(--border) !important;
+    z-index: 100;
+  }
+
+  /* ── Editor tab bar: compact on mobile ── */
+  .web-mode [role='tablist'][aria-label='Open files'] {
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  /* ── Hide the right sidebar wrapper div (display:none) on non-chat pages ── */
+  /* The right sidebar is kept mounted (display:none) for streaming state.
+     On mobile non-chat pages, ensure the wrapper doesn't take space. */
+  .web-mode [data-mobile-active='files'] > div:nth-child(2) > div:last-child,
+  .web-mode [data-mobile-active='editor'] > div:nth-child(2) > div:last-child,
+  .web-mode [data-mobile-active='terminal'] > div:nth-child(2) > div:last-child {
+    display: none !important;
+  }
+}
+
+/* ─── Tablet layout (768px - 1024px) ─────────────────────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Narrower activity bar */
+  .web-mode [data-layout='activity-bar'] {
+    width: 36px !important;
+  }
+
+  /* Slightly compact title bar */
+  .web-mode [data-layout='title-bar'] {
+    height: 34px !important;
+  }
+
+  /* Compact editor tabs */
+  .web-mode [role='tablist'][aria-label='Open files'] {
+    height: 34px !important;
+  }
+}
