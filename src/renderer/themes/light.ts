@@ -1,0 +1,35 @@
+import type { Theme } from './types';
+
+export const lightTheme: Theme = {
+  id: 'light',
+  name: 'Light',
+  fontFamily: {
+    mono: '"Geist Mono", "JetBrains Mono", monospace',
+    ui: '"Inter", system-ui, -apple-system, sans-serif',
+  },
+  colors: {
+    bg: '#ffffff',
+    bgSecondary: '#f4f4f5',
+    bgTertiary: '#e4e4e7',
+    border: '#d4d4d8',
+    borderMuted: '#e4e4e7',
+    text: '#18181b',
+    textSecondary: '#3f3f46',
+    textMuted: '#71717a',
+    textFaint: '#a1a1aa',
+    accent: '#4f46e5',
+    accentHover: '#4338ca',
+    accentMuted: 'rgba(79, 70, 229, 0.1)',
+    success: '#16a34a',
+    warning: '#ca8a04',
+    error: '#dc2626',
+    purple: '#7c3aed',
+    purpleMuted: 'rgba(124, 58, 237, 0.1)',
+    selection: 'rgba(79, 70, 229, 0.15)',
+    focusRing: 'rgba(79, 70, 229, 0.4)',
+    termBg: '#fafafa',
+    termFg: '#18181b',
+    termCursor: '#4f46e5',
+    termSelection: 'rgba(79, 70, 229, 0.15)',
+  },
+};

@@ -1,14 +1,17 @@
 import { BrowserWindow } from 'electron'
 import fs from 'fs/promises'
 import * as pty from 'node-pty'
+
 import { type ClaudeCliSettings, getConfigValue } from './config'
 import { dispatchActivationEvent } from './extensions'
-import { createAgentBridge, type AgentBridgeHandle } from './ptyAgentBridge'
+import type { StreamJsonEvent, StreamJsonResultEvent } from './orchestration/providers/streamJsonTypes'
+import { type AgentBridgeHandle,createAgentBridge } from './ptyAgentBridge'
 import { buildClaudeArgs } from './ptyClaude'
 import { buildBaseEnv, buildShellEnvWithIntegration, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
 import { terminalOutputBuffer } from './ptyOutputBuffer'
-import { startPtyRecording as startRecording, stopPtyRecording as stopRecording, type RecordingState } from './ptyRecording'
-import type { StreamJsonEvent, StreamJsonResultEvent } from './orchestration/providers/streamJsonTypes'
+import { type RecordingState,startPtyRecording as startRecording, stopPtyRecording as stopRecording } from './ptyRecording'
+import { ptyBatcher } from './web/ptyBatcher'
+import { broadcastToWebClients } from './web/webServer'
 
 export interface PtySession {
   id: string
@@ -51,6 +54,7 @@ function cleanupSession(id: string): void {
   sessions.delete(id)
   sessionWindowMap.delete(id)
   terminalOutputBuffer.removeSession(id)
+  ptyBatcher.removeSession(id)
 }
 
 function handleSessionExit(
@@ -67,6 +71,7 @@ function handleSessionExit(
   if (!win.isDestroyed()) {
     win.webContents.send(`pty:exit:${id}`, { exitCode, signal })
   }
+  broadcastToWebClients(`pty:exit:${id}`, { exitCode, signal })
 }
 
 function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow): void {
@@ -74,6 +79,7 @@ function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow):
     if (!win.isDestroyed()) {
       win.webContents.send(`pty:data:${id}`, data)
     }
+    ptyBatcher.append(id, data)
     terminalOutputBuffer.append(id, data)
   })
 

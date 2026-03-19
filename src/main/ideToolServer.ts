@@ -13,11 +13,13 @@
  * Unix:     /tmp/ouroboros-tools.sock
  */
 
-import net from 'net'
 import fs from 'fs'
-import { getAllActiveWindows } from './windowManager'
-import { createToolHandlers, execGitStatus } from './ideToolServerHandlers'
+import net from 'net'
+
 import type { ToolHandler } from './ideToolServerHandlers'
+import { createToolHandlers, execGitStatus } from './ideToolServerHandlers'
+import { broadcastToWebClients } from './web/webServer'
+import { getAllActiveWindows } from './windowManager'
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -79,8 +81,9 @@ function queryRenderer(method: string, params?: unknown): Promise<unknown> {
 
     if (!win.isDestroyed()) {
       win.webContents.send('ide:query', { queryId, method, params })
-      return
     }
+    broadcastToWebClients('ide:query', { queryId, method, params })
+    if (!win.isDestroyed()) return
 
     clearTimeout(timer)
     pendingRendererQueries.delete(queryId)
@@ -320,7 +323,7 @@ function cleanupUnixSocket(): void {
 
 // â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export async function startIdeToolServer(): Promise<{ address: string }> {
+export async function startIdeToolServer(): Promise<{ address: string } | null> {
   if (server) {
     const address = formatAddress(server.address())
     return { address: address ?? PIPE_NAME }
@@ -336,8 +339,12 @@ export async function startIdeToolServer(): Promise<{ address: string }> {
       return { address: PIPE_NAME }
     } catch (err: unknown) {
       const nodeErr = err as NodeJS.ErrnoException
-      console.warn(`[ide-tools] named pipe unavailable (${nodeErr.code ?? 'unknown'})`)
       nextServer.close()
+      if (nodeErr.code === 'EADDRINUSE') {
+        console.log(`[ide-tools] pipe already held by another instance — skipping`)
+        return null
+      }
+      console.warn(`[ide-tools] named pipe unavailable (${nodeErr.code ?? 'unknown'})`)
       throw err
     }
   }
@@ -349,8 +356,12 @@ export async function startIdeToolServer(): Promise<{ address: string }> {
     return { address: UNIX_SOCKET_PATH }
   } catch (err: unknown) {
     const nodeErr = err as NodeJS.ErrnoException
-    console.warn(`[ide-tools] Unix socket unavailable (${nodeErr.code ?? 'unknown'})`)
     nextServer.close()
+    if (nodeErr.code === 'EADDRINUSE') {
+      console.log(`[ide-tools] socket already held by another instance — skipping`)
+      return null
+    }
+    console.warn(`[ide-tools] Unix socket unavailable (${nodeErr.code ?? 'unknown'})`)
     throw err
   }
 }

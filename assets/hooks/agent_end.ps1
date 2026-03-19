@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires after Claude Code executes a tool.
+    Ouroboros hook — fires when a Claude Code sub-agent completes.
 .DESCRIPTION
-    Reads tool result data from stdin (JSON), connects to the Ouroboros
-    named pipe, and sends a post_tool_use event including output and duration.
-    Exits silently if the Ouroboros is not running.
+    Reads the agent end data from stdin (JSON), extracts the session ID,
+    and sends an agent_end event to Ouroboros so the Agent Monitor can
+    mark the session as complete. Exits silently if Ouroboros is not running.
 #>
 
 param()
@@ -24,57 +24,36 @@ $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
 } catch {
-    exit 0
+    # stdin unavailable
 }
 
-if ([string]::IsNullOrWhiteSpace($stdinData)) { exit 0 }
-
-$toolData = $null
-try {
-    $toolData = $stdinData | ConvertFrom-Json -ErrorAction Stop
-} catch {
-    exit 0
+$agentData = $null
+if (-not [string]::IsNullOrWhiteSpace($stdinData)) {
+    try {
+        $agentData = $stdinData | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        # stdin not valid JSON — use defaults
+    }
 }
 
-# ── Build payload ─────────────────────────────────────────────────────────────
-# Session ID: try stdin JSON first (most reliable), then env var
+# ── Extract session ID ───────────────────────────────────────────────────────
+# Try stdin JSON first, then env var
 $sessionId = $null
-if ($toolData.session_id) { $sessionId = $toolData.session_id }
-elseif ($toolData.sessionId) { $sessionId = $toolData.sessionId }
+if ($agentData) {
+    $sessionId = if ($agentData.session_id) { $agentData.session_id } `
+                 elseif ($agentData.sessionId) { $agentData.sessionId } `
+                 else { $null }
+}
 if (-not $sessionId) {
     $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
 }
-$toolName   = if ($toolData.tool_name)     { $toolData.tool_name }     `
-              elseif ($toolData.toolName)  { $toolData.toolName }      `
-              else                         { 'unknown' }
 
-# Duration may be provided by Claude Code in env or in the JSON body
-$durationMs = $null
-if ($env:CLAUDE_TOOL_DURATION_MS) {
-    $parsed = 0
-    if ([int]::TryParse($env:CLAUDE_TOOL_DURATION_MS, [ref]$parsed)) {
-        $durationMs = $parsed
-    }
-} elseif ($toolData.duration_ms) {
-    $durationMs = $toolData.duration_ms
-}
-
-# Output/result field — Claude Code may use different key names
-$output = if ($toolData.output)       { $toolData.output }       `
-          elseif ($toolData.result)   { $toolData.result }       `
-          elseif ($toolData.response) { $toolData.response }     `
-          else                        { $toolData }
-
+# ── Build payload ─────────────────────────────────────────────────────────────
 $payload = [ordered]@{
-    type      = 'post_tool_use'
+    type      = 'agent_end'
     sessionId = $sessionId
-    toolName  = $toolName
-    output    = $output
     timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-}
-
-if ($null -ne $durationMs) {
-    $payload['durationMs'] = $durationMs
+    cwd       = (Get-Location).Path
 }
 
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"

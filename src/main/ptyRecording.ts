@@ -1,6 +1,8 @@
 import { BrowserWindow, dialog } from 'electron'
 import fs from 'fs/promises'
+
 import type { PtySession } from './pty'
+import { broadcastToWebClients } from './web/webServer'
 
 export interface AsciicastEvent {
   time: number
@@ -67,6 +69,7 @@ export function startPtyRecording(
   if (!win.isDestroyed()) {
     win.webContents.send(`pty:recordingState:${id}`, { recording: true })
   }
+  broadcastToWebClients(`pty:recordingState:${id}`, { recording: true })
   return { success: true }
 }
 
@@ -85,6 +88,7 @@ export async function stopPtyRecording(
   if (!win.isDestroyed()) {
     win.webContents.send(`pty:recordingState:${id}`, { recording: false })
   }
+  broadcastToWebClients(`pty:recordingState:${id}`, { recording: false })
 
   try {
     const result = await dialog.showSaveDialog(win, {

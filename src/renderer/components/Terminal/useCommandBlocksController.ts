@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { Terminal } from '@xterm/xterm'
-import type { CommandBlock, UseCommandBlocksOptions, UseCommandBlocksResult } from './useCommandBlocks'
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { ShellIntegrationAddon, ShellIntegrationEvent } from './shellIntegrationAddon'
+import type { CommandBlock, UseCommandBlocksOptions, UseCommandBlocksResult } from './useCommandBlocks'
 
 interface CommandBlockRefs {
   blocks: CommandBlock[]
@@ -34,10 +35,14 @@ const DEFAULT_PROMPT_PATTERNS = [
 
 const MAX_BLOCKS = 500
 const MAX_BLOCK_LINES = 1000
-let blockIdCounter = 0
-
 function generateBlockId(): string {
-  return `cb_${Date.now()}_${++blockIdCounter}`
+  // crypto.randomUUID() is unavailable in insecure contexts (HTTP on non-localhost).
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `cb_${crypto.randomUUID()}`
+  }
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    b => b.toString(16).padStart(2, '0')).join('')
+  return `cb_${hex}`
 }
 
 function getAbsoluteRow(term: Terminal): number {

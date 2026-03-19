@@ -1,5 +1,5 @@
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
-import type { TokenUsage } from '../types/electron';
+import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
 
 const MAX_TOOL_CALLS = 50;
 /** If a tool call has been pending longer than this, auto-resolve it as success
@@ -140,10 +140,25 @@ function startToolCall(
   action: Extract<AgentAction, { type: 'TOOL_START' }>,
 ): AgentState {
   const baseState = ensureSession(state, action.sessionId, action.toolCall.timestamp);
-  return updateSession(baseState, action.sessionId, (session) => ({
-    ...session,
-    toolCalls: trimToolCalls([...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp), action.toolCall]),
-  }));
+  return updateSession(baseState, action.sessionId, (session) => {
+    // Dedup: skip if a tool call with the same name AND same input arrived
+    // within 2s. This prevents double-counting when both hook events and
+    // synthetic bridge events fire for the same tool invocation, while still
+    // allowing consecutive calls to the same tool with different inputs
+    // (e.g. two Read calls on different files).
+    const isDuplicate = session.toolCalls.some((tc) =>
+      tc.toolName === action.toolCall.toolName
+      && tc.input === action.toolCall.input
+      && Math.abs(tc.timestamp - action.toolCall.timestamp) < 2000
+      && tc.status === 'pending',
+    );
+    if (isDuplicate) return session;
+
+    return {
+      ...session,
+      toolCalls: trimToolCalls([...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp), action.toolCall]),
+    };
+  });
 }
 
 function finishToolCall(

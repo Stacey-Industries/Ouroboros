@@ -6,8 +6,9 @@
  * action buttons. Dismissible by clicking outside or pressing Escape.
  */
 
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import type { NotificationEntry, ToastType } from '../../hooks/useToast';
+import React, { memo, useEffect, useRef, useState } from 'react';
+
+import type { NotificationEntry, NotificationProgress, ToastType } from '../../hooks/useToast';
 
 // ── Relative time formatting ────────────────────────────────────────────────
 
@@ -83,7 +84,78 @@ const NC_STYLES = `
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes nc-progress-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
 `;
+
+// ── Progress bar component ──────────────────────────────────────────────────
+
+function ProgressBar({ progress }: { progress: NotificationProgress }): React.ReactElement | null {
+  if (progress.status !== 'active' || progress.total <= 0) return null;
+
+  const percent = Math.min(100, Math.round((progress.completed / progress.total) * 100));
+
+  return (
+    <div style={{ marginTop: '6px' }}>
+      <div style={{
+        width: '100%',
+        height: '3px',
+        borderRadius: '1.5px',
+        backgroundColor: 'var(--border)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${percent}%`,
+          height: '100%',
+          borderRadius: '1.5px',
+          backgroundColor: 'var(--accent)',
+          transition: 'width 300ms ease',
+        }} />
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginTop: '3px',
+        fontSize: '10px',
+        color: 'var(--text-faint, var(--text-muted))',
+      }}>
+        {progress.currentItem && (
+          <span style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '180px',
+            fontFamily: 'var(--font-mono)',
+          }}>
+            {progress.currentItem}
+          </span>
+        )}
+        <span style={{ flexShrink: 0, marginLeft: 'auto' }}>
+          {progress.completed}/{progress.total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Progress status icon ────────────────────────────────────────────────────
+
+function ProgressStatusIcon({ progress }: { progress: NotificationProgress }): React.ReactElement {
+  if (progress.status === 'active') {
+    // Animated spinner
+    return (
+      <svg width={14} height={14} viewBox="0 0 16 16" fill="none" aria-hidden="true"
+        style={{ animation: 'nc-progress-pulse 1.5s ease-in-out infinite' }}>
+        <circle cx="8" cy="8" r="6.5" stroke="var(--accent, #58a6ff)" strokeWidth="1.5" strokeDasharray="20 20" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  // Completed or error — use regular icon
+  const type = progress.status === 'error' ? 'error' : 'success';
+  return <NotificationIcon type={type} />;
+}
 
 // ── Individual notification row ─────────────────────────────────────────────
 
@@ -136,11 +208,28 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
       opacity: entry.read ? 0.7 : 1,
     }}>
       <div style={{ flexShrink: 0, marginTop: '2px' }}>
-        <NotificationIcon type={entry.type} />
+        {entry.progress ? <ProgressStatusIcon progress={entry.progress} /> : <NotificationIcon type={entry.type} />}
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ wordBreak: 'break-word' }}>{entry.message}</div>
+        <div style={{ wordBreak: 'break-word' }}>
+          {entry.message}
+          {entry.progress?.status === 'active' && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--accent)', fontWeight: 500 }}>
+              Running
+            </span>
+          )}
+        </div>
+        {entry.progress?.summary && (
+          <div style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            marginTop: '2px',
+          }}>
+            {entry.progress.summary}
+          </div>
+        )}
+        {entry.progress && <ProgressBar progress={entry.progress} />}
         {entry.action && (
           <button
             type="button"

@@ -11,7 +11,7 @@ export interface SettingsEntry {
   /** Optional extra text to match against (not always shown) */
   description?: string
   /** Which settings tab this entry lives in */
-  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'agent' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'mcpStore' | 'extensionStore' | 'codemode'
+  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'agent' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'codemode' | 'contextDocs'
   /** Display-friendly section name */
   sectionLabel: string
 }
@@ -130,17 +130,16 @@ const CODE_MODE_ENTRIES = createEntries('codemode', 'Code Mode', [
   ['Code Mode Server Names', 'Comma-separated list of MCP server names to proxy through Code Mode.'],
 ])
 
-const MCP_STORE_ENTRIES = createEntries('mcpStore', 'MCP Store', [
-  ['Browse MCP Servers', 'Search and discover community MCP servers from the official registry.'],
-  ['Install MCP Server', 'One-click install MCP servers to Claude Code.'],
-  ['MCP Registry', 'Browse the official MCP server registry.'],
-])
-
-const EXTENSION_STORE_ENTRIES = createEntries('extensionStore', 'Extension Store', [
-  ['Browse Extensions', 'Search and install VS Code-compatible themes, grammars, and snippets from Open VSX.'],
-  ['Install Theme', 'Install color themes from the Open VSX registry.'],
-  ['Install Grammar', 'Add syntax highlighting for new languages.'],
-  ['Extension Store', 'Browse the Open VSX extension registry.'],
+const CONTEXT_DOCS_ENTRIES = createEntries('contextDocs', 'Context Docs', [
+  ['Enable CLAUDE.md Automation', 'Automatically generate and maintain CLAUDE.md context files for Claude Code agents.'],
+  ['Trigger Mode', 'When to regenerate: after Claude sessions, after git commits, or manual only.'],
+  ['Generation Model', 'Which Claude model to use for CLAUDE.md generation (Haiku is fast/cheap, Sonnet is balanced, Opus is thorough).'],
+  ['Auto-commit', 'Automatically commit generated CLAUDE.md files to git.'],
+  ['Generate Root CLAUDE.md', 'Include the root project CLAUDE.md in automatic generation.'],
+  ['Generate Subdirectory Files', 'Generate CLAUDE.md files in subdirectories (src/main/, src/renderer/components/, etc.).'],
+  ['Exclude Directories', 'Directories to skip during CLAUDE.md generation (glob patterns).'],
+  ['Generate Now', 'Manually trigger CLAUDE.md generation for changed directories.'],
+  ['Full Sweep', 'Regenerate all CLAUDE.md files from scratch.'],
 ])
 
 const MCP_ENTRIES = createEntries('mcp', 'MCP Servers', [
@@ -163,6 +162,5 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...EXTENSION_ENTRIES,
   ...CODE_MODE_ENTRIES,
   ...MCP_ENTRIES,
-  ...MCP_STORE_ENTRIES,
-  ...EXTENSION_STORE_ENTRIES,
+  ...CONTEXT_DOCS_ENTRIES,
 ]

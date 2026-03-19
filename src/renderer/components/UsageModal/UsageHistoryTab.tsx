@@ -1,15 +1,16 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+
 import type { SessionUsage, UsageSummary } from '../../types/electron';
 import {
-  HISTORY_RANGES,
-  TimeRange,
   formatCost,
   formatDate,
   formatTokens,
   getTimeSince,
+  HISTORY_RANGES,
   modelShortName,
   summarizeModels,
   timeAgo,
+  TimeRange,
 } from './UsagePanelShared';
 
 async function requestUsageSummary(timeRange: TimeRange): Promise<{ summary: UsageSummary | null; error: string | null }> {
@@ -146,6 +147,86 @@ function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.Re
   );
 }
 
+// ── Daily Cost Chart ─────────────────────────────────────────────────────
+
+interface DailyBucket {
+  label: string;
+  cost: number;
+  tokens: number;
+}
+
+function buildDailyBuckets(sessions: SessionUsage[]): DailyBucket[] {
+  const bucketMap = new Map<string, DailyBucket>();
+
+  for (const session of sessions) {
+    const date = new Date(session.startedAt);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const bucket = bucketMap.get(key) ?? { label, cost: 0, tokens: 0 };
+    bucket.cost += session.estimatedCost;
+    bucket.tokens += session.inputTokens + session.outputTokens;
+    bucketMap.set(key, bucket);
+  }
+
+  // Sort by date key (YYYY-MM-DD sorts naturally)
+  return Array.from(bucketMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, bucket]) => bucket);
+}
+
+function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.ReactElement | null {
+  const buckets = useMemo(() => buildDailyBuckets(sessions), [sessions]);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  if (buckets.length < 2) return null;
+
+  const maxCost = Math.max(...buckets.map((b) => b.cost));
+  if (maxCost === 0) return null;
+
+  return (
+    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Daily Spend</div>
+      <div className="flex items-end gap-[3px]" style={{ height: '80px' }}>
+        {buckets.map((bucket, i) => {
+          const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
+          const isHovered = hoveredIndex === i;
+          return (
+            <div
+              key={i}
+              className="relative flex flex-1 flex-col items-center justify-end"
+              style={{ height: '100%' }}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              {isHovered && (
+                <div
+                  className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap"
+                  style={{ background: 'var(--bg-tertiary)', color: 'var(--accent)', border: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', zIndex: 1 }}
+                >
+                  {formatCost(bucket.cost)}
+                </div>
+              )}
+              <div
+                className="w-full rounded-t transition-opacity duration-100"
+                style={{
+                  height: `${barHeight}%`,
+                  backgroundColor: 'var(--accent)',
+                  opacity: isHovered ? 1 : 0.6,
+                  minHeight: bucket.cost > 0 ? '2px' : '0',
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1 flex justify-between">
+        <span className="text-[8px]" style={{ color: 'var(--text-faint)' }}>{buckets[0].label}</span>
+        <span className="text-[8px]" style={{ color: 'var(--text-faint)' }}>{buckets[buckets.length - 1].label}</span>
+      </div>
+    </div>
+  );
+}
+
 function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.ReactElement {
   return (
     <div className="px-2 py-1.5 text-[10px]" style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -248,7 +329,7 @@ function HistoryContent({
     );
   }
 
-  return summary ? <><HistorySummaryCards summary={summary} /><ModelDistribution sessions={summary.sessions} /><HistorySessionList sessions={summary.sessions} /></> : null;
+  return summary ? <><HistorySummaryCards summary={summary} /><ModelDistribution sessions={summary.sessions} /><DailyCostChart sessions={summary.sessions} /><HistorySessionList sessions={summary.sessions} /></> : null;
 }
 
 export const UsageHistoryTab = memo(function UsageHistoryTab(): React.ReactElement {

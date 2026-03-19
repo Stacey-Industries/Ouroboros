@@ -5,10 +5,12 @@
  * Phase 3A+3B: Enhanced command block UI (Warp-inspired).
  */
 
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import type { Terminal } from '@xterm/xterm'
-import type { CommandBlock } from './useCommandBlocks'
+import React, { useCallback,useEffect, useMemo, useRef, useState } from 'react'
+
+import { EXPLAIN_TERMINAL_ERROR_EVENT, OPEN_AGENT_CHAT_PANEL_EVENT } from '../../hooks/appEventNames'
 import { CommandBlockActions } from './CommandBlockActions'
+import type { CommandBlock } from './useCommandBlocks'
 
 export interface CommandBlockOverlayProps {
   blocks: CommandBlock[]
@@ -110,7 +112,7 @@ function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
   if (!block.complete) {
     // Spinning loader for running command
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: 'spin 1s linear infinite' }}>
+      <svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: 'agent-ide-spin 1s linear infinite' }}>
         <circle cx="8" cy="8" r="6" fill="none" stroke="var(--accent, #58a6ff)" strokeWidth="2" strokeDasharray="20 18" strokeLinecap="round" />
       </svg>
     )
@@ -133,22 +135,11 @@ function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
   )
 }
 
-// ── Spin keyframe (injected once) ────────────────────────────────────────────
-
-let spinStyleInjected = false
-function ensureSpinKeyframe(): void {
-  if (spinStyleInjected) return
-  spinStyleInjected = true
-  const style = document.createElement('style')
-  style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'
-  document.head.appendChild(style)
-}
-
 // ── Single Block Decoration ──────────────────────────────────────────────────
 
 function CommandBlockDecoration({
   block, index, cellHeight, viewportY, activeBlockIndex,
-  onToggleCollapse, onCopyOutput, onCopyCommand, sessionId,
+  onToggleCollapse, onCopyOutput, onCopyCommand, onExplainError, sessionId,
 }: {
   block: CommandBlock
   index: number
@@ -158,6 +149,7 @@ function CommandBlockDecoration({
   onToggleCollapse: (blockId: string) => void
   onCopyOutput: (block: CommandBlock) => void
   onCopyCommand: (block: CommandBlock) => void
+  onExplainError: (block: CommandBlock) => void
   sessionId: string
 }): React.ReactElement {
   const [hovered, setHovered] = useState(false)
@@ -238,6 +230,7 @@ function CommandBlockDecoration({
           onCopyOutput={onCopyOutput}
           onCopyCommand={onCopyCommand}
           onToggleCollapse={onToggleCollapse}
+          onExplainError={onExplainError}
         />
       </div>
 
@@ -294,8 +287,12 @@ function useScrollViewportY(terminal: Terminal | null): number {
     if (!terminal || !terminal.element) return
 
     // Guard against subscribing to an already-disposed terminal.
-    // Disposed terminals have their internal DisposableStore marked as disposed,
-    // which causes onScroll/onWriteParsed getters to throw.
+    // xterm's DisposableStore.add() logs an error (not throws) when disposed,
+    // so try-catch alone doesn't prevent the console warning. Check the
+    // internal disposal flag directly.
+    const core = (terminal as unknown as { _core?: { _isDisposed?: boolean } })._core
+    if (core?._isDisposed) return
+
     let scrollDisposable: { dispose(): void } | null = null
     let writeDisposable: { dispose(): void } | null = null
     try {
@@ -334,13 +331,31 @@ function useScrollViewportY(terminal: Terminal | null): number {
 
 // ── Main Body ────────────────────────────────────────────────────────────────
 
+function readTerminalLines(term: Terminal, startLine: number, endLine: number, maxLines: number = 50): string {
+  const buf = term.buffer.active
+  const from = Math.max(startLine, endLine - maxLines + 1)
+  const lines: string[] = []
+  for (let i = from; i <= endLine; i++) {
+    const line = buf.getLine(i)
+    if (line) lines.push(line.translateToString(true))
+  }
+  return lines.join('\n').trimEnd()
+}
+
 export function CommandBlockOverlayBody({
   activeBlockIndex, blocks, onCopyOutput, onCopyCommand, onToggleCollapse, terminal, sessionId,
 }: CommandBlockOverlayProps): React.ReactElement | null {
-  ensureSpinKeyframe()
-
   const visibleBlocks = useVisibleBlocks(blocks, terminal)
   const viewportY = useScrollViewportY(terminal)
+
+  const handleExplainError = useCallback((block: CommandBlock) => {
+    if (!terminal) return
+    const output = readTerminalLines(terminal, block.outputStartLine, block.endLine)
+    const cmd = block.command || '(unknown command)'
+    const prompt = `Explain this terminal error:\n\`\`\`\n$ ${cmd}\n${output}\n\`\`\`\nExit code: ${block.exitCode}`
+    window.dispatchEvent(new CustomEvent(OPEN_AGENT_CHAT_PANEL_EVENT))
+    window.dispatchEvent(new CustomEvent(EXPLAIN_TERMINAL_ERROR_EVENT, { detail: { prompt } }))
+  }, [terminal])
 
   if (!terminal || visibleBlocks.length === 0) return null
 
@@ -359,6 +374,7 @@ export function CommandBlockOverlayBody({
           onToggleCollapse={onToggleCollapse}
           onCopyOutput={onCopyOutput}
           onCopyCommand={onCopyCommand}
+          onExplainError={handleExplainError}
           sessionId={sessionId}
         />
       ))}

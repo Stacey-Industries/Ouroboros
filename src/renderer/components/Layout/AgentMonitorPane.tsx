@@ -35,7 +35,7 @@ function ChevronLeftIcon(): React.ReactElement {
 export function AgentMonitorPane({
   width,
   collapsed,
-  onToggleCollapse,
+  onToggleCollapse: _onToggleCollapse,
   children,
   focusStyle,
   onFocus,
@@ -68,6 +68,7 @@ export function CollapsedAgentStrip({
 }): React.ReactElement {
   return (
     <div
+      data-layout="collapsed-agent-strip"
       className="
         flex flex-col items-center pt-2 h-full w-10 flex-shrink-0
         bg-[var(--bg-secondary)] border-l border-[var(--border-muted,var(--border))]

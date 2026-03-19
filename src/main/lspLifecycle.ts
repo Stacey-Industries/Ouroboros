@@ -1,19 +1,20 @@
-import { spawn, type ChildProcess } from 'child_process'
+import { type ChildProcess,spawn } from 'child_process'
 import path from 'path'
 import {
   createMessageConnection,
+  type MessageConnection,
   StreamMessageReader,
   StreamMessageWriter,
-  type MessageConnection,
 } from 'vscode-jsonrpc/node'
 import {
   ExitNotification,
-  InitializeRequest,
   InitializedNotification,
+  type InitializeParams,
+  InitializeRequest,
   PublishDiagnosticsNotification,
   ShutdownRequest,
-  type InitializeParams,
 } from 'vscode-languageserver-protocol'
+
 import {
   convertDiagnostics,
   filePathToUri,
@@ -28,6 +29,7 @@ import {
   setMainWindow,
 } from './lspState'
 import type { LspActionResult, LspDiagnostic, LspServerInstance } from './lspTypes'
+import { broadcastToWebClients } from './web/webServer'
 
 const MAX_RESTART_ATTEMPTS = 3
 const RESTART_COOLDOWN_MS = 10_000
@@ -193,6 +195,7 @@ function pushDiagnostics(filePath: string, diagnostics: LspDiagnostic[]): void {
   if (window && !window.isDestroyed()) {
     window.webContents.send('lsp:diagnostics:push', { filePath, diagnostics })
   }
+  broadcastToWebClients('lsp:diagnostics:push', { filePath, diagnostics })
 }
 
 function registerDiagnosticsListener(instance: LspServerInstance): void {

@@ -7,7 +7,8 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FileChangeEvent, HookPayload, AppTheme, AppConfig } from '../renderer/types/electron'
+
+import type { AppConfig,AppTheme, ElectronAPI, FileChangeEvent, HookPayload } from '../renderer/types/electron'
 import { supplementalApis } from './preloadSupplementalApis'
 
 // â”€â”€â”€ PTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -193,6 +194,7 @@ const gitAPI: ElectronAPI['git'] = {
   fileAtCommit: (root, commitHash, filePath) => ipcRenderer.invoke('git:fileAtCommit', root, commitHash, filePath),
   applyHunk: (root, patchContent) => ipcRenderer.invoke('git:applyHunk', root, patchContent),
   revertHunk: (root, patchContent) => ipcRenderer.invoke('git:revertHunk', root, patchContent),
+  stageHunk: (root, patchContent) => ipcRenderer.invoke('git:stageHunk', root, patchContent),
   revertFile: (root, commitHash, filePath) => ipcRenderer.invoke('git:revertFile', root, commitHash, filePath),
   diffBetween: (root, fromHash, toHash) => ipcRenderer.invoke('git:diffBetween', root, fromHash, toHash),
   changedFilesBetween: (root, fromHash, toHash) => ipcRenderer.invoke('git:changedFilesBetween', root, fromHash, toHash),

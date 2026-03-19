@@ -1,7 +1,8 @@
 import Store from 'electron-store'
+
 import type { AgentChatSettings } from './agentChat/types'
-import type { ContextLayerConfig } from './contextLayer/contextLayerTypes'
 import { schema } from './configSchema'
+import type { ContextLayerConfig } from './contextLayer/contextLayerTypes'
 
 export interface PanelSizes {
   leftSidebar: number
@@ -59,6 +60,23 @@ export interface NotificationSettings {
   alwaysNotify: boolean
 }
 
+export interface ClaudeMdSettings {
+  /** Master toggle for CLAUDE.md automation */
+  enabled: boolean
+  /** When to trigger generation */
+  triggerMode: 'post-session' | 'post-commit' | 'manual'
+  /** Which model to use for generation */
+  model: 'haiku' | 'sonnet' | 'opus'
+  /** Auto-commit generated CLAUDE.md files */
+  autoCommit: boolean
+  /** Generate root CLAUDE.md */
+  generateRoot: boolean
+  /** Generate subdirectory CLAUDE.md files */
+  generateSubdirs: boolean
+  /** Directories to exclude from generation */
+  excludeDirs: string[]
+}
+
 export interface AgentTemplate {
   id: string
   name: string
@@ -94,7 +112,7 @@ export interface WorkspaceSnapshot {
 export interface AppConfig {
   recentProjects: string[]
   defaultProjectRoot: string
-  activeTheme: 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'custom'
+  activeTheme: 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'light' | 'high-contrast' | 'custom'
   hooksServerPort: number
   terminalFontSize: number
   autoInstallHooks: boolean
@@ -170,19 +188,32 @@ export interface AppConfig {
   formatOnSave: boolean
   /** Context layer settings for AI-assisted codebase understanding */
   contextLayer: ContextLayerConfig
+  /** Automated CLAUDE.md generation settings */
+  claudeMdSettings: ClaudeMdSettings
+  /** Port for the web remote access server (default: 7890) */
+  webAccessPort: number
+  /** Auth token for web remote access */
+  webAccessToken: string
 }
 
 export const store = new Store<AppConfig>({ schema })
 
+// In-memory cache to avoid re-reading config.json from disk on every call.
+// electron-store's underlying conf library reads the file on every .get().
+// This cache is invalidated on every write via setConfigValue.
+let configCache: AppConfig | null = null
+
 export function getConfig(): AppConfig {
-  return store.store
+  if (!configCache) configCache = store.store
+  return configCache
 }
 
 export function getConfigValue<K extends keyof AppConfig>(key: K): AppConfig[K] {
-  return store.get(key)
+  return getConfig()[key]
 }
 
 export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void {
   store.set(key, value)
+  configCache = null  // invalidate cache on write
 }
 

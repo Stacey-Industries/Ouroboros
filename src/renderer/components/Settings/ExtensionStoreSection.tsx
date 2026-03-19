@@ -3,13 +3,19 @@
  * VS Code extensions (themes, grammars, snippets) from Open VSX.
  */
 
-import React, { useEffect, useState } from 'react';
-import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+import React, { useEffect, useState } from 'react';
+
 import type { InstalledVsxExtension } from '../../types/electron';
-import { SectionLabel, buttonStyle } from './settingsStyles';
 import { ExtensionStoreCard } from './ExtensionStoreCard';
-import { type ExtensionStoreModel, useExtensionStoreModel } from './extensionStoreModel';
+import { type ExtensionStoreModel, type ExtensionStoreSource, useExtensionStoreModel } from './extensionStoreModel';
+import { buttonStyle,SectionLabel } from './settingsStyles';
+
+const SOURCE_OPTIONS: Array<{ id: ExtensionStoreSource; label: string; desc: string }> = [
+  { id: 'openvsx', label: 'Open VSX', desc: 'Open VSX Registry' },
+  { id: 'marketplace', label: 'VS Code Marketplace', desc: 'Visual Studio Marketplace' },
+];
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -31,6 +37,7 @@ export function ExtensionStoreSection(): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {model.error && <div role="alert" style={errorBannerStyle}>{model.error}</div>}
       <StoreHeader onRefresh={model.search} />
+      <SourceToggle source={model.source} onSelect={model.setSource} />
       <InstalledBanner model={model} />
       <SearchInput query={model.query} onChange={model.setQuery} />
       <CategoryFilter activeFilter={model.categoryFilter} onSelect={model.setCategoryFilter} />
@@ -51,12 +58,34 @@ function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactEleme
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>Extension Store</SectionLabel>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-          Themes, grammars, and snippets from Open VSX
+          Themes, grammars, and snippets from multiple sources
         </p>
       </div>
       <div style={{ flexShrink: 0 }}>
         <button onClick={onRefresh} style={buttonStyle}>Refresh</button>
       </div>
+    </div>
+  );
+}
+
+// ── Source Toggle ───────────────────────────────────────────────────────
+
+function SourceToggle({ source, onSelect }: { source: ExtensionStoreSource; onSelect: (s: ExtensionStoreSource) => void }): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      {SOURCE_OPTIONS.map((opt) => {
+        const active = opt.id === source;
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onSelect(opt.id)}
+            title={opt.desc}
+            style={categoryPillStyle(active)}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

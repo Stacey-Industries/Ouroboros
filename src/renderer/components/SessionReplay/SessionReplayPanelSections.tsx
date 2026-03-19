@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+
 import type { AgentSession } from '../AgentMonitor/types';
+import { exportSessionReport } from './exportSessionReport';
 import { ReplayTimeline } from './ReplayTimeline';
-import { StepList } from './StepList';
-import { StepDetail } from './StepDetail';
 import type { SessionReplayController } from './SessionReplayPanelController';
+import { StepDetail } from './StepDetail';
+import { StepList } from './StepList';
 
 export function SessionReplayLayout({
   session,
@@ -27,7 +29,7 @@ export function SessionReplayLayout({
         outline: 'none',
       }}
     >
-      <ReplayHeader taskLabel={session.taskLabel} onClose={onClose} />
+      <ReplayHeader session={session} onClose={onClose} />
       <ReplayTransportBar replay={replay} />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <StepList steps={replay.steps} currentStep={replay.currentStep} onSelect={replay.handleSeek} />
@@ -47,12 +49,17 @@ export function SessionReplayLayout({
 }
 
 function ReplayHeader({
-  taskLabel,
+  session,
   onClose,
 }: {
-  taskLabel: string;
+  session: AgentSession;
   onClose: () => void;
 }): React.ReactElement {
+  const handleExport = useCallback(() => {
+    const report = exportSessionReport(session);
+    void navigator.clipboard.writeText(report);
+  }, [session]);
+
   return (
     <div
       style={{
@@ -71,10 +78,13 @@ function ReplayHeader({
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontWeight: 600, color: 'var(--text)' }}>Session Replay</span>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-          {taskLabel}
+          {session.taskLabel}
         </span>
       </div>
-      <CloseBtn onClick={onClose} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <ExportBtn onClick={handleExport} />
+        <CloseBtn onClick={onClose} />
+      </div>
     </div>
   );
 }
@@ -232,6 +242,46 @@ function TransportBtn({
       }}
     >
       {children}
+    </button>
+  );
+}
+
+function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElement {
+  const [hovered, setHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleClick = useCallback(() => {
+    onClick();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [onClick]);
+
+  return (
+    <button
+      onClick={handleClick}
+      title="Export as Markdown (clipboard)"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: `1px solid ${copied ? 'var(--success)' : 'var(--border)'}`,
+        background: 'transparent',
+        color: copied ? 'var(--success)' : hovered ? 'var(--text)' : 'var(--text-muted)',
+        cursor: 'pointer',
+        fontSize: '0.625rem',
+        fontFamily: 'var(--font-ui)',
+        transition: 'color 0.15s, border-color 0.15s',
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3" />
+        <path d="M8 2v8M5 7l3 3 3-3" />
+      </svg>
+      {copied ? 'Copied!' : 'Export'}
     </button>
   );
 }

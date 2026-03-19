@@ -1,8 +1,11 @@
-import { Menu, MenuItemConstructorOptions, app, shell, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog,Menu, MenuItemConstructorOptions, shell } from 'electron'
+
+import { broadcastToWebClients } from './web/webServer'
 import { createWindow, setWindowProjectRoot } from './windowManager'
 
 function sendMenuEvent(win: BrowserWindow, channel: string): void {
   win.webContents.send(channel)
+  broadcastToWebClients(channel, undefined)
 }
 
 async function openFolderInNewWindow(win: BrowserWindow): Promise<void> {

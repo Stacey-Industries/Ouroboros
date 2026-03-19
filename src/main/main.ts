@@ -27,6 +27,9 @@ import {
 } from './perfMetrics';
 import { killAllPtySessions } from './pty';
 import { runAllMigrations } from './storage/migrate';
+import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
+import { installHandlerCapture } from './web/handlerRegistry';
+import { getOrCreateWebToken } from './web/webAuth';
 import { createWindow, getAllActiveWindows } from './windowManager';
 
 // â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -107,6 +110,7 @@ function broadcastToActiveWindows(channel: string, payload: unknown): void {
       win.webContents.send(channel, payload);
     }
   }
+  broadcastToWebClients(channel, payload)
 }
 
 /** Broadcasts perf metrics to all open windows. */
@@ -131,7 +135,7 @@ async function runStartupStep(
 
 async function startIdeTools(): Promise<void> {
   const toolAddr = await startIdeToolServer();
-  console.log(`[main] IDE tool server started at ${toolAddr.address}`);
+  if (toolAddr) console.log(`[main] IDE tool server started at ${toolAddr.address}`);
 }
 
 async function startBackgroundServices(win: BrowserWindow): Promise<void> {
@@ -213,10 +217,25 @@ async function initializeApplication(): Promise<void> {
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
 
+  // Capture all ipcMain.handle registrations into the shared registry
+  // so the WebSocket bridge can call the same handlers. Must run before
+  // createWindow() which triggers registerIpcHandlers().
+  installHandlerCapture();
+
   initializePerfMetrics({ getActiveWindows: getAllActiveWindows });
   mainWindow = createWindow();
   buildApplicationMenu(mainWindow);
   await startBackgroundServices(mainWindow);
+
+  // Initialize CLAUDE.md generator (non-fatal)
+  try {
+    const { initClaudeMdGenerator } = await import('./claudeMdGenerator');
+    initClaudeMdGenerator(mainWindow);
+    console.log('[claude-md] Generator initialized');
+  } catch (err) {
+    console.warn('[claude-md] Generator initialization failed:', err);
+  }
+
   registerRenderProcessCrashLogging();
   configureAutoUpdater();
   startPerfMetrics();
@@ -246,6 +265,16 @@ async function initializeApplication(): Promise<void> {
   initCodebaseGraph().catch((error) => {
     console.error('[codebase-graph] Initialization failed:', error);
   });
+
+  // Web remote access server (non-fatal)
+  const webPort = (getConfigValue('webAccessPort') as number | undefined) ?? 7890;
+  const webStaticDir = path.join(__dirname, '../web');
+  startWebServer({ port: webPort, staticDir: webStaticDir }).then(() => {
+    const token = getOrCreateWebToken();
+    console.log(`[web] Access URL: http://localhost:${webPort}?token=${token}`);
+  }).catch((error) => {
+    console.error('[web] Failed to start web server:', error);
+  });
 }
 
 async function initCodebaseGraph(): Promise<void> {
@@ -272,6 +301,7 @@ app.whenReady().then(initializeApplication);
 app.on('window-all-closed', async () => {
   clearPerfSubscribers();
   stopPerfMetrics();
+  await stopWebServer();
   await stopHooksServer();
   await stopIdeToolServer();
   killAllPtySessions();

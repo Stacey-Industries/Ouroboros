@@ -1,9 +1,11 @@
 import { BrowserWindow } from 'electron'
+
 import { getServerLanguageForFilePath, serverKey } from './lspHelpers'
 import type {
   LspServerInstance,
   LspServerStatus,
 } from './lspTypes'
+import { broadcastToWebClients } from './web/webServer'
 
 export const servers = new Map<string, LspServerInstance>()
 
@@ -29,6 +31,7 @@ export function broadcastStatusChange(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('lsp:statusChange', getRunningServers())
   }
+  broadcastToWebClients('lsp:statusChange', getRunningServers())
 }
 
 export function detectLanguageForFile(root: string, filePath: string): string | null {

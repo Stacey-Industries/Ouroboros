@@ -1,26 +1,27 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Sidebar } from './Sidebar';
-import { CentrePane } from './CentrePane';
-import { AgentMonitorPane, CollapsedAgentStrip } from './AgentMonitorPane';
-import { TerminalPane } from './TerminalPane';
-import { TitleBar } from './TitleBar';
-import { ResizeDivider } from './ResizeDivider';
-import { useResizable } from './useResizable';
-import { usePanelCollapse, type CollapseTarget } from './usePanelCollapse';
-import { StatusBar } from './StatusBar';
-import type { StatusBarProps, StatusBarLayoutProps } from './StatusBar';
-import type { TerminalSession } from '../Terminal/TerminalTabs';
-import { useFocusPanel } from '../../contexts/FocusContext';
+
 import type { FocusPanel } from '../../contexts/FocusContext';
-import type { WorkspaceLayout } from '../../types/electron';
+import { useFocusPanel } from '../../contexts/FocusContext';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   FOCUS_TERMINAL_SESSION_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
   OPEN_CHAT_IN_TERMINAL_EVENT,
 } from '../../hooks/appEventNames';
-import { ActivityBar } from './ActivityBar';
+import type { WorkspaceLayout } from '../../types/electron';
+import type { TerminalSession } from '../Terminal/TerminalTabs';
 import type { SidebarView } from './ActivityBar';
+import { ActivityBar } from './ActivityBar';
+import { AgentMonitorPane, CollapsedAgentStrip } from './AgentMonitorPane';
+import { CentrePane } from './CentrePane';
+import { ResizeDivider } from './ResizeDivider';
+import { Sidebar } from './Sidebar';
+import type { StatusBarLayoutProps,StatusBarProps } from './StatusBar';
+import { StatusBar } from './StatusBar';
+import { TerminalPane } from './TerminalPane';
+import { TitleBar } from './TitleBar';
+import { type CollapseTarget,usePanelCollapse } from './usePanelCollapse';
+import { useResizable } from './useResizable';
 
 export interface AppLayoutSlots {
   sidebarHeader?: React.ReactNode;
@@ -157,13 +158,128 @@ function usePanelEventHandlers(args: {
   }, [expand, setFocusedPanel, toggle, activateTerminalSession, args.focusOrCreate, args.spawnClaudeSession]);
 }
 
+export type MobilePanel = 'chat' | 'editor' | 'terminal' | 'files';
+
+/* ── Mobile bottom navigation bar ────────────────────────────────────────── */
+
+const MOBILE_NAV_ITEMS: { id: MobilePanel; label: string }[] = [
+  { id: 'files', label: 'Files' },
+  { id: 'editor', label: 'Editor' },
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'chat', label: 'Chat' },
+];
+
+function MobileNavIcon({ id }: { id: MobilePanel }): React.ReactElement {
+  if (id === 'files') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <rect x="5" y="2" width="10" height="13" rx="1.5" />
+        <rect x="3" y="5" width="10" height="13" rx="1.5" fill="var(--bg-secondary)" />
+      </svg>
+    );
+  }
+  if (id === 'editor') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+        <polyline points="7,5 3,10 7,15" /><polyline points="13,5 17,10 13,15" /><line x1="11" y1="3" x2="9" y2="17" />
+      </svg>
+    );
+  }
+  if (id === 'terminal') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="16" height="14" rx="2" />
+        <polyline points="6,8 9,11 6,14" />
+        <line x1="11" y1="14" x2="15" y2="14" />
+      </svg>
+    );
+  }
+  // chat
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h12a2 2 0 012 2v6a2 2 0 01-2 2H8l-4 3v-3a2 2 0 01-2-2V6a2 2 0 012-2z" />
+    </svg>
+  );
+}
+
+function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p: MobilePanel) => void }): React.ReactElement {
+  return (
+    <nav
+      data-layout="mobile-nav"
+      className="web-mobile-only"
+      style={{
+        display: 'none', // shown by CSS on mobile web
+        flexShrink: 0,
+        minHeight: '56px',
+        backgroundColor: 'var(--bg-secondary)',
+        borderTop: '1px solid var(--border)',
+        alignItems: 'stretch',
+        justifyContent: 'space-around',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      {MOBILE_NAV_ITEMS.map((item) => {
+        const isActive = item.id === active;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onSwitch(item.id)}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '2px',
+              background: 'none',
+              border: 'none',
+              borderTop: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+              fontSize: '10px',
+              fontFamily: 'var(--font-ui, sans-serif)',
+              fontWeight: isActive ? 600 : 400,
+              cursor: 'pointer',
+              transition: 'color 100ms ease, border-color 100ms ease',
+              paddingTop: '4px',
+            }}
+          >
+            <MobileNavIcon id={item.id} />
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function AppLayout(props: AppLayoutProps): React.ReactElement {
   const { sizes, startResize, resetSize, applySizes } = useResizable();
-  const { collapsed, toggle, expand, applyState } = usePanelCollapse({ keybindings: props.keybindings });
+  const { collapsed, toggle, expand, collapse, applyState } = usePanelCollapse({ keybindings: props.keybindings });
   const { focusedPanel, setFocusedPanel } = useFocusPanel();
   const [sidebarView, setSidebarView] = useState<SidebarView>('files');
+  const [mobileActivePanel, setMobileActivePanel] = useState<MobilePanel>('chat');
   useApplyLayoutEvent(applySizes, applyState);
   usePanelEventHandlers({ expand, setFocusedPanel, toggle, activateTerminalSession: props.terminalControl.onActivate, focusOrCreate: props.terminalControl.focusOrCreate, spawnClaudeSession: props.terminalControl.onSpawnClaude });
+
+  const handleMobilePanelSwitch = useCallback((panel: MobilePanel) => {
+    setMobileActivePanel(panel);
+    if (panel === 'files') {
+      expand('leftSidebar');
+      collapse('rightSidebar');
+    } else if (panel === 'chat') {
+      collapse('leftSidebar');
+      expand('rightSidebar');
+    } else if (panel === 'terminal') {
+      collapse('leftSidebar');
+      collapse('rightSidebar');
+      expand('terminal');
+    } else {
+      // editor — collapse both sidebars, collapse terminal so editor gets full space
+      collapse('leftSidebar');
+      collapse('rightSidebar');
+      collapse('terminal');
+    }
+  }, [expand, collapse]);
 
   const handleActivityViewChange = useCallback((view: SidebarView) => {
     setSidebarView(view);
@@ -207,10 +323,10 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
   const runningAgentCount = props.runningAgentCount ?? 0;
 
   return (
-    <div className="flex flex-col w-screen h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+    <div data-layout="app" data-mobile-active={mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
       <TitleBar />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Activity bar — always visible */}
+        {/* Activity bar — always visible (hidden on mobile via CSS) */}
         <ActivityBar
           activeView={sidebarView}
           sidebarCollapsed={collapsed.leftSidebar}
@@ -236,7 +352,7 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
         )}
 
         {/* Centre column: editor + terminal stacked vertically */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+        <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
           <CentrePane tabBar={props.editorTabBar} focusStyle={pfs('editor')} onFocus={() => setFocusedPanel('editor')}>
             {props.editorContent}
           </CentrePane>
@@ -258,7 +374,11 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
           </AgentMonitorPane>
         </div>
       </div>
-      <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
+      {/* Mobile bottom nav — hidden on desktop via CSS */}
+      <MobileNavBar active={mobileActivePanel} onSwitch={handleMobilePanelSwitch} />
+      <div data-layout="status-bar">
+        <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
+      </div>
     </div>
   );
 }

@@ -6,9 +6,10 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { useToast } from '../hooks/useToast';
-import type { UseToastReturn } from '../hooks/useToast';
+
 import { ToastContainer } from '../components/shared/Toast';
+import type { UseToastReturn } from '../hooks/useToast';
+import { useToast } from '../hooks/useToast';
 
 // ── Context ──────────────────────────────────────────────────────────────────
 
@@ -34,11 +35,15 @@ export function ToastProvider({ children }: ToastProviderProps): React.ReactElem
       markAllRead: toastState.markAllRead,
       removeNotification: toastState.removeNotification,
       clearAllNotifications: toastState.clearAllNotifications,
+      startProgress: toastState.startProgress,
+      updateProgress: toastState.updateProgress,
+      completeProgress: toastState.completeProgress,
     }),
     [
       toastState.toasts, toastState.toast, toastState.dismiss, toastState.dismissAll,
       toastState.notifications, toastState.unreadCount, toastState.markAllRead,
       toastState.removeNotification, toastState.clearAllNotifications,
+      toastState.startProgress, toastState.updateProgress, toastState.completeProgress,
     ],
   );
 

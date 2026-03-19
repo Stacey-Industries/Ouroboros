@@ -1,9 +1,12 @@
+import { BrowserWindow } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { BrowserWindow } from 'electron'
-import { getConfigValue, type AppConfig } from './config'
-import { writeToPty } from './pty'
+
+import { type AppConfig,getConfigValue } from './config'
 import type { LoadedExtension } from './extensionsTypes'
+import { validatePathInWorkspace } from './ipc-handlers/pathSecurity'
+import { writeToPty } from './pty'
+import { broadcastToWebClients } from './web/webServer'
 
 interface ConsoleProxy {
   log: (...args: unknown[]) => void
@@ -40,6 +43,21 @@ function getResolvedPath(filePath: string): string {
   return path.resolve(filePath)
 }
 
+/**
+ * Get the set of workspace roots allowed for extension file access.
+ * Extensions may not access files outside the configured workspace.
+ */
+function getExtensionAllowedRoots(): string[] {
+  const roots: string[] = []
+  const multiRoots = getConfigValue('multiRoots') ?? []
+  for (const r of multiRoots) {
+    if (r) roots.push(path.resolve(r))
+  }
+  const defaultRoot = getConfigValue('defaultProjectRoot')
+  if (defaultRoot) roots.push(path.resolve(defaultRoot))
+  return roots
+}
+
 function getPrimaryWindow(): BrowserWindow | undefined {
   return BrowserWindow.getAllWindows()[0]
 }
@@ -58,6 +76,8 @@ function buildFilesApi(ext: LoadedExtension): Record<string, unknown> {
       requirePermission(ext, 'files.read')
       requireNonEmptyString(filePath, 'file path')
       const resolved = getResolvedPath(filePath)
+      const pathError = validatePathInWorkspace(resolved, getExtensionAllowedRoots())
+      if (pathError) throw new Error(`Permission denied: ${pathError}`)
       appendLog(ext, `files.readFile: ${resolved}`)
       return fs.readFile(resolved, 'utf-8')
     },
@@ -66,6 +86,8 @@ function buildFilesApi(ext: LoadedExtension): Record<string, unknown> {
       requireNonEmptyString(filePath, 'file path')
       requireString(content, 'Content')
       const resolved = getResolvedPath(filePath)
+      const pathError = validatePathInWorkspace(resolved, getExtensionAllowedRoots())
+      if (pathError) throw new Error(`Permission denied: ${pathError}`)
       appendLog(ext, `files.writeFile: ${resolved}`)
       await fs.writeFile(resolved, content, 'utf-8')
     },
@@ -107,6 +129,7 @@ function buildUiApi(ext: LoadedExtension): Record<string, unknown> {
           message,
         })
       }
+      broadcastToWebClients('extensions:notification', { extensionName: ext.manifest.name, message })
     },
   }
 }

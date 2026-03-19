@@ -3,6 +3,9 @@
  *
  * web-tree-sitter requires a WASM binary for the core runtime (`tree-sitter.wasm`)
  * and one WASM binary per language grammar. This module handles both.
+ *
+ * Uses web-tree-sitter@0.22.x API where Parser is the default export and
+ * Parser.Language is a nested namespace (not a separate named export).
  */
 
 import path from 'path';
@@ -80,10 +83,9 @@ export async function initTreeSitter(): Promise<void> {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    // web-tree-sitter@0.26.7 is ESM and does NOT export './package.json'.
-    // Workaround: resolve the main entry and navigate from there.
+    // web-tree-sitter@0.22.x: the wasm file is 'tree-sitter.wasm' (not 'web-tree-sitter.wasm')
     const treeSitterDir = path.dirname(require.resolve('web-tree-sitter'));
-    const treeSitterWasmPath = path.join(treeSitterDir, 'web-tree-sitter.wasm');
+    const treeSitterWasmPath = path.join(treeSitterDir, 'tree-sitter.wasm');
 
     await Parser.init({
       locateFile: () => treeSitterWasmPath,

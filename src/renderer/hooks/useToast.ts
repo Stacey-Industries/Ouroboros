@@ -6,7 +6,7 @@
  * notification center history (last N notifications).
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect,useRef, useState } from 'react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,15 @@ export interface ToastItem {
   dismissing?: boolean;
 }
 
+export interface NotificationProgress {
+  status: 'active' | 'completed' | 'error';
+  completed: number;
+  total: number;
+  currentItem?: string;
+  /** Set when status transitions to 'completed' or 'error' */
+  summary?: string;
+}
+
 /** An entry stored in the notification center history. */
 export interface NotificationEntry {
   id: string;
@@ -40,6 +49,8 @@ export interface NotificationEntry {
   createdAt: number;
   read: boolean;
   action?: { label: string; onClick: () => void };
+  /** If present, this notification tracks a long-running operation */
+  progress?: NotificationProgress;
 }
 
 export interface UseToastReturn {
@@ -57,6 +68,12 @@ export interface UseToastReturn {
   removeNotification: (id: string) => void;
   /** Clear all notifications from the center. */
   clearAllNotifications: () => void;
+  /** Create a progress notification (appears in notification center, no toast popup). Returns the ID. */
+  startProgress: (title: string, options?: { total?: number }) => string;
+  /** Update an existing progress notification's progress state. */
+  updateProgress: (id: string, update: { completed?: number; total?: number; currentItem?: string }) => void;
+  /** Mark a progress notification as complete (success/error/warning). */
+  completeProgress: (id: string, summary: string, type?: ToastType) => void;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -202,8 +219,66 @@ export function useToast(): UseToastReturn {
     setNotifications([]);
   }, []);
 
+  const startProgress = useCallback((title: string, options?: { total?: number }): string => {
+    const id = generateToastId();
+    const entry: NotificationEntry = {
+      id,
+      message: title,
+      type: 'info',
+      createdAt: Date.now(),
+      read: false,
+      progress: {
+        status: 'active',
+        completed: 0,
+        total: options?.total ?? 0,
+      },
+    };
+    setNotifications((prev) => {
+      const next = [entry, ...prev];
+      return next.length > MAX_NOTIFICATION_HISTORY ? next.slice(0, MAX_NOTIFICATION_HISTORY) : next;
+    });
+    return id;
+  }, []);
+
+  const updateProgress = useCallback((id: string, update: { completed?: number; total?: number; currentItem?: string }): void => {
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (n.id !== id || !n.progress) return n;
+        return {
+          ...n,
+          read: false,
+          progress: {
+            ...n.progress,
+            ...(update.completed !== undefined ? { completed: update.completed } : {}),
+            ...(update.total !== undefined ? { total: update.total } : {}),
+            ...(update.currentItem !== undefined ? { currentItem: update.currentItem } : {}),
+          },
+        };
+      }),
+    );
+  }, []);
+
+  const completeProgress = useCallback((id: string, summary: string, type: ToastType = 'success'): void => {
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (n.id !== id || !n.progress) return n;
+        return {
+          ...n,
+          type,
+          read: false,
+          progress: {
+            ...n.progress,
+            status: type === 'error' ? 'error' : 'completed',
+            summary,
+          },
+        };
+      }),
+    );
+  }, []);
+
   return {
     toasts, toast: addToast, dismiss, dismissAll,
     notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications,
+    startProgress, updateProgress, completeProgress,
   };
 }

@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
 import type { Dispatch } from 'react';
+import { useCallback } from 'react';
+
 import type { FileDiff } from '../../types/electron';
 import type { DiffReviewState, HunkDecision, ReviewFile } from './types';
 
@@ -178,6 +179,24 @@ async function revertPendingEntries(
   }
 }
 
+async function stagePendingEntries(
+  projectRoot: string,
+  entries: PendingHunkRef[],
+  dispatch: ReviewDispatch,
+): Promise<void> {
+  for (const entry of entries) {
+    const result = await window.electronAPI.git.stageHunk(projectRoot, entry.rawPatch);
+    if (!result.success) {
+      dispatch({
+        type: 'SET_DECISION',
+        fileIdx: entry.fileIdx,
+        hunkIdx: entry.hunkIdx,
+        decision: 'pending',
+      });
+    }
+  }
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -216,8 +235,13 @@ export function useSingleHunkActions(
   dispatch: ReviewDispatch,
 ): Pick<DiffReviewActions, 'acceptHunk' | 'rejectHunk'> {
   const acceptHunk = useCallback((fileIdx: number, hunkIdx: number) => {
-    if (!getPendingHunk(state, fileIdx, hunkIdx)) return;
+    const pendingHunk = getPendingHunk(state, fileIdx, hunkIdx);
+    if (!state || !pendingHunk) return;
     dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'accepted' });
+    void window.electronAPI.git.stageHunk(state.projectRoot, pendingHunk.rawPatch).catch((error) => {
+      console.error('[diffReview] Failed to stage hunk:', error);
+      dispatch({ type: 'SET_DECISION', fileIdx, hunkIdx, decision: 'pending' });
+    });
   }, [dispatch, state]);
 
   const rejectHunk = useCallback((fileIdx: number, hunkIdx: number) => {
@@ -239,8 +263,10 @@ export function useBulkReviewActions(
   dispatch: ReviewDispatch,
 ): Pick<DiffReviewActions, 'acceptAllFile' | 'rejectAllFile' | 'acceptAll' | 'rejectAll'> {
   const acceptAllFile = useCallback((fileIdx: number) => {
-    if (!state) return;
+    const file = state?.files[fileIdx];
+    if (!state || !file) return;
     dispatch({ type: 'SET_FILE_DECISION', fileIdx, decision: 'accepted' });
+    void stagePendingEntries(state.projectRoot, getPendingEntriesForFile(file, fileIdx), dispatch);
   }, [dispatch, state]);
 
   const rejectAllFile = useCallback((fileIdx: number) => {
@@ -254,6 +280,7 @@ export function useBulkReviewActions(
   const acceptAll = useCallback(() => {
     if (!state) return;
     dispatch({ type: 'SET_ALL_DECISION', decision: 'accepted' });
+    void stagePendingEntries(state.projectRoot, getPendingEntries(state.files), dispatch);
   }, [dispatch, state]);
 
   const rejectAll = useCallback(() => {

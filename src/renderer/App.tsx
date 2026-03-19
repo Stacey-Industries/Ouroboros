@@ -12,25 +12,24 @@
 
 import React, { useCallback, useState } from 'react';
 
-import { useConfig } from './hooks/useConfig';
-import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
-import { useTerminalSessions } from './hooks/useTerminalSessions';
-import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
-import { useProjectManagement } from './hooks/useProjectManagement';
-import { useInnerAppEffects } from './hooks/useInnerAppEffects';
-
-import { ProjectProvider, useProject } from './contexts/ProjectContext';
-import { ToastProvider } from './contexts/ToastContext';
-import { FocusProvider } from './contexts/FocusContext';
-import { AgentEventsProvider } from './contexts/AgentEventsContext';
-import { ApprovalProvider } from './contexts/ApprovalContext';
-
+import type { Command } from './components/CommandPalette/types';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
-import type { Command } from './components/CommandPalette/types';
-import { InnerAppLayout } from './components/Layout/InnerAppLayout';
 import type { InnerAppLayoutProps } from './components/Layout/InnerAppLayout';
+import { InnerAppLayout } from './components/Layout/InnerAppLayout';
 import { LoadingScreen } from './components/Layout/LoadingScreen';
+import { AgentEventsProvider } from './contexts/AgentEventsContext';
+import { ApprovalProvider } from './contexts/ApprovalContext';
+import { FocusProvider } from './contexts/FocusContext';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { useConfig } from './hooks/useConfig';
+import { useExtensionThemes } from './hooks/useExtensionThemes';
+import { useInnerAppEffects } from './hooks/useInnerAppEffects';
+import { useProjectManagement } from './hooks/useProjectManagement';
+import { useTerminalSessions } from './hooks/useTerminalSessions';
+import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
+import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 
 
 // ─── useCustomCSS ─────────────────────────────────────────────
@@ -183,6 +182,9 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
   const project = useProjectManagement(initialRecentProjects, ctx.setProjectRoot);
   const uiState = useInnerAppUiState();
   const handleExecute = useCommandExecution(execute);
+
+  // Register extension themes at startup so they're available before opening settings
+  useExtensionThemes();
 
   useInnerAppLifecycle({
     ctx,

@@ -1,4 +1,5 @@
 @import './fonts.css';
+@import './mobile.css';
 
 @tailwind base;
 @tailwind components;
@@ -15,6 +16,11 @@
   --panel-radius: 6px;
   --header-height: 36px;
   --tab-height: 34px;
+
+  /* Map shadcn/ui CSS vars (used by Streamdown) to our theme vars */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --sidebar: var(--bg-secondary, var(--bg));
 }
 
 /* ─── Base resets ───────────────────────────────────────────────────────────── */
@@ -70,11 +76,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.12);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
   }
 
   /* Focus ring — exclude xterm internals (helper textarea, decorations) */
@@ -236,9 +242,10 @@
 
 /* Smooth panel content transitions */
 .panel-transition {
-  transition: background-color 150ms ease,
-              border-color 150ms ease,
-              box-shadow 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 /* Tab connected-to-content effect — hides the border between active tab and content */
@@ -325,12 +332,21 @@
 
 /* ─── Terminal progress bar animations ─────────────────────────────────────── */
 @keyframes terminal-progress-indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 @keyframes terminal-progress-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 .terminal-progress-bar-indeterminate {
   animation: terminal-progress-indeterminate 1.5s ease-in-out infinite;
@@ -352,24 +368,46 @@
 
 .agent-chat-message-enter {
   animation: agent-chat-slide-in 140ms ease-out both;
+  /* Prevent layout shifts from propagating when streaming→persisted blocks change */
+  contain: layout style;
 }
 
 /* 4A: Thinking dots (used in StreamingIndicator) */
 @keyframes agent-chat-dot-bounce {
-  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
-  30% { opacity: 0.9; transform: translateY(-3px); }
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
 }
 
 /* 4A: Tally pulse — gentle glow for the change tally dot */
 @keyframes agent-chat-tally-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 /* 4A: Streaming cursor — blinking pipe */
 @keyframes agent-chat-cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .agent-chat-streaming-cursor::after {
@@ -383,15 +421,17 @@
 /* 4A: Tool card expand/collapse (max-height transition) */
 .agent-chat-tool-expand {
   overflow: hidden;
-  transition: max-height 150ms ease-out, opacity 150ms ease-out;
+  transition:
+    max-height 150ms ease-out,
+    opacity 150ms ease-out;
 }
 
-.agent-chat-tool-expand[data-collapsed="true"] {
+.agent-chat-tool-expand[data-collapsed='true'] {
   max-height: 0;
   opacity: 0;
 }
 
-.agent-chat-tool-expand[data-collapsed="false"] {
+.agent-chat-tool-expand[data-collapsed='false'] {
   max-height: 2000px;
   opacity: 1;
 }
@@ -399,27 +439,86 @@
 /* 4A: Thinking block collapse transition */
 .agent-chat-thinking-collapse {
   overflow: hidden;
-  transition: max-height 200ms ease-out, opacity 200ms ease-out;
+  transition:
+    max-height 200ms ease-out,
+    opacity 200ms ease-out;
 }
 
-.agent-chat-thinking-collapse[data-collapsed="true"] {
+.agent-chat-thinking-collapse[data-collapsed='true'] {
   max-height: 0;
   opacity: 0;
 }
 
-.agent-chat-thinking-collapse[data-collapsed="false"] {
+.agent-chat-thinking-collapse[data-collapsed='false'] {
   max-height: 1000px;
   opacity: 1;
 }
 
 /* 4A: Status badge pulse */
 @keyframes agent-chat-status-pulse {
-  0% { background-color: var(--accent); color: var(--bg); }
-  100% { background-color: transparent; color: inherit; }
+  0% {
+    background-color: var(--accent);
+    color: var(--bg);
+  }
+  100% {
+    background-color: transparent;
+    color: inherit;
+  }
 }
 
 .agent-chat-status-pulse {
   animation: agent-chat-status-pulse 300ms ease-out;
+}
+
+/* Snake streaming animations (used by SlitherSnake / BlinkingCursor) */
+@keyframes snakeFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+@keyframes snakeTongue {
+  0%,
+  50%,
+  100% {
+    opacity: 0;
+  }
+  60%,
+  80% {
+    opacity: 1;
+  }
+}
+
+@keyframes snakeGrow {
+  from {
+    width: 0px;
+  }
+  to {
+    width: 28px;
+  }
+}
+
+@keyframes snakeSway {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+/* Spin keyframe — used by CommandBlockOverlayBody spinner icon */
+@keyframes agent-ide-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 4A: Respect prefers-reduced-motion */
@@ -450,7 +549,11 @@
   }
 
   @keyframes agent-chat-dot-bounce {
-    0%, 100% { opacity: 0.5; transform: none; }
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: none;
+    }
   }
 }
 
@@ -488,12 +591,20 @@
   color: var(--text);
 }
 
-.agent-chat-markdown h1 { font-size: 1.25em; }
-.agent-chat-markdown h2 { font-size: 1.15em; }
-.agent-chat-markdown h3 { font-size: 1.05em; }
+.agent-chat-markdown h1 {
+  font-size: 1.25em;
+}
+.agent-chat-markdown h2 {
+  font-size: 1.15em;
+}
+.agent-chat-markdown h3 {
+  font-size: 1.05em;
+}
 .agent-chat-markdown h4,
 .agent-chat-markdown h5,
-.agent-chat-markdown h6 { font-size: 1em; }
+.agent-chat-markdown h6 {
+  font-size: 1em;
+}
 
 .agent-chat-markdown h1:first-child,
 .agent-chat-markdown h2:first-child,
@@ -526,14 +637,15 @@
   color: var(--text);
 }
 
-/* Fenced code blocks */
+/* Fenced code blocks — Streamdown wraps these in its own bordered container,
+   so we only style the inner pre/code without adding a second border. */
 .agent-chat-markdown pre {
   position: relative;
-  margin: 0.5em 0;
+  margin: 0;
   padding: 0.65em 0.85em;
-  border-radius: 6px;
-  background-color: var(--bg-tertiary, rgba(30, 30, 40, 0.6));
-  border: 1px solid var(--border-muted, var(--border));
+  border-radius: 0;
+  background: none;
+  border: none;
   overflow-x: auto;
   line-height: 1.5;
 }
@@ -630,11 +742,8 @@
   cursor: pointer;
 }
 
-.agent-chat-markdown pre:hover [data-sd-copy] {
-  opacity: 1;
-}
-
-.agent-chat-markdown [data-sd-copy]:hover {
-  color: var(--text);
-  background: var(--bg-hover, var(--bg-tertiary));
+/* Let Streamdown's wrapper handle code block styling.
+   Fine-tune its rounded corners and spacing to match our theme. */
+.agent-chat-markdown [class*='rounded'] {
+  border-radius: 6px;
 }

@@ -89,5 +89,37 @@ export const tailSchema = {
       defaultView: { type: 'string', enum: [...AGENT_CHAT_DEFAULT_VIEWS], default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultView }
     },
     default: { ...AGENT_CHAT_SETTINGS_DEFAULTS }
-  }
+  },
+  webAccessPort: {
+    type: 'number',
+    minimum: 1024,
+    maximum: 65535,
+    default: 7890
+  },
+  webAccessToken: {
+    type: 'string',
+    default: ''
+  },
+  claudeMdSettings: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      enabled: { type: 'boolean', default: false },
+      triggerMode: { type: 'string', enum: ['post-session', 'post-commit', 'manual'], default: 'manual' },
+      model: { type: 'string', enum: ['haiku', 'sonnet', 'opus'], default: 'sonnet' },
+      autoCommit: { type: 'boolean', default: false },
+      generateRoot: { type: 'boolean', default: true },
+      generateSubdirs: { type: 'boolean', default: true },
+      excludeDirs: { type: 'array', items: { type: 'string' }, default: [] },
+    },
+    default: {
+      enabled: false,
+      triggerMode: 'manual',
+      model: 'sonnet',
+      autoCommit: false,
+      generateRoot: true,
+      generateSubdirs: true,
+      excludeDirs: [],
+    },
+  },
 }

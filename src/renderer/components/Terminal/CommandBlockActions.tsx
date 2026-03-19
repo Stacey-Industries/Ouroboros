@@ -9,6 +9,7 @@
  */
 
 import React, { useCallback, useState } from 'react'
+
 import type { CommandBlock } from './useCommandBlocks'
 
 export interface CommandBlockActionsProps {
@@ -17,6 +18,7 @@ export interface CommandBlockActionsProps {
   onCopyOutput: (block: CommandBlock) => void
   onCopyCommand: (block: CommandBlock) => void
   onToggleCollapse: (blockId: string) => void
+  onExplainError?: (block: CommandBlock) => void
 }
 
 const actionsBarStyle: React.CSSProperties = {
@@ -69,6 +71,16 @@ function RerunIcon(): React.ReactElement {
   )
 }
 
+function ExplainIcon(): React.ReactElement {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v4" strokeLinecap="round" />
+      <circle cx="8" cy="11.5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 function CollapseIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
@@ -109,6 +121,7 @@ export function CommandBlockActions({
   onCopyOutput,
   onCopyCommand,
   onToggleCollapse,
+  onExplainError,
 }: CommandBlockActionsProps): React.ReactElement {
   const handleRerun = useCallback(() => {
     if (block.command) {
@@ -133,6 +146,11 @@ export function CommandBlockActions({
       {block.command && (
         <ActionButton onClick={handleRerun} title="Re-run command">
           <RerunIcon /> Re-run
+        </ActionButton>
+      )}
+      {block.complete && block.exitCode !== undefined && block.exitCode !== 0 && onExplainError && (
+        <ActionButton onClick={() => onExplainError(block)} title="Explain this error with AI">
+          <ExplainIcon /> Explain
         </ActionButton>
       )}
       {canCollapse && (

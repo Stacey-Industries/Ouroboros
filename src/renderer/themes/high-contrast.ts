@@ -1,0 +1,35 @@
+import type { Theme } from './types';
+
+export const highContrastTheme: Theme = {
+  id: 'high-contrast',
+  name: 'High Contrast',
+  fontFamily: {
+    mono: '"Geist Mono", "JetBrains Mono", monospace',
+    ui: '"Inter", system-ui, -apple-system, sans-serif',
+  },
+  colors: {
+    bg: '#000000',
+    bgSecondary: '#0a0a0a',
+    bgTertiary: '#1a1a1a',
+    border: '#6b6b6b',
+    borderMuted: '#404040',
+    text: '#ffffff',
+    textSecondary: '#e0e0e0',
+    textMuted: '#b0b0b0',
+    textFaint: '#808080',
+    accent: '#5eead4',
+    accentHover: '#99f6e4',
+    accentMuted: 'rgba(94, 234, 212, 0.2)',
+    success: '#4ade80',
+    warning: '#fde047',
+    error: '#fb7185',
+    purple: '#c4b5fd',
+    purpleMuted: 'rgba(196, 181, 253, 0.25)',
+    selection: 'rgba(94, 234, 212, 0.3)',
+    focusRing: 'rgba(94, 234, 212, 0.6)',
+    termBg: '#000000',
+    termFg: '#ffffff',
+    termCursor: '#5eead4',
+    termSelection: 'rgba(94, 234, 212, 0.35)',
+  },
+};

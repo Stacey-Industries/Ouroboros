@@ -7,15 +7,25 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { EXTENSION_THEMES_CHANGED_EVENT } from '../../hooks/useExtensionThemes';
 import type {
-  VsxExtensionSummary,
-  VsxExtensionDetail,
   InstalledVsxExtension,
+  VsxExtensionDetail,
+  VsxExtensionSummary,
 } from '../../types/electron';
+
+/** Notify other hooks (useExtensionThemes) that extension contributions changed. */
+function notifyExtensionChange(): void {
+  window.dispatchEvent(new CustomEvent(EXTENSION_THEMES_CHANGED_EVENT));
+}
+
+export type ExtensionStoreSource = 'openvsx' | 'marketplace';
 
 export interface ExtensionStoreModel {
   // State
   query: string
+  source: ExtensionStoreSource
   extensions: VsxExtensionSummary[]
   installedMap: Map<string, InstalledVsxExtension>
   disabledIds: Set<string>
@@ -29,6 +39,7 @@ export interface ExtensionStoreModel {
 
   // Actions
   setQuery: (q: string) => void
+  setSource: (source: ExtensionStoreSource) => void
   search: () => void
   loadMore: () => void
   selectExtension: (ns: string, name: string) => void
@@ -44,6 +55,7 @@ const PAGE_SIZE = 20;
 
 export function useExtensionStoreModel(): ExtensionStoreModel {
   const [query, setQueryRaw] = useState('');
+  const [source, setSourceRaw] = useState<ExtensionStoreSource>('openvsx');
   const [extensions, setExtensions] = useState<VsxExtensionSummary[]>([]);
   const [installedMap, setInstalledMap] = useState<Map<string, InstalledVsxExtension>>(new Map());
   const [disabledIds, setDisabledIds] = useState<Set<string>>(new Set());
@@ -60,6 +72,8 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
   queryRef.current = query;
   const categoryRef = useRef(categoryFilter);
   categoryRef.current = categoryFilter;
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
 
   // ── Build effective search query ────────────────────────────────────
   const buildSearchQuery = useCallback((q: string, cat: string | null): string => {
@@ -76,8 +90,11 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
     if (!isLoadMore) setLoading(true);
     setError(null);
     try {
-      const effectiveQuery = buildSearchQuery(searchQuery, cat);
-      const result = await window.electronAPI.extensionStore.search(effectiveQuery, searchOffset ?? 0);
+      // Marketplace API has native category filtering via filterType: 5,
+      // so pass category separately. Open VSX uses text-based filtering.
+      const result = sourceRef.current === 'marketplace'
+        ? await window.electronAPI.extensionStore.searchMarketplace(searchQuery.trim(), searchOffset ?? 0, cat ?? undefined)
+        : await window.electronAPI.extensionStore.search(buildSearchQuery(searchQuery, cat), searchOffset ?? 0);
       if (result.success && result.extensions) {
         if (isLoadMore) {
           setExtensions((prev) => [...prev, ...result.extensions!]);
@@ -116,6 +133,19 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
     }, 300);
   }, [executeSearch]);
 
+  // ── Source switching ────────────────────────────────────────────────
+  const setSource = useCallback((s: ExtensionStoreSource) => {
+    setSourceRaw(s);
+    sourceRef.current = s;
+    setExtensions([]);
+    setTotalSize(0);
+    setOffset(0);
+    setSelectedExtension(null);
+    setError(null);
+    // Re-search in new source
+    void executeSearch(queryRef.current, categoryRef.current);
+  }, [executeSearch]);
+
   // ── Category filter ─────────────────────────────────────────────────
   const setCategoryFilter = useCallback((cat: string | null) => {
     setCategoryFilterRaw(cat);
@@ -128,7 +158,9 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
     if (!window.electronAPI?.extensionStore) return;
     void (async () => {
       try {
-        const result = await window.electronAPI.extensionStore.getDetails(ns, name);
+        const result = sourceRef.current === 'marketplace'
+          ? await window.electronAPI.extensionStore.getMarketplaceDetails(ns, name)
+          : await window.electronAPI.extensionStore.getDetails(ns, name);
         if (result.success && result.extension) {
           setSelectedExtension(result.extension);
         } else {
@@ -152,7 +184,9 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
     setError(null);
     void (async () => {
       try {
-        const result = await window.electronAPI.extensionStore.install(ns, name);
+        const result = sourceRef.current === 'marketplace'
+          ? await window.electronAPI.extensionStore.installMarketplace(ns, name)
+          : await window.electronAPI.extensionStore.install(ns, name);
         if (!result.success) {
           setError(result.error ?? 'Failed to install extension');
         } else if (result.installed) {
@@ -161,6 +195,7 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
             next.set(result.installed!.id, result.installed!);
             return next;
           });
+          notifyExtensionChange();
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to install extension');
@@ -190,6 +225,7 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
             next.delete(id);
             return next;
           });
+          notifyExtensionChange();
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to uninstall extension');
@@ -216,6 +252,7 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
             }
             return next;
           });
+          notifyExtensionChange();
         } else {
           setError(result.error ?? 'Failed to toggle extension');
         }
@@ -233,11 +270,8 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
         const result = await window.electronAPI.extensionStore.getInstalled();
         if (result.success && result.extensions) {
           const map = new Map<string, InstalledVsxExtension>();
-          const disabled = new Set<string>();
           for (const ext of result.extensions) {
             map.set(ext.id, ext);
-            // Extensions that were explicitly disabled will be tracked
-            // by the main process; for now we populate from the installed list
           }
           setInstalledMap(map);
           // Preserve existing disabled state — main process tracks this
@@ -268,6 +302,7 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
 
   return {
     query,
+    source,
     extensions,
     installedMap,
     disabledIds,
@@ -279,6 +314,7 @@ export function useExtensionStoreModel(): ExtensionStoreModel {
     installInProgress,
     categoryFilter,
     setQuery,
+    setSource,
     search,
     loadMore,
     selectExtension,

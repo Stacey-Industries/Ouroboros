@@ -1,7 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
+
 import { getConfigValue, setConfigValue } from './config'
-import { appendLog } from './extensionsSandbox'
 import {
   activateExtension,
   copyDir,
@@ -12,6 +12,7 @@ import {
   matchesActivationEvent,
   shouldActivateOnStartup,
 } from './extensionsLifecycle'
+import { appendLog } from './extensionsSandbox'
 import {
   EXT_TO_LANGUAGE,
   type ExtensionActionResult,
@@ -111,7 +112,7 @@ function buildExtensionInfo(ext: LoadedExtension): ExtensionInfo {
   }
 }
 
-export async function dispatchActivationEvent(eventName: string): Promise<void> {
+export async function dispatchActivationEvent(eventName: string, _context?: Record<string, unknown>): Promise<void> {
   const pending = getPendingExtensions(eventName)
   if (pending.length === 0) {
     return

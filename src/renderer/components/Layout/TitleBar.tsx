@@ -7,109 +7,12 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { OPEN_SETTINGS_PANEL_EVENT, SAVE_ALL_DIRTY_EVENT, SPLIT_EDITOR_EVENT } from '../../hooks/appEventNames';
-import { useToastContext } from '../../contexts/ToastContext';
-import { BellIcon, NotificationBadge, NotificationCenter } from '../shared/NotificationCenter';
+
 import ouroborosLogo from '../../../../public/OUROBOROS.png';
-
-/* ── Context-layer summarization progress (payload from main process) ── */
-
-interface ContextLayerProgressPayload {
-  type: 'idle' | 'summarizing';
-  processed: number;
-  failed: number;
-  remaining: number;
-  total: number;
-  currentModule: string | null;
-}
-
-const progressWrapperStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: '3px',
-  pointerEvents: 'none',
-};
-
-const progressTextStyle: React.CSSProperties = {
-  fontSize: '10px',
-  color: 'var(--text-muted)',
-  letterSpacing: '0.02em',
-  whiteSpace: 'nowrap',
-};
-
-const progressTrackStyle: React.CSSProperties = {
-  width: '120px',
-  height: '2px',
-  backgroundColor: 'var(--bg-tertiary)',
-  borderRadius: '1px',
-  overflow: 'hidden',
-};
-
-const progressFillStyle: React.CSSProperties = {
-  height: '100%',
-  backgroundColor: 'var(--accent)',
-  borderRadius: '1px',
-  transition: 'width 300ms ease',
-};
-
-function ContextLayerProgressIndicator(): React.ReactElement | null {
-  const [progress, setProgress] = React.useState<ContextLayerProgressPayload | null>(null);
-  const [showComplete, setShowComplete] = React.useState(false);
-  const completeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  React.useEffect(() => {
-    const api = (window as any).electronAPI?.contextLayer;
-    if (!api?.onProgress) return;
-
-    const cleanup = api.onProgress((payload: ContextLayerProgressPayload) => {
-      if (payload.type === 'idle') {
-        if (payload.processed > 0) {
-          setShowComplete(true);
-          completeTimerRef.current = setTimeout(() => {
-            setShowComplete(false);
-            setProgress(null);
-          }, 3000);
-        } else {
-          setProgress(null);
-        }
-      } else {
-        setShowComplete(false);
-        setProgress(payload);
-      }
-    });
-
-    return () => {
-      cleanup();
-      if (completeTimerRef.current) clearTimeout(completeTimerRef.current);
-    };
-  }, []);
-
-  if (showComplete) {
-    return (
-      <div style={progressWrapperStyle}>
-        <span style={progressTextStyle}>Summaries updated</span>
-      </div>
-    );
-  }
-
-  if (!progress || progress.type === 'idle') return null;
-
-  const percent = progress.total > 0
-    ? Math.round((progress.processed / progress.total) * 100)
-    : 0;
-
-  return (
-    <div style={progressWrapperStyle}>
-      <span style={progressTextStyle}>
-        Summarizing modules {progress.processed}/{progress.total}
-      </span>
-      <div style={progressTrackStyle}>
-        <div style={{ ...progressFillStyle, width: `${percent}%` }} />
-      </div>
-    </div>
-  );
-}
+import { useToastContext } from '../../contexts/ToastContext';
+import { OPEN_EXTENSION_STORE_EVENT, OPEN_MCP_STORE_EVENT, OPEN_SETTINGS_PANEL_EVENT, SAVE_ALL_DIRTY_EVENT, SPLIT_EDITOR_EVENT } from '../../hooks/appEventNames';
+import { useProgressSubscriptions } from '../../hooks/useProgressSubscriptions';
+import { BellIcon, NotificationBadge, NotificationCenter } from '../shared/NotificationCenter';
 
 function SettingsGearIcon(): React.ReactElement {
   return (
@@ -126,6 +29,28 @@ function UsageBarIcon(): React.ReactElement {
       <rect x="1" y="8" width="3" height="7" rx="0.5" />
       <rect x="6.5" y="3" width="3" height="12" rx="0.5" />
       <rect x="12" y="1" width="3" height="14" rx="0.5" />
+    </svg>
+  );
+}
+
+function ExtensionStoreIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
+    </svg>
+  );
+}
+
+function McpStoreIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="1" width="10" height="5" rx="1" />
+      <rect x="3" y="10" width="10" height="5" rx="1" />
+      <line x1="8" y1="6" x2="8" y2="10" />
+      <circle cx="5.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+      <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -162,6 +87,8 @@ interface TitleBarAction {
 }
 
 const TITLE_BAR_ACTIONS: TitleBarAction[] = [
+  { eventName: OPEN_EXTENSION_STORE_EVENT, title: 'Extension Store', Icon: ExtensionStoreIcon },
+  { eventName: OPEN_MCP_STORE_EVENT, title: 'MCP Servers', Icon: McpStoreIcon },
   { eventName: OPEN_SETTINGS_PANEL_EVENT, title: 'Settings (Ctrl+,)', Icon: SettingsGearIcon },
   { eventName: 'agent-ide:open-usage-panel', title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
 ];
@@ -207,13 +134,13 @@ function NotificationBell(): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   const toggle = useCallback(() => {
-    setOpen((prev) => {
-      const next = !prev;
-      // Mark all as read when opening
-      if (next && unreadCount > 0) markAllRead();
-      return next;
-    });
-  }, [unreadCount, markAllRead]);
+    setOpen((prev) => !prev);
+  }, []);
+
+  // Mark all as read when the panel opens — in an effect, not during setState
+  useEffect(() => {
+    if (open && unreadCount > 0) markAllRead();
+  }, [open, unreadCount, markAllRead]);
 
   const handleClose = useCallback(() => {
     setOpen(false);
@@ -281,6 +208,8 @@ function getMenuDefinitions(): MenuDefinition[] {
         { label: 'Save All', shortcut: 'Ctrl+Shift+S', action: () => dispatchEvent(SAVE_ALL_DIRTY_EVENT) },
         SEPARATOR,
         { label: 'Preferences', shortcut: 'Ctrl+,', action: () => dispatchEvent(OPEN_SETTINGS_PANEL_EVENT) },
+        { label: 'Extension Store', action: () => dispatchEvent(OPEN_EXTENSION_STORE_EVENT) },
+        { label: 'MCP Server Store', action: () => dispatchEvent(OPEN_MCP_STORE_EVENT) },
         SEPARATOR,
         { label: 'Close Tab', shortcut: 'Ctrl+W', action: () => dispatchEvent('agent-ide:close-active-tab') },
         { label: 'Close Window', shortcut: 'Alt+F4', action: () => window.close() },
@@ -543,7 +472,6 @@ function NavbarMenus(): React.ReactElement {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const menus = getMenuDefinitions();
 
-  const openMenu = openMenuIndex !== null ? menus[openMenuIndex] : null;
 
   const handleMenuClick = useCallback((idx: number) => {
     setOpenMenuIndex((prev) => {
@@ -684,11 +612,130 @@ function NavbarMenus(): React.ReactElement {
   );
 }
 
+// ── Mobile hamburger menu (≡) — shows all menus in one dropdown ─────────────
+
+function MobileHamburgerMenu(): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const menus = getMenuDefinitions();
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent): void {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="titlebar-no-drag web-mobile-only" style={{ position: 'relative', height: '100%', display: 'none' }}>
+      <button className="titlebar-no-drag" title="Menu" onClick={() => setOpen((v) => !v)} style={titleButtonStyle} {...hoverStyle}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <line x1="2" y1="4" x2="14" y2="4" /><line x1="2" y1="8" x2="14" y2="8" /><line x1="2" y1="12" x2="14" y2="12" />
+        </svg>
+      </button>
+      {open && (
+        <div style={{ ...dropdownStyle, maxHeight: '70vh', overflowY: 'auto' }}>
+          {menus.map((menu) => (
+            <React.Fragment key={menu.label}>
+              <div style={{ padding: '6px 12px 2px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-faint)' }}>
+                {menu.label}
+              </div>
+              {menu.items.map((item, i) =>
+                item.divider ? <div key={`sep-${i}`} style={separatorStyle} /> : (
+                  <button
+                    key={item.label}
+                    onClick={() => { item.action?.(); setOpen(false); }}
+                    disabled={item.disabled}
+                    style={{ ...menuItemRowStyle, opacity: item.disabled ? 0.4 : 1 }}
+                  >
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                  </button>
+                ),
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile overflow menu (⋮) — shows action buttons in a dropdown ───────────
+
+function MobileOverflowMenu(): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent): void {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="titlebar-no-drag web-mobile-only" style={{ position: 'relative', height: '100%', display: 'none' }}>
+      <button className="titlebar-no-drag" title="More" onClick={() => { setOpen((v) => !v); if (!open && unreadCount > 0) markAllRead(); }} style={titleButtonStyle} {...hoverStyle}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" />
+        </svg>
+        {unreadCount > 0 && <NotificationBadge count={unreadCount} />}
+      </button>
+      {open && (
+        <div style={{ ...dropdownStyle, right: 0, left: 'auto' }}>
+          {TITLE_BAR_ACTIONS.map((action) => (
+            <button
+              key={action.eventName}
+              onClick={() => { window.dispatchEvent(new CustomEvent(action.eventName)); setOpen(false); }}
+              style={menuItemRowStyle}
+            >
+              <action.Icon />
+              <span style={{ marginLeft: 8, flex: 1 }}>{action.title}</span>
+            </button>
+          ))}
+          <div style={separatorStyle} />
+          <button
+            onClick={() => { setOpen(false); }}
+            style={menuItemRowStyle}
+          >
+            <BellIcon />
+            <span style={{ marginLeft: 8, flex: 1 }}>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</span>
+          </button>
+          {notifications.length > 0 && (
+            <div style={{ maxHeight: '200px', overflowY: 'auto', borderTop: '1px solid var(--border-muted)' }}>
+              {notifications.slice(0, 5).map((n) => (
+                <div key={n.id} style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {n.message}
+                  <button onClick={() => removeNotification(n.id)} style={{ marginLeft: 8, color: 'var(--text-faint)', fontSize: '10px' }}>×</button>
+                </div>
+              ))}
+              {notifications.length > 5 && (
+                <div style={{ padding: '4px 12px', fontSize: '10px', color: 'var(--text-faint)' }}>+{notifications.length - 5} more</div>
+              )}
+              <button onClick={() => { clearAllNotifications(); }} style={{ ...menuItemRowStyle, fontSize: '11px', color: 'var(--text-faint)' }}>
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── TitleBar ────────────────────────────────────────────────────────────────
 
 export function TitleBar(): React.ReactElement {
+  useProgressSubscriptions();
+
   return (
     <div
+      data-layout="title-bar"
       className="titlebar-drag flex-shrink-0 flex items-center"
       style={{
         height: 'var(--titlebar-height, 36px)',
@@ -696,16 +743,25 @@ export function TitleBar(): React.ReactElement {
         borderBottom: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
       }}
     >
+      {/* Mobile: hamburger menu */}
+      <MobileHamburgerMenu />
       <TitleBarBranding />
-      <NavbarMenus />
-      <div className="flex-1 flex items-center justify-center">
-        <ContextLayerProgressIndicator />
+      {/* Desktop: full navbar menus */}
+      <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
+        <NavbarMenus />
       </div>
-      {TITLE_BAR_ACTIONS.map((action) => (
-        <TitleBarActionButton key={action.eventName} {...action} />
-      ))}
-      <NotificationBell />
-      <div style={{ width: 140 }} />
+      <div className="flex-1" />
+      {/* Desktop: action buttons */}
+      <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        {TITLE_BAR_ACTIONS.map((action) => (
+          <TitleBarActionButton key={action.eventName} {...action} />
+        ))}
+        <NotificationBell />
+      </div>
+      {/* Mobile: overflow menu */}
+      <MobileOverflowMenu />
+      {/* Windows caption button spacer — desktop only */}
+      <div className="web-mobile-hide" style={{ width: 140 }} />
     </div>
   );
 }

@@ -139,6 +139,7 @@ export function ActivityBar({
 
   return (
     <div
+      data-layout="activity-bar"
       className="flex flex-col items-center flex-shrink-0 h-full border-r border-[var(--border-muted,var(--border))]"
       style={{
         width: 40,

@@ -7,11 +7,14 @@
 
 import { BrowserWindow } from 'electron'
 import net from 'net'
+
 import { clearSessionRules, requestApproval, respondToApproval, toolRequiresApproval } from './approvalManager'
+import { getGraphController } from './codebaseGraph/graphController'
 import { getConfigValue } from './config'
 import { getContextLayerController } from './contextLayer/contextLayerController'
-import { getGraphController } from './codebaseGraph/graphController'
 import { dispatchActivationEvent } from './extensions'
+import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat'
+import { broadcastToWebClients } from './web/webServer'
 import { getAllActiveWindows } from './windowManager'
 
 export type HookEventType =
@@ -27,6 +30,7 @@ export interface HookPayload {
   type: HookEventType
   sessionId: string
   toolName?: string
+  toolCallId?: string
   input?: unknown
   output?: unknown
   taskLabel?: string
@@ -36,6 +40,10 @@ export interface HookPayload {
   parentSessionId?: string
   prompt?: string
   model?: string
+  error?: string
+  usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number }
+  /** Working directory of the Claude Code session — set by hook scripts */
+  cwd?: string
 }
 
 export interface AgentEvent {
@@ -85,15 +93,28 @@ const pendingQueue: HookPayload[] = []
 // ---------------------------------------------------------------------------
 const activeSessions = new Map<string, number>() // sessionId → lastSeen timestamp
 
+// Maps sessionId → project root (cwd) so CLAUDE.md generation targets the correct repo.
+// Populated from hook payload `cwd` field (set by hook scripts) or PTY session fallback.
+const sessionCwdMap = new Map<string, string>()
+
 function trackSessionLifecycle(payload: HookPayload): void {
   if (payload.type === 'session_start' || payload.type === 'agent_start') {
     activeSessions.set(payload.sessionId, payload.timestamp)
+    // Register workspace from hook payload cwd (set by hook scripts running in Claude's cwd)
+    if (payload.cwd) {
+      sessionCwdMap.set(payload.sessionId, payload.cwd)
+    }
   } else if (payload.type === 'session_stop' || payload.type === 'agent_end') {
     activeSessions.delete(payload.sessionId)
+    // cwd cleanup is deferred — triggerClaudeMdGeneration reads it before we delete
   } else if (payload.sessionId !== 'unknown' && payload.sessionId !== '' && activeSessions.has(payload.sessionId)) {
     // Update lastSeen for any event with a known session — improves inference
     // accuracy when multiple sessions are active concurrently
     activeSessions.set(payload.sessionId, payload.timestamp)
+    // Update cwd if newly available (hook scripts may send it on any event)
+    if (payload.cwd && !sessionCwdMap.has(payload.sessionId)) {
+      sessionCwdMap.set(payload.sessionId, payload.cwd)
+    }
   }
 }
 
@@ -166,6 +187,7 @@ function sendPayload(windows: BrowserWindow[], payload: HookPayload): void {
   for (const window of windows) {
     window.webContents.send('hooks:event', payload)
   }
+  broadcastToWebClients('hooks:event', payload)
 }
 
 function flushPendingQueue(windows: BrowserWindow[]): void {
@@ -176,6 +198,42 @@ function flushPendingQueue(windows: BrowserWindow[]): void {
   const flushing = pendingQueue.splice(0)
   for (const payload of flushing) {
     sendPayload(windows, payload)
+  }
+}
+
+function triggerClaudeMdGeneration(trigger: 'post-session' | 'post-commit', payload: HookPayload): void {
+  try {
+    const settings = getConfigValue('claudeMdSettings')
+    if (!settings?.enabled || settings.triggerMode !== trigger) return
+
+    // Determine project root from (in priority order):
+    // 1. The cwd field on the hook payload (set by updated hook scripts)
+    // 2. The session→cwd registry (populated on session_start/agent_start)
+    // 3. Skip generation — we don't know which project this session was in
+    const projectRoot = payload.cwd
+      ?? sessionCwdMap.get(payload.sessionId)
+      ?? null
+
+    // Clean up the registry entry now that the session is done
+    sessionCwdMap.delete(payload.sessionId)
+
+    if (!projectRoot) {
+      console.log(`[claude-md] Skipping auto-generation — cannot determine project root for session ${payload.sessionId}`)
+      return
+    }
+
+    console.log(`[claude-md] Auto-generating for ${projectRoot} (session ${payload.sessionId})`)
+
+    // Dynamic import to avoid circular dependencies
+    import('./claudeMdGenerator').then(({ generateClaudeMd }) => {
+      generateClaudeMd(projectRoot).catch((err: unknown) => {
+        console.error('[claude-md] Auto-generation failed:', err)
+      })
+    }).catch(() => {
+      // Generator not initialized yet — ignore
+    })
+  } catch {
+    // Config not available yet — ignore
   }
 }
 
@@ -199,6 +257,9 @@ function dispatchLifecycleEvent(payload: HookPayload): void {
   if (payload.type === 'session_stop') {
     getContextLayerController()?.onGitCommit()
     getGraphController()?.onGitCommit()
+    invalidateAgentChatCache()
+    // Trigger CLAUDE.md generation if configured for post-session
+    triggerClaudeMdGeneration('post-session', payload)
   }
 }
 
@@ -346,6 +407,7 @@ function flushPendingQueueToWindow(window: BrowserWindow): void {
   const flushing = pendingQueue.splice(0)
   for (const payload of flushing) {
     window.webContents.send('hooks:event', payload)
+    broadcastToWebClients('hooks:event', payload)
   }
 }
 
@@ -396,6 +458,31 @@ export function stopHooksServer(): Promise<void> {
       resolve()
     })
   })
+}
+
+/**
+ * Dispatch a synthetic hook event to the renderer.
+ *
+ * Used by the chat orchestration bridge to forward tool activity from
+ * headless stream-json sessions into the Agent Monitor. These events
+ * bypass session inference and approval logic — they already have
+ * correct session IDs and don't need user approval.
+ */
+export function dispatchSyntheticHookEvent(payload: HookPayload): void {
+  // Track session lifecycle so real hook events can still infer sessions
+  trackSessionLifecycle(payload)
+
+  const windows = getDispatchWindows()
+  if (windows.length === 0) {
+    queuePendingPayload(payload)
+    return
+  }
+
+  flushPendingQueue(windows)
+  sendPayload(windows, payload)
+  // Lifecycle events (context layer, graph controller) are handled here
+  // but approval is skipped — chat sessions manage their own permissions.
+  dispatchLifecycleEvent(payload)
 }
 
 export function getHooksAddress(): string | null {

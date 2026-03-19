@@ -3,23 +3,23 @@
  */
 
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
-import type { TabId } from './settingsTabs';
-import { GeneralSection } from './GeneralSection';
-import { AppearanceSection } from './AppearanceSection';
-import { TerminalSection } from './TerminalSection';
-import { HooksSection } from './HooksSection';
-import { FontSection } from './FontSection';
-import { KeybindingsSection } from './KeybindingsSection';
-import { ProfilesSection } from './ProfilesSection';
-import { FileFilterSection } from './FileFilterSection';
-import { ExtensionsSection } from './ExtensionsSection';
 import { AgentSection } from './AgentSection';
+import { AppearanceSection } from './AppearanceSection';
 import { ClaudeSection } from './ClaudeSection';
-import { McpSection } from './McpSection';
-import { McpStoreSection } from './McpStoreSection';
-import { ExtensionStoreSection } from './ExtensionStoreSection';
 import { CodeModeSection } from './CodeModeSection';
+import { ContextDocsSection } from './ContextDocsSection';
+import { ExtensionsSection } from './ExtensionsSection';
+import { FileFilterSection } from './FileFilterSection';
+import { FontSection } from './FontSection';
+import { GeneralSection } from './GeneralSection';
+import { HooksSection } from './HooksSection';
+import { KeybindingsSection } from './KeybindingsSection';
+import { McpSection } from './McpSection';
+import { ProfilesSection } from './ProfilesSection';
+import type { TabId } from './settingsTabs';
+import { TerminalSection } from './TerminalSection';
 
 interface SettingsTabContentProps {
   activeTab: TabId;
@@ -45,9 +45,8 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   files: ({ draft, onChange }) => <FileFilterSection draft={draft} onChange={onChange} />,
   extensions: () => <ExtensionsSection />,
   mcp: () => <McpSection />,
-  mcpStore: () => <McpStoreSection />,
-  extensionStore: () => <ExtensionStoreSection />,
   codemode: () => <CodeModeSection />,
+  contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
 };
 
 export function SettingsTabContent({ activeTab, ...sharedProps }: SettingsTabContentProps): React.ReactElement {

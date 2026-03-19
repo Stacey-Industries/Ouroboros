@@ -15,9 +15,8 @@ export type TabId =
   | 'files'
   | 'extensions'
   | 'mcp'
-  | 'mcpStore'
-  | 'extensionStore'
-  | 'codemode';
+  | 'codemode'
+  | 'contextDocs';
 
 export interface Tab {
   id: TabId;
@@ -37,7 +36,6 @@ export const TABS: Tab[] = [
   { id: 'files', label: 'Files' },
   { id: 'extensions', label: 'Extensions' },
   { id: 'mcp', label: 'MCP Servers' },
-  { id: 'mcpStore', label: 'MCP Store' },
-  { id: 'extensionStore', label: 'Extension Store' },
   { id: 'codemode', label: 'Code Mode' },
+  { id: 'contextDocs', label: 'Context Docs' },
 ];

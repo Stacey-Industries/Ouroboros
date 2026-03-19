@@ -82,6 +82,7 @@ $payload = [ordered]@{
     sessionId       = $sessionId
     taskLabel       = $taskLabel
     timestamp       = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    cwd             = (Get-Location).Path
 }
 
 # Add optional fields only if present (avoid null values in JSON)

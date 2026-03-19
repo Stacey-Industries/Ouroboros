@@ -1,5 +1,5 @@
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
-import type { HookPayload, TokenUsage } from '../types/electron';
+import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
 
 const TASK_LABEL_LIMIT = 72;
 const TOOL_SUMMARY_LIMIT = 80;

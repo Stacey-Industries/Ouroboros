@@ -7,8 +7,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
+
 import type { Theme } from '../themes'
-import { registerExtensionTheme, unregisterExtensionTheme, themes } from '../themes'
+import { registerExtensionTheme, themes,unregisterExtensionTheme } from '../themes'
+
+/** DOM event name dispatched after extension install/uninstall/toggle. */
+export const EXTENSION_THEMES_CHANGED_EVENT = 'agent-ide:extension-themes-changed'
 
 /**
  * Returns a live array of extension theme objects registered with the theme system.
@@ -34,7 +38,6 @@ export function useExtensionThemes(): Theme[] {
       // Register the new set
       const loaded: Theme[] = []
       for (const t of result.themes) {
-        // The data from main process matches the Theme interface
         const theme: Theme = {
           id: t.id,
           name: t.name,
@@ -55,32 +58,11 @@ export function useExtensionThemes(): Theme[] {
     void loadThemes()
   }, [loadThemes])
 
-  // Reload when extensions change (listen for IPC events broadcast from main)
+  // Reload when extensions change via DOM custom event
   useEffect(() => {
-    const api = window.electronAPI
-    if (!api) return
-
-    // The main process broadcasts these events after install/uninstall
-    const cleanups: Array<() => void> = []
-
-    const events = [
-      'extensionStore:installed',
-      'extensionStore:uninstalled',
-      'extensionStore:contributionsChanged',
-    ]
-
-    for (const channel of events) {
-      const handler = () => { void loadThemes() }
-      // Use the general IPC listener if available
-      const cleanup = api.on?.(channel, handler)
-      if (typeof cleanup === 'function') {
-        cleanups.push(cleanup)
-      }
-    }
-
-    return () => {
-      for (const cleanup of cleanups) cleanup()
-    }
+    const handler = () => { void loadThemes() }
+    window.addEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(EXTENSION_THEMES_CHANGED_EVENT, handler)
   }, [loadThemes])
 
   return extensionThemes

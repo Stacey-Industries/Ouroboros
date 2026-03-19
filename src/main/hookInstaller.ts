@@ -10,15 +10,36 @@
  *  - Shows an Electron notification on first install
  */
 
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
+import crypto from 'crypto'
 import { app, Notification } from 'electron'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+
 import { getConfigValue } from './config'
 
 // â”€â”€â”€ Version â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Bump this string whenever the hook scripts change so existing installs update.
-export const CURRENT_HOOK_VERSION = '1.0.6'
+// Auto-computed from hook script contents — no manual bumping needed.
+// Any change to a hook script file automatically triggers re-installation.
+let _cachedVersion: string | null = null
+export function getCurrentHookVersion(): string {
+  if (_cachedVersion) return _cachedVersion
+  const assetsDir = getAssetsHooksDir()
+  const hooks = getPlatformHooks()
+  const hash = crypto.createHash('sha256')
+  for (const entry of hooks) {
+    const filePath = path.join(assetsDir, entry.src)
+    try {
+      hash.update(fs.readFileSync(filePath))
+    } catch {
+      hash.update(entry.src) // fallback: use filename if file missing
+    }
+  }
+  _cachedVersion = hash.digest('hex').slice(0, 16)
+  return _cachedVersion
+}
+// Keep a static export for backward compat (e.g. logs, settings UI)
+export const CURRENT_HOOK_VERSION = 'auto'
 
 const VERSION_MARKER_FILE = '.agent-ide-version'
 
@@ -37,7 +58,9 @@ const WINDOWS_HOOKS: HookEntry[] = [
   { src: 'pre_tool_use.ps1', dest: 'pre_tool_use.ps1', executable: false },
   { src: 'post_tool_use.ps1', dest: 'post_tool_use.ps1', executable: false },
   { src: 'agent_start.ps1', dest: 'agent_start.ps1', executable: false },
-  { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false }
+  { src: 'agent_end.ps1', dest: 'agent_end.ps1', executable: false },
+  { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false },
+  { src: 'session_stop.ps1', dest: 'session_stop.ps1', executable: false },
 ]
 
 const UNIX_HOOKS: HookEntry[] = [
@@ -89,7 +112,9 @@ function buildHookCommands(hooksDir: string): Record<string, string> {
       PreToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'pre_tool_use.ps1')}"`,
       PostToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'post_tool_use.ps1')}"`,
       SubagentStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_start.ps1')}"`,
+      SubagentStop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_end.ps1')}"`,
       SessionStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
+      Stop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_stop.ps1')}"`,
     }
   }
 
@@ -210,7 +235,7 @@ function installHookFiles(assetsDir: string, hooksDir: string): void {
 }
 
 function writeVersionMarker(markerPath: string): void {
-  fs.writeFileSync(markerPath, CURRENT_HOOK_VERSION, 'utf8')
+  fs.writeFileSync(markerPath, getCurrentHookVersion(), 'utf8')
 }
 
 function syncHooksIntoSettings(hooksDir: string): void {
@@ -235,7 +260,7 @@ function maybeShowInstallNotification(firstInstall: boolean, hooksDir: string): 
 
 function logInstallComplete(firstInstall: boolean): void {
   console.log(
-    `[hookInstaller] ${firstInstall ? 'first' : 'updated'} install complete â€” version ${CURRENT_HOOK_VERSION}`
+    `[hookInstaller] ${firstInstall ? 'first' : 'updated'} install complete — version ${getCurrentHookVersion()}`
   )
 }
 
@@ -250,8 +275,9 @@ export async function installHooks(): Promise<InstallResult> {
   const markerPath = path.join(hooksDir, VERSION_MARKER_FILE)
   const installedVersion = readVersionMarker(markerPath)
 
-  if (installedVersion === CURRENT_HOOK_VERSION) {
-    return createSkippedInstallResult(hooksDir, `hooks already at version ${CURRENT_HOOK_VERSION}`)
+  const currentVersion = getCurrentHookVersion()
+  if (installedVersion === currentVersion) {
+    return createSkippedInstallResult(hooksDir, `hooks already at version ${currentVersion}`)
   }
 
   const firstInstall = installedVersion === null
@@ -279,7 +305,7 @@ function readVersionMarker(markerPath: string): string | null {
 /** Returns true if hooks are installed at the current version. */
 export function hooksAreUpToDate(): boolean {
   const markerPath = path.join(getClaudeHooksDir(), VERSION_MARKER_FILE)
-  return readVersionMarker(markerPath) === CURRENT_HOOK_VERSION
+  return readVersionMarker(markerPath) === getCurrentHookVersion()
 }
 
 /** Removes all installed hook scripts and the version marker. */

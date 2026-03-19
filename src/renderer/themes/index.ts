@@ -1,12 +1,14 @@
-import type { Theme } from './types';
-import { retroTheme } from './retro';
-import { modernTheme } from './modern';
-import { warpTheme } from './warp';
 import { cursorTheme } from './cursor';
+import { highContrastTheme } from './high-contrast';
 import { kiroTheme } from './kiro';
+import { lightTheme } from './light';
+import { modernTheme } from './modern';
+import { retroTheme } from './retro';
+import type { Theme } from './types';
+import { warpTheme } from './warp';
 
 export type { Theme };
-export { retroTheme, modernTheme, warpTheme, cursorTheme, kiroTheme };
+export { cursorTheme, highContrastTheme,kiroTheme, lightTheme, modernTheme, retroTheme, warpTheme };
 
 /**
  * A mutable placeholder for the "Custom" theme.
@@ -25,6 +27,8 @@ export const themes: Record<string, Theme> = {
   warp: warpTheme,
   cursor: cursorTheme,
   kiro: kiroTheme,
+  light: lightTheme,
+  'high-contrast': highContrastTheme,
   custom: customTheme,
 };
 
@@ -41,6 +45,8 @@ export const themeList: Theme[] = [
   warpTheme,
   cursorTheme,
   kiroTheme,
+  lightTheme,
+  highContrastTheme,
 ];
 
 /** Register a theme from an installed VS Code extension */

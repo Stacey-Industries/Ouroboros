@@ -44,7 +44,13 @@ try {
 $requestId = [System.Guid]::NewGuid().ToString('N').Substring(0, 16)
 
 # ── Build payload ─────────────────────────────────────────────────────────────
-$sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+# Session ID: try stdin JSON first (most reliable), then env var
+$sessionId = $null
+if ($toolInput.session_id) { $sessionId = $toolInput.session_id }
+elseif ($toolInput.sessionId) { $sessionId = $toolInput.sessionId }
+if (-not $sessionId) {
+    $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+}
 $toolName  = if ($toolInput.tool_name) { $toolInput.tool_name } `
              elseif ($toolInput.toolName) { $toolInput.toolName } `
              else { 'unknown' }

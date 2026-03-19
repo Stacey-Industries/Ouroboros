@@ -3,11 +3,17 @@
  * from the Official MCP Registry.
  */
 
-import React from 'react';
-import type { McpRegistryServer } from '../../types/electron';
-import { SectionLabel, buttonStyle } from './settingsStyles';
+import React, { useState } from 'react';
+
+import type { McpRegistryEnvVar,McpRegistryServer } from '../../types/electron';
+import { extractShortName as mcpExtractShortName,type McpStoreModel, type McpStoreSource, useMcpStoreModel } from './mcpStoreModel';
 import { McpStoreServerCard } from './McpStoreServerCard';
-import { type McpStoreModel, useMcpStoreModel } from './mcpStoreModel';
+import { buttonStyle,SectionLabel } from './settingsStyles';
+
+const SOURCE_OPTIONS: Array<{ id: McpStoreSource; label: string; desc: string }> = [
+  { id: 'registry', label: 'MCP Registry', desc: 'Official registry' },
+  { id: 'npm', label: 'npm', desc: 'npm packages' },
+];
 
 export function McpStoreSection(): React.ReactElement {
   const model = useMcpStoreModel();
@@ -16,6 +22,7 @@ export function McpStoreSection(): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {model.error && <div role="alert" style={errorBannerStyle}>{model.error}</div>}
       <StoreHeader onRefresh={model.search} />
+      <SourceToggle source={model.source} onSelect={model.setSource} />
       <SearchInput query={model.query} onChange={model.setQuery} />
       {model.selectedServer ? (
         <ServerDetailPanel model={model} />
@@ -34,12 +41,45 @@ function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactEleme
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>MCP Server Store</SectionLabel>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-          Discover and install community MCP servers from the official registry.
+          Discover and install MCP servers from multiple sources.
         </p>
       </div>
       <div style={{ flexShrink: 0 }}>
         <button onClick={onRefresh} style={buttonStyle}>Refresh</button>
       </div>
+    </div>
+  );
+}
+
+// ── Source Toggle ───────────────────────────────────────────────────────
+
+function SourceToggle({ source, onSelect }: { source: McpStoreSource; onSelect: (s: McpStoreSource) => void }): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      {SOURCE_OPTIONS.map((opt) => {
+        const active = opt.id === source;
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onSelect(opt.id)}
+            title={opt.desc}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '12px',
+              border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: active ? 'var(--accent)' : 'var(--bg-tertiary)',
+              color: active ? 'var(--bg)' : 'var(--text-muted)',
+              fontSize: '11px',
+              fontWeight: active ? 600 : 400,
+              cursor: 'pointer',
+              transition: 'all 120ms ease',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -65,12 +105,16 @@ function SearchInput({ query, onChange }: { query: string; onChange: (q: string)
 
 function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
   if (model.loading && model.servers.length === 0) {
-    return <p style={loadingStyle}>Searching MCP servers...</p>;
+    return <p style={loadingStyle}>Searching {model.source === 'npm' ? 'npm' : 'MCP'} servers...</p>;
   }
 
   if (model.servers.length === 0) {
     return <div style={emptyStyle}>No servers found.</div>;
   }
+
+  const hasMore = model.source === 'npm'
+    ? model.npmOffset < model.npmTotal
+    : !!model.nextCursor;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
@@ -79,13 +123,13 @@ function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
           <McpStoreServerCard
             key={server.name ?? `server-${idx}`}
             server={server}
-            isInstalled={model.installedNames.has(server.name)}
+            isInstalled={model.installedNames.has(mcpExtractShortName(server.name))}
             isLast={idx === model.servers.length - 1}
             onClick={() => model.selectServer(server)}
           />
         ))}
       </div>
-      {model.nextCursor && (
+      {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
           <button onClick={model.loadMore} style={buttonStyle}>
             Load More
@@ -101,9 +145,24 @@ function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
 function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElement {
   const server = model.selectedServer!;
   const displayName = server.title || extractShortName(server.name);
-  const isInstalled = model.installedNames.has(server.name);
+  const isInstalled = model.installedNames.has(mcpExtractShortName(server.name));
   const isInstalling = model.installInProgress === server.name;
   const pkg = server.packages?.[0];
+  const envVars: McpRegistryEnvVar[] = (pkg as any)?.environmentVariables ?? [];
+  const [envValues, setEnvValues] = useState<Record<string, string>>({});
+
+  const handleEnvChange = (name: string, value: string): void => {
+    setEnvValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleInstall = (scope: 'global' | 'project'): void => {
+    const envOverrides: Record<string, string> = {};
+    for (const ev of envVars) {
+      const val = envValues[ev.name]?.trim();
+      if (val) envOverrides[ev.name] = val;
+    }
+    model.install(server, scope, Object.keys(envOverrides).length > 0 ? envOverrides : undefined);
+  };
 
   return (
     <div style={detailContainerStyle}>
@@ -146,6 +205,33 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
         </div>
       )}
 
+      {/* Environment Variables */}
+      {envVars.length > 0 && !isInstalled && (
+        <div style={{ marginTop: '12px' }}>
+          <SectionLabel style={{ marginBottom: '6px' }}>Environment Variables</SectionLabel>
+          <div style={envVarContainerStyle}>
+            {envVars.map((ev) => (
+              <div key={ev.name} style={envVarRowStyle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <label style={envVarLabelStyle}>{ev.name}</label>
+                  {ev.isRequired && <span style={{ color: 'var(--error)', fontSize: '10px' }}>required</span>}
+                </div>
+                {ev.description && (
+                  <div style={envVarDescStyle}>{ev.description}</div>
+                )}
+                <input
+                  type={ev.name.toLowerCase().includes('key') || ev.name.toLowerCase().includes('secret') || ev.name.toLowerCase().includes('token') ? 'password' : 'text'}
+                  value={envValues[ev.name] ?? ''}
+                  onChange={(e) => handleEnvChange(ev.name, e.target.value)}
+                  placeholder={ev.format || `Enter ${ev.name}`}
+                  style={envVarInputStyle}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Install buttons or installed badge */}
       <div style={installAreaStyle}>
         {isInstalled ? (
@@ -153,14 +239,14 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
         ) : (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={() => model.install(server, 'global')}
+              onClick={() => handleInstall('global')}
               disabled={isInstalling}
               style={installButtonStyle(isInstalling)}
             >
               {isInstalling ? 'Installing...' : 'Install Global'}
             </button>
             <button
-              onClick={() => model.install(server, 'project')}
+              onClick={() => handleInstall('project')}
               disabled={isInstalling}
               style={installButtonStyle(isInstalling)}
             >
@@ -415,6 +501,48 @@ function installButtonStyle(disabled: boolean): React.CSSProperties {
     whiteSpace: 'nowrap',
   };
 }
+
+const envVarContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  padding: '10px 12px',
+  borderRadius: '6px',
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border)',
+};
+
+const envVarRowStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3px',
+};
+
+const envVarLabelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 600,
+  color: 'var(--text)',
+  fontFamily: 'var(--font-mono)',
+};
+
+const envVarDescStyle: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'var(--text-muted)',
+  lineHeight: '1.4',
+};
+
+const envVarInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '6px 8px',
+  borderRadius: '4px',
+  border: '1px solid var(--border)',
+  background: 'var(--bg-secondary)',
+  color: 'var(--text)',
+  fontSize: '11px',
+  fontFamily: 'var(--font-mono)',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
 
 const alreadyInstalledStyle: React.CSSProperties = {
   display: 'inline-flex',

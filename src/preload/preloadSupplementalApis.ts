@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+
 import {
   AGENT_CHAT_EVENT_CHANNELS,
   AGENT_CHAT_INVOKE_CHANNELS,
@@ -14,6 +15,7 @@ import type {
   AgentChatThreadStatusSnapshot,
   ApprovalRequest,
   ApprovalResolved,
+  ClaudeMdGenerationStatus,
   ContextLayerProgress,
   ElectronAPI,
   IdeToolQuery,
@@ -45,6 +47,7 @@ type SupplementalApiKey =
   | 'agentChat'
   | 'orchestration'
   | 'contextLayer'
+  | 'claudeMd'
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>
 
@@ -163,15 +166,19 @@ export const supplementalApis: SupplementalApis = {
 
   mcpStore: {
     search: (query, cursor) => ipcRenderer.invoke('mcpStore:search', query, cursor),
+    searchNpm: (query, offset) => ipcRenderer.invoke('mcpStore:searchNpm', query, offset),
     getServerDetails: (name) => ipcRenderer.invoke('mcpStore:getDetails', name),
-    installServer: (server, scope) => ipcRenderer.invoke('mcpStore:install', server, scope),
+    installServer: (server, scope, envOverrides) => ipcRenderer.invoke('mcpStore:install', server, scope, envOverrides),
     getInstalledServerNames: () => ipcRenderer.invoke('mcpStore:getInstalled'),
   },
 
   extensionStore: {
     search: (query, offset) => ipcRenderer.invoke('extensionStore:search', query, offset),
+    searchMarketplace: (query, offset, category) => ipcRenderer.invoke('extensionStore:searchMarketplace', query, offset, category),
     getDetails: (ns, name) => ipcRenderer.invoke('extensionStore:getDetails', ns, name),
+    getMarketplaceDetails: (ns, name) => ipcRenderer.invoke('extensionStore:getMarketplaceDetails', ns, name),
     install: (ns, name, version) => ipcRenderer.invoke('extensionStore:install', ns, name, version),
+    installMarketplace: (ns, name, version) => ipcRenderer.invoke('extensionStore:installMarketplace', ns, name, version),
     uninstall: (id) => ipcRenderer.invoke('extensionStore:uninstall', id),
     getInstalled: () => ipcRenderer.invoke('extensionStore:getInstalled'),
     enableContributions: (id) => ipcRenderer.invoke('extensionStore:enableContributions', id),
@@ -234,10 +241,20 @@ export const supplementalApis: SupplementalApis = {
     previewContext: (request) => ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
     buildContextPacket: (request) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.buildContextPacket, request),
-    cancelTask: (taskId) => ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.cancelTask, taskId),
+    // Routes to agentChat:cancelTask (singleton orchestration) — the old
+    // orchestration:cancelTask handler was removed because it created a fresh
+    // adapter with empty process Maps and could never kill the running process.
+    cancelTask: (taskId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
   },
 
   contextLayer: {
     onProgress: (callback) => onChannel<ContextLayerProgress>('contextLayer:progress', callback),
+  },
+
+  claudeMd: {
+    generate: (projectRoot, options) => ipcRenderer.invoke('claudeMd:generate', projectRoot, options),
+    generateForDir: (projectRoot, dirPath) => ipcRenderer.invoke('claudeMd:generateForDir', projectRoot, dirPath),
+    getStatus: () => ipcRenderer.invoke('claudeMd:getStatus'),
+    onStatusChange: (callback) => onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
   },
 }

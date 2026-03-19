@@ -7,6 +7,8 @@
 
 import { app, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
 
+import { broadcastToWebClients } from './web/webServer'
+
 interface PerfMetricsOptions {
   getActiveWindows: () => BrowserWindow[]
 }
@@ -61,6 +63,7 @@ function broadcast(): void {
       // Window may have been destroyed between check and send
     }
   }
+  broadcastToWebClients('perf:metrics', metrics)
 }
 
 export function startPerfMetrics(): void {
