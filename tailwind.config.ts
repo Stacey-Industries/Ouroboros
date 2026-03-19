@@ -26,9 +26,7 @@ const config: Config = {
           red: '#f85149',
           'red-muted': '#da3633',
           purple: '#bc8cff',
-          'purple-muted': '#8957e5',
-          cyan: '#39d353',
-          'cyan-muted': '#0e7a0d'
+          'purple-muted': '#8957e5'
         },
         // Ink — text hierarchy
         ink: {

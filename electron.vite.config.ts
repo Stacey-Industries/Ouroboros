@@ -1,8 +1,8 @@
-import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
-import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
 
 const monacoEditorPlugin = (monacoEditorPluginModule as { default: typeof monacoEditorPluginModule }).default ?? monacoEditorPluginModule
 
@@ -65,6 +65,13 @@ export default defineConfig({
         '@renderer': resolve('src/renderer'),
         '@shared': resolve('src/shared')
       }
+    },
+    optimizeDeps: {
+      // Force Vite to re-scan deps on dev cold starts. Prevents stale hash
+      // mismatches when deps change while the dev server isn't running
+      // (npm install, branch switches, force-kills during debugging).
+      // Disabled in production builds to avoid unnecessary re-bundling.
+      force: process.env.NODE_ENV !== 'production',
     },
     css: {
       postcss: resolve(__dirname, 'postcss.config.js')
