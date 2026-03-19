@@ -4,32 +4,33 @@
  * Extracted from InnerApp's render method to reduce component size.
  */
 
-import React, { useCallback, useReducer, type ErrorInfo } from 'react';
-import type { AppLayoutProps } from './AppLayout';
-import type { WorkspaceLayout } from '../../types/electron';
-import type { Command } from '../CommandPalette/types';
-import type { TerminalSession } from '../Terminal/TerminalTabs';
-import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
+import React, { type ErrorInfo,useCallback, useReducer } from 'react';
 
-import { AppLayoutConnected } from './AppLayoutConnected';
-import { EditorTabBar } from './EditorTabBar';
-import { CentrePaneConnected } from './CentrePaneConnected';
-import { FilePickerConnected } from './FilePickerConnected';
+import type { WorkspaceLayout } from '../../types/electron';
+import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
+import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
+import { AgentMonitorManager } from '../AgentMonitor';
+import type { Command } from '../CommandPalette/types';
+import { DiffReviewProvider } from '../DiffReview';
 import { ProjectPicker } from '../FileTree/ProjectPicker';
 import { FileViewerManager } from '../FileViewer';
 import { MultiBufferManager } from '../FileViewer/MultiBufferManager';
-import { DiffReviewProvider } from '../DiffReview';
-import { RightSidebarTabs } from './RightSidebarTabs';
-import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
-import { AgentMonitorManager } from '../AgentMonitor';
 import { GitPanel } from '../GitPanel';
-import { AnalyticsDashboard } from '../Analytics';
-import { TerminalManager } from '../Terminal/TerminalManager';
+import type { TerminalSession } from '../Terminal/TerminalTabs';
+import type { AppLayoutProps } from './AppLayout';
+import { AppLayoutConnected } from './AppLayoutConnected';
+import { CentrePaneConnected } from './CentrePaneConnected';
+import { EditorTabBar } from './EditorTabBar';
+import { FilePickerConnected } from './FilePickerConnected';
+import { RightSidebarTabs } from './RightSidebarTabs';
+const AnalyticsDashboard = React.lazy(() => import('../Analytics').then(m => ({ default: m.AnalyticsDashboard })));
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { PerformanceOverlay } from '../shared/PerformanceOverlay';
-// Inline ErrorBoundary — avoids cross-module resolution issues during Vite HMR
-// that can prevent the boundary from loading when it's needed most (crash recovery).
+import { TerminalManager } from '../Terminal/TerminalManager';
+// Inline ChatErrorBoundary — kept inline specifically for the chat sidebar because Vite HMR
+// can fail to resolve the shared ErrorBoundary module exactly when a crash recovery is needed.
 class ChatErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; error: Error | null }
@@ -64,10 +65,11 @@ class ChatErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-import { SidebarFileTree } from './SidebarFileTree';
-import { SidebarSections } from './SidebarSections';
 import { IdeToolBridge } from './IdeToolBridge';
-import { SearchPanel, GitSidebarPanel, ExtensionsPanel } from './SidebarViewPanels';
+import { SidebarSections } from './SidebarSections';
+import { ExtensionsPanel,GitSidebarPanel, SearchPanel } from './SidebarViewPanels';
+const ExtensionStorePanel = React.lazy(() => import('../ExtensionStore/ExtensionStorePanel').then(m => ({ default: m.ExtensionStorePanel })));
+const McpStorePanel = React.lazy(() => import('../McpStore/McpStorePanel').then(m => ({ default: m.McpStorePanel })));
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
@@ -189,12 +191,14 @@ function LayoutProviders({
   projectRoot: string | null;
 }>): React.ReactElement {
   return (
-    <FileViewerManager projectRoot={projectRoot}>
-      <IdeToolBridge />
-      <MultiBufferManager>
-        <DiffReviewProvider>{children}</DiffReviewProvider>
-      </MultiBufferManager>
-    </FileViewerManager>
+    <ErrorBoundary label="Editor">
+      <FileViewerManager projectRoot={projectRoot}>
+        <IdeToolBridge />
+        <MultiBufferManager>
+          <DiffReviewProvider>{children}</DiffReviewProvider>
+        </MultiBufferManager>
+      </FileViewerManager>
+    </ErrorBoundary>
   );
 }
 
@@ -219,9 +223,9 @@ function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): R
   return (
     <RightSidebarTabs
       chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
-      monitorContent={<AgentMonitorManager />}
-      gitContent={<GitPanel />}
-      analyticsContent={<AnalyticsDashboard />}
+      monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
+      gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
+      analyticsContent={<ErrorBoundary label="Analytics"><React.Suspense fallback={<div />}><AnalyticsDashboard /></React.Suspense></ErrorBoundary>}
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}
@@ -244,18 +248,20 @@ function TerminalPanelContent({
   handleCloseSplit,
 }: TerminalPanelContentProps): React.ReactElement {
   return (
-    <TerminalManager
-      sessions={sessions}
-      activeSessionId={activeSessionId}
-      onRestart={handleTerminalRestart}
-      onClose={handleTerminalClose}
-      onTitleChange={handleTerminalTitleChange}
-      onSpawn={() => void spawnSession()}
-      recordingSessions={recordingSessions}
-      onToggleRecording={(id) => void handleToggleRecording(id)}
-      onSplit={(id) => void handleSplit(id)}
-      onCloseSplit={handleCloseSplit}
-    />
+    <ErrorBoundary label="Terminal">
+      <TerminalManager
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onRestart={handleTerminalRestart}
+        onClose={handleTerminalClose}
+        onTitleChange={handleTerminalTitleChange}
+        onSpawn={() => void spawnSession()}
+        recordingSessions={recordingSessions}
+        onToggleRecording={(id) => void handleToggleRecording(id)}
+        onSplit={(id) => void handleSplit(id)}
+        onCloseSplit={handleCloseSplit}
+      />
+    </ErrorBoundary>
   );
 }
 
@@ -275,7 +281,7 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={<SidebarSections />}
+      sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
       sidebarViewContent={{
         search: <SearchPanel />,
         git: <GitSidebarPanel />,
@@ -313,6 +319,8 @@ function LayoutOverlays({
       <FilePickerConnected isOpen={filePickerOpen} onClose={() => setFilePickerOpen(false)} projectRoot={projectRoot} />
       <SymbolSearch isOpen={symbolSearchOpen} onClose={() => setSymbolSearchOpen(false)} projectRoot={projectRoot} />
       <PerformanceOverlay visible={perfOverlayVisible} />
+      <React.Suspense fallback={<div />}><ExtensionStorePanel /></React.Suspense>
+      <React.Suspense fallback={<div />}><McpStorePanel /></React.Suspense>
     </>
   );
 }
