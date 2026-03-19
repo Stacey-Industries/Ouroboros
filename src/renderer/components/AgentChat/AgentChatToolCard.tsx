@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { formatToolActivity } from './agentChatFormatters';
+
 import { AgentChatDiffPreview } from './AgentChatDiffPreview';
+import { formatToolActivity } from './agentChatFormatters';
 
 const FILE_MODIFYING_TOOLS = new Set([
   'Write',
@@ -236,7 +237,7 @@ function formatInputPreview(name: string, input: unknown): string | null {
   }
 }
 
-export function AgentChatToolCard({
+export const AgentChatToolCard = React.memo(function AgentChatToolCard({
   name,
   status,
   filePath,
@@ -373,4 +374,4 @@ export function AgentChatToolCard({
       )}
     </div>
   );
-}
+});

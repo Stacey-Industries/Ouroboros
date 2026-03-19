@@ -1,13 +1,14 @@
 import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
 } from 'react';
+
 import type {
   AgentChatMessageRecord,
   AgentChatThreadRecord,
@@ -59,8 +60,23 @@ export function mergeThreadCollection(
   threads: AgentChatThreadRecord[],
   nextThread: AgentChatThreadRecord,
 ): AgentChatThreadRecord[] {
+  const existing = threads.find((thread) => thread.id === nextThread.id);
   const remainingThreads = threads.filter((thread) => thread.id !== nextThread.id);
-  return sortThreads([...remainingThreads, nextThread]);
+
+  // Defensive merge: if the incoming thread has fewer messages than the
+  // existing one (possible due to race conditions or stale snapshots),
+  // merge message arrays by ID to avoid losing messages.
+  let merged = nextThread;
+  if (existing && existing.messages.length > 0 && nextThread.messages.length < existing.messages.length) {
+    const messageMap = new Map<string, AgentChatMessageRecord>();
+    for (const msg of existing.messages) messageMap.set(msg.id, msg);
+    // Incoming messages take priority (they may have updated fields)
+    for (const msg of nextThread.messages) messageMap.set(msg.id, msg);
+    const mergedMessages = sortMessages(Array.from(messageMap.values()));
+    merged = { ...nextThread, messages: mergedMessages };
+  }
+
+  return sortThreads([...remainingThreads, merged]);
 }
 
 function mergeThreadMessage(

@@ -5,6 +5,7 @@
  * Tables:  threads + messages (FK → threads.id ON DELETE CASCADE)
  */
 
+import type BetterSqlite3 from 'better-sqlite3';
 import path from 'path';
 
 import type { Database } from '../storage/database';
@@ -108,10 +109,16 @@ interface RawMessageRow {
 }
 
 function parseJsonField<T>(raw: string | null): T | undefined {
-  return raw ? (JSON.parse(raw) as T) : undefined;
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.warn('[threadStoreSqlite] corrupt JSON field, returning undefined:', error);
+    return undefined;
+  }
 }
 
-// eslint-disable-next-line complexity
+ 
 function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
   const base: AgentChatMessageRecord = {
     id: row.id,
@@ -215,6 +222,46 @@ export class ThreadStoreSqliteRuntime {
     return this.getDb().prepare('DELETE FROM threads WHERE id = ?').run(threadId).changes > 0;
   }
 
+  /**
+   * Update only thread-level metadata (status, title, latestOrchestration)
+   * WITHOUT rewriting the messages table. This eliminates the race condition
+   * where a concurrent updateThread + appendMessage could lose messages.
+   */
+  async updateThreadMetadataOnly(
+    threadId: string,
+    patch: {
+      title?: string;
+      status?: string;
+      latestOrchestration?: unknown;
+      updatedAt: number;
+    },
+  ): Promise<AgentChatThreadRecord | null> {
+    const db = this.getDb();
+    const setClauses: string[] = ['updatedAt = ?'];
+    const params: unknown[] = [patch.updatedAt];
+
+    if (patch.title !== undefined) {
+      setClauses.push('title = ?');
+      params.push(patch.title);
+    }
+    if (patch.status !== undefined) {
+      setClauses.push('status = ?');
+      params.push(patch.status);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'latestOrchestration')) {
+      setClauses.push('latestOrchestration = ?');
+      params.push(patch.latestOrchestration ? JSON.stringify(patch.latestOrchestration) : null);
+    }
+
+    params.push(threadId);
+    const changes = db
+      .prepare(`UPDATE threads SET ${setClauses.join(', ')} WHERE id = ?`)
+      .run(...params).changes;
+
+    if (changes === 0) return null;
+    return this.readThread(threadId);
+  }
+
   async updateTitleFromResponse(
     threadId: string,
     assistantContent: string,
@@ -225,11 +272,21 @@ export class ThreadStoreSqliteRuntime {
     if (!first || !this.titleMatchesUserMessage(thread.title, first.content)) return null;
     const newTitle = summarizeForTitle(assistantContent);
     if (!newTitle || newTitle === thread.title) return null;
-    return this.writeThread({ ...thread, title: newTitle, updatedAt: this.options.now() });
+    return this.updateThreadMetadataOnly(threadId, { title: newTitle, updatedAt: this.options.now() });
   }
 
+  // Serialize mutations to prevent concurrent read-modify-write races.
+  // Without this, two concurrent updateThread calls can interleave their
+  // reads and writes, causing one to overwrite the other's changes.
+  private mutationQueue: Promise<unknown> = Promise.resolve();
+
   runMutation<T>(action: () => Promise<T>): Promise<T> {
-    return action();
+    const chained = this.mutationQueue.then(
+      () => action(),
+      () => action(), // continue even if previous mutation failed
+    );
+    this.mutationQueue = chained.catch(() => {}); // prevent unhandled rejection
+    return chained;
   }
 
   close(): void {
@@ -304,7 +361,7 @@ export class ThreadStoreSqliteRuntime {
     );
   }
 
-  private prepareInsertMessage(db: Database): ReturnType<Database['prepare']> {
+  private prepareInsertMessage(db: Database): BetterSqlite3.Statement {
     return db.prepare(
       `INSERT OR REPLACE INTO messages (id, threadId, role, content, createdAt, statusKind, orchestration,
         contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage, blocks)
@@ -313,7 +370,7 @@ export class ThreadStoreSqliteRuntime {
   }
 
   private runInsertMessage(
-    stmt: ReturnType<Database['prepare']>,
+    stmt: BetterSqlite3.Statement,
     threadId: string,
     msg: AgentChatMessageRecord,
   ): void {

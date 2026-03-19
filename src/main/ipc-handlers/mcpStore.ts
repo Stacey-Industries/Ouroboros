@@ -5,10 +5,12 @@
  * and installs servers by writing to Claude Code settings files.
  */
 
-import { IpcMainInvokeEvent, ipcMain, BrowserWindow } from 'electron'
+import { BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
+
+import { getErrorMessage } from '../agentChat/utils'
 import { store } from '../config'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
@@ -175,10 +177,6 @@ function resolveProjectRoot(projectRoot?: string): string | null {
   return projectRoot ?? getStoredProjectRoot()
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 async function runHandler<T extends object>(action: () => Promise<T>): Promise<HandlerSuccess<T> | HandlerFailure> {
   try {
     return { success: true, ...(await action()) }
@@ -277,6 +275,7 @@ async function getServerDetails(name: string): Promise<{ server: McpRegistryServ
 async function installServer(
   server: McpRegistryServer,
   scope: 'global' | 'project',
+  envOverrides?: Record<string, string>,
 ): Promise<Record<string, never>> {
   if (!server.packages || server.packages.length === 0) {
     throw new Error('Server has no installable packages.')
@@ -284,6 +283,11 @@ async function installServer(
 
   const pkg = server.packages[0]
   const config = packageToConfig(pkg)
+
+  // Merge user-provided env var values
+  if (envOverrides && Object.keys(envOverrides).length > 0) {
+    config.env = { ...(config.env ?? {}), ...envOverrides }
+  }
   const shortName = extractShortName(server.name)
 
   const filePath =
@@ -336,6 +340,69 @@ async function getInstalledServerNames(): Promise<{ names: string[] }> {
   return { names: [...names] }
 }
 
+// ─── npm Registry search (secondary source) ──────────────────────────
+
+interface NpmSearchResult {
+  objects: Array<{
+    package: {
+      name: string
+      version: string
+      description?: string
+      keywords?: string[]
+      links?: { npm?: string; repository?: string; homepage?: string }
+      publisher?: { username: string }
+      date?: string
+    }
+    score?: { detail?: { popularity?: number } }
+  }>
+  total: number
+}
+
+async function searchNpmServers(query: string, offset: number = 0): Promise<{
+  servers: McpRegistryServer[]
+  total: number
+}> {
+  const searchTerms = query
+    ? `keywords:mcp-server ${query}`
+    : 'keywords:mcp-server'
+  const params = new URLSearchParams({
+    text: searchTerms,
+    size: '20',
+    from: String(offset),
+  })
+
+  const url = `https://registry.npmjs.org/-/v1/search?${params.toString()}`
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    throw new Error(`npm search failed: ${response.status} ${response.statusText}`)
+  }
+
+  const data = (await response.json()) as NpmSearchResult
+
+  const servers: McpRegistryServer[] = data.objects.map((obj) => {
+    const pkg = obj.package
+    return {
+      name: pkg.name,
+      title: pkg.name,
+      description: pkg.description ?? '',
+      version: pkg.version,
+      packages: [{
+        registry_type: 'npm' as const,
+        name: pkg.name,
+        version: pkg.version,
+      }],
+      _meta: {
+        status: 'active',
+        publishedAt: pkg.date ?? '',
+        updatedAt: pkg.date ?? '',
+      },
+    }
+  })
+
+  return { servers, total: data.total }
+}
+
 // ─── Registration ─────────────────────────────────────────────────────
 
 export function registerMcpStoreHandlers(_senderWindow: SenderWindow): string[] {
@@ -350,12 +417,16 @@ export function registerMcpStoreHandlers(_senderWindow: SenderWindow): string[] 
     runHandler(() => getServerDetails(name)),
   )
 
-  registerHandler(channels, 'mcpStore:install', async (_event, server: McpRegistryServer, scope: 'global' | 'project') =>
-    runHandler(() => installServer(server, scope)),
+  registerHandler(channels, 'mcpStore:install', async (_event, server: McpRegistryServer, scope: 'global' | 'project', envOverrides?: Record<string, string>) =>
+    runHandler(() => installServer(server, scope, envOverrides)),
   )
 
   registerHandler(channels, 'mcpStore:getInstalled', async () =>
     runHandler(() => getInstalledServerNames()),
+  )
+
+  registerHandler(channels, 'mcpStore:searchNpm', async (_event, query: string, offset?: number) =>
+    runHandler(() => searchNpmServers(query, offset)),
   )
 
   return channels

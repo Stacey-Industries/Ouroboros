@@ -47,7 +47,7 @@ function DurationBadge({ duration }: { duration: number }): React.ReactElement {
  * Collapsed: chevron + duration badge; click to expand.
  * Expanded: full thinking text in a visually distinct style.
  */
-export function AgentChatThinkingBlock({
+export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock({
   content,
   duration,
   isStreaming,
@@ -107,4 +107,4 @@ export function AgentChatThinkingBlock({
       `}</style>
     </div>
   );
-}
+});

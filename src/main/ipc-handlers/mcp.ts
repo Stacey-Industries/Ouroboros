@@ -6,10 +6,12 @@
  *  - <projectRoot>/.claude/settings.json (project scope)
  */
 
-import { BrowserWindow, IpcMainInvokeEvent, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain,IpcMainInvokeEvent } from 'electron'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
+
+import { getErrorMessage } from '../agentChat/utils'
 import { store } from '../config'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
@@ -140,10 +142,6 @@ function persistServerBuckets(settings: SettingsRecord, buckets: ServerBuckets):
   }
 
   delete settings.disabledMcpServers
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 async function runHandler<T extends object>(action: () => Promise<T>): Promise<HandlerSuccess<T> | HandlerFailure> {

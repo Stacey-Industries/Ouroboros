@@ -290,6 +290,8 @@ export interface ContextPacket {
   repoMap?: RepoMapSummary
   /** AI-generated summaries for modules relevant to this task (from context layer). */
   moduleSummaries?: ModuleContextSummary[]
+  /** Pre-formatted graph summary (hotspots + blast radius) to inject into the prompt. */
+  graphSummary?: string
 }
 
 export interface RepoMapSummary {
@@ -353,12 +355,40 @@ export interface TokenUsage {
   outputTokens: number
 }
 
+/**
+ * Structured content block delta — carries block identity from the provider API
+ * through to the renderer so blocks can be placed at exact positions.
+ *
+ * This replaces the old prefix-encoded string approach (__tool__:, __thinking__:)
+ * that lost block indices and forced heuristic reconstruction downstream.
+ */
+export interface ProviderContentBlockDelta {
+  /** Position of the content block in the assistant message (global across turns) */
+  blockIndex: number
+  /** Type of content block */
+  blockType: 'text' | 'thinking' | 'tool_use'
+  /** Text delta for text/thinking blocks */
+  textDelta?: string
+  /** Tool activity for tool_use blocks */
+  toolActivity?: {
+    name: string
+    status: 'running' | 'complete'
+    toolUseId?: string
+    filePath?: string
+    inputSummary?: string
+    editSummary?: { oldLines: number; newLines: number }
+  }
+}
+
 export interface ProviderProgressEvent {
   provider: OrchestrationProvider
   status: ProviderExecutionStatus
+  /** Status text for non-streaming events; text delta for legacy streaming path. */
   message: string
   session?: ProviderSessionReference
   timestamp: number
+  /** Structured content block delta — when present, carries block identity from the API. */
+  contentBlock?: ProviderContentBlockDelta
   /** Cumulative token usage for this request (populated on 'completed' status). */
   tokenUsage?: TokenUsage
   /** Total cost in USD (populated on 'completed' status). */

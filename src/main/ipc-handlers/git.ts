@@ -1,10 +1,13 @@
-import { ipcMain, app, IpcMainInvokeEvent, BrowserWindow } from 'electron'
 import { execFile } from 'child_process'
+import { app, BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { dispatchActivationEvent } from '../extensions'
+
 import { getGraphController } from '../codebaseGraph/graphController'
 import { getContextLayerController } from '../contextLayer/contextLayerController'
+import { dispatchActivationEvent } from '../extensions'
+import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat'
+import { assertPathAllowed } from './pathSecurity'
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type DiffStatus = 'modified' | 'added' | 'deleted' | 'renamed'
 type DiffLineKind = 'added' | 'modified' | 'deleted'
@@ -249,6 +252,12 @@ async function applyPatch(root: string, patchContent: string, reverse: boolean =
   catch (err: unknown) { return { success: false, error: gitErrorMessage(err) } }
   finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
 }
+async function stagePatch(root: string, patchContent: string): Promise<GitResponse<Record<string, never>>> {
+  const tmpFile = path.join(app.getPath('temp'), `ouroboros-stage-${Date.now()}.patch`)
+  try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(['apply', '--cached', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
+  catch (err: unknown) { return { success: false, error: gitErrorMessage(err) } }
+  finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
+}
 function gitIsRepo(root: string) { return respond(async () => { await gitExec(['rev-parse', '--git-dir'], { cwd: root }); return { isRepo: true } }, { fallback: { isRepo: false } }) }
 function gitStatus(root: string) { return respond(async () => ({ files: parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])).files })) }
 function gitBranch(root: string) { return respond(async () => ({ branch: await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD']) })) }
@@ -260,7 +269,7 @@ function gitCheckout(root: string, branch: string) { return respond(async () => 
 function gitStage(root: string, filePath: string) { return respond(async () => { await gitExec(['add', filePath], { cwd: root }); return {} }, { gitError: true }) }
 function gitUnstage(root: string, filePath: string) { return respond(async () => { await gitExec(['restore', '--staged', filePath], { cwd: root }); return {} }, { gitError: true }) }
 function gitStatusDetailed(root: string) { return respond(async () => { const snapshot = parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])); return { staged: snapshot.staged, unstaged: snapshot.unstaged } }) }
-function gitCommit(root: string, message: string) { return respond(async () => { await gitExec(['commit', '-m', message], { cwd: root }); dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => { console.error('[git] Failed to dispatch onGitCommit activation event:', error) }); getGraphController()?.onGitCommit(); getContextLayerController()?.onGitCommit(); return {} }, { gitError: true }) }
+function gitCommit(root: string, message: string) { return respond(async () => { await gitExec(['commit', '-m', message], { cwd: root }); dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => { console.error('[git] Failed to dispatch onGitCommit activation event:', error) }); getGraphController()?.onGitCommit(); getContextLayerController()?.onGitCommit(); invalidateAgentChatCache(); return {} }, { gitError: true }) }
 function gitStageAll(root: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); return {} }, { gitError: true }) }
 function gitUnstageAll(root: string) { return respond(async () => { await gitExec(['reset', 'HEAD'], { cwd: root }); return {} }, { gitError: true }) }
 function gitSnapshot(root: string) { return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) })) }
@@ -276,14 +285,52 @@ function gitBlame(root: string, filePath: string) { return respond(async () => (
 function gitDiffRaw(root: string, filePath: string) { return respond(async () => ({ patch: (await gitStdout(root, ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath], 4 * MB)) }), { fallback: { patch: '' } }) }
 export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
   void _senderWindow
-  const register = <T extends unknown[]>(channel: string, handler: (...args: T) => Promise<unknown>): string => { ipcMain.handle(channel, (_event, ...args) => handler(...(args as T))); return channel }
+
+  // Registers a handler where args[0] is a `root` path that must be validated
+  // against the calling window's allowed workspace roots before proceeding.
+  const registerSecure = <T extends [string, ...unknown[]]>(
+    channel: string,
+    handler: (...args: T) => Promise<unknown>,
+  ): string => {
+    ipcMain.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]) => {
+      const root = args[0] as string
+      const denied = assertPathAllowed(event, root)
+      if (denied) return denied
+      return handler(...(args as T))
+    })
+    return channel
+  }
+
   return [
-    register('git:isRepo', gitIsRepo), register('git:status', gitStatus), register('git:branch', gitBranch), register('git:diff', gitDiff),
-    register('git:log', gitLog), register('git:show', gitShow), register('git:branches', gitBranches), register('git:checkout', gitCheckout),
-    register('git:stage', gitStage), register('git:unstage', gitUnstage), register('git:statusDetailed', gitStatusDetailed), register('git:commit', gitCommit),
-    register('git:stageAll', gitStageAll), register('git:unstageAll', gitUnstageAll), register('git:discardFile', discardFile), register('git:snapshot', gitSnapshot),
-    register('git:diffReview', gitDiffReview), register('git:fileAtCommit', gitFileAtCommit), register('git:applyHunk', (root: string, patchContent: string) => applyPatch(root, patchContent)), register('git:revertHunk', (root: string, patchContent: string) => applyPatch(root, patchContent, true)),
-    register('git:revertFile', gitRevertFile), register('git:diffBetween', gitDiffBetween), register('git:changedFilesBetween', gitChangedFilesBetween), register('git:restoreSnapshot', gitRestoreSnapshot),
-    register('git:createSnapshot', gitCreateSnapshot), register('git:dirtyCount', gitDirtyCount), register('git:blame', gitBlame), register('git:diffRaw', gitDiffRaw),
+    registerSecure('git:isRepo', gitIsRepo),
+    registerSecure('git:status', gitStatus),
+    registerSecure('git:branch', gitBranch),
+    registerSecure('git:diff', gitDiff),
+    registerSecure('git:log', gitLog),
+    registerSecure('git:show', gitShow),
+    registerSecure('git:branches', gitBranches),
+    registerSecure('git:checkout', gitCheckout),
+    registerSecure('git:stage', gitStage),
+    registerSecure('git:unstage', gitUnstage),
+    registerSecure('git:statusDetailed', gitStatusDetailed),
+    registerSecure('git:commit', gitCommit),
+    registerSecure('git:stageAll', gitStageAll),
+    registerSecure('git:unstageAll', gitUnstageAll),
+    registerSecure('git:discardFile', discardFile),
+    registerSecure('git:snapshot', gitSnapshot),
+    registerSecure('git:diffReview', gitDiffReview),
+    registerSecure('git:fileAtCommit', gitFileAtCommit),
+    registerSecure('git:applyHunk', (root: string, patchContent: string) => applyPatch(root, patchContent)),
+    registerSecure('git:revertHunk', (root: string, patchContent: string) => applyPatch(root, patchContent, true)),
+    registerSecure('git:stageHunk', (root: string, patchContent: string) => stagePatch(root, patchContent)),
+    registerSecure('git:revertFile', gitRevertFile),
+    registerSecure('git:diffBetween', gitDiffBetween),
+    registerSecure('git:changedFilesBetween', gitChangedFilesBetween),
+    registerSecure('git:restoreSnapshot', gitRestoreSnapshot),
+    registerSecure('git:createSnapshot', gitCreateSnapshot),
+    registerSecure('git:dirtyCount', gitDirtyCount),
+    registerSecure('git:blame', gitBlame),
+    registerSecure('git:diffRaw', gitDiffRaw),
   ]
+
 }

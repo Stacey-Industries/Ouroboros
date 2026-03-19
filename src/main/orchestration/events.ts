@@ -11,7 +11,8 @@ export const ORCHESTRATION_INVOKE_CHANNELS = {
   updateSession: 'orchestration:updateSession',
   resumeTask: 'orchestration:resumeTask',
   rerunVerification: 'orchestration:rerunVerification',
-  cancelTask: 'orchestration:cancelTask',
+  // cancelTask removed — cancel routes through agentChat:cancelTask (singleton adapter).
+  // See agentChat.ts createMinimalOrchestration() for the working cancel path.
   pauseTask: 'orchestration:pauseTask',
 } as const
 

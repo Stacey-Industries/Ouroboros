@@ -1,0 +1,85 @@
+/**
+ * ipc-handlers/pathSecurity.ts — Shared workspace path validation helpers.
+ *
+ * All IPC handlers that accept file-system paths (files, git, context, LSP,
+ * symbol search, shell) import from here so sandboxing logic stays in one place.
+ *
+ * Security goal: prevent a compromised renderer from reading/writing arbitrary
+ * paths outside the active workspace root(s).
+ */
+
+import { IpcMainInvokeEvent } from 'electron'
+import path from 'path'
+
+import { getConfigValue } from '../config'
+import { getWindow } from '../windowManager'
+
+/**
+ * Return the set of allowed root directories for the calling window.
+ * Includes the window's project root, all configured multi-roots,
+ * and the default project root from config.
+ */
+export function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
+  const roots: string[] = []
+
+  // Per-window project root (from windowManager)
+  const winId = event.sender.getOwnerBrowserWindow()?.id
+  if (winId !== undefined) {
+    const managed = getWindow(winId)
+    if (managed?.projectRoot) {
+      roots.push(path.resolve(managed.projectRoot))
+    }
+  }
+
+  // Multi-root workspace entries
+  const multiRoots = getConfigValue('multiRoots') ?? []
+  for (const r of multiRoots) {
+    if (r) roots.push(path.resolve(r))
+  }
+
+  // Fallback default project root
+  const defaultRoot = getConfigValue('defaultProjectRoot')
+  if (defaultRoot) {
+    roots.push(path.resolve(defaultRoot))
+  }
+
+  return roots
+}
+
+/**
+ * Validate that `targetPath` resolves to a location inside one of the
+ * allowed workspace roots.  Returns an error string if the path escapes
+ * the sandbox, or null if the path is allowed.
+ */
+export function validatePathInWorkspace(targetPath: string, allowedRoots: string[]): string | null {
+  if (allowedRoots.length === 0) {
+    // No workspace configured — cannot validate, deny by default.
+    return 'No workspace root configured; file operation denied for security.'
+  }
+
+  const resolved = path.resolve(targetPath)
+
+  for (const root of allowedRoots) {
+    // On Windows path comparison must be case-insensitive
+    const normalizedResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved
+    const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root
+
+    if (normalizedResolved === normalizedRoot || normalizedResolved.startsWith(normalizedRoot + path.sep)) {
+      return null // Path is within this root — allowed.
+    }
+  }
+
+  return `Path "${targetPath}" is outside the workspace and cannot be accessed.`
+}
+
+/**
+ * Convenience: validate a path and return a rejection result if it fails.
+ * Returns null if the path is allowed (caller should proceed normally).
+ */
+export function assertPathAllowed(
+  event: IpcMainInvokeEvent,
+  targetPath: string,
+): { success: false; error: string } | null {
+  const error = validatePathInWorkspace(targetPath, getAllowedRoots(event))
+  return error ? { success: false, error } : null
+}

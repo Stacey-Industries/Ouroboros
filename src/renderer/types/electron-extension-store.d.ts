@@ -75,10 +75,21 @@ export interface ExtensionStoreAPI {
     totalSize?: number
     offset?: number
   }>
+  searchMarketplace: (query: string, offset?: number, category?: string) => Promise<IpcResult & {
+    extensions?: VsxExtensionSummary[]
+    totalSize?: number
+    offset?: number
+  }>
   getDetails: (namespace: string, name: string) => Promise<IpcResult & {
     extension?: VsxExtensionDetail
   }>
+  getMarketplaceDetails: (namespace: string, name: string) => Promise<IpcResult & {
+    extension?: VsxExtensionDetail
+  }>
   install: (namespace: string, name: string, version?: string) => Promise<IpcResult & {
+    installed?: InstalledVsxExtension
+  }>
+  installMarketplace: (namespace: string, name: string, version?: string) => Promise<IpcResult & {
     installed?: InstalledVsxExtension
   }>
   uninstall: (id: string) => Promise<IpcResult>

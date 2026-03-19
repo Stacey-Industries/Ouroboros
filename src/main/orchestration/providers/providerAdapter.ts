@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+
 import type {
   ContextPacket,
   OrchestrationProvider,
@@ -51,19 +52,6 @@ export interface ProviderArtifactInput {
   completedAt?: number
 }
 
-export interface ProviderProgressEventInput {
-  provider: OrchestrationProvider
-  status: ProviderExecutionStatus
-  message: string
-  timestamp: number
-  session?: ProviderSessionReference
-  textDelta?: string
-  toolActivity?: { name: string; status: 'started' | 'running' | 'completed' | 'failed' }
-  tokenUsage?: { inputTokens: number; outputTokens: number }
-  costUsd?: number
-  durationMs?: number
-}
-
 export interface ProviderAdapter {
   readonly provider: OrchestrationProvider
   getCapabilities: () => ProviderCapabilities
@@ -93,16 +81,5 @@ export function createProviderArtifact(input: ProviderArtifactInput): ProviderAr
   }
 }
 
-export function createProviderProgressEvent(input: ProviderProgressEventInput): ProviderProgressEvent {
-  return {
-    provider: input.provider,
-    status: input.status,
-    message: input.message,
-    session: input.session,
-    timestamp: input.timestamp,
-    tokenUsage: input.tokenUsage,
-    costUsd: input.costUsd,
-    durationMs: input.durationMs,
-  }
-}
+
 

@@ -2,10 +2,13 @@
  * ipc-handlers/app.ts â€” Shell, App, Theme, Titlebar IPC handlers
  */
 
-import { ipcMain, shell, app, BrowserWindow, Notification, IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent,Notification, shell } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
-import { getConfigValue, setConfigValue, AppConfig } from '../config'
+
+import { AppConfig,getConfigValue, setConfigValue } from '../config'
+import { broadcastToWebClients } from '../web/webServer'
+import { assertPathAllowed } from './pathSecurity'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type HandlerResult = { success: boolean; error?: string; skipped?: boolean }
@@ -80,6 +83,7 @@ function broadcastThemeChange(theme: AppConfig['activeTheme']): void {
       bw.webContents.send('theme:changed', theme)
     }
   }
+  broadcastToWebClients('theme:changed', theme)
 }
 
 function setTheme(theme: AppConfig['activeTheme']): HandlerResult {
@@ -109,7 +113,11 @@ function setTitlebarOverlayColors(
 }
 
 function registerShellHandlers(channels: string[]): void {
-  ipcMain.handle('shell:showItemInFolder', (_event, fullPath: string) => showItemInFolder(fullPath))
+  ipcMain.handle('shell:showItemInFolder', (event: IpcMainInvokeEvent, fullPath: string) => {
+    const denied = assertPathAllowed(event, fullPath)
+    if (denied) return denied
+    return showItemInFolder(fullPath)
+  })
   channels.push('shell:showItemInFolder')
 
   ipcMain.handle('shell:openExtensionsFolder', () => openExtensionsFolder())

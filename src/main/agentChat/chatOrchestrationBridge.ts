@@ -2,20 +2,16 @@ import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
+
 import { getConfigValue } from '../config'
+import type { HookPayload } from '../hooks'
+import { dispatchSyntheticHookEvent } from '../hooks'
 import type { OrchestrationAPI, ProviderProgressEvent } from '../orchestration/types'
-import { resolveAgentChatSettings, type ResolvedAgentChatSettings } from './settingsResolver'
-import {
-  projectProviderResultToAssistantMessage,
-  projectProviderFailureToAssistantMessage,
-} from './responseProjector'
-import { agentChatThreadStore, type AgentChatThreadStore } from './threadStore'
 import {
   buildAgentChatOrchestrationLink,
   buildAssistantMessageId,
   buildSendFailureResult,
   buildSendSuccessResult,
-  buildThreadWithAssistantMessage,
   createOrchestrationFailure,
   mapOrchestrationStatusToAgentChatStatus,
   persistThreadLinkage,
@@ -23,19 +19,28 @@ import {
 import {
   deriveSmartTitle,
   generateLlmTitle,
+  type PreparedSend,
   preparePendingSend,
   resolveSendOptions,
-  type PreparedSend,
   validateSendRequest,
 } from './chatOrchestrationRequestSupport'
+import {
+  projectProviderFailureToAssistantMessage,
+  projectProviderResultToAssistantMessage,
+} from './responseProjector'
+import { resolveAgentChatSettings, type ResolvedAgentChatSettings } from './settingsResolver'
+import { type AgentChatThreadStore,agentChatThreadStore } from './threadStore'
 import type {
+  AgentChatContentBlock,
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
+  AgentChatRevertResult,
   AgentChatSendMessageRequest,
   AgentChatSendResult,
-  AgentChatSettings,
   AgentChatStreamChunk,
+  AgentChatThreadRecord,
 } from './types'
+import { getErrorMessage } from './utils'
 
 export type StreamChunkListener = (chunk: AgentChatStreamChunk) => void
 
@@ -56,7 +61,7 @@ export interface AgentChatOrchestrationBridge {
   /** Returns buffered stream chunks for a thread (for reconnection after refresh). */
   getBufferedChunks: (threadId: string) => AgentChatStreamChunk[]
   /** Revert file changes made during a specific assistant message's agent turn. */
-  revertToSnapshot: (threadId: string, messageId: string) => Promise<import('./types').AgentChatRevertResult>
+  revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>
   dispose: () => void
 }
 
@@ -71,10 +76,7 @@ interface AgentChatBridgeRuntime {
   orchestration: OrchestrationClient
   threadStore: AgentChatThreadStore
   streamChunkListeners: Set<StreamChunkListener>
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
+  activeSends: Map<string, ActiveStreamContext>
 }
 
 /** Capture current git HEAD hash for the given project root (for revert support). */
@@ -89,7 +91,7 @@ function captureHeadHash(cwd: string): Promise<string | undefined> {
 function gitExecSimple(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile('git', args, { cwd, timeout: 10000 }, (err, stdout) => {
-      err ? reject(err) : resolve(stdout)
+      if (err) reject(err); else resolve(stdout)
     })
   })
 }
@@ -164,9 +166,10 @@ async function executeGitRevert(workspaceRoot: string, snapshotHash: string): Pr
 
 async function revertToSnapshotWithBridge(
   threadStore: AgentChatThreadStore,
+  activeSends: Map<string, ActiveStreamContext>,
   threadId: string,
   messageId: string,
-): Promise<import('./types').AgentChatRevertResult> {
+): Promise<AgentChatRevertResult> {
   const thread = await threadStore.loadThread(threadId)
   if (!thread) {
     return { success: false, error: 'Thread not found.' }
@@ -298,15 +301,25 @@ interface ActiveStreamContext {
   accumulatedText: string
   firstChunkEmitted: boolean
   tokenUsage?: { inputTokens: number; outputTokens: number }
+  /** Resolved model ID (e.g. 'claude-opus-4-6') for this send. */
+  model?: string
   /** Buffered chunks for replay on renderer reconnect (e.g. after HMR/refresh). */
   bufferedChunks: AgentChatStreamChunk[]
   /** Accumulated tool activity for smart title generation */
   toolsUsed: Array<{ name: string; filePath?: string }>
   /** Accumulated content blocks for message persistence — mirrors streaming blocks */
-  accumulatedBlocks: import('./types').AgentChatContentBlock[]
+  accumulatedBlocks: AgentChatContentBlock[]
+  /** Whether agent_start has been emitted to Agent Monitor for this session */
+  monitorStartEmitted: boolean
+  /** Claude Code CLI session ID (from system:init), used for Agent Monitor events */
+  claudeSessionId?: string
+  /** User prompt for this thread — used as task label in the Agent Monitor */
+  userPrompt?: string
+  /** Timer handle for periodic incremental persistence flush. */
+  flushTimer?: ReturnType<typeof setInterval>
+  /** Set to true when a terminal event fires — prevents in-flight flushes from overwriting the final message. */
+  streamEnded: boolean
 }
-
-const activeSends = new Map<string, ActiveStreamContext>()
 
 function emitStreamChunk(
   listeners: Set<StreamChunkListener>,
@@ -314,7 +327,7 @@ function emitStreamChunk(
   ctx?: ActiveStreamContext,
 ): void {
   // Buffer non-terminal chunks for replay on renderer reconnect
-  if (ctx && chunk.type !== 'complete' && chunk.type !== 'error' && chunk.type !== 'thread_snapshot' as string) {
+  if (ctx && chunk.type !== 'complete' && chunk.type !== 'error' && chunk.type !== 'thread_snapshot') {
     ctx.bufferedChunks.push(chunk)
   }
   for (const listener of listeners) {
@@ -326,6 +339,150 @@ function emitStreamChunk(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Agent Monitor bridge — forward tool activity to Agent Monitor via synthetic
+// hook events so the monitor always shows tool calls for chat sessions,
+// regardless of whether the external hook scripts succeed.
+// ---------------------------------------------------------------------------
+
+function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: number): void {
+  if (ctx.monitorStartEmitted) return
+  ctx.monitorStartEmitted = true
+
+  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  dispatchSyntheticHookEvent({
+    type: 'agent_start',
+    sessionId,
+    taskLabel: ctx.userPrompt ?? `Chat ${ctx.threadId.slice(0, 8)}`,
+    prompt: ctx.userPrompt,
+    timestamp: now,
+  })
+}
+
+function emitMonitorToolStart(ctx: ActiveStreamContext, blockIndex: number, toolActivity: {
+  name: string
+  filePath?: string
+  inputSummary?: string
+}, now: number): void {
+  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  ensureMonitorSessionStarted(ctx, now)
+
+  const input: Record<string, unknown> = {}
+  if (toolActivity.filePath) input.file_path = toolActivity.filePath
+  if (toolActivity.inputSummary) input.description = toolActivity.inputSummary
+
+  dispatchSyntheticHookEvent({
+    type: 'pre_tool_use',
+    sessionId,
+    toolName: toolActivity.name,
+    toolCallId: `stream-${sessionId}-${blockIndex}`,
+    input,
+    timestamp: now,
+  } as HookPayload)
+}
+
+function emitMonitorToolEnd(ctx: ActiveStreamContext, blockIndex: number, toolName: string, now: number): void {
+  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  dispatchSyntheticHookEvent({
+    type: 'post_tool_use',
+    sessionId,
+    toolName,
+    toolCallId: `stream-${sessionId}-${blockIndex}`,
+    timestamp: now,
+  } as HookPayload)
+}
+
+function emitMonitorSessionEnd(ctx: ActiveStreamContext, now: number, error?: string): void {
+  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  if (!ctx.monitorStartEmitted) return // Never started — don't emit end
+
+  const payload: HookPayload = {
+    type: 'agent_end',
+    sessionId,
+    timestamp: now,
+  }
+  if (error) (payload as Record<string, unknown>).error = error
+  // Forward token usage so the Agent Monitor shows costs for chat sessions
+  if (ctx.tokenUsage) {
+    payload.usage = {
+      input_tokens: ctx.tokenUsage.inputTokens,
+      output_tokens: ctx.tokenUsage.outputTokens,
+    }
+  }
+  dispatchSyntheticHookEvent(payload)
+}
+
+// ---------------------------------------------------------------------------
+// Incremental persistence — periodic flush of accumulated content to SQLite
+// so that a crash loses at most a few seconds of output.
+// ---------------------------------------------------------------------------
+
+const FLUSH_INTERVAL_MS = 5000
+
+function stopIncrementalFlush(ctx: ActiveStreamContext): void {
+  ctx.streamEnded = true
+  if (ctx.flushTimer) {
+    clearInterval(ctx.flushTimer)
+    ctx.flushTimer = undefined
+  }
+}
+
+async function flushPartialMessage(runtime: AgentChatBridgeRuntime, ctx: ActiveStreamContext): Promise<void> {
+  if (ctx.streamEnded) return
+  if (!ctx.firstChunkEmitted) return
+
+  const partialMessage = projectProviderResultToAssistantMessage({
+    threadId: ctx.threadId,
+    messageId: ctx.assistantMessageId,
+    responseText: ctx.accumulatedText,
+    orchestrationLink: ctx.link,
+    tokenUsage: ctx.tokenUsage,
+    model: ctx.model,
+    timestamp: runtime.now(),
+    blocks: ctx.accumulatedBlocks,
+  })
+
+  // Override with raw streaming blocks — skip mergeAdjacentTextBlocks during
+  // incremental flushes to keep the persisted block structure identical to
+  // streaming state. Merging only happens at final completion time. This
+  // prevents the renderer from showing merged blocks that look like duplicated
+  // text when the display switches from streaming to persisted mid-stream.
+  if (ctx.accumulatedBlocks.length > 0) {
+    partialMessage.blocks = ctx.accumulatedBlocks.map((b) => ({ ...b }))
+  }
+
+  // Re-check after building the message — the stream may have ended while computing
+  if (ctx.streamEnded) return
+
+  try {
+    const thread = await runtime.threadStore.loadThread(ctx.threadId)
+    // Final check after async load — if stream ended during the load, bail out
+    // to avoid overwriting the final completed message with partial content
+    if (ctx.streamEnded) return
+
+    const exists = thread?.messages.some((m) => m.id === ctx.assistantMessageId)
+    if (exists) {
+      await runtime.threadStore.updateMessage(ctx.threadId, ctx.assistantMessageId, {
+        content: partialMessage.content,
+        orchestration: partialMessage.orchestration,
+        toolsSummary: partialMessage.toolsSummary,
+        blocks: partialMessage.blocks,
+      })
+    } else {
+      await runtime.threadStore.appendMessage(ctx.threadId, partialMessage)
+    }
+  } catch (error) {
+    console.warn('[agentChat] incremental flush failed for thread', ctx.threadId, error)
+  }
+}
+
+function startIncrementalFlush(runtime: AgentChatBridgeRuntime, ctx: ActiveStreamContext): void {
+  ctx.flushTimer = setInterval(() => {
+    if (ctx.streamEnded || ctx.flushTimer === undefined) return
+    void flushPartialMessage(runtime, ctx)
+  }, FLUSH_INTERVAL_MS)
+}
+
 function handleProviderProgress(
   runtime: AgentChatBridgeRuntime,
   progress: ProviderProgressEvent,
@@ -334,7 +491,7 @@ function handleProviderProgress(
   // Three fallback strategies: sessionId match, externalTaskId match, or
   // requestId containing the task ID (set by the adapter as "orchestration-{taskId}").
   let ctx: ActiveStreamContext | undefined
-  for (const [, entry] of activeSends) {
+  for (const [, entry] of runtime.activeSends) {
     if (
       progress.session?.sessionId === entry.sessionId ||
       progress.session?.externalTaskId === entry.taskId ||
@@ -346,77 +503,102 @@ function handleProviderProgress(
   }
   if (!ctx) return
 
+  // Capture the Claude Code session ID for Agent Monitor events
+  if (progress.session?.sessionId && !ctx.claudeSessionId) {
+    ctx.claudeSessionId = progress.session.sessionId
+  }
+
   const now = runtime.now()
 
   if (progress.status === 'streaming') {
-    if (progress.message?.startsWith('__tool__:')) {
-      // Parse tool activity signal from the adapter
-      try {
-        const toolJson = JSON.parse(progress.message.slice('__tool__:'.length)) as {
-          name: string
-          status: 'running' | 'complete'
-          filePath?: string
-          inputSummary?: string
-          editSummary?: { oldLines: number; newLines: number }
+    // --- Structured content block path (block-indexed) ---
+    if (progress.contentBlock) {
+      const { blockIndex, blockType, textDelta, toolActivity } = progress.contentBlock
+
+      // Ensure accumulatedBlocks array is large enough for this block index
+      while (ctx.accumulatedBlocks.length <= blockIndex) {
+        ctx.accumulatedBlocks.push({ kind: 'text', content: '' })
+      }
+
+      if (blockType === 'text' && textDelta) {
+        ctx.accumulatedText += textDelta
+        const existing = ctx.accumulatedBlocks[blockIndex]
+        if (existing.kind === 'text') {
+          (existing as { kind: 'text'; content: string }).content += textDelta
+        } else {
+          ctx.accumulatedBlocks[blockIndex] = { kind: 'text', content: textDelta }
+        }
+        emitStreamChunk(runtime.streamChunkListeners, {
+          threadId: ctx.threadId,
+          messageId: ctx.assistantMessageId,
+          type: 'text_delta',
+          blockIndex,
+          textDelta,
+          timestamp: now,
+        }, ctx)
+      } else if (blockType === 'thinking' && textDelta) {
+        const existing = ctx.accumulatedBlocks[blockIndex]
+        if (existing.kind === 'thinking') {
+          (existing as { kind: 'thinking'; content: string }).content += textDelta
+        } else {
+          ctx.accumulatedBlocks[blockIndex] = { kind: 'thinking', content: textDelta }
+        }
+        emitStreamChunk(runtime.streamChunkListeners, {
+          threadId: ctx.threadId,
+          messageId: ctx.assistantMessageId,
+          type: 'thinking_delta',
+          blockIndex,
+          thinkingDelta: textDelta,
+          timestamp: now,
+        }, ctx)
+      } else if (blockType === 'tool_use' && toolActivity) {
+        if (toolActivity.status === 'running') {
+          ctx.accumulatedBlocks[blockIndex] = {
+            kind: 'tool_use',
+            tool: toolActivity.name,
+            status: 'running',
+            filePath: toolActivity.filePath,
+            inputSummary: toolActivity.inputSummary,
+            editSummary: toolActivity.editSummary,
+            blockId: `tool-${blockIndex}`,
+          }
+          ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath })
+          // Forward to Agent Monitor
+          emitMonitorToolStart(ctx, blockIndex, toolActivity, now)
+        } else if (toolActivity.status === 'complete') {
+          const block = ctx.accumulatedBlocks[blockIndex]
+          if (block.kind === 'tool_use') {
+            ctx.accumulatedBlocks[blockIndex] = { ...block, status: 'complete' }
+          }
+          // Forward to Agent Monitor
+          emitMonitorToolEnd(ctx, blockIndex, toolActivity.name, now)
         }
         emitStreamChunk(runtime.streamChunkListeners, {
           threadId: ctx.threadId,
           messageId: ctx.assistantMessageId,
           type: 'tool_activity',
+          blockIndex,
           toolActivity: {
-            name: toolJson.name,
-            status: toolJson.status,
-            filePath: toolJson.filePath,
-            inputSummary: toolJson.inputSummary,
-            editSummary: toolJson.editSummary,
+            name: toolActivity.name,
+            status: toolActivity.status,
+            filePath: toolActivity.filePath,
+            inputSummary: toolActivity.inputSummary,
+            editSummary: toolActivity.editSummary,
           },
           timestamp: now,
         }, ctx)
-        // Track tool for smart title generation (only on 'running' to avoid duplicates)
-        if (toolJson.status === 'running') {
-          ctx.toolsUsed.push({ name: toolJson.name, filePath: toolJson.filePath })
-          // Accumulate tool_use block for message persistence
-          ctx.accumulatedBlocks.push({
-            kind: 'tool_use',
-            tool: toolJson.name,
-            status: 'running',
-            filePath: toolJson.filePath,
-            blockId: `tool-${ctx.accumulatedBlocks.length}`,
-          })
-        } else if (toolJson.status === 'complete') {
-          // Find and update the matching running tool block
-          for (let i = ctx.accumulatedBlocks.length - 1; i >= 0; i--) {
-            const block = ctx.accumulatedBlocks[i]
-            if (block.kind === 'tool_use' && block.tool === toolJson.name && block.status === 'running') {
-              ctx.accumulatedBlocks[i] = { ...block, status: 'complete', filePath: toolJson.filePath ?? block.filePath }
-              break
-            }
-          }
-        }
-      } catch {
-        // Malformed tool JSON — ignore
       }
-    } else if (progress.message?.startsWith('__thinking__:')) {
-      // Parse thinking block signal from the adapter
-      const thinkingText = progress.message.slice('__thinking__:'.length)
-      if (thinkingText) {
-        emitStreamChunk(runtime.streamChunkListeners, {
-          threadId: ctx.threadId,
-          messageId: ctx.assistantMessageId,
-          type: 'thinking_delta',
-          thinkingDelta: thinkingText,
-          timestamp: now,
-        }, ctx)
-        // Accumulate thinking block for message persistence
-        const lastBlock = ctx.accumulatedBlocks[ctx.accumulatedBlocks.length - 1]
-        if (lastBlock && lastBlock.kind === 'thinking') {
-          lastBlock.content += thinkingText
-        } else {
-          ctx.accumulatedBlocks.push({ kind: 'thinking', content: thinkingText })
-        }
-      }
+      ctx.firstChunkEmitted = true
     } else if (progress.message) {
+      // Legacy fallback for unstructured events (diagnostics, status messages).
+      // Appends to the last text block or creates a new one.
       ctx.accumulatedText += progress.message
+      const lastBlock = ctx.accumulatedBlocks[ctx.accumulatedBlocks.length - 1]
+      if (lastBlock && lastBlock.kind === 'text') {
+        (lastBlock as { kind: 'text'; content: string }).content += progress.message
+      } else {
+        ctx.accumulatedBlocks.push({ kind: 'text', content: progress.message })
+      }
       emitStreamChunk(runtime.streamChunkListeners, {
         threadId: ctx.threadId,
         messageId: ctx.assistantMessageId,
@@ -424,16 +606,12 @@ function handleProviderProgress(
         textDelta: progress.message,
         timestamp: now,
       }, ctx)
-      // Accumulate text block for message persistence
-      const lastBlock = ctx.accumulatedBlocks[ctx.accumulatedBlocks.length - 1]
-      if (lastBlock && lastBlock.kind === 'text') {
-        lastBlock.content += progress.message
-      } else {
-        ctx.accumulatedBlocks.push({ kind: 'text', content: progress.message })
-      }
+      ctx.firstChunkEmitted = true
     }
-    ctx.firstChunkEmitted = true
   } else if (progress.status === 'completed') {
+    // Stop incremental flush before final persist to prevent race condition
+    stopIncrementalFlush(ctx)
+
     // Capture token usage from the completed progress event
     if (progress.tokenUsage) {
       ctx.tokenUsage = progress.tokenUsage
@@ -450,6 +628,7 @@ function handleProviderProgress(
       responseText: ctx.accumulatedText,
       orchestrationLink: ctx.link,
       tokenUsage: ctx.tokenUsage,
+      model: ctx.model,
       costUsd: progress.costUsd,
       durationMs: progress.durationMs,
       timestamp: now,
@@ -470,7 +649,7 @@ function handleProviderProgress(
       try {
         const thread = await runtime.threadStore.loadThread(threadId)
         const exists = thread?.messages.some((m) => m.id === assistantMessageId)
-        let updatedThread: import('./types').AgentChatThreadRecord
+        let updatedThread: AgentChatThreadRecord
         if (exists) {
           updatedThread = await runtime.threadStore.updateMessage(threadId, assistantMessageId, {
             content: assistantMessage.content,
@@ -479,6 +658,7 @@ function handleProviderProgress(
             costSummary: assistantMessage.costSummary,
             durationSummary: assistantMessage.durationSummary,
             tokenUsage: assistantMessage.tokenUsage,
+            model: assistantMessage.model,
             blocks: assistantMessage.blocks,
           })
         } else {
@@ -488,7 +668,7 @@ function handleProviderProgress(
         // (set correctly by finalizeStartedTask). ctx.link was captured before the
         // adapter ran and may lack these values.
         const existing = thread?.latestOrchestration
-        const freshLink: import('./types').AgentChatOrchestrationLink = {
+        const freshLink: AgentChatOrchestrationLink = {
           ...ctx.link,
           claudeSessionId: existing?.claudeSessionId ?? ctx.link.claudeSessionId ?? claudeSessionIdFromStream,
           linkedTerminalId: existing?.linkedTerminalId ?? ctx.link.linkedTerminalId,
@@ -530,10 +710,10 @@ function handleProviderProgress(
                 emitStreamChunk(runtime.streamChunkListeners, {
                   threadId: capturedThreadId,
                   messageId: '',
-                  type: 'thread_snapshot' as any,
+                  type: 'thread_snapshot',
                   timestamp: Date.now(),
                   thread: refreshed,
-                } as any)
+                })
               }
             }
           }).catch(() => { /* heuristic title preserved on failure */ })
@@ -548,10 +728,10 @@ function handleProviderProgress(
         emitStreamChunk(runtime.streamChunkListeners, {
           threadId,
           messageId: assistantMessageId,
-          type: 'thread_snapshot' as any,
+          type: 'thread_snapshot',
           timestamp: Date.now(),
           thread: finalThread,
-        } as any)
+        })
       } catch (error) {
         console.error('[agentChat] completion persistence failed for thread', threadId, error)
       } finally {
@@ -564,42 +744,213 @@ function handleProviderProgress(
           type: 'complete',
           timestamp: Date.now(),
         })
-        activeSends.delete(taskId)
+        // Notify Agent Monitor that the session is done
+        emitMonitorSessionEnd(ctx, Date.now())
+        runtime.activeSends.delete(taskId)
       }
     })()
   } else if (progress.status === 'cancelled') {
-    emitStreamChunk(runtime.streamChunkListeners, {
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      type: 'error',
-      textDelta: 'Cancelled.',
-      timestamp: now,
-    })
-    activeSends.delete(ctx.taskId)
-  } else if (progress.status === 'failed') {
-    const failureMessage = projectProviderFailureToAssistantMessage({
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      errorMessage: progress.message || 'Provider task failed.',
-      orchestrationLink: ctx.link,
-      timestamp: now,
-    })
+    // Stop incremental flush before cancel persist
+    stopIncrementalFlush(ctx)
 
-    void runtime.threadStore.appendMessage(ctx.threadId, failureMessage).then((thread) => {
-      return runtime.threadStore.updateThread(thread.id, {
-        status: 'failed',
-        latestOrchestration: ctx!.link,
+    // Persist whatever the agent accomplished before cancellation.
+    // Without this, all accumulated text/blocks are lost and the user sees
+    // only "Task cancelled" with no content.
+    const threadId = ctx.threadId
+    const assistantMessageId = ctx.assistantMessageId
+    const taskId = ctx.taskId
+    const hasContent = ctx.accumulatedText.length > 0 || ctx.accumulatedBlocks.length > 0
+
+    if (hasContent) {
+      // Build the partial assistant message from accumulated content
+      const partialMessage = projectProviderResultToAssistantMessage({
+        threadId,
+        messageId: assistantMessageId,
+        responseText: ctx.accumulatedText,
+        orchestrationLink: ctx.link,
+        tokenUsage: ctx.tokenUsage,
+        model: ctx.model,
+        timestamp: now,
+        blocks: ctx.accumulatedBlocks,
       })
-    }).catch((error) => { console.error('[agentChat] failed to persist failure message for thread', ctx!.threadId, error) })
 
-    emitStreamChunk(runtime.streamChunkListeners, {
-      threadId: ctx.threadId,
-      messageId: ctx.assistantMessageId,
-      type: 'error',
-      textDelta: progress.message,
-      timestamp: now,
-    })
-    activeSends.delete(ctx.taskId)
+      void (async () => {
+        try {
+          const thread = await runtime.threadStore.loadThread(threadId)
+          const exists = thread?.messages.some((m) => m.id === assistantMessageId)
+          let updatedThread: AgentChatThreadRecord
+          if (exists) {
+            updatedThread = await runtime.threadStore.updateMessage(threadId, assistantMessageId, {
+              content: partialMessage.content,
+              orchestration: partialMessage.orchestration,
+              toolsSummary: partialMessage.toolsSummary,
+              blocks: partialMessage.blocks,
+            })
+          } else {
+            updatedThread = await runtime.threadStore.appendMessage(threadId, partialMessage)
+          }
+          await runtime.threadStore.updateThread(updatedThread.id, {
+            status: 'cancelled',
+            latestOrchestration: ctx.link,
+          })
+
+          const finalThread = await runtime.threadStore.loadThread(threadId) ?? updatedThread
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'thread_snapshot',
+            timestamp: Date.now(),
+            thread: finalThread,
+          })
+        } catch (error) {
+          console.error('[agentChat] cancel persistence failed for thread', threadId, error)
+        } finally {
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'complete',
+            timestamp: Date.now(),
+          })
+          emitMonitorSessionEnd(ctx, Date.now(), 'Cancelled')
+          runtime.activeSends.delete(taskId)
+        }
+      })()
+    } else {
+      // No content accumulated — just clean up
+      emitStreamChunk(runtime.streamChunkListeners, {
+        threadId: ctx.threadId,
+        messageId: ctx.assistantMessageId,
+        type: 'complete',
+        timestamp: now,
+      })
+      // Update thread status to cancelled in the store
+      void runtime.threadStore.updateThread(threadId, { status: 'cancelled' }).catch(() => {})
+      emitMonitorSessionEnd(ctx, now, 'Cancelled')
+      runtime.activeSends.delete(ctx.taskId)
+    }
+  } else if (progress.status === 'failed') {
+    // Stop incremental flush before failure persist
+    stopIncrementalFlush(ctx)
+
+    const threadId = ctx.threadId
+    const assistantMessageId = ctx.assistantMessageId
+    const taskId = ctx.taskId
+    const errorMessage = progress.message || 'Provider task failed.'
+    const hasContent = ctx.accumulatedText.length > 0 || ctx.accumulatedBlocks.length > 0
+
+    if (hasContent) {
+      // Agent produced partial content before failing — persist it with the error
+      const partialMessage = projectProviderResultToAssistantMessage({
+        threadId,
+        messageId: assistantMessageId,
+        responseText: ctx.accumulatedText,
+        orchestrationLink: ctx.link,
+        tokenUsage: ctx.tokenUsage,
+        model: ctx.model,
+        timestamp: now,
+        blocks: ctx.accumulatedBlocks,
+      })
+      partialMessage.error = {
+        code: 'orchestration_failed',
+        message: errorMessage,
+        recoverable: true,
+      }
+
+      void (async () => {
+        try {
+          const thread = await runtime.threadStore.loadThread(threadId)
+          const exists = thread?.messages.some((m) => m.id === assistantMessageId)
+          let updatedThread: AgentChatThreadRecord
+          if (exists) {
+            updatedThread = await runtime.threadStore.updateMessage(threadId, assistantMessageId, {
+              content: partialMessage.content,
+              orchestration: partialMessage.orchestration,
+              toolsSummary: partialMessage.toolsSummary,
+              blocks: partialMessage.blocks,
+              error: partialMessage.error,
+            })
+          } else {
+            updatedThread = await runtime.threadStore.appendMessage(threadId, partialMessage)
+          }
+          await runtime.threadStore.updateThread(updatedThread.id, {
+            status: 'failed',
+            latestOrchestration: ctx.link,
+          })
+
+          const finalThread = await runtime.threadStore.loadThread(threadId) ?? updatedThread
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'thread_snapshot',
+            timestamp: Date.now(),
+            thread: finalThread,
+          })
+        } catch (error) {
+          console.error('[agentChat] failure persistence failed for thread', threadId, error)
+        } finally {
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'error',
+            textDelta: errorMessage,
+            timestamp: Date.now(),
+          })
+          emitMonitorSessionEnd(ctx, Date.now(), errorMessage)
+          runtime.activeSends.delete(taskId)
+        }
+      })()
+    } else {
+      // No content accumulated — persist just the failure message
+      const failureMessage = projectProviderFailureToAssistantMessage({
+        threadId,
+        messageId: assistantMessageId,
+        errorMessage,
+        orchestrationLink: ctx.link,
+        timestamp: now,
+      })
+
+      void (async () => {
+        try {
+          const thread = await runtime.threadStore.loadThread(threadId)
+          const exists = thread?.messages.some((m) => m.id === assistantMessageId)
+          let updatedThread: AgentChatThreadRecord
+          if (exists) {
+            updatedThread = await runtime.threadStore.updateMessage(threadId, assistantMessageId, {
+              content: failureMessage.content,
+              orchestration: failureMessage.orchestration,
+              error: failureMessage.error,
+            })
+          } else {
+            updatedThread = await runtime.threadStore.appendMessage(threadId, failureMessage)
+          }
+          await runtime.threadStore.updateThread(updatedThread.id, {
+            status: 'failed',
+            latestOrchestration: ctx.link,
+          })
+
+          const finalThread = await runtime.threadStore.loadThread(threadId) ?? updatedThread
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'thread_snapshot',
+            timestamp: Date.now(),
+            thread: finalThread,
+          })
+        } catch (error) {
+          console.error('[agentChat] failure persistence failed for thread', threadId, error)
+        } finally {
+          emitStreamChunk(runtime.streamChunkListeners, {
+            threadId,
+            messageId: assistantMessageId,
+            type: 'error',
+            textDelta: errorMessage,
+            timestamp: Date.now(),
+          })
+          emitMonitorSessionEnd(ctx, Date.now(), errorMessage)
+          runtime.activeSends.delete(taskId)
+        }
+      })()
+    }
   }
 }
 
@@ -636,6 +987,7 @@ async function executePendingSend(args: {
 
   // Register active streaming context before starting the task
   const assistantMessageId = buildAssistantMessageId(args.runtime.createId, created.session.id)
+  const userPrompt = args.pending.thread.messages.find((m) => m.role === 'user')?.content
   const streamCtx: ActiveStreamContext = {
     threadId: args.pending.thread.id,
     assistantMessageId,
@@ -644,23 +996,56 @@ async function executePendingSend(args: {
     link: linked.link,
     accumulatedText: '',
     firstChunkEmitted: false,
+    model: args.pending.taskRequest.model,
     bufferedChunks: [],
     toolsUsed: [],
     accumulatedBlocks: [],
+    monitorStartEmitted: false,
+    userPrompt: userPrompt?.slice(0, 120),
+    streamEnded: false,
   }
-  activeSends.set(created.taskId, streamCtx)
+  args.runtime.activeSends.set(created.taskId, streamCtx)
 
-  const started = await args.orchestration.startTask(created.taskId)
-  if (!started.success) {
-    console.error('[agentChat] startTask failed:', started.error)
+  // Safety net: wrap everything after activeSends.set in try/catch so that
+  // unexpected exceptions (from startIncrementalFlush, startTask, or
+  // finalizeStartedTask) always clean up the activeSends entry. Without this,
+  // an unhandled throw would permanently lock the thread.
+  try {
+    // Start incremental persistence flush
+    startIncrementalFlush(args.runtime, streamCtx)
+
+    let started: Awaited<ReturnType<typeof args.orchestration.startTask>>
+    try {
+      started = await args.orchestration.startTask(created.taskId)
+    } catch (err) {
+      // startTask threw — no progress callback will ever fire, so clean up now.
+      stopIncrementalFlush(streamCtx)
+      args.runtime.activeSends.delete(created.taskId)
+      throw err
+    }
+
+    if (!started.success) {
+      console.error('[agentChat] startTask failed:', started.error)
+      // startTask returned a failure — no progress callback will fire for this
+      // task, so remove it from activeSends to prevent a permanent lock.
+      stopIncrementalFlush(streamCtx)
+      args.runtime.activeSends.delete(created.taskId)
+    }
+
+    return finalizeStartedTask({
+      fallbackLink: linked.link,
+      linkedThread: linked.thread,
+      pending: args.pending,
+      started,
+      threadStore: args.threadStore,
+    })
+  } catch (err) {
+    // Outer safety net: if anything after activeSends.set threw unexpectedly,
+    // ensure the entry is removed so the thread isn't permanently locked.
+    stopIncrementalFlush(streamCtx)
+    args.runtime.activeSends.delete(created.taskId)
+    throw err
   }
-  return finalizeStartedTask({
-    fallbackLink: linked.link,
-    linkedThread: linked.thread,
-    pending: args.pending,
-    started,
-    threadStore: args.threadStore,
-  })
 }
 
 async function sendMessageWithBridge(
@@ -674,7 +1059,7 @@ async function sendMessageWithBridge(
   // in-flight for this thread, reject the new send rather than spawning a
   // duplicate agent session (which would cause two responses in one thread).
   if (request.threadId) {
-    for (const [, ctx] of activeSends) {
+    for (const [, ctx] of runtime.activeSends) {
       if (ctx.threadId === request.threadId) {
         return buildSendFailureResult({
           error: 'A task is already running for this thread. Wait for it to finish or stop it first.',
@@ -693,12 +1078,24 @@ async function sendMessageWithBridge(
       threadStore: runtime.threadStore,
     })
 
-    return executePendingSend({
+    // Return the thread to the renderer immediately so the UI updates
+    // (shows user message + snake animation).  The orchestration
+    // (context packet + Claude Code launch) runs in the background —
+    // the renderer picks up status changes via IPC event listeners.
+    void executePendingSend({
       orchestration: runtime.orchestration,
       pending,
       runtime,
       threadStore: runtime.threadStore,
+    }).catch((err) => {
+      console.error('[agentChat] background executePendingSend failed:', getErrorMessage(err))
     })
+
+    return {
+      success: true,
+      thread: pending.thread,
+      message: pending.thread.messages.find((m) => m.id === pending.messageId),
+    } as AgentChatSendResult
   } catch (error) {
     console.error('[agentChat] sendMessage failed:', getErrorMessage(error))
     if (error instanceof Error && error.stack) console.error(error.stack)
@@ -739,6 +1136,7 @@ export function createAgentChatOrchestrationBridge(
   deps: AgentChatOrchestrationBridgeDeps,
 ): AgentChatOrchestrationBridge {
   const streamChunkListeners = new Set<StreamChunkListener>()
+  const activeSends = new Map<string, ActiveStreamContext>()
   const runtime: AgentChatBridgeRuntime = {
     createId: deps.createId ?? randomUUID,
     getSettings: deps.getSettings ?? (() => resolveAgentChatSettings({
@@ -749,6 +1147,7 @@ export function createAgentChatOrchestrationBridge(
     orchestration: deps.orchestration,
     threadStore: deps.threadStore ?? agentChatThreadStore,
     streamChunkListeners,
+    activeSends,
   }
 
   // Subscribe to orchestration provider events to forward streaming progress
@@ -764,20 +1163,23 @@ export function createAgentChatOrchestrationBridge(
       return () => streamChunkListeners.delete(listener)
     },
     getActiveThreadIds(): string[] {
-      return Array.from(activeSends.values()).map((ctx) => ctx.threadId)
+      return Array.from(runtime.activeSends.values()).map((ctx) => ctx.threadId)
     },
     getBufferedChunks(threadId: string): AgentChatStreamChunk[] {
-      for (const [, ctx] of activeSends) {
+      for (const [, ctx] of runtime.activeSends) {
         if (ctx.threadId === threadId) return [...ctx.bufferedChunks]
       }
       return []
     },
     revertToSnapshot: (threadId, messageId) =>
-      revertToSnapshotWithBridge(runtime.threadStore, threadId, messageId),
+      revertToSnapshotWithBridge(runtime.threadStore, runtime.activeSends, threadId, messageId),
     dispose: () => {
       unsubProviderEvent()
       streamChunkListeners.clear()
-      activeSends.clear()
+      for (const [, ctx] of runtime.activeSends) {
+        stopIncrementalFlush(ctx)
+      }
+      runtime.activeSends.clear()
     },
   }
 }

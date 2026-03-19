@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { useApplyCode } from './useApplyCode';
+
 import type { DiffLine } from './useApplyCode';
+import { useApplyCode } from './useApplyCode';
 
 export interface ChatCodeBlockProps {
   code: string;
@@ -172,7 +173,7 @@ function FilePathBreadcrumb({ filePath }: { filePath: string }): React.ReactElem
  *
  * All controls live in a compact header bar above the code.
  */
-export function ChatCodeBlock({
+export const ChatCodeBlock = React.memo(function ChatCodeBlock({
   code,
   language,
   filePath,
@@ -343,4 +344,4 @@ export function ChatCodeBlock({
       )}
     </div>
   );
-}
+});

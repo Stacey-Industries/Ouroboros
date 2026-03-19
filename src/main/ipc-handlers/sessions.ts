@@ -6,6 +6,8 @@ import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent } from 'electro
 import fs from 'fs/promises'
 import path from 'path'
 
+import { getErrorMessage } from '../agentChat/utils'
+
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type SessionRecord = Record<string, unknown>
 type SessionToolCall = Record<string, unknown>
@@ -156,10 +158,6 @@ function buildMarkdown(session: SessionRecord): string {
   appendToolCallSections(lines, getToolCalls(session))
 
   return lines.join('\n')
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 async function runHandler<T extends object>(action: () => Promise<T>): Promise<HandlerSuccess<T> | HandlerFailure> {

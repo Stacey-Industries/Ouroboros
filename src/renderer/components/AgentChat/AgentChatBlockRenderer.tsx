@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import type { AgentChatContentBlock } from '../../types/electron';
 import { AgentChatPlanBlock } from './AgentChatPlanBlock';
 import { AgentChatThinkingBlock } from './AgentChatThinkingBlock';
@@ -157,7 +158,7 @@ function collectToolRun(
  * into an `AgentChatToolGroup`. The first block in a run renders the group;
  * subsequent blocks in the run set `skipRender` to avoid duplication.
  */
-export function AgentChatBlockRenderer({
+export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer({
   block,
   index,
   isStreaming,
@@ -174,7 +175,7 @@ export function AgentChatBlockRenderer({
 
   switch (block.kind) {
     case 'text':
-      return <MessageMarkdown content={block.content} isStreaming={isStreaming && isLastBlock} />;
+      return <MessageMarkdown content={block.content} />;
 
     case 'thinking':
       return (
@@ -238,4 +239,4 @@ export function AgentChatBlockRenderer({
     default:
       return <UnknownBlockRenderer block={block} />;
   }
-}
+});

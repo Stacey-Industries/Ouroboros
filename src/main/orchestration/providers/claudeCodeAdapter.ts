@@ -1,19 +1,18 @@
-import path from 'path'
-import { BrowserWindow } from 'electron'
-import { writeFile, unlink } from 'fs/promises'
-import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
-import { getConfigValue, type ClaudeCliSettings } from '../../config'
-import { spawnAgentPty, killPty, type AgentPtyResult } from '../../pty'
-import type { AgentBridgeHandle } from '../../ptyAgentBridge'
-import type { ContextPacket, ProviderCapabilities } from '../types'
+import { BrowserWindow } from 'electron'
+import { unlink,writeFile } from 'fs/promises'
+import { tmpdir } from 'os'
+import path from 'path'
+
 import type { ImageAttachment } from '../../agentChat/types'
+import { type ClaudeCliSettings,getConfigValue } from '../../config'
+import { type AgentPtyResult,killPty, spawnAgentPty } from '../../pty'
+import type { AgentBridgeHandle } from '../../ptyAgentBridge'
 import { getModelBudgets } from '../contextPacketBuilderSupport'
+import type { ContextPacket, ProviderCapabilities } from '../types'
 import { spawnStreamJsonProcess } from './claudeStreamJsonRunner'
-import type { StreamJsonProcessHandle, StreamJsonResultEvent } from './streamJsonTypes'
 import {
   createProviderArtifact,
-  createProviderProgressEvent,
   createProviderSessionReference,
   type ProviderAdapter,
   type ProviderLaunchContext,
@@ -21,6 +20,7 @@ import {
   type ProviderProgressSink,
   type ProviderResumeContext,
 } from './providerAdapter'
+import type { StreamJsonEvent, StreamJsonProcessHandle, StreamJsonResultEvent, StreamJsonToolUseBlock } from './streamJsonTypes'
 
 /** Track active stream-json processes for cancellation. */
 const activeProcesses = new Map<string, StreamJsonProcessHandle>()
@@ -299,7 +299,15 @@ function buildXmlContextBlock(
   sections.push(buildTerminalSection(packet))
 
   sections.push('</ide_context>')
-  return sections.filter(Boolean).join('\n\n')
+
+  const result = sections.filter(Boolean).join('\n\n')
+
+  // Append graph summary (hotspots + blast radius) outside the ide_context block
+  // so it reads as a top-level context section rather than IDE state.
+  if (packet.graphSummary) {
+    return result + '\n\n' + packet.graphSummary
+  }
+  return result
 }
 
 function buildInitialPrompt(
@@ -332,117 +340,189 @@ function buildInitialPrompt(
 }
 
 /**
+ * Extract tool display metadata from a tool_use block's input.
+ * Shared by the event handler for both running and completion events.
+ */
+function extractToolDisplayFields(block: StreamJsonToolUseBlock): {
+  filePath?: string
+  inputSummary?: string
+  editSummary?: { oldLines: number; newLines: number }
+} {
+  const inp = block.input as Record<string, unknown> | undefined
+  if (!inp) return {}
+  const result: { filePath?: string; inputSummary?: string; editSummary?: { oldLines: number; newLines: number } } = {}
+  const fp = inp.file_path ?? inp.filePath ?? inp.path
+  if (typeof fp === 'string') result.filePath = fp
+  if (typeof inp.command === 'string') {
+    result.inputSummary = inp.command.length > 200 ? inp.command.slice(0, 197) + '...' : inp.command
+  } else if (typeof inp.pattern === 'string') {
+    result.inputSummary = `/${inp.pattern}/` + (typeof inp.glob === 'string' ? ` in ${inp.glob}` : '')
+  } else if (typeof inp.description === 'string') {
+    result.inputSummary = inp.description.length > 150 ? inp.description.slice(0, 147) + '...' : inp.description
+  }
+  if (typeof inp.old_string === 'string' && typeof inp.new_string === 'string') {
+    result.editSummary = { oldLines: inp.old_string.split('\n').length, newLines: inp.new_string.split('\n').length }
+  }
+  return result
+}
+
+/**
  * Build the event handler callback shared by both PTY-backed and headless launches.
- * Returns a handler that processes stream-json events and emits deltas via the sink.
+ *
+ * Emits structured ProviderContentBlockDelta events that preserve block identity
+ * (blockIndex) from the Claude API all the way to the renderer — no prefix-encoding,
+ * no heuristic reconstruction downstream.
+ *
+ * Claude Code's stream-json format emits full message snapshots (not per-block deltas),
+ * so we diff each event against the previous snapshot to compute per-block deltas.
+ * Global block indices are maintained across multi-turn conversations.
  */
 function buildEventHandler(
   sink: ProviderProgressSink,
   sessionRef: ReturnType<typeof createProviderSessionReference>,
 ): {
-  handler: (event: import('./streamJsonTypes').StreamJsonEvent) => void
-  getLastEmittedTextLength: () => number
+  handler: (event: StreamJsonEvent) => void
+  getNextGlobalBlockIndex: () => number
   getCumulativeUsage: () => { inputTokens: number; outputTokens: number }
 } {
-  let lastEmittedTextLength = 0
-  /** Track tool_use_id -> tool name so we can emit completion when tool_result arrives. */
-  const toolUseIdToName = new Map<string, string>()
-  /**
-   * Token tracking strategy:
-   * - inputTokens: last turn's input_tokens (non-cached portion sent to the model).
-   *   This is an undercount of true context window utilization (excludes cache reads)
-   *   but is the most reliable per-turn value from stream-json. We overwrite per turn
-   *   so it reflects the most recent request's context size.
-   * - outputTokens: cumulative across all turns within this task invocation.
-   */
+  // --- Per-block state tracking ---
+  /** Global block index counter — increments across turns so each block has a unique position. */
+  let nextGlobalBlockIndex = 0
+  /** Maps local block index (within current turn) → global block index. */
+  let localToGlobal: number[] = []
+  /** Tracks emitted content length per global block index (for computing text/thinking deltas). */
+  const emittedContentLengths = new Map<number, number>()
+  /** Maps tool_use_id → { name, globalIndex } for emitting tool completion events. */
+  const toolIdToGlobal = new Map<string, { name: string; globalIndex: number }>()
+  /** Block types from the previous assistant event (for turn-boundary detection). */
+  let prevBlockTypes: string[] = []
+
+  // --- Token tracking ---
   let lastTurnInputTokens = 0
   let cumulativeOutputTokens = 0
 
-  const handler = (event: import('./streamJsonTypes').StreamJsonEvent) => {
+  const handler = (event: StreamJsonEvent) => {
     if (event.type === 'assistant') {
-      // Claude Code's stream-json format never emits tool_result blocks as events —
-      // tool results are consumed internally and fed back to the model. When a new
-      // assistant response arrives it means all tools from the previous turn are done.
-      for (const [, prevName] of toolUseIdToName) {
-        sink.emit(createProviderProgressEvent({
-          provider: 'claude-code',
-          status: 'streaming',
-          message: `__tool__:${JSON.stringify({ name: prevName, status: 'complete' })}`,
-          timestamp: Date.now(),
-          session: sessionRef,
-        }))
-      }
-      toolUseIdToName.clear()
+      const blocks = event.message.content
+      const now = Date.now()
 
-      const textBlocks = event.message.content.filter((b) => b.type === 'text')
-      const toolBlocks = event.message.content.filter((b) => b.type === 'tool_use')
-      const thinkingBlocks = event.message.content.filter((b) => b.type === 'thinking')
-
-      for (const block of toolBlocks) {
-        if (block.type === 'tool_use') {
-          toolUseIdToName.set(block.id, block.name)
-          const toolPayload: Record<string, unknown> = { name: block.name, status: 'running' }
-          // Extract useful fields from tool input for renderer display
-          const inp = block.input as Record<string, unknown> | undefined
-          if (inp) {
-            const fp = inp.file_path ?? inp.filePath ?? inp.path
-            if (typeof fp === 'string') toolPayload.filePath = fp
-            if (typeof inp.command === 'string') {
-              toolPayload.inputSummary = inp.command.length > 200 ? inp.command.slice(0, 197) + '...' : inp.command
-            } else if (typeof inp.pattern === 'string') {
-              toolPayload.inputSummary = `/${inp.pattern}/` + (typeof inp.glob === 'string' ? ` in ${inp.glob}` : '')
-            } else if (typeof inp.description === 'string') {
-              toolPayload.inputSummary = inp.description.length > 150 ? inp.description.slice(0, 147) + '...' : inp.description
-            }
-            // For Edit tools, include a compact summary of what changed
-            if (typeof inp.old_string === 'string' && typeof inp.new_string === 'string') {
-              const oldLines = inp.old_string.split('\n').length
-              const newLines = inp.new_string.split('\n').length
-              toolPayload.editSummary = { oldLines, newLines }
+      // --- Detect new turn ---
+      // A new turn means the model received tool results and produced a fresh response.
+      // The content array resets (different types at shared positions, or shrinks).
+      let isNewTurn = false
+      if (prevBlockTypes.length > 0) {
+        if (blocks.length < prevBlockTypes.length) {
+          isNewTurn = true
+        } else {
+          for (let i = 0; i < Math.min(blocks.length, prevBlockTypes.length); i++) {
+            if (blocks[i].type !== prevBlockTypes[i]) {
+              isNewTurn = true
+              break
             }
           }
-          sink.emit(createProviderProgressEvent({
-            provider: 'claude-code',
-            status: 'streaming',
-            message: `__tool__:${JSON.stringify(toolPayload)}`,
-            timestamp: Date.now(),
-            session: sessionRef,
-          }))
         }
       }
 
-      // Emit thinking blocks so the renderer can display extended thinking
-      for (const block of thinkingBlocks) {
-        if (block.type === 'thinking' && block.thinking) {
-          sink.emit(createProviderProgressEvent({
+      if (isNewTurn) {
+        // Complete all tracked tools from the previous turn
+        for (const [, info] of toolIdToGlobal) {
+          sink.emit({
             provider: 'claude-code',
             status: 'streaming',
-            message: `__thinking__:${block.thinking}`,
-            timestamp: Date.now(),
+            message: '',
+            timestamp: now,
             session: sessionRef,
-          }))
+            contentBlock: {
+              blockIndex: info.globalIndex,
+              blockType: 'tool_use',
+              toolActivity: { name: info.name, status: 'complete' },
+            },
+          })
+        }
+        toolIdToGlobal.clear()
+        localToGlobal = []
+      }
+
+      // --- Assign global indices for any new blocks ---
+      for (let i = localToGlobal.length; i < blocks.length; i++) {
+        localToGlobal.push(nextGlobalBlockIndex++)
+      }
+
+      // --- Emit per-block deltas ---
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i]
+        const globalIdx = localToGlobal[i]
+
+        if (block.type === 'text') {
+          const prevLen = emittedContentLengths.get(globalIdx) ?? 0
+          const delta = block.text.slice(prevLen)
+          if (delta.length > 0) {
+            sink.emit({
+              provider: 'claude-code',
+              status: 'streaming',
+              message: delta,
+              timestamp: now,
+              session: sessionRef,
+              contentBlock: {
+                blockIndex: globalIdx,
+                blockType: 'text',
+                textDelta: delta,
+              },
+            })
+            emittedContentLengths.set(globalIdx, block.text.length)
+          }
+        } else if (block.type === 'thinking' && block.thinking) {
+          const prevLen = emittedContentLengths.get(globalIdx) ?? 0
+          const delta = block.thinking.slice(prevLen)
+          if (delta.length > 0) {
+            sink.emit({
+              provider: 'claude-code',
+              status: 'streaming',
+              message: '',
+              timestamp: now,
+              session: sessionRef,
+              contentBlock: {
+                blockIndex: globalIdx,
+                blockType: 'thinking',
+                textDelta: delta,
+              },
+            })
+            emittedContentLengths.set(globalIdx, block.thinking.length)
+          }
+        } else if (block.type === 'tool_use') {
+          if (!emittedContentLengths.has(globalIdx)) {
+            const display = extractToolDisplayFields(block)
+            sink.emit({
+              provider: 'claude-code',
+              status: 'streaming',
+              message: '',
+              timestamp: now,
+              session: sessionRef,
+              contentBlock: {
+                blockIndex: globalIdx,
+                blockType: 'tool_use',
+                toolActivity: {
+                  name: block.name,
+                  status: 'running',
+                  toolUseId: block.id,
+                  filePath: display.filePath,
+                  inputSummary: display.inputSummary,
+                  editSummary: display.editSummary,
+                },
+              },
+            })
+            emittedContentLengths.set(globalIdx, 1)
+            toolIdToGlobal.set(block.id, { name: block.name, globalIndex: globalIdx })
+          }
         }
       }
 
-      if (textBlocks.length > 0) {
-        const fullText = textBlocks.map((b) => b.text).join('')
-        const delta = fullText.slice(lastEmittedTextLength)
-        lastEmittedTextLength = fullText.length
-        if (delta.length > 0) {
-          sink.emit(createProviderProgressEvent({
-            provider: 'claude-code',
-            status: 'streaming',
-            message: delta,
-            timestamp: Date.now(),
-            session: sessionRef,
-          }))
-        }
-      }
+      // Update turn-detection state
+      prevBlockTypes = blocks.map((b) => b.type)
 
       // Track per-turn tokens: overwrite input (last turn's context), accumulate output.
       const usage = event.message.usage
       if (usage) {
-        // input_tokens reflects non-cached tokens for this turn's request.
-        // Combined with cache_creation, it approximates fresh context utilization.
         const turnInput = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
         if (turnInput > 0) lastTurnInputTokens = turnInput
         cumulativeOutputTokens += usage.output_tokens ?? 0
@@ -455,7 +535,7 @@ function buildEventHandler(
   }
   return {
     handler,
-    getLastEmittedTextLength: () => lastEmittedTextLength,
+    getNextGlobalBlockIndex: () => nextGlobalBlockIndex,
     getCumulativeUsage: () => ({ inputTokens: lastTurnInputTokens, outputTokens: cumulativeOutputTokens }),
   }
 }
@@ -476,7 +556,7 @@ const AGENT_PTY_PREFIX = 'agent-pty-'
  * Attempt to launch Claude via a real PTY session.
  * Returns null if PTY launch fails (caller should fall back to headless).
  */
-function tryLaunchPtyBacked(args: {
+function _tryLaunchPtyBacked(args: {
   context: ProviderLaunchContext | ProviderResumeContext
   prompt: string
   cwd: string
@@ -535,7 +615,7 @@ function launchHeadless(args: {
   continueSession?: boolean
   effort?: string
   /** Pre-built event handler — when provided, skips internal buildEventHandler call. */
-  eventHandler?: (event: import('./streamJsonTypes').StreamJsonEvent) => void
+  eventHandler?: (event: StreamJsonEvent) => void
 }): { result: Promise<StreamJsonResultEvent> } {
   const handler = args.eventHandler ?? buildEventHandler(args.sink, args.sessionRef).handler
 
@@ -572,12 +652,12 @@ function launchClaude(
   console.log('[claude-code] launchClaude called:', { cwd, model: resolvedModel, effort, permissionMode: resolvedPermissionMode, resumeSessionId: resumeSessionId || context.request.resumeFromSessionId })
 
   // Emit initial queued event
-  sink.emit(createProviderProgressEvent({
+  sink.emit({
     provider: 'claude-code',
     status: 'queued',
     message: 'Launching Claude Code session',
     timestamp: Date.now(),
-  }))
+  })
 
   const sessionRef = createProviderSessionReference('claude-code', {
     requestId,
@@ -605,16 +685,49 @@ function launchClaude(
   // PTY + `-p` (print mode) is incompatible: `-p` expects pipe stdin, but PTY
   // provides a TTY which breaks EOF signalling and causes immediate exit on Windows.
   // The headless path uses proper pipe stdin/stdout for reliable NDJSON streaming.
-  // TODO: Re-enable PTY path with interactive-mode bridge (no `-p` flag).
-  const linkedTerminalId: string | undefined = undefined
+  // TODO: PTY-linked terminal path was removed — re-enable when chat-terminal
+  // unification lands. See AgentChatOrchestrationLink.linkedTerminalId.
   console.log('[claude-code] launching headless stream-json process', effectiveResumeSessionId ? `(resuming session ${effectiveResumeSessionId})` : '(new session)')
 
   // Create the event handler here so we can access cumulative usage in the completion handler.
-  const { handler: eventHandler, getCumulativeUsage } = buildEventHandler(sink, sessionRef)
+  const { handler: eventHandler, getNextGlobalBlockIndex, getCumulativeUsage } = buildEventHandler(sink, sessionRef)
 
   // Materialize image attachments as temp files (async), then launch the process.
   // This runs in the background so the synchronous ProviderLaunchResult can be returned immediately.
   // Each invocation tracks its own temp paths to avoid a shared-closure race between concurrent calls.
+  //
+  // Register a deferred-kill placeholder immediately so that cancelTask can
+  // find and terminate the process even while attachments are being materialized.
+  // The placeholder is replaced with the real handle once launchHeadless runs.
+  let deferredPid: number | undefined
+  const placeholder: StreamJsonProcessHandle = {
+    result: null as unknown as Promise<StreamJsonResultEvent>,
+    kill: () => {
+      // Kill the real process if it's been spawned, otherwise mark as cancelled
+      if (deferredPid) {
+        const handle = activeProcesses.get(context.taskId)
+        if (handle && handle !== placeholder) {
+          handle.kill()
+          return
+        }
+      }
+      // Mark as needing cancellation — launchHeadless will check this
+      void placeholder.sessionId
+    },
+    pid: undefined,
+    sessionId: null,
+  }
+  let cancelledBeforeLaunch = false
+  placeholder.kill = () => {
+    const realHandle = activeProcesses.get(context.taskId)
+    if (realHandle && realHandle !== placeholder) {
+      realHandle.kill()
+    } else {
+      cancelledBeforeLaunch = true
+    }
+  }
+  activeProcesses.set(context.taskId, placeholder)
+
   const invocationTempPaths: string[] = []
   const launchPromise = (async () => {
     let goalSuffix = ''
@@ -627,9 +740,15 @@ function launchClaude(
         console.error('[claude-code] failed to materialize attachments — images will be omitted from this request:', err)
       }
     }
+    // If cancel was requested during attachment materialization, bail out
+    if (cancelledBeforeLaunch) {
+      activeProcesses.delete(context.taskId)
+      return null
+    }
     const prompt = buildInitialPrompt(context, goalSuffix, Boolean(effectiveResumeSessionId), resolvedModel ?? '')
     const launchArgs = { context, prompt, cwd, settings: effectiveSettings, sessionRef, sink, resumeSessionId: effectiveResumeSessionId, continueSession, effort }
     const headless = launchHeadless({ ...launchArgs, eventHandler })
+    // Replace placeholder with real handle (launchHeadless already set it, but ensure consistency)
     return headless.result
   })()
 
@@ -676,16 +795,22 @@ function launchClaude(
       const diagnostic = buildStopDiagnostic(_result, resolvedModel)
       if (diagnostic) {
         console.warn('[claude-code] stop diagnostic:', diagnostic)
-        sink.emit(createProviderProgressEvent({
+        const diagBlockIndex = getNextGlobalBlockIndex()
+        sink.emit({
           provider: 'claude-code',
           status: 'streaming',
           message: diagnostic,
           timestamp: Date.now(),
           session: sessionRef,
-        }))
+          contentBlock: {
+            blockIndex: diagBlockIndex,
+            blockType: 'text',
+            textDelta: diagnostic,
+          },
+        })
       }
 
-      sink.emit(createProviderProgressEvent({
+      sink.emit({
         provider: 'claude-code',
         status: 'completed',
         message: diagnostic ?? 'Response complete',
@@ -694,7 +819,7 @@ function launchClaude(
         tokenUsage: hasTokenUsage ? { inputTokens: inputTokens!, outputTokens: outputTokens! } : undefined,
         costUsd: typeof costUsd === 'number' ? costUsd : undefined,
         durationMs: typeof durationMs === 'number' ? durationMs : undefined,
-      }))
+      })
     },
     (error) => {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -706,41 +831,39 @@ function launchClaude(
       void cleanupTempFiles(invocationTempPaths)
 
       // Emit a visible diagnostic so the user sees the failure reason in chat
-      sink.emit(createProviderProgressEvent({
+      const errorDiagnostic = `\n\n---\n**Agent stopped** — process error: ${errorMsg}`
+      sink.emit({
         provider: 'claude-code',
         status: 'streaming',
-        message: `\n\n---\n**Agent stopped** — process error: ${errorMsg}`,
+        message: errorDiagnostic,
         timestamp: Date.now(),
         session: sessionRef,
-      }))
+        contentBlock: {
+          blockIndex: getNextGlobalBlockIndex(),
+          blockType: 'text',
+          textDelta: errorDiagnostic,
+        },
+      })
 
-      sink.emit(createProviderProgressEvent({
+      sink.emit({
         provider: 'claude-code',
         status: 'failed',
         message: errorMsg,
         timestamp: Date.now(),
         session: sessionRef,
-      }))
+      })
     },
   )
 
-  // Attach linkedTerminalId to the session reference BEFORE emitting events
-  // so it propagates through the orchestration layer to the chat bridge.
-  if (linkedTerminalId) {
-    sessionRef.linkedTerminalId = linkedTerminalId
-  }
-
   // Emit a status-only event so the bridge knows the session is live.
   const submittedAt = Date.now()
-  sink.emit(createProviderProgressEvent({
+  sink.emit({
     provider: 'claude-code',
     status: 'queued',
-    message: linkedTerminalId
-      ? `Claude Code PTY session started (terminal: ${linkedTerminalId})`
-      : 'Claude Code session started',
+    message: 'Claude Code session started',
     timestamp: submittedAt,
     session: sessionRef,
-  }))
+  })
 
   return {
     session: sessionRef,

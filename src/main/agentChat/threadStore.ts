@@ -104,6 +104,30 @@ async function updateThreadRecord(args: {
   runtime: ThreadStoreSqliteRuntime;
   threadId: string;
 }): Promise<AgentChatThreadRecord> {
+  // Use targeted SQL UPDATE for thread metadata to avoid the race condition
+  // where a full writeThread (DELETE all messages + INSERT) could lose messages
+  // that were concurrently appended by another operation.
+  const sqlPatch: {
+    title?: string;
+    status?: string;
+    latestOrchestration?: unknown;
+    updatedAt: number;
+  } = { updatedAt: args.now() };
+
+  if (Object.prototype.hasOwnProperty.call(args.patch, 'title') && args.patch.title !== undefined) {
+    sqlPatch.title = args.patch.title;
+  }
+  if (args.patch.status !== undefined) {
+    sqlPatch.status = args.patch.status;
+  }
+  if (Object.prototype.hasOwnProperty.call(args.patch, 'latestOrchestration')) {
+    sqlPatch.latestOrchestration = args.patch.latestOrchestration;
+  }
+
+  const result = await args.runtime.updateThreadMetadataOnly(args.threadId, sqlPatch);
+  if (result) return result;
+
+  // Fallback: if the targeted update fails (thread not found), use full write
   const thread = await args.runtime.requireThread(args.threadId);
   return args.runtime.writeThread({
     ...thread,

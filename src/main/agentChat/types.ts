@@ -72,7 +72,14 @@ export interface AgentChatErrorPayload {
 
 export type AgentChatContentBlock =
   | { kind: 'text'; content: string }
-  | { kind: 'thinking'; content: string; duration?: number; collapsed?: boolean }
+  | {
+      kind: 'thinking'
+      content: string
+      duration?: number
+      collapsed?: boolean
+      /** Streaming-only: wall-clock timestamp when this thinking block started (stripped on persist). */
+      startedAt?: number
+    }
   | {
       kind: 'tool_use'
       tool: string
@@ -82,6 +89,10 @@ export type AgentChatContentBlock =
       output?: string
       filePath?: string
       duration?: number
+      /** Streaming-only: short summary of the tool input (command, pattern, etc.). */
+      inputSummary?: string
+      /** Streaming-only: edit change summary (line counts). */
+      editSummary?: { oldLines: number; newLines: number }
     }
   | { kind: 'tool_result'; toolUseId: string; content: string }
   | { kind: 'code'; language: string; content: string; filePath?: string; applied?: boolean }
@@ -114,6 +125,8 @@ export interface AgentChatMessageRecord {
   durationSummary?: string
   /** Token usage for this message's API call(s). */
   tokenUsage?: { inputTokens: number; outputTokens: number }
+  /** Model ID used for this message (e.g. 'claude-opus-4-6'). */
+  model?: string
   /** Structured content blocks — when present, renderers should prefer these over `content`. */
   blocks?: AgentChatContentBlock[]
 }
@@ -231,10 +244,20 @@ export interface AgentChatStatusChangedEvent extends AgentChatEventBase<'status_
 export interface AgentChatStreamChunk {
   threadId: string
   messageId: string
-  type: 'text_delta' | 'thinking_delta' | 'tool_activity' | 'complete' | 'error'
+  type: 'text_delta' | 'thinking_delta' | 'tool_activity' | 'complete' | 'error' | 'thread_snapshot'
+  /** Content block index — stable position from the provider API. */
+  blockIndex?: number
   textDelta?: string
   thinkingDelta?: string
-  toolActivity?: { name: string; status: 'running' | 'complete'; filePath?: string }
+  toolActivity?: {
+    name: string
+    status: 'running' | 'complete'
+    filePath?: string
+    inputSummary?: string
+    editSummary?: { oldLines: number; newLines: number }
+  }
+  /** Full thread record — sent with thread_snapshot chunks after persistence. */
+  thread?: AgentChatThreadRecord
   timestamp: number
 }
 

@@ -1,13 +1,14 @@
-import { app, type BrowserWindow, ipcMain, shell } from 'electron'
+import { app, type BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
 
+import { getErrorMessage } from '../agentChat/utils'
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager'
 import {
   clearCostHistory,
+  type CostEntry,
   getCostHistory,
   saveCostEntry,
-  type CostEntry,
 } from '../costHistory'
 import {
   didChange as lspDidChange,
@@ -22,13 +23,13 @@ import {
   startServer as lspStart,
   stopServer as lspStop,
 } from '../lsp'
+import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics'
 import {
   getRecentSessionDetails,
   getSessionDetail,
   getUsageSummary,
   getWindowedUsage,
 } from '../usageReader'
-import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics'
 import {
   closeWindow,
   createWindow,
@@ -37,6 +38,7 @@ import {
   setWindowProjectRoot,
 } from '../windowManager'
 import { readShellHistory, searchSymbols } from './miscSymbolSearch'
+import { assertPathAllowed } from './pathSecurity'
 
 type ChannelList = string[]
 type IpcHandler = Parameters<typeof ipcMain.handle>[1]
@@ -66,10 +68,6 @@ try {
 function registerChannel(channels: ChannelList, channel: string, handler: IpcHandler): void {
   ipcMain.handle(channel, handler)
   channels.push(channel)
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 function ok(): EmptySuccessResponse
@@ -232,7 +230,11 @@ export function registerShellHistoryHandlers(channels: ChannelList): void {
 }
 
 export function registerSymbolHandlers(channels: ChannelList): void {
-  registerChannel(channels, 'symbol:search', async (_event, root: string) => runQuery(async () => ({ symbols: await searchSymbols(root) })))
+  registerChannel(channels, 'symbol:search', async (event: IpcMainInvokeEvent, root: string) => {
+    const denied = assertPathAllowed(event, root)
+    if (denied) return denied
+    return runQuery(async () => ({ symbols: await searchSymbols(root) }))
+  })
 }
 
 export function registerWindowHandlers(channels: ChannelList): void {
@@ -271,15 +273,65 @@ export function registerExtensionHandlers(channels: ChannelList): void {
 export function registerLspHandlers(channels: ChannelList, win: BrowserWindow): void {
   lspSetMainWindow(win)
 
-  registerChannel(channels, 'lsp:start', async (_event, root: string, language: string) => lspStart(root, language))
-  registerChannel(channels, 'lsp:stop', async (_event, root: string, language: string) => lspStop(root, language))
-  registerChannel(channels, 'lsp:completion', async (_event, opts: { root: string; filePath: string; line: number; character: number }) => lspCompletion(opts.root, opts.filePath, opts.line, opts.character))
-  registerChannel(channels, 'lsp:hover', async (_event, opts: { root: string; filePath: string; line: number; character: number }) => lspHover(opts.root, opts.filePath, opts.line, opts.character))
-  registerChannel(channels, 'lsp:definition', async (_event, opts: { root: string; filePath: string; line: number; character: number }) => lspDefinition(opts.root, opts.filePath, opts.line, opts.character))
-  registerChannel(channels, 'lsp:diagnostics', async (_event, root: string, filePath: string) => lspDiagnostics(root, filePath))
-  registerChannel(channels, 'lsp:didOpen', async (_event, root: string, filePath: string, content: string) => lspDidOpen(root, filePath, content))
-  registerChannel(channels, 'lsp:didChange', async (_event, root: string, filePath: string, content: string) => lspDidChange(root, filePath, content))
-  registerChannel(channels, 'lsp:didClose', async (_event, root: string, filePath: string) => lspDidClose(root, filePath))
+  registerChannel(channels, 'lsp:start', async (event: IpcMainInvokeEvent, root: string, language: string) => {
+    const denied = assertPathAllowed(event, root)
+    if (denied) return denied
+    return lspStart(root, language)
+  })
+  registerChannel(channels, 'lsp:stop', async (event: IpcMainInvokeEvent, root: string, language: string) => {
+    const denied = assertPathAllowed(event, root)
+    if (denied) return denied
+    return lspStop(root, language)
+  })
+  registerChannel(channels, 'lsp:completion', async (event: IpcMainInvokeEvent, opts: { root: string; filePath: string; line: number; character: number }) => {
+    const deniedRoot = assertPathAllowed(event, opts.root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, opts.filePath)
+    if (deniedFile) return deniedFile
+    return lspCompletion(opts.root, opts.filePath, opts.line, opts.character)
+  })
+  registerChannel(channels, 'lsp:hover', async (event: IpcMainInvokeEvent, opts: { root: string; filePath: string; line: number; character: number }) => {
+    const deniedRoot = assertPathAllowed(event, opts.root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, opts.filePath)
+    if (deniedFile) return deniedFile
+    return lspHover(opts.root, opts.filePath, opts.line, opts.character)
+  })
+  registerChannel(channels, 'lsp:definition', async (event: IpcMainInvokeEvent, opts: { root: string; filePath: string; line: number; character: number }) => {
+    const deniedRoot = assertPathAllowed(event, opts.root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, opts.filePath)
+    if (deniedFile) return deniedFile
+    return lspDefinition(opts.root, opts.filePath, opts.line, opts.character)
+  })
+  registerChannel(channels, 'lsp:diagnostics', async (event: IpcMainInvokeEvent, root: string, filePath: string) => {
+    const deniedRoot = assertPathAllowed(event, root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, filePath)
+    if (deniedFile) return deniedFile
+    return lspDiagnostics(root, filePath)
+  })
+  registerChannel(channels, 'lsp:didOpen', async (event: IpcMainInvokeEvent, root: string, filePath: string, content: string) => {
+    const deniedRoot = assertPathAllowed(event, root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, filePath)
+    if (deniedFile) return deniedFile
+    return lspDidOpen(root, filePath, content)
+  })
+  registerChannel(channels, 'lsp:didChange', async (event: IpcMainInvokeEvent, root: string, filePath: string, content: string) => {
+    const deniedRoot = assertPathAllowed(event, root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, filePath)
+    if (deniedFile) return deniedFile
+    return lspDidChange(root, filePath, content)
+  })
+  registerChannel(channels, 'lsp:didClose', async (event: IpcMainInvokeEvent, root: string, filePath: string) => {
+    const deniedRoot = assertPathAllowed(event, root)
+    if (deniedRoot) return deniedRoot
+    const deniedFile = assertPathAllowed(event, filePath)
+    if (deniedFile) return deniedFile
+    return lspDidClose(root, filePath)
+  })
   registerChannel(channels, 'lsp:getStatus', async () => ok({ servers: lspGetStatus() }))
 }
 

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+
 import type { AgentChatThreadRecord } from '../../types/electron';
 import {
   formatThreadPreview,
@@ -6,6 +7,7 @@ import {
   getStatusLabel,
   getStatusTone,
 } from './agentChatFormatters';
+import { buildThreadTree, flattenThreadTree } from './buildThreadTree';
 
 export interface AgentChatThreadListProps {
   activeThreadId: string | null;
@@ -54,8 +56,10 @@ function ThreadListItem(props: {
   activeThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   thread: AgentChatThreadRecord;
+  depth: number;
 }): React.ReactElement {
   const isActive = props.activeThreadId === props.thread.id;
+  const isBranch = props.depth > 0;
 
   return (
     <button
@@ -64,11 +68,16 @@ function ThreadListItem(props: {
       style={{
         borderColor: isActive ? 'var(--accent)' : 'var(--border)',
         backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+        marginLeft: props.depth * 16,
+        width: `calc(100% - ${props.depth * 16}px)`,
       }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-[var(--text)]">{props.thread.title}</div>
+          <div className="truncate text-sm font-medium text-[var(--text)]">
+            {isBranch && <span className="mr-1 text-[var(--text-faint)]">{'\u21B3'}</span>}
+            {props.thread.title}
+          </div>
           <div className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">{formatThreadPreview(props.thread)}</div>
         </div>
         <ThreadStatusBadge status={props.thread.status} />
@@ -84,17 +93,20 @@ export function AgentChatThreadList({
   onSelectThread,
   threads,
 }: AgentChatThreadListProps): React.ReactElement {
+  const flatNodes = useMemo(() => flattenThreadTree(buildThreadTree(threads)), [threads]);
+
   return (
     <div className="flex h-full min-h-0 flex-col border-r border-[var(--border)] bg-[var(--bg)] px-3 py-3">
       <ThreadListHeader onNewChat={onNewChat} />
       <div className="flex-1 space-y-2 overflow-y-auto">
         {threads.length === 0 ? <EmptyThreadList /> : null}
-        {threads.map((thread) => (
+        {flatNodes.map((node) => (
           <ThreadListItem
-            key={thread.id}
+            key={node.thread.id}
             activeThreadId={activeThreadId}
             onSelectThread={onSelectThread}
-            thread={thread}
+            thread={node.thread}
+            depth={node.depth}
           />
         ))}
       </div>

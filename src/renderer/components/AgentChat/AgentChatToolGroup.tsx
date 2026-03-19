@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
 import type { AgentChatContentBlock } from '../../types/electron';
 import { AgentChatToolCard, ChevronIcon } from './AgentChatToolCard';
 
 export interface AgentChatToolGroupProps {
   /** Consecutive tool_use blocks to render as a group */
   blocks: Array<AgentChatContentBlock & { kind: 'tool_use' }>;
+  /** Start expanded (e.g. when tools are still running during streaming) */
+  defaultExpanded?: boolean;
 }
 
 /* ---------- Tool type grouping ---------- */
@@ -57,9 +60,15 @@ function summarizeToolTypes(blocks: Array<AgentChatContentBlock & { kind: 'tool_
  * Shows "Read 3 files, Edited 2 files" etc. with expand/collapse chevron.
  * Individual tool cards render inside the expanded group.
  */
-export function AgentChatToolGroup({ blocks }: AgentChatToolGroupProps): React.ReactElement {
+export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ blocks, defaultExpanded }: AgentChatToolGroupProps): React.ReactElement {
   const hasRunning = blocks.some((b) => b.status === 'running');
-  const [expanded, setExpanded] = useState(hasRunning);
+  const [expanded, setExpanded] = useState(defaultExpanded ?? hasRunning);
+
+  useEffect(() => {
+    if (!defaultExpanded) {
+      setExpanded(false);
+    }
+  }, [defaultExpanded]);
 
   const summaries = useMemo(() => summarizeToolTypes(blocks), [blocks]);
   const summaryText = summaries.map((s) => s.label).join(', ');
@@ -124,4 +133,4 @@ export function AgentChatToolGroup({ blocks }: AgentChatToolGroupProps): React.R
       </div>
     </div>
   );
-}
+});

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import type {
   AgentChatContentBlock,
   AgentChatLinkedDetailsResult,
@@ -8,23 +9,25 @@ import type {
   ImageAttachment,
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
-import { formatTimestamp, formatTimestampFull } from './agentChatFormatters';
 import { AgentChatBlockRenderer } from './AgentChatBlockRenderer';
+import { AgentChatBranchIndicator } from './AgentChatBranchIndicator';
 import { AgentChatComposer } from './AgentChatComposer';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
+import { formatTimestamp, formatTimestampFull } from './agentChatFormatters';
 import {
   AssistantMessageActions,
   UserMessageActions,
 } from './AgentChatMessageActions';
-import { CompletedChangeSummaryBar, extractChangeTallyFromBlocks, hasFileChanges } from './ChangeSummaryBar';
-import { MessageMarkdown } from './MessageMarkdown';
-import { AgentChatBranchIndicator } from './AgentChatBranchIndicator';
 import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
-import { useAgentChatStreaming } from './useAgentChatStreaming';
+import { AgentChatToolGroup } from './AgentChatToolGroup';
+import { CompletedChangeSummaryBar, extractChangeTallyFromBlocks, hasFileChanges } from './ChangeSummaryBar';
 import type { ChatOverrides } from './ChatControlsBar';
-import type { PinnedFile } from './useAgentChatContext';
 import type { MentionItem } from './MentionAutocomplete';
+import { MessageMarkdown } from './MessageMarkdown';
 import type { SlashCommandContext } from './SlashCommandMenu';
+import { StreamingStatusMessage } from './streamingUtils';
+import type { PinnedFile } from './useAgentChatContext';
+import { useAgentChatStreaming } from './useAgentChatStreaming';
 import type { QueuedMessage } from './useAgentChatWorkspace';
 
 const FILE_MODIFYING_TOOLS_SET = new Set([
@@ -138,7 +141,7 @@ function MessageActionLink(props: {
   );
 }
 
-function UserMessage(props: {
+const UserMessage = React.memo(function UserMessage(props: {
   message: AgentChatMessageRecord;
   isEditing: boolean;
   editDraft: string;
@@ -210,98 +213,194 @@ function UserMessage(props: {
       </div>
     </div>
   );
-}
+});
 
 /**
- * Renders content blocks for a completed assistant message.
- * Only used when message.blocks is populated; otherwise falls back to MessageMarkdown.
+ * Renders content blocks in their natural sequence order.
  *
- * Passes `allBlocks` so the block renderer can detect and group consecutive
- * tool_use blocks. Blocks inside a group are marked with `skipRender` to
- * prevent double-rendering.
+ * Text, tool groups, thinking, and structural blocks are interleaved exactly
+ * as the model produced them. Consecutive tool_use blocks are collapsed into
+ * a single ToolGroup card; everything else renders at its position.
  */
-function AssistantBlocksContent({ blocks }: { blocks: AgentChatContentBlock[] }): React.ReactElement {
-  // Pre-compute which blocks are "consumed" by a preceding tool group
-  const skipSet = new Set<number>();
-  for (let i = 0; i < blocks.length; i++) {
-    if (blocks[i].kind === 'tool_use' && !skipSet.has(i)) {
-      // Count consecutive tool_use run starting at i
-      let runLen = 0;
-      for (let j = i; j < blocks.length && blocks[j].kind === 'tool_use'; j++) {
-        runLen++;
-      }
-      if (runLen >= 2) {
-        // Mark indices 1..runLen-1 as skipped (the first one renders the group)
-        for (let k = i + 1; k < i + runLen; k++) {
-          skipSet.add(k);
+function AssistantBlocksContent({ blocks, isStreaming = false, onStop }: {
+  blocks: AgentChatContentBlock[];
+  isStreaming?: boolean;
+  onStop?: () => Promise<void>;
+}): React.ReactElement {
+  // Build render items in block order — preserves interleaving of text between tools
+  type RenderItem =
+    | { type: 'text'; block: AgentChatContentBlock; index: number }
+    | { type: 'thinking'; block: AgentChatContentBlock; index: number }
+    | { type: 'tool-group'; tools: AgentChatContentBlock[]; startIndex: number }
+    | { type: 'single-tool'; block: AgentChatContentBlock; index: number }
+    | { type: 'block'; block: AgentChatContentBlock; index: number };
+
+  // Blocks are rendered in their natural API order — no render-time merging.
+  // Block identity is preserved from the provider API through to here via
+  // blockIndex, so each block is already at its correct position.
+  const renderItems = useMemo<RenderItem[]>(() => {
+    const rawItems: RenderItem[] = [];
+    let i = 0;
+    while (i < blocks.length) {
+      const block = blocks[i];
+      if (block.kind === 'text') {
+        rawItems.push({ type: 'text', block, index: i });
+        i++;
+      } else if (block.kind === 'thinking') {
+        rawItems.push({ type: 'thinking', block, index: i });
+        i++;
+      } else if (block.kind === 'tool_use') {
+        // Group consecutive tool_use blocks
+        const run: AgentChatContentBlock[] = [];
+        const startIdx = i;
+        while (i < blocks.length && blocks[i].kind === 'tool_use') {
+          run.push(blocks[i]);
+          i++;
         }
+        if (run.length >= 2) {
+          rawItems.push({ type: 'tool-group', tools: run, startIndex: startIdx });
+        } else {
+          rawItems.push({ type: 'single-tool', block: run[0], index: startIdx });
+        }
+      } else {
+        // code, diff, plan, error, etc.
+        rawItems.push({ type: 'block', block, index: i });
+        i++;
       }
     }
-  }
+    return rawItems;
+  }, [blocks]);
 
   return (
     <div className="space-y-2">
-      {blocks.map((block, index) => (
-        <AgentChatBlockRenderer
-          key={`${block.kind}-${index}`}
-          block={block}
-          index={index}
-          isStreaming={false}
-          isLastBlock={index === blocks.length - 1}
-          allBlocks={blocks}
-          skipRender={skipSet.has(index)}
-        />
-      ))}
+      {renderItems.map((item) => {
+        if (item.type === 'text') {
+          const textBlock = item.block as AgentChatContentBlock & { kind: 'text' };
+          return (
+            <div key={`text-${item.index}`} className="pl-7 pb-0.5">
+              <MessageMarkdown content={textBlock.content} />
+            </div>
+          );
+        }
+
+        if (item.type === 'thinking') {
+          return (
+            <AgentChatBlockRenderer
+              key={`thinking-${item.index}`}
+              block={item.block}
+              index={item.index}
+              isStreaming={isStreaming}
+              isLastBlock={false}
+            />
+          );
+        }
+
+        if (item.type === 'tool-group') {
+          const anyRunning = isStreaming && item.tools.some(
+            (t) => t.kind === 'tool_use' && t.status === 'running',
+          );
+          return (
+            <AgentChatToolGroup
+              key={`tg-${item.startIndex}`}
+              blocks={item.tools as Array<AgentChatContentBlock & { kind: 'tool_use' }>}
+              defaultExpanded={anyRunning}
+            />
+          );
+        }
+
+        if (item.type === 'single-tool') {
+          return (
+            <AgentChatBlockRenderer
+              key={`tool-${item.index}`}
+              block={item.block}
+              index={item.index}
+              isStreaming={isStreaming}
+              isLastBlock={false}
+            />
+          );
+        }
+
+        // Structural blocks (code, diff, plan, error)
+        return (
+          <AgentChatBlockRenderer
+            key={`block-${item.index}`}
+            block={item.block}
+            index={item.index}
+            isStreaming={isStreaming}
+            isLastBlock={false}
+          />
+        );
+      })}
+
+      {/* Rotating status text + animated snake — shown throughout streaming */}
+      {isStreaming && <StreamingStatusMessage onStop={onStop} />}
     </div>
   );
 }
 
-function AssistantMessage(props: {
+const AssistantMessage = React.memo(function AssistantMessage(props: {
   message: AgentChatMessageRecord;
   workspaceRoot?: string;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onBranch: (message: AgentChatMessageRecord) => void;
   onRevert?: (message: AgentChatMessageRecord) => void;
 }): React.ReactElement {
+  // Detect streaming state — same component renders throughout the message lifecycle.
+  // During streaming: blocks grow, snake shows, text animates.
+  // On completion: isStreaming flips false, same DOM stays, animation stops.
+  const msg = props.message as AgentChatMessageRecord & {
+    _streaming?: boolean;
+    _streamingState?: { isStreaming: boolean; onStop?: () => Promise<void> };
+  };
+  const isStreaming = msg._streaming === true && (msg._streamingState?.isStreaming ?? false);
+  const onStop = msg._streamingState?.onStop;
+
   const hasBlocks = props.message.blocks && props.message.blocks.length > 0;
   const snapshotHash = props.message.orchestration?.preSnapshotHash;
-  const showChangeSummary = snapshotHash && props.workspaceRoot && hasBlocks
+  const showChangeSummary = !isStreaming && snapshotHash && props.workspaceRoot && hasBlocks
     && props.message.blocks && hasFileChanges(props.message.blocks);
 
   return (
     <div className="group flex justify-start">
-      <div className="max-w-[95%]">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
-            C
+      <div className="max-w-[95%] w-full">
+        {/* Timestamp + actions — hidden during streaming, shown when persisted */}
+        {!msg._streaming && (
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-[10px]" style={{ color: 'var(--text-faint, var(--text-muted))' }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
+            <AssistantMessageActions message={props.message} onBranch={props.onBranch} onRevert={props.onRevert} />
           </div>
-          <span className="text-[10px]" style={{ color: 'var(--text-faint, var(--text-muted))' }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
-          <AssistantMessageActions message={props.message} onBranch={props.onBranch} onRevert={props.onRevert} />
-        </div>
-        <div className="pl-7 pb-1">
+        )}
+        <div className="pb-1">
+          {/* ONE render path for both streaming and persisted */}
           {hasBlocks ? (
-            <AssistantBlocksContent blocks={props.message.blocks!} />
+            <AssistantBlocksContent blocks={props.message.blocks!} isStreaming={isStreaming} onStop={onStop} />
+          ) : isStreaming ? (
+            <StreamingStatusMessage onStop={onStop} />
           ) : (
             <MessageMarkdown content={props.message.content || ' '} />
           )}
-          <VerificationSummaryRow message={props.message} />
-          <ErrorInline message={props.message} />
-          <ToolsSummaryRow message={props.message} />
-          <CostDurationRow message={props.message} />
-          {showChangeSummary && (
-            <CompletedChangeSummaryBar
-              snapshotHash={snapshotHash}
-              projectRoot={props.workspaceRoot!}
-              sessionId={props.message.id}
-              tally={extractChangeTallyFromBlocks(props.message.blocks!)}
-            />
+          {!isStreaming && (
+            <>
+              <VerificationSummaryRow message={props.message} />
+              <ErrorInline message={props.message} />
+              <ToolsSummaryRow message={props.message} />
+              <CostDurationRow message={props.message} />
+              {showChangeSummary && (
+                <CompletedChangeSummaryBar
+                  snapshotHash={snapshotHash}
+                  projectRoot={props.workspaceRoot!}
+                  sessionId={props.message.id}
+                  tally={extractChangeTallyFromBlocks(props.message.blocks!)}
+                />
+              )}
+              <MessageActionLink message={props.message} onOpenLinkedDetails={props.onOpenLinkedDetails} />
+            </>
           )}
-          <MessageActionLink message={props.message} onOpenLinkedDetails={props.onOpenLinkedDetails} />
         </div>
       </div>
     </div>
   );
-}
+});
 
 function StatusMessage(props: { message: AgentChatMessageRecord }): React.ReactElement {
   const [pulsing, setPulsing] = React.useState(true);
@@ -389,50 +488,8 @@ function PendingUserBubble({ text }: { text: string }): React.ReactElement {
   );
 }
 
-function StreamingIndicator({
-  activeThread,
-  onStop,
-}: {
-  activeThread: AgentChatThreadRecord | null;
-  onStop?: () => Promise<void>;
-}): React.ReactElement | null {
-  // When thread is null we're in context-building phase — always show the indicator.
-  const isStreaming = !activeThread || activeThread.status === 'submitting' || activeThread.status === 'running';
-  if (!isStreaming) return null;
-
-  return (
-    <div className="flex items-center justify-between pl-7 pr-1">
-      <div className="flex items-center gap-2">
-        {[0, 150, 300].map((delay, i) => (
-          <span
-            key={i}
-            className="inline-block h-1.5 w-1.5 rounded-full"
-            style={{
-              backgroundColor: 'var(--accent)',
-              opacity: 0.8,
-              animation: `agent-chat-dot-bounce 1.2s ease-in-out ${delay}ms infinite`,
-            }}
-          />
-        ))}
-      </div>
-      {onStop && (
-        <button
-          onClick={() => void onStop()}
-          title="Stop task"
-          className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error, #f85149)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="4" y="4" width="16" height="16" rx="2" />
-          </svg>
-          Stop
-        </button>
-      )}
-    </div>
-  );
-}
+// StreamingIndicator removed — all working/thinking states now use the snake
+// animation via AgentChatStreamingMessage.
 
 function InlineError({ error }: { error: string | null }): React.ReactElement | null {
   if (!error) return null;
@@ -445,10 +502,30 @@ function InlineError({ error }: { error: string | null }): React.ReactElement | 
 
 function FailedBanner({ activeThread }: { activeThread: AgentChatThreadRecord }): React.ReactElement | null {
   if (activeThread.status !== 'failed' && activeThread.status !== 'cancelled') return null;
-  const label = activeThread.status === 'failed' ? 'Task failed' : 'Task cancelled';
-  // Surface the error message from the last assistant message (if any)
-  const lastMsg = [...activeThread.messages].reverse().find((m) => m.role === 'assistant' && m.error);
+  const label = activeThread.status === 'failed' ? 'Task failed' : 'Chat was stopped';
+  // Surface the error message from the last assistant message (if any).
+  // Backward loop avoids allocating a reversed copy on every streaming chunk render.
+  let lastMsg: AgentChatMessageRecord | undefined;
+  for (let i = activeThread.messages.length - 1; i >= 0; i--) {
+    const m = activeThread.messages[i];
+    if (m.role === 'assistant' && m.error) { lastMsg = m; break; }
+  }
   const detail = lastMsg?.error?.message;
+  // For cancelled status, don't show the banner if the last assistant message
+  // has content — the partial response is already visible above.
+  if (activeThread.status === 'cancelled') {
+    const lastAssistant = activeThread.messages.findLast((m) => m.role === 'assistant');
+    if (lastAssistant && (lastAssistant.content?.trim() || lastAssistant.blocks?.length)) {
+      // Show a subtle inline indicator instead of a prominent banner
+      return (
+        <div className="flex justify-center">
+          <div className="rounded-full px-3 py-1 text-[10px]" style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-tertiary)' }}>
+            Chat was stopped
+          </div>
+        </div>
+      );
+    }
+  }
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="rounded-full px-3 py-1 text-[11px] font-medium" style={{ color: 'var(--error, #f85149)', backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
@@ -730,12 +807,15 @@ function ConversationBody(props: {
       const thread = props.activeThread;
       if (!thread) return;
       // Find the latest assistant message (just completed) to get its snapshot hash
-      const lastAssistant = [...thread.messages].reverse().find((m) => m.role === 'assistant');
+      let lastAssistant: AgentChatMessageRecord | undefined;
+      for (let i = thread.messages.length - 1; i >= 0; i--) {
+        if (thread.messages[i].role === 'assistant') { lastAssistant = thread.messages[i]; break; }
+      }
       const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
       if (snapshotHash && thread.workspaceRoot) {
         // Check if the streaming blocks include file-modifying tools
         const hasFileEdits = streaming.blocks.some(
-          (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool.name),
+          (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
         );
         if (hasFileEdits) {
           window.dispatchEvent(
@@ -778,15 +858,54 @@ function ConversationBody(props: {
     }
     setEditingMessageId(null);
     setEditDraft('');
-  }, [editDraft, editingMessageId, props]);
+  }, [editDraft, editingMessageId, props.activeThread, props.onEdit]);
+
+  // Unified message list — must be called unconditionally (React hooks rule).
+  // Injects a synthetic streaming assistant message into the messages array
+  // using the streaming messageId as key, so React reconciles in-place when
+  // the persisted message arrives (same ID) — no unmount/remount, no visual jump.
+  const threadIsActive = props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running';
+  const streamingIsActive = streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
+  const streamingAlreadyPersisted = streaming.streamingMessageId && props.activeThread
+    ? props.activeThread.messages.some((m) => m.id === streaming.streamingMessageId)
+    : false;
+
+  const messagesWithStreaming = useMemo(() => {
+    if (!props.activeThread) return [];
+
+    const filtered = props.activeThread.messages.filter((message) => {
+      if (message.role === 'status') {
+        const kind = (message as { statusKind?: string }).statusKind;
+        if (kind === 'context' || kind === 'progress' || kind === 'verification') return false;
+      }
+      return true;
+    });
+
+    if (streamingIsActive && !streamingAlreadyPersisted) {
+      const syntheticMessage: AgentChatMessageRecord = {
+        id: streaming.streamingMessageId || `streaming-${Date.now()}`,
+        threadId: props.activeThread.id,
+        role: 'assistant',
+        content: streaming.activeTextContent || '',
+        createdAt: Date.now(),
+        blocks: streaming.blocks.length > 0 ? streaming.blocks : undefined,
+        _streaming: true,
+        _streamingState: {
+          isStreaming: threadIsActive || streaming.isStreaming,
+          onStop: props.onStop,
+        },
+      } as AgentChatMessageRecord & { _streaming: boolean; _streamingState: { isStreaming: boolean; onStop?: () => Promise<void> } };
+      filtered.push(syntheticMessage);
+    }
+
+    return filtered;
+  }, [props.activeThread, streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, props.onStop]);
+
+  const lastUserMessageId = props.activeThread ? findLastUserMessageId(props.activeThread.messages) : null;
 
   if (!props.hasProject) return <MissingProjectState />;
   if (props.isLoading) return <LoadingState />;
 
-  // No thread yet but a send is in progress — show the optimistic user message
-  // while context building runs on the main process.  Use the full streaming
-  // message component (with the snake animation) instead of the bare 3-dot
-  // indicator so the transition feels seamless.
   if (!props.activeThread) {
     if (props.isSending && props.pendingUserMessage) {
       return (
@@ -806,18 +925,6 @@ function ConversationBody(props: {
     return <EmptyConversationState onSelectPrompt={props.onDraftChange} />;
   }
 
-  const threadIsActive = props.activeThread.status === 'submitting' || props.activeThread.status === 'running';
-  // Show streaming blocks while streaming OR while retained after completion
-  // (blocks are kept until the persisted message appears in the thread).
-  const streamingMessageInThread = streaming.streamingMessageId
-    ? props.activeThread.messages.some((m) => m.id === streaming.streamingMessageId)
-    : false;
-  // Mount AgentChatStreamingMessage whenever the agent is active — even before the first block
-  // arrives. This allows the rotating status text (Slithering…, Coiling… etc.) to show
-  // during the pre-stream waiting period instead of the generic 3-dot indicator.
-  const showStreamingMessage = (streaming.blocks.length > 0 || threadIsActive || streaming.isStreaming) && !streamingMessageInThread;
-  const lastUserMessageId = findLastUserMessageId(props.activeThread.messages);
-
   return (
     <div ref={scrollRef} onScroll={onScroll} className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
       <div className="mt-auto space-y-4">
@@ -827,17 +934,7 @@ function ConversationBody(props: {
             onSwitchToParent={props.onSelectThread}
           />
         )}
-        {props.activeThread.messages
-          .filter((message) => {
-            // Hide noisy intermediate status messages (context preparation, progress updates).
-            // Keep result/error statuses since they carry meaningful info.
-            if (message.role === 'status') {
-              const kind = (message as { statusKind?: string }).statusKind;
-              if (kind === 'context' || kind === 'progress' || kind === 'verification') return false;
-            }
-            return true;
-          })
-          .map((message) => (
+        {messagesWithStreaming.map((message) => (
           <MessageCard
             key={message.id}
             message={message}
@@ -860,14 +957,6 @@ function ConversationBody(props: {
         {props.pendingUserMessage && props.isSending && (
           <PendingUserBubble text={props.pendingUserMessage} />
         )}
-        {showStreamingMessage && (
-          <AgentChatStreamingMessage
-            blocks={streaming.blocks}
-            isStreaming={threadIsActive || streaming.isStreaming}
-            activeTextContent={streaming.activeTextContent}
-            onStop={props.onStop}
-          />
-        )}
         <FailedBanner activeThread={props.activeThread} />
         <InlineError error={props.error} />
       </div>
@@ -875,28 +964,48 @@ function ConversationBody(props: {
   );
 }
 
+/** Per-model context usage entry. */
+export interface ModelContextUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 /**
- * Returns token usage for the active thread's chat session.
- * - inputTokens: last turn's context window utilization (non-cached tokens)
- * - outputTokens: cumulative output tokens across all turns in this session
+ * Returns context usage aggregated per model for the active thread.
+ * Each entry shows the last input (context window) and cumulative output for that model.
  */
-function useThreadTokenUsage(thread: AgentChatThreadRecord | null | undefined): { inputTokens: number; outputTokens: number } | undefined {
+function useThreadModelUsage(thread: AgentChatThreadRecord | null | undefined): ModelContextUsage[] | undefined {
   return useMemo(() => {
     if (!thread?.messages) return undefined;
-    // Use the LAST assistant message's token usage — it carries the most recent
-    // per-turn input and cumulative output from the adapter.
-    let lastUsage: { inputTokens: number; outputTokens: number } | undefined;
+    // Track per-model: last input tokens seen, cumulative output
+    const perModel = new Map<string, { inputTokens: number; outputTokens: number }>();
     for (const msg of thread.messages) {
-      if (msg.tokenUsage) {
-        lastUsage = msg.tokenUsage;
+      if (!msg.tokenUsage) continue;
+      const modelKey = msg.model || '';
+      const existing = perModel.get(modelKey);
+      if (existing) {
+        // Input tokens = last turn's context window size (overwrite, not accumulate)
+        existing.inputTokens = msg.tokenUsage.inputTokens;
+        // Output tokens are cumulative from the adapter
+        existing.outputTokens = msg.tokenUsage.outputTokens;
+      } else {
+        perModel.set(modelKey, {
+          inputTokens: msg.tokenUsage.inputTokens,
+          outputTokens: msg.tokenUsage.outputTokens,
+        });
       }
     }
-    return lastUsage ?? undefined;
+    if (perModel.size === 0) return undefined;
+    return Array.from(perModel.entries()).map(([model, usage]) => ({
+      model,
+      ...usage,
+    }));
   }, [thread?.messages]);
 }
 
 export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement {
-  const threadTokenUsage = useThreadTokenUsage(props.activeThread);
+  const threadModelUsage = useThreadModelUsage(props.activeThread);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)]">
@@ -949,7 +1058,7 @@ export function AgentChatConversation(props: AgentChatConversationProps): React.
         chatOverrides={props.chatOverrides}
         onChatOverridesChange={props.onChatOverridesChange}
         settingsModel={props.settingsModel}
-        threadTokenUsage={threadTokenUsage}
+        threadModelUsage={threadModelUsage}
         slashCommandContext={props.slashCommandContext}
         attachments={props.attachments}
         onAttachmentsChange={props.onAttachmentsChange}

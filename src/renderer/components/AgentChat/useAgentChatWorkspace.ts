@@ -1,5 +1,7 @@
 /* @refresh reset */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef,useState } from 'react';
+
+import { EXPLAIN_TERMINAL_ERROR_EVENT } from '../../hooks/appEventNames';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
@@ -7,18 +9,18 @@ import type {
   AgentChatThreadRecord,
   ImageAttachment,
 } from '../../types/electron';
-import type { ChatOverrides } from './ChatControlsBar';
+import {
+  buildAgentChatWorkspaceModel,
+  useAgentChatActions,
+} from './agentChatWorkspaceActions';
 import {
   useActiveThread,
   useAgentChatEventSubscriptions,
   useThreadState,
 } from './agentChatWorkspaceSupport';
-import {
-  buildAgentChatWorkspaceModel,
-  useAgentChatActions,
-} from './agentChatWorkspaceActions';
-import { useAgentChatLinkedDetails } from './useAgentChatLinkedDetails';
+import type { ChatOverrides } from './ChatControlsBar';
 import { useAgentChatDraftPersistence } from './useAgentChatDraftPersistence';
+import { useAgentChatLinkedDetails } from './useAgentChatLinkedDetails';
 
 export interface QueuedMessage {
   id: string;
@@ -262,6 +264,18 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
     });
     await actions.stopTask();
   }, [controller.setQueuedMessages, actions.stopTask]);
+
+  // Listen for "Explain error" requests from the terminal
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ prompt: string }>).detail;
+      if (detail?.prompt) {
+        controller.setDraft(detail.prompt);
+      }
+    };
+    window.addEventListener(EXPLAIN_TERMINAL_ERROR_EVENT, handler);
+    return () => window.removeEventListener(EXPLAIN_TERMINAL_ERROR_EVENT, handler);
+  }, [controller.setDraft]);
 
   const detailsState = useAgentChatLinkedDetails({ activeThread: controller.activeThread });
 

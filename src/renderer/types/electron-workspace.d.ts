@@ -1,18 +1,23 @@
-import type { ExtensionsAPI, IpcResult } from './electron-foundation'
-import type { AgentChatAPI } from './electron-agent-chat'
 import type {
-  ApprovalAPI,
-  AppAPI,
-  ConfigAPI,
-  FilesAPI,
-  HooksAPI,
-  PtyAPI,
-  ShellAPI,
-  ThemeAPI
-} from './electron-runtime-apis'
-import type { McpStoreAPI } from './electron-mcp-store'
+  ContextPacketResult,
+  OrchestrationState,
+  ProviderProgressEvent,
+  TaskMutationResult,
+  TaskRequest,
+  TaskSessionPatch,
+  TaskSessionRecord,
+  TaskSessionResult,
+  TaskSessionsResult,
+  VerificationProfileName,
+  VerificationResult,
+  VerificationSummary,
+} from '../../main/orchestration/types'
+import type { AgentChatAPI } from './electron-agent-chat'
+import type { ClaudeMdAPI } from './electron-claude-md'
 import type { ExtensionStoreAPI } from './electron-extension-store'
+import type { ExtensionsAPI, IpcResult } from './electron-foundation'
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git'
+import type { McpStoreAPI } from './electron-mcp-store'
 import type {
   ContextLayerAPI,
   CostAPI,
@@ -23,6 +28,16 @@ import type {
   SymbolAPI,
   UsageAPI
 } from './electron-observability'
+import type {
+  AppAPI,
+  ApprovalAPI,
+  ConfigAPI,
+  FilesAPI,
+  HooksAPI,
+  PtyAPI,
+  ShellAPI,
+  ThemeAPI
+} from './electron-runtime-apis'
 
 export interface McpServerConfig {
   command?: string
@@ -135,9 +150,22 @@ export interface WindowAPI {
  * The full task management UI and API were removed as dead code.
  */
 export interface OrchestrationAPI {
-  previewContext: (request: unknown) => Promise<unknown>
-  buildContextPacket: (request: unknown) => Promise<unknown>
-  cancelTask: (taskId: string) => Promise<unknown>
+  createTask: (request: TaskRequest) => Promise<TaskMutationResult>
+  startTask: (taskId: string) => Promise<TaskMutationResult>
+  previewContext: (request: TaskRequest) => Promise<ContextPacketResult>
+  buildContextPacket: (request: TaskRequest) => Promise<ContextPacketResult>
+  loadSession: (sessionId: string) => Promise<TaskSessionResult>
+  loadSessions: (workspaceRoot?: string) => Promise<TaskSessionsResult>
+  loadLatestSession: (workspaceRoot?: string) => Promise<TaskSessionResult>
+  updateSession: (sessionId: string, patch: TaskSessionPatch) => Promise<TaskSessionResult>
+  resumeTask: (sessionId: string) => Promise<TaskMutationResult>
+  rerunVerification: (sessionId: string, profile?: VerificationProfileName) => Promise<VerificationResult>
+  cancelTask: (taskId: string) => Promise<TaskMutationResult>
+  pauseTask: (taskId: string) => Promise<TaskMutationResult>
+  onStateChange: (callback: (state: OrchestrationState) => void) => () => void
+  onProviderEvent: (callback: (event: ProviderProgressEvent) => void) => () => void
+  onVerificationSummary: (callback: (summary: VerificationSummary) => void) => () => void
+  onSessionUpdate: (callback: (session: TaskSessionRecord) => void) => () => void
 }
 
 export interface ElectronAPI {
@@ -170,4 +198,5 @@ export interface ElectronAPI {
   agentChat: AgentChatAPI
   orchestration: OrchestrationAPI
   contextLayer: ContextLayerAPI
+  claudeMd: ClaudeMdAPI
 }

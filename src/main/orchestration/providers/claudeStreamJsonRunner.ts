@@ -3,7 +3,7 @@
 // Spawns `claude -p --output-format stream-json` and parses NDJSON output.
 // ---------------------------------------------------------------------------
 
-import { spawn, type ChildProcess } from 'child_process'
+import { type ChildProcess,execFile, spawn } from 'child_process'
 
 import type {
   StreamJsonEvent,
@@ -134,7 +134,16 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
     kill: () => {
       try {
         if (process.platform === 'win32') {
+          // On Windows, child.kill() only kills the immediate process.
+          // Claude Code spawns child processes that keep running.
+          // Kill the direct child first (synchronous, immediate),
+          // then use taskkill /T to clean up the entire process tree.
           child.kill()
+          if (child.pid) {
+            execFile('taskkill', ['/T', '/F', '/PID', String(child.pid)], () => {
+              // Best-effort tree kill — ignore errors (process may already be dead)
+            })
+          }
         } else {
           child.kill('SIGTERM')
         }

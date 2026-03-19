@@ -6,12 +6,15 @@ export interface ChatOverrides {
   permissionMode: string;
 }
 
-/** Map a model ID (or empty string) to a short display name. */
+/** Map a model ID/alias to a short display name. */
 function modelDisplayName(modelId: string): string {
   if (!modelId) return 'Sonnet';
-  if (modelId.includes('opus')) return 'Opus';
+  // Claude Code CLI uses [1m] suffix for extended context variants
+  const is1m = modelId.includes('[1m]');
+  const suffix = is1m ? ' 1M' : '';
+  if (modelId.includes('opus')) return `Opus${suffix}`;
   if (modelId.includes('haiku')) return 'Haiku';
-  if (modelId.includes('sonnet')) return 'Sonnet';
+  if (modelId.includes('sonnet')) return `Sonnet${suffix}`;
   return modelId;
 }
 
@@ -19,9 +22,10 @@ function buildModelOptions(settingsModel: string): Array<{ value: string; label:
   const defaultLabel = `Default (${modelDisplayName(settingsModel)})`;
   return [
     { value: '', label: defaultLabel },
-    { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (200K)' },
-    { value: 'claude-opus-4-6', label: 'Opus 4.6 (1M)' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (200K)' },
+    { value: 'opus[1m]', label: 'Opus 4.6 (1M)' },
+    { value: 'opus', label: 'Opus 4.6 (200K)' },
+    { value: 'sonnet', label: 'Sonnet 4.6 (200K)' },
+    { value: 'haiku', label: 'Haiku 4.5 (200K)' },
   ];
 }
 
@@ -122,32 +126,56 @@ function formatTokenCount(count: number): string {
   return `${(count / 1_000_000).toFixed(1)}M`;
 }
 
-function TokenUsageIndicator(props: {
-  inputTokens: number;
-  outputTokens: number;
-}): React.ReactElement | null {
-  if (props.inputTokens === 0 && props.outputTokens === 0) return null;
+/** Known context window limits by model variant. */
+function getContextLimit(modelId: string): number {
+  // Claude Code CLI uses [1m] suffix for 1M context variants
+  if (modelId.includes('[1m]')) return 1_000_000;
+  // All base models (opus, sonnet, haiku) use 200K
+  return 200_000;
+}
 
-  const showInput = props.inputTokens > 0;
-  const title = showInput
-    ? `Context: ${props.inputTokens.toLocaleString()} tokens · Output: ${props.outputTokens.toLocaleString()} tokens`
-    : `Output: ${props.outputTokens.toLocaleString()} tokens`;
+function ModelContextUsageIndicator(props: {
+  usage: Array<{ model: string; inputTokens: number; outputTokens: number }>;
+}): React.ReactElement | null {
+  if (props.usage.length === 0) return null;
 
   return (
     <div
-      className="flex items-center gap-1.5 text-[11px]"
+      className="flex items-center gap-3 text-[11px]"
       style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-      title={title}
     >
-      {showInput && (
-        <>
-          <span style={{ color: 'var(--text)' }}>{formatTokenCount(props.inputTokens)}</span>
-          <span style={{ opacity: 0.5 }}>in</span>
-          <span style={{ opacity: 0.3 }}>/</span>
-        </>
-      )}
-      <span style={{ color: 'var(--text)' }}>{formatTokenCount(props.outputTokens)}</span>
-      <span style={{ opacity: 0.5 }}>out</span>
+      {props.usage.map((entry) => {
+        const name = modelDisplayName(entry.model);
+        const limit = getContextLimit(entry.model);
+        const pct = Math.min(100, Math.round((entry.inputTokens / limit) * 100));
+        const title = `${name}: ${entry.inputTokens.toLocaleString()} / ${limit.toLocaleString()} context tokens (${pct}%) · ${entry.outputTokens.toLocaleString()} output tokens`;
+
+        return (
+          <div key={entry.model} className="flex items-center gap-1.5" title={title}>
+            <span style={{ opacity: 0.6 }}>{name}</span>
+            <div
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: 'var(--border)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: '100%',
+                  borderRadius: 2,
+                  backgroundColor: pct >= 90 ? 'var(--error, #ef4444)' : pct >= 70 ? 'var(--warning, #f59e0b)' : 'var(--accent)',
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+            <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.inputTokens)}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -157,8 +185,8 @@ export function ChatControlsBar(props: {
   onChange: (overrides: ChatOverrides) => void;
   /** Model ID from settings (e.g. 'claude-opus-4-6'). Empty = Sonnet default. */
   settingsModel?: string;
-  /** Cumulative token usage for the active thread. */
-  threadTokenUsage?: { inputTokens: number; outputTokens: number };
+  /** Per-model context usage for the active thread. */
+  threadModelUsage?: Array<{ model: string; inputTokens: number; outputTokens: number }>;
 }): React.ReactElement {
   const modelOptions = buildModelOptions(props.settingsModel ?? '');
 
@@ -180,13 +208,10 @@ export function ChatControlsBar(props: {
         value={props.overrides.permissionMode}
         onChange={(permissionMode) => props.onChange({ ...props.overrides, permissionMode })}
       />
-      {props.threadTokenUsage && (
+      {props.threadModelUsage && props.threadModelUsage.length > 0 && (
         <>
           <div className="mx-0.5 h-3 w-px" style={{ backgroundColor: 'var(--border)' }} />
-          <TokenUsageIndicator
-            inputTokens={props.threadTokenUsage.inputTokens}
-            outputTokens={props.threadTokenUsage.outputTokens}
-          />
+          <ModelContextUsageIndicator usage={props.threadModelUsage} />
         </>
       )}
     </div>

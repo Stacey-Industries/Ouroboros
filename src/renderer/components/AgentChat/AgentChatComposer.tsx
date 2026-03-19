@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import type { AgentChatMessageRecord, ImageAttachment, ImageMimeType } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
-import type { PinnedFile } from './useAgentChatContext';
-import type { MentionItem } from './MentionAutocomplete';
 import { AgentChatContextBar } from './AgentChatContextBar';
-import { ChatControlsBar, cyclePermissionMode, type ChatOverrides } from './ChatControlsBar';
+import { ChatControlsBar, type ChatOverrides,cyclePermissionMode } from './ChatControlsBar';
+import type { MentionItem } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
-import { SlashCommandMenu, buildChatSlashCommands, type SlashCommand, type SlashCommandContext } from './SlashCommandMenu';
+import { buildChatSlashCommands, type SlashCommand, type SlashCommandContext,SlashCommandMenu } from './SlashCommandMenu';
+import type { PinnedFile } from './useAgentChatContext';
 
 export interface AgentChatComposerProps {
   canSend: boolean;
@@ -39,8 +40,8 @@ export interface AgentChatComposerProps {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   /** Model ID from settings, used to label the "Default" option. */
   settingsModel?: string;
-  /** Cumulative token usage for the active thread. */
-  threadTokenUsage?: { inputTokens: number; outputTokens: number };
+  /** Per-model context usage for the active thread. */
+  threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   /** Slash command callbacks for /clear, /compact, /new, etc. */
   slashCommandContext?: SlashCommandContext;
   /** Image attachments for the current message */
@@ -68,6 +69,13 @@ function extractSlashQuery(value: string): string | null {
   // Only match if it's a single token (no spaces — user is still typing the command)
   if (rest.includes(' ') || rest.includes('\n')) return null;
   return rest;
+}
+
+function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
+  textarea.style.height = 'auto';
+  const minHeight = 40;
+  const maxHeight = 120;
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)}px`;
 }
 
 function extractMentionQuery(value: string, cursorPos: number): string | null {
@@ -224,7 +232,7 @@ export function AgentChatComposer({
   chatOverrides,
   onChatOverridesChange,
   settingsModel,
-  threadTokenUsage,
+  threadModelUsage,
   slashCommandContext,
   attachments = [],
   onAttachmentsChange,
@@ -236,6 +244,26 @@ export function AgentChatComposer({
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
   const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // ── Uncontrolled textarea pattern ──────────────────────────────────────
+  // The textarea is uncontrolled (no `value` prop). Keystrokes update the DOM
+  // directly without triggering React re-renders up the tree. The parent's
+  // `draft` prop is only used for external resets (thread switch, clear on
+  // submit, recall last message). We sync from parent → textarea via this
+  // ref-tracking effect, and from textarea → parent via onChange on submit.
+  const lastSyncedDraft = useRef(draft);
+
+  useEffect(() => {
+    // Only sync when the parent changed draft externally (not from our own typing)
+    if (draft !== lastSyncedDraft.current) {
+      lastSyncedDraft.current = draft;
+      if (textareaRef.current) {
+        textareaRef.current.value = draft;
+        // Auto-resize after external draft change
+        autoResizeTextarea(textareaRef.current);
+      }
+    }
+  }, [draft]);
 
   // Use the new mention autocomplete system when onAddMention is provided
   const useMentionSystem = Boolean(onAddMention);
@@ -261,6 +289,11 @@ export function AgentChatComposer({
     }
     // Clear the draft (remove the /command text)
     if (cmd.clearDraft !== false) {
+      if (textareaRef.current) {
+        textareaRef.current.value = '';
+        autoResizeTextarea(textareaRef.current);
+      }
+      lastSyncedDraft.current = '';
       onChange('');
     }
     setIsSlashMenuOpen(false);
@@ -277,18 +310,19 @@ export function AgentChatComposer({
     if (!textareaRef.current) return;
 
     const textarea = textareaRef.current;
+    const currentValue = textarea.value;
     const cursorPos = textarea.selectionStart;
-    const textBeforeCursor = draft.slice(0, cursorPos);
+    const textBeforeCursor = currentValue.slice(0, cursorPos);
     const lastAt = textBeforeCursor.lastIndexOf('@');
 
     if (lastAt !== -1) {
-      // Replace the @query with just the text before @
-      const newDraft = draft.slice(0, lastAt) + draft.slice(cursorPos);
+      const newDraft = currentValue.slice(0, lastAt) + currentValue.slice(cursorPos);
+      textarea.value = newDraft;
+      lastSyncedDraft.current = newDraft;
       onChange(newDraft);
     }
 
     if (useMentionSystem && onAddMention) {
-      // Convert to a MentionItem and add via mention system
       onAddMention({
         type: 'file',
         key: `@file:${file.path}`,
@@ -302,26 +336,29 @@ export function AgentChatComposer({
       onSelectFile(file);
       onCloseAutocomplete?.();
     }
-  }, [draft, onChange, onSelectFile, onCloseAutocomplete, useMentionSystem, onAddMention]);
+  }, [onChange, onSelectFile, onCloseAutocomplete, useMentionSystem, onAddMention]);
 
   const handleMentionSelect = useCallback((mention: MentionItem) => {
     if (!textareaRef.current) return;
 
     const textarea = textareaRef.current;
+    const currentValue = textarea.value;
     const cursorPos = textarea.selectionStart;
-    const textBeforeCursor = draft.slice(0, cursorPos);
+    const textBeforeCursor = currentValue.slice(0, cursorPos);
     const lastAt = textBeforeCursor.lastIndexOf('@');
 
     if (lastAt !== -1) {
-      const newDraft = draft.slice(0, lastAt) + draft.slice(cursorPos);
+      const newDraft = currentValue.slice(0, lastAt) + currentValue.slice(cursorPos);
+      textarea.value = newDraft;
+      lastSyncedDraft.current = newDraft;
       onChange(newDraft);
     }
 
     onAddMention?.(mention);
     setIsMentionAutocompleteOpen(false);
     setMentionQuery(null);
-    textareaRef.current?.focus();
-  }, [draft, onChange, onAddMention]);
+    textarea.focus();
+  }, [onChange, onAddMention]);
 
   const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = Array.from(event.clipboardData.items);
@@ -412,14 +449,22 @@ export function AgentChatComposer({
   }, [attachments, onAttachmentsChange]);
 
   const handleChange = useCallback((value: string) => {
+    // Track what we typed so the parent→textarea sync effect ignores it
+    lastSyncedDraft.current = value;
+    // Sync to parent (for draft persistence, submit readiness) but since the
+    // Composer is uncontrolled, this won't cause a re-render of the Composer
+    // itself — only the parent updates its state for later use on submit.
     onChange(value);
 
+    // Auto-resize inline (no useEffect needed since textarea is uncontrolled)
+    if (textareaRef.current) autoResizeTextarea(textareaRef.current);
+
     // Check for slash command first
+    const cursorPos = textareaRef.current?.selectionStart ?? value.length;
     const sq = extractSlashQuery(value);
     if (sq !== null) {
       setSlashQuery(sq);
       setIsSlashMenuOpen(true);
-      // Close other autocompletes
       setIsMentionAutocompleteOpen(false);
       setMentionQuery(null);
       onCloseAutocomplete?.();
@@ -428,31 +473,19 @@ export function AgentChatComposer({
     setSlashQuery(null);
     setIsSlashMenuOpen(false);
 
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    // Use setTimeout to get the updated selectionStart after React re-render
-    setTimeout(() => {
-      const cursorPos = textarea.selectionStart;
-      const query = extractMentionQuery(value, cursorPos);
-
-      if (useMentionSystem) {
-        if (query !== null) {
-          setMentionQuery(query);
-          setIsMentionAutocompleteOpen(true);
-        } else {
-          setMentionQuery(null);
-          setIsMentionAutocompleteOpen(false);
-        }
-      } else if (onAutocompleteQuery) {
-        if (query !== null) {
-          onOpenAutocomplete?.();
-          onAutocompleteQuery(query);
-        } else {
-          onCloseAutocomplete?.();
-        }
+    // Mention detection
+    const query = extractMentionQuery(value, cursorPos);
+    if (useMentionSystem) {
+      setMentionQuery(query);
+      setIsMentionAutocompleteOpen(query !== null);
+    } else if (onAutocompleteQuery) {
+      if (query !== null) {
+        onOpenAutocomplete?.();
+        onAutocompleteQuery(query);
+      } else {
+        onCloseAutocomplete?.();
       }
-    }, 0);
+    }
   }, [onChange, onAutocompleteQuery, onOpenAutocomplete, onCloseAutocomplete, useMentionSystem]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -511,6 +544,11 @@ export function AgentChatComposer({
     // Original composer key handling
     if (event.key === 'Escape') {
       event.preventDefault();
+      if (textareaRef.current) {
+        textareaRef.current.value = '';
+        autoResizeTextarea(textareaRef.current);
+      }
+      lastSyncedDraft.current = '';
       onChange('');
       return;
     }
@@ -520,12 +558,17 @@ export function AgentChatComposer({
       !event.shiftKey &&
       !event.ctrlKey &&
       !event.metaKey &&
-      draft.trim() === '' &&
+      (event.target as HTMLTextAreaElement).value.trim() === '' &&
       (event.target as HTMLTextAreaElement).selectionStart === 0
     ) {
       const lastContent = findLastUserMessageContent(messages);
       if (lastContent) {
         event.preventDefault();
+        if (textareaRef.current) {
+          textareaRef.current.value = lastContent;
+          autoResizeTextarea(textareaRef.current);
+        }
+        lastSyncedDraft.current = lastContent;
         onChange(lastContent);
       }
       return;
@@ -545,7 +588,6 @@ export function AgentChatComposer({
     autocompleteResults,
     canSend,
     chatOverrides,
-    draft,
     handleFileSelect,
     isAutocompleteOpen,
     isMentionAutocompleteOpen,
@@ -559,15 +601,9 @@ export function AgentChatComposer({
     useMentionSystem,
   ]);
 
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    const scrollHeight = textarea.scrollHeight;
-    const minHeight = 40;
-    const maxHeight = 120;
-    textarea.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
-  }, [draft]);
+  // Auto-resize is now handled inline in handleChange and the sync effect above,
+  // so no useEffect on draft is needed (which was the main perf problem — draft
+  // changes caused full-tree re-renders).
 
   const mentionTotalTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
 
@@ -628,7 +664,7 @@ export function AgentChatComposer({
         )}
         <textarea
           ref={textareaRef}
-          value={draft}
+          defaultValue={draft}
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
@@ -687,7 +723,7 @@ export function AgentChatComposer({
       </div>
       </div>
       {chatOverrides && onChatOverridesChange && (
-        <ChatControlsBar overrides={chatOverrides} onChange={onChatOverridesChange} settingsModel={settingsModel} threadTokenUsage={threadTokenUsage} />
+        <ChatControlsBar overrides={chatOverrides} onChange={onChatOverridesChange} settingsModel={settingsModel} threadModelUsage={threadModelUsage} />
       )}
     </div>
   );

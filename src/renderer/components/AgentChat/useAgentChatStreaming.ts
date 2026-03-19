@@ -1,33 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ToolActivity } from './AgentChatToolCard';
 
-export interface AgentChatStreamChunk {
-  threadId: string;
-  messageId: string;
-  type: 'text_delta' | 'thinking_delta' | 'tool_activity' | 'complete' | 'error' | 'thread_snapshot';
-  textDelta?: string;
-  thinkingDelta?: string;
-  toolActivity?: {
-    name: string;
-    status: 'running' | 'complete';
-    filePath?: string;
-    inputSummary?: string;
-    editSummary?: { oldLines: number; newLines: number };
-  };
-  timestamp: number;
-  thread?: unknown;
-}
+import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
 
-/** A discrete block within a single assistant turn */
-export type AssistantTurnBlock =
-  | { kind: 'text'; content: string }
-  | { kind: 'thinking'; content: string; startedAt: number; duration?: number }
-  | { kind: 'tool_use'; tool: ToolActivity; blockId: string };
+/** @deprecated Use AgentChatContentBlock directly. Kept as alias for backward compatibility. */
+export type AssistantTurnBlock = AgentChatContentBlock;
 
 export interface AgentChatStreamingState {
   isStreaming: boolean;
   streamingMessageId: string | null;
-  blocks: AssistantTurnBlock[];
+  blocks: AgentChatContentBlock[];
   /** The text content currently being appended to (the last text block, if any) */
   activeTextContent: string;
 }
@@ -39,15 +20,26 @@ const INITIAL_STATE: AgentChatStreamingState = {
   activeTextContent: '',
 };
 
-let blockIdCounter = 0;
 function generateBlockId(): string {
-  return `block-${++blockIdCounter}`;
+  // crypto.randomUUID() is unavailable in insecure contexts (HTTP on non-localhost).
+  // Fall back to a timestamp + random suffix for web remote access over Tailscale/LAN.
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `block-${crypto.randomUUID()}`;
+  }
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    b => b.toString(16).padStart(2, '0')).join('');
+  return `block-${hex}`;
 }
 
-function sealThinkingBlocks(blocks: AssistantTurnBlock[], now: number): AssistantTurnBlock[] {
+/**
+ * Seal any open thinking blocks (set duration) when a non-thinking delta arrives.
+ * Thinking blocks without a duration are "actively streaming"; once sealed they
+ * auto-collapse in the UI.
+ */
+function sealThinkingBlocks(blocks: AgentChatContentBlock[], now: number): AgentChatContentBlock[] {
   let changed = false;
   const next = blocks.map((b) => {
-    if (b.kind === 'thinking' && b.duration === undefined) {
+    if (b.kind === 'thinking' && b.startedAt !== undefined && b.duration === undefined) {
       changed = true;
       return { ...b, duration: Math.round((now - b.startedAt) / 1000) };
     }
@@ -57,9 +49,22 @@ function sealThinkingBlocks(blocks: AssistantTurnBlock[], now: number): Assistan
 }
 
 /**
+ * Ensure the blocks array is large enough for the given blockIndex.
+ * Fills gaps with empty text placeholders (harmless, overwritten by actual deltas).
+ */
+function ensureBlockCapacity(blocks: AgentChatContentBlock[], blockIndex: number): void {
+  while (blocks.length <= blockIndex) {
+    blocks.push({ kind: 'text', content: '' });
+  }
+}
+
+/**
  * Pure state transition: apply one chunk to a thread's streaming state.
- * Returns the new state, or null if the chunk doesn't affect streaming state
- * (caller handles side-effects like thread_snapshot DOM dispatch separately).
+ *
+ * With structured content blocks, each chunk carries a `blockIndex` that maps
+ * directly to a position in the blocks array — no heuristic merging needed.
+ * This matches the industry-standard approach used by Cursor, Windsurf, and
+ * VS Code Copilot: the renderer is a direct projection of the API's block structure.
  */
 function applyChunk(
   prev: AgentChatStreamingState,
@@ -68,26 +73,64 @@ function applyChunk(
   switch (chunk.type) {
     case 'text_delta': {
       const delta = chunk.textDelta ?? '';
+      const blockIndex = chunk.blockIndex;
+      // Seal any open thinking blocks — text arriving means thinking is done
       const sealed = sealThinkingBlocks(prev.blocks, Date.now());
       const blocks = [...sealed];
-      const lastBlock = blocks[blocks.length - 1];
-      if (lastBlock && lastBlock.kind === 'text') {
-        blocks[blocks.length - 1] = { kind: 'text', content: lastBlock.content + delta };
+
+      if (blockIndex !== undefined) {
+        // Structured path: place at exact block position
+        ensureBlockCapacity(blocks, blockIndex);
+        const existing = blocks[blockIndex];
+        if (existing.kind === 'text') {
+          blocks[blockIndex] = { kind: 'text', content: existing.content + delta };
+        } else {
+          // Block type mismatch (gap placeholder was wrong type) — overwrite
+          blocks[blockIndex] = { kind: 'text', content: delta };
+        }
       } else {
-        blocks.push({ kind: 'text', content: delta });
+        // Legacy fallback (no blockIndex): append to last text block or create new
+        const lastBlock = blocks[blocks.length - 1];
+        if (lastBlock && lastBlock.kind === 'text') {
+          blocks[blocks.length - 1] = { kind: 'text', content: lastBlock.content + delta };
+        } else {
+          blocks.push({ kind: 'text', content: delta });
+        }
       }
-      const activeTextContent = (blocks[blocks.length - 1] as { kind: 'text'; content: string }).content;
+
+      // Find the last text block for activeTextContent
+      let activeTextContent = '';
+      for (let idx = blocks.length - 1; idx >= 0; idx--) {
+        if (blocks[idx].kind === 'text') {
+          activeTextContent = (blocks[idx] as { kind: 'text'; content: string }).content;
+          break;
+        }
+      }
       return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent };
     }
 
     case 'thinking_delta': {
       const delta = chunk.thinkingDelta ?? '';
+      const blockIndex = chunk.blockIndex;
       const blocks = [...prev.blocks];
-      const lastBlock = blocks[blocks.length - 1];
-      if (lastBlock && lastBlock.kind === 'thinking' && lastBlock.duration === undefined) {
-        blocks[blocks.length - 1] = { ...lastBlock, content: lastBlock.content + delta };
+
+      if (blockIndex !== undefined) {
+        // Structured path: place at exact block position
+        ensureBlockCapacity(blocks, blockIndex);
+        const existing = blocks[blockIndex];
+        if (existing.kind === 'thinking' && existing.duration === undefined) {
+          blocks[blockIndex] = { ...existing, content: existing.content + delta };
+        } else {
+          blocks[blockIndex] = { kind: 'thinking', content: delta, startedAt: Date.now() };
+        }
       } else {
-        blocks.push({ kind: 'thinking', content: delta, startedAt: Date.now() });
+        // Legacy fallback
+        const lastBlock = blocks[blocks.length - 1];
+        if (lastBlock && lastBlock.kind === 'thinking' && lastBlock.duration === undefined) {
+          blocks[blocks.length - 1] = { ...lastBlock, content: lastBlock.content + delta };
+        } else {
+          blocks.push({ kind: 'thinking', content: delta, startedAt: Date.now() });
+        }
       }
       return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
     }
@@ -95,27 +138,44 @@ function applyChunk(
     case 'tool_activity': {
       if (!chunk.toolActivity) return prev;
       const { name, status, filePath, inputSummary, editSummary } = chunk.toolActivity;
+      const blockIndex = chunk.blockIndex;
       const sealed = sealThinkingBlocks(prev.blocks, Date.now());
+
+      if (blockIndex !== undefined) {
+        // Structured path: place at exact block position
+        const blocks = [...sealed];
+        ensureBlockCapacity(blocks, blockIndex);
+
+        if (status === 'running') {
+          blocks[blockIndex] = {
+            kind: 'tool_use', tool: name, status, filePath, inputSummary, editSummary,
+            blockId: generateBlockId(),
+          };
+        } else {
+          // Complete: update the existing tool block in place
+          const existing = blocks[blockIndex];
+          if (existing.kind === 'tool_use') {
+            blocks[blockIndex] = { ...existing, status, filePath: filePath ?? existing.filePath };
+          }
+        }
+        return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
+      }
+
+      // Legacy fallback (no blockIndex)
       if (status === 'running') {
-        const blocks: AssistantTurnBlock[] = [
+        const blocks: AgentChatContentBlock[] = [
           ...sealed,
-          { kind: 'tool_use', tool: { name, status, filePath, inputSummary, editSummary }, blockId: generateBlockId() },
+          { kind: 'tool_use', tool: name, status, filePath, inputSummary, editSummary, blockId: generateBlockId() },
         ];
         return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: '' };
       }
       const blocks = [...sealed];
-      let found = false;
       for (let i = blocks.length - 1; i >= 0; i--) {
         const block = blocks[i];
-        if (block.kind === 'tool_use' && block.tool.name === name && block.tool.status === 'running') {
-          // Preserve input data from the 'running' event, merge with completion
-          blocks[i] = { ...block, tool: { ...block.tool, name, status, filePath: filePath ?? block.tool.filePath } };
-          found = true;
+        if (block.kind === 'tool_use' && block.tool === name && block.status === 'running') {
+          blocks[i] = { ...block, status, filePath: filePath ?? block.filePath };
           break;
         }
-      }
-      if (!found) {
-        blocks.push({ kind: 'tool_use', tool: { name, status, filePath, inputSummary, editSummary }, blockId: generateBlockId() });
       }
       return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
     }
@@ -124,8 +184,8 @@ function applyChunk(
       // Seal any running tool blocks, mark streaming done — retain blocks briefly
       // so they stay visible until the persisted thread_snapshot replaces them.
       const blocks = prev.blocks.map((b) =>
-        b.kind === 'tool_use' && b.tool.status === 'running'
-          ? { ...b, tool: { ...b.tool, status: 'complete' as const } }
+        b.kind === 'tool_use' && b.status === 'running'
+          ? { ...b, status: 'complete' as const }
           : b,
       );
       return { ...prev, isStreaming: false, blocks };
@@ -171,7 +231,7 @@ export function useAgentChatStreaming(activeThreadId: string | null): AgentChatS
   }, []);
 
   useEffect(() => {
-    const api = (window as any).electronAPI?.agentChat;
+    const api = (window as unknown as { electronAPI?: { agentChat?: { onStreamChunk?: (cb: (chunk: AgentChatStreamChunk) => void) => (() => void) | void; getBufferedChunks?: (id: string) => Promise<AgentChatStreamChunk[]> } } }).electronAPI?.agentChat;
     if (!api?.onStreamChunk) return;
     const cleanup = api.onStreamChunk(handleChunk);
     return () => { if (typeof cleanup === 'function') cleanup(); };
@@ -183,7 +243,7 @@ export function useAgentChatStreaming(activeThreadId: string | null): AgentChatS
   // for new chunks.
   useEffect(() => {
     if (!activeThreadId) return;
-    const api = (window as any).electronAPI?.agentChat;
+    const api = (window as unknown as { electronAPI?: { agentChat?: { onStreamChunk?: (cb: (chunk: AgentChatStreamChunk) => void) => (() => void) | void; getBufferedChunks?: (id: string) => Promise<AgentChatStreamChunk[]> } } }).electronAPI?.agentChat;
     if (!api?.getBufferedChunks) return;
     void api.getBufferedChunks(activeThreadId).then(
       (chunks: AgentChatStreamChunk[]) => {
@@ -196,11 +256,7 @@ export function useAgentChatStreaming(activeThreadId: string | null): AgentChatS
   const activeState = (activeThreadId ? stateMap.get(activeThreadId) : null) ?? INITIAL_STATE;
 
   // After streaming completes, clear the retained blocks once the persisted
-  // message has arrived in the thread. We detect this by watching whether the
-  // conversation component's streamingMessageInThread check will match (the
-  // persisted message with the streaming messageId appears in the thread).
-  // Use a generous timeout (5s) as a safety net — the thread_snapshot may be
-  // delayed by the main process persisting to disk.
+  // message has arrived in the thread.
   useEffect(() => {
     if (!activeThreadId || activeState.isStreaming || activeState.blocks.length === 0) return;
     const id = activeThreadId;

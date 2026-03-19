@@ -1,14 +1,14 @@
 import type { OrchestrationAPI } from '../orchestration/types'
 import {
-  createAgentChatOrchestrationBridge,
   type AgentChatOrchestrationBridge,
   type AgentChatOrchestrationBridgeDeps,
+  createAgentChatOrchestrationBridge,
 } from './chatOrchestrationBridge'
-import {
-  agentChatThreadStore,
-  type AgentChatThreadStore,
-} from './threadStore'
 import { hydrateLatestAgentChatThread } from './threadHydrator'
+import {
+  type AgentChatThreadStore,
+  agentChatThreadStore,
+} from './threadStore'
 import type {
   AgentChatAPI,
   AgentChatCreateThreadRequest,
@@ -23,14 +23,15 @@ import type {
   AgentChatThreadResult,
   AgentChatThreadsResult,
 } from './types'
+import { getErrorMessage, isNonEmptyString } from './utils'
 
-export * from './events'
-export * from './types'
-export * from './threadStore'
 export * from './chatOrchestrationBridge'
 export * from './eventProjector'
+export * from './events'
 export * from './settingsResolver'
 export * from './threadHydrator'
+export * from './threadStore'
+export * from './types'
 
 export interface AgentChatService extends Pick<AgentChatAPI,
   'createThread'
@@ -52,14 +53,6 @@ export interface AgentChatService extends Pick<AgentChatAPI,
 export interface AgentChatServiceDeps
   extends Omit<AgentChatOrchestrationBridgeDeps, 'threadStore'> {
   threadStore?: AgentChatThreadStore
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 async function createThreadResult(

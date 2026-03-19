@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
 import type { AgentChatContentBlock } from '../../types/electron';
-import type { AssistantTurnBlock } from './useAgentChatStreaming';
 
 const FILE_MODIFYING_TOOLS = new Set([
   'Write', 'Edit', 'MultiEdit', 'write_file', 'edit_file', 'multi_edit',
@@ -13,20 +13,19 @@ export interface ChangeTally {
   linesRemoved: number;
 }
 
-/** Extract a change tally from streaming blocks. */
-export function extractChangeTally(blocks: AssistantTurnBlock[]): ChangeTally {
+/** Extract a change tally from streaming blocks (uses unified AgentChatContentBlock). */
+export function extractChangeTally(blocks: AgentChatContentBlock[]): ChangeTally {
   const fileSet = new Set<string>();
   let linesAdded = 0;
   let linesRemoved = 0;
 
   for (const block of blocks) {
     if (block.kind !== 'tool_use') continue;
-    const { tool } = block;
-    if (!FILE_MODIFYING_TOOLS.has(tool.name)) continue;
-    if (tool.filePath) fileSet.add(tool.filePath);
-    if (tool.editSummary) {
-      linesAdded += tool.editSummary.newLines;
-      linesRemoved += tool.editSummary.oldLines;
+    if (!FILE_MODIFYING_TOOLS.has(block.tool)) continue;
+    if (block.filePath) fileSet.add(block.filePath);
+    if (block.editSummary) {
+      linesAdded += block.editSummary.newLines;
+      linesRemoved += block.editSummary.oldLines;
     }
   }
 
@@ -73,7 +72,7 @@ function DiffIcon(): React.ReactElement {
 /* ─── Bar variants ──────────────────────────────────────────────────────── */
 
 export interface StreamingChangeSummaryBarProps {
-  blocks: AssistantTurnBlock[];
+  blocks: AgentChatContentBlock[];
   isStreaming: boolean;
 }
 
@@ -136,6 +135,150 @@ export interface CompletedChangeSummaryBarProps {
   tally?: ChangeTally;
 }
 
+/* ─── Chevron ────────────────────────────────────────────────────────────── */
+
+function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
+  return (
+    <svg
+      className={`h-3 w-3 shrink-0 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 4l4 4-4 4" />
+    </svg>
+  );
+}
+
+/* ─── Inline diff for a single file ──────────────────────────────────────── */
+
+interface DiffLine {
+  prefix: string;
+  content: string;
+  type: 'add' | 'remove' | 'context' | 'header';
+}
+
+function parsePatchLines(patch: string): DiffLine[] {
+  const lines: DiffLine[] = [];
+  for (const raw of patch.split('\n')) {
+    if (raw.startsWith('@@')) {
+      lines.push({ prefix: '', content: raw, type: 'header' });
+    } else if (raw.startsWith('+')) {
+      lines.push({ prefix: '+', content: raw.slice(1), type: 'add' });
+    } else if (raw.startsWith('-')) {
+      lines.push({ prefix: '-', content: raw.slice(1), type: 'remove' });
+    } else {
+      lines.push({ prefix: ' ', content: raw.startsWith(' ') ? raw.slice(1) : raw, type: 'context' });
+    }
+  }
+  return lines;
+}
+
+const diffLineColors: Record<DiffLine['type'], React.CSSProperties> = {
+  add: { backgroundColor: 'rgba(63, 185, 80, 0.1)', color: 'var(--success, #3fb950)' },
+  remove: { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: 'var(--error, #f85149)' },
+  context: { color: 'var(--text-muted)' },
+  header: { color: 'var(--accent)', fontWeight: 600 },
+};
+
+function InlineDiffViewer({ filePath, projectRoot }: { filePath: string; projectRoot: string }): React.ReactElement {
+  const [patch, setPatch] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const result = await window.electronAPI.git.diffRaw(projectRoot, filePath);
+        if (active) setPatch(result.patch ?? '');
+      } catch {
+        if (active) setPatch('');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [filePath, projectRoot]);
+
+  if (loading) {
+    return <div className="px-3 py-2 text-[10px] italic" style={{ color: 'var(--text-faint)' }}>Loading diff...</div>;
+  }
+
+  if (!patch) {
+    return <div className="px-3 py-2 text-[10px] italic" style={{ color: 'var(--text-faint)' }}>No changes (file matches HEAD)</div>;
+  }
+
+  const lines = parsePatchLines(patch);
+
+  return (
+    <div
+      className="overflow-auto text-[11px] leading-[1.5]"
+      style={{ maxHeight: '300px', fontFamily: 'var(--font-mono)', borderTop: '1px solid var(--border-muted)' }}
+    >
+      {lines.map((line, i) => (
+        <div key={i} className="px-3 py-0" style={diffLineColors[line.type]}>
+          <span className="select-none opacity-40 inline-block w-3">{line.prefix}</span>
+          {line.content}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── File row in expanded list ──────────────────────────────────────────── */
+
+function shortenPath(filePath: string): string {
+  const parts = filePath.replace(/\\/g, '/').split('/');
+  if (parts.length <= 3) return parts.join('/');
+  return `.../${parts.slice(-3).join('/')}`;
+}
+
+function FileChangeRow({
+  filePath,
+  isSelected,
+  onClick,
+}: {
+  filePath: string;
+  isSelected: boolean;
+  onClick: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-2 px-3 py-1 text-[11px] text-left transition-colors"
+      style={{
+        backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+        color: isSelected ? 'var(--text)' : 'var(--text-muted)',
+        borderBottom: '1px solid var(--border-muted)',
+        fontFamily: 'var(--font-mono)',
+        cursor: 'pointer',
+        border: 'none',
+      }}
+    >
+      <FileIcon />
+      <span className="truncate">{shortenPath(filePath)}</span>
+      <svg
+        className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${isSelected ? 'rotate-90' : ''}`}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ opacity: 0.5 }}
+      >
+        <path d="M6 4l4 4-4 4" />
+      </svg>
+    </button>
+  );
+}
+
+/* ─── CompletedChangeSummaryBar (enhanced with expandable file list) ────── */
+
 /** Shows a "Review Changes" bar on completed assistant messages that made file changes. */
 export function CompletedChangeSummaryBar({
   snapshotHash,
@@ -143,7 +286,10 @@ export function CompletedChangeSummaryBar({
   sessionId,
   tally,
 }: CompletedChangeSummaryBarProps): React.ReactElement {
-  const openReview = useCallback(() => {
+  const [expanded, setExpanded] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+
+  const openFullReview = useCallback(() => {
     window.dispatchEvent(
       new CustomEvent('agent-ide:open-diff-review', {
         detail: { sessionId, snapshotHash, projectRoot },
@@ -151,48 +297,75 @@ export function CompletedChangeSummaryBar({
     );
   }, [sessionId, snapshotHash, projectRoot]);
 
+  const fileCount = tally?.filesChanged.length ?? 0;
+
   return (
     <div
-      className="flex items-center gap-3 rounded px-3 py-1.5 text-[11px] mt-2 cursor-pointer transition-colors duration-100"
+      className="rounded mt-2 overflow-hidden"
       style={{
         backgroundColor: 'var(--bg-tertiary)',
-        color: 'var(--text-muted)',
         border: '1px solid var(--border)',
       }}
-      onClick={openReview}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--accent)';
-        e.currentTarget.style.color = 'var(--text)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--border)';
-        e.currentTarget.style.color = 'var(--text-muted)';
-      }}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openReview(); }}
     >
-      <DiffIcon />
+      {/* Header row */}
+      <div className="flex items-center gap-2 px-3 py-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        {/* Expand toggle (only when we have files) */}
+        {fileCount > 0 && (
+          <button
+            onClick={() => { setExpanded(!expanded); if (expanded) setSelectedFile(null); }}
+            className="flex items-center gap-1 shrink-0"
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
+          >
+            <ChevronIcon expanded={expanded} />
+          </button>
+        )}
 
-      {tally && tally.filesChanged.length > 0 ? (
-        <>
+        <DiffIcon />
+
+        {fileCount > 0 ? (
           <span>
-            {tally.filesChanged.length} file{tally.filesChanged.length !== 1 ? 's' : ''} changed
+            {fileCount} file{fileCount !== 1 ? 's' : ''} changed
           </span>
-          {(tally.linesAdded > 0 || tally.linesRemoved > 0) && (
-            <span className="flex items-center gap-1.5">
-              {tally.linesAdded > 0 && (
-                <span style={{ color: 'var(--success, #3fb950)' }}>+{tally.linesAdded}</span>
+        ) : (
+          <span>Changes</span>
+        )}
+
+        {tally && (tally.linesAdded > 0 || tally.linesRemoved > 0) && (
+          <span className="flex items-center gap-1.5">
+            {tally.linesAdded > 0 && (
+              <span style={{ color: 'var(--success, #3fb950)' }}>+{tally.linesAdded}</span>
+            )}
+            {tally.linesRemoved > 0 && (
+              <span style={{ color: 'var(--error, #f85149)' }}>-{tally.linesRemoved}</span>
+            )}
+          </span>
+        )}
+
+        <button
+          onClick={openFullReview}
+          className="ml-auto shrink-0 text-[10px] font-medium"
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0 }}
+        >
+          Full Review →
+        </button>
+      </div>
+
+      {/* Expanded file list */}
+      {expanded && tally && tally.filesChanged.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+          {tally.filesChanged.map((file) => (
+            <React.Fragment key={file}>
+              <FileChangeRow
+                filePath={file}
+                isSelected={selectedFile === file}
+                onClick={() => setSelectedFile(selectedFile === file ? null : file)}
+              />
+              {selectedFile === file && (
+                <InlineDiffViewer filePath={file} projectRoot={projectRoot} />
               )}
-              {tally.linesRemoved > 0 && (
-                <span style={{ color: 'var(--error, #f85149)' }}>-{tally.linesRemoved}</span>
-              )}
-            </span>
-          )}
-          <span style={{ color: 'var(--accent)' }}>Review Changes →</span>
-        </>
-      ) : (
-        <span style={{ color: 'var(--accent)' }}>Review Changes →</span>
+            </React.Fragment>
+          ))}
+        </div>
       )}
     </div>
   );

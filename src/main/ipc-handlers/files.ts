@@ -2,18 +2,20 @@
  * ipc-handlers/files.ts - File system IPC handlers
  */
 
-import { ipcMain, dialog, shell, BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import chokidar, { FSWatcher } from 'chokidar'
+import { randomUUID } from 'crypto'
+import { BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent,shell } from 'electron'
 import type { Dirent } from 'fs'
 import fs from 'fs/promises'
-import path from 'path'
 import { tmpdir } from 'os'
-import { randomUUID } from 'crypto'
-import chokidar, { FSWatcher } from 'chokidar'
-import { dispatchFileOpenEvent } from '../extensions'
-import { getContextLayerController } from '../contextLayer/contextLayerController'
+import path from 'path'
+
 import { getGraphController } from '../codebaseGraph/graphController'
-import { getConfigValue } from '../config'
-import { getWindow } from '../windowManager'
+import { getContextLayerController } from '../contextLayer/contextLayerController'
+import { dispatchFileOpenEvent } from '../extensions'
+import { broadcastToWebClients } from '../web/webServer'
+import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat'
+import { assertPathAllowed } from './pathSecurity'
 
 const MAX_READ_BYTES = 100 * 1024 * 1024 // 100 MB
 
@@ -26,81 +28,6 @@ type RegisterHandler = <TArgs extends unknown[]>(
   channel: string,
   handler: FileHandler<TArgs>,
 ) => void
-
-// ---- Workspace path sandboxing (security: prevent path traversal) ----------
-//
-// All file operations from the renderer must be confined to the active
-// workspace root(s).  A compromised renderer could otherwise read/write
-// arbitrary files (e.g. /etc/passwd, ~/.ssh/authorized_keys).
-
-/**
- * Return the set of allowed root directories for the calling window.
- * Includes the window's project root, all configured multi-roots,
- * and the default project root from config.
- */
-function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
-  const roots: string[] = []
-
-  // Per-window project root (from windowManager)
-  const winId = event.sender.getOwnerBrowserWindow()?.id
-  if (winId !== undefined) {
-    const managed = getWindow(winId)
-    if (managed?.projectRoot) {
-      roots.push(path.resolve(managed.projectRoot))
-    }
-  }
-
-  // Multi-root workspace entries
-  const multiRoots = getConfigValue('multiRoots') ?? []
-  for (const r of multiRoots) {
-    if (r) roots.push(path.resolve(r))
-  }
-
-  // Fallback default project root
-  const defaultRoot = getConfigValue('defaultProjectRoot')
-  if (defaultRoot) {
-    roots.push(path.resolve(defaultRoot))
-  }
-
-  return roots
-}
-
-/**
- * Validate that `targetPath` resolves to a location inside one of the
- * allowed workspace roots.  Returns an error string if the path escapes
- * the sandbox, or null if the path is allowed.
- */
-function validatePathInWorkspace(targetPath: string, allowedRoots: string[]): string | null {
-  if (allowedRoots.length === 0) {
-    // No workspace configured — cannot validate, deny by default.
-    return 'No workspace root configured; file operation denied for security.'
-  }
-
-  const resolved = path.resolve(targetPath)
-
-  for (const root of allowedRoots) {
-    // On Windows path comparison must be case-insensitive
-    const normalizedResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved
-    const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root
-
-    if (normalizedResolved === normalizedRoot || normalizedResolved.startsWith(normalizedRoot + path.sep)) {
-      return null // Path is within this root — allowed.
-    }
-  }
-
-  return `Path "${targetPath}" is outside the workspace and cannot be accessed.`
-}
-
-/**
- * Convenience: validate a path and return a rejection result if it fails.
- */
-function assertPathAllowed(
-  event: IpcMainInvokeEvent,
-  targetPath: string,
-): { success: false; error: string } | null {
-  const error = validatePathInWorkspace(targetPath, getAllowedRoots(event))
-  return error ? { success: false, error } : null
-}
 
 const watchers = new Map<string, FSWatcher>()
 
@@ -162,7 +89,9 @@ function broadcastFileChange(type: string, filePath: string): void {
       window.webContents.send('files:change', { type, path: filePath })
     }
   }
+  broadcastToWebClients('files:change', { type, path: filePath })
   getContextLayerController()?.onFileChange(type, filePath)
+  invalidateAgentChatCache()
 
   // Notify codebase graph of file change
   const graphCtrl = getGraphController()
@@ -393,8 +322,14 @@ async function handleSoftDelete(event: IpcMainInvokeEvent, targetPath: string) {
 }
 
 async function handleRestoreDeleted(event: IpcMainInvokeEvent, tempPath: string, originalPath: string) {
-  // Only validate the restore destination — tempPath is in the OS temp dir
-  // which is outside the workspace by design.
+  // Validate that tempPath is within the agent-ide temp directory to prevent
+  // an attacker from using this handler to move arbitrary files.
+  const normalizedTemp = path.resolve(tempPath)
+  const expectedPrefix = path.resolve(tmpdir(), 'agent-ide-deleted')
+  if (normalizedTemp !== expectedPrefix && !normalizedTemp.startsWith(expectedPrefix + path.sep)) {
+    return { success: false, error: 'Invalid temp path: must be within agent-ide temp directory.' }
+  }
+  // Validate the restore destination is within the workspace.
   const denied = assertPathAllowed(event, originalPath)
   if (denied) return denied
   try {

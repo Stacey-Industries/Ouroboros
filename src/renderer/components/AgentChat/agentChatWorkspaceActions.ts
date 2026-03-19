@@ -1,4 +1,6 @@
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { type Dispatch, type SetStateAction,useCallback, useRef } from 'react';
+
+import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
@@ -6,11 +8,10 @@ import type {
   AgentChatThreadRecord,
   ImageAttachment,
 } from '../../types/electron';
-import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
-import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
-import type { ChatOverrides } from './ChatControlsBar';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
+import type { ChatOverrides } from './ChatControlsBar';
 import { clearPersistedDraft } from './useAgentChatDraftPersistence';
+import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
 
 export interface SendMessageArgs {
   activeThreadId: string | null;
@@ -381,15 +382,8 @@ export function useStopTaskAction(
 
     try {
       // Route through agentChat.cancelTask which uses the singleton
-      // orchestration that actually owns the running process. The generic
-      // orchestration.cancelTask creates a fresh adapter with empty maps
-      // and can never find the process to kill.
-      const api = window.electronAPI.agentChat;
-      if (api.cancelTask) {
-        await api.cancelTask(taskId);
-      } else {
-        await window.electronAPI.orchestration.cancelTask(taskId);
-      }
+      // orchestration that actually owns the running process.
+      await window.electronAPI.agentChat.cancelTask(taskId);
     } catch (stopError) {
       setError(getErrorMessage(stopError));
     }

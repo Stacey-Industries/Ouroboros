@@ -1,4 +1,5 @@
 import type { AgentChatSettings } from '../../main/agentChat/types'
+import type { ClaudeMdSettings } from './electron-claude-md'
 
 export type AppTheme = 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'custom' | (string & {})
 
@@ -111,6 +112,7 @@ export interface AppConfig {
   /** Format document before saving (requires a formatting provider in Monaco) */
   formatOnSave: boolean
   contextLayer: ContextLayerConfig
+  claudeMdSettings: ClaudeMdSettings
 }
 
 export interface ContextLayerConfig {
@@ -166,7 +168,7 @@ export interface AgentEvent {
   payload: unknown
 }
 
-export interface TokenUsage {
+export interface RawApiTokenUsage {
   input_tokens?: number
   output_tokens?: number
   cache_read_input_tokens?: number
@@ -184,9 +186,11 @@ export interface HookPayload {
   prompt?: string
   error?: string
   parentSessionId?: string
-  usage?: TokenUsage
+  usage?: RawApiTokenUsage
   model?: string
   requestId?: string
+  /** Working directory of the Claude Code session — set by hook scripts */
+  cwd?: string
 }
 
 export interface ToolCallPayload {

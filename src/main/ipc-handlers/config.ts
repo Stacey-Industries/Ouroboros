@@ -2,12 +2,14 @@
  * ipc-handlers/config.ts - Config IPC handlers
  */
 
-import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'electron'
 import chokidar, { FSWatcher } from 'chokidar'
+import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
+
 import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config'
 import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes'
+import { broadcastToWebClients } from '../web/webServer'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 type ConfigInvokeHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown
@@ -76,6 +78,7 @@ function notifyExternalConfigChange(updated: AppConfig): void {
     }
     window.webContents.send('config:externalChange', updated)
   }
+  broadcastToWebClients('config:externalChange', updated)
 }
 
 function registerHandlers(entries: ConfigHandlerEntry[], channels: string[]): void {

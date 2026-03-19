@@ -5,19 +5,23 @@
  * generator in contextGenerator.ts, types in contextTypes.ts.
  */
 
-import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron'
-import { scanProject } from './contextScanner'
-import { generateClaudeMdContent } from './contextGenerator'
+import { BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron'
 
-export type { ProjectContext, ContextGenerateOptions } from './contextTypes'
+import { generateClaudeMdContent } from './contextGenerator'
+import { scanProject } from './contextScanner'
+import { assertPathAllowed } from './pathSecurity'
+
+export type { ContextGenerateOptions,ProjectContext } from './contextTypes'
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function registerContextHandlers(_senderWindow: SenderWindow): string[] {
   const channels: string[] = []
 
-  ipcMain.handle('context:scan', async (_event, projectRoot: string) => {
+  ipcMain.handle('context:scan', async (event, projectRoot: string) => {
+    const denied = assertPathAllowed(event, projectRoot)
+    if (denied) return denied
     try {
       const context = await scanProject(projectRoot)
       return { success: true, context }
@@ -27,7 +31,9 @@ export function registerContextHandlers(_senderWindow: SenderWindow): string[] {
   })
   channels.push('context:scan')
 
-  ipcMain.handle('context:generate', async (_event, projectRoot: string, options?: Parameters<typeof generateClaudeMdContent>[1]) => {
+  ipcMain.handle('context:generate', async (event, projectRoot: string, options?: Parameters<typeof generateClaudeMdContent>[1]) => {
+    const denied = assertPathAllowed(event, projectRoot)
+    if (denied) return denied
     try {
       const context = await scanProject(projectRoot)
       const content = generateClaudeMdContent(context, options ?? {})

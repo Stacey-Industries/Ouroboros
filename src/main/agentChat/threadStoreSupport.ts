@@ -1,15 +1,14 @@
 import { createHash, randomUUID } from 'crypto'
+
 import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
 } from './types'
+import { isNonEmptyString } from './utils'
+export { isNonEmptyString } from './utils'
 
 export const DEFAULT_THREAD_TITLE = 'New Chat'
-
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0
-}
 
 function normalizeTimestamp(value: unknown, fallback: number): number {
   return Number.isFinite(value) ? Number(value) : fallback

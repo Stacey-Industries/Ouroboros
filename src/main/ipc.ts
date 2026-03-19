@@ -6,23 +6,27 @@
  * All handlers return serialisable values (no class instances).
  */
 
-import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
+
+import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager'
 import {
-  registerPtyHandlers,
-  registerConfigHandlers, cleanupConfigWatcher,
-  registerFileHandlers, cleanupFileWatchers,
-  registerGitHandlers,
-  registerAppHandlers,
-  registerAgentChatHandlers,
   cleanupAgentChatHandlers,
-  registerSessionHandlers,
-  registerMiscHandlers, lspStopAll,
+cleanupConfigWatcher,
+cleanupFileWatchers,
+lspStopAll,
+  registerAgentChatHandlers,
+  registerAppHandlers,
+  registerClaudeMdHandlers,
+  registerConfigHandlers,   registerContextHandlers,
+  registerExtensionStoreHandlers,
+  registerFileHandlers,   registerGitHandlers,
+  registerIdeToolsHandlers,
   registerMcpHandlers,
   registerMcpStoreHandlers,
-  registerExtensionStoreHandlers,
-  registerContextHandlers,
-  registerIdeToolsHandlers,
+  registerMiscHandlers,   registerPtyHandlers,
+  registerSessionHandlers,
 } from './ipc-handlers'
+import { clearRegistry } from './web/handlerRegistry'
 
 /** Resolve the BrowserWindow that sent an IPC event. */
 function senderWindow(event: IpcMainInvokeEvent): BrowserWindow {
@@ -46,6 +50,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...registerExtensionStoreHandlers(senderWindow),
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
+    ...registerClaudeMdHandlers(senderWindow),
   ]
 }
 
@@ -93,18 +98,15 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
     }
   })
 
-  ipcMain.handle('orchestration:cancelTask', async (_event, taskId: unknown) => {
-    try {
-      const { createClaudeCodeAdapter } = await import('./orchestration/providers/claudeCodeAdapter')
-      const adapter = createClaudeCodeAdapter()
-      await adapter.cancelTask({ externalTaskId: taskId as string })
-      return { success: true }
-    } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+  // NOTE: orchestration:cancelTask has been intentionally removed.
+  // It created a fresh ClaudeCodeAdapter instance on every call (empty process Maps),
+  // so it could never find or kill the running process. Cancel is handled via
+  // agentChat:cancelTask, which routes through the singleton orchestration that
+  // actually owns the running processes. The preload still exposes
+  // orchestration.cancelTask() for renderer compatibility — it now routes to
+  // agentChat:cancelTask under the hood.
 
-  channels.push('orchestration:previewContext', 'orchestration:buildContextPacket', 'orchestration:cancelTask')
+  channels.push('orchestration:previewContext', 'orchestration:buildContextPacket')
 }
 
 function registerCodeModeHandlers(channels: string[]): void {
@@ -136,6 +138,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   allChannels = registerDomainHandlers(win)
   registerCodeModeHandlers(allChannels)
   registerOrchestrationStubHandlers(allChannels)
+  startApprovalManagerCleanup()
 
   return () => { cleanupIpcHandlers() }
 }
@@ -148,14 +151,16 @@ export function cleanupIpcHandlers(): void {
   cleanupConfigWatcher()
 
   cleanupAgentChatHandlers()
+  stopApprovalManagerCleanup()
 
   // Stop all LSP servers
   lspStopAll().catch((error) => { console.error('[ipc] Failed to stop LSP servers during cleanup:', error) })
 
-  // Remove all handlers
+  // Remove all handlers from ipcMain and the WebSocket bridge registry
   for (const channel of allChannels) {
     ipcMain.removeHandler(channel)
   }
+  clearRegistry()
 
   allChannels = []
   handlersRegistered = false

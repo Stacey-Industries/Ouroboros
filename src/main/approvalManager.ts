@@ -12,9 +12,11 @@
  */
 
 import fs from 'fs'
-import path from 'path'
 import os from 'os'
+import path from 'path'
+
 import { getConfigValue } from './config'
+import { broadcastToWebClients } from './web/webServer'
 import { getAllActiveWindows } from './windowManager'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -90,8 +92,28 @@ function cleanupOldResponses(): void {
   }
 }
 
-// Run cleanup every 2 minutes
-setInterval(cleanupOldResponses, 2 * 60 * 1000)
+// ─── Cleanup lifecycle ────────────────────────────────────────────────────────
+
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Start the periodic cleanup of old approval response files.
+ * Safe to call multiple times — only one interval will run.
+ */
+export function startApprovalManagerCleanup(): void {
+  if (cleanupIntervalId) return // Already running
+  cleanupIntervalId = setInterval(cleanupOldResponses, 2 * 60 * 1000)
+}
+
+/**
+ * Stop the periodic cleanup interval (called on app shutdown / test teardown).
+ */
+export function stopApprovalManagerCleanup(): void {
+  if (cleanupIntervalId) {
+    clearInterval(cleanupIntervalId)
+    cleanupIntervalId = null
+  }
+}
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
@@ -129,6 +151,7 @@ export function requestApproval(request: ApprovalRequest): void {
       win.webContents.send('approval:request', request)
     }
   }
+  broadcastToWebClients('approval:request', request)
 
   // Flash taskbar on Windows to draw attention
   for (const win of windows) {
@@ -176,6 +199,7 @@ export function respondToApproval(requestId: string, response: ApprovalResponse)
         win.webContents.send('approval:resolved', { requestId, decision: response.decision })
       }
     }
+    broadcastToWebClients('approval:resolved', { requestId, decision: response.decision })
 
     return true
   } catch (err) {

@@ -132,6 +132,7 @@ export interface GitAPI {
   fileAtCommit: (root: string, commitHash: string, filePath: string) => Promise<GitFileAtCommitResult>
   applyHunk: (root: string, patchContent: string) => Promise<IpcResult>
   revertHunk: (root: string, patchContent: string) => Promise<IpcResult>
+  stageHunk: (root: string, patchContent: string) => Promise<IpcResult>
   revertFile: (root: string, commitHash: string, filePath: string) => Promise<IpcResult>
   diffBetween: (root: string, fromHash: string, toHash: string) => Promise<GitDiffReviewResult>
   changedFilesBetween: (root: string, fromHash: string, toHash: string) => Promise<GitChangedFilesResult>
