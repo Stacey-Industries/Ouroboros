@@ -1,17 +1,20 @@
-import React, { memo } from 'react';
 import type { RefObject } from 'react';
+import React, { memo } from 'react';
+
 import { ClaudeMdEditor } from './ClaudeMdEditor';
-import { InlineEditor } from './InlineEditor';
-import { CommitHistory } from './CommitHistory';
-import { MarkdownPreview } from './MarkdownPreview';
-import { DiffView } from './DiffView';
-import { ConflictResolver } from './ConflictResolver';
-import { CodeView } from './CodeView';
-import { MonacoEditor } from './MonacoEditor';
-import { MonacoDiffEditor } from './MonacoDiffEditor';
-import { detectLanguage } from './monacoSetup';
 import type { CodeViewProps } from './CodeView';
+import { CodeView } from './CodeView';
+import { CommitHistory } from './CommitHistory';
 import type { ConflictBlock } from './ConflictResolver';
+import { ConflictResolver } from './ConflictResolver';
+import { DiffView } from './DiffView';
+import { InlineEditor } from './InlineEditor';
+import { MarkdownPreview } from './MarkdownPreview';
+import { MonacoDiffEditor } from './MonacoDiffEditor';
+// MonacoEditor kept as legacy fallback — see MonacoEditor.tsx
+// import { MonacoEditor } from './MonacoEditor';
+import { MonacoEditorHost } from './MonacoEditorHost';
+import { detectLanguage } from './monacoSetup';
 
 /**
  * Feature flag: when true, Monaco Editor is used for code views instead of the
@@ -59,6 +62,8 @@ export interface ContentRouterProps {
   codeRef: RefObject<HTMLDivElement | null>;
 
   // ── Monaco-specific props ─────────────────────────────────────────────
+  /** Callback when editor dirty state changes (content differs from saved) */
+  onDirtyChange?: (dirty: boolean) => void;
   /** Word wrap toggle state (drives Monaco wordWrap option) */
   wordWrap?: boolean;
   /** Minimap toggle state (drives Monaco minimap.enabled option) */
@@ -109,11 +114,11 @@ function renderEditorContent(props: ContentRouterProps): React.ReactElement | nu
     );
   }
 
-  // When Monaco is enabled, use it for edit mode (same component, readOnly=false)
+  // When Monaco is enabled, use MonacoEditorHost — single persistent editor instance
+  // that swaps models via setModel() instead of recreating the widget on every tab switch.
   if (USE_MONACO) {
     return renderPanel(
-      <MonacoEditor
-        key={props.filePath}
+      <MonacoEditorHost
         filePath={props.filePath}
         content={props.content}
         readOnly={false}
@@ -214,11 +219,10 @@ function resolveContent(props: ContentRouterProps): React.ReactElement {
     }
   }
 
-  // Default: code view (read-only)
+  // Default: code view (read-only) — uses MonacoEditorHost for persistent instance
   if (USE_MONACO && props.filePath && props.content != null) {
     return renderPanel(
-      <MonacoEditor
-        key={props.filePath}
+      <MonacoEditorHost
         filePath={props.filePath}
         content={props.content}
         readOnly={true}

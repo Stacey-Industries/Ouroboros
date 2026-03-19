@@ -1,40 +1,79 @@
 /**
- * editorRegistry.ts — Global registry of active CodeMirror EditorView instances.
+ * editorRegistry.ts — Global registry of active editor instances.
  *
- * InlineEditor registers its EditorView here on mount and unregisters on unmount.
- * This allows other parts of the app (e.g. useIdeToolResponder) to read editor
- * content and selection state without threading refs through the component tree.
+ * Tracks both CodeMirror (EditorView) and Monaco (IStandaloneCodeEditor)
+ * instances. Allows other parts of the app (e.g. useIdeToolResponder via
+ * IdeToolBridge) to read editor content and selection state without threading
+ * refs through the component tree.
+ *
+ * CodeMirror: InlineEditor registers on mount, unregisters on unmount.
+ * Monaco: MonacoEditorHost registers on model swap, unregisters on model detach.
  */
 
 import type { EditorView } from '@codemirror/view'
+import type * as monaco from 'monaco-editor'
 
-/** Map of filePath -> EditorView instance */
-const registry = new Map<string, EditorView>()
+// ── CodeMirror registry ──────────────────────────────────────────────────────
+
+/** Map of filePath -> CodeMirror EditorView instance */
+const cmRegistry = new Map<string, EditorView>()
 
 export function registerEditor(filePath: string, view: EditorView): void {
-  registry.set(filePath, view)
+  cmRegistry.set(filePath, view)
 }
 
 export function unregisterEditor(filePath: string): void {
-  registry.delete(filePath)
+  cmRegistry.delete(filePath)
 }
+
+// ── Monaco registry ──────────────────────────────────────────────────────────
+
+/** Map of filePath -> Monaco IStandaloneCodeEditor instance */
+const monacoRegistry = new Map<string, monaco.editor.IStandaloneCodeEditor>()
+
+export function registerMonacoEditor(
+  filePath: string,
+  editor: monaco.editor.IStandaloneCodeEditor,
+): void {
+  monacoRegistry.set(filePath, editor)
+}
+
+export function unregisterMonacoEditor(filePath: string): void {
+  monacoRegistry.delete(filePath)
+}
+
+// ── Unified content access ───────────────────────────────────────────────────
 
 /**
  * Get the current document content for a file path.
- * Returns null if the file is not open in an editor.
+ * Checks CodeMirror registry first, then Monaco registry.
+ * Returns null if the file is not open in any editor.
  */
 export function getEditorContent(filePath?: string): string | null {
-  let view: EditorView | undefined
-
+  // Try CodeMirror first
   if (filePath) {
-    view = registry.get(filePath)
-  } else {
-    const first = registry.values().next()
-    view = first.done ? undefined : first.value
+    const cmView = cmRegistry.get(filePath)
+    if (cmView) return cmView.state.doc.toString()
+
+    const monacoEditor = monacoRegistry.get(filePath)
+    if (monacoEditor) {
+      const model = monacoEditor.getModel()
+      return model ? model.getValue() : null
+    }
+    return null
   }
 
-  if (!view) return null
-  return view.state.doc.toString()
+  // No filePath — return first available
+  const firstCm = cmRegistry.values().next()
+  if (!firstCm.done) return firstCm.value.state.doc.toString()
+
+  const firstMonaco = monacoRegistry.values().next()
+  if (!firstMonaco.done) {
+    const model = firstMonaco.value.getModel()
+    return model ? model.getValue() : null
+  }
+
+  return null
 }
 
 /**
@@ -49,21 +88,35 @@ export function getEditorSelection(filePath?: string): {
   endLine?: number
 } | null {
   if (filePath) {
-    const view = registry.get(filePath)
-    if (!view) return null
-    return extractSelection(view, filePath)
+    // Try CodeMirror
+    const cmView = cmRegistry.get(filePath)
+    if (cmView) return extractCmSelection(cmView, filePath)
+
+    // Try Monaco
+    const monacoEditor = monacoRegistry.get(filePath)
+    if (monacoEditor) return extractMonacoSelection(monacoEditor, filePath)
+
+    return null
   }
 
-  // Search all editors for a non-empty selection
-  for (const [path, view] of registry) {
-    const sel = extractSelection(view, path)
+  // Search all CodeMirror editors for a non-empty selection
+  for (const [path, view] of cmRegistry) {
+    const sel = extractCmSelection(view, path)
+    if (sel) return sel
+  }
+
+  // Search all Monaco editors for a non-empty selection
+  for (const [path, editor] of monacoRegistry) {
+    const sel = extractMonacoSelection(editor, path)
     if (sel) return sel
   }
 
   return null
 }
 
-function extractSelection(
+// ── CodeMirror selection extraction ──────────────────────────────────────────
+
+function extractCmSelection(
   view: EditorView,
   filePath: string
 ): { text: string; filePath: string; startLine: number; endLine: number } | null {
@@ -75,4 +128,27 @@ function extractSelection(
   const endLine = view.state.doc.lineAt(to).number
 
   return { text, filePath, startLine, endLine }
+}
+
+// ── Monaco selection extraction ──────────────────────────────────────────────
+
+function extractMonacoSelection(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  filePath: string
+): { text: string; filePath: string; startLine: number; endLine: number } | null {
+  const selection = editor.getSelection()
+  if (!selection || selection.isEmpty()) return null
+
+  const model = editor.getModel()
+  if (!model) return null
+
+  const text = model.getValueInRange(selection)
+  if (!text) return null
+
+  return {
+    text,
+    filePath,
+    startLine: selection.startLineNumber,
+    endLine: selection.endLineNumber,
+  }
 }

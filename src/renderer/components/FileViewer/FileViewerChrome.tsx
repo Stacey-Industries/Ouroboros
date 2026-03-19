@@ -1,15 +1,16 @@
-import React, { memo, useCallback } from 'react';
 import type { Ref } from 'react';
+import React, { memo, useCallback } from 'react';
+
+import type { CodeViewProps } from './CodeView';
+import type { CodeRow } from './codeViewTypes';
 import { ContentRouter } from './ContentRouter';
 import { DirtyBanner } from './DirtyBanner';
+import type { FileViewerProps } from './FileViewer';
 import { FileViewerToolbar } from './FileViewerToolbar';
 import { StatusBar } from './StatusBar';
 import { SymbolOutline } from './SymbolOutline';
-import { ViewModeBar } from './ViewModeBar';
-import type { CodeRow } from './codeViewTypes';
-import type { CodeViewProps } from './CodeView';
-import type { FileViewerProps } from './FileViewer';
 import type { FileViewerState } from './useFileViewerState';
+import { ViewModeBar } from './ViewModeBar';
 
 const FOLD_GUTTER_WIDTH = 16;
 const DIFF_GUTTER_WIDTH = 6;
@@ -153,6 +154,7 @@ interface ChromeBodyProps {
   originalContent?: string | null;
   onSave?: (content: string) => void;
   onContentChange?: (content: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   codeViewProps: Omit<CodeViewProps, 'scrollRef' | 'codeRef'>;
   s: FileViewerState;
 }
@@ -164,6 +166,7 @@ function ChromeBody({
   originalContent,
   onSave,
   onContentChange,
+  onDirtyChange,
   codeViewProps,
   s,
 }: ChromeBodyProps): React.ReactElement {
@@ -180,6 +183,7 @@ function ChromeBody({
         projectRoot={projectRoot}
         onSave={onSave}
         onContentChange={onContentChange}
+        onDirtyChange={onDirtyChange}
         showHistory={s.showHistory}
         isMarkdown={s.isMarkdown}
         hasDiff={s.hasDiff}
