@@ -8,7 +8,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron'
 
-import type { AppConfig,AppTheme, ElectronAPI, FileChangeEvent, HookPayload } from '../renderer/types/electron'
+import type { AppConfig, AppTheme, ElectronAPI, FileChangeEvent, HookPayload } from '../renderer/types/electron'
 import { supplementalApis } from './preloadSupplementalApis'
 
 // â”€â”€â”€ PTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -16,6 +16,7 @@ import { supplementalApis } from './preloadSupplementalApis'
 const ptyAPI: ElectronAPI['pty'] = {
   spawn: (id, options) => ipcRenderer.invoke('pty:spawn', id, options),
   spawnClaude: (id, options) => ipcRenderer.invoke('pty:spawnClaude', id, options),
+  spawnCodex: (id, options) => ipcRenderer.invoke('pty:spawnCodex', id, options),
   write: (id, data) => ipcRenderer.invoke('pty:write', id, data),
   resize: (id, cols, rows) => ipcRenderer.invoke('pty:resize', id, cols, rows),
   kill: (id) => ipcRenderer.invoke('pty:kill', id),
@@ -48,6 +49,10 @@ const ptyAPI: ElectronAPI['pty'] = {
     ipcRenderer.on(channel, handler)
     return () => ipcRenderer.removeListener(channel, handler)
   }
+}
+
+const codexAPI: ElectronAPI['codex'] = {
+  listModels: () => ipcRenderer.invoke('codex:listModels'),
 }
 
 // â”€â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -129,6 +134,8 @@ const appAPI: ElectronAPI['app'] = {
 
   notify: (options) => ipcRenderer.invoke('app:notify', options),
 
+  rebuildAndRestart: () => ipcRenderer.invoke('app:rebuildAndRestart'),
+
   onMenuEvent: (callback) => {
     const events = [
       'menu:open-folder',
@@ -203,6 +210,13 @@ const gitAPI: ElectronAPI['git'] = {
   dirtyCount: (root) => ipcRenderer.invoke('git:dirtyCount', root),
 }
 
+// ——— Providers ———————————————————————————————————————————————————————
+
+const providersAPI: ElectronAPI['providers'] = {
+  list: () => ipcRenderer.invoke('providers:list'),
+  getSlots: () => ipcRenderer.invoke('providers:getSlots'),
+}
+
 const electronAPI: ElectronAPI = {
   pty: ptyAPI,
   config: configAPI,
@@ -212,6 +226,8 @@ const electronAPI: ElectronAPI = {
   shell: shellAPI,
   theme: themeAPI,
   git: gitAPI,
+  providers: providersAPI,
+  codex: codexAPI,
   ...supplementalApis,
 }
 

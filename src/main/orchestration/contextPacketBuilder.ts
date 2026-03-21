@@ -261,15 +261,15 @@ export async function buildContextPacket(options: {
     budget,
   }
 
-  const { getContextLayerController } = await import('../contextLayer/contextLayerController')
-  const layerController = getContextLayerController()
-  if (layerController) {
-    try {
+  try {
+    const { getContextLayerController } = await import('../contextLayer/contextLayerController')
+    const layerController = getContextLayerController()
+    if (layerController) {
       const enriched = await layerController.enrichPacket(packet, extractGoalKeywords(options.request.goal), options.repoSnapshot)
       packet = enriched.packet
-    } catch {
-      // Context layer enrichment is optional — continue with unenriched packet
     }
+  } catch {
+    // Context layer enrichment is optional — unavailable in worker threads
   }
 
   const result: ContextPacketBuildResult = { selection, packet }

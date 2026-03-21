@@ -346,9 +346,20 @@ export class ThreadStoreSqliteRuntime {
   }
 
   private upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
+    // IMPORTANT: Use INSERT ... ON CONFLICT DO UPDATE instead of INSERT OR REPLACE.
+    // INSERT OR REPLACE is implemented as DELETE + INSERT in SQLite, which triggers
+    // ON DELETE CASCADE on the messages table and silently wipes all messages.
     db.prepare(
-      `INSERT OR REPLACE INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         workspaceRoot = excluded.workspaceRoot,
+         createdAt = excluded.createdAt,
+         updatedAt = excluded.updatedAt,
+         title = excluded.title,
+         status = excluded.status,
+         latestOrchestration = excluded.latestOrchestration,
+         branchInfo = excluded.branchInfo`,
     ).run(
       thread.id,
       thread.workspaceRoot,

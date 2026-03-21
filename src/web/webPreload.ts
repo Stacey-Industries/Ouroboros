@@ -254,6 +254,7 @@ function desktopOnlyNoop() {
 const ptyAPI = {
   spawn: (id: string, options: any) => transport.invoke('pty:spawn', id, options),
   spawnClaude: (id: string, options: any) => transport.invoke('pty:spawnClaude', id, options),
+  spawnCodex: (id: string, options: any) => transport.invoke('pty:spawnCodex', id, options),
   write: (id: string, data: string) => transport.invoke('pty:write', id, data),
   resize: (id: string, cols: number, rows: number) =>
     transport.invoke('pty:resize', id, cols, rows),
@@ -271,6 +272,10 @@ const ptyAPI = {
   ) => transport.on(`pty:exit:${id}`, callback),
   onRecordingState: (id: string, callback: (state: { recording: boolean }) => void) =>
     transport.on(`pty:recordingState:${id}`, callback),
+}
+
+const codexAPI = {
+  listModels: () => transport.invoke('codex:listModels'),
 }
 
 // ─── Config API ──────────────────────────────────────────────────────────────
@@ -344,6 +349,8 @@ const appAPI = {
   setTitleBarOverlay: desktopOnlyNoop(),
 
   notify: (options: any) => transport.invoke('app:notify', options),
+
+  rebuildWeb: () => transport.invoke('app:rebuildWeb'),
 
   onMenuEvent: (callback: (event: string) => void) => {
     const events = [
@@ -719,6 +726,7 @@ const electronAPI = {
   context: contextAPI,
   ideTools: ideToolsAPI,
   codemode: codemodeAPI,
+  codex: codexAPI,
   agentChat: agentChatAPI,
   orchestration: orchestrationAPI,
   contextLayer: contextLayerAPI,

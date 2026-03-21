@@ -1,12 +1,14 @@
 /**
  * graphController.ts — Main controller for the internal codebase graph engine.
  * Mirrors 14 tools from the codebase-memory MCP server, built natively for the IDE.
+ *
+ * Heavy indexing (tree-sitter WASM) runs in a worker_threads Worker so the
+ * Electron main-process event loop stays responsive.
  */
 
 import path from 'path';
+import { Worker } from 'worker_threads';
 
-import { indexAllFiles, reindexChangedPaths, TreeCache } from './graphIndexing';
-import { initTreeSitter } from './graphParser';
 import { GraphQueryEngine } from './graphQuery';
 import { GraphStore } from './graphStore';
 import type {
@@ -14,11 +16,14 @@ import type {
   CallPathResult,
   ChangeDetectionResult,
   CodeSnippetResult,
+  GraphEdge,
+  GraphNode,
   GraphSchema,
   GraphToolContext,
   IndexStatus,
   SearchResult,
 } from './graphTypes';
+import type { WorkerResponse } from './graphWorkerTypes';
 
 export class GraphController {
   private store: GraphStore;
@@ -30,9 +35,11 @@ export class GraphController {
   private initialized = false;
   private pendingChanges: string[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private treeCache = new TreeCache();
   private indexingInProgress = false;
   private pendingReindex: string[] | null = null;
+  private worker: Worker | null = null;
+  private initResolve: (() => void) | null = null;
+  private initReject: ((err: Error) => void) | null = null;
 
   constructor(rootPath: string) {
     this.rootPath = rootPath;
@@ -42,31 +49,22 @@ export class GraphController {
   }
 
   async initialize(): Promise<void> {
-    try {
-      await initTreeSitter();
-      console.log('[codebase-graph] tree-sitter WASM runtime initialized');
-    } catch (err) {
-      console.warn('[codebase-graph] tree-sitter init failed, falling back to regex:', err);
-    }
-
     const loaded = await this.store.load();
     if (loaded && this.store.nodeCount() > 0) {
       this.initialized = true;
       this.indexedAt = Date.now();
+      this.spawnWorker();
       return;
     }
 
-    await this.indexRepository({
-      projectRoot: this.rootPath,
-      projectName: this.projectName,
-      incremental: false,
-    });
+    this.spawnWorker();
+    await this.requestFullIndex(false);
     this.initialized = true;
   }
 
   async dispose(): Promise<void> {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
-    this.treeCache.freeAll();
+    await this.terminateWorker();
     try {
       await this.store.save();
     } catch {
@@ -74,6 +72,8 @@ export class GraphController {
     }
     this.initialized = false;
   }
+
+  // ── Status / context ────────────────────────────────────────────
 
   getStatus(): IndexStatus {
     return {
@@ -96,7 +96,7 @@ export class GraphController {
     };
   }
 
-  // ── Event hooks ───────────────────────────────────────────────────
+  // ── Event hooks ─────────────────────────────────────────────────
 
   onSessionStart(): void {
     this.reindexChangedFiles().catch((err) => {
@@ -120,7 +120,7 @@ export class GraphController {
     }, 2000);
   }
 
-  // ── Tool 1: indexRepository ───────────────────────────────────────
+  // ── Tool 1: indexRepository ─────────────────────────────────────
 
   async indexRepository(opts: {
     projectRoot: string;
@@ -128,28 +128,21 @@ export class GraphController {
     incremental: boolean;
   }): Promise<{ success: boolean }> {
     if (this.indexingInProgress) return { success: true };
-    this.indexingInProgress = true;
-    const startTime = Date.now();
-
     try {
-      const ctx = { store: this.store, treeCache: this.treeCache, rootPath: this.rootPath };
-      await indexAllFiles(ctx, opts.projectRoot, opts.incremental);
-      this.indexedAt = Date.now();
-      this.indexDurationMs = this.indexedAt - startTime;
+      await this.requestFullIndex(opts.incremental);
       return { success: true };
     } catch (err) {
       console.error('[codebase-graph] Index failed:', err);
       return { success: false };
-    } finally {
-      this.drainPendingReindex();
     }
   }
 
-  // ── Tools 2–14 (delegates) ───────────────────────────────────────
+  // ── Tools 2-14 (delegates) ─────────────────────────────────────
 
   indexStatus(): IndexStatus {
     return this.getStatus();
   }
+
   listProjects(): string[] {
     return this.initialized ? [this.rootPath] : [];
   }
@@ -164,12 +157,15 @@ export class GraphController {
   async detectChanges(): Promise<ChangeDetectionResult> {
     return this.query.detectChanges();
   }
+
   getArchitecture(aspects?: string[]): ArchitectureView {
     return this.query.getArchitecture(aspects);
   }
+
   async getCodeSnippet(symbolId: string): Promise<CodeSnippetResult | null> {
     return this.query.getCodeSnippet(symbolId);
   }
+
   getGraphSchema(): GraphSchema {
     return this.query.getGraphSchema();
   }
@@ -178,7 +174,7 @@ export class GraphController {
     let ingested = 0;
     if (!Array.isArray(traces)) return { success: false, ingested: 0 };
     for (const trace of traces) {
-      if (typeof trace === 'object' && trace !== null && 'source' in trace && 'target' in trace) {
+      if (isTraceObject(trace)) {
         const t = trace as { source: string; target: string; type?: string };
         this.store.addEdge({
           source: t.source,
@@ -189,9 +185,7 @@ export class GraphController {
       }
     }
     if (ingested > 0) {
-      this.store
-        .save()
-        .catch((e) => console.error('[codebase-graph] Save after trace ingestion:', e));
+      this.store.save().catch((e) => console.error('[codebase-graph] Save after trace:', e));
     }
     return { success: true, ingested };
   }
@@ -226,11 +220,142 @@ export class GraphController {
   searchGraph(query: string, limit?: number): SearchResult[] {
     return this.query.searchGraph(query, limit);
   }
+
   traceCallPath(fromId: string, toId: string, maxDepth?: number): CallPathResult {
     return this.query.traceCallPath(fromId, toId, maxDepth);
   }
 
-  // ── Internal ──────────────────────────────────────────────────────
+  // ── Worker lifecycle ────────────────────────────────────────────
+
+  private spawnWorker(): void {
+    if (this.worker) return;
+
+    // Workers are emitted at out/main/. __dirname may be out/main/chunks/
+    // when electron-vite code-splits, so resolve from the known output root.
+    const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
+    const workerPath = path.join(outMainDir, 'graphWorker.js');
+    this.worker = new Worker(workerPath);
+
+    this.worker.on('message', (msg: WorkerResponse) => {
+      this.handleWorkerMessage(msg);
+    });
+
+    this.worker.on('error', (err) => {
+      console.error('[codebase-graph] Worker error:', err);
+      this.rejectPendingInit(err);
+    });
+
+    this.worker.on('exit', (code) => {
+      if (code !== 0) {
+        console.warn(`[codebase-graph] Worker exited with code ${code}`);
+      }
+      this.worker = null;
+    });
+  }
+
+  private async terminateWorker(): Promise<void> {
+    if (!this.worker) return;
+    try {
+      await this.worker.terminate();
+    } catch {
+      /* already exited */
+    }
+    this.worker = null;
+  }
+
+  // ── Worker message handling ─────────────────────────────────────
+
+  private handleWorkerMessage(msg: WorkerResponse): void {
+    switch (msg.type) {
+      case 'ready':
+        console.log('[codebase-graph] Worker thread ready');
+        break;
+      case 'indexComplete':
+        this.applyFullIndex(msg.nodes, msg.edges, msg.durationMs);
+        break;
+      case 'reindexComplete':
+        this.applyReindex(msg.nodes, msg.edges, msg.removedRelPaths);
+        break;
+      case 'progress':
+        this.logProgress(msg.filesProcessed, msg.totalFiles);
+        break;
+      case 'error':
+        this.handleWorkerError(msg.message, msg.requestType);
+        break;
+    }
+  }
+
+  private applyFullIndex(nodes: GraphNode[], edges: GraphEdge[], durationMs: number): void {
+    this.store.clear();
+    this.store.addBulk(nodes, edges);
+    this.indexedAt = Date.now();
+    this.indexDurationMs = durationMs;
+    this.store.save().catch((e) => console.error('[codebase-graph] Save failed:', e));
+    console.log(`[codebase-graph] Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`);
+    this.resolvePendingInit();
+    this.drainPendingReindex();
+  }
+
+  private applyReindex(nodes: GraphNode[], edges: GraphEdge[], removedRelPaths: string[]): void {
+    for (const relPath of removedRelPaths) {
+      this.store.clearFile(relPath);
+    }
+    for (const node of nodes) this.store.addNode(node);
+    this.store.replaceAllEdges(edges);
+    this.indexedAt = Date.now();
+    this.store.save().catch((e) => console.error('[codebase-graph] Save failed:', e));
+    this.drainPendingReindex();
+  }
+
+  private logProgress(processed: number, total: number): void {
+    if (processed % 50 === 0 || processed === total) {
+      console.log(`[codebase-graph] Indexed ${processed}/${total} files`);
+    }
+  }
+
+  private handleWorkerError(message: string, requestType: string): void {
+    console.error(`[codebase-graph] Worker error (${requestType}):`, message);
+    this.rejectPendingInit(new Error(message));
+    this.drainPendingReindex();
+  }
+
+  // ── Worker request helpers ──────────────────────────────────────
+
+  private requestFullIndex(incremental: boolean): Promise<void> {
+    if (this.indexingInProgress) return Promise.resolve();
+    this.indexingInProgress = true;
+
+    return new Promise<void>((resolve, reject) => {
+      this.initResolve = resolve;
+      this.initReject = reject;
+      this.worker?.postMessage({
+        type: 'indexAll',
+        projectRoot: this.rootPath,
+        projectName: this.projectName,
+        incremental,
+      });
+    });
+  }
+
+  private resolvePendingInit(): void {
+    this.indexingInProgress = false;
+    if (this.initResolve) {
+      this.initResolve();
+      this.initResolve = null;
+      this.initReject = null;
+    }
+  }
+
+  private rejectPendingInit(err: Error): void {
+    this.indexingInProgress = false;
+    if (this.initReject) {
+      this.initReject(err);
+      this.initResolve = null;
+      this.initReject = null;
+    }
+  }
+
+  // ── Incremental reindex ─────────────────────────────────────────
 
   private async reindexChangedFiles(): Promise<void> {
     if (this.indexingInProgress) {
@@ -240,15 +365,30 @@ export class GraphController {
       return;
     }
     this.indexingInProgress = true;
-    try {
-      const paths = [...new Set(this.pendingChanges)];
-      this.pendingChanges = [];
-      const ctx = { store: this.store, treeCache: this.treeCache, rootPath: this.rootPath };
-      await reindexChangedPaths(ctx, this.query, paths);
-      this.indexedAt = Date.now();
-    } finally {
-      this.drainPendingReindex();
+    const paths = [...new Set(this.pendingChanges)];
+    this.pendingChanges = [];
+
+    if (paths.length === 0) {
+      const changes = await this.query.detectChanges();
+      if (changes.changedFiles.length === 0) {
+        this.indexingInProgress = false;
+        return;
+      }
+      const fullPaths = changes.changedFiles.map((r) => path.join(this.rootPath, r));
+      this.sendReindexRequest(fullPaths);
+      return;
     }
+
+    this.sendReindexRequest(paths);
+  }
+
+  private sendReindexRequest(paths: string[]): void {
+    this.worker?.postMessage({
+      type: 'reindexFiles',
+      projectRoot: this.rootPath,
+      projectName: this.projectName,
+      paths,
+    });
   }
 
   private drainPendingReindex(): void {
@@ -262,6 +402,12 @@ export class GraphController {
       });
     }
   }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+function isTraceObject(trace: unknown): boolean {
+  return typeof trace === 'object' && trace !== null && 'source' in trace && 'target' in trace;
 }
 
 // ── Singleton ─────────────────────────────────────────────────────

@@ -2,6 +2,8 @@ import type {
   AppConfig,
   AppTheme,
   ClaudeCliSettings,
+  CodexCliSettings,
+  CodexModelOption,
   FileChangeEvent,
   HookPayload,
   IpcResult,
@@ -33,6 +35,19 @@ export interface PtyAPI {
       initialPrompt?: string
       cliOverrides?: Partial<ClaudeCliSettings>
       resumeMode?: string
+      /** Provider:model override (e.g. 'minimax:MiniMax-M2.7') */
+      providerModel?: string
+    }
+  ) => Promise<PtySpawnResult>
+  spawnCodex: (
+    id: string,
+    options?: {
+      cwd?: string
+      cols?: number
+      rows?: number
+      initialPrompt?: string
+      cliOverrides?: Partial<CodexCliSettings>
+      resumeThreadId?: string
     }
   ) => Promise<PtySpawnResult>
   write: (id: string, data: string) => Promise<IpcResult>
@@ -48,6 +63,10 @@ export interface PtyAPI {
     callback: (result: { exitCode: number | null; signal: number | null }) => void
   ) => () => void
   onRecordingState: (id: string, callback: (state: { recording: boolean }) => void) => () => void
+}
+
+export interface CodexAPI {
+  listModels: () => Promise<CodexModelOption[]>
 }
 
 export interface ConfigExportResult extends IpcResult {
@@ -143,6 +162,8 @@ export interface AppAPI {
   openExternal: (url: string) => Promise<IpcResult>
   setTitleBarOverlay: (color: string, symbolColor: string) => Promise<IpcResult>
   notify: (options: NotifyOptions) => Promise<NotifyResult>
+  rebuildAndRestart: () => Promise<IpcResult>
+  rebuildWeb: () => Promise<IpcResult>
   onMenuEvent: (callback: (event: MenuEvent) => void) => () => void
 }
 

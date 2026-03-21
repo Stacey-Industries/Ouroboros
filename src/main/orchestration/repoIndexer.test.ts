@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { filePathToUri } from '../lspHelpers'
 import { servers } from '../lspState'
 import type { LspDiagnostic, LspServerInstance } from '../lspTypes'
+import { buildLspDiagnosticsSummary } from './lspDiagnosticsProvider'
 import { buildRepoIndexSnapshot, clearRepoIndexCache } from './repoIndexer'
 
 const createdRoots: string[] = []
@@ -48,7 +49,7 @@ function registerDeterministicRepoFactsTest(): void {
       { message: 'unused import', severity: 'warning', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 6 } },
     ]))
 
-    const snapshot = await buildRepoIndexSnapshot([root], { now: 123 })
+    const snapshot = await buildRepoIndexSnapshot([root], { now: 123, diagnosticsProvider: buildLspDiagnosticsSummary })
     const rootSnapshot = snapshot.roots[0]
     const indexedEntry = rootSnapshot.files.find((file) => file.path === entryFile)
 
@@ -62,7 +63,17 @@ function registerDeterministicRepoFactsTest(): void {
     expect(indexedEntry?.imports).toEqual(['./util', 'react'])
     expect(indexedEntry?.diagnostics).toEqual({ errors: 1, warnings: 1, infos: 0, hints: 0, total: 2 })
     expect(snapshot.repoFacts.diagnostics).toEqual({
-      files: [{ filePath: entryFile, errors: 1, warnings: 1, infos: 0, hints: 0 }],
+      files: [{
+        filePath: entryFile,
+        errors: 1,
+        warnings: 1,
+        infos: 0,
+        hints: 0,
+        messages: [
+          { severity: 'error', line: 1, character: 0, message: 'broken type' },
+          { severity: 'warning', line: 2, character: 0, message: 'unused import' },
+        ],
+      }],
       totalErrors: 1,
       totalWarnings: 1,
       totalInfos: 0,

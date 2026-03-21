@@ -6,6 +6,7 @@ import path from 'path'
 
 import type { ImageAttachment } from '../../agentChat/types'
 import { type ClaudeCliSettings,getConfigValue } from '../../config'
+import { resolveModelEnv } from '../../providers'
 import { type AgentPtyResult,killPty, spawnAgentPty } from '../../pty'
 import type { AgentBridgeHandle } from '../../ptyAgentBridge'
 import { getModelBudgets } from '../contextPacketBuilderSupport'
@@ -24,6 +25,8 @@ import type { StreamJsonEvent, StreamJsonProcessHandle, StreamJsonResultEvent, S
 
 /** Track active stream-json processes for cancellation. */
 const activeProcesses = new Map<string, StreamJsonProcessHandle>()
+/** Tasks that were cancelled by the user — suppresses error diagnostics in the exit handler. */
+const cancelledTasks = new Set<string>()
 
 /**
  * Build a user-visible diagnostic when the agent stopped for a reason other
@@ -566,6 +569,8 @@ function _tryLaunchPtyBacked(args: {
   resumeSessionId?: string
   continueSession?: boolean
   effort?: string
+  /** Extra env vars for provider routing (overrides slot-based env in PTY). */
+  providerEnv?: Record<string, string>
 }): { ptySessionId: string; result: Promise<StreamJsonResultEvent | null> } | null {
   const win = args.context.window ?? getActiveBrowserWindow()
   if (!win) return null
@@ -583,6 +588,7 @@ function _tryLaunchPtyBacked(args: {
     resumeSessionId: args.resumeSessionId || undefined,
     continueSession: args.continueSession || undefined,
     effort: args.effort || undefined,
+    env: args.providerEnv,
     onEvent: handler,
   })
 
@@ -614,6 +620,8 @@ function launchHeadless(args: {
   resumeSessionId?: string
   continueSession?: boolean
   effort?: string
+  /** Extra env vars (e.g. provider routing: ANTHROPIC_BASE_URL, ANTHROPIC_MODEL). */
+  providerEnv?: Record<string, string>
   /** Pre-built event handler — when provided, skips internal buildEventHandler call. */
   eventHandler?: (event: StreamJsonEvent) => void
 }): { result: Promise<StreamJsonResultEvent> } {
@@ -628,6 +636,7 @@ function launchHeadless(args: {
     resumeSessionId: args.resumeSessionId || undefined,
     continueSession: args.continueSession || undefined,
     effort: args.effort || undefined,
+    env: args.providerEnv,
     onEvent: handler,
   })
 
@@ -649,7 +658,13 @@ function launchClaude(
   const effort = context.request.effort || settings.effort || undefined
   const resolvedPermissionMode = context.request.permissionMode || settings.permissionMode || 'default'
 
-  console.log('[claude-code] launchClaude called:', { cwd, model: resolvedModel, effort, permissionMode: resolvedPermissionMode, resumeSessionId: resumeSessionId || context.request.resumeFromSessionId })
+  // Resolve provider env when model uses 'providerId:modelId' format.
+  // Provider env sets ANTHROPIC_MODEL (+ base URL, auth) so we must NOT
+  // also pass --model (which would conflict). Plain model strings go via --model as before.
+  const providerEnv = resolvedModel?.includes(':') ? resolveModelEnv(resolvedModel) : {}
+  const isProviderRouted = Object.keys(providerEnv).length > 0
+
+  console.log('[claude-code] launchClaude called:', { cwd, model: resolvedModel, isProviderRouted, effort, permissionMode: resolvedPermissionMode, resumeSessionId: resumeSessionId || context.request.resumeFromSessionId })
 
   // Emit initial queued event
   sink.emit({
@@ -668,9 +683,10 @@ function launchClaude(
   // Build an effective settings object that applies per-request overrides.
   // This ensures the CLI --model and --permission-mode flags reflect what
   // the user picked in the chat controls, not just the global settings.
+  // When provider-routed, model goes via ANTHROPIC_MODEL env var, not --model flag.
   const effectiveSettings: ClaudeCliSettings = {
     ...settings,
-    model: resolvedModel ?? '',
+    model: isProviderRouted ? '' : (resolvedModel ?? ''),
     permissionMode: resolvedPermissionMode,
   }
 
@@ -746,7 +762,7 @@ function launchClaude(
       return null
     }
     const prompt = buildInitialPrompt(context, goalSuffix, Boolean(effectiveResumeSessionId), resolvedModel ?? '')
-    const launchArgs = { context, prompt, cwd, settings: effectiveSettings, sessionRef, sink, resumeSessionId: effectiveResumeSessionId, continueSession, effort }
+    const launchArgs = { context, prompt, cwd, settings: effectiveSettings, sessionRef, sink, resumeSessionId: effectiveResumeSessionId, continueSession, effort, providerEnv: isProviderRouted ? providerEnv : undefined }
     const headless = launchHeadless({ ...launchArgs, eventHandler })
     // Replace placeholder with real handle (launchHeadless already set it, but ensure consistency)
     return headless.result
@@ -823,12 +839,28 @@ function launchClaude(
     },
     (error) => {
       const errorMsg = error instanceof Error ? error.message : String(error)
-      console.error('[claude-code] process failed:', errorMsg)
-      if (error instanceof Error && error.stack) console.error('[claude-code] stack:', error.stack)
+      const wasCancelled = cancelledTasks.delete(context.taskId)
       activeProcesses.delete(context.taskId)
       activeAgentPtySessions.delete(context.taskId)
       // Clean up any temp image files written for this invocation
       void cleanupTempFiles(invocationTempPaths)
+
+      if (wasCancelled) {
+        // User-initiated stop — emit 'cancelled', not 'failed'. The bridge's
+        // cancel handler will persist accumulated work and finalize the UI.
+        console.log('[claude-code] process stopped by user')
+        sink.emit({
+          provider: 'claude-code',
+          status: 'cancelled',
+          message: 'Task cancelled by user',
+          timestamp: Date.now(),
+          session: sessionRef,
+        })
+        return
+      }
+
+      console.error('[claude-code] process failed:', errorMsg)
+      if (error instanceof Error && error.stack) console.error('[claude-code] stack:', error.stack)
 
       // Emit a visible diagnostic so the user sees the failure reason in chat
       const errorDiagnostic = `\n\n---\n**Agent stopped** — process error: ${errorMsg}`
@@ -923,6 +955,7 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
     // Try headless process direct lookup (keyed by taskId)
     const handle = activeProcesses.get(targetId)
     if (handle) {
+      cancelledTasks.add(targetId)
       handle.kill()
       activeProcesses.delete(targetId)
       return
@@ -931,6 +964,7 @@ export class ClaudeCodeAdapter implements ProviderAdapter {
     // Also check by iterating (targetId may match sessionId)
     for (const [key, proc] of activeProcesses) {
       if (proc.sessionId === targetId || key === targetId) {
+        cancelledTasks.add(key)
         proc.kill()
         activeProcesses.delete(key)
         return

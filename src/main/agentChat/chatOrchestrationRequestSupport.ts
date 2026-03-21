@@ -5,6 +5,8 @@ import type {
   TaskRequestContextSelection,
   TaskRequestMetadata,
 } from '../orchestration/types'
+import type { ModelSlotAssignments } from '../config'
+import { getConfigValue } from '../config'
 import type { AgentChatThreadStore } from './threadStore'
 import { DEFAULT_THREAD_TITLE, isNonEmptyString } from './threadStoreSupport'
 import type { ResolvedAgentChatSettings } from './settingsResolver'
@@ -387,6 +389,36 @@ function buildConversationHistory(
   return kept
 }
 
+/**
+ * Check if the model changed since the last session — any model change invalidates
+ * --resume because thinking block signatures are model-specific.
+ *
+ * Priority: orchestration link model (set even when stopped early) > last assistant message model.
+ * Returns true (= don't resume) when the previous model is unknown and a session exists.
+ */
+function didModelChange(thread: AgentChatThreadRecord, currentModel: string): boolean {
+  // Best source: model stored on the orchestration link (survives early stops)
+  const linkModel = thread.latestOrchestration?.model
+  if (linkModel) return linkModel !== currentModel
+
+  // Fallback: last assistant message's model (pre-migration threads)
+  const lastAssistant = [...thread.messages].reverse().find(m => m.role === 'assistant' && m.model)
+  if (lastAssistant?.model) return lastAssistant.model !== currentModel
+
+  // No model info at all — if we have a session ID, assume it's stale (safe default)
+  return !!(thread.latestOrchestration?.claudeSessionId || thread.latestOrchestration?.codexThreadId)
+}
+
+function getResumeSessionId(
+  thread: AgentChatThreadRecord,
+  provider: TaskRequest['provider'],
+): string | undefined {
+  if (provider === 'codex') {
+    return thread.latestOrchestration?.codexThreadId
+  }
+  return thread.latestOrchestration?.claudeSessionId
+}
+
 function buildTaskRequest(args: {
   content: string
   request: AgentChatSendMessageRequest
@@ -394,21 +426,28 @@ function buildTaskRequest(args: {
   resolved: ResolvedSendOptions
   thread: AgentChatThreadRecord
 }): TaskRequest {
-  const claudeSessionId = args.thread.latestOrchestration?.claudeSessionId
+  const resumeSessionId = getResumeSessionId(args.thread, args.resolved.provider)
+  const currentModel = args.resolved.model || ''
+
+  // Don't resume a session when the model changed — thinking block signatures
+  // are model-specific and will be rejected by the API.
+  const modelChanged = didModelChange(args.thread, currentModel)
+  const canResume = resumeSessionId && !modelChanged
+
   return {
     workspaceRoots: [args.thread.workspaceRoot],
     goal: args.content,
     mode: args.resolved.mode,
     provider: args.resolved.provider,
     verificationProfile: args.resolved.verificationProfile,
-    model: args.resolved.model || undefined,
+    model: currentModel || undefined,
     effort: args.resolved.effort || undefined,
     permissionMode: args.resolved.permissionMode !== 'default' ? args.resolved.permissionMode : undefined,
     contextSelection: normalizeContextSelection(args.request.contextSelection),
-    conversationHistory: claudeSessionId
+    conversationHistory: canResume
       ? []
-      : buildConversationHistory(args.thread.messages, args.content, args.resolved.model),
-    resumeFromSessionId: claudeSessionId || undefined,
+      : buildConversationHistory(args.thread.messages, args.content, currentModel),
+    resumeFromSessionId: canResume ? resumeSessionId : undefined,
     goalAttachments: args.request.attachments?.length ? args.request.attachments : undefined,
     metadata: {
       origin: mapSourceToOrigin(args.request.metadata?.source),
@@ -444,11 +483,16 @@ export function resolveSendOptions(
   settings: ResolvedAgentChatSettings,
   request: AgentChatSendMessageRequest,
 ): ResolvedSendOptions {
+  // Use agentChat model slot as fallback when no per-message override is given.
+  // This lets users set a default provider:model for all agent chat sessions.
+  const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined
+  const slotDefault = slots?.agentChat || ''
+
   return {
     provider: request.overrides?.provider ?? settings.defaultProvider,
     verificationProfile: request.overrides?.verificationProfile ?? settings.defaultVerificationProfile,
     mode: request.overrides?.mode ?? DEFAULT_MODE,
-    model: request.overrides?.model || settings.claudeCliSettings.model,
+    model: request.overrides?.model || slotDefault || settings.claudeCliSettings.model,
     effort: request.overrides?.effort || DEFAULT_CHAT_EFFORT,
     permissionMode: request.overrides?.permissionMode || settings.claudeCliSettings.permissionMode || 'default',
   }

@@ -9,6 +9,9 @@ import { BrowserWindow, screen, session } from 'electron'
 import path from 'path'
 import { getConfigValue, setConfigValue } from './config'
 import type { WindowBounds } from './config'
+
+/** Resolve the `out/main/` directory. electron-vite may code-split into `out/main/chunks/`. */
+const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname
 import { registerIpcHandlers } from './ipc'
 import { killPtySessionsForWindow } from './pty'
 
@@ -167,7 +170,7 @@ function loadWindowContent(win: BrowserWindow): void {
     return
   }
 
-  win.loadFile(path.join(__dirname, '../renderer/index.html'))
+  win.loadFile(path.join(outMainDir, '../renderer/index.html'))
 }
 
 function openDevToolsInDevelopment(win: BrowserWindow): void {
@@ -272,7 +275,7 @@ function ensureCSP(): void {
             "font-src 'self' data:",
             "img-src 'self' data: blob:",
             "connect-src 'self' ws://localhost:* http://localhost:*",
-            "worker-src blob:"
+            "worker-src 'self' blob:"
           ].join('; ')
         ]
       }
@@ -289,7 +292,7 @@ function ensureCSP(): void {
 export function createWindow(projectRoot?: string): BrowserWindow {
   ensureCSP()
   const state = getWindowCreationState()
-  const preloadPath = path.join(__dirname, '../preload/index.js')
+  const preloadPath = path.join(outMainDir, '../preload/index.js')
   const win = createBrowserWindow(preloadPath, state)
   const winId = registerManagedWindow(win, projectRoot)
 
@@ -323,11 +326,10 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
   if (managed) {
     managed.projectRoot = projectRoot
   }
-  // Eagerly warm the repo snapshot cache so context is ready before
-  // the user's first chat message.
+  // Start context refresh for the new project root (timer may already be running for another root).
   try {
-    const { warmSnapshotCache } = require('./ipc-handlers/agentChat')
-    warmSnapshotCache([projectRoot])
+    const { startContextRefreshTimer } = require('./ipc-handlers/agentChat')
+    startContextRefreshTimer([projectRoot])
   } catch { /* agentChat module may not be loaded yet */ }
 }
 

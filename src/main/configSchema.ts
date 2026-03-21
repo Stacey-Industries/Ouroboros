@@ -103,7 +103,9 @@ export const schema: any = {
         cwd: { type: 'string' },
         title: { type: 'string' },
         isClaude: { type: 'boolean' },
-        claudeSessionId: { type: 'string' }
+        isCodex: { type: 'boolean' },
+        claudeSessionId: { type: 'string' },
+        codexThreadId: { type: 'string' }
       }
     },
     default: []
@@ -144,7 +146,7 @@ export const schema: any = {
     properties: {
       permissionMode: { type: 'string', default: 'default' },
       model: { type: 'string', default: '' },
-      effort: { type: 'string', default: '' },
+      effort: { type: 'string', default: 'medium' },
       appendSystemPrompt: { type: 'string', default: '' },
       verbose: { type: 'boolean', default: false },
       maxBudgetUsd: { type: 'number', default: 0 },
@@ -158,7 +160,7 @@ export const schema: any = {
     default: {
       permissionMode: 'default',
       model: '',
-      effort: '',
+      effort: 'medium',
       appendSystemPrompt: '',
       verbose: false,
       maxBudgetUsd: 0,
@@ -168,6 +170,31 @@ export const schema: any = {
       chrome: false,
       worktree: false,
       dangerouslySkipPermissions: false
+    }
+  },
+  codexCliSettings: {
+    type: 'object',
+    properties: {
+      model: { type: 'string', default: '' },
+      reasoningEffort: { type: 'string', default: 'medium' },
+      sandbox: { type: 'string', default: 'workspace-write' },
+      approvalPolicy: { type: 'string', default: 'on-request' },
+      profile: { type: 'string', default: '' },
+      addDirs: { type: 'array', items: { type: 'string' }, default: [] },
+      search: { type: 'boolean', default: false },
+      skipGitRepoCheck: { type: 'boolean', default: false },
+      dangerouslyBypassApprovalsAndSandbox: { type: 'boolean', default: false }
+    },
+    default: {
+      model: '',
+      reasoningEffort: 'medium',
+      sandbox: 'workspace-write',
+      approvalPolicy: 'on-request',
+      profile: '',
+      addDirs: [],
+      search: false,
+      skipGitRepoCheck: false,
+      dangerouslyBypassApprovalsAndSandbox: false
     }
   },
   notifications: {

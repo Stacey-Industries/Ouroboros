@@ -49,7 +49,10 @@ export function buildAgentChatOrchestrationLink(
     taskId: session.taskId,
     sessionId: session.id,
     attemptId: session.attempts.at(-1)?.id ?? session.latestResult?.attemptId,
-    claudeSessionId: session.providerSession?.sessionId,
+    provider: session.providerSession?.provider ?? session.request.provider,
+    claudeSessionId: session.providerSession?.provider === 'claude-code' ? session.providerSession.sessionId : undefined,
+    codexThreadId: session.providerSession?.provider === 'codex' ? session.providerSession.sessionId : undefined,
+    model: session.request.model,
     linkedTerminalId: session.providerSession?.linkedTerminalId,
   }
 }

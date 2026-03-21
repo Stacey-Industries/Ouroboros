@@ -83,11 +83,20 @@ async function syncThreadMetadata(args: {
   // fire before the adapter has set these on providerSession.
   if (link) {
     const existing = args.thread.latestOrchestration
+    if (!link.provider && existing?.provider) {
+      link.provider = existing.provider
+    }
     if (!link.linkedTerminalId && existing?.linkedTerminalId) {
       link.linkedTerminalId = existing.linkedTerminalId
     }
     if (!link.claudeSessionId && existing?.claudeSessionId) {
       link.claudeSessionId = existing.claudeSessionId
+    }
+    if (!link.codexThreadId && existing?.codexThreadId) {
+      link.codexThreadId = existing.codexThreadId
+    }
+    if (!link.model && existing?.model) {
+      link.model = existing.model
     }
   }
 

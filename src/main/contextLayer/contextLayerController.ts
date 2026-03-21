@@ -17,6 +17,7 @@ import type {
   ModuleContextSummary,
   RepoMapSummary,
 } from '../orchestration/types'
+import { buildLspDiagnosticsSummary } from '../orchestration/lspDiagnosticsProvider'
 import {
   buildRepoIndexSnapshot,
   type IndexedRepoFile,
@@ -777,7 +778,9 @@ class ContextLayerControllerImpl implements ContextLayerController {
     // Load path aliases before building the import graph so aliased imports resolve
     await this.loadPathAliases()
 
-    const snapshot = await buildRepoIndexSnapshot(this.workspaceRoots)
+    const snapshot = await buildRepoIndexSnapshot(this.workspaceRoots, {
+      diagnosticsProvider: buildLspDiagnosticsSummary,
+    })
 
     const changedFiles = new Set<string>()
     for (const root of snapshot.roots) {
@@ -1126,7 +1129,9 @@ class ContextLayerControllerImpl implements ContextLayerController {
     if (this.dirtyModuleIds.size === 0) return
 
     const startMs = Date.now()
-    const snapshot = existingSnapshot ?? await buildRepoIndexSnapshot(packet.repoFacts.workspaceRoots)
+    const snapshot = existingSnapshot ?? await buildRepoIndexSnapshot(packet.repoFacts.workspaceRoots, {
+      diagnosticsProvider: buildLspDiagnosticsSummary,
+    })
 
     // Skip refresh if repo hasn't actually changed
     if (snapshot.cache.key === this.lastSnapshotCacheKey) {

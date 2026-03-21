@@ -40,8 +40,16 @@ export interface AgentChatOrchestrationLink {
   taskId?: string
   sessionId?: string
   attemptId?: string
+  /** Provider that executed this session. */
+  provider?: OrchestrationProvider
   /** Claude Code CLI session UUID (from stream-json init event, used for --resume) */
   claudeSessionId?: string
+  /** Codex thread UUID (from thread.started, used for `codex resume <id>`) */
+  codexThreadId?: string
+  /** Model string used for this session (e.g. 'minimax:MiniMax-M2.7', 'claude-opus-4-6').
+   *  Used to detect model changes between turns — a model change invalidates --resume
+   *  because thinking block signatures are model-specific. */
+  model?: string
   /** PTY session ID backing this chat session (for chat-terminal unification) */
   linkedTerminalId?: string
   /** Git HEAD hash captured before the agent turn started — used for revert. */
@@ -297,7 +305,9 @@ export interface AgentChatDeleteResult extends OperationResult {
 }
 
 export interface AgentChatLinkedTerminalResult extends OperationResult {
+  provider?: OrchestrationProvider | null
   claudeSessionId?: string | null
+  codexThreadId?: string | null
   linkedTerminalId?: string | null
 }
 

@@ -8,7 +8,10 @@
 
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
 
+import { listCodexModels } from './codex'
 import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager'
+import { getConfigValue } from './config'
+import { getAllProviders } from './providers'
 import {
   cleanupAgentChatHandlers,
 cleanupConfigWatcher,
@@ -78,8 +81,9 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
     try {
       const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
       const { buildRepoFacts } = await import('./orchestration/repoIndexer')
+      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider')
       const req = request as { workspaceRoots: string[] }
-      const repoFacts = await buildRepoFacts(req.workspaceRoots)
+      const repoFacts = await buildRepoFacts(req.workspaceRoots, { diagnosticsProvider: buildLspDiagnosticsSummary })
       return buildContextPacket({ request: req, repoFacts })
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
@@ -90,8 +94,9 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
     try {
       const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
       const { buildRepoFacts } = await import('./orchestration/repoIndexer')
+      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider')
       const req = request as { workspaceRoots: string[] }
-      const repoFacts = await buildRepoFacts(req.workspaceRoots)
+      const repoFacts = await buildRepoFacts(req.workspaceRoots, { diagnosticsProvider: buildLspDiagnosticsSummary })
       return buildContextPacket({ request: req, repoFacts })
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
@@ -120,6 +125,24 @@ function registerCodeModeHandlers(channels: string[]): void {
   channels.push('codemode:enable', 'codemode:disable', 'codemode:status')
 }
 
+function registerProviderHandlers(channels: string[]): void {
+  ipcMain.handle('providers:list', () => {
+    const providers = getAllProviders()
+    return providers.map(p => ({
+      ...p,
+      apiKey: p.apiKey ? '\u2022\u2022\u2022\u2022' + p.apiKey.slice(-4) : '',
+    }))
+  })
+
+  ipcMain.handle('providers:getSlots', () => {
+    return getConfigValue('modelSlots')
+  })
+
+  ipcMain.handle('codex:listModels', () => listCodexModels())
+
+  channels.push('providers:list', 'providers:getSlots', 'codex:listModels')
+}
+
 let handlersRegistered = false
 let allChannels: string[] = []
 
@@ -137,6 +160,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   handlersRegistered = true
   allChannels = registerDomainHandlers(win)
   registerCodeModeHandlers(allChannels)
+  registerProviderHandlers(allChannels)
   registerOrchestrationStubHandlers(allChannels)
   startApprovalManagerCleanup()
 

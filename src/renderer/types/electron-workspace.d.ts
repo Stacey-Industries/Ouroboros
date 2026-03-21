@@ -15,7 +15,7 @@ import type {
 import type { AgentChatAPI } from './electron-agent-chat'
 import type { ClaudeMdAPI } from './electron-claude-md'
 import type { ExtensionStoreAPI } from './electron-extension-store'
-import type { ExtensionsAPI, IpcResult } from './electron-foundation'
+import type { ExtensionsAPI, IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation'
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git'
 import type { McpStoreAPI } from './electron-mcp-store'
 import type {
@@ -32,6 +32,7 @@ import type {
   AppAPI,
   ApprovalAPI,
   ConfigAPI,
+  CodexAPI,
   FilesAPI,
   HooksAPI,
   PtyAPI,
@@ -168,6 +169,11 @@ export interface OrchestrationAPI {
   onSessionUpdate: (callback: (session: TaskSessionRecord) => void) => () => void
 }
 
+export interface ProvidersAPI {
+  list: () => Promise<ModelProvider[]>
+  getSlots: () => Promise<ModelSlotAssignments>
+}
+
 export interface ElectronAPI {
   pty: PtyAPI
   config: ConfigAPI
@@ -199,4 +205,6 @@ export interface ElectronAPI {
   orchestration: OrchestrationAPI
   contextLayer: ContextLayerAPI
   claudeMd: ClaudeMdAPI
+  providers: ProvidersAPI
+  codex: CodexAPI
 }

@@ -100,6 +100,50 @@ export const tailSchema = {
     type: 'string',
     default: ''
   },
+  webAccessPassword: {
+    type: 'string',
+    default: ''
+  },
+  modelProviders: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        baseUrl: { type: 'string' },
+        apiKey: { type: 'string' },
+        models: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              provider: { type: 'string' },
+              capabilities: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+        enabled: { type: 'boolean' },
+        builtIn: { type: 'boolean' },
+      },
+    },
+    default: [],
+  },
+  modelSlots: {
+    type: 'object',
+    properties: {
+      terminal: { type: 'string', default: '' },
+      agentChat: { type: 'string', default: '' },
+      claudeMdGeneration: { type: 'string', default: '' },
+    },
+    default: {
+      terminal: '',
+      agentChat: '',
+      claudeMdGeneration: '',
+    },
+  },
   claudeMdSettings: {
     type: 'object',
     additionalProperties: false,

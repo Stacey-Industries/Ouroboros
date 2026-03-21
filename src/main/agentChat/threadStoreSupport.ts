@@ -23,8 +23,12 @@ export function normalizeLink(
   if (isNonEmptyString(link.taskId)) normalized.taskId = link.taskId
   if (isNonEmptyString(link.sessionId)) normalized.sessionId = link.sessionId
   if (isNonEmptyString(link.attemptId)) normalized.attemptId = link.attemptId
+  if (isNonEmptyString(link.provider)) normalized.provider = link.provider
   if (isNonEmptyString(link.claudeSessionId)) normalized.claudeSessionId = link.claudeSessionId
+  if (isNonEmptyString(link.codexThreadId)) normalized.codexThreadId = link.codexThreadId
+  if (isNonEmptyString(link.model)) normalized.model = link.model
   if (isNonEmptyString(link.linkedTerminalId)) normalized.linkedTerminalId = link.linkedTerminalId
+  if (isNonEmptyString(link.preSnapshotHash)) normalized.preSnapshotHash = link.preSnapshotHash
 
   return normalized.taskId || normalized.sessionId || normalized.attemptId ? normalized : undefined
 }

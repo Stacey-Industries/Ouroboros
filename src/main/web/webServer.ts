@@ -17,10 +17,11 @@ import http from 'http'
 import { WebSocket,WebSocketServer } from 'ws'
 
 import {
+  getLoginPageHtml,
   getOrCreateWebToken,
   isRateLimited,
-  LOGIN_PAGE_HTML,
   recordFailedAttempt,
+  validateCredential,
   validateToken,
 } from './webAuth'
 import { handleJsonRpcMessage } from './webSocketBridge'
@@ -104,7 +105,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const acceptsHtml = req.headers.accept?.includes('text/html')
 
   if (acceptsHtml) {
-    res.status(401).type('html').send(LOGIN_PAGE_HTML)
+    res.status(401).type('html').send(getLoginPageHtml())
   } else {
     res.status(401).json({ error: 'Unauthorized. Provide a valid token.' })
   }
@@ -129,8 +130,46 @@ export function startWebServer(options: WebServerOptions): Promise<void> {
       })
     })
 
+    // Login endpoint (unauthenticated — must be before auth middleware)
+    app.use(express.json())
+    app.post('/api/login', (req: Request, res: Response) => {
+      const ip = req.ip || req.socket.remoteAddress || 'unknown'
+      if (isRateLimited(ip)) {
+        res.status(429).json({ success: false, error: 'Too many attempts. Try again later.' })
+        return
+      }
+
+      const { credential } = req.body as { credential?: string }
+      if (!credential || typeof credential !== 'string') {
+        res.status(400).json({ success: false, error: 'Missing credential.' })
+        return
+      }
+
+      if (!validateCredential(credential)) {
+        recordFailedAttempt(ip)
+        res.status(401).json({ success: false, error: 'Invalid credentials.' })
+        return
+      }
+
+      const token = getOrCreateWebToken()
+      const maxAge = 30 * 24 * 60 * 60
+      res.setHeader('Set-Cookie', [
+        `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
+        `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
+      ])
+      res.json({ success: true })
+    })
+
     // Auth middleware — all routes below require a valid token
     app.use(authMiddleware)
+
+    // Cache-control — prevent stale HTML on mobile browsers
+    app.use((_req: Request, res: Response, next: NextFunction) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      res.setHeader('Pragma', 'no-cache')
+      res.setHeader('Expires', '0')
+      next()
+    })
 
     // Serve static renderer files if a directory is provided
     if (options.staticDir) {

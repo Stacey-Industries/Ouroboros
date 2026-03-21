@@ -6,6 +6,9 @@
  */
 
 import { type BrowserWindow, ipcMain } from 'electron'
+import fs from 'fs/promises'
+import path from 'path'
+import { Worker } from 'worker_threads'
 
 import {
   AGENT_CHAT_EVENT_CHANNELS,
@@ -24,11 +27,11 @@ import type {
   AgentChatOrchestrationLink,
   AgentChatSendMessageRequest,
 } from '../agentChat/types'
-import { buildContextPacket } from '../orchestration/contextPacketBuilder'
 import { buildGraphSummary, formatGraphSummary, type GraphSummary } from '../orchestration/graphSummaryBuilder'
+import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
 import { createClaudeCodeAdapter } from '../orchestration/providers/claudeCodeAdapter'
+import { createCodexAdapter } from '../orchestration/providers/codexAdapter'
 import type { ProviderAdapter, ProviderProgressSink } from '../orchestration/providers/providerAdapter'
-import { buildRepoIndexSnapshot } from '../orchestration/repoIndexer'
 import type {
   ContextPacket,
   OrchestrationProvider,
@@ -61,72 +64,209 @@ interface CachedContext {
   snapshot: RepoIndexSnapshot
   graphSummary: GraphSummary
   builtAt: number
+  /** Pre-built context packet — avoids rebuilding on every createTask. */
+  cachedPacket?: ContextPacket
+  /** The model the cached packet was built for. */
+  cachedPacketModel?: string
 }
 
 const contextCache = new Map<string, CachedContext>()
-const contextBuildInFlight = new Map<string, Promise<CachedContext | null>>()
-const CONTEXT_MAX_AGE_MS = 60_000 // rebuild if older than 60s
+const contextBuildInFlight = new Set<string>()
+const CONTEXT_REFRESH_MS = 30_000  // refresh every 30s (runs in worker thread — no main-thread blocking)
 
 function cacheKey(roots: string[]): string {
   return [...roots].sort().join('|')
 }
 
-/** Trigger a background build of repo snapshot + graph summary. */
+// ── Disk persistence for context cache ────────────────────────────────
+
+function getContextCachePath(): string {
+  try {
+    const { app } = require('electron')
+    return path.join(app.getPath('userData'), 'context-cache.json')
+  } catch {
+    return ''
+  }
+}
+
+/** Save the context cache to disk (best-effort, non-blocking). */
+function persistContextCache(): void {
+  const cachePath = getContextCachePath()
+  if (!cachePath) return
+  try {
+    const entries: Array<[string, Omit<CachedContext, 'cachedPacket'> & { cachedPacket?: unknown }]> = []
+    for (const [key, entry] of contextCache) {
+      entries.push([key, { snapshot: entry.snapshot, graphSummary: entry.graphSummary, builtAt: entry.builtAt }])
+    }
+    const data = JSON.stringify(entries)
+    fs.writeFile(cachePath, data, 'utf-8').catch(() => {})
+  } catch { /* non-fatal */ }
+}
+
+/** Load persisted context cache from disk on startup. */
+export function loadPersistedContextCache(): void {
+  const cachePath = getContextCachePath()
+  if (!cachePath) return
+  try {
+    const fsSync = require('fs')
+    if (!fsSync.existsSync(cachePath)) return
+    const data = fsSync.readFileSync(cachePath, 'utf-8')
+    const entries: Array<[string, CachedContext]> = JSON.parse(data)
+    for (const [key, entry] of entries) {
+      // Mark as stale so background refresh triggers, but data is usable immediately
+      contextCache.set(key, entry)
+    }
+    console.log(`[agentChat] Loaded persisted context cache (${entries.length} entries)`)
+  } catch (err) {
+    console.warn('[agentChat] Failed to load persisted context cache:', err)
+  }
+}
+
+// ── Context worker management ─────────────────────────────────────────
+
+let contextWorker: Worker | null = null
+let workerReady = false
+
+function getWorkerPath(): string {
+  const outMainDir = __dirname.endsWith('chunks')
+    ? path.dirname(__dirname)
+    : __dirname
+  return path.join(outMainDir, 'contextWorker.js')
+}
+
+function ensureContextWorker(): Worker | null {
+  if (contextWorker) return contextWorker
+  const workerPath = getWorkerPath()
+  try {
+    contextWorker = new Worker(workerPath)
+    contextWorker.on('message', handleContextWorkerMessage)
+    contextWorker.on('error', (err) => {
+      console.warn('[agentChat] context worker error:', err)
+      contextWorker = null
+      workerReady = false
+    })
+    contextWorker.on('exit', (code) => {
+      if (code !== 0) console.warn('[agentChat] context worker exited with code', code)
+      contextWorker = null
+      workerReady = false
+    })
+    return contextWorker
+  } catch (err) {
+    console.warn('[agentChat] Failed to create context worker:', err)
+    return null
+  }
+}
+
+function handleContextWorkerMessage(msg: { type: string; id?: string; snapshot?: RepoIndexSnapshot; packet?: ContextPacket; durationMs?: number; message?: string }): void {
+  if (msg.type === 'ready') {
+    workerReady = true
+    console.log('[agentChat] context worker ready')
+    return
+  }
+  if (msg.type === 'error') {
+    console.warn('[agentChat] context worker error for', msg.id, ':', msg.message)
+    contextBuildInFlight.delete(msg.id ?? '')
+    return
+  }
+  if (msg.type === 'contextReady' && msg.id && msg.snapshot) {
+    onContextReady(msg.id, msg.snapshot, msg.packet, msg.durationMs ?? 0)
+  }
+}
+
+function onContextReady(id: string, snapshot: RepoIndexSnapshot, packet: ContextPacket | undefined, durationMs: number): void {
+  const roots = id.split('|')
+  const key = cacheKey(roots)
+
+  const entry: CachedContext = {
+    snapshot,
+    graphSummary: { hotspots: [], blastRadius: [], builtAt: 0 },
+    builtAt: Date.now(),
+    cachedPacket: packet,
+  }
+  contextCache.set(key, entry)
+  console.log('[agentChat] Context cache built via worker in', durationMs, 'ms for key:', key, packet ? '(with packet)' : '(no packet)')
+  persistContextCache()
+
+  // Attach graph summary asynchronously (needs main-thread graph controller)
+  void buildGraphSummary(roots[0])
+    .catch(() => ({ hotspots: [], blastRadius: [], builtAt: 0 }) as GraphSummary)
+    .then((gs) => {
+      entry.graphSummary = gs
+      if (entry.cachedPacket) {
+        const section = formatGraphSummary(gs)
+        if (section) entry.cachedPacket.graphSummary = section
+      }
+    })
+    .finally(() => { contextBuildInFlight.delete(key) })
+}
+
+/** Trigger a background build of repo snapshot in a worker thread. */
 export function warmSnapshotCache(roots: string[]): void {
   if (!roots.length) return
   const key = cacheKey(roots)
-  if (contextBuildInFlight.has(key)) return // already building
+  if (contextBuildInFlight.has(key)) return
 
-  const buildPromise = (async (): Promise<CachedContext | null> => {
-    try {
-      // Build repo snapshot and graph summary in parallel
-      const [snapshot, graphSummary] = await Promise.all([
-        buildRepoIndexSnapshot(roots),
-        buildGraphSummary(roots[0]).catch((err) => {
-          console.warn('[agentChat] graph summary build failed (non-fatal):', err)
-          return { hotspots: [], blastRadius: [], builtAt: 0 } as GraphSummary
-        }),
-      ])
-      const entry: CachedContext = { snapshot, graphSummary, builtAt: Date.now() }
-      contextCache.set(key, entry)
-      return entry
-    } catch (err) {
-      console.warn('[agentChat] background context build failed:', err)
-      return null
-    } finally {
-      contextBuildInFlight.delete(key)
-    }
-  })()
-  contextBuildInFlight.set(key, buildPromise)
+  const worker = ensureContextWorker()
+  if (!worker) return
+
+  // Use the cache key as the message id so onContextReady can map back
+  contextBuildInFlight.add(key)
+  worker.postMessage({ type: 'buildContext', id: key, roots })
 }
 
-/** Get cached context, or wait for an in-flight build (with timeout). */
-async function getOrBuildContext(roots: string[], timeoutMs = 15_000): Promise<CachedContext | null> {
-  const key = cacheKey(roots)
-
-  const cached = contextCache.get(key)
-  if (cached && Date.now() - cached.builtAt < CONTEXT_MAX_AGE_MS) {
-    return cached
+/** Terminate the context worker (call on app shutdown). */
+export function terminateContextWorker(): void {
+  if (contextWorker) {
+    contextWorker.terminate().catch(() => {})
+    contextWorker = null
+    workerReady = false
   }
+}
 
-  if (!contextBuildInFlight.has(key)) {
+/**
+ * Get cached context synchronously. Returns whatever is cached immediately.
+ * Does NOT trigger background refreshes — that would flood the event loop
+ * with fs.readdir callbacks during the send path, starving IPC for 15-20s.
+ * Refreshes happen only on the periodic timer (see startContextRefreshTimer).
+ */
+function getCachedContext(roots: string[]): CachedContext | null {
+  return contextCache.get(cacheKey(roots)) ?? null
+}
+
+/** Periodic background refresh — runs on a timer, never on the send path. */
+let contextRefreshTimer: ReturnType<typeof setInterval> | null = null
+
+export function startContextRefreshTimer(roots: string[]): void {
+  if (contextRefreshTimer) return
+  console.log('[agentChat] Starting context refresh timer for roots:', roots)
+  console.log('[agentChat] Current cache size:', contextCache.size, 'keys:', [...contextCache.keys()])
+  // Initial warm-up after a short delay (let startup finish first)
+  setTimeout(() => {
+    console.log('[agentChat] Initial warm-up triggered for roots:', roots)
     warmSnapshotCache(roots)
-  }
-  const pending = contextBuildInFlight.get(key)
-  if (!pending) return null
-
-  return Promise.race([
-    pending,
-    new Promise<null>((r) => setTimeout(() => r(null), timeoutMs)),
-  ])
+  }, 5_000)
+  // Then refresh every 5 min (context is supplementary — Claude Code reads files natively)
+  contextRefreshTimer = setInterval(() => warmSnapshotCache(roots), CONTEXT_REFRESH_MS)
 }
 
-/** Invalidate the cache (e.g. after git ops, file saves, Claude Code runs). */
+export function stopContextRefreshTimer(): void {
+  if (contextRefreshTimer) {
+    clearInterval(contextRefreshTimer)
+    contextRefreshTimer = null
+  }
+}
+
+/**
+ * Mark cached context as stale so the next getOrBuildContext call returns it
+ * immediately (avoiding a cold-start wait) while triggering a background
+ * refresh.  Setting builtAt to 0 makes the staleness check always true.
+ */
 export function invalidateSnapshotCache(roots?: string[]): void {
   if (roots) {
-    contextCache.delete(cacheKey(roots))
+    const entry = contextCache.get(cacheKey(roots))
+    if (entry) entry.builtAt = 0
   } else {
-    contextCache.clear()
+    for (const entry of contextCache.values()) entry.builtAt = 0
   }
 }
 
@@ -137,7 +277,7 @@ export function invalidateSnapshotCache(roots?: string[]): void {
  */
 const providerRegistry = new Map<OrchestrationProvider, () => ProviderAdapter>([
   ['claude-code', () => createClaudeCodeAdapter()],
-  // ['codex', () => createCodexAdapter()],    // future
+  ['codex', () => createCodexAdapter()],
   // ['anthropic-api', () => createAnthropicApiAdapter()],  // future
 ])
 
@@ -176,26 +316,25 @@ function createMinimalOrchestration() {
 
   return {
     async createTask(request: TaskRequest): Promise<TaskMutationResult> {
+      const ct0 = Date.now()
       const taskId = request.taskId ?? createId('task')
       const sessionId = request.sessionId ?? createId('session')
 
-      // Grab the pre-built context (warmed on startup). Includes both the
-      // repo snapshot and graph summary (hotspots + blast radius).
+      // Use only the pre-built context packet from the background cache.
+      // NEVER build a context packet on-demand here — buildContextPacket
+      // does heavy file I/O that blocks the main process event loop for
+      // 5-10 seconds, causing "not responding" hangs in the UI.
+      // Claude Code handles its own context (CLAUDE.md, project scan) natively.
       let contextPacket: ContextPacket | undefined
-      const ctx = await getOrBuildContext(request.workspaceRoots)
-      if (ctx) {
-        try {
-          const result = await buildContextPacket({ request, repoFacts: ctx.snapshot.repoFacts, model: request.model, repoSnapshot: ctx.snapshot })
-          contextPacket = result.packet
-          // Store graph summary on the context packet for injection into the prompt.
-          // (ContextPacket has no systemPrompt field — graphSummary is the correct carrier.)
-          if (contextPacket) {
-            const graphSection = formatGraphSummary(ctx.graphSummary)
-            if (graphSection) {
-              contextPacket.graphSummary = graphSection
-            }
-          }
-        } catch { /* context is best-effort */ }
+      const ct1 = Date.now()
+      const ctx = getCachedContext(request.workspaceRoots)
+      console.log('[agentChat:timing:main] createTask.getCachedContext:', Date.now() - ct1, 'ms', ctx ? 'hit' : 'miss', ctx?.cachedPacket ? 'packet-cached' : 'no-packet')
+      if (ctx?.cachedPacket) {
+        contextPacket = ctx.cachedPacket
+        if (!contextPacket.graphSummary) {
+          const graphSection = formatGraphSummary(ctx.graphSummary)
+          if (graphSection) contextPacket.graphSummary = graphSection
+        }
       }
 
       const session: TaskSessionRecord = {
@@ -207,6 +346,7 @@ function createMinimalOrchestration() {
         contextPacket,
       }
       sessions.set(taskId, session)
+      console.log('[agentChat:timing:main] createTask total:', Date.now() - ct0, 'ms')
       return { success: true, taskId, session, state: { status: 'idle', updatedAt: Date.now() } }
     },
 
@@ -270,6 +410,18 @@ function createMinimalOrchestration() {
           : defaultAdapter
         await cancelAdapter.cancelTask(session.providerSession)
       }
+
+      // Emit a 'cancelled' provider event so the bridge's cancel handler fires.
+      // Without this, the bridge never cleans up its activeSends entry and late
+      // 'completed'/'failed' events from the dying process overwrite the cancelled status.
+      providerListeners.forEach((listener) => listener({
+        provider: session.request.provider || 'claude-code',
+        status: 'cancelled',
+        message: 'Task cancelled by user',
+        timestamp: Date.now(),
+        session: session.providerSession,
+      }))
+
       const cancelled = { ...session, status: 'cancelled' as const, updatedAt: Date.now() }
       sessions.set(taskId, cancelled)
       sessionListeners.forEach((l) => l(cancelled))
@@ -396,7 +548,9 @@ export function registerAgentChatHandlers(win?: BrowserWindow): string[] {
     const link = result.thread.latestOrchestration
     return {
       success: true,
+      provider: link?.provider ?? null,
       claudeSessionId: link?.claudeSessionId ?? null,
+      codexThreadId: link?.codexThreadId ?? null,
       linkedTerminalId: link?.linkedTerminalId ?? null,
     }
   })
@@ -416,12 +570,15 @@ export function registerAgentChatHandlers(win?: BrowserWindow): string[] {
         // TaskSessionRecord is a different shape — project it properly.
         void (async () => {
           try {
-            // Find the chat thread linked to this orchestration session
-            const threads = await svc.listThreads()
-            const linkedThread = threads.threads?.find((t) =>
-              t.latestOrchestration?.sessionId === session.id ||
-              t.latestOrchestration?.taskId === session.taskId,
-            )
+            // Find the chat thread linked to this orchestration session.
+            // Use targeted bridge lookup + single-thread load instead of
+            // loading ALL threads (which blocks the main event loop via
+            // synchronous better-sqlite3 reads of every message row).
+            const threadId = svc.bridge.findThreadIdForSession(session.id)
+              ?? svc.bridge.findThreadIdForSession(session.taskId)
+            if (!threadId) return
+            const threadResult = await svc.loadThread(threadId)
+            const linkedThread = threadResult.success ? threadResult.thread : undefined
             if (!linkedThread) return
 
             // While the bridge is actively streaming for this thread, suppress

@@ -24,7 +24,9 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/main/main.ts')
+          index: resolve(__dirname, 'src/main/main.ts'),
+          graphWorker: resolve(__dirname, 'src/main/codebaseGraph/graphWorker.ts'),
+          contextWorker: resolve(__dirname, 'src/main/orchestration/contextWorker.ts'),
         }
       }
     }

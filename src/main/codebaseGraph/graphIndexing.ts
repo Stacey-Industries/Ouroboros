@@ -74,7 +74,7 @@ export class TreeCache {
 
 // ── Indexing helpers ────────────────────────────────────────────────
 
-interface IndexContext {
+export interface IndexContext {
   store: GraphStore;
   treeCache: TreeCache;
   rootPath: string;
@@ -107,13 +107,19 @@ export async function indexAllFiles(
   const allNodes: GraphNode[] = [];
   const allEdges: Array<{ source: string; target: string; type: string }> = [];
 
-  for (const filePath of files) {
+  for (let i = 0; i < files.length; i++) {
     try {
-      const { nodes, edges } = await parseSingleFile(ctx, filePath, projectRoot);
+      const { nodes, edges } = await parseSingleFile(ctx, files[i], projectRoot);
       allNodes.push(...nodes);
       allEdges.push(...edges);
     } catch (err) {
-      console.warn(`[codebase-graph] Failed to parse ${filePath}:`, err);
+      console.warn(`[codebase-graph] Failed to parse ${files[i]}:`, err);
+    }
+    // Yield the event loop every 10 files so IPC and other async work
+    // can interleave. Without this, tree-sitter WASM parsing starves
+    // the event loop for 10-20s on large repos.
+    if (i % 10 === 9) {
+      await new Promise<void>((r) => setTimeout(r, 0));
     }
   }
 

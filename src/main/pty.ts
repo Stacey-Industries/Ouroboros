@@ -2,12 +2,13 @@ import { BrowserWindow } from 'electron'
 import fs from 'fs/promises'
 import * as pty from 'node-pty'
 
-import { type ClaudeCliSettings, getConfigValue } from './config'
+import { type ClaudeCliSettings, type CodexCliSettings, getConfigValue } from './config'
 import { dispatchActivationEvent } from './extensions'
 import type { StreamJsonEvent, StreamJsonResultEvent } from './orchestration/providers/streamJsonTypes'
 import { type AgentBridgeHandle,createAgentBridge } from './ptyAgentBridge'
 import { buildClaudeArgs } from './ptyClaude'
-import { buildBaseEnv, buildShellEnvWithIntegration, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
+import { buildCodexArgs, buildCodexCommand, buildCodexLaunchArgs } from './ptyCodex'
+import { buildBaseEnv, buildProviderEnv, buildShellEnvWithIntegration, getDefaultArgs, getDefaultShell, resolveSpawnOptions } from './ptyEnv'
 import { terminalOutputBuffer } from './ptyOutputBuffer'
 import { type RecordingState,startPtyRecording as startRecording, stopPtyRecording as stopRecording } from './ptyRecording'
 import { ptyBatcher } from './web/ptyBatcher'
@@ -36,6 +37,7 @@ export interface ActiveSessionInfo {
 }
 
 export { buildClaudeArgs, buildClaudeCommand } from './ptyClaude'
+export { buildCodexArgs, buildCodexCommand } from './ptyCodex'
 export type { AsciicastEvent } from './ptyRecording'
 
 const recordings = new Map<string, RecordingState>()
@@ -424,7 +426,7 @@ export function spawnAgentPty(
       cols,
       rows,
       cwd,
-      env: buildBaseEnv(options.env),
+      env: buildBaseEnv({ ...buildProviderEnv('agentChat'), ...options.env }),
     })
 
     // Register the PTY session (attaches normal data/exit listeners for xterm)
@@ -532,12 +534,46 @@ export function spawnClaudePty(
       cols,
       rows,
       cwd,
-      env: buildBaseEnv(options.env),
+      env: buildBaseEnv({ ...buildProviderEnv('terminal'), ...options.env }),
     })
 
     registerSession({ id, proc, cwd, shell: launch.shell, win })
     if (options.initialPrompt) {
       scheduleStartupCommand(id, proc, options.initialPrompt, 300)
+    }
+    notifyTerminalCreated(id, cwd)
+    return { success: true }
+  } catch (error) {
+    cleanupSession(id)
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+export function spawnCodexPty(
+  id: string,
+  win: BrowserWindow,
+  settings: CodexCliSettings,
+  options: SpawnOptions & { initialPrompt?: string; resumeThreadId?: string } = {},
+): { success: boolean; error?: string } {
+  if (sessions.has(id)) {
+    return { success: false, error: `Session ${id} already exists` }
+  }
+
+  const { cwd, cols, rows } = resolveSpawnOptions(options)
+  const launch = buildCodexLaunchArgs(buildCodexArgs(settings), options.resumeThreadId)
+
+  try {
+    const proc = pty.spawn(launch.shell, launch.args, {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd,
+      env: buildBaseEnv(options.env),
+    })
+
+    registerSession({ id, proc, cwd, shell: launch.shell, win })
+    if (options.initialPrompt) {
+      scheduleStartupCommand(id, proc, options.initialPrompt, 500)
     }
     notifyTerminalCreated(id, cwd)
     return { success: true }

@@ -19,7 +19,7 @@ export const AGENT_CHAT_SETTINGS_DEFAULTS: AgentChatSettings = {
 export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   permissionMode: 'default',
   model: '',
-  effort: '',
+  effort: 'medium',
   appendSystemPrompt: '',
   verbose: false,
   maxBudgetUsd: 0,

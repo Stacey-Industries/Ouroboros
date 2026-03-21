@@ -2,6 +2,8 @@
  * ipc-handlers/app.ts â€” Shell, App, Theme, Titlebar IPC handlers
  */
 
+import { exec, spawn } from 'child_process'
+
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent,Notification, shell } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
@@ -157,6 +159,85 @@ function registerTitlebarHandlers(channels: string[], senderWindow: SenderWindow
   channels.push('titlebar:setOverlayColors')
 }
 
+function runBuildCommand(cwd: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const cmd = 'npm run build && npm run build:web'
+    exec(cmd, { cwd, timeout: 300000 }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(stderr || err.message))
+      } else {
+        resolve(stdout)
+      }
+    })
+  })
+}
+
+function registerRebuildHandlers(channels: string[]): void {
+  ipcMain.handle('app:rebuildAndRestart', async () => {
+    try {
+      // In dev mode: app.getAppPath() == project root (has package.json)
+      // In packaged app: app.getAppPath('exe') == dir containing the .exe (has package.json)
+      // app.getAppPath() in a packaged app returns resources/app.asar (no package.json)
+      const projectRoot = app.isPackaged
+        ? path.dirname(app.getAppPath('exe'))
+        : app.getAppPath()
+      broadcastToWebClients('app:rebuilding', { status: 'building' })
+      await runBuildCommand(projectRoot)
+      broadcastToWebClients('app:rebuilding', { status: 'restarting' })
+
+      setTimeout(() => {
+        app.relaunch()
+        app.exit(0)
+      }, 500)
+
+      return { success: true }
+    } catch (err) {
+      return toErrorResult(err)
+    }
+  })
+
+  // Web rebuild: rebuilds the web UI and restarts the dev server WITHOUT killing
+  // the Electron process. The web client listens for the 'done' status and reloads.
+  ipcMain.handle('app:rebuildWeb', async () => {
+    return new Promise((resolve) => {
+      const projectRoot = app.isPackaged
+        ? path.dirname(app.getAppPath('exe'))
+        : app.getAppPath()
+
+      broadcastToWebClients('app:rebuilding', { status: 'building' })
+
+      // Rebuild the web assets
+      exec('npm run build:web', { cwd: projectRoot, timeout: 300000 }, (err, stdout, stderr) => {
+        if (err) {
+          broadcastToWebClients('app:rebuilding', { status: 'error', message: stderr || err.message })
+          resolve(toErrorResult(new Error(stderr || err.message)))
+          return
+        }
+
+        // Restart the dev server as a detached background process
+        // so the Electron app (and its web server) keep running.
+        // shell: true routes through cmd.exe on Windows, resolving npm from PATH.
+        // stdio: 'ignore' + unref() fully detaches the child from this process.
+        broadcastToWebClients('app:rebuilding', { status: 'restarting' })
+
+        const child = spawn('npm', ['run', 'dev'], {
+          cwd: projectRoot,
+          detached: true,
+          stdio: 'ignore',
+          shell: true,
+        })
+        child.unref()
+
+        broadcastToWebClients('app:rebuilding', { status: 'done' })
+        resolve({ success: true })
+      })
+    })
+  })
+
+  channels.push('app:rebuildAndRestart')
+  channels.push('app:rebuildWeb')
+}
+
 export function registerAppHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = []
   registerShellHandlers(channels)
@@ -164,5 +245,6 @@ export function registerAppHandlers(senderWindow: SenderWindow): string[] {
   registerAppInteractionHandlers(channels)
   registerThemeHandlers(channels)
   registerTitlebarHandlers(channels, senderWindow)
+  registerRebuildHandlers(channels)
   return channels
 }

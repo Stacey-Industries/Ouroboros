@@ -1,5 +1,8 @@
 import os from 'os'
+
+import type { ModelSlotAssignments } from './config'
 import { getConfigValue } from './config'
+import { resolveModelEnv } from './providers'
 import { buildShellIntegrationEnv, detectShellType } from './shellIntegration/resolve'
 
 export interface ResolvedSpawnOptions {
@@ -108,6 +111,12 @@ export function buildShellEnvWithIntegration(
 ): { env: Record<string, string>; shellArgs: string[] | null } {
   const baseEnv = buildShellEnv(shell, extraEnv)
   return buildShellIntegrationEnv(shell, baseEnv)
+}
+
+export function buildProviderEnv(slotKey: keyof ModelSlotAssignments): Record<string, string> {
+  const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined
+  const slotValue = slots?.[slotKey] ?? ''
+  return resolveModelEnv(slotValue)
 }
 
 export { detectShellType } from './shellIntegration/resolve'

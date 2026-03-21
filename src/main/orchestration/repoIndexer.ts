@@ -5,9 +5,7 @@ import path from 'path'
 import { getStrategyForLanguage, getAllImportableExtensions } from '../contextLayer/languageStrategies'
 import { readTextSafe } from '../ipc-handlers/contextDetectors'
 import { scanProject } from '../ipc-handlers/contextScanner'
-import { uriToFilePath } from '../lspHelpers'
-import { servers } from '../lspState'
-import type { DiagnosticMessage, DiagnosticsFileSummary, DiagnosticsSummary, GitDiffFileSummary, GitDiffHunk, GitDiffSummary, RecentCommit, RecentEditsSummary, RepoFacts, WorkspaceRootFact } from './types'
+import type { DiagnosticsFileSummary, DiagnosticsSummary, GitDiffFileSummary, GitDiffHunk, GitDiffSummary, RecentCommit, RecentEditsSummary, RepoFacts, WorkspaceRootFact } from './types'
 
 const DEFAULT_MAX_RECENT_FILES = 20
 const DEFAULT_IMPORT_BYTES = 64 * 1024
@@ -150,6 +148,8 @@ export interface RepoIndexerOptions {
   workspaceStateKey?: string
   rootStateKeys?: Record<string, string>
   now?: number
+  /** Optional provider for LSP diagnostics. Omit in worker threads (no Electron). */
+  diagnosticsProvider?: (rootPath: string, indexedAt: number) => DiagnosticsSummary
 }
 
 const rootSnapshotCache = new Map<string, RootRepoIndexSnapshot>()
@@ -200,6 +200,7 @@ export async function buildRepoIndexSnapshot(workspaceRoots: string[], options: 
       indexedAt,
       maxImportBytes: options.maxImportBytes ?? DEFAULT_IMPORT_BYTES,
       maxRecentFiles: options.maxRecentFiles ?? DEFAULT_MAX_RECENT_FILES,
+      diagnosticsProvider: options.diagnosticsProvider,
     })
     rootSnapshots.push(snapshot)
     cacheRoots.push({ rootPath, key: snapshot.stateKey, hit: false })
@@ -223,14 +224,21 @@ export async function buildRepoIndexSnapshot(workspaceRoots: string[], options: 
   return snapshot
 }
 
-async function indexWorkspaceRoot(rootPath: string, options: { indexedAt: number; maxImportBytes: number; maxRecentFiles: number }): Promise<RootRepoIndexSnapshot> {
+async function indexWorkspaceRoot(rootPath: string, options: {
+  indexedAt: number
+  maxImportBytes: number
+  maxRecentFiles: number
+  diagnosticsProvider?: (rootPath: string, indexedAt: number) => DiagnosticsSummary
+}): Promise<RootRepoIndexSnapshot> {
   const [projectContext, scanResult, gitDiff, recentCommits] = await Promise.all([
     scanProject(rootPath),
     scanWorkspaceTree(rootPath, options.maxImportBytes),
     buildGitDiffSummary(rootPath, options.indexedAt),
     buildRecentCommits(rootPath),
   ])
-  const diagnostics = buildDiagnosticsSummary(rootPath, options.indexedAt)
+  const diagnostics = options.diagnosticsProvider
+    ? options.diagnosticsProvider(rootPath, options.indexedAt)
+    : emptyDiagnosticsSummary(options.indexedAt)
   const diagnosticsByPath = new Map(diagnostics.files.map((entry) => [normalizePathForCompare(entry.filePath), toIndexedDiagnostics(entry)]))
   const files = scanResult.files.map((file) => {
     const diagnosticSummary = diagnosticsByPath.get(normalizePathForCompare(file.path))
@@ -596,92 +604,13 @@ const MAX_MESSAGES_TOTAL = 50
 
 const SEVERITY_PRIORITY: Record<string, number> = { error: 0, warning: 1, info: 2, hint: 3 }
 
-function buildDiagnosticsSummary(rootPath: string, generatedAt: number): DiagnosticsSummary {
-  const byFile = new Map<string, DiagnosticsFileSummary>()
-  const messagesByFile = new Map<string, DiagnosticMessage[]>()
-
-  for (const server of servers.values()) {
-    if (normalizePathForCompare(server.root) !== normalizePathForCompare(rootPath) || server.status !== 'running') {
-      continue
-    }
-
-    for (const [uri, diagnostics] of server.diagnosticsCache.entries()) {
-      const filePath = uriToFilePath(uri)
-      if (!isPathInsideRoot(filePath, rootPath)) {
-        continue
-      }
-      const existing = byFile.get(filePath) ?? {
-        filePath,
-        errors: 0,
-        warnings: 0,
-        infos: 0,
-        hints: 0,
-      }
-      const messages = messagesByFile.get(filePath) ?? []
-      for (const diagnostic of diagnostics) {
-        if (diagnostic.severity === 'error') {
-          existing.errors += 1
-        } else if (diagnostic.severity === 'warning') {
-          existing.warnings += 1
-        } else if (diagnostic.severity === 'hint') {
-          existing.hints += 1
-        } else {
-          existing.infos += 1
-        }
-        messages.push({
-          severity: diagnostic.severity,
-          line: diagnostic.range.startLine + 1,  // Convert from 0-indexed LSP to 1-indexed
-          character: diagnostic.range.startChar,
-          message: diagnostic.message,
-        })
-      }
-      byFile.set(filePath, existing)
-      messagesByFile.set(filePath, messages)
-    }
-  }
-
-  // Sort messages per file by severity priority (errors first), then by line number,
-  // and cap at MAX_MESSAGES_PER_FILE per file.
-  for (const [filePath, messages] of messagesByFile) {
-    messages.sort(
-      (left, right) =>
-        (SEVERITY_PRIORITY[left.severity] ?? 3) - (SEVERITY_PRIORITY[right.severity] ?? 3) ||
-        left.line - right.line,
-    )
-    const fileSummary = byFile.get(filePath)
-    if (fileSummary) {
-      fileSummary.messages = messages.slice(0, MAX_MESSAGES_PER_FILE)
-    }
-  }
-
-  const files = Array.from(byFile.values()).sort((left, right) => left.filePath.localeCompare(right.filePath))
-
-  // Enforce total message cap across all files (prioritize files with errors first)
-  let totalMessages = 0
-  const filesByPriority = [...files].sort(
-    (left, right) => right.errors - left.errors || right.warnings - left.warnings || left.filePath.localeCompare(right.filePath),
-  )
-  for (const file of filesByPriority) {
-    if (!file.messages || file.messages.length === 0) {
-      continue
-    }
-    if (totalMessages >= MAX_MESSAGES_TOTAL) {
-      file.messages = []
-      continue
-    }
-    const remaining = MAX_MESSAGES_TOTAL - totalMessages
-    if (file.messages.length > remaining) {
-      file.messages = file.messages.slice(0, remaining)
-    }
-    totalMessages += file.messages.length
-  }
-
+function emptyDiagnosticsSummary(generatedAt: number): DiagnosticsSummary {
   return {
-    files,
-    totalErrors: files.reduce((total, file) => total + file.errors, 0),
-    totalWarnings: files.reduce((total, file) => total + file.warnings, 0),
-    totalInfos: files.reduce((total, file) => total + file.infos, 0),
-    totalHints: files.reduce((total, file) => total + file.hints, 0),
+    files: [],
+    totalErrors: 0,
+    totalWarnings: 0,
+    totalInfos: 0,
+    totalHints: 0,
     generatedAt,
   }
 }

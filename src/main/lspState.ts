@@ -5,7 +5,6 @@ import type {
   LspServerInstance,
   LspServerStatus,
 } from './lspTypes'
-import { broadcastToWebClients } from './web/webServer'
 
 export const servers = new Map<string, LspServerInstance>()
 
@@ -31,7 +30,14 @@ export function broadcastStatusChange(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('lsp:statusChange', getRunningServers())
   }
-  broadcastToWebClients('lsp:statusChange', getRunningServers())
+  try {
+    // Keep the web bridge optional here so importing LSP state in tests does
+    // not pull the full Electron/window manager graph into module evaluation.
+    const { broadcastToWebClients } = require('./web/webServer') as typeof import('./web/webServer')
+    broadcastToWebClients('lsp:statusChange', getRunningServers())
+  } catch {
+    // Web server is best-effort and may be unavailable in tests or early boot.
+  }
 }
 
 export function detectLanguageForFile(root: string, filePath: string): string | null {

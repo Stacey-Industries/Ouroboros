@@ -1,7 +1,7 @@
 import type { AgentChatSettings } from '../../main/agentChat/types'
 import type { ClaudeMdSettings } from './electron-claude-md'
 
-export type AppTheme = 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'custom' | (string & {})
+export type AppTheme = 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'glass' | 'light' | 'high-contrast' | 'custom' | (string & {})
 
 export interface PanelSizes {
   leftSidebar: number
@@ -32,6 +32,27 @@ export interface ClaudeCliSettings {
   dangerouslySkipPermissions: boolean
 }
 
+export interface CodexCliSettings {
+  model: string
+  reasoningEffort: string
+  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access'
+  approvalPolicy: 'untrusted' | 'on-request' | 'never'
+  profile: string
+  addDirs: string[]
+  search: boolean
+  skipGitRepoCheck: boolean
+  dangerouslyBypassApprovalsAndSandbox: boolean
+}
+
+export interface CodexModelOption {
+  id: string
+  name: string
+  description?: string
+  reasoningEfforts: string[]
+  contextWindow?: number
+  effectiveContextWindowPercent?: number
+}
+
 export interface AgentTemplate {
   id: string
   name: string
@@ -55,6 +76,29 @@ export interface WorkspaceLayout {
   }
   rightSidebarTab?: string
   builtIn?: boolean
+}
+
+export interface ProviderModel {
+  id: string
+  name: string
+  provider: string
+  capabilities?: string[]
+}
+
+export interface ModelProvider {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey: string
+  models: ProviderModel[]
+  enabled: boolean
+  builtIn?: boolean
+}
+
+export interface ModelSlotAssignments {
+  terminal: string
+  agentChat: string
+  claudeMdGeneration: string
 }
 
 export interface WorkspaceSnapshot {
@@ -84,7 +128,14 @@ export interface AppConfig {
   keybindings: Record<string, string>
   showBgGradient: boolean
   customThemeColors: Record<string, string>
-  terminalSessions: Array<{ cwd: string; title: string; isClaude?: boolean; claudeSessionId?: string }>
+  terminalSessions: Array<{
+    cwd: string
+    title: string
+    isClaude?: boolean
+    isCodex?: boolean
+    claudeSessionId?: string
+    codexThreadId?: string
+  }>
   customCSS: string
   bookmarks: string[]
   fileTreeIgnorePatterns: string[]
@@ -93,6 +144,7 @@ export interface AppConfig {
   customPrompt: string
   promptPreset: string
   claudeCliSettings: ClaudeCliSettings
+  codexCliSettings: CodexCliSettings
   agentChatSettings: AgentChatSettings
   notifications: NotificationSettings
   agentTemplates: AgentTemplate[]
@@ -113,6 +165,10 @@ export interface AppConfig {
   formatOnSave: boolean
   contextLayer: ContextLayerConfig
   claudeMdSettings: ClaudeMdSettings
+  modelProviders: ModelProvider[]
+  modelSlots: ModelSlotAssignments
+  webAccessPort: number
+  webAccessPassword: string
 }
 
 export interface ContextLayerConfig {

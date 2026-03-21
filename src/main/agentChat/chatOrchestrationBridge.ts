@@ -60,6 +60,8 @@ export interface AgentChatOrchestrationBridge {
   getActiveThreadIds: () => string[]
   /** Returns buffered stream chunks for a thread (for reconnection after refresh). */
   getBufferedChunks: (threadId: string) => AgentChatStreamChunk[]
+  /** Find the thread ID associated with a session or task ID (from activeSends). */
+  findThreadIdForSession: (sessionOrTaskId: string) => string | undefined
   /** Revert file changes made during a specific assistant message's agent turn. */
   revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>
   dispose: () => void
@@ -311,8 +313,8 @@ interface ActiveStreamContext {
   accumulatedBlocks: AgentChatContentBlock[]
   /** Whether agent_start has been emitted to Agent Monitor for this session */
   monitorStartEmitted: boolean
-  /** Claude Code CLI session ID (from system:init), used for Agent Monitor events */
-  claudeSessionId?: string
+  /** Provider-native session ID (Claude session UUID, Codex thread UUID, etc.) */
+  providerSessionId?: string
   /** User prompt for this thread — used as task label in the Agent Monitor */
   userPrompt?: string
   /** Timer handle for periodic incremental persistence flush. */
@@ -349,7 +351,7 @@ function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: number): voi
   if (ctx.monitorStartEmitted) return
   ctx.monitorStartEmitted = true
 
-  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  const sessionId = ctx.providerSessionId ?? ctx.sessionId
   dispatchSyntheticHookEvent({
     type: 'agent_start',
     sessionId,
@@ -364,7 +366,7 @@ function emitMonitorToolStart(ctx: ActiveStreamContext, blockIndex: number, tool
   filePath?: string
   inputSummary?: string
 }, now: number): void {
-  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  const sessionId = ctx.providerSessionId ?? ctx.sessionId
   ensureMonitorSessionStarted(ctx, now)
 
   const input: Record<string, unknown> = {}
@@ -382,7 +384,7 @@ function emitMonitorToolStart(ctx: ActiveStreamContext, blockIndex: number, tool
 }
 
 function emitMonitorToolEnd(ctx: ActiveStreamContext, blockIndex: number, toolName: string, now: number): void {
-  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  const sessionId = ctx.providerSessionId ?? ctx.sessionId
   dispatchSyntheticHookEvent({
     type: 'post_tool_use',
     sessionId,
@@ -393,7 +395,7 @@ function emitMonitorToolEnd(ctx: ActiveStreamContext, blockIndex: number, toolNa
 }
 
 function emitMonitorSessionEnd(ctx: ActiveStreamContext, now: number, error?: string): void {
-  const sessionId = ctx.claudeSessionId ?? ctx.sessionId
+  const sessionId = ctx.providerSessionId ?? ctx.sessionId
   if (!ctx.monitorStartEmitted) return // Never started — don't emit end
 
   const payload: HookPayload = {
@@ -401,7 +403,7 @@ function emitMonitorSessionEnd(ctx: ActiveStreamContext, now: number, error?: st
     sessionId,
     timestamp: now,
   }
-  if (error) (payload as Record<string, unknown>).error = error
+  if (error) (payload as unknown as Record<string, unknown>).error = error
   // Forward token usage so the Agent Monitor shows costs for chat sessions
   if (ctx.tokenUsage) {
     payload.usage = {
@@ -503,9 +505,26 @@ function handleProviderProgress(
   }
   if (!ctx) return
 
-  // Capture the Claude Code session ID for Agent Monitor events
-  if (progress.session?.sessionId && !ctx.claudeSessionId) {
-    ctx.claudeSessionId = progress.session.sessionId
+  // Guard: ignore late events for streams that were already cancelled/completed.
+  // After cancellation, the dying process may still emit 'completed' or 'failed'
+  // events — processing these would overwrite the cancelled status.
+  if (ctx.streamEnded && progress.status !== 'cancelled') return
+
+  // Capture the provider-native session ID for Agent Monitor events and
+  // keep the thread link populated for provider-specific resume/open-terminal flows.
+  if (progress.session?.sessionId) {
+    if (!ctx.providerSessionId) {
+      ctx.providerSessionId = progress.session.sessionId
+    }
+    if (!ctx.link.provider && progress.session.provider) {
+      ctx.link.provider = progress.session.provider
+    }
+    if (progress.session.provider === 'claude-code' && !ctx.link.claudeSessionId) {
+      ctx.link.claudeSessionId = progress.session.sessionId
+    }
+    if (progress.session.provider === 'codex' && !ctx.link.codexThreadId) {
+      ctx.link.codexThreadId = progress.session.sessionId
+    }
   }
 
   const now = runtime.now()
@@ -641,10 +660,7 @@ function handleProviderProgress(
     const threadId = ctx.threadId
     const assistantMessageId = ctx.assistantMessageId
     const taskId = ctx.taskId
-    // Capture the Claude Code CLI session ID from the progress event now,
-    // before the async block runs. sessionRef.sessionId is set when the
-    // stream emits system:init, and progress.session is the same object.
-    const claudeSessionIdFromStream = progress.session?.sessionId
+    const providerSessionIdFromStream = progress.session?.sessionId
     void (async () => {
       try {
         const thread = await runtime.threadStore.loadThread(threadId)
@@ -670,8 +686,16 @@ function handleProviderProgress(
         const existing = thread?.latestOrchestration
         const freshLink: AgentChatOrchestrationLink = {
           ...ctx.link,
-          claudeSessionId: existing?.claudeSessionId ?? ctx.link.claudeSessionId ?? claudeSessionIdFromStream,
+          provider: progress.session?.provider ?? existing?.provider ?? ctx.link.provider,
+          claudeSessionId: existing?.claudeSessionId ?? ctx.link.claudeSessionId,
+          codexThreadId: existing?.codexThreadId ?? ctx.link.codexThreadId,
+          model: ctx.model || existing?.model || ctx.link.model,
           linkedTerminalId: existing?.linkedTerminalId ?? ctx.link.linkedTerminalId,
+        }
+        if (freshLink.provider === 'claude-code') {
+          freshLink.claudeSessionId = freshLink.claudeSessionId ?? providerSessionIdFromStream
+        } else if (freshLink.provider === 'codex') {
+          freshLink.codexThreadId = freshLink.codexThreadId ?? providerSessionIdFromStream
         }
         await runtime.threadStore.updateThread(updatedThread.id, {
           status: 'complete',
@@ -960,10 +984,25 @@ async function executePendingSend(args: {
   runtime: AgentChatBridgeRuntime
   threadStore: AgentChatThreadStore
 }): Promise<AgentChatSendResult> {
-  // Capture git HEAD before the agent starts — used for revert support.
-  const preSnapshotHash = await captureHeadHash(args.pending.thread.workspaceRoot)
+  const et0 = Date.now()
 
+  // Yield to a fresh event loop iteration via setTimeout so we don't get
+  // blocked behind tree-sitter WASM parsing or other CPU-bound work that
+  // is currently hogging the event loop.
+  await new Promise<void>((r) => setTimeout(r, 0))
+
+  // Capture git HEAD before the agent starts — used for revert support.
+  // Fire-and-forget: don't block the launch on git.
+  const preSnapshotPromise = captureHeadHash(args.pending.thread.workspaceRoot)
+
+  const et1 = Date.now()
   const created = await args.orchestration.createTask(args.pending.taskRequest)
+  console.log('[agentChat:timing:main] createTask:', Date.now() - et1, 'ms')
+
+  // Resolve git hash now (it was running in parallel with createTask)
+  const preSnapshotHash = await preSnapshotPromise
+  console.log('[agentChat:timing:main] total up to createTask:', Date.now() - et0, 'ms')
+
   if (!created.success || !created.taskId || !created.session) {
     console.error('[agentChat] createTask failed:', created.error)
     return failPendingSend({
@@ -974,11 +1013,13 @@ async function executePendingSend(args: {
     })
   }
 
+  const et2 = Date.now()
   const linked = await persistCreatedLink({
     created,
     pending: args.pending,
     threadStore: args.threadStore,
   })
+  console.log('[agentChat:timing:main] persistCreatedLink:', Date.now() - et2, 'ms')
 
   // Attach the pre-snapshot hash to the link for revert support
   if (preSnapshotHash) {
@@ -1016,7 +1057,10 @@ async function executePendingSend(args: {
 
     let started: Awaited<ReturnType<typeof args.orchestration.startTask>>
     try {
+      const et3 = Date.now()
       started = await args.orchestration.startTask(created.taskId)
+      console.log('[agentChat:timing:main] startTask:', Date.now() - et3, 'ms')
+      console.log('[agentChat:timing:main] total executePendingSend:', Date.now() - et0, 'ms')
     } catch (err) {
       // startTask threw — no progress callback will ever fire, so clean up now.
       stopIncrementalFlush(streamCtx)
@@ -1091,6 +1135,10 @@ async function sendMessageWithBridge(
       console.error('[agentChat] background executePendingSend failed:', getErrorMessage(err))
     })
 
+    console.log('[agentChat:debug] sendMessage returning thread:', pending.thread.id,
+      'messages:', pending.thread.messages.length,
+      'ids:', pending.thread.messages.map(m => `${m.role}:${m.id.slice(-6)}`).join(', '))
+
     return {
       success: true,
       thread: pending.thread,
@@ -1164,6 +1212,14 @@ export function createAgentChatOrchestrationBridge(
     },
     getActiveThreadIds(): string[] {
       return Array.from(runtime.activeSends.values()).map((ctx) => ctx.threadId)
+    },
+    findThreadIdForSession(sessionOrTaskId: string): string | undefined {
+      for (const [taskId, ctx] of runtime.activeSends) {
+        if (taskId === sessionOrTaskId || ctx.sessionId === sessionOrTaskId) {
+          return ctx.threadId
+        }
+      }
+      return undefined
     },
     getBufferedChunks(threadId: string): AgentChatStreamChunk[] {
       for (const [, ctx] of runtime.activeSends) {

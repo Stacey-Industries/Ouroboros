@@ -24,7 +24,7 @@ const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'recentProjects', 'defaultProjectRoot', 'activeTheme', 'hooksServerPort',
   'terminalFontSize', 'terminalCursorStyle', 'autoInstallHooks', 'shell', 'panelSizes', 'windowBounds',
   'fontUI', 'fontMono', 'fontSizeUI', 'keybindings', 'showBgGradient',
-  'customThemeColors', 'terminalSessions', 'claudeCliSettings', 'customCSS',
+  'customThemeColors', 'terminalSessions', 'claudeCliSettings', 'codexCliSettings', 'customCSS',
   'bookmarks', 'fileTreeIgnorePatterns', 'profiles',
   'multiRoots', 'customPrompt', 'promptPreset',
   'agentChatSettings', 'notifications', 'agentTemplates',

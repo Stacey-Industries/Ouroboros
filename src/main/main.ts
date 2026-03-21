@@ -30,6 +30,7 @@ import { runAllMigrations } from './storage/migrate';
 import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
+import { loadPersistedContextCache, startContextRefreshTimer } from './ipc-handlers/agentChat';
 import { createWindow, getAllActiveWindows } from './windowManager';
 
 // â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -261,14 +262,23 @@ async function initializeApplication(): Promise<void> {
       console.warn('[context-layer] Initialization failed:', error);
     });
 
-  // Codebase graph initialization (non-fatal)
+  // Codebase graph initialization (non-fatal).
+  // Indexing runs in a worker_threads Worker so the main-process event
+  // loop stays responsive — no delay needed.
   initCodebaseGraph().catch((error) => {
     console.error('[codebase-graph] Initialization failed:', error);
   });
 
+  // Start the context cache refresh timer so chat context is always warm.
+  if (defaultRoot) {
+    loadPersistedContextCache();
+    startContextRefreshTimer([defaultRoot]);
+  }
+
   // Web remote access server (non-fatal)
   const webPort = (getConfigValue('webAccessPort') as number | undefined) ?? 7890;
-  const webStaticDir = path.join(__dirname, '../web');
+  const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
+  const webStaticDir = path.join(outMainDir, '../web');
   startWebServer({ port: webPort, staticDir: webStaticDir }).then(() => {
     const token = getOrCreateWebToken();
     console.log(`[web] Access URL: http://localhost:${webPort}?token=${token}`);

@@ -42,6 +42,47 @@ export function validateToken(provided: string): boolean {
   }
 }
 
+/**
+ * Returns true if a web access password has been configured.
+ */
+export function hasPasswordConfigured(): boolean {
+  const password = getConfigValue('webAccessPassword')
+  return typeof password === 'string' && password.length > 0
+}
+
+/**
+ * Validates a provided password against the stored password.
+ * Uses constant-time comparison to prevent timing attacks.
+ */
+export function validatePassword(provided: string): boolean {
+  if (!provided || typeof provided !== 'string') return false
+
+  const expected = getConfigValue('webAccessPassword')
+  if (!expected || typeof expected !== 'string' || expected.length === 0) {
+    return false
+  }
+
+  if (provided.length !== expected.length) return false
+
+  try {
+    const providedBuf = Buffer.from(provided, 'utf-8')
+    const expectedBuf = Buffer.from(expected, 'utf-8')
+    return crypto.timingSafeEqual(providedBuf, expectedBuf)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Validates a login credential — tries password first, then token.
+ */
+export function validateCredential(provided: string): boolean {
+  if (hasPasswordConfigured()) {
+    return validatePassword(provided)
+  }
+  return validateToken(provided)
+}
+
 // ─── Rate Limiting ───────────────────────────────────────────────────────────
 
 interface RateLimitEntry {
@@ -95,7 +136,20 @@ export function recordFailedAttempt(ip: string): void {
 
 // ─── Login Page ──────────────────────────────────────────────────────────────
 
-export const LOGIN_PAGE_HTML = `<!DOCTYPE html>
+/**
+ * Generates the login page HTML. When a password is configured, the page
+ * shows a "Password" field and POSTs to /api/login. Otherwise falls back
+ * to the token query-param redirect flow.
+ */
+export function getLoginPageHtml(): string {
+  const usePassword = hasPasswordConfigured()
+  const label = usePassword ? 'Password' : 'Access Token'
+  const placeholder = usePassword ? 'Enter your password' : 'Paste your access token'
+  const helpText = usePassword
+    ? 'Set your password in IDE Settings &gt; General &gt; Web Access Password'
+    : 'Find your token in the IDE console or Settings'
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -169,6 +223,7 @@ export const LOGIN_PAGE_HTML = `<!DOCTYPE html>
     }
     button:hover { background: #2ea043; }
     button:active { background: #238636; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
     .error {
       color: #f85149;
       font-size: 0.8125rem;
@@ -190,27 +245,49 @@ export const LOGIN_PAGE_HTML = `<!DOCTYPE html>
     <p class="subtitle">Remote Access</p>
     <form id="login-form">
       <div class="form-group">
-        <label for="token">Access Token</label>
-        <input type="password" id="token" name="token" placeholder="Paste your access token" autocomplete="off" autofocus>
+        <label for="credential">${label}</label>
+        <input type="password" id="credential" name="credential" placeholder="${placeholder}" autocomplete="current-password" autofocus>
       </div>
-      <button type="submit">Connect</button>
+      <button type="submit" id="submit-btn">Connect</button>
       <div class="error" id="error"></div>
     </form>
-    <p class="help">Find your token in the IDE console or Settings</p>
+    <p class="help">${helpText}</p>
   </div>
   <script>
     document.getElementById('login-form').addEventListener('submit', function(e) {
       e.preventDefault();
-      var token = document.getElementById('token').value.trim();
-      if (!token) {
-        document.getElementById('error').textContent = 'Please enter a token.';
+      var credential = document.getElementById('credential').value.trim();
+      if (!credential) {
+        document.getElementById('error').textContent = 'Please enter your ${label.toLowerCase()}.';
         return;
       }
-      // Redirect to current path with token as query param
-      var url = new URL(window.location.href);
-      url.searchParams.set('token', token);
-      window.location.href = url.toString();
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+      document.getElementById('error').textContent = '';
+
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: credential })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success) {
+          window.location.reload();
+        } else {
+          document.getElementById('error').textContent = data.error || 'Invalid credentials.';
+          btn.disabled = false;
+          btn.textContent = 'Connect';
+        }
+      })
+      .catch(function() {
+        document.getElementById('error').textContent = 'Connection failed. Try again.';
+        btn.disabled = false;
+        btn.textContent = 'Connect';
+      });
     });
   </script>
 </body>
 </html>`
+}

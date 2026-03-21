@@ -22,8 +22,11 @@ export interface TerminalSessionSnapshot {
   cwd: string
   title: string
   isClaude?: boolean
+  isCodex?: boolean
   /** Claude Code session UUID — used to restore with --resume <id> */
   claudeSessionId?: string
+  /** Codex thread UUID — used to restore with `codex resume <id>` */
+  codexThreadId?: string
 }
 
 export interface ClaudeCliSettings {
@@ -31,7 +34,7 @@ export interface ClaudeCliSettings {
   permissionMode: string
   /** Model override: '' means CLI default. e.g. 'sonnet', 'opus', 'haiku', or full model ID */
   model: string
-  /** Effort level: '' | 'low' | 'medium' | 'high' | 'max' */
+  /** Effort level: 'low' | 'medium' | 'high' | 'max' */
   effort: string
   /** Extra system prompt appended to default */
   appendSystemPrompt: string
@@ -53,11 +56,58 @@ export interface ClaudeCliSettings {
   dangerouslySkipPermissions: boolean
 }
 
+export interface CodexCliSettings {
+  /** Model override: '' means CLI default. e.g. 'gpt-5.4' */
+  model: string
+  /** Reasoning effort override: 'low' | 'medium' | 'high' | 'xhigh' */
+  reasoningEffort: string
+  /** Sandbox mode for command execution */
+  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access'
+  /** Approval policy for command execution */
+  approvalPolicy: 'untrusted' | 'on-request' | 'never'
+  /** Optional config profile from ~/.codex/config.toml */
+  profile: string
+  /** Additional directories Codex can write to */
+  addDirs: string[]
+  /** Enable live web search */
+  search: boolean
+  /** Allow running outside a git repository */
+  skipGitRepoCheck: boolean
+  /** Dangerously bypass approvals and sandbox entirely */
+  dangerouslyBypassApprovalsAndSandbox: boolean
+}
+
 export interface NotificationSettings {
   /** 'all' | 'errors-only' | 'none' */
   level: string
   /** Whether to notify even when the app is focused */
   alwaysNotify: boolean
+}
+
+export interface ProviderModel {
+  id: string
+  name: string
+  provider: string
+  capabilities?: string[]
+}
+
+export interface ModelProvider {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey: string
+  models: ProviderModel[]
+  enabled: boolean
+  builtIn?: boolean
+}
+
+export interface ModelSlotAssignments {
+  /** Model for interactive Claude Code terminals (format: 'providerId:modelId') */
+  terminal: string
+  /** Model for agent chat subagent sessions */
+  agentChat: string
+  /** Model for CLAUDE.md generation */
+  claudeMdGeneration: string
 }
 
 export interface ClaudeMdSettings {
@@ -112,7 +162,7 @@ export interface WorkspaceSnapshot {
 export interface AppConfig {
   recentProjects: string[]
   defaultProjectRoot: string
-  activeTheme: 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'light' | 'high-contrast' | 'custom'
+  activeTheme: 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'glass' | 'light' | 'high-contrast' | 'custom'
   hooksServerPort: number
   terminalFontSize: number
   autoInstallHooks: boolean
@@ -140,6 +190,8 @@ export interface AppConfig {
   promptPreset: string
   /** Claude CLI launch settings */
   claudeCliSettings: ClaudeCliSettings
+  /** Codex CLI launch settings */
+  codexCliSettings: CodexCliSettings
   agentChatSettings: AgentChatSettings
   /** Desktop notification preferences for agent events */
   notifications: NotificationSettings
@@ -190,10 +242,16 @@ export interface AppConfig {
   contextLayer: ContextLayerConfig
   /** Automated CLAUDE.md generation settings */
   claudeMdSettings: ClaudeMdSettings
+  /** Configured LLM providers (Anthropic-compatible endpoints) */
+  modelProviders: ModelProvider[]
+  /** Which provider:model to use for each session type */
+  modelSlots: ModelSlotAssignments
   /** Port for the web remote access server (default: 7890) */
   webAccessPort: number
   /** Auth token for web remote access */
   webAccessToken: string
+  /** Password for web remote access login (alternative to token) */
+  webAccessPassword: string
 }
 
 export const store = new Store<AppConfig>({ schema })
@@ -216,4 +274,3 @@ export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConf
   store.set(key, value)
   configCache = null  // invalidate cache on write
 }
-
