@@ -399,18 +399,19 @@ export const NotificationCenter = memo(function NotificationCenter({
         ref={panelRef}
         role="dialog"
         aria-label="Notification center"
+        className="glass-card"
         style={{
           position: 'absolute',
           top: 'calc(var(--titlebar-height, 36px) - 2px)',
-          left: '0',
+          right: '0',
           width: '320px',
           maxHeight: '400px',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--bg-secondary, var(--bg))',
-          border: '1px solid var(--border)',
+          background: 'var(--glass-card-bg, var(--bg-secondary, var(--bg)))',
+          border: '1px solid var(--glass-border-muted, var(--border))',
           borderRadius: '8px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+          boxShadow: 'var(--glass-shadow, 0 8px 24px rgba(0, 0, 0, 0.35))',
           zIndex: 9999,
           overflow: 'hidden',
           animation: 'nc-fade-in 150ms ease-out',

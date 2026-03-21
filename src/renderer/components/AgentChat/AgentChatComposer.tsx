@@ -1,13 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AgentChatMessageRecord, ImageAttachment, ImageMimeType } from '../../types/electron';
+import type { AgentChatMessageRecord, CodexModelOption, ImageAttachment, ImageMimeType, ModelProvider } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { AgentChatContextBar } from './AgentChatContextBar';
-import { ChatControlsBar, type ChatOverrides,cyclePermissionMode } from './ChatControlsBar';
+import {
+  ChatControlsBar,
+  type ChatOverrides,
+  cyclePermissionMode,
+  resolveChatControlProvider,
+} from './ChatControlsBar';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
-import { buildChatSlashCommands, type SlashCommand, type SlashCommandContext,SlashCommandMenu } from './SlashCommandMenu';
+import { buildChatSlashCommands, type SlashCommand, type SlashCommandContext, SlashCommandMenu } from './SlashCommandMenu';
 import type { PinnedFile } from './useAgentChatContext';
 
 export interface AgentChatComposerProps {
@@ -40,6 +45,11 @@ export interface AgentChatComposerProps {
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   /** Model ID from settings, used to label the "Default" option. */
   settingsModel?: string;
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  /** Configured model providers for the model picker dropdown. */
+  modelProviders?: ModelProvider[];
+  codexModels?: CodexModelOption[];
   /** Per-model context usage for the active thread. */
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   /** Slash command callbacks for /clear, /compact, /new, etc. */
@@ -61,12 +71,11 @@ function findLastUserMessageContent(messages: AgentChatMessageRecord[] | undefin
 
 /**
  * If the draft starts with `/` and contains no whitespace yet, return the query after `/`.
- * e.g. "/cle" → "cle", "/clear something" → null, "hello /foo" → null.
+ * e.g. "/cle" -> "cle", "/clear something" -> null, "hello /foo" -> null.
  */
 function extractSlashQuery(value: string): string | null {
   if (!value.startsWith('/')) return null;
   const rest = value.slice(1);
-  // Only match if it's a single token (no spaces — user is still typing the command)
   if (rest.includes(' ') || rest.includes('\n')) return null;
   return rest;
 }
@@ -79,18 +88,12 @@ function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
 }
 
 function extractMentionQuery(value: string, cursorPos: number): string | null {
-  // Walk backwards from cursor to find an unmatched @
   const textBeforeCursor = value.slice(0, cursorPos);
   const lastAt = textBeforeCursor.lastIndexOf('@');
   if (lastAt === -1) return null;
-
-  // @ must be at start or preceded by whitespace
   if (lastAt > 0 && !/\s/.test(textBeforeCursor[lastAt - 1])) return null;
-
   const query = textBeforeCursor.slice(lastAt + 1);
-  // If query contains whitespace with more than one word, it's probably not a mention
   if (query.includes('\n')) return null;
-
   return query;
 }
 
@@ -129,13 +132,13 @@ function AttachmentChipsBar({ attachments, onRemove }: { attachments: ImageAttac
 }
 
 function SendButton(props: { canSend: boolean; isSending: boolean; willQueue: boolean; onClick: () => void }): React.ReactElement {
-  // When the thread is busy, the button queues instead — show a queue icon
   const label = props.willQueue ? 'Queue message' : 'Send message';
   return (
     <button
       onClick={props.onClick}
       disabled={!props.canSend}
       title={label}
+      aria-busy={props.isSending}
       className="absolute bottom-2 right-2 flex items-center justify-center rounded-full text-xs font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30"
       style={{
         width: '28px',
@@ -193,7 +196,7 @@ function AutocompleteDropdown(props: {
             color: 'var(--text)',
           }}
           onMouseDown={(e) => {
-            e.preventDefault(); // Prevent textarea blur
+            e.preventDefault();
             props.onSelect(file);
           }}
         >
@@ -232,6 +235,10 @@ export function AgentChatComposer({
   chatOverrides,
   onChatOverridesChange,
   settingsModel,
+  codexSettingsModel,
+  defaultProvider,
+  modelProviders,
+  codexModels,
   threadModelUsage,
   slashCommandContext,
   attachments = [],
@@ -245,37 +252,26 @@ export function AgentChatComposer({
   const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // ── Uncontrolled textarea pattern ──────────────────────────────────────
-  // The textarea is uncontrolled (no `value` prop). Keystrokes update the DOM
-  // directly without triggering React re-renders up the tree. The parent's
-  // `draft` prop is only used for external resets (thread switch, clear on
-  // submit, recall last message). We sync from parent → textarea via this
-  // ref-tracking effect, and from textarea → parent via onChange on submit.
   const lastSyncedDraft = useRef(draft);
 
   useEffect(() => {
-    // Only sync when the parent changed draft externally (not from our own typing)
     if (draft !== lastSyncedDraft.current) {
       lastSyncedDraft.current = draft;
       if (textareaRef.current) {
         textareaRef.current.value = draft;
-        // Auto-resize after external draft change
         autoResizeTextarea(textareaRef.current);
       }
     }
   }, [draft]);
 
-  // Use the new mention autocomplete system when onAddMention is provided
   const useMentionSystem = Boolean(onAddMention);
 
-  // Build slash commands from context callbacks
   const slashCommands = useMemo(
     () => buildChatSlashCommands(slashCommandContext ?? {}),
     [slashCommandContext],
   );
 
   const handleSlashSelect = useCallback((cmd: SlashCommand) => {
-    // Special case: /diff adds a @diff mention instead of executing
     if (cmd.id === 'diff' && onAddMention) {
       onAddMention({
         type: 'diff',
@@ -287,7 +283,6 @@ export function AgentChatComposer({
     } else {
       cmd.action();
     }
-    // Clear the draft (remove the /command text)
     if (cmd.clearDraft !== false) {
       if (textareaRef.current) {
         textareaRef.current.value = '';
@@ -301,7 +296,6 @@ export function AgentChatComposer({
     textareaRef.current?.focus();
   }, [onChange, onAddMention]);
 
-  // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(0);
   }, [autocompleteResults.length]);
@@ -365,11 +359,15 @@ export function AgentChatComposer({
     const imageItems = items.filter((item) => item.type.startsWith('image/'));
     if (imageItems.length === 0) return;
     event.preventDefault();
+
     const readers: Promise<ImageAttachment>[] = imageItems.map(
       (item) =>
         new Promise((resolve, reject) => {
           const blob = item.getAsFile();
-          if (!blob) { reject(new Error('No file')); return; }
+          if (!blob) {
+            reject(new Error('No file'));
+            return;
+          }
           const reader = new FileReader();
           reader.onload = () => {
             const dataUrl = reader.result as string;
@@ -384,6 +382,7 @@ export function AgentChatComposer({
           reader.readAsDataURL(blob);
         }),
     );
+
     void Promise.allSettled(readers).then((results) => {
       const newAtts = results
         .filter((r): r is PromiseFulfilledResult<ImageAttachment> => r.status === 'fulfilled')
@@ -407,6 +406,7 @@ export function AgentChatComposer({
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
     if (files.length === 0) return;
+
     const readers: Promise<ImageAttachment>[] = files.map(
       (file) =>
         new Promise((resolve, reject) => {
@@ -424,6 +424,7 @@ export function AgentChatComposer({
           reader.readAsDataURL(file);
         }),
     );
+
     void Promise.allSettled(readers).then((results) => {
       const newAtts = results
         .filter((r): r is PromiseFulfilledResult<ImageAttachment> => r.status === 'fulfilled')
@@ -449,17 +450,11 @@ export function AgentChatComposer({
   }, [attachments, onAttachmentsChange]);
 
   const handleChange = useCallback((value: string) => {
-    // Track what we typed so the parent→textarea sync effect ignores it
     lastSyncedDraft.current = value;
-    // Sync to parent (for draft persistence, submit readiness) but since the
-    // Composer is uncontrolled, this won't cause a re-render of the Composer
-    // itself — only the parent updates its state for later use on submit.
     onChange(value);
 
-    // Auto-resize inline (no useEffect needed since textarea is uncontrolled)
     if (textareaRef.current) autoResizeTextarea(textareaRef.current);
 
-    // Check for slash command first
     const cursorPos = textareaRef.current?.selectionStart ?? value.length;
     const sq = extractSlashQuery(value);
     if (sq !== null) {
@@ -473,7 +468,6 @@ export function AgentChatComposer({
     setSlashQuery(null);
     setIsSlashMenuOpen(false);
 
-    // Mention detection
     const query = extractMentionQuery(value, cursorPos);
     if (useMentionSystem) {
       setMentionQuery(query);
@@ -489,23 +483,18 @@ export function AgentChatComposer({
   }, [onChange, onAutocompleteQuery, onOpenAutocomplete, onCloseAutocomplete, useMentionSystem]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // When slash command menu is open, let it handle keyboard events
     if (isSlashMenuOpen) {
       if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
-        return; // SlashCommandMenu's global handler deals with it
+        return;
       }
     }
 
-    // When the new mention autocomplete is open, let it handle keyboard events
-    // (it uses a global keydown listener)
     if (useMentionSystem && isMentionAutocompleteOpen) {
-      // Still allow Enter/Escape/Arrow to be handled by MentionAutocomplete
       if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) {
-        return; // Let MentionAutocomplete's global handler deal with it
+        return;
       }
     }
 
-    // Handle legacy autocomplete keyboard navigation
     if (!useMentionSystem && isAutocompleteOpen && autocompleteResults.length > 0) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -534,14 +523,20 @@ export function AgentChatComposer({
       }
     }
 
-    // Shift+Tab cycles permission mode
     if (event.key === 'Tab' && event.shiftKey && chatOverrides && onChatOverridesChange) {
       event.preventDefault();
-      onChatOverridesChange({ ...chatOverrides, permissionMode: cyclePermissionMode(chatOverrides.permissionMode) });
+      const provider = resolveChatControlProvider(
+        chatOverrides.model,
+        defaultProvider ?? 'claude-code',
+        codexModels,
+      );
+      onChatOverridesChange({
+        ...chatOverrides,
+        permissionMode: cyclePermissionMode(chatOverrides.permissionMode, provider),
+      });
       return;
     }
 
-    // Original composer key handling
     if (event.key === 'Escape') {
       event.preventDefault();
       if (textareaRef.current) {
@@ -601,10 +596,6 @@ export function AgentChatComposer({
     useMentionSystem,
   ]);
 
-  // Auto-resize is now handled inline in handleChange and the sync effect above,
-  // so no useEffect on draft is needed (which was the main perf problem — draft
-  // changes caused full-tree re-renders).
-
   const mentionTotalTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
 
   return (
@@ -616,114 +607,122 @@ export function AgentChatComposer({
       onDrop={handleDrop}
     >
       <div className="px-3">
-      <AgentChatContextBar
-        pinnedFiles={pinnedFiles}
-        onRemoveFile={onRemoveFile ?? (() => {})}
-        contextSummary={contextSummary ?? null}
-      />
-      {useMentionSystem && (
-        <MentionChipsBar
-          mentions={mentions}
-          onRemove={onRemoveMention ?? (() => {})}
-          totalTokens={mentionTotalTokens}
+        <AgentChatContextBar
+          pinnedFiles={pinnedFiles}
+          onRemoveFile={onRemoveFile ?? (() => {})}
+          contextSummary={contextSummary ?? null}
         />
-      )}
-      <AttachmentChipsBar attachments={attachments} onRemove={handleRemoveAttachment} />
-      <div className="relative">
-        {isSlashMenuOpen && slashQuery !== null && (
-          <SlashCommandMenu
-            query={slashQuery}
-            commands={slashCommands}
-            onSelect={handleSlashSelect}
-            onClose={() => {
-              setIsSlashMenuOpen(false);
-              setSlashQuery(null);
-            }}
-            isOpen={isSlashMenuOpen}
+        {useMentionSystem && (
+          <MentionChipsBar
+            mentions={mentions}
+            onRemove={onRemoveMention ?? (() => {})}
+            totalTokens={mentionTotalTokens}
           />
         )}
-        {useMentionSystem && isMentionAutocompleteOpen && mentionQuery !== null && (
-          <MentionAutocomplete
-            query={mentionQuery}
-            allFiles={allFiles}
-            selectedMentions={mentions}
-            onSelect={handleMentionSelect}
-            onClose={() => {
-              setIsMentionAutocompleteOpen(false);
-              setMentionQuery(null);
-            }}
-            isOpen={isMentionAutocompleteOpen}
-          />
-        )}
-        {!useMentionSystem && isAutocompleteOpen && (
-          <AutocompleteDropdown
-            results={autocompleteResults}
-            selectedIndex={selectedIndex}
-            onSelect={handleFileSelect}
-          />
-        )}
-        <textarea
-          ref={textareaRef}
-          defaultValue={draft}
-          onChange={(event) => handleChange(event.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          onBlur={() => {
-            // Delay close to allow click on dropdown items
-            setTimeout(() => {
-              if (useMentionSystem) {
+        <AttachmentChipsBar attachments={attachments} onRemove={handleRemoveAttachment} />
+        <div className="relative">
+          {isSlashMenuOpen && slashQuery !== null && (
+            <SlashCommandMenu
+              query={slashQuery}
+              commands={slashCommands}
+              onSelect={handleSlashSelect}
+              onClose={() => {
+                setIsSlashMenuOpen(false);
+                setSlashQuery(null);
+              }}
+              isOpen={isSlashMenuOpen}
+            />
+          )}
+          {useMentionSystem && isMentionAutocompleteOpen && mentionQuery !== null && (
+            <MentionAutocomplete
+              query={mentionQuery}
+              allFiles={allFiles}
+              selectedMentions={mentions}
+              onSelect={handleMentionSelect}
+              onClose={() => {
                 setIsMentionAutocompleteOpen(false);
                 setMentionQuery(null);
-              } else {
-                onCloseAutocomplete?.();
-              }
-            }, 200);
-          }}
-          placeholder="Ask Claude... (/ for commands, @ to mention files)"
-          disabled={disabled}
-          rows={1}
-          className={`w-full resize-none border bg-[var(--bg)] py-2.5 pl-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60${onAttachmentsChange ? ' pr-16' : ' pr-10'}`}
-          style={{
-            borderColor: 'var(--border-muted, var(--border))',
-            borderRadius: '8px',
-            fontFamily: 'var(--font-ui)',
-            minHeight: '40px',
-            transition: 'border-color 150ms ease, box-shadow 150ms ease',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'var(--accent)';
-            e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent-muted, rgba(88, 166, 255, 0.2))';
-          }}
-          onBlurCapture={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-muted, var(--border))';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        />
-        {onAttachmentsChange && (
-          <button
-            type="button"
-            title="Attach image"
-            onClick={() => void handlePickImage()}
-            className="absolute bottom-2 right-10 flex h-[28px] w-[28px] items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-            </svg>
-          </button>
-        )}
-        <SendButton
-          canSend={canSend}
-          isSending={isSending}
-          willQueue={threadIsBusy}
-          onClick={() => void onSubmit()}
-        />
-      </div>
+              }}
+              isOpen={isMentionAutocompleteOpen}
+            />
+          )}
+          {!useMentionSystem && isAutocompleteOpen && (
+            <AutocompleteDropdown
+              results={autocompleteResults}
+              selectedIndex={selectedIndex}
+              onSelect={handleFileSelect}
+            />
+          )}
+          <textarea
+            ref={textareaRef}
+            defaultValue={draft}
+            onChange={(event) => handleChange(event.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onBlur={() => {
+              setTimeout(() => {
+                if (useMentionSystem) {
+                  setIsMentionAutocompleteOpen(false);
+                  setMentionQuery(null);
+                } else {
+                  onCloseAutocomplete?.();
+                }
+              }, 200);
+            }}
+            placeholder="Ask the agent... (/ for commands, @ to mention files)"
+            disabled={disabled}
+            rows={1}
+            className={`w-full resize-none border bg-[var(--bg)] py-2.5 pl-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60${onAttachmentsChange ? ' pr-16' : ' pr-10'}`}
+            style={{
+              borderColor: 'var(--border-muted, var(--border))',
+              borderRadius: '8px',
+              fontFamily: 'var(--font-ui)',
+              minHeight: '40px',
+              transition: 'border-color 150ms ease, box-shadow 150ms ease',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+              e.currentTarget.style.boxShadow = '0 0 0 2px var(--accent-muted, rgba(88, 166, 255, 0.2))';
+            }}
+            onBlurCapture={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-muted, var(--border))';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          />
+          {onAttachmentsChange && (
+            <button
+              type="button"
+              title="Attach image"
+              onClick={() => void handlePickImage()}
+              className="absolute bottom-2 right-10 flex h-[28px] w-[28px] items-center justify-center rounded transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+          )}
+          <SendButton
+            canSend={canSend}
+            isSending={isSending}
+            willQueue={threadIsBusy}
+            onClick={() => void onSubmit()}
+          />
+        </div>
       </div>
       {chatOverrides && onChatOverridesChange && (
-        <ChatControlsBar overrides={chatOverrides} onChange={onChatOverridesChange} settingsModel={settingsModel} threadModelUsage={threadModelUsage} />
+        <ChatControlsBar
+          overrides={chatOverrides}
+          onChange={onChatOverridesChange}
+          settingsModel={settingsModel}
+          codexSettingsModel={codexSettingsModel}
+          defaultProvider={defaultProvider}
+          providers={modelProviders}
+          codexModels={codexModels}
+          threadModelUsage={threadModelUsage}
+        />
       )}
     </div>
   );

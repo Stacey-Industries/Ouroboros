@@ -151,7 +151,10 @@ function NotificationBell(): React.ReactElement {
       <button
         className="titlebar-no-drag"
         title="Notifications"
-        onClick={toggle}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          toggle();
+        }}
         style={titleButtonStyle}
         {...hoverStyle}
       >

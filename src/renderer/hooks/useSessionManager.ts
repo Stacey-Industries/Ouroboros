@@ -56,7 +56,8 @@ function buildTerminalControl(args: {
     onActivate: setActiveSessionId,
     onClose: handleTerminalClose,
     onNew: () => void spawnSession(),
-    onNewClaude: () => void spawnClaudeSession(),
+    onNewClaude: (providerModel?: string) => void spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
+    onNewCodex: () => void spawnSession(),
     onReorder: handleTerminalReorder,
   };
 }

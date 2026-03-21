@@ -20,7 +20,6 @@ import type { TerminalSession } from '../Terminal/TerminalTabs';
 import type { AppLayoutProps } from './AppLayout';
 import { AppLayoutConnected } from './AppLayoutConnected';
 import { CentrePaneConnected } from './CentrePaneConnected';
-import { EditorTabBar } from './EditorTabBar';
 import { FilePickerConnected } from './FilePickerConnected';
 import { RightSidebarTabs } from './RightSidebarTabs';
 const AnalyticsDashboard = React.lazy(() => import('../Analytics').then(m => ({ default: m.AnalyticsDashboard })));
@@ -68,8 +67,6 @@ class ChatErrorBoundary extends React.Component<
 import { IdeToolBridge } from './IdeToolBridge';
 import { SidebarSections } from './SidebarSections';
 import { ExtensionsPanel,GitSidebarPanel, SearchPanel } from './SidebarViewPanels';
-const ExtensionStorePanel = React.lazy(() => import('../ExtensionStore/ExtensionStorePanel').then(m => ({ default: m.ExtensionStorePanel })));
-const McpStorePanel = React.lazy(() => import('../McpStore/McpStorePanel').then(m => ({ default: m.McpStorePanel })));
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
@@ -292,7 +289,6 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
         git: <SidebarViewHeader title="Source Control" />,
         extensions: <SidebarViewHeader title="Extensions" />,
       }}
-      editorTabBar={<EditorTabBar />}
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<TerminalPanelContent {...props} />}
@@ -319,8 +315,6 @@ function LayoutOverlays({
       <FilePickerConnected isOpen={filePickerOpen} onClose={() => setFilePickerOpen(false)} projectRoot={projectRoot} />
       <SymbolSearch isOpen={symbolSearchOpen} onClose={() => setSymbolSearchOpen(false)} projectRoot={projectRoot} />
       <PerformanceOverlay visible={perfOverlayVisible} />
-      <React.Suspense fallback={<div />}><ExtensionStorePanel /></React.Suspense>
-      <React.Suspense fallback={<div />}><McpStorePanel /></React.Suspense>
     </>
   );
 }

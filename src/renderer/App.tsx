@@ -220,10 +220,12 @@ function buildTerminalControl(terminal: ReturnType<typeof useTerminalSessions>):
     onActivate: terminal.setActiveSessionId,
     onClose: terminal.handleTerminalClose,
     onNew: () => void terminal.spawnSession(),
-    onNewClaude: () => void terminal.spawnClaudeSession(),
+    onNewClaude: (providerModel?: string) => void terminal.spawnClaudeSession(undefined, providerModel ? { providerModel } : undefined),
+    onNewCodex: (model?: string) => void terminal.spawnCodexSession(undefined, model ? { model, cliOverrides: { model } } : undefined),
     onReorder: terminal.handleTerminalReorder,
     focusOrCreate: terminal.focusOrCreateSession,
     onSpawnClaude: terminal.spawnClaudeSession,
+    onSpawnCodex: terminal.spawnCodexSession,
   };
 }
 

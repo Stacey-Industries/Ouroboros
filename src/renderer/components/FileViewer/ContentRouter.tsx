@@ -52,6 +52,8 @@ export interface ContentRouterProps {
   hasDiff: boolean;
   /** Original content for diff */
   originalContent?: string | null;
+  /** Preferred content baseline for diff mode */
+  diffBaseContent?: string | null;
   /** Conflict blocks */
   conflictBlocks: ConflictBlock[];
   /** Conflict resolved handler */
@@ -164,7 +166,8 @@ function renderPreviewContent(props: ContentRouterProps): React.ReactElement | n
 }
 
 function renderDiffContent(props: ContentRouterProps): React.ReactElement | null {
-  if (props.viewMode !== 'diff' || !props.hasDiff || props.originalContent == null || props.content == null) {
+  const diffBaseContent = props.diffBaseContent ?? props.originalContent ?? null;
+  if (props.viewMode !== 'diff' || !props.hasDiff || diffBaseContent == null || props.content == null) {
     return null;
   }
 
@@ -174,7 +177,7 @@ function renderDiffContent(props: ContentRouterProps): React.ReactElement | null
       : 'plaintext';
     return renderPanel(
       <MonacoDiffEditor
-        originalContent={props.originalContent}
+        originalContent={diffBaseContent}
         modifiedContent={props.content}
         language={language}
         filePath={props.filePath ?? undefined}
@@ -184,7 +187,7 @@ function renderDiffContent(props: ContentRouterProps): React.ReactElement | null
   }
 
   return renderPanel(
-    <DiffView originalContent={props.originalContent} currentContent={props.content} />,
+    <DiffView originalContent={diffBaseContent} currentContent={props.content} />,
   );
 }
 
@@ -230,6 +233,7 @@ function resolveContent(props: ContentRouterProps): React.ReactElement {
         onDirtyChange={props.onDirtyChange}
         wordWrap={props.wordWrap}
         showMinimap={props.showMinimap}
+        diffLines={props.codeViewProps.diffLines}
       />,
     );
   }

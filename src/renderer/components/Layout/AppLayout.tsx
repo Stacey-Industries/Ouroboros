@@ -43,12 +43,15 @@ export interface TerminalPaneControl {
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onNew: () => void;
-  onNewClaude: () => void;
+  onNewClaude: (providerModel?: string) => void;
+  onNewCodex: (model?: string) => void;
   onReorder?: (reordered: TerminalSession[]) => void;
   /** Activate a session by ID, creating a terminal tab for it if it doesn't exist in the sessions list. */
   focusOrCreate?: (id: string) => void;
   /** Spawn an interactive Claude session (e.g. --resume <sessionId>) */
   onSpawnClaude?: (cwd?: string, options?: { resumeMode?: string; label?: string }) => Promise<void>;
+  /** Spawn an interactive Codex session (e.g. `codex resume <threadId>`) */
+  onSpawnCodex?: (cwd?: string, options?: { resumeThreadId?: string; label?: string; model?: string }) => Promise<void>;
 }
 
 export interface AppLayoutProps extends AppLayoutSlots {
@@ -94,6 +97,7 @@ function usePanelEventHandlers(args: {
   activateTerminalSession?: (id: string) => void;
   focusOrCreate?: (id: string) => void;
   spawnClaudeSession?: (cwd?: string, options?: { resumeMode?: string; label?: string }) => Promise<void>;
+  spawnCodexSession?: (cwd?: string, options?: { resumeThreadId?: string; label?: string; model?: string }) => Promise<void>;
 }): void {
   const { expand, setFocusedPanel, toggle, activateTerminalSession } = args;
 
@@ -128,12 +132,30 @@ function usePanelEventHandlers(args: {
     }
 
     function onOpenChatInTerminal(event: Event): void {
-      const detail = (event as CustomEvent<{ claudeSessionId: string }>).detail;
-      if (!detail?.claudeSessionId || !args.spawnClaudeSession) return;
+      const detail = (event as CustomEvent<{
+        provider?: 'claude-code' | 'codex';
+        sessionId?: string;
+        claudeSessionId?: string;
+        codexThreadId?: string;
+        model?: string;
+      }>).detail;
+      const provider = detail?.provider ?? (detail?.codexThreadId ? 'codex' : 'claude-code');
+      const sessionId = detail?.sessionId ?? detail?.claudeSessionId ?? detail?.codexThreadId;
+      if (!sessionId) return;
       expand('terminal');
       setFocusedPanel('terminal');
+      if (provider === 'codex') {
+        if (!args.spawnCodexSession) return;
+        void args.spawnCodexSession(undefined, {
+          resumeThreadId: sessionId,
+          label: 'Chat (resumed)',
+          model: detail?.model,
+        });
+        return;
+      }
+      if (!args.spawnClaudeSession) return;
       void args.spawnClaudeSession(undefined, {
-        resumeMode: detail.claudeSessionId,
+        resumeMode: sessionId,
         label: 'Chat (resumed)',
       });
     }
@@ -155,7 +177,7 @@ function usePanelEventHandlers(args: {
       window.removeEventListener(FOCUS_TERMINAL_SESSION_EVENT, onFocusTerminalSession);
       window.removeEventListener(OPEN_CHAT_IN_TERMINAL_EVENT, onOpenChatInTerminal);
     };
-  }, [expand, setFocusedPanel, toggle, activateTerminalSession, args.focusOrCreate, args.spawnClaudeSession]);
+  }, [expand, setFocusedPanel, toggle, activateTerminalSession, args.focusOrCreate, args.spawnClaudeSession, args.spawnCodexSession]);
 }
 
 export type MobilePanel = 'chat' | 'editor' | 'terminal' | 'files';
@@ -259,7 +281,15 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
   const [sidebarView, setSidebarView] = useState<SidebarView>('files');
   const [mobileActivePanel, setMobileActivePanel] = useState<MobilePanel>('chat');
   useApplyLayoutEvent(applySizes, applyState);
-  usePanelEventHandlers({ expand, setFocusedPanel, toggle, activateTerminalSession: props.terminalControl.onActivate, focusOrCreate: props.terminalControl.focusOrCreate, spawnClaudeSession: props.terminalControl.onSpawnClaude });
+  usePanelEventHandlers({
+    expand,
+    setFocusedPanel,
+    toggle,
+    activateTerminalSession: props.terminalControl.onActivate,
+    focusOrCreate: props.terminalControl.focusOrCreate,
+    spawnClaudeSession: props.terminalControl.onSpawnClaude,
+    spawnCodexSession: props.terminalControl.onSpawnCodex,
+  });
 
   const handleMobilePanelSwitch = useCallback((panel: MobilePanel) => {
     setMobileActivePanel(panel);
@@ -323,61 +353,63 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
   const runningAgentCount = props.runningAgentCount ?? 0;
 
   return (
-    <div data-layout="app" data-mobile-active={mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
-      <TitleBar />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Activity bar — always visible (hidden on mobile via CSS) */}
-        <ActivityBar
-          activeView={sidebarView}
-          sidebarCollapsed={collapsed.leftSidebar}
-          onViewChange={handleActivityViewChange}
-          onToggleSidebar={handleActivityToggle}
-        />
+    <div data-layout="app" data-mobile-active={mobileActivePanel} className="relative flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--text)] p-3 sm:p-4" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+      <div data-layout="app-shell" className="glass-shell flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden p-3 sm:p-4">
+        <TitleBar />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Activity bar — always visible (hidden on mobile via CSS) */}
+          <ActivityBar
+            activeView={sidebarView}
+            sidebarCollapsed={collapsed.leftSidebar}
+            onViewChange={handleActivityViewChange}
+            onToggleSidebar={handleActivityToggle}
+          />
 
-        {/* Left sidebar — collapses but activity bar stays */}
-        {!collapsed.leftSidebar && (
-          <>
-            <Sidebar
-              width={sizes.leftSidebar}
-              collapsed={false}
-              onToggleCollapse={() => toggle('leftSidebar')}
-              header={activeSidebarHeader}
-              focusStyle={pfs('sidebar')}
-              onFocus={() => setFocusedPanel('sidebar')}
-            >
-              {activeSidebarContent}
-            </Sidebar>
-            <ResizeDivider direction="vertical" onPointerDown={mkResize('leftSidebar', 'vertical')} onDoubleClick={() => resetSize('leftSidebar')} label="Resize left sidebar" />
-          </>
-        )}
+          {/* Left sidebar — collapses but activity bar stays */}
+          {!collapsed.leftSidebar && (
+            <>
+              <Sidebar
+                width={sizes.leftSidebar}
+                collapsed={false}
+                onToggleCollapse={() => toggle('leftSidebar')}
+                header={activeSidebarHeader}
+                focusStyle={pfs('sidebar')}
+                onFocus={() => setFocusedPanel('sidebar')}
+              >
+                {activeSidebarContent}
+              </Sidebar>
+              <ResizeDivider direction="vertical" onPointerDown={mkResize('leftSidebar', 'vertical')} onDoubleClick={() => resetSize('leftSidebar')} label="Resize left sidebar" />
+            </>
+          )}
 
-        {/* Centre column: editor + terminal stacked vertically */}
-        <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
-          <CentrePane tabBar={props.editorTabBar} focusStyle={pfs('editor')} onFocus={() => setFocusedPanel('editor')}>
-            {props.editorContent}
-          </CentrePane>
-          <ResizeDivider direction="horizontal" onPointerDown={mkResize('terminal', 'horizontal')} onDoubleClick={() => resetSize('terminal')} label="Resize terminal" />
-          <TerminalPane height={sizes.terminal} collapsed={collapsed.terminal} onToggleCollapse={() => toggle('terminal')} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onReorder={tc.onReorder} focusStyle={pfs('terminal')} onFocus={() => setFocusedPanel('terminal')}>
-            {props.terminalContent}
-          </TerminalPane>
+          {/* Centre column: editor + terminal stacked vertically */}
+          <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
+            <CentrePane tabBar={props.editorTabBar} focusStyle={pfs('editor')} onFocus={() => setFocusedPanel('editor')}>
+              {props.editorContent}
+            </CentrePane>
+            <ResizeDivider direction="horizontal" onPointerDown={mkResize('terminal', 'horizontal')} onDoubleClick={() => resetSize('terminal')} label="Resize terminal" />
+            <TerminalPane height={sizes.terminal} collapsed={collapsed.terminal} onToggleCollapse={() => toggle('terminal')} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={pfs('terminal')} onFocus={() => setFocusedPanel('terminal')}>
+              {props.terminalContent}
+            </TerminalPane>
+          </div>
+
+          {/* Right sidebar divider + agent pane */}
+          {!collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={mkResize('rightSidebar', 'vertical')} onDoubleClick={() => resetSize('rightSidebar')} label="Resize right sidebar" />}
+          {collapsed.rightSidebar && (
+            <CollapsedAgentStrip onExpand={() => toggle('rightSidebar')} runningCount={runningAgentCount} />
+          )}
+          {/* Always keep workspace mounted — display:none preserves streaming state and model overrides across sidebar collapse */}
+          <div style={{ display: collapsed.rightSidebar ? 'none' : undefined }}>
+            <AgentMonitorPane width={sizes.rightSidebar} collapsed={false} onToggleCollapse={() => toggle('rightSidebar')} focusStyle={pfs('agentMonitor')} onFocus={() => setFocusedPanel('agentMonitor')}>
+              {props.agentCards}
+            </AgentMonitorPane>
+          </div>
         </div>
-
-        {/* Right sidebar divider + agent pane */}
-        {!collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={mkResize('rightSidebar', 'vertical')} onDoubleClick={() => resetSize('rightSidebar')} label="Resize right sidebar" />}
-        {collapsed.rightSidebar && (
-          <CollapsedAgentStrip onExpand={() => toggle('rightSidebar')} runningCount={runningAgentCount} />
-        )}
-        {/* Always keep workspace mounted — display:none preserves streaming state and model overrides across sidebar collapse */}
-        <div style={{ display: collapsed.rightSidebar ? 'none' : undefined }}>
-          <AgentMonitorPane width={sizes.rightSidebar} collapsed={false} onToggleCollapse={() => toggle('rightSidebar')} focusStyle={pfs('agentMonitor')} onFocus={() => setFocusedPanel('agentMonitor')}>
-            {props.agentCards}
-          </AgentMonitorPane>
+        {/* Mobile bottom nav — hidden on desktop via CSS */}
+        <MobileNavBar active={mobileActivePanel} onSwitch={handleMobilePanelSwitch} />
+        <div data-layout="status-bar">
+          <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
         </div>
-      </div>
-      {/* Mobile bottom nav — hidden on desktop via CSS */}
-      <MobileNavBar active={mobileActivePanel} onSwitch={handleMobilePanelSwitch} />
-      <div data-layout="status-bar">
-        <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
       </div>
     </div>
   );

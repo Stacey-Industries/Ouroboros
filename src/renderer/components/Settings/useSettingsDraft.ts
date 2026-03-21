@@ -14,7 +14,7 @@ export interface SettingsDraftApi {
   handleImport: (imported: AppConfig) => void;
   handlePreviewTheme: (themeId: string) => void;
   handleCancel: (onClose: () => void) => void;
-  handleSave: (onClose: () => void) => Promise<void>;
+  handleSave: () => Promise<void>;
   isSaving: boolean;
   saveError: string | null;
   originalThemeRef: React.MutableRefObject<string | null>;
@@ -69,7 +69,7 @@ function useDraftSaveHandlers({
     onClose();
   }, [originalGradientRef, originalThemeRef, setShowBgGradient, setTheme]);
 
-  const handleSave = useCallback(async (onClose: () => void): Promise<void> => {
+  const handleSave = useCallback(async (): Promise<void> => {
     if (!draft) return;
     setIsSaving(true);
     setSaveError(null);
@@ -79,7 +79,6 @@ function useDraftSaveHandlers({
       await applyThemeAndFont(draft, setTheme, setShowBgGradient);
       originalThemeRef.current = draft.activeTheme ?? null;
       originalGradientRef.current = draft.showBgGradient ?? true;
-      onClose();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to save settings.');
     } finally {

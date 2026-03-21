@@ -72,6 +72,18 @@
     display: flex !important;
   }
 
+  /* ── Mobile sidebar override class ── */
+  /* Applied by AgentMonitorPane when data-mobile-sidebar="true" is set on the pane.
+     This class uses width:100dvw (dynamic vw that accounts for mobile browser chrome)
+     and min-width:0 to override the inline width/minWidth set by the resizable panel
+     (inline styles cannot be overridden by !important in CSS — hence the class). */
+  .web-mode .mobile-agent-sidebar {
+    width: 100dvw !important;
+    min-width: 0 !important;
+    max-width: 100dvw !important;
+    overflow-x: hidden !important;
+  }
+
   /* ─────────────────────────────────────────────────────────────────────── */
   /* ── Panel switching: show/hide panels based on active mobile tab ────── */
   /* ─────────────────────────────────────────────────────────────────────── */
@@ -131,11 +143,26 @@
   }
   /* Right sidebar (agent pane) fills screen */
   .web-mode [data-mobile-active='chat'] [aria-label='Agent sidebar'] {
-    width: 100% !important;
+    width: 100dvw !important;
     min-width: 0 !important;
-    max-width: 100% !important;
+    max-width: 100dvw !important;
     flex: 1 1 0% !important;
     border-left: none !important;
+    overflow-x: hidden !important;
+    position: relative; /* Establish containing block for absolute children */
+  }
+  /* Agent sidebar children: force full width + clip overflow */
+  .web-mode [data-mobile-active='chat'] [aria-label='Agent sidebar'] > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  /* Deep-level overflow guard for chat messages */
+  .web-mode [data-mobile-active='chat'] [aria-label='Agent sidebar'] [class*='overflow-y-auto'] {
+    max-width: 100% !important;
+  }
+  .web-mode [data-mobile-active='chat'] pre {
+    overflow-x: auto !important; /* Allow scrolling within code blocks, not the page */
   }
 
   /* ── Ensure inactive sidebars don't leak through ── */
@@ -199,6 +226,21 @@
   .web-mode [aria-label='Agent sidebar'] {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Terminal: enable touch scrolling ── */
+  /* xterm.js creates these elements internally */
+  .web-mode [aria-label='Terminal'] .xterm {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: scroll !important;
+  }
+  .web-mode [aria-label='Terminal'] .xterm-viewport {
+    overflow-y: scroll !important;
+    touch-action: pan-y;
+  }
+  .web-mode [aria-label='Terminal'] .xterm-screen {
+    touch-action: pan-y;
   }
 
   /* ── Smooth transitions for page switching ── */

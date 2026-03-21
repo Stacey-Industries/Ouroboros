@@ -78,6 +78,7 @@ export interface FileViewerState {
   isClaudeMd: boolean;
   isMarkdown: boolean;
   hasDiff: boolean;
+  diffBaseContent: string | null;
   diffLines: DiffLineInfo[];
   diffMap: Map<number, DiffLineInfo['kind']>;
   blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
@@ -93,6 +94,7 @@ export interface FileViewerState {
 interface ViewerData {
   highlightedHtml: string | null;
   highlightLang: string | null;
+  diffBaseContent: string | null;
   diffLines: DiffLineInfo[];
   diffMap: Map<number, DiffLineInfo['kind']>;
   blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
@@ -110,8 +112,8 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
   const refs = useViewerRefs();
   const toggles = useViewerToggles();
   const ui = useViewerUiState();
-  const derived = useViewerDerivedState(input);
   const data = useViewerData(input, ideTheme.id, refs.scrollRef, toggles.showBlame);
+  const derived = useViewerDerivedState(input, data.diffBaseContent);
   const conflicts = useConflictState(input.filePath, input.content);
   const folds = useCollapsedFoldState(input.filePath, input.content);
 
@@ -216,11 +218,17 @@ function useViewerDerivedState({
   filePath,
   content,
   originalContent,
-}: FileViewerStateInput): ViewerDerivedState {
+}: FileViewerStateInput, gitDiffBaseContent: string | null): ViewerDerivedState {
+  const diffBaseContent =
+    originalContent != null && content != null && originalContent !== content
+      ? originalContent
+      : gitDiffBaseContent;
+
   return {
     isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath),
     isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath),
-    hasDiff: originalContent != null && content != null && originalContent !== content,
+    hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content,
+    diffBaseContent,
   };
 }
 
@@ -236,22 +244,93 @@ function useViewerData(
     ideThemeId
   );
   const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
+  const diffBaseContent = useGitDiffBaseContent(
+    input.projectRoot ?? null,
+    input.filePath,
+    input.content,
+    diffLines,
+  );
+  const effectiveDiffLines = useMemo(
+    () => buildEffectiveDiffLines(diffLines, diffBaseContent, input.content),
+    [diffBaseContent, diffLines, input.content],
+  );
   const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
   const { foldableLines } = useFoldRanges(input.content);
   const scrollMetrics = useScrollMetrics(scrollRef);
   const outlineSymbols = useSymbolOutline(input.content, input.filePath ? getLanguage(input.filePath) : 'text');
-  const diffMap = useMemo(() => createDiffMap(diffLines), [diffLines]);
+  const diffMap = useMemo(() => createDiffMap(effectiveDiffLines), [effectiveDiffLines]);
 
   return {
     highlightedHtml,
     highlightLang,
-    diffLines,
+    diffBaseContent,
+    diffLines: effectiveDiffLines,
     diffMap,
     blameLines,
     foldableLines,
     scrollMetrics,
     outlineSymbols,
   };
+}
+
+function useGitDiffBaseContent(
+  projectRoot: string | null,
+  filePath: string | null,
+  content: string | null,
+  diffLines: DiffLineInfo[],
+): string | null {
+  const [diffBaseContent, setDiffBaseContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!projectRoot || !filePath || content == null) {
+      setDiffBaseContent(null);
+      return () => { active = false; };
+    }
+
+    void (async () => {
+      try {
+        const repoResult = await window.electronAPI.git.isRepo(projectRoot);
+        if (!active || !repoResult.success || !repoResult.isRepo) {
+          if (active) setDiffBaseContent(null);
+          return;
+        }
+
+        const baseResult = await window.electronAPI.git.fileAtCommit(projectRoot, 'HEAD', filePath);
+        if (!active) return;
+
+        const baseContent = baseResult.success ? (baseResult.content ?? '') : null;
+        const hasGitDiff = baseContent != null && (diffLines.length > 0 || baseContent !== content);
+        setDiffBaseContent(hasGitDiff ? baseContent : null);
+      } catch {
+        if (active) setDiffBaseContent(null);
+      }
+    })();
+
+    return () => { active = false; };
+  }, [content, diffLines, filePath, projectRoot]);
+
+  return diffBaseContent;
+}
+
+function buildEffectiveDiffLines(
+  diffLines: DiffLineInfo[],
+  diffBaseContent: string | null,
+  content: string | null,
+): DiffLineInfo[] {
+  if (diffLines.length > 0) {
+    return diffLines;
+  }
+
+  if (diffBaseContent !== '' || content == null || content.length === 0) {
+    return diffLines;
+  }
+
+  return content.split('\n').map((_, index) => ({
+    line: index + 1,
+    kind: 'added',
+  }));
 }
 
 function useConflictState(

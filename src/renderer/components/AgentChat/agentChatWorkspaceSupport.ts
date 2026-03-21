@@ -66,6 +66,9 @@ export function mergeThreadCollection(
   // Defensive merge: if the incoming thread has fewer messages than the
   // existing one (possible due to race conditions or stale snapshots),
   // merge message arrays by ID to avoid losing messages.
+  // Defensive merge: if the incoming thread has fewer messages than the
+  // existing one (possible due to race conditions or stale snapshots),
+  // merge message arrays by ID to avoid losing messages.
   let merged = nextThread;
   if (existing && existing.messages.length > 0 && nextThread.messages.length < existing.messages.length) {
     const messageMap = new Map<string, AgentChatMessageRecord>();
@@ -113,7 +116,9 @@ function mergeThreadStatus(
   const mergedOrchestration = incoming
     ? {
         ...incoming,
+        provider: incoming.provider ?? existing?.provider,
         claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
+        codexThreadId: incoming.codexThreadId ?? existing?.codexThreadId,
         linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
       }
     : existing;
@@ -258,7 +263,17 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
 
     const cleanupThread = window.electronAPI.agentChat.onThreadUpdate((thread) => {
       if (thread.workspaceRoot !== projectRootRef.current) return;
-      setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
+      console.log('[agentChat:debug] onThreadUpdate:', thread.id,
+        'messages:', thread.messages.length, 'status:', thread.status,
+        'ids:', thread.messages.map(m => `${m.role}:${m.id.slice(-6)}`).join(', '));
+      setThreads((currentThreads) => {
+        const existing = currentThreads.find(t => t.id === thread.id);
+        if (existing && existing.messages.length > thread.messages.length) {
+          console.warn('[agentChat:debug] INCOMING THREAD HAS FEWER MESSAGES!',
+            'existing:', existing.messages.length, 'incoming:', thread.messages.length);
+        }
+        return mergeThreadCollection(currentThreads, thread);
+      });
       setActiveThreadId((currentThreadId) => currentThreadId ?? thread.id);
     });
 

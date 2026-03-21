@@ -9,6 +9,7 @@ export interface UseTerminalSessionsReturn {
   recordingSessions: Set<string>;
   spawnSession: (optionalCwd?: string) => Promise<void>;
   spawnClaudeSession: (optionalCwd?: string, options?: SpawnClaudeOptions) => Promise<void>;
+  spawnCodexSession: (optionalCwd?: string, options?: SpawnCodexOptions) => Promise<void>;
   handleTerminalClose: (sessionId: string) => void;
   handleTerminalRestart: (sessionId: string) => Promise<void>;
   handleTerminalTitleChange: (sessionId: string, title: string) => void;
@@ -23,12 +24,23 @@ export interface SpawnClaudeOptions {
   cliOverrides?: Record<string, unknown>;
   label?: string;
   resumeMode?: string;
+  /** Provider:model override (e.g. 'minimax:MiniMax-M2.7') */
+  providerModel?: string;
+}
+
+export interface SpawnCodexOptions {
+  initialPrompt?: string;
+  cliOverrides?: Record<string, unknown>;
+  label?: string;
+  resumeThreadId?: string;
+  model?: string;
 }
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
 type ActiveSessionSetter = Dispatch<SetStateAction<string | null>>;
 type SpawnSession = (optionalCwd?: string) => Promise<void>;
 type SpawnClaudeSession = (optionalCwd?: string, options?: SpawnClaudeOptions) => Promise<void>;
+type SpawnCodexSession = (optionalCwd?: string, options?: SpawnCodexOptions) => Promise<void>;
 
 interface KillTimerApi {
   clearKillTimers: (sessionId: string) => void;
@@ -49,6 +61,7 @@ interface SpawnDependencies extends BaseSpawnDependencies {
 interface RestoreDependencies {
   spawnSession: SpawnSession;
   spawnClaudeSession: SpawnClaudeSession;
+  spawnCodexSession: SpawnCodexSession;
   setSessions: SessionSetter;
   setActiveSessionId: ActiveSessionSetter;
   spawnCountRef: MutableRefObject<number>;
@@ -68,7 +81,9 @@ export interface SavedSessionSnapshot {
   cwd: string;
   title?: string;
   isClaude?: boolean;
+  isCodex?: boolean;
   claudeSessionId?: string;
+  codexThreadId?: string;
 }
 
 interface RestoreState {
@@ -85,7 +100,9 @@ function isSavedSessionSnapshot(value: unknown): value is SavedSessionSnapshot {
   return typeof snapshot.cwd === 'string'
     && (snapshot.title === undefined || typeof snapshot.title === 'string')
     && (snapshot.isClaude === undefined || typeof snapshot.isClaude === 'boolean')
-    && (snapshot.claudeSessionId === undefined || typeof snapshot.claudeSessionId === 'string');
+    && (snapshot.isCodex === undefined || typeof snapshot.isCodex === 'boolean')
+    && (snapshot.claudeSessionId === undefined || typeof snapshot.claudeSessionId === 'string')
+    && (snapshot.codexThreadId === undefined || typeof snapshot.codexThreadId === 'string');
 }
 
 async function readSavedSessionSnapshots(): Promise<SavedSessionSnapshot[]> {
@@ -103,7 +120,9 @@ export function serializeSavedSessionSnapshots(snapshots: SavedSessionSnapshot[]
       cwd: snapshot.cwd,
       title: snapshot.title ?? '',
       isClaude: snapshot.isClaude === true,
+      isCodex: snapshot.isCodex === true,
       claudeSessionId: snapshot.claudeSessionId ?? null,
+      codexThreadId: snapshot.codexThreadId ?? null,
     })),
   );
 }
@@ -230,6 +249,7 @@ function useSpawnClaudeSession({
       title: options?.label ?? `Claude ${index + 1}`,
       status: 'running',
       isClaude: true,
+      model: options?.providerModel,
     };
 
     await spawnSessionWithLifecycle({
@@ -244,23 +264,64 @@ function useSpawnClaudeSession({
           initialPrompt: options?.initialPrompt,
           cliOverrides: options?.cliOverrides,
           resumeMode: options?.resumeMode,
+          providerModel: options?.providerModel,
         }),
     });
   }, [clearKillTimers, pendingClaudeAssocRef, setActiveSessionId, setSessions, spawnCountRef]);
 }
 
+function useSpawnCodexSession({
+  spawnCountRef,
+  setSessions,
+  setActiveSessionId,
+  clearKillTimers,
+}: BaseSpawnDependencies): SpawnCodexSession {
+  return useCallback(async (
+    optionalCwd?: string,
+    options?: SpawnCodexOptions,
+  ): Promise<void> => {
+    const { id, index } = nextSessionIdentity(spawnCountRef);
+    const cwd = optionalCwd ?? await getDefaultCwd();
+    const session: TerminalSession = {
+      id,
+      title: options?.label ?? `Codex ${index + 1}`,
+      status: 'running',
+      isCodex: true,
+      codexThreadId: options?.resumeThreadId,
+      model: options?.model,
+    };
+
+    await spawnSessionWithLifecycle({
+      session,
+      setSessions,
+      setActiveSessionId,
+      clearKillTimers,
+      start: () =>
+        window.electronAPI.pty.spawnCodex(id, {
+          cwd,
+          initialPrompt: options?.initialPrompt,
+          cliOverrides: options?.cliOverrides,
+          resumeThreadId: options?.resumeThreadId,
+        }),
+    });
+  }, [clearKillTimers, setActiveSessionId, setSessions, spawnCountRef]);
+}
+
 export function useSessionSpawners(dependencies: SpawnDependencies): {
   spawnSession: SpawnSession;
   spawnClaudeSession: SpawnClaudeSession;
+  spawnCodexSession: SpawnCodexSession;
 } {
   const spawnSession = useSpawnSession(dependencies);
   const spawnClaudeSession = useSpawnClaudeSession(dependencies);
-  return { spawnSession, spawnClaudeSession };
+  const spawnCodexSession = useSpawnCodexSession(dependencies);
+  return { spawnSession, spawnClaudeSession, spawnCodexSession };
 }
 
 export function useRestoreSessions({
   spawnSession,
   spawnClaudeSession,
+  spawnCodexSession,
   setSessions,
   setActiveSessionId,
   spawnCountRef,
@@ -283,6 +344,7 @@ export function useRestoreSessions({
     void restoreSessionsAsync({
       spawnSession,
       spawnClaudeSession,
+      spawnCodexSession,
       setSessions,
       setActiveSessionId,
       spawnCountRef,
@@ -293,7 +355,7 @@ export function useRestoreSessions({
       console.error('[terminal] Failed to restore terminal sessions:', error);
       setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: null });
     });
-  }, [clearKillTimers, setActiveSessionId, setSessions, spawnClaudeSession, spawnCountRef, spawnSession]);
+  }, [clearKillTimers, setActiveSessionId, setSessions, spawnClaudeSession, spawnCodexSession, spawnCountRef, spawnSession]);
 
   return restoreState;
 }
@@ -308,6 +370,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 async function restoreSessionsAsync({
   spawnSession,
   spawnClaudeSession,
+  spawnCodexSession,
   setSessions,
   setActiveSessionId,
   spawnCountRef,
@@ -320,7 +383,7 @@ async function restoreSessionsAsync({
       return reconnectSessions(active, savedSnapshots, { setSessions, setActiveSessionId, spawnCountRef, clearKillTimers });
     }
 
-    await spawnFromSavedOrDefault(savedSnapshots, { spawnSession, spawnClaudeSession });
+    await spawnFromSavedOrDefault(savedSnapshots, { spawnSession, spawnClaudeSession, spawnCodexSession });
     return savedSnapshots.length > 0 ? serializeSavedSessionSnapshots(savedSnapshots) : null;
   } catch {
     void spawnSession();
@@ -337,6 +400,10 @@ function getRestoredSessionTitle(index: number, snapshot?: SavedSessionSnapshot)
     return `Claude ${index + 1}`;
   }
 
+  if (snapshot?.isCodex) {
+    return `Codex ${index + 1}`;
+  }
+
   return buildSessionLabel(index);
 }
 
@@ -350,7 +417,9 @@ function restoreSessionFromSnapshot(
     title: getRestoredSessionTitle(index, savedSnapshot),
     status: 'running',
     isClaude: savedSnapshot?.isClaude === true ? true : undefined,
+    isCodex: savedSnapshot?.isCodex === true ? true : undefined,
     claudeSessionId: savedSnapshot?.claudeSessionId,
+    codexThreadId: savedSnapshot?.codexThreadId,
   };
 }
 
@@ -411,7 +480,7 @@ function reconnectSessions(
 
 async function spawnFromSavedOrDefault(
   savedSnapshots: SavedSessionSnapshot[],
-  { spawnSession, spawnClaudeSession }: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession'>,
+  { spawnSession, spawnClaudeSession, spawnCodexSession }: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession' | 'spawnCodexSession'>,
 ): Promise<void> {
   const autoLaunch = await window.electronAPI.config.get('claudeAutoLaunch');
   if (savedSnapshots.length === 0) {
@@ -421,17 +490,22 @@ async function spawnFromSavedOrDefault(
   }
 
   for (const snapshot of savedSnapshots) {
-    await spawnSavedSession(snapshot, autoLaunch, { spawnSession, spawnClaudeSession });
+    await spawnSavedSession(snapshot, autoLaunch, { spawnSession, spawnClaudeSession, spawnCodexSession });
   }
 }
 
 async function spawnSavedSession(
   snapshot: SavedSessionSnapshot,
   autoLaunch: boolean,
-  { spawnSession, spawnClaudeSession }: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession'>,
+  { spawnSession, spawnClaudeSession, spawnCodexSession }: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession' | 'spawnCodexSession'>,
 ): Promise<void> {
   if (snapshot.isClaude || autoLaunch) {
     await spawnClaudeSession(snapshot.cwd, { label: snapshot.title, resumeMode: snapshot.claudeSessionId ?? 'continue' });
+    return;
+  }
+
+  if (snapshot.isCodex) {
+    await spawnCodexSession(snapshot.cwd, { label: snapshot.title, resumeThreadId: snapshot.codexThreadId });
     return;
   }
 

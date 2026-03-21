@@ -6,7 +6,9 @@ import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  CodexModelOption,
   ImageAttachment,
+  ModelProvider,
 } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
@@ -18,6 +20,7 @@ export interface SendMessageArgs {
   attachments?: ImageAttachment[];
   setAttachments?: Dispatch<SetStateAction<ImageAttachment[]>>;
   chatOverrides?: ChatOverrides;
+  codexModels?: CodexModelOption[];
   contextFilePaths?: string[];
   draft: string;
   isSending: boolean;
@@ -56,6 +59,10 @@ interface BuildWorkspaceModelArgs extends AgentChatActionState {
   chatOverrides: ChatOverrides;
   setChatOverrides: (overrides: ChatOverrides) => void;
   settingsModel: string;
+  codexSettingsModel: string;
+  defaultProvider: 'claude-code' | 'codex' | 'anthropic-api';
+  modelProviders: ModelProvider[];
+  codexModels: CodexModelOption[];
   closeDetails: () => void;
   details: AgentChatLinkedDetailsResult | null;
   detailsError: string | null;
@@ -81,6 +88,11 @@ interface BuildWorkspaceModelArgs extends AgentChatActionState {
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
+}
+
+function isCodexModel(model: string | undefined, codexModels: CodexModelOption[] | undefined): boolean {
+  if (!model) return false;
+  return (codexModels ?? []).some((entry) => entry.id === model);
 }
 
 /**
@@ -143,23 +155,32 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
 
     // Yield a frame so React can flush the optimistic UI (pending bubble +
     // streaming indicator) before we enter potentially slow IPC calls.
+    const t0 = performance.now();
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    console.log('[agentChat:timing] rAF yield:', (performance.now() - t0).toFixed(0), 'ms');
 
     try {
       // Flush dirty editor buffers to disk so Claude Code reads fresh content.
+      const t1 = performance.now();
       await saveAllDirtyBuffers();
+      console.log('[agentChat:timing] saveAllDirtyBuffers:', (performance.now() - t1).toFixed(0), 'ms');
 
       const contextSelection = a.contextFilePaths && a.contextFilePaths.length > 0
         ? { userSelectedFiles: a.contextFilePaths }
         : undefined;
 
       const overrides: Record<string, string | undefined> = {};
-      if (a.chatOverrides?.model) overrides.model = a.chatOverrides.model;
+      const selectedModel = a.chatOverrides?.model;
+      if (selectedModel) {
+        overrides.provider = isCodexModel(selectedModel, a.codexModels) ? 'codex' : 'claude-code';
+      }
+      if (selectedModel) overrides.model = selectedModel;
       if (a.chatOverrides?.effort) overrides.effort = a.chatOverrides.effort;
       if (a.chatOverrides?.permissionMode && a.chatOverrides.permissionMode !== 'default') {
         overrides.permissionMode = a.chatOverrides.permissionMode;
       }
 
+      const t2 = performance.now();
       const result = await window.electronAPI.agentChat.sendMessage({
         threadId: a.activeThreadId ?? undefined,
         workspaceRoot: a.projectRoot,
@@ -172,6 +193,8 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
           usedAdvancedControls: Boolean(contextSelection),
         },
       });
+      console.log('[agentChat:timing] IPC sendMessage:', (performance.now() - t2).toFixed(0), 'ms');
+      console.log('[agentChat:timing] total send path:', (performance.now() - t0).toFixed(0), 'ms');
 
       if (!result.success) {
         throw new Error(result.error ?? 'Unable to send the chat message.');
@@ -181,16 +204,32 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
       a.setAttachments?.([]);
 
       if (result.thread) {
-        a.setThreads((currentThreads) => mergeThreadCollection(currentThreads, result.thread as AgentChatThreadRecord));
-        a.setActiveThreadId(result.thread.id);
+        const rt = result.thread as AgentChatThreadRecord;
+        console.log('[agentChat:debug] IPC result thread:', rt.id,
+          'messages:', rt.messages.length,
+          'ids:', rt.messages.map(m => `${m.role}:${m.id.slice(-6)}`).join(', '));
+        const t3 = performance.now();
+        a.setThreads((currentThreads) => mergeThreadCollection(currentThreads, rt));
+        a.setActiveThreadId(rt.id);
+        console.log('[agentChat:timing] setState calls:', (performance.now() - t3).toFixed(0), 'ms');
       }
 
+      // Clear the optimistic bubble only after the thread has been merged —
+      // React 18 batches these so both update in a single render.
+      a.setPendingUserMessage(null);
+      // Measure how long until React actually renders
+      const t4 = performance.now();
+      requestAnimationFrame(() => {
+        console.log('[agentChat:timing] time-to-render after send:', (performance.now() - t4).toFixed(0), 'ms');
+      });
       clearPersistedDraft(result.thread?.id ?? a.activeThreadId);
     } catch (sendError) {
       a.setError(getErrorMessage(sendError));
+      // Restore the draft so the user doesn't lose their message on failure.
+      a.setDraft(content);
+      a.setPendingUserMessage(null);
     } finally {
       a.setIsSending(false);
-      a.setPendingUserMessage(null);
     }
   }, []);
 }
@@ -457,6 +496,10 @@ export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): Age
     chatOverrides: args.chatOverrides,
     setChatOverrides: args.setChatOverrides,
     settingsModel: args.settingsModel,
+    codexSettingsModel: args.codexSettingsModel,
+    defaultProvider: args.defaultProvider,
+    modelProviders: args.modelProviders,
+    codexModels: args.codexModels,
     pendingUserMessage: args.pendingUserMessage,
     closeDetails: args.closeDetails,
     deleteThread: args.deleteThread,

@@ -152,6 +152,7 @@ interface ChromeBodyProps {
   content: string | null;
   projectRoot?: string | null;
   originalContent?: string | null;
+  diffBaseContent?: string | null;
   onSave?: (content: string) => void;
   onContentChange?: (content: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -164,6 +165,7 @@ function ChromeBody({
   content,
   projectRoot,
   originalContent,
+  diffBaseContent,
   onSave,
   onContentChange,
   onDirtyChange,
@@ -188,6 +190,7 @@ function ChromeBody({
         isMarkdown={s.isMarkdown}
         hasDiff={s.hasDiff}
         originalContent={originalContent}
+        diffBaseContent={diffBaseContent}
         conflictBlocks={s.conflictBlocks}
         handleConflictResolved={s.handleConflictResolved}
         codeViewProps={codeViewProps}
@@ -248,7 +251,7 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   return (
     <div ref={s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
       <ChromeHeader projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload} currentContent={content} isDirty={isDirty} onSave={onSave} onCancelEdit={onCancelEdit} s={s} />
-      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} onSave={handleEditorSave} onContentChange={onContentChange} codeViewProps={codeViewProps} s={s} />
+      <ChromeBody filePath={filePath} content={content} projectRoot={projectRoot} originalContent={originalContent} diffBaseContent={s.diffBaseContent} onSave={handleEditorSave} onContentChange={onContentChange} onDirtyChange={undefined} codeViewProps={codeViewProps} s={s} />
       {filePath && <StatusFooter filePath={filePath} lineCount={lineCount} s={s} />}
     </div>
   );

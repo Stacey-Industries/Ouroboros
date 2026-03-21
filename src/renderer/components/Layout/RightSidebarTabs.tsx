@@ -279,7 +279,6 @@ function ChatPanelHeader({
       className="flex-shrink-0 flex items-center h-8 border-b relative"
       style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-muted, var(--border))' }}
     >
-      {/* Collapse button */}
       <button
         onClick={onCollapse}
         title="Collapse sidebar (Ctrl+\)"
@@ -288,7 +287,6 @@ function ChatPanelHeader({
         <CollapseIcon />
       </button>
 
-      {/* History button */}
       <button
         onClick={onToggleHistory}
         className="flex items-center gap-1 px-1.5 py-1 rounded transition-colors duration-100"
@@ -316,7 +314,6 @@ function ChatPanelHeader({
         )}
       </button>
 
-      {/* Active thread title with status indicator */}
       <span
         className="flex-1 flex items-center justify-center gap-1.5 truncate text-[11px] px-1.5 select-none"
         style={{ color: 'var(--text-muted)' }}
@@ -341,7 +338,6 @@ function ChatPanelHeader({
         <span className="truncate">{activeThread?.title ?? 'New Chat'}</span>
       </span>
 
-      {/* New Chat button */}
       <button
         onClick={onNewChat}
         className="flex items-center gap-1 px-1.5 py-1 mr-0.5 rounded text-[11px] transition-colors duration-100"
@@ -360,7 +356,6 @@ function ChatPanelHeader({
         <PlusIcon />
       </button>
 
-      {/* View switcher */}
       <button
         onClick={onToggleViewDropdown}
         className="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors duration-100"
@@ -382,7 +377,6 @@ function ChatPanelHeader({
         <GearIcon />
       </button>
 
-      {/* View switcher dropdown */}
       {viewDropdownOpen && (
         <ViewSwitcherDropdown
           activeView={activeView}
@@ -453,7 +447,6 @@ function RecentThreadTabs({
         borderColor: 'var(--border-muted, var(--border))',
         backgroundColor: 'var(--bg-secondary)',
         scrollbarWidth: 'none',
-        height: 28,
       }}
     >
       {recentThreads.map((thread) => {
@@ -484,7 +477,6 @@ function RecentThreadTabs({
           >
             <ThreadStatusIcon status={thread.status} />
             <span className="truncate max-w-[90px]">{thread.title || 'Chat'}</span>
-            {/* Active indicator underline */}
             {isActive && (
               <span
                 className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full"

@@ -10,6 +10,8 @@ export interface ClaudeSessionOptions {
   initialPrompt?: string;
   cliOverrides?: Record<string, unknown>;
   label?: string;
+  /** Provider:model override (e.g. 'minimax:MiniMax-M2.7' or 'opus') */
+  providerModel?: string;
 }
 
 export interface SessionManagerActionArgs {

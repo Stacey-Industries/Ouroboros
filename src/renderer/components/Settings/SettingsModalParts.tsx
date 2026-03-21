@@ -59,6 +59,7 @@ function ModalOverlay({
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
+      className="glass-shell"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onCancel();
@@ -71,8 +72,8 @@ function ModalOverlay({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(2px)',
+        backgroundColor: 'var(--glass-shell-bg, rgba(0, 0, 0, 0.6))',
+        backdropFilter: 'var(--glass-backdrop, blur(2px))',
         padding: '24px',
         animation: isVisible
           ? 'settings-overlay-in 180ms ease forwards'
@@ -91,6 +92,7 @@ function ModalCard({
   return (
     <div
       role="document"
+      className="glass-card"
       style={{
         width: '100%',
         maxWidth: '680px',
@@ -98,9 +100,9 @@ function ModalCard({
         display: 'flex',
         flexDirection: 'column',
         borderRadius: '10px',
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
-        boxShadow: '0 32px 80px rgba(0, 0, 0, 0.7)',
+        background: 'var(--glass-card-bg, var(--bg))',
+        border: '1px solid var(--glass-border-muted, var(--border))',
+        boxShadow: 'var(--glass-shadow, 0 32px 80px rgba(0, 0, 0, 0.7))',
         overflow: 'hidden',
         animation: isVisible
           ? 'settings-card-in 180ms ease forwards'
@@ -120,7 +122,7 @@ function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px 20px',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid var(--glass-border-muted, var(--border))',
         flexShrink: 0,
       }}
     >
@@ -226,9 +228,9 @@ function ModalFooter({
         justifyContent: 'flex-end',
         gap: '10px',
         padding: '14px 20px',
-        borderTop: '1px solid var(--border)',
+        borderTop: '1px solid var(--glass-border, var(--border))',
         flexShrink: 0,
-        background: 'var(--bg-secondary)',
+        background: 'var(--glass-panel-bg-thin, var(--bg-secondary))',
       }}
     >
       {saveError && (

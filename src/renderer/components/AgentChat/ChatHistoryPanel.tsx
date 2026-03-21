@@ -171,10 +171,8 @@ function ThreadItem({
         if (!isActive) e.currentTarget.style.backgroundColor = '';
       }}
     >
-      {/* Status icon */}
       <StatusIcon display={display} />
 
-      {/* Title + metadata */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           {thread.branchInfo && (
@@ -291,7 +289,6 @@ export function ChatHistoryPanel({
         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
       }}
     >
-      {/* Search */}
       <div
         className="flex items-center gap-2 px-3 py-2 border-b flex-shrink-0"
         style={{ borderColor: 'var(--border-muted, var(--border))' }}

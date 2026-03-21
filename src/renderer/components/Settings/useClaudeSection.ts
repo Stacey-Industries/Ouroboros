@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { AgentTemplate, AppConfig, ClaudeCliSettings } from '../../types/electron';
+
+import type { AgentTemplate, AppConfig, ClaudeCliSettings, ModelProvider } from '../../types/electron';
 
 export interface ClaudeOption {
   label: string;
@@ -14,6 +15,7 @@ export interface ClaudeOptionGroup {
 export interface ClaudeSectionModel {
   autoLaunch: boolean;
   canAddDir: boolean;
+  modelOptionGroups: ClaudeOptionGroup[];
   newDir: string;
   settings: ClaudeCliSettings;
   templates: AgentTemplate[];
@@ -34,7 +36,7 @@ type ClaudeSettingUpdater = <K extends keyof ClaudeCliSettings>(
 export const DEFAULT_CLAUDE_SETTINGS: ClaudeCliSettings = {
   permissionMode: 'default',
   model: '',
-  effort: '',
+  effort: 'medium',
   appendSystemPrompt: '',
   verbose: false,
   maxBudgetUsd: 0,
@@ -47,7 +49,7 @@ export const DEFAULT_CLAUDE_SETTINGS: ClaudeCliSettings = {
 };
 
 export const PERMISSION_MODES: ClaudeOption[] = [
-  { value: 'default', label: 'Default' },
+  { value: 'default', label: 'Ask First' },
   { value: 'acceptEdits', label: 'Accept Edits' },
   { value: 'plan', label: 'Plan' },
   { value: 'auto', label: 'Auto' },
@@ -55,14 +57,13 @@ export const PERMISSION_MODES: ClaudeOption[] = [
 ];
 
 export const EFFORT_LEVELS: ClaudeOption[] = [
-  { value: '', label: '(Default)' },
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
   { value: 'max', label: 'Max' },
 ];
 
-export const MODEL_OPTION_GROUPS: ClaudeOptionGroup[] = [
+const BASE_MODEL_GROUPS: ClaudeOptionGroup[] = [
   {
     label: 'Latest Versions',
     options: [
@@ -81,18 +82,41 @@ export const MODEL_OPTION_GROUPS: ClaudeOptionGroup[] = [
   },
 ];
 
+/** Static default — used when no providers are configured. */
+export const MODEL_OPTION_GROUPS: ClaudeOptionGroup[] = BASE_MODEL_GROUPS;
+
+/** Builds model groups dynamically, including third-party providers. */
+export function getModelOptionGroups(providers: ModelProvider[]): ClaudeOptionGroup[] {
+  const providerGroups = providers
+    .filter((p) => p.enabled && p.models.length > 0)
+    .map((p) => ({
+      label: p.name,
+      options: p.models.map((m) => ({ value: m.id, label: m.name })),
+    }));
+  return [...BASE_MODEL_GROUPS, ...providerGroups];
+}
+
 export function useClaudeSectionModel(
   draft: AppConfig,
   onChange: ConfigChangeHandler,
 ): ClaudeSectionModel {
-  const settings = draft.claudeCliSettings ?? DEFAULT_CLAUDE_SETTINGS;
+  const rawSettings = draft.claudeCliSettings ?? DEFAULT_CLAUDE_SETTINGS;
+  const settings: ClaudeCliSettings = {
+    ...DEFAULT_CLAUDE_SETTINGS,
+    ...rawSettings,
+    effort: rawSettings.effort || DEFAULT_CLAUDE_SETTINGS.effort,
+    permissionMode: rawSettings.permissionMode || DEFAULT_CLAUDE_SETTINGS.permissionMode,
+    addDirs: rawSettings.addDirs ?? DEFAULT_CLAUDE_SETTINGS.addDirs,
+  };
   const updateSetting: ClaudeSettingUpdater = (key, value) =>
     updateClaudeSetting(settings, onChange, key, value);
   const directoryState = useClaudeDirectoryState(settings, updateSetting);
+  const modelOptionGroups = getModelOptionGroups(draft.modelProviders ?? []);
 
   return {
     autoLaunch: draft.claudeAutoLaunch ?? false,
     canAddDir: directoryState.canAddDir,
+    modelOptionGroups,
     newDir: directoryState.newDir,
     settings,
     templates: draft.agentTemplates ?? [],

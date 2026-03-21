@@ -188,38 +188,57 @@ function Tab(props: {
 }
 
 /**
- * Resolves the Claude Code session ID for a thread, used to --resume into
- * an interactive terminal.  Reads from the thread prop first, falls back to
- * IPC polling while the session is active.
+ * Resolves the provider-backed resume session ID for a thread, used to
+ * reopen the chat in an interactive terminal.
  */
-function useClaudeSessionId(
+function useLinkedSessionId(
   threadId: string | null,
   threadStatus: string | null,
+  threadProvider: 'claude-code' | 'codex' | undefined,
   threadClaudeSessionId: string | null | undefined,
-): string | null {
-  const [claudeSessionId, setClaudeSessionId] = useState<string | null>(
-    threadClaudeSessionId ?? null,
-  );
+  threadCodexThreadId: string | null | undefined,
+): { provider: 'claude-code' | 'codex' | null; sessionId: string | null } {
+  const [state, setState] = useState<{ provider: 'claude-code' | 'codex' | null; sessionId: string | null }>({
+    provider: threadProvider ?? (threadCodexThreadId ? 'codex' : threadClaudeSessionId ? 'claude-code' : null),
+    sessionId: threadCodexThreadId ?? threadClaudeSessionId ?? null,
+  });
 
-  // Prefer the value already on the thread's latestOrchestration
   useEffect(() => {
-    if (threadClaudeSessionId) {
-      setClaudeSessionId(threadClaudeSessionId);
+    if (threadCodexThreadId) {
+      setState({ provider: 'codex', sessionId: threadCodexThreadId });
+      return;
     }
-  }, [threadClaudeSessionId]);
+    if (threadClaudeSessionId) {
+      setState({ provider: 'claude-code', sessionId: threadClaudeSessionId });
+      return;
+    }
+    setState((prev) => ({ provider: threadProvider ?? prev.provider, sessionId: prev.sessionId }));
+  }, [threadClaudeSessionId, threadCodexThreadId, threadProvider]);
 
   // Fallback: query via IPC while the thread is actively running
   useEffect(() => {
     if (!threadId || !window.electronAPI?.agentChat?.getLinkedTerminal) {
-      setClaudeSessionId(null);
+      setState({ provider: null, sessionId: null });
       return;
     }
 
     let cancelled = false;
     const query = () => {
       void window.electronAPI.agentChat.getLinkedTerminal(threadId).then((result) => {
-        if (!cancelled && result?.success && result.claudeSessionId) {
-          setClaudeSessionId(result.claudeSessionId);
+        if (cancelled || !result?.success) {
+          return;
+        }
+        const provider =
+          result.provider === 'claude-code' || result.provider === 'codex'
+            ? result.provider
+            : result.codexThreadId
+              ? 'codex'
+              : result.claudeSessionId
+                ? 'claude-code'
+                : null;
+        const sessionId = result.codexThreadId ?? result.claudeSessionId ?? null;
+        if (provider && sessionId) {
+          setState({ provider, sessionId });
         }
       });
     };
@@ -239,27 +258,44 @@ function useClaudeSessionId(
   }, [threadId, threadStatus]);
 
   useEffect(() => {
-    if (!threadId) setClaudeSessionId(null);
+    if (!threadId) {
+      setState({ provider: null, sessionId: null });
+    }
   }, [threadId]);
 
-  return claudeSessionId;
+  return state;
 }
 
-function OpenInTerminalButton({ threadId, threadStatus, threadClaudeSessionId }: {
+function OpenInTerminalButton({ threadId, threadStatus, threadProvider, threadClaudeSessionId, threadCodexThreadId, threadModel }: {
   threadId: string | null;
   threadStatus: string | null;
+  threadProvider: 'claude-code' | 'codex' | undefined;
   threadClaudeSessionId: string | null | undefined;
+  threadCodexThreadId: string | null | undefined;
+  threadModel: string | null | undefined;
 }): React.ReactElement | null {
-  const claudeSessionId = useClaudeSessionId(threadId, threadStatus, threadClaudeSessionId);
+  const linked = useLinkedSessionId(
+    threadId,
+    threadStatus,
+    threadProvider,
+    threadClaudeSessionId,
+    threadCodexThreadId,
+  );
 
   const handleClick = useCallback(() => {
-    if (!claudeSessionId) return;
+    if (!linked.provider || !linked.sessionId) return;
     window.dispatchEvent(
-      new CustomEvent(OPEN_CHAT_IN_TERMINAL_EVENT, { detail: { claudeSessionId } }),
+      new CustomEvent(OPEN_CHAT_IN_TERMINAL_EVENT, {
+        detail: {
+          provider: linked.provider,
+          sessionId: linked.sessionId,
+          model: threadModel ?? undefined,
+        },
+      }),
     );
-  }, [claudeSessionId]);
+  }, [linked.provider, linked.sessionId, threadModel]);
 
-  if (!claudeSessionId) return null;
+  if (!linked.sessionId) return null;
 
   return (
     <button
@@ -359,7 +395,10 @@ export function AgentChatTabBar({
       <OpenInTerminalButton
         threadId={activeThreadId}
         threadStatus={threads.find((t) => t.id === activeThreadId)?.status ?? null}
+        threadProvider={threads.find((t) => t.id === activeThreadId)?.latestOrchestration?.provider as 'claude-code' | 'codex' | undefined}
         threadClaudeSessionId={threads.find((t) => t.id === activeThreadId)?.latestOrchestration?.claudeSessionId}
+        threadCodexThreadId={threads.find((t) => t.id === activeThreadId)?.latestOrchestration?.codexThreadId}
+        threadModel={threads.find((t) => t.id === activeThreadId)?.latestOrchestration?.model}
       />
 
       {/* Thread dropdown */}

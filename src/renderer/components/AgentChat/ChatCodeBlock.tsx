@@ -202,7 +202,7 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
   const handleOpenInEditor = useCallback(() => {
     if (!filePath) return;
     window.dispatchEvent(
-      new CustomEvent('agent-ide:open-file', { detail: { path: filePath } }),
+      new CustomEvent('agent-ide:open-file', { detail: { filePath } }),
     );
   }, [filePath]);
 

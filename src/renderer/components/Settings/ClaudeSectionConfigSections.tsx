@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   claudeSectionAddButtonStyle,
   claudeSectionAddDirectoryRowStyle,
@@ -16,15 +17,14 @@ import {
   claudeSectionModelHelpStyle,
   claudeSectionRemoveDirectoryButtonStyle,
   claudeSectionSectionDescriptionStyle,
-  claudeSectionTextInputStyle,
   claudeSectionTextareaStyle,
+  claudeSectionTextInputStyle,
 } from './claudeSectionContentStyles';
 import { SelectSection, SwitchControl } from './ClaudeSectionControls';
 import { SectionLabel } from './settingsStyles';
 import type { ClaudeSectionModel } from './useClaudeSection';
 import {
   EFFORT_LEVELS,
-  MODEL_OPTION_GROUPS,
   PERMISSION_MODES,
 } from './useClaudeSection';
 
@@ -65,7 +65,7 @@ export function ModelSection({
         onChange={(value) => model.updateSetting('model', value)}
       >
         <option value="">(CLI Default)</option>
-        {MODEL_OPTION_GROUPS.map((group) => (
+        {model.modelOptionGroups.map((group) => (
           <optgroup key={group.label} label={group.label}>
             {group.options.map((option) => (
               <option key={option.value} value={option.value}>

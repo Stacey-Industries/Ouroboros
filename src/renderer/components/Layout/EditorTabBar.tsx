@@ -16,6 +16,17 @@ import {
   type MultiBufferTab,
 } from '../FileViewer/MultiBufferManager';
 
+type SpecialViewType = 'settings' | 'usage' | 'context-builder' | 'time-travel' | 'extensions' | 'mcp';
+
+export type { SpecialViewType };
+
+export interface EditorTabBarProps {
+  openSpecialViews: SpecialViewType[];
+  activeSpecialView: SpecialViewType | null;
+  onSpecialViewClick: (view: SpecialViewType) => void;
+  onSpecialViewClose: (view: SpecialViewType) => void;
+}
+
 const containerStyle: React.CSSProperties = {
   display: 'flex',
   flex: 1,
@@ -138,11 +149,100 @@ const newMultiBufferButtonStyle: React.CSSProperties = {
   borderRight: '1px solid var(--border)',
 };
 
+const specialViewTabStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '0 10px 0 12px',
+  height: '100%',
+  flexShrink: 0,
+  cursor: 'pointer',
+  userSelect: 'none',
+  borderRight: '1px solid var(--border)',
+  borderBottom: '2px solid transparent',
+  backgroundColor: 'var(--bg-secondary)',
+  color: 'var(--text-muted)',
+  fontSize: '0.8125rem',
+  fontFamily: 'var(--font-ui)',
+  minWidth: '80px',
+  maxWidth: '200px',
+  transition: 'background-color 150ms ease, color 150ms ease',
+};
+
+const specialViewTabActiveStyle: React.CSSProperties = {
+  ...specialViewTabStyle,
+  backgroundColor: 'var(--bg)',
+  color: 'var(--text)',
+  borderBottom: '2px solid var(--accent)',
+};
+
+const specialViewIconStyle: React.CSSProperties = {
+  fontSize: '0.875rem',
+  opacity: 0.7,
+};
+
 function activateMultiBuffer(id: string): void {
   window.dispatchEvent(
     new CustomEvent('agent-ide:activate-multi-buffer', { detail: { id } }),
   );
 }
+
+const SPECIAL_VIEW_META: Record<SpecialViewType, { label: string; icon: string }> = {
+  'settings': { label: 'Settings', icon: '\u2699' },
+  'usage': { label: 'Usage', icon: '\u2630' },
+  'context-builder': { label: 'Context', icon: '\u2631' },
+  'time-travel': { label: 'Time Travel', icon: '\u21B7' },
+  'extensions': { label: 'Extensions', icon: '\u2B29' },
+  'mcp': { label: 'MCP Servers', icon: '\u2B21' },
+};
+
+function SpecialViewTab({
+  specialView,
+  isActive,
+  onClick,
+  onClose,
+}: {
+  specialView: SpecialViewType;
+  isActive: boolean;
+  onClick: () => void;
+  onClose?: () => void;
+}): React.ReactElement {
+  const meta = SPECIAL_VIEW_META[specialView];
+  if (!meta) return <></>;
+  return (
+    <div
+      role="tab"
+      tabIndex={0}
+      aria-selected={isActive}
+      title={meta.label}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      style={isActive ? specialViewTabActiveStyle : specialViewTabStyle}
+    >
+      <span style={specialViewIconStyle}>{meta.icon}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {meta.label}
+      </span>
+      {onClose && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          aria-label={`Close ${meta.label}`}
+          style={specialViewCloseStyle}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
+const specialViewCloseStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: '18px', height: '18px', marginLeft: '4px',
+  borderRadius: '4px', border: 'none', background: 'transparent',
+  color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', lineHeight: 1,
+  flexShrink: 0,
+};
 
 function deactivateMultiBuffer(): void {
   window.dispatchEvent(new CustomEvent('agent-ide:deactivate-multi-buffer'));
@@ -169,6 +269,7 @@ function useEditorTabActions(
   const handleActivateFile = useCallback((filePath: string) => {
     deactivateMultiBuffer();
     setActive(filePath);
+    window.dispatchEvent(new CustomEvent('agent-ide:file-tab-clicked-while-special-view'));
   }, [setActive]);
 
   return {
@@ -406,7 +507,12 @@ function useActiveMultiBufferId(): string | null {
   return activeId;
 }
 
-export function EditorTabBar(): React.ReactElement {
+export function EditorTabBar({
+  openSpecialViews,
+  activeSpecialView,
+  onSpecialViewClick,
+  onSpecialViewClose,
+}: EditorTabBarProps): React.ReactElement {
   const {
     openFiles, activeIndex, setActive, closeFile,
     pinTab, unpinTab, togglePin, closeOthers, closeToRight, closeAll,
@@ -437,6 +543,15 @@ export function EditorTabBar(): React.ReactElement {
           onCloseAll={closeAll}
         />
       )}
+      {openSpecialViews.map((view) => (
+        <SpecialViewTab
+          key={view}
+          specialView={view}
+          isActive={view === activeSpecialView}
+          onClick={() => onSpecialViewClick(view)}
+          onClose={() => onSpecialViewClose(view)}
+        />
+      ))}
       <MultiBufferTabs
         buffers={multiBuffers}
         activeId={activeMultiBufferId}

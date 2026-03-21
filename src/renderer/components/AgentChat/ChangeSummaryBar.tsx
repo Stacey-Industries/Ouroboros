@@ -35,13 +35,18 @@ export function extractChangeTally(blocks: AgentChatContentBlock[]): ChangeTally
 /** Extract a change tally from persisted content blocks (AgentChatContentBlock[]). */
 export function extractChangeTallyFromBlocks(blocks: AgentChatContentBlock[]): ChangeTally {
   const fileSet = new Set<string>();
+  let linesAdded = 0;
+  let linesRemoved = 0;
   for (const block of blocks) {
     if (block.kind !== 'tool_use') continue;
     if (!FILE_MODIFYING_TOOLS.has(block.tool)) continue;
     if (block.filePath) fileSet.add(block.filePath);
+    if (block.editSummary) {
+      linesAdded += block.editSummary.newLines;
+      linesRemoved += block.editSummary.oldLines;
+    }
   }
-  // Persisted blocks don't carry editSummary — line counts will come from the DiffReview panel
-  return { filesChanged: Array.from(fileSet), linesAdded: 0, linesRemoved: 0 };
+  return { filesChanged: Array.from(fileSet), linesAdded, linesRemoved };
 }
 
 /** Returns true if the message has file-modifying tool blocks worth reviewing. */

@@ -44,7 +44,7 @@ export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: Setti
       onImport={api.handleImport}
       onPreviewTheme={api.handlePreviewTheme}
       onResultClick={(entry) => handleResultClick(entry, setActiveTab, setSearchQuery)}
-      onSave={() => void api.handleSave(onClose)}
+      onSave={() => void api.handleSave()}
       saveError={api.saveError}
       searchInputRef={searchInputRef}
       searchQuery={searchQuery}

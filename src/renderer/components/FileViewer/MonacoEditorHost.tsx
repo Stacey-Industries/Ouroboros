@@ -16,6 +16,7 @@
 import * as monaco from 'monaco-editor';
 import React, { memo,useCallback, useEffect, useRef, useState } from 'react';
 
+import type { DiffLineInfo } from '../../types/electron';
 import {
   registerMonacoEditor,
   unregisterMonacoEditor,
@@ -57,6 +58,8 @@ export interface MonacoEditorHostProps {
   showMinimap?: boolean;
   /** Format document before saving (requires formatting provider) */
   formatOnSave?: boolean;
+  /** Diff markers to render in read-only code mode */
+  diffLines?: DiffLineInfo[];
 }
 
 // Ensure Monaco is initialized before any editor is created
@@ -160,6 +163,7 @@ export const MonacoEditorHost = memo(function MonacoEditorHost(
     wordWrap: wordWrapProp,
     showMinimap: showMinimapProp,
     formatOnSave = false,
+    diffLines = [],
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -169,6 +173,7 @@ export const MonacoEditorHost = memo(function MonacoEditorHost(
   const isDirtyRef = useRef(false);
   const contentChangeDisposableRef = useRef<monaco.IDisposable | null>(null);
   const saveActionDisposableRef = useRef<monaco.IDisposable | null>(null);
+  const diffDecorationIdsRef = useRef<string[]>([]);
 
   // Stable refs for callbacks (avoids re-registering on every render)
   const onSaveRef = useRef(onSave);
@@ -229,6 +234,7 @@ export const MonacoEditorHost = memo(function MonacoEditorHost(
       minimap: { enabled: showMinimapProp ?? true },
       stickyScroll: { enabled: true, maxLineCount: 5 },
       lineNumbers: 'on',
+      glyphMargin: true,
       folding: true,
       foldingStrategy: 'indentation',
       wordWrap: wordWrapProp ? 'on' : 'off',
@@ -560,6 +566,16 @@ export const MonacoEditorHost = memo(function MonacoEditorHost(
     }
   }, [showMinimapProp]);
 
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    diffDecorationIdsRef.current = editor.deltaDecorations(
+      diffDecorationIdsRef.current,
+      buildDiffDecorations(diffLines),
+    );
+  }, [diffLines, filePath]);
+
   // ── Keybinding mode (vim / emacs / default) ─────────────────────────────
   useEffect(() => {
     const editor = editorRef.current;
@@ -706,4 +722,43 @@ export function setViewState(
   state: monaco.editor.ICodeEditorViewState,
 ): void {
   viewStateMap.set(filePath, state);
+}
+
+function buildDiffDecorations(diffLines: DiffLineInfo[]): monaco.editor.IModelDeltaDecoration[] {
+  const seen = new Set<string>();
+
+  return diffLines.flatMap((diffLine) => {
+    const lineNumber = Math.max(1, diffLine.line);
+    const key = `${lineNumber}:${diffLine.kind}`;
+    if (seen.has(key)) {
+      return [];
+    }
+    seen.add(key);
+
+    return [{
+      range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+      options: {
+        isWholeLine: true,
+        className: `ouroboros-monaco-diff-line-${diffLine.kind}`,
+        linesDecorationsClassName: `ouroboros-monaco-diff-gutter-${diffLine.kind}`,
+        overviewRuler: {
+          color: getOverviewRulerColor(diffLine.kind),
+          position: monaco.editor.OverviewRulerLane.Left,
+        },
+      },
+    }];
+  });
+}
+
+function getOverviewRulerColor(kind: DiffLineInfo['kind']): string {
+  switch (kind) {
+    case 'added':
+      return '#3fb950';
+    case 'deleted':
+      return '#f85149';
+    case 'modified':
+      return '#2f81f7';
+    default:
+      return '#6e7681';
+  }
 }

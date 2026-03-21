@@ -91,6 +91,7 @@ export function Sidebar({
 }: SidebarProps): React.ReactElement {
   return (
     <div
+      data-layout="sidebar"
       className="
         flex flex-col h-full overflow-hidden
         bg-[var(--bg-secondary)] border-r border-[var(--border-muted,var(--border))]

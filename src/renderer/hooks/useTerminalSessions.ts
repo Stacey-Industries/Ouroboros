@@ -14,7 +14,7 @@ import {
   useRecordingSync,
 } from './useTerminalSessions.sync';
 
-export type { SpawnClaudeOptions, UseTerminalSessionsReturn } from './useTerminalSessions.effects';
+export type { SpawnClaudeOptions, SpawnCodexOptions, UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 
 export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCreateSession: (id: string) => void } {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
@@ -23,7 +23,7 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
   const spawnCountRef = useRef(0);
   const pendingClaudeAssocRef = useRef<string[]>([]);
   const timerApi = useKillTimers();
-  const { spawnSession, spawnClaudeSession } = useSessionSpawners({
+  const { spawnSession, spawnClaudeSession, spawnCodexSession } = useSessionSpawners({
     spawnCountRef,
     pendingClaudeAssocRef,
     setSessions,
@@ -44,6 +44,7 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
   const hasCompletedRestore = useRestoreSessions({
     spawnSession,
     spawnClaudeSession,
+    spawnCodexSession,
     setSessions,
     setActiveSessionId,
     spawnCountRef,
@@ -77,5 +78,5 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
     registerExitHandler(id, setSessions, timerApi.clearKillTimers);
   }, [setActiveSessionId, setSessions, timerApi.clearKillTimers]);
 
-  return { sessions, activeSessionId, setActiveSessionId, recordingSessions, spawnSession, spawnClaudeSession, focusOrCreateSession, ...handlers };
+  return { sessions, activeSessionId, setActiveSessionId, recordingSessions, spawnSession, spawnClaudeSession, spawnCodexSession, focusOrCreateSession, ...handlers };
 }

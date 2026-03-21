@@ -43,6 +43,7 @@ export interface ViewerDerivedState {
   isClaudeMd: boolean;
   isMarkdown: boolean;
   hasDiff: boolean;
+  diffBaseContent: string | null;
 }
 
 export interface ViewerConflicts {
@@ -156,6 +157,7 @@ function createViewerFrameState({
     isClaudeMd: derived.isClaudeMd,
     isMarkdown: derived.isMarkdown,
     hasDiff: derived.hasDiff,
+    diffBaseContent: derived.diffBaseContent,
     toggleFold: folds.toggleFold,
     handleConflictResolved: conflicts.handleConflictResolved,
   };

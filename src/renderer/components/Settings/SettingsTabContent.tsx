@@ -9,6 +9,7 @@ import { AgentSection } from './AgentSection';
 import { AppearanceSection } from './AppearanceSection';
 import { ClaudeSection } from './ClaudeSection';
 import { CodeModeSection } from './CodeModeSection';
+import { CodexSection } from './CodexSection';
 import { ContextDocsSection } from './ContextDocsSection';
 import { ExtensionsSection } from './ExtensionsSection';
 import { FileFilterSection } from './FileFilterSection';
@@ -18,6 +19,7 @@ import { HooksSection } from './HooksSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { McpSection } from './McpSection';
 import { ProfilesSection } from './ProfilesSection';
+import { ProvidersSection } from './ProvidersSection';
 import type { TabId } from './settingsTabs';
 import { TerminalSection } from './TerminalSection';
 
@@ -39,6 +41,8 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   terminal: ({ draft, onChange }) => <TerminalSection draft={draft} onChange={onChange} />,
   agent: ({ draft, onChange }) => <AgentSection draft={draft} onChange={onChange} />,
   claude: ({ draft, onChange }) => <ClaudeSection draft={draft} onChange={onChange} />,
+  codex: ({ draft, onChange }) => <CodexSection draft={draft} onChange={onChange} />,
+  providers: ({ draft, onChange }) => <ProvidersSection draft={draft} onChange={onChange} />,
   keybindings: ({ draft, onChange }) => <KeybindingsSection draft={draft} onChange={onChange} />,
   hooks: ({ draft, onChange }) => <HooksSection draft={draft} onChange={onChange} />,
   profiles: ({ draft, onChange }) => <ProfilesSection draft={draft} onChange={onChange} />,

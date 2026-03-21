@@ -5,6 +5,7 @@ import { DefaultProjectFolder, RecentProjects } from './GeneralProjectSubsection
 import { NotificationsSubsection } from './GeneralNotificationsSubsection';
 import { BackupSubsection } from './GeneralBackupSubsection';
 import { LspSubsection } from './GeneralLspSubsection';
+import { WebAccessSubsection } from './GeneralWebAccessSubsection';
 
 interface GeneralSectionProps {
   draft: AppConfig;
@@ -26,6 +27,7 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
         />
       </section>
       <NotificationsSubsection draft={draft} onChange={onChange} />
+      <WebAccessSubsection draft={draft} onChange={onChange} />
       <BackupSubsection onImport={onImport} />
       <LspSubsection draft={draft} onChange={onChange} />
     </div>

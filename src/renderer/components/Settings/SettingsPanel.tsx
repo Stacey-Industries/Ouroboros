@@ -34,7 +34,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   if (!api.draft) return null;
 
   const doCancel = (): void => api.handleCancel(onClose);
-  const doSave = (): void => void api.handleSave(onClose);
+  const doSave = (): void => void api.handleSave();
 
   const handleResultClick = (entry: SettingsEntry): void => {
     setSearchQuery('');
@@ -43,7 +43,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
 
   return (
     <div style={panelStyle}>
-      <PanelHeader onClose={doCancel} />
       <SettingsSearchInput inputRef={searchInputRef} value={searchQuery} onChange={setSearchQuery} />
       {!isSearching && <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />}
 
@@ -63,15 +62,6 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
-
-function PanelHeader({ onClose }: { onClose: () => void }): React.ReactElement {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-      <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>Settings</h2>
-      <button onClick={onClose} aria-label="Close settings" style={closeButtonStyle}>×</button>
-    </div>
-  );
-}
 
 function PanelFooter({ isSaving, saveError, onCancel, onSave }: {
   isSaving: boolean; saveError: string | null; onCancel: () => void; onSave: () => void;
@@ -120,17 +110,11 @@ const panelStyle: React.CSSProperties = {
 };
 
 const contentScrollStyle: React.CSSProperties = {
-  flex: 1, overflowY: 'auto', padding: '12px 16px',
+  flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px',
 };
 
 const tabContentStyle: React.CSSProperties = {
-  flex: 1, overflowY: 'auto', padding: '24px 24px',
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  borderRadius: '6px', border: 'none', background: 'transparent',
-  color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', lineHeight: 1,
+  flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 24px',
 };
 
 const footerStyle: React.CSSProperties = {

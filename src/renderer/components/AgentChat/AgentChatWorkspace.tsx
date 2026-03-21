@@ -24,7 +24,7 @@ export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorks
   }, [model.threads, model.activeThreadId, model.selectThread, model.startNewChat, model.deleteThread]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)] w-full max-w-full">
       <div className="flex-1 min-h-0 overflow-hidden">
         <AgentChatConversation
           activeThread={model.activeThread}
@@ -66,6 +66,10 @@ export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorks
           chatOverrides={model.chatOverrides}
           onChatOverridesChange={model.setChatOverrides}
           settingsModel={model.settingsModel}
+          codexSettingsModel={model.codexSettingsModel}
+          defaultProvider={model.defaultProvider}
+          modelProviders={model.modelProviders}
+          codexModels={model.codexModels}
           queuedMessages={model.queuedMessages}
           onEditQueuedMessage={model.editQueuedMessage}
           onDeleteQueuedMessage={model.deleteQueuedMessage}

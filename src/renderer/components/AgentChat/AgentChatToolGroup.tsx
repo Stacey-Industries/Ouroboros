@@ -126,6 +126,8 @@ export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ block
               filePath={block.filePath}
               input={block.input}
               duration={block.duration}
+              inputSummary={block.inputSummary}
+              editSummary={block.editSummary}
               errorOutput={block.status === 'error' ? block.output : undefined}
             />
           ))}

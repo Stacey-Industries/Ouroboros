@@ -80,6 +80,7 @@ function useSpawnClaudeSessionAction(
         cwd,
         initialPrompt: options?.initialPrompt,
         cliOverrides: options?.cliOverrides,
+        providerModel: options?.providerModel,
       }),
     });
   }, [killTimersRef, setActiveSessionId, setSessions, spawnCountRef]);

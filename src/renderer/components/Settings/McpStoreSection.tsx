@@ -121,7 +121,7 @@ function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
       <div style={listContainerStyle}>
         {model.servers.map((server, idx) => (
           <McpStoreServerCard
-            key={server.name ?? `server-${idx}`}
+            key={`${server.name ?? 'server'}-${idx}`}
             server={server}
             isInstalled={model.installedNames.has(mcpExtractShortName(server.name))}
             isLast={idx === model.servers.length - 1}

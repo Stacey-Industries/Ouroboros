@@ -12,7 +12,8 @@ export interface TerminalPaneProps {
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onNew: () => void;
-  onNewClaude: () => void;
+  onNewClaude: (providerModel?: string) => void;
+  onNewCodex: (model?: string) => void;
   onReorder?: (reordered: TerminalSession[]) => void;
   children?: React.ReactNode;
   /** Inline style from focus manager (e.g. box-shadow ring) */
@@ -24,7 +25,7 @@ export interface TerminalPaneProps {
 const MIN_HEIGHT = 120;
 type TerminalPaneHeaderProps = Pick<
   TerminalPaneProps,
-  'collapsed' | 'onToggleCollapse' | 'sessions' | 'activeSessionId' | 'onActivate' | 'onClose' | 'onNew' | 'onNewClaude' | 'onReorder'
+  'collapsed' | 'onToggleCollapse' | 'sessions' | 'activeSessionId' | 'onActivate' | 'onClose' | 'onNew' | 'onNewClaude' | 'onNewCodex' | 'onReorder'
 >;
 
 function ChevronDownIcon(): React.ReactElement {
@@ -102,10 +103,12 @@ function TerminalPaneHeader({
   onClose,
   onNew,
   onNewClaude,
+  onNewCodex,
   onReorder,
 }: TerminalPaneHeaderProps): React.ReactElement {
   return (
     <div
+      data-layout="terminal-header"
       className="
         flex items-center h-8 min-h-[32px] flex-shrink-0
         bg-[var(--bg-secondary)] border-b border-[var(--border-muted,var(--border))]
@@ -119,6 +122,7 @@ function TerminalPaneHeader({
         onClose={onClose}
         onNew={onNew}
         onNewClaude={onNewClaude}
+        onNewCodex={onNewCodex}
         onReorder={onReorder}
       />
       <div className="flex-1" />
@@ -140,6 +144,7 @@ function getTerminalPaneHeaderProps(props: TerminalPaneProps): TerminalPaneHeade
     onClose: props.onClose,
     onNew: props.onNew,
     onNewClaude: props.onNewClaude,
+    onNewCodex: props.onNewCodex,
     onReorder: props.onReorder,
   };
 }

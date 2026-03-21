@@ -11,7 +11,7 @@ export interface SettingsEntry {
   /** Optional extra text to match against (not always shown) */
   description?: string
   /** Which settings tab this entry lives in */
-  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'agent' | 'claude' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'codemode' | 'contextDocs'
+  section: 'general' | 'appearance' | 'fonts' | 'terminal' | 'agent' | 'claude' | 'codex' | 'providers' | 'keybindings' | 'hooks' | 'profiles' | 'files' | 'extensions' | 'mcp' | 'codemode' | 'contextDocs'
   /** Display-friendly section name */
   sectionLabel: string
 }
@@ -43,6 +43,8 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
   ['Workspace Layouts', 'Save and restore panel arrangements for different workflows (monitoring, review, coding). Switch with Ctrl+Alt+1/2/3.'],
   ['Enable LSP', 'Enable Language Server Protocol integration for code intelligence (completions, diagnostics, hover, go-to-definition).'],
   ['Custom Language Servers', 'Configure custom language server commands per language. For example, use "rust-analyzer" for Rust or "pylsp" for Python.'],
+  ['Web Access Password', 'Set a password for mobile/remote login instead of the auto-generated access token.'],
+  ['Web Access Port', 'Port for the web remote access server (requires restart). Default: 7890.'],
 ])
 
 const APPEARANCE_ENTRIES = createEntries('appearance', 'Appearance', [
@@ -88,6 +90,27 @@ const CLAUDE_ENTRIES = createEntries('claude', 'Claude Code', [
   ['Git Worktree', 'Create a new git worktree for each Claude Code session.'],
   ['Skip Permission Checks', 'Dangerously bypass all permission checks. Only for sandboxed environments.'],
   ['Agent Templates', 'Pre-configured launch profiles for Claude Code sessions. Edit, add, or remove quick-action templates.'],
+])
+
+const CODEX_ENTRIES = createEntries('codex', 'Codex', [
+  ['Model Override', 'Override the default model for Codex CLI sessions.'],
+  ['Reasoning Effort', 'Controls Codex reasoning depth: low, medium, high, or xhigh.'],
+  ['Sandbox Mode', 'Controls Codex command sandboxing: read-only, workspace-write, or danger-full-access.'],
+  ['Approval Policy', 'Controls when Codex asks for command approval: untrusted, on-request, or never.'],
+  ['Config Profile', 'Optional profile from ~/.codex/config.toml used when launching Codex.'],
+  ['Live Web Search', 'Enable the native Responses web_search tool for Codex sessions.'],
+  ['Additional Directories', 'Extra directories Codex can write to beyond the primary workspace.'],
+  ['Skip Git Repo Check', 'Allow Codex to run outside a git repository.'],
+  ['Bypass Approvals And Sandbox', 'Dangerously disable all Codex approval prompts and sandboxing.'],
+])
+
+const PROVIDER_ENTRIES = createEntries('providers', 'Providers', [
+  ['Model Providers', 'Configure LLM providers (Anthropic, MiniMax, OpenRouter) with API endpoints and keys.'],
+  ['Terminal Model', 'Which provider and model to use for interactive Claude Code terminal sessions.'],
+  ['Agent Chat Model', 'Which provider and model to use for agent chat subagent sessions.'],
+  ['CLAUDE.md Generation Model', 'Which provider and model to use for automated CLAUDE.md generation.'],
+  ['Add Provider', 'Add a new Anthropic-compatible LLM provider with API endpoint and key.'],
+  ['Test Connection', 'Verify that a provider endpoint is reachable and the API key is valid.'],
 ])
 
 const KEYBINDING_ENTRIES = createEntries('keybindings', 'Keybindings', [
@@ -156,6 +179,8 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...TERMINAL_ENTRIES,
   ...AGENT_ENTRIES,
   ...CLAUDE_ENTRIES,
+  ...CODEX_ENTRIES,
+  ...PROVIDER_ENTRIES,
   ...KEYBINDING_ENTRIES,
   ...HOOK_ENTRIES,
   ...FILE_ENTRIES,

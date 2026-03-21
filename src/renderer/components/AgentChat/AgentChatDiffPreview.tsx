@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from 'react';
 
+import { useProject } from '../../contexts/ProjectContext';
+
 export interface AgentChatDiffPreviewProps {
   filePath: string;
 }
@@ -68,6 +70,7 @@ function ExternalIcon(): React.ReactElement {
 }
 
 export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): React.ReactElement {
+  const { projectRoot, projectRoots } = useProject();
   const [diffLines, setDiffLines] = useState<DiffLine[] | null>(null);
   const [rawPatch, setRawPatch] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -86,12 +89,13 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
 
     try {
       const api = (window as unknown as { electronAPI: { git: { diffRaw: (root: string, filePath: string) => Promise<{ success: boolean; patch?: string; error?: string }> } } }).electronAPI;
-
-      // Derive project root from file path - walk up to find .git
-      // For simplicity, use the first segment that looks like a project root
-      // In practice, the renderer usually knows the project root from context
-      const projectRoot = await getProjectRoot();
-      const result = await api.git.diffRaw(projectRoot, filePath);
+      const resolvedProjectRoot = resolveProjectRoot(projectRoots, projectRoot, filePath);
+      if (!resolvedProjectRoot) {
+        setError('Unable to resolve the project root for this file');
+        setLoading(false);
+        return;
+      }
+      const result = await api.git.diffRaw(resolvedProjectRoot, filePath);
 
       if (!result.success) {
         setError(result.error ?? 'Failed to get diff');
@@ -114,7 +118,7 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
     } finally {
       setLoading(false);
     }
-  }, [diffLines, filePath]);
+  }, [diffLines, filePath, projectRoot, projectRoots]);
 
   const handleOpenInEditor = useCallback(() => {
     window.dispatchEvent(
@@ -295,17 +299,27 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
   );
 }
 
-/** Retrieve the project root from the DOM-based project context or fallback. */
-function getProjectRoot(): Promise<string> {
-  // The project root is typically stored in a DOM data attribute or context.
-  // Try reading from the common pattern used in this app.
-  const el = document.querySelector('[data-project-root]');
-  if (el) {
-    return Promise.resolve(el.getAttribute('data-project-root')!);
+function normalizePath(value: string): string {
+  return value.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+}
+
+function resolveProjectRoot(
+  projectRoots: string[],
+  primaryProjectRoot: string | null,
+  filePath: string,
+): string | null {
+  const normalizedFilePath = normalizePath(filePath);
+  const candidates = [...projectRoots];
+  if (primaryProjectRoot && !candidates.includes(primaryProjectRoot)) {
+    candidates.unshift(primaryProjectRoot);
   }
 
-  // Fallback: try to derive from the file path by finding a common workspace root
-  // In Electron apps, we can ask the config for the project root
-  const api = (window as unknown as { electronAPI: { config: { get: (key: string) => Promise<unknown> } } }).electronAPI;
-  return api.config.get('projectRoot') as Promise<string>;
+  const containingRoots = candidates
+    .filter((root) => {
+      const normalizedRoot = normalizePath(root);
+      return normalizedFilePath === normalizedRoot || normalizedFilePath.startsWith(`${normalizedRoot}/`);
+    })
+    .sort((left, right) => normalizePath(right).length - normalizePath(left).length);
+
+  return containingRoots[0] ?? primaryProjectRoot ?? null;
 }

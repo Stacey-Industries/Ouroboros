@@ -16,7 +16,7 @@ const FILE_MODIFYING_TOOLS = new Set([
 
 export interface ToolActivity {
   name: string;
-  status: 'running' | 'complete';
+  status: 'running' | 'complete' | 'error';
   filePath?: string;
   inputSummary?: string;
   editSummary?: { oldLines: number; newLines: number };
@@ -24,7 +24,7 @@ export interface ToolActivity {
 
 export interface AgentChatToolCardProps {
   name: string;
-  status: 'running' | 'complete';
+  status: 'running' | 'complete' | 'error';
   filePath?: string;
   isCollapsed?: boolean;
   /** Tool input for preview (optional, from structured content blocks) */
@@ -265,10 +265,10 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
 
   return (
     <div
-      className="my-1.5 rounded-md border text-xs"
+      className="glass-card my-1.5 rounded-md border text-xs"
       style={{
-        backgroundColor: 'var(--bg-tertiary)',
-        borderColor: errorOutput ? 'rgba(248, 81, 73, 0.3)' : 'var(--border)',
+        backgroundColor: 'var(--glass-card-bg, var(--bg-tertiary))',
+        borderColor: errorOutput ? 'rgba(248, 81, 73, 0.3)' : 'var(--glass-border-muted, var(--border))',
       }}
     >
       <button

@@ -9,6 +9,8 @@ export type TabId =
   | 'terminal'
   | 'agent'
   | 'claude'
+  | 'codex'
+  | 'providers'
   | 'keybindings'
   | 'hooks'
   | 'profiles'
@@ -30,6 +32,8 @@ export const TABS: Tab[] = [
   { id: 'terminal', label: 'Terminal' },
   { id: 'agent', label: 'Agent' },
   { id: 'claude', label: 'Claude Code' },
+  { id: 'codex', label: 'Codex' },
+  { id: 'providers', label: 'Providers' },
   { id: 'keybindings', label: 'Keybindings' },
   { id: 'hooks', label: 'Hooks' },
   { id: 'profiles', label: 'Profiles' },

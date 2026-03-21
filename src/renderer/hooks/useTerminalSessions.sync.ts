@@ -13,7 +13,9 @@ interface SavedSessionSnapshot {
   cwd: string;
   title: string;
   isClaude?: boolean;
+  isCodex?: boolean;
   claudeSessionId?: string;
+  codexThreadId?: string;
 }
 
 function getRunningSessions(sessions: TerminalSession[]): TerminalSession[] {
@@ -25,7 +27,9 @@ function buildRunningTopologySignature(sessions: TerminalSession[]): string {
     sessions.map((session) => ({
       id: session.id,
       isClaude: session.isClaude === true,
+      isCodex: session.isCodex === true,
       claudeSessionId: session.claudeSessionId ?? null,
+      codexThreadId: session.codexThreadId ?? null,
     })),
   );
 }
@@ -127,7 +131,9 @@ function createSessionSnapshot(session: TerminalSession, cwd: string): SavedSess
     cwd,
     title: session.title,
     isClaude: session.isClaude === true,
+    isCodex: session.isCodex === true,
     claudeSessionId: session.claudeSessionId,
+    codexThreadId: session.codexThreadId,
   };
 }
 

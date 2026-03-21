@@ -7,7 +7,9 @@ import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  CodexModelOption,
   ImageAttachment,
+  ModelProvider,
 } from '../../types/electron';
 import {
   buildAgentChatWorkspaceModel,
@@ -39,6 +41,11 @@ export interface AgentChatWorkspaceModel {
   setChatOverrides: (overrides: ChatOverrides) => void;
   /** Model ID from settings (for labeling the Default option). */
   settingsModel: string;
+  codexSettingsModel: string;
+  defaultProvider: 'claude-code' | 'codex' | 'anthropic-api';
+  /** Configured model providers (non-Anthropic) for the model picker. */
+  modelProviders: ModelProvider[];
+  codexModels: CodexModelOption[];
   pendingUserMessage: string | null;
   closeDetails: () => void;
   deleteThread: (threadId: string) => Promise<void>;
@@ -76,7 +83,7 @@ export interface AgentChatWorkspaceModel {
   sendQueuedMessageNow: (id: string) => Promise<void>;
 }
 
-const DEFAULT_CHAT_OVERRIDES: ChatOverrides = { model: '', effort: '', permissionMode: 'default' };
+const DEFAULT_CHAT_OVERRIDES: ChatOverrides = { model: '', effort: 'medium', permissionMode: 'default' };
 
 let queueIdCounter = 0;
 
@@ -87,6 +94,10 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
   const [contextFilePaths, setContextFilePaths] = useState<string[]>([]);
   const [chatOverrides, setChatOverridesState] = useState<ChatOverrides>(DEFAULT_CHAT_OVERRIDES);
   const [settingsModel, setSettingsModel] = useState('');
+  const [codexSettingsModel, setCodexSettingsModel] = useState('');
+  const [defaultProvider, setDefaultProvider] = useState<'claude-code' | 'codex' | 'anthropic-api'>('claude-code');
+  const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
+  const [codexModels, setCodexModels] = useState<CodexModelOption[]>([]);
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const threadState = useThreadState({ projectRoot });
@@ -116,12 +127,18 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
     // saved overrides — keep current overrides as-is so settings don't reset
   }, [threadState.activeThreadId]);
 
-  // Read the configured model from settings once on mount
+  // Read model settings and providers from config once on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
       window.electronAPI.config.getAll().then((cfg) => {
         setSettingsModel(cfg?.claudeCliSettings?.model ?? '');
+        setCodexSettingsModel(cfg?.codexCliSettings?.model ?? '');
+        setDefaultProvider(cfg?.agentChatSettings?.defaultProvider ?? 'claude-code');
+        setModelProviders(cfg?.modelProviders ?? []);
       }).catch((error) => { console.error('[agentChat] Failed to load config for settings model:', error) });
+      window.electronAPI.codex.listModels().then(setCodexModels).catch((error) => {
+        console.error('[agentChat] Failed to load Codex models:', error);
+      });
     }
   }, []);
   const activeThread = useActiveThread(threadState.threads, threadState.activeThreadId);
@@ -157,8 +174,9 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
 
   return {
     activeThread, addToQueue, attachments, chatOverrides, contextFilePaths, deleteQueuedMessage,
-    draft, editQueuedMessage, isSending, pendingUserMessage,
-    queuedMessages, setChatOverrides, setAttachments, setContextFilePaths, setDraft, setIsSending,
+    draft, editQueuedMessage, isSending, modelProviders, pendingUserMessage,
+    codexModels, codexSettingsModel, defaultProvider, queuedMessages, setChatOverrides,
+    setAttachments, setContextFilePaths, setDraft, setIsSending,
     setPendingUserMessage, setQueuedMessages, settingsModel, threadState,
   };
 }
@@ -172,6 +190,7 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
     attachments: controller.attachments,
     setAttachments: controller.setAttachments,
     chatOverrides: controller.chatOverrides,
+    codexModels: controller.codexModels,
     contextFilePaths: controller.contextFilePaths,
     draft: controller.draft,
     isSending: controller.isSending,
@@ -288,6 +307,10 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
     chatOverrides: controller.chatOverrides,
     setChatOverrides: controller.setChatOverrides,
     settingsModel: controller.settingsModel,
+    codexSettingsModel: controller.codexSettingsModel,
+    defaultProvider: controller.defaultProvider,
+    modelProviders: controller.modelProviders,
+    codexModels: controller.codexModels,
     closeDetails: detailsState.closeDetails,
     deleteThread: actions.deleteThread,
     editAndResend: actions.editAndResend,

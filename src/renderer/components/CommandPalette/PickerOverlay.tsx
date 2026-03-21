@@ -15,6 +15,7 @@ export interface PickerOverlayProps {
 export function PickerOverlay({ label, animPrefix, maxWidth, onClose, children }: PickerOverlayProps): React.ReactElement {
   return (
     <div
+      className="glass-scrim"
       aria-modal="true"
       role="dialog"
       aria-label={label}
@@ -27,20 +28,21 @@ export function PickerOverlay({ label, animPrefix, maxWidth, onClose, children }
         alignItems: 'flex-start',
         justifyContent: 'center',
         paddingTop: '15vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.55)',
+        backgroundColor: 'var(--glass-scrim-bg, rgba(0, 0, 0, 0.55))',
         animation: `${animPrefix}-overlay-in 120ms ease`,
       }}
     >
       <div
+        className="glass-card"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
           maxWidth,
           borderRadius: '8px',
           overflow: 'hidden',
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          backgroundColor: 'var(--glass-card-bg, var(--bg-secondary))',
+          border: '1px solid var(--glass-border-muted, var(--border))',
+          boxShadow: 'var(--glass-shadow, 0 24px 64px rgba(0,0,0,0.6))',
           animation: `${animPrefix}-card-in 120ms ease`,
         }}
       >

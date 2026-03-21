@@ -6,7 +6,9 @@ import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  CodexModelOption,
   ImageAttachment,
+  ModelProvider,
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { AgentChatBlockRenderer } from './AgentChatBlockRenderer';
@@ -79,6 +81,11 @@ export interface AgentChatConversationProps {
   chatOverrides?: ChatOverrides;
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   settingsModel?: string;
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  /** Configured model providers for the model picker dropdown. */
+  modelProviders?: ModelProvider[];
+  codexModels?: CodexModelOption[];
   slashCommandContext?: SlashCommandContext;
   // Message queue
   queuedMessages?: QueuedMessage[];
@@ -624,7 +631,6 @@ function EmptyConversationState(props: {
 }): React.ReactElement {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      {/* Header */}
       <div className="flex flex-col items-center gap-2">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-full text-base font-bold"
@@ -636,11 +642,10 @@ function EmptyConversationState(props: {
           Start a conversation
         </div>
         <div className="max-w-[300px] text-xs" style={{ color: 'var(--text-muted)' }}>
-          Ask Claude to inspect, edit, or verify code. Your first message creates the thread.
+          Ask the agent to inspect, edit, or verify code. Your first message creates the thread.
         </div>
       </div>
 
-      {/* Suggested prompts grid */}
       <div className="grid w-full max-w-[440px] grid-cols-2 gap-2">
         {SUGGESTED_PROMPTS.map((item) => (
           <button
@@ -1008,61 +1013,74 @@ export function AgentChatConversation(props: AgentChatConversationProps): React.
   const threadModelUsage = useThreadModelUsage(props.activeThread);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)]">
-      <ConversationBody
-        activeThread={props.activeThread}
-        error={props.error}
-        hasProject={props.hasProject}
-        isSending={props.isSending}
-        isLoading={props.isLoading}
-        onEdit={props.onEdit}
-        onRetry={props.onRetry}
-        onBranch={props.onBranch}
-        onRevert={props.onRevert}
-        onOpenLinkedDetails={props.onOpenLinkedDetails}
-        onStop={props.onStop}
-        pendingUserMessage={props.pendingUserMessage}
-        onSelectThread={props.onSelectThread}
-        onDraftChange={props.onDraftChange}
-      />
-      {props.queuedMessages && props.queuedMessages.length > 0 && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow && (
-        <QueuedMessageBanner
-          messages={props.queuedMessages}
-          onEdit={props.onEditQueuedMessage}
-          onDelete={props.onDeleteQueuedMessage}
-          onSendNow={props.onSendQueuedMessageNow}
+    <div className="relative flex h-full min-h-0 w-full max-w-full flex-col p-2">
+      <div
+        className="glass-shell flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden rounded-[28px]"
+        style={{
+          backgroundColor: 'var(--glass-shell-bg, var(--bg-secondary))',
+          border: '1px solid var(--glass-border-muted, var(--border))',
+          boxShadow: 'var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.35))',
+        }}
+      >
+        <ConversationBody
+          activeThread={props.activeThread}
+          error={props.error}
+          hasProject={props.hasProject}
+          isSending={props.isSending}
+          isLoading={props.isLoading}
+          onEdit={props.onEdit}
+          onRetry={props.onRetry}
+          onBranch={props.onBranch}
+          onRevert={props.onRevert}
+          onOpenLinkedDetails={props.onOpenLinkedDetails}
+          onStop={props.onStop}
+          pendingUserMessage={props.pendingUserMessage}
+          onSelectThread={props.onSelectThread}
+          onDraftChange={props.onDraftChange}
         />
-      )}
-      <AgentChatComposer
-        canSend={props.canSend}
-        disabled={!props.hasProject}
-        draft={props.draft}
-        isSending={props.isSending}
-        threadIsBusy={props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running'}
-        messages={props.activeThread?.messages}
-        onChange={props.onDraftChange}
-        onSubmit={props.onSend}
-        pinnedFiles={props.pinnedFiles}
-        onRemoveFile={props.onRemoveFile}
-        contextSummary={props.contextSummary}
-        autocompleteResults={props.autocompleteResults}
-        isAutocompleteOpen={props.isAutocompleteOpen}
-        onAutocompleteQuery={props.onAutocompleteQuery}
-        onSelectFile={props.onSelectFile}
-        onCloseAutocomplete={props.onCloseAutocomplete}
-        onOpenAutocomplete={props.onOpenAutocomplete}
-        mentions={props.mentions}
-        onAddMention={props.onAddMention}
-        onRemoveMention={props.onRemoveMention}
-        allFiles={props.allFiles}
-        chatOverrides={props.chatOverrides}
-        onChatOverridesChange={props.onChatOverridesChange}
-        settingsModel={props.settingsModel}
-        threadModelUsage={threadModelUsage}
-        slashCommandContext={props.slashCommandContext}
-        attachments={props.attachments}
-        onAttachmentsChange={props.onAttachmentsChange}
-      />
+        {props.queuedMessages && props.queuedMessages.length > 0 && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow && (
+          <QueuedMessageBanner
+            messages={props.queuedMessages}
+            onEdit={props.onEditQueuedMessage}
+            onDelete={props.onDeleteQueuedMessage}
+            onSendNow={props.onSendQueuedMessageNow}
+          />
+        )}
+        <AgentChatComposer
+          canSend={props.canSend}
+          disabled={!props.hasProject}
+          draft={props.draft}
+          isSending={props.isSending}
+          threadIsBusy={props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running'}
+          messages={props.activeThread?.messages}
+          onChange={props.onDraftChange}
+          onSubmit={props.onSend}
+          pinnedFiles={props.pinnedFiles}
+          onRemoveFile={props.onRemoveFile}
+          contextSummary={props.contextSummary}
+          autocompleteResults={props.autocompleteResults}
+          isAutocompleteOpen={props.isAutocompleteOpen}
+          onAutocompleteQuery={props.onAutocompleteQuery}
+          onSelectFile={props.onSelectFile}
+          onCloseAutocomplete={props.onCloseAutocomplete}
+          onOpenAutocomplete={props.onOpenAutocomplete}
+          mentions={props.mentions}
+          onAddMention={props.onAddMention}
+          onRemoveMention={props.onRemoveMention}
+          allFiles={props.allFiles}
+          chatOverrides={props.chatOverrides}
+          onChatOverridesChange={props.onChatOverridesChange}
+          settingsModel={props.settingsModel}
+          codexSettingsModel={props.codexSettingsModel}
+          defaultProvider={props.defaultProvider}
+          modelProviders={props.modelProviders}
+          codexModels={props.codexModels}
+          threadModelUsage={threadModelUsage}
+          slashCommandContext={props.slashCommandContext}
+          attachments={props.attachments}
+          onAttachmentsChange={props.onAttachmentsChange}
+        />
+      </div>
       <AgentChatDetailsDrawer
         activeLink={props.details?.link ?? props.activeThread?.latestOrchestration}
         details={props.details}
