@@ -1,3 +1,4 @@
+@import './tokens.css';
 @import './fonts.css';
 @import './mobile.css';
 
@@ -17,10 +18,13 @@
   --header-height: 36px;
   --tab-height: 34px;
 
+  /* Glass surface variables are forced transparent in useTheme.ts applyThemeToDom().
+     No CSS overrides needed — the source sets them directly. */
+
   /* Map shadcn/ui CSS vars (used by Streamdown) to our theme vars */
-  --background: var(--bg);
+  --background: transparent;
   --foreground: var(--text);
-  --sidebar: var(--bg-secondary, var(--bg));
+  --sidebar: transparent;
 }
 
 /* ─── Base resets ───────────────────────────────────────────────────────────── */
@@ -117,15 +121,15 @@
   }
 
   .panel-bg {
-    background-color: var(--bg);
+    background-color: var(--surface-base);
   }
 
   .panel-bg-raised {
-    background-color: var(--bg-secondary);
+    background-color: var(--surface-panel);
   }
 
   .panel-bg-overlay {
-    background-color: var(--bg-tertiary);
+    background-color: var(--surface-raised);
   }
 
   .border-surface {
@@ -211,11 +215,11 @@
   .btn-primary {
     @apply btn;
     background: var(--accent);
-    color: var(--bg);
+    color: var(--text-on-accent);
   }
   .btn-primary:hover {
     background: var(--accent-hover);
-    color: var(--bg);
+    color: var(--text-on-accent);
   }
 
   /* Tab bar item */
@@ -260,6 +264,17 @@
   right: 0;
   height: 1px;
   background: var(--bg);
+}
+
+/* ─── Monaco transparent background for glass mode ─────────────────────── */
+.monaco-editor,
+.monaco-editor .overflow-guard,
+.monaco-editor-background,
+.monaco-editor .inputarea.ime-input,
+.monaco-editor .margin,
+.monaco-editor .monaco-scrollable-element {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 /* ─── Monaco find widget overrides ────────────────────────────────────────── */
@@ -312,6 +327,13 @@
 /* Allow vertical touch scrolling in terminal, but prevent horizontal pan/zoom */
 .xterm {
   touch-action: pan-y;
+  background-color: transparent !important;
+}
+.xterm-viewport {
+  background-color: transparent !important;
+}
+.xterm-screen {
+  background-color: transparent !important;
 }
 
 .xterm :focus-visible {
@@ -458,7 +480,7 @@
 @keyframes agent-chat-status-pulse {
   0% {
     background-color: var(--accent);
-    color: var(--bg);
+    color: var(--text-on-accent);
   }
   100% {
     background-color: transparent;
@@ -520,198 +542,6 @@
     transform: rotate(360deg);
   }
 }
-
-
-
-/* -------------------------------------------------------------------------- */
-/* Glass theme                                                                */
-/* -------------------------------------------------------------------------- */
-
-:root[data-theme-id='glass'] {
-  --glass-scrim-bg: rgba(4, 4, 8, 0.62);
-  --glass-shell-bg: rgba(8, 8, 12, 0.58);
-  --glass-panel-bg-thin: rgba(18, 18, 22, 0.54);
-  --glass-panel-bg-strong: rgba(10, 10, 14, 0.76);
-  --glass-card-bg: rgba(20, 20, 26, 0.56);
-  --glass-border: rgba(255, 255, 255, 0.10);
-  --glass-border-muted: rgba(255, 255, 255, 0.05);
-  --glass-border-faint: rgba(255, 255, 255, 0.03);
-  --glass-backdrop: blur(22px) saturate(135%);
-  --glass-card-backdrop: blur(14px) saturate(125%);
-  --glass-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
-  --glass-shell-shadow: 0 34px 96px rgba(0, 0, 0, 0.56), 0 6px 20px rgba(0, 0, 0, 0.26);
-  --glass-panel-shadow: 0 18px 44px rgba(0, 0, 0, 0.30);
-  --glass-card-shadow: 0 14px 36px rgba(0, 0, 0, 0.30);
-  --glass-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --glass-shell-radius: 32px;
-  --glass-panel-radius: 24px;
-  --glass-card-radius: 18px;
-  --glass-resize-accent: rgba(88, 166, 255, 0.42);
-}
-
-:root[data-theme-id='glass'] [data-layout='app'] {
-  position: relative;
-  isolation: isolate;
-  background-color: var(--bg);
-  background-image: var(--bg-gradient, none);
-}
-
-:root[data-theme-id='glass'] [data-layout='app']::before,
-:root[data-theme-id='glass'] [data-layout='app']::after {
-  content: '';
-  position: absolute;
-  inset: -18%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-:root[data-theme-id='glass'] [data-layout='app']::before {
-  background:
-    radial-gradient(ellipse at 16% 14%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 10%, transparent 38%),
-    radial-gradient(ellipse at 84% 12%, rgba(88, 166, 255, 0.16) 0%, rgba(88, 166, 255, 0.06) 12%, transparent 40%),
-    radial-gradient(ellipse at 72% 86%, rgba(183, 148, 246, 0.10) 0%, transparent 34%),
-    radial-gradient(ellipse at 42% 48%, rgba(255, 255, 255, 0.05) 0%, transparent 58%);
-  filter: blur(72px);
-  opacity: 0.78;
-  transform: scale(1.08);
-}
-
-:root[data-theme-id='glass'] [data-layout='app']::after {
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.30) 0%, rgba(0, 0, 0, 0.08) 42%, transparent 72%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.18) 100%);
-  opacity: 0.9;
-}
-
-:root[data-theme-id='glass'] [data-layout='app'] > * {
-  position: relative;
-  z-index: 1;
-}
-
-:root[data-theme-id='glass'] [data-layout='app-shell'] {
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  background-color: var(--glass-shell-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-shell-radius);
-  box-shadow: var(--glass-shell-shadow), var(--glass-inner-highlight);
-  background-clip: padding-box;
-}
-
-:root[data-theme-id='glass'] :where(
-  [data-layout='title-bar'],
-  [data-layout='status-bar'],
-  [data-layout='editor-tab-bar'],
-  [data-layout='terminal-header'],
-  [data-layout='chat-controls-bar'],
-  [data-layout='mobile-nav']
-) {
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  background-color: var(--glass-panel-bg-thin) !important;
-  border-color: var(--glass-border) !important;
-  border-radius: var(--glass-panel-radius);
-  box-shadow: var(--glass-panel-shadow), var(--glass-inner-highlight);
-  background-clip: padding-box;
-}
-
-:root[data-theme-id='glass'] :where(
-  [data-layout='activity-bar'],
-  [data-layout='sidebar'],
-  [aria-label='Left sidebar'],
-  [data-layout='agent-sidebar'],
-  [aria-label='Agent sidebar'],
-  [data-layout='collapsed-agent-strip'],
-  [data-layout='centre-column']
-) {
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  background-color: var(--glass-panel-bg-strong) !important;
-  border-color: var(--glass-border) !important;
-  border-radius: calc(var(--glass-panel-radius) + 4px);
-  box-shadow: var(--glass-panel-shadow), var(--glass-inner-highlight);
-  background-clip: padding-box;
-  overflow: hidden;
-}
-
-:root[data-theme-id='glass'] [data-layout='activity-bar'] {
-  filter: none !important;
-}
-
-:root[data-theme-id='glass'] [data-layout='centre-column'] {
-  background-color: rgba(12, 12, 16, 0.58) !important;
-}
-
-:root[data-theme-id='glass'] :where([data-layout='collapsed-agent-strip']) {
-  background-color: rgba(12, 12, 16, 0.70) !important;
-  box-shadow: inset 1px 0 0 var(--glass-border-muted), var(--glass-panel-shadow), var(--glass-inner-highlight);
-}
-
-:root[data-theme-id='glass'] :where([data-layout='mobile-nav']) {
-  background-color: var(--glass-panel-bg-thin) !important;
-  border-top-color: var(--glass-border) !important;
-}
-
-:root[data-theme-id='glass'] :where(
-  [role='tablist'][aria-label='Open files'],
-  [aria-label='Terminal'] > div:first-child
-) {
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  background-color: var(--glass-panel-bg-thin) !important;
-  border-color: var(--glass-border) !important;
-  background-clip: padding-box;
-  box-shadow: inset 0 1px 0 var(--glass-border-muted);
-}
-
-:root[data-theme-id='glass'] [data-layout='resize-handle'] > div:last-child,
-:root[data-theme-id='glass'] [data-layout='resize-handle'] [data-glass-resize-line] {
-  background-color: var(--glass-resize-accent) !important;
-  box-shadow: 0 0 12px rgba(88, 166, 255, 0.28);
-}
-
-:root[data-theme-id='glass'] .glass-scrim {
-  background-color: var(--glass-scrim-bg);
-}
-
-:root[data-theme-id='glass'] .glass-shell {
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  background-color: var(--glass-shell-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-shell-radius);
-  box-shadow: var(--glass-shell-shadow), var(--glass-inner-highlight);
-  background-clip: padding-box;
-}
-
-:root[data-theme-id='glass'] .glass-pane {
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  background-color: var(--glass-panel-bg-thin);
-  border: 1px solid var(--glass-border);
-  border-radius: calc(var(--glass-panel-radius) + 4px);
-  box-shadow: var(--glass-panel-shadow), var(--glass-inner-highlight);
-  background-clip: padding-box;
-}
-
-:root[data-theme-id='glass'] .glass-card {
-  backdrop-filter: var(--glass-card-backdrop);
-  -webkit-backdrop-filter: var(--glass-card-backdrop);
-  background-color: var(--glass-card-bg);
-  border: 1px solid var(--glass-border-muted);
-  border-radius: var(--glass-card-radius);
-  box-shadow: var(--glass-card-shadow), inset 0 1px 0 var(--glass-border-faint);
-  background-clip: padding-box;
-}
-
-:root[data-theme-id='glass'] ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-:root[data-theme-id='glass'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
-}
-
 /* 4A: Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .agent-chat-message-enter {
@@ -961,4 +791,118 @@
 
 .monaco-editor .ouroboros-monaco-diff-gutter-deleted {
   border-left: 3px solid var(--error, #f85149);
+}
+
+/* ─── Glass (always-on) ────────────────────────────────────────────────────── */
+/* The CSS variables --bg, --bg-secondary, --bg-tertiary, --term-bg are forced
+   transparent in :root above. This makes ALL elements using them transparent
+   automatically. Below we only handle edge cases and overlays. */
+
+body {
+  background: transparent !important;
+}
+
+/* Activity bar: remove brightness filter */
+[data-layout="activity-bar"] {
+  filter: none !important;
+}
+
+/* Border colors are forced to semi-transparent white in useTheme.ts */
+
+/* Legacy catch-all removed — all color: var(--bg) antipatterns have been migrated
+   to var(--text-on-accent). If a stray instance reappears, the CSS alias
+   --bg: var(--surface-base) in tokens.css will make it transparent (visually broken),
+   which is the correct signal to fix it at the source. */
+
+/* Prevent browser default from turning selected items black */
+[role="option"][aria-selected="true"] {
+  color: var(--text) !important;
+}
+
+/* Notification panel — anchor to right edge so it doesn't overflow the window */
+[aria-label="Notification center"] {
+  left: auto !important;
+  right: 0 !important;
+}
+
+/* Resize dividers: invisible */
+[data-layout="resize-handle"] {
+  background: transparent !important;
+}
+
+/* Glass card utility — very subtle lift for tool cards */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  border-radius: 10px;
+}
+
+/* ─── Overlays & popups: frosted glass (readable over transparent content) ── */
+
+[role="menu"],
+[role="dialog"],
+[data-layout="title-bar"] [style*="position: absolute"],
+[data-layout="title-bar"] [style*="position:absolute"] {
+  background-color: rgba(10, 10, 14, 0.92) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+/* Native <select> elements and options */
+select,
+select option {
+  background-color: rgba(10, 10, 14, 0.95) !important;
+  color: var(--text) !important;
+  color-scheme: dark !important;
+}
+
+/* Notification dropdown — prevent right-side cutoff */
+[data-layout="title-bar"] {
+  overflow: visible !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* ─── Glass rounded corners ────────────────────────────────────────────────── */
+
+button {
+  border-radius: 8px;
+}
+input,
+textarea,
+select {
+  border-radius: 8px !important;
+}
+
+/* ─── Borderless panels (experimental — remove this block to restore) ──── */
+[data-layout="activity-bar"],
+[data-layout="sidebar"],
+[data-layout="centre-column"],
+[data-layout="editor-tab-bar"],
+[data-layout="terminal-header"],
+[data-layout="agent-sidebar"],
+[data-layout="collapsed-agent-strip"],
+[data-layout="status-bar"],
+[data-layout="title-bar"],
+[data-layout="resize-handle"],
+[data-layout="app"] {
+  border-color: transparent !important;
+}
+[data-layout="activity-bar"] *,
+[data-layout="sidebar"] *,
+[data-layout="agent-sidebar"] *,
+[data-layout="terminal-header"] *,
+[data-layout="centre-column"] > *,
+[data-layout="editor-tab-bar"] *,
+[data-layout="status-bar"] * {
+  border-color: transparent !important;
 }

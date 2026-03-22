@@ -62,7 +62,7 @@ export function ExtensionsBuildGuide({
         style={guideToggleStyle(isOpen)}
       >
         <SectionLabel style={{ marginBottom: 0 }}>How to Build an Extension</SectionLabel>
-        <span style={guideArrowStyle(isOpen)}>{'\u25B6'}</span>
+        <span className="text-text-semantic-muted" style={guideArrowStyle(isOpen)}>{'\u25B6'}</span>
       </button>
       {isOpen && <BuildGuideContent />}
     </section>
@@ -88,8 +88,8 @@ function BuildGuideContent(): React.ReactElement {
 
 function GuideDescription(): React.ReactElement {
   return (
-    <p style={guideTextStyle}>
-      Create a folder with a <code style={inlineCodeStyle}>manifest.json</code> and a JavaScript
+    <p className="text-text-semantic-muted" style={guideTextStyle}>
+      Create a folder with a <code className="text-text-semantic-secondary" style={inlineCodeStyle}>manifest.json</code> and a JavaScript
       entry file, then install via &quot;Install from Folder&quot; or copy directly to the
       extensions directory.
     </p>
@@ -100,7 +100,7 @@ function EventBadgeList(): React.ReactElement {
   return (
     <div style={badgeListStyle}>
       {ACTIVATION_EVENTS.map(({ event, description }) => (
-        <span key={event} title={description} style={guideBadgeStyle}>
+        <span key={event} title={description} className="text-text-semantic-secondary" style={guideBadgeStyle}>
           {event}
         </span>
       ))}
@@ -110,8 +110,8 @@ function EventBadgeList(): React.ReactElement {
 
 function ActivationHelp(): React.ReactElement {
   return (
-    <p style={guideTextStyle}>
-      Extensions without <code style={inlineCodeStyle}>activationEvents</code> activate on
+    <p className="text-text-semantic-muted" style={guideTextStyle}>
+      Extensions without <code className="text-text-semantic-secondary" style={inlineCodeStyle}>activationEvents</code> activate on
       startup (backward compatible). Extensions with specific events remain &quot;pending&quot;
       until the matching event fires.
     </p>
@@ -121,12 +121,12 @@ function ActivationHelp(): React.ReactElement {
 function PermissionsList(): React.ReactElement {
   return (
     <>
-      <p style={{ ...guideTextStyle, marginBottom: '6px' }}>
-        <strong style={{ color: 'var(--text)' }}>Valid permissions:</strong>
+      <p className="text-text-semantic-muted" style={{ ...guideTextStyle, marginBottom: '6px' }}>
+        <strong className="text-text-semantic-primary">Valid permissions:</strong>
       </p>
       <div style={{ ...badgeListStyle, marginBottom: '6px' }}>
         {VALID_PERMISSIONS.map((permission) => (
-          <code key={permission} style={permissionCodeStyle}>
+          <code key={permission} className="text-text-semantic-secondary" style={permissionCodeStyle}>
             {permission}
           </code>
         ))}
@@ -137,17 +137,17 @@ function PermissionsList(): React.ReactElement {
 
 function SandboxNote(): React.ReactElement {
   return (
-    <p style={{ ...guideTextStyle, marginTop: '8px', marginBottom: 0 }}>
+    <p className="text-text-semantic-muted" style={{ ...guideTextStyle, marginTop: '8px', marginBottom: 0 }}>
       Extensions run in a sandboxed VM with no access to{' '}
-      <code style={inlineCodeStyle}>require()</code>,{' '}
-      <code style={inlineCodeStyle}>process</code>, or the filesystem directly. All capabilities
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>require()</code>,{' '}
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>process</code>, or the filesystem directly. All capabilities
       are gated by the permissions declared in the manifest.
     </p>
   );
 }
 
 function CodeBlock({ code }: { code: string }): React.ReactElement {
-  return <pre style={codeBlockStyle}>{code}</pre>;
+  return <pre className="text-text-semantic-secondary" style={codeBlockStyle}>{code}</pre>;
 }
 
 function guideToggleStyle(isOpen: boolean): React.CSSProperties {
@@ -166,7 +166,6 @@ function guideToggleStyle(isOpen: boolean): React.CSSProperties {
 function guideArrowStyle(isOpen: boolean): React.CSSProperties {
   return {
     fontSize: '10px',
-    color: 'var(--text-muted)',
     transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
     transition: 'transform 150ms ease',
     display: 'inline-block',
@@ -187,7 +186,6 @@ const codeBlockStyle: React.CSSProperties = {
   padding: '8px',
   borderRadius: '4px',
   border: '1px solid var(--border)',
-  color: 'var(--text-secondary)',
   overflowX: 'auto',
   margin: '0 0 12px 0',
   lineHeight: 1.6,
@@ -200,20 +198,17 @@ const guideBadgeStyle: React.CSSProperties = {
   borderRadius: '3px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text-secondary)',
   fontFamily: 'var(--font-mono)',
   cursor: 'help',
 };
 
 const guideTextStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '10px',
 };
 
 const inlineCodeStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-secondary)',
 };
 
 const permissionCodeStyle: React.CSSProperties = {
@@ -222,6 +217,5 @@ const permissionCodeStyle: React.CSSProperties = {
   borderRadius: '3px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text-secondary)',
   fontFamily: 'var(--font-mono)',
 };

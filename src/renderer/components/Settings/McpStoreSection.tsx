@@ -20,7 +20,7 @@ export function McpStoreSection(): React.ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {model.error && <div role="alert" style={errorBannerStyle}>{model.error}</div>}
+      {model.error && <div role="alert" className="text-status-error" style={errorBannerStyle}>{model.error}</div>}
       <StoreHeader onRefresh={model.search} />
       <SourceToggle source={model.source} onSelect={model.setSource} />
       <SearchInput query={model.query} onChange={model.setQuery} />
@@ -40,12 +40,12 @@ function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactEleme
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>MCP Server Store</SectionLabel>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>
           Discover and install MCP servers from multiple sources.
         </p>
       </div>
       <div style={{ flexShrink: 0 }}>
-        <button onClick={onRefresh} style={buttonStyle}>Refresh</button>
+        <button onClick={onRefresh} className="text-text-semantic-primary" style={buttonStyle}>Refresh</button>
       </div>
     </div>
   );
@@ -68,7 +68,7 @@ function SourceToggle({ source, onSelect }: { source: McpStoreSource; onSelect: 
               borderRadius: '12px',
               border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: active ? 'var(--accent)' : 'var(--bg-tertiary)',
-              color: active ? 'var(--bg)' : 'var(--text-muted)',
+              color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
               fontSize: '11px',
               fontWeight: active ? 600 : 400,
               cursor: 'pointer',
@@ -89,12 +89,13 @@ function SourceToggle({ source, onSelect }: { source: McpStoreSource; onSelect: 
 function SearchInput({ query, onChange }: { query: string; onChange: (q: string) => void }): React.ReactElement {
   return (
     <div style={searchWrapperStyle}>
-      <span style={searchIconStyle}>&#x2315;</span>
+      <span className="text-text-semantic-muted" style={searchIconStyle}>&#x2315;</span>
       <input
         type="text"
         value={query}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search MCP servers..."
+        className="text-text-semantic-primary"
         style={searchInputStyle}
       />
     </div>
@@ -105,11 +106,11 @@ function SearchInput({ query, onChange }: { query: string; onChange: (q: string)
 
 function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
   if (model.loading && model.servers.length === 0) {
-    return <p style={loadingStyle}>Searching {model.source === 'npm' ? 'npm' : 'MCP'} servers...</p>;
+    return <p className="text-text-semantic-muted" style={loadingStyle}>Searching {model.source === 'npm' ? 'npm' : 'MCP'} servers...</p>;
   }
 
   if (model.servers.length === 0) {
-    return <div style={emptyStyle}>No servers found.</div>;
+    return <div className="text-text-semantic-muted" style={emptyStyle}>No servers found.</div>;
   }
 
   const hasMore = model.source === 'npm'
@@ -131,7 +132,7 @@ function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
       </div>
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
-          <button onClick={model.loadMore} style={buttonStyle}>
+          <button onClick={model.loadMore} className="text-text-semantic-primary" style={buttonStyle}>
             Load More
           </button>
         </div>
@@ -167,21 +168,21 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
   return (
     <div style={detailContainerStyle}>
       {/* Back button */}
-      <button onClick={model.clearSelection} style={backButtonStyle}>
+      <button onClick={model.clearSelection} className="text-interactive-accent" style={backButtonStyle}>
         &larr; Back to results
       </button>
 
       {/* Header */}
       <div style={{ marginTop: '12px' }}>
         <div style={detailTitleRowStyle}>
-          <span style={detailTitleStyle}>{displayName}</span>
-          <span style={detailVersionStyle}>v{server.version}</span>
+          <span className="text-text-semantic-primary" style={detailTitleStyle}>{displayName}</span>
+          <span className="text-text-semantic-muted" style={detailVersionStyle}>v{server.version}</span>
         </div>
         {server.name !== displayName && (
-          <div style={registryNameStyle}>{server.name}</div>
+          <div className="text-text-semantic-muted" style={registryNameStyle}>{server.name}</div>
         )}
         {server.description && (
-          <p style={detailDescriptionStyle}>{server.description}</p>
+          <p className="text-text-semantic-muted" style={detailDescriptionStyle}>{server.description}</p>
         )}
       </div>
 
@@ -213,17 +214,18 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
             {envVars.map((ev) => (
               <div key={ev.name} style={envVarRowStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <label style={envVarLabelStyle}>{ev.name}</label>
-                  {ev.isRequired && <span style={{ color: 'var(--error)', fontSize: '10px' }}>required</span>}
+                  <label className="text-text-semantic-primary" style={envVarLabelStyle}>{ev.name}</label>
+                  {ev.isRequired && <span className="text-status-error" style={{ fontSize: '10px' }}>required</span>}
                 </div>
                 {ev.description && (
-                  <div style={envVarDescStyle}>{ev.description}</div>
+                  <div className="text-text-semantic-muted" style={envVarDescStyle}>{ev.description}</div>
                 )}
                 <input
                   type={ev.name.toLowerCase().includes('key') || ev.name.toLowerCase().includes('secret') || ev.name.toLowerCase().includes('token') ? 'password' : 'text'}
                   value={envValues[ev.name] ?? ''}
                   onChange={(e) => handleEnvChange(ev.name, e.target.value)}
                   placeholder={ev.format || `Enter ${ev.name}`}
+                  className="text-text-semantic-primary"
                   style={envVarInputStyle}
                 />
               </div>
@@ -235,7 +237,7 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
       {/* Install buttons or installed badge */}
       <div style={installAreaStyle}>
         {isInstalled ? (
-          <div style={alreadyInstalledStyle}>Already installed</div>
+          <div className="text-interactive-accent" style={alreadyInstalledStyle}>Already installed</div>
         ) : (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -264,8 +266,8 @@ function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElem
 function MetadataRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div style={metadataRowStyle}>
-      <span style={metadataLabelStyle}>{label}</span>
-      <span style={metadataValueStyle}>{value}</span>
+      <span className="text-text-semantic-muted" style={metadataLabelStyle}>{label}</span>
+      <span className="text-text-semantic-primary" style={metadataValueStyle}>{value}</span>
     </div>
   );
 }
@@ -278,17 +280,17 @@ function RuntimeInfo({ pkg }: { pkg: NonNullable<McpRegistryServer['packages'][0
 
   return (
     <div style={runtimeBodyStyle}>
-      <div style={monoLineStyle}>
-        <span style={runtimeLabelStyle}>Command:</span> {command}
+      <div className="text-text-semantic-primary" style={monoLineStyle}>
+        <span className="text-text-semantic-muted" style={runtimeLabelStyle}>Command:</span> {command}
       </div>
       {runtime?.args && runtime.args.length > 0 && (
-        <div style={monoLineStyle}>
-          <span style={runtimeLabelStyle}>Args:</span> {runtime.args.join(' ')}
+        <div className="text-text-semantic-primary" style={monoLineStyle}>
+          <span className="text-text-semantic-muted" style={runtimeLabelStyle}>Args:</span> {runtime.args.join(' ')}
         </div>
       )}
       {runtime?.env && Object.keys(runtime.env).length > 0 && (
-        <div style={monoLineStyle}>
-          <span style={runtimeLabelStyle}>Env:</span>{' '}
+        <div className="text-text-semantic-primary" style={monoLineStyle}>
+          <span className="text-text-semantic-muted" style={runtimeLabelStyle}>Env:</span>{' '}
           {Object.entries(runtime.env).map(([k, v]) => `${k}=${v}`).join(', ')}
         </div>
       )}
@@ -329,7 +331,6 @@ const errorBannerStyle: React.CSSProperties = {
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
   fontSize: '12px',
-  color: 'var(--error)',
 };
 
 const emptyStyle: React.CSSProperties = {
@@ -338,14 +339,12 @@ const emptyStyle: React.CSSProperties = {
   border: '1px dashed var(--border)',
   background: 'var(--bg-tertiary)',
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
   textAlign: 'center',
 };
 
 const loadingStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 const searchWrapperStyle: React.CSSProperties = {
@@ -358,7 +357,6 @@ const searchIconStyle: React.CSSProperties = {
   position: 'absolute',
   left: '10px',
   fontSize: '14px',
-  color: 'var(--text-muted)',
   pointerEvents: 'none',
 };
 
@@ -368,7 +366,6 @@ const searchInputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-secondary)',
-  color: 'var(--text)',
   fontSize: '12px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -391,7 +388,6 @@ const backButtonStyle: React.CSSProperties = {
   padding: '4px 8px',
   border: 'none',
   background: 'transparent',
-  color: 'var(--accent)',
   fontSize: '12px',
   cursor: 'pointer',
   fontWeight: 500,
@@ -406,24 +402,20 @@ const detailTitleRowStyle: React.CSSProperties = {
 const detailTitleStyle: React.CSSProperties = {
   fontSize: '16px',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 const detailVersionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 const registryNameStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
   marginTop: '2px',
 };
 
 const detailDescriptionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   lineHeight: '1.5',
   margin: '8px 0 0 0',
 };
@@ -447,13 +439,11 @@ const metadataRowStyle: React.CSSProperties = {
 };
 
 const metadataLabelStyle: React.CSSProperties = {
-  color: 'var(--text-muted)',
   minWidth: '70px',
   fontWeight: 500,
 };
 
 const metadataValueStyle: React.CSSProperties = {
-  color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
   fontSize: '11px',
 };
@@ -475,11 +465,9 @@ const runtimeBodyStyle: React.CSSProperties = {
 const monoLineStyle: React.CSSProperties = {
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text)',
 };
 
 const runtimeLabelStyle: React.CSSProperties = {
-  color: 'var(--text-muted)',
   fontWeight: 500,
 };
 
@@ -493,7 +481,7 @@ function installButtonStyle(disabled: boolean): React.CSSProperties {
     borderRadius: '6px',
     border: 'none',
     background: disabled ? 'var(--bg-tertiary)' : 'var(--accent)',
-    color: disabled ? 'var(--text-muted)' : 'var(--bg)',
+    color: disabled ? 'var(--text-muted)' : 'var(--text-on-accent)',
     fontSize: '12px',
     fontWeight: 600,
     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -521,13 +509,11 @@ const envVarRowStyle: React.CSSProperties = {
 const envVarLabelStyle: React.CSSProperties = {
   fontSize: '11px',
   fontWeight: 600,
-  color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
 };
 
 const envVarDescStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   lineHeight: '1.4',
 };
 
@@ -537,7 +523,6 @@ const envVarInputStyle: React.CSSProperties = {
   borderRadius: '4px',
   border: '1px solid var(--border)',
   background: 'var(--bg-secondary)',
-  color: 'var(--text)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -551,7 +536,6 @@ const alreadyInstalledStyle: React.CSSProperties = {
   padding: '6px 12px',
   borderRadius: '6px',
   background: 'color-mix(in srgb, var(--accent) 15%, var(--bg))',
-  color: 'var(--accent)',
   fontSize: '12px',
   fontWeight: 600,
 };

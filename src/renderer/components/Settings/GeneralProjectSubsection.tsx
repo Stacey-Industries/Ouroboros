@@ -24,14 +24,14 @@ export function DefaultProjectFolder({ draft, onChange }: Props): React.ReactEle
   return (
     <section>
       <SectionLabel>Default Project Folder</SectionLabel>
-      <p style={descStyle}>
+      <p className="text-text-semantic-muted" style={descStyle}>
         The folder Ouroboros opens by default when no project is loaded.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={pathDisplayStyle(defaultRoot)} title={defaultRoot || 'Not set'}>
           {defaultRoot || 'Not set'}
         </div>
-        <button onClick={() => void handlePickFolder()} style={buttonStyle}>
+        <button onClick={() => void handlePickFolder()} className="text-text-semantic-primary" style={buttonStyle}>
           Browse...
         </button>
       </div>
@@ -47,13 +47,13 @@ export function RecentProjects({ draft, onChange }: Props): React.ReactElement {
       <div style={headerRowStyle}>
         <SectionLabel style={{ marginBottom: 0 }}>Recent Projects</SectionLabel>
         {recentProjects.length > 0 && (
-          <button onClick={() => onChange('recentProjects', [])} style={clearBtnStyle}>
+          <button onClick={() => onChange('recentProjects', [])} className="text-status-error" style={clearBtnStyle}>
             Clear all
           </button>
         )}
       </div>
       {recentProjects.length === 0 ? (
-        <p style={emptyStyle}>No recent projects.</p>
+        <p className="text-text-semantic-muted" style={emptyStyle}>No recent projects.</p>
       ) : (
         <RecentProjectList projects={recentProjects} onChange={onChange} />
       )}
@@ -85,34 +85,41 @@ function RecentProjectRow({ project, index, isLast, onRemove }: {
 }): React.ReactElement {
   return (
     <div style={{ ...rowStyle, borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-      <span style={indexStyle}>{index + 1}</span>
-      <span style={pathStyle} title={project}>{project}</span>
-      <button aria-label={`Remove ${project}`} onClick={onRemove} style={removeBtnStyle}>×</button>
+      <span className="text-text-semantic-muted" style={indexStyle}>{index + 1}</span>
+      <span className="text-text-semantic-secondary" style={pathStyle} title={project}>{project}</span>
+      <button aria-label={`Remove ${project}`} onClick={onRemove} className="text-text-semantic-muted" style={removeBtnStyle}>×</button>
     </div>
   );
 }
 
-const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' };
+function pathDisplayStyle(path: string): React.CSSProperties {
+  return {
+    flex: 1,
+    fontSize: '12px',
+    fontFamily: 'var(--font-mono)',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg-tertiary)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: path ? 'var(--text)' : 'var(--text-muted)',
+    minWidth: 0,
+  };
+}
+
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
 const headerRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' };
-const emptyStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' };
+const emptyStyle: React.CSSProperties = { fontSize: '12px', fontStyle: 'italic' };
 const listBorderStyle: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' };
 const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-tertiary)', gap: '8px' };
-const indexStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0 };
-const pathStyle: React.CSSProperties = { flex: 1, fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 };
-const removeBtnStyle: React.CSSProperties = { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1, padding: '0 2px' };
+const indexStyle: React.CSSProperties = { fontSize: '11px', fontFamily: 'var(--font-mono)', flexShrink: 0 };
+const pathStyle: React.CSSProperties = { flex: 1, fontSize: '12px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 };
+const removeBtnStyle: React.CSSProperties = { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: '0 2px' };
 
 const clearBtnStyle: React.CSSProperties = {
   flexShrink: 0, padding: '4px 8px', borderRadius: '6px',
   border: '1px solid var(--error)', background: 'transparent',
-  color: 'var(--error)', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap',
+  fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap',
 };
-
-function pathDisplayStyle(value: string): React.CSSProperties {
-  return {
-    flex: 1, padding: '7px 10px', borderRadius: '6px',
-    border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-    fontSize: '12px', fontFamily: 'var(--font-mono)',
-    color: value ? 'var(--text-secondary)' : 'var(--text-muted)',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
-  };
-}

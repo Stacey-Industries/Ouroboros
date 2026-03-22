@@ -48,11 +48,11 @@ export function ProviderList({
 function AnthropicRow(): React.ReactElement {
   return (
     <div style={providerRowStyle}>
-      <span style={providerNameStyle}>{BUILTIN_ANTHROPIC.name}</span>
-      <span style={providerBuiltInStyle}>
+      <span className="text-text-semantic-primary" style={providerNameStyle}>{BUILTIN_ANTHROPIC.name}</span>
+      <span className="text-text-semantic-muted" style={providerBuiltInStyle}>
         (Built-in — uses CLI auth)
       </span>
-      <span style={{ fontSize: '11px', color: 'var(--accent)' }}>
+      <span className="text-interactive-accent" style={{ fontSize: '11px' }}>
         Always enabled
       </span>
     </div>
@@ -72,8 +72,8 @@ function UserProviderRow({
 }: UserProviderRowProps): React.ReactElement {
   return (
     <div style={providerRowStyle}>
-      <span style={providerNameStyle}>{provider.name}</span>
-      <span style={providerUrlStyle}>{provider.baseUrl}</span>
+      <span className="text-text-semantic-primary" style={providerNameStyle}>{provider.name}</span>
+      <span className="text-text-semantic-muted" style={providerUrlStyle}>{provider.baseUrl}</span>
       <SwitchControl
         checked={provider.enabled}
         label={`Toggle ${provider.name}`}
@@ -82,6 +82,7 @@ function UserProviderRow({
       <button
         onClick={() => onRemove(provider.id)}
         aria-label={`Remove ${provider.name}`}
+        className="text-text-semantic-muted"
         style={deleteButtonStyle}
       >
         x

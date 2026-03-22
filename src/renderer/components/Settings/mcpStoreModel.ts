@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { MCP_SERVERS_CHANGED_EVENT } from '../../hooks/appEventNames';
 import type { McpRegistryServer } from '../../types/electron';
 
 /** Extract short name from registry name: "io.github.user/server-name" → "server-name" */
@@ -186,6 +187,8 @@ export function useMcpStoreModel(): McpStoreModel {
           // Config stores the short name (e.g. "server-name" from "io.github.user/server-name")
           const shortName = extractShortName(server.name);
           setInstalledNames((prev) => new Set([...prev, shortName]));
+          // Notify MCP settings section to refresh its server list
+          window.dispatchEvent(new CustomEvent(MCP_SERVERS_CHANGED_EVENT));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to install server');

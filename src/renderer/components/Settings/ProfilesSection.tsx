@@ -41,7 +41,6 @@ const stackStyle: React.CSSProperties = {
 
 const helperTextStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '12px',
 };
 
@@ -57,7 +56,6 @@ const profileInputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '13px',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -72,7 +70,6 @@ const profileListStyle: React.CSSProperties = {
 const profileNameStyle: React.CSSProperties = {
   flex: 1,
   fontSize: '13px',
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -83,7 +80,6 @@ const themePreviewStyle: React.CSSProperties = {
   flexShrink: 0,
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-muted)',
   opacity: 0.7,
 };
 
@@ -93,7 +89,6 @@ const applyButtonStyle: React.CSSProperties = {
   borderRadius: '5px',
   border: '1px solid var(--accent)',
   background: 'transparent',
-  color: 'var(--accent)',
   fontSize: '11px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -105,7 +100,6 @@ const deleteButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   fontSize: '15px',
   lineHeight: 1,
   padding: '0 2px',
@@ -113,7 +107,6 @@ const deleteButtonStyle: React.CSSProperties = {
 
 const emptyStateStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
 };
 
@@ -153,7 +146,7 @@ function getSaveButtonStyle(enabled: boolean): React.CSSProperties {
     borderRadius: '6px',
     border: '1px solid var(--border)',
     background: enabled ? 'var(--accent)' : 'var(--bg-tertiary)',
-    color: enabled ? 'var(--bg)' : 'var(--text-muted)',
+    color: enabled ? 'var(--text-on-accent)' : 'var(--text-muted)',
     fontSize: '12px',
     fontWeight: 600,
     cursor: enabled ? 'pointer' : 'not-allowed',
@@ -239,9 +232,9 @@ function SaveProfileSection({
   return (
     <section>
       <SectionLabel>Save Current Settings as Profile</SectionLabel>
-      <p style={helperTextStyle}>Snapshots the current theme, fonts, terminal size, and other appearance settings. Project paths and window layout are not included.</p>
+      <p className="text-text-semantic-muted" style={helperTextStyle}>Snapshots the current theme, fonts, terminal size, and other appearance settings. Project paths and window layout are not included.</p>
       <div style={inputRowStyle}>
-        <input type="text" value={newName} onChange={(event) => onNameChange(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onSave(); } }} placeholder="Profile name..." style={profileInputStyle} autoComplete="off" spellCheck={false} />
+        <input type="text" value={newName} onChange={(event) => onNameChange(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onSave(); } }} placeholder="Profile name..." className="text-text-semantic-primary" style={profileInputStyle} autoComplete="off" spellCheck={false} />
         <button onClick={onSave} disabled={!canSave} style={getSaveButtonStyle(canSave)}>Save Profile</button>
       </div>
     </section>
@@ -263,10 +256,10 @@ function ProfileRow({
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', gap: '10px', borderBottom: isLast ? 'none' : '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
-      <span style={profileNameStyle} title={name}>{name}</span>
-      {previewTheme && <span style={themePreviewStyle}>{previewTheme}</span>}
-      <button aria-label={`Apply profile ${name}`} onClick={() => onApply(name)} style={applyButtonStyle}>Apply</button>
-      <button aria-label={`Delete profile ${name}`} onClick={() => onDelete(name)} style={deleteButtonStyle}>x</button>
+      <span className="text-text-semantic-primary" style={profileNameStyle} title={name}>{name}</span>
+      {previewTheme && <span className="text-text-semantic-muted" style={themePreviewStyle}>{previewTheme}</span>}
+      <button aria-label={`Apply profile ${name}`} onClick={() => onApply(name)} className="text-interactive-accent" style={applyButtonStyle}>Apply</button>
+      <button aria-label={`Delete profile ${name}`} onClick={() => onDelete(name)} className="text-text-semantic-muted" style={deleteButtonStyle}>x</button>
     </div>
   );
 }
@@ -285,7 +278,7 @@ function ProfilesList({
   return (
     <section>
       <SectionLabel>Saved Profiles</SectionLabel>
-      {profileNames.length === 0 ? <p style={emptyStateStyle}>No profiles saved yet.</p> : (
+      {profileNames.length === 0 ? <p className="text-text-semantic-muted" style={emptyStateStyle}>No profiles saved yet.</p> : (
         <div style={profileListStyle}>
           {profileNames.map((name, index) => <ProfileRow key={name} name={name} previewTheme={profiles[name]?.activeTheme} isLast={index === profileNames.length - 1} onApply={onApply} onDelete={onDelete} />)}
         </div>

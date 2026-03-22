@@ -23,6 +23,18 @@ export function SettingsTabBar({
           aria-selected={activeTab === tab.id}
           onClick={() => onTabChange(tab.id)}
           style={tabStyle(activeTab === tab.id)}
+          onMouseEnter={(e) => {
+            if (activeTab !== tab.id) {
+              e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.15)';
+              e.currentTarget.style.color = 'var(--text)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== tab.id) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }
+          }}
         >
           {tab.label}
         </button>
@@ -33,25 +45,24 @@ export function SettingsTabBar({
 
 const barStyle: React.CSSProperties = {
   display: 'flex',
-  borderBottom: '1px solid var(--border)',
   padding: '0 12px',
+  paddingBottom: '6px',
   flexShrink: 0,
-  background: 'var(--bg-secondary)',
+  background: 'transparent',
   overflowX: 'auto',
 };
 
 function tabStyle(active: boolean): React.CSSProperties {
   return {
-    padding: '10px 14px',
-    background: 'none',
+    padding: '8px 12px',
+    background: active ? 'rgba(128,128,128,0.15)' : 'transparent',
     border: 'none',
-    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+    borderRadius: '6px',
     color: active ? 'var(--text)' : 'var(--text-muted)',
     fontSize: '13px',
     fontWeight: active ? 500 : 400,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
-    marginBottom: '-1px',
-    transition: 'color 150ms ease, border-color 150ms ease',
+    transition: 'color 150ms ease, background-color 150ms ease',
   };
 }

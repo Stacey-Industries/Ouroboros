@@ -29,25 +29,25 @@ export function McpStoreServerCard({ server, isInstalled, isLast, onClick }: Mcp
       <div style={cardBodyStyle}>
         {/* Top row: name + installed badge */}
         <div style={topRowStyle}>
-          <span style={nameStyle}>{displayName}</span>
+          <span className="text-text-semantic-primary" style={nameStyle}>{displayName}</span>
           {isInstalled ? (
-            <span style={installedBadgeStyle}>Installed</span>
+            <span className="text-interactive-accent" style={installedBadgeStyle}>Installed</span>
           ) : (
-            <span style={arrowStyle}>&rarr;</span>
+            <span className="text-text-semantic-muted" style={arrowStyle}>&rarr;</span>
           )}
         </div>
 
         {/* Description — clamped to 2 lines */}
         {server.description && (
-          <div style={descriptionStyle} className="line-clamp-2">
+          <div className="text-text-semantic-muted line-clamp-2" style={descriptionStyle}>
             {server.description}
           </div>
         )}
 
         {/* Footer: type badge + version */}
         <div style={footerStyle}>
-          <span style={typeBadgeStyle}>{registryType}</span>
-          <span style={versionStyle}>v{server.version}</span>
+          <span className="text-interactive-accent" style={typeBadgeStyle}>{registryType}</span>
+          <span className="text-text-semantic-muted" style={versionStyle}>v{server.version}</span>
         </div>
       </div>
     </div>
@@ -92,7 +92,6 @@ const topRowStyle: React.CSSProperties = {
 const nameStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -101,7 +100,6 @@ const nameStyle: React.CSSProperties = {
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   lineHeight: '1.4',
   overflow: 'hidden',
   display: '-webkit-box',
@@ -122,7 +120,6 @@ const typeBadgeStyle: React.CSSProperties = {
   borderRadius: '3px',
   border: '1px solid var(--border)',
   background: 'color-mix(in srgb, var(--accent) 10%, var(--bg))',
-  color: 'var(--accent)',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
@@ -131,7 +128,6 @@ const typeBadgeStyle: React.CSSProperties = {
 
 const versionStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
 };
 
 const installedBadgeStyle: React.CSSProperties = {
@@ -139,13 +135,11 @@ const installedBadgeStyle: React.CSSProperties = {
   padding: '1px 6px',
   borderRadius: '3px',
   background: 'color-mix(in srgb, var(--accent) 15%, var(--bg))',
-  color: 'var(--accent)',
   fontWeight: 600,
   flexShrink: 0,
 };
 
 const arrowStyle: React.CSSProperties = {
   fontSize: '13px',
-  color: 'var(--text-muted)',
   flexShrink: 0,
 };

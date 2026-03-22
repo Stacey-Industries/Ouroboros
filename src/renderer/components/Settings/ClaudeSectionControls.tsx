@@ -55,7 +55,7 @@ export function ToggleSection({
       <div style={claudeSectionToggleRowStyle}>
         <div>
           <SectionLabel>{title}</SectionLabel>
-          <p style={claudeSectionInlineDescriptionStyle}>{description}</p>
+          <p className="text-text-semantic-muted" style={claudeSectionInlineDescriptionStyle}>{description}</p>
         </div>
         <SwitchControl checked={checked} label={label} onChange={onChange} />
       </div>
@@ -74,13 +74,14 @@ export function TextInputSection({
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>{description}</p>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>{description}</p>
       <input
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={label}
+        className="text-text-semantic-primary"
         style={claudeSectionTextInputStyle}
       />
     </section>
@@ -98,11 +99,12 @@ export function SelectSection({
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>{description}</p>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>{description}</p>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-label={label}
+        className="text-text-semantic-primary"
         style={claudeSectionSelectStyle}
       >
         {children}

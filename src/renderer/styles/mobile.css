@@ -13,6 +13,17 @@
   height: 100dvh;
 }
 
+/* ─── Dark base background for glass on web ───────────────────────────────
+ * Electron provides a dark window chrome behind transparent surfaces.
+ * Web mode has no OS chrome, so the html element needs a dark base
+ * for the glass gradient to render against. The --bg-gradient var is
+ * set per-theme by applyThemeToDom(), so the gradient matches whatever
+ * theme is active. */
+.web-mode {
+  background-color: #0a0a0e !important;
+  background-image: var(--bg-gradient, none);
+}
+
 /* ─── Prevent iOS bounce scroll ──────────────────────────────────────────── */
 .web-mode {
   overscroll-behavior: none;
@@ -205,10 +216,19 @@
     min-height: 48px !important;
   }
 
-  /* ── Title bar: compact mobile height ── */
+  /* ── Title bar: frosted glass on mobile web ── */
+  /* z-index + position create a stacking context above page content so that
+     dropdown menus (hamburger, overflow) escape the backdrop-filter stacking
+     context and render on top of whatever panel is visible. */
   .web-mode [data-layout='title-bar'] {
+    background-color: rgba(10, 10, 14, 0.92) !important;
+    backdrop-filter: blur(24px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     height: 44px !important;
     min-height: 44px !important;
+    position: relative;
+    z-index: 50;
   }
 
   /* ── Full-height panels: ensure panels stretch properly ── */
@@ -250,17 +270,39 @@
     transition: opacity 100ms ease;
   }
 
-  /* ── Bottom nav: active indicator styling ── */
+  /* ── Bottom nav: frosted glass on mobile web ── */
   .web-mode [data-layout='mobile-nav'] {
-    background-color: var(--bg-secondary) !important;
-    border-top: 1px solid var(--border) !important;
+    background-color: rgba(10, 10, 14, 0.92) !important;
+    backdrop-filter: blur(24px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
     z-index: 100;
   }
 
-  /* ── Editor tab bar: compact on mobile ── */
+  /* ── Editor tab bar: frosted glass on mobile ── */
   .web-mode [role='tablist'][aria-label='Open files'] {
+    background-color: rgba(10, 10, 14, 0.85) !important;
+    backdrop-filter: blur(16px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
     height: 32px !important;
     min-height: 32px !important;
+  }
+
+  /* ── Panel headers: frosted glass on mobile ── */
+  .web-mode [aria-label='Left sidebar'] > div:first-child {
+    background-color: rgba(10, 10, 14, 0.85) !important;
+    backdrop-filter: blur(16px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
+  }
+
+  /* ── Chat panel: frosted glass for headers + surface panels on mobile ── */
+  /* Targets bg-surface-panel elements inside the agent sidebar — these are
+     transparent in glass mode and need frosted glass to be readable. Covers
+     the ChatPanelHeader, RecentThreadTabs, and SecondaryViewHeader. */
+  .web-mode [data-mobile-active='chat'] [data-layout='agent-sidebar'] .bg-surface-panel {
+    background-color: rgba(10, 10, 14, 0.85) !important;
+    backdrop-filter: blur(16px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
   }
 
   /* ── Hide the right sidebar wrapper div (display:none) on non-chat pages ── */

@@ -28,7 +28,7 @@ export function ApprovalSubsection({ draft, onChange }: Props): React.ReactEleme
     <>
       <section>
         <SectionLabel>Pre-Execution Approval</SectionLabel>
-        <p style={descStyle}>Require manual approval before Claude Code executes certain tools.</p>
+        <p className="text-text-semantic-muted" style={descStyle}>Require manual approval before Claude Code executes certain tools.</p>
         <ToolToggleGrid tools={COMMON_TOOLS} currentTools={currentTools} onToggle={toggleTool} />
         <ApprovalStatus currentTools={currentTools} />
         <CustomToolInput currentTools={currentTools} onAdd={(t) => onChange('approvalRequired', [...currentTools, t])} />
@@ -57,10 +57,10 @@ function ToolToggleGrid({ tools, currentTools, onToggle }: {
 
 function ApprovalStatus({ currentTools }: { currentTools: string[] }): React.ReactElement {
   return (
-    <div style={statusBoxStyle}>
+    <div className="text-text-semantic-primary" style={statusBoxStyle}>
       {currentTools.length === 0
-        ? <span style={{ color: 'var(--text-muted)' }}>No tools require approval.</span>
-        : <><span style={{ color: 'var(--text-muted)' }}>Requiring approval: </span>{currentTools.join(', ')}</>}
+        ? <span className="text-text-semantic-muted">No tools require approval.</span>
+        : <><span className="text-text-semantic-muted">Requiring approval: </span>{currentTools.join(', ')}</>}
     </div>
   );
 }
@@ -84,7 +84,7 @@ function CustomToolInput({ currentTools, onAdd }: {
       <input ref={inputRef} type="text" value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
-        placeholder="Custom tool name..." style={inputStyle}
+        placeholder="Custom tool name..." className="text-text-semantic-primary" style={inputStyle}
       />
       <button onClick={handleAdd} disabled={!value.trim() || currentTools.includes(value.trim())} style={addBtnStyle(!value.trim())}>
         Add
@@ -97,16 +97,16 @@ function TimeoutSection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section>
       <SectionLabel>Auto-Approve Timeout</SectionLabel>
-      <p style={descStyle}>Auto-approve tool calls after a timeout (seconds). Set to 0 for manual approval.</p>
+      <p className="text-text-semantic-muted" style={descStyle}>Auto-approve tool calls after a timeout (seconds). Set to 0 for manual approval.</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <input type="number" min={0} max={300} value={draft.approvalTimeout ?? 0}
           onChange={(e) => {
             const val = parseInt(e.target.value, 10);
             if (!isNaN(val) && val >= 0 && val <= 300) onChange('approvalTimeout', val);
           }}
-          aria-label="Auto-approve timeout in seconds" style={numberInputStyle}
+          aria-label="Auto-approve timeout in seconds" className="text-text-semantic-primary" style={numberInputStyle}
         />
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+        <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
           {(draft.approvalTimeout ?? 0) === 0 ? 'Never auto-approve' : `Auto-approve after ${draft.approvalTimeout}s`}
         </span>
       </div>
@@ -114,11 +114,11 @@ function TimeoutSection({ draft, onChange }: Props): React.ReactElement {
   );
 }
 
-const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' };
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
 
 const statusBoxStyle: React.CSSProperties = {
   padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)', fontSize: '12px', color: 'var(--text)', marginBottom: '10px',
+  background: 'var(--bg-tertiary)', fontSize: '12px', marginBottom: '10px',
 };
 
 function toolBtnStyle(isActive: boolean): React.CSSProperties {
@@ -126,7 +126,7 @@ function toolBtnStyle(isActive: boolean): React.CSSProperties {
     padding: '4px 10px', borderRadius: '4px',
     border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
     background: isActive ? 'var(--accent)' : 'transparent',
-    color: isActive ? 'var(--bg)' : 'var(--text-muted)',
+    color: isActive ? 'var(--text-on-accent)' : 'var(--text-muted)',
     fontSize: '12px', cursor: 'pointer', fontWeight: isActive ? 600 : 400,
     transition: 'all 0.15s',
   };
@@ -135,7 +135,7 @@ function toolBtnStyle(isActive: boolean): React.CSSProperties {
 const inputStyle: React.CSSProperties = {
   flex: 1, padding: '6px 10px', borderRadius: '6px',
   border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  color: 'var(--text)', fontSize: '12px', outline: 'none',
+  fontSize: '12px', outline: 'none',
 };
 
 function addBtnStyle(disabled: boolean): React.CSSProperties {
@@ -149,5 +149,5 @@ function addBtnStyle(disabled: boolean): React.CSSProperties {
 const numberInputStyle: React.CSSProperties = {
   width: '80px', padding: '7px 10px', borderRadius: '6px',
   border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  color: 'var(--text)', fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
+  fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
 };

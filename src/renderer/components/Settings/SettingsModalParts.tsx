@@ -59,7 +59,6 @@ function ModalOverlay({
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
-      className="glass-shell"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onCancel();
@@ -72,8 +71,8 @@ function ModalOverlay({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'var(--glass-shell-bg, rgba(0, 0, 0, 0.6))',
-        backdropFilter: 'var(--glass-backdrop, blur(2px))',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(2px)',
         padding: '24px',
         animation: isVisible
           ? 'settings-overlay-in 180ms ease forwards'
@@ -92,7 +91,6 @@ function ModalCard({
   return (
     <div
       role="document"
-      className="glass-card"
       style={{
         width: '100%',
         maxWidth: '680px',
@@ -100,9 +98,9 @@ function ModalCard({
         display: 'flex',
         flexDirection: 'column',
         borderRadius: '10px',
-        background: 'var(--glass-card-bg, var(--bg))',
-        border: '1px solid var(--glass-border-muted, var(--border))',
-        boxShadow: 'var(--glass-shadow, 0 32px 80px rgba(0, 0, 0, 0.7))',
+        background: 'var(--bg)',
+        border: '1px solid var(--border)',
+        boxShadow: '0 32px 80px rgba(0, 0, 0, 0.7)',
         overflow: 'hidden',
         animation: isVisible
           ? 'settings-card-in 180ms ease forwards'
@@ -122,16 +120,17 @@ function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px 20px',
-        borderBottom: '1px solid var(--glass-border-muted, var(--border))',
+        borderBottom: '1px solid var(--border)',
         flexShrink: 0,
       }}
     >
-      <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>
+      <h2 className="text-text-semantic-primary" style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>
         Settings
       </h2>
       <button
         onClick={onClose}
         aria-label="Close settings"
+        className="text-text-semantic-muted"
         style={{
           width: '28px',
           height: '28px',
@@ -141,7 +140,6 @@ function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
           borderRadius: '6px',
           border: 'none',
           background: 'transparent',
-          color: 'var(--text-muted)',
           fontSize: '18px',
           cursor: 'pointer',
           lineHeight: 1,
@@ -228,17 +226,17 @@ function ModalFooter({
         justifyContent: 'flex-end',
         gap: '10px',
         padding: '14px 20px',
-        borderTop: '1px solid var(--glass-border, var(--border))',
+        borderTop: '1px solid var(--border)',
         flexShrink: 0,
-        background: 'var(--glass-panel-bg-thin, var(--bg-secondary))',
+        background: 'var(--bg-secondary)',
       }}
     >
       {saveError && (
-        <span role="alert" style={{ flex: 1, fontSize: '12px', color: 'var(--error)' }}>
+        <span role="alert" className="text-status-error" style={{ flex: 1, fontSize: '12px' }}>
           {saveError}
         </span>
       )}
-      <button onClick={onCancel} disabled={isSaving} style={cancelButtonStyle}>
+      <button onClick={onCancel} disabled={isSaving} className="text-text-semantic-secondary" style={cancelButtonStyle}>
         Cancel
       </button>
       <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>

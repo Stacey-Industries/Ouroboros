@@ -49,7 +49,7 @@ function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement 
         <span style={nameStyle(server.enabled)}>{server.name}</span>
         <ScopeBadge scope={server.scope} />
       </div>
-      <div style={commandStyle}>
+      <div className="text-text-semantic-muted" style={commandStyle}>
         {server.config.url ?? `${server.config.command} ${summarizeArgs(server.config.args)}`}
       </div>
     </div>
@@ -86,11 +86,11 @@ function ServerControls({ server, isEditing, isConfirmingDelete, onToggle, onEdi
       </button>
       {isConfirmingDelete ? (
         <>
-          <button onClick={onConfirmDelete} style={{ ...smallBtnStyle, color: '#f87171', borderColor: '#f87171' }}>Confirm</button>
+          <button onClick={onConfirmDelete} className="text-status-error" style={{ ...smallBtnStyle, borderColor: '#f87171' }}>Confirm</button>
           <button onClick={onCancelDelete} style={smallBtnStyle}>No</button>
         </>
       ) : (
-        <button onClick={onDelete} title="Delete" style={{ ...smallBtnStyle, color: '#f87171' }}>Delete</button>
+        <button onClick={onDelete} title="Delete" className="text-status-error" style={smallBtnStyle}>Delete</button>
       )}
     </div>
   );
@@ -117,7 +117,7 @@ function nameStyle(enabled: boolean): React.CSSProperties {
 }
 
 const commandStyle: React.CSSProperties = {
-  fontSize: '11px', color: 'var(--text-muted)', paddingLeft: '16px',
+  fontSize: '11px', paddingLeft: '16px',
   fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 };
 

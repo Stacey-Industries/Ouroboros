@@ -20,7 +20,7 @@ export function SettingsSearchResults({
 }: SettingsSearchResultsProps): React.ReactElement {
   if (searchResults.length === 0) {
     return (
-      <p style={emptyStyle}>
+      <p className="text-text-semantic-muted" style={emptyStyle}>
         No settings matching &ldquo;{searchQuery}&rdquo;
       </p>
     );
@@ -49,13 +49,13 @@ function SearchResultItem({
   return (
     <button onClick={onClick} style={itemStyle}>
       <div style={itemHeaderStyle}>
-        <span style={labelStyle}>
+        <span className="text-text-semantic-primary" style={labelStyle}>
           <HighlightedText text={match.entry.label} ranges={match.labelRanges} />
         </span>
-        <span style={badgeStyle}>{match.entry.sectionLabel}</span>
+        <span className="text-interactive-accent" style={badgeStyle}>{match.entry.sectionLabel}</span>
       </div>
       {match.entry.description && (
-        <span style={descStyle}>{match.entry.description}</span>
+        <span className="text-text-semantic-muted" style={descStyle}>{match.entry.description}</span>
       )}
     </button>
   );
@@ -65,7 +65,6 @@ const emptyStyle: React.CSSProperties = {
   margin: '32px 0',
   textAlign: 'center',
   fontSize: '13px',
-  color: 'var(--text-muted)',
 };
 
 const listStyle: React.CSSProperties = {
@@ -97,7 +96,6 @@ const itemHeaderStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
 };
 
 const badgeStyle: React.CSSProperties = {
@@ -105,12 +103,10 @@ const badgeStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  color: 'var(--accent)',
   flexShrink: 0,
 };
 
 const descStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   lineHeight: 1.4,
 };

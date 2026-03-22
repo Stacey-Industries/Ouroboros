@@ -24,7 +24,6 @@ const sectionLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   marginBottom: '12px',
 };
 
@@ -49,7 +48,7 @@ const toggleButtonStyle: React.CSSProperties = {
 };
 
 function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div style={sectionLabelStyle}>{children}</div>;
+  return <div className="text-text-semantic-muted" style={sectionLabelStyle}>{children}</div>;
 }
 
 function ThemeCardSwatches({ theme }: { theme: Theme }): React.ReactElement {
@@ -102,12 +101,12 @@ function ThemeCardName({
 function ThemeCardStatus(): React.ReactElement {
   return (
     <div
+      className="text-interactive-accent"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px',
         fontSize: '10px',
-        color: 'var(--accent)',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
@@ -200,7 +199,7 @@ export function ThemeGrid({
           />
         ))}
       </div>
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '10px' }}>
         Click a theme to preview it. Changes apply when you save.
       </p>
     </section>
@@ -229,6 +228,40 @@ export function BackgroundGradientSection({
   );
 }
 
+export function GlassOpacitySection({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}): React.ReactElement {
+  return (
+    <section>
+      <SectionLabel>Glass Tint</SectionLabel>
+      <div style={panelStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Darken the transparent glass background
+            </span>
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>
+              {value}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            style={{ width: '100%', accentColor: 'var(--accent)' }}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ThemeEditorHeader({
   editorOpen,
   setEditorOpen,
@@ -239,16 +272,16 @@ function ThemeEditorHeader({
   return (
     <button onClick={() => setEditorOpen((value) => !value)} style={toggleButtonStyle}>
       <div>
-        <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>Theme Editor</div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>Theme Editor</div>
+        <div className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
           Customize individual color tokens and save as a custom theme
         </div>
       </div>
       <span
         aria-hidden="true"
+        className="text-text-semantic-muted"
         style={{
           fontSize: '11px',
-          color: 'var(--text-muted)',
           transform: editorOpen ? 'rotate(180deg)' : 'rotate(0deg)',
           transition: 'transform 150ms ease',
           display: 'inline-block',

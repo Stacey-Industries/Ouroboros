@@ -89,13 +89,14 @@ function FontTextSection({
   return (
     <section>
       <SectionLabel>{label}</SectionLabel>
-      <p style={descriptionStyle}>{description}</p>
+      <p className="text-text-semantic-muted" style={descriptionStyle}>{description}</p>
       <input
         type="text"
         value={value}
         onChange={(event) => onChange(configKey, event.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        className="text-text-semantic-primary"
         style={inputStyle}
         spellCheck={false}
       />
@@ -122,7 +123,7 @@ function FontSizeSection({ fontUI, fontSizeUI, onChange }: FontSizeSectionProps)
   return (
     <section>
       <SectionLabel>UI Font Size</SectionLabel>
-      <p style={descriptionStyle}>
+      <p className="text-text-semantic-muted" style={descriptionStyle}>
         Base font size for the interface ({UI_FONT_SIZE_MIN}-{UI_FONT_SIZE_MAX}px). Default: {DEFAULT_UI_FONT_SIZE}px.
       </p>
       <div style={sliderRowStyle}>
@@ -136,7 +137,7 @@ function FontSizeSection({ fontUI, fontSizeUI, onChange }: FontSizeSectionProps)
           aria-label="UI font size slider"
           style={rangeInputStyle}
         />
-        <span style={sizeValueStyle}>{fontSizeUI}px</span>
+        <span className="text-text-semantic-primary" style={sizeValueStyle}>{fontSizeUI}px</span>
         <ResetButton fontSizeUI={fontSizeUI} onChange={onChange} />
       </div>
       <PreviewCard
@@ -146,7 +147,7 @@ function FontSizeSection({ fontUI, fontSizeUI, onChange }: FontSizeSectionProps)
         lineHeight={1.5}
         lines={[PREVIEW_TEXT]}
       />
-      <p style={saveNoticeStyle}>Font size changes apply after Save.</p>
+      <p className="text-text-semantic-muted" style={saveNoticeStyle}>Font size changes apply after Save.</p>
     </section>
   );
 }
@@ -171,8 +172,8 @@ function PreviewCard({
   labelFontFamily,
 }: PreviewCardProps): React.ReactElement {
   return (
-    <div aria-label={ariaLabel} style={previewStyle(fontFamily, fontSize, lineHeight)}>
-      <div style={previewLabelStyle(labelFontFamily)}>{`Preview (${previewLabel})`}</div>
+    <div aria-label={ariaLabel} className="text-text-semantic-secondary" style={previewStyle(fontFamily, fontSize, lineHeight)}>
+      <div className="text-text-semantic-muted" style={previewLabelStyle(labelFontFamily)}>{`Preview (${previewLabel})`}</div>
       {lines.map((line) => (
         <div key={line}>{line}</div>
       ))}
@@ -192,7 +193,7 @@ function ResetButton({
   }
 
   return (
-    <button onClick={() => onChange('fontSizeUI', DEFAULT_UI_FONT_SIZE)} style={resetButtonStyle}>
+    <button onClick={() => onChange('fontSizeUI', DEFAULT_UI_FONT_SIZE)} className="text-text-semantic-muted" style={resetButtonStyle}>
       Reset
     </button>
   );
@@ -220,7 +221,7 @@ function previewStyle(fontFamily: string, fontSize: string, lineHeight: number):
 }
 
 const containerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '28px' };
-const descriptionStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' };
+const descriptionStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
 const sliderRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px' };
 const rangeInputStyle: React.CSSProperties = { flex: 1, accentColor: 'var(--accent)', cursor: 'pointer' };
 const sizeValueStyle: React.CSSProperties = {
@@ -228,7 +229,6 @@ const sizeValueStyle: React.CSSProperties = {
   textAlign: 'right',
   fontSize: '13px',
   fontWeight: 600,
-  color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
 };
 const previewBaseStyle: React.CSSProperties = {
@@ -237,15 +237,13 @@ const previewBaseStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text-secondary)',
 };
 const previewLabelStyle = (fontFamily = 'inherit'): React.CSSProperties => ({
   fontSize: '11px',
-  color: 'var(--text-muted)',
   marginBottom: '4px',
   fontFamily,
 });
-const saveNoticeStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' };
+const saveNoticeStyle: React.CSSProperties = { fontSize: '11px', marginTop: '6px' };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -253,7 +251,6 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '13px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -265,7 +262,6 @@ const resetButtonStyle: React.CSSProperties = {
   borderRadius: '4px',
   border: '1px solid var(--border)',
   background: 'transparent',
-  color: 'var(--text-muted)',
   fontSize: '11px',
   cursor: 'pointer',
 };

@@ -6,9 +6,9 @@ function CollapseChevron({ isOpen }: { isOpen: boolean }): React.ReactElement {
   return (
     <span
       aria-hidden="true"
+      className="text-text-semantic-muted"
       style={{
         fontSize: '10px',
-        color: 'var(--text-muted)',
         transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
         transition: 'transform 150ms ease',
         display: 'inline-block',
@@ -60,7 +60,7 @@ export function GeneratedTypesContent({
 }: Pick<CodeModeSectionModel, 'generatedTypes' | 'isEnabled'>): React.ReactElement {
   if (!generatedTypes) {
     return (
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '12px', fontStyle: 'italic', margin: 0 }}>
         {isEnabled
           ? 'No types generated yet.'
           : 'Enable Code Mode to generate TypeScript types for your MCP servers.'}
@@ -70,6 +70,7 @@ export function GeneratedTypesContent({
 
   return (
     <pre
+      className="text-text-semantic-secondary"
       style={{
         background: 'var(--bg)',
         fontFamily: 'var(--font-mono)',
@@ -77,7 +78,6 @@ export function GeneratedTypesContent({
         padding: '10px 12px',
         borderRadius: '6px',
         border: '1px solid var(--border)',
-        color: 'var(--text-secondary)',
         overflowX: 'auto',
         maxHeight: '300px',
         overflowY: 'auto',
@@ -94,11 +94,11 @@ export function GeneratedTypesContent({
 export function HowItWorksContent(): React.ReactElement {
   return (
     <ol
+      className="text-text-semantic-muted"
       style={{
         margin: 0,
         paddingLeft: '20px',
         fontSize: '12px',
-        color: 'var(--text-muted)',
         lineHeight: 1.8,
       }}
     >
@@ -106,7 +106,7 @@ export function HowItWorksContent(): React.ReactElement {
       <li>Introspects their tool schemas and generates TypeScript type definitions</li>
       <li>
         Exposes a single{' '}
-        <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+        <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>
           execute_code
         </code>{' '}
         tool to Claude

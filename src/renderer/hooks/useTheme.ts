@@ -16,6 +16,20 @@ export function applyFontConfig(fontUI: string, fontMono: string, fontSizeUI: nu
   root.style.fontSize = `${clampedSize}px`;
 }
 
+/** Ensure a hex color's brightness is at least `min` (0-255). Returns original if bright enough. */
+function brightenIfDark(color: string, min: number): string {
+  const hex = color.replace('#', '');
+  if (hex.length < 6) return color;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const brightness = Math.max(r, g, b);
+  if (brightness >= min) return color;
+  const scale = min / Math.max(brightness, 1);
+  const clamp = (v: number): number => Math.min(255, Math.round(v * scale));
+  return `#${clamp(r).toString(16).padStart(2, '0')}${clamp(g).toString(16).padStart(2, '0')}${clamp(b).toString(16).padStart(2, '0')}`;
+}
+
 function updateTitleBarOverlay(theme: Theme): void {
   try {
     const api = window.electronAPI;
@@ -27,57 +41,106 @@ function updateTitleBarOverlay(theme: Theme): void {
   }
 }
 
-function applyThemeToDom(theme: Theme, showBgGradient = true): void {
-  const root = document.documentElement;
-  const { colors, fontFamily, effects } = theme;
+function applyPaletteTokens(root: HTMLElement, colors: Theme['colors']): void {
+  root.style.setProperty('--palette-bg', colors.bg);
+  root.style.setProperty('--palette-bg-secondary', colors.bgSecondary);
+  root.style.setProperty('--palette-bg-tertiary', colors.bgTertiary);
+  root.style.setProperty('--palette-text', colors.text);
+  root.style.setProperty('--palette-text-secondary', colors.textSecondary);
+  root.style.setProperty('--palette-text-muted', colors.textMuted);
+  root.style.setProperty('--palette-text-faint', colors.textFaint);
+  root.style.setProperty('--palette-border', colors.border);
+  root.style.setProperty('--palette-border-muted', colors.borderMuted);
+  root.style.setProperty('--palette-accent', colors.accent);
+  root.style.setProperty('--palette-accent-hover', colors.accentHover);
+  root.style.setProperty('--palette-accent-muted', colors.accentMuted);
+  root.style.setProperty('--palette-success', colors.success);
+  root.style.setProperty('--palette-warning', colors.warning);
+  root.style.setProperty('--palette-error', colors.error);
+  root.style.setProperty('--palette-purple', colors.purple);
+  root.style.setProperty('--palette-purple-muted', colors.purpleMuted);
+  root.style.setProperty('--palette-selection', colors.selection);
+  root.style.setProperty('--palette-focus-ring', colors.focusRing);
+  root.style.setProperty('--palette-term-fg', colors.termFg);
+  root.style.setProperty('--palette-term-cursor', colors.termCursor);
+  root.style.setProperty('--palette-term-selection', colors.termSelection);
+}
 
-  // Color tokens — used as CSS vars throughout the app
-  root.style.setProperty('--bg', colors.bg);
-  root.style.setProperty('--bg-secondary', colors.bgSecondary);
-  root.style.setProperty('--bg-tertiary', colors.bgTertiary);
-  root.style.setProperty('--border', colors.border);
-  root.style.setProperty('--border-muted', colors.borderMuted);
-  root.style.setProperty('--text', colors.text);
+function applySemanticTokens(root: HTMLElement, colors: Theme['colors']): void {
+  // Glass: surface tokens are forced transparent so OS acrylic shows through
+  root.style.setProperty('--surface-base', 'transparent');
+  root.style.setProperty('--surface-panel', 'transparent');
+  root.style.setProperty('--surface-raised', 'rgba(255, 255, 255, 0.05)');
+  root.style.setProperty('--surface-overlay', 'rgba(10, 10, 14, 0.92)');
+  root.style.setProperty('--surface-inset', 'rgba(0, 0, 0, 0.15)');
+  root.style.setProperty('--text-primary', colors.text);
   root.style.setProperty('--text-secondary', colors.textSecondary);
-  root.style.setProperty('--text-muted', colors.textMuted);
-  root.style.setProperty('--text-faint', colors.textFaint);
-  root.style.setProperty('--accent', colors.accent);
-  root.style.setProperty('--accent-hover', colors.accentHover);
-  root.style.setProperty('--accent-muted', colors.accentMuted);
-  root.style.setProperty('--success', colors.success);
-  root.style.setProperty('--warning', colors.warning);
-  root.style.setProperty('--error', colors.error);
-  root.style.setProperty('--purple', colors.purple);
-  root.style.setProperty('--purple-muted', colors.purpleMuted);
-  root.style.setProperty('--selection', colors.selection);
-  root.style.setProperty('--focus-ring', colors.focusRing);
+  // Glass: force muted/faint bright enough for transparent surfaces
+  root.style.setProperty('--text-muted', '#c0c0d4');
+  root.style.setProperty('--text-faint', '#a0a0b8');
+  root.style.setProperty('--text-on-accent', colors.bg);
+  // Glass: semi-transparent white borders regardless of theme
+  root.style.setProperty('--border-default', 'rgba(255, 255, 255, 0.08)');
+  root.style.setProperty('--border-subtle', 'rgba(255, 255, 255, 0.05)');
+  root.style.setProperty('--border-accent', colors.accent);
+  root.style.setProperty('--interactive-accent', colors.accent);
+  root.style.setProperty('--interactive-hover', colors.accentHover);
+  root.style.setProperty('--interactive-muted', colors.accentMuted);
+  root.style.setProperty('--interactive-selection', colors.selection);
+  root.style.setProperty('--interactive-focus', colors.focusRing);
+  root.style.setProperty('--status-success', colors.success);
+  root.style.setProperty('--status-warning', colors.warning);
+  root.style.setProperty('--status-error', colors.error);
+  root.style.setProperty('--status-info', colors.accent);
+}
 
-  // Terminal-specific tokens
-  root.style.setProperty('--term-bg', colors.termBg);
+function applyComponentTokens(root: HTMLElement, colors: Theme['colors']): void {
+  root.style.setProperty('--tab-active-bg', 'transparent');
+  root.style.setProperty('--tab-inactive-bg', 'transparent');
+  root.style.setProperty('--tab-hover-bg', 'rgba(255, 255, 255, 0.05)');
+  root.style.setProperty('--tab-active-border', colors.accent);
+  root.style.setProperty('--composer-bg', 'transparent');
+  root.style.setProperty('--composer-border', 'rgba(255, 255, 255, 0.08)');
+  // Terminal: rgba(0,0,0,0) for xterm canvas compatibility
+  root.style.setProperty('--term-bg', 'rgba(0,0,0,0)');
   root.style.setProperty('--term-fg', colors.termFg);
   root.style.setProperty('--term-cursor', colors.termCursor);
   root.style.setProperty('--term-selection', colors.termSelection);
+  root.style.setProperty('--monaco-bg', colors.bg === 'transparent' ? '#00000001' : colors.bg);
+  root.style.setProperty('--chat-user-bg', colors.accent);
+  root.style.setProperty('--chat-user-text', colors.bg);
+}
 
-  // Git status tokens (derived from existing theme colors)
+function applyDerivedTokens(root: HTMLElement, colors: Theme['colors']): void {
+  // Git status tokens (derived from theme colors, consumed by file tree)
   root.style.setProperty('--git-modified', colors.warning);
   root.style.setProperty('--git-added', colors.success);
   root.style.setProperty('--git-deleted', colors.error);
   root.style.setProperty('--git-untracked', colors.textMuted);
+}
 
-  // Font tokens
+function applyThemeToDom(theme: Theme, showBgGradient = true, glassOpacity = 0): void {
+  const root = document.documentElement;
+  const { colors, fontFamily, effects } = theme;
+  applyPaletteTokens(root, colors);
+  applySemanticTokens(root, colors);
+  applyComponentTokens(root, colors);
+  applyDerivedTokens(root, colors);
+  // Glass opacity overlay + background gradient
+  const opacity = Math.max(0, Math.min(100, glassOpacity)) / 100;
+  const layers: string[] = [];
+  if (opacity > 0) {
+    layers.push(`linear-gradient(rgba(0, 0, 0, ${opacity}), rgba(0, 0, 0, ${opacity}))`);
+  }
+  if (showBgGradient && theme.backgroundGradient) {
+    layers.push(theme.backgroundGradient);
+  }
+  root.style.setProperty('--bg-gradient', layers.length > 0 ? layers.join(', ') : 'none');
   root.style.setProperty('--font-mono', fontFamily.mono);
   root.style.setProperty('--font-ui', fontFamily.ui);
-
-  // Background gradient — set to 'none' when disabled or absent
-  const gradient = showBgGradient && theme.backgroundGradient ? theme.backgroundGradient : 'none';
-  root.style.setProperty('--bg-gradient', gradient);
-
-  // Effect flags (data attributes for CSS targeting)
   root.dataset['themeId'] = theme.id;
   root.dataset['scanlines'] = String(effects?.scanlines ?? false);
   root.dataset['glowText'] = String(effects?.glowText ?? false);
-
-  // Notify terminals and other consumers that CSS vars have been updated
   window.dispatchEvent(new Event('agent-ide:theme-applied'));
 }
 
@@ -97,6 +160,7 @@ export function applyCustomThemeColors(colors: Record<string, string>): void {
 interface ThemeRuntimeState {
   themeId: string;
   showBgGradient: boolean;
+  glassOpacity: number;
   customThemeColors: Record<string, string>;
   fontUI: string;
   fontMono: string;
@@ -106,12 +170,13 @@ interface ThemeRuntimeState {
 
 type ThemeBootstrapConfig = Pick<
   AppConfig,
-  'activeTheme' | 'showBgGradient' | 'customThemeColors' | 'fontUI' | 'fontMono' | 'fontSizeUI'
+  'activeTheme' | 'showBgGradient' | 'glassOpacity' | 'customThemeColors' | 'fontUI' | 'fontMono' | 'fontSizeUI'
 >;
 
 const DEFAULT_BOOTSTRAP_CONFIG: ThemeBootstrapConfig = {
   activeTheme: defaultThemeId,
   showBgGradient: true,
+  glassOpacity: 0,
   customThemeColors: {},
   fontUI: '',
   fontMono: '',
@@ -121,6 +186,7 @@ const DEFAULT_BOOTSTRAP_CONFIG: ThemeBootstrapConfig = {
 let runtimeState: ThemeRuntimeState = {
   themeId: defaultThemeId,
   showBgGradient: true,
+  glassOpacity: 0,
   customThemeColors: {},
   fontUI: '',
   fontMono: '',
@@ -162,6 +228,7 @@ function normalizeBootstrapConfig(config?: Partial<ThemeBootstrapConfig> | null)
         ? config.activeTheme
         : DEFAULT_BOOTSTRAP_CONFIG.activeTheme,
     showBgGradient: config?.showBgGradient ?? DEFAULT_BOOTSTRAP_CONFIG.showBgGradient,
+    glassOpacity: config?.glassOpacity ?? DEFAULT_BOOTSTRAP_CONFIG.glassOpacity,
     customThemeColors: config?.customThemeColors ?? DEFAULT_BOOTSTRAP_CONFIG.customThemeColors,
     fontUI: config?.fontUI ?? DEFAULT_BOOTSTRAP_CONFIG.fontUI,
     fontMono: config?.fontMono ?? DEFAULT_BOOTSTRAP_CONFIG.fontMono,
@@ -199,6 +266,8 @@ interface UseThemeReturn {
   themes: Theme[];
   showBgGradient: boolean;
   setShowBgGradient: (value: boolean) => void;
+  glassOpacity: number;
+  setGlassOpacity: (value: number) => void;
 }
 
 function applyRuntimeState(nextState: ThemeRuntimeState): void {
@@ -207,7 +276,7 @@ function applyRuntimeState(nextState: ThemeRuntimeState): void {
     Object.assign(customTheme.colors, nextState.customThemeColors);
   }
   const theme = getTheme(nextState.themeId);
-  applyThemeToDom(theme, nextState.showBgGradient);
+  applyThemeToDom(theme, nextState.showBgGradient, nextState.glassOpacity);
   applyFontConfig(nextState.fontUI, nextState.fontMono, nextState.fontSizeUI);
   updateTitleBarOverlay(theme);
   emitRuntimeState();
@@ -273,6 +342,7 @@ async function hydrateThemeOnMount(config?: Partial<ThemeBootstrapConfig> | null
   applyRuntimeState({
     themeId: resolved.activeTheme,
     showBgGradient: resolved.showBgGradient,
+    glassOpacity: resolved.glassOpacity,
     customThemeColors: resolved.customThemeColors,
     fontUI: resolved.fontUI,
     fontMono: resolved.fontMono,
@@ -344,6 +414,11 @@ export function useTheme(): UseThemeReturn {
     persistBgGradient(value);
   }, []);
 
+  const setGlassOpacity = useCallback((value: number) => {
+    setRuntimeState({ glassOpacity: value, hydrated: true });
+    try { window.electronAPI?.config?.set('glassOpacity', value); } catch { /* ignore */ }
+  }, []);
+
   // Build live theme list: built-ins + any registered extension themes
   const allThemes = useMemo(() => {
     const extThemes = Object.values(themes).filter((t) => t.id.startsWith('ext:'));
@@ -358,5 +433,7 @@ export function useTheme(): UseThemeReturn {
     themes: allThemes,
     showBgGradient: snapshot.showBgGradient,
     setShowBgGradient,
-  }), [allThemes, setShowBgGradient, setTheme, snapshot.showBgGradient, snapshot.themeId]);
+    glassOpacity: snapshot.glassOpacity,
+    setGlassOpacity,
+  }), [allThemes, setGlassOpacity, setShowBgGradient, setTheme, snapshot.glassOpacity, snapshot.showBgGradient, snapshot.themeId]);
 }

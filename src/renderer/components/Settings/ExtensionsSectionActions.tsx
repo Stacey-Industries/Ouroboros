@@ -36,7 +36,7 @@ export function ActionErrorBanner({
   message,
 }: ActionErrorBannerProps): React.ReactElement {
   return (
-    <div role="alert" style={extensionsSectionErrorBannerStyle}>
+    <div role="alert" className="text-status-error" style={extensionsSectionErrorBannerStyle}>
       {message}
     </div>
   );
@@ -61,7 +61,7 @@ export function ExtensionActionButtons({
       >
         {model.isOpening ? 'Opening...' : 'Open Extensions Folder'}
       </button>
-      <button onClick={() => void model.fetchExtensions()} style={buttonStyle}>
+      <button onClick={() => void model.fetchExtensions()} className="text-text-semantic-primary" style={buttonStyle}>
         Refresh List
       </button>
     </section>
@@ -74,7 +74,7 @@ export function ExtensionCommandsSection({
   return (
     <section>
       <SectionLabel>Extension Commands</SectionLabel>
-      <p style={{ ...extensionsSectionMutedTextStyle, marginBottom: '12px' }}>
+      <p className="text-text-semantic-muted" style={{ ...extensionsSectionMutedTextStyle, marginBottom: '12px' }}>
         {getCommandSummary(commands)}
       </p>
       {commands.length > 0 && (
@@ -99,11 +99,11 @@ function CommandRow({
   return (
     <div style={extensionsSectionCommandRowStyle(isLast)}>
       <div style={extensionsSectionCommandTextStyle}>
-        <span style={extensionsSectionCommandLabelStyle}>{command.label}</span>
-        <span style={extensionsSectionCommandIdStyle}>{command.id}</span>
+        <span className="text-text-semantic-primary" style={extensionsSectionCommandLabelStyle}>{command.label}</span>
+        <span className="text-text-semantic-muted" style={extensionsSectionCommandIdStyle}>{command.id}</span>
       </div>
       {command.shortcut && (
-        <kbd style={extensionsSectionCommandShortcutStyle}>{command.shortcut}</kbd>
+        <kbd className="text-text-semantic-muted" style={extensionsSectionCommandShortcutStyle}>{command.shortcut}</kbd>
       )}
     </div>
   );

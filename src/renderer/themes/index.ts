@@ -1,5 +1,4 @@
 import { cursorTheme } from './cursor';
-import { glassTheme } from './glass';
 import { highContrastTheme } from './high-contrast';
 import { kiroTheme } from './kiro';
 import { lightTheme } from './light';
@@ -9,7 +8,7 @@ import type { Theme } from './types';
 import { warpTheme } from './warp';
 
 export type { Theme };
-export { cursorTheme, glassTheme, highContrastTheme, kiroTheme, lightTheme, modernTheme, retroTheme, warpTheme };
+export { cursorTheme, highContrastTheme, kiroTheme, lightTheme, modernTheme, retroTheme, warpTheme };
 
 /**
  * A mutable placeholder for the "Custom" theme.
@@ -28,7 +27,6 @@ export const themes: Record<string, Theme> = {
   warp: warpTheme,
   cursor: cursorTheme,
   kiro: kiroTheme,
-  glass: glassTheme,
   light: lightTheme,
   'high-contrast': highContrastTheme,
   custom: customTheme,
@@ -47,7 +45,6 @@ export const themeList: Theme[] = [
   warpTheme,
   cursorTheme,
   kiroTheme,
-  glassTheme,
   lightTheme,
   highContrastTheme,
 ];

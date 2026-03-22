@@ -90,8 +90,8 @@ function SwitchText({
 }): React.ReactElement {
   return (
     <label htmlFor={controlId} style={textWrapperStyle(disabled)}>
-      <div id={labelId} style={labelStyle}>{label}</div>
-      {description && <div id={descriptionId} style={descriptionStyle}>{description}</div>}
+      <div id={labelId} className="text-text-semantic-primary" style={labelStyle}>{label}</div>
+      {description && <div id={descriptionId} className="text-text-semantic-muted" style={descriptionStyle}>{description}</div>}
     </label>
   );
 }
@@ -138,13 +138,11 @@ const textWrapperStyle = (disabled: boolean): React.CSSProperties => ({
 const labelStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   lineHeight: 1.4,
 };
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginTop: '2px',
   lineHeight: 1.5,
 };

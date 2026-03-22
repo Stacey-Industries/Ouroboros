@@ -9,7 +9,6 @@ export const cancelButtonStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'transparent',
-  color: 'var(--text-secondary)',
   fontSize: '13px',
   cursor: 'pointer',
 };
@@ -20,7 +19,7 @@ export function saveButtonStyle(disabled: boolean): React.CSSProperties {
     borderRadius: '6px',
     border: 'none',
     background: disabled ? 'var(--bg-tertiary)' : 'var(--accent)',
-    color: disabled ? 'var(--text-muted)' : 'var(--bg)',
+    color: disabled ? 'var(--text-muted)' : 'var(--text-on-accent)',
     fontSize: '13px',
     fontWeight: 600,
     cursor: disabled ? 'not-allowed' : 'pointer',

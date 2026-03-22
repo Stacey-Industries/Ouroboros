@@ -68,8 +68,8 @@ function PanelFooter({ isSaving, saveError, onCancel, onSave }: {
 }): React.ReactElement {
   return (
     <div style={footerStyle}>
-      {saveError && <span role="alert" style={{ flex: 1, fontSize: '12px', color: 'var(--error)' }}>{saveError}</span>}
-      <button onClick={onCancel} disabled={isSaving} style={cancelButtonStyle}>Cancel</button>
+      {saveError && <span role="alert" className="text-status-error" style={{ flex: 1, fontSize: '12px' }}>{saveError}</span>}
+      <button onClick={onCancel} disabled={isSaving} className="text-text-semantic-secondary" style={cancelButtonStyle}>Cancel</button>
       <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>{isSaving ? 'Saving...' : 'Save'}</button>
     </div>
   );
@@ -119,6 +119,6 @@ const tabContentStyle: React.CSSProperties = {
 
 const footerStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-  gap: '10px', padding: '14px 20px', borderTop: '1px solid var(--border)',
-  flexShrink: 0, background: 'var(--bg-secondary)',
+  gap: '10px', padding: '14px 20px',
+  flexShrink: 0, background: 'transparent',
 };

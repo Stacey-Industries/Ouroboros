@@ -26,7 +26,6 @@ const stackStyle: React.CSSProperties = {
 
 const helperTextStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '10px',
 };
 
@@ -46,7 +45,6 @@ const tagStyle: React.CSSProperties = {
   background: 'var(--bg-tertiary)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-secondary)',
   userSelect: 'none',
 };
 
@@ -65,7 +63,6 @@ const removeButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   fontSize: '13px',
   lineHeight: 1,
   padding: '0',
@@ -79,7 +76,6 @@ const addButtonStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
@@ -87,7 +83,6 @@ const addButtonStyle: React.CSSProperties = {
 
 const emptyStateStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
 };
 
@@ -106,7 +101,6 @@ function getInputStyle(hasError: boolean): React.CSSProperties {
     borderRadius: '6px',
     border: hasError ? '1px solid var(--error, #e55)' : '1px solid var(--border)',
     background: 'var(--bg)',
-    color: 'var(--text)',
     fontSize: '12px',
     fontFamily: 'var(--font-mono)',
     outline: 'none',
@@ -154,9 +148,9 @@ function FileFilterTag({
   onRemove?: () => void;
 }): React.ReactElement {
   return (
-    <span style={tagStyle}>
+    <span className="text-text-semantic-secondary" style={tagStyle}>
       {label}
-      {onRemove && <button aria-label={`Remove ${label}`} onClick={onRemove} style={removeButtonStyle}>x</button>}
+      {onRemove && <button aria-label={`Remove ${label}`} onClick={onRemove} className="text-text-semantic-muted" style={removeButtonStyle}>x</button>}
     </span>
   );
 }
@@ -165,7 +159,7 @@ function FilterInputError({ message }: { message: string | null }): React.ReactE
   if (!message) return null;
 
   return (
-    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '2px', padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-secondary, var(--bg))', border: '1px solid var(--error, #e55)', color: 'var(--error, #e55)', fontSize: '11px', zIndex: 1 }}>
+    <div className="text-status-error" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '2px', padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-secondary, var(--bg))', border: '1px solid var(--error, #e55)', fontSize: '11px', zIndex: 1 }}>
       {message}
     </div>
   );
@@ -175,7 +169,7 @@ function BaselinePatternsSection(): React.ReactElement {
   return (
     <section>
       <SectionLabel>Always Ignored (built-in)</SectionLabel>
-      <p style={helperTextStyle}>These patterns are always active and cannot be removed. Dotfiles and common project folders stay visible unless you add them below.</p>
+      <p className="text-text-semantic-muted" style={helperTextStyle}>These patterns are always active and cannot be removed. Dotfiles and common project folders stay visible unless you add them below.</p>
       <div style={tagListStyle}>{BASELINE_PATTERNS.map((pattern) => <FileFilterTag key={pattern} label={pattern} />)}</div>
     </section>
   );
@@ -199,10 +193,10 @@ function PatternInputRow({
   return (
     <div style={inputRowStyle}>
       <div style={inputWrapperStyle}>
-        <input ref={inputRef} type="text" value={inputValue} placeholder="e.g. vendor or *.log" onChange={onChange} onKeyDown={onKeyDown} style={getInputStyle(Boolean(inputError))} onFocus={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--accent)'; }} onBlur={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--border)'; }} />
+        <input ref={inputRef} type="text" value={inputValue} placeholder="e.g. vendor or *.log" onChange={onChange} onKeyDown={onKeyDown} className="text-text-semantic-primary" style={getInputStyle(Boolean(inputError))} onFocus={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--accent)'; }} onBlur={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--border)'; }} />
         <FilterInputError message={inputError} />
       </div>
-      <button onClick={onAdd} style={addButtonStyle}>Add</button>
+      <button onClick={onAdd} className="text-text-semantic-primary" style={addButtonStyle}>Add</button>
     </div>
   );
 }
@@ -215,7 +209,7 @@ function ActivePatternList({
   onRemove: (pattern: string) => void;
 }): React.ReactElement {
   if (patterns.length === 0) {
-    return <p style={emptyStateStyle}>No custom patterns. The built-in list above is still applied.</p>;
+    return <p className="text-text-semantic-muted" style={emptyStateStyle}>No custom patterns. The built-in list above is still applied.</p>;
   }
 
   return (
@@ -237,7 +231,7 @@ function CustomPatternsSection({
   return (
     <section>
       <SectionLabel>Custom Ignore Patterns</SectionLabel>
-      <p style={helperTextStyle}>Add patterns to skip additional files or folders. Use exact names like <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>vendor</code> or glob-like suffixes like <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>.log</code> with a wildcard prefix, for example <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>*.log</code>.</p>
+      <p className="text-text-semantic-muted" style={helperTextStyle}>Add patterns to skip additional files or folders. Use exact names like <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>vendor</code> or glob-like suffixes like <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>.log</code> with a wildcard prefix, for example <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>*.log</code>.</p>
       <PatternInputRow inputError={input.inputError} inputRef={input.inputRef} inputValue={input.inputValue} onAdd={input.handleAdd} onChange={input.handleChange} onKeyDown={input.handleKeyDown} />
       <ActivePatternList patterns={patterns} onRemove={onRemove} />
     </section>

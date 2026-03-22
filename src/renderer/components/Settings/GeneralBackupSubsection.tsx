@@ -61,11 +61,12 @@ function ExportImportSection({
   return (
     <section>
       <SectionLabel>Settings Backup</SectionLabel>
-      <p style={descStyle}>Export or import settings as JSON.</p>
+      <p className="text-text-semantic-muted" style={descStyle}>Export or import settings as JSON.</p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
           onClick={() => void handleExportSettings(setIsExporting, showToast)}
           disabled={isExporting}
+          className="text-text-semantic-primary"
           style={actionBtn(isExporting)}
         >
           {isExporting ? 'Exporting...' : 'Export Settings'}
@@ -73,6 +74,7 @@ function ExportImportSection({
         <button
           onClick={() => void handleImportSettings(setIsImporting, showToast, onImport)}
           disabled={isImporting}
+          className="text-text-semantic-primary"
           style={actionBtn(isImporting)}
         >
           {isImporting ? 'Importing...' : 'Import Settings'}
@@ -107,10 +109,10 @@ function OpenSettingsFileSection({
   return (
     <section>
       <SectionLabel>Power User</SectionLabel>
-      <p style={descStyle}>
-        Open <code style={codeStyle}>settings.json</code> in your system editor.
+      <p className="text-text-semantic-muted" style={descStyle}>
+        Open <code className="text-text-semantic-secondary" style={codeStyle}>settings.json</code> in your system editor.
       </p>
-      <button onClick={() => void handleOpen()} disabled={isOpeningFile} style={actionBtn(isOpeningFile)}>
+      <button onClick={() => void handleOpen()} disabled={isOpeningFile} className="text-text-semantic-primary" style={actionBtn(isOpeningFile)}>
         {isOpeningFile ? 'Opening...' : 'Open settings.json'}
       </button>
     </section>
@@ -136,8 +138,8 @@ function UpdatesSection({ showToast }: { showToast: ToastFn }): React.ReactEleme
   return (
     <section>
       <SectionLabel>Updates</SectionLabel>
-      <p style={descStyle}>Check for a new version of Ouroboros.</p>
-      <button onClick={() => void handleCheck()} disabled={isChecking} style={actionBtn(isChecking)}>
+      <p className="text-text-semantic-muted" style={descStyle}>Check for a new version of Ouroboros.</p>
+      <button onClick={() => void handleCheck()} disabled={isChecking} className="text-text-semantic-primary" style={actionBtn(isChecking)}>
         {isChecking ? 'Checking...' : 'Check for Updates'}
       </button>
     </section>
@@ -225,13 +227,13 @@ function CrashLogsSection({ showToast }: { showToast: ToastFn }): React.ReactEle
   return (
     <section>
       <SectionLabel>Crash Logs</SectionLabel>
-      <p style={descStyle}>{crashLogsSummary(count)}</p>
+      <p className="text-text-semantic-muted" style={descStyle}>{crashLogsSummary(count)}</p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button onClick={() => void window.electronAPI.crash.openCrashLogDir()} style={buttonStyle}>
+        <button onClick={() => void window.electronAPI.crash.openCrashLogDir()} className="text-text-semantic-primary" style={buttonStyle}>
           View Crash Logs
         </button>
         {count > 0 && (
-          <button onClick={() => void clearCrashLogs(setIsClearing, setCount, showToast)} disabled={isClearing} style={dangerBtn(isClearing)}>
+          <button onClick={() => void clearCrashLogs(setIsClearing, setCount, showToast)} disabled={isClearing} className="text-status-error" style={dangerBtn(isClearing)}>
             {isClearing ? 'Clearing...' : 'Clear Logs'}
           </button>
         )}
@@ -265,8 +267,8 @@ function crashLogsSummary(count: number): string {
   return count === 0 ? 'No crash logs on record.' : `${count} crash log${count !== 1 ? 's' : ''} recorded.`;
 }
 
-const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' };
-const codeStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' };
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px' };
+const codeStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' };
 
 function actionBtn(disabled: boolean): React.CSSProperties {
   return { ...buttonStyle, opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' };
@@ -275,7 +277,6 @@ function actionBtn(disabled: boolean): React.CSSProperties {
 function dangerBtn(disabled: boolean): React.CSSProperties {
   return {
     ...buttonStyle,
-    color: 'var(--error)',
     borderColor: 'var(--error)',
     background: 'transparent',
     opacity: disabled ? 0.6 : 1,

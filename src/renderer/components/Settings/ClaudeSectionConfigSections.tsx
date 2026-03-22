@@ -76,7 +76,7 @@ export function ModelSection({
         ))}
       </SelectSection>
       {model.settings.model && (
-        <p style={claudeSectionModelHelpStyle}>
+        <p className="text-text-semantic-muted" style={claudeSectionModelHelpStyle}>
           Passes <code>--model {model.settings.model}</code> to the Claude CLI
         </p>
       )}
@@ -90,7 +90,7 @@ export function EffortSection({
   return (
     <section>
       <SectionLabel>Effort Level</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
         Controls how much effort Claude puts into responses.
       </p>
       <div style={claudeSectionEffortListStyle}>
@@ -114,7 +114,7 @@ export function BudgetSection({
   return (
     <section>
       <SectionLabel>Max Budget (USD)</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
         Maximum dollar amount to spend per session. 0 for unlimited.
       </p>
       <input
@@ -124,6 +124,7 @@ export function BudgetSection({
         value={model.settings.maxBudgetUsd}
         onChange={(event) => updateBudget(model, event.target.value)}
         aria-label="Max budget in USD"
+        className="text-text-semantic-primary"
         style={claudeSectionBudgetInputStyle}
       />
     </section>
@@ -136,7 +137,7 @@ export function SystemPromptSection({
   return (
     <section>
       <SectionLabel>System Prompt (Append)</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
         Additional instructions appended to Claude&apos;s default system prompt.
       </p>
       <textarea
@@ -145,6 +146,7 @@ export function SystemPromptSection({
         placeholder="e.g. Always respond in Spanish."
         aria-label="Append system prompt"
         rows={4}
+        className="text-text-semantic-primary"
         style={claudeSectionTextareaStyle}
       />
     </section>
@@ -157,7 +159,7 @@ export function AdditionalDirectoriesSection({
   return (
     <section>
       <SectionLabel>Additional Directories</SectionLabel>
-      <p style={claudeSectionSectionDescriptionStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
         Extra directories Claude Code can access beyond the project root.
       </p>
       {model.settings.addDirs.length > 0 && (
@@ -173,11 +175,11 @@ export function DangerZoneSection({
 }: ClaudeSectionConfigProps): React.ReactElement {
   return (
     <section style={claudeSectionDangerSectionStyle}>
-      <SectionLabel style={{ color: '#ef4444' }}>Danger Zone</SectionLabel>
+      <SectionLabel className="text-status-error">Danger Zone</SectionLabel>
       <div style={claudeSectionDangerRowStyle}>
         <div style={claudeSectionDangerCopyStyle}>
-          <div style={claudeSectionDangerTitleStyle}>Skip All Permission Checks</div>
-          <p style={claudeSectionDangerTextStyle}>
+          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>Skip All Permission Checks</div>
+          <p className="text-status-warning" style={claudeSectionDangerTextStyle}>
             Bypasses ALL permission checks. Only use in sandboxed environments with no internet
             access.
           </p>
@@ -204,10 +206,11 @@ function DirectoryList({
     <div style={claudeSectionDirectoryListStyle}>
       {directories.map((directory, index) => (
         <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}>
-          <span style={claudeSectionDirectoryTextStyle}>{directory}</span>
+          <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>{directory}</span>
           <button
             onClick={() => onRemove(index)}
             aria-label={`Remove ${directory}`}
+            className="text-text-semantic-muted"
             style={claudeSectionRemoveDirectoryButtonStyle}
           >
             x
@@ -230,6 +233,7 @@ function AddDirectoryRow({
         onKeyDown={(event) => handleDirectoryKeyDown(event, model.addDir)}
         placeholder="/path/to/directory"
         aria-label="New directory path"
+        className="text-text-semantic-primary"
         style={{ ...claudeSectionTextInputStyle, flex: 1 }}
       />
       <button

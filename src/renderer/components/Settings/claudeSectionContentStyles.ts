@@ -11,7 +11,6 @@ export const claudeSectionBudgetInputStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '13px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -39,7 +38,6 @@ export const claudeSectionDangerSectionStyle: CSSProperties = {
 
 export const claudeSectionDangerTextStyle: CSSProperties = {
   fontSize: '12px',
-  color: '#f59e0b',
   margin: 0,
   lineHeight: 1.4,
 };
@@ -47,7 +45,6 @@ export const claudeSectionDangerTextStyle: CSSProperties = {
 export const claudeSectionDangerTitleStyle: CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   marginBottom: '4px',
 };
 
@@ -72,7 +69,6 @@ export const claudeSectionDirectoryTextStyle: CSSProperties = {
   flex: 1,
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -84,7 +80,7 @@ export function claudeSectionEffortButtonStyle(isActive: boolean): CSSProperties
     borderRadius: '4px',
     border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
     background: isActive ? 'var(--accent)' : 'transparent',
-    color: isActive ? 'var(--bg)' : 'var(--text)',
+    color: isActive ? 'var(--text-on-accent)' : 'var(--text)',
     fontSize: '12px',
     cursor: 'pointer',
     fontFamily: 'var(--font-ui)',
@@ -100,19 +96,16 @@ export const claudeSectionEffortListStyle: CSSProperties = {
 
 export const claudeSectionHeaderTextStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   margin: 0,
 };
 
 export const claudeSectionInlineDescriptionStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   margin: 0,
 };
 
 export const claudeSectionModelHelpStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   marginTop: '6px',
   fontFamily: 'var(--font-mono)',
 };
@@ -120,7 +113,6 @@ export const claudeSectionModelHelpStyle: CSSProperties = {
 export const claudeSectionRemoveDirectoryButtonStyle: CSSProperties = {
   background: 'none',
   border: 'none',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   fontSize: '14px',
   lineHeight: 1,
@@ -136,7 +128,6 @@ export const claudeSectionRootStyle: CSSProperties = {
 
 export const claudeSectionSectionDescriptionStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '10px',
 };
 
@@ -146,7 +137,6 @@ export const claudeSectionSelectStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -192,7 +182,6 @@ export const claudeSectionTextInputStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -218,7 +207,7 @@ export function claudeSectionAddButtonStyle(enabled: boolean): CSSProperties {
     borderRadius: '6px',
     border: '1px solid var(--border)',
     background: enabled ? 'var(--accent)' : 'var(--bg-tertiary)',
-    color: enabled ? 'var(--bg)' : 'var(--text-muted)',
+    color: enabled ? 'var(--text-on-accent)' : 'var(--text-muted)',
     fontSize: '12px',
     cursor: enabled ? 'pointer' : 'not-allowed',
     fontWeight: 500,

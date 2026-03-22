@@ -23,7 +23,6 @@ export const providerRowStyle: CSSProperties = {
 export const providerNameStyle: CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   flex: 1,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -32,7 +31,6 @@ export const providerNameStyle: CSSProperties = {
 
 export const providerUrlStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
   maxWidth: '200px',
   overflow: 'hidden',
@@ -42,7 +40,6 @@ export const providerUrlStyle: CSSProperties = {
 
 export const providerBuiltInStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
 };
 
@@ -55,7 +52,6 @@ export const providerListStyle: CSSProperties = {
 export const deleteButtonStyle: CSSProperties = {
   background: 'none',
   border: 'none',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   fontSize: '14px',
   lineHeight: 1,
@@ -79,7 +75,6 @@ export const formInputStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -92,7 +87,6 @@ export const formSelectStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -112,7 +106,7 @@ export function formActionButtonStyle(primary: boolean): CSSProperties {
     borderRadius: '6px',
     border: primary ? '1px solid var(--accent)' : '1px solid var(--border)',
     background: primary ? 'var(--accent)' : 'transparent',
-    color: primary ? 'var(--bg)' : 'var(--text)',
+    color: primary ? 'var(--text-on-accent)' : 'var(--text)',
     fontSize: '12px',
     fontWeight: 500,
     cursor: 'pointer',
@@ -125,7 +119,6 @@ export const slotSelectStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -135,7 +128,6 @@ export const slotSelectStyle: CSSProperties = {
 
 export const slotDescriptionStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   marginTop: '4px',
   lineHeight: 1.4,
 };
@@ -148,12 +140,10 @@ export const slotSectionStyle: CSSProperties = {
 
 export const headerDescriptionStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   margin: 0,
 };
 
 export const formLabelStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '2px',
 };

@@ -6,7 +6,6 @@ export const claudeTemplateAddButtonStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'transparent',
-  color: 'var(--text)',
   fontSize: '12px',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
@@ -35,20 +34,17 @@ export const claudeTemplateHeaderRowStyle: CSSProperties = {
 
 export const claudeTemplateHelpCodeStyle: CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  color: 'var(--accent)',
   fontSize: '11px',
 };
 
 export const claudeTemplateHelpTextStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   marginBottom: '12px',
 };
 
 export const claudeTemplateIconButtonStyle: CSSProperties = {
   background: 'none',
   border: 'none',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   padding: '4px',
   flexShrink: 0,
@@ -64,7 +60,6 @@ export const claudeTemplateTextInputStyle: CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -98,19 +93,16 @@ export const claudeTemplateListStyle: CSSProperties = {
 export const claudeTemplateSaveButtonStyle: CSSProperties = {
   ...smallButtonStyle,
   background: 'var(--accent)',
-  color: 'var(--bg)',
   borderColor: 'var(--accent)',
 };
 
 export const claudeTemplateTemplateNameStyle: CSSProperties = {
   fontSize: '12px',
   fontWeight: 500,
-  color: 'var(--text)',
 };
 
 export const claudeTemplateTemplatePromptStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',

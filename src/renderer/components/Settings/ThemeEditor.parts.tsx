@@ -7,7 +7,6 @@ const sectionLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
 };
 
 const ghostButtonStyle: React.CSSProperties = {
@@ -15,7 +14,6 @@ const ghostButtonStyle: React.CSSProperties = {
   borderRadius: '5px',
   border: '1px solid var(--border)',
   background: 'transparent',
-  color: 'var(--text-secondary)',
   fontSize: '11px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
@@ -26,7 +24,6 @@ const accentButtonStyle: React.CSSProperties = {
   borderRadius: '5px',
   border: 'none',
   background: 'var(--accent)',
-  color: 'var(--bg)',
   fontSize: '11px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -36,7 +33,6 @@ const accentButtonStyle: React.CSSProperties = {
 const disabledButtonStyle: React.CSSProperties = {
   ...accentButtonStyle,
   background: 'var(--bg-tertiary)',
-  color: 'var(--text-muted)',
   cursor: 'not-allowed',
 };
 
@@ -71,11 +67,12 @@ function ThemeEditorHeader({
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={sectionLabelStyle}>Color Tokens</div>
+      <div className="text-text-semantic-muted" style={sectionLabelStyle}>Color Tokens</div>
       <div style={{ display: 'flex', gap: '8px' }}>
         {hasOverrides ? (
           <button
             onClick={onResetAll}
+            className="text-text-semantic-secondary"
             style={ghostButtonStyle}
             title="Reset all colors to theme defaults"
           >
@@ -85,6 +82,7 @@ function ThemeEditorHeader({
         <button
           onClick={onSaveAsCustom}
           disabled={!hasOverrides}
+          className={hasOverrides ? 'text-text-semantic-on-accent' : 'text-text-semantic-muted'}
           style={hasOverrides ? accentButtonStyle : disabledButtonStyle}
           title={hasOverrides ? 'Save current colors as Custom theme' : 'Edit a color first'}
         >
@@ -142,9 +140,9 @@ function TokenLabel({
         {label}
       </div>
       <div
+        className="text-text-semantic-muted"
         style={{
           fontSize: '10px',
-          color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',
         }}
       >
@@ -265,7 +263,7 @@ function ColorTokenGrid({
 
 function ThemeEditorHelpText({ hasOverrides }: { hasOverrides: boolean }): React.ReactElement {
   return (
-    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+    <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: 0 }}>
       Click a swatch to pick a color. Changes preview instantly.
       {hasOverrides
         ? ' Click "Save as Custom" to keep them as the Custom theme.'

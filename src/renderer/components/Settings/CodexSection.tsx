@@ -52,7 +52,7 @@ function HeaderSection(): React.ReactElement {
   return (
     <div>
       <SectionLabel>Codex Settings</SectionLabel>
-      <p style={claudeSectionHeaderTextStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
         Configure how Codex CLI launches in new Codex terminals and agent chat sessions.
       </p>
     </div>
@@ -77,7 +77,7 @@ function ModelSection({ model }: { model: CodexSectionModel }): React.ReactEleme
         ))}
       </SelectSection>
       {model.settings.model && (
-        <p style={claudeSectionModelHelpStyle}>
+        <p className="text-text-semantic-muted" style={claudeSectionModelHelpStyle}>
           Passes <code>--model {model.settings.model}</code> to the Codex CLI
         </p>
       )}
@@ -151,17 +151,18 @@ function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactE
     <>
       <section>
         <SectionLabel>Additional Directories</SectionLabel>
-        <p style={claudeSectionSectionDescriptionStyle}>
+        <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
           Extra directories Codex can write to in addition to the primary workspace.
         </p>
         {model.settings.addDirs.length > 0 && (
           <div style={claudeSectionDirectoryListStyle}>
             {model.settings.addDirs.map((directory, index) => (
               <div key={`${directory}-${index}`} style={claudeSectionDirectoryRowStyle}>
-                <span style={claudeSectionDirectoryTextStyle}>{directory}</span>
+                <span className="text-text-semantic-primary" style={claudeSectionDirectoryTextStyle}>{directory}</span>
                 <button
                   onClick={() => model.removeDir(index)}
                   aria-label={`Remove ${directory}`}
+                  className="text-text-semantic-muted"
                   style={claudeSectionRemoveDirectoryButtonStyle}
                 >
                   x
@@ -183,6 +184,7 @@ function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactE
             }}
             placeholder="/path/to/directory"
             aria-label="New Codex directory path"
+            className="text-text-semantic-primary"
             style={{ ...claudeSectionTextInputStyle, flex: 1 }}
           />
           <button
@@ -208,11 +210,11 @@ function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactE
 function DangerZoneSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <section style={claudeSectionDangerSectionStyle}>
-      <SectionLabel style={{ color: '#ef4444' }}>Danger Zone</SectionLabel>
+      <SectionLabel className="text-status-error">Danger Zone</SectionLabel>
       <div style={claudeSectionDangerRowStyle}>
         <div style={claudeSectionDangerCopyStyle}>
-          <div style={claudeSectionDangerTitleStyle}>Bypass Approvals And Sandbox</div>
-          <p style={claudeSectionDangerTextStyle}>
+          <div className="text-text-semantic-primary" style={claudeSectionDangerTitleStyle}>Bypass Approvals And Sandbox</div>
+          <p className="text-status-warning" style={claudeSectionDangerTextStyle}>
             Disables all Codex approval prompts and sandboxing. Only use this when the environment is
             already externally sandboxed.
           </p>

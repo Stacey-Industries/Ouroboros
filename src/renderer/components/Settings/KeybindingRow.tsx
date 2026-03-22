@@ -36,9 +36,9 @@ export function KeybindingRow({
 
 function ActionLabel({ label, isCustomised }: { label: string; isCustomised: boolean }): React.ReactElement {
   return (
-    <div style={{ fontSize: '13px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div className="text-text-semantic-primary" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
       {label}
-      {isCustomised && <span style={customBadgeStyle}>custom</span>}
+      {isCustomised && <span className="text-interactive-accent" style={customBadgeStyle}>custom</span>}
     </div>
   );
 }
@@ -51,7 +51,7 @@ function ShortcutDisplay({ isCapturing, capturedKeys, conflictId, effectiveShort
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <div style={captureBoxStyle(conflictId)}>{capturedKeys || 'Press a key...'}</div>
         {conflictId && (
-          <span role="alert" style={conflictStyle}>
+          <span role="alert" className="text-status-error" style={conflictStyle}>
             Used by <em>{KEYBINDING_ACTIONS.find((a) => a.id === conflictId)?.label ?? conflictId}</em>
           </span>
         )}
@@ -74,14 +74,14 @@ function ActionButtons({ isCapturing, capturedKeys, conflictId, isCustomised, on
     return (
       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
         <button onClick={onCommit} disabled={!canSave} style={saveBtnStyle(canSave)}>Save</button>
-        <button onClick={onCancel} style={smallBtnStyle}>Cancel</button>
+        <button onClick={onCancel} className="text-text-semantic-primary" style={smallBtnStyle}>Cancel</button>
       </div>
     );
   }
   return (
     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-      <button onClick={onStartCapture} style={smallBtnStyle}>Edit</button>
-      {isCustomised && <button onClick={onReset} title="Reset to default" style={resetBtnStyle}>↺</button>}
+      <button onClick={onStartCapture} className="text-text-semantic-primary" style={smallBtnStyle}>Edit</button>
+      {isCustomised && <button onClick={onReset} title="Reset to default" className="text-text-semantic-muted" style={resetBtnStyle}>↺</button>}
     </div>
   );
 }
@@ -96,7 +96,7 @@ function rowStyle(isCapturing: boolean, isLast: boolean): React.CSSProperties {
   };
 }
 
-const customBadgeStyle: React.CSSProperties = { fontSize: '10px', color: 'var(--accent)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const customBadgeStyle: React.CSSProperties = { fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' };
 
 function captureBoxStyle(conflictId: string | null): React.CSSProperties {
   return {
@@ -107,7 +107,7 @@ function captureBoxStyle(conflictId: string | null): React.CSSProperties {
   };
 }
 
-const conflictStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--error)', maxWidth: '120px', lineHeight: 1.3 };
+const conflictStyle: React.CSSProperties = { fontSize: '11px', maxWidth: '120px', lineHeight: 1.3 };
 
 function kbdStyle(isCustomised: boolean): React.CSSProperties {
   return {
@@ -119,16 +119,16 @@ function kbdStyle(isCustomised: boolean): React.CSSProperties {
   };
 }
 
-const smallBtnStyle: React.CSSProperties = { padding: '4px 10px', borderRadius: '5px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text)', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' };
+const smallBtnStyle: React.CSSProperties = { padding: '4px 10px', borderRadius: '5px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' };
 
 function saveBtnStyle(canSave: boolean): React.CSSProperties {
   return {
     ...smallBtnStyle,
     background: canSave ? 'var(--accent)' : 'transparent',
-    color: canSave ? 'var(--bg)' : 'var(--text-muted)',
+    color: canSave ? 'var(--text-on-accent)' : 'var(--text-muted)',
     borderColor: canSave ? 'var(--accent)' : 'var(--border)',
     cursor: canSave ? 'pointer' : 'not-allowed',
   };
 }
 
-const resetBtnStyle: React.CSSProperties = { ...smallBtnStyle, color: 'var(--text-muted)', borderColor: 'transparent', background: 'transparent' };
+const resetBtnStyle: React.CSSProperties = { ...smallBtnStyle, borderColor: 'transparent', background: 'transparent' };

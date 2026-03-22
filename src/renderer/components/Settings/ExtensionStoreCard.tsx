@@ -32,33 +32,33 @@ export function ExtensionStoreCard({
       <div style={cardBodyStyle}>
         {/* Top row: name + badge */}
         <div style={topRowStyle}>
-          <span style={nameStyle}>{extension.displayName || extension.name}</span>
+          <span className="text-text-semantic-primary" style={nameStyle}>{extension.displayName || extension.name}</span>
           {isInstalled ? (
-            <span style={isDisabled ? disabledBadgeStyle : installedBadgeStyle}>
+            <span className={isDisabled ? 'text-text-semantic-muted' : 'text-interactive-accent'} style={isDisabled ? disabledBadgeStyle : installedBadgeStyle}>
               {isDisabled ? 'Disabled' : 'Installed'}
             </span>
           ) : (
-            <span style={arrowStyle}>&rarr;</span>
+            <span className="text-text-semantic-muted" style={arrowStyle}>&rarr;</span>
           )}
         </div>
 
         {/* Description — clamped to 2 lines */}
         {extension.description && (
-          <div style={descriptionStyle} className="line-clamp-2">
+          <div className="text-text-semantic-muted line-clamp-2" style={descriptionStyle}>
             {extension.description}
           </div>
         )}
 
         {/* Footer: category badge + downloads + rating + version */}
         <div style={footerStyle}>
-          <span style={typeBadgeStyle}>Extension</span>
-          <span style={metaStyle}>{formatDownloads(extension.downloads)}</span>
+          <span className="text-interactive-accent" style={typeBadgeStyle}>Extension</span>
+          <span className="text-text-semantic-muted" style={metaStyle}>{formatDownloads(extension.downloads)}</span>
           {extension.averageRating != null && (
-            <span style={metaStyle}>
+            <span className="text-text-semantic-muted" style={metaStyle}>
               {'\u2605'} {extension.averageRating.toFixed(1)}
             </span>
           )}
-          <span style={versionStyle}>v{extension.version}</span>
+          <span className="text-text-semantic-muted" style={versionStyle}>v{extension.version}</span>
         </div>
       </div>
     </div>
@@ -101,7 +101,6 @@ const topRowStyle: React.CSSProperties = {
 const nameStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -110,7 +109,6 @@ const nameStyle: React.CSSProperties = {
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   lineHeight: '1.4',
   overflow: 'hidden',
   display: '-webkit-box',
@@ -131,7 +129,6 @@ const typeBadgeStyle: React.CSSProperties = {
   borderRadius: '3px',
   border: '1px solid var(--border)',
   background: 'color-mix(in srgb, var(--accent) 10%, var(--bg))',
-  color: 'var(--accent)',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
@@ -140,12 +137,10 @@ const typeBadgeStyle: React.CSSProperties = {
 
 const metaStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
 };
 
 const versionStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
 };
 
 const installedBadgeStyle: React.CSSProperties = {
@@ -153,7 +148,6 @@ const installedBadgeStyle: React.CSSProperties = {
   padding: '1px 6px',
   borderRadius: '3px',
   background: 'color-mix(in srgb, var(--accent) 15%, var(--bg))',
-  color: 'var(--accent)',
   fontWeight: 600,
   flexShrink: 0,
 };
@@ -163,13 +157,11 @@ const disabledBadgeStyle: React.CSSProperties = {
   padding: '1px 6px',
   borderRadius: '3px',
   background: 'color-mix(in srgb, var(--text-muted) 15%, var(--bg))',
-  color: 'var(--text-muted)',
   fontWeight: 600,
   flexShrink: 0,
 };
 
 const arrowStyle: React.CSSProperties = {
   fontSize: '13px',
-  color: 'var(--text-muted)',
   flexShrink: 0,
 };

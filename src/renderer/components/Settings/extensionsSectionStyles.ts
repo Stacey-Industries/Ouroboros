@@ -28,13 +28,11 @@ export const extensionsSectionActivationBadgeStyle: CSSProperties = {
   borderRadius: '3px',
   border: '1px solid color-mix(in srgb, var(--accent) 40%, var(--border))',
   background: 'color-mix(in srgb, var(--accent) 8%, var(--bg-tertiary))',
-  color: 'var(--accent)',
   fontFamily: 'var(--font-mono)',
 };
 
 export const extensionsSectionActivationLabelStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontWeight: 500,
 };
 
@@ -47,7 +45,6 @@ export const extensionsSectionActivationRowStyle: CSSProperties = {
 
 export const extensionsSectionAuthorStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
 };
 
 export const extensionsSectionBadgeStripStyle: CSSProperties = {
@@ -58,7 +55,6 @@ export const extensionsSectionBadgeStripStyle: CSSProperties = {
 
 export const extensionsSectionCommandIdStyle: CSSProperties = {
   fontSize: '0.75rem',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -67,7 +63,6 @@ export const extensionsSectionCommandIdStyle: CSSProperties = {
 
 export const extensionsSectionCommandLabelStyle: CSSProperties = {
   fontSize: '0.875rem',
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -93,7 +88,6 @@ export const extensionsSectionCommandShortcutStyle: CSSProperties = {
   background: 'var(--bg)',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-muted)',
   whiteSpace: 'nowrap',
 };
 
@@ -113,7 +107,6 @@ export const extensionsSectionControlRowStyle: CSSProperties = {
 
 export const extensionsSectionDescriptionStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -139,12 +132,10 @@ export const extensionsSectionDetailPanelStyle: CSSProperties = {
 export const extensionsSectionDetailTitleStyle: CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 export const extensionsSectionDetailVersionStyle: CSSProperties = {
   fontWeight: 400,
-  color: 'var(--text-muted)',
 };
 
 export const extensionsSectionEmptyStateStyle: CSSProperties = {
@@ -153,7 +144,6 @@ export const extensionsSectionEmptyStateStyle: CSSProperties = {
   border: '1px dashed var(--border)',
   background: 'var(--bg-tertiary)',
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
   textAlign: 'center',
 };
@@ -164,12 +154,10 @@ export const extensionsSectionErrorBannerStyle: CSSProperties = {
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
   fontSize: '12px',
-  color: 'var(--error)',
 };
 
 export const extensionsSectionErrorLineStyle: CSSProperties = {
   fontSize: '11px',
-  color: '#f87171',
   paddingLeft: '16px',
 };
 
@@ -179,20 +167,17 @@ export const extensionsSectionErrorPanelStyle: CSSProperties = {
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
   fontSize: '12px',
-  color: 'var(--error)',
 };
 
 export const extensionsSectionExtensionNameStyle: CSSProperties = {
   fontSize: '13px',
   fontWeight: 500,
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 };
 
 export const extensionsSectionItalicMutedTextStyle: CSSProperties = {
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
 };
 
@@ -210,7 +195,6 @@ export const extensionsSectionLogBodyStyle: CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: '11px',
   lineHeight: 1.5,
-  color: 'var(--text-secondary)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-all',
 };
@@ -229,12 +213,10 @@ export const extensionsSectionLogTitleStyle: CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
 };
 
 export const extensionsSectionMutedTextStyle: CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 export const extensionsSectionPermissionBadgeStyle: CSSProperties = {
@@ -243,7 +225,6 @@ export const extensionsSectionPermissionBadgeStyle: CSSProperties = {
   borderRadius: '3px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
 };
 
@@ -332,6 +313,5 @@ export function extensionsSectionToggleButtonStyle(enabled: boolean): CSSPropert
 
 export const extensionsSectionVersionStyle: CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   flexShrink: 0,
 };

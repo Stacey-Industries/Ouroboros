@@ -11,7 +11,6 @@ const sectionLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   marginBottom: '12px',
 };
 
@@ -30,7 +29,6 @@ const textareaStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono, monospace)',
   fontSize: '12px',
   lineHeight: 1.6,
-  color: 'var(--text)',
   background: 'var(--bg)',
   border: '1px solid var(--border)',
   borderRadius: '6px',
@@ -45,7 +43,6 @@ const resetButtonStyle: React.CSSProperties = {
   borderRadius: '5px',
   border: '1px solid var(--border)',
   background: 'transparent',
-  color: 'var(--text-muted)',
   fontSize: '12px',
   cursor: 'pointer',
 };
@@ -55,7 +52,6 @@ const getSaveButtonStyle = (saved: boolean): React.CSSProperties => ({
   borderRadius: '5px',
   border: 'none',
   background: saved ? 'var(--success)' : 'var(--accent)',
-  color: 'var(--bg)',
   fontSize: '12px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -63,7 +59,7 @@ const getSaveButtonStyle = (saved: boolean): React.CSSProperties => ({
 });
 
 function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div style={sectionLabelStyle}>{children}</div>;
+  return <div className="text-text-semantic-muted" style={sectionLabelStyle}>{children}</div>;
 }
 
 function countRuleBlocks(css: string): number {
@@ -114,7 +110,7 @@ function useCustomCSSController({
 
 function CustomCSSStatus({ ruleCount }: { ruleCount: number }): React.ReactElement {
   return (
-    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+    <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
       {ruleCount > 0
         ? `${ruleCount} rule block${ruleCount === 1 ? '' : 's'} active`
         : 'No custom rules active'}
@@ -137,10 +133,10 @@ function CustomCSSActions({
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <CustomCSSStatus ruleCount={ruleCount} />
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button onClick={onReset} style={resetButtonStyle}>
+        <button onClick={onReset} className="text-text-semantic-muted" style={resetButtonStyle}>
           Reset
         </button>
-        <button onClick={onSave} style={getSaveButtonStyle(saved)}>
+        <button onClick={onSave} className="text-text-semantic-on-accent" style={getSaveButtonStyle(saved)}>
           {saved ? 'Saved!' : 'Apply CSS'}
         </button>
       </div>
@@ -165,7 +161,7 @@ function CustomCSSBody({
 }): React.ReactElement {
   return (
     <div style={panelStyle}>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+      <div className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
         Inject custom CSS overrides. Changes apply after saving settings.
       </div>
       <textarea
@@ -174,6 +170,7 @@ function CustomCSSBody({
         placeholder="/* Add custom CSS here */"
         rows={7}
         spellCheck={false}
+        className="text-text-semantic-primary"
         style={textareaStyle}
       />
       <CustomCSSActions

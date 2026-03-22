@@ -88,7 +88,6 @@ export const containerStyle: React.CSSProperties = {
 
 export const sectionHintStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 export const inlineInputStyle: React.CSSProperties = {
@@ -97,7 +96,6 @@ export const inlineInputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '13px',
   textAlign: 'center',
   outline: 'none',
@@ -110,7 +108,6 @@ export const textInputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -124,7 +121,6 @@ export const previewBoxStyle: React.CSSProperties = {
   padding: '8px 12px',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.875rem',
-  color: 'var(--text)',
   whiteSpace: 'pre',
   overflowX: 'auto',
 };
@@ -192,7 +188,7 @@ export function PresetButton({
         borderRadius: '4px',
         border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
         background: active ? 'var(--accent)' : 'transparent',
-        color: active ? 'var(--bg)' : 'var(--text)',
+        color: active ? 'var(--text-on-accent)' : 'var(--text)',
         fontSize: '12px',
         cursor: 'pointer',
         fontFamily: 'var(--font-ui)',

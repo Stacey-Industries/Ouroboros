@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+
+import { MCP_SERVERS_CHANGED_EVENT } from '../../hooks/appEventNames';
 import type { McpServerEntry } from '../../types/electron';
 import { EMPTY_FORM, configToForm, formToConfig, type ServerFormState } from './mcpHelpers';
 
@@ -80,7 +82,7 @@ function useMcpServerData(): McpServerData {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  async function refresh(): Promise<void> {
+  const refresh = useCallback(async (): Promise<void> => {
     if (!('electronAPI' in window)) return;
     setLoading(true);
     setError(null);
@@ -93,9 +95,17 @@ function useMcpServerData(): McpServerData {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  // Auto-refresh when MCP store installs/changes a server
+  useEffect(() => {
+    const handler = () => void refresh();
+    window.addEventListener(MCP_SERVERS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(MCP_SERVERS_CHANGED_EVENT, handler);
+  }, [refresh]);
+
   useEffect(() => {
     if (!actionError) return;
     const timeout = setTimeout(() => setActionError(null), 5000);

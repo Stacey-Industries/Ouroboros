@@ -10,13 +10,13 @@ export function ErrorBanner({ error }: { error: string | null }): React.ReactEle
   return (
     <div
       role="alert"
+      className="text-status-error"
       style={{
         padding: '8px 12px',
         borderRadius: '6px',
         border: '1px solid var(--error)',
         background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
         fontSize: '12px',
-        color: 'var(--error)',
       }}
     >
       {error}
@@ -41,7 +41,7 @@ function StatusDot({ isEnabled }: { isEnabled: boolean }): React.ReactElement {
 function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Proxied servers:</span>
+      <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Proxied servers:</span>
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
         {servers.map((name) => (
           <span
@@ -52,7 +52,6 @@ function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement 
               borderRadius: '3px',
               border: '1px solid var(--border)',
               background: 'var(--bg-tertiary)',
-              color: 'var(--text-secondary)',
               fontFamily: 'var(--font-mono)',
             }}
           >
@@ -71,7 +70,7 @@ function StatusIndicator({
 }: Pick<CodeModeSectionModel, 'isEnabled' | 'loading' | 'proxiedServers'>): React.ReactElement {
   if (loading) {
     return (
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '12px', fontStyle: 'italic' }}>
         Loading status...
       </p>
     );
@@ -80,7 +79,7 @@ function StatusIndicator({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Status:</span>
+        <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Status:</span>
         <StatusDot isEnabled={isEnabled} />
         <span
           style={{
@@ -104,10 +103,10 @@ function ServerNamesField({
   return (
     <div style={{ marginBottom: '16px' }}>
       <label
+        className="text-text-semantic-muted"
         style={{
           display: 'block',
           fontSize: '12px',
-          color: 'var(--text-muted)',
           marginBottom: '6px',
         }}
       >
@@ -118,13 +117,13 @@ function ServerNamesField({
         value={serverNames}
         onChange={(event) => setServerNames(event.target.value)}
         placeholder="github, stripe, filesystem"
+        className="text-text-semantic-primary"
         style={{
           width: '100%',
           padding: '7px 10px',
           borderRadius: '6px',
           border: '1px solid var(--border)',
           background: 'var(--bg-tertiary)',
-          color: 'var(--text)',
           fontSize: '13px',
           fontFamily: 'var(--font-mono)',
           outline: 'none',
@@ -168,6 +167,7 @@ function DisableButton({
     <button
       onClick={() => void handleDisable()}
       disabled={!canDisable}
+      className="text-text-semantic-primary"
       style={{
         ...buttonStyle,
         opacity: canDisable ? 1 : 0.6,
@@ -199,7 +199,7 @@ function ActionButtons({
         disabling={disabling}
         handleDisable={handleDisable}
       />
-      <button onClick={() => void fetchStatus()} style={buttonStyle}>
+      <button onClick={() => void fetchStatus()} className="text-text-semantic-primary" style={buttonStyle}>
         Refresh
       </button>
     </div>
@@ -211,15 +211,15 @@ export function CodeModeOverview(props: CodeModeSectionModel): React.ReactElemen
     <section>
       <SectionLabel>Code Mode</SectionLabel>
       <p
+        className="text-text-semantic-muted"
         style={{
           fontSize: '12px',
-          color: 'var(--text-muted)',
           margin: '0 0 16px 0',
           lineHeight: 1.5,
         }}
       >
         Collapse N MCP tools into a single{' '}
-        <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+        <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>
           execute_code
         </code>{' '}
         tool with TypeScript types. Reduces context token usage by 30-80%.

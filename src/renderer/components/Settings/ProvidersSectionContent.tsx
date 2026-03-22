@@ -24,7 +24,7 @@ export function ProvidersSectionContent({
     <div style={providersRootStyle}>
       <div>
         <SectionLabel>Model Providers</SectionLabel>
-        <p style={headerDescriptionStyle}>
+        <p className="text-text-semantic-muted" style={headerDescriptionStyle}>
           Configure Anthropic-compatible LLM providers and assign models to session types.
         </p>
       </div>

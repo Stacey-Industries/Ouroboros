@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { Theme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
+import { useTheme } from '../../hooks/useTheme';
 import {
   BackgroundGradientSection,
   CustomCSSSection,
+  GlassOpacitySection,
   ThemeEditorSection,
   ThemeGrid,
 } from './AppearanceSectionParts.sections';
@@ -44,6 +46,7 @@ export function AppearanceSectionContent({
         checked={draft.showBgGradient ?? true}
         onChange={(value) => onChange('showBgGradient', value)}
       />
+      <GlassOpacitySlider draft={draft} onChange={onChange} />
       <ThemeEditorSection
         activeThemeId={draft.activeTheme}
         draft={draft}
@@ -54,5 +57,23 @@ export function AppearanceSectionContent({
       />
       <CustomCSSSection draft={draft} onChange={onChange} />
     </div>
+  );
+}
+
+function GlassOpacitySlider({ draft, onChange }: {
+  draft: AppConfig;
+  onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+}): React.ReactElement {
+  const { setGlassOpacity } = useTheme();
+  const handleChange = useCallback((value: number) => {
+    onChange('glassOpacity', value);
+    setGlassOpacity(value);
+  }, [onChange, setGlassOpacity]);
+
+  return (
+    <GlassOpacitySection
+      value={draft.glassOpacity ?? 0}
+      onChange={handleChange}
+    />
   );
 }

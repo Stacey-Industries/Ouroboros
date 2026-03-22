@@ -35,7 +35,7 @@ export function ExtensionStoreSection(): React.ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {model.error && <div role="alert" style={errorBannerStyle}>{model.error}</div>}
+      {model.error && <div role="alert" className="text-status-error" style={errorBannerStyle}>{model.error}</div>}
       <StoreHeader onRefresh={model.search} />
       <SourceToggle source={model.source} onSelect={model.setSource} />
       <InstalledBanner model={model} />
@@ -57,12 +57,12 @@ function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactEleme
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>Extension Store</SectionLabel>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>
           Themes, grammars, and snippets from multiple sources
         </p>
       </div>
       <div style={{ flexShrink: 0 }}>
-        <button onClick={onRefresh} style={buttonStyle}>Refresh</button>
+        <button onClick={onRefresh} className="text-text-semantic-primary" style={buttonStyle}>Refresh</button>
       </div>
     </div>
   );
@@ -98,13 +98,13 @@ function InstalledBanner({ model }: { model: ExtensionStoreModel }): React.React
 
   return (
     <div style={installedBannerStyle}>
-      <div style={installedBannerHeaderStyle}>
+      <div className="text-text-semantic-muted" style={installedBannerHeaderStyle}>
         Installed ({installed.length})
       </div>
-      <div style={installedBannerBodyStyle}>
+      <div className="text-text-semantic-primary" style={installedBannerBodyStyle}>
         {installed.map((ext, idx) => (
           <React.Fragment key={ext.id}>
-            {idx > 0 && <span style={installedSepStyle}>{' \u00b7 '}</span>}
+            {idx > 0 && <span className="text-text-semantic-muted" style={installedSepStyle}>{' \u00b7 '}</span>}
             <span
               role="button"
               tabIndex={0}
@@ -113,6 +113,7 @@ function InstalledBanner({ model }: { model: ExtensionStoreModel }): React.React
                 if (e.key === 'Enter' || e.key === ' ')
                   model.selectExtension(ext.namespace, ext.name);
               }}
+              className="text-interactive-accent"
               style={installedNameStyle}
             >
               {ext.displayName || ext.name}
@@ -129,12 +130,13 @@ function InstalledBanner({ model }: { model: ExtensionStoreModel }): React.React
 function SearchInput({ query, onChange }: { query: string; onChange: (q: string) => void }): React.ReactElement {
   return (
     <div style={searchWrapperStyle}>
-      <span style={searchIconStyle}>&#x2315;</span>
+      <span className="text-text-semantic-muted" style={searchIconStyle}>&#x2315;</span>
       <input
         type="text"
         value={query}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search extensions..."
+        className="text-text-semantic-primary"
         style={searchInputStyle}
       />
     </div>
@@ -172,11 +174,11 @@ function CategoryFilter({
 
 function ExtensionList({ model }: { model: ExtensionStoreModel }): React.ReactElement {
   if (model.loading && model.extensions.length === 0) {
-    return <p style={loadingStyle}>Searching extensions...</p>;
+    return <p className="text-text-semantic-muted" style={loadingStyle}>Searching extensions...</p>;
   }
 
   if (model.extensions.length === 0) {
-    return <div style={emptyStyle}>No extensions found.</div>;
+    return <div className="text-text-semantic-muted" style={emptyStyle}>No extensions found.</div>;
   }
 
   const hasMore = model.totalSize > model.offset + PAGE_SIZE;
@@ -200,7 +202,7 @@ function ExtensionList({ model }: { model: ExtensionStoreModel }): React.ReactEl
       </div>
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
-          <button onClick={model.loadMore} style={buttonStyle}>
+          <button onClick={model.loadMore} className="text-text-semantic-primary" style={buttonStyle}>
             Load More
           </button>
         </div>
@@ -222,7 +224,7 @@ function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElem
   return (
     <div style={detailContainerStyle}>
       {/* Back button */}
-      <button onClick={model.clearSelection} style={backButtonStyle}>
+      <button onClick={model.clearSelection} className="text-interactive-accent" style={backButtonStyle}>
         &larr; Back to results
       </button>
 
@@ -237,21 +239,21 @@ function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElem
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={detailTitleRowStyle}>
-            <span style={detailTitleStyle}>{ext.displayName || ext.name}</span>
-            <span style={detailVersionStyle}>v{ext.version}</span>
+            <span className="text-text-semantic-primary" style={detailTitleStyle}>{ext.displayName || ext.name}</span>
+            <span className="text-text-semantic-muted" style={detailVersionStyle}>v{ext.version}</span>
           </div>
-          <div style={publisherStyle}>{ext.namespace}</div>
+          <div className="text-text-semantic-muted" style={publisherStyle}>{ext.namespace}</div>
           {ext.description && (
-            <p style={detailDescriptionStyle}>{ext.description}</p>
+            <p className="text-text-semantic-muted" style={detailDescriptionStyle}>{ext.description}</p>
           )}
         </div>
       </div>
 
       {/* Stats row */}
       <div style={statsRowStyle}>
-        <span style={statStyle}>{formatDownloads(ext.downloads)} downloads</span>
+        <span className="text-text-semantic-muted" style={statStyle}>{formatDownloads(ext.downloads)} downloads</span>
         {ext.averageRating != null && (
-          <span style={statStyle}>{'\u2605'} {ext.averageRating.toFixed(1)}</span>
+          <span className="text-text-semantic-muted" style={statStyle}>{'\u2605'} {ext.averageRating.toFixed(1)}</span>
         )}
       </div>
 
@@ -266,6 +268,7 @@ function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElem
               href={ext.repository}
               target="_blank"
               rel="noopener noreferrer"
+              className="text-interactive-accent"
               style={linkStyle}
               onClick={(e) => {
                 e.preventDefault();
@@ -297,12 +300,14 @@ function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElem
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => model.toggleEnabled(extId)}
+              className="text-text-semantic-primary"
               style={buttonStyle}
             >
               {isDisabled ? 'Enable' : 'Disable'}
             </button>
             <button
               onClick={() => model.uninstall(extId)}
+              className="text-status-error"
               style={dangerButtonStyle}
             >
               Uninstall
@@ -332,8 +337,8 @@ function MetadataRow({
 }): React.ReactElement {
   return (
     <div style={metadataRowStyle}>
-      <span style={metadataLabelStyle}>{label}</span>
-      {children ?? <span style={metadataValueStyle}>{value}</span>}
+      <span className="text-text-semantic-muted" style={metadataLabelStyle}>{label}</span>
+      {children ?? <span className="text-text-semantic-primary" style={metadataValueStyle}>{value}</span>}
     </div>
   );
 }
@@ -365,7 +370,7 @@ function ContributionsSummary({ installed }: { installed: InstalledVsxExtension 
       <SectionLabel style={{ marginBottom: '6px' }}>Contributions</SectionLabel>
       <div style={contributionsBodyStyle}>
         {items.map((item) => (
-          <div key={item} style={contributionItemStyle}>{item}</div>
+          <div key={item} className="text-text-semantic-primary" style={contributionItemStyle}>{item}</div>
         ))}
       </div>
     </div>
@@ -398,7 +403,7 @@ function ReadmeSection({ readme }: { readme: string }): React.ReactElement {
       <SectionLabel style={{ marginBottom: '8px' }}>README</SectionLabel>
       <div
         style={readmeBodyStyle}
-        className="ext-store-readme"
+        className="ext-store-readme text-text-semantic-primary"
         dangerouslySetInnerHTML={{ __html: readmeHtml }}
       />
     </div>
@@ -431,7 +436,6 @@ const errorBannerStyle: React.CSSProperties = {
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
   fontSize: '12px',
-  color: 'var(--error)',
 };
 
 const emptyStyle: React.CSSProperties = {
@@ -440,14 +444,12 @@ const emptyStyle: React.CSSProperties = {
   border: '1px dashed var(--border)',
   background: 'var(--bg-tertiary)',
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
   textAlign: 'center',
 };
 
 const loadingStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 const searchWrapperStyle: React.CSSProperties = {
@@ -460,7 +462,6 @@ const searchIconStyle: React.CSSProperties = {
   position: 'absolute',
   left: '10px',
   fontSize: '14px',
-  color: 'var(--text-muted)',
   pointerEvents: 'none',
 };
 
@@ -470,7 +471,6 @@ const searchInputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-secondary)',
-  color: 'var(--text)',
   fontSize: '12px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -488,7 +488,7 @@ function categoryPillStyle(isActive: boolean): React.CSSProperties {
     borderRadius: '12px',
     border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
     background: isActive ? 'var(--accent)' : 'var(--bg-tertiary)',
-    color: isActive ? 'var(--bg)' : 'var(--text-muted)',
+    color: isActive ? 'var(--text-on-accent)' : 'var(--text-muted)',
     fontSize: '11px',
     fontWeight: isActive ? 600 : 400,
     cursor: 'pointer',
@@ -513,7 +513,6 @@ const installedBannerStyle: React.CSSProperties = {
 const installedBannerHeaderStyle: React.CSSProperties = {
   fontSize: '11px',
   fontWeight: 600,
-  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
   marginBottom: '6px',
@@ -521,16 +520,12 @@ const installedBannerHeaderStyle: React.CSSProperties = {
 
 const installedBannerBodyStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text)',
   lineHeight: '1.6',
 };
 
-const installedSepStyle: React.CSSProperties = {
-  color: 'var(--text-muted)',
-};
+const installedSepStyle: React.CSSProperties = {};
 
 const installedNameStyle: React.CSSProperties = {
-  color: 'var(--accent)',
   cursor: 'pointer',
   fontWeight: 500,
 };
@@ -546,7 +541,6 @@ const backButtonStyle: React.CSSProperties = {
   padding: '4px 8px',
   border: 'none',
   background: 'transparent',
-  color: 'var(--accent)',
   fontSize: '12px',
   cursor: 'pointer',
   fontWeight: 500,
@@ -582,24 +576,20 @@ const detailTitleRowStyle: React.CSSProperties = {
 const detailTitleStyle: React.CSSProperties = {
   fontSize: '16px',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 const detailVersionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 const publisherStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
   marginTop: '2px',
 };
 
 const detailDescriptionStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   lineHeight: '1.5',
   margin: '8px 0 0 0',
 };
@@ -613,7 +603,6 @@ const statsRowStyle: React.CSSProperties = {
 
 const statStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontWeight: 500,
 };
 
@@ -636,19 +625,16 @@ const metadataRowStyle: React.CSSProperties = {
 };
 
 const metadataLabelStyle: React.CSSProperties = {
-  color: 'var(--text-muted)',
   minWidth: '80px',
   fontWeight: 500,
 };
 
 const metadataValueStyle: React.CSSProperties = {
-  color: 'var(--text)',
   fontFamily: 'var(--font-mono)',
   fontSize: '11px',
 };
 
 const linkStyle: React.CSSProperties = {
-  color: 'var(--accent)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
   textDecoration: 'none',
@@ -671,7 +657,6 @@ const contributionsBodyStyle: React.CSSProperties = {
 
 const contributionItemStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text)',
 };
 
 const installAreaStyle: React.CSSProperties = {
@@ -684,7 +669,7 @@ function accentButtonStyle(disabled: boolean): React.CSSProperties {
     borderRadius: '6px',
     border: 'none',
     background: disabled ? 'var(--bg-tertiary)' : 'var(--accent)',
-    color: disabled ? 'var(--text-muted)' : 'var(--bg)',
+    color: disabled ? 'var(--text-muted)' : 'var(--text-on-accent)',
     fontSize: '12px',
     fontWeight: 600,
     cursor: disabled ? 'not-allowed' : 'pointer',
@@ -698,7 +683,6 @@ const dangerButtonStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg))',
-  color: 'var(--error)',
   fontSize: '12px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -718,7 +702,6 @@ const readmeBodyStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   fontSize: '13px',
   lineHeight: '1.6',
-  color: 'var(--text)',
   fontFamily: 'var(--font-ui)',
   wordBreak: 'break-word',
 };

@@ -8,8 +8,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Surface — dark backgrounds (GitHub dark / Monokai inspired)
-        surface: {
+        // Semantic tokens (CSS custom properties — resolve at runtime)
+        'surface': {
+          base:    'var(--surface-base)',
+          panel:   'var(--surface-panel)',
+          raised:  'var(--surface-raised)',
+          overlay: 'var(--surface-overlay)',
+          inset:   'var(--surface-inset)',
+        },
+        'text-semantic': {
+          primary:     'var(--text-primary)',
+          secondary:   'var(--text-secondary)',
+          muted:       'var(--text-muted)',
+          faint:       'var(--text-faint)',
+          'on-accent': 'var(--text-on-accent)',
+        },
+        'border-semantic': {
+          DEFAULT: 'var(--border-default)',
+          subtle:  'var(--border-subtle)',
+          accent:  'var(--border-accent)',
+        },
+        'interactive': {
+          accent:    'var(--interactive-accent)',
+          hover:     'var(--interactive-hover)',
+          muted:     'var(--interactive-muted)',
+          selection: 'var(--interactive-selection)',
+          focus:     'var(--interactive-focus)',
+        },
+        'status': {
+          success: 'var(--status-success)',
+          warning: 'var(--status-warning)',
+          error:   'var(--status-error)',
+          info:    'var(--status-info)',
+        },
+        // Static design tokens (GitHub dark / Monokai inspired)
+        'surface-static': {
           DEFAULT: '#0d1117',
           raised: '#161b22',
           overlay: '#1c2128',

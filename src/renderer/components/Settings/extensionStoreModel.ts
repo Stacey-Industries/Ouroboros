@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { VSX_EXTENSIONS_CHANGED_EVENT } from '../../hooks/appEventNames';
 import { EXTENSION_THEMES_CHANGED_EVENT } from '../../hooks/useExtensionThemes';
 import type {
   InstalledVsxExtension,
@@ -18,6 +19,7 @@ import type {
 /** Notify other hooks (useExtensionThemes) that extension contributions changed. */
 function notifyExtensionChange(): void {
   window.dispatchEvent(new CustomEvent(EXTENSION_THEMES_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(VSX_EXTENSIONS_CHANGED_EVENT));
 }
 
 export type ExtensionStoreSource = 'openvsx' | 'marketplace';

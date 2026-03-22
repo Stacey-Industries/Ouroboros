@@ -1,0 +1,127 @@
+/* ─── Tier 1: Primitive palette ──────────────────────────────────────────────
+ * Raw color values. NEVER used directly in components.
+ * Themes swap these values; semantic mappings stay stable.
+ * Set at runtime by applyThemeToDom() in useTheme.ts — these are only defaults.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Neutrals (set by applyThemeToDom from theme.colors) */
+  --palette-bg:             #111113;
+  --palette-bg-secondary:   #18181b;
+  --palette-bg-tertiary:    #27272a;
+  --palette-text:           #fafafa;
+  --palette-text-secondary: #a1a1aa;
+  --palette-text-muted:     #52525b;
+  --palette-text-faint:     #3f3f46;
+  --palette-border:         #3f3f46;
+  --palette-border-muted:   #2d2d33;
+
+  /* Accent */
+  --palette-accent:         #818cf8;
+  --palette-accent-hover:   #a5b4fc;
+  --palette-accent-muted:   rgba(129, 140, 248, 0.15);
+
+  /* Status */
+  --palette-success:        #34d399;
+  --palette-warning:        #fbbf24;
+  --palette-error:          #f87171;
+  --palette-purple:         #a78bfa;
+  --palette-purple-muted:   rgba(167, 139, 250, 0.2);
+
+  /* Interactive */
+  --palette-selection:      rgba(99, 102, 241, 0.25);
+  --palette-focus-ring:     rgba(129, 140, 248, 0.5);
+
+  /* Terminal */
+  --palette-term-bg:        #0c0c0e;
+  --palette-term-fg:        #e4e4e7;
+  --palette-term-cursor:    #818cf8;
+  --palette-term-selection: rgba(129, 140, 248, 0.3);
+
+  /* ─── Tier 2: Semantic tokens ─────────────────────────────────────────────
+   * What components consume. Glass mode overrides surface tokens to transparent.
+   * ──────────────────────────────────────────────────────────────────────── */
+
+  /* Surfaces */
+  --surface-base:     var(--palette-bg);           /* Main app background */
+  --surface-panel:    var(--palette-bg-secondary);  /* Sidebars, panels */
+  --surface-raised:   var(--palette-bg-tertiary);   /* Hovers, elevated sections */
+  --surface-overlay:  rgba(10, 10, 14, 0.92);      /* Dialogs, menus, popovers */
+  --surface-inset:    rgba(0, 0, 0, 0.15);         /* Inset areas (code blocks in chat) */
+
+  /* Text */
+  --text-primary:     var(--palette-text);
+  --text-secondary:   var(--palette-text-secondary);
+  --text-muted:       var(--palette-text-muted);
+  --text-faint:       var(--palette-text-faint);
+  --text-on-accent:   var(--palette-bg);            /* Dark text on accent buttons */
+
+  /* Borders */
+  --border-default:   var(--palette-border);
+  --border-subtle:    var(--palette-border-muted);
+  --border-accent:    var(--palette-accent);
+
+  /* Interactive */
+  --interactive-accent:    var(--palette-accent);
+  --interactive-hover:     var(--palette-accent-hover);
+  --interactive-muted:     var(--palette-accent-muted);
+  --interactive-selection: var(--palette-selection);
+  --interactive-focus:     var(--palette-focus-ring);
+
+  /* Status */
+  --status-success: var(--palette-success);
+  --status-warning: var(--palette-warning);
+  --status-error:   var(--palette-error);
+  --status-info:    var(--palette-accent);
+
+  /* ─── Tier 3: Component tokens ────────────────────────────────────────────
+   * Scoped to specific complex components. Optional — only add when a
+   * component needs a value that doesn't map cleanly to a Tier 2 token.
+   * ──────────────────────────────────────────────────────────────────────── */
+
+  /* Tabs */
+  --tab-active-bg:     var(--surface-base);
+  --tab-inactive-bg:   var(--surface-panel);
+  --tab-hover-bg:      var(--surface-raised);
+  --tab-active-border: var(--interactive-accent);
+
+  /* Composer */
+  --composer-bg:     var(--surface-base);
+  --composer-border: var(--border-default);
+
+  /* Terminal */
+  --term-bg:        var(--palette-term-bg);
+  --term-fg:        var(--palette-term-fg);
+  --term-cursor:    var(--palette-term-cursor);
+  --term-selection: var(--palette-term-selection);
+
+  /* Monaco (always solid — canvas rendering can't handle transparency) */
+  --monaco-bg: var(--palette-bg);
+
+  /* User message bubble */
+  --chat-user-bg:   var(--interactive-accent);
+  --chat-user-text: var(--text-on-accent);
+
+  /* ─── Compatibility aliases ───────────────────────────────────────────────
+   * Map old variable names to new semantic tokens.
+   * Components using var(--bg) will still work during migration.
+   * Remove these after Phase 3 is complete.
+   * ──────────────────────────────────────────────────────────────────────── */
+
+  --bg:             var(--surface-base);
+  --bg-secondary:   var(--surface-panel);
+  --bg-tertiary:    var(--surface-raised);
+  --text:           var(--text-primary);
+  --border:         var(--border-default);
+  --border-muted:   var(--border-subtle);
+  --accent:         var(--interactive-accent);
+  --accent-hover:   var(--interactive-hover);
+  --accent-muted:   var(--interactive-muted);
+  --selection:      var(--interactive-selection);
+  --focus-ring:     var(--interactive-focus);
+  --success:        var(--status-success);
+  --warning:        var(--status-warning);
+  --error:          var(--status-error);
+  --purple:         var(--palette-purple);
+  --purple-muted:   var(--palette-purple-muted);
+}

@@ -59,19 +59,19 @@ export function summarizeArgs(args?: string[]): string {
 }
 
 export const labelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)',
+  fontSize: '11px', fontWeight: 500,
 };
 
 export const inputStyle: React.CSSProperties = {
   padding: '6px 10px', borderRadius: '4px',
   border: '1px solid var(--border)', background: 'var(--bg)',
-  color: 'var(--text)', fontSize: '12px', fontFamily: 'var(--font-ui)',
+  fontSize: '12px', fontFamily: 'var(--font-ui)',
   outline: 'none', width: '100%', boxSizing: 'border-box',
 };
 
 export const smallBtnStyle: React.CSSProperties = {
   padding: '3px 8px', borderRadius: '4px',
   border: '1px solid var(--border)', background: 'var(--bg)',
-  color: 'var(--text-muted)', fontSize: '11px',
+  fontSize: '11px',
   cursor: 'pointer', whiteSpace: 'nowrap',
 };

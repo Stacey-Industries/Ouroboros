@@ -114,7 +114,7 @@ function HeaderSection(): React.ReactElement {
   return (
     <div>
       <SectionLabel>Claude Code Settings</SectionLabel>
-      <p style={claudeSectionHeaderTextStyle}>
+      <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
         Configure how Claude Code launches in new Claude terminals.
       </p>
     </div>

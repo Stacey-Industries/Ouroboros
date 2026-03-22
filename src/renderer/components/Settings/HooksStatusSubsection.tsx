@@ -94,7 +94,7 @@ function MissingHooksNote({ status }: { status: HookStatus }): React.ReactElemen
   }
 
   return (
-    <p style={noteStyle}>
+    <p className="text-text-semantic-muted" style={noteStyle}>
       Hook scripts are not installed. Enable auto-install in General settings, then restart.
     </p>
   );
@@ -113,9 +113,9 @@ function StatusCard({
     <div style={cardStyle}>
       <StatusDot status={info.status} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{statusLabel(info.status)}</div>
-        {info.version && <div style={versionStyle}>Version {info.version}</div>}
-        {info.errorMessage && <div style={errorStyle}>{info.errorMessage}</div>}
+        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>{statusLabel(info.status)}</div>
+        {info.version && <div className="text-text-semantic-muted" style={versionStyle}>Version {info.version}</div>}
+        {info.errorMessage && <div className="text-status-error" style={errorStyle}>{info.errorMessage}</div>}
       </div>
       <button onClick={onReinstall} disabled={isReinstalling || info.status === 'checking'} style={reinstallBtnStyle(isReinstalling)}>
         {isReinstalling ? 'Reinstalling...' : 'Reinstall hooks'}
@@ -128,8 +128,8 @@ function TransportSection({ transport }: { transport: string }): React.ReactElem
   return (
     <section>
       <SectionLabel>Server Transport</SectionLabel>
-      <div style={transportBoxStyle}>{transport}</div>
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+      <div className="text-text-semantic-secondary" style={transportBoxStyle}>{transport}</div>
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '6px' }}>
         On Windows, Ouroboros uses a named pipe. TCP is the fallback on other platforms.
       </p>
     </section>
@@ -167,10 +167,10 @@ function statusDotStyle(color: string, highlight: boolean): React.CSSProperties 
 
 const defaultHooksInfo: HooksInfo = { status: 'checking', version: null, transport: 'Detecting...' };
 const cardStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-secondary)' };
-const versionStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' };
-const errorStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--error)', marginTop: '2px' };
-const transportBoxStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' };
-const noteStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' };
+const versionStyle: React.CSSProperties = { fontSize: '11px', marginTop: '2px' };
+const errorStyle: React.CSSProperties = { fontSize: '11px', marginTop: '2px' };
+const transportBoxStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', fontSize: '12px', fontFamily: 'var(--font-mono)' };
+const noteStyle: React.CSSProperties = { fontSize: '11px', marginTop: '8px' };
 
 function reinstallBtnStyle(isReinstalling: boolean): React.CSSProperties {
   return {

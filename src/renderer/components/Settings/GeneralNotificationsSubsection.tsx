@@ -28,12 +28,12 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
   return (
     <section>
       <SectionLabel>Agent Notifications</SectionLabel>
-      <p style={descStyle}>
+      <p className="text-text-semantic-muted" style={descStyle}>
         Desktop notifications when agent sessions complete or encounter errors.
       </p>
       <div style={levelRowStyle}>
-        <label htmlFor="notif-level" style={levelLabelStyle}>Notification level</label>
-        <select id="notif-level" value={notifications.level} onChange={handleLevelChange} style={selectStyle}>
+        <label htmlFor="notif-level" className="text-text-semantic-secondary" style={levelLabelStyle}>Notification level</label>
+        <select id="notif-level" value={notifications.level} onChange={handleLevelChange} className="text-text-semantic-primary" style={selectStyle}>
           <option value="all">All (complete + errors)</option>
           <option value="errors-only">Errors only</option>
           <option value="none">None</option>
@@ -49,12 +49,12 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
   );
 }
 
-const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' };
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px' };
 const levelRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' };
-const levelLabelStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' };
+const levelLabelStyle: React.CSSProperties = { fontSize: '12px', whiteSpace: 'nowrap' };
 
 const selectStyle: React.CSSProperties = {
   flex: 1, maxWidth: '200px', padding: '6px 10px', borderRadius: '6px',
   border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  color: 'var(--text)', fontSize: '12px', fontFamily: 'var(--font-ui)', cursor: 'pointer',
+  fontSize: '12px', fontFamily: 'var(--font-ui)', cursor: 'pointer',
 };

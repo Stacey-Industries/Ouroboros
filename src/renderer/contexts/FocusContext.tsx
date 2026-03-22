@@ -94,8 +94,5 @@ export function focusRingStyle(
   panel: FocusPanel,
   focusedPanel: FocusPanel,
 ): React.CSSProperties {
-  if (panel !== focusedPanel) return {};
-  return {
-    boxShadow: 'inset 0 0 0 1px var(--accent)',
-  };
+  return {};
 }

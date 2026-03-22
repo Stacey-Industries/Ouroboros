@@ -58,7 +58,7 @@ export function ClaudeTemplateEditor({
           <TemplateListItem key={template.id} model={model} template={template} />
         ))}
       </div>
-      <button onClick={model.addTemplate} style={claudeTemplateAddButtonStyle}>
+      <button onClick={model.addTemplate} className="text-text-semantic-primary" style={claudeTemplateAddButtonStyle}>
         + Add Template
       </button>
     </section>
@@ -103,6 +103,7 @@ function EditableTemplateFields({
           onChange={(event) => model.updateDraft('icon', event.target.value)}
           placeholder="Icon"
           aria-label="Template icon"
+          className="text-text-semantic-primary"
           style={claudeTemplateIconInputStyle}
         />
         <input
@@ -111,6 +112,7 @@ function EditableTemplateFields({
           onChange={(event) => model.updateDraft('name', event.target.value)}
           placeholder="Template name"
           aria-label="Template name"
+          className="text-text-semantic-primary"
           style={{ ...claudeTemplateTextInputStyle, flex: 1 }}
         />
       </div>
@@ -120,6 +122,7 @@ function EditableTemplateFields({
         placeholder="Prompt template (supports {{variables}})"
         aria-label="Prompt template"
         rows={3}
+        className="text-text-semantic-primary"
         style={claudeTemplateTextareaStyle}
       />
     </>
@@ -133,10 +136,10 @@ function EditableTemplateActions({
 }): React.ReactElement {
   return (
     <div style={claudeTemplateButtonRowStyle}>
-      <button onClick={model.cancelEdit} style={claudeTemplateCancelButtonStyle}>
+      <button onClick={model.cancelEdit} className="text-text-semantic-primary" style={claudeTemplateCancelButtonStyle}>
         Cancel
       </button>
-      <button onClick={model.saveEdit} style={claudeTemplateSaveButtonStyle}>
+      <button onClick={model.saveEdit} className="text-text-semantic-on-accent" style={claudeTemplateSaveButtonStyle}>
         Save
       </button>
     </div>
@@ -151,8 +154,8 @@ function TemplateRow({
     <div style={claudeTemplateTemplateRowStyle}>
       {template.icon && <span style={claudeTemplateIconPreviewStyle}>{template.icon}</span>}
       <div style={claudeTemplateTemplateTextStyle}>
-        <div style={claudeTemplateTemplateNameStyle}>{template.name}</div>
-        <div style={claudeTemplateTemplatePromptStyle} title={template.promptTemplate}>
+        <div className="text-text-semantic-primary" style={claudeTemplateTemplateNameStyle}>{template.name}</div>
+        <div className="text-text-semantic-muted" style={claudeTemplateTemplatePromptStyle} title={template.promptTemplate}>
           {template.promptTemplate}
         </div>
       </div>
@@ -186,7 +189,8 @@ function IconButton({
     <button
       onClick={onClick}
       aria-label={ariaLabel}
-      style={{ ...claudeTemplateIconButtonStyle, color: color ?? claudeTemplateIconButtonStyle.color }}
+      className={color ? undefined : 'text-text-semantic-muted'}
+      style={color ? { ...claudeTemplateIconButtonStyle, color } : claudeTemplateIconButtonStyle}
       title={title}
     >
       {children}
@@ -196,11 +200,11 @@ function IconButton({
 
 function TemplateHelpText(): React.ReactElement {
   return (
-    <p style={claudeTemplateHelpTextStyle}>
+    <p className="text-text-semantic-muted" style={claudeTemplateHelpTextStyle}>
       Quick-launch profiles for common tasks. Use{' '}
-      <code style={claudeTemplateHelpCodeStyle}>{'{{openFile}}'}</code>,{' '}
-      <code style={claudeTemplateHelpCodeStyle}>{'{{projectRoot}}'}</code>,{' '}
-      <code style={claudeTemplateHelpCodeStyle}>{'{{projectName}}'}</code> as variables in
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{openFile}}'}</code>,{' '}
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{projectRoot}}'}</code>,{' '}
+      <code className="text-interactive-accent" style={claudeTemplateHelpCodeStyle}>{'{{projectName}}'}</code> as variables in
       prompts.
     </p>
   );

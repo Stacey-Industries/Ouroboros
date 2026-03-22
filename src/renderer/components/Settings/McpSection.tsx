@@ -15,7 +15,7 @@ export function McpSection(): React.ReactElement {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {model.actionError && <div role="alert" style={errorBannerStyle}>{model.actionError}</div>}
+      {model.actionError && <div role="alert" className="text-status-error" style={errorBannerStyle}>{model.actionError}</div>}
       <McpHeader onRefresh={() => void model.refresh()} onAdd={model.startAdd} />
       {model.isAdding && <AddFormWrapper {...buildAddFormProps(model)} />}
       <McpBody {...buildMcpBodyProps(model)} />
@@ -29,11 +29,11 @@ function McpHeader({ onRefresh, onAdd }: { onRefresh: () => void; onAdd: () => v
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>MCP Servers</SectionLabel>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Configure MCP servers for Claude Code.</p>
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>Configure MCP servers for Claude Code.</p>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        <button onClick={onRefresh} style={buttonStyle}>Refresh</button>
-        <button onClick={onAdd} style={{ ...buttonStyle, background: 'var(--accent)', color: 'var(--bg)', border: 'none', fontWeight: 600 }}>+ Add Server</button>
+        <button onClick={onRefresh} className="text-text-semantic-primary" style={buttonStyle}>Refresh</button>
+        <button onClick={onAdd} className="text-text-semantic-on-accent" style={{ ...buttonStyle, background: 'var(--accent)', border: 'none', fontWeight: 600 }}>+ Add Server</button>
       </div>
     </div>
   );
@@ -52,7 +52,7 @@ function AddFormWrapper({
 }): React.ReactElement {
   return (
     <div style={{ border: '1px solid var(--accent)', borderRadius: '6px', overflow: 'hidden' }}>
-      <div style={addFormHeaderStyle}>New MCP Server</div>
+      <div className="text-text-semantic-primary" style={addFormHeaderStyle}>New MCP Server</div>
       <McpServerForm form={form} isEdit={false} onFieldChange={formHandlers.onFieldChange} onScopeChange={formHandlers.onScopeChange} onAddEnvRow={formHandlers.onAddEnvRow} onRemoveEnvRow={formHandlers.onRemoveEnvRow} onUpdateEnvRow={formHandlers.onUpdateEnvRow} onSubmit={onSubmit} onCancel={onCancel} />
     </div>
   );
@@ -79,9 +79,9 @@ interface McpBodyProps {
 }
 
 function McpBody(props: McpBodyProps): React.ReactElement | null {
-  if (props.loading) return <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading MCP servers...</p>;
-  if (props.error) return <div style={errorBannerStyle}>{props.error}</div>;
-  if (props.servers.length === 0 && !props.isAdding) return <div style={emptyStyle}>No MCP servers configured.</div>;
+  if (props.loading) return <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Loading MCP servers...</p>;
+  if (props.error) return <div className="text-status-error" style={errorBannerStyle}>{props.error}</div>;
+  if (props.servers.length === 0 && !props.isAdding) return <div className="text-text-semantic-muted" style={emptyStyle}>No MCP servers configured.</div>;
 
   return (
     <>
@@ -140,12 +140,12 @@ function McpHelpText(): React.ReactElement {
   return (
     <section>
       <SectionLabel>About MCP Servers</SectionLabel>
-      <p style={helpStyle}>MCP servers provide additional tools and capabilities to Claude Code.</p>
-      <p style={helpStyle}>
-        <strong style={{ color: 'var(--text)' }}>Global</strong> servers are available in all projects.{' '}
-        <strong style={{ color: 'var(--text)' }}>Project</strong> servers are specific to the current project.
+      <p className="text-text-semantic-muted" style={helpStyle}>MCP servers provide additional tools and capabilities to Claude Code.</p>
+      <p className="text-text-semantic-muted" style={helpStyle}>
+        <strong className="text-text-semantic-primary">Global</strong> servers are available in all projects.{' '}
+        <strong className="text-text-semantic-primary">Project</strong> servers are specific to the current project.
       </p>
-      <p style={{ ...helpStyle, margin: 0 }}>Changes are written directly to Claude Code settings files.</p>
+      <p className="text-text-semantic-muted" style={{ ...helpStyle, margin: 0 }}>Changes are written directly to Claude Code settings files.</p>
     </section>
   );
 }
@@ -192,7 +192,6 @@ const addFormHeaderStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--border)',
   fontSize: '12px',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 const errorBannerStyle: React.CSSProperties = {
@@ -201,7 +200,6 @@ const errorBannerStyle: React.CSSProperties = {
   border: '1px solid var(--error)',
   background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
   fontSize: '12px',
-  color: 'var(--error)',
 };
 
 const emptyStyle: React.CSSProperties = {
@@ -210,9 +208,8 @@ const emptyStyle: React.CSSProperties = {
   border: '1px dashed var(--border)',
   background: 'var(--bg-tertiary)',
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
   textAlign: 'center',
 };
 
-const helpStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 8px 0', lineHeight: 1.5 };
+const helpStyle: React.CSSProperties = { fontSize: '12px', margin: '0 0 8px 0', lineHeight: 1.5 };

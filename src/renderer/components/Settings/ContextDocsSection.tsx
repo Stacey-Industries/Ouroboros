@@ -39,7 +39,6 @@ const primaryButtonStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: 'none',
   background: 'var(--accent)',
-  color: '#fff',
   fontSize: '12px',
   fontWeight: 500,
   cursor: 'pointer',
@@ -64,7 +63,6 @@ const statusBoxStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
   fontSize: '12px',
-  color: 'var(--text)',
 };
 
 const resultRowStyle: React.CSSProperties = {
@@ -72,12 +70,10 @@ const resultRowStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   padding: '4px 0',
   fontSize: '12px',
-  color: 'var(--text-secondary, var(--text))',
 };
 
 const resultLabelStyle: React.CSSProperties = {
   fontWeight: 500,
-  color: 'var(--text)',
 };
 
 const progressBarContainerStyle: React.CSSProperties = {
@@ -107,7 +103,6 @@ const actionRowStyle: React.CSSProperties = {
 
 const modelHintStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   marginTop: '6px',
   fontFamily: 'var(--font-mono)',
 };
@@ -186,7 +181,7 @@ export function ContextDocsSection({
       {/* Header */}
       <div>
         <SectionLabel>CLAUDE.md Automation</SectionLabel>
-        <p style={claudeSectionHeaderTextStyle}>
+        <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
           Automatically generate and maintain CLAUDE.md context files so Claude Code agents
           always have accurate, up-to-date project knowledge.
         </p>
@@ -228,7 +223,7 @@ export function ContextDocsSection({
               <option value="sonnet">Sonnet (balanced)</option>
               <option value="opus">Opus (most thorough)</option>
             </SelectSection>
-            <p style={modelHintStyle}>
+            <p className="text-text-semantic-muted" style={modelHintStyle}>
               Haiku: ~2s per file, minimal cost. Sonnet: ~5s, good detail. Opus: ~15s, maximum fidelity.
             </p>
           </section>
@@ -275,13 +270,14 @@ export function ContextDocsSection({
           {/* Actions */}
           <section>
             <SectionLabel>Actions</SectionLabel>
-            <p style={claudeSectionSectionDescriptionStyle}>
+            <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
               Manually trigger CLAUDE.md generation for the current project.
             </p>
             <div style={actionRowStyle}>
               <button
                 onClick={() => handleGenerate(false)}
                 disabled={generating || !draft.defaultProjectRoot}
+                className="text-text-semantic-on-accent"
                 style={generating || !draft.defaultProjectRoot ? disabledButtonStyle : primaryButtonStyle}
                 onMouseOver={(e) => { if (!generating && draft.defaultProjectRoot) e.currentTarget.style.opacity = '0.85'; }}
                 onMouseOut={(e) => { e.currentTarget.style.opacity = '1'; }}
@@ -300,7 +296,7 @@ export function ContextDocsSection({
                 Full Sweep
               </button>
               {!draft.defaultProjectRoot && (
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <span className="text-text-semantic-muted" style={{ fontSize: '11px', fontStyle: 'italic' }}>
                   Open a project first
                 </span>
               )}
@@ -313,20 +309,20 @@ export function ContextDocsSection({
       {settings.enabled && (
         <section>
           <SectionLabel>Status</SectionLabel>
-          <div style={statusBoxStyle}>
+          <div className="text-text-semantic-primary" style={statusBoxStyle}>
             {/* Progress indicator when running */}
             {status?.running ? (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <span style={{ fontWeight: 500 }}>Generating...</span>
                   {status.progress && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
                       {status.progress.completed} / {status.progress.total}
                     </span>
                   )}
                 </div>
                 {status.currentDir && (
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px 0', fontFamily: 'var(--font-mono)' }}>
+                  <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: '0 0 6px 0', fontFamily: 'var(--font-mono)' }}>
                     {status.currentDir}
                   </p>
                 )}
@@ -344,35 +340,35 @@ export function ContextDocsSection({
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 500 }}>Last Run</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
                     {formatTimestamp(lastRun.timestamp)}
                   </span>
                 </div>
                 {resultCounts && (
                   <div>
-                    <div style={resultRowStyle}>
-                      <span style={resultLabelStyle}>Created</span>
+                    <div className="text-text-semantic-secondary" style={resultRowStyle}>
+                      <span className="text-text-semantic-primary" style={resultLabelStyle}>Created</span>
                       <span>{resultCounts.created}</span>
                     </div>
-                    <div style={resultRowStyle}>
-                      <span style={resultLabelStyle}>Updated</span>
+                    <div className="text-text-semantic-secondary" style={resultRowStyle}>
+                      <span className="text-text-semantic-primary" style={resultLabelStyle}>Updated</span>
                       <span>{resultCounts.updated}</span>
                     </div>
-                    <div style={resultRowStyle}>
-                      <span style={resultLabelStyle}>Skipped</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{resultCounts.skipped}</span>
+                    <div className="text-text-semantic-secondary" style={resultRowStyle}>
+                      <span className="text-text-semantic-primary" style={resultLabelStyle}>Skipped</span>
+                      <span className="text-text-semantic-muted">{resultCounts.skipped}</span>
                     </div>
                     {resultCounts.errors > 0 && (
-                      <div style={resultRowStyle}>
-                        <span style={{ ...resultLabelStyle, color: 'var(--error, #e55)' }}>Errors</span>
-                        <span style={{ color: 'var(--error, #e55)' }}>{resultCounts.errors}</span>
+                      <div className="text-text-semantic-secondary" style={resultRowStyle}>
+                        <span className="text-status-error" style={resultLabelStyle}>Errors</span>
+                        <span className="text-status-error">{resultCounts.errors}</span>
                       </div>
                     )}
                   </div>
                 )}
               </div>
             ) : (
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              <p className="text-text-semantic-muted" style={{ margin: 0, fontStyle: 'italic' }}>
                 No generation runs yet. Click &ldquo;Generate Now&rdquo; to start.
               </p>
             )}

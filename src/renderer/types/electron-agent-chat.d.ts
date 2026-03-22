@@ -1,6 +1,7 @@
 import type { AgentChatAPI as MainAgentChatAPI } from '../../main/agentChat/types'
 
 export type {
+  SessionMemoryEntry,
   ImageAttachment,
   ImageMimeType,
   AgentChatBranchInfo,

@@ -44,7 +44,7 @@ function KeybindingsLayout({
           keybindings={keybindings}
         />
       ))}
-      <p style={footerTextStyle}>
+      <p className="text-text-semantic-muted" style={footerTextStyle}>
         Keybinding changes take effect immediately after saving. Some shortcuts may not apply
         until the relevant panel or file is active.
       </p>
@@ -64,7 +64,7 @@ function KeybindingCategory({
   const actions = KEYBINDING_ACTIONS.filter((action) => action.category === category);
   return (
     <section>
-      <div style={categoryLabelStyle}>{category}</div>
+      <div className="text-text-semantic-muted" style={categoryLabelStyle}>{category}</div>
       <div style={categoryCardStyle}>
         {actions.map((action, index) => (
           <KeybindingRow
@@ -89,10 +89,10 @@ function KeybindingCategory({
 
 function KeybindingInstructions(): React.ReactElement {
   return (
-    <p style={instructionsStyle}>
-      Click <strong style={{ color: 'var(--text)' }}>Edit</strong> on an action, then press the
-      desired key combination. Press <kbd style={kbdStyle}>Escape</kbd> to cancel or{' '}
-      <kbd style={kbdStyle}>Enter</kbd> to confirm.
+    <p className="text-text-semantic-muted" style={instructionsStyle}>
+      Click <strong className="text-text-semantic-primary">Edit</strong> on an action, then press the
+      desired key combination. Press <kbd className="text-text-semantic-secondary" style={kbdStyle}>Escape</kbd> to cancel or{' '}
+      <kbd className="text-text-semantic-secondary" style={kbdStyle}>Enter</kbd> to confirm.
     </p>
   );
 }
@@ -108,19 +108,16 @@ const categoryLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   marginBottom: '8px',
 };
 
 const footerTextStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   marginTop: '4px',
 };
 
 const instructionsStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   margin: 0,
 };
 
@@ -133,7 +130,6 @@ const kbdStyle: React.CSSProperties = {
   background: 'var(--bg-secondary)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-secondary)',
   whiteSpace: 'nowrap',
 };
 

@@ -16,11 +16,11 @@ export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section style={{ marginTop: '24px' }}>
       <SectionLabel>Language Server Protocol (LSP)</SectionLabel>
-      <p style={descStyle}>
+      <p className="text-text-semantic-muted" style={descStyle}>
         Connect to language servers for code intelligence.
       </p>
       <div style={toggleRowStyle}>
-        <label style={{ fontSize: '13px', color: 'var(--text)', flex: 1 }}>Enable LSP</label>
+        <label className="text-text-semantic-primary" style={{ fontSize: '13px', flex: 1 }}>Enable LSP</label>
         <ToggleSwitch checked={draft.lspEnabled ?? false} onChange={(v) => onChange('lspEnabled', v)} />
       </div>
       {draft.lspEnabled && <LspServersInput draft={draft} onChange={onChange} />}
@@ -47,14 +47,15 @@ function LspServersInput({ draft, onChange }: Props): React.ReactElement {
 
   return (
     <div style={{ marginTop: '4px' }}>
-      <label style={sublabelStyle}>Custom Language Server Commands</label>
-      <p style={hintStyle}>
+      <label className="text-text-semantic-muted" style={sublabelStyle}>Custom Language Server Commands</label>
+      <p className="text-text-semantic-faint" style={hintStyle}>
         One entry per line: language=command (e.g. &quot;rust=rust-analyzer&quot;).
       </p>
       <textarea
         value={value}
         onChange={handleChange}
         rows={4}
+        className="text-text-semantic-primary"
         style={textareaStyle}
         placeholder={'typescript=typescript-language-server --stdio\npython=pylsp'}
       />
@@ -62,14 +63,14 @@ function LspServersInput({ draft, onChange }: Props): React.ReactElement {
   );
 }
 
-const descStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 };
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px', lineHeight: 1.5 };
 const toggleRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' };
-const sublabelStyle: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' };
-const hintStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-faint)', marginBottom: '8px', lineHeight: 1.4 };
+const sublabelStyle: React.CSSProperties = { fontSize: '12px', display: 'block', marginBottom: '6px' };
+const hintStyle: React.CSSProperties = { fontSize: '11px', marginBottom: '8px', lineHeight: 1.4 };
 
 const textareaStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', borderRadius: '6px',
   border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  color: 'var(--text)', fontSize: '12px', fontFamily: 'var(--font-mono)',
+  fontSize: '12px', fontFamily: 'var(--font-mono)',
   resize: 'vertical', outline: 'none', boxSizing: 'border-box',
 };

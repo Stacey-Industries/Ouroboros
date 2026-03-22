@@ -83,13 +83,14 @@ function SlotDropdown({
 }: SlotDropdownProps): React.ReactElement {
   return (
     <div>
-      <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', marginBottom: '4px' }}>
+      <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>
         {config.title}
       </div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={config.title}
+        className="text-text-semantic-primary"
         style={slotSelectStyle}
       >
         <option value="">(No override — use CLI default)</option>
@@ -97,7 +98,7 @@ function SlotDropdown({
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      <p style={slotDescriptionStyle}>{config.description}</p>
+      <p className="text-text-semantic-muted" style={slotDescriptionStyle}>{config.description}</p>
     </div>
   );
 }

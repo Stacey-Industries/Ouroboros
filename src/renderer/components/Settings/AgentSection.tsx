@@ -32,7 +32,7 @@ export function AgentSection({
     <div style={claudeSectionRootStyle}>
       <div>
         <SectionLabel>Agent Chat</SectionLabel>
-        <p style={claudeSectionHeaderTextStyle}>
+        <p className="text-text-semantic-muted" style={claudeSectionHeaderTextStyle}>
           Configure agent chat behavior, providers, and verification.
         </p>
       </div>

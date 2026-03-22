@@ -64,13 +64,13 @@ function FontSizeResetButton({
   return (
     <button
       onClick={onReset}
+      className="text-text-semantic-muted"
       style={{
         marginLeft: '8px',
         padding: '4px 8px',
         borderRadius: '4px',
         border: '1px solid var(--border)',
         background: 'transparent',
-        color: 'var(--text-muted)',
         fontSize: '11px',
         cursor: 'pointer',
       }}
@@ -100,12 +100,13 @@ function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.R
         value={fontSize}
         onChange={handleInputChange}
         aria-label="Terminal font size"
+        className="text-text-semantic-primary"
         style={inlineInputStyle}
       />
       <StepButton disabled={fontSize >= FONT_SIZE_MAX} label="Increase font size" onClick={() => onChange(fontSize + 1)}>
         +
       </StepButton>
-      <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>px</span>
+      <span className="text-text-semantic-muted" style={{ fontSize: '12px', marginLeft: '4px' }}>px</span>
       <FontSizeResetButton fontSize={fontSize} onReset={() => onChange(DEFAULT_FONT_SIZE)} />
     </div>
   );
@@ -115,7 +116,7 @@ function FontSizeSection({ fontSize, onChange }: FontSizeSectionProps): React.Re
   return (
     <section>
       <SectionLabel>Terminal Font Size</SectionLabel>
-      <p style={{ ...sectionHintStyle, marginBottom: '12px' }}>
+      <p className="text-text-semantic-muted" style={{ ...sectionHintStyle, marginBottom: '12px' }}>
         Range: {FONT_SIZE_MIN}-{FONT_SIZE_MAX}px. Default: {DEFAULT_FONT_SIZE}px.
       </p>
       <FontSizeControls fontSize={fontSize} onChange={onChange} />
@@ -144,7 +145,7 @@ function ShellSection({ shell, presets, onChange }: ShellSectionProps): React.Re
   return (
     <section>
       <SectionLabel>Default Shell</SectionLabel>
-      <p style={{ ...sectionHintStyle, marginBottom: '10px' }}>
+      <p className="text-text-semantic-muted" style={{ ...sectionHintStyle, marginBottom: '10px' }}>
         Shell executable used for new terminal sessions.
       </p>
       <ShellPresetButtons presets={presets} shell={shell} onChange={onChange} />
@@ -154,9 +155,10 @@ function ShellSection({ shell, presets, onChange }: ShellSectionProps): React.Re
         onChange={(event) => onChange(event.target.value)}
         placeholder="Auto-detected from system"
         aria-label="Default shell path"
+        className="text-text-semantic-primary"
         style={textInputStyle}
       />
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '6px' }}>
         Click a preset or enter a custom path. Changes apply to new terminal sessions.
       </p>
     </section>
@@ -194,6 +196,7 @@ function PromptCustomInput({
         onChange={(event) => onCustomPromptChange(event.target.value)}
         placeholder="e.g. \\u@\\h \\w $ "
         aria-label="Custom PS1 prompt string"
+        className="text-text-semantic-primary"
         style={textInputStyle}
       />
     </div>
@@ -210,7 +213,7 @@ function PromptSection({
   return (
     <section>
       <SectionLabel>Shell Prompt</SectionLabel>
-      <p style={{ ...sectionHintStyle, marginBottom: '12px' }}>
+      <p className="text-text-semantic-muted" style={{ ...sectionHintStyle, marginBottom: '12px' }}>
         Select a prompt style or enter a custom PS1. Only applies to POSIX shells (bash, zsh).
       </p>
       <PromptPresetButtons onPresetChange={onPresetChange} promptPreset={promptPreset} />
@@ -220,10 +223,10 @@ function PromptSection({
           onCustomPromptChange={onCustomPromptChange}
         />
       )}
-      <div aria-label="Prompt preview" style={previewBoxStyle}>
+      <div aria-label="Prompt preview" className="text-text-semantic-primary" style={previewBoxStyle}>
         {preview}
       </div>
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '6px' }}>
         Changes take effect in new terminal sessions.
       </p>
     </section>
@@ -244,7 +247,7 @@ function PreviewSection({ fontSize }: { fontSize: number }): React.ReactElement 
           </div>
         ))}
       </div>
-      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+      <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '6px' }}>
         Previewing at {fontSize}px
       </p>
     </section>

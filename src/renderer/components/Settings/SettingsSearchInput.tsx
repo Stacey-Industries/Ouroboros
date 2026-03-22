@@ -18,7 +18,7 @@ export function SettingsSearchInput({
   return (
     <div style={wrapperStyle}>
       <div style={{ position: 'relative' }}>
-        <span aria-hidden="true" style={iconStyle}>
+        <span aria-hidden="true" className="text-text-semantic-muted" style={iconStyle}>
           ⌕
         </span>
         <input
@@ -28,12 +28,14 @@ export function SettingsSearchInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label="Search settings"
+          className="text-text-semantic-primary"
           style={inputStyle}
         />
         {value && (
           <button
             onClick={() => onChange('')}
             aria-label="Clear search"
+            className="text-text-semantic-muted"
             style={clearStyle}
           >
             ×
@@ -46,9 +48,8 @@ export function SettingsSearchInput({
 
 const wrapperStyle: React.CSSProperties = {
   padding: '10px 16px',
-  borderBottom: '1px solid var(--border)',
   flexShrink: 0,
-  background: 'var(--bg-secondary)',
+  background: 'transparent',
 };
 
 const iconStyle: React.CSSProperties = {
@@ -57,7 +58,6 @@ const iconStyle: React.CSSProperties = {
   top: '50%',
   transform: 'translateY(-50%)',
   fontSize: '13px',
-  color: 'var(--text-muted)',
   pointerEvents: 'none',
   lineHeight: 1,
 };
@@ -68,7 +68,6 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '13px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -83,7 +82,6 @@ const clearStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   fontSize: '14px',
   lineHeight: 1,
   padding: '2px',

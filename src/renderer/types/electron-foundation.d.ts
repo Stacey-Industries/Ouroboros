@@ -152,6 +152,17 @@ export interface AppConfig {
   activeLayoutName: string
   extensionsEnabled: boolean
   disabledExtensions: string[]
+  installedVsxExtensions: Array<{
+    id: string; namespace: string; name: string; displayName: string;
+    version: string; description: string; installPath: string; installedAt: string;
+    contributes: {
+      themes?: Array<{ label: string; uiTheme: string; path: string }>;
+      grammars?: Array<{ language: string; scopeName: string; path: string }>;
+      snippets?: Array<{ language: string; path: string }>;
+      languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>;
+    };
+  }>
+  disabledVsxExtensions: string[]
   lspEnabled: boolean
   lspServers: Record<string, string>
   claudeAutoLaunch: boolean
@@ -169,6 +180,7 @@ export interface AppConfig {
   modelSlots: ModelSlotAssignments
   webAccessPort: number
   webAccessPassword: string
+  glassOpacity: number
 }
 
 export interface ContextLayerConfig {

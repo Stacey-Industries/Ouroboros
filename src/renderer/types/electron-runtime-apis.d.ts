@@ -165,6 +165,10 @@ export interface AppAPI {
   rebuildAndRestart: () => Promise<IpcResult>
   rebuildWeb: () => Promise<IpcResult>
   onMenuEvent: (callback: (event: MenuEvent) => void) => () => void
+  /** Custom window controls (frame: false on Windows) */
+  minimizeWindow: () => Promise<IpcResult>
+  toggleMaximizeWindow: () => Promise<IpcResult>
+  closeWindow: () => Promise<IpcResult>
 }
 
 export interface ShellAPI {

@@ -45,8 +45,8 @@ function FormField({ label, value, field, onChange, placeholder, autoFocus }: {
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label style={labelStyle}>{label}</label>
-      <input type="text" value={value} onChange={(e) => onChange(field, e.target.value)} placeholder={placeholder} style={inputStyle} autoFocus={autoFocus} />
+      <label className="text-text-semantic-secondary" style={labelStyle}>{label}</label>
+      <input type="text" value={value} onChange={(e) => onChange(field, e.target.value)} placeholder={placeholder} className="text-text-semantic-primary" style={inputStyle} autoFocus={autoFocus} />
     </div>
   );
 }
@@ -59,10 +59,10 @@ function EnvRowsEditor({ rows, onAdd, onRemove, onUpdate }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <label style={labelStyle}>Environment Variables</label>
-        <button onClick={onAdd} style={{ ...smallBtnStyle, fontSize: '10px', padding: '2px 8px' }}>+ Add</button>
+        <label className="text-text-semantic-secondary" style={labelStyle}>Environment Variables</label>
+        <button onClick={onAdd} className="text-text-semantic-muted" style={{ ...smallBtnStyle, fontSize: '10px', padding: '2px 8px' }}>+ Add</button>
       </div>
-      {rows.length === 0 && <span style={emptyEnvStyle}>No environment variables configured.</span>}
+      {rows.length === 0 && <span className="text-text-semantic-muted" style={emptyEnvStyle}>No environment variables configured.</span>}
       {rows.map((row, idx) => (
         <EnvRowInput key={idx} row={row} idx={idx} onUpdate={onUpdate} onRemove={onRemove} />
       ))}
@@ -77,10 +77,10 @@ function EnvRowInput({ row, idx, onUpdate, onRemove }: {
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-      <input type="text" value={row.key} onChange={(e) => onUpdate(idx, 'key', e.target.value)} placeholder="KEY" style={{ ...inputStyle, flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px' }} />
-      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>=</span>
-      <input type="text" value={row.value} onChange={(e) => onUpdate(idx, 'value', e.target.value)} placeholder="value" style={{ ...inputStyle, flex: 2, fontFamily: 'var(--font-mono)', fontSize: '11px' }} />
-      <button onClick={() => onRemove(idx)} style={{ ...smallBtnStyle, color: '#f87171', padding: '2px 6px', fontSize: '12px' }} title="Remove">x</button>
+      <input type="text" value={row.key} onChange={(e) => onUpdate(idx, 'key', e.target.value)} placeholder="KEY" className="text-text-semantic-primary" style={{ ...inputStyle, flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px' }} />
+      <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>=</span>
+      <input type="text" value={row.value} onChange={(e) => onUpdate(idx, 'value', e.target.value)} placeholder="value" className="text-text-semantic-primary" style={{ ...inputStyle, flex: 2, fontFamily: 'var(--font-mono)', fontSize: '11px' }} />
+      <button onClick={() => onRemove(idx)} className="text-status-error" style={{ ...smallBtnStyle, padding: '2px 6px', fontSize: '12px' }} title="Remove">x</button>
     </div>
   );
 }
@@ -90,7 +90,7 @@ function ScopeSelector({ scope, onChange }: {
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label style={labelStyle}>Scope</label>
+      <label className="text-text-semantic-secondary" style={labelStyle}>Scope</label>
       <div style={{ display: 'flex', gap: '12px' }}>
         <ScopeRadio label="Global (~/.claude/settings.json)" checked={scope === 'global'} onChange={() => onChange('global')} />
         <ScopeRadio label="Project (.claude/settings.json)" checked={scope === 'project'} onChange={() => onChange('project')} />
@@ -115,10 +115,10 @@ function FormActions({ isEdit, onSubmit, onCancel }: {
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-      <button onClick={onSubmit} style={{ ...buttonStyle, background: 'var(--accent)', color: 'var(--bg)', border: 'none', fontWeight: 600 }}>
+      <button onClick={onSubmit} className="text-text-semantic-on-accent" style={{ ...buttonStyle, background: 'var(--accent)', border: 'none', fontWeight: 600 }}>
         {isEdit ? 'Save Changes' : 'Add Server'}
       </button>
-      <button onClick={onCancel} style={buttonStyle}>Cancel</button>
+      <button onClick={onCancel} className="text-text-semantic-primary" style={buttonStyle}>Cancel</button>
     </div>
   );
 }
@@ -130,5 +130,5 @@ const formContainerStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: '10px',
 };
 
-const emptyEnvStyle: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' };
-const radioLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text)', cursor: 'pointer' };
+const emptyEnvStyle: React.CSSProperties = { fontSize: '11px', fontStyle: 'italic' };
+const radioLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' };
