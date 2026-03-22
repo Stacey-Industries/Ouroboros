@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFileViewerManager, Breadcrumb, FileViewer } from '../FileViewer';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFileViewerManager, FileViewer } from '../FileViewer';
 import { useMultiBufferManager, AddExcerptForm } from '../FileViewer/MultiBufferManager';
 import { MultiBufferView } from '../FileViewer/MultiBufferView';
 import { useProject } from '../../contexts/ProjectContext';
@@ -193,40 +193,6 @@ function useMultiBufferEvents(): {
   return { activeMultiBufferId, setActiveMultiBufferId, showAddExcerpt, setShowAddExcerpt };
 }
 
-function useNavigateToDir(): (dirPath: string) => void {
-  return useMemo(
-    () => (dirPath: string) => {
-      window.dispatchEvent(
-        new CustomEvent('agent-ide:reveal-in-tree', { detail: { dirPath } }),
-      );
-    },
-    [],
-  );
-}
-
-function FileContentHeader({
-  filePath,
-  projectRoot,
-}: {
-  filePath: string | null;
-  projectRoot: string | null;
-}): React.ReactElement {
-  const onNavigateToDir = useNavigateToDir();
-  return (
-    <div
-      className="bg-surface-panel border-b border-border-semantic"
-      style={{
-        flexShrink: 0,
-        height: '28px',
-        display: 'flex',
-        alignItems: 'center',
-      }}
-    >
-      <Breadcrumb filePath={filePath} projectRoot={projectRoot} onNavigateToDir={onNavigateToDir} />
-    </div>
-  );
-}
-
 function FileContentView({
   activeFile,
   projectRoot,
@@ -245,29 +211,24 @@ function FileContentView({
   const fileView = normalizeFileView(activeFile);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <FileContentHeader filePath={fileView.path} projectRoot={projectRoot} />
-      <div style={CONTENT_BODY_STYLE}>
-        <FileViewer
-          filePath={fileView.path}
-          content={fileView.content}
-          isLoading={fileView.isLoading}
-          error={fileView.error}
-          isDirtyOnDisk={fileView.isDirtyOnDisk}
-          onReload={onReload}
-          originalContent={fileView.originalContent}
-          projectRoot={projectRoot}
-          isImage={fileView.isImage}
-          isPdf={fileView.isPdf}
-          isBinary={fileView.isBinary}
-          binaryContent={fileView.binaryContent}
-          onSave={onSave}
-          onContentChange={onContentChange}
-          onCancelEdit={onCancelEdit}
-          isDirty={fileView.isDirty}
-        />
-      </div>
-    </div>
+    <FileViewer
+      filePath={fileView.path}
+      content={fileView.content}
+      isLoading={fileView.isLoading}
+      error={fileView.error}
+      isDirtyOnDisk={fileView.isDirtyOnDisk}
+      onReload={onReload}
+      originalContent={fileView.originalContent}
+      projectRoot={projectRoot}
+      isImage={fileView.isImage}
+      isPdf={fileView.isPdf}
+      isBinary={fileView.isBinary}
+      binaryContent={fileView.binaryContent}
+      onSave={onSave}
+      onContentChange={onContentChange}
+      onCancelEdit={onCancelEdit}
+      isDirty={fileView.isDirty}
+    />
   );
 }
 
@@ -588,27 +549,24 @@ function SplitContentView({
         }}
         onClick={onFocusLeft}
       >
-        <FileContentHeader filePath={leftView.path} projectRoot={projectRoot} />
-        <div style={CONTENT_BODY_STYLE}>
-          <FileViewer
-            filePath={leftView.path}
-            content={leftView.content}
-            isLoading={leftView.isLoading}
-            error={leftView.error}
-            isDirtyOnDisk={leftView.isDirtyOnDisk}
-            onReload={leftActions.handleReload}
-            originalContent={leftView.originalContent}
-            projectRoot={projectRoot}
-            isImage={leftView.isImage}
-            isPdf={leftView.isPdf}
-            isBinary={leftView.isBinary}
-            binaryContent={leftView.binaryContent}
-            onSave={leftActions.handleSave}
-            onContentChange={leftActions.handleContentChange}
-            onCancelEdit={leftActions.handleCancelEdit}
-            isDirty={leftView.isDirty}
-          />
-        </div>
+        <FileViewer
+          filePath={leftView.path}
+          content={leftView.content}
+          isLoading={leftView.isLoading}
+          error={leftView.error}
+          isDirtyOnDisk={leftView.isDirtyOnDisk}
+          onReload={leftActions.handleReload}
+          originalContent={leftView.originalContent}
+          projectRoot={projectRoot}
+          isImage={leftView.isImage}
+          isPdf={leftView.isPdf}
+          isBinary={leftView.isBinary}
+          binaryContent={leftView.binaryContent}
+          onSave={leftActions.handleSave}
+          onContentChange={leftActions.handleContentChange}
+          onCancelEdit={leftActions.handleCancelEdit}
+          isDirty={leftView.isDirty}
+        />
       </div>
 
       {/* Split divider */}
@@ -624,27 +582,24 @@ function SplitContentView({
         onClick={onFocusRight}
       >
         <CloseSplitButton onClick={onCloseSplit} />
-        <FileContentHeader filePath={rightView.path} projectRoot={projectRoot} />
-        <div style={CONTENT_BODY_STYLE}>
-          <FileViewer
-            filePath={rightView.path}
-            content={rightView.content}
-            isLoading={rightView.isLoading}
-            error={rightView.error}
-            isDirtyOnDisk={rightView.isDirtyOnDisk}
-            onReload={rightActions.handleReload}
-            originalContent={rightView.originalContent}
-            projectRoot={projectRoot}
-            isImage={rightView.isImage}
-            isPdf={rightView.isPdf}
-            isBinary={rightView.isBinary}
-            binaryContent={rightView.binaryContent}
-            onSave={rightActions.handleSave}
-            onContentChange={rightActions.handleContentChange}
-            onCancelEdit={rightActions.handleCancelEdit}
-            isDirty={rightView.isDirty}
-          />
-        </div>
+        <FileViewer
+          filePath={rightView.path}
+          content={rightView.content}
+          isLoading={rightView.isLoading}
+          error={rightView.error}
+          isDirtyOnDisk={rightView.isDirtyOnDisk}
+          onReload={rightActions.handleReload}
+          originalContent={rightView.originalContent}
+          projectRoot={projectRoot}
+          isImage={rightView.isImage}
+          isPdf={rightView.isPdf}
+          isBinary={rightView.isBinary}
+          binaryContent={rightView.binaryContent}
+          onSave={rightActions.handleSave}
+          onContentChange={rightActions.handleContentChange}
+          onCancelEdit={rightActions.handleCancelEdit}
+          isDirty={rightView.isDirty}
+        />
       </div>
     </div>
   );

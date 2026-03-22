@@ -52,6 +52,7 @@ export default defineConfig({
   },
   renderer: {
     root: 'src/renderer',
+    publicDir: resolve(__dirname, 'public'),
     plugins: [
       react(),
       (monacoEditorPlugin as (opts: Record<string, unknown>) => unknown)({

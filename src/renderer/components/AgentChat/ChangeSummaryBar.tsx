@@ -294,10 +294,10 @@ export function CompletedChangeSummaryBar({
   const openFullReview = useCallback(() => {
     window.dispatchEvent(
       new CustomEvent('agent-ide:open-diff-review', {
-        detail: { sessionId, snapshotHash, projectRoot },
+        detail: { sessionId, snapshotHash, projectRoot, filePaths: tally?.filesChanged },
       }),
     );
-  }, [sessionId, snapshotHash, projectRoot]);
+  }, [sessionId, snapshotHash, projectRoot, tally?.filesChanged]);
 
   const fileCount = tally?.filesChanged.length ?? 0;
 

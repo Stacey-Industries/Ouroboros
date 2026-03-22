@@ -635,6 +635,75 @@ function useSaveAllDirtyListener(
   }, [openFilesRef, saveFile]);
 }
 
+function useSaveActiveFileListener(
+  openFilesRef: React.RefObject<OpenFile[]>,
+  activeIndexRef: React.RefObject<number>,
+  saveFile: (filePath: string, content?: string) => Promise<SaveFileResult>,
+): void {
+  useEffect(() => {
+    function onSaveActive(): void {
+      const files = openFilesRef.current ?? [];
+      const idx = activeIndexRef.current ?? 0;
+      const file = files[idx];
+      if (file && file.isDirty && file.content != null) {
+        void saveFile(file.path, file.content);
+      }
+    }
+    window.addEventListener('agent-ide:save-active-file', onSaveActive);
+    return () => window.removeEventListener('agent-ide:save-active-file', onSaveActive);
+  }, [openFilesRef, activeIndexRef, saveFile]);
+}
+
+function useCloseActiveTabListener(
+  openFilesRef: React.RefObject<OpenFile[]>,
+  activeIndexRef: React.RefObject<number>,
+  closeFile: (filePath: string) => void,
+): void {
+  useEffect(() => {
+    function onCloseTab(): void {
+      const files = openFilesRef.current ?? [];
+      const idx = activeIndexRef.current ?? 0;
+      const file = files[idx];
+      if (file) closeFile(file.path);
+    }
+    window.addEventListener('agent-ide:close-active-tab', onCloseTab);
+    return () => window.removeEventListener('agent-ide:close-active-tab', onCloseTab);
+  }, [openFilesRef, activeIndexRef, closeFile]);
+}
+
+function useNewFileListener(
+  setOpenFiles: SetOpenFiles,
+  setActiveIndex: SetActiveIndex,
+): void {
+  useEffect(() => {
+    let untitledCounter = 1;
+    function onNewFile(): void {
+      const fileName = `Untitled-${untitledCounter++}`;
+      const newFile: OpenFile = {
+        path: fileName,
+        name: fileName,
+        content: '',
+        originalContent: '',
+        diskContent: null,
+        isLoading: false,
+        error: null,
+        isDirty: false,
+        isPinned: true,
+        isPreview: false,
+        isDirtyOnDisk: false,
+        saveError: null,
+      };
+      setOpenFiles((prev) => {
+        const next = [...prev, newFile];
+        setActiveIndex(next.length - 1);
+        return next;
+      });
+    }
+    window.addEventListener('agent-ide:new-file', onNewFile);
+    return () => window.removeEventListener('agent-ide:new-file', onNewFile);
+  }, [setOpenFiles, setActiveIndex]);
+}
+
 const DEFAULT_SPLIT_STATE: SplitState = {
   isSplit: false,
   activeSplit: 'left',
@@ -727,11 +796,14 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
   const [activeIndex, setActiveIndex] = useState(0);
   const openFilesRef = useRef(openFiles);
   openFilesRef.current = openFiles;
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
   useProjectChangeListener(projectRoot, setOpenFiles);
   const openFile = useOpenFileAction(setOpenFiles, setActiveIndex);
   const openFilePreview = useOpenFilePreviewAction(setOpenFiles, setActiveIndex);
   useReloadFileListener(setOpenFiles);
   useOpenFileListener(openFile);
+  useNewFileListener(setOpenFiles, setActiveIndex);
   const closeFile = useCloseFileAction(setOpenFiles, setActiveIndex);
   const closeOthers = useCloseOthersAction(setOpenFiles, setActiveIndex);
   const closeToRight = useCloseToRightAction(setOpenFiles, setActiveIndex);
@@ -746,6 +818,8 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
   const updateDraft = useUpdateDraftAction(setOpenFiles);
   const discardDraft = useDiscardDraftAction(setOpenFiles);
   useSaveAllDirtyListener(openFilesRef, saveFile);
+  useSaveActiveFileListener(openFilesRef, activeIndexRef, saveFile);
+  useCloseActiveTabListener(openFilesRef, activeIndexRef, closeFile);
 
   const { split, splitRight, closeSplit, setActiveSplit, setSplitRatio, rightFile } =
     useSplitState(openFiles, activeIndex);

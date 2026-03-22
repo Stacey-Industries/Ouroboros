@@ -65,11 +65,6 @@ class ChatErrorBoundary extends React.Component<
 }
 import { IdeToolBridge } from './IdeToolBridge';
 import { SidebarSections } from './SidebarSections';
-import { ExtensionsPanel,GitSidebarPanel, SearchPanel } from './SidebarViewPanels';
-
-function hasElectronAPI(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window;
-}
 
 export interface InnerAppLayoutProps {
   projectRoot: string | null;
@@ -112,6 +107,10 @@ export interface InnerAppLayoutProps {
   perfOverlayVisible: boolean;
 }
 
+function hasElectronAPI(): boolean {
+  return typeof window !== 'undefined' && 'electronAPI' in window;
+}
+
 type ProjectPickerSlotProps = Pick<
   InnerAppLayoutProps,
   'projectRoot' | 'recentProjects' | 'handleProjectChange' | 'addProjectRoot' | 'setRecentProjects'
@@ -131,32 +130,6 @@ type LayoutOverlaysProps = Pick<
   'filePickerOpen' | 'setFilePickerOpen' | 'projectRoot' |
   'symbolSearchOpen' | 'setSymbolSearchOpen' | 'perfOverlayVisible'
 >;
-
-function ProjectPickerSlot({
-  projectRoot,
-  recentProjects,
-  handleProjectChange,
-  addProjectRoot,
-  setRecentProjects,
-  rootCount,
-}: ProjectPickerSlotProps): React.ReactElement {
-  const handleAddProject = useCallback((path: string) => {
-    addProjectRoot(path);
-    const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
-    setRecentProjects(updated);
-    if (hasElectronAPI()) void window.electronAPI.config.set('recentProjects', updated);
-  }, [addProjectRoot, recentProjects, setRecentProjects]);
-
-  return (
-    <ProjectPicker
-      currentPath={projectRoot}
-      recentProjects={recentProjects}
-      onSelectProject={(path) => void handleProjectChange(path)}
-      onAddProject={handleAddProject}
-      rootCount={rootCount}
-    />
-  );
-}
 
 function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutProps'] {
   const {
@@ -262,11 +235,29 @@ function TerminalPanelContent({
   );
 }
 
-function SidebarViewHeader({ title }: { title: string }): React.ReactElement {
+function ProjectPickerSlot({
+  projectRoot,
+  recentProjects,
+  handleProjectChange,
+  addProjectRoot,
+  setRecentProjects,
+  rootCount,
+}: ProjectPickerSlotProps): React.ReactElement {
+  const handleAddProject = useCallback((path: string) => {
+    addProjectRoot(path);
+    const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
+    setRecentProjects(updated);
+    if (hasElectronAPI()) void window.electronAPI.config.set('recentProjects', updated);
+  }, [addProjectRoot, recentProjects, setRecentProjects]);
+
   return (
-    <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">
-      {title}
-    </span>
+    <ProjectPicker
+      currentPath={projectRoot}
+      recentProjects={recentProjects}
+      onSelectProject={(path) => void handleProjectChange(path)}
+      onAddProject={handleAddProject}
+      rootCount={rootCount}
+    />
   );
 }
 
@@ -279,16 +270,6 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
       sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
-      sidebarViewContent={{
-        search: <SearchPanel />,
-        git: <GitSidebarPanel />,
-        extensions: <ExtensionsPanel />,
-      }}
-      sidebarViewHeaders={{
-        search: <SidebarViewHeader title="Search" />,
-        git: <SidebarViewHeader title="Source Control" />,
-        extensions: <SidebarViewHeader title="Extensions" />,
-      }}
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<TerminalPanelContent {...props} />}

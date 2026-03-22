@@ -12,7 +12,7 @@ import type {
 } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
-import { clearPersistedDraft } from './useAgentChatDraftPersistence';
+import { clearPersistedDraft, isDraftThreadId } from './useAgentChatDraftPersistence';
 import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
 
 export interface SendMessageArgs {
@@ -180,9 +180,14 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
         overrides.permissionMode = a.chatOverrides.permissionMode;
       }
 
+      // Draft IDs (from "+" tabs) mean "create new thread" — pass undefined.
+      const resolvedThreadId = isDraftThreadId(a.activeThreadId)
+        ? undefined
+        : (a.activeThreadId ?? undefined);
+
       const t2 = performance.now();
       const result = await window.electronAPI.agentChat.sendMessage({
-        threadId: a.activeThreadId ?? undefined,
+        threadId: resolvedThreadId,
         workspaceRoot: a.projectRoot,
         content,
         attachments: a.attachments?.length ? a.attachments : undefined,
@@ -223,6 +228,11 @@ export function useSendMessageAction(args: SendMessageArgs): () => Promise<void>
         console.log('[agentChat:timing] time-to-render after send:', (performance.now() - t4).toFixed(0), 'ms');
       });
       clearPersistedDraft(result.thread?.id ?? a.activeThreadId);
+      // When a thread was created from a draft tab, clean up the draft's
+      // localStorage entry so it doesn't linger.
+      if (isDraftThreadId(a.activeThreadId) && result.thread) {
+        clearPersistedDraft(a.activeThreadId);
+      }
     } catch (sendError) {
       a.setError(getErrorMessage(sendError));
       // Restore the draft so the user doesn't lose their message on failure.

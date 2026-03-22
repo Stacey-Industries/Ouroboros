@@ -388,6 +388,30 @@ export const MonacoEditor = memo(function MonacoEditor(
     }
   }, [content, onDirtyChange]);
 
+  // ── Find / Replace via menu events ────────────────────────────────────
+  useEffect(() => {
+    function onFind(): void {
+      editorRef.current?.focus();
+      editorRef.current?.getAction('actions.find')?.run();
+    }
+    function onReplace(): void {
+      editorRef.current?.focus();
+      editorRef.current?.getAction('editor.action.startFindReplaceAction')?.run();
+    }
+    function onGoToLine(): void {
+      editorRef.current?.focus();
+      editorRef.current?.getAction('editor.action.gotoLine')?.run();
+    }
+    window.addEventListener('agent-ide:find', onFind);
+    window.addEventListener('agent-ide:replace', onReplace);
+    window.addEventListener('agent-ide:go-to-line', onGoToLine);
+    return () => {
+      window.removeEventListener('agent-ide:find', onFind);
+      window.removeEventListener('agent-ide:replace', onReplace);
+      window.removeEventListener('agent-ide:go-to-line', onGoToLine);
+    };
+  }, []);
+
   // ── Focus editor imperatively ──────────────────────────────────────────
   const handleContainerClick = useCallback(() => {
     editorRef.current?.focus();

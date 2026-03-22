@@ -1,20 +1,17 @@
 export { AppLayout } from './AppLayout';
 export type { AppLayoutProps, AppLayoutSlots, TerminalPaneControl } from './AppLayout';
 
-export { ActivityBar } from './ActivityBar';
-export type { ActivityBarProps, SidebarView } from './ActivityBar';
-
 export { ResizeHandle } from './ResizeHandle';
 export type { ResizeHandleProps } from './ResizeHandle';
 
-export { Sidebar, CollapsedSidebarStrip } from './Sidebar';
+export { Sidebar } from './Sidebar';
 export type { SidebarProps } from './Sidebar';
 
 export { CentrePane } from './CentrePane';
 export type { CentrePaneProps } from './CentrePane';
 
-export { AgentMonitorPane, CollapsedAgentStrip } from './AgentMonitorPane';
-export type { AgentMonitorPaneProps, AgentSummary } from './AgentMonitorPane';
+export { AgentMonitorPane } from './AgentMonitorPane';
+export type { AgentMonitorPaneProps } from './AgentMonitorPane';
 
 export { TerminalPane } from './TerminalPane';
 export type { TerminalPaneProps } from './TerminalPane';

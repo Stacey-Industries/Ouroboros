@@ -19,9 +19,9 @@ const CONTAINER_STYLE: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   height: '100%',
-  flex: 1,
   overflow: 'hidden',
   position: 'relative',
+  minWidth: 0,
 };
 
 const TAB_LIST_STYLE: React.CSSProperties = {

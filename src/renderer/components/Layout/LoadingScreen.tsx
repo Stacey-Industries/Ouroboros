@@ -4,10 +4,12 @@
 
 import React from 'react';
 
+import ouroborosLogo from '../../../../public/OUROBOROS.png';
+
 export function LoadingScreen(): React.ReactElement {
   return (
     <div
-      className="bg-surface-base text-text-semantic-muted"
+      className="text-text-semantic-muted"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -15,30 +17,24 @@ export function LoadingScreen(): React.ReactElement {
         width: '100vw',
         height: '100vh',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '20px',
+        background: 'transparent',
       }}
     >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        style={{ animation: 'spin 1s linear infinite' }}
-      >
-        <circle cx="12" cy="12" r="10" stroke="var(--border-semantic)" strokeWidth="2" />
-        <path
-          d="M12 2a10 10 0 0 1 10 10"
-          stroke="var(--interactive-accent)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span style={{ fontSize: '13px', fontFamily: 'var(--font-ui, system-ui)' }}>
+      <img
+        src={ouroborosLogo}
+        alt="Ouroboros"
+        draggable={false}
+        style={{
+          width: '64px',
+          height: '64px',
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 0 24px rgba(88, 166, 255, 0.15))',
+        }}
+      />
+      <span style={{ fontSize: '11px', fontFamily: 'var(--font-ui, system-ui)', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
         Loading…
       </span>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -180,7 +180,7 @@ export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer
           content={block.content}
           duration={block.duration}
           isStreaming={isStreaming && isLastBlock}
-          collapsed={thinkingCollapsed && !isStreaming}
+          collapsed={thinkingCollapsed}
           onToggleCollapse={() => setThinkingCollapsed((c) => !c)}
         />
       );

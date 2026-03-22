@@ -205,17 +205,19 @@ function buildDisplayUsage(args: {
   threadModelUsage?: ModelUsageEntry[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
 }): ModelUsageEntry[] {
-  // If streaming token usage exists for the active model, use it as the display value
-  // even if persisted usage hasn't arrived yet — it represents current state.
-  if (args.streamingTokenUsage && args.activeModel) {
-    return [{ model: args.activeModel, ...args.streamingTokenUsage }];
+  if (!args.activeModel) return [];
+  const persisted = (args.threadModelUsage ?? []).find((entry) => entry.model === args.activeModel);
+  const base = persisted ?? { model: args.activeModel, inputTokens: 0, outputTokens: 0 };
+  // During streaming, add the live turn's tokens to the persisted total.
+  // Each send creates a fresh adapter so streamingTokenUsage is per-send only.
+  if (args.streamingTokenUsage) {
+    return [{
+      model: args.activeModel,
+      inputTokens: base.inputTokens + args.streamingTokenUsage.inputTokens,
+      outputTokens: base.outputTokens + args.streamingTokenUsage.outputTokens,
+    }];
   }
-  const usage = args.threadModelUsage ?? [];
-  // Don't pre-add the active model with 0 tokens — only show actual usage data.
-  // This prevents the context ring from appearing at 0% at the start of a conversation.
-  if (!args.activeModel) return usage;
-  if (usage.some((entry) => entry.model === args.activeModel)) return usage;
-  return usage;
+  return [base];
 }
 
 function formatTokenCount(count: number): string {

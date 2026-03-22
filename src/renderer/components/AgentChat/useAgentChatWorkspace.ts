@@ -21,7 +21,7 @@ import {
   useThreadState,
 } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
-import { useAgentChatDraftPersistence } from './useAgentChatDraftPersistence';
+import { createDraftThreadId, isDraftThreadId, useAgentChatDraftPersistence } from './useAgentChatDraftPersistence';
 import { useAgentChatLinkedDetails } from './useAgentChatLinkedDetails';
 
 export interface QueuedMessage {
@@ -119,7 +119,7 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
     const saved = chatOverridesMapRef.current.get(threadState.activeThreadId);
     if (saved) {
       setChatOverridesState(saved);
-    } else if (threadState.activeThreadId === null) {
+    } else if (threadState.activeThreadId === null || isDraftThreadId(threadState.activeThreadId)) {
       // Starting a fresh "new chat" — reset to defaults
       setChatOverridesState(DEFAULT_CHAT_OVERRIDES);
     }
@@ -334,7 +334,13 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
     sendMessage,
     setContextFilePaths: controller.setContextFilePaths,
     setDraft: controller.setDraft,
-    startNewChat: actions.startNewChat,
+    startNewChat: () => {
+      // Each "+" click creates a unique draft tab (Cursor-style).
+      const draftId = createDraftThreadId();
+      controller.setDraft('');
+      controller.threadState.setActiveThreadId(draftId);
+      controller.threadState.setError(null);
+    },
     stopTask: actions.stopTask,
     threads: controller.threadState.threads,
     queuedMessages: controller.queuedMessages,

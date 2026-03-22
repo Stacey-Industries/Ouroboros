@@ -5,12 +5,13 @@
  * via a settings/view dropdown in the header, not as competing tabs.
  *
  * Header layout:
- *   [Collapse] [History] [thread title] [+ New] [View Switcher]
+ *   [History] [thread title] [+ New] [View Switcher]
  */
 
 import React, { useState, useCallback, memo, useEffect, useRef } from 'react';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import { ChatHistoryPanel } from '../AgentChat/ChatHistoryPanel';
+import { isDraftThreadId } from '../AgentChat/useAgentChatDraftPersistence';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
@@ -27,20 +28,13 @@ export interface RightSidebarTabsProps {
   /** Chat thread data — passed through from AgentChatWorkspace */
   threads?: AgentChatThreadRecord[];
   activeThreadId?: string | null;
-  onSelectThread?: (threadId: string) => void;
+  onSelectThread?: (threadId: string | null) => void;
   onDeleteThread?: (threadId: string) => void;
   onNewChat?: () => void;
 }
 
 /* ── Icons ── */
 
-function CollapseIcon(): React.ReactElement {
-  return (
-    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function HistoryIcon(): React.ReactElement {
   return (
@@ -213,25 +207,15 @@ function ViewSwitcherDropdown({
 function SecondaryViewHeader({
   label,
   onBackToChat,
-  onCollapse,
 }: {
   label: string;
   onBackToChat: () => void;
-  onCollapse: () => void;
 }): React.ReactElement {
   return (
     <div
-      className="flex-shrink-0 flex items-center h-8 border-b bg-surface-panel"
+      className="flex-shrink-0 flex items-center h-8 border-b bg-surface-panel pl-2"
       style={{ borderColor: 'var(--border-muted, var(--border))' }}
     >
-      <button
-        onClick={onCollapse}
-        title="Collapse sidebar (Ctrl+\)"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100"
-      >
-        <CollapseIcon />
-      </button>
-
       <button
         onClick={onBackToChat}
         className="flex items-center gap-1 px-1.5 text-xs transition-colors duration-100 text-text-semantic-muted"
@@ -265,7 +249,6 @@ function ChatPanelHeader({
   historyOpen,
   onToggleHistory,
   onNewChat,
-  onCollapse,
   viewDropdownOpen,
   onToggleViewDropdown,
   activeView,
@@ -276,7 +259,6 @@ function ChatPanelHeader({
   historyOpen: boolean;
   onToggleHistory: () => void;
   onNewChat: () => void;
-  onCollapse: () => void;
   viewDropdownOpen: boolean;
   onToggleViewDropdown: () => void;
   activeView: RightSidebarView;
@@ -284,17 +266,9 @@ function ChatPanelHeader({
 }): React.ReactElement {
   return (
     <div
-      className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel"
+      className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel pl-2"
       style={{ borderColor: 'var(--border-muted, var(--border))' }}
     >
-      <button
-        onClick={onCollapse}
-        title="Collapse sidebar (Ctrl+\)"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100"
-      >
-        <CollapseIcon />
-      </button>
-
       <button
         data-history-toggle
         onClick={onToggleHistory}
@@ -430,21 +404,43 @@ function ThreadStatusIcon({ status }: { status: string }): React.ReactElement {
 
 const MAX_RECENT_TABS = 5;
 
+function TabCloseButton({ onClick }: { onClick: (e: React.MouseEvent) => void }): React.ReactElement {
+  return (
+    <span
+      role="button"
+      tabIndex={-1}
+      aria-label="Close tab"
+      onClick={onClick}
+      className="shrink-0 rounded opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity duration-100"
+      style={{ padding: '0 1px', lineHeight: 1 }}
+    >
+      <svg className="h-2.5 w-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <path d="M2 2l6 6M8 2l-6 6" />
+      </svg>
+    </span>
+  );
+}
+
 function RecentThreadTabs({
   threads,
   activeThreadId,
   onSelect,
+  onClose,
+  draftTabs,
 }: {
   threads: AgentChatThreadRecord[];
   activeThreadId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
+  onClose: (id: string) => void;
+  draftTabs?: string[];
 }): React.ReactElement | null {
   // Show the most recently updated threads (up to 5)
   const recentThreads = [...threads]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, MAX_RECENT_TABS);
 
-  if (recentThreads.length === 0) return null;
+  const drafts = draftTabs ?? [];
+  if (recentThreads.length === 0 && drafts.length === 0) return null;
 
   return (
     <div
@@ -454,13 +450,46 @@ function RecentThreadTabs({
         scrollbarWidth: 'none',
       }}
     >
+      {drafts.map((draftId) => {
+        const isActive = activeThreadId === draftId;
+        return (
+          <button
+            key={draftId}
+            onClick={() => onSelect(draftId)}
+            className={`group flex items-center gap-1 shrink-0 px-2 py-1 text-[10px] transition-colors duration-100 relative ${isActive ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
+            style={{
+              backgroundColor: isActive ? 'color-mix(in srgb, var(--interactive-accent) 10%, transparent)' : 'transparent',
+              borderRadius: '4px 4px 0 0',
+            }}
+            title="New Chat"
+            onMouseEnter={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '';
+              }
+            }}
+          >
+            <span className="truncate max-w-[90px]">New Chat</span>
+            <TabCloseButton onClick={(e) => { e.stopPropagation(); onClose(draftId); }} />
+            {isActive && (
+              <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-interactive-accent" />
+            )}
+          </button>
+        );
+      })}
       {recentThreads.map((thread) => {
         const isActive = thread.id === activeThreadId;
         return (
           <button
             key={thread.id}
             onClick={() => onSelect(thread.id)}
-            className="flex items-center gap-1 shrink-0 px-2 py-1 text-[10px] transition-colors duration-100 relative text-text-semantic-muted"
+            className="group flex items-center gap-1 shrink-0 px-2 py-1 text-[10px] transition-colors duration-100 relative text-text-semantic-muted"
             style={{
               color: isActive ? 'var(--interactive-accent)' : undefined,
               backgroundColor: isActive ? 'color-mix(in srgb, var(--interactive-accent) 10%, transparent)' : 'transparent',
@@ -482,6 +511,7 @@ function RecentThreadTabs({
           >
             <ThreadStatusIcon status={thread.status} />
             <span className="truncate max-w-[90px]">{thread.title || 'Chat'}</span>
+            <TabCloseButton onClick={(e) => { e.stopPropagation(); onClose(thread.id); }} />
             {isActive && (
               <span
                 className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-interactive-accent"
@@ -529,14 +559,48 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
   const [activeView, setActiveView] = useState<RightSidebarView>('chat');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
+  // Draft tabs — each "+" click creates a unique draft ID (Cursor-style).
+  // When a message is sent from a draft tab, the backend creates a real thread
+  // and the draft tab is removed.
+  const [draftTabs, setDraftTabs] = useState<string[]>([]);
+  // Real thread tabs the user has manually closed (hidden, not deleted).
+  const [dismissedTabs, setDismissedTabs] = useState<Set<string>>(new Set());
+
+  // Auto-track: when activeThreadId becomes a draft ID not yet in our list, add it.
+  // This handles both the "+" button and Ctrl+L (anything that calls startNewChat).
+  // Only reacts to activeThreadId changes — NOT draftTabs changes, otherwise closing
+  // a draft tab re-triggers this and re-adds the draft that was just removed.
+  const draftTabsRef = useRef(draftTabs);
+  draftTabsRef.current = draftTabs;
+  useEffect(() => {
+    if (isDraftThreadId(activeThreadId) && !draftTabsRef.current.includes(activeThreadId)) {
+      setDraftTabs((prev) => [...prev, activeThreadId]);
+    }
+  }, [activeThreadId]);
+
+  // Remove a draft tab when a real thread is created from it.
+  // Detect: activeThreadId was a draft ID, now it's a real thread ID that
+  // just appeared in the threads array.
+  const prevActiveIdRef = useRef(activeThreadId);
+  const prevThreadIdsRef = useRef<Set<string>>(new Set(threads.map((t) => t.id)));
+  useEffect(() => {
+    const wasId = prevActiveIdRef.current;
+    if (
+      isDraftThreadId(wasId) &&
+      activeThreadId !== null &&
+      !isDraftThreadId(activeThreadId) &&
+      !prevThreadIdsRef.current.has(activeThreadId)
+    ) {
+      // Draft → new real thread. Remove the draft tab.
+      setDraftTabs((prev) => prev.filter((id) => id !== wasId));
+    }
+    prevActiveIdRef.current = activeThreadId;
+    prevThreadIdsRef.current = new Set(threads.map((t) => t.id));
+  }, [activeThreadId, threads]);
 
   useAgentChatViewFocus(setActiveView);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
-
-  const handleCollapse = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('agent-ide:toggle-agent-monitor'));
-  }, []);
 
   const handleToggleHistory = useCallback(() => {
     setHistoryOpen((prev) => !prev);
@@ -552,6 +616,28 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
     onNewChat?.();
     setHistoryOpen(false);
   }, [onNewChat]);
+
+  const handleCloseTab = useCallback((id: string) => {
+    if (isDraftThreadId(id)) {
+      setDraftTabs((prev) => prev.filter((d) => d !== id));
+    } else {
+      setDismissedTabs((prev) => new Set(prev).add(id));
+    }
+    // If closing the active tab, switch to the most recent thread or the first draft
+    if (activeThreadId === id) {
+      const remaining = threads.filter((t) => t.id !== id && !dismissedTabs.has(t.id));
+      const remainingDrafts = isDraftThreadId(id)
+        ? draftTabs.filter((d) => d !== id)
+        : draftTabs;
+      if (remainingDrafts.length > 0) {
+        onSelectThread?.(remainingDrafts[remainingDrafts.length - 1]);
+      } else if (remaining.length > 0) {
+        onSelectThread?.(remaining[0].id);
+      } else {
+        onSelectThread?.(null);
+      }
+    }
+  }, [activeThreadId, threads, draftTabs, dismissedTabs, onSelectThread, onNewChat]);
 
   const handleSwitchView = useCallback((view: RightSidebarView) => {
     setActiveView(view);
@@ -589,7 +675,6 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
           historyOpen={historyOpen}
           onToggleHistory={handleToggleHistory}
           onNewChat={handleNewChat}
-          onCollapse={handleCollapse}
           viewDropdownOpen={viewDropdownOpen}
           onToggleViewDropdown={handleToggleViewDropdown}
           activeView={activeView}
@@ -599,16 +684,17 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
         <SecondaryViewHeader
           label={viewLabels[activeView]}
           onBackToChat={handleBackToChat}
-          onCollapse={handleCollapse}
         />
       )}
 
       {/* Recent thread tabs — last 5 conversations with status indicators */}
       {activeView === 'chat' && (
         <RecentThreadTabs
-          threads={threads}
+          threads={threads.filter((t) => !dismissedTabs.has(t.id))}
           activeThreadId={activeThreadId}
           onSelect={(id) => onSelectThread?.(id)}
+          onClose={handleCloseTab}
+          draftTabs={draftTabs}
         />
       )}
 

@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 
-export type CollapseTarget = 'leftSidebar' | 'rightSidebar' | 'terminal';
+export type CollapseTarget = 'leftSidebar' | 'rightSidebar' | 'terminal' | 'editor';
 
 export interface CollapseState {
   leftSidebar: boolean;
   rightSidebar: boolean;
   terminal: boolean;
+  editor: boolean;
 }
 
 export interface UsePanelCollapseReturn {
@@ -38,6 +39,7 @@ const DEFAULT_STATE: CollapseState = {
   leftSidebar: false,
   rightSidebar: false,
   terminal: false,
+  editor: false,
 };
 const DEFAULT_SHORTCUTS: Record<string, ShortcutConfig> = {
   'view:toggle-sidebar': { panel: 'leftSidebar', shortcut: 'Ctrl+B' },
@@ -54,6 +56,7 @@ function normalizeCollapseState(parsed?: Partial<CollapseState>): CollapseState 
     leftSidebar: parsed?.leftSidebar ?? DEFAULT_STATE.leftSidebar,
     rightSidebar: parsed?.rightSidebar ?? DEFAULT_STATE.rightSidebar,
     terminal: parsed?.terminal ?? DEFAULT_STATE.terminal,
+    editor: parsed?.editor ?? DEFAULT_STATE.editor,
   };
 }
 

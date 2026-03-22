@@ -841,6 +841,10 @@ body {
 
 [role="menu"],
 [role="dialog"],
+[role="alert"],
+[role="listbox"][aria-label="Switch branch"],
+[role="listbox"][aria-label="Workspace layouts"],
+[role="listbox"][aria-label="Project selector"],
 [data-layout="title-bar"] [style*="position: absolute"],
 [data-layout="title-bar"] [style*="position:absolute"] {
   background-color: rgba(10, 10, 14, 0.92) !important;
@@ -849,6 +853,18 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 10px !important;
   overflow: hidden;
+}
+
+/* Tooltips: frosted glass background */
+.agent-ide-tooltip__body {
+  background: rgba(10, 10, 14, 0.92) !important;
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.agent-ide-tooltip__arrow {
+  background: rgba(10, 10, 14, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Native <select> elements and options */

@@ -11,27 +11,6 @@ export interface AgentMonitorPaneProps {
   onFocus?: () => void;
 }
 
-function ChevronLeftIcon(): React.ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M9 11L5 7L9 3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function AgentMonitorPane({
   width,
   collapsed,
@@ -65,43 +44,10 @@ export function AgentMonitorPane({
       aria-label="Agent sidebar"
       onClick={onFocus}
     >
-      {/* No separate header — RightSidebarTabs owns the header with collapse button */}
+      {/* No separate header — RightSidebarTabs owns the header */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {children}
       </div>
-    </div>
-  );
-}
-
-// Collapsed strip — narrow right-side affordance
-export function CollapsedAgentStrip({
-  onExpand,
-  runningCount = 0,
-}: {
-  onExpand: () => void;
-  runningCount?: number;
-}): React.ReactElement {
-  return (
-    <div
-      data-layout="collapsed-agent-strip"
-      className="
-        flex flex-col items-center pt-2 h-full w-10 flex-shrink-0
-        bg-surface-panel border-l border-border-semantic
-        cursor-pointer relative
-      "
-      onClick={onExpand}
-      title="Expand agent sidebar (Ctrl+\\)"
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onExpand()}
-      aria-label="Expand agent sidebar"
-    >
-      <span className="text-text-semantic-muted mt-2">
-        <ChevronLeftIcon />
-      </span>
-      {runningCount > 0 && (
-        <span className="mt-2 w-2 h-2 rounded-full bg-interactive-accent animate-pulse" style={{ boxShadow: '0 0 6px var(--interactive-accent)' }} />
-      )}
     </div>
   );
 }

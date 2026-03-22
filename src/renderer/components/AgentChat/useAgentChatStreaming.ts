@@ -141,7 +141,10 @@ function applyChunk(
           blocks.push({ kind: 'thinking', content: delta, startedAt: Date.now() });
         }
       }
-      return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
+      return {
+        ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent,
+        ...(chunk.tokenUsage ? { streamingTokenUsage: chunk.tokenUsage } : {}),
+      };
     }
 
     case 'tool_activity': {
@@ -167,7 +170,10 @@ function applyChunk(
             blocks[blockIndex] = { ...existing, status, filePath: filePath ?? existing.filePath };
           }
         }
-        return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
+        return {
+          ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent,
+          ...(chunk.tokenUsage ? { streamingTokenUsage: chunk.tokenUsage } : {}),
+        };
       }
 
       // Legacy fallback (no blockIndex)
@@ -176,7 +182,10 @@ function applyChunk(
           ...sealed,
           { kind: 'tool_use', tool: name, status, filePath, inputSummary, editSummary, blockId: generateBlockId() },
         ];
-        return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: '' };
+        return {
+          ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: '',
+          ...(chunk.tokenUsage ? { streamingTokenUsage: chunk.tokenUsage } : {}),
+        };
       }
       const blocks = [...sealed];
       for (let i = blocks.length - 1; i >= 0; i--) {
@@ -186,7 +195,10 @@ function applyChunk(
           break;
         }
       }
-      return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent };
+      return {
+        ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent: prev.activeTextContent,
+        ...(chunk.tokenUsage ? { streamingTokenUsage: chunk.tokenUsage } : {}),
+      };
     }
 
     case 'complete': {
@@ -250,14 +262,37 @@ export function useAgentChatStreaming(activeThreadId: string | null): AgentChatS
   // This restores in-flight streaming state after a renderer refresh (HMR / Ctrl+R)
   // so tool cards, thinking blocks, and streamed text reappear without waiting
   // for new chunks.
+  //
+  // IMPORTANT: The replay builds state from scratch inside a setStateMap updater
+  // and skips if the stateMap already has an entry for this thread. Without this
+  // guard, switching away from a streaming thread and back would replay ALL
+  // buffered chunks on TOP of the already-accumulated state, doubling text content
+  // (text_delta chunks append, so replaying them is not idempotent).
   useEffect(() => {
     if (!activeThreadId) return;
     const api = (window as unknown as { electronAPI?: { agentChat?: { onStreamChunk?: (cb: (chunk: AgentChatStreamChunk) => void) => (() => void) | void; getBufferedChunks?: (id: string) => Promise<AgentChatStreamChunk[]> } } }).electronAPI?.agentChat;
     if (!api?.getBufferedChunks) return;
-    void api.getBufferedChunks(activeThreadId).then(
+    const threadId = activeThreadId;
+    void api.getBufferedChunks(threadId).then(
       (chunks: AgentChatStreamChunk[]) => {
         if (!chunks || chunks.length === 0) return;
-        for (const chunk of chunks) handleChunk(chunk);
+        setStateMap((prev) => {
+          // If the live listener already populated state for this thread,
+          // skip the replay — those chunks are already reflected in the map.
+          // This prevents the thread-switch-back duplication bug.
+          if (prev.has(threadId)) return prev;
+
+          // Rebuild streaming state from scratch (e.g. after HMR/refresh
+          // when the stateMap is empty and we need to restore in-flight UI).
+          let rebuilt: AgentChatStreamingState = INITIAL_STATE;
+          for (const chunk of chunks) {
+            const next = applyChunk(rebuilt, chunk);
+            if (next) rebuilt = next;
+          }
+          const updated = new Map(prev);
+          updated.set(threadId, rebuilt);
+          return updated;
+        });
       },
     );
   }, [activeThreadId, handleChunk]);

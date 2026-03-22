@@ -257,6 +257,28 @@ function getEmptyStateMessage(projectRoot: string | null, isRepo: boolean | null
   return null;
 }
 
+function ReviewChangesBar({ hasChanges }: { hasChanges: boolean }): React.ReactElement | null {
+  if (!hasChanges) return null;
+  return (
+    <div className="flex-shrink-0 border-b border-border-semantic px-2 py-1.5 flex items-center gap-1.5">
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:review-all-changes'))}
+        className="flex-1 rounded px-2 py-1 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted border border-border-semantic"
+        title="Review all uncommitted changes (staged + unstaged) with hunk-level accept/reject"
+      >
+        Review All
+      </button>
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:review-unstaged-changes'))}
+        className="flex-1 rounded px-2 py-1 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted border border-border-semantic"
+        title="Review only unstaged changes with hunk-level accept/reject"
+      >
+        Review Unstaged
+      </button>
+    </div>
+  );
+}
+
 function ChangeSections(props: GitPanelContentProps): React.ReactElement {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -297,6 +319,8 @@ function RepoContent(props: GitPanelContentProps): React.ReactElement {
       </div>
 
       {props.error ? <ErrorBanner error={props.error} onDismiss={props.clearError} /> : null}
+
+      <ReviewChangesBar hasChanges={props.stagedCount + props.unstagedCount > 0} />
 
       <ChangeSections {...props} />
 

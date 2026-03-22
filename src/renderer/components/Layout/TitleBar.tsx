@@ -8,6 +8,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { CollapseState, CollapseTarget } from './usePanelCollapse';
 import ouroborosLogo from '../../../../public/OUROBOROS.png';
 import { useToastContext } from '../../contexts/ToastContext';
 import { OPEN_EXTENSION_STORE_EVENT, OPEN_MCP_STORE_EVENT, OPEN_SETTINGS_PANEL_EVENT, SAVE_ALL_DIRTY_EVENT, SPLIT_EDITOR_EVENT } from '../../hooks/appEventNames';
@@ -51,6 +52,45 @@ function McpStoreIcon(): React.ReactElement {
       <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
       <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
       <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+// ── Panel toggle icons (Windsurf-style layout indicators) ───────────────────
+
+function PanelLeftIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" />
+    </svg>
+  );
+}
+
+function PanelCentreIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="5,4 3,8 5,12" />
+      <polyline points="11,4 13,8 11,12" />
+      <line x1="9" y1="3" x2="7" y2="13" />
+    </svg>
+  );
+}
+
+function PanelBottomIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="1.5" y1="10" x2="14.5" y2="10" />
+    </svg>
+  );
+}
+
+function PanelRightIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" />
     </svg>
   );
 }
@@ -118,23 +158,84 @@ const TITLE_BAR_ACTIONS: TitleBarAction[] = [
   { eventName: 'agent-ide:open-usage-panel', title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
 ];
 
-function TitleBarBranding(): React.ReactElement {
+// ── Panel toggle bar (Windsurf-style) ───────────────────────────────────────
+
+interface PanelToggleConfig {
+  panel: CollapseTarget;
+  title: string;
+  shortcut?: string;
+  Icon: () => React.ReactElement;
+}
+
+const PANEL_TOGGLES: PanelToggleConfig[] = [
+  { panel: 'leftSidebar', title: 'File Tree', shortcut: 'Ctrl+B', Icon: PanelLeftIcon },
+  { panel: 'editor', title: 'Editor', Icon: PanelCentreIcon },
+  { panel: 'terminal', title: 'Terminal', shortcut: 'Ctrl+J', Icon: PanelBottomIcon },
+  { panel: 'rightSidebar', title: 'Chat', shortcut: 'Ctrl+\\', Icon: PanelRightIcon },
+];
+
+function PanelToggleButton({
+  config,
+  isActive,
+  onClick,
+}: {
+  config: PanelToggleConfig;
+  isActive: boolean;
+  onClick: () => void;
+}): React.ReactElement {
+  const label = `${isActive ? 'Hide' : 'Show'} ${config.title}${config.shortcut ? ` (${config.shortcut})` : ''}`;
+  return (
+    <button
+      className="titlebar-no-drag"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        ...titleButtonStyle,
+        color: isActive ? 'var(--text-secondary)' : 'var(--text-faint, var(--text-semantic-faint))',
+        opacity: isActive ? 1 : 0.5,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = 'var(--text-primary)';
+        e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.15)';
+        e.currentTarget.style.opacity = '1';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = isActive ? 'var(--text-secondary)' : 'var(--text-faint, var(--text-semantic-faint))';
+        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.opacity = isActive ? '1' : '0.5';
+      }}
+    >
+      <config.Icon />
+    </button>
+  );
+}
+
+function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement | null {
+  if (!collapsed || !onToggle) return null;
   return (
     <>
-      <img
-        className="titlebar-no-drag select-none"
-        src={ouroborosLogo}
-        alt="Ouroboros"
-        style={{ height: '20px', width: '20px', marginLeft: '8px', marginRight: '6px', flexShrink: 0, objectFit: 'contain', opacity: 0.9 }}
-        draggable={false}
-      />
-      <span
-        className="select-none text-text-semantic-muted"
-        style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginRight: '4px' }}
-      >
-        Ouroboros
-      </span>
+      {PANEL_TOGGLES.map((config) => (
+        <PanelToggleButton
+          key={config.panel}
+          config={config}
+          isActive={!collapsed[config.panel]}
+          onClick={() => onToggle(config.panel)}
+        />
+      ))}
     </>
+  );
+}
+
+function TitleBarBranding(): React.ReactElement {
+  return (
+    <img
+      className="titlebar-no-drag select-none"
+      src={ouroborosLogo}
+      alt="Ouroboros"
+      style={{ height: '20px', width: '20px', marginLeft: '8px', marginRight: '6px', flexShrink: 0, objectFit: 'contain', opacity: 0.9 }}
+      draggable={false}
+    />
   );
 }
 
@@ -229,7 +330,7 @@ function getMenuDefinitions(): MenuDefinition[] {
         { label: 'New File', shortcut: 'Ctrl+N', action: () => dispatchEvent('agent-ide:new-file') },
         { label: 'New Window', shortcut: 'Ctrl+Shift+N', action: () => window.electronAPI?.app?.newWindow?.() },
         SEPARATOR,
-        { label: 'Open Folder', shortcut: 'Ctrl+O', action: () => dispatchEvent('menu:open-folder') },
+        { label: 'Open Folder', shortcut: 'Ctrl+O', action: () => dispatchEvent('agent-ide:open-folder') },
         { label: 'Open File', shortcut: 'Ctrl+P', action: () => dispatchEvent('agent-ide:open-file-picker') },
         SEPARATOR,
         { label: 'Save', shortcut: 'Ctrl+S', action: () => dispatchEvent('agent-ide:save-active-file') },
@@ -254,7 +355,6 @@ function getMenuDefinitions(): MenuDefinition[] {
         { label: 'Paste', shortcut: 'Ctrl+V', action: () => document.execCommand('paste') },
         SEPARATOR,
         { label: 'Find', shortcut: 'Ctrl+F', action: () => dispatchEvent('agent-ide:find') },
-        { label: 'Find in Files', shortcut: 'Ctrl+Shift+F', action: () => dispatchEvent('agent-ide:find-in-files') },
         { label: 'Replace', shortcut: 'Ctrl+H', action: () => dispatchEvent('agent-ide:replace') },
         SEPARATOR,
         { label: 'Select All', shortcut: 'Ctrl+A', action: () => document.execCommand('selectAll') },
@@ -263,10 +363,11 @@ function getMenuDefinitions(): MenuDefinition[] {
     {
       label: 'View',
       items: [
-        { label: 'Command Palette', shortcut: 'Ctrl+Shift+P', action: () => dispatchEvent('menu:command-palette') },
+        { label: 'Command Palette', shortcut: 'Ctrl+Shift+P', action: () => dispatchEvent('agent-ide:command-palette') },
         { label: 'File Picker', shortcut: 'Ctrl+P', action: () => dispatchEvent('agent-ide:open-file-picker') },
         SEPARATOR,
         { label: 'Toggle Sidebar', shortcut: 'Ctrl+B', action: () => dispatchEvent('agent-ide:toggle-sidebar') },
+        { label: 'Toggle Editor', action: () => dispatchEvent('agent-ide:toggle-editor') },
         { label: 'Toggle Agent Panel', shortcut: 'Ctrl+\\', action: () => dispatchEvent('agent-ide:toggle-agent-monitor') },
         { label: 'Toggle Terminal', shortcut: 'Ctrl+J', action: () => dispatchEvent('agent-ide:toggle-terminal') },
         SEPARATOR,
@@ -283,19 +384,19 @@ function getMenuDefinitions(): MenuDefinition[] {
       label: 'Go',
       items: [
         { label: 'Go to File', shortcut: 'Ctrl+P', action: () => dispatchEvent('agent-ide:open-file-picker') },
-        { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEvent('agent-ide:go-to-symbol') },
+        { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEvent('agent-ide:open-symbol-search') },
         { label: 'Go to Line', shortcut: 'Ctrl+G', action: () => dispatchEvent('agent-ide:go-to-line') },
         SEPARATOR,
-        { label: 'Back', shortcut: 'Alt+Left', action: () => dispatchEvent('agent-ide:navigate-back') },
-        { label: 'Forward', shortcut: 'Alt+Right', action: () => dispatchEvent('agent-ide:navigate-forward') },
+        { label: 'Back', shortcut: 'Alt+Left', disabled: true },
+        { label: 'Forward', shortcut: 'Alt+Right', disabled: true },
       ],
     },
     {
       label: 'Terminal',
       items: [
-        { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEvent('menu:new-terminal') },
+        { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEvent('agent-ide:new-terminal') },
         { label: 'New Claude Terminal', shortcut: 'Ctrl+Shift+C', action: () => dispatchEvent('agent-ide:new-claude-terminal') },
-        { label: 'Split Terminal', action: () => dispatchEvent('agent-ide:split-active-terminal') },
+        { label: 'Split Terminal', disabled: true },
         SEPARATOR,
         { label: 'Clear Terminal', action: () => dispatchEvent('agent-ide:clear-active-terminal') },
       ],
@@ -304,12 +405,19 @@ function getMenuDefinitions(): MenuDefinition[] {
       label: 'Help',
       items: [
         { label: 'Documentation', action: () => window.electronAPI?.app?.openExternal?.('https://claude.ai/claude-code') },
-        { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+K Ctrl+S', action: () => dispatchEvent('agent-ide:open-keybindings') },
+        { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+K Ctrl+S', action: () => dispatchEvent(OPEN_SETTINGS_PANEL_EVENT) },
         SEPARATOR,
         { label: 'Open Logs Folder', action: () => window.electronAPI?.app?.openLogsFolder?.() },
         { label: 'Toggle Developer Tools', shortcut: 'Ctrl+Shift+I', action: () => window.electronAPI?.app?.toggleDevTools?.() },
         SEPARATOR,
-        { label: 'About Ouroboros', action: () => dispatchEvent('agent-ide:show-about') },
+        { label: 'About Ouroboros', action: () => {
+          void window.electronAPI?.app?.getVersion?.().then((version) => {
+            void window.electronAPI?.app?.getPlatform?.().then((platform) => {
+              // eslint-disable-next-line no-alert
+              alert(`Ouroboros IDE\nVersion: ${version}\nPlatform: ${platform}\n\nBuilt with Electron + React + Monaco`);
+            });
+          });
+        } },
       ],
     },
   ];
@@ -797,7 +905,12 @@ function MobileOverflowMenu(): React.ReactElement {
 
 // ── TitleBar ────────────────────────────────────────────────────────────────
 
-export function TitleBar(): React.ReactElement {
+export interface TitleBarProps {
+  collapsed?: CollapseState;
+  onTogglePanel?: (panel: CollapseTarget) => void;
+}
+
+export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement {
   useProgressSubscriptions();
 
   return (
@@ -817,8 +930,10 @@ export function TitleBar(): React.ReactElement {
         <NavbarMenus />
       </div>
       <div className="flex-1" />
-      {/* Desktop: action buttons */}
+      {/* Desktop: panel toggles + action buttons */}
       <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        <PanelToggleBar collapsed={collapsed} onToggle={onTogglePanel} />
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-semantic)', margin: '0 6px', opacity: 0.5 }} />
         {TITLE_BAR_ACTIONS.map((action) => (
           <TitleBarActionButton key={action.eventName} {...action} />
         ))}

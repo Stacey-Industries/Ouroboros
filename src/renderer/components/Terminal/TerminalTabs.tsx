@@ -3,9 +3,8 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react'
-import { ClaudeModelMenu, shortModelName } from './ClaudeModelMenu'
-import { CodexModelMenu } from './CodexModelMenu'
-import { Tooltip } from '../shared'
+import { shortModelName } from './ClaudeModelMenu'
+import { NewTerminalMenu } from './NewTerminalMenu'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,43 +165,15 @@ export function TerminalTabs({
   sessions, activeSessionId, onActivate, onClose, onNew, onNewClaude, onNewCodex, onReorder,
 }: TerminalTabsProps): React.ReactElement {
   const dnd = useTabDragDrop(sessions, onReorder)
-  const [showModelMenu, setShowModelMenu] = useState(false)
-  const [showCodexModelMenu, setShowCodexModelMenu] = useState(false)
-  const claudeBtnRef = useRef<HTMLButtonElement>(null)
-  const codexBtnRef = useRef<HTMLButtonElement>(null)
+  const [showNewMenu, setShowNewMenu] = useState(false)
+  const plusBtnRef = useRef<HTMLButtonElement>(null)
 
-  const handleClaudeClick = useCallback(() => {
-    onNewClaude()
-  }, [onNewClaude])
-
-  const handleClaudeContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setShowModelMenu((prev) => !prev)
+  const handleToggleMenu = useCallback(() => {
+    setShowNewMenu((prev) => !prev)
   }, [])
-
-  const handleModelSelect = useCallback((model: string) => {
-    onNewClaude(model)
-  }, [onNewClaude])
 
   const handleMenuClose = useCallback(() => {
-    setShowModelMenu(false)
-  }, [])
-
-  const handleCodexClick = useCallback(() => {
-    onNewCodex()
-  }, [onNewCodex])
-
-  const handleCodexContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setShowCodexModelMenu((prev) => !prev)
-  }, [])
-
-  const handleCodexModelSelect = useCallback((model: string) => {
-    onNewCodex(model)
-  }, [onNewCodex])
-
-  const handleCodexMenuClose = useCallback(() => {
-    setShowCodexModelMenu(false)
+    setShowNewMenu(false)
   }, [])
 
   return (
@@ -222,52 +193,24 @@ export function TerminalTabs({
           onDragEnd={dnd.handleDragEnd}
         />
       ))}
-      <Tooltip text="New terminal (Ctrl+Shift+`)" position="bottom">
-        <button onClick={onNew} aria-label="New terminal tab" className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"><PlusIcon /></button>
-      </Tooltip>
       <div className="relative flex items-stretch">
-        <Tooltip text="New Claude terminal (click) / Select model (right-click)" position="bottom">
-          <button
-            ref={claudeBtnRef}
-            onClick={handleClaudeClick}
-            onContextMenu={handleClaudeContextMenu}
-            aria-label="New Claude Code terminal"
-            aria-haspopup="true"
-            aria-expanded={showModelMenu}
-            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-interactive-accent hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic text-[10px] font-medium rounded-sm"
-          >
-            <span style={{ fontSize: '10px' }}>&#9670;</span>
-            <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Claude</span>
-          </button>
-        </Tooltip>
-        {showModelMenu && (
-          <ClaudeModelMenu
-            anchorRef={claudeBtnRef}
-            onSelect={handleModelSelect}
+        <button
+          ref={plusBtnRef}
+          onClick={handleToggleMenu}
+          aria-label="New terminal"
+          aria-haspopup="true"
+          aria-expanded={showNewMenu}
+          className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"
+        >
+          <PlusIcon />
+        </button>
+        {showNewMenu && (
+          <NewTerminalMenu
+            anchorRef={plusBtnRef}
+            onNew={onNew}
+            onNewClaude={onNewClaude}
+            onNewCodex={onNewCodex}
             onClose={handleMenuClose}
-          />
-        )}
-      </div>
-      <div className="relative flex items-stretch">
-        <Tooltip text="New Codex terminal (click) / Select model (right-click)" position="bottom">
-          <button
-            ref={codexBtnRef}
-            onClick={handleCodexClick}
-            onContextMenu={handleCodexContextMenu}
-            aria-label="New Codex terminal"
-            aria-haspopup="true"
-            aria-expanded={showCodexModelMenu}
-            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent-blue,var(--accent))] hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic text-[10px] font-medium rounded-sm"
-          >
-            <span style={{ fontSize: '10px' }}>&#9671;</span>
-            <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Codex</span>
-          </button>
-        </Tooltip>
-        {showCodexModelMenu && (
-          <CodexModelMenu
-            anchorRef={codexBtnRef}
-            onSelect={handleCodexModelSelect}
-            onClose={handleCodexMenuClose}
           />
         )}
       </div>

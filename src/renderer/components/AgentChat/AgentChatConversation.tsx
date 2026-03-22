@@ -802,12 +802,18 @@ function ConversationBody(props: {
           (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
         );
         if (hasFileEdits) {
+          const filePaths = [...new Set(
+            props.streaming.blocks
+              .filter((b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool) && b.filePath)
+              .map((b) => (b as { filePath: string }).filePath),
+          )];
           window.dispatchEvent(
             new CustomEvent('agent-ide:open-diff-review', {
               detail: {
                 sessionId: lastAssistant!.id,
                 snapshotHash,
                 projectRoot: thread.workspaceRoot,
+                filePaths,
               },
             }),
           );
@@ -957,22 +963,20 @@ export interface ModelContextUsage {
 
 /**
  * Returns context usage aggregated per model for the active thread.
- * Each entry shows the last input (context window) and cumulative output for that model.
+ * Accumulates input and output tokens across all messages — each sendMessage
+ * creates a fresh adapter so persisted values are per-send, not cumulative.
  */
 function useThreadModelUsage(thread: AgentChatThreadRecord | null | undefined): ModelContextUsage[] | undefined {
   return useMemo(() => {
     if (!thread?.messages) return undefined;
-    // Track per-model: last input tokens seen, cumulative output
     const perModel = new Map<string, { inputTokens: number; outputTokens: number }>();
     for (const msg of thread.messages) {
       if (!msg.tokenUsage) continue;
       const modelKey = msg.model || '';
       const existing = perModel.get(modelKey);
       if (existing) {
-        // Input tokens = last turn's context window size (overwrite, not accumulate)
-        existing.inputTokens = msg.tokenUsage.inputTokens;
-        // Output tokens are cumulative from the adapter
-        existing.outputTokens = msg.tokenUsage.outputTokens;
+        existing.inputTokens += msg.tokenUsage.inputTokens;
+        existing.outputTokens += msg.tokenUsage.outputTokens;
       } else {
         perModel.set(modelKey, {
           inputTokens: msg.tokenUsage.inputTokens,

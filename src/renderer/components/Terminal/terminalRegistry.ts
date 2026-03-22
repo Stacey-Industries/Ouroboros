@@ -20,6 +20,18 @@ export function unregisterTerminal(sessionId: string): void {
   registry.delete(sessionId)
 }
 
+/** Clear a terminal's screen buffer. */
+export function clearTerminal(sessionId?: string): void {
+  let term: Terminal | undefined
+  if (sessionId) {
+    term = registry.get(sessionId)
+  } else {
+    const first = registry.values().next()
+    term = first.done ? undefined : first.value
+  }
+  if (term) term.clear()
+}
+
 /**
  * Read the last N lines from a terminal's buffer.
  * If sessionId is not provided, reads from the first registered terminal.
