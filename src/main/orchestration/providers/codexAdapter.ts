@@ -239,7 +239,14 @@ function buildXmlContextBlock(
   ].filter(Boolean)
 
   const result = sections.join('\n\n')
-  return packet.graphSummary ? `${result}\n\n${packet.graphSummary}` : result
+  let output = result
+  if (packet.graphSummary) {
+    output += `\n\n${packet.graphSummary}`
+  }
+  if (packet.sessionMemories) {
+    output += `\n\n${packet.sessionMemories}`
+  }
+  return output
 }
 
 function buildPrompt(
@@ -595,6 +602,7 @@ function launchCodex(
         timestamp: Date.now(),
         session: sessionRef,
         tokenUsage: usage,
+        durationMs: result.durationMs,
       })
     },
     (error) => {

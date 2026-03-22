@@ -480,29 +480,29 @@ function buildConversationHistory(
 }
 
 /**
- * Check if the model changed since the last session — any model change invalidates
- * --resume because thinking block signatures are model-specific.
+ * Check if the provider changed since the last session.
  *
- * Priority: orchestration link model (set even when stopped early) > last assistant message model.
- * Returns true (= don't resume) when the previous model is unknown and a session exists.
+ * Switching providers (e.g. claude-code → codex) invalidates --resume because
+ * the other provider's CLI has no knowledge of the intervening turns.
+ * Switching models within the same provider (e.g. Opus → Sonnet) is fine —
+ * Claude Code handles model changes natively via /model mid-session, and
+ * thinking block signatures are valid across all Anthropic models.
  */
-function didModelChange(thread: AgentChatThreadRecord, currentModel: string): boolean {
-  // Best source: model stored on the orchestration link (survives early stops)
-  const linkModel = thread.latestOrchestration?.model
-  if (linkModel) return linkModel !== currentModel
-
-  // Fallback: last assistant message's model (pre-migration threads)
-  const lastAssistant = [...thread.messages].reverse().find(m => m.role === 'assistant' && m.model)
-  if (lastAssistant?.model) return lastAssistant.model !== currentModel
-
-  // No model info at all — if we have a session ID, assume it's stale (safe default)
-  return !!(thread.latestOrchestration?.claudeSessionId || thread.latestOrchestration?.codexThreadId)
+function didProviderChange(thread: AgentChatThreadRecord, currentProvider: TaskRequest['provider']): boolean {
+  const lastProvider = thread.latestOrchestration?.provider
+  if (!lastProvider) return false
+  return lastProvider !== currentProvider
 }
 
 function getResumeSessionId(
   thread: AgentChatThreadRecord,
   provider: TaskRequest['provider'],
 ): string | undefined {
+  // Only return a session ID when the last turn used the same provider.
+  // Sticky merges preserve both claudeSessionId and codexThreadId across
+  // provider switches, but those IDs are stale — the other provider's
+  // session has no knowledge of the intervening turns.
+  if (thread.latestOrchestration?.provider !== provider) return undefined
   if (provider === 'codex') {
     return thread.latestOrchestration?.codexThreadId
   }
@@ -516,13 +516,26 @@ function buildTaskRequest(args: {
   resolved: ResolvedSendOptions
   thread: AgentChatThreadRecord
 }): TaskRequest {
-  const resumeSessionId = getResumeSessionId(args.thread, args.resolved.provider)
   const currentModel = args.resolved.model || ''
+  const providerChanged = didProviderChange(args.thread, args.resolved.provider)
+  // getResumeSessionId already guards against stale cross-provider IDs,
+  // but the explicit providerChanged check also skips resume when the
+  // provider changed (even if getResumeSessionId returned undefined).
+  const resumeSessionId = providerChanged ? undefined : getResumeSessionId(args.thread, args.resolved.provider)
+  const canResume = !!resumeSessionId
 
-  // Don't resume a session when the model changed — thinking block signatures
-  // are model-specific and will be rejected by the API.
-  const modelChanged = didModelChange(args.thread, currentModel)
-  const canResume = resumeSessionId && !modelChanged
+  // Diagnostic logging for resume decision — helps debug "started new session" issues
+  if (!canResume && args.thread.messages.some(m => m.role === 'assistant')) {
+    console.log('[agentChat:resume] resume skipped:', {
+      resumeSessionId: resumeSessionId ?? 'undefined',
+      providerChanged,
+      currentProvider: args.resolved.provider,
+      lastProvider: args.thread.latestOrchestration?.provider ?? 'undefined',
+      currentModel: currentModel || '(empty)',
+      hasOrchestration: !!args.thread.latestOrchestration,
+      claudeSessionId: args.thread.latestOrchestration?.claudeSessionId ?? 'undefined',
+    })
+  }
 
   // Increment turn count for adaptive budget tracking
   args.thread.turnCount = (args.thread.turnCount ?? 0) + 1
@@ -591,18 +604,26 @@ export function resolveSendOptions(
   settings: ResolvedAgentChatSettings,
   request: AgentChatSendMessageRequest,
 ): ResolvedSendOptions {
+  const provider = request.overrides?.provider ?? settings.defaultProvider
+
   // Use agentChat model slot as fallback when no per-message override is given.
   // This lets users set a default provider:model for all agent chat sessions.
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined
   const slotDefault = slots?.agentChat || ''
+  const providerDefaultModel = provider === 'codex'
+    ? settings.codexCliSettings.model
+    : settings.claudeCliSettings.model
+  const permissionModeDefault = provider === 'codex'
+    ? 'default'
+    : (settings.claudeCliSettings.permissionMode || 'default')
 
   return {
-    provider: request.overrides?.provider ?? settings.defaultProvider,
+    provider,
     verificationProfile: request.overrides?.verificationProfile ?? settings.defaultVerificationProfile,
     mode: request.overrides?.mode ?? DEFAULT_MODE,
-    model: request.overrides?.model || slotDefault || settings.claudeCliSettings.model,
+    model: request.overrides?.model || slotDefault || providerDefaultModel,
     effort: request.overrides?.effort || DEFAULT_CHAT_EFFORT,
-    permissionMode: request.overrides?.permissionMode || settings.claudeCliSettings.permissionMode || 'default',
+    permissionMode: request.overrides?.permissionMode || permissionModeDefault,
   }
 }
 

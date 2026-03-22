@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   AGENT_CHAT_SETTINGS_DEFAULTS,
   CLAUDE_CLI_SETTINGS_FALLBACK,
+  CODEX_CLI_SETTINGS_FALLBACK,
   resolveAgentChatSettings,
   resolveClaudeCliSettings,
+  resolveCodexCliSettings,
 } from './settingsResolver'
 
 function registerDefaultsTest(): void {
@@ -12,6 +14,7 @@ function registerDefaultsTest(): void {
     expect(resolveAgentChatSettings()).toEqual({
       ...AGENT_CHAT_SETTINGS_DEFAULTS,
       claudeCliSettings: CLAUDE_CLI_SETTINGS_FALLBACK,
+      codexCliSettings: CODEX_CLI_SETTINGS_FALLBACK,
     })
   })
 }
@@ -33,6 +36,11 @@ function registerPreserveStoredValuesTest(): void {
         addDirs: ['c:/repo'],
         verbose: true,
       },
+      codexCliSettings: {
+        model: 'gpt-5.4',
+        sandbox: 'read-only',
+        search: true,
+      },
     })).toEqual({
       defaultProvider: 'codex',
       defaultVerificationProfile: 'full',
@@ -46,6 +54,12 @@ function registerPreserveStoredValuesTest(): void {
         model: 'sonnet',
         addDirs: ['c:/repo'],
         verbose: true,
+      },
+      codexCliSettings: {
+        ...CODEX_CLI_SETTINGS_FALLBACK,
+        model: 'gpt-5.4',
+        sandbox: 'read-only',
+        search: true,
       },
     })
   })
@@ -66,6 +80,12 @@ function registerFallbackNormalizationTest(): void {
         addDirs: ['c:/repo', 42 as never],
         dangerouslySkipPermissions: true,
       },
+      codexCliSettings: {
+        sandbox: 'invalid-sandbox' as never,
+        approvalPolicy: 'invalid-policy' as never,
+        addDirs: ['c:/repo', 42 as never],
+        dangerouslyBypassApprovalsAndSandbox: true,
+      },
     })).toEqual({
       ...AGENT_CHAT_SETTINGS_DEFAULTS,
       claudeCliSettings: {
@@ -73,6 +93,11 @@ function registerFallbackNormalizationTest(): void {
         permissionMode: 'acceptEdits',
         addDirs: ['c:/repo'],
         dangerouslySkipPermissions: true,
+      },
+      codexCliSettings: {
+        ...CODEX_CLI_SETTINGS_FALLBACK,
+        addDirs: ['c:/repo'],
+        dangerouslyBypassApprovalsAndSandbox: true,
       },
     })
   })
@@ -93,9 +118,25 @@ function registerClaudeOnlyResolverTest(): void {
   })
 }
 
+function registerCodexOnlyResolverTest(): void {
+  it('resolves Codex CLI settings independently for Codex request paths', () => {
+    expect(resolveCodexCliSettings({
+      model: 'gpt-5.4-mini',
+      approvalPolicy: 'never',
+      skipGitRepoCheck: true,
+    })).toEqual({
+      ...CODEX_CLI_SETTINGS_FALLBACK,
+      model: 'gpt-5.4-mini',
+      approvalPolicy: 'never',
+      skipGitRepoCheck: true,
+    })
+  })
+}
+
 describe('agent chat settings resolver', () => {
   registerDefaultsTest()
   registerPreserveStoredValuesTest()
   registerFallbackNormalizationTest()
   registerClaudeOnlyResolverTest()
+  registerCodexOnlyResolverTest()
 })

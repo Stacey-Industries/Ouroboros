@@ -111,6 +111,7 @@ export interface CodexExecSpawnOptions {
 export interface CodexExecResult {
   threadId: string | null
   usage?: CodexUsage
+  durationMs: number
 }
 
 export interface CodexExecProcessHandle {
@@ -126,6 +127,25 @@ export interface CodexExecArgs {
 }
 
 const MAX_BUFFER_BYTES = 100 * 1024 * 1024
+
+function normalizeEventType(type: string): string {
+  switch (type) {
+    case 'thread_started':
+      return 'thread.started'
+    case 'turn_started':
+      return 'turn.started'
+    case 'turn_completed':
+      return 'turn.completed'
+    case 'turn_failed':
+      return 'turn.failed'
+    case 'item_started':
+      return 'item.started'
+    case 'item_completed':
+      return 'item.completed'
+    default:
+      return type
+  }
+}
 
 function escapePowerShellArg(arg: string): string {
   return `'${arg.replace(/'/g, "''")}'`
@@ -171,6 +191,13 @@ function tryParseEvent(line: string): CodexExecEvent | null {
   try {
     const parsed = JSON.parse(trimmed)
     if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
+      const normalizedType = normalizeEventType(parsed.type)
+      if (normalizedType !== parsed.type) {
+        return {
+          ...(parsed as Record<string, unknown>),
+          type: normalizedType,
+        } as CodexExecEvent
+      }
       return parsed as CodexExecEvent
     }
     console.warn('[codex-exec] parsed JSON lacks "type" field:', trimmed.slice(0, 120))
@@ -183,6 +210,7 @@ function tryParseEvent(line: string): CodexExecEvent | null {
 
 export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExecProcessHandle {
   const { command, args } = buildCodexExecArgs(options)
+  const startedAt = Date.now()
 
   const child: ChildProcess = spawn(command, args, {
     cwd: options.cwd,
@@ -198,6 +226,7 @@ export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExec
   let threadId: string | null = null
   let lastUsage: CodexUsage | undefined
   let failureMessage: string | null = null
+  let sawFailureEvent = false
   let stderrBuf = ''
   let stdoutBuf = ''
 
@@ -244,14 +273,17 @@ export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExec
         }
       } else if (event.type === 'error') {
         const errorEvent = event as CodexErrorEvent
+        sawFailureEvent = true
         failureMessage = errorEvent.message ?? failureMessage
       } else if (event.type === 'turn.failed') {
         const turnFailed = event as CodexTurnFailedEvent
+        sawFailureEvent = true
         failureMessage = turnFailed.error?.message ?? failureMessage
       } else if (event.type === 'item.completed') {
         const completed = event as CodexItemCompletedEvent
         if (completed.item.type === 'error') {
           const itemError = completed.item as CodexItemError
+          sawFailureEvent = true
           failureMessage = itemError.message ?? failureMessage
         }
       }
@@ -293,9 +325,14 @@ export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExec
       }
 
       if (code === 0 || code === null) {
+        if (sawFailureEvent || failureMessage) {
+          reject(new Error(failureMessage ?? 'Codex exec reported a failure event.'))
+          return
+        }
         resolve({
           threadId,
           usage: lastUsage,
+          durationMs: Date.now() - startedAt,
         })
         return
       }

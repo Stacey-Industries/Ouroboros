@@ -184,8 +184,8 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
         const event = tryParseEvent(line)
         if (!event) continue
 
-        // Capture session_id from init event
-        if (event.type === 'system' && event.subtype === 'init' && event.session_id) {
+        // Capture session_id — prefer init event, fall back to any event carrying it
+        if (!sessionId && event.session_id) {
           sessionId = event.session_id
         }
 
@@ -214,7 +214,7 @@ export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJ
       if (stdoutBuf.trim()) {
         const event = tryParseEvent(stdoutBuf)
         if (event) {
-          if (event.type === 'system' && event.subtype === 'init' && event.session_id) {
+          if (!sessionId && event.session_id) {
             sessionId = event.session_id
           }
           if (event.type === 'result') {

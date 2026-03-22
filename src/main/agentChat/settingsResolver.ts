@@ -1,4 +1,4 @@
-import type { ClaudeCliSettings } from '../config'
+import type { ClaudeCliSettings, CodexCliSettings } from '../config'
 import type { AgentChatContextBehavior, AgentChatDefaultView, AgentChatSettings } from './types'
 import type { OrchestrationProvider, VerificationProfileName } from '../orchestration/types'
 
@@ -31,17 +31,33 @@ export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   dangerouslySkipPermissions: false,
 }
 
+export const CODEX_CLI_SETTINGS_FALLBACK: CodexCliSettings = {
+  model: '',
+  reasoningEffort: 'medium',
+  sandbox: 'workspace-write',
+  approvalPolicy: 'on-request',
+  profile: '',
+  addDirs: [],
+  search: false,
+  skipGitRepoCheck: false,
+  dangerouslyBypassApprovalsAndSandbox: false,
+}
+
 export interface AgentChatSettingsResolverSource {
   agentChatSettings?: Partial<AgentChatSettings> | null
   claudeCliSettings?: Partial<ClaudeCliSettings> | null
+  codexCliSettings?: Partial<CodexCliSettings> | null
 }
 
 export interface ResolvedAgentChatSettings extends AgentChatSettings {
   claudeCliSettings: ClaudeCliSettings
+  codexCliSettings: CodexCliSettings
 }
 
 type ClaudeCliStringSettings = Pick<ClaudeCliSettings, 'permissionMode' | 'model' | 'effort' | 'appendSystemPrompt' | 'allowedTools' | 'disallowedTools'>
 type ClaudeCliBooleanSettings = Pick<ClaudeCliSettings, 'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions'>
+type CodexCliStringSettings = Pick<CodexCliSettings, 'model' | 'reasoningEffort' | 'profile'>
+type CodexCliBooleanSettings = Pick<CodexCliSettings, 'search' | 'skipGitRepoCheck' | 'dangerouslyBypassApprovalsAndSandbox'>
 
 function resolveBoolean(value: boolean | undefined, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
@@ -98,6 +114,43 @@ export function resolveClaudeCliSettings(settings?: Partial<ClaudeCliSettings> |
   }
 }
 
+function resolveCodexCliStringSettings(settings?: Partial<CodexCliSettings> | null): CodexCliStringSettings {
+  return {
+    model: resolveString(settings?.model, CODEX_CLI_SETTINGS_FALLBACK.model),
+    reasoningEffort: resolveString(settings?.reasoningEffort, CODEX_CLI_SETTINGS_FALLBACK.reasoningEffort),
+    profile: resolveString(settings?.profile, CODEX_CLI_SETTINGS_FALLBACK.profile),
+  }
+}
+
+function resolveCodexCliBooleanSettings(settings?: Partial<CodexCliSettings> | null): CodexCliBooleanSettings {
+  return {
+    search: resolveBoolean(settings?.search, CODEX_CLI_SETTINGS_FALLBACK.search),
+    skipGitRepoCheck: resolveBoolean(settings?.skipGitRepoCheck, CODEX_CLI_SETTINGS_FALLBACK.skipGitRepoCheck),
+    dangerouslyBypassApprovalsAndSandbox: resolveBoolean(
+      settings?.dangerouslyBypassApprovalsAndSandbox,
+      CODEX_CLI_SETTINGS_FALLBACK.dangerouslyBypassApprovalsAndSandbox,
+    ),
+  }
+}
+
+export function resolveCodexCliSettings(settings?: Partial<CodexCliSettings> | null): CodexCliSettings {
+  return {
+    ...resolveCodexCliStringSettings(settings),
+    sandbox: resolveChoice(
+      settings?.sandbox,
+      ['read-only', 'workspace-write', 'danger-full-access'],
+      CODEX_CLI_SETTINGS_FALLBACK.sandbox,
+    ),
+    approvalPolicy: resolveChoice(
+      settings?.approvalPolicy,
+      ['untrusted', 'on-request', 'never'],
+      CODEX_CLI_SETTINGS_FALLBACK.approvalPolicy,
+    ),
+    addDirs: resolveStringArray(settings?.addDirs, CODEX_CLI_SETTINGS_FALLBACK.addDirs),
+    ...resolveCodexCliBooleanSettings(settings),
+  }
+}
+
 export function resolveAgentChatSettings(source: AgentChatSettingsResolverSource = {}): ResolvedAgentChatSettings {
   const settings = source.agentChatSettings
 
@@ -117,5 +170,6 @@ export function resolveAgentChatSettings(source: AgentChatSettingsResolverSource
     openDetailsOnFailure: resolveBoolean(settings?.openDetailsOnFailure, AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure),
     defaultView: resolveChoice(settings?.defaultView, AGENT_CHAT_DEFAULT_VIEWS, AGENT_CHAT_SETTINGS_DEFAULTS.defaultView),
     claudeCliSettings: resolveClaudeCliSettings(source.claudeCliSettings),
+    codexCliSettings: resolveCodexCliSettings(source.codexCliSettings),
   }
 }

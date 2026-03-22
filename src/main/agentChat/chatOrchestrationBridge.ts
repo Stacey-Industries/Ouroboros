@@ -247,6 +247,18 @@ async function persistCreatedLink(args: {
     sessionId: args.created.session?.id,
   }
 
+  // Preserve sticky fields from the previous turn's latestOrchestration.
+  // At this point the new session's providerSession.sessionId isn't set yet
+  // (the Claude Code process hasn't emitted its init event), so the new link
+  // has claudeSessionId/codexThreadId/model = undefined.  Without this merge
+  // the previous session's resume ID is lost, breaking --resume on the next turn.
+  const existing = args.pending.thread.latestOrchestration
+  if (existing) {
+    if (!link.claudeSessionId && existing.claudeSessionId) link.claudeSessionId = existing.claudeSessionId
+    if (!link.codexThreadId && existing.codexThreadId) link.codexThreadId = existing.codexThreadId
+    if (!link.model && existing.model) link.model = existing.model
+  }
+
   const thread = await persistThreadLinkage({
     link,
     messageId: args.pending.messageId,
@@ -381,7 +393,7 @@ function emitMonitorToolStart(ctx: ActiveStreamContext, blockIndex: number, tool
     type: 'pre_tool_use',
     sessionId,
     toolName: toolActivity.name,
-    toolCallId: `stream-${sessionId}-${blockIndex}`,
+    toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
     input,
     timestamp: now,
   } as HookPayload)
@@ -393,7 +405,7 @@ function emitMonitorToolEnd(ctx: ActiveStreamContext, blockIndex: number, toolNa
     type: 'post_tool_use',
     sessionId,
     toolName,
-    toolCallId: `stream-${sessionId}-${blockIndex}`,
+    toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
     timestamp: now,
   } as HookPayload)
 }
@@ -534,6 +546,11 @@ function handleProviderProgress(
   const now = runtime.now()
 
   if (progress.status === 'streaming') {
+    // Update token usage from streaming events so live display works
+    if (progress.tokenUsage) {
+      ctx.tokenUsage = progress.tokenUsage
+    }
+
     // --- Structured content block path (block-indexed) ---
     if (progress.contentBlock) {
       const { blockIndex, blockType, textDelta, toolActivity } = progress.contentBlock
@@ -864,8 +881,9 @@ function handleProviderProgress(
         type: 'complete',
         timestamp: now,
       })
-      // Update thread status to cancelled in the store
-      void runtime.threadStore.updateThread(threadId, { status: 'cancelled' }).catch(() => {})
+      // Update thread status AND latestOrchestration so sticky fields
+      // (claudeSessionId, model) are preserved for the next send.
+      void runtime.threadStore.updateThread(threadId, { status: 'cancelled', latestOrchestration: ctx.link }).catch(() => {})
       emitMonitorSessionEnd(ctx, now, 'Cancelled')
       runtime.activeSends.delete(ctx.taskId)
     }
@@ -1209,6 +1227,7 @@ export function createAgentChatOrchestrationBridge(
     getSettings: deps.getSettings ?? (() => resolveAgentChatSettings({
       agentChatSettings: getConfigValue('agentChatSettings'),
       claudeCliSettings: getConfigValue('claudeCliSettings'),
+      codexCliSettings: getConfigValue('codexCliSettings'),
     })),
     now: deps.now ?? Date.now,
     orchestration: deps.orchestration,

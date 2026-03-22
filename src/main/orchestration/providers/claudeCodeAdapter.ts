@@ -546,8 +546,10 @@ function buildEventHandler(
         cumulativeOutputTokens += usage.output_tokens ?? 0
       }
     }
-    // Capture session ID from system init events (needed for --resume)
-    if (event.type === 'system' && event.subtype === 'init' && event.session_id) {
+    // Capture session ID from stream events (needed for --resume).
+    // Primary source is the system init event, but fall back to assistant/result
+    // events in case the init event doesn't carry session_id.
+    if (!sessionRef.sessionId && event.session_id) {
       sessionRef.sessionId = event.session_id
     }
   }
