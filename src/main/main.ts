@@ -31,7 +31,7 @@ import { runAllMigrations } from './storage/migrate';
 import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
-import { loadPersistedContextCache, startContextRefreshTimer } from './ipc-handlers/agentChat';
+import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { createWindow, getAllActiveWindows } from './windowManager';
 
 // â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -309,6 +309,8 @@ app.setName('Ouroboros');
 app.whenReady().then(initializeApplication);
 
 app.on('window-all-closed', async () => {
+  stopContextRefreshTimer();
+  terminateContextWorker();
   clearPerfSubscribers();
   stopPerfMetrics();
   await stopWebServer();

@@ -173,6 +173,19 @@ export function requestApproval(request: ApprovalRequest): void {
 }
 
 /**
+ * Synchronous sleep using SharedArrayBuffer + Atomics.wait.
+ * Only used for EMFILE retry — keeps respondToApproval synchronous
+ * so callers don't need to change.
+ */
+function sleepSync(ms: number): void {
+  const buf = new SharedArrayBuffer(4)
+  Atomics.wait(new Int32Array(buf), 0, 0, ms)
+}
+
+const EMFILE_MAX_RETRIES = 2
+const EMFILE_RETRY_DELAY_MS = 200
+
+/**
  * Write an approval response file so the hook script can pick it up.
  */
 export function respondToApproval(requestId: string, response: ApprovalResponse): boolean {
@@ -185,27 +198,48 @@ export function respondToApproval(requestId: string, response: ApprovalResponse)
     autoApproveTimers.delete(requestId)
   }
 
-  // Write the response file
+  // Write the response file (with EMFILE retry)
+  const data = JSON.stringify(response)
+  let filePath: string
   try {
     ensureApprovalsDir()
-    const filePath = getResponseFilePath(requestId)
-    fs.writeFileSync(filePath, JSON.stringify(response), 'utf8')
-    console.log(`[approval] wrote response for ${requestId}: ${response.decision}`)
-
-    // Notify renderer windows that this approval was resolved
-    const windows = getAllActiveWindows()
-    for (const win of windows) {
-      if (!win.isDestroyed()) {
-        win.webContents.send('approval:resolved', { requestId, decision: response.decision })
-      }
-    }
-    broadcastToWebClients('approval:resolved', { requestId, decision: response.decision })
-
-    return true
+    filePath = getResponseFilePath(requestId)
   } catch (err) {
-    console.error(`[approval] failed to write response file for ${requestId}:`, err)
+    console.error(`[approval] failed to prepare response path for ${requestId}:`, err)
     return false
   }
+
+  let lastError: unknown
+  for (let attempt = 0; attempt <= EMFILE_MAX_RETRIES; attempt++) {
+    try {
+      fs.writeFileSync(filePath, data, 'utf8')
+      console.log(`[approval] wrote response for ${requestId}: ${response.decision}${attempt > 0 ? ` (retry ${attempt})` : ''}`)
+
+      // Notify renderer windows that this approval was resolved
+      const windows = getAllActiveWindows()
+      for (const win of windows) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('approval:resolved', { requestId, decision: response.decision })
+        }
+      }
+      broadcastToWebClients('approval:resolved', { requestId, decision: response.decision })
+
+      return true
+    } catch (err) {
+      lastError = err
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EMFILE' || code === 'ENFILE') {
+        console.warn(`[approval] ${code} on attempt ${attempt + 1} for ${requestId} — retrying in ${EMFILE_RETRY_DELAY_MS}ms`)
+        sleepSync(EMFILE_RETRY_DELAY_MS)
+        continue
+      }
+      // Non-EMFILE errors fail immediately
+      break
+    }
+  }
+
+  console.error(`[approval] failed to write response file for ${requestId}:`, lastError)
+  return false
 }
 
 /**

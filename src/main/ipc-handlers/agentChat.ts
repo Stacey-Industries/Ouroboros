@@ -74,7 +74,7 @@ interface CachedContext {
 
 const contextCache = new Map<string, CachedContext>()
 const contextBuildInFlight = new Set<string>()
-const CONTEXT_REFRESH_MS = 30_000  // refresh every 30s (runs in worker thread — no main-thread blocking)
+const CONTEXT_REFRESH_MS = 300_000  // refresh every 5 min (runs in worker thread — no main-thread blocking)
 
 function cacheKey(roots: string[]): string {
   return [...roots].sort().join('|')
@@ -247,7 +247,6 @@ export function startContextRefreshTimer(roots: string[]): void {
     console.log('[agentChat] Initial warm-up triggered for roots:', roots)
     warmSnapshotCache(roots)
   }, 5_000)
-  // Then refresh every 5 min (context is supplementary — Claude Code reads files natively)
   contextRefreshTimer = setInterval(() => warmSnapshotCache(roots), CONTEXT_REFRESH_MS)
 }
 
@@ -688,6 +687,8 @@ export function cleanupAgentChatHandlers(): void {
     ipcMain.removeHandler(channel)
   }
   registeredChannels = []
+  stopContextRefreshTimer()
+  terminateContextWorker()
   service = null
   orchestration = null
 }

@@ -266,6 +266,23 @@ export function registerWindowHandlers(channels: ChannelList): void {
     if (win) win.close()
     return ok()
   })
+
+  registerChannel(channels, 'window:toggle-fullscreen', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.setFullScreen(!win.isFullScreen())
+    return ok()
+  })
+
+  registerChannel(channels, 'window:toggle-devtools', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.webContents.toggleDevTools()
+    return ok()
+  })
+
+  registerChannel(channels, 'app:open-logs-folder', async () => {
+    await shell.openPath(app.getPath('logs'))
+    return ok()
+  })
 }
 
 export function registerExtensionHandlers(channels: ChannelList): void {

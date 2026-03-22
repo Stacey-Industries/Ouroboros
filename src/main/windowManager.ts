@@ -154,7 +154,13 @@ function createBrowserWindow(preloadPath: string, state: WindowCreationState): B
     win.setDarkTheme()
     win.setMicaAcrylicEffect()
     win.setRoundedCorner()
+    // Toggle alwaysFocused per-window so the active window keeps vibrant
+    // acrylic while inactive windows dim naturally. This avoids the DWM
+    // focus-fight flashing that occurs when multiple windows all claim
+    // alwaysFocused(true) simultaneously.
     win.alwaysFocused(true)
+    win.on('focus', () => { win.alwaysFocused(true) })
+    win.on('blur', () => { win.alwaysFocused(false) })
   }
 
   return win
