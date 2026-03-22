@@ -91,7 +91,7 @@ export function summarizeModels(sessions: SessionUsage[]): Array<{ name: string;
 export function StatRow({ label, value, color }: { label: string; value: string; color?: string }): React.ReactElement {
   return (
     <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border-muted)' }}>
-      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span className="text-[11px] text-text-semantic-muted">{label}</span>
       <span className="text-[12px] font-semibold tabular-nums" style={{ color: color ?? 'var(--text)', fontFamily: 'var(--font-mono)' }}>{value}</span>
     </div>
   );

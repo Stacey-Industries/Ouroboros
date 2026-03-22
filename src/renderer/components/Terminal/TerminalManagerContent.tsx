@@ -30,9 +30,9 @@ interface SharedTerminalProps {
   onToggleSync: () => void
 }
 
-const EXITED_CONTAINER_CLASS = 'flex h-full w-full flex-col items-center justify-center gap-3 bg-[var(--term-bg,var(--bg))] font-mono text-sm text-[var(--text-muted)]'
-const PRIMARY_EXITED_ACTION_CLASS = 'rounded bg-[var(--accent)] px-3 py-1 text-xs text-[var(--bg)] transition-colors duration-100 hover:bg-[var(--accent-hover)]'
-const SECONDARY_EXITED_ACTION_CLASS = 'rounded border border-[var(--border)] px-3 py-1 text-xs text-[var(--text-muted)] transition-colors duration-100 hover:bg-[var(--bg-tertiary)] hover:text-[var(--text)]'
+const EXITED_CONTAINER_CLASS = 'flex h-full w-full flex-col items-center justify-center gap-3 bg-[var(--term-bg,var(--bg))] font-mono text-sm text-text-semantic-muted'
+const PRIMARY_EXITED_ACTION_CLASS = 'rounded bg-interactive-accent px-3 py-1 text-xs text-text-semantic-on-accent transition-colors duration-100 hover:bg-interactive-hover'
+const SECONDARY_EXITED_ACTION_CLASS = 'rounded border border-border-semantic px-3 py-1 text-xs text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-text-semantic-primary'
 
 type TerminalStatus = TerminalSession['status']
 

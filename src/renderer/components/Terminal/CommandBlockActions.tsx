@@ -31,7 +31,6 @@ const actionsBarStyle: React.CSSProperties = {
 const actionButtonStyle: React.CSSProperties = {
   background: 'none',
   border: '1px solid transparent',
-  color: 'var(--text-muted, #888)',
   cursor: 'pointer',
   padding: '1px 5px',
   fontSize: 10,
@@ -47,9 +46,7 @@ const actionButtonStyle: React.CSSProperties = {
 
 const actionButtonHoverStyle: React.CSSProperties = {
   ...actionButtonStyle,
-  color: 'var(--text, #ccc)',
-  background: 'var(--bg-secondary, rgba(60,60,60,0.8))',
-  borderColor: 'var(--border, #444)',
+  background: 'rgba(60,60,60,0.8)',
 }
 
 function CopyIcon(): React.ReactElement {
@@ -106,6 +103,7 @@ function ActionButton({
     <button
       onClick={(e) => { e.stopPropagation(); onClick() }}
       title={title}
+      className={hovered ? 'text-text-semantic-primary border-border-semantic' : 'text-text-semantic-muted'}
       style={hovered ? actionButtonHoverStyle : actionButtonStyle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

@@ -175,7 +175,7 @@ function ProjectSummarySection({ context }: { context: ProjectContext }): React.
     <Section title="Project Summary">
       <div style={cardStyle}>
         <div style={titleRowStyle}>
-          <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>
+          <span className="text-text-semantic-primary" style={{ fontSize: '15px', fontWeight: 600 }}>
             {context.name}
           </span>
           {context.hasClaudeMd && <Badge label="CLAUDE.md exists" color="#22c55e" />}
@@ -220,7 +220,7 @@ function StructureSection({ context }: { context: ProjectContext }): React.React
           {keyDirs.map((dir) => (
             <React.Fragment key={dir.path}>
               <CodeLine accent>{dir.path}/</CodeLine>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{dir.purpose}</span>
+              <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>{dir.purpose}</span>
             </React.Fragment>
           ))}
         </div>
@@ -240,7 +240,7 @@ function BuildCommandsSection({ context }: { context: ProjectContext }): React.R
         {context.buildCommands.map((command) => (
           <div key={command.name} style={commandRowStyle}>
             <CodeLine accent>{command.name}</CodeLine>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{command.command}</span>
+            <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>{command.command}</span>
           </div>
         ))}
       </div>

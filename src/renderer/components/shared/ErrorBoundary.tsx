@@ -42,23 +42,18 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
       return (
         <div
-          className="flex flex-col items-center justify-center gap-3 p-6 text-center"
-          style={{ color: 'var(--text-muted)', minHeight: 120 }}
+          className="flex flex-col items-center justify-center gap-3 p-6 text-center text-text-semantic-muted"
+          style={{ minHeight: 120 }}
         >
-          <span className="text-sm font-medium" style={{ color: 'var(--error, #f85149)' }}>
+          <span className="text-sm font-medium text-status-error">
             {this.props.label ?? 'Component'} crashed
           </span>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-xs text-text-semantic-muted">
             {this.state.error?.message ?? 'An unexpected error occurred.'}
           </span>
           <button
-            className="mt-1 rounded px-3 py-1 text-xs"
-            style={{
-              backgroundColor: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              cursor: 'pointer',
-            }}
+            className="mt-1 rounded px-3 py-1 text-xs bg-surface-raised border border-border-semantic text-text-semantic-primary"
+            style={{ cursor: 'pointer' }}
             onClick={this.handleRetry}
           >
             Retry

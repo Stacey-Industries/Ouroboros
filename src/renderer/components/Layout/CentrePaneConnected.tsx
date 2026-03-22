@@ -109,7 +109,7 @@ const layerStyle: React.CSSProperties = {
 
 const panelStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', height: '100%',
-  background: 'var(--bg)', fontFamily: 'var(--font-ui)',
+  fontFamily: 'var(--font-ui)',
 };
 
 const scrollStyle: React.CSSProperties = {
@@ -123,8 +123,8 @@ function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projec
     case 'usage': return <UsagePanel onClose={noop} />;
     case 'context-builder': return projectRoot ? <ContextBuilder projectRoot={projectRoot} onClose={noop} /> : null;
     case 'time-travel': return <TimeTravelPanelConnected onClose={noop} />;
-    case 'extensions': return <div style={panelStyle}><div style={scrollStyle}><ExtensionStoreSection /></div></div>;
-    case 'mcp': return <div style={panelStyle}><div style={scrollStyle}><McpStoreSection /></div></div>;
+    case 'extensions': return <div className="bg-surface-base" style={panelStyle}><div style={scrollStyle}><ExtensionStoreSection /></div></div>;
+    case 'mcp': return <div className="bg-surface-base" style={panelStyle}><div style={scrollStyle}><McpStoreSection /></div></div>;
     default: return null;
   }
 }

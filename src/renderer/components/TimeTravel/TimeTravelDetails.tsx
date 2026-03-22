@@ -26,8 +26,8 @@ function SnapshotSummary({ snapshot }: { snapshot: WorkspaceSnapshot }): React.R
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>{snapshotTypeLabel(snapshot.type)}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>{snapshot.sessionLabel || `Session ${snapshot.sessionId.slice(0, 8)}`}</div>
-      <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="text-text-semantic-secondary" style={{ fontSize: '11px', marginBottom: '2px' }}>{snapshot.sessionLabel || `Session ${snapshot.sessionId.slice(0, 8)}`}</div>
+      <div className="text-text-semantic-muted" style={{ fontSize: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'var(--font-mono)' }}>{snapshot.commitHash}</span>
         <span>{formatFullDate(snapshot.timestamp)}</span>
       </div>
@@ -68,10 +68,10 @@ function ComparisonSummary({
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Comparison</div>
-      <div style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+      <div className="text-text-semantic-secondary" style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{ padding: '1px 4px', borderRadius: '3px', backgroundColor: '#d29922', color: '#000', fontSize: '9px', fontWeight: 600 }}>FROM</span>
         <span style={{ fontFamily: 'var(--font-mono)' }}>{truncateHash(fromSnapshot.commitHash)}</span>
-        <span style={{ color: 'var(--text-muted)' }}>&rarr;</span>
+        <span className="text-text-semantic-muted">&rarr;</span>
         <span style={{ padding: '1px 4px', borderRadius: '3px', backgroundColor: '#a371f7', color: '#000', fontSize: '9px', fontWeight: 600 }}>TO</span>
         <span style={{ fontFamily: 'var(--font-mono)' }}>{truncateHash(toSnapshot.commitHash)}</span>
       </div>
@@ -83,7 +83,7 @@ function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 6px', borderRadius: '3px', fontSize: '11px' }}>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600, color: statusColor(file.status), width: '12px', textAlign: 'center', flexShrink: 0 }}>{statusIcon(file.status)}</span>
-      <span style={{ flex: 1, fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{file.path}</span>
+      <span className="text-text-semantic-secondary" style={{ flex: 1, fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}>{file.path}</span>
       <span style={{ fontSize: '10px', color: '#3fb950', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{file.additions > 0 ? `+${file.additions}` : ''}</span>
       <span style={{ fontSize: '10px', color: '#f85149', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{file.deletions > 0 ? `-${file.deletions}` : ''}</span>
     </div>
@@ -98,11 +98,11 @@ function ChangedFilesSection({
   changedFiles: ChangedFile[];
 }): React.ReactElement {
   if (loadingFiles) {
-    return <div style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '8px 0' }}>Loading...</div>;
+    return <div className="text-text-semantic-muted" style={{ fontSize: '11px', padding: '8px 0' }}>Loading...</div>;
   }
 
   if (changedFiles.length === 0) {
-    return <div style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '8px 0' }}>No file changes detected.</div>;
+    return <div className="text-text-semantic-muted" style={{ fontSize: '11px', padding: '8px 0' }}>No file changes detected.</div>;
   }
 
   return (
@@ -132,7 +132,7 @@ function RestoreDialogActions({
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-      <button onClick={onCancel} style={{ padding: '6px 16px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-ui)' }}>
+      <button onClick={onCancel} className="text-text-semantic-primary border border-border-semantic" style={{ padding: '6px 16px', borderRadius: '4px', background: 'transparent', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-ui)' }}>
         Cancel
       </button>
       <button onClick={() => void onConfirm()} style={{ padding: '6px 16px', borderRadius: '4px', border: 'none', background: '#f85149', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-ui)' }}>
@@ -155,10 +155,10 @@ export function RestoreConfirmDialog({
 }): React.ReactElement {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.6)' }}>
-      <div style={{ width: '100%', maxWidth: '420px', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', padding: '20px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '14px', color: 'var(--text)', fontWeight: 600 }}>Restore Workspace State</h3>
-        <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-          This will restore the workspace to commit <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontSize: '11px' }}>{truncateHash(snapshot.commitHash)}</code> ({snapshotTypeLabel(snapshot.type)}).
+      <div className="bg-surface-panel border border-border-semantic" style={{ width: '100%', maxWidth: '420px', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', padding: '20px' }}>
+        <h3 className="text-text-semantic-primary" style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}>Restore Workspace State</h3>
+        <p className="text-text-semantic-secondary" style={{ margin: '0 0 8px', fontSize: '12px', lineHeight: '1.5' }}>
+          This will restore the workspace to commit <code className="text-interactive-accent" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>{truncateHash(snapshot.commitHash)}</code> ({snapshotTypeLabel(snapshot.type)}).
         </p>
         <DirtyWarning dirtyCount={dirtyCount} />
         <RestoreDialogActions onConfirm={onConfirm} onCancel={onCancel} />
@@ -182,7 +182,7 @@ export function TimeTravelDetailsPane({ panel }: { panel: DetailsPanelState }): 
         </>
       )}
       {comparison && <ComparisonSummary fromSnapshot={comparison.from} toSnapshot={comparison.to} />}
-      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <div className="text-text-semantic-muted" style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Changed Files {panel.changedFiles.length > 0 ? `(${panel.changedFiles.length})` : ''}
       </div>
       <ChangedFilesSection loadingFiles={panel.loadingFiles} changedFiles={panel.changedFiles} />

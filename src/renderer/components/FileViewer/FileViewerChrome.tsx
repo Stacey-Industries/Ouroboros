@@ -20,7 +20,7 @@ const rootStyle: React.CSSProperties = {
   flexDirection: 'column',
   minHeight: 0,
   height: '100%',
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'transparent',
 };
 
 const bodyStyle: React.CSSProperties = {

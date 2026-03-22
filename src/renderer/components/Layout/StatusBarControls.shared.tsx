@@ -30,8 +30,6 @@ export const DROPDOWN_STYLE: React.CSSProperties = {
   minWidth: '220px',
   maxWidth: '320px',
   maxHeight: '280px',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border)',
   borderRadius: '6px',
   boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.4)',
   display: 'flex',
@@ -43,10 +41,7 @@ export const DROPDOWN_STYLE: React.CSSProperties = {
 
 export const SEARCH_INPUT_STYLE: React.CSSProperties = {
   width: '100%',
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
   borderRadius: '4px',
-  color: 'var(--text)',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
   padding: '3px 6px',
@@ -144,11 +139,11 @@ export function StatusItem({
 }): React.ReactElement {
   return (
     <span
-      className="flex items-center px-2 truncate"
+      className="flex items-center px-2 truncate text-text-semantic-faint"
       title={title}
-      style={{ color: 'var(--text-faint)', transition: 'color 120ms ease', cursor: 'default' }}
-      onMouseEnter={(event) => setElementColor(event.currentTarget, 'var(--text-muted)')}
-      onMouseLeave={(event) => setElementColor(event.currentTarget, 'var(--text-faint)')}
+      style={{ transition: 'color 120ms ease', cursor: 'default' }}
+      onMouseEnter={(event) => setElementColor(event.currentTarget, 'var(--text-secondary)')}
+      onMouseLeave={(event) => setElementColor(event.currentTarget, '')}
     >
       {children}
     </span>
@@ -159,7 +154,8 @@ export function Divider(): React.ReactElement {
   return (
     <span
       aria-hidden="true"
-      style={{ width: '1px', height: '12px', backgroundColor: 'var(--border)', flexShrink: 0 }}
+      className="bg-border-semantic"
+      style={{ width: '1px', height: '12px', flexShrink: 0 }}
     />
   );
 }
@@ -233,12 +229,12 @@ export function StatusBarToggleButton({
       aria-haspopup="listbox"
       aria-expanded={open}
       style={{ ...STATUS_BUTTON_STYLE, cursor, color: restingColor }}
-      onMouseEnter={(event) => canHover && setElementColor(event.currentTarget, 'var(--text)')}
+      onMouseEnter={(event) => canHover && setElementColor(event.currentTarget, 'var(--text-primary)')}
       onMouseLeave={(event) => setElementColor(event.currentTarget, restingColor)}
     >
       {icon}
       <span style={{ ...TRUNCATE_STYLE, maxWidth }}>{label}</span>
-      <span style={{ fontSize: '8px', lineHeight: 1, color: 'var(--text-faint)' }}>&#9650;</span>
+      <span style={{ fontSize: '8px', lineHeight: 1, color: 'var(--text-faint, var(--text-secondary))' }}>&#9650;</span>
     </button>
   );
 }
@@ -264,7 +260,7 @@ export function LayoutControl({
         open={open}
         title={`Layout: ${layout.activeLayoutName}`}
         onToggle={() => setOpen((previous) => !previous)}
-        restingColor="var(--text-muted)"
+        restingColor="var(--text-secondary)"
       />
       {open ? (
         <LayoutSwitcher

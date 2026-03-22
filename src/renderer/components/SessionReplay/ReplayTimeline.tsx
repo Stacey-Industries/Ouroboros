@@ -29,7 +29,6 @@ const CONTAINER_STYLE: React.CSSProperties = { padding: '4px 8px' };
 const TRACK_STYLE: React.CSSProperties = {
   position: 'relative',
   height: '24px',
-  background: 'var(--bg-tertiary)',
   borderRadius: '4px',
   cursor: 'pointer',
   overflow: 'hidden',
@@ -40,7 +39,6 @@ const LABELS_STYLE: React.CSSProperties = {
   justifyContent: 'space-between',
   padding: '2px 0',
   fontSize: '0.625rem',
-  color: 'var(--text-faint)',
   fontFamily: 'var(--font-mono)',
   userSelect: 'none',
 };
@@ -185,7 +183,7 @@ function ReplayTimelineTrack({
   playheadPct: number;
 }): React.ReactElement {
   return (
-    <div ref={trackRef} onClick={handleClick} style={TRACK_STYLE}>
+    <div ref={trackRef} onClick={handleClick} className="bg-surface-raised" style={TRACK_STYLE}>
       <ReplayTimelineSegments
         steps={steps}
         currentStep={currentStep}
@@ -205,7 +203,7 @@ function ReplayTimelineLabels({
   totalDurationMs: number;
 }): React.ReactElement {
   return (
-    <div style={LABELS_STYLE}>
+    <div className="text-text-semantic-faint" style={LABELS_STYLE}>
       <span>{formatElapsed(currentElapsedMs)}</span>
       <span>{formatElapsed(totalDurationMs)}</span>
     </div>

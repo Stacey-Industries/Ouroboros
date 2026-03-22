@@ -30,7 +30,7 @@ export const SlotEditor = memo(function SlotEditor({
   templates: AgentTemplate[];
 }): React.ReactElement {
   return (
-    <div className="flex flex-col gap-2 rounded p-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+    <div className="flex flex-col gap-2 rounded p-3 bg-surface-panel border border-border-semantic">
       <SlotEditorHeader
         canRemove={canRemove}
         index={index}
@@ -47,9 +47,9 @@ export const SlotEditor = memo(function SlotEditor({
 
 export function LauncherHeader({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
-    <div className="flex shrink-0 items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+    <div className="flex shrink-0 items-center gap-2 px-3 py-2 border-b border-border-semantic">
       <MultiSessionGridIcon />
-      <span className="flex-1 text-xs font-semibold" style={{ color: 'var(--text)' }}>
+      <span className="flex-1 text-xs font-semibold text-text-semantic-primary">
         Multi-Session Launch
       </span>
       <IconButton
@@ -77,7 +77,7 @@ export function LauncherFooter({
   slotsLength: number;
 }): React.ReactElement {
   return (
-    <div className="flex shrink-0 items-center gap-2 px-3 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+    <div className="flex shrink-0 items-center gap-2 px-3 py-2 border-t border-border-semantic">
       <AddSessionButton canAddSlot={slotsLength < MAX_SLOTS} onAddSlot={onAddSlot} />
       <span className="flex-1" />
       <SlotCounter slotsLength={slotsLength} />

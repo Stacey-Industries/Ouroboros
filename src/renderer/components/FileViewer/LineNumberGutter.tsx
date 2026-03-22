@@ -16,6 +16,7 @@ export const LineNumberGutter = memo(function LineNumberGutter({
   return (
     <div
       aria-hidden="true"
+      className="text-text-semantic-faint"
       style={{
         flexShrink: 0,
         width: `${gutterWidth}px`,
@@ -23,8 +24,7 @@ export const LineNumberGutter = memo(function LineNumberGutter({
         paddingBottom: '16px',
         textAlign: 'right',
         paddingRight: '4px',
-        color: 'var(--text-faint)',
-        backgroundColor: 'var(--bg)',
+        backgroundColor: 'var(--surface-base)',
         position: 'sticky',
         left: 0,
         zIndex: 2,

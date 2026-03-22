@@ -61,7 +61,7 @@ const richInputEditorTheme = EditorView.theme({
   '&.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.25))' },
   '.cm-selectionBackground': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.15))' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--text-faint, #555)', borderRight: '1px solid var(--border, #333)', minWidth: '2.5em' },
+  '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--text-semantic-faint, #555)', borderRight: '1px solid var(--border, #333)', minWidth: '2.5em' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent' },
   '.cm-scroller::-webkit-scrollbar': { width: '6px' },
   '.cm-scroller::-webkit-scrollbar-track': { background: 'transparent' },
@@ -72,10 +72,10 @@ const toolbarStyle: React.CSSProperties = {
   backgroundColor: 'var(--rich-input-toolbar-bg, rgba(40,40,40,0.9))', minHeight: 24,
 };
 const toolbarPrimaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'var(--font-ui, sans-serif)', color: 'var(--text-muted, #888)', userSelect: 'none',
+  display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'var(--font-ui, sans-serif)', userSelect: 'none',
 };
 const toolbarSecondaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, fontFamily: 'var(--font-ui, sans-serif)', color: 'var(--text-faint, #666)', userSelect: 'none',
+  display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, fontFamily: 'var(--font-ui, sans-serif)', userSelect: 'none',
 };
 const toolbarTitleStyle: React.CSSProperties = { fontWeight: 600, letterSpacing: '0.02em' };
 const dividerStyle: React.CSSProperties = { color: 'var(--border, #444)' };
@@ -90,24 +90,31 @@ const richInputAnimationCss = '@keyframes richInputSlideUp { from { opacity: 0; 
 function getLineNumberButtonStyle(showLineNumbers: boolean): React.CSSProperties {
   return {
     background: 'none', border: showLineNumbers ? '1px solid var(--accent, #58a6ff)' : '1px solid transparent', borderRadius: 3,
-    color: showLineNumbers ? 'var(--accent, #58a6ff)' : 'var(--text-faint, #666)', cursor: 'pointer', fontSize: 10, padding: '1px 5px',
+    color: showLineNumbers ? 'var(--accent, #58a6ff)' : 'var(--text-semantic-faint, #666)', cursor: 'pointer', fontSize: 10, padding: '1px 5px',
     fontFamily: 'var(--font-ui, sans-serif)',
   };
 }
 function ToolbarStart({ onToggleLineNumbers, showLineNumbers }: { onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
   return (
-    <div style={toolbarPrimaryStyle}>
+    <div className="text-text-semantic-muted" style={toolbarPrimaryStyle}>
       <span style={toolbarTitleStyle}>Multi-line Input</span>
       <button onClick={onToggleLineNumbers} title="Toggle line numbers" style={getLineNumberButtonStyle(showLineNumbers)}>#</button>
     </div>
   );
 }
-function ToolbarEnd({ doSubmit }: { doSubmit: () => void }): React.ReactElement {
+function ToolbarEnd({ doCancel, doSubmit }: { doCancel: () => void; doSubmit: () => void }): React.ReactElement {
   return (
-    <div style={toolbarSecondaryStyle}>
+    <div className="text-text-semantic-faint" style={toolbarSecondaryStyle}>
       <span>Ctrl+Up/Down: history</span>
       <span style={dividerStyle}>|</span>
       <span>Esc: cancel</span>
+      <button
+        onClick={doCancel}
+        title="Close multi-line input"
+        style={{ background: 'transparent', border: '1px solid var(--border, #444)', borderRadius: 3, color: 'var(--text-semantic-muted, #a0a0a0)', cursor: 'pointer', fontSize: 10, padding: '2px 8px', fontFamily: 'var(--font-ui, sans-serif)' }}
+      >
+        Close
+      </button>
       <button
         onClick={doSubmit}
         title="Submit (Ctrl+Enter)"
@@ -118,18 +125,18 @@ function ToolbarEnd({ doSubmit }: { doSubmit: () => void }): React.ReactElement 
     </div>
   );
 }
-function RichInputToolbar({ doSubmit, onToggleLineNumbers, showLineNumbers }: { doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
+function RichInputToolbar({ doCancel, doSubmit, onToggleLineNumbers, showLineNumbers }: { doCancel: () => void; doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
   return (
     <div style={toolbarStyle}>
       <ToolbarStart onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
-      <ToolbarEnd doSubmit={doSubmit} />
+      <ToolbarEnd doCancel={doCancel} doSubmit={doSubmit} />
     </div>
   );
 }
-function RichInputPanel({ containerRef, doSubmit, onToggleLineNumbers, showLineNumbers }: { containerRef: React.RefObject<HTMLDivElement | null>; doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
+function RichInputPanel({ containerRef, doCancel, doSubmit, onToggleLineNumbers, showLineNumbers }: { containerRef: React.RefObject<HTMLDivElement | null>; doCancel: () => void; doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
   return (
     <div style={panelStyle}>
-      <RichInputToolbar doSubmit={doSubmit} onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
+      <RichInputToolbar doCancel={doCancel} doSubmit={doSubmit} onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
       <div ref={containerRef} style={editorHostStyle} />
       <style>{richInputAnimationCss}</style>
     </div>
@@ -272,5 +279,5 @@ export const RichInputBody = memo(function RichInputBody({ onCancel, onSubmit, v
   useRichInputEditorMount({ containerRef, doCancel, doSubmit, highlightCompartment, lineNumCompartment, navigateHistory, viewRef });
   useVisibleFocus(viewRef, visible);
   useLineNumberConfig(lineNumCompartment, showLineNumbers, viewRef);
-  return visible ? <RichInputPanel containerRef={containerRef} doSubmit={doSubmit} onToggleLineNumbers={() => setShowLineNumbers((value) => !value)} showLineNumbers={showLineNumbers} /> : null;
+  return visible ? <RichInputPanel containerRef={containerRef} doCancel={doCancel} doSubmit={doSubmit} onToggleLineNumbers={() => setShowLineNumbers((value) => !value)} showLineNumbers={showLineNumbers} /> : null;
 });

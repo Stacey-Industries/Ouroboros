@@ -9,7 +9,6 @@ const bannerStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--border)',
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
-  color: 'var(--text-muted)',
 };
 
 /**
@@ -17,8 +16,8 @@ const bannerStyle: React.CSSProperties = {
  */
 export const ClaudeMdBanner = memo(function ClaudeMdBanner(): React.ReactElement {
   return (
-    <div style={bannerStyle}>
-      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>CLAUDE.md</span>
+    <div className="text-text-semantic-muted" style={bannerStyle}>
+      <span className="text-interactive-accent" style={{ fontWeight: 600 }}>CLAUDE.md</span>
       <span>
         Enhanced editor available — click Edit to use section navigation,
         token counting, and templates

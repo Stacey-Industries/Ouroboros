@@ -28,7 +28,7 @@ export const DiffGutter = memo(function DiffGutter({
         width: `${diffGutterWidth}px`,
         paddingTop: '16px',
         paddingBottom: '16px',
-        backgroundColor: 'var(--bg)',
+        backgroundColor: 'var(--surface-base)',
         position: 'sticky',
         left: `${gutterWidth + foldGutterWidth}px`,
         zIndex: 2,

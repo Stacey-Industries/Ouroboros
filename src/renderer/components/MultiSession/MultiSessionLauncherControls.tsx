@@ -5,9 +5,9 @@ import { MAX_SLOTS } from './useMultiSessionLauncherModel';
 
 const MODEL_OPTIONS = [{ value: '', label: 'Default' }, { value: 'sonnet', label: 'Sonnet' }, { value: 'opus', label: 'Opus' }, { value: 'haiku', label: 'Haiku' }];
 const EFFORT_OPTIONS = [{ value: '', label: 'Default' }, { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'max', label: 'Max' }];
-const TEMPLATE_SELECT_STYLE = { flex: 1, minWidth: 0, background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontFamily: 'var(--font-ui)', cursor: 'pointer' } as const;
-const OVERRIDE_SELECT_STYLE = { background: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '3px', padding: '2px 6px', fontSize: '10px', fontFamily: 'var(--font-ui)', cursor: 'pointer' } as const;
-const PROMPT_STYLE = { width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '6px 8px', outline: 'none', resize: 'vertical', minHeight: '40px', lineHeight: 1.5, boxSizing: 'border-box' } as const;
+const TEMPLATE_SELECT_STYLE = { flex: 1, minWidth: 0, background: 'var(--surface-base, var(--bg))', border: '1px solid var(--border)', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontFamily: 'var(--font-ui)', cursor: 'pointer' } as const;
+const OVERRIDE_SELECT_STYLE = { background: 'var(--surface-base, var(--bg))', border: '1px solid var(--border)', borderRadius: '3px', padding: '2px 6px', fontSize: '10px', fontFamily: 'var(--font-ui)', cursor: 'pointer' } as const;
+const PROMPT_STYLE = { width: '100%', background: 'var(--surface-base, var(--bg))', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '6px 8px', outline: 'none', resize: 'vertical', minHeight: '40px', lineHeight: 1.5, boxSizing: 'border-box' } as const;
 
 interface IconButtonProps { ariaLabel: string; children: React.ReactNode; defaultColor: string; hoverColor: string; onClick: () => void; title: string; }
 
@@ -29,7 +29,7 @@ export function IconButton({ ariaLabel, children, defaultColor, hoverColor, onCl
 
 export function MultiSessionGridIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ color: 'var(--accent)', flexShrink: 0 }}>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="5" height="6" rx="1" />
       <rect x="10" y="1" width="5" height="6" rx="1" />
       <rect x="1" y="9" width="5" height="6" rx="1" />
@@ -44,7 +44,7 @@ export function CloseIcon(): React.ReactElement {
 
 function SessionTemplateSelect({ index, slot, templates, onUpdate }: { index: number; slot: SessionSlot; templates: AgentTemplate[]; onUpdate: (id: string, updates: Partial<SessionSlot>) => void; }): React.ReactElement {
   return (
-    <select value={slot.templateId} onChange={(event) => onUpdate(slot.id, { templateId: event.target.value })} style={TEMPLATE_SELECT_STYLE} aria-label={`Template for session ${index + 1}`}>
+    <select value={slot.templateId} onChange={(event) => onUpdate(slot.id, { templateId: event.target.value })} style={TEMPLATE_SELECT_STYLE} className="text-text-semantic-primary" aria-label={`Template for session ${index + 1}`}>
       <option value="__custom__">Custom prompt</option>
       {templates.map((template) => <option key={template.id} value={template.id}>{template.icon ? `${template.icon} ` : ''}{template.name}</option>)}
     </select>
@@ -53,7 +53,7 @@ function SessionTemplateSelect({ index, slot, templates, onUpdate }: { index: nu
 
 function OverrideSelect({ ariaLabel, options, value, onChange }: { ariaLabel: string; options: Array<{ label: string; value: string }>; value: string; onChange: (value: string) => void; }): React.ReactElement {
   return (
-    <select value={value} onChange={(event) => onChange(event.target.value)} style={OVERRIDE_SELECT_STYLE} aria-label={ariaLabel}>
+    <select value={value} onChange={(event) => onChange(event.target.value)} style={OVERRIDE_SELECT_STYLE} className="text-text-semantic-primary" aria-label={ariaLabel}>
       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   );
@@ -62,7 +62,7 @@ function OverrideSelect({ ariaLabel, options, value, onChange }: { ariaLabel: st
 export function SlotEditorHeader({ canRemove, index, onRemove, onUpdate, slot, templates }: { canRemove: boolean; index: number; onRemove: (id: string) => void; onUpdate: (id: string, updates: Partial<SessionSlot>) => void; slot: SessionSlot; templates: AgentTemplate[]; }): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
-      <span className="shrink-0 text-[11px] font-semibold" style={{ color: 'var(--accent)' }}>Session {index + 1}</span>
+      <span className="shrink-0 text-[11px] font-semibold text-interactive-accent">Session {index + 1}</span>
       <SessionTemplateSelect index={index} onUpdate={onUpdate} slot={slot} templates={templates} />
       {canRemove ? (
         <IconButton ariaLabel={`Remove session ${index + 1}`} defaultColor="var(--text-faint)" hoverColor="var(--error)" onClick={() => onRemove(slot.id)} title="Remove session">
@@ -74,13 +74,13 @@ export function SlotEditorHeader({ canRemove, index, onRemove, onUpdate, slot, t
 }
 
 export function SlotPromptField({ index, onUpdate, slot }: { index: number; onUpdate: (id: string, updates: Partial<SessionSlot>) => void; slot: SessionSlot; }): React.ReactElement {
-  return <textarea value={slot.customPrompt} onChange={(event) => onUpdate(slot.id, { customPrompt: event.target.value })} placeholder="Enter a prompt for this session..." rows={2} style={PROMPT_STYLE} aria-label={`Custom prompt for session ${index + 1}`} />;
+  return <textarea value={slot.customPrompt} onChange={(event) => onUpdate(slot.id, { customPrompt: event.target.value })} placeholder="Enter a prompt for this session..." rows={2} style={PROMPT_STYLE} className="text-text-semantic-primary" aria-label={`Custom prompt for session ${index + 1}`} />;
 }
 
 export function SlotOverrides({ index, onUpdate, slot }: { index: number; onUpdate: (id: string, updates: Partial<SessionSlot>) => void; slot: SessionSlot; }): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
-      <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-faint)' }}>Overrides:</span>
+      <span className="shrink-0 text-[10px] text-text-semantic-faint">Overrides:</span>
       <OverrideSelect ariaLabel={`Model override for session ${index + 1}`} options={MODEL_OPTIONS} value={slot.modelOverride} onChange={(value) => onUpdate(slot.id, { modelOverride: value })} />
       <OverrideSelect ariaLabel={`Effort override for session ${index + 1}`} options={EFFORT_OPTIONS} value={slot.effortOverride} onChange={(value) => onUpdate(slot.id, { effortOverride: value })} />
     </div>
@@ -110,7 +110,7 @@ export function AddSessionButton({ canAddSlot, onAddSlot }: { canAddSlot: boolea
 }
 
 export function SlotCounter({ slotsLength }: { slotsLength: number }): React.ReactElement {
-  return <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)' }}>{slotsLength} / {MAX_SLOTS}</span>;
+  return <span className="text-[10px] tabular-nums text-text-semantic-faint">{slotsLength} / {MAX_SLOTS}</span>;
 }
 
 export function LaunchAllButton({ canLaunch, onLaunchAll }: { canLaunch: boolean; onLaunchAll: () => void; }): React.ReactElement {
@@ -119,7 +119,7 @@ export function LaunchAllButton({ canLaunch, onLaunchAll }: { canLaunch: boolean
       onClick={onLaunchAll}
       disabled={!canLaunch}
       className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[11px] font-semibold transition-colors"
-      style={{ background: canLaunch ? 'var(--accent)' : 'var(--bg-tertiary)', color: canLaunch ? 'var(--bg)' : 'var(--text-faint)', border: 'none', cursor: canLaunch ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-ui)' }}
+      style={{ background: canLaunch ? 'var(--accent)' : 'var(--bg-tertiary)', color: canLaunch ? 'var(--text-on-accent)' : 'var(--text-faint)', border: 'none', cursor: canLaunch ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-ui)' }}
       title={canLaunch ? 'Launch all configured sessions simultaneously' : 'Configure at least one session with a prompt'}
     >
       <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M2 1l7 4-7 4V1z" /></svg>

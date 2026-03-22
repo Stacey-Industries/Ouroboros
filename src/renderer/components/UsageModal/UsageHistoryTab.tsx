@@ -70,7 +70,7 @@ function HistoryToolbar({
   onRefresh: () => Promise<void>;
 }): React.ReactElement {
   return (
-    <div className="flex flex-shrink-0 items-center gap-1.5 px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+    <div className="flex flex-shrink-0 items-center gap-1.5 px-4 py-2 border-b border-border-semantic">
       {HISTORY_RANGES.map((range) => (
         <button
           key={range.key}
@@ -90,8 +90,7 @@ function HistoryToolbar({
       <div className="flex-1" />
       <button
         onClick={() => void onRefresh()}
-        className="rounded px-2 py-0.5 text-[10px] transition-colors"
-        style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+        className="rounded px-2 py-0.5 text-[10px] transition-colors text-text-semantic-faint" style={{ background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
       >
         Refresh
       </button>
@@ -111,12 +110,12 @@ function HistorySummaryCards({ summary }: { summary: UsageSummary }): React.Reac
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+    <div className="grid grid-cols-3 gap-2 px-4 py-3 border-b border-border-semantic">
       {cards.map((card) => (
-        <div key={card.label} className="flex flex-col items-center rounded-md px-2 py-2" style={{ background: 'var(--bg-tertiary)' }}>
-          <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>{card.label}</span>
-          <span className="text-[15px] font-bold tabular-nums" style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{card.value}</span>
-          {card.sub && <span className="text-[9px]" style={{ color: 'var(--text-faint)' }}>{card.sub}</span>}
+        <div key={card.label} className="flex flex-col items-center rounded-md px-2 py-2 bg-surface-raised">
+          <span className="text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint">{card.label}</span>
+          <span className="text-[15px] font-bold tabular-nums text-interactive-accent" style={{ fontFamily: 'var(--font-mono)' }}>{card.value}</span>
+          {card.sub && <span className="text-[9px] text-text-semantic-faint">{card.sub}</span>}
         </div>
       ))}
     </div>
@@ -128,20 +127,20 @@ function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.Re
   const maxTokens = models.length > 0 ? Math.max(...models.map((model) => model.tokens)) : 1;
 
   return (
-    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Model Distribution</div>
+    <div className="px-4 py-3 border-b border-border-semantic">
+      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">Model Distribution</div>
       <div className="flex flex-col gap-1.5">
         {models.map((model) => (
           <div key={model.name} className="flex items-center gap-2">
             <span className="text-[10px] font-semibold" style={{ color: model.color, width: '50px', flexShrink: 0 }}>{model.name}</span>
-            <div className="h-[6px] flex-1 overflow-hidden rounded-full" style={{ background: 'var(--bg)' }}>
+            <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-surface-base">
               <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.max((model.tokens / maxTokens) * 100, 2)}%`, background: model.color, opacity: 0.7 }} />
             </div>
-            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', width: '50px', textAlign: 'right', flexShrink: 0 }}>{formatTokens(model.tokens)}</span>
-            <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)', width: '44px', textAlign: 'right', flexShrink: 0 }}>{formatCost(model.cost)}</span>
+            <span className="text-[10px] tabular-nums text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)', width: '50px', textAlign: 'right', flexShrink: 0 }}>{formatTokens(model.tokens)}</span>
+            <span className="text-[10px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)', width: '44px', textAlign: 'right', flexShrink: 0 }}>{formatCost(model.cost)}</span>
           </div>
         ))}
-        {models.length === 0 && <span className="text-[10px] italic" style={{ color: 'var(--text-faint)' }}>No data</span>}
+        {models.length === 0 && <span className="text-[10px] italic text-text-semantic-faint">No data</span>}
       </div>
     </div>
   );
@@ -184,8 +183,8 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
   if (maxCost === 0) return null;
 
   return (
-    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Daily Spend</div>
+    <div className="px-4 py-3 border-b border-border-semantic">
+      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">Daily Spend</div>
       <div className="flex items-end gap-[3px]" style={{ height: '80px' }}>
         {buckets.map((bucket, i) => {
           const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
@@ -200,8 +199,8 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
             >
               {isHovered && (
                 <div
-                  className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap"
-                  style={{ background: 'var(--bg-tertiary)', color: 'var(--accent)', border: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', zIndex: 1 }}
+                  className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap bg-surface-raised text-interactive-accent"
+                  style={{ border: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', zIndex: 1 }}
                 >
                   {formatCost(bucket.cost)}
                 </div>
@@ -220,8 +219,8 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
         })}
       </div>
       <div className="mt-1 flex justify-between">
-        <span className="text-[8px]" style={{ color: 'var(--text-faint)' }}>{buckets[0].label}</span>
-        <span className="text-[8px]" style={{ color: 'var(--text-faint)' }}>{buckets[buckets.length - 1].label}</span>
+        <span className="text-[8px] text-text-semantic-faint">{buckets[0].label}</span>
+        <span className="text-[8px] text-text-semantic-faint">{buckets[buckets.length - 1].label}</span>
       </div>
     </div>
   );
@@ -229,18 +228,18 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
 
 function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.ReactElement {
   return (
-    <div className="px-2 py-1.5 text-[10px]" style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}>
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5" style={{ color: 'var(--text-muted)' }}>
-        <span>Model: <span style={{ color: 'var(--text)' }}>{session.model}</span></span>
-        <span>Input: <span style={{ color: 'var(--text)' }}>{formatTokens(session.inputTokens)}</span></span>
-        <span>Output: <span style={{ color: 'var(--text)' }}>{formatTokens(session.outputTokens)}</span></span>
-        <span>Cache Read: <span style={{ color: 'var(--text)' }}>{formatTokens(session.cacheReadTokens)}</span></span>
-        <span>Cache Write: <span style={{ color: 'var(--text)' }}>{formatTokens(session.cacheWriteTokens)}</span></span>
-        <span>Messages: <span style={{ color: 'var(--text)' }}>{session.messageCount}</span></span>
+    <div className="px-2 py-1.5 text-[10px] bg-surface-raised" style={{ borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
+        <span>Model: <span className="text-text-semantic-primary">{session.model}</span></span>
+        <span>Input: <span className="text-text-semantic-primary">{formatTokens(session.inputTokens)}</span></span>
+        <span>Output: <span className="text-text-semantic-primary">{formatTokens(session.outputTokens)}</span></span>
+        <span>Cache Read: <span className="text-text-semantic-primary">{formatTokens(session.cacheReadTokens)}</span></span>
+        <span>Cache Write: <span className="text-text-semantic-primary">{formatTokens(session.cacheWriteTokens)}</span></span>
+        <span>Messages: <span className="text-text-semantic-primary">{session.messageCount}</span></span>
       </div>
-      <div className="mt-1 flex gap-x-4" style={{ color: 'var(--text-faint)' }}>
-        <span>Started: <span style={{ color: 'var(--text)' }}>{formatDate(session.startedAt)}</span></span>
-        <span>Last active: <span style={{ color: 'var(--text)' }}>{formatDate(session.lastActiveAt)}</span></span>
+      <div className="mt-1 flex gap-x-4 text-text-semantic-faint">
+        <span>Started: <span className="text-text-semantic-primary">{formatDate(session.startedAt)}</span></span>
+        <span>Last active: <span className="text-text-semantic-primary">{formatDate(session.lastActiveAt)}</span></span>
       </div>
     </div>
   );
@@ -260,15 +259,15 @@ function HistorySessionRow({
   return (
     <div>
       <button
-        className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors"
-        style={{ fontFamily: 'var(--font-mono)', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-muted)', cursor: 'pointer', color: 'var(--text)', textAlign: 'left', padding: '4px 0' }}
+        className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
+        style={{ fontFamily: 'var(--font-mono)', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-muted)', cursor: 'pointer', textAlign: 'left', padding: '4px 0' }}
         onClick={onToggle}
       >
-        <span style={{ width: '70px', flexShrink: 0, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>{timeAgo(session.lastActiveAt)}</span>
+        <span className="text-text-semantic-muted" style={{ width: '70px', flexShrink: 0, fontFamily: 'var(--font-ui)' }}>{timeAgo(session.lastActiveAt)}</span>
         <span className="min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ui)' }}>{session.sessionId.slice(0, 8)}</span>
-        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right', color: 'var(--text)' }}>{modelShortName(session.model)}</span>
-        <span style={{ width: '56px', flexShrink: 0, textAlign: 'right', color: 'var(--text-muted)' }}>{formatTokens(totalTokens)}</span>
-        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right', color: 'var(--accent)', fontWeight: 600 }}>{formatCost(session.estimatedCost)}</span>
+        <span className="text-text-semantic-primary" style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>{modelShortName(session.model)}</span>
+        <span className="text-text-semantic-muted" style={{ width: '56px', flexShrink: 0, textAlign: 'right' }}>{formatTokens(totalTokens)}</span>
+        <span className="text-interactive-accent" style={{ width: '48px', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}>{formatCost(session.estimatedCost)}</span>
       </button>
       {isExpanded && <HistorySessionExpandedDetails session={session} />}
     </div>
@@ -278,13 +277,13 @@ function HistorySessionRow({
 function HistorySessionList({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
   const [expanded, setExpanded] = useState<string | null>(null);
   if (sessions.length === 0) {
-    return <div className="px-4 py-6 text-center text-[11px] italic" style={{ color: 'var(--text-faint)' }}>No sessions found in Claude Code&apos;s local data</div>;
+    return <div className="px-4 py-6 text-center text-[11px] italic text-text-semantic-faint">No sessions found in Claude Code&apos;s local data</div>;
   }
 
   return (
     <div className="px-4 py-2">
-      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>Sessions ({sessions.length})</div>
-      <div className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)', borderBottom: '1px solid var(--border-muted)' }}>
+      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">Sessions ({sessions.length})</div>
+      <div className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint" style={{ borderBottom: '1px solid var(--border-muted)' }}>
         <span style={{ width: '70px', flexShrink: 0 }}>When</span>
         <span className="min-w-0 flex-1">Session</span>
         <span style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>Model</span>
@@ -317,14 +316,14 @@ function HistoryContent({
   onRetry: () => Promise<void>;
 }): React.ReactElement | null {
   if (isLoading) {
-    return <div className="flex items-center justify-center py-12"><span className="text-[11px] italic" style={{ color: 'var(--text-faint)' }}>Scanning Claude Code session files...</span></div>;
+    return <div className="flex items-center justify-center py-12"><span className="text-[11px] italic text-text-semantic-faint">Scanning Claude Code session files...</span></div>;
   }
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-12">
-        <span className="text-[11px]" style={{ color: 'var(--error, #f87171)' }}>{error}</span>
-        <button onClick={() => void onRetry()} className="rounded px-3 py-1 text-[10px]" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer' }}>Retry</button>
+        <span className="text-[11px] text-status-error">{error}</span>
+        <button onClick={() => void onRetry()} className="rounded px-3 py-1 text-[10px] bg-surface-raised text-text-semantic-muted border border-border-semantic" style={{ cursor: 'pointer' }}>Retry</button>
       </div>
     );
   }

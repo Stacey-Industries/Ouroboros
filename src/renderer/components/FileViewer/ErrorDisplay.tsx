@@ -11,7 +11,6 @@ const containerStyle: React.CSSProperties = {
   justifyContent: 'center',
   height: '100%',
   gap: '8px',
-  color: 'var(--error)',
   fontSize: '0.875rem',
   padding: '24px',
   textAlign: 'center',
@@ -24,7 +23,7 @@ export const ErrorDisplay = memo(function ErrorDisplay({
   error,
 }: ErrorDisplayProps): React.ReactElement {
   return (
-    <div style={containerStyle}>
+    <div className="text-status-error" style={containerStyle}>
       <span style={{ fontSize: '1.5rem' }}>{'\u26A0'}</span>
       <span>{error}</span>
     </div>

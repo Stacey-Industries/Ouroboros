@@ -17,8 +17,8 @@ interface DiffReviewLayoutProps {
   onRejectHunk: (fileIdx: number, hunkIdx: number) => void;
   setFileRef: (idx: number, element: HTMLDivElement | null) => void;
 }
-const panelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg)' };
-const headerStyle: React.CSSProperties = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', userSelect: 'none' };
+const panelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--surface-base)' };
+const headerStyle: React.CSSProperties = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--surface-panel)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', userSelect: 'none' };
 export function DiffReviewLayout({
   files,
   selectedFileIdx,
@@ -121,14 +121,14 @@ function DiffReviewHeader({
 function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <span style={{ fontWeight: 600, color: 'var(--text)' }}>Diff Review</span>
-      <span style={{ color: 'var(--success, #4CAF50)' }}>+{stats.added}</span>
-      <span style={{ color: 'var(--error, #f85149)' }}>-{stats.removed}</span>
+      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Diff Review</span>
+      <span style={{ color: 'var(--status-success, #4CAF50)' }}>+{stats.added}</span>
+      <span style={{ color: 'var(--status-error, #f85149)' }}>-{stats.removed}</span>
       <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
         {stats.decidedHunks}/{stats.totalHunks} hunks decided
       </span>
-      <ReviewStat count={stats.acceptedHunks} color="var(--success, #4CAF50)" label="accepted" />
-      <ReviewStat count={stats.rejectedHunks} color="var(--error, #f85149)" label="rejected" />
+      <ReviewStat count={stats.acceptedHunks} color="var(--status-success, #4CAF50)" label="accepted" />
+      <ReviewStat count={stats.rejectedHunks} color="var(--status-error, #f85149)" label="rejected" />
     </div>
   );
 }
@@ -148,11 +148,11 @@ function DiffReviewHeaderActions({
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       {!allDecided && (
         <>
-          <HeaderBtn label="Accept All" color="var(--success, #4CAF50)" onClick={onAcceptAll} />
-          <HeaderBtn label="Reject All" color="var(--error, #f85149)" onClick={onRejectAll} />
+          <HeaderBtn label="Accept All" color="var(--status-success, #4CAF50)" onClick={onAcceptAll} />
+          <HeaderBtn label="Reject All" color="var(--status-error, #f85149)" onClick={onRejectAll} />
         </>
       )}
-      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--accent, #58a6ff)" onClick={onClose} />
+      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--interactive-accent, #58a6ff)" onClick={onClose} />
     </div>
   );
 }
@@ -183,7 +183,7 @@ const FileSection = React.forwardRef<HTMLDivElement, FileSectionProps>(function 
   ref,
 ) {
   return (
-    <div ref={ref} style={{ borderBottom: '2px solid var(--border)' }}>
+    <div ref={ref} style={{ borderBottom: '2px solid var(--border-default)' }}>
       <FileSectionHeader file={file} isSelected={isSelected} />
       {file.hunks.map((hunk, hunkIdx) => (
         <HunkView
@@ -214,11 +214,11 @@ function FileSectionHeader({
         alignItems: 'center',
         gap: '8px',
         padding: '4px 12px',
-        backgroundColor: isSelected ? 'rgba(88, 166, 255, 0.06)' : 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
+        backgroundColor: isSelected ? 'rgba(88, 166, 255, 0.06)' : 'var(--surface-panel)',
+        borderBottom: '1px solid var(--border-default)',
         fontSize: '0.8125rem',
         fontFamily: 'var(--font-mono)',
-        color: 'var(--text)',
+        color: 'var(--text-primary)',
         userSelect: 'none',
       }}
     >
@@ -256,10 +256,10 @@ function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactEl
 }
 
 function getStatusMeta(status: ReviewFile['status']): { color: string; label: string } {
-  if (status === 'added') return { color: 'var(--success, #4CAF50)', label: 'A' };
-  if (status === 'deleted') return { color: 'var(--error, #f85149)', label: 'D' };
-  if (status === 'renamed') return { color: 'var(--accent, #58a6ff)', label: 'R' };
-  return { color: 'var(--warning, #d29922)', label: 'M' };
+  if (status === 'added') return { color: 'var(--status-success, #4CAF50)', label: 'A' };
+  if (status === 'deleted') return { color: 'var(--status-error, #f85149)', label: 'D' };
+  if (status === 'renamed') return { color: 'var(--interactive-accent, #58a6ff)', label: 'R' };
+  return { color: 'var(--status-warning, #d29922)', label: 'M' };
 }
 
 function HeaderBtn({
@@ -285,7 +285,7 @@ function HeaderBtn({
         border: `1px solid ${color}`,
         borderRadius: '4px',
         background: hovered ? color : 'transparent',
-        color: hovered ? 'var(--bg)' : color,
+        color: hovered ? 'var(--text-on-accent)' : color,
         cursor: 'pointer',
         lineHeight: '1.5',
         transition: 'background 0.1s, color 0.1s',

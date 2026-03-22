@@ -232,22 +232,22 @@ export const MonacoDiffEditor = memo(function MonacoDiffEditor(
           alignItems: 'center',
           gap: '8px',
           padding: '4px 8px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-semantic)',
+          background: 'var(--surface-panel)',
           fontSize: '12px',
-          color: 'var(--text-secondary)',
           flexShrink: 0,
         }}
+        className="text-text-semantic-muted"
       >
         {/* View mode toggle */}
         <button
           onClick={toggleViewMode}
           title={sideBySide ? 'Switch to inline diff' : 'Switch to side-by-side diff'}
+          className="text-text-semantic-primary"
           style={{
             background: 'transparent',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-semantic)',
             borderRadius: '4px',
-            color: 'var(--text)',
             padding: '2px 8px',
             cursor: 'pointer',
             fontSize: '11px',
@@ -257,17 +257,17 @@ export const MonacoDiffEditor = memo(function MonacoDiffEditor(
         </button>
 
         {/* Separator */}
-        <span style={{ color: 'var(--border)' }}>|</span>
+        <span style={{ color: 'var(--border-semantic)' }}>|</span>
 
         {/* Navigation */}
         <button
           onClick={goToPrevChange}
           title="Previous change"
+          className="text-text-semantic-primary"
           style={{
             background: 'transparent',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-semantic)',
             borderRadius: '4px',
-            color: 'var(--text)',
             padding: '2px 8px',
             cursor: 'pointer',
             fontSize: '11px',
@@ -278,11 +278,11 @@ export const MonacoDiffEditor = memo(function MonacoDiffEditor(
         <button
           onClick={goToNextChange}
           title="Next change"
+          className="text-text-semantic-primary"
           style={{
             background: 'transparent',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-semantic)',
             borderRadius: '4px',
-            color: 'var(--text)',
             padding: '2px 8px',
             cursor: 'pointer',
             fontSize: '11px',
@@ -304,11 +304,11 @@ export const MonacoDiffEditor = memo(function MonacoDiffEditor(
               <button
                 onClick={() => handleAcceptHunk(0)}
                 title="Accept all changes"
+                className="text-status-success"
                 style={{
                   background: 'transparent',
-                  border: '1px solid var(--success)',
+                  border: '1px solid var(--status-success)',
                   borderRadius: '4px',
-                  color: 'var(--success)',
                   padding: '2px 8px',
                   cursor: 'pointer',
                   fontSize: '11px',
@@ -321,11 +321,11 @@ export const MonacoDiffEditor = memo(function MonacoDiffEditor(
               <button
                 onClick={() => handleRejectHunk(0)}
                 title="Reject all changes"
+                className="text-status-error"
                 style={{
                   background: 'transparent',
-                  border: '1px solid var(--error)',
+                  border: '1px solid var(--status-error)',
                   borderRadius: '4px',
-                  color: 'var(--error)',
                   padding: '2px 8px',
                   cursor: 'pointer',
                   fontSize: '11px',

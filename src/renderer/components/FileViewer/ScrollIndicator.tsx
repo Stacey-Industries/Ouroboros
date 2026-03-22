@@ -21,7 +21,7 @@ const trackStyle: React.CSSProperties = {
   right: 0,
   width: '4px',
   height: '100%',
-  backgroundColor: 'var(--bg-tertiary)',
+  backgroundColor: 'var(--surface-raised)',
   zIndex: 5,
   pointerEvents: 'none',
   transition: 'opacity 200ms ease',
@@ -30,7 +30,7 @@ const trackStyle: React.CSSProperties = {
 const thumbBaseStyle: React.CSSProperties = {
   position: 'absolute',
   width: '100%',
-  backgroundColor: 'var(--accent)',
+  backgroundColor: 'var(--interactive-accent)',
   borderRadius: '2px',
   transition: 'top 50ms ease-out, opacity 200ms ease',
 };

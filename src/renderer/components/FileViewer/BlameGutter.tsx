@@ -68,17 +68,14 @@ const BLAME_ANNOTATION_STYLE: React.CSSProperties = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
-  color: 'var(--text-faint)',
 };
 
 const BLAME_AUTHOR_STYLE: React.CSSProperties = {
-  color: 'var(--text-muted)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
 };
 
 const BLAME_DATE_STYLE: React.CSSProperties = {
-  color: 'var(--text-faint)',
   flexShrink: 0,
 };
 
@@ -91,13 +88,12 @@ const TOOLTIP_BACKDROP_STYLE: React.CSSProperties = {
 const TOOLTIP_CARD_STYLE: React.CSSProperties = {
   position: 'fixed',
   zIndex: 1000,
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-panel)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '6px',
   padding: '10px 14px',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
-  color: 'var(--text)',
   maxWidth: '350px',
   boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
   lineHeight: '1.5',
@@ -111,22 +107,17 @@ const TOOLTIP_HEADER_STYLE: React.CSSProperties = {
 
 const TOOLTIP_HASH_STYLE: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  color: 'var(--accent)',
   fontSize: '0.6875rem',
 };
 
-const TOOLTIP_AUTHOR_STYLE: React.CSSProperties = {
-  color: 'var(--text-muted)',
-};
+const TOOLTIP_AUTHOR_STYLE: React.CSSProperties = {};
 
 const TOOLTIP_DATE_STYLE: React.CSSProperties = {
-  color: 'var(--text-faint)',
   fontSize: '0.6875rem',
 };
 
 const TOOLTIP_SUMMARY_STYLE: React.CSSProperties = {
   marginTop: '6px',
-  color: 'var(--text)',
   fontWeight: 500,
 };
 
@@ -206,11 +197,12 @@ const BlameAnnotationRow = memo(function BlameAnnotationRow({
   return (
     <div
       onClick={(event) => onClick(event, blame)}
+      className="text-text-semantic-faint"
       style={{ ...BLAME_ANNOTATION_STYLE, backgroundColor }}
       title={formatBlameTitle(blame)}
     >
-      <span style={BLAME_AUTHOR_STYLE}>{shortAuthor(blame.author)}</span>
-      <span style={BLAME_DATE_STYLE}>{relativeDate(blame.date)}</span>
+      <span className="text-text-semantic-muted" style={BLAME_AUTHOR_STYLE}>{shortAuthor(blame.author)}</span>
+      <span className="text-text-semantic-faint" style={BLAME_DATE_STYLE}>{relativeDate(blame.date)}</span>
     </div>
   );
 });
@@ -251,15 +243,15 @@ const BlameTooltip = memo(function BlameTooltip({
   return (
     <>
       <div onClick={onClose} style={TOOLTIP_BACKDROP_STYLE} />
-      <div style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}>
+      <div className="text-text-semantic-primary" style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}>
         <div style={TOOLTIP_HEADER_STYLE}>
-          <span style={TOOLTIP_HASH_STYLE}>{blame.hash.slice(0, 8)}</span>
-          <span style={TOOLTIP_AUTHOR_STYLE}>{blame.author}</span>
+          <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>{blame.hash.slice(0, 8)}</span>
+          <span className="text-text-semantic-muted" style={TOOLTIP_AUTHOR_STYLE}>{blame.author}</span>
         </div>
-        <div style={TOOLTIP_DATE_STYLE}>
+        <div className="text-text-semantic-faint" style={TOOLTIP_DATE_STYLE}>
           {new Date(blame.date * 1000).toLocaleString()}
         </div>
-        <div style={TOOLTIP_SUMMARY_STYLE}>{blame.summary}</div>
+        <div className="text-text-semantic-primary" style={TOOLTIP_SUMMARY_STYLE}>{blame.summary}</div>
       </div>
     </>
   );

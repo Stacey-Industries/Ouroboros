@@ -26,10 +26,7 @@ const searchInputStyle: React.CSSProperties = {
   flex: 1,
   minWidth: 0,
   padding: '4px 8px',
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
   borderRadius: '4px',
-  color: 'var(--text)',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -214,7 +211,7 @@ export function FileTreeSearchBar({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search files..."
           aria-label="Filter files"
-          className="selectable"
+          className="selectable bg-surface-base border border-border-semantic text-text-semantic-primary"
           style={searchInputStyle}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}

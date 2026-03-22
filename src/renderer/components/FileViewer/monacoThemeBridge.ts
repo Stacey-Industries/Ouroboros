@@ -90,12 +90,12 @@ const THEME_NAME = 'ouroboros';
  * Build a Monaco IStandaloneThemeData from the current CSS custom properties.
  */
 function buildThemeData(): monaco.editor.IStandaloneThemeData {
-  const bg = cssVarHex('--bg', '#111113');
-  const bgSecondary = cssVarHex('--bg-secondary', '#18181b');
+  const bg = cssVarHex('--monaco-bg', '#111113');
+  const bgSecondary = cssVarHex('--palette-bg-secondary', '#18181b');
   const text = cssVarHex('--text', '#fafafa');
   const textSecondary = cssVarHex('--text-secondary', '#a1a1aa');
-  const textMuted = cssVarHex('--text-muted', '#52525b');
-  const border = cssVarHex('--border', '#3f3f46');
+  const textMuted = cssVarHex('--text-muted', '#c0c0d4');
+  const border = cssVarHex('--border-default', '#3f3f46');
   const accent = cssVarHex('--accent', '#818cf8');
   const accentMuted = cssVarHex('--accent-muted', '#818cf826');
   const selection = cssVarHex('--selection', '#6366f140');

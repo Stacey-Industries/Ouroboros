@@ -42,7 +42,6 @@ const headerStyle: React.CSSProperties = {
   gap: '4px',
   cursor: 'pointer',
   userSelect: 'none',
-  backgroundColor: 'var(--bg-tertiary)',
   borderBottom: '1px solid var(--border-muted)',
   minHeight: '26px',
 };
@@ -53,7 +52,6 @@ const headerTitleStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -63,8 +61,6 @@ const countBadgeStyle: React.CSSProperties = {
   flexShrink: 0,
   fontSize: '0.625rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
-  backgroundColor: 'var(--bg)',
   padding: '0 5px',
   borderRadius: '8px',
   lineHeight: '16px',
@@ -87,7 +83,6 @@ const dotStyle: React.CSSProperties = {
   flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
-  color: 'var(--accent)',
 };
 
 const unpinButtonStyle: React.CSSProperties = {
@@ -96,7 +91,6 @@ const unpinButtonStyle: React.CSSProperties = {
   border: 'none',
   padding: '2px',
   cursor: 'pointer',
-  color: 'var(--text-faint)',
   display: 'flex',
   alignItems: 'center',
   borderRadius: '3px',
@@ -169,7 +163,8 @@ function PinnedChevron({ expanded }: { expanded: boolean }): React.ReactElement 
       viewBox="0 0 10 10"
       fill="none"
       aria-hidden="true"
-      style={{ flexShrink: 0, color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
+      className="text-text-semantic-faint"
+      style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
     >
       <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -178,7 +173,7 @@ function PinnedChevron({ expanded }: { expanded: boolean }): React.ReactElement 
 
 function PinnedIcon(): React.ReactElement {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--accent)' }}>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
       <path d="M9.828 2.172a2 2 0 0 1 2.828 0l1.172 1.172a2 2 0 0 1 0 2.828L11 9l.5 5-3-3-4 4v-1.5L1 11l3-3-3-3 5 .5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -194,11 +189,11 @@ function PinnedSectionHeader({
   onToggle: () => void;
 }): React.ReactElement {
   return (
-    <div style={headerStyle} onClick={onToggle} role="button" tabIndex={0} onKeyDown={(event) => handleHeaderKeyDown(event, onToggle)} aria-expanded={expanded} aria-label="Toggle Pinned section">
+    <div className="bg-surface-raised" style={headerStyle} onClick={onToggle} role="button" tabIndex={0} onKeyDown={(event) => handleHeaderKeyDown(event, onToggle)} aria-expanded={expanded} aria-label="Toggle Pinned section">
       <PinnedChevron expanded={expanded} />
       <PinnedIcon />
-      <span style={headerTitleStyle}>Pinned</span>
-      <span style={countBadgeStyle}>{count}</span>
+      <span className="text-text-semantic-muted" style={headerTitleStyle}>Pinned</span>
+      <span className="text-text-semantic-faint bg-surface-base" style={countBadgeStyle}>{count}</span>
     </div>
   );
 }
@@ -224,12 +219,12 @@ function PinnedItemRow({
     <div role="listitem" className="pinned-item-row" data-active={isActive} onClick={() => onFileSelect(item.path)} style={getRowStyle(isActive)} title={item.path}>
       <PinnedItemIcon item={item} />
       <span style={getNameStyle(item)}>{item.name}</span>
-      <span style={dotStyle} aria-hidden="true">
+      <span className="text-interactive-accent" style={dotStyle} aria-hidden="true">
         <svg width="6" height="6" viewBox="0 0 6 6" fill="none">
           <circle cx="3" cy="3" r="3" fill="currentColor" />
         </svg>
       </span>
-      <button className="pinned-unpin-btn" onClick={(event) => { event.stopPropagation(); onUnpin(item.path); }} title={`Unpin "${item.name}"`} style={unpinButtonStyle} aria-label={`Unpin ${item.name}`}>
+      <button className="pinned-unpin-btn text-text-semantic-faint" onClick={(event) => { event.stopPropagation(); onUnpin(item.path); }} title={`Unpin "${item.name}"`} style={unpinButtonStyle} aria-label={`Unpin ${item.name}`}>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
           <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>

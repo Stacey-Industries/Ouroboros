@@ -37,12 +37,12 @@ function buildRootNode(root: string): TreeNode {
 }
 
 function RootSectionError({ error }: { error: string }): React.ReactElement {
-  return <div style={{ padding: '12px', color: 'var(--error)', fontSize: '0.8125rem' }}>{error}</div>;
+  return <div className="text-status-error" style={{ padding: '12px', fontSize: '0.8125rem' }}>{error}</div>;
 }
 
 function RootSectionEmpty(): React.ReactElement {
   return (
-    <div style={{ padding: '16px 12px', color: 'var(--text-faint)', fontSize: '0.8125rem', textAlign: 'center' }}>
+    <div className="text-text-semantic-faint" style={{ padding: '16px 12px', fontSize: '0.8125rem', textAlign: 'center' }}>
       No files found in this directory.
     </div>
   );

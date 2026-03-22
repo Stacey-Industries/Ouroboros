@@ -53,16 +53,14 @@ const TOOL_BADGE_STYLE: React.CSSProperties = {
 
 const STATUS_TEXT_STYLE: React.CSSProperties = { fontSize: '0.6875rem', fontWeight: 500 };
 
-const META_TEXT_STYLE: React.CSSProperties = { fontSize: '0.6875rem', color: 'var(--text-faint)' };
+const META_TEXT_STYLE: React.CSSProperties = { fontSize: '0.6875rem' };
 
 const TOOL_INPUT_STYLE: React.CSSProperties = {
   marginTop: '6px',
   padding: '4px 8px',
-  background: 'var(--bg-secondary)',
   borderRadius: '4px',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-muted)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-all',
   maxHeight: '60px',
@@ -80,7 +78,6 @@ const OUTPUT_LABEL_STYLE: React.CSSProperties = {
   padding: '0 12px 4px',
   fontSize: '0.6875rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
 };
@@ -89,24 +86,21 @@ const OUTPUT_PANEL_STYLE: React.CSSProperties = {
   flex: 1,
   margin: '0 12px 8px',
   padding: '8px',
-  background: 'var(--bg-secondary)',
   borderRadius: '4px',
   border: '1px solid var(--border-muted)',
   overflow: 'auto',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
   lineHeight: '1.5',
-  color: 'var(--text)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
 };
 
-const EMPTY_OUTPUT_STYLE: React.CSSProperties = { color: 'var(--text-faint)', fontStyle: 'italic' };
+const EMPTY_OUTPUT_STYLE: React.CSSProperties = { fontStyle: 'italic' };
 
 const STEP_COUNTER_STYLE: React.CSSProperties = {
   fontSize: '0.625rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
   fontFamily: 'var(--font-mono)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
@@ -116,10 +110,9 @@ const SESSION_TITLE_STYLE: React.CSSProperties = {
   margin: '8px 0 4px',
   fontSize: '0.875rem',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
-const SESSION_LABEL_STYLE: React.CSSProperties = { fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '12px' };
+const SESSION_LABEL_STYLE: React.CSSProperties = { fontSize: '0.8125rem', marginBottom: '12px' };
 
 const METADATA_GRID_STYLE: React.CSSProperties = {
   display: 'grid',
@@ -129,7 +122,7 @@ const METADATA_GRID_STYLE: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
 };
 
-const METADATA_LABEL_STYLE: React.CSSProperties = { color: 'var(--text-faint)', whiteSpace: 'nowrap' };
+const METADATA_LABEL_STYLE: React.CSSProperties = { whiteSpace: 'nowrap' };
 
 type ReplayToolCall = NonNullable<ReplayStep['toolCall']>;
 
@@ -238,8 +231,8 @@ function SessionStartDetail({
 function SessionHeading({ taskLabel }: { taskLabel: string }): React.ReactElement {
   return (
     <>
-      <h3 style={SESSION_TITLE_STYLE}>Session Started</h3>
-      <div style={SESSION_LABEL_STYLE}>{taskLabel}</div>
+      <h3 className="text-text-semantic-primary" style={SESSION_TITLE_STYLE}>Session Started</h3>
+      <div className="text-text-semantic-muted" style={SESSION_LABEL_STYLE}>{taskLabel}</div>
     </>
   );
 }
@@ -294,30 +287,30 @@ function ToolStatus({ status }: { status: ReplayToolCall['status'] }): React.Rea
 }
 
 function ToolDuration({ duration }: { duration: number }): React.ReactElement {
-  return <span style={{ ...META_TEXT_STYLE, fontFamily: 'var(--font-mono)' }}>{formatDuration(duration)}</span>;
+  return <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, fontFamily: 'var(--font-mono)' }}>{formatDuration(duration)}</span>;
 }
 
 function ToolTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
-  return <span style={{ ...META_TEXT_STYLE, marginLeft: 'auto' }}>{formatTime(timestamp)}</span>;
+  return <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, marginLeft: 'auto' }}>{formatTime(timestamp)}</span>;
 }
 
 function ToolInputSummary({ input }: { input?: string }): React.ReactElement {
-  return <div style={TOOL_INPUT_STYLE}>{input || '(no input)'}</div>;
+  return <div className="bg-surface-panel text-text-semantic-muted" style={TOOL_INPUT_STYLE}>{input || '(no input)'}</div>;
 }
 
 function OutputPanel({ output }: { output?: string }): React.ReactElement {
   return (
     <div style={OUTPUT_CONTAINER_STYLE}>
-      <div style={OUTPUT_LABEL_STYLE}>Output</div>
-      <div style={OUTPUT_PANEL_STYLE}>
-        {output || <span style={EMPTY_OUTPUT_STYLE}>No output captured</span>}
+      <div className="text-text-semantic-faint" style={OUTPUT_LABEL_STYLE}>Output</div>
+      <div className="bg-surface-panel text-text-semantic-primary" style={OUTPUT_PANEL_STYLE}>
+        {output || <span className="text-text-semantic-faint" style={EMPTY_OUTPUT_STYLE}>No output captured</span>}
       </div>
     </div>
   );
 }
 
 function StepCounter({ step, total }: { step: number; total: number }): React.ReactElement {
-  return <span style={STEP_COUNTER_STYLE}>Step {step} of {total}</span>;
+  return <span className="text-text-semantic-faint" style={STEP_COUNTER_STYLE}>Step {step} of {total}</span>;
 }
 
 function MetadataGrid({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -327,8 +320,8 @@ function MetadataGrid({ children }: { children: React.ReactNode }): React.ReactE
 function MetadataRow({ label, value, color }: { label: string; value: string; color?: string }): React.ReactElement {
   return (
     <>
-      <span style={METADATA_LABEL_STYLE}>{label}</span>
-      <span style={{ color: color ?? 'var(--text-muted)' }}>{value}</span>
+      <span className="text-text-semantic-faint" style={METADATA_LABEL_STYLE}>{label}</span>
+      <span style={{ color: color ?? undefined }} className={color ? undefined : 'text-text-semantic-muted'}>{value}</span>
     </>
   );
 }

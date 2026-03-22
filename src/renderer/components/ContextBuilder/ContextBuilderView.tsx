@@ -8,7 +8,6 @@ const containerStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'hidden',
-  background: 'var(--bg)',
 };
 
 export function ContextBuilderView({
@@ -16,7 +15,7 @@ export function ContextBuilderView({
   ...model
 }: ContextBuilderModel & { onClose: () => void }): React.ReactElement {
   return (
-    <div style={containerStyle}>
+    <div className="bg-surface-base" style={containerStyle}>
       <ContextBuilderHeader
         onClose={onClose}
         scanning={model.scanning}

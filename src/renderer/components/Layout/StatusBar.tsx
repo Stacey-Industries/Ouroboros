@@ -67,9 +67,8 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
 
 const STATUS_BAR_STYLE: React.CSSProperties = {
   height: '24px',
-  backgroundColor: 'var(--bg-secondary)',
-  borderTop: '1px solid color-mix(in srgb, var(--border) 30%, transparent)',
-  boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--border) 30%, transparent)',
+  borderTop: 'none',
+  boxShadow: 'none',
   fontSize: '11px',
   fontFamily: 'var(--font-ui, system-ui)',
   overflow: 'visible',
@@ -202,7 +201,7 @@ export function StatusBar({
   );
 
   return (
-    <div className="flex items-center justify-between flex-shrink-0 select-none" style={STATUS_BAR_STYLE}>
+    <div className="flex items-center justify-between flex-shrink-0 select-none bg-surface-panel" style={STATUS_BAR_STYLE}>
       <div className="flex items-center min-w-0 overflow-hidden">
         <GitSection gitBranch={gitBranch} projectRoot={projectRoot} />
         <FileSection

@@ -10,8 +10,8 @@ export interface FileIconInfo {
 
 const ICON_MAP: Record<string, FileIconInfo> = {
   // TypeScript
-  ts: { color: 'var(--accent)', label: 'TS' },
-  tsx: { color: 'var(--accent)', label: 'TSX' },
+  ts: { color: 'var(--interactive-accent)', label: 'TS' },
+  tsx: { color: 'var(--interactive-accent)', label: 'TSX' },
   // JavaScript
   js: { color: '#f7df1e', label: 'JS' },
   jsx: { color: '#f7df1e', label: 'JSX' },
@@ -34,10 +34,10 @@ const ICON_MAP: Record<string, FileIconInfo> = {
   sass: { color: 'var(--purple)', label: 'SASS' },
   less: { color: 'var(--purple)', label: 'LESS' },
   // Markdown / docs
-  md: { color: 'var(--text-muted)', label: 'MD' },
-  mdx: { color: 'var(--text-muted)', label: 'MDX' },
-  txt: { color: 'var(--text-muted)', label: 'TXT' },
-  rst: { color: 'var(--text-muted)', label: 'RST' },
+  md: { color: 'var(--text-semantic-muted)', label: 'MD' },
+  mdx: { color: 'var(--text-semantic-muted)', label: 'MDX' },
+  txt: { color: 'var(--text-semantic-muted)', label: 'TXT' },
+  rst: { color: 'var(--text-semantic-muted)', label: 'RST' },
   // Python
   py: { color: '#4b8bbe', label: 'PY' },
   pyi: { color: '#4b8bbe', label: 'PYI' },
@@ -71,17 +71,17 @@ const ICON_MAP: Record<string, FileIconInfo> = {
   php: { color: '#4f5d95', label: 'PHP' },
   // Database
   sql: { color: '#e38c00', label: 'SQL' },
-  prisma: { color: 'var(--accent)', label: 'PRISMA' },
+  prisma: { color: 'var(--interactive-accent)', label: 'PRISMA' },
   // Config / dotfiles
   env: { color: 'var(--success)', label: 'ENV' },
-  gitignore: { color: 'var(--text-faint)', label: 'GIT' },
+  gitignore: { color: 'var(--text-semantic-faint)', label: 'GIT' },
   dockerfile: { color: '#384d54', label: 'DOCK' },
   // Misc
-  lock: { color: 'var(--text-faint)', label: 'LOCK' },
-  log: { color: 'var(--text-faint)', label: 'LOG' },
+  lock: { color: 'var(--text-semantic-faint)', label: 'LOCK' },
+  log: { color: 'var(--text-semantic-faint)', label: 'LOG' },
 };
 
-const FALLBACK: FileIconInfo = { color: 'var(--text-faint)', label: 'FILE' };
+const FALLBACK: FileIconInfo = { color: 'var(--text-semantic-faint)', label: 'FILE' };
 
 /**
  * Returns icon info for a given filename or extension.

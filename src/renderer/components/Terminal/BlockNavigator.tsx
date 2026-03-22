@@ -31,9 +31,9 @@ function NavButton({ onClick, disabled, title, direction }: NavButtonProps): Rea
       onClick={onClick}
       disabled={disabled}
       title={title}
+      className={disabled ? 'text-text-semantic-muted' : 'text-text-semantic-primary'}
       style={{
         background: 'none', border: 'none',
-        color: disabled ? 'var(--text-muted, #555)' : 'var(--text, #ccc)',
         cursor: disabled ? 'default' : 'pointer',
         padding: '1px 3px', fontSize: 11, lineHeight: 1,
         display: 'flex', alignItems: 'center',
@@ -51,11 +51,9 @@ const containerStyle: React.CSSProperties = {
   position: 'absolute', top: 36, right: 8, zIndex: 15,
   display: 'flex', alignItems: 'center', gap: 2,
   padding: '2px 4px', borderRadius: 4,
-  border: '1px solid var(--border, #333)',
-  backgroundColor: 'var(--bg-secondary, rgba(30,30,30,0.9))',
   backdropFilter: 'blur(4px)',
   fontFamily: 'var(--font-mono, monospace)', fontSize: 10,
-  color: 'var(--text-muted, #888)', userSelect: 'none',
+  userSelect: 'none',
   boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
 }
 
@@ -69,7 +67,7 @@ export function BlockNavigator({
   const stop = (e: React.MouseEvent) => e.stopPropagation()
 
   return (
-    <div style={containerStyle}>
+    <div className="border border-border-semantic bg-surface-panel text-text-semantic-muted" style={containerStyle}>
       <NavButton
         onClick={(e) => { stop(e); onNavigateUp() }}
         disabled={activeIndex <= 0}

@@ -119,9 +119,12 @@ export function useRichInputState(
   const focusTerminal = useCallback(() => terminalRef.current?.focus(), [terminalRef])
 
   const handleRichInputSubmit = useCallback((text: string) => {
-    void window.electronAPI.pty.write(sessionId, `${text}\r`)
-    setRichInputActive(false)
-    focusTerminal()
+    void (async () => {
+      await writeChunkedPaste(sessionId, text)
+      await window.electronAPI.pty.write(sessionId, '\r')
+      setRichInputActive(false)
+      focusTerminal()
+    })()
   }, [focusTerminal, sessionId])
 
   const handleRichInputCancel = useCallback(() => {

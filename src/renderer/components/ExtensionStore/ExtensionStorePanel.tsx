@@ -98,14 +98,13 @@ export function ExtensionStorePanel(): React.ReactElement | null {
         }}
       >
         <div
+          className="bg-surface-base border-l border-border-semantic"
           style={{
             width: '520px',
             maxWidth: '90vw',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: 'var(--bg)',
-            borderLeft: '1px solid var(--border)',
             boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
             animation: isVisible
               ? 'ext-card-in 200ms ease forwards'
@@ -114,27 +113,27 @@ export function ExtensionStorePanel(): React.ReactElement | null {
         >
           {/* Header */}
           <div
+            className="border-b border-border-semantic"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 16px',
-              borderBottom: '1px solid var(--border)',
               flexShrink: 0,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ExtensionIcon />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+              <span className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 600 }}>
                 Extension Store
               </span>
             </div>
             <button
               onClick={close}
+              className="text-text-semantic-muted"
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--text-muted)',
                 cursor: 'pointer',
                 fontSize: '18px',
                 lineHeight: 1,
@@ -166,7 +165,7 @@ export function ExtensionStorePanel(): React.ReactElement | null {
 
 function ExtensionIcon(): React.ReactElement {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent)' }}>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-interactive-accent">
       <path d="M9 2v3a1 1 0 001 1h3" />
       <path d="M4 2H2.5A1.5 1.5 0 001 3.5v10A1.5 1.5 0 002.5 15h7a1.5 1.5 0 001.5-1.5V6L7 2H4z" />
       <path d="M5 9h4M5 11.5h2.5" />

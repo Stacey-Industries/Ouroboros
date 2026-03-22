@@ -37,9 +37,9 @@ function shimmerStyle(
     borderRadius: '4px',
     background: `linear-gradient(
       90deg,
-      var(--bg-tertiary) 25%,
-      var(--bg-secondary) 50%,
-      var(--bg-tertiary) 75%
+      var(--surface-raised) 25%,
+      var(--surface-panel) 50%,
+      var(--surface-raised) 75%
     )`,
     backgroundSize: '200% 100%',
     animation: 'skeleton-shimmer 1.8s ease-in-out infinite',

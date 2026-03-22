@@ -28,7 +28,7 @@ export function ResizeDivider({ direction, onPointerDown, onDoubleClick, label }
       <div className={`absolute ${isVertical ? 'inset-y-0 -left-1 -right-1' : 'inset-x-0 -top-1 -bottom-1'}`} />
       <div
         data-layout="resize-handle-line"
-        className={`absolute ${isVertical ? 'inset-y-0 left-[2px] w-[1px]' : 'inset-x-0 top-[2px] h-[1px]'} bg-[var(--border)] opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-[var(--accent)] group-active:opacity-100 group-active:bg-[var(--accent)]`}
+        className={`absolute ${isVertical ? 'inset-y-0 left-[2px] w-[1px]' : 'inset-x-0 top-[2px] h-[1px]'} bg-border-semantic opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-interactive-accent group-active:opacity-100 group-active:bg-interactive-accent`}
       />
     </div>
   );

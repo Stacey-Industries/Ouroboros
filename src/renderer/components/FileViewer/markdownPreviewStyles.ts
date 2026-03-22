@@ -18,12 +18,12 @@ const MARKDOWN_PREVIEW_STYLES = `
   .md-preview p { margin: 0.6em 0; }
   .md-preview ul, .md-preview ol { margin: 0.6em 0; padding-left: 1.75em; }
   .md-preview li { margin: 0.2em 0; }
-  .md-preview a { color: var(--accent); text-decoration: underline; }
+  .md-preview a { color: var(--interactive-accent); text-decoration: underline; }
   .md-preview a:hover { opacity: 0.85; }
   .md-preview code {
     font-family: var(--font-mono);
     font-size: 0.875em;
-    background: var(--bg-secondary);
+    background: var(--surface-panel);
     border: 1px solid var(--border-muted);
     border-radius: 3px;
     padding: 0.1em 0.35em;
@@ -32,7 +32,7 @@ const MARKDOWN_PREVIEW_STYLES = `
   .md-preview pre {
     font-family: var(--font-mono);
     font-size: 0.8125em;
-    background: var(--bg-secondary);
+    background: var(--surface-panel);
     border: 1px solid var(--border-muted);
     border-radius: 6px;
     padding: 12px 16px;
@@ -48,11 +48,11 @@ const MARKDOWN_PREVIEW_STYLES = `
     font-size: inherit;
   }
   .md-preview blockquote {
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--interactive-accent);
     margin: 0.8em 0;
     padding: 0.4em 1em;
     color: var(--text-muted);
-    background: var(--bg-secondary);
+    background: var(--surface-panel);
     border-radius: 0 4px 4px 0;
   }
   .md-preview hr {

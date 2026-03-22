@@ -110,9 +110,9 @@ function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement {
       tabIndex={item.disabled ? undefined : -1}
       aria-disabled={item.disabled}
       onClick={item.disabled ? undefined : item.action}
+      className={item.disabled ? 'text-text-semantic-faint' : 'text-text-semantic-primary'}
       style={{
         padding: '6px 12px', cursor: item.disabled ? 'default' : 'pointer',
-        color: item.disabled ? 'var(--text-faint, var(--text-muted))' : 'var(--text)',
         whiteSpace: 'nowrap', userSelect: 'none',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         gap: '16px', opacity: item.disabled ? 0.4 : 1,
@@ -121,7 +121,7 @@ function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement {
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
     >
       <span>{item.label}</span>
-      {item.shortcut && <span style={{ fontSize: '0.6875rem', color: 'var(--text-faint)', fontFamily: 'var(--font-ui)' }}>{item.shortcut}</span>}
+      {item.shortcut && <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-ui)' }}>{item.shortcut}</span>}
     </div>
   )
 }
@@ -129,15 +129,14 @@ function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement {
 // ─── Separator ────────────────────────────────────────────────────────────────
 
 function Separator(): React.ReactElement {
-  return <div style={{ height: '1px', margin: '4px 8px', background: 'var(--border-muted, var(--border))' }} />
+  return <div className="bg-border-semantic" style={{ height: '1px', margin: '4px 8px' }} />
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const menuStyle: React.CSSProperties = {
   minWidth: '180px', padding: '4px 0',
-  background: 'var(--bg-secondary, var(--bg))',
-  border: '1px solid var(--border)', borderRadius: '6px',
+  borderRadius: '6px',
   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
   fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
 }
@@ -156,7 +155,7 @@ export function TerminalContextMenu({
   const items = buildMenuItems(terminal, sessionId, state.hasSelection, onClose)
 
   return (
-    <div ref={menuRef} role="menu" style={{ position: 'fixed', left: state.x, top: state.y, zIndex: 9999, ...menuStyle }}>
+    <div ref={menuRef} role="menu" className="bg-surface-panel border border-border-semantic" style={{ position: 'fixed', left: state.x, top: state.y, zIndex: 9999, ...menuStyle }}>
       {items.map((item) => (
         <React.Fragment key={item.label}>
           {item.separator && <Separator />}

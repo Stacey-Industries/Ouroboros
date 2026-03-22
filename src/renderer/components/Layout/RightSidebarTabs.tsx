@@ -16,13 +16,14 @@ import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
 } from '../../hooks/appEventNames';
 
-export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics';
+export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics' | 'memory';
 
 export interface RightSidebarTabsProps {
   chatContent: React.ReactNode;
   monitorContent: React.ReactNode;
   gitContent: React.ReactNode;
   analyticsContent?: React.ReactNode;
+  memoryContent?: React.ReactNode;
   /** Chat thread data — passed through from AgentChatWorkspace */
   threads?: AgentChatThreadRecord[];
   activeThreadId?: string | null;
@@ -107,12 +108,23 @@ function AnalyticsIcon(): React.ReactElement {
   );
 }
 
+function MemoryIcon(): React.ReactElement {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1a5 5 0 0 1 5 5c0 1.8-1 3.2-2.1 4.3S9 12.5 9 14H7c0-1.5-.4-2.5-1.9-3.7A5 5 0 0 1 8 1z" />
+      <path d="M6.5 15h3" />
+      <path d="M7 14h2" />
+    </svg>
+  );
+}
+
 /* ── View Switcher Dropdown ── */
 
 const SECONDARY_VIEWS: Array<{ id: RightSidebarView; label: string; Icon: () => React.ReactElement }> = [
   { id: 'monitor', label: 'Monitor', Icon: MonitorIcon },
   { id: 'git', label: 'Git Status', Icon: GitIcon },
   { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon },
+  { id: 'memory', label: 'Memory', Icon: MemoryIcon },
 ];
 
 function ViewSwitcherDropdown({
@@ -144,12 +156,10 @@ function ViewSwitcherDropdown({
   return (
     <div
       ref={ref}
-      className="absolute right-1 z-50"
+      className="absolute right-1 z-50 bg-surface-overlay border border-border-semantic backdrop-blur-xl"
       style={{
         top: '100%',
         marginTop: 2,
-        backgroundColor: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
         borderRadius: 6,
         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
         minWidth: 150,
@@ -162,13 +172,13 @@ function ViewSwitcherDropdown({
           <button
             key={id}
             onClick={() => { onSwitchView(id); onClose(); }}
-            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs transition-colors duration-75"
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs transition-colors duration-75 text-text-semantic-primary"
             style={{
-              color: isActive ? 'var(--accent)' : 'var(--text)',
-              backgroundColor: isActive ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'transparent',
+              color: isActive ? 'var(--interactive-accent)' : undefined,
+              backgroundColor: isActive ? 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)' : 'transparent',
             }}
             onMouseEnter={(e) => {
-              if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+              if (!isActive) e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
             }}
             onMouseLeave={(e) => {
               if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
@@ -180,15 +190,14 @@ function ViewSwitcherDropdown({
         );
       })}
 
-      <div className="my-1 border-t" style={{ borderColor: 'var(--border-muted, var(--border))' }} />
+      <div className="my-1 border-t border-border-semantic" />
 
       {/* Back to chat when on a secondary view */}
       {activeView !== 'chat' && (
         <button
           onClick={() => { onSwitchView('chat'); onClose(); }}
-          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs transition-colors duration-75"
-          style={{ color: 'var(--accent)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
+          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs transition-colors duration-75 text-interactive-accent"
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--surface-raised)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
           <BackArrowIcon />
@@ -212,34 +221,33 @@ function SecondaryViewHeader({
 }): React.ReactElement {
   return (
     <div
-      className="flex-shrink-0 flex items-center h-8 border-b"
-      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-muted, var(--border))' }}
+      className="flex-shrink-0 flex items-center h-8 border-b bg-surface-panel"
+      style={{ borderColor: 'var(--border-muted, var(--border))' }}
     >
       <button
         onClick={onCollapse}
         title="Collapse sidebar (Ctrl+\)"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-colors duration-100"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100"
       >
         <CollapseIcon />
       </button>
 
       <button
         onClick={onBackToChat}
-        className="flex items-center gap-1 px-1.5 text-xs transition-colors duration-100"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex items-center gap-1 px-1.5 text-xs transition-colors duration-100 text-text-semantic-muted"
         title="Back to Chat"
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--interactive-accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
       >
         <BackArrowIcon />
         <span>Chat</span>
       </button>
 
-      <span className="mx-1 text-[10px]" style={{ color: 'var(--border)' }}>|</span>
+      <span className="mx-1 text-[10px] text-border-semantic">|</span>
 
       <span
-        className="text-xs font-semibold uppercase tracking-wider select-none"
-        style={{ color: 'var(--text-muted)', letterSpacing: '0.06em' }}
+        className="text-xs font-semibold uppercase tracking-wider select-none text-text-semantic-muted"
+        style={{ letterSpacing: '0.06em' }}
       >
         {label}
       </span>
@@ -276,34 +284,35 @@ function ChatPanelHeader({
 }): React.ReactElement {
   return (
     <div
-      className="flex-shrink-0 flex items-center h-8 border-b relative"
-      style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-muted, var(--border))' }}
+      className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel"
+      style={{ borderColor: 'var(--border-muted, var(--border))' }}
     >
       <button
         onClick={onCollapse}
         title="Collapse sidebar (Ctrl+\)"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-colors duration-100"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100"
       >
         <CollapseIcon />
       </button>
 
       <button
+        data-history-toggle
         onClick={onToggleHistory}
-        className="flex items-center gap-1 px-1.5 py-1 rounded transition-colors duration-100"
+        className="flex items-center gap-1 px-1.5 py-1 rounded transition-colors duration-100 text-text-semantic-muted"
         style={{
-          color: historyOpen ? 'var(--accent)' : 'var(--text-muted)',
-          backgroundColor: historyOpen ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+          color: historyOpen ? 'var(--interactive-accent)' : undefined,
+          backgroundColor: historyOpen ? 'color-mix(in srgb, var(--interactive-accent) 10%, transparent)' : 'transparent',
         }}
         title={`Chat History (${threadCount} conversations)`}
         onMouseEnter={(e) => {
           if (!historyOpen) {
-            e.currentTarget.style.color = 'var(--text)';
-            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
           }
         }}
         onMouseLeave={(e) => {
           if (!historyOpen) {
-            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.color = '';
             e.currentTarget.style.backgroundColor = 'transparent';
           }
         }}
@@ -315,22 +324,21 @@ function ChatPanelHeader({
       </button>
 
       <span
-        className="flex-1 flex items-center justify-center gap-1.5 truncate text-[11px] px-1.5 select-none"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex-1 flex items-center justify-center gap-1.5 truncate text-[11px] px-1.5 select-none text-text-semantic-muted"
         title={activeThread?.title ?? 'New Chat'}
       >
         {activeThread && (activeThread.status === 'running' || activeThread.status === 'submitting') && (
-          <svg className="h-3 w-3 animate-spin shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+          <svg className="h-3 w-3 animate-spin shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
           </svg>
         )}
         {activeThread && activeThread.status === 'complete' && (
-          <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--success, #3fb950)' }}>
+          <svg className="h-3 w-3 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
             <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
         {activeThread && activeThread.status === 'failed' && (
-          <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--error, #f85149)' }}>
+          <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
             <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
@@ -340,17 +348,16 @@ function ChatPanelHeader({
 
       <button
         onClick={onNewChat}
-        className="flex items-center gap-1 px-1.5 py-1 mr-0.5 rounded text-[11px] transition-colors duration-100"
+        className="flex items-center gap-1 px-1.5 py-1 mr-0.5 rounded text-[11px] transition-colors duration-100 text-interactive-accent"
         style={{
-          color: 'var(--accent)',
-          backgroundColor: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+          backgroundColor: 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)',
         }}
         title="New Chat (Ctrl+L)"
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent) 18%, transparent)';
+          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--interactive-accent) 18%, transparent)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent) 8%, transparent)';
+          e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)';
         }}
       >
         <PlusIcon />
@@ -358,19 +365,19 @@ function ChatPanelHeader({
 
       <button
         onClick={onToggleViewDropdown}
-        className="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors duration-100"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors duration-100 text-text-semantic-muted"
         style={{
-          color: viewDropdownOpen ? 'var(--accent)' : 'var(--text-muted)',
+          color: viewDropdownOpen ? 'var(--interactive-accent)' : undefined,
         }}
         title="Switch view"
         onMouseEnter={(e) => {
           if (!viewDropdownOpen) {
-            e.currentTarget.style.color = 'var(--text)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }
         }}
         onMouseLeave={(e) => {
           if (!viewDropdownOpen) {
-            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.color = '';
           }
         }}
       >
@@ -393,21 +400,21 @@ function ChatPanelHeader({
 function ThreadStatusIcon({ status }: { status: string }): React.ReactElement {
   if (status === 'running' || status === 'submitting' || status === 'verifying') {
     return (
-      <svg className="h-2.5 w-2.5 animate-spin shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+      <svg className="h-2.5 w-2.5 animate-spin shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
       </svg>
     );
   }
   if (status === 'complete') {
     return (
-      <svg className="h-2.5 w-2.5 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--success, #3fb950)' }}>
+      <svg className="h-2.5 w-2.5 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
         <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
   if (status === 'failed') {
     return (
-      <svg className="h-2.5 w-2.5 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--error, #f85149)' }}>
+      <svg className="h-2.5 w-2.5 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
         <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
@@ -416,8 +423,7 @@ function ThreadStatusIcon({ status }: { status: string }): React.ReactElement {
   // idle / other — small neutral dot
   return (
     <span
-      className="block h-1.5 w-1.5 rounded-full shrink-0"
-      style={{ backgroundColor: 'var(--text-muted)' }}
+      className="block h-1.5 w-1.5 rounded-full shrink-0 bg-text-semantic-muted"
     />
   );
 }
@@ -442,10 +448,9 @@ function RecentThreadTabs({
 
   return (
     <div
-      className="flex-shrink-0 flex items-center gap-0.5 px-1 overflow-x-auto border-b"
+      className="flex-shrink-0 flex items-center gap-0.5 px-1 overflow-x-auto border-b bg-surface-panel"
       style={{
         borderColor: 'var(--border-muted, var(--border))',
-        backgroundColor: 'var(--bg-secondary)',
         scrollbarWidth: 'none',
       }}
     >
@@ -455,23 +460,23 @@ function RecentThreadTabs({
           <button
             key={thread.id}
             onClick={() => onSelect(thread.id)}
-            className="flex items-center gap-1 shrink-0 px-2 py-1 text-[10px] transition-colors duration-100 relative"
+            className="flex items-center gap-1 shrink-0 px-2 py-1 text-[10px] transition-colors duration-100 relative text-text-semantic-muted"
             style={{
-              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-              backgroundColor: isActive ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
+              color: isActive ? 'var(--interactive-accent)' : undefined,
+              backgroundColor: isActive ? 'color-mix(in srgb, var(--interactive-accent) 10%, transparent)' : 'transparent',
               borderRadius: '4px 4px 0 0',
             }}
             title={thread.title || 'Chat'}
             onMouseEnter={(e) => {
               if (!isActive) {
-                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                e.currentTarget.style.color = 'var(--text)';
+                e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
+                e.currentTarget.style.color = 'var(--text-primary)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isActive) {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.color = '';
               }
             }}
           >
@@ -479,8 +484,7 @@ function RecentThreadTabs({
             <span className="truncate max-w-[90px]">{thread.title || 'Chat'}</span>
             {isActive && (
               <span
-                className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full"
-                style={{ backgroundColor: 'var(--accent)' }}
+                className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-interactive-accent"
               />
             )}
           </button>
@@ -515,6 +519,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
   monitorContent,
   gitContent,
   analyticsContent,
+  memoryContent,
   threads = [],
   activeThreadId = null,
   onSelectThread,
@@ -563,6 +568,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
     monitor: monitorContent,
     git: gitContent,
     analytics: analyticsContent ?? null,
+    memory: memoryContent ?? null,
   };
 
   const viewLabels: Record<RightSidebarView, string> = {
@@ -570,6 +576,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
     monitor: 'Monitor',
     git: 'Git Status',
     analytics: 'Analytics',
+    memory: 'Memory',
   };
 
   return (
@@ -619,7 +626,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
         )}
 
         {/* All views stay mounted to preserve state (e.g. streaming chat) */}
-        {(['chat', 'monitor', 'git', 'analytics'] as const).map((view) => (
+        {(['chat', 'monitor', 'git', 'analytics', 'memory'] as const).map((view) => (
           <div
             key={view}
             className="h-full overflow-hidden"

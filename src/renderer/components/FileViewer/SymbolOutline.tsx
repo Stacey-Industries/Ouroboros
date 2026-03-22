@@ -134,17 +134,17 @@ function navigateToSymbolLine(
 }
 
 function OutlineHeader(): React.ReactElement {
-  return <div style={OUTLINE_HEADER_STYLE}>Outline</div>;
+  return <div className="text-text-semantic-faint" style={OUTLINE_HEADER_STYLE}>Outline</div>;
 }
 
 function OutlineEmptyState(): React.ReactElement {
-  return <div style={OUTLINE_EMPTY_STATE_STYLE}>No symbols found</div>;
+  return <div className="text-text-semantic-faint" style={OUTLINE_EMPTY_STATE_STYLE}>No symbols found</div>;
 }
 
 function handleOutlineItemMouseEnter(
   event: React.MouseEvent<HTMLButtonElement>
 ): void {
-  event.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+  event.currentTarget.style.backgroundColor = 'var(--surface-panel)';
 }
 
 function handleOutlineItemMouseLeave(

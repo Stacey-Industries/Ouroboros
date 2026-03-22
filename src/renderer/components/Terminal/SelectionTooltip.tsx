@@ -43,9 +43,7 @@ interface SelectionTooltipProps {
 const tooltipStyle: React.CSSProperties = {
   position: 'fixed', zIndex: 1000,
   padding: '3px 10px', borderRadius: 4,
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
   border: '1px solid var(--accent, #58a6ff)',
-  color: 'var(--accent, #58a6ff)',
   fontFamily: 'var(--font-ui, sans-serif)', fontSize: 11,
   cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
   userSelect: 'none', whiteSpace: 'nowrap', pointerEvents: 'auto',
@@ -68,6 +66,7 @@ export function SelectionTooltip({
 
   return (
     <div
+      className="bg-surface-panel text-interactive-accent"
       style={{ ...tooltipStyle, left: state.x, top: state.y }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={handleClick}

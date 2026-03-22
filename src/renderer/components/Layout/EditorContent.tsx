@@ -34,8 +34,6 @@ interface FileViewerActionArgs {
 const ACTION_BAR_STYLE: React.CSSProperties = {
   flexShrink: 0,
   height: '28px',
-  borderBottom: '1px solid var(--border)',
-  backgroundColor: 'var(--bg-secondary)',
   display: 'flex',
   alignItems: 'center',
   padding: '0 8px',
@@ -45,9 +43,7 @@ const ACTION_BAR_STYLE: React.CSSProperties = {
 };
 const ACTION_BUTTON_STYLE: React.CSSProperties = {
   background: 'none',
-  border: '1px solid var(--border)',
   borderRadius: '3px',
-  color: 'var(--accent)',
   padding: '2px 8px',
   fontSize: '0.75rem',
   cursor: 'pointer',
@@ -99,14 +95,14 @@ function MultiBufferActionBar({
   const actionLabel = showAddExcerpt ? 'Cancel' : '+ Add Excerpt';
 
   return (
-    <div style={ACTION_BAR_STYLE}>
-      <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Snippet Collection:</span>
-      <span style={{ color: 'var(--text)', fontWeight: 600 }}>{name}</span>
+    <div className="bg-surface-panel border-b border-border-semantic" style={ACTION_BAR_STYLE}>
+      <span className="text-text-semantic-muted" style={{ fontStyle: 'italic' }}>Snippet Collection:</span>
+      <span className="text-text-semantic-primary" style={{ fontWeight: 600 }}>{name}</span>
       <div style={{ flex: 1 }} />
-      <span style={{ color: 'var(--text-faint)', fontSize: '0.6875rem' }}>
+      <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem' }}>
         Esc to return to file
       </span>
-      <button onClick={onToggleAdd} style={ACTION_BUTTON_STYLE}>{actionLabel}</button>
+      <button onClick={onToggleAdd} className="border border-border-semantic text-interactive-accent" style={ACTION_BUTTON_STYLE}>{actionLabel}</button>
     </div>
   );
 }
@@ -218,11 +214,10 @@ function FileContentHeader({
   const onNavigateToDir = useNavigateToDir();
   return (
     <div
+      className="bg-surface-panel border-b border-border-semantic"
       style={{
         flexShrink: 0,
         height: '28px',
-        borderBottom: '1px solid var(--border)',
-        backgroundColor: 'var(--bg-secondary)',
         display: 'flex',
         alignItems: 'center',
       }}
@@ -431,7 +426,6 @@ const SPLIT_DIVIDER_LINE_STYLE: React.CSSProperties = {
   bottom: 0,
   left: '2px',
   width: '1px',
-  backgroundColor: 'var(--border)',
   transition: 'background-color 150ms ease, opacity 150ms ease',
   opacity: 0,
 };
@@ -478,7 +472,7 @@ function SplitDivider({
   const lineStyle: React.CSSProperties = {
     ...SPLIT_DIVIDER_LINE_STYLE,
     opacity: isHovered || isDragging ? 1 : 0,
-    backgroundColor: isHovered || isDragging ? 'var(--accent)' : 'var(--border)',
+    backgroundColor: isHovered || isDragging ? 'var(--interactive-accent)' : 'var(--border-semantic)',
   };
 
   return (
@@ -537,8 +531,8 @@ function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElem
         height: '20px',
         borderRadius: '3px',
         border: 'none',
-        background: isHovered ? 'var(--bg-tertiary)' : 'transparent',
-        color: isHovered ? 'var(--text)' : 'var(--text-faint)',
+        background: isHovered ? 'var(--surface-raised)' : 'transparent',
+        color: isHovered ? 'var(--text-primary)' : 'var(--text-faint)',
         cursor: 'pointer',
         padding: 0,
         transition: 'opacity 150ms ease, background-color 150ms ease',

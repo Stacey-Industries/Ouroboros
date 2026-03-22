@@ -37,7 +37,6 @@ export function RangeHighlight({ text, indices }: RangeHighlightProps): React.Re
 
 const markStyle: React.CSSProperties = {
   background: 'transparent',
-  color: 'var(--accent)',
   fontWeight: 600,
 };
 
@@ -51,7 +50,7 @@ function buildSpans(text: string, isHighlighted: (i: number) => boolean): React.
     while (end < text.length && isHighlighted(end) === matched) end++;
 
     if (matched) {
-      parts.push(<mark key={i} style={markStyle}>{text.slice(i, end)}</mark>);
+      parts.push(<mark key={i} className="text-interactive-accent" style={markStyle}>{text.slice(i, end)}</mark>);
     } else {
       parts.push(<span key={i}>{text.slice(i, end)}</span>);
     }

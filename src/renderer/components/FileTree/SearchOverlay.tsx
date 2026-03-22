@@ -28,14 +28,12 @@ const OVERLAY_STYLE: React.CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: 'var(--bg-secondary)',
   zIndex: 10,
 };
 
 const EMPTY_STATE_STYLE: React.CSSProperties = {
   ...OVERLAY_STYLE,
   padding: '16px 12px',
-  color: 'var(--text-faint)',
   fontSize: '0.8125rem',
   textAlign: 'center',
 };
@@ -92,7 +90,7 @@ function useSearchResults(roots: string[], extraIgnorePatterns: string[], query:
 }
 
 function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement {
-  return <div style={EMPTY_STATE_STYLE}>{label}</div>;
+  return <div className="bg-surface-panel text-text-semantic-faint" style={EMPTY_STATE_STYLE}>{label}</div>;
 }
 
 function SearchOverlayResults({
@@ -105,7 +103,7 @@ function SearchOverlayResults({
   onFileSelect: (path: string) => void;
 }): React.ReactElement {
   return (
-    <div style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
+    <div className="bg-surface-panel" style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
       {searchResults.map(({ node, ranges }) => (
         <FileTreeItem
           key={node.path}

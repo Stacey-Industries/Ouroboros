@@ -23,7 +23,7 @@ const popupBaseStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '8px',
   padding: '6px 12px',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   borderRadius: '6px',
   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
   fontFamily: 'var(--font-ui)',
@@ -35,8 +35,7 @@ const inputBaseStyle: React.CSSProperties = {
   width: '120px',
   height: '26px',
   padding: '0 6px',
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
+  backgroundColor: 'var(--surface-base)',
   borderRadius: '3px',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.8125rem',
@@ -45,7 +44,6 @@ const inputBaseStyle: React.CSSProperties = {
 };
 
 const lineRangeStyle: React.CSSProperties = {
-  color: 'var(--text-faint)',
   fontSize: '0.75rem',
   whiteSpace: 'nowrap',
   userSelect: 'none',
@@ -131,7 +129,7 @@ function GoToLinePanel({
         hasError={hasError}
         onChange={onChange}
       />
-      <span style={lineRangeStyle}>1 &ndash; {lineCount}</span>
+      <span className="text-text-semantic-faint" style={lineRangeStyle}>1 &ndash; {lineCount}</span>
     </div>
   );
 }
@@ -149,9 +147,10 @@ const GoToLineInput = React.forwardRef<HTMLInputElement, {
       onChange={onChange}
       placeholder="Go to line..."
       spellCheck={false}
+      className="text-text-semantic-primary"
       style={getInputStyle(hasError)}
-      onFocus={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--accent)')}
-      onBlur={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--border)')}
+      onFocus={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--interactive-accent)')}
+      onBlur={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--border-semantic)')}
     />
   );
 });
@@ -215,14 +214,14 @@ function handleGoToLineKeyDown(
 function getPopupStyle(hasError: boolean): React.CSSProperties {
   return {
     ...popupBaseStyle,
-    border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
+    border: `1px solid ${hasError ? 'var(--status-error)' : 'var(--border-semantic)'}`,
   };
 }
 
 function getInputStyle(hasError: boolean): React.CSSProperties {
   return {
     ...inputBaseStyle,
-    border: `1px solid ${hasError ? 'var(--error, #e55)' : 'var(--border)'}`,
+    border: `1px solid ${hasError ? 'var(--status-error)' : 'var(--border-semantic)'}`,
   };
 }
 
@@ -252,7 +251,7 @@ function highlightLine(options: HighlightLineOptions): void {
   highlight.style.right = '0';
   highlight.style.top = `${paddingTop + (lineNum - 1) * lineHeight}px`;
   highlight.style.height = `${lineHeight}px`;
-  highlight.style.backgroundColor = 'var(--accent)';
+  highlight.style.backgroundColor = 'var(--interactive-accent)';
   highlight.style.opacity = '0.25';
   highlight.style.pointerEvents = 'none';
   highlight.style.transition = 'opacity 0.8s ease-out';

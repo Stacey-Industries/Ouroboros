@@ -32,15 +32,15 @@ export function DirtyCloseDialog({
     >
       <div
         style={{
-          backgroundColor: 'var(--bg)',
-          border: '1px solid var(--border)',
+          backgroundColor: 'var(--surface-base)',
+          border: '1px solid var(--border-semantic)',
           borderRadius: '8px',
           padding: '16px',
           minWidth: '300px',
           fontFamily: 'var(--font-ui)',
         }}
       >
-        <p style={{ color: 'var(--text)', marginBottom: '12px' }}>
+        <p className="text-text-semantic-primary" style={{ marginBottom: '12px' }}>
           &quot;{fileName}&quot; has unsaved changes.
         </p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

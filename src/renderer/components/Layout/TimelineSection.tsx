@@ -37,7 +37,7 @@ interface CommitItemProps {
 
 function CommitItem({ commit }: CommitItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+    e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
   }, []);
 
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -46,12 +46,11 @@ function CommitItem({ commit }: CommitItemProps): React.ReactElement {
 
   return (
     <div
-      className="flex flex-col cursor-pointer select-none"
+      className="flex flex-col cursor-pointer select-none border-b border-border-semantic"
       style={{
         padding: '3px 8px',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-ui)',
-        borderBottom: '1px solid var(--border-muted, var(--border))',
       }}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
@@ -59,37 +58,37 @@ function CommitItem({ commit }: CommitItemProps): React.ReactElement {
     >
       <div className="flex items-center gap-1.5">
         <span
+          className="text-text-semantic-faint"
           style={{
             flexShrink: 0,
             fontFamily: 'var(--font-mono)',
             fontSize: '0.6rem',
-            color: 'var(--text-faint)',
           }}
         >
           {commit.hash.slice(0, 7)}
         </span>
         <span
+          className="text-text-semantic-muted"
           style={{
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             minWidth: 0,
-            color: 'var(--text-muted)',
           }}
         >
           {commit.message}
         </span>
       </div>
       <div className="flex items-center gap-1.5" style={{ marginTop: '1px' }}>
-        <span style={{ fontSize: '0.6rem', color: 'var(--text-faint)' }}>
+        <span className="text-text-semantic-faint" style={{ fontSize: '0.6rem' }}>
           {commit.author}
         </span>
         <span
+          className="text-text-semantic-faint"
           style={{
             marginLeft: 'auto',
             fontSize: '0.6rem',
-            color: 'var(--text-faint)',
           }}
         >
           {relativeTime(commit.date)}
@@ -102,9 +101,8 @@ function CommitItem({ commit }: CommitItemProps): React.ReactElement {
 function TimelineEmptyState({ message }: { message: string }): React.ReactElement {
   return (
     <div
-      className="flex items-center justify-center"
+      className="flex items-center justify-center text-text-semantic-muted"
       style={{
-        color: 'var(--text-muted)',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-ui)',
         padding: '16px 12px',

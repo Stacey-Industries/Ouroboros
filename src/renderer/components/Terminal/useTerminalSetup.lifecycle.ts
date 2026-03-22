@@ -61,6 +61,7 @@ function createTerminal(
     cursorInactiveStyle: 'none',
     scrollback: 50000,
     allowProposedApi: true,
+    allowTransparency: true,
     theme: buildXtermTheme(),
   })
 }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import {
   ImageStatusBar,
   ImageViewerToolbar,
@@ -8,6 +8,10 @@ import {
   formatBytes,
 } from './ImageViewer.parts';
 import type { ZoomMode } from './ImageViewer.parts';
+
+const LazyMonacoEditor = React.lazy(() =>
+  import('./MonacoEditor').then((mod) => ({ default: mod.MonacoEditor }))
+);
 
 export interface ImageViewerProps {
   filePath: string;
@@ -19,7 +23,7 @@ const rootStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'hidden',
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'var(--surface-base)',
 };
 
 /**
@@ -130,37 +134,20 @@ export function ImageViewer({
 
 /** Lazy Monaco wrapper for SVG source viewing */
 function SvgSourceView({ content, filePath }: { content: string; filePath: string }) {
-  // Dynamically import MonacoEditor to avoid circular deps
-  const [MonacoEditor, setMonacoEditor] = useState<React.ComponentType<{
-    filePath: string;
-    content: string;
-    readOnly: boolean;
-  }> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import('./MonacoEditor').then((mod) => {
-      if (!cancelled) {
-        setMonacoEditor(() => mod.MonacoEditor);
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!MonacoEditor) {
-    return (
-      <div style={{ padding: 16, color: 'var(--text-faint)', fontFamily: 'var(--font-mono)', fontSize: '0.8125rem' }}>
-        Loading editor...
-      </div>
-    );
-  }
-
   return (
-    <MonacoEditor
-      filePath={filePath}
-      content={content}
-      readOnly={true}
-    />
+    <Suspense
+      fallback={
+        <div className="text-text-semantic-faint" style={{ padding: 16, fontFamily: 'var(--font-mono)', fontSize: '0.8125rem' }}>
+          Loading editor...
+        </div>
+      }
+    >
+      <LazyMonacoEditor
+        filePath={filePath}
+        content={content}
+        readOnly={true}
+      />
+    </Suspense>
   );
 }
 

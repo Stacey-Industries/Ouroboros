@@ -58,7 +58,7 @@ export function AgentMonitorPane({
       data-layout="agent-sidebar"
       className={`
         flex flex-col h-full overflow-hidden
-        bg-[var(--bg-secondary)] border-l border-[var(--border-muted,var(--border))]
+        bg-surface-panel border-l border-border-semantic
         ${isMobile ? 'mobile-agent-sidebar' : ''}
       `}
       style={isMobile ? focusStyle : { width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, ...focusStyle }}
@@ -86,7 +86,7 @@ export function CollapsedAgentStrip({
       data-layout="collapsed-agent-strip"
       className="
         flex flex-col items-center pt-2 h-full w-10 flex-shrink-0
-        bg-[var(--bg-secondary)] border-l border-[var(--border-muted,var(--border))]
+        bg-surface-panel border-l border-border-semantic
         cursor-pointer relative
       "
       onClick={onExpand}
@@ -96,11 +96,11 @@ export function CollapsedAgentStrip({
       onKeyDown={(e) => e.key === 'Enter' && onExpand()}
       aria-label="Expand agent sidebar"
     >
-      <span className="text-[var(--text-muted)] mt-2">
+      <span className="text-text-semantic-muted mt-2">
         <ChevronLeftIcon />
       </span>
       {runningCount > 0 && (
-        <span className="mt-2 w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" style={{ boxShadow: '0 0 6px var(--accent)' }} />
+        <span className="mt-2 w-2 h-2 rounded-full bg-interactive-accent animate-pulse" style={{ boxShadow: '0 0 6px var(--interactive-accent)' }} />
       )}
     </div>
   );

@@ -14,7 +14,7 @@ const containerStyle: React.CSSProperties = {
   gap: '2px',
   padding: '3px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
 
@@ -28,10 +28,10 @@ function modeButtonStyle(
     fontFamily: 'var(--font-ui)',
     fontWeight: 500,
     border: '1px solid',
-    borderColor: active ? 'var(--accent)' : 'var(--border)',
+    borderColor: active ? 'var(--interactive-accent)' : 'var(--border-semantic)',
     borderRadius,
-    backgroundColor: active ? 'var(--accent)' : 'transparent',
-    color: active ? 'var(--bg)' : 'var(--text-muted)',
+    backgroundColor: active ? 'var(--interactive-accent)' : 'transparent',
+    color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
     cursor: 'pointer',
     lineHeight: '1.5',
   };

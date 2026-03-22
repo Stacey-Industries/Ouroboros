@@ -24,7 +24,7 @@ export function TimeTravelPanel({
   const hasDetailPane = Boolean(panel.selectedSnapshot || panel.comparisonReady);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg)', color: 'var(--text)', fontFamily: 'var(--font-ui)' }}>
+    <div className="bg-surface-base text-text-semantic-primary" style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-ui)' }}>
       <TimeTravelControls snapshotCount={panel.sortedSnapshots.length} onClose={onClose} panel={panel} onRefreshSnapshots={onRefreshSnapshots} />
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <TimeTravelTimelinePane snapshots={panel.sortedSnapshots} hasDetailPane={hasDetailPane} panel={panel} />

@@ -22,7 +22,7 @@ const rootStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'hidden',
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'var(--surface-base)',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.75rem',
 };
@@ -34,11 +34,10 @@ const toolbarStyle: React.CSSProperties = {
   gap: '8px',
   padding: '4px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
-  color: 'var(--text-muted)',
 };
 
 const btnStyle: React.CSSProperties = {
@@ -46,10 +45,9 @@ const btnStyle: React.CSSProperties = {
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
   fontWeight: 500,
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   backgroundColor: 'transparent',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   lineHeight: '1.5',
 };
@@ -58,10 +56,9 @@ const searchInputStyle: React.CSSProperties = {
   padding: '2px 6px',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-mono)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
+  backgroundColor: 'var(--surface-base)',
   width: '200px',
 };
 
@@ -70,8 +67,7 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   padding: '4px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
-  color: 'var(--text-faint)',
+  backgroundColor: 'var(--surface-panel)',
   fontSize: '0.625rem',
   fontFamily: 'var(--font-mono)',
   userSelect: 'none',
@@ -282,13 +278,13 @@ export function HexViewer({ content, filePath }: HexViewerProps): React.ReactEle
           backgroundColor: isHighlighted ? 'rgba(255, 200, 0, 0.15)' : undefined,
         }}
       >
-        <span style={{ width: OFFSET_WIDTH, color: 'var(--text-faint)', flexShrink: 0 }}>
+        <span className="text-text-semantic-faint" style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>
           {toOffset(offset)}
         </span>
-        <span style={{ width: HEX_WIDTH, color: 'var(--text)', flexShrink: 0, whiteSpace: 'pre' }}>
+        <span className="text-text-semantic-primary" style={{ width: HEX_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}>
           {hex}
         </span>
-        <span style={{ width: ASCII_WIDTH, color: 'var(--accent)', flexShrink: 0, whiteSpace: 'pre' }}>
+        <span className="text-interactive-accent" style={{ width: ASCII_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}>
           {ascii}
         </span>
       </div>
@@ -298,13 +294,14 @@ export function HexViewer({ content, filePath }: HexViewerProps): React.ReactEle
   return (
     <div style={rootStyle}>
       {/* Toolbar */}
-      <div style={toolbarStyle}>
+      <div className="text-text-semantic-muted" style={toolbarStyle}>
         <span style={{ fontWeight: 600 }}>Hex</span>
         <span>{formatBytes(content.length)}</span>
-        <div style={{ width: 1, height: 16, backgroundColor: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ width: 1, height: 16, backgroundColor: 'var(--border-semantic)', margin: '0 4px' }} />
         <input
           type="text"
           placeholder="Search hex or ASCII..."
+          className="text-text-semantic-primary"
           style={searchInputStyle}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -314,25 +311,25 @@ export function HexViewer({ content, filePath }: HexViewerProps): React.ReactEle
             <span>
               {activeMatchIndex + 1} / {matchOffsets.length}
             </span>
-            <button onClick={() => goToMatch(activeMatchIndex - 1)} style={btnStyle} disabled={activeMatchIndex <= 0}>
+            <button onClick={() => goToMatch(activeMatchIndex - 1)} className="text-text-semantic-muted" style={btnStyle} disabled={activeMatchIndex <= 0}>
               Prev
             </button>
-            <button onClick={() => goToMatch(activeMatchIndex + 1)} style={btnStyle} disabled={activeMatchIndex >= matchOffsets.length - 1}>
+            <button onClick={() => goToMatch(activeMatchIndex + 1)} className="text-text-semantic-muted" style={btnStyle} disabled={activeMatchIndex >= matchOffsets.length - 1}>
               Next
             </button>
           </>
         )}
         {searchQuery && matchOffsets.length === 0 && (
-          <span style={{ color: 'var(--error, #f85149)' }}>No matches</span>
+          <span className="text-status-error">No matches</span>
         )}
         <div style={{ flex: 1 }} />
-        <button onClick={openExternal} style={btnStyle} title="Open in external application">
+        <button onClick={openExternal} className="text-text-semantic-muted" style={btnStyle} title="Open in external application">
           Open External
         </button>
       </div>
 
       {/* Column headers */}
-      <div style={headerStyle}>
+      <div className="text-text-semantic-faint" style={headerStyle}>
         <span style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>Offset</span>
         <span style={{ width: HEX_WIDTH, flexShrink: 0 }}>
           00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F

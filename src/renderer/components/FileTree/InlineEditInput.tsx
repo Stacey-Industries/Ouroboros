@@ -134,10 +134,8 @@ function inputStyle(error: string | null): React.CSSProperties {
   return {
     width: '100%',
     padding: '0 4px',
-    background: 'var(--bg)',
     border: error ? '1px solid var(--error, #e55)' : '1px solid var(--accent)',
     borderRadius: '2px',
-    color: 'var(--text)',
     fontSize: '0.8125rem',
     fontFamily: 'var(--font-mono)',
     outline: 'none',
@@ -171,6 +169,7 @@ function InlineEditField({
         onChange={onChange}
         onKeyDown={onKeyDown}
         onBlur={onBlur}
+        className="bg-surface-base text-text-semantic-primary"
         style={inputStyle(error)}
       />
       {error && <EditError message={error} />}
@@ -214,16 +213,15 @@ export function InlineEditInput({
 function EditError({ message }: { message: string }): React.ReactElement {
   return (
     <div
+      className="bg-surface-panel text-status-error"
       style={{
         position: 'absolute',
         top: '22px',
         left: 0,
         right: 0,
         padding: '2px 6px',
-        background: 'var(--bg-secondary, var(--bg))',
         border: '1px solid var(--error, #e55)',
         borderRadius: '2px',
-        color: 'var(--error, #e55)',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-ui)',
         zIndex: 10,

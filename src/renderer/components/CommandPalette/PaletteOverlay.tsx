@@ -16,11 +16,10 @@ export function PaletteOverlay({ isVisible, onClose, children }: PaletteOverlayP
       aria-modal="true"
       role="dialog"
       aria-label="Command Palette"
-      className="glass-scrim"
       onClick={onClose}
       style={overlayStyle}
     >
-      <div className="glass-card" onClick={(e) => e.stopPropagation()} style={cardStyle}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-surface-panel border border-border-semantic" style={cardStyle}>
         {children}
       </div>
     </div>
@@ -35,7 +34,7 @@ const overlayStyle: React.CSSProperties = {
   alignItems: 'flex-start',
   justifyContent: 'center',
   paddingTop: '15vh',
-  backgroundColor: 'var(--glass-scrim-bg, rgba(0, 0, 0, 0.55))',
+  backgroundColor: 'rgba(0, 0, 0, 0.55)',
   animation: 'cp-overlay-in 120ms ease',
 };
 
@@ -44,9 +43,7 @@ const cardStyle: React.CSSProperties = {
   maxWidth: '520px',
   borderRadius: '8px',
   overflow: 'hidden',
-  backgroundColor: 'var(--glass-card-bg, var(--bg-secondary))',
-  border: '1px solid var(--glass-border-muted, var(--border))',
-  boxShadow: 'var(--glass-shadow, 0 24px 64px rgba(0,0,0,0.6))',
+  boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
   animation: 'cp-card-in 120ms ease',
 };
 
@@ -54,7 +51,7 @@ const cardStyle: React.CSSProperties = {
 
 export function CategoryHeader({ label }: { label: string }): React.ReactElement {
   return (
-    <div aria-hidden="true" style={headerStyle}>
+    <div aria-hidden="true" className="text-text-semantic-faint" style={headerStyle}>
       {label}
     </div>
   );
@@ -66,7 +63,6 @@ const headerStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.07em',
-  color: 'var(--text-faint)',
   fontFamily: 'var(--font-mono)',
   userSelect: 'none',
 };
@@ -79,7 +75,7 @@ export interface PaletteFooterProps {
 
 export function PaletteFooter({ hints }: PaletteFooterProps): React.ReactElement {
   return (
-    <div style={footerStyle}>
+    <div className="text-text-semantic-muted" style={footerStyle}>
       {hints.map((hint) => (
         <span key={hint}>{hint}</span>
       ))}
@@ -93,6 +89,5 @@ const footerStyle: React.CSSProperties = {
   padding: '6px 14px',
   borderTop: '1px solid var(--border)',
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
 };

@@ -18,18 +18,15 @@ const titleRowStyle: React.CSSProperties = {
 const titleStyle: React.CSSProperties = {
   fontSize: '14px',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 const scanningStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
 };
 
 const statusStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--accent)',
   padding: '2px 8px',
   borderRadius: '4px',
   background: 'rgba(88, 166, 255, 0.1)',
@@ -38,7 +35,6 @@ const statusStyle: React.CSSProperties = {
 const closeButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   padding: '4px',
   fontSize: '16px',
@@ -59,7 +55,7 @@ export function ContextBuilderHeader({
   return (
     <div style={headerStyle}>
       <HeaderTitle scanning={scanning} statusMessage={statusMessage} />
-      <button onClick={onClose} aria-label="Close context builder" style={closeButtonStyle}>
+      <button onClick={onClose} aria-label="Close context builder" className="text-text-semantic-muted" style={closeButtonStyle}>
         x
       </button>
     </div>
@@ -73,7 +69,7 @@ function HeaderTitle({
   return (
     <div style={titleRowStyle}>
       <ContextBuilderIcon />
-      <span style={titleStyle}>Context Builder</span>
+      <span className="text-text-semantic-primary" style={titleStyle}>Context Builder</span>
       <HeaderStatus scanning={scanning} statusMessage={statusMessage} />
     </div>
   );
@@ -89,8 +85,8 @@ function HeaderStatus({
 
   return (
     <>
-      {scanning && <span style={scanningStyle}>Scanning...</span>}
-      {statusMessage && <span style={statusStyle}>{statusMessage}</span>}
+      {scanning && <span className="text-text-semantic-muted" style={scanningStyle}>Scanning...</span>}
+      {statusMessage && <span className="text-interactive-accent" style={statusStyle}>{statusMessage}</span>}
     </>
   );
 }

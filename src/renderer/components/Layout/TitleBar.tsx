@@ -55,13 +55,39 @@ function McpStoreIcon(): React.ReactElement {
   );
 }
 
+function WindowControls(): React.ReactElement | null {
+  const [platform, setPlatform] = useState<string>('');
+  useEffect(() => {
+    window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {});
+  }, []);
+  // Only show on Windows (macOS has native traffic lights via hiddenInset)
+  if (platform !== 'win32') return null;
+  const api = window.electronAPI?.app;
+  const base = 'titlebar-no-drag flex items-center justify-center w-[46px] h-full transition-colors duration-100';
+  const hover = 'hover:bg-[rgba(255,255,255,0.08)]';
+  const closeHover = 'hover:bg-[#e81123] hover:text-white';
+  return (
+    <div className="web-mobile-hide flex items-stretch h-full ml-auto" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <button className={`${base} ${hover} text-text-semantic-muted`} onClick={() => api?.minimizeWindow()} title="Minimize" aria-label="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
+      </button>
+      <button className={`${base} ${hover} text-text-semantic-muted`} onClick={() => api?.toggleMaximizeWindow()} title="Maximize" aria-label="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="0.5" y="0.5" width="9" height="9" /></svg>
+      </button>
+      <button className={`${base} ${closeHover} text-text-semantic-muted`} onClick={() => api?.closeWindow()} title="Close" aria-label="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2"><line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" /></svg>
+      </button>
+    </div>
+  );
+}
+
 const hoverStyle = {
   onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.color = 'var(--text)';
+    e.currentTarget.style.color = 'var(--text-primary)';
     e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.15)';
   },
   onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.color = 'var(--text-muted)';
+    e.currentTarget.style.color = '';
     e.currentTarget.style.backgroundColor = 'transparent';
   },
 };
@@ -75,7 +101,6 @@ const titleButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   transition: 'color 150ms, background-color 150ms',
   flexShrink: 0,
 };
@@ -104,8 +129,8 @@ function TitleBarBranding(): React.ReactElement {
         draggable={false}
       />
       <span
-        className="select-none"
-        style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginRight: '4px' }}
+        className="select-none text-text-semantic-muted"
+        style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginRight: '4px' }}
       >
         Ouroboros
       </span>
@@ -116,7 +141,7 @@ function TitleBarBranding(): React.ReactElement {
 function TitleBarActionButton({ eventName, title, Icon }: TitleBarAction): React.ReactElement {
   return (
     <button
-      className="titlebar-no-drag"
+      className="titlebar-no-drag text-text-semantic-muted"
       title={title}
       onClick={() => window.dispatchEvent(new CustomEvent(eventName))}
       style={titleButtonStyle}
@@ -149,7 +174,7 @@ function NotificationBell(): React.ReactElement {
   return (
     <div className="titlebar-no-drag" style={{ position: 'relative', height: '100%' }}>
       <button
-        className="titlebar-no-drag"
+        className="titlebar-no-drag text-text-semantic-muted"
         title="Notifications"
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -303,7 +328,6 @@ const menuItemRowStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: '12px',
   fontFamily: 'var(--font-ui, sans-serif)',
-  color: 'var(--text)',
   transition: 'background-color 80ms ease',
   gap: '16px',
   textAlign: 'left',
@@ -313,7 +337,6 @@ const menuItemRowStyle: React.CSSProperties = {
 
 const menuItemShortcutStyle: React.CSSProperties = {
   marginLeft: 'auto',
-  color: 'var(--text-faint)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono, monospace)',
   letterSpacing: '0.01em',
@@ -323,7 +346,7 @@ const menuItemShortcutStyle: React.CSSProperties = {
 
 const separatorStyle: React.CSSProperties = {
   height: '1px',
-  backgroundColor: 'var(--border-muted)',
+  backgroundColor: 'var(--border-semantic)',
   margin: '4px 8px',
 };
 
@@ -350,17 +373,17 @@ function MenuItemRow({
       onClick={() => { item.action?.(); onClose(); }}
       disabled={item.disabled}
       onMouseEnter={onMouseEnterItem}
-      className="titlebar-no-drag"
+      className="titlebar-no-drag text-text-semantic-primary"
       style={{
         ...menuItemRowStyle,
-        backgroundColor: isHighlighted ? 'var(--accent-muted)' : 'transparent',
+        backgroundColor: isHighlighted ? 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)' : 'transparent',
         opacity: item.disabled ? 0.4 : 1,
         cursor: item.disabled ? 'default' : 'pointer',
       }}
     >
       <span style={{ flex: 1 }}>{item.label}</span>
       {item.shortcut && (
-        <span style={menuItemShortcutStyle}>
+        <span className="text-text-semantic-faint" style={menuItemShortcutStyle}>
           {item.shortcut}
         </span>
       )}
@@ -376,8 +399,6 @@ const dropdownStyle: React.CSSProperties = {
   left: 0,
   minWidth: '220px',
   padding: '4px 0',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border-muted)',
   borderRadius: '6px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
   zIndex: 1000,
@@ -397,7 +418,7 @@ function DropdownMenu({
   itemRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
 }): React.ReactElement {
   return (
-    <div className="titlebar-no-drag" style={dropdownStyle}>
+    <div className="titlebar-no-drag bg-surface-panel border border-border-semantic" style={dropdownStyle}>
       {menu.items.map((item, i) => (
         <MenuItemRow
           key={item.divider ? `sep-${i}` : item.label}
@@ -437,8 +458,8 @@ function NavbarMenuButton({
         height: '100%',
         padding: '0 10px',
         border: 'none',
-        background: isOpen ? 'var(--bg-tertiary)' : 'transparent',
-        color: isOpen ? 'var(--text)' : 'var(--text-muted)',
+        background: isOpen ? 'var(--surface-raised)' : 'transparent',
+        color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)',
         fontSize: '12px',
         fontFamily: 'var(--font-ui, sans-serif)',
         cursor: 'pointer',
@@ -449,13 +470,13 @@ function NavbarMenuButton({
       onMouseEnter={(e) => {
         onHover();
         if (!isOpen) {
-          e.currentTarget.style.color = 'var(--text)';
+          e.currentTarget.style.color = 'var(--text-primary)';
           e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.1)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isOpen) {
-          e.currentTarget.style.color = 'var(--text-muted)';
+          e.currentTarget.style.color = '';
           e.currentTarget.style.backgroundColor = 'transparent';
         }
       }}
@@ -639,10 +660,10 @@ function MobileHamburgerMenu(): React.ReactElement {
         </svg>
       </button>
       {open && (
-        <div style={{ ...dropdownStyle, maxHeight: '70vh', overflowY: 'auto' }}>
+        <div role="menu" style={{ ...dropdownStyle, maxHeight: '70vh', overflowY: 'auto', padding: '6px 0' }}>
           {menus.map((menu) => (
             <React.Fragment key={menu.label}>
-              <div style={{ padding: '6px 12px 2px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-faint)' }}>
+              <div className="text-text-semantic-faint select-none" style={{ padding: '8px 12px 4px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {menu.label}
               </div>
               {menu.items.map((item, i) =>
@@ -651,7 +672,21 @@ function MobileHamburgerMenu(): React.ReactElement {
                     key={item.label}
                     onClick={() => { item.action?.(); setOpen(false); }}
                     disabled={item.disabled}
-                    style={{ ...menuItemRowStyle, opacity: item.disabled ? 0.4 : 1 }}
+                    className="titlebar-no-drag text-text-semantic-primary"
+                    style={{
+                      ...menuItemRowStyle,
+                      opacity: item.disabled ? 0.4 : 1,
+                      height: '32px',
+                      borderRadius: '4px',
+                      margin: '0 4px',
+                      width: 'calc(100% - 8px)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <span style={{ flex: 1 }}>{item.label}</span>
                   </button>
@@ -690,12 +725,25 @@ function MobileOverflowMenu(): React.ReactElement {
         {unreadCount > 0 && <NotificationBadge count={unreadCount} />}
       </button>
       {open && (
-        <div style={{ ...dropdownStyle, right: 0, left: 'auto' }}>
+        <div role="menu" style={{ ...dropdownStyle, right: 0, left: 'auto', padding: '6px 0' }}>
           {TITLE_BAR_ACTIONS.map((action) => (
             <button
               key={action.eventName}
               onClick={() => { window.dispatchEvent(new CustomEvent(action.eventName)); setOpen(false); }}
-              style={menuItemRowStyle}
+              className="titlebar-no-drag text-text-semantic-primary"
+              style={{
+                ...menuItemRowStyle,
+                height: '32px',
+                borderRadius: '4px',
+                margin: '0 4px',
+                width: 'calc(100% - 8px)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <action.Icon />
               <span style={{ marginLeft: 8, flex: 1 }}>{action.title}</span>
@@ -704,23 +752,39 @@ function MobileOverflowMenu(): React.ReactElement {
           <div style={separatorStyle} />
           <button
             onClick={() => { setOpen(false); }}
-            style={menuItemRowStyle}
+            className="titlebar-no-drag text-text-semantic-primary"
+            style={{
+              ...menuItemRowStyle,
+              height: '32px',
+              borderRadius: '4px',
+              margin: '0 4px',
+              width: 'calc(100% - 8px)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--interactive-accent) 15%, transparent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <BellIcon />
             <span style={{ marginLeft: 8, flex: 1 }}>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</span>
           </button>
           {notifications.length > 0 && (
-            <div style={{ maxHeight: '200px', overflowY: 'auto', borderTop: '1px solid var(--border-muted)' }}>
+            <div className="border-t border-border-semantic" style={{ maxHeight: '200px', overflowY: 'auto' }}>
               {notifications.slice(0, 5).map((n) => (
-                <div key={n.id} style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div key={n.id} className="text-text-semantic-muted" style={{ padding: '4px 12px', fontSize: '11px' }}>
                   {n.message}
-                  <button onClick={() => removeNotification(n.id)} style={{ marginLeft: 8, color: 'var(--text-faint)', fontSize: '10px' }}>×</button>
+                  <button onClick={() => removeNotification(n.id)} className="text-text-semantic-faint" style={{ marginLeft: 8, fontSize: '10px' }}>×</button>
                 </div>
               ))}
               {notifications.length > 5 && (
-                <div style={{ padding: '4px 12px', fontSize: '10px', color: 'var(--text-faint)' }}>+{notifications.length - 5} more</div>
+                <div className="text-text-semantic-faint" style={{ padding: '4px 12px', fontSize: '10px' }}>+{notifications.length - 5} more</div>
               )}
-              <button onClick={() => { clearAllNotifications(); }} style={{ ...menuItemRowStyle, fontSize: '11px', color: 'var(--text-faint)' }}>
+              <button onClick={() => { clearAllNotifications(); }} className="text-text-semantic-faint" style={{ ...menuItemRowStyle, fontSize: '11px', height: '28px', borderRadius: '4px', margin: '0 4px', width: 'calc(100% - 8px)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
                 Clear all
               </button>
             </div>
@@ -739,11 +803,10 @@ export function TitleBar(): React.ReactElement {
   return (
     <div
       data-layout="title-bar"
-      className="titlebar-drag flex-shrink-0 flex items-center"
+      className="titlebar-drag flex-shrink-0 flex items-center bg-surface-panel"
       style={{
         height: 'var(--titlebar-height, 36px)',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
+        borderBottom: '1px solid color-mix(in srgb, var(--border-semantic) 50%, transparent)',
       }}
     >
       {/* Mobile: hamburger menu */}
@@ -763,8 +826,8 @@ export function TitleBar(): React.ReactElement {
       </div>
       {/* Mobile: overflow menu */}
       <MobileOverflowMenu />
-      {/* Windows caption button spacer — desktop only */}
-      <div className="web-mobile-hide" style={{ width: 140 }} />
+      {/* Custom window controls — visible on Windows (frame: false), hidden on macOS (native traffic lights) */}
+      <WindowControls />
     </div>
   );
 }

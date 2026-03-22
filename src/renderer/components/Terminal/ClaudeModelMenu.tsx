@@ -102,13 +102,13 @@ function ModelMenuGroup({ group, items, onSelect }: {
 }): React.ReactElement {
   return (
     <div>
-      <div className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-[var(--text-muted)] opacity-60">
+      <div className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted opacity-60">
         {group}
       </div>
       {items.map((m) => (
         <button
           key={m.value} role="menuitem"
-          className="w-full text-left px-3 py-1 text-[11px] text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-colors duration-100 cursor-pointer"
+          className="w-full text-left px-3 py-1 text-[11px] text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100 cursor-pointer"
           onClick={() => onSelect(m.value)}
         >
           {m.label}
@@ -137,10 +137,10 @@ export function ClaudeModelMenu({ anchorRef, onSelect, onClose }: {
   return (
     <div
       ref={menuRef} role="menu"
-      className="absolute top-full left-0 mt-0.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded border border-[var(--border)] bg-[var(--bg-secondary)] shadow-lg py-1"
+      className="absolute top-full left-0 mt-0.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded border border-border-semantic bg-surface-panel shadow-lg py-1"
       style={{ fontFamily: 'var(--font-ui)' }}
     >
-      <div className="px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+      <div className="px-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted">
         Select model
       </div>
       {Array.from(groups.entries()).map(([group, items]) => (

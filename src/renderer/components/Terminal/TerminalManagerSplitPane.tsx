@@ -11,7 +11,6 @@ const SPLIT_DIVIDER_STYLE: React.CSSProperties = {
   width: 5,
   flexShrink: 0,
   cursor: 'col-resize',
-  backgroundColor: 'var(--border, #333)',
   position: 'relative',
   zIndex: 5,
 }
@@ -31,9 +30,6 @@ const SPLIT_CLOSE_BUTTON_STYLE: React.CSSProperties = {
   zIndex: 20,
   padding: '2px 6px',
   borderRadius: 3,
-  border: '1px solid var(--border, #333)',
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-  color: 'var(--text-muted, #888)',
   fontFamily: 'var(--font-ui, sans-serif)',
   fontSize: 10,
   cursor: 'pointer',
@@ -99,6 +95,7 @@ function SplitDivider({
 }): React.ReactElement {
   return (
     <div
+      className="bg-border-semantic"
       style={{ ...SPLIT_DIVIDER_STYLE, touchAction: 'none' }}
       onPointerDown={onPointerDown}
       role="separator"
@@ -114,7 +111,7 @@ function SplitCloseButton({
   onClose: () => void
 }): React.ReactElement {
   return (
-    <button onClick={onClose} title="Close split pane" style={SPLIT_CLOSE_BUTTON_STYLE}>
+    <button onClick={onClose} title="Close split pane" className="border border-border-semantic bg-surface-panel text-text-semantic-muted" style={SPLIT_CLOSE_BUTTON_STYLE}>
       Close split
     </button>
   )

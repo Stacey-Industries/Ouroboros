@@ -15,7 +15,6 @@ export interface PickerOverlayProps {
 export function PickerOverlay({ label, animPrefix, maxWidth, onClose, children }: PickerOverlayProps): React.ReactElement {
   return (
     <div
-      className="glass-scrim"
       aria-modal="true"
       role="dialog"
       aria-label={label}
@@ -28,21 +27,19 @@ export function PickerOverlay({ label, animPrefix, maxWidth, onClose, children }
         alignItems: 'flex-start',
         justifyContent: 'center',
         paddingTop: '15vh',
-        backgroundColor: 'var(--glass-scrim-bg, rgba(0, 0, 0, 0.55))',
+        backgroundColor: 'rgba(0, 0, 0, 0.55)',
         animation: `${animPrefix}-overlay-in 120ms ease`,
       }}
     >
       <div
-        className="glass-card"
         onClick={(e) => e.stopPropagation()}
+        className="bg-surface-panel border border-border-semantic"
         style={{
           width: '100%',
           maxWidth,
           borderRadius: '8px',
           overflow: 'hidden',
-          backgroundColor: 'var(--glass-card-bg, var(--bg-secondary))',
-          border: '1px solid var(--glass-border-muted, var(--border))',
-          boxShadow: 'var(--glass-shadow, 0 24px 64px rgba(0,0,0,0.6))',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
           animation: `${animPrefix}-card-in 120ms ease`,
         }}
       >
@@ -78,7 +75,7 @@ export function PickerInput({
 }: PickerInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
-      <span style={prefixStyle}>{prefix}</span>
+      <span className="text-text-semantic-muted" style={prefixStyle}>{prefix}</span>
       <input
         ref={inputRef}
         type="text"
@@ -90,13 +87,14 @@ export function PickerInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        className="text-text-semantic-primary"
         style={inputStyle}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
       />
-      {statusText && <span style={statusStyle}>{statusText}</span>}
+      {statusText && <span className="text-text-semantic-muted" style={statusStyle}>{statusText}</span>}
     </div>
   );
 }
@@ -112,7 +110,6 @@ const inputContainerStyle: React.CSSProperties = {
 
 const prefixStyle: React.CSSProperties = {
   fontSize: '14px',
-  color: 'var(--text-muted)',
   flexShrink: 0,
   fontFamily: 'var(--font-mono)',
 };
@@ -123,14 +120,12 @@ const inputStyle: React.CSSProperties = {
   border: 'none',
   outline: 'none',
   fontSize: '14px',
-  color: 'var(--text)',
   fontFamily: 'var(--font-ui)',
   caretColor: 'var(--accent)',
 };
 
 const statusStyle: React.CSSProperties = {
   fontSize: '11px',
-  color: 'var(--text-muted)',
   fontFamily: 'var(--font-mono)',
   flexShrink: 0,
 };

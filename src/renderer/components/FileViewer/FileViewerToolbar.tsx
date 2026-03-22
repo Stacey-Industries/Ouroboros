@@ -31,7 +31,7 @@ const containerStyle: React.CSSProperties = {
   gap: '6px',
   padding: '3px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
 
@@ -218,7 +218,7 @@ function DirtyIndicator(): React.ReactElement {
         width: '6px',
         height: '6px',
         borderRadius: '50%',
-        backgroundColor: 'var(--accent)',
+        backgroundColor: 'var(--interactive-accent)',
       }}
     />
   );

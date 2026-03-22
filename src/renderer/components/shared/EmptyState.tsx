@@ -16,19 +16,16 @@ const containerStyle: React.CSSProperties = {
   gap: '12px',
   padding: '24px',
   userSelect: 'none',
-  color: 'var(--text-faint)',
 };
 
 const iconWrapperStyle: React.CSSProperties = { opacity: 0.35 };
 const titleStyle: React.CSSProperties = {
   fontSize: '0.875rem',
   fontWeight: 500,
-  color: 'var(--text-muted)',
 };
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: '0.75rem',
-  color: 'var(--text-faint)',
   textAlign: 'center',
   maxWidth: '240px',
   lineHeight: '1.5',
@@ -41,7 +38,6 @@ const actionButtonStyle: React.CSSProperties = {
   borderRadius: '4px',
   border: 'none',
   backgroundColor: 'var(--accent)',
-  color: 'var(--bg)',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
   fontWeight: 500,
@@ -203,7 +199,7 @@ function EmptyStateDescription({
 }: {
   description?: string;
 }): React.ReactElement | null {
-  return description ? <span style={descriptionStyle}>{description}</span> : null;
+  return description ? <span className="text-text-semantic-faint" style={descriptionStyle}>{description}</span> : null;
 }
 
 function handleActionHover(target: HTMLButtonElement, hovering: boolean): void {
@@ -218,6 +214,7 @@ function EmptyStateAction({
   return (
     <button
       onClick={action.onClick}
+      className="text-text-semantic-on-accent"
       style={actionButtonStyle}
       onMouseEnter={(e) => {
         handleActionHover(e.currentTarget, true);
@@ -243,11 +240,11 @@ export const EmptyState = memo(function EmptyState({
   const IconComponent = ICONS[icon];
 
   return (
-    <div style={containerStyle}>
+    <div className="text-text-semantic-faint" style={containerStyle}>
       <div style={iconWrapperStyle}>
         <IconComponent />
       </div>
-      <span style={titleStyle}>{title}</span>
+      <span className="text-text-semantic-muted" style={titleStyle}>{title}</span>
       <EmptyStateDescription description={description} />
       {action && <EmptyStateAction action={action} />}
     </div>

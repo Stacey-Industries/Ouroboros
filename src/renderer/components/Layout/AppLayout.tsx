@@ -196,7 +196,7 @@ function MobileNavIcon({ id }: { id: MobilePanel }): React.ReactElement {
     return (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
         <rect x="5" y="2" width="10" height="13" rx="1.5" />
-        <rect x="3" y="5" width="10" height="13" rx="1.5" fill="var(--bg-secondary)" />
+        <rect x="3" y="5" width="10" height="13" rx="1.5" fill="var(--surface-panel)" />
       </svg>
     );
   }
@@ -233,8 +233,6 @@ function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p:
         display: 'none', // shown by CSS on mobile web
         flexShrink: 0,
         minHeight: '56px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderTop: '1px solid var(--border)',
         alignItems: 'stretch',
         justifyContent: 'space-around',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -252,21 +250,32 @@ function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p:
               alignItems: 'center',
               justifyContent: 'center',
               flex: 1,
-              gap: '2px',
-              background: 'none',
+              gap: '3px',
+              background: isActive ? 'rgba(255, 255, 255, 0.06)' : 'none',
               border: 'none',
-              borderTop: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+              color: isActive ? 'var(--interactive-accent)' : 'var(--text-secondary)',
               fontSize: '10px',
               fontFamily: 'var(--font-ui, sans-serif)',
               fontWeight: isActive ? 600 : 400,
               cursor: 'pointer',
-              transition: 'color 100ms ease, border-color 100ms ease',
-              paddingTop: '4px',
+              transition: 'color 100ms ease, background-color 100ms ease',
+              padding: '6px 0',
+              position: 'relative',
             }}
           >
             <MobileNavIcon id={item.id} />
             <span>{item.label}</span>
+            {isActive && (
+              <span style={{
+                position: 'absolute',
+                top: 0,
+                left: '25%',
+                right: '25%',
+                height: '2px',
+                borderRadius: '1px',
+                backgroundColor: 'var(--interactive-accent)',
+              }} />
+            )}
           </button>
         );
       })}
@@ -334,7 +343,7 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
 
   const pfs = useCallback(
     (panel: FocusPanel): React.CSSProperties =>
-      focusedPanel === panel ? { outline: '1px solid var(--accent)', outlineOffset: '-1px' } : {},
+      {},
     [focusedPanel],
   );
 
@@ -353,63 +362,61 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
   const runningAgentCount = props.runningAgentCount ?? 0;
 
   return (
-    <div data-layout="app" data-mobile-active={mobileActivePanel} className="relative flex h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--text)] p-3 sm:p-4" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
-      <div data-layout="app-shell" className="glass-shell flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden p-3 sm:p-4">
-        <TitleBar />
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Activity bar — always visible (hidden on mobile via CSS) */}
-          <ActivityBar
-            activeView={sidebarView}
-            sidebarCollapsed={collapsed.leftSidebar}
-            onViewChange={handleActivityViewChange}
-            onToggleSidebar={handleActivityToggle}
-          />
+    <div data-layout="app" data-mobile-active={mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+      <TitleBar />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Activity bar — always visible (hidden on mobile via CSS) */}
+        <ActivityBar
+          activeView={sidebarView}
+          sidebarCollapsed={collapsed.leftSidebar}
+          onViewChange={handleActivityViewChange}
+          onToggleSidebar={handleActivityToggle}
+        />
 
-          {/* Left sidebar — collapses but activity bar stays */}
-          {!collapsed.leftSidebar && (
-            <>
-              <Sidebar
-                width={sizes.leftSidebar}
-                collapsed={false}
-                onToggleCollapse={() => toggle('leftSidebar')}
-                header={activeSidebarHeader}
-                focusStyle={pfs('sidebar')}
-                onFocus={() => setFocusedPanel('sidebar')}
-              >
-                {activeSidebarContent}
-              </Sidebar>
-              <ResizeDivider direction="vertical" onPointerDown={mkResize('leftSidebar', 'vertical')} onDoubleClick={() => resetSize('leftSidebar')} label="Resize left sidebar" />
-            </>
-          )}
+        {/* Left sidebar — collapses but activity bar stays */}
+        {!collapsed.leftSidebar && (
+          <>
+            <Sidebar
+              width={sizes.leftSidebar}
+              collapsed={false}
+              onToggleCollapse={() => toggle('leftSidebar')}
+              header={activeSidebarHeader}
+              focusStyle={pfs('sidebar')}
+              onFocus={() => setFocusedPanel('sidebar')}
+            >
+              {activeSidebarContent}
+            </Sidebar>
+            <ResizeDivider direction="vertical" onPointerDown={mkResize('leftSidebar', 'vertical')} onDoubleClick={() => resetSize('leftSidebar')} label="Resize left sidebar" />
+          </>
+        )}
 
-          {/* Centre column: editor + terminal stacked vertically */}
-          <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
-            <CentrePane tabBar={props.editorTabBar} focusStyle={pfs('editor')} onFocus={() => setFocusedPanel('editor')}>
-              {props.editorContent}
-            </CentrePane>
-            <ResizeDivider direction="horizontal" onPointerDown={mkResize('terminal', 'horizontal')} onDoubleClick={() => resetSize('terminal')} label="Resize terminal" />
-            <TerminalPane height={sizes.terminal} collapsed={collapsed.terminal} onToggleCollapse={() => toggle('terminal')} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={pfs('terminal')} onFocus={() => setFocusedPanel('terminal')}>
-              {props.terminalContent}
-            </TerminalPane>
-          </div>
-
-          {/* Right sidebar divider + agent pane */}
-          {!collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={mkResize('rightSidebar', 'vertical')} onDoubleClick={() => resetSize('rightSidebar')} label="Resize right sidebar" />}
-          {collapsed.rightSidebar && (
-            <CollapsedAgentStrip onExpand={() => toggle('rightSidebar')} runningCount={runningAgentCount} />
-          )}
-          {/* Always keep workspace mounted — display:none preserves streaming state and model overrides across sidebar collapse */}
-          <div style={{ display: collapsed.rightSidebar ? 'none' : undefined }}>
-            <AgentMonitorPane width={sizes.rightSidebar} collapsed={false} onToggleCollapse={() => toggle('rightSidebar')} focusStyle={pfs('agentMonitor')} onFocus={() => setFocusedPanel('agentMonitor')}>
-              {props.agentCards}
-            </AgentMonitorPane>
-          </div>
+        {/* Centre column: editor + terminal stacked vertically */}
+        <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
+          <CentrePane tabBar={props.editorTabBar} focusStyle={pfs('editor')} onFocus={() => setFocusedPanel('editor')}>
+            {props.editorContent}
+          </CentrePane>
+          <ResizeDivider direction="horizontal" onPointerDown={mkResize('terminal', 'horizontal')} onDoubleClick={() => resetSize('terminal')} label="Resize terminal" />
+          <TerminalPane height={sizes.terminal} collapsed={collapsed.terminal} onToggleCollapse={() => toggle('terminal')} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={pfs('terminal')} onFocus={() => setFocusedPanel('terminal')}>
+            {props.terminalContent}
+          </TerminalPane>
         </div>
-        {/* Mobile bottom nav — hidden on desktop via CSS */}
-        <MobileNavBar active={mobileActivePanel} onSwitch={handleMobilePanelSwitch} />
-        <div data-layout="status-bar">
-          <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
+
+        {/* Right sidebar divider + agent pane */}
+        {!collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={mkResize('rightSidebar', 'vertical')} onDoubleClick={() => resetSize('rightSidebar')} label="Resize right sidebar" />}
+        {collapsed.rightSidebar && (
+          <CollapsedAgentStrip onExpand={() => toggle('rightSidebar')} runningCount={runningAgentCount} />
+        )}
+        {/* Always keep workspace mounted — display:none preserves streaming state and model overrides across sidebar collapse */}
+        <div style={{ display: collapsed.rightSidebar ? 'none' : undefined }}>
+          <AgentMonitorPane width={sizes.rightSidebar} collapsed={false} onToggleCollapse={() => toggle('rightSidebar')} focusStyle={pfs('agentMonitor')} onFocus={() => setFocusedPanel('agentMonitor')}>
+            {props.agentCards}
+          </AgentMonitorPane>
         </div>
+      </div>
+      {/* Mobile bottom nav — hidden on desktop via CSS */}
+      <MobileNavBar active={mobileActivePanel} onSwitch={handleMobilePanelSwitch} />
+      <div data-layout="status-bar">
+        <StatusBar {...props.statusBar} layout={layoutProps ? { ...layoutProps, currentPanelSizes: sizes, currentVisiblePanels: { leftSidebar: !collapsed.leftSidebar, rightSidebar: !collapsed.rightSidebar, terminal: !collapsed.terminal } } : undefined} />
       </div>
     </div>
   );

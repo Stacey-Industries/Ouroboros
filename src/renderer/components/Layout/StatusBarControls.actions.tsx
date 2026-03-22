@@ -13,7 +13,7 @@ import {
 
 const MENU_HEADER_STYLE: React.CSSProperties = {
   padding: '6px 8px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-semantic)',
   flexShrink: 0,
 };
 
@@ -41,7 +41,7 @@ const BRANCH_CHECK_STYLE: React.CSSProperties = {
 };
 
 const BRANCH_SWITCHING_STYLE: React.CSSProperties = {
-  color: 'var(--text-faint)',
+  color: 'var(--text-faint, var(--text-secondary))',
   fontSize: '0.6875rem',
   flexShrink: 0,
 };
@@ -68,7 +68,7 @@ function getBranchOptionStyle(
   return {
     ...BRANCH_OPTION_STYLE,
     cursor: isCurrent ? 'default' : 'pointer',
-    color: isCurrent ? 'var(--accent)' : 'var(--text)',
+    color: isCurrent ? 'var(--interactive-accent)' : 'var(--text-primary)',
     opacity: checkingOut !== null && !isCheckingOut ? 0.5 : 1,
   };
 }
@@ -98,7 +98,7 @@ function BranchListButton({
   const isCheckingOut = checkingOut === branch;
   const handleMouseEnter = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!isCurrent && checkingOut === null) {
-      setElementBackground(event.currentTarget, 'var(--bg)');
+      setElementBackground(event.currentTarget, 'var(--surface-base)');
     }
   };
 
@@ -136,7 +136,7 @@ function BranchDropdownContent({
   onCheckout: (branch: string) => void;
 }): React.ReactElement {
   if (loading) {
-    return <BranchDropdownMessage color="var(--text-faint)">Loading branches...</BranchDropdownMessage>;
+    return <BranchDropdownMessage color="var(--text-faint, var(--text-secondary))">Loading branches...</BranchDropdownMessage>;
   }
   if (error) {
     return <BranchDropdownMessage color="var(--error)">{error}</BranchDropdownMessage>;
@@ -174,6 +174,7 @@ function BranchSearchInput({
         placeholder="Filter branches..."
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
+        className="bg-surface-base border border-border-semantic text-text-semantic-primary"
         style={SEARCH_INPUT_STYLE}
       />
     </div>
@@ -204,7 +205,7 @@ function BranchDropdown({
   useDismissOnOutsideInteraction(dropdownRef, onClose);
 
   return (
-    <div ref={dropdownRef} role="listbox" aria-label="Switch branch" style={DROPDOWN_STYLE}>
+    <div ref={dropdownRef} role="listbox" aria-label="Switch branch" className="bg-surface-panel border border-border-semantic" style={DROPDOWN_STYLE}>
       <BranchSearchInput search={search} onSearchChange={setSearch} />
       <div style={MENU_BODY_STYLE}>
         <BranchDropdownContent
@@ -260,7 +261,7 @@ export function BranchButton({
   const closeMenu = useCallback(() => setOpen(false), []);
   const { checkingOut, handleCheckout } = useBranchCheckout(projectRoot, closeMenu);
   const label = checkingOut !== null ? 'switching...' : gitBranch;
-  const restingColor = checkingOut !== null ? 'var(--text-faint)' : 'var(--text-muted)';
+  const restingColor = checkingOut !== null ? 'var(--text-faint, var(--text-secondary))' : 'var(--text-secondary)';
 
   return (
     <div style={TOGGLE_CONTAINER_STYLE}>

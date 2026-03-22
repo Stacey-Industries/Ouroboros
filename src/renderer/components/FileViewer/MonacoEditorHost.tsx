@@ -655,15 +655,15 @@ export const MonacoEditorHost = memo(function MonacoEditorHost(
       {keybindingMode === 'vim' && (
         <div
           ref={vimStatusRef}
+          className="text-text-semantic-muted"
           style={{
             height: '22px',
             lineHeight: '22px',
             padding: '0 8px',
             fontSize: '11px',
             fontFamily: 'var(--font-mono)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-secondary)',
-            borderTop: '1px solid var(--border)',
+            background: 'var(--surface-panel)',
+            borderTop: '1px solid var(--border-semantic)',
             flexShrink: 0,
           }}
         />

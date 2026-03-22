@@ -33,7 +33,7 @@ const rootStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'hidden',
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'var(--surface-base)',
 };
 
 const toolbarStyle: React.CSSProperties = {
@@ -43,11 +43,10 @@ const toolbarStyle: React.CSSProperties = {
   gap: '8px',
   padding: '4px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
-  color: 'var(--text-muted)',
 };
 
 const btnStyle: React.CSSProperties = {
@@ -55,19 +54,17 @@ const btnStyle: React.CSSProperties = {
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
   fontWeight: 500,
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   backgroundColor: 'transparent',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
   lineHeight: '1.5',
 };
 
 const activeBtnStyle: React.CSSProperties = {
   ...btnStyle,
-  borderColor: 'var(--accent)',
-  backgroundColor: 'var(--accent)',
-  color: 'var(--bg)',
+  borderColor: 'var(--interactive-accent)',
+  backgroundColor: 'var(--interactive-accent)',
 };
 
 const pageInputStyle: React.CSSProperties = {
@@ -75,10 +72,9 @@ const pageInputStyle: React.CSSProperties = {
   padding: '1px 4px',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-mono)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
+  backgroundColor: 'var(--surface-base)',
   textAlign: 'center',
 };
 
@@ -256,7 +252,7 @@ export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactEle
   if (loading) {
     return (
       <div style={rootStyle}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)' }}>
+        <div className="text-text-semantic-faint" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           Loading PDF...
         </div>
       </div>
@@ -267,9 +263,9 @@ export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactEle
     return (
       <div style={rootStyle}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px' }}>
-          <span style={{ fontSize: '1.5rem', color: 'var(--error, #f85149)' }}>!</span>
-          <span style={{ color: 'var(--error, #f85149)', fontSize: '0.875rem', textAlign: 'center' }}>{error}</span>
-          <button onClick={openExternal} style={btnStyle}>Open in external app</button>
+          <span className="text-status-error" style={{ fontSize: '1.5rem' }}>!</span>
+          <span className="text-status-error" style={{ fontSize: '0.875rem', textAlign: 'center' }}>{error}</span>
+          <button onClick={openExternal} className="text-text-semantic-muted" style={btnStyle}>Open in external app</button>
         </div>
       </div>
     );
@@ -278,12 +274,13 @@ export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactEle
   return (
     <div style={rootStyle}>
       {/* Toolbar */}
-      <div style={toolbarStyle}>
-        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} style={btnStyle} title="Previous page">
+      <div className="text-text-semantic-muted" style={toolbarStyle}>
+        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} className="text-text-semantic-muted" style={btnStyle} title="Previous page">
           Prev
         </button>
         <input
           type="text"
+          className="text-text-semantic-primary"
           style={pageInputStyle}
           value={pageInputValue}
           onChange={(e) => setPageInputValue(e.target.value)}
@@ -291,24 +288,24 @@ export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactEle
           title="Go to page"
         />
         <span>/ {numPages}</span>
-        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= numPages} style={btnStyle} title="Next page">
+        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= numPages} className="text-text-semantic-muted" style={btnStyle} title="Next page">
           Next
         </button>
 
-        <div style={{ width: 1, height: 16, backgroundColor: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ width: 1, height: 16, backgroundColor: 'var(--border-semantic)', margin: '0 4px' }} />
 
-        <button onClick={() => setZoomMode('fitWidth')} style={zoomMode === 'fitWidth' ? activeBtnStyle : btnStyle}>
+        <button onClick={() => setZoomMode('fitWidth')} className={zoomMode === 'fitWidth' ? 'text-text-semantic-on-accent' : 'text-text-semantic-muted'} style={zoomMode === 'fitWidth' ? activeBtnStyle : btnStyle}>
           Fit Width
         </button>
-        <button onClick={() => setZoomMode('fitPage')} style={zoomMode === 'fitPage' ? activeBtnStyle : btnStyle}>
+        <button onClick={() => setZoomMode('fitPage')} className={zoomMode === 'fitPage' ? 'text-text-semantic-on-accent' : 'text-text-semantic-muted'} style={zoomMode === 'fitPage' ? activeBtnStyle : btnStyle}>
           Fit Page
         </button>
-        <button onClick={zoomOut} style={btnStyle}>-</button>
-        <button onClick={zoomIn} style={btnStyle}>+</button>
+        <button onClick={zoomOut} className="text-text-semantic-muted" style={btnStyle}>-</button>
+        <button onClick={zoomIn} className="text-text-semantic-muted" style={btnStyle}>+</button>
         <span>{zoomLabel}</span>
 
         <div style={{ flex: 1 }} />
-        <button onClick={openExternal} style={btnStyle} title="Open in external application">
+        <button onClick={openExternal} className="text-text-semantic-muted" style={btnStyle} title="Open in external application">
           Open External
         </button>
       </div>

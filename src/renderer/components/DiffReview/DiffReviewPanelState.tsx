@@ -78,7 +78,7 @@ function CenteredMessage({
 function DiffReviewError({ error }: { error: string }): React.ReactElement {
   return (
     <CenteredMessage
-      color="var(--error, #f85149)"
+      color="var(--status-error, #f85149)"
       extraStyle={{ padding: '20px', textAlign: 'center' }}
     >
       <div>
@@ -101,10 +101,10 @@ function DiffReviewEmptyState({ onClose }: { onClose: () => void }): React.React
         style={{
           padding: '4px 12px',
           fontSize: '0.75rem',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-default)',
           borderRadius: '4px',
           background: 'transparent',
-          color: 'var(--text)',
+          color: 'var(--text-primary)',
           cursor: 'pointer',
         }}
       >

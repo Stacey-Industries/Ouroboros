@@ -45,7 +45,7 @@ const splitButtonStyle: React.CSSProperties = {
   flexShrink: 0,
   border: 'none',
   background: 'transparent',
-  color: 'var(--text-faint)',
+  color: 'var(--text-faint, var(--text-secondary))',
   cursor: 'pointer',
   padding: 0,
   transition: 'color 150ms ease, background-color 150ms ease',
@@ -53,7 +53,7 @@ const splitButtonStyle: React.CSSProperties = {
 
 const splitButtonActiveStyle: React.CSSProperties = {
   ...splitButtonStyle,
-  color: 'var(--accent)',
+  color: 'var(--interactive-accent)',
 };
 
 const multiBufferTabStyle: React.CSSProperties = {
@@ -65,10 +65,10 @@ const multiBufferTabStyle: React.CSSProperties = {
   flexShrink: 0,
   cursor: 'pointer',
   userSelect: 'none',
-  borderRight: '1px solid var(--border)',
+  borderRight: '1px solid var(--border-semantic)',
   borderBottom: '2px solid transparent',
-  backgroundColor: 'var(--bg-secondary)',
-  color: 'var(--text-muted)',
+  backgroundColor: 'var(--surface-panel)',
+  color: 'var(--text-secondary)',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
   fontStyle: 'italic',
@@ -79,9 +79,9 @@ const multiBufferTabStyle: React.CSSProperties = {
 
 const multiBufferTabActiveStyle: React.CSSProperties = {
   ...multiBufferTabStyle,
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
-  borderBottom: '2px solid var(--accent)',
+  backgroundColor: 'var(--surface-base)',
+  color: 'var(--text-primary)',
+  borderBottom: '2px solid var(--interactive-accent)',
 };
 
 const multiBufferIconStyle: React.CSSProperties = {
@@ -98,10 +98,10 @@ const multiBufferLabelStyle: React.CSSProperties = {
 
 const renameInputStyle: React.CSSProperties = {
   flex: 1,
-  background: 'var(--bg)',
-  border: '1px solid var(--accent)',
+  background: 'var(--surface-base)',
+  border: '1px solid var(--interactive-accent)',
   borderRadius: '2px',
-  color: 'var(--text)',
+  color: 'var(--text-primary)',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
   fontStyle: 'italic',
@@ -112,7 +112,7 @@ const renameInputStyle: React.CSSProperties = {
 
 const excerptCountStyle: React.CSSProperties = {
   fontSize: '0.625rem',
-  color: 'var(--text-faint)',
+  color: 'var(--text-faint, var(--text-secondary))',
   fontStyle: 'normal',
   whiteSpace: 'nowrap',
 };
@@ -126,7 +126,7 @@ const closeButtonStyle: React.CSSProperties = {
   borderRadius: '3px',
   border: 'none',
   background: 'transparent',
-  color: 'var(--text-faint)',
+  color: 'var(--text-faint, var(--text-secondary))',
   cursor: 'pointer',
   padding: 0,
   flexShrink: 0,
@@ -141,12 +141,12 @@ const newMultiBufferButtonStyle: React.CSSProperties = {
   flexShrink: 0,
   border: 'none',
   background: 'transparent',
-  color: 'var(--text-faint)',
+  color: 'var(--text-faint, var(--text-secondary))',
   cursor: 'pointer',
   fontSize: '0.875rem',
   fontFamily: 'var(--font-ui)',
   padding: 0,
-  borderRight: '1px solid var(--border)',
+  borderRight: '1px solid var(--border-semantic)',
 };
 
 const specialViewTabStyle: React.CSSProperties = {
@@ -158,10 +158,10 @@ const specialViewTabStyle: React.CSSProperties = {
   flexShrink: 0,
   cursor: 'pointer',
   userSelect: 'none',
-  borderRight: '1px solid var(--border)',
+  borderRight: '1px solid var(--border-semantic)',
   borderBottom: '2px solid transparent',
-  backgroundColor: 'var(--bg-secondary)',
-  color: 'var(--text-muted)',
+  backgroundColor: 'var(--surface-panel)',
+  color: 'var(--text-secondary)',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
   minWidth: '80px',
@@ -171,9 +171,9 @@ const specialViewTabStyle: React.CSSProperties = {
 
 const specialViewTabActiveStyle: React.CSSProperties = {
   ...specialViewTabStyle,
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
-  borderBottom: '2px solid var(--accent)',
+  backgroundColor: 'var(--surface-base)',
+  color: 'var(--text-primary)',
+  borderBottom: '2px solid var(--interactive-accent)',
 };
 
 const specialViewIconStyle: React.CSSProperties = {
@@ -240,7 +240,7 @@ const specialViewCloseStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   width: '18px', height: '18px', marginLeft: '4px',
   borderRadius: '4px', border: 'none', background: 'transparent',
-  color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', lineHeight: 1,
+  color: 'var(--text-secondary)', fontSize: '14px', cursor: 'pointer', lineHeight: 1,
   flexShrink: 0,
 };
 
@@ -476,8 +476,8 @@ function SplitEditorButton({
       aria-label={isSplit ? 'Close Split Editor' : 'Split Editor Right'}
       style={{
         ...(isSplit ? splitButtonActiveStyle : splitButtonStyle),
-        color: isHovered ? 'var(--accent)' : (isSplit ? 'var(--accent)' : 'var(--text-faint)'),
-        backgroundColor: isHovered ? 'var(--bg-tertiary)' : 'transparent',
+        color: isHovered ? 'var(--interactive-accent)' : (isSplit ? 'var(--interactive-accent)' : 'var(--text-faint, var(--text-secondary))'),
+        backgroundColor: isHovered ? 'var(--surface-raised)' : 'transparent',
       }}
     >
       <SplitColumnsIcon />

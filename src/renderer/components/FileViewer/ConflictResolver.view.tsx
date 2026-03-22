@@ -36,11 +36,10 @@ const lineStyle: React.CSSProperties = {
   lineHeight: '1.6',
   minHeight: '1.6em',
   whiteSpace: 'pre',
-  color: 'var(--text)',
 };
 
 const cardStyle: React.CSSProperties = {
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   margin: '4px 8px',
   overflow: 'hidden',
@@ -52,8 +51,8 @@ const actionsStyle: React.CSSProperties = {
   display: 'flex',
   gap: '4px',
   padding: '6px 8px',
-  background: 'var(--bg-tertiary, var(--bg-secondary))',
-  borderTop: '1px solid var(--border)',
+  background: 'var(--surface-raised)',
+  borderTop: '1px solid var(--border-semantic)',
 };
 
 function resolveBlockContent(content: string, blockIndex: number, choice: ConflictChoice): string | null {
@@ -147,7 +146,6 @@ function getSectionBodyStyle(background: string): React.CSSProperties {
     whiteSpace: 'pre',
     overflowX: 'auto',
     minHeight: '1.6em',
-    color: 'var(--text)',
   };
 }
 
@@ -166,7 +164,7 @@ function ActionButton(props: { label: string; color: string; onClick: () => void
         border: `1px solid ${props.color}`,
         borderRadius: '4px',
         background: hovered ? props.color : 'transparent',
-        color: hovered ? 'var(--bg)' : props.color,
+        color: hovered ? 'var(--text-on-accent)' : props.color,
         cursor: 'pointer',
         lineHeight: '1.5',
         transition: 'background 0.1s, color 0.1s',
@@ -192,9 +190,9 @@ function ConflictSection(props: {
         {props.title}
         {props.label ? ` (${props.label})` : ''}
       </div>
-      <div style={getSectionBodyStyle(props.bodyBackground)}>
+      <div className="text-text-semantic-primary" style={getSectionBodyStyle(props.bodyBackground)}>
         {props.lines.length === 0 ? (
-          <span style={{ color: 'var(--text-faint)', fontStyle: 'italic', fontSize: '0.75rem' }}>(empty)</span>
+          <span className="text-text-semantic-faint" style={{ fontStyle: 'italic', fontSize: '0.75rem' }}>(empty)</span>
         ) : (
           props.lines.map((line, index) => (
             <div key={index} style={{ minHeight: '1.6em', lineHeight: '1.6' }}>
@@ -236,7 +234,7 @@ function ConflictCard(props: {
         bodyBackground="rgba(255,100,100,0.06)"
         lines={props.block.oursLines}
       />
-      <div style={{ height: '1px', background: 'var(--border)' }} />
+      <div style={{ height: '1px', background: 'var(--border-semantic)' }} />
       <ConflictSection
         title="Theirs"
         label={props.block.theirsLabel}
@@ -272,14 +270,14 @@ function ConflictStatus(props: {
       }}
     >
       <span>{hasConflicts ? `${props.conflictCount} conflict${props.conflictCount === 1 ? '' : 's'} remaining` : 'All conflicts resolved.'}</span>
-      {props.isSaving ? <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Saving...</span> : null}
-      {props.saveError ? <span style={{ color: 'var(--error)', fontSize: '0.75rem' }}>{props.saveError}</span> : null}
+      {props.isSaving ? <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>Saving...</span> : null}
+      {props.saveError ? <span className="text-status-error" style={{ fontSize: '0.75rem' }}>{props.saveError}</span> : null}
     </div>
   );
 }
 
 function NormalLine({ line }: { line: string }): React.ReactElement {
-  return <div style={lineStyle}>{line}</div>;
+  return <div className="text-text-semantic-primary" style={lineStyle}>{line}</div>;
 }
 
 function ConflictContent(props: {

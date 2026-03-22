@@ -20,7 +20,6 @@ const emptyStateStyle: React.CSSProperties = {
   alignItems: 'center',
   padding: '0 12px',
   height: '100%',
-  color: 'var(--text-faint)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
 };
@@ -34,7 +33,6 @@ const containerStyle: React.CSSProperties = {
   overflow: 'hidden',
   fontFamily: 'var(--font-mono)',
   fontSize: '11px',
-  color: 'var(--text-muted)',
 };
 
 const segmentsStyle: React.CSSProperties = {
@@ -50,7 +48,6 @@ const directoryButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   padding: '1px 3px',
-  color: 'var(--text-muted)',
   fontSize: 'inherit',
   fontFamily: 'inherit',
   borderRadius: '3px',
@@ -65,7 +62,6 @@ const currentSegmentStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '4px',
-  color: 'var(--text)',
   fontWeight: 500,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -74,14 +70,12 @@ const currentSegmentStyle: React.CSSProperties = {
 };
 
 const chevronWrapperStyle: React.CSSProperties = {
-  color: 'var(--text-faint)',
   flexShrink: 0,
   display: 'inline-flex',
   alignItems: 'center',
 };
 
 const ellipsisStyle: React.CSSProperties = {
-  color: 'var(--text-faint)',
   flexShrink: 0,
   padding: '0 1px',
   fontSize: 'inherit',
@@ -356,6 +350,7 @@ function DirectorySegmentButton(props: {
     <button
       onClick={() => onNavigateToDir?.(dirPath)}
       title={`Reveal ${dirPath}`}
+      className="text-text-semantic-muted"
       style={directoryButtonStyle}
       onMouseEnter={(e) => {
         setDirectoryButtonHoverState(e.currentTarget, true);
@@ -371,7 +366,7 @@ function DirectorySegmentButton(props: {
 
 function CurrentSegmentLabel({ segment }: { segment: string }): React.ReactElement {
   return (
-    <span style={currentSegmentStyle}>
+    <span className="text-text-semantic-primary" style={currentSegmentStyle}>
       <FileTypeIcon filename={segment} />
       {segment}
     </span>
@@ -380,14 +375,14 @@ function CurrentSegmentLabel({ segment }: { segment: string }): React.ReactEleme
 
 function ChevronSeparator(): React.ReactElement {
   return (
-    <span style={chevronWrapperStyle}>
+    <span className="text-text-semantic-faint" style={chevronWrapperStyle}>
       <ChevronIcon />
     </span>
   );
 }
 
 function EllipsisBadge(): React.ReactElement {
-  return <span style={ellipsisStyle} title="Path truncated">...</span>;
+  return <span className="text-text-semantic-faint" style={ellipsisStyle} title="Path truncated">...</span>;
 }
 
 function BreadcrumbSegmentItem(props: {
@@ -496,7 +491,7 @@ function CopyPathButton(props: {
 // ---------------------------------------------------------------------------
 
 function EmptyBreadcrumb(): React.ReactElement {
-  return <div style={emptyStateStyle}>No file open</div>;
+  return <div className="text-text-semantic-faint" style={emptyStateStyle}>No file open</div>;
 }
 
 function BreadcrumbLayout(props: {
@@ -507,7 +502,7 @@ function BreadcrumbLayout(props: {
 }): React.ReactElement {
   const { data, copied, onCopy, onNavigateToDir } = props;
   return (
-    <div style={containerStyle}>
+    <div className="text-text-semantic-muted" style={containerStyle}>
       <BreadcrumbSegments data={data} onNavigateToDir={onNavigateToDir} />
       <CopyPathButton copied={copied} onCopy={onCopy} />
     </div>

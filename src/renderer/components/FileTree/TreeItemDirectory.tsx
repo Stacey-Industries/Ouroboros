@@ -110,7 +110,7 @@ export function TreeItemDirectory({
 
 function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 120ms ease', fill: 'var(--text-muted)' }}>
+    <svg width="16" height="16" viewBox="0 0 16 16" className="text-text-semantic-muted" style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 120ms ease' }}>
       <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -118,14 +118,14 @@ function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
 
 function DirLabel({ name, statusColor }: { name: string; statusColor?: string }): React.ReactElement {
   return (
-    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', fontWeight: 500, color: statusColor ?? 'var(--text)', fontFamily: 'var(--font-ui)' }}>
+    <span className="text-text-semantic-primary" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', fontWeight: 500, color: statusColor ?? undefined, fontFamily: 'var(--font-ui)' }}>
       {name}
     </span>
   );
 }
 
 function ChildCount({ count }: { count: number }): React.ReactElement {
-  return <span style={{ flexShrink: 0, fontSize: '0.6875rem', color: 'var(--text-faint)', marginLeft: '2px' }}>({count})</span>;
+  return <span className="text-text-semantic-faint" style={{ flexShrink: 0, fontSize: '0.6875rem', marginLeft: '2px' }}>({count})</span>;
 }
 
 function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement {
@@ -133,7 +133,7 @@ function StatusBadge({ label, color }: { label: string; color?: string }): React
 }
 
 function PinDot(): React.ReactElement {
-  return <span title="Pinned" style={{ flexShrink: 0, fontSize: '0.625rem', color: 'var(--accent)', marginLeft: '4px', lineHeight: 1 }}>&#x25CF;</span>;
+  return <span title="Pinned" className="text-interactive-accent" style={{ flexShrink: 0, fontSize: '0.625rem', marginLeft: '4px', lineHeight: 1 }}>&#x25CF;</span>;
 }
 
 function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement {
@@ -141,7 +141,7 @@ function HeatDot({ color, glow }: { color: string; glow: boolean }): React.React
 }
 
 function LoadingDots(): React.ReactElement {
-  return <span style={{ fontSize: '0.6875rem', color: 'var(--text-faint)', flexShrink: 0 }}>...</span>;
+  return <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', flexShrink: 0 }}>...</span>;
 }
 
 // ─── Directory diagnostic indicator (4A) ─────────────────────────────────────

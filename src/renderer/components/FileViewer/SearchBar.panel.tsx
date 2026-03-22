@@ -10,8 +10,8 @@ const panelStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '4px',
   padding: '4px 8px',
-  backgroundColor: 'var(--bg-secondary)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-panel)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '6px',
   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
   fontFamily: 'var(--font-ui)',
@@ -22,9 +22,8 @@ const inputStyle: React.CSSProperties = {
   width: '200px',
   height: '26px',
   padding: '0 6px',
-  backgroundColor: 'var(--bg)',
-  color: 'var(--text)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '3px',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.8125rem',
@@ -47,16 +46,16 @@ const iconButtonStyle: React.CSSProperties = {
   height: '26px',
   padding: 0,
   background: 'transparent',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '3px',
 };
 
 function getToggleButtonStyle(active: boolean, fontFamily: string): React.CSSProperties {
   return {
     ...iconButtonStyle,
-    background: active ? 'var(--accent)' : 'transparent',
-    color: active ? 'var(--bg)' : 'var(--text-muted)',
-    borderColor: active ? 'var(--accent)' : 'var(--border)',
+    background: active ? 'var(--interactive-accent)' : 'transparent',
+    color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
+    borderColor: active ? 'var(--interactive-accent)' : 'var(--border-semantic)',
     cursor: 'pointer',
     fontSize: '0.75rem',
     fontWeight: 600,
@@ -126,12 +125,13 @@ function SearchInput({ controller }: { controller: SearchBarController }): React
       onChange={(event) => controller.setQuery(event.target.value)}
       placeholder="Find..."
       spellCheck={false}
+      className="text-text-semantic-primary"
       style={inputStyle}
       onFocus={(event) => {
-        event.target.style.borderColor = 'var(--accent)';
+        event.target.style.borderColor = 'var(--interactive-accent)';
       }}
       onBlur={(event) => {
-        event.target.style.borderColor = 'var(--border)';
+        event.target.style.borderColor = 'var(--border-semantic)';
       }}
     />
   );

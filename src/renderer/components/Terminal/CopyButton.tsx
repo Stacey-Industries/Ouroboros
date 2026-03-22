@@ -69,6 +69,7 @@ export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactE
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy terminal output'}
+      className={copied ? 'border border-interactive-accent text-interactive-accent' : 'border border-border-semantic bg-surface-panel text-text-semantic-muted'}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -81,9 +82,7 @@ export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactE
         boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
         userSelect: 'none',
         whiteSpace: 'nowrap',
-        border: copied ? '1px solid var(--accent, #58a6ff)' : '1px solid var(--border, #333)',
-        backgroundColor: copied ? 'rgba(88,166,255,0.15)' : 'var(--bg-secondary, #1e1e1e)',
-        color: copied ? 'var(--accent, #58a6ff)' : 'var(--text-muted, #888)',
+        backgroundColor: copied ? 'rgba(88,166,255,0.15)' : undefined,
       }}
     >
       {copied ? <CheckIcon /> : <CopyIcon />}

@@ -35,29 +35,26 @@ const FORM_STYLE: React.CSSProperties = {
   flexDirection: 'column',
   gap: '8px',
   padding: '12px',
-  backgroundColor: 'var(--bg-secondary)',
-  borderBottom: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-panel)',
+  borderBottom: '1px solid var(--border-semantic)',
   fontFamily: 'var(--font-ui)',
 };
 
 const FORM_TITLE_STYLE: React.CSSProperties = {
   fontSize: '0.8125rem',
   fontWeight: 600,
-  color: 'var(--text)',
 };
 
 const FIELD_LABEL_STYLE: React.CSSProperties = {
-  color: 'var(--text-muted)',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
   marginBottom: '2px',
 };
 
 const INPUT_STYLE: React.CSSProperties = {
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
+  background: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '3px',
-  color: 'var(--text)',
   padding: '4px 8px',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-mono)',
@@ -67,7 +64,7 @@ const INPUT_STYLE: React.CSSProperties = {
 
 const INPUT_ERROR_STYLE: React.CSSProperties = {
   ...INPUT_STYLE,
-  border: '1px solid var(--error, #f44)',
+  border: '1px solid var(--status-error)',
 };
 
 const RANGE_FIELDS_STYLE: React.CSSProperties = {
@@ -83,9 +80,8 @@ const ACTIONS_STYLE: React.CSSProperties = {
 
 const CANCEL_BUTTON_STYLE: React.CSSProperties = {
   background: 'none',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '3px',
-  color: 'var(--text-muted)',
   padding: '4px 12px',
   fontSize: '0.8125rem',
   cursor: 'pointer',
@@ -93,10 +89,9 @@ const CANCEL_BUTTON_STYLE: React.CSSProperties = {
 };
 
 const SUBMIT_BUTTON_STYLE: React.CSSProperties = {
-  background: 'var(--accent)',
+  background: 'var(--interactive-accent)',
   border: 'none',
   borderRadius: '3px',
-  color: 'var(--bg)',
   padding: '4px 12px',
   fontSize: '0.8125rem',
   cursor: 'pointer',
@@ -111,7 +106,6 @@ const SUBMIT_BUTTON_DISABLED_STYLE: React.CSSProperties = {
 };
 
 const ERROR_TEXT_STYLE: React.CSSProperties = {
-  color: 'var(--error, #f44)',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
   marginTop: '2px',
@@ -124,8 +118,8 @@ const SUGGESTION_LIST_STYLE: React.CSSProperties = {
   right: 0,
   maxHeight: '160px',
   overflowY: 'auto',
-  backgroundColor: 'var(--bg)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
   borderTop: 'none',
   borderRadius: '0 0 3px 3px',
   zIndex: 100,
@@ -137,7 +131,6 @@ const SUGGESTION_ITEM_STYLE: React.CSSProperties = {
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
   cursor: 'pointer',
-  color: 'var(--text)',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -145,8 +138,7 @@ const SUGGESTION_ITEM_STYLE: React.CSSProperties = {
 
 const SUGGESTION_ITEM_ACTIVE_STYLE: React.CSSProperties = {
   ...SUGGESTION_ITEM_STYLE,
-  backgroundColor: 'var(--accent)',
-  color: 'var(--bg)',
+  backgroundColor: 'var(--interactive-accent)',
 };
 
 // ── Validation ──────────────────────────────────────────────────────────
@@ -317,17 +309,18 @@ function ExcerptField({
 }: ExcerptFieldProps): React.ReactElement {
   return (
     <div>
-      <div style={FIELD_LABEL_STYLE}>{label}</div>
+      <div className="text-text-semantic-muted" style={FIELD_LABEL_STYLE}>{label}</div>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
+        className="text-text-semantic-primary"
         style={error ? INPUT_ERROR_STYLE : INPUT_STYLE}
         autoFocus={autoFocus}
         min={min}
       />
-      {error ? <div style={ERROR_TEXT_STYLE}>{error}</div> : null}
+      {error ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{error}</div> : null}
     </div>
   );
 }
@@ -405,7 +398,7 @@ function FilePathField({
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      <div style={FIELD_LABEL_STYLE}>File path</div>
+      <div className="text-text-semantic-muted" style={FIELD_LABEL_STYLE}>File path</div>
       <div style={{ display: 'flex', gap: '4px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <input
@@ -415,6 +408,7 @@ function FilePathField({
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder="Type a filename to search..."
+            className="text-text-semantic-primary"
             style={error ? INPUT_ERROR_STYLE : INPUT_STYLE}
             autoFocus
           />
@@ -423,6 +417,7 @@ function FilePathField({
               {suggestions.map((s, i) => (
                 <div
                   key={s.path}
+                  className={i === activeIndex ? 'text-text-semantic-on-accent' : 'text-text-semantic-primary'}
                   style={i === activeIndex ? SUGGESTION_ITEM_ACTIVE_STYLE : SUGGESTION_ITEM_STYLE}
                   onMouseEnter={() => setActiveIndex(i)}
                   onMouseDown={(e) => {
@@ -443,6 +438,7 @@ function FilePathField({
           <button
             type="button"
             onClick={handleBrowse}
+            className="text-text-semantic-muted"
             style={CANCEL_BUTTON_STYLE}
             title="Browse for file"
           >
@@ -450,7 +446,7 @@ function FilePathField({
           </button>
         ) : null}
       </div>
-      {error ? <div style={ERROR_TEXT_STYLE}>{error}</div> : null}
+      {error ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{error}</div> : null}
     </div>
   );
 }
@@ -498,11 +494,12 @@ function ExcerptActions({
 }): React.ReactElement {
   return (
     <div style={ACTIONS_STYLE}>
-      <button type="button" onClick={onCancel} style={CANCEL_BUTTON_STYLE}>
+      <button type="button" onClick={onCancel} className="text-text-semantic-muted" style={CANCEL_BUTTON_STYLE}>
         Cancel
       </button>
       <button
         type="submit"
+        className="text-text-semantic-on-accent"
         style={disabled ? SUBMIT_BUTTON_DISABLED_STYLE : SUBMIT_BUTTON_STYLE}
       >
         Add Excerpt
@@ -521,7 +518,7 @@ export const AddExcerptForm = memo(function AddExcerptForm({
 
   return (
     <form onSubmit={form.handleSubmit} style={FORM_STYLE}>
-      <div style={FORM_TITLE_STYLE}>Add Excerpt</div>
+      <div className="text-text-semantic-primary" style={FORM_TITLE_STYLE}>Add Excerpt</div>
       <FilePathField
         value={form.filePath}
         onChange={form.setFilePath}
@@ -542,7 +539,7 @@ export const AddExcerptForm = memo(function AddExcerptForm({
         onChange={form.setLabel}
         placeholder="e.g. handleClick"
       />
-      {form.submitError ? <div style={ERROR_TEXT_STYLE}>{form.submitError}</div> : null}
+      {form.submitError ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{form.submitError}</div> : null}
       <ExcerptActions onCancel={onCancel} disabled={showErrors && form.hasErrors} />
     </form>
   );

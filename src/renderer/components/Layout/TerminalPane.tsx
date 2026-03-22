@@ -83,8 +83,8 @@ function TerminalCollapseButton({
         aria-label={collapsed ? 'Expand terminal' : 'Collapse terminal'}
         className="
           flex-shrink-0 flex items-center justify-center w-7 h-full
-          text-[var(--text-muted)] hover:text-[var(--text)]
-          hover:bg-[var(--bg-tertiary)]
+          text-text-semantic-muted hover:text-text-semantic-primary
+          hover:bg-surface-raised
           transition-colors duration-100
         "
       >
@@ -111,7 +111,7 @@ function TerminalPaneHeader({
       data-layout="terminal-header"
       className="
         flex items-center h-8 min-h-[32px] flex-shrink-0
-        bg-[var(--bg-secondary)] border-b border-[var(--border-muted,var(--border))]
+        bg-surface-panel border-b border-border-semantic
         overflow-x-auto overflow-y-hidden
       "
     >

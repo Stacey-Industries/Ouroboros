@@ -15,9 +15,8 @@ const containerStyle: React.CSSProperties = {
   gap: '12px',
   padding: '2px 12px',
   borderTop: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
   userSelect: 'none',
 };
 
@@ -31,10 +30,10 @@ export const StatusBar = memo(function StatusBar({
   highlightLang,
 }: StatusBarProps): React.ReactElement {
   return (
-    <div style={containerStyle}>
+    <div className="text-text-semantic-faint" style={containerStyle}>
       <span>{lineCount} lines</span>
       {collapsedFoldCount > 0 && (
-        <span style={{ color: 'var(--text-muted)' }}>
+        <span className="text-text-semantic-muted">
           {collapsedFoldCount} folded
         </span>
       )}

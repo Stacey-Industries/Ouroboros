@@ -6,7 +6,7 @@ const HEADER_STYLE = {
   alignItems: 'center',
   gap: '8px',
   padding: '6px 12px',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
@@ -16,7 +16,6 @@ const TOGGLE_BUTTON_STYLE = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   padding: '0 2px',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.75rem',
@@ -29,7 +28,6 @@ const FILE_LINK_STYLE = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--accent)',
   padding: 0,
   fontFamily: 'var(--font-mono)',
   fontSize: '0.8125rem',
@@ -38,19 +36,17 @@ const FILE_LINK_STYLE = {
 } as const;
 
 const LABEL_STYLE = {
-  color: 'var(--text)',
   fontSize: '0.75rem',
-  backgroundColor: 'var(--bg-tertiary, var(--bg))',
+  backgroundColor: 'var(--surface-raised)',
   padding: '1px 6px',
   borderRadius: '3px',
 } as const;
 
 const ACTION_BUTTON_STYLE = {
   background: 'none',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '3px',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   padding: '2px 6px',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
@@ -70,6 +66,7 @@ function ToggleButton({
   return (
     <button
       onClick={onToggle}
+      className="text-text-semantic-muted"
       style={TOGGLE_BUTTON_STYLE}
       title={collapsed ? 'Expand' : 'Collapse'}
     >
@@ -88,6 +85,7 @@ function FileLinkButton({
   return (
     <button
       onClick={onOpenFile}
+      className="text-interactive-accent"
       style={FILE_LINK_STYLE}
       title={`Open ${excerpt.filePath}`}
     >
@@ -98,12 +96,12 @@ function FileLinkButton({
 
 function ExcerptLabel({ label }: { label?: string }): React.ReactElement | null {
   if (!label) return null;
-  return <span style={LABEL_STYLE}>{label}</span>;
+  return <span className="text-text-semantic-primary" style={LABEL_STYLE}>{label}</span>;
 }
 
 function ExcerptMeta({ excerpt }: { excerpt: BufferExcerpt }): React.ReactElement {
   return (
-    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+    <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>
       lines {excerpt.startLine}-{excerpt.endLine}
     </span>
   );
@@ -119,7 +117,7 @@ function ActionButton({
   title: string;
 }): React.ReactElement {
   return (
-    <button onClick={onClick} style={ACTION_BUTTON_STYLE} title={title}>
+    <button onClick={onClick} className="text-text-semantic-muted" style={ACTION_BUTTON_STYLE} title={title}>
       {label}
     </button>
   );
@@ -156,7 +154,7 @@ export function MultiBufferExcerptHeader({
 }): React.ReactElement {
   return (
     <div
-      style={{ ...HEADER_STYLE, borderBottom: collapsed ? 'none' : '1px solid var(--border)' }}
+      style={{ ...HEADER_STYLE, borderBottom: collapsed ? 'none' : '1px solid var(--border-semantic)' }}
     >
       <ToggleButton collapsed={collapsed} onToggle={onToggle} />
       <FileLinkButton excerpt={excerpt} onOpenFile={onOpenFile} />

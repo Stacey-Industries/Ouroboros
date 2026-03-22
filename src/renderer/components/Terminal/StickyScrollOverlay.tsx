@@ -66,12 +66,9 @@ const stickyContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 8,
   padding: '2px 8px 2px 6px',
-  background: 'var(--bg-secondary, rgba(30,30,30,0.95))',
   backdropFilter: 'blur(4px)',
-  borderBottom: '1px solid var(--border, #333)',
   fontFamily: 'var(--font-mono, monospace)',
   fontSize: 11,
-  color: 'var(--text, #ccc)',
   cursor: 'pointer',
   userSelect: 'none',
   pointerEvents: 'auto',
@@ -126,8 +123,8 @@ function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | 
 
   if (elapsed === undefined || elapsed < 500) return null
   return (
-    <span style={{
-      fontSize: 10, color: 'var(--text-muted, #888)',
+    <span className="text-text-semantic-muted" style={{
+      fontSize: 10,
       marginLeft: 'auto', flexShrink: 0,
     }}>
       {formatDuration(elapsed)}
@@ -190,6 +187,7 @@ export function StickyScrollOverlay({ blocks, terminal }: StickyScrollOverlayPro
 
   return (
     <div
+      className="bg-surface-panel text-text-semantic-primary border-b border-border-semantic"
       style={{ ...stickyContainerStyle, height: cellHeight }}
       onClick={handleClick}
       title="Click to scroll to command"
@@ -199,15 +197,15 @@ export function StickyScrollOverlay({ blocks, terminal }: StickyScrollOverlayPro
         {stickyBlock.command ? truncateCommand(stickyBlock.command) : '(command)'}
       </span>
       {stickyBlock.exitCode !== undefined && stickyBlock.exitCode !== 0 && (
-        <span style={{
+        <span className="text-status-error" style={{
           fontSize: 10, padding: '0 3px', borderRadius: 2,
-          background: 'rgba(229,57,53,0.1)', color: 'var(--error, #e53935)',
+          background: 'rgba(229,57,53,0.1)',
         }}>
           exit {stickyBlock.exitCode}
         </span>
       )}
       <LiveDuration block={stickyBlock} />
-      <span style={{ fontSize: 9, color: 'var(--text-muted, #666)', flexShrink: 0 }}>
+      <span className="text-text-semantic-muted" style={{ fontSize: 9, flexShrink: 0 }}>
         {'\u2191'} scroll to prompt
       </span>
     </div>

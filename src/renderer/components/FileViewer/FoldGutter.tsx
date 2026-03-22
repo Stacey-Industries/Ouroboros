@@ -45,7 +45,7 @@ function getFoldGutterStyle(
     width: `${foldGutterWidth}px`,
     paddingTop: '16px',
     paddingBottom: '16px',
-    backgroundColor: 'var(--bg)',
+    backgroundColor: 'var(--surface-base)',
     position: 'sticky',
     left: `${gutterWidth}px`,
     zIndex: 2,

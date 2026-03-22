@@ -249,17 +249,17 @@ function ScrollbarTooltip({
   if (!tooltip.visible) return null;
   return (
     <div
+      className="text-text-semantic-muted"
       style={{
         position: 'absolute',
         right: `${SCROLLBAR_WIDTH + 4}px`,
         top: `${Math.max(0, tooltip.y - 10)}px`,
-        backgroundColor: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
+        backgroundColor: 'var(--surface-panel)',
+        border: '1px solid var(--border-semantic)',
         borderRadius: '4px',
         padding: '2px 6px',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-ui)',
-        color: 'var(--text-muted)',
         whiteSpace: 'nowrap',
         pointerEvents: 'none',
         zIndex: 30,

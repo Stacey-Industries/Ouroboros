@@ -94,7 +94,7 @@ function CompletionOverlayBody({
   onNavigate: (delta: number) => void
 }): React.ReactElement {
   return (
-    <div ref={listRef} onMouseDown={(e) => e.preventDefault()} style={getOverlayStyle(position)}>
+    <div ref={listRef} onMouseDown={(e) => e.preventDefault()} className="bg-surface-panel border border-border-semantic" style={getOverlayStyle(position)}>
       {completions.map((completion, index) => (
         <CompletionItem
           key={`${completion.type}:${completion.value}:${index}`}
@@ -119,8 +119,6 @@ function getOverlayStyle(position: { x: number; y: number }): React.CSSPropertie
     maxWidth: 420,
     maxHeight: MAX_VISIBLE * ITEM_HEIGHT + 2,
     overflowY: 'auto',
-    backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-    border: '1px solid var(--border, #333)',
     borderRadius: 4,
     boxShadow: '0 -4px 16px rgba(0,0,0,0.45)',
     fontFamily: 'var(--font-mono, monospace)',
@@ -146,6 +144,7 @@ function CompletionItem({
     <div
       onClick={onClick}
       onMouseEnter={onHover}
+      className={isSelected ? 'bg-surface-raised text-text-semantic-primary' : 'text-text-semantic-muted'}
       style={getCompletionItemStyle(isSelected)}
     >
       <CompletionTypeBadge type={completion.type} color={color} />
@@ -162,9 +161,7 @@ function getCompletionItemStyle(isSelected: boolean): React.CSSProperties {
     padding: '3px 8px',
     height: 24,
     cursor: 'pointer',
-    backgroundColor: isSelected ? 'var(--bg-tertiary, #2a2a2a)' : 'transparent',
     borderLeft: isSelected ? '2px solid var(--accent, #58a6ff)' : '2px solid transparent',
-    color: isSelected ? 'var(--text, #e0e0e0)' : 'var(--text-muted, #888)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -202,16 +199,15 @@ function CompletionTypeBadge({
 function CompletionHint(): React.ReactElement {
   return (
     <div
+      className="text-text-semantic-muted border-t border-border-semantic"
       style={{
         padding: '3px 8px',
-        borderTop: '1px solid var(--border, #333)',
-        color: 'var(--text-muted, #666)',
         fontSize: 10,
         fontFamily: 'var(--font-ui, sans-serif)',
         whiteSpace: 'nowrap',
       }}
     >
-      Tab/Enter to select Â· Esc to dismiss
+      Tab/Enter to select · Esc to dismiss
     </div>
   )
 }

@@ -46,7 +46,7 @@ function SnapshotBadges({
 }): React.ReactElement {
   return (
     <>
-      {isHead && <span style={{ fontSize: '9px', fontWeight: 600, padding: '0 4px', borderRadius: '3px', backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>HEAD</span>}
+      {isHead && <span className="text-text-semantic-on-accent" style={{ fontSize: '9px', fontWeight: 600, padding: '0 4px', borderRadius: '3px', backgroundColor: 'var(--accent)' }}>HEAD</span>}
       {isCompareFrom && <span style={{ fontSize: '9px', fontWeight: 600, padding: '0 4px', borderRadius: '3px', backgroundColor: '#d29922', color: '#000' }}>FROM</span>}
       {isCompareTo && <span style={{ fontSize: '9px', fontWeight: 600, padding: '0 4px', borderRadius: '3px', backgroundColor: '#a371f7', color: '#000' }}>TO</span>}
     </>
@@ -55,9 +55,9 @@ function SnapshotBadges({
 
 function SnapshotMeta({ snapshot }: { snapshot: WorkspaceSnapshot }): React.ReactElement {
   return (
-    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div className="text-text-semantic-secondary" style={{ fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
       {snapshot.sessionLabel || `Session ${snapshot.sessionId.slice(0, 8)}`}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '2px', fontSize: '10px', color: 'var(--text-muted)' }}>
+      <div className="text-text-semantic-muted" style={{ display: 'flex', gap: '8px', marginTop: '2px', fontSize: '10px' }}>
         <span style={{ fontFamily: 'var(--font-mono)' }}>{truncateHash(snapshot.commitHash)}</span>
         <span>{formatTimestamp(snapshot.timestamp)}</span>
         {snapshot.fileCount !== undefined && snapshot.fileCount > 0 && <span>{snapshot.fileCount} file{snapshot.fileCount !== 1 ? 's' : ''}</span>}
@@ -88,7 +88,8 @@ function SnapshotNode({
     <button
       onClick={() => onSelect(snapshot)}
       title={snapshotTitle(snapshot)}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%', padding: '8px 12px', background: isSelected ? 'rgba(88, 166, 255, 0.08)' : 'transparent', border: 'none', borderLeft: `2px solid ${borderColor}`, cursor: 'pointer', textAlign: 'left', color: 'var(--text)', fontFamily: 'var(--font-ui)', fontSize: '12px', transition: 'background 100ms' }}
+      className="text-text-semantic-primary"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', width: '100%', padding: '8px 12px', background: isSelected ? 'rgba(88, 166, 255, 0.08)' : 'transparent', border: 'none', borderLeft: `2px solid ${borderColor}`, cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-ui)', fontSize: '12px', transition: 'background 100ms' }}
     >
       <SnapshotMarker dotColor={dotColor} isHead={isHead} />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -104,7 +105,7 @@ function SnapshotNode({
 
 function EmptyTimelineState(): React.ReactElement {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', gap: '8px' }}>
+    <div className="text-text-semantic-muted" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontSize: '12px', textAlign: 'center', gap: '8px' }}>
       <svg width="32" height="32" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
         <circle cx="8" cy="8" r="6.5" />
         <polyline points="8,4 8,8 11,10" />
@@ -125,7 +126,7 @@ export function TimeTravelTimelinePane({
   panel: TimelinePanelState;
 }): React.ReactElement {
   return (
-    <div style={{ width: hasDetailPane ? '55%' : '100%', overflowY: 'auto', borderRight: hasDetailPane ? '1px solid var(--border)' : 'none', transition: 'width 200ms' }}>
+    <div className={hasDetailPane ? 'border-r border-border-semantic' : ''} style={{ width: hasDetailPane ? '55%' : '100%', overflowY: 'auto', transition: 'width 200ms' }}>
       {snapshots.length === 0 ? <EmptyTimelineState /> : snapshots.map((snapshot) => (
         <SnapshotNode
           key={snapshot.id}

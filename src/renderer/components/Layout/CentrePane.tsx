@@ -14,7 +14,7 @@ export interface CentrePaneProps {
 export function CentrePane({ tabBar, children, focusStyle, rootStyle, onFocus }: CentrePaneProps): React.ReactElement {
   return (
     <div
-      className="flex flex-col flex-1 min-h-0 min-w-0 bg-[var(--bg)]"
+      className="flex flex-col flex-1 min-h-0 min-w-0 bg-surface-base"
       aria-label="Editor pane"
       style={{ ...focusStyle, ...rootStyle }}
       onClick={onFocus}
@@ -25,7 +25,7 @@ export function CentrePane({ tabBar, children, focusStyle, rootStyle, onFocus }:
           data-layout="editor-tab-bar"
           className="
             flex-shrink-0 flex items-center h-9
-            bg-[var(--bg-secondary)] border-b border-[var(--border)]
+            bg-surface-panel border-b border-border-semantic
             overflow-x-auto overflow-y-hidden
           "
           role="tablist"

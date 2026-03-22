@@ -36,8 +36,6 @@ const LIST_STYLE: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'auto',
-  borderRight: '1px solid var(--border)',
-  backgroundColor: 'var(--bg-secondary)',
   minWidth: '180px',
   maxWidth: '240px',
 };
@@ -46,7 +44,6 @@ const HEADER_STYLE: React.CSSProperties = {
   padding: '6px 8px',
   fontSize: '0.6875rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   borderBottom: '1px solid var(--border)',
@@ -66,7 +63,6 @@ const ROW_STYLE: React.CSSProperties = {
 };
 
 const STEP_INDEX_STYLE: React.CSSProperties = {
-  color: 'var(--text-faint)',
   fontSize: '0.5625rem',
   width: '16px',
   textAlign: 'right',
@@ -78,18 +74,15 @@ const STEP_LABEL_STYLE: React.CSSProperties = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-  color: 'var(--text-muted)',
   fontSize: '0.625rem',
 };
 
 const STEP_DURATION_STYLE: React.CSSProperties = {
-  color: 'var(--text-faint)',
   fontSize: '0.5625rem',
   flexShrink: 0,
 };
 
 const START_BADGE_STYLE: React.CSSProperties = {
-  color: 'var(--accent)',
   fontSize: '0.625rem',
   flexShrink: 0,
 };
@@ -147,7 +140,7 @@ export const StepList = memo(function StepList({
   }, [currentStep]);
 
   return (
-    <div style={LIST_STYLE}>
+    <div className="bg-surface-panel border-r border-border-semantic" style={LIST_STYLE}>
       <StepListHeader count={steps.length} />
       {steps.map((step, idx) => (
         <StepRow
@@ -164,7 +157,7 @@ export const StepList = memo(function StepList({
 });
 
 function StepListHeader({ count }: { count: number }): React.ReactElement {
-  return <div style={HEADER_STYLE}>Steps ({count})</div>;
+  return <div className="text-text-semantic-faint" style={HEADER_STYLE}>Steps ({count})</div>;
 }
 
 function StepRow({
@@ -193,12 +186,12 @@ function StepRow({
 }
 
 function StepIndex({ index }: { index: number }): React.ReactElement {
-  return <span style={STEP_INDEX_STYLE}>{index}</span>;
+  return <span className="text-text-semantic-faint" style={STEP_INDEX_STYLE}>{index}</span>;
 }
 
 function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | null {
   if (step.type === 'session_start') {
-    return <span style={START_BADGE_STYLE}>START</span>;
+    return <span className="text-interactive-accent" style={START_BADGE_STYLE}>START</span>;
   }
 
   if (step.toolCall === undefined) {
@@ -214,12 +207,12 @@ function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | nul
 
 function StepLabel({ label }: { label: string }): React.ReactElement {
   return (
-    <span style={STEP_LABEL_STYLE} title={label}>
+    <span className="text-text-semantic-muted" style={STEP_LABEL_STYLE} title={label}>
       {label}
     </span>
   );
 }
 
 function StepDuration({ duration }: { duration: number }): React.ReactElement {
-  return <span style={STEP_DURATION_STYLE}>{formatDurationShort(duration)}</span>;
+  return <span className="text-text-semantic-faint" style={STEP_DURATION_STYLE}>{formatDurationShort(duration)}</span>;
 }

@@ -16,16 +16,10 @@ function PlaceholderPanel({
 }): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 text-center select-none">
-      <span
-        className="text-sm font-medium mb-2"
-        style={{ color: 'var(--text)' }}
-      >
+      <span className="text-sm font-medium mb-2 text-text-semantic-primary">
         {title}
       </span>
-      <span
-        className="text-xs"
-        style={{ color: 'var(--text-muted)' }}
-      >
+      <span className="text-xs text-text-semantic-muted">
         {message}
       </span>
     </div>

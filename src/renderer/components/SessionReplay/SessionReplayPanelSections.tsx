@@ -20,12 +20,12 @@ export function SessionReplayLayout({
     <div
       ref={replay.panelRef}
       tabIndex={-1}
+      className="bg-surface-base"
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         overflow: 'hidden',
-        backgroundColor: 'var(--bg)',
         outline: 'none',
       }}
     >
@@ -62,22 +62,21 @@ function ReplayHeader({
 
   return (
     <div
+      className="bg-surface-panel border-b border-border-semantic"
       style={{
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '4px 12px',
-        borderBottom: '1px solid var(--border)',
-        backgroundColor: 'var(--bg-secondary)',
         fontSize: '0.8125rem',
         fontFamily: 'var(--font-ui)',
         userSelect: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontWeight: 600, color: 'var(--text)' }}>Session Replay</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-text-semantic-primary" style={{ fontWeight: 600 }}>Session Replay</span>
+        <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
           {session.taskLabel}
         </span>
       </div>
@@ -91,7 +90,7 @@ function ReplayHeader({
 
 function ReplayTransportBar({ replay }: { replay: SessionReplayController }): React.ReactElement {
   return (
-    <div style={{ flexShrink: 0, borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="bg-surface-panel border-b border-border-semantic" style={{ flexShrink: 0 }}>
       <ReplayTransportControls replay={replay} />
       <ReplayTimeline
         steps={replay.steps}
@@ -150,15 +149,14 @@ function ReplaySpeedButton({
     <button
       onClick={onClick}
       title="Playback speed"
+      className="text-text-semantic-muted border border-border-semantic"
       style={{
         padding: '2px 6px',
         fontSize: '0.625rem',
         fontWeight: 600,
         fontFamily: 'var(--font-mono)',
-        border: '1px solid var(--border)',
         borderRadius: '4px',
         background: 'transparent',
-        color: 'var(--text-muted)',
         cursor: 'pointer',
         marginLeft: '4px',
       }}
@@ -177,11 +175,11 @@ function ReplayStepCounter({
 }): React.ReactElement {
   return (
     <span
+      className="text-text-semantic-faint"
       style={{
         marginLeft: 'auto',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-mono)',
-        color: 'var(--text-faint)',
       }}
     >
       {currentStep + 1} / {totalSteps}

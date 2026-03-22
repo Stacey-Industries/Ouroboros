@@ -35,13 +35,13 @@ function getFileContent(
 function MultiBufferEmptyState(): React.ReactElement {
   return (
     <div
+      className="text-text-semantic-muted"
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        color: 'var(--text-muted)',
         fontFamily: 'var(--font-ui)',
         gap: '12px',
         padding: '32px',
@@ -57,7 +57,7 @@ function MultiBufferEmptyState(): React.ReactElement {
       >
         {'\u2630'}
       </div>
-      <span style={{ fontSize: '1rem', color: 'var(--text)', fontWeight: 600 }}>
+      <span className="text-text-semantic-primary" style={{ fontSize: '1rem', fontWeight: 600 }}>
         No excerpts yet
       </span>
       <div
@@ -72,10 +72,10 @@ function MultiBufferEmptyState(): React.ReactElement {
         related code from multiple files side by side.
       </div>
       <div
+        className="text-text-semantic-faint"
         style={{
           marginTop: '8px',
           fontSize: '0.75rem',
-          color: 'var(--text-faint)',
           lineHeight: 1.5,
           maxWidth: '300px',
         }}
@@ -96,20 +96,20 @@ function MultiBufferHeader({
 }): React.ReactElement {
   return (
     <div
+      className="text-text-semantic-primary"
       style={{
         padding: '8px 12px',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
+        backgroundColor: 'var(--surface-panel)',
+        borderBottom: '1px solid var(--border-semantic)',
         fontFamily: 'var(--font-ui)',
         fontSize: '0.875rem',
         fontWeight: 600,
-        color: 'var(--text)',
       }}
     >
       {name}
       <span
+        className="text-text-semantic-muted"
         style={{
-          color: 'var(--text-muted)',
           fontWeight: 400,
           marginLeft: '8px',
           fontSize: '0.75rem',
@@ -138,7 +138,7 @@ export const MultiBufferView = memo(function MultiBufferView({
       style={{
         height: '100%',
         overflow: 'auto',
-        backgroundColor: 'var(--bg)',
+        backgroundColor: 'var(--surface-base)',
       }}
     >
       <MultiBufferHeader count={excerpts.length} name={name} />

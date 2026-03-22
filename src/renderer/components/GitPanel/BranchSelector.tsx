@@ -76,8 +76,8 @@ function BranchSelectorTrigger({
       className="
         flex items-center gap-1.5 w-full px-2 py-1 rounded
         text-xs text-left
-        bg-[var(--bg-tertiary)] hover:bg-[var(--bg)]
-        border border-[var(--border)]
+        bg-surface-raised hover:bg-surface-base
+        border border-border-semantic
         transition-colors duration-75
         disabled:opacity-50
       "
@@ -85,7 +85,7 @@ function BranchSelectorTrigger({
       title={currentBranch ?? 'No branch'}
     >
       <BranchIcon />
-      <span className="flex-1 truncate" style={{ color: 'var(--text)' }}>
+      <span className="flex-1 truncate text-text-semantic-primary">
         {currentBranch ?? 'detached'}
       </span>
       <ChevronIcon />
@@ -106,7 +106,7 @@ function BranchDropdown({
     <div
       className="
         absolute z-50 left-0 right-0 mt-1
-        bg-[var(--bg-secondary)] border border-[var(--border)]
+        bg-surface-panel border border-border-semantic
         rounded shadow-lg overflow-y-auto
       "
       style={{ maxHeight: '200px' }}
@@ -135,19 +135,19 @@ function BranchOption({
   return (
     <button
       onClick={onSelect}
-      className="
+      className={`
         w-full px-2 py-1 text-left text-xs truncate
-        hover:bg-[var(--bg-tertiary)]
+        hover:bg-surface-raised
         transition-colors duration-75
-      "
+        ${isCurrent ? 'text-interactive-accent' : 'text-text-semantic-primary'}
+      `}
       style={{
         fontFamily: 'var(--font-mono, monospace)',
-        color: isCurrent ? 'var(--accent)' : 'var(--text)',
         fontWeight: isCurrent ? 600 : 400,
       }}
       title={branch}
     >
-      {isCurrent && <span className="mr-1" style={{ color: 'var(--accent)' }}>*</span>}
+      {isCurrent && <span className="mr-1 text-interactive-accent">*</span>}
       {branch}
     </button>
   )
@@ -155,7 +155,7 @@ function BranchOption({
 
 function BranchIcon(): React.ReactElement {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'var(--accent)' }}>
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-interactive-accent">
       <path d="M6 3v8" />
       <path d="M10 3v4" />
       <circle cx="6" cy="13" r="1.5" />
@@ -168,7 +168,7 @@ function BranchIcon(): React.ReactElement {
 
 function ChevronIcon(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-text-semantic-muted">
       <path d="M2.5 4L5 6.5L7.5 4" />
     </svg>
   )

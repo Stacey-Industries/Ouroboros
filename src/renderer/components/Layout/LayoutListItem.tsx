@@ -17,8 +17,9 @@ export interface LayoutListItemProps {
 export function LayoutListItem({ layout, isActive, onSelect, onUpdate, onDelete }: LayoutListItemProps): React.ReactElement {
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', transition: 'background 80ms' }}
-      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg)'; }}
+      className="flex items-center"
+      style={{ gap: '6px', padding: '6px 10px', cursor: 'pointer', transition: 'background 80ms' }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--surface-base)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
       <LayoutRadioButton layout={layout} isActive={isActive} onSelect={onSelect} />
@@ -31,19 +32,20 @@ function LayoutRadioButton({ layout, isActive, onSelect }: { layout: WorkspaceLa
   return (
     <button
       role="option" aria-selected={isActive} onClick={() => onSelect(layout)}
-      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: isActive ? 'var(--accent)' : 'var(--text)', fontFamily: 'var(--font-ui)', fontSize: '0.8125rem', padding: 0 }}
+      className="text-text-semantic-primary"
+      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: isActive ? 'var(--interactive-accent)' : undefined, fontFamily: 'var(--font-ui)', fontSize: '0.8125rem', padding: 0 }}
     >
       <RadioDot active={isActive} />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{layout.name}</span>
-      {layout.builtIn && <span style={{ fontSize: '9px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>built-in</span>}
+      {layout.builtIn && <span className="text-text-semantic-faint" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>built-in</span>}
     </button>
   );
 }
 
 function RadioDot({ active }: { active: boolean }): React.ReactElement {
   return (
-    <span style={{ width: '14px', height: '14px', borderRadius: '50%', border: `2px solid ${active ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 120ms' }}>
-      {active && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent)' }} />}
+    <span style={{ width: '14px', height: '14px', borderRadius: '50%', border: `2px solid ${active ? 'var(--interactive-accent)' : 'var(--border-semantic)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 120ms' }}>
+      {active && <span className="bg-interactive-accent" style={{ width: '6px', height: '6px', borderRadius: '50%' }} />}
     </span>
   );
 }
@@ -70,9 +72,10 @@ function ActionButton({ title, onClick, hoverColor, hoverBg, children }: { title
     <button
       title={title}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-faint)', fontSize: '11px', padding: '2px 4px', borderRadius: '3px', transition: 'color 100ms, background 100ms' }}
+      className="text-text-semantic-faint"
+      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', padding: '2px 4px', borderRadius: '3px', transition: 'color 100ms, background 100ms' }}
       onMouseEnter={(e) => { e.currentTarget.style.color = hoverColor; e.currentTarget.style.backgroundColor = hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = 'transparent'; }}
     >
       {children}
     </button>

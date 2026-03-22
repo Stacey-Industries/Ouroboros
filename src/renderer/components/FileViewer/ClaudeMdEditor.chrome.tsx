@@ -25,11 +25,10 @@ const topBarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '12px',
   padding: '4px 12px',
-  borderBottom: '1px solid var(--border)',
-  backgroundColor: 'var(--bg)',
+  borderBottom: '1px solid var(--border-semantic)',
+  backgroundColor: 'var(--surface-base)',
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
-  color: 'var(--text-muted)',
   flexShrink: 0,
 };
 
@@ -37,10 +36,9 @@ const buttonStyle: React.CSSProperties = {
   padding: '1px 8px',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   backgroundColor: 'transparent',
-  color: 'var(--text-muted)',
   cursor: 'pointer',
 };
 
@@ -55,9 +53,9 @@ const ActionButton = memo(function ActionButton({
   onClick: () => void;
   title: string;
 }): React.ReactElement {
-  const activeStyle = active ? { borderColor: 'var(--accent)', backgroundColor: 'var(--accent)', color: 'var(--bg)' } : null;
+  const activeStyle = active ? { borderColor: 'var(--interactive-accent)', backgroundColor: 'var(--interactive-accent)', color: 'var(--text-on-accent)' } : null;
   return (
-    <button onClick={onClick} title={title} style={activeStyle ? { ...buttonStyle, ...activeStyle } : buttonStyle}>
+    <button onClick={onClick} title={title} className="text-text-semantic-muted" style={activeStyle ? { ...buttonStyle, ...activeStyle } : buttonStyle}>
       {children}
     </button>
   );
@@ -104,8 +102,8 @@ const ClaudeMdTopBar = memo(function ClaudeMdTopBar({
   stats: ClaudeMdStats;
 }): React.ReactElement {
   return (
-    <div style={topBarStyle}>
-      <span style={{ fontWeight: 600, color: 'var(--accent)' }}>CLAUDE.md Editor</span>
+    <div className="text-text-semantic-muted" style={topBarStyle}>
+      <span className="text-interactive-accent" style={{ fontWeight: 600 }}>CLAUDE.md Editor</span>
       <span style={{ marginLeft: 'auto' }} />
       <TokenSummary stats={stats} />
       <span title="File size on disk">{formatBytes(stats.fileSize)}</span>

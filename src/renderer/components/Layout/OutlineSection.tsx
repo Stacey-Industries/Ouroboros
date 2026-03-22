@@ -20,9 +20,8 @@ import {
 function OutlineEmptyState({ message }: { message: string }): React.ReactElement {
   return (
     <div
-      className="flex items-center justify-center"
+      className="flex items-center justify-center text-text-semantic-muted"
       style={{
-        color: 'var(--text-muted)',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-ui)',
         padding: '16px 12px',
@@ -42,7 +41,7 @@ interface OutlineItemProps {
 
 function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+    e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
   }, []);
 
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
@@ -51,7 +50,7 @@ function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement 
 
   return (
     <button
-      className="flex items-center gap-1.5 w-full border-none cursor-pointer outline-none"
+      className="flex items-center gap-1.5 w-full border-none cursor-pointer outline-none text-text-semantic-secondary"
       style={{
         paddingLeft: `${8 + symbol.depth * 12}px`,
         paddingRight: '8px',
@@ -61,7 +60,6 @@ function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement 
         fontFamily: 'var(--font-mono)',
         fontSize: '0.6875rem',
         lineHeight: '1.5',
-        color: 'var(--text-muted)',
         textAlign: 'left',
         overflow: 'hidden',
         whiteSpace: 'nowrap',
@@ -78,10 +76,10 @@ function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement 
       </span>
       <span style={OUTLINE_NAME_STYLE}>{symbol.name}</span>
       <span
+        className="text-text-semantic-faint"
         style={{
           flexShrink: 0,
           fontSize: '0.6rem',
-          color: 'var(--text-faint)',
           fontFamily: 'var(--font-mono)',
           marginLeft: 'auto',
           paddingLeft: '4px',

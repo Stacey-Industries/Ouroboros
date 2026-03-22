@@ -49,7 +49,6 @@ const headerStyle: React.CSSProperties = {
   gap: '4px',
   cursor: 'pointer',
   userSelect: 'none',
-  backgroundColor: 'var(--bg-tertiary)',
   borderBottom: '1px solid var(--border-muted)',
   minHeight: '26px',
 };
@@ -60,7 +59,6 @@ const headerTitleStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -70,8 +68,6 @@ const countBadgeStyle: React.CSSProperties = {
   flexShrink: 0,
   fontSize: '0.625rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
-  backgroundColor: 'var(--bg)',
   padding: '0 5px',
   borderRadius: '8px',
   lineHeight: '16px',
@@ -91,7 +87,6 @@ const subHeaderTitleStyle: React.CSSProperties = {
   flex: 1,
   fontSize: '0.6875rem',
   fontWeight: 600,
-  color: 'var(--text-faint)',
   letterSpacing: '0.04em',
 };
 
@@ -114,7 +109,6 @@ const fileNameStyle: React.CSSProperties = {
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
   fontSize: '0.8125rem',
-  color: 'var(--text-secondary)',
   fontFamily: 'var(--font-mono)',
 };
 
@@ -124,7 +118,6 @@ const actionBtnStyle: React.CSSProperties = {
   border: 'none',
   padding: '1px 3px',
   cursor: 'pointer',
-  color: 'var(--text-faint)',
   display: 'flex',
   alignItems: 'center',
   borderRadius: '3px',
@@ -141,7 +134,6 @@ const headerActionBtnStyle: React.CSSProperties = {
   border: 'none',
   padding: '1px 4px',
   cursor: 'pointer',
-  color: 'var(--text-faint)',
   display: 'flex',
   alignItems: 'center',
   borderRadius: '3px',
@@ -193,7 +185,7 @@ function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
-      style={{ flexShrink: 0, color: 'var(--text-faint)', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
+      className="text-text-semantic-faint" style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }}
     >
       <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -202,7 +194,7 @@ function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
 
 function GitIcon(): React.ReactElement {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--accent)' }}>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
       <path d="M14.5 7.5L8.5 1.5a.7.7 0 0 0-1 0L5.7 3.3l1.3 1.3a1 1 0 0 1 1.2 1.2l1.2 1.2a1 1 0 1 1-.7.7L7.6 6.5v3a1 1 0 1 1-1-.6V6.3a1 1 0 0 1-.5-1.3L4.8 3.7 1.5 7a.7.7 0 0 0 0 1L7.5 14a.7.7 0 0 0 1 0l6-6a.7.7 0 0 0 0-1z" stroke="currentColor" strokeWidth="0.8" fill="none" />
     </svg>
   );
@@ -251,7 +243,7 @@ function StagingFileRow({
       role="listitem"
     >
       <FileTypeIcon filename={entry.name} />
-      <span style={fileNameStyle}>{entry.path}</span>
+      <span style={fileNameStyle} className="text-text-semantic-secondary">{entry.path}</span>
       <StatusBadge status={entry.status} />
       {actions}
     </div>
@@ -261,7 +253,7 @@ function StagingFileRow({
 function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
-      className="staging-action-btn"
+      className="staging-action-btn text-text-semantic-faint"
       style={actionBtnStyle}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title="Stage file"
@@ -275,7 +267,7 @@ function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
 function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
-      className="staging-action-btn"
+      className="staging-action-btn text-text-semantic-faint"
       style={actionBtnStyle}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title="Unstage file"
@@ -289,7 +281,7 @@ function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement
 function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
-      className="staging-action-btn staging-discard-btn"
+      className="staging-action-btn staging-discard-btn text-text-semantic-faint"
       style={actionBtnStyle}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       title="Discard changes"
@@ -318,7 +310,7 @@ function SubSectionHeader({
   return (
     <div style={subHeaderStyle} onClick={onToggle} role="button" tabIndex={0} aria-expanded={expanded}>
       <Chevron expanded={expanded} />
-      <span style={subHeaderTitleStyle}>{title} ({count})</span>
+      <span style={subHeaderTitleStyle} className="text-text-semantic-faint">{title} ({count})</span>
       {headerAction}
     </div>
   );
@@ -361,6 +353,7 @@ function StagedSection({
         headerAction={
           <button
             style={headerActionBtnStyle}
+            className="text-text-semantic-faint"
             onClick={(e) => { e.stopPropagation(); void handleUnstageAll(); }}
             title="Unstage all"
             aria-label="Unstage all"
@@ -433,6 +426,7 @@ function UnstagedSection({
         headerAction={
           <button
             style={headerActionBtnStyle}
+            className="text-text-semantic-faint"
             onClick={(e) => { e.stopPropagation(); void handleStageAll(); }}
             title="Stage all"
             aria-label="Stage all"
@@ -485,6 +479,7 @@ export function StagingArea({
     <div style={sectionStyle}>
       <style>{STAGING_CSS}</style>
       <div
+        className="bg-surface-raised"
         style={headerStyle}
         onClick={() => setIsExpanded((v) => !v)}
         role="button"
@@ -495,8 +490,8 @@ export function StagingArea({
       >
         <Chevron expanded={isExpanded} />
         <GitIcon />
-        <span style={headerTitleStyle}>Source Control</span>
-        <span style={countBadgeStyle}>{totalCount}</span>
+        <span className="text-text-semantic-muted" style={headerTitleStyle}>Source Control</span>
+        <span className="text-text-semantic-faint bg-surface-base" style={countBadgeStyle}>{totalCount}</span>
       </div>
       {isExpanded && (
         <>

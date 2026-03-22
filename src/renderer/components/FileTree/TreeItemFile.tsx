@@ -127,7 +127,7 @@ function FileLabel({ name, statusColor, matchRanges }: {
   name: string; statusColor?: string; matchRanges?: MatchRange[];
 }): React.ReactElement {
   return (
-    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', color: statusColor ?? 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+    <span className="text-text-semantic-muted" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', color: statusColor ?? undefined, fontFamily: 'var(--font-mono)' }}>
       <HighlightedName name={name} ranges={matchRanges} />
     </span>
   );
@@ -141,7 +141,7 @@ function HighlightedName({ name, ranges }: { name: string; ranges?: MatchRange[]
     if (cursor < range.start) {
       parts.push(<span key={`p-${cursor}`}>{name.slice(cursor, range.start)}</span>);
     }
-    parts.push(<span key={`m-${range.start}`} style={{ color: 'var(--accent)', fontWeight: 600 }}>{name.slice(range.start, range.end)}</span>);
+    parts.push(<span key={`m-${range.start}`} className="text-interactive-accent" style={{ fontWeight: 600 }}>{name.slice(range.start, range.end)}</span>);
     cursor = range.end;
   }
   if (cursor < name.length) {
@@ -157,7 +157,7 @@ function StatusBadge({ label, color }: { label: string; color?: string }): React
 function SearchPath({ relativePath }: { relativePath: string }): React.ReactElement | null {
   if (!relativePath.includes('/')) return null;
   return (
-    <span style={{ flexShrink: 0, fontSize: '0.6875rem', color: 'var(--text-faint)', marginLeft: '4px', maxWidth: '40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <span className="text-text-semantic-faint" style={{ flexShrink: 0, fontSize: '0.6875rem', marginLeft: '4px', maxWidth: '40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
       {relativePath.slice(0, relativePath.lastIndexOf('/'))}
     </span>
   );
@@ -175,11 +175,11 @@ function NestChevron({ expanded }: { expanded: boolean }): React.ReactElement {
       width="16"
       height="16"
       viewBox="0 0 16 16"
+      className="text-text-semantic-muted"
       style={{
         flexShrink: 0,
         transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
         transition: 'transform 120ms ease',
-        fill: 'var(--text-muted)',
         opacity: 0.6,
       }}
     >

@@ -68,7 +68,7 @@ const overlayContainerStyle: React.CSSProperties = {
 
 const separatorLineStyle: React.CSSProperties = {
   position: 'absolute', left: 28, right: 0, height: 1,
-  background: 'var(--border, #333)', opacity: 0.5,
+  opacity: 0.5,
 }
 
 const gutterStyle: React.CSSProperties = {
@@ -79,14 +79,14 @@ const gutterStyle: React.CSSProperties = {
 
 const commandLabelStyle: React.CSSProperties = {
   position: 'absolute', left: 32, display: 'flex', alignItems: 'center', gap: 6,
-  fontSize: 10, fontFamily: 'var(--font-mono, monospace)', color: 'var(--accent, #58a6ff)',
+  fontSize: 10, fontFamily: 'var(--font-mono, monospace)',
   opacity: 0.85, userSelect: 'none', whiteSpace: 'nowrap', overflow: 'hidden',
   textOverflow: 'ellipsis', maxWidth: '50%',
 }
 
 const timestampStyle: React.CSSProperties = {
   position: 'absolute', right: 6, fontSize: 9,
-  fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-muted, #666)',
+  fontFamily: 'var(--font-mono, monospace)',
   opacity: 0.7, userSelect: 'none',
 }
 
@@ -98,12 +98,10 @@ const actionsContainerStyle: React.CSSProperties = {
 const collapsedOverlayStyle: React.CSSProperties = {
   position: 'absolute', left: 28, right: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--bg-secondary, rgba(30,30,30,0.85))',
   backdropFilter: 'blur(2px)',
-  color: 'var(--text-muted, #888)', fontSize: 11,
+  fontSize: 11,
   fontFamily: 'var(--font-mono, monospace)',
   cursor: 'pointer', pointerEvents: 'auto', userSelect: 'none',
-  borderLeft: '2px solid var(--border, #444)',
 }
 
 // ── Gutter Icon ──────────────────────────────────────────────────────────────
@@ -184,7 +182,7 @@ function CommandBlockDecoration({
       onMouseLeave={() => setHovered(false)}
     >
       {/* Separator line */}
-      <div style={{ ...separatorLineStyle, top: 0 }} />
+      <div className="bg-border-semantic" style={{ ...separatorLineStyle, top: 0 }} />
 
       {/* Left border for output region */}
       <div style={{
@@ -202,13 +200,13 @@ function CommandBlockDecoration({
 
       {/* Command text label */}
       {block.command && (
-        <div style={{ ...commandLabelStyle, top: (cellHeight - 14) / 2, height: 14 }} title={block.command}>
+        <div className="text-interactive-accent" style={{ ...commandLabelStyle, top: (cellHeight - 14) / 2, height: 14 }} title={block.command}>
           {truncateCommand(block.command)}
         </div>
       )}
 
       {/* Timestamp (relative) */}
-      <div style={{ ...timestampStyle, top: (cellHeight - 12) / 2, height: 12, lineHeight: '12px' }}>
+      <div className="text-text-semantic-muted" style={{ ...timestampStyle, top: (cellHeight - 12) / 2, height: 12, lineHeight: '12px' }}>
         <RelativeTimestamp timestamp={block.timestamp} />
         {block.duration !== undefined && block.duration > 500 && (
           <span style={{ marginLeft: 6, color: block.duration > 10000 ? 'var(--warning, #f0a030)' : undefined }}>
@@ -237,6 +235,7 @@ function CommandBlockDecoration({
       {/* Collapsed overlay */}
       {block.collapsed && collapsedLines > 0 && (
         <div
+          className="bg-surface-panel text-text-semantic-muted border-l-2"
           style={{
             ...collapsedOverlayStyle,
             top: cellHeight,

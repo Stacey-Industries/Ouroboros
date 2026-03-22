@@ -59,14 +59,12 @@ const filterBtnBase: React.CSSProperties = {
   fontWeight: 600,
   fontFamily: 'var(--font-ui)',
   backgroundColor: 'transparent',
-  color: 'var(--text-faint)',
   transition: 'all 150ms',
   lineHeight: '18px',
 };
 
 const filterBtnActive: React.CSSProperties = {
   ...filterBtnBase,
-  color: 'var(--accent)',
   backgroundColor: 'rgba(var(--accent-rgb, 88, 166, 255), 0.1)',
   borderColor: 'rgba(var(--accent-rgb, 88, 166, 255), 0.3)',
 };
@@ -95,14 +93,12 @@ const filteredNameStyle: React.CSSProperties = {
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
   fontSize: '0.8125rem',
-  color: 'var(--text-secondary)',
   fontFamily: 'var(--font-mono)',
 };
 
 const footerStyle: React.CSSProperties = {
   padding: '4px 12px',
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
   borderTop: '1px solid var(--border-muted)',
   textAlign: 'center',
 };
@@ -227,6 +223,7 @@ function FilterButton({
   return (
     <button
       style={isActive ? filterBtnActive : filterBtnBase}
+      className={isActive ? 'text-interactive-accent' : 'text-text-semantic-faint'}
       onClick={onClick}
       title={`${def.label} (${count})`}
       aria-pressed={isActive}
@@ -238,7 +235,7 @@ function FilterButton({
       }}
     >
       {def.shortLabel}
-      <span style={{ fontSize: '0.5625rem', color: isActive ? 'var(--accent)' : 'var(--text-faint)', opacity: 0.8 }}>
+      <span style={{ fontSize: '0.5625rem', opacity: 0.8 }} className={isActive ? 'text-interactive-accent' : 'text-text-semantic-faint'}>
         {count}
       </span>
     </button>
@@ -286,7 +283,7 @@ function FilteredFileRow({
       role="listitem"
     >
       <FileTypeIcon filename={entry.name} />
-      <span style={filteredNameStyle}>{entry.path}</span>
+      <span style={filteredNameStyle} className="text-text-semantic-secondary">{entry.path}</span>
       <StatusBadge status={entry.status} />
     </div>
   );
@@ -318,7 +315,7 @@ function FilteredFileList({
           />
         ))}
       </div>
-      <div style={footerStyle}>
+      <div style={footerStyle} className="text-text-semantic-faint">
         Showing {entries.length} {filterLabel.toLowerCase()} file{entries.length !== 1 ? 's' : ''}
       </div>
     </>

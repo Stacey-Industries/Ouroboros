@@ -8,6 +8,7 @@ import React, { type ErrorInfo,useCallback, useReducer } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
 import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
+import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
 import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
 import { AgentMonitorManager } from '../AgentMonitor';
 import type { Command } from '../CommandPalette/types';
@@ -47,14 +48,12 @@ class ChatErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center"
-          style={{ color: 'var(--text-muted)', minHeight: 120 }}>
-          <span className="text-sm font-medium" style={{ color: 'var(--error, #f85149)' }}>
+        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-text-semantic-muted" style={{ minHeight: 120 }}>
+          <span className="text-sm font-medium text-status-error">
             Chat crashed
           </span>
           <span className="text-xs">{this.state.error?.message ?? 'An unexpected error occurred.'}</span>
-          <button className="mt-1 rounded px-3 py-1 text-xs"
-            style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text)' }}
+          <button className="mt-1 rounded px-3 py-1 text-xs bg-surface-raised border border-border-semantic text-text-semantic-primary"
             onClick={() => this.setState({ hasError: false, error: null })}>
             Retry
           </button>
@@ -223,6 +222,7 @@ function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): R
       monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
       gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
       analyticsContent={<ErrorBoundary label="Analytics"><React.Suspense fallback={<div />}><AnalyticsDashboard /></React.Suspense></ErrorBoundary>}
+      memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}
@@ -264,7 +264,7 @@ function TerminalPanelContent({
 
 function SidebarViewHeader({ title }: { title: string }): React.ReactElement {
   return (
-    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+    <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">
       {title}
     </span>
   );

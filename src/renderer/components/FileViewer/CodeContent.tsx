@@ -134,10 +134,10 @@ function FoldPlaceholder({
   return (
     <div style={{ height: '1.6em', lineHeight: '1.6em', userSelect: 'none' }}>
       <span
+        className="text-text-semantic-faint"
         style={{
-          color: 'var(--text-faint)',
           fontStyle: 'italic',
-          backgroundColor: 'var(--bg-secondary)',
+          backgroundColor: 'var(--surface-panel)',
           borderRadius: '3px',
           paddingLeft: '8px',
           paddingRight: '8px',
@@ -187,9 +187,9 @@ function CodeLine({
 
   return (
     <div
-      className="code-line"
+      className="code-line text-text-semantic-primary"
       data-line={index}
-      style={{ ...style, color: 'var(--text)' }}
+      style={style}
     >
       {plainText}
     </div>

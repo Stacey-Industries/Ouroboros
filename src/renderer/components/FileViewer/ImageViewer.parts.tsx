@@ -9,7 +9,7 @@ const toolbarStyle: React.CSSProperties = {
   gap: '6px',
   padding: '3px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
 
@@ -20,9 +20,8 @@ const statusBarStyle: React.CSSProperties = {
   gap: '12px',
   padding: '2px 12px',
   borderTop: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
   userSelect: 'none',
 };
 
@@ -68,9 +67,9 @@ export function ImageViewerToolbar({
         +
       </button>
       <span
+        className="text-text-semantic-faint"
         style={{
           fontSize: '0.6875rem',
-          color: 'var(--text-faint)',
           fontFamily: 'var(--font-ui)',
           marginLeft: '4px',
         }}
@@ -178,12 +177,12 @@ export function ImageViewport({
 function ImageLoadError({ fileUrl }: { fileUrl: string }): React.ReactElement {
   return (
     <div
+      className="text-status-error"
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '8px',
-        color: 'var(--error, #f85149)',
         fontSize: '0.875rem',
         textAlign: 'center',
       }}
@@ -191,9 +190,9 @@ function ImageLoadError({ fileUrl }: { fileUrl: string }): React.ReactElement {
       <span style={{ fontSize: '1.5rem' }}>!</span>
       <span>Failed to load image</span>
       <span
+        className="text-text-semantic-faint"
         style={{
           fontSize: '0.75rem',
-          color: 'var(--text-faint)',
           fontFamily: 'var(--font-mono)',
           wordBreak: 'break-all',
         }}
@@ -218,7 +217,7 @@ export function ImageStatusBar({
   zoomLabel,
 }: ImageStatusBarProps): React.ReactElement {
   return (
-    <div style={statusBarStyle}>
+    <div className="text-text-semantic-faint" style={statusBarStyle}>
       {naturalWidth != null && naturalHeight != null && (
         <span>
           {naturalWidth} x {naturalHeight} px
@@ -274,7 +273,7 @@ function getImageAreaStyle(zoomMode: ZoomMode, isPanning: boolean): React.CSSPro
     alignItems: zoomMode === 'fit' ? 'center' : 'flex-start',
     justifyContent: zoomMode === 'fit' ? 'center' : 'flex-start',
     padding: '16px',
-    backgroundColor: 'var(--bg)',
+    backgroundColor: 'var(--surface-base)',
     cursor: isPanning ? 'grabbing' : 'grab',
   };
 }
@@ -286,10 +285,10 @@ function getZoomButtonStyle(active: boolean): React.CSSProperties {
     fontFamily: 'var(--font-ui)',
     fontWeight: 500,
     border: '1px solid',
-    borderColor: active ? 'var(--accent)' : 'var(--border)',
+    borderColor: active ? 'var(--interactive-accent)' : 'var(--border-semantic)',
     borderRadius: '4px',
-    backgroundColor: active ? 'var(--accent)' : 'transparent',
-    color: active ? 'var(--bg)' : 'var(--text-muted)',
+    backgroundColor: active ? 'var(--interactive-accent)' : 'transparent',
+    color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
     cursor: 'pointer',
     lineHeight: '1.5',
   };

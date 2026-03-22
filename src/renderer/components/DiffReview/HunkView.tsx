@@ -61,8 +61,8 @@ const hunkHeaderStyle: CSSProperties = {
   justifyContent: 'space-between',
   padding: '2px 8px',
   backgroundColor: 'rgba(88, 166, 255, 0.08)',
-  borderBottom: '1px solid var(--border-muted)',
-  color: 'var(--accent)',
+  borderBottom: '1px solid var(--border-subtle)',
+  color: 'var(--interactive-accent)',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
   userSelect: 'none',
@@ -82,7 +82,7 @@ const lineContentStyle: CSSProperties = {
   fontSize: 'inherit',
   lineHeight: 'inherit',
   whiteSpace: 'pre',
-  color: 'var(--text)',
+  color: 'var(--text-primary)',
   overflowX: 'visible',
 };
 
@@ -90,18 +90,18 @@ const actionBarStyle: CSSProperties = {
   display: 'flex',
   gap: '4px',
   padding: '4px 8px',
-  background: 'var(--bg-tertiary, var(--bg-secondary))',
-  borderTop: '1px solid var(--border-muted)',
+  background: 'var(--surface-raised)',
+  borderTop: '1px solid var(--border-subtle)',
 };
 
 const acceptedBadgeStyle: CSSProperties = {
-  color: 'var(--success, #4CAF50)',
+  color: 'var(--status-success, #4CAF50)',
   fontWeight: 600,
   fontSize: '0.75rem',
 };
 
 const rejectedBadgeStyle: CSSProperties = {
-  color: 'var(--error, #f85149)',
+  color: 'var(--status-error, #f85149)',
   fontWeight: 600,
   fontSize: '0.75rem',
 };
@@ -124,22 +124,22 @@ function gutterBg(type: DiffLineType): string {
   switch (type) {
     case 'added': return 'rgba(80, 200, 80, 0.18)';
     case 'removed': return 'rgba(255, 80, 80, 0.18)';
-    default: return 'var(--bg)';
+    default: return 'var(--surface-base)';
   }
 }
 
 function markerColor(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'var(--success, #4CAF50)';
-    case 'removed': return 'var(--error, #f85149)';
+    case 'added': return 'var(--status-success, #4CAF50)';
+    case 'removed': return 'var(--status-error, #f85149)';
     default: return 'var(--text-faint)';
   }
 }
 
 function decisionBorder(decision: HunkDecision): string {
   switch (decision) {
-    case 'accepted': return '3px solid var(--success, #4CAF50)';
-    case 'rejected': return '3px solid var(--error, #f85149)';
+    case 'accepted': return '3px solid var(--status-success, #4CAF50)';
+    case 'rejected': return '3px solid var(--status-error, #f85149)';
     default: return '3px solid transparent';
   }
 }
@@ -182,7 +182,7 @@ function markerStyle(type: DiffLineType): CSSProperties {
     backgroundColor: gutterBg(type),
     userSelect: 'none',
     fontWeight: 600,
-    borderRight: '1px solid var(--border-muted)',
+    borderRight: '1px solid var(--border-subtle)',
   };
 }
 
@@ -195,7 +195,7 @@ function buttonStyle(color: string, hovered: boolean, disabled?: boolean): CSSPr
     border: `1px solid ${color}`,
     borderRadius: '4px',
     background: hovered && !disabled ? color : 'transparent',
-    color: hovered && !disabled ? 'var(--bg)' : color,
+    color: hovered && !disabled ? 'var(--text-on-accent)' : color,
     cursor: disabled ? 'default' : 'pointer',
     lineHeight: '1.5',
     transition: 'background 0.1s, color 0.1s',
@@ -280,13 +280,13 @@ function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.
     <div style={actionBarStyle}>
       <ActionBtn
         label={decision === 'accepted' ? 'Accepted' : 'Accept'}
-        color="var(--success, #4CAF50)"
+        color="var(--status-success, #4CAF50)"
         disabled={decided}
         onClick={onAccept}
       />
       <ActionBtn
         label={decision === 'rejected' ? 'Rejected' : 'Reject'}
-        color="var(--error, #f85149)"
+        color="var(--status-error, #f85149)"
         disabled={decided}
         onClick={onReject}
       />

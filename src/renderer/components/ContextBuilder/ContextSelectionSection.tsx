@@ -23,10 +23,7 @@ const summaryBarStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   padding: '6px 10px',
   borderRadius: '6px',
-  backgroundColor: 'var(--bg-tertiary)',
-  border: '1px solid var(--border)',
   fontSize: '12px',
-  color: 'var(--text-muted)',
 };
 
 const summaryButtonStyle: React.CSSProperties = {
@@ -35,7 +32,6 @@ const summaryButtonStyle: React.CSSProperties = {
   borderRadius: '4px',
   padding: '2px 8px',
   fontSize: '11px',
-  color: 'var(--accent)',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
 };
@@ -43,7 +39,6 @@ const summaryButtonStyle: React.CSSProperties = {
 const groupHeaderStyle: React.CSSProperties = {
   fontSize: '12px',
   fontWeight: 600,
-  color: 'var(--text)',
   margin: '4px 0 2px',
 };
 
@@ -54,14 +49,12 @@ const itemRowStyle: React.CSSProperties = {
   padding: '3px 8px',
   borderRadius: '4px',
   fontSize: '12px',
-  color: 'var(--text)',
   cursor: 'pointer',
 };
 
 const typeBadgeStyle: React.CSSProperties = {
   fontSize: '10px',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-muted)',
   backgroundColor: 'var(--bg-tertiary)',
   border: '1px solid var(--border)',
   borderRadius: '3px',
@@ -70,7 +63,6 @@ const typeBadgeStyle: React.CSSProperties = {
 
 const emptyStyle: React.CSSProperties = {
   fontSize: '12px',
-  color: 'var(--text-muted)',
   fontStyle: 'italic',
   padding: '8px 0',
 };
@@ -81,18 +73,18 @@ export function ContextSelectionSection({
   const { groups, summary, isSelected, toggleItem, selectAll, clearAll } = contextSelection;
 
   if (groups.length === 0) {
-    return <div style={emptyStyle}>No context groups available.</div>;
+    return <div className="text-text-semantic-muted" style={emptyStyle}>No context groups available.</div>;
   }
 
   return (
     <div style={sectionStyle}>
-      <div style={summaryBarStyle}>
+      <div className="bg-surface-raised border border-border-semantic text-text-semantic-muted" style={summaryBarStyle}>
         <span>{summary.selectedCount} of {summary.totalCount} selected</span>
         <div style={{ display: 'flex', gap: '6px' }}>
-          <button type="button" style={summaryButtonStyle} onClick={selectAll}>
+          <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={selectAll}>
             Select All
           </button>
-          <button type="button" style={summaryButtonStyle} onClick={clearAll}>
+          <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={clearAll}>
             Clear All
           </button>
         </div>
@@ -100,12 +92,13 @@ export function ContextSelectionSection({
 
       {groups.map((group) => (
         <div key={group.label}>
-          <div style={groupHeaderStyle}>{group.label}</div>
+          <div className="text-text-semantic-primary" style={groupHeaderStyle}>{group.label}</div>
           {group.items.map((item) => {
             const checked = isSelected(group.label, item.label);
             return (
               <label
                 key={item.label}
+                className="text-text-semantic-primary"
                 style={itemRowStyle}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-tertiary)';
@@ -121,7 +114,7 @@ export function ContextSelectionSection({
                   style={{ accentColor: 'var(--accent)' }}
                 />
                 <span>{item.label}</span>
-                <span style={typeBadgeStyle}>{item.type}</span>
+                <span className="text-text-semantic-muted" style={typeBadgeStyle}>{item.type}</span>
               </label>
             );
           })}

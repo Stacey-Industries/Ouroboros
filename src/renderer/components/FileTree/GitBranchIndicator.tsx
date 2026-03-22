@@ -31,7 +31,6 @@ const branchNameStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: 600,
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -43,8 +42,6 @@ const dropdownStyle: React.CSSProperties = {
   left: 0,
   right: 0,
   zIndex: 100,
-  backgroundColor: 'var(--bg-secondary, var(--bg))',
-  border: '1px solid var(--border)',
   borderRadius: '0 0 4px 4px',
   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
   maxHeight: '280px',
@@ -59,10 +56,7 @@ const dropdownHeaderStyle: React.CSSProperties = {
 const searchInputStyle: React.CSSProperties = {
   width: '100%',
   padding: '4px 8px',
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
   borderRadius: '4px',
-  color: 'var(--text)',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
@@ -77,14 +71,12 @@ const branchItemStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text-secondary)',
   userSelect: 'none',
   minHeight: '26px',
 };
 
 const branchItemActiveStyle: React.CSSProperties = {
   ...branchItemStyle,
-  color: 'var(--accent)',
   fontWeight: 600,
 };
 
@@ -94,7 +86,6 @@ const sectionLabelStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-faint)',
 };
 
 const createBtnStyle: React.CSSProperties = {
@@ -104,7 +95,6 @@ const createBtnStyle: React.CSSProperties = {
   padding: '4px 8px',
   cursor: 'pointer',
   fontSize: '0.75rem',
-  color: 'var(--accent)',
   fontFamily: 'var(--font-ui)',
   userSelect: 'none',
   borderTop: '1px solid var(--border-muted)',
@@ -118,7 +108,6 @@ const DROPDOWN_CSS = `
 
 const chevronStyle: React.CSSProperties = {
   flexShrink: 0,
-  color: 'var(--text-faint)',
   transition: 'transform 150ms',
 };
 
@@ -126,7 +115,7 @@ const chevronStyle: React.CSSProperties = {
 
 function BranchIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--accent)' }}>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
       <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 7v4M11 7C11 9 9 11 5 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -136,6 +125,7 @@ function DropdownChevron({ open }: { open: boolean }): React.ReactElement {
   return (
     <svg
       width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
+      className="text-text-semantic-faint"
       style={{ ...chevronStyle, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
     >
       <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -145,7 +135,7 @@ function DropdownChevron({ open }: { open: boolean }): React.ReactElement {
 
 function CheckMark(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--accent)' }}>
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
       <path d="M2 5L4 7L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -162,7 +152,7 @@ function BranchItem({
 }): React.ReactElement {
   return (
     <div
-      className="branch-item"
+      className={`branch-item ${isCurrent ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
       style={isCurrent ? branchItemActiveStyle : branchItemStyle}
       onClick={onClick}
       role="option"
@@ -179,7 +169,7 @@ function BranchItem({
 
 function CreateBranchRow({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
-    <div className="branch-create-btn" style={createBtnStyle} onClick={onClick} role="button" tabIndex={0}>
+    <div className="branch-create-btn text-interactive-accent" style={createBtnStyle} onClick={onClick} role="button" tabIndex={0}>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
         <path d="M5 2V8M2 5H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
@@ -339,14 +329,14 @@ export function GitBranchIndicator({ projectRoot, isRepo }: GitBranchIndicatorPr
         aria-expanded={isOpen}
       >
         <BranchIcon />
-        <span style={branchNameStyle}>
+        <span className="text-text-semantic-primary" style={branchNameStyle}>
           {switching ? 'Switching...' : displayName}
         </span>
         <DropdownChevron open={isOpen} />
       </div>
 
       {isOpen && (
-        <div style={dropdownStyle}>
+        <div className="bg-surface-panel border border-border-semantic" style={dropdownStyle}>
           <div style={dropdownHeaderStyle}>
             <input
               ref={searchInputRef}
@@ -355,16 +345,16 @@ export function GitBranchIndicator({ projectRoot, isRepo }: GitBranchIndicatorPr
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search branches..."
               style={searchInputStyle}
-              className="selectable"
+              className="selectable bg-surface-base border border-border-semantic text-text-semantic-primary"
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
             />
           </div>
 
-          <div style={sectionLabelStyle}>Local Branches</div>
+          <div className="text-text-semantic-faint" style={sectionLabelStyle}>Local Branches</div>
           <div role="listbox" aria-label="Git branches">
             {filteredBranches.length === 0 && (
-              <div style={{ padding: '8px', fontSize: '0.75rem', color: 'var(--text-faint)', textAlign: 'center' }}>
+              <div className="text-text-semantic-faint" style={{ padding: '8px', fontSize: '0.75rem', textAlign: 'center' }}>
                 {search ? 'No matching branches' : 'No branches found'}
               </div>
             )}

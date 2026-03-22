@@ -46,15 +46,13 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement 
 function SectionBadge({ value }: { value: string | number }): React.ReactElement {
   return (
     <span
-      className="flex-shrink-0 rounded-full text-center select-none"
+      className="flex-shrink-0 rounded-full text-center select-none bg-surface-raised text-text-semantic-muted"
       style={{
         fontSize: '9px',
         lineHeight: '16px',
         minWidth: '16px',
         height: '16px',
         padding: '0 4px',
-        backgroundColor: 'var(--bg-tertiary)',
-        color: 'var(--text-muted)',
         fontFamily: 'var(--font-ui)',
       }}
     >
@@ -82,12 +80,10 @@ export function SidebarSection({
     >
       {/* Header bar — 24px, always visible */}
       <button
-        className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-none"
+        className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-none bg-surface-panel border-b border-border-semantic"
         style={{
           height: '24px',
           minHeight: '24px',
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border-muted, var(--border))',
         }}
         onClick={onToggle}
         title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
@@ -95,12 +91,12 @@ export function SidebarSection({
       >
         <ChevronIcon collapsed={collapsed} />
         <span
+          className="text-text-semantic-muted"
           style={{
             fontSize: '10px',
             fontWeight: 600,
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
-            color: 'var(--text-muted)',
             fontFamily: 'var(--font-ui)',
             lineHeight: '24px',
             flex: 1,

@@ -22,7 +22,6 @@ const listStyle: React.CSSProperties = {
 const emptyStateStyle: React.CSSProperties = {
   padding: '16px 14px',
   fontSize: '13px',
-  color: 'var(--text-muted)',
   textAlign: 'center',
 };
 
@@ -81,7 +80,7 @@ function SymbolResultsList({
   if (matches.length === 0) {
     return (
       <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef} style={listStyle}>
-        <div style={emptyStateStyle}>{emptyLabel}</div>
+        <div className="text-text-semantic-muted" style={emptyStateStyle}>{emptyLabel}</div>
       </div>
     );
   }

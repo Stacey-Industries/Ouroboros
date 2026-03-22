@@ -46,8 +46,8 @@ const sidebarStyle: CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'auto',
-  borderRight: '1px solid var(--border)',
-  backgroundColor: 'var(--bg-secondary)',
+  borderRight: '1px solid var(--border-default)',
+  backgroundColor: 'var(--surface-panel)',
   minWidth: '200px',
   maxWidth: '280px',
 };
@@ -59,7 +59,7 @@ const headerStyle: CSSProperties = {
   color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1px solid var(--border-default)',
   userSelect: 'none',
 };
 
@@ -73,7 +73,7 @@ const filePathStyle: CSSProperties = {
   flex: 1,
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
-  color: 'var(--text)',
+  color: 'var(--text-primary)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -89,10 +89,10 @@ const actionRowStyle: CSSProperties = {
 
 function statusBadge(status: ReviewFile['status']): { label: string; color: string } {
   switch (status) {
-    case 'added': return { label: 'A', color: 'var(--success, #4CAF50)' };
-    case 'deleted': return { label: 'D', color: 'var(--error, #f85149)' };
-    case 'renamed': return { label: 'R', color: 'var(--accent, #58a6ff)' };
-    default: return { label: 'M', color: 'var(--warning, #d29922)' };
+    case 'added': return { label: 'A', color: 'var(--status-success, #4CAF50)' };
+    case 'deleted': return { label: 'D', color: 'var(--status-error, #f85149)' };
+    case 'renamed': return { label: 'R', color: 'var(--interactive-accent, #58a6ff)' };
+    default: return { label: 'M', color: 'var(--status-warning, #d29922)' };
   }
 }
 
@@ -110,8 +110,8 @@ function fileItemStyle(isSelected: boolean, hovered: boolean): CSSProperties {
     padding: '6px 8px',
     cursor: 'pointer',
     backgroundColor: isSelected ? 'rgba(88, 166, 255, 0.1)' : hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
-    borderLeft: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
-    borderBottom: '1px solid var(--border-muted)',
+    borderLeft: isSelected ? '2px solid var(--interactive-accent)' : '2px solid transparent',
+    borderBottom: '1px solid var(--border-subtle)',
     transition: 'background-color 0.1s',
   };
 }
@@ -136,7 +136,7 @@ function progressStyle(allDecided: boolean): CSSProperties {
   return {
     flexShrink: 0,
     fontSize: '0.625rem',
-    color: allDecided ? 'var(--success, #4CAF50)' : 'var(--text-faint)',
+    color: allDecided ? 'var(--status-success, #4CAF50)' : 'var(--text-faint)',
     fontWeight: 500,
   };
 }
@@ -185,8 +185,8 @@ function FileListItemActions({
 }: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
   return (
     <div style={actionRowStyle}>
-      <QuickActionButton color="var(--success, #4CAF50)" label="Accept All" onClick={() => onAcceptAll(index)} />
-      <QuickActionButton color="var(--error, #f85149)" label="Reject All" onClick={() => onRejectAll(index)} />
+      <QuickActionButton color="var(--status-success, #4CAF50)" label="Accept All" onClick={() => onAcceptAll(index)} />
+      <QuickActionButton color="var(--status-error, #f85149)" label="Reject All" onClick={() => onRejectAll(index)} />
     </div>
   );
 }

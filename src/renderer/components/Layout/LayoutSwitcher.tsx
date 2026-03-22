@@ -37,7 +37,7 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
   }, [onSave]);
 
   return (
-    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts" style={dropdownStyle}>
+    <div ref={dropdownRef} role="listbox" aria-label="Workspace layouts" className="bg-surface-panel border border-border-semantic" style={dropdownStyle}>
       <LayoutHeader onToggleSave={() => setShowSaveInput((p) => !p)} />
       {showSaveInput && <LayoutSaveInput layouts={layouts} onSave={handleSaved} onCancel={() => setShowSaveInput(false)} />}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -45,7 +45,7 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
           <LayoutListItem key={layout.name} layout={layout} isActive={layout.name === activeLayoutName} onSelect={onSelect} onUpdate={onUpdate} onDelete={onDelete} />
         ))}
       </div>
-      <div style={{ padding: '5px 10px', borderTop: '1px solid var(--border-muted)', fontSize: '10px', color: 'var(--text-faint)', flexShrink: 0 }}>
+      <div className="border-t border-border-semantic text-text-semantic-faint" style={{ padding: '5px 10px', fontSize: '10px', flexShrink: 0 }}>
         Ctrl+Alt+1/2/3 to quick-switch
       </div>
     </div>
@@ -55,7 +55,6 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
 const dropdownStyle: React.CSSProperties = {
   position: 'fixed', bottom: '26px', right: '8px', zIndex: 1000,
   minWidth: '240px', maxWidth: '320px', maxHeight: '340px',
-  backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)',
   borderRadius: '6px', boxShadow: '0 -4px 16px rgba(0,0,0,0.4)',
   display: 'flex', flexDirection: 'column', overflow: 'hidden',
   fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
@@ -63,14 +62,15 @@ const dropdownStyle: React.CSSProperties = {
 
 function LayoutHeader({ onToggleSave }: { onToggleSave: () => void }): React.ReactElement {
   return (
-    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-      <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '12px' }}>Workspace Layouts</span>
+    <div className="border-b border-border-semantic" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <span className="text-text-semantic-primary" style={{ fontWeight: 600, fontSize: '12px' }}>Workspace Layouts</span>
       <button
         onClick={onToggleSave}
         title="Save current layout"
-        style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-muted)', fontSize: '11px', padding: '2px 8px', cursor: 'pointer', transition: 'color 120ms, border-color 120ms' }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+        className="text-text-semantic-muted border border-border-semantic"
+        style={{ background: 'none', borderRadius: '4px', fontSize: '11px', padding: '2px 8px', cursor: 'pointer', transition: 'color 120ms, border-color 120ms' }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--interactive-accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = ''; e.currentTarget.style.borderColor = ''; }}
       >
         + Save Current
       </button>

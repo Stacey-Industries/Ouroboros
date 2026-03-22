@@ -25,7 +25,7 @@ function FilesIcon(): React.ReactElement {
       {/* Back page */}
       <rect x="5" y="2" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
       {/* Front page */}
-      <rect x="3" y="5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="var(--bg-secondary)" />
+      <rect x="3" y="5" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.4" fill="var(--surface-panel)" />
     </svg>
   );
 }
@@ -97,21 +97,20 @@ function ActivityBarIcon({
       onClick={onClick}
       title={view.label}
       aria-label={view.label}
-      className="relative flex items-center justify-center w-[40px] h-[40px] transition-colors duration-100"
+      className="relative flex items-center justify-center w-[40px] h-[40px] transition-colors duration-100 text-text-semantic-muted"
       style={{
-        color: isActive ? 'var(--text)' : 'var(--text-muted)',
+        color: isActive ? 'var(--text-primary)' : undefined,
       }}
     >
       {/* Active indicator: 2px left border in accent */}
       {isActive && (
         <span
-          className="absolute left-0 top-[6px] bottom-[6px] w-[2px] rounded-r-sm"
-          style={{ backgroundColor: 'var(--accent)' }}
+          className="absolute left-0 top-[6px] bottom-[6px] w-[2px] rounded-r-sm bg-interactive-accent"
         />
       )}
       {/* Hover background */}
       <span
-        className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] hover:bg-[var(--bg-tertiary)] transition-colors duration-100"
+        className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] hover:bg-surface-raised transition-colors duration-100"
       >
         {view.icon}
       </span>
@@ -144,7 +143,7 @@ export function ActivityBar({
       style={{
         width: 40,
         minWidth: 40,
-        backgroundColor: 'var(--bg-secondary)',
+        backgroundColor: 'var(--surface-panel)',
         filter: 'brightness(0.92)',
         paddingTop: 8,
         gap: 0,

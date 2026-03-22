@@ -21,7 +21,7 @@ function UsageTabBar({
   onSelect: (tab: UsageTab) => void;
 }): React.ReactElement {
   return (
-    <div className="flex" style={{ borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-secondary)' }}>
+    <div className="flex border-b border-border-semantic bg-surface-panel" style={{ flexShrink: 0 }}>
       {TABS.map((tab) => (
         <button
           key={tab.key}
@@ -50,7 +50,7 @@ export const UsagePanel = memo(function UsagePanel(_props: UsagePanelProps): Rea
   const content = activeTab === 'current' ? <UsageCurrentTab /> : <UsageHistoryTab />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
+    <div className="flex flex-col h-full bg-surface-base" style={{ fontFamily: 'var(--font-ui)' }}>
       <UsageTabBar activeTab={activeTab} onSelect={setActiveTab} />
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{content}</div>
     </div>

@@ -23,7 +23,6 @@ const RECENT_BUTTON_STYLE: React.CSSProperties = {
   padding: '6px 12px',
   background: 'transparent',
   border: 'none',
-  color: 'var(--text)',
   cursor: 'pointer',
   fontSize: '0.8125rem',
   fontFamily: 'var(--font-ui)',
@@ -52,8 +51,6 @@ const MENU_STYLE: React.CSSProperties = {
   left: 0,
   right: 0,
   zIndex: 1000,
-  backgroundColor: 'var(--bg-tertiary)',
-  border: '1px solid var(--border)',
   borderRadius: '6px',
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
   overflow: 'hidden',
@@ -70,13 +67,11 @@ const TRUNCATE_STYLE: React.CSSProperties = {
 const RECENT_PATH_STYLE: React.CSSProperties = {
   ...TRUNCATE_STYLE,
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
 };
 
 const SECTION_LABEL_STYLE: React.CSSProperties = {
   padding: '4px 12px 2px',
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
 };
@@ -177,7 +172,8 @@ function ActionButton({
       role="option"
       aria-selected={false}
       onClick={() => void onClick()}
-      style={{ ...BUTTON_BASE_STYLE, borderBottom, color: 'var(--accent)' }}
+      className="text-interactive-accent"
+      style={{ ...BUTTON_BASE_STYLE, borderBottom }}
       onMouseEnter={actionHover}
       onMouseLeave={clearHover}
     >
@@ -201,12 +197,13 @@ function RecentProjectButton({
       aria-selected={false}
       onClick={() => onSelect(path)}
       title={path}
+      className="text-text-semantic-primary"
       style={RECENT_BUTTON_STYLE}
       onMouseEnter={recentHover}
       onMouseLeave={clearHover}
     >
       <span style={TRUNCATE_STYLE}>{basename(path)}</span>
-      <span style={RECENT_PATH_STYLE}>{path}</span>
+      <span className="text-text-semantic-faint" style={RECENT_PATH_STYLE}>{path}</span>
     </button>
   );
 }
@@ -223,7 +220,7 @@ function RecentProjectsSection({
   }
   return (
     <div>
-      <div style={SECTION_LABEL_STYLE}>Recent</div>
+      <div className="text-text-semantic-faint" style={SECTION_LABEL_STYLE}>Recent</div>
       {recents.map((path) => (
         <RecentProjectButton key={path} path={path} onSelect={onSelectRecent} />
       ))}
@@ -258,11 +255,12 @@ export function ProjectPickerToggle({
       title={currentPath ?? 'No folder open'}
       aria-haspopup="listbox"
       aria-expanded={open}
-      style={{ ...TOGGLE_BUTTON_STYLE, color: busy ? 'var(--text-faint)' : 'var(--text)', cursor: busy ? 'wait' : 'pointer' }}
+      className={busy ? 'text-text-semantic-faint' : 'text-text-semantic-primary'}
+      style={{ ...TOGGLE_BUTTON_STYLE, cursor: busy ? 'wait' : 'pointer' }}
     >
-      <span style={{ color: 'var(--text-muted)' }}><FolderIcon /></span>
+      <span className="text-text-semantic-muted"><FolderIcon /></span>
       <span style={{ ...TRUNCATE_STYLE, flex: 1, textAlign: 'left' }}>{label}</span>
-      <span style={{ color: 'var(--text-muted)' }}><ChevronDownIcon /></span>
+      <span className="text-text-semantic-muted"><ChevronDownIcon /></span>
     </button>
   );
 }
@@ -284,7 +282,7 @@ export function ProjectPickerMenu({
 }): React.ReactElement {
   const openFolderLabel = rootCount > 0 ? 'Open folder... (replace workspace)' : 'Open folder...';
   return (
-    <div role="listbox" aria-label="Project selector" style={MENU_STYLE}>
+    <div role="listbox" aria-label="Project selector" className="bg-surface-raised border border-border-semantic" style={MENU_STYLE}>
       <ActionButton borderBottom="1px solid var(--border-muted)" icon={<FolderIcon />} onClick={onOpenFolder}>
         {openFolderLabel}
       </ActionButton>

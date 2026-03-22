@@ -9,8 +9,8 @@ import {
 const sidebarStyle: React.CSSProperties = {
   width: '200px',
   flexShrink: 0,
-  borderRight: '1px solid var(--border)',
-  backgroundColor: 'var(--bg)',
+  borderRight: '1px solid var(--border-semantic)',
+  backgroundColor: 'var(--surface-base)',
   overflow: 'auto',
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
@@ -19,8 +19,8 @@ const sidebarStyle: React.CSSProperties = {
 const panelStyle: React.CSSProperties = {
   width: '240px',
   flexShrink: 0,
-  borderLeft: '1px solid var(--border)',
-  backgroundColor: 'var(--bg)',
+  borderLeft: '1px solid var(--border-semantic)',
+  backgroundColor: 'var(--surface-base)',
   overflow: 'auto',
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
@@ -29,7 +29,6 @@ const panelStyle: React.CSSProperties = {
 const sectionTitleStyle: React.CSSProperties = {
   padding: '8px 10px 4px',
   fontWeight: 600,
-  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   fontSize: '0.625rem',
@@ -39,10 +38,9 @@ const insertButtonStyle: React.CSSProperties = {
   padding: '2px 8px',
   fontSize: '0.625rem',
   fontFamily: 'var(--font-ui)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   backgroundColor: 'transparent',
-  color: 'var(--accent)',
   cursor: 'pointer',
 };
 
@@ -50,7 +48,6 @@ const previewStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: '0.5625rem',
   lineHeight: '1.4',
-  color: 'var(--text-muted)',
   whiteSpace: 'pre-wrap',
   margin: '0 0 6px',
   maxHeight: '80px',
@@ -68,6 +65,7 @@ const SectionRow = memo(function SectionRow({
     <button
       onClick={() => onSelect(section)}
       title={`Line ${section.startLine + 1}: ${section.title}`}
+      className="text-text-semantic-primary"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -77,14 +75,13 @@ const SectionRow = memo(function SectionRow({
         paddingLeft: `${10 + (section.level - 1) * 12}px`,
         border: 'none',
         backgroundColor: 'transparent',
-        color: 'var(--text)',
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: 'var(--font-ui)',
         fontSize: '0.6875rem',
         lineHeight: '1.4',
       }}
-      onMouseEnter={(event) => { event.currentTarget.style.backgroundColor = 'var(--border)'; }}
+      onMouseEnter={(event) => { event.currentTarget.style.backgroundColor = 'var(--border-semantic)'; }}
       onMouseLeave={(event) => { event.currentTarget.style.backgroundColor = 'transparent'; }}
     >
       <span style={{ flexShrink: 0, width: '14px', textAlign: 'center', fontSize: '0.625rem', opacity: 0.7 }}>{SECTION_ICONS[section.type]}</span>
@@ -105,13 +102,13 @@ const TemplateMenuButton = memo(function TemplateMenuButton({
   return (
     <button
       onClick={() => onInsertTemplate(template.content)}
+      className="text-text-semantic-muted"
       style={{
         display: 'block',
         width: '100%',
         padding: '3px 6px',
         border: 'none',
         backgroundColor: 'transparent',
-        color: 'var(--text-muted)',
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: 'var(--font-ui)',
@@ -119,7 +116,7 @@ const TemplateMenuButton = memo(function TemplateMenuButton({
         lineHeight: '1.5',
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.backgroundColor = 'var(--border)';
+        event.currentTarget.style.backgroundColor = 'var(--border-semantic)';
         event.currentTarget.style.color = 'var(--text)';
       }}
       onMouseLeave={(event) => {
@@ -133,7 +130,7 @@ const TemplateMenuButton = memo(function TemplateMenuButton({
 });
 
 const TemplatePreview = memo(function TemplatePreview({ content }: { content: string }): React.ReactElement {
-  return <pre style={previewStyle}>{content.slice(0, 200)}</pre>;
+  return <pre className="text-text-semantic-muted" style={previewStyle}>{content.slice(0, 200)}</pre>;
 });
 
 const InsertTemplateButton = memo(function InsertTemplateButton({
@@ -146,14 +143,15 @@ const InsertTemplateButton = memo(function InsertTemplateButton({
   return (
     <button
       onClick={() => onInsertTemplate(templateContent)}
+      className="text-interactive-accent"
       style={insertButtonStyle}
       onMouseEnter={(event) => {
-        event.currentTarget.style.backgroundColor = 'var(--accent)';
-        event.currentTarget.style.color = 'var(--bg)';
+        event.currentTarget.style.backgroundColor = 'var(--interactive-accent)';
+        event.currentTarget.style.color = 'var(--text-on-accent)';
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.backgroundColor = 'transparent';
-        event.currentTarget.style.color = 'var(--accent)';
+        event.currentTarget.style.color = 'var(--interactive-accent)';
       }}
     >
       Insert
@@ -173,12 +171,12 @@ const TemplateCard = memo(function TemplateCard({
       style={{
         margin: '6px 8px',
         padding: '8px 10px',
-        border: '1px solid var(--border)',
+        border: '1px solid var(--border-semantic)',
         borderRadius: '6px',
         backgroundColor: 'rgba(255,255,255,0.02)',
       }}
     >
-      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px', fontSize: '0.6875rem' }}>{template.name}</div>
+      <div className="text-text-semantic-primary" style={{ fontWeight: 600, marginBottom: '4px', fontSize: '0.6875rem' }}>{template.name}</div>
       <TemplatePreview content={template.content} />
       <InsertTemplateButton onInsertTemplate={onInsertTemplate} templateContent={template.content} />
     </div>
@@ -193,7 +191,7 @@ const SectionOutline = memo(function SectionOutline({
   sections: ClaudeMdSection[];
 }): React.ReactElement {
   if (sections.length === 0) {
-    return <div style={{ padding: '12px 10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No headings found</div>;
+    return <div className="text-text-semantic-muted" style={{ padding: '12px 10px', fontStyle: 'italic' }}>No headings found</div>;
   }
   return (
     <>
@@ -210,8 +208,8 @@ const AddSectionMenu = memo(function AddSectionMenu({
   onInsertTemplate: (templateContent: string) => void;
 }): React.ReactElement {
   return (
-    <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)', marginTop: '4px' }}>
-      <div style={{ ...sectionTitleStyle, padding: 0, marginBottom: '4px' }}>Add Section</div>
+    <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border-semantic)', marginTop: '4px' }}>
+      <div className="text-text-semantic-muted" style={{ ...sectionTitleStyle, padding: 0, marginBottom: '4px' }}>Add Section</div>
       {CLAUDE_MD_TEMPLATES.map((template) => (
         <TemplateMenuButton key={template.name} onInsertTemplate={onInsertTemplate} template={template} />
       ))}
@@ -230,7 +228,7 @@ export const ClaudeMdOutlineSidebar = memo(function ClaudeMdOutlineSidebar({
 }): React.ReactElement {
   return (
     <aside style={sidebarStyle}>
-      <div style={sectionTitleStyle}>Sections</div>
+      <div className="text-text-semantic-muted" style={sectionTitleStyle}>Sections</div>
       <SectionOutline onSelectSection={onSelectSection} sections={sections} />
       <AddSectionMenu onInsertTemplate={onInsertTemplate} />
     </aside>
@@ -244,7 +242,7 @@ export const ClaudeMdTemplateLibrary = memo(function ClaudeMdTemplateLibrary({
 }): React.ReactElement {
   return (
     <aside style={panelStyle}>
-      <div style={sectionTitleStyle}>Template Library</div>
+      <div className="text-text-semantic-muted" style={sectionTitleStyle}>Template Library</div>
       {CLAUDE_MD_TEMPLATES.map((template) => (
         <TemplateCard key={template.name} onInsertTemplate={onInsertTemplate} template={template} />
       ))}

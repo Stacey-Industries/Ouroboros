@@ -82,11 +82,11 @@ function FilePathLabel({ filePath }: { filePath: string }): React.ReactElement {
 
   return (
     <span
-      className="flex-1 min-w-0 truncate text-xs"
-      style={{ color: 'var(--text)', fontFamily: 'var(--font-mono, monospace)' }}
+      className="flex-1 min-w-0 truncate text-xs text-text-semantic-primary"
+      style={{ fontFamily: 'var(--font-mono, monospace)' }}
       title={filePath}
     >
-      {dirPath ? <span style={{ color: 'var(--text-muted)' }}>{dirPath}/</span> : null}
+      {dirPath ? <span className="text-text-semantic-muted">{dirPath}/</span> : null}
       {fileName}
     </span>
   );
@@ -111,7 +111,7 @@ function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): Reac
     <button
       onClick={() => onToggle(filePath)}
       title={isStaged ? `Unstage ${filePath}` : `Stage ${filePath}`}
-      className="rounded p-0.5 text-[var(--text-muted)] transition-colors duration-75 hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]"
+      className="rounded p-0.5 text-text-semantic-muted transition-colors duration-75 hover:bg-surface-panel hover:text-text-semantic-primary"
     >
       <ToggleIcon isStaged={isStaged} />
     </button>
@@ -146,10 +146,10 @@ function DiscardButton({
     : `Discard changes to ${filePath}`;
   const className = confirmDiscard
     ? 'rounded p-0.5 transition-colors duration-75'
-    : 'rounded p-0.5 text-[var(--text-muted)] transition-colors duration-75 hover:bg-[var(--bg-secondary)] hover:text-[var(--text)]';
+    : 'rounded p-0.5 text-text-semantic-muted transition-colors duration-75 hover:bg-surface-panel hover:text-text-semantic-primary';
 
   return (
-    <button onClick={onDiscard} title={title} className={className} style={confirmDiscard ? { color: 'var(--error, #f85149)' } : undefined}>
+    <button onClick={onDiscard} title={title} className={confirmDiscard ? `${className} text-status-error` : className}>
       <DiscardIcon confirmDiscard={confirmDiscard} />
     </button>
   );
@@ -166,7 +166,7 @@ export const GitFileRow = memo(function GitFileRow({
 
   return (
     <div
-      className="group flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-75 hover:bg-[var(--bg-tertiary)]"
+      className="group flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-75 hover:bg-surface-raised"
       style={{ minHeight: '24px' }}
     >
       <StatusBadge status={status} />

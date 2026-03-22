@@ -41,14 +41,13 @@ const SCROLL_BUTTON_STYLE: React.CSSProperties = {
   width: '20px',
   height: '100%',
   border: 'none',
-  background: 'var(--bg-secondary)',
-  color: 'var(--text-muted)',
+  background: 'var(--surface-panel)',
   cursor: 'pointer',
   flexShrink: 0,
   padding: 0,
   fontSize: '10px',
-  borderLeft: '1px solid var(--border)',
-  borderRight: '1px solid var(--border)',
+  borderLeft: '1px solid var(--border-semantic)',
+  borderRight: '1px solid var(--border-semantic)',
 };
 
 const OVERFLOW_BUTTON_STYLE: React.CSSProperties = {
@@ -58,13 +57,12 @@ const OVERFLOW_BUTTON_STYLE: React.CSSProperties = {
   width: '24px',
   height: '100%',
   border: 'none',
-  background: 'var(--bg-secondary)',
-  color: 'var(--text-muted)',
+  background: 'var(--surface-panel)',
   cursor: 'pointer',
   flexShrink: 0,
   padding: 0,
   fontSize: '10px',
-  borderLeft: '1px solid var(--border)',
+  borderLeft: '1px solid var(--border-semantic)',
 };
 
 const OVERFLOW_DROPDOWN_STYLE: React.CSSProperties = {
@@ -76,8 +74,8 @@ const OVERFLOW_DROPDOWN_STYLE: React.CSSProperties = {
   maxWidth: '300px',
   maxHeight: '300px',
   overflowY: 'auto',
-  backgroundColor: 'var(--bg)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   padding: '4px 0',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
@@ -93,7 +91,6 @@ const OVERFLOW_ITEM_STYLE: React.CSSProperties = {
   padding: '4px 12px',
   border: 'none',
   background: 'transparent',
-  color: 'var(--text)',
   textAlign: 'left',
   cursor: 'pointer',
   fontFamily: 'inherit',
@@ -142,6 +139,7 @@ function ScrollButton({
   if (!visible) return null;
   return (
     <button
+      className="text-text-semantic-muted"
       style={SCROLL_BUTTON_STYLE}
       onClick={onClick}
       aria-label={`Scroll tabs ${direction}`}
@@ -211,11 +209,11 @@ function OverflowDropdown({
           style={{
             ...OVERFLOW_ITEM_STYLE,
             fontWeight: index === activeIndex ? 600 : 'normal',
-            color: index === activeIndex ? 'var(--accent)' : 'var(--text)',
+            color: index === activeIndex ? 'var(--interactive-accent)' : 'var(--text)',
             fontStyle: file.isPreview ? 'italic' : 'normal',
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface-raised)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
@@ -244,7 +242,7 @@ function OverflowDropdown({
               width: '4px',
               height: '4px',
               borderRadius: '50%',
-              backgroundColor: 'var(--accent)',
+              backgroundColor: 'var(--interactive-accent)',
               flexShrink: 0,
             }} />
           )}
@@ -354,6 +352,7 @@ export function FileViewerTabs({
       <ScrollButton direction="right" onClick={scrollRight} visible={showScrollRight} />
       {hasOverflow && (
         <button
+          className="text-text-semantic-muted"
           style={OVERFLOW_BUTTON_STYLE}
           onClick={toggleOverflow}
           aria-label="Show all tabs"

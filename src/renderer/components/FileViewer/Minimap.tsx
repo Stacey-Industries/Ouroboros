@@ -235,7 +235,7 @@ const minimapContainerStyle: React.CSSProperties = {
   overflow: 'hidden',
   cursor: 'pointer',
   zIndex: 3,
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'var(--surface-base)',
   borderLeft: '1px solid var(--border-muted)',
   opacity: 0.85,
 };
@@ -250,10 +250,10 @@ function getViewportIndicatorStyle(viewportRect: {
     left: 0,
     right: 0,
     height: `${viewportRect.height}px`,
-    backgroundColor: 'var(--accent)',
+    backgroundColor: 'var(--interactive-accent)',
     opacity: 0.15,
-    borderTop: '1px solid var(--accent)',
-    borderBottom: '1px solid var(--accent)',
+    borderTop: '1px solid var(--interactive-accent)',
+    borderBottom: '1px solid var(--interactive-accent)',
     pointerEvents: 'none',
   };
 }

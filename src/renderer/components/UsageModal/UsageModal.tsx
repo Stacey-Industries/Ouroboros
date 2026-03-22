@@ -18,13 +18,13 @@ export const UsageModal = memo(function UsageModal({ isOpen, onClose }: UsageMod
 
   return (
     <div
-      className="glass-shell fixed inset-0 z-[1000] flex items-center justify-center"
-      style={{ backgroundColor: 'var(--glass-shell-bg, rgba(0, 0, 0, 0.5))', backdropFilter: 'var(--glass-backdrop, blur(2px))' }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(2px)' }}
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <div
-        className="glass-card flex flex-col rounded-lg shadow-2xl overflow-hidden"
-        style={{ width: '560px', maxHeight: '80vh', background: 'var(--glass-card-bg, var(--bg-secondary))', border: '1px solid var(--glass-border-muted, var(--border))', fontFamily: 'var(--font-ui)' }}
+        className="flex flex-col rounded-lg shadow-2xl overflow-hidden bg-surface-panel border border-border-semantic"
+        style={{ width: '560px', maxHeight: '80vh', fontFamily: 'var(--font-ui)' }}
       >
         <UsageModalHeader onClose={onClose} />
         <UsageRangeControls range={range} onRangeChange={setRange} onRefresh={() => void loadUsage(range)} />

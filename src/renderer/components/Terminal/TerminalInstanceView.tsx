@@ -109,7 +109,7 @@ function TerminalToolbarButtons({
   return (
     <div style={{
       position: 'absolute',
-      top: 6,
+      bottom: 6,
       right: 6,
       zIndex: 10,
       display: 'flex',
@@ -145,6 +145,12 @@ function TerminalToolbarButtons({
       {!controller.showSearch && (
         <CopyButton terminal={controller.terminalRef.current} visible={isHovered} />
       )}
+      <MultiLineButton
+        isActive={controller.richInputActive}
+        isHovered={isHovered}
+        showSearch={controller.showSearch}
+        onClick={controller.richInputActive ? controller.handleRichInputCancel : controller.openRichInput}
+      />
     </div>
   )
 }
@@ -236,15 +242,13 @@ function TerminalCompletionLayer({
 
 function TerminalActionLayers({
   controller,
-  isHovered,
 }: {
   controller: TerminalInstanceController
-  isHovered: boolean
 }): React.ReactElement {
   return (
     <>
       <TerminalOverlayModals controller={controller} />
-      <TerminalRichInputLayer controller={controller} isHovered={isHovered} />
+      <TerminalRichInputLayer controller={controller} />
     </>
   )
 }
@@ -289,27 +293,16 @@ function TerminalOverlayModals({
 
 function TerminalRichInputLayer({
   controller,
-  isHovered,
 }: {
   controller: TerminalInstanceController
-  isHovered: boolean
 }): React.ReactElement {
   return (
-    <>
-      {!controller.richInputActive && (
-        <MultiLineButton
-          isHovered={isHovered}
-          showSearch={controller.showSearch}
-          onClick={controller.openRichInput}
-        />
-      )}
-      <RichInput
-        sessionId={controller.sessionId}
-        onSubmit={controller.handleRichInputSubmit}
-        onCancel={controller.handleRichInputCancel}
-        visible={controller.richInputActive}
-      />
-    </>
+    <RichInput
+      sessionId={controller.sessionId}
+      onSubmit={controller.handleRichInputSubmit}
+      onCancel={controller.handleRichInputCancel}
+      visible={controller.richInputActive}
+    />
   )
 }
 
@@ -339,7 +332,7 @@ export function TerminalInstanceView({
       <TerminalProgressBarLayer controller={controller} />
       <TerminalCommandBlocks controller={controller} />
       <TerminalCompletionLayer controller={controller} />
-      <TerminalActionLayers controller={controller} isHovered={isHovered} />
+      <TerminalActionLayers controller={controller} />
     </div>
   )
 }

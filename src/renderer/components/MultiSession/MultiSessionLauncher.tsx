@@ -20,7 +20,7 @@ export const MultiSessionLauncher = memo(function MultiSessionLauncher({
   const model = useMultiSessionLauncherModel(onLaunched, projectRoot);
 
   return (
-    <div className="flex h-full flex-col" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-full flex-col bg-surface-base">
       <LauncherHeader onClose={onClose} />
       <div
         className="flex-1 overflow-y-auto px-3 py-2"

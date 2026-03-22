@@ -11,7 +11,6 @@ const inputContainerStyle: React.CSSProperties = {
 
 const inputPrefixStyle: React.CSSProperties = {
   fontSize: '14px',
-  color: 'var(--text-muted)',
   flexShrink: 0,
   fontFamily: 'var(--font-mono)',
 };
@@ -22,7 +21,6 @@ const inputStyle: React.CSSProperties = {
   border: 'none',
   outline: 'none',
   fontSize: '14px',
-  color: 'var(--text)',
   fontFamily: 'var(--font-ui)',
   caretColor: 'var(--accent)',
 };
@@ -48,7 +46,7 @@ export function CommandPaletteSearchInput({
 }: CommandPaletteSearchInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
-      <span style={inputPrefixStyle}>&gt;</span>
+      <span className="text-text-semantic-muted" style={inputPrefixStyle}>&gt;</span>
       <input
         ref={inputRef}
         type="text"
@@ -61,6 +59,7 @@ export function CommandPaletteSearchInput({
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
         onKeyDown={onKeyDown}
+        className="text-text-semantic-primary"
         style={inputStyle}
         autoComplete="off"
         autoCorrect="off"

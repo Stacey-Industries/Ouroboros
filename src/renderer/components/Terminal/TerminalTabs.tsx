@@ -55,14 +55,14 @@ function PlusIcon(): React.ReactElement {
 // ─── Tab class builder ────────────────────────────────────────────────────────
 
 function getTabClasses(isActive: boolean, isExited: boolean, isDragging: boolean, isDragOver: boolean): string {
-  const base = 'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-[var(--border)] shrink-0 transition-all duration-150'
-  const dragOver = isDragOver && !isDragging ? 'bg-[var(--bg-tertiary)] border-l-2 border-l-[var(--accent)]' : ''
+  const base = 'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-border-semantic shrink-0 transition-all duration-150'
+  const dragOver = isDragOver && !isDragging ? 'bg-surface-raised border-l-2 border-l-[var(--accent)]' : ''
   const dragging = isDragging ? 'opacity-40' : ''
   const state = isActive
-    ? 'bg-[var(--term-bg,var(--bg))] text-[var(--text)] after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-[var(--accent)]'
+    ? 'bg-[var(--term-bg,var(--bg))] text-text-semantic-primary after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-interactive-accent'
     : isExited
-      ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] opacity-60 hover:opacity-80 hover:bg-[var(--bg-tertiary)]'
-      : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)]'
+      ? 'bg-surface-panel text-text-semantic-muted opacity-60 hover:opacity-80 hover:bg-surface-raised'
+      : 'bg-surface-panel text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised'
   return [base, dragOver, dragging, state].filter(Boolean).join(' ')
 }
 
@@ -104,15 +104,15 @@ function TabItem({
       onDragStart={onDragStart} onDragOver={onDragOver}
       onDragLeave={onDragLeave} onDrop={onDrop} onDragEnd={onDragEnd}
     >
-      {session.isClaude && <span className="flex-shrink-0 text-[var(--accent)]" style={{ fontSize: '10px', lineHeight: 1 }} title="Claude Code session">&#9670;</span>}
+      {session.isClaude && <span className="flex-shrink-0 text-interactive-accent" style={{ fontSize: '10px', lineHeight: 1 }} title="Claude Code session">&#9670;</span>}
       {session.isCodex && <span className="flex-shrink-0 text-[var(--accent-blue,var(--accent))]" style={{ fontSize: '10px', lineHeight: 1 }} title="Codex session">&#9671;</span>}
-      {isExited && <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] flex-shrink-0" aria-label="exited" />}
+      {isExited && <span className="w-1.5 h-1.5 rounded-full bg-text-semantic-muted flex-shrink-0" aria-label="exited" />}
       <span className="truncate max-w-[120px]">{label}</span>
       {(hovered || isActive) && (
         <button
           onClick={(e) => { e.stopPropagation(); onClose() }}
           onMouseDown={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors duration-100"
+          className="flex-shrink-0 p-0.5 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-panel transition-colors duration-100"
           title={`Close ${session.title}`} aria-label={`Close ${session.title}`}
         >
           <CloseIcon />
@@ -223,7 +223,7 @@ export function TerminalTabs({
         />
       ))}
       <Tooltip text="New terminal (Ctrl+Shift+`)" position="bottom">
-        <button onClick={onNew} aria-label="New terminal tab" className="flex-shrink-0 flex items-center justify-center w-7 h-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-all duration-150 border-r border-[var(--border)] rounded-sm"><PlusIcon /></button>
+        <button onClick={onNew} aria-label="New terminal tab" className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"><PlusIcon /></button>
       </Tooltip>
       <div className="relative flex items-stretch">
         <Tooltip text="New Claude terminal (click) / Select model (right-click)" position="bottom">
@@ -234,7 +234,7 @@ export function TerminalTabs({
             aria-label="New Claude Code terminal"
             aria-haspopup="true"
             aria-expanded={showModelMenu}
-            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent)] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-all duration-150 border-r border-[var(--border)] text-[10px] font-medium rounded-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-interactive-accent hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic text-[10px] font-medium rounded-sm"
           >
             <span style={{ fontSize: '10px' }}>&#9670;</span>
             <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Claude</span>
@@ -257,7 +257,7 @@ export function TerminalTabs({
             aria-label="New Codex terminal"
             aria-haspopup="true"
             aria-expanded={showCodexModelMenu}
-            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent-blue,var(--accent))] hover:text-[var(--text)] hover:bg-[var(--bg-tertiary)] transition-all duration-150 border-r border-[var(--border)] text-[10px] font-medium rounded-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-1 px-2 h-full text-[var(--accent-blue,var(--accent))] hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic text-[10px] font-medium rounded-sm"
           >
             <span style={{ fontSize: '10px' }}>&#9671;</span>
             <span style={{ fontSize: '10px', fontFamily: 'var(--font-ui)' }}>Codex</span>

@@ -103,23 +103,20 @@ function ProgressBar({ progress }: { progress: NotificationProgress }): React.Re
         width: '100%',
         height: '3px',
         borderRadius: '1.5px',
-        backgroundColor: 'var(--border)',
         overflow: 'hidden',
-      }}>
+      }} className="bg-border-semantic">
         <div style={{
           width: `${percent}%`,
           height: '100%',
           borderRadius: '1.5px',
-          backgroundColor: 'var(--accent)',
           transition: 'width 300ms ease',
-        }} />
+        }} className="bg-interactive-accent" />
       </div>
-      <div style={{
+      <div className="text-text-semantic-faint" style={{
         display: 'flex',
         justifyContent: 'space-between',
         marginTop: '3px',
         fontSize: '10px',
-        color: 'var(--text-faint, var(--text-muted))',
       }}>
         {progress.currentItem && (
           <span style={{
@@ -172,13 +169,11 @@ const rowStyle: React.CSSProperties = {
   borderBottom: '1px solid color-mix(in srgb, var(--border) 40%, transparent)',
   fontSize: '12px',
   lineHeight: '1.4',
-  color: 'var(--text)',
   fontFamily: 'var(--font-ui)',
 };
 
 const timestampStyle: React.CSSProperties = {
   fontSize: '10px',
-  color: 'var(--text-faint, var(--text-muted))',
   whiteSpace: 'nowrap',
   flexShrink: 0,
   marginTop: '1px',
@@ -203,7 +198,7 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
   const [closeHovered, setCloseHovered] = useState(false);
 
   return (
-    <div style={{
+    <div className="text-text-semantic-primary" style={{
       ...rowStyle,
       opacity: entry.read ? 0.7 : 1,
     }}>
@@ -215,15 +210,14 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
         <div style={{ wordBreak: 'break-word' }}>
           {entry.message}
           {entry.progress?.status === 'active' && (
-            <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--accent)', fontWeight: 500 }}>
+            <span className="text-interactive-accent" style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 500 }}>
               Running
             </span>
           )}
         </div>
         {entry.progress?.summary && (
-          <div style={{
+          <div className="text-text-semantic-muted" style={{
             fontSize: '11px',
-            color: 'var(--text-muted)',
             marginTop: '2px',
           }}>
             {entry.progress.summary}
@@ -241,7 +235,7 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
         )}
       </div>
 
-      <span style={timestampStyle}>{formatRelativeTime(entry.createdAt)}</span>
+      <span className="text-text-semantic-faint" style={timestampStyle}>{formatRelativeTime(entry.createdAt)}</span>
 
       <button
         type="button"
@@ -259,10 +253,10 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
           border: 'none',
           borderRadius: '3px',
           background: closeHovered ? 'rgba(128,128,128,0.2)' : 'transparent',
-          color: 'var(--text-muted)',
           cursor: 'pointer',
           flexShrink: 0,
         }}
+        className="text-text-semantic-muted"
       >
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
           <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -276,13 +270,12 @@ function NotificationRow({ entry, onRemove }: NotificationRowProps): React.React
 
 function EmptyState(): React.ReactElement {
   return (
-    <div style={{
+    <div className="text-text-semantic-muted" style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '32px 16px',
-      color: 'var(--text-muted)',
       fontSize: '12px',
       fontFamily: 'var(--font-ui)',
       gap: '8px',
@@ -315,12 +308,11 @@ function PanelHeader({ count, onClearAll }: PanelHeaderProps): React.ReactElemen
       borderBottom: '1px solid var(--border)',
       fontFamily: 'var(--font-ui)',
     }}>
-      <span style={{
+      <span className="text-text-semantic-muted" style={{
         fontSize: '11px',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
-        color: 'var(--text-muted)',
       }}>
         Notifications
       </span>
@@ -330,12 +322,12 @@ function PanelHeader({ count, onClearAll }: PanelHeaderProps): React.ReactElemen
           onClick={onClearAll}
           onMouseEnter={() => setClearHovered(true)}
           onMouseLeave={() => setClearHovered(false)}
+          className="text-text-semantic-muted"
           style={{
             padding: '2px 6px',
             border: 'none',
             borderRadius: '3px',
             background: clearHovered ? 'rgba(128,128,128,0.15)' : 'transparent',
-            color: 'var(--text-muted)',
             cursor: 'pointer',
             fontFamily: 'inherit',
             fontSize: '10px',
@@ -399,19 +391,17 @@ export const NotificationCenter = memo(function NotificationCenter({
         ref={panelRef}
         role="dialog"
         aria-label="Notification center"
-        className="glass-card"
+        className="bg-surface-panel border border-border-semantic"
         style={{
           position: 'absolute',
           top: 'calc(var(--titlebar-height, 36px) - 2px)',
-          right: '0',
+          left: '0',
           width: '320px',
           maxHeight: '400px',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--glass-card-bg, var(--bg-secondary, var(--bg)))',
-          border: '1px solid var(--glass-border-muted, var(--border))',
           borderRadius: '8px',
-          boxShadow: 'var(--glass-shadow, 0 8px 24px rgba(0, 0, 0, 0.35))',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
           zIndex: 9999,
           overflow: 'hidden',
           animation: 'nc-fade-in 150ms ease-out',
@@ -458,7 +448,7 @@ export function NotificationBadge({ count }: NotificationBadgeProps): React.Reac
   const display = count > 99 ? '99+' : String(count);
 
   return (
-    <span style={{
+    <span className="bg-interactive-accent text-white" style={{
       position: 'absolute',
       top: '2px',
       right: '2px',
@@ -469,8 +459,6 @@ export function NotificationBadge({ count }: NotificationBadgeProps): React.Reac
       justifyContent: 'center',
       padding: '0 3px',
       borderRadius: '7px',
-      backgroundColor: 'var(--accent, #58a6ff)',
-      color: '#fff',
       fontSize: '9px',
       fontWeight: 700,
       fontFamily: 'var(--font-ui)',

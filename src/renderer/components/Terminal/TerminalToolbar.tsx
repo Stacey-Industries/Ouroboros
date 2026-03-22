@@ -21,10 +21,9 @@ const BUTTON_STYLE: React.CSSProperties = {
   boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
   userSelect: 'none' as const,
   whiteSpace: 'nowrap' as const,
-  border: '1px solid var(--border, #333)',
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-  color: 'var(--text-muted, #888)',
 }
+
+const BUTTON_CLASS = 'border border-border-semantic bg-surface-panel text-text-semantic-muted'
 
 interface RecordingVisualState {
   backgroundColor: string
@@ -52,11 +51,10 @@ export function SyncButton({
     <button
       onClick={onToggleSync}
       title="Sync input across terminals"
+      className={syncInput ? 'border border-interactive-accent text-interactive-accent' : BUTTON_CLASS}
       style={{
         ...BUTTON_STYLE,
-        border: syncInput ? '1px solid var(--accent, #58a6ff)' : '1px solid var(--border, #333)',
-        backgroundColor: syncInput ? 'rgba(88,166,255,0.15)' : 'var(--bg-secondary, #1e1e1e)',
-        color: syncInput ? 'var(--accent, #58a6ff)' : 'var(--text-muted, #888)',
+        backgroundColor: syncInput ? 'rgba(88,166,255,0.15)' : undefined,
       }}
     >
       <SyncIcon />
@@ -82,6 +80,7 @@ export function SplitButton({
     <button
       onClick={() => onSplit(sessionId)}
       title="Split terminal pane"
+      className={BUTTON_CLASS}
       style={BUTTON_STYLE}
     >
       <SplitIcon />
@@ -113,11 +112,12 @@ export function RecordingButton({
       <button
         onClick={() => onToggleRecording(sessionId)}
         title={visualState.title}
+        className={isRecording ? undefined : BUTTON_CLASS}
         style={{
           ...BUTTON_STYLE,
-          border: visualState.border,
-          backgroundColor: visualState.backgroundColor,
-          color: visualState.color,
+          border: visualState.border || undefined,
+          backgroundColor: visualState.backgroundColor || undefined,
+          color: visualState.color || undefined,
         }}
       >
         <RecordingDot isRecording={isRecording} />
@@ -129,10 +129,12 @@ export function RecordingButton({
 }
 
 export function MultiLineButton({
+  isActive,
   isHovered,
   showSearch,
   onClick,
 }: {
+  isActive: boolean
   isHovered: boolean
   showSearch: boolean
   onClick: () => void
@@ -142,17 +144,12 @@ export function MultiLineButton({
   return (
     <button
       onClick={onClick}
-      title="Open multi-line input (Ctrl+Shift+Enter)"
-      style={{
-        ...BUTTON_STYLE,
-        position: 'absolute',
-        bottom: 6,
-        right: 6,
-        zIndex: 10,
-      }}
+      title={isActive ? 'Close multi-line input' : 'Open multi-line input (Ctrl+Shift+Enter)'}
+      className={BUTTON_CLASS}
+      style={BUTTON_STYLE}
     >
       <MultiLineIcon />
-      Multi-line
+      {isActive ? 'Close' : 'Multi-line'}
     </button>
   )
 }
@@ -171,9 +168,9 @@ function getRecordingVisualState(isRecording: boolean): RecordingVisualState {
   return {
     title: 'Start recording terminal session',
     label: 'Rec',
-    border: '1px solid var(--border, #333)',
-    backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-    color: 'var(--text-muted, #888)',
+    border: '',
+    backgroundColor: '',
+    color: '',
   }
 }
 
@@ -210,12 +207,10 @@ function RecordingDot({ isRecording }: { isRecording: boolean }): React.ReactEle
       width: 7,
       height: 7,
       borderRadius: '50%',
-      backgroundColor: isRecording
-        ? 'var(--recording-dot, #e53935)'
-        : 'var(--text-muted, #888)',
+      backgroundColor: isRecording ? 'var(--recording-dot, #e53935)' : undefined,
       flexShrink: 0,
       animation: isRecording ? 'pty-rec-pulse 1.2s ease-in-out infinite' : undefined,
-    }} />
+    }} className={isRecording ? undefined : 'bg-text-semantic-muted'} />
   )
 }
 

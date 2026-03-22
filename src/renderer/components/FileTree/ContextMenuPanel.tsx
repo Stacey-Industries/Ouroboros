@@ -24,7 +24,6 @@ const MENU_BUTTON_STYLE: React.CSSProperties = {
 
 const MENU_SHORTCUT_STYLE: React.CSSProperties = {
   fontSize: '0.6875rem',
-  color: 'var(--text-faint)',
   fontFamily: 'var(--font-ui)',
 };
 
@@ -33,8 +32,6 @@ const MENU_PANEL_STYLE: React.CSSProperties = {
   zIndex: 9999,
   minWidth: '200px',
   padding: '4px 0',
-  background: 'var(--bg-secondary, var(--bg))',
-  border: '1px solid var(--border)',
   borderRadius: '6px',
   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
   fontFamily: 'var(--font-ui)',
@@ -80,7 +77,7 @@ function MenuShortcut({ shortcut }: { shortcut?: string }): React.ReactElement |
     return null;
   }
 
-  return <span style={MENU_SHORTCUT_STYLE}>{shortcut}</span>;
+  return <span className="text-text-semantic-faint" style={MENU_SHORTCUT_STYLE}>{shortcut}</span>;
 }
 
 function useConstrainedMenuPosition({
@@ -153,6 +150,7 @@ export function ContextMenuPanel({
     <div
       ref={menuRef}
       role="menu"
+      className="bg-surface-panel border border-border-semantic"
       style={{ ...MENU_PANEL_STYLE, left: x, top: y }}
     >
       <MenuItems items={items} />

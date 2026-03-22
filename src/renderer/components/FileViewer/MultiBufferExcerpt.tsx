@@ -38,7 +38,6 @@ const TABLE_STYLE = {
 const LINE_NO_STYLE = {
   padding: '0 12px 0 8px',
   textAlign: 'right',
-  color: 'var(--text-faint)',
   userSelect: 'none',
   whiteSpace: 'nowrap',
   verticalAlign: 'top',
@@ -47,17 +46,16 @@ const LINE_NO_STYLE = {
 const LINE_CONTENT_STYLE = {
   padding: '0 8px',
   whiteSpace: 'pre',
-  color: 'var(--text)',
 } as const;
 
 function ExcerptStatus({
-  color,
+  className,
   message,
 }: {
-  color: string;
+  className: string;
   message: string;
 }): React.ReactElement {
-  return <div style={{ ...STATUS_STYLE, color }}>{message}</div>;
+  return <div className={className} style={STATUS_STYLE}>{message}</div>;
 }
 
 function ExcerptLineRow({
@@ -75,8 +73,9 @@ function ExcerptLineRow({
 
   return (
     <tr>
-      <td style={lineNumberStyle}>{lineNo}</td>
+      <td className="text-text-semantic-faint" style={lineNumberStyle}>{lineNo}</td>
       <td
+        className="text-text-semantic-primary"
         style={LINE_CONTENT_STYLE}
         dangerouslySetInnerHTML={highlightedHtml ? { __html: highlightedHtml } : undefined}
       >
@@ -130,15 +129,15 @@ const ExcerptContent = memo(function ExcerptContent({
   const highlightedLines = useHighlightedExcerptLines(excerpt, content, shikiTheme);
 
   if (isLoading) {
-    return <ExcerptStatus color="var(--text-muted)" message="Loading..." />;
+    return <ExcerptStatus className="text-text-semantic-muted" message="Loading..." />;
   }
 
   if (error) {
-    return <ExcerptStatus color="var(--error, #f44)" message={`Error: ${error}`} />;
+    return <ExcerptStatus className="text-status-error" message={`Error: ${error}`} />;
   }
 
   if (!content) {
-    return <ExcerptStatus color="var(--text-muted)" message="No content" />;
+    return <ExcerptStatus className="text-text-semantic-muted" message="No content" />;
   }
 
   return (
@@ -169,7 +168,7 @@ export const ExcerptSection = memo(function ExcerptSection({
   );
 
   return (
-    <div style={{ borderBottom: '1px solid var(--border)' }}>
+    <div style={{ borderBottom: '1px solid var(--border-semantic)' }}>
       <MultiBufferExcerptHeader
         collapsed={collapsed}
         excerpt={excerpt}

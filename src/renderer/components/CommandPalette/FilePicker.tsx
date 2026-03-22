@@ -104,7 +104,7 @@ function FileList({ listRef, matches, selectedIndex, emptyLabel, onSelect, onHov
       style={{ maxHeight: `${ITEM_HEIGHT * MAX_VISIBLE}px`, overflowY: 'auto', padding: '4px 0' }}
     >
       {matches.length === 0 ? (
-        <div style={{ padding: '16px 14px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+        <div className="text-text-semantic-muted" style={{ padding: '16px 14px', fontSize: '13px', textAlign: 'center' }}>
           {emptyLabel}
         </div>
       ) : (

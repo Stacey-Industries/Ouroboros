@@ -69,7 +69,7 @@ const DIFF_VIEW_STYLE: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   overflow: 'hidden',
-  backgroundColor: 'var(--bg)',
+  backgroundColor: 'var(--surface-base)',
 };
 
 const DIFF_HEADER_STYLE: React.CSSProperties = {
@@ -79,9 +79,8 @@ const DIFF_HEADER_STYLE: React.CSSProperties = {
   gap: '12px',
   padding: '6px 12px',
   borderBottom: '1px solid var(--border-muted)',
-  backgroundColor: 'var(--bg-secondary)',
+  backgroundColor: 'var(--surface-panel)',
   fontSize: '0.8125rem',
-  color: 'var(--text-muted)',
   userSelect: 'none',
 };
 
@@ -126,7 +125,6 @@ const DIFF_CONTENT_CELL_STYLE: React.CSSProperties = {
   fontSize: 'inherit',
   lineHeight: 'inherit',
   whiteSpace: 'pre',
-  color: 'var(--text)',
   overflowX: 'visible',
 };
 
@@ -217,7 +215,7 @@ function getDiffVisuals(type: DiffLineType): DiffVisuals {
   }
   return {
     backgroundColor: 'transparent',
-    gutterBackground: 'var(--bg)',
+    gutterBackground: 'var(--surface-base)',
     marker: ' ',
     markerColor: 'var(--text-faint)',
   };
@@ -226,16 +224,16 @@ function getDiffVisuals(type: DiffLineType): DiffVisuals {
 function DiffStatsHeader({ stats, lineCount }: DiffStatsHeaderProps): React.ReactElement {
   if (!stats.hasChanges) {
     return (
-      <div style={DIFF_HEADER_STYLE}>
+      <div className="text-text-semantic-muted" style={DIFF_HEADER_STYLE}>
         <span>No changes detected</span>
       </div>
     );
   }
 
   return (
-    <div style={DIFF_HEADER_STYLE}>
-      <span style={{ color: 'var(--success, #4CAF50)' }}>+{stats.added}</span>
-      <span style={{ color: 'var(--error, #f85149)' }}>-{stats.removed}</span>
+    <div className="text-text-semantic-muted" style={DIFF_HEADER_STYLE}>
+      <span className="text-status-success">+{stats.added}</span>
+      <span className="text-status-error">-{stats.removed}</span>
       <span>{lineCount} lines</span>
     </div>
   );
@@ -298,7 +296,7 @@ function DiffMarkerCell({ marker, visuals }: DiffMarkerCellProps): React.ReactEl
 }
 
 function DiffContentCell({ text }: Pick<DiffLine, 'text'>): React.ReactElement {
-  return <pre style={DIFF_CONTENT_CELL_STYLE}>{text}</pre>;
+  return <pre className="text-text-semantic-primary" style={DIFF_CONTENT_CELL_STYLE}>{text}</pre>;
 }
 
 const DiffLineRow = memo(function DiffLineRow({

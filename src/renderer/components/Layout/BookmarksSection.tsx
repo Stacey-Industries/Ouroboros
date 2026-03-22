@@ -44,7 +44,7 @@ function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React
   const filename = getFilename(filePath);
 
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+    e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
     const btn = e.currentTarget.querySelector<HTMLElement>('[data-unpin]');
     if (btn) btn.style.opacity = '1';
   }, []);
@@ -57,12 +57,11 @@ function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React
 
   return (
     <div
-      className="flex items-center gap-1.5 cursor-pointer select-none"
+      className="flex items-center gap-1.5 cursor-pointer select-none text-text-semantic-muted"
       style={{
         padding: '2px 8px',
         fontSize: '0.6875rem',
         fontFamily: 'var(--font-mono)',
-        color: 'var(--text-muted)',
         lineHeight: '1.5',
       }}
       onClick={() => onClick(filePath)}
@@ -71,12 +70,12 @@ function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React
       title={filePath}
     >
       <span
+        className="text-text-semantic-faint"
         style={{
           flexShrink: 0,
           width: '12px',
           textAlign: 'center',
           fontSize: '0.6rem',
-          color: 'var(--text-faint)',
           fontFamily: 'var(--font-mono)',
         }}
       >
@@ -95,13 +94,12 @@ function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React
       </span>
       <button
         data-unpin
-        className="border-none cursor-pointer outline-none"
+        className="border-none cursor-pointer outline-none text-text-semantic-faint"
         style={{
           opacity: 0,
           flexShrink: 0,
           padding: '0 2px',
           background: 'none',
-          color: 'var(--text-faint)',
           fontSize: '0.6875rem',
           lineHeight: 1,
           transition: 'opacity 100ms',
@@ -149,9 +147,8 @@ export function BookmarksSection(): React.ReactElement {
   if (bookmarks.length === 0) {
     return (
       <div
-        className="flex items-center justify-center"
+        className="flex items-center justify-center text-text-semantic-muted"
         style={{
-          color: 'var(--text-muted)',
           fontSize: '0.6875rem',
           fontFamily: 'var(--font-ui)',
           padding: '16px 12px',

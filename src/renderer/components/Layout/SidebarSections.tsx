@@ -101,7 +101,7 @@ function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProp
       aria-label="Resize sections"
     >
       <div className="absolute inset-x-0 -top-1 -bottom-1" />
-      <div className="absolute inset-x-0 top-[1px] h-[1px] bg-[var(--border)] opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-[var(--accent)] group-active:opacity-100 group-active:bg-[var(--accent)]" />
+      <div className="absolute inset-x-0 top-[1px] h-[1px] bg-border-semantic opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:bg-interactive-accent group-active:opacity-100 group-active:bg-interactive-accent" />
     </div>
   );
 }

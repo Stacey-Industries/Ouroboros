@@ -8,7 +8,6 @@ const sectionHeaderStyle: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.06em',
-  color: 'var(--text-muted)',
   marginBottom: '8px',
   marginTop: '20px',
 };
@@ -34,7 +33,6 @@ export const contextEditorStyle: React.CSSProperties = {
   borderRadius: '8px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   lineHeight: 1.6,
@@ -85,7 +83,6 @@ export const optionLabelStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '6px',
   fontSize: '12px',
-  color: 'var(--text)',
   cursor: 'pointer',
 };
 
@@ -101,7 +98,6 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: '6px',
   border: '1px solid var(--border)',
   background: 'var(--bg-tertiary)',
-  color: 'var(--text)',
   fontSize: '12px',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
@@ -118,7 +114,6 @@ const primaryButtonStyle: React.CSSProperties = {
 const emptyStateStyle: React.CSSProperties = {
   textAlign: 'center',
   padding: '40px',
-  color: 'var(--text-muted)',
   fontSize: '13px',
 };
 
@@ -131,7 +126,7 @@ export function Section({
 }): React.ReactElement {
   return (
     <>
-      <div style={sectionHeaderStyle}>{title}</div>
+      <div className="text-text-semantic-muted" style={sectionHeaderStyle}>{title}</div>
       {children}
     </>
   );
@@ -172,10 +167,10 @@ export function CodeLine({
 }): React.ReactElement {
   return (
     <span
+      className={accent ? 'text-interactive-accent' : 'text-text-semantic-primary'}
       style={{
         fontSize: '12px',
         fontFamily: 'var(--font-mono)',
-        color: accent ? 'var(--accent)' : 'var(--text)',
         padding: '2px 0',
         whiteSpace: accent ? 'nowrap' : undefined,
       }}
@@ -188,14 +183,12 @@ export function CodeLine({
 export function ConfigPill({ label }: { label: string }): React.ReactElement {
   return (
     <span
+      className="bg-surface-base border border-border-semantic text-text-semantic-muted"
       style={{
         fontSize: '11px',
         fontFamily: 'var(--font-mono)',
         padding: '2px 6px',
         borderRadius: '3px',
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
-        color: 'var(--text-muted)',
       }}
     >
       {label}
@@ -215,14 +208,14 @@ export function ActionButton({
   primary?: boolean;
 }): React.ReactElement {
   return (
-    <button disabled={disabled} onClick={onClick} style={primary ? primaryButtonStyle : buttonStyle}>
+    <button disabled={disabled} onClick={onClick} className="text-text-semantic-primary" style={primary ? primaryButtonStyle : buttonStyle}>
       {label}
     </button>
   );
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div style={emptyStateStyle}>{children}</div>;
+  return <div className="text-text-semantic-muted" style={emptyStateStyle}>{children}</div>;
 }
 
 export function LoadingState(): React.ReactElement {

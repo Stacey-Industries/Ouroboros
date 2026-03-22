@@ -30,10 +30,10 @@ const HANDLE_LAYOUTS: Record<ResizeDirection, HandleLayout> = {
     hitAreaClassName: 'absolute inset-y-0 -left-1 -right-1',
     lineClassName: `
       absolute inset-y-0 left-[2px] w-[1px]
-      bg-[var(--border)]
+      bg-border-semantic
       transition-colors duration-100
-      group-hover:bg-[var(--accent)]
-      group-active:bg-[var(--accent)]
+      group-hover:bg-interactive-accent
+      group-active:bg-interactive-accent
     `,
     gripClassName: `
       absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -47,10 +47,10 @@ const HANDLE_LAYOUTS: Record<ResizeDirection, HandleLayout> = {
     hitAreaClassName: 'absolute inset-x-0 -top-1 -bottom-1',
     lineClassName: `
       absolute inset-x-0 top-[2px] h-[1px]
-      bg-[var(--border)]
+      bg-border-semantic
       transition-colors duration-100
-      group-hover:bg-[var(--accent)]
-      group-active:bg-[var(--accent)]
+      group-hover:bg-interactive-accent
+      group-active:bg-interactive-accent
     `,
     gripClassName: `
       absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -64,7 +64,7 @@ function DragGripDots({ direction }: { direction: ResizeDirection }): React.Reac
   return (
     <div className={HANDLE_LAYOUTS[direction].gripClassName}>
       {GRIP_DOTS.map((dot) => (
-        <div key={dot} className="w-[3px] h-[3px] rounded-full bg-[var(--text-muted)]" />
+        <div key={dot} className="w-[3px] h-[3px] rounded-full bg-text-semantic-muted" />
       ))}
     </div>
   );

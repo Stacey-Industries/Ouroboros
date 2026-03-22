@@ -58,8 +58,7 @@ function EmptyState({ message, centered = false }: EmptyStateProps): React.React
   return (
     <div className={`p-4 ${centered ? 'flex h-full items-center justify-center' : ''}`}>
       <span
-        className={`text-xs ${centered ? 'text-center' : ''}`}
-        style={{ color: 'var(--text-muted)' }}
+        className={`text-xs text-text-semantic-muted ${centered ? 'text-center' : ''}`}
       >
         {message}
       </span>
@@ -70,17 +69,15 @@ function EmptyState({ message, centered = false }: EmptyStateProps): React.React
 function ErrorBanner({ error, onDismiss }: ErrorBannerProps): React.ReactElement {
   return (
     <div
-      className="flex-shrink-0 border-b border-[var(--border)] px-2 py-1 text-xs"
+      className="flex-shrink-0 border-b border-border-semantic px-2 py-1 text-xs text-status-error"
       style={{
         backgroundColor: 'rgba(248, 81, 73, 0.1)',
-        color: 'var(--error, #f85149)',
       }}
     >
       {error}
       <button
         onClick={onDismiss}
-        className="ml-2 underline"
-        style={{ color: 'var(--error, #f85149)' }}
+        className="ml-2 underline text-status-error"
       >
         dismiss
       </button>
@@ -95,18 +92,16 @@ function SectionHeader({
   onToggleAll,
 }: SectionHeaderProps): React.ReactElement {
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between bg-[var(--bg-secondary)] px-2 py-1.5">
+    <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5">
       <span
-        className="text-xs font-semibold uppercase tracking-wider"
-        style={{ color: 'var(--text-muted)' }}
+        className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted"
       >
         {title} ({count})
       </span>
       {count > 0 && toggleAllLabel && onToggleAll ? (
         <button
           onClick={() => void onToggleAll()}
-          className="rounded px-1.5 py-0.5 text-xs transition-colors duration-75 hover:bg-[var(--bg-tertiary)]"
-          style={{ color: 'var(--text-muted)' }}
+          className="rounded px-1.5 py-0.5 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted"
           title={toggleAllLabel}
         >
           {toggleAllLabel}
@@ -128,7 +123,7 @@ function ChangeSection({
   toggleAllLabel,
 }: ChangeSectionProps): React.ReactElement {
   return (
-    <div className={isStaged ? 'border-b border-[var(--border)]' : ''}>
+    <div className={isStaged ? 'border-b border-border-semantic' : ''}>
       <SectionHeader
         count={count}
         title={title}
@@ -136,7 +131,7 @@ function ChangeSection({
         toggleAllLabel={toggleAllLabel}
       />
       {count === 0 ? (
-        <div className="px-2 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+        <div className="px-2 py-2 text-xs text-text-semantic-muted">
           {emptyLabel}
         </div>
       ) : (
@@ -190,9 +185,9 @@ function CommitMessageInput({
       placeholder="Commit message..."
       rows={3}
       className="
-        w-full resize-none rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs
-        text-[var(--text)] placeholder:text-[var(--text-muted)]
-        transition-colors duration-100 focus:border-[var(--accent)] focus:outline-none
+        w-full resize-none rounded border border-border-semantic bg-surface-base px-2 py-1.5 text-xs
+        text-text-semantic-primary placeholder:text-text-semantic-muted
+        transition-colors duration-100 focus:border-interactive-accent focus:outline-none
       "
       style={{ fontFamily: 'var(--font-mono, monospace)' }}
     />
@@ -216,7 +211,7 @@ function CommitButton({
       "
       style={{
         backgroundColor: canCommit ? 'var(--accent)' : 'var(--bg-tertiary)',
-        color: canCommit ? 'var(--bg)' : 'var(--text-muted)',
+        color: canCommit ? 'var(--text-on-accent)' : 'var(--text-muted)',
       }}
       title={title}
     >
@@ -229,7 +224,7 @@ function CommitSection(props: CommitSectionProps): React.ReactElement {
   const title = getCommitTitle(props.stagedCount, props.commitMessage);
 
   return (
-    <div className="flex-shrink-0 border-t border-[var(--border)] p-2">
+    <div className="flex-shrink-0 border-t border-border-semantic p-2">
       <CommitMessageInput
         commitMessage={props.commitMessage}
         onCommitMessageChange={props.onCommitMessageChange}
@@ -293,7 +288,7 @@ function ChangeSections(props: GitPanelContentProps): React.ReactElement {
 function RepoContent(props: GitPanelContentProps): React.ReactElement {
   return (
     <div className="flex h-full flex-col overflow-hidden" style={{ fontSize: '12px' }}>
-      <div className="flex-shrink-0 border-b border-[var(--border)] px-2 py-2">
+      <div className="flex-shrink-0 border-b border-border-semantic px-2 py-2">
         <BranchSelector
           currentBranch={props.currentBranch}
           branches={props.branches}

@@ -102,9 +102,9 @@ function getTabStyle(isActive: boolean, isHovered: boolean, isPinned?: boolean):
     flexShrink: 0,
     cursor: 'pointer',
     userSelect: 'none',
-    borderRight: '1px solid var(--border)',
-    borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-    backgroundColor: isActive ? 'var(--bg)' : isHovered ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+    borderRight: '1px solid var(--border-semantic)',
+    borderBottom: isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
+    backgroundColor: isActive ? 'var(--tab-active-bg)' : isHovered ? 'var(--tab-hover-bg)' : 'var(--tab-inactive-bg)',
     color: isActive ? 'var(--text)' : 'var(--text-muted)',
     fontSize: '0.8125rem',
     fontFamily: 'var(--font-ui)',
@@ -195,7 +195,7 @@ function CloseTabButton({
         height: '16px',
         borderRadius: '3px',
         border: 'none',
-        background: isHovered ? 'var(--bg-tertiary)' : 'transparent',
+        background: isHovered ? 'var(--surface-raised)' : 'transparent',
         color: isHovered ? 'var(--text)' : 'var(--text-faint)',
         cursor: 'pointer',
         padding: 0,
@@ -214,6 +214,7 @@ function CloseTabButton({
 function PinIndicator(): React.ReactElement {
   return (
     <span
+      className="text-text-semantic-faint"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -221,7 +222,6 @@ function PinIndicator(): React.ReactElement {
         width: '16px',
         height: '16px',
         flexShrink: 0,
-        color: 'var(--text-faint)',
       }}
       title="Pinned"
     >
@@ -242,8 +242,8 @@ const CONTEXT_MENU_STYLE: React.CSSProperties = {
   position: 'fixed',
   zIndex: 10000,
   minWidth: '160px',
-  backgroundColor: 'var(--bg)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
   borderRadius: '4px',
   padding: '4px 0',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
@@ -257,7 +257,6 @@ const MENU_ITEM_STYLE: React.CSSProperties = {
   padding: '4px 12px',
   border: 'none',
   background: 'transparent',
-  color: 'var(--text)',
   textAlign: 'left',
   cursor: 'pointer',
   fontFamily: 'inherit',
@@ -267,7 +266,7 @@ const MENU_ITEM_STYLE: React.CSSProperties = {
 const MENU_SEPARATOR_STYLE: React.CSSProperties = {
   height: '1px',
   margin: '4px 0',
-  backgroundColor: 'var(--border)',
+  backgroundColor: 'var(--border-semantic)',
 };
 
 function TabContextMenu({
@@ -357,9 +356,10 @@ function TabContextMenu({
         return (
           <button
             key={item.label}
+            className="text-text-semantic-primary"
             style={MENU_ITEM_STYLE}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--bg-tertiary)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface-raised)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';

@@ -30,9 +30,9 @@ export const ToolbarButton = memo(function ToolbarButton({
   const style: React.CSSProperties = {
     ...baseStyle,
     border: '1px solid',
-    borderColor: active ? 'var(--accent)' : 'var(--border)',
-    backgroundColor: active ? 'var(--accent)' : 'transparent',
-    color: active ? 'var(--bg)' : 'var(--text-muted)',
+    borderColor: active ? 'var(--interactive-accent)' : 'var(--border-semantic)',
+    backgroundColor: active ? 'var(--interactive-accent)' : 'transparent',
+    color: active ? 'var(--text-on-accent)' : 'var(--text-muted)',
   };
 
   return (

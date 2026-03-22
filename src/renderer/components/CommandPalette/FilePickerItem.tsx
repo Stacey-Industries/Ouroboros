@@ -33,7 +33,7 @@ function getItemStyle(isSelected: boolean): React.CSSProperties {
     height: `${ITEM_HEIGHT}px`,
     boxSizing: 'border-box',
     backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-    color: isSelected ? 'var(--bg)' : 'var(--text)',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text)',
     transition: 'background-color 80ms ease',
     userSelect: 'none',
     minWidth: 0,

@@ -15,24 +15,19 @@ const containerStyle: React.CSSProperties = {
   position: 'absolute', top: 4, right: 16, zIndex: 10,
   display: 'flex', alignItems: 'center', gap: 4,
   padding: '4px 8px', borderRadius: 4,
-  backgroundColor: 'var(--bg-secondary, #1e1e1e)',
-  border: '1px solid var(--border, #333)',
   boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   fontFamily: 'var(--font-ui, sans-serif)', fontSize: 12,
 }
 
 const inputStyle: React.CSSProperties = {
   width: 160, padding: '3px 6px', borderRadius: 3,
-  border: '1px solid var(--border, #444)',
-  backgroundColor: 'var(--bg, #0d0d0d)',
-  color: 'var(--text, #e0e0e0)',
   fontFamily: 'var(--font-mono, monospace)', fontSize: 12,
   outline: 'none',
 }
 
 const navBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none',
-  color: 'var(--text, #e0e0e0)', cursor: 'pointer',
+  cursor: 'pointer',
   padding: '2px 4px', fontSize: 14, lineHeight: 1,
 }
 
@@ -87,12 +82,12 @@ export function TerminalSearchBar({ searchAddon, onClose }: TerminalSearchBarPro
     : ''
 
   return (
-    <div style={containerStyle} onKeyDown={handleKeyDown}>
-      <input ref={inputRef} type="text" value={query} onChange={handleInputChange} placeholder="Search..." style={inputStyle} />
-      {matchLabel && <span style={{ color: 'var(--text-secondary, #888)', minWidth: 60, textAlign: 'center' }}>{matchLabel}</span>}
-      <button onClick={findPrev} title="Previous match (Shift+Enter)" style={navBtnStyle}>&#x25B2;</button>
-      <button onClick={findNext} title="Next match (Enter)" style={navBtnStyle}>&#x25BC;</button>
-      <button onClick={() => { searchAddon.clearDecorations(); onClose() }} title="Close (Escape)" style={{ ...navBtnStyle, marginLeft: 4 }}>&#x2715;</button>
+    <div className="bg-surface-panel border border-border-semantic" style={containerStyle} onKeyDown={handleKeyDown}>
+      <input ref={inputRef} type="text" value={query} onChange={handleInputChange} placeholder="Search..." className="bg-surface-base text-text-semantic-primary border border-border-semantic rounded" style={inputStyle} />
+      {matchLabel && <span className="text-text-semantic-muted" style={{ minWidth: 60, textAlign: 'center' }}>{matchLabel}</span>}
+      <button onClick={findPrev} title="Previous match (Shift+Enter)" className="text-text-semantic-primary" style={navBtnStyle}>&#x25B2;</button>
+      <button onClick={findNext} title="Next match (Enter)" className="text-text-semantic-primary" style={navBtnStyle}>&#x25BC;</button>
+      <button onClick={() => { searchAddon.clearDecorations(); onClose() }} title="Close (Escape)" className="text-text-semantic-primary" style={{ ...navBtnStyle, marginLeft: 4 }}>&#x2715;</button>
     </div>
   )
 }

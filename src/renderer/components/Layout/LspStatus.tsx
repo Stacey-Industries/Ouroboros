@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<LspServerStatusType, string> = {
   starting: 'var(--warning, #e5c07b)',
   running: 'var(--success, #98c379)',
   error: 'var(--error, #e06c75)',
-  stopped: 'var(--text-muted)',
+  stopped: 'var(--text-secondary)',
 }
 
 const triggerStyle: React.CSSProperties = {
@@ -22,7 +22,6 @@ const triggerStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--text-muted)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
   padding: '2px 6px',
@@ -36,8 +35,6 @@ const tooltipStyle: React.CSSProperties = {
   right: 0,
   marginBottom: '6px',
   minWidth: '220px',
-  background: 'var(--bg-secondary)',
-  border: '1px solid var(--border)',
   borderRadius: '6px',
   boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
   padding: '8px 0',
@@ -48,10 +45,8 @@ const tooltipHeaderStyle: React.CSSProperties = {
   padding: '4px 12px 8px',
   fontSize: '11px',
   fontWeight: 600,
-  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  borderBottom: '1px solid var(--border)',
 }
 
 const tooltipRowStyle: React.CSSProperties = {
@@ -62,7 +57,7 @@ const tooltipRowStyle: React.CSSProperties = {
   fontSize: '12px',
 }
 
-const hoverBackground = 'color-mix(in srgb, var(--text) 8%, transparent)'
+const hoverBackground = 'color-mix(in srgb, var(--text-primary) 8%, transparent)'
 
 function useLspServers(): LspServerStatus[] {
   const [servers, setServers] = useState<LspServerStatus[]>([])
@@ -107,8 +102,8 @@ function LspTooltipRow({ server }: { server: LspServerStatus }): React.ReactElem
   return (
     <div style={tooltipRowStyle}>
       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: STATUS_COLORS[server.status], flexShrink: 0 }} />
-      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{server.language}</span>
-      <span style={{ color: 'var(--text-muted)', fontSize: '10px', marginLeft: 'auto' }}>
+      <span className="text-text-semantic-primary" style={{ fontWeight: 500 }}>{server.language}</span>
+      <span className="text-text-semantic-muted" style={{ fontSize: '10px', marginLeft: 'auto' }}>
         {server.status}
       </span>
     </div>
@@ -117,8 +112,8 @@ function LspTooltipRow({ server }: { server: LspServerStatus }): React.ReactElem
 
 function LspTooltip({ servers }: { servers: LspServerStatus[] }): React.ReactElement {
   return (
-    <div style={tooltipStyle}>
-      <div style={tooltipHeaderStyle}>Language Servers</div>
+    <div className="bg-surface-panel border border-border-semantic" style={tooltipStyle}>
+      <div className="text-text-semantic-muted border-b border-border-semantic" style={tooltipHeaderStyle}>Language Servers</div>
       {servers.map((server) => (
         <LspTooltipRow key={`${server.root}::${server.language}`} server={server} />
       ))}
@@ -148,7 +143,7 @@ function LspStatusTrigger({
   }, [])
 
   return (
-    <button onClick={onClick} title="Language servers" style={triggerStyle} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <button onClick={onClick} title="Language servers" className="text-text-semantic-muted" style={triggerStyle} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
       <span>LSP {runningCount}/{totalCount}</span>
     </button>

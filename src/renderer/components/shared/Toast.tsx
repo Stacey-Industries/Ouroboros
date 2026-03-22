@@ -116,6 +116,7 @@ function CloseButton({ onClick }: { onClick: () => void }): React.ReactElement {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       aria-label="Dismiss notification"
+      className="text-text-semantic-muted"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -126,7 +127,6 @@ function CloseButton({ onClick }: { onClick: () => void }): React.ReactElement {
         border: 'none',
         borderRadius: '4px',
         background: hovered ? 'rgba(128,128,128,0.2)' : 'transparent',
-        color: 'var(--text-muted, #8b949e)',
         cursor: 'pointer',
         flexShrink: 0,
       }}
@@ -165,15 +165,12 @@ function buildToastItemStyle(typeColor: string, dismissing: boolean): React.CSSP
     padding: '10px 12px',
     minWidth: '280px',
     maxWidth: '400px',
-    background: 'var(--bg-secondary, var(--bg))',
-    border: '1px solid var(--border)',
     borderLeft: `3px solid ${typeColor}`,
     borderRadius: '6px',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
     fontFamily: 'var(--font-ui)',
     fontSize: '0.8125rem',
     lineHeight: '1.4',
-    color: 'var(--text)',
     overflow: 'hidden',
     animation: dismissing ? 'toast-fade-out 300ms ease-in forwards' : 'toast-slide-in 300ms ease-out',
   };
@@ -256,6 +253,7 @@ const ToastItemView = memo(function ToastItemView({
       role="alert"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      className="bg-surface-panel border border-border-semantic text-text-semantic-primary"
       style={buildToastItemStyle(typeColor, item.dismissing)}
     >
       <div style={{ flexShrink: 0, marginTop: '1px' }}>

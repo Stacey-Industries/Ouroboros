@@ -65,7 +65,7 @@ function ItemLabel({ command, isSelected, matchIndices }: { command: Command; is
 function RightIndicator({ command, isSelected, hasChildren }: { command: Command; isSelected: boolean; hasChildren: boolean }): React.ReactElement | null {
   if (hasChildren) {
     return (
-      <span aria-hidden="true" style={{ flexShrink: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', opacity: isSelected ? 0.7 : 0.4, color: isSelected ? 'var(--bg)' : 'var(--text-muted)' }}>
+      <span aria-hidden="true" style={{ flexShrink: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', opacity: isSelected ? 0.7 : 0.4, color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)' }}>
         &rarr;
       </span>
     );
@@ -92,7 +92,7 @@ function itemStyle(isSelected: boolean): React.CSSProperties {
     borderRadius: '4px',
     margin: '0 4px',
     backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-    color: isSelected ? 'var(--bg)' : 'var(--text)',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text)',
     transition: 'background-color 80ms ease',
     userSelect: 'none',
     minWidth: 0,
@@ -107,7 +107,7 @@ function kbdStyle(isSelected: boolean): React.CSSProperties {
     padding: '1px 5px',
     borderRadius: '3px',
     backgroundColor: isSelected ? 'rgba(0,0,0,0.15)' : 'var(--bg-tertiary)',
-    color: isSelected ? 'var(--bg)' : 'var(--text-muted)',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)',
     border: `1px solid ${isSelected ? 'rgba(0,0,0,0.2)' : 'var(--border)'}`,
     whiteSpace: 'nowrap',
   };
