@@ -23,7 +23,7 @@ export const Legend = memo(function Legend(): React.ReactElement {
               opacity: 0.8,
             }}
           />
-          <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>{label}</span>
+          <span className="text-text-semantic-faint" style={{ fontSize: '9px' }}>{label}</span>
         </span>
       ))}
     </div>

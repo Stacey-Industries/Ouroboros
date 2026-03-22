@@ -27,7 +27,7 @@ export const SessionTable = memo(function SessionTable({ entries }: SessionTable
 
   if (entries.length === 0) {
     return (
-      <div className="px-3 py-4 text-center text-[11px] italic" style={{ color: 'var(--text-faint)' }}>
+      <div className="px-3 py-4 text-center text-[11px] italic text-text-semantic-faint">
         No cost entries recorded yet
       </div>
     );
@@ -35,7 +35,7 @@ export const SessionTable = memo(function SessionTable({ entries }: SessionTable
 
   return (
     <div className="px-3 py-2">
-      <div className="text-[10px] font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-faint)' }}>
+      <div className="text-[10px] font-medium uppercase tracking-wider mb-1.5 text-text-semantic-faint">
         Session History ({entries.length} entries)
       </div>
       <TableHeader />
@@ -51,8 +51,8 @@ export const SessionTable = memo(function SessionTable({ entries }: SessionTable
 function TableHeader(): React.ReactElement {
   return (
     <div
-      className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider"
-      style={{ color: 'var(--text-faint)', borderBottom: '1px solid var(--border-muted)' }}
+      className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint"
+      style={{ borderBottom: '1px solid var(--border-muted)' }}
     >
       {TABLE_HEADER_COLS.map((col) => (
         <span

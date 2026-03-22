@@ -72,11 +72,11 @@ const AgentCardHeader = memo(function AgentCardHeader({
   return (
     <div role="button" tabIndex={0} className="w-full flex items-center gap-2 px-2.5 py-2 text-left transition-colors cursor-pointer" style={{ background: 'transparent' }} onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={onToggleExpanded} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggleExpanded(); } }} aria-expanded={expanded}>
       <ChevronIcon open={expanded} />
-      <span className="flex-1 min-w-0 text-xs font-medium truncate" style={{ color: 'var(--text)' }} title={session.taskLabel}>
+      <span className="flex-1 min-w-0 text-xs font-medium truncate text-text-semantic-primary" title={session.taskLabel}>
         {session.taskLabel}
       </span>
       <StatusBadge status={session.status} />
-      {isRunning ? <RunningProgress startedAt={session.startedAt} completedToolCallCount={completedCallCount} /> : <span className="shrink-0 text-[10px] tabular-nums" style={{ color: 'var(--text-faint)' }}>{formatDuration(displayDuration)}</span>}
+      {isRunning ? <RunningProgress startedAt={session.startedAt} completedToolCallCount={completedCallCount} /> : <span className="shrink-0 text-[10px] tabular-nums text-text-semantic-faint">{formatDuration(displayDuration)}</span>}
       <AgentCardHeaderActions session={session} isDone={isDone} onDismiss={onDismiss} onToggleNotes={onToggleNotes} onUpdateNotes={onUpdateNotes} onReviewChanges={onReviewChanges} onReplay={onReplay} />
     </div>
   );
@@ -96,12 +96,12 @@ function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactE
   const title = `Input: ${session.inputTokens.toLocaleString()} tokens | Output: ${session.outputTokens.toLocaleString()} tokens${session.cacheReadTokens ? ` | Cache read: ${session.cacheReadTokens.toLocaleString()}` : ''}${session.cacheWriteTokens ? ` | Cache write: ${session.cacheWriteTokens.toLocaleString()}` : ''}`;
 
   return (
-    <span className="text-[10px] font-mono flex items-center gap-1.5" style={{ color: 'var(--text-faint)' }} title={title}>
-      <span style={{ color: 'var(--text-muted)' }}>{'\u2193'}{formatTokenCount(session.inputTokens)}</span>
-      <span style={{ color: 'var(--text-muted)' }}>{'\u2191'}{formatTokenCount(session.outputTokens)}</span>
-      <span style={{ color: 'var(--text-faint)' }}>tokens</span>
-      <span style={{ color: 'var(--text-faint)' }}>{'\u00b7'}</span>
-      <span style={{ color: 'var(--accent)' }}>~{formatCost(estimatedCost)}</span>
+    <span className="text-[10px] font-mono flex items-center gap-1.5 text-text-semantic-faint" title={title}>
+      <span className="text-text-semantic-muted">{'\u2193'}{formatTokenCount(session.inputTokens)}</span>
+      <span className="text-text-semantic-muted">{'\u2191'}{formatTokenCount(session.outputTokens)}</span>
+      <span className="text-text-semantic-faint">tokens</span>
+      <span className="text-text-semantic-faint">{'\u00b7'}</span>
+      <span className="text-interactive-accent">~{formatCost(estimatedCost)}</span>
     </span>
   );
 }
@@ -111,9 +111,8 @@ function SubagentBadge({ count }: { count: number }): React.ReactElement | null 
 
   return (
     <span
-      className="text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1"
+      className="text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 text-interactive-accent"
       style={{
-        color: 'var(--accent)',
         background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
         border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
         letterSpacing: '0.02em',
@@ -131,12 +130,12 @@ function SubagentBadge({ count }: { count: number }): React.ReactElement | null 
 function AgentCardMeta({ session, childCount }: { session: AgentSession; childCount?: number }): React.ReactElement {
   return (
     <div className="px-6 pb-1 flex items-center gap-2">
-      <span className="text-[10px] font-mono" style={{ color: 'var(--text-faint)' }} title={session.id}>
+      <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>
         {session.id.slice(0, 12)}
       </span>
-      {session.restored && <span className="text-[9px] px-1 py-0.5 rounded" style={{ color: 'var(--text-faint)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-muted)', letterSpacing: '0.02em' }}>restored</span>}
+      {session.restored && <span className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic" style={{ letterSpacing: '0.02em' }}>restored</span>}
       {childCount !== undefined && childCount > 0 && <SubagentBadge count={childCount} />}
-      {session.parentSessionId && <span className="text-[9px] px-1 py-0.5 rounded" style={{ color: 'var(--text-faint)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-muted)', letterSpacing: '0.02em' }} title={`Parent: ${session.parentSessionId}`}>subagent</span>}
+      {session.parentSessionId && <span className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic" style={{ letterSpacing: '0.02em' }} title={`Parent: ${session.parentSessionId}`}>subagent</span>}
       <TokenUsageSummary session={session} />
     </div>
   );
@@ -146,7 +145,7 @@ function SessionErrorBanner({ error }: { error?: string }): React.ReactElement |
   if (!error) return null;
 
   return (
-    <div className="mx-2.5 mb-2 px-2 py-1.5 rounded text-[11px] selectable" style={{ background: 'color-mix(in srgb, var(--error) 10%, transparent)', color: 'var(--error)', border: '1px solid color-mix(in srgb, var(--error) 20%, transparent)' }}>
+    <div className="mx-2.5 mb-2 px-2 py-1.5 rounded text-[11px] selectable text-status-error" style={{ background: 'color-mix(in srgb, var(--error) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--error) 20%, transparent)' }}>
       {error}
     </div>
   );
@@ -167,7 +166,7 @@ function SessionNotes({
 }): React.ReactElement | null {
   if (showNotes && onSaveNotes) {
     return (
-      <div className="mx-2.5 mb-2 p-2 rounded" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
+      <div className="mx-2.5 mb-2 p-2 rounded bg-surface-raised border border-border-semantic">
         <textarea value={notesDraft} onChange={(event) => onNotesDraftChange(event.target.value)} onBlur={onSaveNotes} placeholder="Add notes about this session..." rows={2} style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '11px', fontFamily: 'var(--font-ui)', outline: 'none', resize: 'vertical', minHeight: '36px', lineHeight: 1.5, boxSizing: 'border-box' }} />
       </div>
     );
@@ -175,7 +174,7 @@ function SessionNotes({
 
   if (!showNotes && session.notes) {
     return (
-      <div className="mx-6 mb-1.5 text-[10px] italic truncate" style={{ color: 'var(--text-muted)' }} title={session.notes}>
+      <div className="mx-6 mb-1.5 text-[10px] italic truncate text-text-semantic-muted" title={session.notes}>
         {session.notes}
       </div>
     );
@@ -188,8 +187,8 @@ function CollapsedPreview({ latestCall }: { latestCall?: ToolCallEvent }): React
   if (!latestCall) return null;
 
   return (
-    <div className="px-6 pb-2 text-[10px] truncate" style={{ color: 'var(--text-faint)' }} title={`${latestCall.toolName}: ${latestCall.input}`}>
-      <span style={{ color: 'var(--text-muted)' }}>{latestCall.toolName}</span>
+    <div className="px-6 pb-2 text-[10px] truncate text-text-semantic-faint" title={`${latestCall.toolName}: ${latestCall.input}`}>
+      <span className="text-text-semantic-muted">{latestCall.toolName}</span>
       {' '}
       {latestCall.input}
     </div>
@@ -207,7 +206,7 @@ function EventLogSection({
 }): React.ReactElement {
   return (
     <div style={{ borderTop: '1px solid var(--border-muted)' }}>
-      <button onClick={onToggleLog} className="w-full px-3 py-1 text-[10px] text-left transition-colors" style={{ color: 'var(--text-faint)' }} onMouseEnter={(event) => { event.currentTarget.style.color = 'var(--text-muted)'; }} onMouseLeave={(event) => { event.currentTarget.style.color = 'var(--text-faint)'; }}>
+      <button onClick={onToggleLog} className="w-full px-3 py-1 text-[10px] text-left transition-colors text-text-semantic-faint" onMouseEnter={(event) => { event.currentTarget.style.color = 'var(--text-muted)'; }} onMouseLeave={(event) => { event.currentTarget.style.color = 'var(--text-faint)'; }}>
         {showLog ? '\u25b2 Hide log' : '\u25bc Show event log'}
       </button>
       {showLog && <AgentEventLog toolCalls={session.toolCalls} sessionId={session.id} />}

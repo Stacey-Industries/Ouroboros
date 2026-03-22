@@ -89,7 +89,7 @@ export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashb
   if (isLoading) {
     return (
       <div className="flex items-center justify-center px-4 py-8" style={{ minHeight: '120px' }}>
-        <span className="text-[11px] italic" style={{ color: 'var(--text-faint)' }}>Loading cost history...</span>
+        <span className="text-[11px] italic text-text-semantic-faint">Loading cost history...</span>
       </div>
     );
   }

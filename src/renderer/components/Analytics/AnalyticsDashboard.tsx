@@ -20,14 +20,14 @@ export const AnalyticsDashboard = memo(function AnalyticsDashboard(): React.Reac
 
   if (agents.length === 0) {
     return (
-      <div className="h-full overflow-y-auto" style={{ background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
+      <div className="h-full overflow-y-auto bg-surface-base" style={{ fontFamily: 'var(--font-ui)' }}>
         <AnalyticsEmptyState />
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
+    <div className="h-full overflow-y-auto bg-surface-base" style={{ fontFamily: 'var(--font-ui)' }}>
       <AnalyticsSummaryGrid aggregate={aggregate} />
       <ToolDistributionChart distribution={toolDistribution} />
       <EfficiencySparkline sessions={sessions} />

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
+import { SelectPill } from './SelectPill';
 
 export interface ChatOverrides {
   model: string;
@@ -202,11 +203,19 @@ function getSelectedOptionLabel(
 function buildDisplayUsage(args: {
   activeModel: string;
   threadModelUsage?: ModelUsageEntry[];
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
 }): ModelUsageEntry[] {
+  // If streaming token usage exists for the active model, use it as the display value
+  // even if persisted usage hasn't arrived yet — it represents current state.
+  if (args.streamingTokenUsage && args.activeModel) {
+    return [{ model: args.activeModel, ...args.streamingTokenUsage }];
+  }
   const usage = args.threadModelUsage ?? [];
+  // Don't pre-add the active model with 0 tokens — only show actual usage data.
+  // This prevents the context ring from appearing at 0% at the start of a conversation.
   if (!args.activeModel) return usage;
   if (usage.some((entry) => entry.model === args.activeModel)) return usage;
-  return [{ model: args.activeModel, inputTokens: 0, outputTokens: 0 }, ...usage];
+  return usage;
 }
 
 function formatTokenCount(count: number): string {
@@ -229,7 +238,6 @@ function getContextTone(pct: number): string {
 }
 
 const pillStyle: React.CSSProperties = {
-  backgroundColor: 'var(--bg-tertiary)',
   borderRadius: '9999px',
   padding: '2px 8px',
 };
@@ -241,29 +249,14 @@ function ModelSelect(props: {
   onChange: (value: string) => void;
 }): React.ReactElement {
   return (
-    <div className="flex items-center gap-1" style={pillStyle}>
-      <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-        Model
-      </span>
-      <select
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
-        className="border-none bg-transparent px-0.5 py-0 text-[11px] text-[var(--text)] focus:outline-none cursor-pointer"
-        style={{ fontFamily: 'var(--font-ui)', colorScheme: 'dark' }}
-        title={getSelectedModelLabel(props.value, props.defaultOption, props.groups)}
-      >
-        <option value={props.defaultOption.value}>{props.defaultOption.label}</option>
-        {props.groups.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-    </div>
+    <SelectPill
+      label="Model"
+      value={props.value}
+      defaultOption={props.defaultOption}
+      groups={props.groups}
+      onChange={props.onChange}
+      title={getSelectedModelLabel(props.value, props.defaultOption, props.groups)}
+    />
   );
 }
 
@@ -274,24 +267,13 @@ function ControlSelect(props: {
   onChange: (value: string) => void;
 }): React.ReactElement {
   return (
-    <div className="flex items-center gap-1" style={pillStyle}>
-      <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-        {props.label}
-      </span>
-      <select
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
-        className="border-none bg-transparent px-0.5 py-0 text-[11px] text-[var(--text)] focus:outline-none cursor-pointer"
-        style={{ fontFamily: 'var(--font-ui)', colorScheme: 'dark' }}
-        title={getSelectedOptionLabel(props.value, props.options)}
-      >
-        {props.options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <SelectPill
+      label={props.label}
+      value={props.value}
+      options={props.options}
+      onChange={props.onChange}
+      title={getSelectedOptionLabel(props.value, props.options)}
+    />
   );
 }
 
@@ -307,23 +289,63 @@ function PermissionModeIndicator(props: {
     <button
       type="button"
       onClick={() => props.onChange(cyclePermissionMode(props.value, props.provider))}
-      className="flex items-center gap-1 text-[11px] transition-colors duration-150"
-      style={{
-        ...pillStyle,
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-ui)',
-      }}
+      className="flex items-center gap-1 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-[rgba(128,128,128,0.15)]"
+      style={{ ...pillStyle, fontFamily: 'var(--font-ui)' }}
       title="Permission mode (Shift+Tab to cycle)"
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--bg-hover, var(--border))';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-      }}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wide">Mode</span>
-      <span style={{ color: 'var(--text)' }}>{current.label}</span>
+      <span className="text-text-semantic-primary">{current.label}</span>
     </button>
+  );
+}
+
+function ContextRing(props: {
+  pct: number;
+  tone: string;
+  label: string;
+  size?: number;
+  stroke?: number;
+}): React.ReactElement {
+  const size = props.size ?? 26;
+  const stroke = props.stroke ?? 2.5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (props.pct / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} style={{ pointerEvents: 'none' }}>
+      <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={props.tone}
+          strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+        />
+      </g>
+      <text
+        x={size / 2}
+        y={size / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="var(--text-primary)"
+        style={{ fontSize: '8px', fontFamily: 'var(--font-mono)' }}
+      >
+        {props.label}
+      </text>
+    </svg>
   );
 }
 
@@ -334,40 +356,20 @@ function ModelContextUsageIndicator(props: {
   if (props.usage.length === 0) return null;
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-3 text-[11px]"
-      style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-    >
+    <div className="flex items-center gap-2">
       {props.usage.map((entry) => {
-        const name = getDisplayModelName(entry.model);
         const limit = getContextLimit(entry.model, props.codexModels);
         const pct = Math.min(100, Math.round((entry.inputTokens / limit) * 100));
         const tone = getContextTone(pct);
-        const title = `${name}: ${entry.inputTokens.toLocaleString()} / ${limit.toLocaleString()} context tokens (${pct}%) · ${entry.outputTokens.toLocaleString()} output tokens`;
+        const tooltip = `${entry.inputTokens.toLocaleString()} / ${limit.toLocaleString()} Tokens`;
 
         return (
-          <div key={entry.model} className="flex items-center gap-1.5" title={title}>
-            <span style={{ opacity: 0.6 }}>{name}</span>
-            <div
-              style={{
-                width: 40,
-                height: 4,
-                borderRadius: 2,
-                backgroundColor: 'var(--border)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width: `${pct}%`,
-                  height: '100%',
-                  borderRadius: 2,
-                  backgroundColor: tone,
-                  transition: 'width 0.3s ease',
-                }}
-              />
-            </div>
-            <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.inputTokens)}</span>
+          <div
+            key={entry.model}
+            title={tooltip}
+            style={{ cursor: 'default' }}
+          >
+            <ContextRing pct={pct} tone={tone} label={String(pct)} />
           </div>
         );
       })}
@@ -382,6 +384,7 @@ export function ChatControlsBar(props: {
   codexSettingsModel?: string;
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   threadModelUsage?: ModelUsageEntry[];
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
 }): React.ReactElement {
@@ -399,6 +402,7 @@ export function ChatControlsBar(props: {
   const displayUsage = buildDisplayUsage({
     activeModel,
     threadModelUsage: props.threadModelUsage,
+    streamingTokenUsage: props.streamingTokenUsage,
   });
   const effortOptions = getEffortOptions(activeProvider);
   const effortValue = effortOptions.some((option) => option.value === props.overrides.effort)
@@ -433,7 +437,7 @@ export function ChatControlsBar(props: {
       />
       {displayUsage.length > 0 && (
         <>
-          <div className="mx-0.5 h-3 w-px" style={{ backgroundColor: 'var(--border)' }} />
+          <div className="mx-0.5 h-3 w-px bg-border-semantic" />
           <ModelContextUsageIndicator usage={displayUsage} codexModels={props.codexModels} />
         </>
       )}

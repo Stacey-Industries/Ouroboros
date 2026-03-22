@@ -77,8 +77,7 @@ export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ block
 
   return (
     <div
-      className="my-1.5 rounded-md border"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-tertiary)' }}
+      className="my-1.5 rounded-md border border-border-semantic bg-surface-raised"
     >
       <button
         onClick={() => setExpanded((e) => !e)}
@@ -87,28 +86,26 @@ export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ block
         <ChevronIcon collapsed={!expanded} />
         {!allComplete && (
           <svg
-            className="h-3.5 w-3.5 animate-spin shrink-0"
+            className="h-3.5 w-3.5 animate-spin shrink-0 text-interactive-accent"
             viewBox="0 0 16 16"
             fill="none"
-            style={{ color: 'var(--accent)' }}
           >
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
           </svg>
         )}
         {allComplete && (
           <svg
-            className="h-3.5 w-3.5 shrink-0"
+            className="h-3.5 w-3.5 shrink-0 text-interactive-accent"
             viewBox="0 0 16 16"
             fill="none"
-            style={{ color: 'var(--accent)' }}
           >
             <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
-        <span className="truncate" style={{ color: 'var(--text-muted)' }}>
+        <span className="truncate text-text-semantic-muted">
           {summaryText}
         </span>
-        <span className="ml-auto text-[10px]" style={{ color: 'var(--text-muted)' }}>
+        <span className="ml-auto text-[10px] text-text-semantic-muted">
           {blocks.length} tool{blocks.length === 1 ? '' : 's'}
         </span>
       </button>
@@ -117,7 +114,7 @@ export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ block
         className="agent-chat-tool-expand"
         data-collapsed={expanded ? 'false' : 'true'}
       >
-        <div className="space-y-1 border-t px-1.5 py-1.5" style={{ borderColor: 'var(--border)' }}>
+        <div className="space-y-1 border-t border-border-semantic px-1.5 py-1.5">
           {blocks.map((block, idx) => (
             <AgentChatToolCard
               key={block.blockId ?? `tool-group-${idx}`}

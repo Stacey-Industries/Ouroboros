@@ -193,7 +193,7 @@ export const ViewToggle = memo(function ViewToggle({ view, onChange }: ViewToggl
               onChange(option);
             }}
             className="px-2 py-0.5 text-[10px] font-medium transition-colors"
-            style={{ background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--bg)' : 'var(--text-faint)', border: 'none', cursor: 'pointer', lineHeight: '1.4' }}
+            style={{ background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--text-on-accent)' : 'var(--text-faint)', border: 'none', cursor: 'pointer', lineHeight: '1.4' }}
             title={option === 'feed' ? 'Tool call feed' : 'Gantt timeline'}
           >
             {option === 'feed' ? 'Feed' : 'Timeline'}
@@ -273,11 +273,11 @@ function ExportMenu({
   onExport: (format: 'json' | 'markdown') => Promise<void>;
 }): React.ReactElement {
   return (
-    <div className="absolute right-0 z-50 rounded shadow-lg py-0.5" style={{ top: '100%', marginTop: '2px', minWidth: '130px', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('json')}>
+    <div className="absolute right-0 z-50 rounded shadow-lg py-0.5 bg-surface-panel border border-border-semantic" style={{ top: '100%', marginTop: '2px', minWidth: '130px' }}>
+      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary" onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('json')}>
         Export as JSON
       </button>
-      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors" style={{ color: 'var(--text)' }} onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('markdown')}>
+      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary" onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('markdown')}>
         Export as Markdown
       </button>
     </div>

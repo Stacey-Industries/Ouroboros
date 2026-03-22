@@ -26,29 +26,27 @@ export const Tooltip = memo(function Tooltip({ data }: { data: TooltipData }): R
 
   return (
     <div
+      className="bg-surface-panel border border-border-semantic text-text-semantic-primary"
       style={{
         position: 'fixed',
         left: data.x + 8,
         top: data.y - 8,
         zIndex: 9999,
         pointerEvents: 'none',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
         borderRadius: '4px',
         padding: '5px 8px',
         fontSize: '11px',
-        color: 'var(--text)',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         maxWidth: '200px',
         whiteSpace: 'nowrap',
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: '2px' }}>{data.toolName}</div>
-      <div style={{ color: 'var(--text-faint)' }}>
+      <div className="text-text-semantic-faint">
         Start: +{formatDurationShort(data.startOffsetMs)}
       </div>
       {data.duration !== undefined && (
-        <div style={{ color: 'var(--text-faint)' }}>
+        <div className="text-text-semantic-faint">
           Duration: {formatDurationShort(data.duration)}
         </div>
       )}

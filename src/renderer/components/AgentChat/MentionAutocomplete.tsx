@@ -242,24 +242,16 @@ export function MentionAutocomplete({
   return (
     <div
       ref={listRef}
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[280px] overflow-y-auto rounded-lg border shadow-lg"
-      style={{
-        backgroundColor: 'var(--bg)',
-        borderColor: 'var(--border)',
-      }}
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[280px] overflow-y-auto rounded-lg border border-border-semantic shadow-lg bg-surface-base"
     >
-      <div className="px-2 py-1.5 text-[10px] font-medium text-[var(--text-muted)]">
+      <div className="px-2 py-1.5 text-[10px] font-medium text-text-semantic-muted">
         Mentions
       </div>
       {results.map((result, index) => (
         <button
           key={result.mention.key}
           data-active={index === selectedIndex}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75"
-          style={{
-            backgroundColor: index === selectedIndex ? 'var(--bg-hover, var(--border))' : 'transparent',
-            color: 'var(--text)',
-          }}
+          className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${index === selectedIndex ? ' bg-surface-overlay' : ''}`}
           onMouseDown={(e) => {
             e.preventDefault();
             onSelect(result.mention);
@@ -276,7 +268,7 @@ export function MentionAutocomplete({
             }
           </span>
           {result.description && (
-            <span className="shrink-0 text-[10px] text-[var(--text-muted)]">
+            <span className="shrink-0 text-[10px] text-text-semantic-muted">
               {result.description}
             </span>
           )}

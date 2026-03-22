@@ -10,19 +10,13 @@ export interface AgentChatContextBarProps {
 function PinnedFileChip(props: { file: PinnedFile; onRemove: () => void }): React.ReactElement {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight"
-      style={{
-        backgroundColor: 'var(--bg)',
-        borderColor: 'var(--border)',
-        color: 'var(--text)',
-      }}
+      className="inline-flex items-center gap-1 rounded-md border border-border-semantic px-1.5 py-0.5 text-[11px] leading-tight bg-surface-base text-text-semantic-primary"
       title={props.file.relativePath}
     >
       <span className="max-w-[120px] truncate">{props.file.name}</span>
       <button
         onClick={props.onRemove}
-        className="ml-0.5 rounded-sm opacity-60 transition-opacity duration-75 hover:opacity-100"
-        style={{ color: 'var(--text-muted)' }}
+        className="ml-0.5 rounded-sm opacity-60 transition-opacity duration-75 hover:opacity-100 text-text-semantic-muted"
         aria-label={`Remove ${props.file.name}`}
       >
         &times;
@@ -48,7 +42,7 @@ export function AgentChatContextBar({
         />
       ))}
       {contextSummary && (
-        <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+        <span className="ml-auto text-[10px] text-text-semantic-muted">
           {contextSummary}
         </span>
       )}

@@ -158,18 +158,12 @@ function ThreadItem({
 
   return (
     <div
-      className="group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-75"
+      className={`group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-75 ${!isActive ? 'hover:bg-surface-raised' : ''}`}
       style={{
         backgroundColor: isActive ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : undefined,
         minHeight: 40,
       }}
       onClick={onSelect}
-      onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = '';
-      }}
     >
       <StatusIcon display={display} />
 
@@ -181,8 +175,7 @@ function ThreadItem({
             </span>
           )}
           <span
-            className="truncate text-xs font-medium"
-            style={{ color: isActive ? 'var(--accent)' : 'var(--text)' }}
+            className={`truncate text-xs font-medium ${isActive ? 'text-interactive-accent' : 'text-text-semantic-primary'}`}
           >
             {thread.title || 'New Chat'}
           </span>
@@ -193,10 +186,10 @@ function ThreadItem({
               {display.label}
             </span>
           )}
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] text-text-semantic-muted">
             {relativeTime(thread.updatedAt)}
           </span>
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] text-text-semantic-muted">
             {msgCount} {msgCount === 1 ? 'msg' : 'msgs'}
           </span>
         </div>
@@ -205,8 +198,7 @@ function ThreadItem({
       {/* Delete button */}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="opacity-0 group-hover:opacity-70 hover:!opacity-100 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded transition-opacity duration-75"
-        style={{ color: 'var(--text-muted)' }}
+        className="opacity-0 group-hover:opacity-70 hover:!opacity-100 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded text-text-semantic-muted transition-opacity duration-75"
         title="Delete conversation"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -242,6 +234,8 @@ export function ChatHistoryPanel({
     }
     function handleClickOutside(e: MouseEvent): void {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        // Ignore clicks on the toggle button — let its onClick handle toggling
+        if ((e.target as HTMLElement).closest?.('[data-history-toggle]')) return;
         onClose();
       }
     }
@@ -280,20 +274,19 @@ export function ChatHistoryPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute left-0 right-0 z-50 flex flex-col overflow-hidden"
+      className="absolute left-0 right-0 z-50 flex flex-col overflow-hidden border-b border-border-semantic"
       style={{
         top: 0,
         maxHeight: '60%',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+        backgroundColor: '#0d0d12',
+        borderRadius: '0 0 10px 10px',
       }}
     >
       <div
-        className="flex items-center gap-2 px-3 py-2 border-b flex-shrink-0"
-        style={{ borderColor: 'var(--border-muted, var(--border))' }}
+        className="flex items-center gap-2 px-3 py-2 border-b border-border-semantic flex-shrink-0"
       >
-        <span style={{ color: 'var(--text-muted)' }}>
+        <span className="text-text-semantic-muted">
           <SearchIcon />
         </span>
         <input
@@ -302,14 +295,12 @@ export function ChatHistoryPanel({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search conversations..."
-          className="flex-1 bg-transparent text-xs outline-none"
-          style={{ color: 'var(--text)' }}
+          className="flex-1 bg-transparent text-xs text-text-semantic-primary outline-none"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="text-[10px] px-1 rounded"
-            style={{ color: 'var(--text-muted)' }}
+            className="text-[10px] px-1 rounded text-text-semantic-muted"
           >
             Clear
           </button>
@@ -319,7 +310,7 @@ export function ChatHistoryPanel({
       {/* Thread list grouped by section */}
       <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth: 'thin' }}>
         {filteredThreads.length === 0 && (
-          <div className="px-3 py-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+          <div className="px-3 py-4 text-xs text-center text-text-semantic-muted">
             {searchQuery ? 'No matching conversations' : 'No conversations yet'}
           </div>
         )}
@@ -331,8 +322,7 @@ export function ChatHistoryPanel({
               {/* Only show section headers when there are multiple sections with content */}
               {filteredThreads.length > items.length && (
                 <div
-                  className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide"
-                  style={{ color: section === 'active' ? 'var(--accent)' : 'var(--text-muted)' }}
+                  className={`px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide ${section === 'active' ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
                 >
                   {SECTION_LABELS[section]}
                   {section === 'active' && (
@@ -357,10 +347,9 @@ export function ChatHistoryPanel({
       {/* Footer */}
       {threads.length > 0 && (
         <div
-          className="flex items-center justify-between px-3 py-1.5 border-t flex-shrink-0"
-          style={{ borderColor: 'var(--border-muted, var(--border))' }}
+          className="flex items-center justify-between px-3 py-1.5 border-t border-border-semantic flex-shrink-0"
         >
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] text-text-semantic-muted">
             {threads.length} conversation{threads.length !== 1 ? 's' : ''}
           </span>
         </div>

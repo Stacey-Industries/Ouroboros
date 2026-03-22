@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import { OPEN_CHAT_IN_TERMINAL_EVENT } from '../../hooks/appEventNames';
 
@@ -36,9 +37,9 @@ function ChevronDownIcon(): React.ReactElement {
 function BranchTabIcon({ parentTitle, messageIndex }: { parentTitle: string; messageIndex: number }): React.ReactElement {
   return (
     <span
-      className="shrink-0"
+      className="shrink-0 text-interactive-accent"
       title={`Branched from "${parentTitle}" at message ${messageIndex}`}
-      style={{ color: 'var(--accent)', opacity: 0.7 }}
+      style={{ opacity: 0.7 }}
     >
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="6" y1="3" x2="6" y2="15" />
@@ -58,12 +59,14 @@ function ThreadDropdown({
   onSelectThread,
   onDeleteThread,
   onClose,
+  triggerRect,
 }: {
   threads: AgentChatThreadRecord[];
   activeThreadId: string | null;
   onSelectThread: (id: string) => void;
   onDeleteThread: (id: string) => void;
   onClose: () => void;
+  triggerRect: DOMRect;
 }): React.ReactElement {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -84,35 +87,36 @@ function ThreadDropdown({
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       ref={dropdownRef}
       style={{
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        right: 0,
+        position: 'fixed',
+        top: triggerRect.bottom + 2,
+        left: triggerRect.left,
+        width: triggerRect.width,
         maxHeight: 300,
         overflowY: 'auto',
-        backgroundColor: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
-        borderRadius: 6,
+        overflowX: 'hidden',
         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-        zIndex: 100,
+        zIndex: 9999,
         padding: '4px 0',
+        backgroundColor: '#0d0d12',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: 10,
       }}
     >
       {threads.length === 0 && (
-        <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>No conversations</div>
+        <div className="px-3 py-2 text-xs text-text-semantic-muted">No conversations</div>
       )}
       {threads.map((thread) => {
         const isActive = thread.id === activeThreadId;
         return (
           <div
             key={thread.id}
-            className="group flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-75 hover:bg-[var(--bg-tertiary)]"
+            className="group flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors duration-75 hover:bg-surface-raised"
             style={{
-              backgroundColor: isActive ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : undefined,
+              backgroundColor: isActive ? 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)' : undefined,
             }}
             onClick={() => { onSelectThread(thread.id); onClose(); }}
           >
@@ -123,18 +127,16 @@ function ThreadDropdown({
               />
             )}
             <span
-              className="flex-1 truncate text-xs"
-              style={{ color: isActive ? 'var(--accent)' : 'var(--text)' }}
+              className={`flex-1 truncate text-xs ${isActive ? 'text-interactive-accent' : 'text-text-semantic-primary'}`}
             >
               {thread.title}
             </span>
-            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-[10px] text-text-semantic-muted">
               {thread.messages?.length ?? 0} msgs
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
-              className="opacity-0 group-hover:opacity-70 hover:!opacity-100 text-[10px] px-1 rounded transition-opacity duration-75"
-              style={{ color: 'var(--text-muted)' }}
+              className="opacity-0 group-hover:opacity-70 hover:!opacity-100 text-[10px] px-1 rounded text-text-semantic-muted transition-opacity duration-75"
               title="Delete conversation"
             >
               &times;
@@ -142,7 +144,8 @@ function ThreadDropdown({
           </div>
         );
       })}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -160,11 +163,9 @@ function Tab(props: {
   return (
     <button
       onClick={props.onSelect}
-      className="group relative flex shrink-0 items-center gap-1 px-2.5 py-1 text-[11px] transition-colors duration-100 rounded-t"
+      className={`group relative flex shrink-0 items-center gap-1 px-2.5 py-1 text-[11px] transition-colors duration-100 rounded-t ${props.isActive ? 'text-text-semantic-primary bg-surface-base' : 'text-text-semantic-muted'}`}
       style={{
-        color: props.isActive ? 'var(--text)' : 'var(--text-muted)',
-        backgroundColor: props.isActive ? 'var(--bg)' : 'transparent',
-        borderBottom: props.isActive ? '2px solid var(--accent)' : '2px solid transparent',
+        borderBottom: props.isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
       }}
     >
       {props.isBranch && (
@@ -178,8 +179,7 @@ function Tab(props: {
         role="button"
         tabIndex={-1}
         onClick={(e) => { e.stopPropagation(); props.onClose(); }}
-        className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
-        style={{ color: 'var(--text-muted)' }}
+        className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
       >
         &times;
       </span>
@@ -300,11 +300,8 @@ function OpenInTerminalButton({ threadId, threadStatus, threadProvider, threadCl
   return (
     <button
       onClick={handleClick}
-      className="flex shrink-0 items-center gap-1 px-2 py-1.5 text-xs transition-colors duration-100"
-      style={{ color: 'var(--text-muted)' }}
+      className="flex shrink-0 items-center gap-1 px-2 py-1.5 text-xs text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
       title="Resume this chat session in an interactive terminal"
-      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="4 17 10 11 4 5" />
@@ -323,7 +320,9 @@ export function AgentChatTabBar({
   threads,
 }: AgentChatTabBarProps): React.ReactElement | null {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [barRect, setBarRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     if (!scrollRef.current || !activeThreadId) return;
@@ -337,21 +336,15 @@ export function AgentChatTabBar({
 
   return (
     <div
-      className="flex items-center border-b relative"
-      style={{
-        borderColor: 'var(--border)',
-        backgroundColor: 'var(--bg-secondary)',
-        minHeight: 32,
-      }}
+      ref={barRef}
+      className="flex items-center border-b border-border-semantic relative bg-surface-panel"
+      style={{ minHeight: 32 }}
     >
       {/* New chat button */}
       <button
         onClick={onNewChat}
-        className="flex shrink-0 items-center justify-center w-7 h-full transition-colors duration-100"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex shrink-0 items-center justify-center w-7 h-full text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
         title="New chat (Ctrl+L)"
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
       >
         <PlusIcon />
       </button>
@@ -380,12 +373,12 @@ export function AgentChatTabBar({
       {/* Thread history dropdown toggle */}
       {threads.length > 1 && (
         <button
-          onClick={() => setDropdownOpen((prev) => !prev)}
-          className="flex shrink-0 items-center justify-center w-6 h-full transition-colors duration-100"
-          style={{ color: 'var(--text-muted)' }}
+          onClick={() => {
+            if (!dropdownOpen && barRef.current) setBarRect(barRef.current.getBoundingClientRect());
+            setDropdownOpen((prev) => !prev);
+          }}
+          className="flex shrink-0 items-center justify-center w-6 h-full text-text-semantic-muted transition-colors duration-100 hover:text-text-semantic-primary"
           title="Chat history"
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
           <ChevronDownIcon />
         </button>
@@ -402,13 +395,14 @@ export function AgentChatTabBar({
       />
 
       {/* Thread dropdown */}
-      {dropdownOpen && (
+      {dropdownOpen && barRect && (
         <ThreadDropdown
           threads={threads}
           activeThreadId={activeThreadId}
           onSelectThread={onSelectThread}
           onDeleteThread={onDeleteThread}
           onClose={() => setDropdownOpen(false)}
+          triggerRect={barRect}
         />
       )}
     </div>

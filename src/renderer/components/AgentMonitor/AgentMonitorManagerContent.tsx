@@ -64,7 +64,7 @@ const SessionCardList = memo(function SessionCardList({
 
 const NoMatchesState = memo(function NoMatchesState({ query }: { query: string }): React.ReactElement {
   return (
-    <div className="px-4 py-6 text-center text-[12px] italic" style={{ color: 'var(--text-faint)' }}>
+    <div className="px-4 py-6 text-center text-[12px] italic text-text-semantic-faint">
       No sessions match &ldquo;{query}&rdquo;
     </div>
   );

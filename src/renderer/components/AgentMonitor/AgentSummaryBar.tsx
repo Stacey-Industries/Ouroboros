@@ -62,7 +62,7 @@ function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
 }
 
 function SummarySeparator(): React.ReactElement {
-  return <span style={{ color: 'var(--text-faint)' }}>·</span>;
+  return <span className="text-text-semantic-faint">·</span>;
 }
 
 function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement {
@@ -74,7 +74,7 @@ function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.Rea
 
   return (
     <>
-      <span style={{ color: 'var(--text-muted)' }}>
+      <span className="text-text-semantic-muted">
         {summary.total} agent{summary.total !== 1 ? 's' : ''}
       </span>
       {items.map((item) => (
@@ -94,13 +94,14 @@ function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.Rea
     <>
       <SummarySeparator />
       <span
-        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+        className="text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-mono)' }}
         title={`Total: ↓${tokenTotals.inputTokens.toLocaleString()} input, ↑${tokenTotals.outputTokens.toLocaleString()} output`}
       >
         {'↓'}{formatTokenCount(tokenTotals.inputTokens)}
         {' ↑'}{formatTokenCount(tokenTotals.outputTokens)}
       </span>
-      <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
+      <span className="text-interactive-accent" style={{ fontFamily: 'var(--font-mono)' }}>
         ~{formatCost(tokenTotals.totalCost)}
       </span>
     </>

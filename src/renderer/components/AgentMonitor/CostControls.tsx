@@ -43,7 +43,7 @@ export const Controls = memo(function Controls({
     >
       <RangeSelector range={range} onRangeChange={onRangeChange} />
       <span className="flex-1" />
-      <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
+      <span className="text-[10px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
         {entryCount} entries
       </span>
       {entryCount > 0 && <ClearButton confirmClear={confirmClear} onClick={handleClear} />}

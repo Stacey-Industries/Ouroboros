@@ -70,11 +70,11 @@ const PreviousSessionsHeader = memo(function PreviousSessionsHeader({
       onClick={onToggle}
       aria-expanded={!collapsed}
     >
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={{ transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform 150ms ease', color: 'var(--text-faint)', flexShrink: 0 }}>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" className="text-text-semantic-faint" style={{ transform: collapsed ? 'none' : 'rotate(90deg)', transition: 'transform 150ms ease', flexShrink: 0 }}>
         <path d="M3 1.5L7 5L3 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>Previous Sessions</span>
-      <span className="text-[10px] ml-auto tabular-nums" style={{ color: 'var(--text-faint)' }}>{count}</span>
+      <span className="text-[11px] font-medium text-text-semantic-faint">Previous Sessions</span>
+      <span className="text-[10px] ml-auto tabular-nums text-text-semantic-faint">{count}</span>
     </button>
   );
 });
@@ -111,8 +111,8 @@ const ClearFilterButton = memo(function ClearFilterButton({
   return (
     <button
       onClick={onClear}
-      className="shrink-0 flex items-center justify-center rounded"
-      style={{ color: 'var(--text-faint)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px' }}
+      className="shrink-0 flex items-center justify-center rounded text-text-semantic-faint"
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px' }}
       onMouseEnter={(event) => { event.currentTarget.style.color = 'var(--text)'; }}
       onMouseLeave={(event) => { event.currentTarget.style.color = 'var(--text-faint)'; }}
       title="Clear filter"
@@ -130,7 +130,7 @@ export const SearchInput = memo(function SearchInput({ onChange, value }: Search
 
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ color: 'var(--text-faint)', flexShrink: 0 }}>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="text-text-semantic-faint" style={{ flexShrink: 0 }}>
         <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.3" />
         <path d="M8 8L10.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
@@ -139,8 +139,8 @@ export const SearchInput = memo(function SearchInput({ onChange, value }: Search
         value={value}
         onChange={handleChange}
         placeholder="Filter sessions and tools..."
-        className="flex-1 bg-transparent text-[11px] outline-none"
-        style={{ color: 'var(--text)', caretColor: 'var(--accent)', fontFamily: 'var(--font-ui)' }}
+        className="flex-1 bg-transparent text-[11px] outline-none text-text-semantic-primary"
+        style={{ caretColor: 'var(--accent)', fontFamily: 'var(--font-ui)' }}
         aria-label="Filter agent sessions"
       />
       {value ? <ClearFilterButton onClear={() => onChange('')} /> : null}
@@ -151,11 +151,11 @@ export const SearchInput = memo(function SearchInput({ onChange, value }: Search
 const ComparePanelEmptyState = memo(function ComparePanelEmptyState(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center" style={{ minHeight: '120px' }}>
-      <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ color: 'var(--text-faint)', marginBottom: '8px' }}>
+      <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" className="text-text-semantic-faint" style={{ marginBottom: '8px' }}>
         <rect x="1" y="3" width="6" height="10" rx="1" />
         <rect x="9" y="3" width="6" height="10" rx="1" />
       </svg>
-      <span className="text-[11px] italic" style={{ color: 'var(--text-faint)' }}>Select a session to compare</span>
+      <span className="text-[11px] italic text-text-semantic-faint">Select a session to compare</span>
     </div>
   );
 });
@@ -168,7 +168,7 @@ const ComparePanelHeader = memo(function ComparePanelHeader({
 }: Omit<ComparePanelProps, 'onDismiss'>): React.ReactElement {
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-muted)' }}>
-      <span className="text-[11px] font-semibold shrink-0" style={{ color: 'var(--accent)' }}>{label}</span>
+      <span className="text-[11px] font-semibold shrink-0 text-interactive-accent">{label}</span>
       <select
         value={selectedId ?? ''}
         onChange={(event) => onSelect(event.target.value)}
@@ -231,7 +231,7 @@ export const QuickActionBar = memo(function QuickActionBar({
 
   return (
     <div className="flex items-center gap-1 px-2 py-1.5 flex-shrink-0 overflow-x-auto" style={{ borderBottom: '1px solid var(--border-muted)' }}>
-      <span className="text-[10px] font-medium shrink-0" style={{ color: 'var(--text-faint)' }}>Quick:</span>
+      <span className="text-[10px] font-medium shrink-0 text-text-semantic-faint">Quick:</span>
       {templates.map((template) => <QuickActionButton key={template.id} template={template} onClick={() => onExecuteTemplate(template)} />)}
     </div>
   );

@@ -70,28 +70,28 @@ function ToolGroup({ tools, defaultExpanded }: ToolGroupProps): React.ReactEleme
   const summary = categorizeTools(tools);
 
   return (
-    <div className="my-1 rounded-md border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+    <div className="my-1 rounded-md border border-border-semantic bg-surface-raised">
       <button
         onClick={() => setExpanded((e) => !e)}
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs text-left transition-colors duration-100 hover:opacity-80"
       >
         <ChevronIcon collapsed={!expanded} />
         {!allComplete ? (
-          <svg className="h-3.5 w-3.5 animate-spin shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+          <svg className="h-3.5 w-3.5 animate-spin shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
           </svg>
         ) : (
-          <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+          <svg className="h-3.5 w-3.5 shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
             <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
-        <span className="truncate" style={{ color: 'var(--text-muted)' }}>{summary}</span>
-        <span className="ml-auto shrink-0 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+        <span className="truncate text-text-semantic-muted">{summary}</span>
+        <span className="ml-auto shrink-0 text-[10px] text-text-semantic-muted">
           {allComplete ? `${tools.length} tools` : `${completeCount}/${tools.length}`}
         </span>
       </button>
       {expanded && (
-        <div className="space-y-1 border-t px-1.5 pb-1.5 pt-1" style={{ borderColor: 'var(--border)' }}>
+        <div className="space-y-1 border-t border-border-semantic px-1.5 pb-1.5 pt-1">
           {tools.map(
             (b) =>
               b.kind === 'tool_use' && (

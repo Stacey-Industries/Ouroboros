@@ -46,11 +46,10 @@ function CodeBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: '
 function ErrorBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 'error' } }): React.ReactElement {
   return (
     <div
-      className="my-1.5 rounded-md border px-3 py-2 text-xs"
+      className="my-1.5 rounded-md border px-3 py-2 text-xs text-status-error"
       style={{
         borderColor: 'rgba(248, 81, 73, 0.3)',
         backgroundColor: 'rgba(248, 81, 73, 0.06)',
-        color: 'var(--error, #f85149)',
       }}
     >
       <div className="flex items-center gap-1.5">
@@ -74,25 +73,24 @@ function ErrorBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 
 function DiffBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 'diff' } }): React.ReactElement {
   return (
     <div
-      className="my-1.5 rounded-md border px-3 py-2 text-xs"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-tertiary)' }}
+      className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs"
     >
-      <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
+      <div className="flex items-center gap-1.5 text-text-semantic-muted">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3v18M3 12h18" />
         </svg>
-        <span className="font-medium text-[var(--text)]">{block.filePath}</span>
+        <span className="font-medium text-text-semantic-primary">{block.filePath}</span>
         <span
           className="ml-auto rounded-full px-1.5 py-0.5 text-[10px]"
           style={{
-            backgroundColor: block.status === 'accepted' ? 'rgba(63, 185, 80, 0.15)' : block.status === 'rejected' ? 'rgba(248, 81, 73, 0.15)' : 'var(--bg)',
+            backgroundColor: block.status === 'accepted' ? 'rgba(63, 185, 80, 0.15)' : block.status === 'rejected' ? 'rgba(248, 81, 73, 0.15)' : 'var(--surface-base)',
             color: block.status === 'accepted' ? '#3fb950' : block.status === 'rejected' ? '#f85149' : 'var(--text-muted)',
           }}
         >
           {block.status}
         </span>
       </div>
-      <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap text-[11px]" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+      <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap text-[11px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
         {block.hunks}
       </pre>
     </div>
@@ -109,17 +107,16 @@ function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): Reac
 
   return (
     <div
-      className="my-1.5 rounded-md border px-3 py-2 text-xs"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-tertiary)' }}
+      className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs"
     >
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center gap-1.5 text-[var(--text-muted)] hover:opacity-80"
+        className="flex items-center gap-1.5 text-text-semantic-muted hover:opacity-80"
       >
         <span>Unknown block: {(block as { kind: string }).kind}</span>
       </button>
       {expanded && (
-        <pre className="mt-1.5 max-h-[200px] overflow-auto whitespace-pre-wrap text-[10px]" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+        <pre className="mt-1.5 max-h-[200px] overflow-auto whitespace-pre-wrap text-[10px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
           {JSON.stringify(block, null, 2)}
         </pre>
       )}
@@ -215,7 +212,7 @@ export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer
       // Tool results are typically displayed within the tool_use card
       // Render as muted text for standalone occurrences
       return (
-        <div className="my-1 px-2.5 py-1 text-xs text-[var(--text-muted)]" style={{ fontFamily: 'var(--font-mono)' }}>
+        <div className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
           {block.content}
         </div>
       );

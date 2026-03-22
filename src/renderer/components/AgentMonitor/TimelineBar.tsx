@@ -40,7 +40,6 @@ function computeBarLayout(
 const TRACK_STYLE: React.CSSProperties = {
   position: 'absolute',
   inset: '4px 0',
-  background: 'var(--bg-tertiary)',
   borderRadius: '2px',
 };
 
@@ -100,7 +99,7 @@ export const TimelineBar = memo(function TimelineBar({
 
   return (
     <div style={{ position: 'relative', height: '14px', flexShrink: 0 }}>
-      <div style={TRACK_STYLE} />
+      <div className="bg-surface-raised" style={TRACK_STYLE} />
       <div
         onMouseEnter={handleHover}
         onMouseMove={handleHover}

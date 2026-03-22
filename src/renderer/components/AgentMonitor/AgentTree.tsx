@@ -20,7 +20,6 @@ interface TreeNode {
 const INDENT_PX = 16;
 
 const branchToggleStyle: React.CSSProperties = {
-  color: 'var(--text-faint)',
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',
@@ -106,7 +105,7 @@ const BranchToggle = memo(function BranchToggle({
   onToggle,
 }: BranchToggleProps): React.ReactElement {
   return (
-    <button onClick={onToggle} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors" style={branchToggleStyle} onMouseEnter={(event) => setBranchToggleHover(event.currentTarget, true)} onMouseLeave={(event) => setBranchToggleHover(event.currentTarget, false)} title={expanded ? 'Collapse subagents' : 'Expand subagents'}>
+    <button onClick={onToggle} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors text-text-semantic-faint" style={branchToggleStyle} onMouseEnter={(event) => setBranchToggleHover(event.currentTarget, true)} onMouseLeave={(event) => setBranchToggleHover(event.currentTarget, false)} title={expanded ? 'Collapse subagents' : 'Expand subagents'}>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}>
         <path d="M3 1.5L7 5L3 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
       </svg>

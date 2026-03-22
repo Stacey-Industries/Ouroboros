@@ -41,9 +41,8 @@ export function pickNextIndex(prev: number, visited: Set<number>): number {
 export function BlinkingCursor(): React.ReactElement {
   return (
     <span
-      className="ml-0.5 inline-block h-[1.1em] w-[2px] align-text-bottom"
+      className="ml-0.5 inline-block h-[1.1em] w-[2px] align-text-bottom bg-interactive-accent"
       style={{
-        backgroundColor: 'var(--accent)',
         animation: 'agent-chat-cursor-blink 1s step-end infinite',
       }}
     />
@@ -130,7 +129,7 @@ export function StreamingStatusMessage({ onStop }: { onStop?: () => Promise<void
   return (
     <div className="pl-7 py-0.5 flex items-center justify-between pr-1">
       <div className="flex items-center gap-1.5">
-        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-sm text-text-semantic-muted">
           {message.slice(0, displayChars)}
           {displayChars < message.length && <BlinkingCursor />}
         </span>
@@ -140,10 +139,7 @@ export function StreamingStatusMessage({ onStop }: { onStop?: () => Promise<void
         <button
           onClick={() => void onStop()}
           title="Stop task"
-          className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error, #f85149)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-status-error"
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
             <rect x="4" y="4" width="16" height="16" rx="2" />

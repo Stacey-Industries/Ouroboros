@@ -34,14 +34,13 @@ export const SessionTableRow = memo(function SessionTableRow({
   return (
     <div>
       <button
-        className="w-full flex items-center gap-2 py-1 text-[10px] tabular-nums transition-colors"
+        className="w-full flex items-center gap-2 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
         style={{
           fontFamily: 'var(--font-mono)',
           background: 'transparent',
           border: 'none',
           borderBottom: '1px solid var(--border-muted)',
           cursor: 'pointer',
-          color: 'var(--text)',
           textAlign: 'left',
           padding: '4px 0',
         }}
@@ -54,7 +53,7 @@ export const SessionTableRow = memo(function SessionTableRow({
         <span className="flex-1 min-w-0 truncate" style={{ fontFamily: 'var(--font-ui)' }}>{truncateLabel(entry.taskLabel)}</span>
         <span style={{ width: '55px', flexShrink: 0, textAlign: 'right', color: 'var(--text-muted)' }}>{shortModel(entry.model)}</span>
         <span style={{ width: '70px', flexShrink: 0, textAlign: 'right', color: 'var(--text-muted)' }}>{formatTokenCount(entry.inputTokens + entry.outputTokens)}</span>
-        <span style={{ width: '52px', flexShrink: 0, textAlign: 'right', color: 'var(--accent)', fontWeight: 600 }}>{formatCost(entry.estimatedCost)}</span>
+        <span className="text-interactive-accent" style={{ width: '52px', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}>{formatCost(entry.estimatedCost)}</span>
       </button>
       {isExpanded && <ExpandedDetails entry={entry} />}
     </div>
@@ -64,20 +63,20 @@ export const SessionTableRow = memo(function SessionTableRow({
 function ExpandedDetails({ entry }: { entry: CostEntry }): React.ReactElement {
   return (
     <div
-      className="py-1.5 px-2 text-[10px]"
-      style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}
+      className="py-1.5 px-2 text-[10px] bg-surface-raised"
+      style={{ borderBottom: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)' }}
     >
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5" style={{ color: 'var(--text-muted)' }}>
-        <span>Model: <span style={{ color: 'var(--text)' }}>{entry.model}</span></span>
-        <span>Input: <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.inputTokens)}</span></span>
-        <span>Output: <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.outputTokens)}</span></span>
-        {entry.cacheReadTokens > 0 && <span>Cache Read: <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.cacheReadTokens)}</span></span>}
-        {entry.cacheWriteTokens > 0 && <span>Cache Write: <span style={{ color: 'var(--text)' }}>{formatTokenCount(entry.cacheWriteTokens)}</span></span>}
-        <span>Session: <span style={{ color: 'var(--text)' }}>{entry.sessionId.slice(0, 8)}</span></span>
-        <span>Time: <span style={{ color: 'var(--text)' }}>{new Date(entry.timestamp).toLocaleTimeString()}</span></span>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
+        <span>Model: <span className="text-text-semantic-primary">{entry.model}</span></span>
+        <span>Input: <span className="text-text-semantic-primary">{formatTokenCount(entry.inputTokens)}</span></span>
+        <span>Output: <span className="text-text-semantic-primary">{formatTokenCount(entry.outputTokens)}</span></span>
+        {entry.cacheReadTokens > 0 && <span>Cache Read: <span className="text-text-semantic-primary">{formatTokenCount(entry.cacheReadTokens)}</span></span>}
+        {entry.cacheWriteTokens > 0 && <span>Cache Write: <span className="text-text-semantic-primary">{formatTokenCount(entry.cacheWriteTokens)}</span></span>}
+        <span>Session: <span className="text-text-semantic-primary">{entry.sessionId.slice(0, 8)}</span></span>
+        <span>Time: <span className="text-text-semantic-primary">{new Date(entry.timestamp).toLocaleTimeString()}</span></span>
       </div>
-      <div className="mt-1" style={{ color: 'var(--text-faint)' }}>
-        Task: <span style={{ color: 'var(--text)' }}>{entry.taskLabel}</span>
+      <div className="mt-1 text-text-semantic-faint">
+        Task: <span className="text-text-semantic-primary">{entry.taskLabel}</span>
       </div>
     </div>
   );

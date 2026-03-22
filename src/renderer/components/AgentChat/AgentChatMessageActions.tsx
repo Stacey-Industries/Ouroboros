@@ -19,7 +19,7 @@ function ActionButton(props: {
     <button
       title={props.title}
       onClick={props.onClick}
-      className="rounded p-1 text-[var(--text-muted)] transition-colors duration-100 hover:bg-[var(--bg-tertiary)] hover:text-[var(--text)]"
+      className="rounded p-1 text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-text-semantic-primary"
     >
       {props.children}
     </button>
@@ -145,7 +145,7 @@ export function AssistantMessageActions({
         <button
           title="Revert changes from this turn"
           onClick={() => onRevert(message)}
-          className="rounded px-1.5 py-0.5 text-[var(--text-muted)] transition-all duration-100 hover:bg-[rgba(220,80,60,0.1)] hover:text-[rgb(220,80,60)]"
+          className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-[rgba(220,80,60,0.1)] hover:text-[rgb(220,80,60)]"
         >
           <div className="flex items-center gap-1">
             <RevertIcon />
@@ -156,7 +156,7 @@ export function AssistantMessageActions({
       <button
         title="Branch from this message"
         onClick={() => onBranch(message)}
-        className="rounded px-1.5 py-0.5 text-[var(--text-muted)] transition-all duration-100 hover:bg-[rgba(100,100,255,0.1)] hover:text-[var(--accent)]"
+        className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-[rgba(100,100,255,0.1)] hover:text-interactive-accent"
       >
         <div className="flex items-center gap-1">
           <BranchIcon />

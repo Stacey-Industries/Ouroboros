@@ -21,8 +21,8 @@ const PRE_STYLE = {
 function CodeBlock({ text, bg, borderColor }: { text: string; bg: string; borderColor: string }): React.ReactElement {
   return (
     <pre
-      className="mt-1 p-2 rounded text-xs font-mono whitespace-pre-wrap"
-      style={{ backgroundColor: bg, color: 'var(--text)', border: `1px solid ${borderColor}`, ...PRE_STYLE }}
+      className="mt-1 p-2 rounded text-xs font-mono whitespace-pre-wrap text-text-semantic-primary"
+      style={{ backgroundColor: bg, border: `1px solid ${borderColor}`, ...PRE_STYLE }}
     >
       {text}
     </pre>
@@ -61,8 +61,8 @@ export function ToolInputPreview({ toolName, input }: ToolInputPreviewProps): Re
 function FilePathRow({ filePath }: { filePath: string }): React.ReactElement {
   return (
     <div>
-      <span className="font-semibold" style={{ color: 'var(--text-muted)' }}>File: </span>
-      <span className="font-mono text-xs" style={{ color: 'var(--accent)' }}>{filePath}</span>
+      <span className="font-semibold text-text-semantic-muted">File: </span>
+      <span className="font-mono text-xs text-interactive-accent">{filePath}</span>
     </div>
   );
 }
@@ -70,7 +70,7 @@ function FilePathRow({ filePath }: { filePath: string }): React.ReactElement {
 function CommandRow({ command }: { command: string }): React.ReactElement {
   return (
     <div>
-      <span className="font-semibold" style={{ color: 'var(--text-muted)' }}>Command: </span>
+      <span className="font-semibold text-text-semantic-muted">Command: </span>
       <CodeBlock text={command} bg="var(--bg-deeper, rgba(0,0,0,0.3))" borderColor="var(--border)" />
     </div>
   );
@@ -79,7 +79,7 @@ function CommandRow({ command }: { command: string }): React.ReactElement {
 function OldStringRow({ oldString }: { oldString: string }): React.ReactElement {
   return (
     <div>
-      <span className="font-semibold" style={{ color: 'var(--text-muted)' }}>Replacing: </span>
+      <span className="font-semibold text-text-semantic-muted">Replacing: </span>
       <CodeBlock text={truncate(oldString, 500)} bg="rgba(255, 80, 80, 0.1)" borderColor="rgba(255, 80, 80, 0.3)" />
     </div>
   );
@@ -88,7 +88,7 @@ function OldStringRow({ oldString }: { oldString: string }): React.ReactElement 
 function ContentRow({ content, isEdit }: { content: string; isEdit: boolean }): React.ReactElement {
   return (
     <div>
-      <span className="font-semibold" style={{ color: 'var(--text-muted)' }}>
+      <span className="font-semibold text-text-semantic-muted">
         {isEdit ? 'With:' : 'Content:'}
       </span>
       <CodeBlock text={truncate(content, 1000)} bg="rgba(80, 200, 80, 0.1)" borderColor="rgba(80, 200, 80, 0.3)" />

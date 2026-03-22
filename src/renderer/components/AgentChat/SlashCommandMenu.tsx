@@ -98,15 +98,10 @@ export function SlashCommandMenu({
   return (
     <div
       ref={listRef}
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border shadow-lg"
-      style={{
-        backgroundColor: 'var(--bg)',
-        borderColor: 'var(--border)',
-      }}
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic shadow-lg bg-surface-base"
     >
       <div
-        className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
-        style={{ color: 'var(--text-muted)' }}
+        className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted"
       >
         Slash Commands
       </div>
@@ -114,14 +109,7 @@ export function SlashCommandMenu({
         <button
           key={cmd.id}
           data-slash-item
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75"
-          style={{
-            backgroundColor:
-              index === selectedIndex
-                ? 'var(--bg-hover, var(--border))'
-                : 'transparent',
-            color: 'var(--text)',
-          }}
+          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${index === selectedIndex ? ' bg-surface-overlay' : ''}`}
           onMouseDown={(e) => {
             e.preventDefault(); // Prevent textarea blur
             onSelect(cmd);
@@ -129,18 +117,14 @@ export function SlashCommandMenu({
           onMouseEnter={() => setSelectedIndex(index)}
         >
           <span
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px]"
-            style={{
-              backgroundColor: 'var(--bg-elevated, var(--border))',
-              color: 'var(--text-muted)',
-            }}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] bg-surface-raised text-text-semantic-muted"
           >
             {cmd.icon}
           </span>
-          <span className="font-medium" style={{ color: 'var(--accent)' }}>
+          <span className="font-medium text-interactive-accent">
             /{cmd.id}
           </span>
-          <span className="truncate" style={{ color: 'var(--text-muted)' }}>
+          <span className="truncate text-text-semantic-muted">
             {cmd.description}
           </span>
         </button>
@@ -161,6 +145,8 @@ export interface SlashCommandContext {
   onClearChat?: () => void;
   onCompactChat?: () => void;
   onNewThread?: () => void;
+  onRemember?: (content: string) => void;
+  onOpenMemories?: () => void;
 }
 
 export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[] {
@@ -234,6 +220,22 @@ export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[]
       description: 'Show keyboard shortcuts and tips',
       icon: '?',
       action: () => dispatchIdeEvent('agent-ide:open-settings', 'keybindings'),
+    },
+    {
+      id: 'remember',
+      label: 'Remember',
+      description: 'Save a memory for future sessions',
+      icon: '◆',
+      action: () => { /* handled via onSelect in composer — extracts draft text */ },
+      clearDraft: true,
+    },
+    {
+      id: 'memories',
+      label: 'Memories',
+      description: 'View stored session memories',
+      icon: '≡',
+      action: () => ctx.onOpenMemories?.(),
+      clearDraft: true,
     },
   ];
 }

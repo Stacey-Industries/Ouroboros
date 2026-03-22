@@ -55,12 +55,12 @@ function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactEl
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
-        <span className="font-semibold text-base" style={{ color: 'var(--text)' }}>
+        <span className="font-semibold text-base text-text-semantic-primary">
           Tool Approval Required
         </span>
       </div>
       {queuedCount > 0 && (
-        <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
+        <span className="text-xs px-2 py-0.5 rounded text-text-semantic-on-accent" style={{ backgroundColor: 'var(--accent)' }}>
           +{queuedCount} queued
         </span>
       )}
@@ -78,10 +78,10 @@ function ApprovalMeta({
   return (
     <div className="flex items-center gap-2">
       <ToolBadge toolName={request.toolName} />
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-xs text-text-semantic-muted">
         Session {request.sessionId.slice(0, 8)}...
       </span>
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-xs text-text-semantic-muted">
         {elapsedSeconds > 0 ? `${elapsedSeconds}s ago` : 'just now'}
       </span>
     </div>
@@ -117,8 +117,7 @@ function RejectReasonField({
       }}
       placeholder="Rejection reason (optional)..."
       autoFocus
-      className="flex-1 px-3 py-1.5 rounded text-sm"
-      style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', border: '1px solid var(--border)', outline: 'none' }}
+      className="flex-1 px-3 py-1.5 rounded text-sm bg-surface-base text-text-semantic-primary border border-border-semantic outline-none"
     />
   );
 }
@@ -189,14 +188,14 @@ function ApprovalActions({
     <div className="flex items-center gap-2 mt-1">
       <ActionButton title="Approve (Enter or Y)" label="Approve (Y)" className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors" style={{ backgroundColor: '#98c379', color: '#1e1e1e', border: 'none', cursor: 'pointer' }} onClick={onApprove} />
       <ActionButton title="Reject (Escape or N)" label="Reject (N)" className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors" style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={handleReject} />
-      <ActionButton title="Always Allow this tool for this session (A)" label="Always Allow (A)" className="px-4 py-2 rounded text-sm font-medium transition-colors" style={{ backgroundColor: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent)', cursor: 'pointer' }} onClick={onAlwaysAllow} />
+      <ActionButton title="Always Allow this tool for this session (A)" label="Always Allow (A)" className="px-4 py-2 rounded text-sm font-medium transition-colors text-interactive-accent" style={{ backgroundColor: 'transparent', border: '1px solid var(--accent)', cursor: 'pointer' }} onClick={onAlwaysAllow} />
     </div>
   );
 }
 
 function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement {
   return (
-    <div className="rounded p-3" style={{ backgroundColor: 'var(--bg-deeper, rgba(0,0,0,0.2))', border: '1px solid var(--border)' }}>
+    <div className="rounded p-3 border border-border-semantic" style={{ backgroundColor: 'var(--bg-deeper, rgba(0,0,0,0.2))' }}>
       <ToolInputPreview toolName={request.toolName} input={request.toolInput} />
     </div>
   );
@@ -204,7 +203,7 @@ function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactEle
 
 function DialogHint(): React.ReactElement {
   return (
-    <div className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+    <div className="text-center text-xs text-text-semantic-muted">
       Claude Code is waiting for your decision. The tool will not execute until you respond.
     </div>
   );
@@ -234,7 +233,7 @@ export function ApprovalDialogCard({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 9999, backdropFilter: 'blur(2px)' }} onClick={(event) => event.stopPropagation()}>
-      <div className="flex flex-col gap-3 rounded-lg shadow-2xl" style={{ backgroundColor: 'var(--bg-panel, var(--bg))', border: '1px solid var(--border)', padding: '20px', width: '560px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto' }}>
+      <div className="flex flex-col gap-3 rounded-lg shadow-2xl border border-border-semantic" style={{ backgroundColor: 'var(--bg-panel, var(--bg))', padding: '20px', width: '560px', maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto' }}>
         <ApprovalHeader queuedCount={queuedCount} />
         <ApprovalMeta request={request} elapsedSeconds={elapsedSeconds} />
         <PreviewPanel request={request} />

@@ -11,10 +11,9 @@ export interface AgentChatThinkingBlockProps {
 function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
-      className={`h-3 w-3 shrink-0 transition-transform duration-200 ${collapsed ? '' : 'rotate-90'}`}
+      className={`h-3 w-3 shrink-0 transition-transform duration-200 text-text-semantic-muted ${collapsed ? '' : 'rotate-90'}`}
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--text-muted)' }}
     >
       <path
         d="M6 4l4 4-4 4"
@@ -31,8 +30,7 @@ function DurationBadge({ duration }: { duration: number }): React.ReactElement {
   const label = duration < 1 ? '<1s' : `${duration}s`;
   return (
     <span
-      className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+      className="rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-surface-raised text-text-semantic-muted"
     >
       {label}
     </span>
@@ -58,17 +56,15 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
 
   return (
     <div
-      className={`rounded-md ${isStreaming ? 'agent-chat-thinking-pulse' : ''}`}
+      className={`rounded-md ${isStreaming ? 'agent-chat-thinking-pulse' : ''} ${isCollapsed ? '' : 'bg-surface-raised'}`}
       style={{
         borderLeft: `2px solid ${isStreaming ? 'var(--accent)' : isCollapsed ? 'transparent' : 'var(--border)'}`,
-        backgroundColor: isCollapsed ? 'transparent' : 'var(--bg-tertiary)',
       }}
     >
       {/* Header row — always visible */}
       <button
         onClick={onToggleCollapse}
-        className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-        style={{ color: 'var(--text-muted)' }}
+        className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:bg-surface-raised text-text-semantic-muted"
       >
         <ChevronIcon collapsed={isCollapsed} />
         <span>
@@ -85,11 +81,8 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
         data-collapsed={isCollapsed ? 'true' : 'false'}
       >
         <div
-          className="px-2.5 pb-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed"
-          style={{
-            color: 'var(--text-muted)',
-            fontFamily: 'var(--font-ui)',
-          }}
+          className="px-2.5 pb-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-text-semantic-muted"
+          style={{ fontFamily: 'var(--font-ui)' }}
         >
           {content || (isStreaming ? '' : '(empty)')}
         </div>

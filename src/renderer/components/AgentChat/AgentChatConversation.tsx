@@ -105,24 +105,24 @@ function ContextSummaryRow({ message }: { message: AgentChatMessageRecord }): Re
     omittedFileCount > 0 ? `${omittedFileCount} excluded` : null,
     usedAdvancedControls ? 'advanced' : null,
   ].filter(Boolean);
-  return <div className="mt-1 text-[11px] text-[var(--text-muted)]">{parts.join(' \u00b7 ')}</div>;
+  return <div className="mt-1 text-[11px] text-text-semantic-muted">{parts.join(' \u00b7 ')}</div>;
 }
 
 function VerificationSummaryRow({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
   if (!message.verificationPreview) return null;
   const { profile, status, summary } = message.verificationPreview;
   const content = [profile, status, summary || null].filter(Boolean).join(' \u00b7 ');
-  return <div className="mt-1 text-[11px] text-[var(--text-muted)]">{content}</div>;
+  return <div className="mt-1 text-[11px] text-text-semantic-muted">{content}</div>;
 }
 
 function ErrorInline({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
   if (!message.error) return null;
-  return <div className="mt-1 text-[11px] text-[var(--error,#f85149)]">{message.error.message}</div>;
+  return <div className="mt-1 text-[11px] text-status-error">{message.error.message}</div>;
 }
 
 function ToolsSummaryRow({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
   if (!message.toolsSummary) return null;
-  return <div className="mt-1 text-[11px] text-[var(--text-muted)]">{message.toolsSummary}</div>;
+  return <div className="mt-1 text-[11px] text-text-semantic-muted">{message.toolsSummary}</div>;
 }
 
 function CostDurationRow({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
@@ -130,7 +130,7 @@ function CostDurationRow({ message }: { message: AgentChatMessageRecord }): Reac
   if (message.costSummary) parts.push(message.costSummary);
   if (message.durationSummary) parts.push(message.durationSummary);
   if (parts.length === 0) return null;
-  return <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">{parts.join(' \u2022 ')}</div>;
+  return <div className="mt-0.5 text-[11px] text-text-semantic-muted">{parts.join(' \u2022 ')}</div>;
 }
 
 function MessageActionLink(props: {
@@ -141,7 +141,7 @@ function MessageActionLink(props: {
   return (
     <button
       onClick={() => void props.onOpenLinkedDetails(props.message.orchestration)}
-      className="mt-1 text-[11px] text-[var(--accent)] transition-opacity duration-100 hover:opacity-80"
+      className="mt-1 text-[11px] text-interactive-accent transition-opacity duration-100 hover:opacity-80"
     >
       View details
     </button>
@@ -165,7 +165,7 @@ const UserMessage = React.memo(function UserMessage(props: {
   if (props.isEditing) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
+        <div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 bg-interactive-accent text-text-semantic-on-accent">
           <textarea
             autoFocus
             value={props.editDraft}
@@ -180,8 +180,8 @@ const UserMessage = React.memo(function UserMessage(props: {
                 props.onCancelEdit();
               }
             }}
-            className="w-full resize-none rounded-lg border bg-[var(--bg)] p-2 text-sm text-[var(--text)] focus:border-[var(--accent)] focus:outline-none"
-            style={{ borderColor: 'var(--border)', fontFamily: 'var(--font-ui)', minHeight: '60px' }}
+            className="w-full resize-none rounded-lg border bg-surface-base border-border-semantic p-2 text-sm text-text-semantic-primary focus:border-interactive-accent focus:outline-none"
+            style={{ fontFamily: 'var(--font-ui)', minHeight: '60px' }}
             rows={3}
           />
           <div className="mt-1.5 flex justify-end gap-1.5">
@@ -213,10 +213,10 @@ const UserMessage = React.memo(function UserMessage(props: {
         onRetry={props.onRetry}
         onBranch={props.onBranch}
       />
-      <div className="max-w-[85%] rounded-lg px-3.5 py-2.5" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)', borderRadius: '8px' }}>
+      <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 bg-interactive-accent text-text-semantic-on-accent">
         <div className="whitespace-pre-wrap text-sm leading-relaxed">{props.message.content || ' '}</div>
         <ContextSummaryRow message={props.message} />
-        <div className="mt-1 text-right text-[10px]" style={{ color: 'var(--bg)', opacity: 0.6 }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div>
+        <div className="mt-1 text-right text-[10px] text-text-semantic-on-accent" style={{ opacity: 0.6 }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div>
       </div>
     </div>
   );
@@ -373,7 +373,7 @@ const AssistantMessage = React.memo(function AssistantMessage(props: {
         {/* Timestamp + actions — hidden during streaming, shown when persisted */}
         {!msg._streaming && (
           <div className="flex items-center gap-1 mb-1">
-            <span className="text-[10px]" style={{ color: 'var(--text-faint, var(--text-muted))' }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
+            <span className="text-[10px] text-text-semantic-faint" title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</span>
             <AssistantMessageActions message={props.message} onBranch={props.onBranch} onRevert={props.onRevert} />
           </div>
         )}
@@ -421,8 +421,7 @@ function StatusMessage(props: { message: AgentChatMessageRecord }): React.ReactE
   return (
     <div className="flex justify-center">
       <div
-        className={`rounded-full px-3 py-1 text-[11px] text-[var(--text-muted)] ${pulsing ? 'agent-chat-status-pulse' : ''}`}
-        style={{ backgroundColor: 'var(--bg-tertiary)' }}
+        className={`rounded-full px-3 py-1 text-[11px] text-text-semantic-muted bg-surface-raised ${pulsing ? 'agent-chat-status-pulse' : ''}`}
       >
         {props.message.content || 'Status update'}
       </div>
@@ -485,10 +484,7 @@ function MessageCard(props: {
 function PendingUserBubble({ text }: { text: string }): React.ReactElement {
   return (
     <div className="flex justify-end">
-      <div
-        className="max-w-[85%] rounded-xl rounded-tr-sm px-3.5 py-2.5 text-sm leading-relaxed opacity-80"
-        style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}
-      >
+      <div className="max-w-[85%] rounded-xl rounded-tr-sm px-3.5 py-2.5 text-sm leading-relaxed opacity-80 bg-interactive-accent text-text-semantic-on-accent">
         {text}
       </div>
     </div>
@@ -501,7 +497,7 @@ function PendingUserBubble({ text }: { text: string }): React.ReactElement {
 function InlineError({ error }: { error: string | null }): React.ReactElement | null {
   if (!error) return null;
   return (
-    <div className="mx-4 rounded-lg px-3 py-2 text-xs text-[var(--error,#f85149)]" style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
+    <div className="mx-4 rounded-lg px-3 py-2 text-xs text-status-error" style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
       {error}
     </div>
   );
@@ -526,7 +522,7 @@ function FailedBanner({ activeThread }: { activeThread: AgentChatThreadRecord })
       // Show a subtle inline indicator instead of a prominent banner
       return (
         <div className="flex justify-center">
-          <div className="rounded-full px-3 py-1 text-[10px]" style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-tertiary)' }}>
+          <div className="rounded-full px-3 py-1 text-[10px] text-text-semantic-muted bg-surface-raised">
             Chat was stopped
           </div>
         </div>
@@ -535,11 +531,11 @@ function FailedBanner({ activeThread }: { activeThread: AgentChatThreadRecord })
   }
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="rounded-full px-3 py-1 text-[11px] font-medium" style={{ color: 'var(--error, #f85149)', backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
+      <div className="rounded-full px-3 py-1 text-[11px] font-medium text-status-error" style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}>
         {label}
       </div>
       {detail && (
-        <div className="max-w-md px-3 py-1 text-center text-[10px]" style={{ color: 'var(--text-muted)' }}>
+        <div className="max-w-md px-3 py-1 text-center text-[10px] text-text-semantic-muted">
           {detail}
         </div>
       )}
@@ -550,7 +546,7 @@ function FailedBanner({ activeThread }: { activeThread: AgentChatThreadRecord })
 function LoadingState(): React.ReactElement {
   return (
     <div className="flex flex-1 items-center justify-center">
-      <div className="text-xs text-[var(--text-muted)]">Loading chats...</div>
+      <div className="text-xs text-text-semantic-muted">Loading chats...</div>
     </div>
   );
 }
@@ -567,10 +563,10 @@ function MissingProjectState(): React.ReactElement {
           <path d="M8 20H40" stroke="currentColor" strokeWidth="1.5" />
         </svg>
       </div>
-      <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+      <div className="text-sm font-medium text-text-semantic-muted">
         Open a project folder to get started
       </div>
-      <div className="max-w-[280px] text-xs" style={{ color: 'var(--text-faint, var(--text-muted))' }}>
+      <div className="max-w-[280px] text-xs text-text-semantic-faint">
         Agent chat requires an active workspace. Open a folder to begin.
       </div>
     </div>
@@ -632,16 +628,10 @@ function EmptyConversationState(props: {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
       <div className="flex flex-col items-center gap-2">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-full text-base font-bold"
-          style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)', opacity: 0.8 }}
-        >
-          C
-        </div>
-        <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+        <div className="text-sm font-medium text-text-semantic-primary">
           Start a conversation
         </div>
-        <div className="max-w-[300px] text-xs" style={{ color: 'var(--text-muted)' }}>
+        <div className="max-w-[300px] text-xs text-text-semantic-muted">
           Ask the agent to inspect, edit, or verify code. Your first message creates the thread.
         </div>
       </div>
@@ -651,16 +641,15 @@ function EmptyConversationState(props: {
           <button
             key={item.prompt}
             onClick={() => props.onSelectPrompt?.(item.prompt)}
-            className="flex flex-col gap-1.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-150 hover:bg-[var(--bg-tertiary)]"
-            style={{ borderColor: 'var(--border)' }}
+            className="flex flex-col gap-1.5 rounded-lg border border-border-semantic px-3 py-2.5 text-left transition-colors duration-150 hover:bg-surface-raised"
           >
-            <div className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-text-semantic-muted">
               {item.icon}
-              <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
+              <span className="text-xs font-medium text-text-semantic-primary">
                 {item.title}
               </span>
             </div>
-            <span className="text-[11px] leading-snug" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-[11px] leading-snug text-text-semantic-muted">
               {item.description}
             </span>
           </button>
@@ -679,23 +668,18 @@ function QueuedMessageBanner(props: {
   if (props.messages.length === 0) return null;
 
   return (
-    <div className="border-t px-3 py-1.5" style={{ borderColor: 'var(--border)' }}>
-      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+    <div className="border-t border-border-semantic px-3 py-1.5">
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-text-semantic-muted">
         Queued ({props.messages.length})
       </div>
       <div className="space-y-1">
         {props.messages.map((msg) => (
           <div
             key={msg.id}
-            className="flex items-start gap-2 rounded-lg border px-2.5 py-1.5"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg)',
-            }}
+            className="flex items-start gap-2 rounded-lg border border-border-semantic bg-surface-base px-2.5 py-1.5"
           >
             <div
-              className="min-w-0 flex-1 truncate text-xs"
-              style={{ color: 'var(--text)' }}
+              className="min-w-0 flex-1 truncate text-xs text-text-semantic-primary"
               title={msg.content}
             >
               {msg.content.length > 80 ? `${msg.content.slice(0, 80)}...` : msg.content}
@@ -704,8 +688,7 @@ function QueuedMessageBanner(props: {
               <button
                 onClick={() => props.onEdit(msg.id)}
                 title="Edit — move back to composer"
-                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--text-muted)' }}
+                className="rounded p-0.5 text-[10px] text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -715,8 +698,7 @@ function QueuedMessageBanner(props: {
               <button
                 onClick={() => void props.onSendNow(msg.id)}
                 title="Send now — interrupt current task"
-                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--accent)' }}
+                className="rounded p-0.5 text-[10px] text-interactive-accent transition-colors duration-100 hover:bg-surface-raised"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />
@@ -726,10 +708,7 @@ function QueuedMessageBanner(props: {
               <button
                 onClick={() => props.onDelete(msg.id)}
                 title="Remove from queue"
-                className="rounded p-0.5 text-[10px] transition-colors duration-100 hover:bg-[var(--bg-tertiary)]"
-                style={{ color: 'var(--text-muted)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error, #f85149)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                className="rounded p-0.5 text-[10px] text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised hover:text-status-error"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -782,6 +761,7 @@ function findLastUserMessageId(messages: AgentChatMessageRecord[]): string | nul
 
 function ConversationBody(props: {
   activeThread: AgentChatThreadRecord | null;
+  streaming: import('./useAgentChatStreaming').AgentChatStreamingState;
   error: string | null;
   hasProject: boolean;
   isSending: boolean;
@@ -796,7 +776,6 @@ function ConversationBody(props: {
   onSelectThread?: (threadId: string) => void;
   onDraftChange?: (value: string) => void;
 }): React.ReactElement {
-  const streaming = useAgentChatStreaming(props.activeThread?.id ?? null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
 
@@ -805,10 +784,10 @@ function ConversationBody(props: {
   const wasStreamingRef = useRef(false);
   useEffect(() => {
     const wasStreaming = wasStreamingRef.current;
-    wasStreamingRef.current = streaming.isStreaming;
+    wasStreamingRef.current = props.streaming.isStreaming;
 
     // Detect completion: was streaming → no longer streaming, has blocks with file changes
-    if (wasStreaming && !streaming.isStreaming && streaming.blocks.length > 0) {
+    if (wasStreaming && !props.streaming.isStreaming && props.streaming.blocks.length > 0) {
       const thread = props.activeThread;
       if (!thread) return;
       // Find the latest assistant message (just completed) to get its snapshot hash
@@ -819,7 +798,7 @@ function ConversationBody(props: {
       const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
       if (snapshotHash && thread.workspaceRoot) {
         // Check if the streaming blocks include file-modifying tools
-        const hasFileEdits = streaming.blocks.some(
+        const hasFileEdits = props.streaming.blocks.some(
           (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
         );
         if (hasFileEdits) {
@@ -835,13 +814,13 @@ function ConversationBody(props: {
         }
       }
     }
-  }, [streaming.isStreaming, streaming.blocks, props.activeThread]);
+  }, [props.streaming.isStreaming, props.streaming.blocks, props.activeThread]);
 
   const { scrollRef, onScroll } = useSmartAutoScroll([
     props.activeThread?.messages.length,
     props.activeThread?.status,
-    streaming.blocks.length,
-    streaming.activeTextContent,
+    props.streaming.blocks.length,
+    props.streaming.activeTextContent,
   ]);
 
   const handleStartEdit = useCallback((message: AgentChatMessageRecord) => {
@@ -870,9 +849,9 @@ function ConversationBody(props: {
   // using the streaming messageId as key, so React reconciles in-place when
   // the persisted message arrives (same ID) — no unmount/remount, no visual jump.
   const threadIsActive = props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running';
-  const streamingIsActive = streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
-  const streamingAlreadyPersisted = streaming.streamingMessageId && props.activeThread
-    ? props.activeThread.messages.some((m) => m.id === streaming.streamingMessageId)
+  const streamingIsActive = props.streaming.isStreaming || props.streaming.blocks.length > 0 || threadIsActive;
+  const streamingAlreadyPersisted = props.streaming.streamingMessageId && props.activeThread
+    ? props.activeThread.messages.some((m) => m.id === props.streaming.streamingMessageId)
     : false;
 
   const messagesWithStreaming = useMemo(() => {
@@ -888,15 +867,15 @@ function ConversationBody(props: {
 
     if (streamingIsActive && !streamingAlreadyPersisted) {
       const syntheticMessage: AgentChatMessageRecord = {
-        id: streaming.streamingMessageId || `streaming-${Date.now()}`,
+        id: props.streaming.streamingMessageId || `streaming-${Date.now()}`,
         threadId: props.activeThread.id,
         role: 'assistant',
-        content: streaming.activeTextContent || '',
+        content: props.streaming.activeTextContent || '',
         createdAt: Date.now(),
-        blocks: streaming.blocks.length > 0 ? streaming.blocks : undefined,
+        blocks: props.streaming.blocks.length > 0 ? props.streaming.blocks : undefined,
         _streaming: true,
         _streamingState: {
-          isStreaming: threadIsActive || streaming.isStreaming,
+          isStreaming: threadIsActive || props.streaming.isStreaming,
           onStop: props.onStop,
         },
       } as AgentChatMessageRecord & { _streaming: boolean; _streamingState: { isStreaming: boolean; onStop?: () => Promise<void> } };
@@ -904,7 +883,7 @@ function ConversationBody(props: {
     }
 
     return filtered;
-  }, [props.activeThread, streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, props.onStop]);
+  }, [props.activeThread, props.streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, props.onStop]);
 
   const lastUserMessageId = props.activeThread ? findLastUserMessageId(props.activeThread.messages) : null;
 
@@ -1010,77 +989,71 @@ function useThreadModelUsage(thread: AgentChatThreadRecord | null | undefined): 
 }
 
 export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement {
+  const streaming = useAgentChatStreaming(props.activeThread?.id ?? null);
   const threadModelUsage = useThreadModelUsage(props.activeThread);
 
   return (
-    <div className="relative flex h-full min-h-0 w-full max-w-full flex-col p-2">
-      <div
-        className="glass-shell flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden rounded-[28px]"
-        style={{
-          backgroundColor: 'var(--glass-shell-bg, var(--bg-secondary))',
-          border: '1px solid var(--glass-border-muted, var(--border))',
-          boxShadow: 'var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.35))',
-        }}
-      >
-        <ConversationBody
-          activeThread={props.activeThread}
-          error={props.error}
-          hasProject={props.hasProject}
-          isSending={props.isSending}
-          isLoading={props.isLoading}
-          onEdit={props.onEdit}
-          onRetry={props.onRetry}
-          onBranch={props.onBranch}
-          onRevert={props.onRevert}
-          onOpenLinkedDetails={props.onOpenLinkedDetails}
-          onStop={props.onStop}
-          pendingUserMessage={props.pendingUserMessage}
-          onSelectThread={props.onSelectThread}
-          onDraftChange={props.onDraftChange}
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface-panel">
+      <ConversationBody
+        activeThread={props.activeThread}
+        streaming={streaming}
+        error={props.error}
+        hasProject={props.hasProject}
+        isSending={props.isSending}
+        isLoading={props.isLoading}
+        onEdit={props.onEdit}
+        onRetry={props.onRetry}
+        onBranch={props.onBranch}
+        onRevert={props.onRevert}
+        onOpenLinkedDetails={props.onOpenLinkedDetails}
+        onStop={props.onStop}
+        pendingUserMessage={props.pendingUserMessage}
+        onSelectThread={props.onSelectThread}
+        onDraftChange={props.onDraftChange}
+      />
+      {props.queuedMessages && props.queuedMessages.length > 0 && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow && (
+        <QueuedMessageBanner
+          messages={props.queuedMessages}
+          onEdit={props.onEditQueuedMessage}
+          onDelete={props.onDeleteQueuedMessage}
+          onSendNow={props.onSendQueuedMessageNow}
         />
-        {props.queuedMessages && props.queuedMessages.length > 0 && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow && (
-          <QueuedMessageBanner
-            messages={props.queuedMessages}
-            onEdit={props.onEditQueuedMessage}
-            onDelete={props.onDeleteQueuedMessage}
-            onSendNow={props.onSendQueuedMessageNow}
-          />
-        )}
-        <AgentChatComposer
-          canSend={props.canSend}
-          disabled={!props.hasProject}
-          draft={props.draft}
-          isSending={props.isSending}
-          threadIsBusy={props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running'}
-          messages={props.activeThread?.messages}
-          onChange={props.onDraftChange}
-          onSubmit={props.onSend}
-          pinnedFiles={props.pinnedFiles}
-          onRemoveFile={props.onRemoveFile}
-          contextSummary={props.contextSummary}
-          autocompleteResults={props.autocompleteResults}
-          isAutocompleteOpen={props.isAutocompleteOpen}
-          onAutocompleteQuery={props.onAutocompleteQuery}
-          onSelectFile={props.onSelectFile}
-          onCloseAutocomplete={props.onCloseAutocomplete}
-          onOpenAutocomplete={props.onOpenAutocomplete}
-          mentions={props.mentions}
-          onAddMention={props.onAddMention}
-          onRemoveMention={props.onRemoveMention}
-          allFiles={props.allFiles}
-          chatOverrides={props.chatOverrides}
-          onChatOverridesChange={props.onChatOverridesChange}
-          settingsModel={props.settingsModel}
-          codexSettingsModel={props.codexSettingsModel}
-          defaultProvider={props.defaultProvider}
-          modelProviders={props.modelProviders}
-          codexModels={props.codexModels}
-          threadModelUsage={threadModelUsage}
-          slashCommandContext={props.slashCommandContext}
-          attachments={props.attachments}
-          onAttachmentsChange={props.onAttachmentsChange}
-        />
-      </div>
+      )}
+      <AgentChatComposer
+        canSend={props.canSend}
+        disabled={!props.hasProject}
+        draft={props.draft}
+        isSending={props.isSending}
+        threadIsBusy={props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running'}
+        messages={props.activeThread?.messages}
+        onChange={props.onDraftChange}
+        onSubmit={props.onSend}
+        pinnedFiles={props.pinnedFiles}
+        onRemoveFile={props.onRemoveFile}
+        contextSummary={props.contextSummary}
+        autocompleteResults={props.autocompleteResults}
+        isAutocompleteOpen={props.isAutocompleteOpen}
+        onAutocompleteQuery={props.onAutocompleteQuery}
+        onSelectFile={props.onSelectFile}
+        onCloseAutocomplete={props.onCloseAutocomplete}
+        onOpenAutocomplete={props.onOpenAutocomplete}
+        mentions={props.mentions}
+        onAddMention={props.onAddMention}
+        onRemoveMention={props.onRemoveMention}
+        allFiles={props.allFiles}
+        chatOverrides={props.chatOverrides}
+        onChatOverridesChange={props.onChatOverridesChange}
+        settingsModel={props.settingsModel}
+        codexSettingsModel={props.codexSettingsModel}
+        defaultProvider={props.defaultProvider}
+        modelProviders={props.modelProviders}
+        codexModels={props.codexModels}
+        threadModelUsage={threadModelUsage}
+        streamingTokenUsage={streaming.streamingTokenUsage}
+        slashCommandContext={props.slashCommandContext}
+        attachments={props.attachments}
+        onAttachmentsChange={props.onAttachmentsChange}
+      />
       <AgentChatDetailsDrawer
         activeLink={props.details?.link ?? props.activeThread?.latestOrchestration}
         details={props.details}

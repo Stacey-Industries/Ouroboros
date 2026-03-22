@@ -52,6 +52,8 @@ export interface AgentChatComposerProps {
   codexModels?: CodexModelOption[];
   /** Per-model context usage for the active thread. */
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
+  /** Real-time token usage during streaming — shown in the context ring while agent is working. */
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   /** Slash command callbacks for /clear, /compact, /new, etc. */
   slashCommandContext?: SlashCommandContext;
   /** Image attachments for the current message */
@@ -101,8 +103,8 @@ function AttachmentChip({ attachment, onRemove }: { attachment: ImageAttachment;
   const src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight"
-      style={{ backgroundColor: 'rgba(100,180,255,0.08)', borderColor: 'rgba(100,180,255,0.25)', color: 'var(--accent)' }}
+      className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight text-interactive-accent"
+      style={{ backgroundColor: 'rgba(100,180,255,0.08)', borderColor: 'rgba(100,180,255,0.25)' }}
     >
       <img src={src} alt="" className="h-4 w-4 rounded object-cover" />
       <span className="max-w-[100px] truncate" style={{ fontFamily: 'var(--font-mono)' }}>{attachment.name}</span>
@@ -139,25 +141,12 @@ function SendButton(props: { canSend: boolean; isSending: boolean; willQueue: bo
       disabled={!props.canSend}
       title={label}
       aria-busy={props.isSending}
-      className="absolute bottom-2 right-2 flex items-center justify-center rounded-full text-xs font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30"
+      className="absolute right-2 flex items-center justify-center rounded-md text-xs font-medium transition-all duration-100 hover:bg-[rgba(255,255,255,0.08)] disabled:cursor-not-allowed disabled:opacity-30"
       style={{
+        top: '6px',
         width: '28px',
         height: '28px',
-        backgroundColor: props.canSend
-          ? (props.willQueue ? 'var(--bg-tertiary)' : 'var(--accent)')
-          : 'transparent',
-        color: props.canSend
-          ? (props.willQueue ? 'var(--accent)' : 'var(--bg)')
-          : 'var(--text-muted)',
-        border: props.canSend && props.willQueue ? '1.5px solid var(--accent)' : 'none',
-      }}
-      onMouseEnter={(e) => {
-        if (props.canSend) {
-          e.currentTarget.style.filter = 'brightness(1.15)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.filter = 'none';
+        color: props.canSend ? 'var(--text-primary)' : 'var(--text-muted)',
       }}
     >
       {props.willQueue ? (
@@ -181,26 +170,18 @@ function AutocompleteDropdown(props: {
 
   return (
     <div
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[240px] overflow-y-auto rounded-lg border shadow-lg"
-      style={{
-        backgroundColor: 'var(--bg)',
-        borderColor: 'var(--border)',
-      }}
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[240px] overflow-y-auto rounded-lg border border-border-semantic shadow-lg bg-surface-base"
     >
       {props.results.map((file, index) => (
         <button
           key={file.path}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75"
-          style={{
-            backgroundColor: index === props.selectedIndex ? 'var(--bg-hover, var(--border))' : 'transparent',
-            color: 'var(--text)',
-          }}
+          className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors duration-75 text-text-semantic-primary${index === props.selectedIndex ? ' bg-surface-overlay' : ''}`}
           onMouseDown={(e) => {
             e.preventDefault();
             props.onSelect(file);
           }}
         >
-          <span className="shrink-0 text-[var(--text-muted)]">@</span>
+          <span className="shrink-0 text-text-semantic-muted">@</span>
           <span className="truncate" style={{ fontFamily: 'var(--font-mono)' }}>
             {file.relativePath}
           </span>
@@ -240,6 +221,7 @@ export function AgentChatComposer({
   modelProviders,
   codexModels,
   threadModelUsage,
+  streamingTokenUsage,
   slashCommandContext,
   attachments = [],
   onAttachmentsChange,
@@ -272,7 +254,13 @@ export function AgentChatComposer({
   );
 
   const handleSlashSelect = useCallback((cmd: SlashCommand) => {
-    if (cmd.id === 'diff' && onAddMention) {
+    if (cmd.id === 'remember' && slashCommandContext?.onRemember) {
+      const text = draft.replace(/^\/remember\s*/i, '').trim();
+      if (text) {
+        slashCommandContext.onRemember(text);
+      }
+      // Draft is cleared below via clearDraft: true
+    } else if (cmd.id === 'diff' && onAddMention) {
       onAddMention({
         type: 'diff',
         key: '@diff',
@@ -294,7 +282,7 @@ export function AgentChatComposer({
     setIsSlashMenuOpen(false);
     setSlashQuery(null);
     textareaRef.current?.focus();
-  }, [onChange, onAddMention]);
+  }, [draft, onChange, onAddMention, slashCommandContext]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -574,6 +562,22 @@ export function AgentChatComposer({
     }
 
     event.preventDefault();
+
+    // Intercept /remember <text> typed directly and submitted via Enter
+    if (draft.match(/^\/remember\s+/i) && slashCommandContext?.onRemember) {
+      const text = draft.replace(/^\/remember\s*/i, '').trim();
+      if (text) {
+        slashCommandContext.onRemember(text);
+      }
+      if (textareaRef.current) {
+        textareaRef.current.value = '';
+        autoResizeTextarea(textareaRef.current);
+      }
+      lastSyncedDraft.current = '';
+      onChange('');
+      return;
+    }
+
     if (!canSend) {
       return;
     }
@@ -583,6 +587,7 @@ export function AgentChatComposer({
     autocompleteResults,
     canSend,
     chatOverrides,
+    draft,
     handleFileSelect,
     isAutocompleteOpen,
     isMentionAutocompleteOpen,
@@ -593,6 +598,7 @@ export function AgentChatComposer({
     onCloseAutocomplete,
     onSubmit,
     selectedIndex,
+    slashCommandContext,
     useMentionSystem,
   ]);
 
@@ -600,8 +606,7 @@ export function AgentChatComposer({
 
   return (
     <div
-      className={`border-t pb-1 pt-2${isDragging ? ' ring-2 ring-inset ring-[var(--accent)]' : ''}`}
-      style={{ borderColor: 'var(--border)' }}
+      className={`pb-1 pt-2${isDragging ? ' ring-2 ring-inset ring-interactive-accent' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -672,12 +677,14 @@ export function AgentChatComposer({
             placeholder="Ask the agent... (/ for commands, @ to mention files)"
             disabled={disabled}
             rows={1}
-            className={`w-full resize-none border bg-[var(--bg)] py-2.5 pl-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60${onAttachmentsChange ? ' pr-16' : ' pr-10'}`}
+            className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             style={{
               borderColor: 'var(--border-muted, var(--border))',
               borderRadius: '8px',
               fontFamily: 'var(--font-ui)',
               minHeight: '40px',
+              padding: onAttachmentsChange ? '10px 72px 10px 12px' : '10px 44px 10px 12px',
+              lineHeight: '1.4',
               transition: 'border-color 150ms ease, box-shadow 150ms ease',
             }}
             onFocus={(e) => {
@@ -694,10 +701,8 @@ export function AgentChatComposer({
               type="button"
               title="Attach image"
               onClick={() => void handlePickImage()}
-              className="absolute bottom-2 right-10 flex h-[28px] w-[28px] items-center justify-center rounded transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+              className="absolute right-10 flex h-[28px] w-[28px] items-center justify-center rounded-md transition-colors duration-100 text-text-semantic-muted hover:text-text-semantic-primary hover:bg-[rgba(255,255,255,0.08)]"
+              style={{ top: '6px' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -722,6 +727,7 @@ export function AgentChatComposer({
           providers={modelProviders}
           codexModels={codexModels}
           threadModelUsage={threadModelUsage}
+          streamingTokenUsage={streamingTokenUsage}
         />
       )}
     </div>

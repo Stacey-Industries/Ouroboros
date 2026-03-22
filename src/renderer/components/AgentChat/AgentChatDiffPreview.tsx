@@ -142,23 +142,15 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
         <button
           onClick={fetchDiff}
           disabled={loading}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-          style={{
-            backgroundColor: 'rgba(100, 100, 255, 0.1)',
-            color: 'var(--accent)',
-            border: '1px solid var(--border)',
-          }}
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
+          style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
         >
           {loading ? 'Loading...' : expanded ? 'Hide Changes' : 'View Changes'}
         </button>
 
         <button
           onClick={handleOpenInEditor}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-          style={{
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border)',
-          }}
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-text-semantic-muted border border-border-semantic"
           title="Open in Editor"
         >
           <ExternalIcon />
@@ -168,11 +160,7 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
         {diffLines !== null && (
           <button
             onClick={handleCopyDiff}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-            style={{
-              color: 'var(--text-muted)',
-              border: '1px solid var(--border)',
-            }}
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-text-semantic-muted border border-border-semantic"
             title="Copy Diff"
           >
             <CopyIcon />
@@ -183,8 +171,8 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
 
       {error && (
         <div
-          className="mt-1 rounded px-2 py-1 text-[10px]"
-          style={{ color: 'var(--error, #f85149)', backgroundColor: 'rgba(248, 81, 73, 0.08)' }}
+          className="mt-1 rounded px-2 py-1 text-[10px] text-status-error"
+          style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}
         >
           {error}
         </div>
@@ -192,11 +180,9 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
 
       {expanded && diffLines && diffLines.length > 0 && (
         <div
-          className="mt-1.5 overflow-auto rounded border"
+          className="mt-1.5 overflow-auto rounded border border-border-semantic bg-surface-base"
           style={{
             maxHeight: '300px',
-            borderColor: 'var(--border)',
-            backgroundColor: 'var(--bg)',
             fontFamily: 'var(--font-mono)',
             fontSize: '11px',
             lineHeight: '1.5',
@@ -210,12 +196,7 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
                     <tr key={i}>
                       <td
                         colSpan={3}
-                        className="px-2 py-0.5 select-text"
-                        style={{
-                          color: 'var(--text-muted)',
-                          backgroundColor: 'var(--bg-tertiary)',
-                          fontWeight: 600,
-                        }}
+                        className="px-2 py-0.5 select-text text-text-semantic-muted bg-surface-raised font-semibold"
                       >
                         {line.text}
                       </td>
@@ -228,11 +209,8 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
                     <tr key={i}>
                       <td
                         colSpan={3}
-                        className="px-2 py-0.5 select-text"
-                        style={{
-                          color: 'var(--accent)',
-                          backgroundColor: 'rgba(100, 100, 255, 0.06)',
-                        }}
+                        className="px-2 py-0.5 select-text text-interactive-accent"
+                        style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
                       >
                         {line.text}
                       </td>
@@ -260,9 +238,8 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
                 return (
                   <tr key={i} style={{ backgroundColor: bgColor }}>
                     <td
-                      className="select-none px-1 text-right"
+                      className="select-none px-1 text-right text-text-semantic-muted"
                       style={{
-                        color: 'var(--text-muted)',
                         minWidth: '2.5em',
                         opacity: 0.5,
                         userSelect: 'none',
@@ -271,9 +248,8 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
                       {line.oldLineNo ?? ''}
                     </td>
                     <td
-                      className="select-none px-1 text-right"
+                      className="select-none px-1 text-right text-text-semantic-muted"
                       style={{
-                        color: 'var(--text-muted)',
                         minWidth: '2.5em',
                         opacity: 0.5,
                         userSelect: 'none',

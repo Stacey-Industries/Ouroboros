@@ -92,19 +92,13 @@ export function StreamingChangeSummaryBar({
 
   return (
     <div
-      className="flex items-center gap-3 rounded px-3 py-1.5 text-[11px] mt-2 ml-7"
-      style={{
-        backgroundColor: 'var(--bg-tertiary)',
-        color: 'var(--text-muted)',
-        border: '1px solid var(--border)',
-      }}
+      className="flex items-center gap-3 rounded px-3 py-1.5 text-[11px] mt-2 ml-7 bg-surface-raised text-text-semantic-muted border border-border-semantic"
     >
       {/* Pulsing dot while streaming */}
       {isStreaming && (
         <span
-          className="inline-block h-2 w-2 rounded-full"
+          className="inline-block h-2 w-2 rounded-full bg-interactive-accent"
           style={{
-            backgroundColor: 'var(--accent)',
             animation: 'agent-chat-tally-pulse 1.5s ease-in-out infinite',
           }}
         />
@@ -118,10 +112,10 @@ export function StreamingChangeSummaryBar({
       {(tally.linesAdded > 0 || tally.linesRemoved > 0) && (
         <span className="flex items-center gap-1.5">
           {tally.linesAdded > 0 && (
-            <span style={{ color: 'var(--success, #3fb950)' }}>+{tally.linesAdded}</span>
+            <span className="text-status-success">+{tally.linesAdded}</span>
           )}
           {tally.linesRemoved > 0 && (
-            <span style={{ color: 'var(--error, #f85149)' }}>-{tally.linesRemoved}</span>
+            <span className="text-status-error">-{tally.linesRemoved}</span>
           )}
         </span>
       )}
@@ -183,10 +177,10 @@ function parsePatchLines(patch: string): DiffLine[] {
 }
 
 const diffLineColors: Record<DiffLine['type'], React.CSSProperties> = {
-  add: { backgroundColor: 'rgba(63, 185, 80, 0.1)', color: 'var(--success, #3fb950)' },
-  remove: { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: 'var(--error, #f85149)' },
-  context: { color: 'var(--text-muted)' },
-  header: { color: 'var(--accent)', fontWeight: 600 },
+  add: { backgroundColor: 'rgba(63, 185, 80, 0.1)', color: '#3fb950' },
+  remove: { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: '#f85149' },
+  context: {},
+  header: { fontWeight: 600 },
 };
 
 function InlineDiffViewer({ filePath, projectRoot }: { filePath: string; projectRoot: string }): React.ReactElement {
@@ -210,11 +204,11 @@ function InlineDiffViewer({ filePath, projectRoot }: { filePath: string; project
   }, [filePath, projectRoot]);
 
   if (loading) {
-    return <div className="px-3 py-2 text-[10px] italic" style={{ color: 'var(--text-faint)' }}>Loading diff...</div>;
+    return <div className="px-3 py-2 text-[10px] italic text-text-semantic-faint">Loading diff...</div>;
   }
 
   if (!patch) {
-    return <div className="px-3 py-2 text-[10px] italic" style={{ color: 'var(--text-faint)' }}>No changes (file matches HEAD)</div>;
+    return <div className="px-3 py-2 text-[10px] italic text-text-semantic-faint">No changes (file matches HEAD)</div>;
   }
 
   const lines = parsePatchLines(patch);
@@ -222,10 +216,14 @@ function InlineDiffViewer({ filePath, projectRoot }: { filePath: string; project
   return (
     <div
       className="overflow-auto text-[11px] leading-[1.5]"
-      style={{ maxHeight: '300px', fontFamily: 'var(--font-mono)', borderTop: '1px solid var(--border-muted)' }}
+      style={{ maxHeight: '300px', fontFamily: 'var(--font-mono)', borderTop: '1px solid var(--border)' }}
     >
       {lines.map((line, i) => (
-        <div key={i} className="px-3 py-0" style={diffLineColors[line.type]}>
+        <div
+          key={i}
+          className={`px-3 py-0 ${line.type === 'context' ? 'text-text-semantic-muted' : line.type === 'header' ? 'text-interactive-accent' : ''}`}
+          style={diffLineColors[line.type]}
+        >
           <span className="select-none opacity-40 inline-block w-3">{line.prefix}</span>
           {line.content}
         </div>
@@ -254,11 +252,10 @@ function FileChangeRow({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-2 px-3 py-1 text-[11px] text-left transition-colors"
+      className={`flex w-full items-center gap-2 px-3 py-1 text-[11px] text-left transition-colors ${isSelected ? 'text-text-semantic-primary' : 'text-text-semantic-muted'}`}
       style={{
         backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 10%, transparent)' : 'transparent',
-        color: isSelected ? 'var(--text)' : 'var(--text-muted)',
-        borderBottom: '1px solid var(--border-muted)',
+        borderBottom: '1px solid var(--border)',
         fontFamily: 'var(--font-mono)',
         cursor: 'pointer',
         border: 'none',
@@ -306,20 +303,16 @@ export function CompletedChangeSummaryBar({
 
   return (
     <div
-      className="rounded mt-2 overflow-hidden"
-      style={{
-        backgroundColor: 'var(--bg-tertiary)',
-        border: '1px solid var(--border)',
-      }}
+      className="rounded mt-2 overflow-hidden bg-surface-raised border border-border-semantic"
     >
       {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+      <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-text-semantic-muted">
         {/* Expand toggle (only when we have files) */}
         {fileCount > 0 && (
           <button
             onClick={() => { setExpanded(!expanded); if (expanded) setSelectedFile(null); }}
             className="flex items-center gap-1 shrink-0"
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <ChevronIcon expanded={expanded} />
           </button>
@@ -338,18 +331,18 @@ export function CompletedChangeSummaryBar({
         {tally && (tally.linesAdded > 0 || tally.linesRemoved > 0) && (
           <span className="flex items-center gap-1.5">
             {tally.linesAdded > 0 && (
-              <span style={{ color: 'var(--success, #3fb950)' }}>+{tally.linesAdded}</span>
+              <span className="text-status-success">+{tally.linesAdded}</span>
             )}
             {tally.linesRemoved > 0 && (
-              <span style={{ color: 'var(--error, #f85149)' }}>-{tally.linesRemoved}</span>
+              <span className="text-status-error">-{tally.linesRemoved}</span>
             )}
           </span>
         )}
 
         <button
           onClick={openFullReview}
-          className="ml-auto shrink-0 text-[10px] font-medium"
-          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0 }}
+          className="ml-auto shrink-0 text-[10px] font-medium text-interactive-accent"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           Full Review →
         </button>
@@ -357,7 +350,7 @@ export function CompletedChangeSummaryBar({
 
       {/* Expanded file list */}
       {expanded && tally && tally.filesChanged.length > 0 && (
-        <div style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="border-t border-border-semantic">
           {tally.filesChanged.map((file) => (
             <React.Fragment key={file}>
               <FileChangeRow

@@ -38,19 +38,19 @@ interface SparklineDotsProps {
 const SummaryCard = memo(function SummaryCard({ label, value, sub }: SummaryCardProps): React.ReactElement {
   return (
     <div
-      className="flex flex-col items-center rounded-md px-2 py-2 min-w-0"
-      style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-muted)' }}
+      className="flex flex-col items-center rounded-md px-2 py-2 min-w-0 bg-surface-raised"
+      style={{ border: '1px solid var(--border-muted)' }}
     >
-      <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+      <span className="text-[9px] font-semibold uppercase tracking-wider text-text-semantic-faint">
         {label}
       </span>
       <span
-        className="text-[15px] font-bold tabular-nums leading-tight"
-        style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}
+        className="text-[15px] font-bold tabular-nums leading-tight text-interactive-accent"
+        style={{ fontFamily: 'var(--font-mono)' }}
       >
         {value}
       </span>
-      {sub ? <span className="text-[9px]" style={{ color: 'var(--text-faint)' }}>{sub}</span> : null}
+      {sub ? <span className="text-[9px] text-text-semantic-faint">{sub}</span> : null}
     </div>
   );
 });
@@ -59,7 +59,7 @@ export const AnalyticsSummaryGrid = memo(function AnalyticsSummaryGrid({
   aggregate,
 }: AnalyticsSummaryGridProps): React.ReactElement {
   return (
-    <div className="grid grid-cols-2 gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+    <div className="grid grid-cols-2 gap-2 px-4 py-3 border-b border-border-semantic">
       <SummaryCard label="Sessions" value={String(aggregate.totalSessions)} sub={`${aggregate.totalToolCalls} tool calls`} />
       <SummaryCard
         label="Tokens / Edit"
@@ -85,22 +85,21 @@ const ToolDistributionRow = memo(function ToolDistributionRow({
       >
         {entry.toolName}
       </span>
-      <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+      <div className="flex-1 h-[6px] rounded-full overflow-hidden bg-surface-base">
         <div
           className="h-full rounded-full transition-all duration-300"
           style={{ width: `${Math.max((entry.count / maxCount) * 100, 2)}%`, background: getToolColor(entry.toolName), opacity: 0.7 }}
         />
       </div>
-      <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}>
+      <span className="text-[10px] tabular-nums text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}>
         {entry.count}
       </span>
-      <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)', width: '36px', textAlign: 'right', flexShrink: 0 }}>
+      <span className="text-[10px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)', width: '36px', textAlign: 'right', flexShrink: 0 }}>
         {formatPercent(entry.percentage)}
       </span>
       {entry.errorCount > 0 ? (
         <span
-          className="text-[9px] tabular-nums"
-          style={{ color: 'var(--error, #f87171)', fontFamily: 'var(--font-mono)', width: '24px', textAlign: 'right', flexShrink: 0 }}
+          className="text-[9px] tabular-nums text-status-error" style={{ fontFamily: 'var(--font-mono)', width: '24px', textAlign: 'right', flexShrink: 0 }}
           title={`${entry.errorCount} error(s)`}
         >
           {entry.errorCount}err
@@ -115,18 +114,18 @@ export const ToolDistributionChart = memo(function ToolDistributionChart({
 }: ToolDistributionChartProps): React.ReactElement {
   if (distribution.length === 0) {
     return (
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>
+      <div className="px-4 py-3 border-b border-border-semantic">
+        <div className="text-[10px] font-medium uppercase tracking-wider mb-2 text-text-semantic-faint">
           Tool Distribution
         </div>
-        <span className="text-[10px] italic" style={{ color: 'var(--text-faint)' }}>No tool calls recorded</span>
+        <span className="text-[10px] italic text-text-semantic-faint">No tool calls recorded</span>
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>
+    <div className="px-4 py-3 border-b border-border-semantic">
+      <div className="text-[10px] font-medium uppercase tracking-wider mb-2 text-text-semantic-faint">
         Tool Distribution
       </div>
       <div className="flex flex-col gap-1">
@@ -153,15 +152,15 @@ export const EfficiencySparkline = memo(function EfficiencySparkline({
   if (dataPoints.length < 2) return null;
 
   return (
-    <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-faint)' }}>
+    <div className="px-4 py-3 border-b border-border-semantic">
+      <div className="text-[10px] font-medium uppercase tracking-wider mb-2 text-text-semantic-faint">
         Tokens per Edit Trend (lower is better)
       </div>
       <svg width="200" height="40" viewBox="0 0 200 40" style={{ overflow: 'visible' }}>
         <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
         <SparklineDots points={points} />
       </svg>
-      <div className="flex justify-between text-[9px] tabular-nums mt-1" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
+      <div className="flex justify-between text-[9px] tabular-nums mt-1 text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
         <span>{formatTokens(Math.round(dataPoints[0]))}</span>
         <span>{formatTokens(Math.round(dataPoints[dataPoints.length - 1]))}</span>
       </div>
@@ -176,8 +175,8 @@ export const AnalyticsEmptyState = memo(function AnalyticsEmptyState(): React.Re
         <path d="M1 12 L4 4 L7 8 L10 2 L15 10" />
         <line x1="1" y1="14" x2="15" y2="14" />
       </svg>
-      <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>No sessions tracked yet</span>
-      <span className="text-[10px]" style={{ color: 'var(--text-faint)', opacity: 0.6 }}>
+      <span className="text-[11px] text-text-semantic-faint">No sessions tracked yet</span>
+      <span className="text-[10px] text-text-semantic-faint" style={{ opacity: 0.6 }}>
         Analytics will appear once Claude Code sessions are detected
       </span>
     </div>

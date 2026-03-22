@@ -42,11 +42,11 @@ export const SummaryCards = memo(function SummaryCards({ entries }: SummaryCards
       style={{ borderBottom: '1px solid var(--border-muted)' }}
     >
       {CARD_DEFS.map((card) => (
-        <div key={card.label} className="flex flex-col items-center rounded px-2 py-1.5" style={{ background: 'var(--bg-tertiary)' }}>
-          <span className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+        <div key={card.label} className="flex flex-col items-center rounded px-2 py-1.5 bg-surface-raised">
+          <span className="text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint">
             {card.label}
           </span>
-          <span className="text-[14px] font-bold tabular-nums" style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
+          <span className="text-[14px] font-bold tabular-nums text-interactive-accent" style={{ fontFamily: 'var(--font-mono)' }}>
             {formatCost(stats[card.key])}
           </span>
         </div>

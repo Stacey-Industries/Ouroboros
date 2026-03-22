@@ -130,7 +130,7 @@ const LogLine = memo(function LogLine({ call }: LogLineProps): React.ReactElemen
     : null;
 
   return (
-    <div className="flex items-baseline gap-2 px-3 py-0.5 leading-snug hover:bg-[var(--bg-tertiary)]">
+    <div className="flex items-baseline gap-2 px-3 py-0.5 leading-snug hover:bg-surface-raised">
       <span
         className="shrink-0 text-[10px] tabular-nums"
         style={{ color: 'var(--text-faint)', minWidth: '84px' }}
@@ -149,7 +149,7 @@ const LogLine = memo(function LogLine({ call }: LogLineProps): React.ReactElemen
       >
         {call.toolName}
       </span>
-      <span className="selectable break-all text-[10px]" style={{ color: 'var(--text)' }}>
+      <span className="selectable break-all text-[10px] text-text-semantic-primary">
         {call.input}
         {durationText}
       </span>

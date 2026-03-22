@@ -25,12 +25,7 @@ function CopyButton({ text }: { text: string }): React.ReactElement {
   return (
     <button
       onClick={handleCopy}
-      className="absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100"
-      style={{
-        backgroundColor: 'var(--bg, #1a1a2e)',
-        color: 'var(--text-muted)',
-        border: '1px solid var(--border)',
-      }}
+      className="absolute top-2 right-2 rounded px-1.5 py-0.5 text-[10px] opacity-0 transition-opacity group-hover/code:opacity-100 bg-surface-base text-text-semantic-muted border border-border-semantic"
     >
       {copied ? 'Copied' : 'Copy'}
     </button>
@@ -61,7 +56,7 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
 
   return (
     <div
-      className="agent-chat-markdown text-sm leading-relaxed text-[var(--text)]"
+      className="agent-chat-markdown text-sm leading-relaxed text-text-semantic-primary"
       onClick={handleLinkClick}
     >
       <ReactMarkdown
@@ -78,8 +73,8 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
                 <div className="group/code relative my-2">
                   {match && (
                     <div
-                      className="rounded-t px-3 py-1 text-[10px] font-medium"
-                      style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}
+                      className="rounded-t px-3 py-1 text-[10px] font-medium bg-surface-raised text-text-semantic-muted"
+                      style={{ borderBottom: '1px solid var(--border)' }}
                     >
                       {match[1]}
                     </div>
@@ -90,7 +85,7 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
                       margin: 0,
                       padding: '0.65em 0.85em',
                       backgroundColor: 'var(--bg-tertiary, rgba(30, 30, 40, 0.6))',
-                      border: '1px solid var(--border-muted, var(--border))',
+                      border: '1px solid var(--border)',
                       borderTop: match ? 'none' : undefined,
                       overflowX: 'auto',
                       lineHeight: 1.5,
@@ -108,11 +103,10 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
             // Inline code
             return (
               <code
-                className={className}
+                className={`${className ?? ''} bg-surface-raised`}
                 style={{
                   padding: '0.15em 0.35em',
                   borderRadius: '4px',
-                  backgroundColor: 'var(--bg-tertiary, rgba(100, 100, 100, 0.12))',
                   fontSize: '0.9em',
                   fontFamily: 'var(--font-mono)',
                 }}
@@ -143,11 +137,11 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
           th({ children }) {
             return (
               <th
+                className="text-text-semantic-primary"
                 style={{
                   padding: '0.4em 0.75em',
                   textAlign: 'left',
                   borderBottom: '2px solid var(--border)',
-                  color: 'var(--text)',
                   fontWeight: 600,
                   whiteSpace: 'nowrap',
                 }}
@@ -159,10 +153,10 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
           td({ children }) {
             return (
               <td
+                className="text-text-semantic-muted"
                 style={{
                   padding: '0.35em 0.75em',
-                  borderBottom: '1px solid var(--border-muted, var(--border))',
-                  color: 'var(--text-muted)',
+                  borderBottom: '1px solid var(--border)',
                 }}
               >
                 {children}
@@ -173,7 +167,7 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
           // Links
           a({ href, children }) {
             return (
-              <a href={href} style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+              <a href={href} className="text-interactive-accent underline">
                 {children}
               </a>
             );
@@ -188,13 +182,12 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
             const matches = text.match(TREE_CHAR_RE);
             if (matches && matches.length >= 3) {
               return (
-                <pre style={{
+                <pre className="text-text-semantic-muted" style={{
                   margin: '0.4em 0',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.85em',
                   lineHeight: 1.5,
                   whiteSpace: 'pre-wrap',
-                  color: 'var(--text-muted)',
                   background: 'none',
                   border: 'none',
                   padding: 0,
@@ -208,11 +201,11 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
           blockquote({ children }) {
             return (
               <blockquote
+                className="text-text-semantic-muted"
                 style={{
                   margin: '0.5em 0',
                   padding: '0.25em 0 0.25em 0.75em',
                   borderLeft: '3px solid var(--accent, #58a6ff)',
-                  color: 'var(--text-muted)',
                 }}
               >
                 {children}
@@ -224,14 +217,14 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
           },
 
           // Headings
-          h1({ children }) { return <h1 style={{ fontSize: '1.3em', fontWeight: 700, margin: '0.6em 0 0.3em', color: 'var(--text)' }}>{children}</h1>; },
-          h2({ children }) { return <h2 style={{ fontSize: '1.15em', fontWeight: 600, margin: '0.5em 0 0.25em', color: 'var(--text)' }}>{children}</h2>; },
-          h3({ children }) { return <h3 style={{ fontSize: '1.05em', fontWeight: 600, margin: '0.4em 0 0.2em', color: 'var(--text)' }}>{children}</h3>; },
+          h1({ children }) { return <h1 className="text-text-semantic-primary" style={{ fontSize: '1.3em', fontWeight: 700, margin: '0.6em 0 0.3em' }}>{children}</h1>; },
+          h2({ children }) { return <h2 className="text-text-semantic-primary" style={{ fontSize: '1.15em', fontWeight: 600, margin: '0.5em 0 0.25em' }}>{children}</h2>; },
+          h3({ children }) { return <h3 className="text-text-semantic-primary" style={{ fontSize: '1.05em', fontWeight: 600, margin: '0.4em 0 0.2em' }}>{children}</h3>; },
 
           // Lists
           ul({ children }) { return <ul style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'disc' }}>{children}</ul>; },
           ol({ children }) { return <ol style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'decimal' }}>{children}</ol>; },
-          li({ children }) { return <li style={{ margin: '0.15em 0', color: 'var(--text)' }}>{children}</li>; },
+          li({ children }) { return <li className="text-text-semantic-primary" style={{ margin: '0.15em 0' }}>{children}</li>; },
         }}
       >
         {content || ' '}

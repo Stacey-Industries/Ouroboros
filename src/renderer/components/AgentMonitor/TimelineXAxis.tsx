@@ -45,12 +45,12 @@ export const XAxis = memo(function XAxis({ totalDurationMs }: XAxisProps): React
         return (
           <span
             key={t}
+            className="text-text-semantic-faint"
             style={{
               position: 'absolute',
               left: `${pct}%`,
               transform: tickTransform(pct),
               fontSize: '9px',
-              color: 'var(--text-faint)',
               fontFamily: 'var(--font-mono)',
               pointerEvents: 'none',
               userSelect: 'none',

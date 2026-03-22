@@ -74,10 +74,9 @@ function parseUnifiedDiff(patch: string): ParsedDiffLine[] {
 function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
-      className={`h-3 w-3 shrink-0 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
+      className={`h-3 w-3 shrink-0 transition-transform duration-150 text-text-semantic-muted ${expanded ? 'rotate-90' : ''}`}
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--text-muted)' }}
     >
       <path
         d="M6 4l4 4-4 4"
@@ -94,29 +93,39 @@ function DiffBadge({ additions, deletions }: { additions: number; deletions: num
   return (
     <span className="flex items-center gap-1 text-[10px]">
       {additions > 0 && (
-        <span style={{ color: 'var(--diff-add, #2ea043)' }}>+{additions}</span>
+        <span className="text-status-success">+{additions}</span>
       )}
       {deletions > 0 && (
-        <span style={{ color: 'var(--diff-del, #f85149)' }}>-{deletions}</span>
+        <span className="text-status-error">-{deletions}</span>
       )}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: FileStatus }): React.ReactElement {
-  const styles: Record<FileStatus, { bg: string; color: string; label: string }> = {
-    pending: { bg: 'var(--bg)', color: 'var(--text-muted)', label: 'Pending' },
-    accepted: { bg: 'rgba(63, 185, 80, 0.15)', color: '#3fb950', label: 'Accepted' },
-    rejected: { bg: 'rgba(248, 81, 73, 0.15)', color: '#f85149', label: 'Rejected' },
-  };
-  const s = styles[status];
-
+  if (status === 'pending') {
+    return (
+      <span className="rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-surface-base text-text-semantic-muted">
+        Pending
+      </span>
+    );
+  }
+  if (status === 'accepted') {
+    return (
+      <span
+        className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+        style={{ backgroundColor: 'rgba(63, 185, 80, 0.15)', color: '#3fb950' }}
+      >
+        Accepted
+      </span>
+    );
+  }
   return (
     <span
       className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-      style={{ backgroundColor: s.bg, color: s.color }}
+      style={{ backgroundColor: 'rgba(248, 81, 73, 0.15)', color: '#f85149' }}
     >
-      {s.label}
+      Rejected
     </span>
   );
 }
@@ -126,11 +135,9 @@ function InlineDiffView({ diff }: { diff: string }): React.ReactElement {
 
   return (
     <div
-      className="overflow-auto rounded border"
+      className="overflow-auto rounded border border-border-semantic bg-surface-base"
       style={{
         maxHeight: '300px',
-        borderColor: 'var(--border)',
-        backgroundColor: 'var(--bg)',
         fontFamily: 'var(--font-mono)',
         fontSize: '11px',
         lineHeight: '1.5',
@@ -144,8 +151,7 @@ function InlineDiffView({ diff }: { diff: string }): React.ReactElement {
                 <tr key={i}>
                   <td
                     colSpan={3}
-                    className="select-text px-2 py-0.5"
-                    style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-tertiary)', fontWeight: 600 }}
+                    className="select-text px-2 py-0.5 text-text-semantic-muted bg-surface-raised font-semibold"
                   >
                     {line.text}
                   </td>
@@ -158,8 +164,8 @@ function InlineDiffView({ diff }: { diff: string }): React.ReactElement {
                 <tr key={i}>
                   <td
                     colSpan={3}
-                    className="select-text px-2 py-0.5"
-                    style={{ color: 'var(--accent)', backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
+                    className="select-text px-2 py-0.5 text-interactive-accent"
+                    style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
                   >
                     {line.text}
                   </td>
@@ -186,15 +192,14 @@ function InlineDiffView({ diff }: { diff: string }): React.ReactElement {
             return (
               <tr key={i} style={{ backgroundColor: bgColor }}>
                 <td
-                  className="select-none px-1 text-right"
-                  style={{ color: 'var(--text-muted)', minWidth: '2.5em', opacity: 0.5, userSelect: 'none' }}
+                  className="select-none px-1 text-right text-text-semantic-muted"
+                  style={{ minWidth: '2.5em', opacity: 0.5, userSelect: 'none' }}
                 >
                   {line.oldLineNo ?? ''}
                 </td>
                 <td
-                  className="select-none px-1 text-right"
+                  className="select-none px-1 text-right text-text-semantic-muted"
                   style={{
-                    color: 'var(--text-muted)',
                     minWidth: '2.5em',
                     opacity: 0.5,
                     userSelect: 'none',
@@ -236,15 +241,14 @@ function FileRow({
 
   return (
     <div
-      className="rounded-md border"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-tertiary)' }}
+      className="rounded-md border border-border-semantic bg-surface-raised"
     >
       <button
         onClick={() => setExpanded((e) => !e)}
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:opacity-80"
       >
         <ChevronIcon expanded={expanded} />
-        <span className="truncate font-medium" style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+        <span className="truncate font-medium text-text-semantic-primary" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
           {shortPath(file.path)}
         </span>
         <DiffBadge additions={file.additions} deletions={file.deletions} />
@@ -253,11 +257,11 @@ function FileRow({
       </button>
 
       {expanded && (
-        <div className="border-t px-2.5 py-2" style={{ borderColor: 'var(--border)' }}>
+        <div className="border-t border-border-semantic px-2.5 py-2">
           {file.diff ? (
             <InlineDiffView diff={file.diff} />
           ) : (
-            <div className="text-[11px] text-[var(--text-muted)]" style={{ fontFamily: 'var(--font-mono)' }}>
+            <div className="text-[11px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
               No diff content available.
             </div>
           )}
@@ -357,20 +361,17 @@ export function AgentChatDiffReview({
 
   return (
     <div
-      className="my-2 rounded-lg border"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}
+      className="my-2 rounded-lg border border-border-semantic bg-surface-panel"
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between border-b px-3 py-2"
-        style={{ borderColor: 'var(--border)' }}
+        className="flex items-center justify-between border-b border-border-semantic px-3 py-2"
       >
         <div className="flex items-center gap-2">
           <svg
-            className="h-4 w-4"
+            className="h-4 w-4 text-interactive-accent"
             viewBox="0 0 16 16"
             fill="none"
-            style={{ color: 'var(--accent)' }}
           >
             <path
               d="M8 1v14M1 8h14"
@@ -379,10 +380,10 @@ export function AgentChatDiffReview({
               strokeLinecap="round"
             />
           </svg>
-          <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
+          <span className="text-xs font-medium text-text-semantic-primary">
             Review Changes
           </span>
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] text-text-semantic-muted">
             {files.length} file{files.length === 1 ? '' : 's'}
           </span>
           <DiffBadge additions={totalAdditions} deletions={totalDeletions} />
@@ -405,8 +406,7 @@ export function AgentChatDiffReview({
       {/* Footer with bulk actions */}
       {pendingCount > 0 && (
         <div
-          className="flex items-center justify-end gap-2 border-t px-3 py-2"
-          style={{ borderColor: 'var(--border)' }}
+          className="flex items-center justify-end gap-2 border-t border-border-semantic px-3 py-2"
         >
           <button
             onClick={handleAcceptAll}

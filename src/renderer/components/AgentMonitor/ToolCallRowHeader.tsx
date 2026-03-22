@@ -67,7 +67,7 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
 
 function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): React.ReactElement {
   return (
-    <span className="shrink-0 mt-0.5" style={{ color: 'var(--text-faint)', opacity: visible ? 1 : 0.3, width: '10px' }}>
+    <span className="shrink-0 mt-0.5 text-text-semantic-faint" style={{ opacity: visible ? 1 : 0.3, width: '10px' }}>
       <RowChevron open={open} />
     </span>
   );
@@ -92,7 +92,7 @@ function ToolBadge({ color, toolName }: { color: string; toolName: string }): Re
 function ToolLabel({ call, fileLabel, isPending }: { call: ToolCallEvent; fileLabel: string | null; isPending: boolean }): React.ReactElement {
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-      <span className="text-[11px] font-medium leading-none" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-[11px] font-medium leading-none text-text-semantic-muted">
         {call.toolName}
       </span>
       <span

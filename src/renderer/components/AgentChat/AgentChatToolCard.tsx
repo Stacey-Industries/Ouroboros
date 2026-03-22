@@ -42,10 +42,9 @@ export interface AgentChatToolCardProps {
 function SpinnerIcon(): React.ReactElement {
   return (
     <svg
-      className="h-3.5 w-3.5 animate-spin"
+      className="h-3.5 w-3.5 animate-spin text-interactive-accent"
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--accent)' }}
     >
       <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
     </svg>
@@ -55,10 +54,9 @@ function SpinnerIcon(): React.ReactElement {
 function CheckIcon(): React.ReactElement {
   return (
     <svg
-      className="h-3.5 w-3.5"
+      className="h-3.5 w-3.5 text-interactive-accent"
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--accent)' }}
     >
       <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -68,10 +66,9 @@ function CheckIcon(): React.ReactElement {
 export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
-      className={`h-3 w-3 transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+      className={`h-3 w-3 text-text-semantic-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
       viewBox="0 0 16 16"
       fill="none"
-      style={{ color: 'var(--text-muted)' }}
     >
       <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -80,10 +77,9 @@ export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactE
 
 function ToolIcon({ name }: { name: string }): React.ReactElement {
   const svgProps = {
-    className: 'h-3.5 w-3.5 shrink-0',
+    className: 'h-3.5 w-3.5 shrink-0 text-text-semantic-muted',
     viewBox: '0 0 14 14',
     fill: 'none',
-    style: { color: 'var(--text-muted)' } as React.CSSProperties,
   };
   const strokeProps = {
     stroke: 'currentColor',
@@ -265,11 +261,8 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
 
   return (
     <div
-      className="glass-card my-1.5 rounded-md border text-xs"
-      style={{
-        backgroundColor: 'var(--glass-card-bg, var(--bg-tertiary))',
-        borderColor: errorOutput ? 'rgba(248, 81, 73, 0.3)' : 'var(--glass-border-muted, var(--border))',
-      }}
+      className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${errorOutput ? '' : 'border-border-semantic'}`}
+      style={errorOutput ? { borderColor: 'rgba(248, 81, 73, 0.3)' } : undefined}
     >
       <button
         onClick={() => setCollapsed((prev) => !prev)}
@@ -278,30 +271,30 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
         <ToolIcon name={name} />
         {status === 'running' ? <SpinnerIcon /> : <CheckIcon />}
         <span
-          className="shrink-0"
-          style={{ color: 'var(--text)', fontFamily: 'var(--font-ui)' }}
+          className="shrink-0 text-text-semantic-primary"
+          style={{ fontFamily: 'var(--font-ui)' }}
         >
           {formatToolActivity(name)}
         </span>
         {headerDetail && (
-          <span className="truncate text-[10px] ml-0.5 min-w-0" style={{ color: 'var(--text-muted)' }}>
+          <span className="truncate text-[10px] ml-0.5 min-w-0 text-text-semantic-muted">
             {headerDetail}
           </span>
         )}
         {editSummary && (
-          <span className="shrink-0 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          <span className="shrink-0 text-[10px] text-text-semantic-muted">
             <span style={{ color: 'var(--error, #f85149)' }}>-{editSummary.oldLines}</span>
             {' / '}
             <span style={{ color: 'var(--success, #3fb950)' }}>+{editSummary.newLines}</span>
           </span>
         )}
         {duration != null && (
-          <span className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[10px] shrink-0 text-text-semantic-muted">
             {duration < 1 ? `${Math.round(duration * 1000)}ms` : `${duration.toFixed(1)}s`}
           </span>
         )}
         {errorOutput && (
-          <span className="text-[10px] shrink-0 font-medium" style={{ color: 'var(--error, #f85149)' }}>
+          <span className="text-[10px] shrink-0 font-medium text-status-error">
             error
           </span>
         )}
@@ -310,24 +303,22 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
       </button>
       {!collapsed && (
         <div
-          className="border-t px-2.5 py-2 space-y-1"
+          className="border-t border-border-semantic px-2.5 py-2 space-y-1 text-text-semantic-muted"
           style={{
-            borderColor: 'var(--border)',
-            color: 'var(--text-muted)',
             fontFamily: 'var(--font-mono)',
             fontSize: '11px',
           }}
         >
           {filePath && (
             <div className="truncate">
-              <span style={{ color: 'var(--text-faint, var(--text-muted))' }}>path </span>
-              <span style={{ color: 'var(--text)' }}>{filePath}</span>
+              <span className="text-text-semantic-faint">path </span>
+              <span className="text-text-semantic-primary">{filePath}</span>
             </div>
           )}
           {displaySummary && (
             <pre
-              className="max-h-[120px] overflow-auto whitespace-pre-wrap rounded p-1.5"
-              style={{ backgroundColor: 'var(--bg)', color: 'var(--text)', fontSize: '10px' }}
+              className="max-h-[120px] overflow-auto whitespace-pre-wrap rounded p-1.5 bg-surface-base text-text-semantic-primary"
+              style={{ fontSize: '10px' }}
             >
               {displaySummary}
             </pre>
@@ -342,7 +333,7 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
             <AgentChatDiffPreview filePath={filePath} />
           )}
           {!filePath && !displaySummary && !editSummary && !showDiffPreview && !errorOutput && (
-            <div style={{ color: 'var(--text-faint, var(--text-muted))' }}>
+            <div className="text-text-semantic-faint">
               {status === 'running' ? 'Running...' : 'Completed'}
             </div>
           )}
@@ -350,18 +341,16 @@ export const AgentChatToolCard = React.memo(function AgentChatToolCard({
             <div>
               <button
                 onClick={() => setErrorExpanded((e) => !e)}
-                className="flex items-center gap-1 text-[10px] font-medium transition-colors hover:opacity-80"
-                style={{ color: 'var(--error, #f85149)' }}
+                className="flex items-center gap-1 text-[10px] font-medium text-status-error transition-colors hover:opacity-80"
               >
                 <ChevronIcon collapsed={!errorExpanded} />
                 Error Output
               </button>
               {errorExpanded && (
                 <pre
-                  className="mt-1 max-h-[200px] overflow-auto whitespace-pre-wrap rounded p-2 text-[10px]"
+                  className="mt-1 max-h-[200px] overflow-auto whitespace-pre-wrap rounded p-2 text-[10px] text-status-error"
                   style={{
                     backgroundColor: 'rgba(248, 81, 73, 0.06)',
-                    color: 'var(--error, #f85149)',
                     border: '1px solid rgba(248, 81, 73, 0.2)',
                   }}
                 >

@@ -56,10 +56,10 @@ export const DailyChart = memo(function DailyChart({ entries, days }: DailyChart
   return (
     <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border-muted)' }}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
           Daily Cost (Last {days} days)
         </span>
-        <span className="text-[10px] tabular-nums ml-auto" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-[10px] tabular-nums ml-auto text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
           max {formatCost(maxCost)}
         </span>
       </div>
@@ -70,7 +70,7 @@ export const DailyChart = memo(function DailyChart({ entries, days }: DailyChart
         {chartData.map((day, i) => (
           <div key={day.date} className="flex-1 text-center">
             {i % labelInterval === 0 ? (
-              <span className="text-[8px] tabular-nums" style={{ color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
+              <span className="text-[8px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
                 {formatDateShort(day.date)}
               </span>
             ) : null}

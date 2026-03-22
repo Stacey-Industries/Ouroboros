@@ -104,7 +104,7 @@ export const ToolCallTimeline = memo(function ToolCallTimeline({
 
   if (toolCalls.length === 0 || !hasTimingData) {
     return (
-      <div className="px-3 py-4 text-center text-[11px] italic" style={{ color: 'var(--text-faint)' }}>
+      <div className="px-3 py-4 text-center text-[11px] italic text-text-semantic-faint">
         No timing data yet.
       </div>
     );
@@ -141,10 +141,10 @@ const TimelineHeader = memo(function TimelineHeader({ count, totalMs }: Timeline
       className="flex items-center justify-between px-3 py-1"
       style={{ borderBottom: '1px solid var(--border-muted)' }}
     >
-      <span className="text-[10px] font-medium" style={{ color: 'var(--text-faint)' }}>
+      <span className="text-[10px] font-medium text-text-semantic-faint">
         {count} tool call{count !== 1 ? 's' : ''}
       </span>
-      <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-faint)' }}>
+      <span className="text-[10px] tabular-nums text-text-semantic-faint">
         {formatDurationShort(totalMs)} total
       </span>
     </div>

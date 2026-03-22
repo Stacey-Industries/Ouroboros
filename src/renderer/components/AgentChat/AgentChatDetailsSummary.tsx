@@ -31,9 +31,9 @@ function formatCount(value: number): string {
 
 function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement {
   return (
-    <div className="rounded border border-[var(--border)] bg-[var(--bg)] px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
-      <div className="mt-1 text-xs text-[var(--text)]">{value}</div>
+    <div className="rounded border border-border-semantic bg-surface-base px-2.5 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{label}</div>
+      <div className="mt-1 text-xs text-text-semantic-primary">{value}</div>
     </div>
   );
 }
@@ -47,13 +47,13 @@ function SummaryHeadline(props: {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-[var(--text)]">{getStatusLabel(props.activeThread.status)}</div>
-        <div className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{getStatusDescription(props.activeThread)}</div>
+        <div className="text-sm font-medium text-text-semantic-primary">{getStatusLabel(props.activeThread.status)}</div>
+        <div className="mt-1 text-xs leading-5 text-text-semantic-muted">{getStatusDescription(props.activeThread)}</div>
       </div>
       {latestLink ? (
         <button
           onClick={() => void props.onOpenDetails(latestLink)}
-          className="rounded border border-[var(--border)] px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors duration-100 hover:border-[var(--accent)] hover:text-[var(--text)]"
+          className="rounded border border-border-semantic px-2 py-1 text-[11px] text-text-semantic-muted transition-colors duration-100 hover:border-interactive-accent hover:text-text-semantic-primary"
         >
           Details
         </button>
@@ -80,7 +80,7 @@ function SummaryVerificationNote({ summary }: { summary: string | null }): React
   }
 
   return (
-    <div className="mt-3 rounded border border-[var(--border)] bg-[var(--bg)] px-2.5 py-2 text-xs leading-5 text-[var(--text-muted)]">
+    <div className="mt-3 rounded border border-border-semantic bg-surface-base px-2.5 py-2 text-xs leading-5 text-text-semantic-muted">
       {summary}
     </div>
   );

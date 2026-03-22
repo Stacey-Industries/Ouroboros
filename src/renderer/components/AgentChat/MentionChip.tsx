@@ -133,7 +133,7 @@ export function MentionChipsBar({ mentions, onRemove, totalTokens }: MentionChip
           onRemove={() => onRemove(mention.key)}
         />
       ))}
-      <span className="ml-auto text-[10px] text-[var(--text-muted)]">
+      <span className="ml-auto text-[10px] text-text-semantic-muted">
         {formatTokenCount(totalTokens)} tokens
       </span>
     </div>

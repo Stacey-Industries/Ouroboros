@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useToastContext } from '../../contexts/ToastContext';
 import { AgentChatConversation } from './AgentChatConversation';
+import type { SlashCommandContext } from './SlashCommandMenu';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
 import { useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
@@ -12,6 +14,7 @@ export interface AgentChatWorkspaceProps {
 export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
+  const { toast } = useToastContext();
 
   useEffect(() => {
     model.setContextFilePaths(context.filePaths);
@@ -23,8 +26,36 @@ export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorks
     onModelReadyRef.current?.(model);
   }, [model.threads, model.activeThreadId, model.selectThread, model.startNewChat, model.deleteThread]);
 
+  const onRemember = useCallback(async (content: string) => {
+    if (!content.trim()) return;
+    try {
+      await window.electronAPI.agentChat.createMemory(projectRoot ?? '', {
+        type: 'preference',
+        content: content.trim(),
+        relevantFiles: [],
+      });
+      toast('Memory saved', 'success');
+    } catch (err) {
+      console.warn('[agentChat] failed to save memory:', err);
+      toast('Failed to save memory', 'error');
+    }
+  }, [projectRoot, toast]);
+
+  const onOpenMemories = useCallback(() => {
+    window.dispatchEvent(
+      new CustomEvent('agent-ide:switch-sidebar-view', { detail: { view: 'memory' } }),
+    );
+  }, []);
+
+  const slashCommandContext = useMemo<SlashCommandContext>(() => ({
+    onClearChat: model.reloadThreads,
+    onNewThread: model.startNewChat,
+    onRemember,
+    onOpenMemories,
+  }), [model.reloadThreads, model.startNewChat, onRemember, onOpenMemories]);
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--bg-secondary)] w-full max-w-full">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface-panel w-full max-w-full">
       <div className="flex-1 min-h-0 overflow-hidden">
         <AgentChatConversation
           activeThread={model.activeThread}
@@ -76,6 +107,7 @@ export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorks
           onSendQueuedMessageNow={model.sendQueuedMessageNow}
           attachments={model.attachments}
           onAttachmentsChange={model.setAttachments}
+          slashCommandContext={slashCommandContext}
         />
       </div>
     </div>

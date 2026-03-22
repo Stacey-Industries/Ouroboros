@@ -69,9 +69,8 @@ function LineNumbers({ count }: { count: number }): React.ReactElement {
 
   return (
     <div
-      className="select-none pr-3 text-right"
+      className="select-none pr-3 text-right text-text-semantic-faint"
       style={{
-        color: 'var(--text-faint, var(--text-muted))',
         fontFamily: 'var(--font-mono)',
         fontSize: '11px',
         lineHeight: '1.5',
@@ -99,7 +98,7 @@ function ApplyDiffPreview({
   onReject: () => void;
 }): React.ReactElement {
   return (
-    <div className="border-t" style={{ borderColor: 'var(--border)' }}>
+    <div className="border-t border-border-semantic">
       <div
         className="overflow-auto"
         style={{ maxHeight: '200px', fontFamily: 'var(--font-mono)', fontSize: '11px', lineHeight: '1.5' }}
@@ -126,7 +125,7 @@ function ApplyDiffPreview({
           );
         })}
       </div>
-      <div className="flex items-center gap-1.5 border-t px-3 py-1.5" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-center gap-1.5 border-t border-border-semantic px-3 py-1.5">
         <button
           onClick={onAccept}
           className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
@@ -154,7 +153,7 @@ function FilePathBreadcrumb({ filePath }: { filePath: string }): React.ReactElem
   const visible = parts.length > 3 ? ['...', ...parts.slice(-3)] : parts;
 
   return (
-    <span className="ml-1.5 truncate text-[10px]" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>
+    <span className="ml-1.5 truncate text-[10px] text-text-semantic-muted opacity-70">
       {visible.join(' / ')}
     </span>
   );
@@ -208,18 +207,16 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
 
   return (
     <div
-      className="group/code my-2 rounded-md border"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-tertiary)' }}
+      className="group/code my-2 rounded-md border border-border-semantic bg-surface-raised"
     >
       {/* ── Header bar ── */}
       <div
-        className="flex items-center gap-1.5 border-b px-2.5 py-1"
-        style={{ borderColor: 'var(--border)' }}
+        className="flex items-center gap-1.5 border-b border-border-semantic px-2.5 py-1"
       >
         {/* Left side: language + file path */}
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
           {language && (
-            <span className="shrink-0 text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+            <span className="shrink-0 text-[10px] font-medium text-text-semantic-muted">
               {language}
             </span>
           )}
@@ -237,14 +234,13 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
           {isApplied && canRevert && (
             <button
               onClick={() => void revert()}
-              className="text-[10px] underline transition-colors hover:opacity-80"
-              style={{ color: 'var(--text-muted)' }}
+              className="text-[10px] underline transition-colors hover:opacity-80 text-text-semantic-muted"
             >
               Revert
             </button>
           )}
           {status === 'error' && errorMessage && (
-            <span className="text-[10px]" style={{ color: 'var(--error, #f85149)' }}>
+            <span className="text-[10px] text-status-error">
               {errorMessage}
             </span>
           )}
@@ -253,8 +249,7 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
           <button
             onClick={() => setShowLineNumbers((v) => !v)}
             title={showLineNumbers ? 'Hide line numbers' : 'Show line numbers'}
-            className="rounded p-0.5 transition-colors hover:bg-[var(--bg)]"
-            style={{ color: showLineNumbers ? 'var(--accent)' : 'var(--text-muted)' }}
+            className={`rounded p-0.5 transition-colors hover:bg-surface-base ${showLineNumbers ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M4 6h2M4 12h2M4 18h2M10 6h10M10 12h10M10 18h7" />
@@ -265,8 +260,7 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
           <button
             onClick={() => setWordWrap((v) => !v)}
             title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
-            className="rounded p-0.5 transition-colors hover:bg-[var(--bg)]"
-            style={{ color: 'var(--text-muted)' }}
+            className="rounded p-0.5 transition-colors hover:bg-surface-base text-text-semantic-muted"
           >
             <WrapIcon active={wordWrap} />
           </button>
@@ -276,12 +270,8 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
             <button
               onClick={() => void apply()}
               title="Apply to file"
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-              style={{
-                backgroundColor: 'rgba(100, 100, 255, 0.1)',
-                color: 'var(--accent)',
-                border: '1px solid var(--border)',
-              }}
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
+              style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
             >
               Apply
             </button>
@@ -292,7 +282,7 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
             <button
               onClick={handleOpenInEditor}
               title="Open in editor"
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)]"
+              className="rounded p-0.5 text-text-semantic-muted transition-colors hover:bg-surface-base hover:text-text-semantic-primary"
             >
               <OpenFileIcon />
             </button>
@@ -302,7 +292,7 @@ export const ChatCodeBlock = React.memo(function ChatCodeBlock({
           <button
             onClick={handleCopy}
             title={copied ? 'Copied!' : 'Copy code'}
-            className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)]"
+            className="rounded p-0.5 text-text-semantic-muted transition-colors hover:bg-surface-base hover:text-text-semantic-primary"
           >
             {copied ? <CheckIcon /> : <CopyIcon />}
           </button>

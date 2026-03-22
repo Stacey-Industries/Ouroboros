@@ -21,7 +21,7 @@ const FeedHeader = memo(function FeedHeader({ count, allExpanded, onExpandAll, o
       className="flex items-center justify-between px-3 py-1"
       style={{ borderBottom: '1px solid var(--border-muted)' }}
     >
-      <span className="text-[10px] font-medium" style={{ color: 'var(--text-faint)' }}>
+      <span className="text-[10px] font-medium text-text-semantic-faint">
         {count} tool call{count !== 1 ? 's' : ''}
       </span>
       <button
@@ -113,7 +113,7 @@ export const ToolCallFeed = memo(function ToolCallFeed({
 
   if (toolCalls.length === 0) {
     return (
-      <div className="px-3 py-3 text-[11px] italic" style={{ color: 'var(--text-faint)' }}>
+      <div className="px-3 py-3 text-[11px] italic text-text-semantic-faint">
         No tool calls yet.
       </div>
     );

@@ -29,22 +29,20 @@ export function AgentChatBranchIndicator({
 }: AgentChatBranchIndicatorProps): React.ReactElement {
   return (
     <div
-      className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-[11px]"
+      className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-[11px] text-text-semantic-muted"
       style={{
         backgroundColor: 'rgba(100, 100, 255, 0.04)',
         borderColor: 'rgba(100, 100, 255, 0.15)',
-        color: 'var(--text-muted)',
       }}
     >
-      <span className="shrink-0" style={{ color: 'var(--accent)' }}>
+      <span className="shrink-0 text-interactive-accent">
         <ForkIcon />
       </span>
       <span>
         Branched from{' '}
         <button
           onClick={() => onSwitchToParent(branchInfo.parentThreadId)}
-          className="font-medium underline decoration-dotted transition-opacity hover:opacity-80"
-          style={{ color: 'var(--accent)' }}
+          className="font-medium underline decoration-dotted transition-opacity hover:opacity-80 text-interactive-accent"
           title={`Switch to "${branchInfo.parentTitle}"`}
         >
           {branchInfo.parentTitle}

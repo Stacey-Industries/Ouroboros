@@ -11,6 +11,8 @@ export interface AgentChatStreamingState {
   blocks: AgentChatContentBlock[];
   /** The text content currently being appended to (the last text block, if any) */
   activeTextContent: string;
+  /** Real-time token usage during streaming */
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
 }
 
 const INITIAL_STATE: AgentChatStreamingState = {
@@ -106,7 +108,14 @@ function applyChunk(
           break;
         }
       }
-      return { ...prev, isStreaming: true, streamingMessageId: chunk.messageId, blocks, activeTextContent };
+      return {
+        ...prev,
+        isStreaming: true,
+        streamingMessageId: chunk.messageId,
+        blocks,
+        activeTextContent,
+        ...(chunk.tokenUsage ? { streamingTokenUsage: chunk.tokenUsage } : {}),
+      };
     }
 
     case 'thinking_delta': {
