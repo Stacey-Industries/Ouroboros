@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
+import { initClaudeMdGenerator } from './claudeMdGenerator';
 import {
   getGraphController,
   GraphController,
@@ -230,7 +231,6 @@ async function initializeApplication(): Promise<void> {
 
   // Initialize CLAUDE.md generator (non-fatal)
   try {
-    const { initClaudeMdGenerator } = await import('./claudeMdGenerator');
     initClaudeMdGenerator(mainWindow);
     console.log('[claude-md] Generator initialized');
   } catch (err) {

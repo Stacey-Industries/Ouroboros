@@ -16,7 +16,11 @@ export function detectShellType(shell: string): ShellType {
   const base = path.basename(shell).toLowerCase().replace(/\.exe$/, '')
   if (base === 'bash' || base === 'sh') return 'bash'
   if (base === 'zsh') return 'zsh'
-  if (base === 'pwsh' || base === 'powershell') return 'pwsh'
+  // 'pwsh' is PowerShell 7+ which supports OSC 633 via the integration script.
+  // 'powershell' is Windows PowerShell 5.1 — the integration script is NOT
+  // compatible because [Console]::Write + [char]27 behaves differently in PS5.1,
+  // causing ESC to print literally (e]633...) and leaving blocks incomplete.
+  if (base === 'pwsh') return 'pwsh'
   return 'unknown'
 }
 

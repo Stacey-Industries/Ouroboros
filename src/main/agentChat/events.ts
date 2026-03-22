@@ -13,6 +13,10 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   getBufferedChunks: 'agentChat:getBufferedChunks',
   revertToSnapshot: 'agentChat:revertToSnapshot',
   cancelTask: 'agentChat:cancelTask',
+  listMemories: 'agentChat:listMemories',
+  createMemory: 'agentChat:createMemory',
+  updateMemory: 'agentChat:updateMemory',
+  deleteMemory: 'agentChat:deleteMemory',
 } as const
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

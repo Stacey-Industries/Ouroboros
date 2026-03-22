@@ -91,6 +91,12 @@ export const schema: any = {
     type: 'boolean',
     default: true
   },
+  glassOpacity: {
+    type: 'number',
+    default: 0,
+    minimum: 0,
+    maximum: 100
+  },
   customThemeColors: {
     type: 'object',
     default: {}

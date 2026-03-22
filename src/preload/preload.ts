@@ -153,7 +153,11 @@ const appAPI: ElectronAPI['app'] = {
     }
 
     return () => handlers.forEach((cleanup) => cleanup())
-  }
+  },
+
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('window:maximize-toggle'),
+  closeWindow: () => ipcRenderer.invoke('window:close-self'),
 }
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

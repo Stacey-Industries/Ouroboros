@@ -226,6 +226,14 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, threadId, messageId),
     cancelTask: (taskId) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+    listMemories: (workspaceRoot) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listMemories, workspaceRoot),
+    createMemory: (workspaceRoot, entry) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.createMemory, workspaceRoot, entry),
+    updateMemory: (workspaceRoot, memoryId, updates) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.updateMemory, workspaceRoot, memoryId, updates),
+    deleteMemory: (workspaceRoot, memoryId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, workspaceRoot, memoryId),
     onThreadUpdate: (callback) =>
       onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
     onMessageUpdate: (callback) =>

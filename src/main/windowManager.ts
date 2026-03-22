@@ -10,6 +10,10 @@ import path from 'path'
 import { getConfigValue, setConfigValue } from './config'
 import type { WindowBounds } from './config'
 
+// mica-electron: native Windows DWM acrylic/mica effects
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const MicaBrowserWindow = process.platform === 'win32' ? require('mica-electron').MicaBrowserWindow : null
+
 /** Resolve the `out/main/` directory. electron-vite may code-split into `out/main/chunks/`. */
 const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname
 import { registerIpcHandlers } from './ipc'
@@ -121,23 +125,19 @@ function getWindowPosition(state: WindowCreationState): { x?: number; y?: number
 }
 
 function createBrowserWindow(preloadPath: string, state: WindowCreationState): BrowserWindow {
-  return new BrowserWindow({
+  const WindowClass = (MicaBrowserWindow && process.platform === 'win32') ? MicaBrowserWindow : BrowserWindow
+
+  const win = new WindowClass({
     width: state.width,
     height: state.height,
     ...getWindowPosition(state),
     minWidth: 900,
     minHeight: 600,
     show: false,
-    backgroundColor: '#0d1117',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    titleBarOverlay:
-      process.platform === 'win32'
-        ? {
-            color: '#0d1117',
-            symbolColor: '#e6edf3',
-            height: 32
-          }
-        : undefined,
+    backgroundColor: '#00000000',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : undefined,
+    frame: process.platform !== 'darwin' ? false : undefined,
+    ...(process.platform === 'darwin' ? { vibrancy: 'under-window' as const } : {}),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -148,6 +148,16 @@ function createBrowserWindow(preloadPath: string, state: WindowCreationState): B
       experimentalFeatures: false
     }
   })
+
+  // Always apply glass — acrylic is the permanent visual layer
+  if (process.platform === 'win32' && MicaBrowserWindow && win instanceof MicaBrowserWindow) {
+    win.setDarkTheme()
+    win.setMicaAcrylicEffect()
+    win.setRoundedCorner()
+    win.alwaysFocused(true)
+  }
+
+  return win
 }
 
 function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number {
@@ -243,8 +253,14 @@ function setupWindowCloseHandler(win: BrowserWindow, winId: number): void {
     if (!win.isMaximized()) {
       saveWindowBounds(win, false)
     }
-    cleanupIpcHandlers(winId)
     killPtySessionsForWindow(winId)
+  })
+
+  // Defer IPC handler cleanup to 'closed' — the renderer still makes IPC
+  // calls (config:set, files:readDir, etc.) during beforeunload/unload which
+  // run AFTER 'close' but BEFORE the window is destroyed.
+  win.on('closed', () => {
+    cleanupIpcHandlers(winId)
     windows.delete(winId)
   })
 }
@@ -273,7 +289,7 @@ function ensureCSP(): void {
             "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' data:",
-            "img-src 'self' data: blob:",
+            "img-src 'self' data: blob: https:",
             "connect-src 'self' ws://localhost:* http://localhost:*",
             "worker-src 'self' blob:"
           ].join('; ')

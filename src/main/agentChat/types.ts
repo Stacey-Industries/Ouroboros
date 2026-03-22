@@ -9,6 +9,8 @@ import type {
   VerificationSummary,
 } from '../orchestration/types'
 
+export type { SessionMemoryEntry } from './sessionMemory'
+
 export type AgentChatThreadStatus =
   | 'idle'
   | 'submitting'
@@ -164,6 +166,10 @@ export interface AgentChatThreadRecord {
   latestOrchestration?: AgentChatOrchestrationLink
   /** Present when this thread was created by branching from another */
   branchInfo?: AgentChatBranchInfo
+  /** Number of times the conversation history has been compacted for this thread */
+  compactionCount?: number
+  /** Running count of user turns sent on this thread (used for adaptive budget scaling) */
+  turnCount?: number
 }
 
 export interface AgentChatSettings {
@@ -267,6 +273,8 @@ export interface AgentChatStreamChunk {
   /** Full thread record — sent with thread_snapshot chunks after persistence. */
   thread?: AgentChatThreadRecord
   timestamp: number
+  /** Real-time token usage during streaming (emitted alongside content blocks) */
+  tokenUsage?: { inputTokens: number; outputTokens: number }
 }
 
 export interface AgentChatStreamChunkEvent extends AgentChatEventBase<'stream_chunk'> {
@@ -334,6 +342,14 @@ export interface AgentChatAPI {
   revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>
   /** Cancel a running task. Routes through the singleton orchestration that owns the process. */
   cancelTask: (taskId: string) => Promise<{ success: boolean; error?: string }>
+  /** List all active (non-superseded) memories for a workspace. */
+  listMemories: (workspaceRoot: string) => Promise<{ success: boolean; memories?: SessionMemoryEntry[]; error?: string }>
+  /** Create a new memory entry manually. */
+  createMemory: (workspaceRoot: string, entry: { type: string; content: string; relevantFiles?: string[] }) => Promise<{ success: boolean; memory?: SessionMemoryEntry; error?: string }>
+  /** Update an existing memory entry by ID. */
+  updateMemory: (workspaceRoot: string, memoryId: string, updates: { content?: string; type?: string; relevantFiles?: string[] }) => Promise<{ success: boolean; memory?: SessionMemoryEntry; error?: string }>
+  /** Delete a memory entry by ID. */
+  deleteMemory: (workspaceRoot: string, memoryId: string) => Promise<{ success: boolean; error?: string }>
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void

@@ -1,8 +1,9 @@
-import { app, type BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
 
 import { getErrorMessage } from '../agentChat/utils'
+import { getGraphController } from '../codebaseGraph/graphController'
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager'
 import {
   clearCostHistory,
@@ -248,6 +249,23 @@ export function registerWindowHandlers(channels: ChannelList): void {
   registerChannel(channels, 'window:list', async () => runQuery(() => ({ windows: getWindowInfos() })))
   registerChannel(channels, 'window:focus', async (_event, windowId: number) => runAction(() => focusWindow(windowId)))
   registerChannel(channels, 'window:close', async (_event, windowId: number) => runAction(() => closeWindow(windowId)))
+
+  // Custom window controls (frame: false on Windows — no native buttons)
+  registerChannel(channels, 'window:minimize', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.minimize()
+    return ok()
+  })
+  registerChannel(channels, 'window:maximize-toggle', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) { win.isMaximized() ? win.unmaximize() : win.maximize() }
+    return ok()
+  })
+  registerChannel(channels, 'window:close-self', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.close()
+    return ok()
+  })
 }
 
 export function registerExtensionHandlers(channels: ChannelList): void {
@@ -354,14 +372,12 @@ export function registerApprovalHandlers(channels: ChannelList): void {
 
 export function registerGraphHandlers(channels: ChannelList): void {
   registerChannel(channels, 'graph:getStatus', async () => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph controller not initialized' }
     return { success: true as const, status: ctrl.getStatus() }
   })
 
   registerChannel(channels, 'graph:reindex', async () => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph controller not initialized' }
     const context = ctrl.getGraphToolContext()
@@ -376,56 +392,48 @@ export function registerGraphHandlers(channels: ChannelList): void {
   })
 
   registerChannel(channels, 'graph:searchGraph', async (_event, query: string, limit?: number) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, results: ctrl.searchGraph(query, limit) }
   })
 
   registerChannel(channels, 'graph:queryGraph', async (_event, query: string) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, results: ctrl.queryGraph(query) }
   })
 
   registerChannel(channels, 'graph:traceCallPath', async (_event, fromId: string, toId: string, maxDepth?: number) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, result: ctrl.traceCallPath(fromId, toId, maxDepth) }
   })
 
   registerChannel(channels, 'graph:getArchitecture', async (_event, aspects?: string[]) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, architecture: ctrl.getArchitecture(aspects) }
   })
 
   registerChannel(channels, 'graph:getCodeSnippet', async (_event, symbolId: string) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, snippet: await ctrl.getCodeSnippet(symbolId) }
   })
 
   registerChannel(channels, 'graph:detectChanges', async () => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, changes: await ctrl.detectChanges() }
   })
 
   registerChannel(channels, 'graph:searchCode', async (_event, pattern: string, opts?: { fileGlob?: string; maxResults?: number }) => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, results: await ctrl.searchCode(pattern, opts) }
   })
 
   registerChannel(channels, 'graph:getGraphSchema', async () => {
-    const { getGraphController } = await import('../codebaseGraph/graphController')
     const ctrl = getGraphController()
     if (!ctrl) return { success: false as const, error: 'Graph not initialized' }
     return { success: true as const, schema: ctrl.getGraphSchema() }

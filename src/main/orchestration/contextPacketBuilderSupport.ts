@@ -83,7 +83,7 @@ function countLines(content: string): number {
 }
 
 function estimateTokens(byteCount: number): number {
-  return Math.ceil(byteCount / 4)
+  return Math.ceil(byteCount / 3.2)
 }
 
 function clampRange(range: ContextSnippetRange, totalLines: number): ContextSnippetRange {

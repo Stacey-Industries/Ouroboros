@@ -28,6 +28,7 @@ import {
   projectProviderFailureToAssistantMessage,
   projectProviderResultToAssistantMessage,
 } from './responseProjector'
+import { sessionMemoryStore } from './sessionMemory'
 import { resolveAgentChatSettings, type ResolvedAgentChatSettings } from './settingsResolver'
 import { type AgentChatThreadStore,agentChatThreadStore } from './threadStore'
 import type {
@@ -40,6 +41,7 @@ import type {
   AgentChatStreamChunk,
   AgentChatThreadRecord,
 } from './types'
+import { tokenCalibrationStore } from './tokenCalibration'
 import { getErrorMessage } from './utils'
 
 export type StreamChunkListener = (chunk: AgentChatStreamChunk) => void
@@ -321,6 +323,8 @@ interface ActiveStreamContext {
   flushTimer?: ReturnType<typeof setInterval>
   /** Set to true when a terminal event fires — prevents in-flight flushes from overwriting the final message. */
   streamEnded: boolean
+  /** Estimated history tokens at send time — used for calibration feedback. */
+  estimatedHistoryTokens?: number
 }
 
 function emitStreamChunk(
@@ -554,6 +558,7 @@ function handleProviderProgress(
           blockIndex,
           textDelta,
           timestamp: now,
+          tokenUsage: ctx.tokenUsage,
         }, ctx)
       } else if (blockType === 'thinking' && textDelta) {
         const existing = ctx.accumulatedBlocks[blockIndex]
@@ -569,6 +574,7 @@ function handleProviderProgress(
           blockIndex,
           thinkingDelta: textDelta,
           timestamp: now,
+          tokenUsage: ctx.tokenUsage,
         }, ctx)
       } else if (blockType === 'tool_use' && toolActivity) {
         if (toolActivity.status === 'running') {
@@ -605,6 +611,7 @@ function handleProviderProgress(
             editSummary: toolActivity.editSummary,
           },
           timestamp: now,
+          tokenUsage: ctx.tokenUsage,
         }, ctx)
       }
       ctx.firstChunkEmitted = true
@@ -624,6 +631,7 @@ function handleProviderProgress(
         type: 'text_delta',
         textDelta: progress.message,
         timestamp: now,
+        tokenUsage: ctx.tokenUsage,
       }, ctx)
       ctx.firstChunkEmitted = true
     }
@@ -634,6 +642,10 @@ function handleProviderProgress(
     // Capture token usage from the completed progress event
     if (progress.tokenUsage) {
       ctx.tokenUsage = progress.tokenUsage
+      // Feed calibration loop: compare estimated history tokens with actual input tokens
+      if (ctx.estimatedHistoryTokens && ctx.estimatedHistoryTokens > 0) {
+        tokenCalibrationStore.recordObservation(ctx.estimatedHistoryTokens, progress.tokenUsage.inputTokens)
+      }
     }
 
     // Finalize: build the assistant message from accumulated text.
@@ -756,6 +768,11 @@ function handleProviderProgress(
           timestamp: Date.now(),
           thread: finalThread,
         })
+
+        // Deferred memory decay: mark memories that were NOT used this session
+        // so their confidence decays over time. Fire-and-forget.
+        const capturedWorkspace = finalThread.workspaceRoot
+        void sessionMemoryStore.decayUnused(capturedWorkspace, []).catch(() => {})
       } catch (error) {
         console.error('[agentChat] completion persistence failed for thread', threadId, error)
       } finally {
@@ -1044,6 +1061,8 @@ async function executePendingSend(args: {
     monitorStartEmitted: false,
     userPrompt: userPrompt?.slice(0, 120),
     streamEnded: false,
+    estimatedHistoryTokens: args.pending.taskRequest.conversationHistory
+      ?.reduce((sum, m) => sum + Math.ceil(m.content.length / 3.5), 0),
   }
   args.runtime.activeSends.set(created.taskId, streamCtx)
 

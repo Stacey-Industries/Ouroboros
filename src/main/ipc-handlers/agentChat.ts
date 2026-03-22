@@ -27,6 +27,8 @@ import type {
   AgentChatOrchestrationLink,
   AgentChatSendMessageRequest,
 } from '../agentChat/types'
+import { formatMemoriesForContext } from '../agentChat/memoryExtractor'
+import { sessionMemoryStore, type SessionMemoryEntry } from '../agentChat/sessionMemory'
 import { buildGraphSummary, formatGraphSummary, type GraphSummary } from '../orchestration/graphSummaryBuilder'
 import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
 import { createClaudeCodeAdapter } from '../orchestration/providers/claudeCodeAdapter'
@@ -337,6 +339,19 @@ function createMinimalOrchestration() {
         }
       }
 
+      // Inject session memories from prior sessions (best-effort, non-blocking).
+      if (contextPacket && request.workspaceRoots.length > 0) {
+        try {
+          const contextFiles = contextPacket.files.map((f) => f.path)
+          const memories = await sessionMemoryStore.getRelevantMemories(
+            request.workspaceRoots[0], contextFiles,
+          )
+          if (memories.length > 0) {
+            contextPacket.sessionMemories = formatMemoriesForContext(memories)
+          }
+        } catch { /* memory loading failure is non-fatal */ }
+      }
+
       const session: TaskSessionRecord = {
         version: 1, id: sessionId, taskId,
         workspaceRoots: request.workspaceRoots,
@@ -538,6 +553,42 @@ export function registerAgentChatHandlers(win?: BrowserWindow): string[] {
   // agentChat:revertToSnapshot — reverts file changes made during an agent turn
   register(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, (threadId: unknown, messageId: unknown) =>
     svc.revertToSnapshot(requireValidString(threadId, 'threadId'), requireValidString(messageId, 'messageId')))
+
+  // ── Memory CRUD ────────────────────────────────────────────────────────────
+
+  register(AGENT_CHAT_INVOKE_CHANNELS.listMemories, async (workspaceRoot: unknown) => {
+    const root = requireValidString(workspaceRoot, 'workspaceRoot')
+    return { success: true, memories: await sessionMemoryStore.loadMemories(root) }
+  })
+
+  register(AGENT_CHAT_INVOKE_CHANNELS.createMemory, async (workspaceRoot: unknown, entry: unknown) => {
+    const root = requireValidString(workspaceRoot, 'workspaceRoot')
+    const obj = requireValidObject(entry, 'memory entry')
+    const newEntry = sessionMemoryStore.createEntry('manual', {
+      type: (obj.type as SessionMemoryEntry['type']) || 'preference',
+      content: requireValidString(obj.content, 'content'),
+      relevantFiles: Array.isArray(obj.relevantFiles) ? obj.relevantFiles as string[] : [],
+    })
+    await sessionMemoryStore.saveMemories(root, [newEntry])
+    return { success: true, memory: newEntry }
+  })
+
+  register(AGENT_CHAT_INVOKE_CHANNELS.updateMemory, async (workspaceRoot: unknown, memoryId: unknown, updates: unknown) => {
+    const root = requireValidString(workspaceRoot, 'workspaceRoot')
+    const id = requireValidString(memoryId, 'memoryId')
+    const obj = requireValidObject(updates, 'updates')
+    const updated = await sessionMemoryStore.updateEntry(root, id, obj as Partial<Pick<SessionMemoryEntry, 'content' | 'type' | 'relevantFiles'>>)
+    if (!updated) return { success: false, error: 'Memory not found' }
+    return { success: true, memory: updated }
+  })
+
+  register(AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, async (workspaceRoot: unknown, memoryId: unknown) => {
+    const root = requireValidString(workspaceRoot, 'workspaceRoot')
+    const id = requireValidString(memoryId, 'memoryId')
+    const deleted = await sessionMemoryStore.deleteEntry(root, id)
+    if (!deleted) return { success: false, error: 'Memory not found' }
+    return { success: true }
+  })
 
   // agentChat:getLinkedTerminal — returns the PTY session ID for a chat thread
   register(AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminal, async (threadId: unknown) => {

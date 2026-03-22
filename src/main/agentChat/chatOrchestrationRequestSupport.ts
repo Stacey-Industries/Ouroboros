@@ -18,6 +18,9 @@ import type {
   AgentChatSettings,
   AgentChatThreadRecord,
 } from './types'
+import { tokenCalibrationStore } from './tokenCalibration'
+import { buildInlineSummary, COMPACTION_THRESHOLD, KEEP_RECENT_TURNS } from './conversationCompactor'
+import { computeAdaptiveBudgets } from './adaptiveBudget'
 
 export interface ResolvedSendOptions {
   mode: OrchestrationMode
@@ -337,21 +340,54 @@ function getHistoryBudgets(model: string): {
   return { historyTokenBudget: 64_000, assistantMaxChars: 16_000, assistantTruncationKeep: 15_500 }
 }
 
+/**
+ * Compute adaptive budgets with fallback to static budgets on error.
+ * Returns both history budgets and an optional context packet token cap.
+ */
+function getAdaptiveBudgets(model: string, thread?: AgentChatThreadRecord): {
+  historyTokenBudget: number
+  assistantMaxChars: number
+  assistantTruncationKeep: number
+  contextPacketMaxTokens?: number
+} {
+  try {
+    const turnNumber = (thread?.turnCount ?? Math.ceil((thread?.messages.length ?? 0) / 2)) || 1
+    // We don't have direct access to the actual packet tokens here, so we pass 0
+    // and let the adaptive budget use phase-based defaults on first turns.
+    const adaptive = computeAdaptiveBudgets({
+      model,
+      turnNumber,
+      lastContextPacketTokens: 0,
+      lastHistoryTokens: 0,
+    })
+    return {
+      historyTokenBudget: adaptive.historyTokenBudget,
+      assistantMaxChars: adaptive.assistantMaxChars,
+      assistantTruncationKeep: adaptive.assistantTruncationKeep,
+      contextPacketMaxTokens: adaptive.contextPacketMaxTokens,
+    }
+  } catch (err) {
+    console.warn('[agentChat] adaptive budget failed, using static fallback:', err)
+    return getHistoryBudgets(model)
+  }
+}
+
 function truncateAssistantContent(content: string, maxChars: number, keepChars: number): string {
   if (content.length <= maxChars) return content
   return `${content.slice(0, keepChars)}...(truncated)`
 }
 
 function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4)
+  return Math.ceil(text.length / 3.5)
 }
 
 function buildConversationHistory(
   messages: AgentChatMessageRecord[],
   currentContent: string,
   model: string,
+  thread?: AgentChatThreadRecord,
 ): ConversationMessage[] {
-  const budgets = getHistoryBudgets(model)
+  const budgets = getAdaptiveBudgets(model, thread)
 
   // Include all messages except the current one (which is the last user message just appended).
   // The adapter receives `goal` as the current turn's user message; history is prior turns.
@@ -366,19 +402,73 @@ function buildConversationHistory(
         : m.content,
     }))
 
-  // Keep the most recent messages that fit within the token budget, dropping oldest first.
+  // Estimate total tokens across all filtered messages.
   let totalTokens = 0
+  for (const msg of filtered) {
+    totalTokens += tokenCalibrationStore.calibrate(estimateTokens(msg.content))
+  }
+
+  const compactionBudget = budgets.historyTokenBudget * COMPACTION_THRESHOLD
+
+  // If within budget, return everything as-is.
+  if (totalTokens <= compactionBudget) return filtered
+
+  // --- Compaction needed ---
+  try {
+    // Split into "to compact" (older) and "to keep" (recent turns).
+    // Each turn is a user+assistant pair; KEEP_RECENT_TURNS pairs = 2x messages.
+    const keepCount = Math.min(filtered.length, KEEP_RECENT_TURNS * 2)
+    const splitPoint = filtered.length - keepCount
+    const toCompact = filtered.slice(0, splitPoint)
+    const toKeep = filtered.slice(splitPoint)
+
+    if (toCompact.length === 0) return filtered
+
+    // Check if we already have a compaction summary as the first message.
+    const previousCompactionCount =
+      toCompact[0].content.startsWith('[Conversation Compacted')
+        ? parseInt(toCompact[0].content.match(/Summary #(\d+)/)?.[1] ?? '0', 10)
+        : 0
+
+    // Estimate tokens in the messages being dropped.
+    let compactedTokens = 0
+    for (const msg of toCompact) {
+      compactedTokens += tokenCalibrationStore.calibrate(estimateTokens(msg.content))
+    }
+
+    const summaryText = buildInlineSummary(toCompact, previousCompactionCount, compactedTokens)
+
+    // Track compaction count on the thread (fire-and-forget, never block send path).
+    if (thread) {
+      thread.compactionCount = previousCompactionCount + 1
+    }
+
+    // Verify the kept messages + summary fit within the full budget.
+    // If they don't, fall through to the legacy drop-oldest approach below.
+    let keptTokens = tokenCalibrationStore.calibrate(estimateTokens(summaryText))
+    for (const msg of toKeep) {
+      keptTokens += tokenCalibrationStore.calibrate(estimateTokens(msg.content))
+    }
+
+    if (keptTokens <= budgets.historyTokenBudget) {
+      return [{ role: 'user', content: summaryText }, ...toKeep]
+    }
+  } catch (err) {
+    console.warn('[agentChat] Compaction failed, falling back to message dropping:', err)
+  }
+
+  // Fallback: keep the most recent messages that fit within the token budget, dropping oldest first.
+  let fallbackTokens = 0
   let startIndex = filtered.length
   for (let i = filtered.length - 1; i >= 0; i--) {
-    const msgTokens = estimateTokens(filtered[i].content)
-    if (totalTokens + msgTokens > budgets.historyTokenBudget) break
-    totalTokens += msgTokens
+    const msgTokens = tokenCalibrationStore.calibrate(estimateTokens(filtered[i].content))
+    if (fallbackTokens + msgTokens > budgets.historyTokenBudget) break
+    fallbackTokens += msgTokens
     startIndex = i
   }
 
   const kept = filtered.slice(startIndex)
 
-  // If any messages were dropped, prepend a summary note.
   if (startIndex > 0 && kept.length > 0) {
     kept.unshift({
       role: 'user',
@@ -434,7 +524,13 @@ function buildTaskRequest(args: {
   const modelChanged = didModelChange(args.thread, currentModel)
   const canResume = resumeSessionId && !modelChanged
 
-  return {
+  // Increment turn count for adaptive budget tracking
+  args.thread.turnCount = (args.thread.turnCount ?? 0) + 1
+
+  // Compute adaptive budgets — the context packet cap flows to the builder via TaskRequest.budget
+  const adaptiveBudgets = getAdaptiveBudgets(currentModel, args.thread)
+
+  const taskRequest: TaskRequest = {
     workspaceRoots: [args.thread.workspaceRoot],
     goal: args.content,
     mode: args.resolved.mode,
@@ -446,7 +542,7 @@ function buildTaskRequest(args: {
     contextSelection: normalizeContextSelection(args.request.contextSelection),
     conversationHistory: canResume
       ? []
-      : buildConversationHistory(args.thread.messages, args.content, currentModel),
+      : buildConversationHistory(args.thread.messages, args.content, currentModel, args.thread),
     resumeFromSessionId: canResume ? resumeSessionId : undefined,
     goalAttachments: args.request.attachments?.length ? args.request.attachments : undefined,
     metadata: {
@@ -455,6 +551,18 @@ function buildTaskRequest(args: {
       requestedAt: args.requestedAt,
     },
   }
+
+  // Pass adaptive context budget cap to the context packet builder.
+  // Only set when adaptive budgets computed a cap — the builder uses its own
+  // model-based defaults when budget.maxTokens is absent.
+  if (adaptiveBudgets.contextPacketMaxTokens) {
+    taskRequest.budget = {
+      ...taskRequest.budget,
+      maxTokens: adaptiveBudgets.contextPacketMaxTokens,
+    }
+  }
+
+  return taskRequest
 }
 
 async function resolveThreadForSend(args: {

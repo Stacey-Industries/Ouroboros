@@ -9,6 +9,7 @@ import { BrowserWindow } from 'electron'
 import net from 'net'
 
 import { clearSessionRules, requestApproval, respondToApproval, toolRequiresApproval } from './approvalManager'
+import { generateClaudeMd } from './claudeMdGenerator'
 import { getGraphController } from './codebaseGraph/graphController'
 import { getConfigValue } from './config'
 import { getContextLayerController } from './contextLayer/contextLayerController'
@@ -224,13 +225,8 @@ function triggerClaudeMdGeneration(trigger: 'post-session' | 'post-commit', payl
 
     console.log(`[claude-md] Auto-generating for ${projectRoot} (session ${payload.sessionId})`)
 
-    // Dynamic import to avoid circular dependencies
-    import('./claudeMdGenerator').then(({ generateClaudeMd }) => {
-      generateClaudeMd(projectRoot).catch((err: unknown) => {
-        console.error('[claude-md] Auto-generation failed:', err)
-      })
-    }).catch(() => {
-      // Generator not initialized yet — ignore
+    generateClaudeMd(projectRoot).catch((err: unknown) => {
+      console.error('[claude-md] Auto-generation failed:', err)
     })
   } catch {
     // Config not available yet — ignore

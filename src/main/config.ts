@@ -252,6 +252,7 @@ export interface AppConfig {
   webAccessToken: string
   /** Password for web remote access login (alternative to token) */
   webAccessPassword: string
+  glassOpacity: number
 }
 
 export const store = new Store<AppConfig>({ schema })

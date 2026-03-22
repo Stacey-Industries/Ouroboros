@@ -292,6 +292,8 @@ export interface ContextPacket {
   moduleSummaries?: ModuleContextSummary[]
   /** Pre-formatted graph summary (hotspots + blast radius) to inject into the prompt. */
   graphSummary?: string
+  /** Pre-formatted session memory block from prior sessions. */
+  sessionMemories?: string
 }
 
 export interface RepoMapSummary {

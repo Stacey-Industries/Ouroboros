@@ -307,10 +307,17 @@ function buildXmlContextBlock(
 
   // Append graph summary (hotspots + blast radius) outside the ide_context block
   // so it reads as a top-level context section rather than IDE state.
+  let output = result
   if (packet.graphSummary) {
-    return result + '\n\n' + packet.graphSummary
+    output += '\n\n' + packet.graphSummary
   }
-  return result
+
+  // Append session memories from prior sessions outside the ide_context block.
+  if (packet.sessionMemories) {
+    output += '\n\n' + packet.sessionMemories
+  }
+
+  return output
 }
 
 function buildInitialPrompt(
@@ -404,6 +411,10 @@ function buildEventHandler(
   let lastTurnInputTokens = 0
   let cumulativeOutputTokens = 0
 
+  function getCumulativeUsage(): { inputTokens: number; outputTokens: number } {
+    return { inputTokens: lastTurnInputTokens, outputTokens: cumulativeOutputTokens }
+  }
+
   const handler = (event: StreamJsonEvent) => {
     if (event.type === 'assistant') {
       const blocks = event.message.content
@@ -440,6 +451,7 @@ function buildEventHandler(
               blockType: 'tool_use',
               toolActivity: { name: info.name, status: 'complete' },
             },
+            tokenUsage: getCumulativeUsage(),
           })
         }
         toolIdToGlobal.clear()
@@ -471,6 +483,7 @@ function buildEventHandler(
                 blockType: 'text',
                 textDelta: delta,
               },
+              tokenUsage: getCumulativeUsage(),
             })
             emittedContentLengths.set(globalIdx, block.text.length)
           }
@@ -489,6 +502,7 @@ function buildEventHandler(
                 blockType: 'thinking',
                 textDelta: delta,
               },
+              tokenUsage: getCumulativeUsage(),
             })
             emittedContentLengths.set(globalIdx, block.thinking.length)
           }
@@ -513,6 +527,7 @@ function buildEventHandler(
                   editSummary: display.editSummary,
                 },
               },
+              tokenUsage: getCumulativeUsage(),
             })
             emittedContentLengths.set(globalIdx, 1)
             toolIdToGlobal.set(block.id, { name: block.name, globalIndex: globalIdx })
@@ -539,7 +554,7 @@ function buildEventHandler(
   return {
     handler,
     getNextGlobalBlockIndex: () => nextGlobalBlockIndex,
-    getCumulativeUsage: () => ({ inputTokens: lastTurnInputTokens, outputTokens: cumulativeOutputTokens }),
+    getCumulativeUsage,
   }
 }
 
