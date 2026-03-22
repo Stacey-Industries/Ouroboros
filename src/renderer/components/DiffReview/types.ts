@@ -30,6 +30,7 @@ export interface DiffReviewState {
   sessionId: string;
   snapshotHash: string;
   projectRoot: string;
+  filePaths?: string[];
   files: ReviewFile[];
   loading: boolean;
   error: string | null;

@@ -249,13 +249,25 @@ async function discardFile(root: string, filePath: string): Promise<GitResponse<
 async function applyPatch(root: string, patchContent: string, reverse: boolean = false): Promise<GitResponse<Record<string, never>>> {
   const tmpFile = path.join(app.getPath('temp'), `ouroboros-hunk-${Date.now()}.patch`)
   try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(reverse ? ['apply', '-R', '--whitespace=nowarn', tmpFile] : ['apply', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-  catch (err: unknown) { return { success: false, error: gitErrorMessage(err) } }
+  catch (err: unknown) {
+    // If the patch didn't apply, check if it was already applied/reverted.
+    // A forward-apply failure where reverse-check succeeds means already applied.
+    // A reverse-apply failure where forward-check succeeds means already reverted.
+    try { await gitExec(reverse ? ['apply', '--check', '--whitespace=nowarn', tmpFile] : ['apply', '-R', '--check', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
+    catch { return { success: false, error: gitErrorMessage(err) } }
+  }
   finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
 }
 async function stagePatch(root: string, patchContent: string): Promise<GitResponse<Record<string, never>>> {
   const tmpFile = path.join(app.getPath('temp'), `ouroboros-stage-${Date.now()}.patch`)
   try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(['apply', '--cached', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-  catch (err: unknown) { return { success: false, error: gitErrorMessage(err) } }
+  catch (err: unknown) {
+    // If forward-apply failed, check if the hunk is already staged by testing
+    // whether it can be reverse-applied from the index. This happens when the
+    // user re-opens a review after previously accepting hunks.
+    try { await gitExec(['apply', '--cached', '--reverse', '--check', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
+    catch { return { success: false, error: gitErrorMessage(err) } }
+  }
   finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
 }
 function gitIsRepo(root: string) { return respond(async () => { await gitExec(['rev-parse', '--git-dir'], { cwd: root }); return { isRepo: true } }, { fallback: { isRepo: false } }) }
@@ -273,7 +285,8 @@ function gitCommit(root: string, message: string) { return respond(async () => {
 function gitStageAll(root: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); return {} }, { gitError: true }) }
 function gitUnstageAll(root: string) { return respond(async () => { await gitExec(['reset', 'HEAD'], { cwd: root }); return {} }, { gitError: true }) }
 function gitSnapshot(root: string) { return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) })) }
-function gitDiffReview(root: string, commitHash: string) { return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, ['diff', commitHash, '--unified=3', '--no-color'], 10 * MB), root) })) }
+function gitDiffReview(root: string, commitHash: string, filePaths?: string[]) { const ref = commitHash && commitHash !== 'INDEX' ? commitHash : ''; const args = ['diff']; if (ref) args.push(ref); args.push('--unified=3', '--no-color'); if (filePaths?.length) { args.push('--', ...filePaths) } return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) })) }
+function gitDiffCached(root: string, commitHash: string, filePaths?: string[]) { const ref = commitHash && commitHash !== 'INDEX' ? commitHash : ''; const args = ['diff', '--cached']; if (ref) args.push(ref); args.push('--unified=3', '--no-color'); if (filePaths?.length) { args.push('--', ...filePaths) } return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) })) }
 function gitFileAtCommit(root: string, commitHash: string, filePath: string) { return respond(async () => ({ content: await gitStdout(root, ['show', `${commitHash}:${normalizeGitPath(path.relative(root, filePath))}`], 4 * MB) }), { fallback: { content: '' } }) }
 function gitRevertFile(root: string, commitHash: string, filePath: string) { return respond(async () => { await gitExec(['checkout', commitHash, '--', filePath], { cwd: root }); return {} }, { gitError: true }) }
 function gitDiffBetween(root: string, fromHash: string, toHash: string) { return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, ['diff', fromHash, toHash, '--unified=3', '--no-color'], 10 * MB), root) })) }
@@ -319,6 +332,7 @@ export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
     registerSecure('git:discardFile', discardFile),
     registerSecure('git:snapshot', gitSnapshot),
     registerSecure('git:diffReview', gitDiffReview),
+    registerSecure('git:diffCached', gitDiffCached),
     registerSecure('git:fileAtCommit', gitFileAtCommit),
     registerSecure('git:applyHunk', (root: string, patchContent: string) => applyPatch(root, patchContent)),
     registerSecure('git:revertHunk', (root: string, patchContent: string) => applyPatch(root, patchContent, true)),

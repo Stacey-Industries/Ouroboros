@@ -6,7 +6,7 @@
  * window.electronAPI. No raw Node/Electron APIs are exposed.
  */
 
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 
 import type { AppConfig, AppTheme, ElectronAPI, FileChangeEvent, HookPayload } from '../renderer/types/electron'
 import { supplementalApis } from './preloadSupplementalApis'
@@ -158,6 +158,26 @@ const appAPI: ElectronAPI['app'] = {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('window:maximize-toggle'),
   closeWindow: () => ipcRenderer.invoke('window:close-self'),
+
+  newWindow: () => ipcRenderer.invoke('window:new'),
+  toggleFullscreen: () => ipcRenderer.invoke('window:toggle-fullscreen'),
+  toggleDevTools: () => ipcRenderer.invoke('window:toggle-devtools'),
+  openLogsFolder: () => ipcRenderer.invoke('app:open-logs-folder'),
+
+  zoomIn: () => {
+    const level = Math.min(webFrame.getZoomLevel() + 0.5, 5)
+    webFrame.setZoomLevel(level)
+    return Promise.resolve({ success: true as const })
+  },
+  zoomOut: () => {
+    const level = Math.max(webFrame.getZoomLevel() - 0.5, -3)
+    webFrame.setZoomLevel(level)
+    return Promise.resolve({ success: true as const })
+  },
+  zoomReset: () => {
+    webFrame.setZoomLevel(0)
+    return Promise.resolve({ success: true as const })
+  },
 }
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -201,7 +221,8 @@ const gitAPI: ElectronAPI['git'] = {
   discardFile: (root, filePath) => ipcRenderer.invoke('git:discardFile', root, filePath),
   statusDetailed: (root) => ipcRenderer.invoke('git:statusDetailed', root),
   snapshot: (root) => ipcRenderer.invoke('git:snapshot', root),
-  diffReview: (root, commitHash) => ipcRenderer.invoke('git:diffReview', root, commitHash),
+  diffReview: (root, commitHash, filePaths) => ipcRenderer.invoke('git:diffReview', root, commitHash, filePaths),
+  diffCached: (root, commitHash, filePaths) => ipcRenderer.invoke('git:diffCached', root, commitHash, filePaths),
   fileAtCommit: (root, commitHash, filePath) => ipcRenderer.invoke('git:fileAtCommit', root, commitHash, filePath),
   applyHunk: (root, patchContent) => ipcRenderer.invoke('git:applyHunk', root, patchContent),
   revertHunk: (root, patchContent) => ipcRenderer.invoke('git:revertHunk', root, patchContent),

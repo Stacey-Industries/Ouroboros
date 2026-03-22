@@ -169,6 +169,15 @@ export interface AppAPI {
   minimizeWindow: () => Promise<IpcResult>
   toggleMaximizeWindow: () => Promise<IpcResult>
   closeWindow: () => Promise<IpcResult>
+
+  /** Window and app actions */
+  newWindow: () => Promise<IpcResult>
+  toggleFullscreen: () => Promise<IpcResult>
+  toggleDevTools: () => Promise<IpcResult>
+  openLogsFolder: () => Promise<IpcResult>
+  zoomIn: () => Promise<IpcResult>
+  zoomOut: () => Promise<IpcResult>
+  zoomReset: () => Promise<IpcResult>
 }
 
 export interface ShellAPI {

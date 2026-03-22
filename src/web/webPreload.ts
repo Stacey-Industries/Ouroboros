@@ -365,6 +365,18 @@ const appAPI = {
     }
     return () => cleanups.forEach((cleanup) => cleanup())
   },
+
+  // Window/app controls — desktop-only in web mode
+  minimizeWindow: desktopOnlyNoop(),
+  toggleMaximizeWindow: desktopOnlyNoop(),
+  closeWindow: desktopOnlyNoop(),
+  newWindow: desktopOnlyNoop(),
+  toggleFullscreen: desktopOnlyNoop(),
+  toggleDevTools: desktopOnlyNoop(),
+  openLogsFolder: desktopOnlyNoop(),
+  zoomIn: async () => { document.body.style.zoom = String(parseFloat(document.body.style.zoom || '1') + 0.1); return { success: true } },
+  zoomOut: async () => { document.body.style.zoom = String(Math.max(0.5, parseFloat(document.body.style.zoom || '1') - 0.1)); return { success: true } },
+  zoomReset: async () => { document.body.style.zoom = '1'; return { success: true } },
 }
 
 // ─── Shell API ───────────────────────────────────────────────────────────────
@@ -407,8 +419,10 @@ const gitAPI = {
     transport.invoke('git:discardFile', root, filePath),
   statusDetailed: (root: string) => transport.invoke('git:statusDetailed', root),
   snapshot: (root: string) => transport.invoke('git:snapshot', root),
-  diffReview: (root: string, commitHash?: string) =>
-    transport.invoke('git:diffReview', root, commitHash),
+  diffReview: (root: string, commitHash?: string, filePaths?: string[]) =>
+    transport.invoke('git:diffReview', root, commitHash, filePaths),
+  diffCached: (root: string, commitHash: string, filePaths?: string[]) =>
+    transport.invoke('git:diffCached', root, commitHash, filePaths),
   fileAtCommit: (root: string, commitHash: string, filePath: string) =>
     transport.invoke('git:fileAtCommit', root, commitHash, filePath),
   applyHunk: (root: string, patchContent: string) =>

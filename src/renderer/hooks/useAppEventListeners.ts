@@ -19,6 +19,7 @@ import {
   type ToastFn,
 } from './agentChatUiHelpers';
 import type { AppTheme, WorkspaceLayout } from '../types/electron';
+import { clearTerminal } from '../components/Terminal/terminalRegistry';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
@@ -54,6 +55,7 @@ interface DiffReviewDetail {
   sessionId?: string;
   snapshotHash?: string;
   projectRoot?: string;
+  filePaths?: string[];
 }
 
 function emitUsagePanel(): void {
@@ -157,6 +159,8 @@ function createDomEventEntries(args: {
     ['agent-ide:open-usage', emitUsagePanel],
     ['agent-ide:open-folder', createFolderHandler(handleProjectChange)],
     ['agent-ide:new-terminal', createNewTerminalHandler(spawnSession)],
+    ['agent-ide:new-claude-terminal', () => { void spawnClaudeSession(); }],
+    ['agent-ide:clear-active-terminal', () => clearTerminal()],
     ['agent-ide:open-file-picker', createBooleanOpener(setFilePickerOpen)],
     ['agent-ide:open-symbol-search', createBooleanOpener(setSymbolSearchOpen)],
     ['agent-ide:open-diff-review', createDiffReviewHandler()],

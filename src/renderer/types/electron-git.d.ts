@@ -128,7 +128,8 @@ export interface GitAPI {
   commit: (root: string, message: string) => Promise<IpcResult>
   discardFile: (root: string, filePath: string) => Promise<IpcResult>
   snapshot: (root: string) => Promise<GitSnapshotResult>
-  diffReview: (root: string, commitHash: string) => Promise<GitDiffReviewResult>
+  diffReview: (root: string, commitHash: string, filePaths?: string[]) => Promise<GitDiffReviewResult>
+  diffCached: (root: string, commitHash: string, filePaths?: string[]) => Promise<GitDiffReviewResult>
   fileAtCommit: (root: string, commitHash: string, filePath: string) => Promise<GitFileAtCommitResult>
   applyHunk: (root: string, patchContent: string) => Promise<IpcResult>
   revertHunk: (root: string, patchContent: string) => Promise<IpcResult>

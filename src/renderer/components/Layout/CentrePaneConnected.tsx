@@ -39,7 +39,7 @@ const SPECIAL_VIEW_EVENTS: Array<[string, SpecialViewType]> = [
 // ── Hooks ───────────────────────────────────────────────────────────────────
 
 function useDiffReviewEvents(
-  openReview: (sessionId: string, snapshotHash: string, projectRoot: string) => void,
+  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void,
   setReplaySession: (s: AgentMonitorSession | null) => void,
   setActiveView: (v: 'editor') => void,
 ): void {
@@ -49,7 +49,7 @@ function useDiffReviewEvents(
       if (detail) {
         setReplaySession(null);
         setActiveView('editor');
-        openReview(detail.sessionId, detail.snapshotHash, detail.projectRoot);
+        openReview(detail.sessionId, detail.snapshotHash, detail.projectRoot, detail.filePaths);
       }
     }
     window.addEventListener('agent-ide:diff-review-open', onOpen);
@@ -156,6 +156,28 @@ export function CentrePaneConnected(): React.ReactElement {
   useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
   useSpecialViewEvents(openAndActivate);
   useFileTabClicksSwitchToEditor(setActiveView);
+
+  // Global "review all changes" / "review unstaged" events (command palette, git panel)
+  useEffect(() => {
+    function onReviewAll() {
+      if (!projectRoot) return;
+      setReplaySession(null);
+      setActiveView('editor');
+      openReview('global-review', 'HEAD', projectRoot);
+    }
+    function onReviewUnstaged() {
+      if (!projectRoot) return;
+      setReplaySession(null);
+      setActiveView('editor');
+      openReview('global-review-unstaged', 'INDEX', projectRoot);
+    }
+    window.addEventListener('agent-ide:review-all-changes', onReviewAll);
+    window.addEventListener('agent-ide:review-unstaged-changes', onReviewUnstaged);
+    return () => {
+      window.removeEventListener('agent-ide:review-all-changes', onReviewAll);
+      window.removeEventListener('agent-ide:review-unstaged-changes', onReviewUnstaged);
+    };
+  }, [openReview, projectRoot, setReplaySession, setActiveView]);
 
   if (state) {
     return (

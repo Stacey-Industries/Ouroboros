@@ -85,7 +85,7 @@ function viewCommands(): Command[] {
       label: 'Toggle Left Sidebar',
       category: 'view',
       shortcut: 'Ctrl+B',
-      icon: 'â¬›',
+      icon: '⬛',
       action: () => {
         dispatchIdeEvent('agent-ide:toggle-sidebar');
       },
@@ -232,6 +232,24 @@ function gitCommands(): Command[] {
       icon: 'â±',
       action: () => {
         dispatchIdeEvent('agent-ide:open-time-travel');
+      },
+    },
+    {
+      id: 'git:review-all-changes',
+      label: 'Review All Working Changes',
+      category: 'git',
+      icon: '\u0394',
+      action: () => {
+        dispatchIdeEvent('agent-ide:review-all-changes');
+      },
+    },
+    {
+      id: 'git:review-unstaged-changes',
+      label: 'Review Unstaged Changes',
+      category: 'git',
+      icon: '\u0394',
+      action: () => {
+        dispatchIdeEvent('agent-ide:review-unstaged-changes');
       },
     },
   ];
