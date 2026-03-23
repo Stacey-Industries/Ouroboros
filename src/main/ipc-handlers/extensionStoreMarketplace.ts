@@ -279,17 +279,17 @@ async function installMarketplaceExtension(
   const downloadUrl = buildVsixDownloadUrl(namespace, name, targetVersion.version);
   const buffer = await downloadMarketplaceVsix(downloadUrl);
   const tempPath = path.join(os.tmpdir(), `${extensionId}-${Date.now()}.vsix`);
-  const installed = await installExtensionFromBuffer(
+  const installed = await installExtensionFromBuffer({
     buffer,
     tempPath,
     extensionId,
     namespace,
     name,
-    targetVersion.version,
-    ext.displayName,
-    ext.shortDescription,
+    version: targetVersion.version,
+    displayName: ext.displayName,
+    description: ext.shortDescription,
     existing,
-  );
+  });
 
   // Remove from disabled if present
   const disabled = getDisabledList();

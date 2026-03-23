@@ -10,6 +10,7 @@ import {
 } from './approvalManager';
 import { generateClaudeMd } from './claudeMdGenerator';
 import { getGraphController } from './codebaseGraph/graphController';
+import { getConfigValue } from './config';
 import { getContextLayerController } from './contextLayer/contextLayerController';
 import { dispatchActivationEvent } from './extensions';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';

@@ -6,10 +6,16 @@
  * window.electronAPI. No raw Node/Electron APIs are exposed.
  */
 
-import { contextBridge, ipcRenderer, webFrame } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 
-import type { AppConfig, AppTheme, ElectronAPI, FileChangeEvent, HookPayload } from '../renderer/types/electron'
-import { supplementalApis } from './preloadSupplementalApis'
+import type {
+  AppConfig,
+  AppTheme,
+  ElectronAPI,
+  FileChangeEvent,
+  HookPayload,
+} from '../renderer/types/electron';
+import { supplementalApis } from './preloadSupplementalApis';
 
 // â”€â”€â”€ PTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -26,34 +32,34 @@ const ptyAPI: ElectronAPI['pty'] = {
   listSessions: () => ipcRenderer.invoke('pty:listSessions'),
 
   onData: (id, callback) => {
-    const channel = `pty:data:${id}`
-    const handler = (_event: Electron.IpcRendererEvent, data: string) => callback(data)
-    ipcRenderer.on(channel, handler)
-    return () => ipcRenderer.removeListener(channel, handler)
+    const channel = `pty:data:${id}`;
+    const handler = (_event: Electron.IpcRendererEvent, data: string) => callback(data);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
   },
 
   onExit: (id, callback) => {
-    const channel = `pty:exit:${id}`
+    const channel = `pty:exit:${id}`;
     const handler = (
       _event: Electron.IpcRendererEvent,
-      result: { exitCode: number | null; signal: number | null }
-    ) => callback(result)
-    ipcRenderer.on(channel, handler)
-    return () => ipcRenderer.removeListener(channel, handler)
+      result: { exitCode: number | null; signal: number | null },
+    ) => callback(result);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
   },
 
   onRecordingState: (id, callback) => {
-    const channel = `pty:recordingState:${id}`
+    const channel = `pty:recordingState:${id}`;
     const handler = (_event: Electron.IpcRendererEvent, state: { recording: boolean }) =>
-      callback(state)
-    ipcRenderer.on(channel, handler)
-    return () => ipcRenderer.removeListener(channel, handler)
-  }
-}
+      callback(state);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
+};
 
 const codexAPI: ElectronAPI['codex'] = {
   listModels: () => ipcRenderer.invoke('codex:listModels'),
-}
+};
 
 // â”€â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -66,11 +72,11 @@ const configAPI: ElectronAPI['config'] = {
   openSettingsFile: () => ipcRenderer.invoke('config:openSettingsFile'),
 
   onExternalChange: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, config: AppConfig) => callback(config)
-    ipcRenderer.on('config:externalChange', handler)
-    return () => ipcRenderer.removeListener('config:externalChange', handler)
+    const handler = (_event: Electron.IpcRendererEvent, config: AppConfig) => callback(config);
+    ipcRenderer.on('config:externalChange', handler);
+    return () => ipcRenderer.removeListener('config:externalChange', handler);
   },
-}
+};
 
 // â”€â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -89,38 +95,39 @@ const filesAPI: ElectronAPI['files'] = {
   copyFile: (sourcePath, destPath) => ipcRenderer.invoke('files:copyFile', sourcePath, destPath),
   delete: (targetPath) => ipcRenderer.invoke('files:delete', targetPath),
   softDelete: (targetPath) => ipcRenderer.invoke('files:softDelete', targetPath),
-  restoreDeleted: (tempPath, originalPath) => ipcRenderer.invoke('files:restoreDeleted', tempPath, originalPath),
+  restoreDeleted: (tempPath, originalPath) =>
+    ipcRenderer.invoke('files:restoreDeleted', tempPath, originalPath),
 
   showImageDialog: () => ipcRenderer.invoke('files:showImageDialog'),
 
   onFileChange: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, change: FileChangeEvent) =>
-      callback(change)
-    ipcRenderer.on('files:change', handler)
-    return () => ipcRenderer.removeListener('files:change', handler)
-  }
-}
+      callback(change);
+    ipcRenderer.on('files:change', handler);
+    return () => ipcRenderer.removeListener('files:change', handler);
+  },
+};
 
 // â”€â”€â”€ Hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const hooksAPI: ElectronAPI['hooks'] = {
   onAgentEvent: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, hookPayload: HookPayload) =>
-      callback(hookPayload)
-    ipcRenderer.on('hooks:event', handler)
-    return () => ipcRenderer.removeListener('hooks:event', handler)
+      callback(hookPayload);
+    ipcRenderer.on('hooks:event', handler);
+    return () => ipcRenderer.removeListener('hooks:event', handler);
   },
 
   onToolCall: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, hookPayload: HookPayload) => {
       if (hookPayload.type === 'pre_tool_use' || hookPayload.type === 'post_tool_use') {
-        callback(hookPayload)
+        callback(hookPayload);
       }
-    }
-    ipcRenderer.on('hooks:event', handler)
-    return () => ipcRenderer.removeListener('hooks:event', handler)
-  }
-}
+    };
+    ipcRenderer.on('hooks:event', handler);
+    return () => ipcRenderer.removeListener('hooks:event', handler);
+  },
+};
 
 // â”€â”€â”€ App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -135,24 +142,25 @@ const appAPI: ElectronAPI['app'] = {
   notify: (options) => ipcRenderer.invoke('app:notify', options),
 
   rebuildAndRestart: () => ipcRenderer.invoke('app:rebuildAndRestart'),
+  rebuildWeb: () => ipcRenderer.invoke('app:rebuildWeb'),
 
   onMenuEvent: (callback) => {
     const events = [
       'menu:open-folder',
       'menu:new-terminal',
       'menu:command-palette',
-      'menu:settings'
-    ] as const
+      'menu:settings',
+    ] as const;
 
-    const handlers: Array<() => void> = []
+    const handlers: Array<() => void> = [];
 
     for (const event of events) {
-      const handler = () => callback(event)
-      ipcRenderer.on(event, handler)
-      handlers.push(() => ipcRenderer.removeListener(event, handler))
+      const handler = () => callback(event);
+      ipcRenderer.on(event, handler);
+      handlers.push(() => ipcRenderer.removeListener(event, handler));
     }
 
-    return () => handlers.forEach((cleanup) => cleanup())
+    return () => handlers.forEach((cleanup) => cleanup());
   },
 
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
@@ -165,27 +173,27 @@ const appAPI: ElectronAPI['app'] = {
   openLogsFolder: () => ipcRenderer.invoke('app:open-logs-folder'),
 
   zoomIn: () => {
-    const level = Math.min(webFrame.getZoomLevel() + 0.5, 5)
-    webFrame.setZoomLevel(level)
-    return Promise.resolve({ success: true as const })
+    const level = Math.min(webFrame.getZoomLevel() + 0.5, 5);
+    webFrame.setZoomLevel(level);
+    return Promise.resolve({ success: true as const });
   },
   zoomOut: () => {
-    const level = Math.max(webFrame.getZoomLevel() - 0.5, -3)
-    webFrame.setZoomLevel(level)
-    return Promise.resolve({ success: true as const })
+    const level = Math.max(webFrame.getZoomLevel() - 0.5, -3);
+    webFrame.setZoomLevel(level);
+    return Promise.resolve({ success: true as const });
   },
   zoomReset: () => {
-    webFrame.setZoomLevel(0)
-    return Promise.resolve({ success: true as const })
+    webFrame.setZoomLevel(0);
+    return Promise.resolve({ success: true as const });
   },
-}
+};
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const shellAPI: ElectronAPI['shell'] = {
   showItemInFolder: (fullPath) => ipcRenderer.invoke('shell:showItemInFolder', fullPath),
   openExtensionsFolder: () => ipcRenderer.invoke('shell:openExtensionsFolder'),
-}
+};
 
 // â”€â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -194,11 +202,11 @@ const themeAPI: ElectronAPI['theme'] = {
   set: (theme) => ipcRenderer.invoke('theme:set', theme),
 
   onChange: (callback) => {
-    const handler = (_event: Electron.IpcRendererEvent, theme: AppTheme) => callback(theme)
-    ipcRenderer.on('theme:changed', handler)
-    return () => ipcRenderer.removeListener('theme:changed', handler)
-  }
-}
+    const handler = (_event: Electron.IpcRendererEvent, theme: AppTheme) => callback(theme);
+    ipcRenderer.on('theme:changed', handler);
+    return () => ipcRenderer.removeListener('theme:changed', handler);
+  },
+};
 
 // â”€â”€â”€ Git â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -221,26 +229,33 @@ const gitAPI: ElectronAPI['git'] = {
   discardFile: (root, filePath) => ipcRenderer.invoke('git:discardFile', root, filePath),
   statusDetailed: (root) => ipcRenderer.invoke('git:statusDetailed', root),
   snapshot: (root) => ipcRenderer.invoke('git:snapshot', root),
-  diffReview: (root, commitHash, filePaths) => ipcRenderer.invoke('git:diffReview', root, commitHash, filePaths),
-  diffCached: (root, commitHash, filePaths) => ipcRenderer.invoke('git:diffCached', root, commitHash, filePaths),
-  fileAtCommit: (root, commitHash, filePath) => ipcRenderer.invoke('git:fileAtCommit', root, commitHash, filePath),
+  diffReview: (root, commitHash, filePaths) =>
+    ipcRenderer.invoke('git:diffReview', root, commitHash, filePaths),
+  diffCached: (root, commitHash, filePaths) =>
+    ipcRenderer.invoke('git:diffCached', root, commitHash, filePaths),
+  fileAtCommit: (root, commitHash, filePath) =>
+    ipcRenderer.invoke('git:fileAtCommit', root, commitHash, filePath),
   applyHunk: (root, patchContent) => ipcRenderer.invoke('git:applyHunk', root, patchContent),
   revertHunk: (root, patchContent) => ipcRenderer.invoke('git:revertHunk', root, patchContent),
   stageHunk: (root, patchContent) => ipcRenderer.invoke('git:stageHunk', root, patchContent),
-  revertFile: (root, commitHash, filePath) => ipcRenderer.invoke('git:revertFile', root, commitHash, filePath),
-  diffBetween: (root, fromHash, toHash) => ipcRenderer.invoke('git:diffBetween', root, fromHash, toHash),
-  changedFilesBetween: (root, fromHash, toHash) => ipcRenderer.invoke('git:changedFilesBetween', root, fromHash, toHash),
-  restoreSnapshot: (root, commitHash) => ipcRenderer.invoke('git:restoreSnapshot', root, commitHash),
+  revertFile: (root, commitHash, filePath) =>
+    ipcRenderer.invoke('git:revertFile', root, commitHash, filePath),
+  diffBetween: (root, fromHash, toHash) =>
+    ipcRenderer.invoke('git:diffBetween', root, fromHash, toHash),
+  changedFilesBetween: (root, fromHash, toHash) =>
+    ipcRenderer.invoke('git:changedFilesBetween', root, fromHash, toHash),
+  restoreSnapshot: (root, commitHash) =>
+    ipcRenderer.invoke('git:restoreSnapshot', root, commitHash),
   createSnapshot: (root, label) => ipcRenderer.invoke('git:createSnapshot', root, label),
   dirtyCount: (root) => ipcRenderer.invoke('git:dirtyCount', root),
-}
+};
 
 // ——— Providers ———————————————————————————————————————————————————————
 
 const providersAPI: ElectronAPI['providers'] = {
   list: () => ipcRenderer.invoke('providers:list'),
   getSlots: () => ipcRenderer.invoke('providers:getSlots'),
-}
+};
 
 const electronAPI: ElectronAPI = {
   pty: ptyAPI,
@@ -254,8 +269,8 @@ const electronAPI: ElectronAPI = {
   providers: providersAPI,
   codex: codexAPI,
   ...supplementalApis,
-}
+};
 
 // â”€â”€â”€ Expose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+contextBridge.exposeInMainWorld('electronAPI', electronAPI);
