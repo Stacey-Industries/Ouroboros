@@ -18,6 +18,7 @@ import {
   lspStopAll,
   registerAgentChatHandlers,
   registerAppHandlers,
+  registerAuthHandlers,
   registerClaudeMdHandlers,
   registerConfigHandlers,
   registerContextHandlers,
@@ -58,6 +59,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
     ...registerClaudeMdHandlers(senderWindow),
+    ...registerAuthHandlers(senderWindow, win),
   ];
 }
 

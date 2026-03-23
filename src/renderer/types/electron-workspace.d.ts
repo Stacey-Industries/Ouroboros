@@ -5,6 +5,7 @@ import type {
 } from '@shared/types/orchestration';
 
 import type { AgentChatAPI } from './electron-agent-chat';
+import type { AuthAPI } from './electron-auth';
 import type { ClaudeMdAPI } from './electron-claude-md';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type {
@@ -190,6 +191,7 @@ export interface ElectronAPI {
   files: FilesAPI;
   hooks: HooksAPI;
   approval: ApprovalAPI;
+  auth: AuthAPI;
   app: AppAPI;
   shell: ShellAPI;
   theme: ThemeAPI;

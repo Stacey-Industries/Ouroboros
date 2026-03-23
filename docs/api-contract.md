@@ -1306,6 +1306,87 @@ Manages Cloudflare CodeMode (tool-call optimizer) integration.
 
 ---
 
+## Authentication API (`auth:*`)
+
+Credential management for three providers: GitHub, Anthropic (Claude), and OpenAI (Codex). Credentials are encrypted at rest via Electron's `safeStorage` (OS keychain). The renderer never receives raw tokens — only status and user info.
+
+Type definitions: `src/shared/types/auth.ts` (canonical), `src/renderer/types/electron-auth.d.ts` (renderer surface)
+Implementation: `src/main/ipc-handlers/auth.ts`, `src/main/auth/` (providers + credential store)
+
+### `auth:getStates`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** none
+- **Returns:** `{ success: boolean; states?: AuthState[]; error?: string }`
+- **Notes:** Returns the current `AuthState` for all three providers (`github`, `anthropic`, `openai`). Each state includes `provider`, `status` (`'authenticated'` | `'unauthenticated'` | `'expired'` | `'refreshing'`), and optionally `credentialType` (`'oauth'` | `'apikey'`) and `user` (GitHub only).
+
+### `auth:startLogin`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(provider: AuthProvider)`
+- **Returns:** `{ success: boolean; error?: string }`
+- **Notes:** Only meaningful for `'github'` — starts the GitHub Device Flow (RFC 8628). Progress events are pushed to the renderer via `auth:loginEvent`. For `'anthropic'` and `'openai'`, returns an error directing the user to `auth:setApiKey` or CLI import instead.
+
+### `auth:cancelLogin`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(provider: AuthProvider)`
+- **Returns:** `{ success: boolean; error?: string }`
+- **Notes:** Aborts an in-progress GitHub Device Flow login. No-op for other providers.
+
+### `auth:logout`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(provider: AuthProvider)`
+- **Returns:** `{ success: boolean; error?: string }`
+- **Notes:** Deletes the stored credential for the given provider. Broadcasts `auth:stateChanged` on success.
+
+### `auth:setApiKey`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(provider: AuthProvider, apiKey: string)`
+- **Returns:** `{ success: boolean; error?: string }`
+- **Notes:** Stores an API key for `'anthropic'` or `'openai'`. Returns an error for `'github'` (use OAuth login instead). Anthropic keys must start with `sk-ant-`. OpenAI keys must start with `sk-` and are validated against the OpenAI models endpoint before storage (if online). Broadcasts `auth:stateChanged` on success.
+
+### `auth:importCliCreds`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(provider: AuthProvider)`
+- **Returns:** `{ success: boolean; error?: string }`
+- **Notes:** Imports credentials from CLI tools into the credential store. Sources: `gh` CLI `hosts.yml` (GitHub), `~/.claude/.credentials.json` or `ANTHROPIC_API_KEY` env var (Anthropic), `OPENAI_API_KEY` env var or Codex CLI `config.toml` (OpenAI). Broadcasts `auth:stateChanged` on success.
+
+### `auth:detectCliCreds`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** none
+- **Returns:** `{ success: boolean; detections?: CliCredentialDetection[]; error?: string }`
+- **Notes:** Checks which providers have importable CLI credentials without actually importing them. Each `CliCredentialDetection` includes `provider`, `available` (boolean), and `source` (human-readable origin description like `"gh CLI (user: octocat)"` or `"ANTHROPIC_API_KEY env var"`).
+
+### `auth:openExternal`
+
+- **Direction:** renderer → main (invoke)
+- **Payload:** `(url: string)`
+- **Returns:** `void`
+- **Notes:** Opens a URL in the user's default browser via `shell.openExternal`. Used during GitHub Device Flow to open the verification URI.
+
+### `auth:loginEvent` (event)
+
+- **Direction:** main → renderer
+- **Callback:** `(event: GitHubLoginEvent) => void`
+- **Notes:** Pushed during GitHub Device Flow login. Event types:
+  - `{ type: 'device_code', info: GitHubDeviceFlowInfo }` — contains `userCode`, `verificationUri`, `expiresIn`
+  - `{ type: 'authenticated', state: AuthState }` — login succeeded, includes user info
+  - `{ type: 'error', message: string }` — login failed
+  - `{ type: 'cancelled' }` — login was cancelled via `auth:cancelLogin`
+
+### `auth:stateChanged` (event)
+
+- **Direction:** main → renderer
+- **Callback:** `(states: AuthState[]) => void`
+- **Notes:** Pushed whenever any provider's auth state changes (login, logout, API key set, CLI import). Contains the full `AuthState[]` for all three providers — not a delta.
+
+---
+
 ## Window API (`window:*`)
 
 ### `window:new`

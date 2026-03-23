@@ -5,6 +5,7 @@
 import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
+import { AccountsSection } from './AccountsSection';
 import { AgentSection } from './AgentSection';
 import { AppearanceSection } from './AppearanceSection';
 import { ClaudeSection } from './ClaudeSection';
@@ -35,8 +36,13 @@ type SharedTabProps = Omit<SettingsTabContentProps, 'activeTab'>;
 type TabRenderer = (props: SharedTabProps) => React.ReactElement;
 
 const TAB_RENDERERS: Record<TabId, TabRenderer> = {
-  general: ({ draft, onChange, onImport }) => <GeneralSection draft={draft} onChange={onChange} onImport={onImport} />,
-  appearance: ({ draft, onChange, onPreviewTheme }) => <AppearanceSection draft={draft} onChange={onChange} onPreviewTheme={onPreviewTheme} />,
+  accounts: () => <AccountsSection />,
+  general: ({ draft, onChange, onImport }) => (
+    <GeneralSection draft={draft} onChange={onChange} onImport={onImport} />
+  ),
+  appearance: ({ draft, onChange, onPreviewTheme }) => (
+    <AppearanceSection draft={draft} onChange={onChange} onPreviewTheme={onPreviewTheme} />
+  ),
   fonts: ({ draft, onChange }) => <FontSection draft={draft} onChange={onChange} />,
   terminal: ({ draft, onChange }) => <TerminalSection draft={draft} onChange={onChange} />,
   agent: ({ draft, onChange }) => <AgentSection draft={draft} onChange={onChange} />,
@@ -53,6 +59,9 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
 };
 
-export function SettingsTabContent({ activeTab, ...sharedProps }: SettingsTabContentProps): React.ReactElement {
+export function SettingsTabContent({
+  activeTab,
+  ...sharedProps
+}: SettingsTabContentProps): React.ReactElement {
   return TAB_RENDERERS[activeTab](sharedProps);
 }

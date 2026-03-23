@@ -11,8 +11,10 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import type {
   AppConfig,
   AppTheme,
+  AuthState,
   ElectronAPI,
   FileChangeEvent,
+  GitHubLoginEvent,
   HookPayload,
 } from '../renderer/types/electron';
 import { supplementalApis } from './preloadSupplementalApis';
@@ -257,11 +259,37 @@ const providersAPI: ElectronAPI['providers'] = {
   getSlots: () => ipcRenderer.invoke('providers:getSlots'),
 };
 
+// ——— Auth ———————————————————————————————————————————————————————————
+
+const authAPI: ElectronAPI['auth'] = {
+  getStates: () => ipcRenderer.invoke('auth:getStates'),
+  startLogin: (provider) => ipcRenderer.invoke('auth:startLogin', provider),
+  cancelLogin: (provider) => ipcRenderer.invoke('auth:cancelLogin', provider),
+  logout: (provider) => ipcRenderer.invoke('auth:logout', provider),
+  setApiKey: (provider, apiKey) => ipcRenderer.invoke('auth:setApiKey', provider, apiKey),
+  importCliCreds: (provider) => ipcRenderer.invoke('auth:importCliCreds', provider),
+  detectCliCreds: () => ipcRenderer.invoke('auth:detectCliCreds'),
+  openExternal: (url) => ipcRenderer.invoke('auth:openExternal', url),
+
+  onLoginEvent: (callback) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: GitHubLoginEvent) => callback(data);
+    ipcRenderer.on('auth:loginEvent', handler);
+    return () => ipcRenderer.removeListener('auth:loginEvent', handler);
+  },
+
+  onStateChanged: (callback) => {
+    const handler = (_event: Electron.IpcRendererEvent, states: AuthState[]) => callback(states);
+    ipcRenderer.on('auth:stateChanged', handler);
+    return () => ipcRenderer.removeListener('auth:stateChanged', handler);
+  },
+};
+
 const electronAPI: ElectronAPI = {
   pty: ptyAPI,
   config: configAPI,
   files: filesAPI,
   hooks: hooksAPI,
+  auth: authAPI,
   app: appAPI,
   shell: shellAPI,
   theme: themeAPI,

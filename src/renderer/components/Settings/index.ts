@@ -1,3 +1,4 @@
+export { AccountsSection } from './AccountsSection';
 export { AgentSection } from './AgentSection';
 export { AppearanceSection } from './AppearanceSection';
 export { ClaudeSection } from './ClaudeSection';

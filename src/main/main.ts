@@ -2,6 +2,7 @@ import { app, BrowserWindow, crashReporter } from 'electron';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
+import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import {
   getGraphController,
@@ -194,6 +195,7 @@ async function initializeApplication(): Promise<void> {
   registerRenderProcessCrashLogging();
   configureAutoUpdater();
   startPerfMetrics();
+  startTokenRefreshManager();
   registerWindowLifecycleHandlers();
   startContextLayerAsync(defaultRoot);
   startWebServerAsync();
@@ -225,6 +227,7 @@ process.on('SIGTERM', () => app.quit());
 process.on('SIGINT', () => app.quit());
 
 app.on('window-all-closed', async () => {
+  stopTokenRefreshManager();
   stopContextRefreshTimer();
   terminateContextWorker();
   clearPerfSubscribers();

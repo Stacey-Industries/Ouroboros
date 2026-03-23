@@ -3,6 +3,7 @@
  */
 
 export type TabId =
+  | 'accounts'
   | 'general'
   | 'appearance'
   | 'fonts'
@@ -26,6 +27,7 @@ export interface Tab {
 }
 
 export const TABS: Tab[] = [
+  { id: 'accounts', label: 'Accounts' },
   { id: 'general', label: 'General' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'fonts', label: 'Fonts' },
