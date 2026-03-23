@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RootRepoIndexSnapshot } from '../orchestration/repoIndexer';
 import {
   buildResolvedImportGraph,
   computeModuleCohesion,
@@ -7,7 +8,6 @@ import {
   type ResolvedImport,
 } from './importGraphAnalyzer';
 import { refineModuleAssignments } from './importGraphAnalyzerSupport';
-import type { RootRepoIndexSnapshot } from '../orchestration/repoIndexer';
 
 // ---------------------------------------------------------------------------
 // Helpers

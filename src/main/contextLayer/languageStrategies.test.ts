@@ -1,14 +1,14 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  basename,
+  configureTypeScriptAliases,
+  dirname,
+  getAllImportableExtensions,
   getStrategyForExtension,
   getStrategyForLanguage,
-  getAllImportableExtensions,
-  configureTypeScriptAliases,
   resolveRelativePath,
   tryMatch,
-  basename,
-  dirname,
 } from './languageStrategies';
 
 // ---------------------------------------------------------------------------

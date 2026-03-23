@@ -31,7 +31,7 @@ vi.mock('../config', () => ({
 }));
 
 // ── Import after mocks ────────────────────────────────────────────────────────
-import { validatePathInWorkspace, getAllowedRoots, assertPathAllowed } from './pathSecurity';
+import { assertPathAllowed,getAllowedRoots, validatePathInWorkspace } from './pathSecurity';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

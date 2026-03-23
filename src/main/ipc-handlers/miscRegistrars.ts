@@ -6,6 +6,7 @@ import { getErrorMessage } from '../agentChat/utils';
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager';
 import { clearCostHistory, type CostEntry, getCostHistory, saveCostEntry } from '../costHistory';
 import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
+import { getAutoUpdater } from '../updater';
 import {
   getRecentSessionDetails,
   getSessionDetail,
@@ -19,7 +20,6 @@ import {
   getWindowInfos,
   setWindowProjectRoot,
 } from '../windowManager';
-import { getAutoUpdater } from '../updater';
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
 

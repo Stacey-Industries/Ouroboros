@@ -34,10 +34,10 @@ import {
 } from './perfMetrics';
 import { killAllPtySessions } from './pty';
 import { runAllMigrations } from './storage/migrate';
+import { getAutoUpdater } from './updater';
 import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
-import { getAutoUpdater } from './updater';
 import { createWindow, getAllActiveWindows } from './windowManager';
 
 // Configure crash reporter to collect local crash dumps.

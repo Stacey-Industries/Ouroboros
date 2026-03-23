@@ -1,8 +1,8 @@
 import './styles/fonts.css'
 import './styles/globals.css'
 
-import { Component, StrictMode } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { Component, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import App from './App'
@@ -13,6 +13,15 @@ import App from './App'
 
 interface RootErrorBoundaryState {
   error: Error | null
+}
+
+const CRASH_STYLES = {
+  root: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'system-ui, sans-serif', padding: '32px', boxSizing: 'border-box' as const },
+  card: { maxWidth: '480px', width: '100%', textAlign: 'center' as const },
+  label: { fontSize: '14px', color: '#8b949e', marginBottom: '8px', letterSpacing: '0.08em', textTransform: 'uppercase' as const },
+  heading: { fontSize: '20px', fontWeight: 600, margin: '0 0 12px', color: '#e6edf3' },
+  message: { fontSize: '13px', color: '#8b949e', background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '12px 16px', margin: '0 0 24px', wordBreak: 'break-word' as const, textAlign: 'left' as const, fontFamily: 'monospace' },
+  button: { background: '#1f6feb', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px 20px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' },
 }
 
 class RootErrorBoundary extends Component<{ children: ReactNode }, RootErrorBoundaryState> {
@@ -33,66 +42,12 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, RootErrorBoun
     if (this.state.error) {
       const { error } = this.state
       return (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            background: '#0d1117',
-            color: '#e6edf3',
-            fontFamily: 'system-ui, sans-serif',
-            padding: '32px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '480px',
-              width: '100%',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: '14px', color: '#8b949e', marginBottom: '8px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Ouroboros
-            </div>
-            <h1 style={{ fontSize: '20px', fontWeight: 600, margin: '0 0 12px', color: '#e6edf3' }}>
-              Something went wrong
-            </h1>
-            {error.message && (
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: '#8b949e',
-                  background: '#161b22',
-                  border: '1px solid #30363d',
-                  borderRadius: '6px',
-                  padding: '12px 16px',
-                  margin: '0 0 24px',
-                  wordBreak: 'break-word',
-                  textAlign: 'left',
-                  fontFamily: 'monospace',
-                }}
-              >
-                {error.message}
-              </p>
-            )}
-            <button
-              onClick={() => { window.location.reload() }}
-              style={{
-                background: '#1f6feb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 20px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Reload
-            </button>
+        <div style={CRASH_STYLES.root}>
+          <div style={CRASH_STYLES.card}>
+            <div style={CRASH_STYLES.label}>Ouroboros</div>
+            <h1 style={CRASH_STYLES.heading}>Something went wrong</h1>
+            {error.message && <p style={CRASH_STYLES.message}>{error.message}</p>}
+            <button onClick={() => { window.location.reload() }} style={CRASH_STYLES.button}>Reload</button>
           </div>
         </div>
       )

@@ -15,7 +15,7 @@ interface AutoUpdaterLike {
   on(event: string, listener: (...args: unknown[]) => void): this;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let _autoUpdater: AutoUpdaterLike | null = null;
 
 try {

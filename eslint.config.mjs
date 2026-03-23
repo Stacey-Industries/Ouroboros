@@ -85,6 +85,15 @@ export default tseslint.config(
     },
   },
 
+  // ── Relaxed rules for test files ─────────────────────────────────
+  {
+    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    rules: {
+      'max-lines-per-function': 'off',
+      'max-lines': 'off',
+    },
+  },
+
   // ── Prettier compat — MUST be last to override formatting rules ───
   prettierConfig,
 );
