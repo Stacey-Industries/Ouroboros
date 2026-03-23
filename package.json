@@ -10,6 +10,7 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
+    "clean": "rm -rf out dist coverage .vite",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
@@ -75,8 +76,7 @@
     "fuse.js": "^7.0.0",
     "ignore": "^7.0.5",
     "immer": "^11.1.4",
-    "marked": "^17.0.4",
-    "mica-electron": "^1.5.17",
+"mica-electron": "^1.5.17",
     "monaco-editor": "^0.55.1",
     "monaco-vim": "^0.4.4",
     "node-pty": "^1.2.0-beta.11",

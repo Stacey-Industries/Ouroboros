@@ -7,8 +7,7 @@
 import { middleSchema } from './configSchemaMiddle';
 import { tailSchema } from './configSchemaTail';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const schema: any = {
+export const schema: Record<string, unknown> = {
   recentProjects: {
     type: 'array',
     items: { type: 'string' },

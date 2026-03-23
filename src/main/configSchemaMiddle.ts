@@ -3,8 +3,7 @@
  * Extracted from configSchema.ts to keep each file under the 300-line limit.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const middleSchema: Record<string, any> = {
+export const middleSchema: Record<string, unknown> = {
   agentTemplates: {
     type: 'array',
     items: {

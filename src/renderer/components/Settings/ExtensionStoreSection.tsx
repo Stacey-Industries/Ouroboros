@@ -1,6 +1,5 @@
-import DOMPurify from 'dompurify'
-import { marked } from 'marked'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
+import ReactMarkdown from 'react-markdown'
 
 import type { InstalledVsxExtension } from '../../types/electron'
 import { ExtensionStoreCard } from './ExtensionStoreCard'
@@ -99,14 +98,7 @@ function ContributionsSummary({ installed }: { installed: InstalledVsxExtension 
 }
 
 function ReadmeSection({ readme }: { readme: string }): React.ReactElement {
-  const [readmeHtml, setReadmeHtml] = useState('')
-  useEffect(() => {
-    let cancelled = false
-    void (async () => { try { const parsed = await marked.parse(readme); const sanitized = DOMPurify.sanitize(parsed); if (!cancelled) setReadmeHtml(sanitized) } catch { if (!cancelled) setReadmeHtml('<p>Failed to render README.</p>') } })()
-    return () => { cancelled = true }
-  }, [readme])
-  if (!readmeHtml) return <></>
-  return <div style={readmeContainerStyle}><SectionLabel style={{ marginBottom: '8px' }}>README</SectionLabel><div style={readmeBodyStyle} className="ext-store-readme text-text-semantic-primary" dangerouslySetInnerHTML={{ __html: readmeHtml }} /></div>
+  return <div style={readmeContainerStyle}><SectionLabel style={{ marginBottom: '8px' }}>README</SectionLabel><div style={readmeBodyStyle} className="ext-store-readme text-text-semantic-primary"><ReactMarkdown>{readme}</ReactMarkdown></div></div>
 }
 
 function summarizeContributions(installed: InstalledVsxExtension): string[] {

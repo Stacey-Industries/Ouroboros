@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, crashReporter } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -39,6 +39,13 @@ import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
 import { getAutoUpdater } from './updater';
 import { createWindow, getAllActiveWindows } from './windowManager';
+
+// Configure crash reporter to collect local crash dumps.
+// Remote reporting (e.g., Sentry) should be added before v1.0 GA.
+crashReporter.start({
+  uploadToServer: false,
+  compress: true,
+});
 
 // â”€â”€â”€ Crash logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
