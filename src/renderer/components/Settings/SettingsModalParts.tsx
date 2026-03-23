@@ -1,13 +1,14 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+
 import type { AppConfig } from '../../types/electron';
 import type { SettingsEntry } from './settingsEntries';
+import { cancelButtonStyle, KEYFRAMES, saveButtonStyle } from './settingsModalStyles';
 import { SettingsSearchInput } from './SettingsSearchInput';
 import { SettingsSearchResults } from './SettingsSearchResults';
 import { SettingsTabBar } from './SettingsTabBar';
 import { SettingsTabContent } from './SettingsTabContent';
 import type { TabId } from './settingsTabs';
-import { cancelButtonStyle, KEYFRAMES, saveButtonStyle } from './settingsModalStyles';
 
 type SettingsChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 

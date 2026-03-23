@@ -1,6 +1,7 @@
 import React from 'react';
-import type { WorkspaceSnapshot } from '../../types/electron';
+
 import { useProject } from '../../contexts/ProjectContext';
+import type { WorkspaceSnapshot } from '../../types/electron';
 import { TimeTravelControls } from './TimeTravelControls';
 import { RestoreConfirmDialog, TimeTravelDetailsPane } from './TimeTravelDetails';
 import { TimeTravelTimelinePane } from './TimeTravelTimeline';

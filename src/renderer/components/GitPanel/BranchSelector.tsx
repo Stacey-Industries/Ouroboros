@@ -4,7 +4,7 @@
  * Shows current branch name and allows switching between local branches.
  */
 
-import React, { memo, useState, useCallback, useRef, useEffect } from 'react'
+import React, { memo, useCallback, useEffect,useRef, useState } from 'react'
 
 export interface BranchSelectorProps {
   currentBranch: string | null

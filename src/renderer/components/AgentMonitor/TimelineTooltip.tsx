@@ -3,8 +3,9 @@
  */
 
 import React, { memo } from 'react';
-import type { ToolCallEvent } from './types';
+
 import { formatDurationShort } from './timelineHelpers';
+import type { ToolCallEvent } from './types';
 
 export interface TooltipData {
   toolName: string;

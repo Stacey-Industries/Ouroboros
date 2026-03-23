@@ -1,12 +1,13 @@
-import { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
+import type { UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 import {
   generateSessionId,
   getDefaultCwd,
   registerExitHandler,
 } from './useTerminalSessions.effects';
-import type { UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;
 type ActiveSessionSetter = Dispatch<SetStateAction<string | null>>;

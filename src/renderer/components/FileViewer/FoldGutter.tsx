@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
-import type { FoldRange } from './useFoldRanges';
+
 import type { CodeRow } from './codeViewTypes';
+import type { FoldRange } from './useFoldRanges';
 
 export interface FoldGutterProps {
   rows: CodeRow[];

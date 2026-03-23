@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { InlineEditorHandle } from './InlineEditor';
+
 import {
   appendTemplate,
+  type ClaudeMdSection,
+  type ClaudeMdStats,
   formatClaudeMd,
   getClaudeMdStats,
   parseClaudeMdSections,
-  type ClaudeMdSection,
-  type ClaudeMdStats,
 } from './ClaudeMdEditor.utils';
+import type { InlineEditorHandle } from './InlineEditor';
 
 interface UseClaudeMdEditorModelArgs {
   content: string;

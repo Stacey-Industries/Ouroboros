@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentChatDefaultView } from '../../types/electron';
+
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
 } from '../../hooks/appEventNames';
+import type { AgentChatDefaultView } from '../../types/electron';
 
 export interface AgentChatDefaultViewState {
   activeView: AgentChatDefaultView;

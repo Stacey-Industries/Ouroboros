@@ -6,9 +6,10 @@
  */
 
 import { useEffect, useRef } from 'react'
+
+import { estimateCost } from '../components/AgentMonitor/costCalculator'
 import type { AgentSession } from '../components/AgentMonitor/types'
 import type { CostEntry } from '../types/electron'
-import { estimateCost } from '../components/AgentMonitor/costCalculator'
 
 function isFinishedSession(session: AgentSession): boolean {
   return session.status === 'complete' || session.status === 'error'

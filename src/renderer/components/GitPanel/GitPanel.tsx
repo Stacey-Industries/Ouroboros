@@ -4,6 +4,7 @@
  */
 
 import React, { memo } from 'react';
+
 import { useProject } from '../../contexts/ProjectContext';
 import { GitPanelContent } from './GitPanelContent';
 import { useGitPanelModel } from './useGitPanelModel';

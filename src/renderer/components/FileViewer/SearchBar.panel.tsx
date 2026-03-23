@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { SearchBarController } from './SearchBar.controller';
 
 const panelStyle: React.CSSProperties = {

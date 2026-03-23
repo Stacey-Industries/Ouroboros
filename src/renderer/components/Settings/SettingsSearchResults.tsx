@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
-import type { SettingsEntry } from './settingsEntries';
+
 import type { SearchMatch } from './searchHelpers';
 import { HighlightedText } from './searchHelpers';
+import type { SettingsEntry } from './settingsEntries';
 
 interface SettingsSearchResultsProps {
   searchQuery: string;

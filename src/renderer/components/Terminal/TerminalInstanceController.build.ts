@@ -1,11 +1,11 @@
 import type { SelectionTooltipState } from './SelectionTooltip'
 import type { TerminalContextMenuState } from './TerminalContextMenu'
-import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
 import type {
   TerminalFoundation,
   TerminalHistoryState,
   TerminalInstanceController,
 } from './TerminalInstanceController.types'
+import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
 
 type TerminalCoreController = Pick<
   TerminalInstanceController,

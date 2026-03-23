@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
 
 export interface TemplateEditorModel {

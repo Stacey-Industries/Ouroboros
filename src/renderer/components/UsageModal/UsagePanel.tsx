@@ -1,4 +1,5 @@
 import React, { memo, useState } from 'react';
+
 import { UsageCurrentTab } from './UsageCurrentTab';
 import { UsageHistoryTab } from './UsageHistoryTab';
 
@@ -45,7 +46,7 @@ function UsageTabBar({
   );
 }
 
-export const UsagePanel = memo(function UsagePanel(_props: UsagePanelProps): React.ReactElement {
+export const UsagePanel = memo(function UsagePanel(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<UsageTab>('current');
   const content = activeTab === 'current' ? <UsageCurrentTab /> : <UsageHistoryTab />;
 

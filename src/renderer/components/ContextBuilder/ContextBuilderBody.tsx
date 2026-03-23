@@ -1,29 +1,30 @@
 import React from 'react';
+
 import type {
   ContextGenerateOptions,
   ProjectContext,
 } from '../../types/electron';
-import { ContextSelectionSection } from './ContextSelectionSection';
-import { GeneratedContextSection } from './GeneratedContextSection';
 import {
   Badge,
-  CodeLine,
-  ConfigPill,
-  EmptyState,
-  ErrorBanner,
-  LoadingState,
-  Section,
   badgeWrapStyle,
   bodyStyle,
   buildProjectBadges,
   cardStyle,
+  CodeLine,
   commandRowStyle,
   configListStyle,
+  ConfigPill,
+  EmptyState,
+  ErrorBanner,
+  LoadingState,
   optionCardStyle,
   optionLabelStyle,
+  Section,
   structureGridStyle,
   titleRowStyle,
 } from './ContextBuilderPrimitives';
+import { ContextSelectionSection } from './ContextSelectionSection';
+import { GeneratedContextSection } from './GeneratedContextSection';
 import type { ContextBuilderModel } from './useContextBuilderModel';
 
 const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'build']);

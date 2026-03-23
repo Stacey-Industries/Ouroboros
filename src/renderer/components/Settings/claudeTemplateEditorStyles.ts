@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+
 import { smallButtonStyle } from './settingsStyles';
 
 export const claudeTemplateAddButtonStyle: CSSProperties = {

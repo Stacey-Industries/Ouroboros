@@ -6,9 +6,9 @@
  * file is created (if saved recently, < 24 hours).
  */
 
-import { useCallback, useEffect, useRef } from 'react'
-import type { Terminal } from '@xterm/xterm'
 import type { SerializeAddon } from '@xterm/addon-serialize'
+import type { Terminal } from '@xterm/xterm'
+import { useCallback, useEffect, useRef } from 'react'
 
 const MAX_SERIALIZED_LINES = 10_000
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
@@ -24,6 +24,14 @@ interface SessionMetadata {
 interface PersistenceActions {
   saveSession: () => Promise<void>
   restoreSession: () => Promise<boolean>
+}
+
+interface UseTerminalPersistenceArgs {
+  sessionId: string
+  terminalRef: { current: Terminal | null }
+  serializeAddonRef: { current: SerializeAddon | null }
+  projectRoot: string | null
+  cwd?: string
 }
 
 function getSessionDir(projectRoot: string): string {
@@ -105,6 +113,20 @@ async function readSavedSession(
   }
 }
 
+function parseRecentSessionMetadata(content: string): SessionMetadata | null {
+  const metadata: SessionMetadata = JSON.parse(content)
+  return Date.now() - metadata.timestamp <= SESSION_MAX_AGE_MS ? metadata : null
+}
+
+async function loadRecentSessionMetadata(path: string): Promise<SessionMetadata | null> {
+  try {
+    const content = await window.electronAPI.files.readFile(path)
+    return content.success && content.content ? parseRecentSessionMetadata(content.content) : null
+  } catch {
+    return null
+  }
+}
+
 async function restoreSessionContent(
   terminal: Terminal,
   sessionId: string,
@@ -123,37 +145,20 @@ async function restoreSessionContent(
   }
 }
 
-export function useTerminalPersistence(
-  sessionId: string,
-  terminalRef: { current: Terminal | null },
-  serializeAddonRef: { current: SerializeAddon | null },
-  projectRoot: string | null,
-  cwd?: string,
-): PersistenceActions {
+export function useTerminalPersistence({
+  sessionId,
+  terminalRef,
+  serializeAddonRef,
+  projectRoot,
+  cwd,
+}: UseTerminalPersistenceArgs): PersistenceActions {
   const projectRootRef = useRef(projectRoot)
   const cwdRef = useRef(cwd ?? '')
+  useEffect(() => { projectRootRef.current = projectRoot; cwdRef.current = cwd ?? '' }, [projectRoot, cwd])
 
-  // Keep refs current
-  useEffect(() => { projectRootRef.current = projectRoot }, [projectRoot])
-  useEffect(() => { cwdRef.current = cwd ?? '' }, [cwd])
+  const saveSession = useCallback(async () => { const addon = serializeAddonRef.current; const root = projectRootRef.current; if (!addon || !root) return; await saveSessionToFile(addon, sessionId, root, cwdRef.current) }, [sessionId, serializeAddonRef])
+  const restoreSession = useCallback(async (): Promise<boolean> => { const terminal = terminalRef.current; const root = projectRootRef.current; if (!terminal || !root) return false; return restoreSessionContent(terminal, sessionId, root) }, [sessionId, terminalRef])
 
-  const saveSession = useCallback(async () => {
-    const addon = serializeAddonRef.current
-    const root = projectRootRef.current
-    if (!addon || !root) return
-
-    await saveSessionToFile(addon, sessionId, root, cwdRef.current)
-  }, [sessionId, serializeAddonRef])
-
-  const restoreSession = useCallback(async (): Promise<boolean> => {
-    const terminal = terminalRef.current
-    const root = projectRootRef.current
-    if (!terminal || !root) return false
-
-    return restoreSessionContent(terminal, sessionId, root)
-  }, [sessionId, terminalRef])
-
-  // Auto-save on PTY exit
   useEffect(() => {
     const cleanup = window.electronAPI.pty.onExit(sessionId, () => {
       void saveSession()
@@ -161,23 +166,17 @@ export function useTerminalPersistence(
     return cleanup
   }, [sessionId, saveSession])
 
-  // Auto-save on app beforeunload
   useEffect(() => {
     const handler = () => { void saveSession() }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveSession])
 
-  // Periodic auto-save every 30s — ensures disk is always reasonably current
-  // even if beforeunload doesn't complete (async IPC race) or HMR unmount
-  // happens without a page unload event.
   useEffect(() => {
     const id = setInterval(() => { void saveSession() }, AUTO_SAVE_INTERVAL_MS)
     return () => clearInterval(id)
   }, [saveSession])
 
-  // Save on React unmount — fires during HMR module replacement, which does
-  // NOT trigger beforeunload. This is the only reliable save path for HMR.
   useEffect(() => {
     return () => { void saveSession() }
   }, [saveSession])
@@ -185,29 +184,17 @@ export function useTerminalPersistence(
   return { saveSession, restoreSession }
 }
 
-/** List all saved terminal sessions for a project */
 export async function listSavedSessions(projectRoot: string): Promise<SessionMetadata[]> {
   try {
-    const dirPath = getSessionDir(projectRoot)
-    const result = await window.electronAPI.files.readDir(dirPath)
+    const result = await window.electronAPI.files.readDir(getSessionDir(projectRoot))
     if (!result.success || !result.items) return []
 
     const metaFiles = result.items.filter((item) => item.name.endsWith('.meta.json'))
     const sessions: SessionMetadata[] = []
 
     for (const metaFile of metaFiles) {
-      try {
-        const content = await window.electronAPI.files.readFile(metaFile.path)
-        if (content.success && content.content) {
-          const metadata: SessionMetadata = JSON.parse(content.content)
-          const age = Date.now() - metadata.timestamp
-          if (age <= SESSION_MAX_AGE_MS) {
-            sessions.push(metadata)
-          }
-        }
-      } catch {
-        // Skip corrupted metadata files
-      }
+      const metadata = await loadRecentSessionMetadata(metaFile.path)
+      if (metadata) sessions.push(metadata)
     }
 
     return sessions.sort((a, b) => b.timestamp - a.timestamp)

@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import { ToolbarButton } from './ToolbarButton';
 
 export interface FileViewerToolbarProps {
@@ -142,31 +143,74 @@ interface EditControlsProps {
   setClaudeMdEnhanced: (updater: boolean | ((prev: boolean) => boolean)) => void;
 }
 
-function EditControls(props: EditControlsProps): React.ReactElement | null {
-  if (!props.onSave) return null;
+function confirmDiscardChanges(isDirty?: boolean): boolean {
+  if (!isDirty) {
+    return true;
+  }
+  return window.confirm('Discard your unsaved changes?');
+}
 
-  const handleToggleEdit = () => {
-    props.setEditMode(!props.editMode);
-  };
-
+function EditModeButtons({
+  currentContent,
+  isDirty,
+  onSave,
+  onCancelEdit,
+  setEditMode,
+}: Pick<EditControlsProps, 'currentContent' | 'isDirty' | 'onSave' | 'onCancelEdit' | 'setEditMode'>): React.ReactElement {
   const handleSave = () => {
-    if (props.currentContent == null) {
+    if (currentContent == null) {
       return;
     }
-    props.onSave?.(props.currentContent);
-    props.setEditMode(false);
+    onSave?.(currentContent);
+    setEditMode(false);
   };
 
   const handleCancel = () => {
-    if (props.isDirty) {
-      const confirmed = window.confirm('Discard your unsaved changes?');
-      if (!confirmed) {
-        return;
-      }
+    if (!confirmDiscardChanges(isDirty)) {
+      return;
     }
-    props.onCancelEdit?.();
-    props.setEditMode(false);
+    onCancelEdit?.();
+    setEditMode(false);
   };
+
+  return (
+    <>
+      <ToolbarButton
+        label="Save"
+        active={Boolean(isDirty)}
+        onClick={handleSave}
+        title="Save changes"
+      />
+      <ToolbarButton
+        label="Cancel"
+        active={false}
+        onClick={handleCancel}
+        title="Discard draft and exit edit mode"
+      />
+    </>
+  );
+}
+
+function ClaudeMdToggle({
+  claudeMdEnhanced,
+  setClaudeMdEnhanced,
+}: Pick<EditControlsProps, 'claudeMdEnhanced' | 'setClaudeMdEnhanced'>): React.ReactElement {
+  return (
+    <ToolbarButton
+      label={claudeMdEnhanced ? 'Enhanced' : 'Plain'}
+      active={claudeMdEnhanced}
+      onClick={() => setClaudeMdEnhanced(toggleBoolean)}
+      title={
+        claudeMdEnhanced
+          ? 'Switch to plain editor'
+          : 'Switch to enhanced CLAUDE.md editor'
+      }
+    />
+  );
+}
+
+function EditControls(props: EditControlsProps): React.ReactElement | null {
+  if (!props.onSave) return null;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -174,35 +218,22 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
       <ToolbarButton
         label={props.editMode ? 'Exit Edit' : 'Edit'}
         active={props.editMode}
-        onClick={handleToggleEdit}
+        onClick={() => props.setEditMode(!props.editMode)}
         title={props.editMode ? 'Exit edit mode' : 'Edit file'}
       />
       {props.editMode && (
-        <>
-          <ToolbarButton
-            label="Save"
-            active={Boolean(props.isDirty)}
-            onClick={handleSave}
-            title="Save changes"
-          />
-          <ToolbarButton
-            label="Cancel"
-            active={false}
-            onClick={handleCancel}
-            title="Discard draft and exit edit mode"
-          />
-        </>
+        <EditModeButtons
+          currentContent={props.currentContent}
+          isDirty={props.isDirty}
+          onSave={props.onSave}
+          onCancelEdit={props.onCancelEdit}
+          setEditMode={props.setEditMode}
+        />
       )}
       {props.isClaudeMd && props.editMode && (
-        <ToolbarButton
-          label={props.claudeMdEnhanced ? 'Enhanced' : 'Plain'}
-          active={props.claudeMdEnhanced}
-          onClick={() => props.setClaudeMdEnhanced(toggleBoolean)}
-          title={
-            props.claudeMdEnhanced
-              ? 'Switch to plain editor'
-              : 'Switch to enhanced CLAUDE.md editor'
-          }
+        <ClaudeMdToggle
+          claudeMdEnhanced={props.claudeMdEnhanced}
+          setClaudeMdEnhanced={props.setClaudeMdEnhanced}
         />
       )}
     </div>

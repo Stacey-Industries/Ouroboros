@@ -1,19 +1,20 @@
 import { useCallback } from 'react';
-import { useGitStatus } from '../../hooks/useGitStatus';
+
 import { useToastContext } from '../../contexts/ToastContext';
-import { useRootTreeState } from './useRootTreeState';
-import { useFileTreeUndo } from './useFileTreeUndo';
+import { useGitStatus } from '../../hooks/useGitStatus';
 import type { TreeNode } from './FileTreeItem';
+import { useFileTreeUndo } from './useFileTreeUndo';
 import {
-  useRootSelection,
   useContextMenuState,
-  useRootEditing,
-  useDropHandlers,
-  useMenuActions,
   useDisplayItems,
+  useDropHandlers,
   useFocusClamp,
+  useMenuActions,
+  useRootEditing,
   useRootKeyboard,
+  useRootSelection,
 } from './useRootSectionInteractions';
+import { useRootTreeState } from './useRootTreeState';
 
 interface UseRootSectionModelArgs {
   root: string;
@@ -50,7 +51,7 @@ function buildKeyboardDeps(args: {
   };
 }
 
-function buildRootSectionResult(args: {
+type RootSectionArgs = {
   gitStatus: ReturnType<typeof useGitStatus>['gitStatus'];
   tree: ReturnType<typeof useRootTreeState>;
   selection: ReturnType<typeof useRootSelection>;
@@ -61,7 +62,9 @@ function buildRootSectionResult(args: {
   displayItems: ReturnType<typeof useDisplayItems>;
   onKeyDown: ReturnType<typeof useRootKeyboard>;
   undo: ReturnType<typeof useFileTreeUndo>;
-}) {
+};
+
+function buildStateProps(args: RootSectionArgs) {
   return {
     gitStatus: args.gitStatus,
     isLoading: args.tree.isLoading,
@@ -71,6 +74,11 @@ function buildRootSectionResult(args: {
     selectedPaths: args.selection.selectedPaths,
     contextMenu: args.menuState.contextMenu,
     editState: args.editing.editState,
+  };
+}
+
+function buildHandlerProps(args: RootSectionArgs) {
+  return {
     handleItemClick: args.selection.handleItemClick,
     handleDoubleClick: args.editing.handleDoubleClick,
     handleContextMenu: args.menuState.handleContextMenu,
@@ -92,6 +100,10 @@ function buildRootSectionResult(args: {
     pushUndo: args.undo.pushUndo,
     onKeyDown: args.onKeyDown,
   };
+}
+
+function buildRootSectionResult(args: RootSectionArgs) {
+  return { ...buildStateProps(args), ...buildHandlerProps(args) };
 }
 
 export function useRootSectionModel({ root, onFileSelect, onFileOpen, extraIgnorePatterns, enabled = true }: UseRootSectionModelArgs) {

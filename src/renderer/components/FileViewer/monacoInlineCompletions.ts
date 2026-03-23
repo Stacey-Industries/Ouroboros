@@ -29,19 +29,14 @@ import * as monaco from 'monaco-editor';
  *   - Only provide completions for the primary cursor (not multi-cursor)
  */
 const inlineCompletionsProvider: monaco.languages.InlineCompletionsProvider = {
-  provideInlineCompletions(
-    _model: monaco.editor.ITextModel,
-    _position: monaco.Position,
-    _context: monaco.languages.InlineCompletionContext,
-    _token: monaco.CancellationToken,
-  ): monaco.languages.ProviderResult<monaco.languages.InlineCompletions> {
+  provideInlineCompletions(): monaco.languages.ProviderResult<monaco.languages.InlineCompletions> {
     // TODO: Implement AI-powered completions here.
     // For now, return an empty list so the provider is registered
     // but doesn't interfere with the editing experience.
     return { items: [] };
   },
 
-  freeInlineCompletions(_completions: monaco.languages.InlineCompletions): void {
+  freeInlineCompletions(): void {
     // TODO: Clean up any resources associated with the completions
     // (e.g., cancel pending API requests, release memory)
   },

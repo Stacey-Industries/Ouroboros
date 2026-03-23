@@ -9,7 +9,8 @@
  * All content rendered as text - no dangerouslySetInnerHTML.
  */
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { memo,useCallback, useState } from 'react';
+
 import type { ToolCallEvent } from './types';
 
 type FilterType = 'all' | 'pending' | 'success' | 'error';

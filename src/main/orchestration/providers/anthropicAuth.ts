@@ -1,7 +1,7 @@
+import Anthropic from '@anthropic-ai/sdk'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import Anthropic from '@anthropic-ai/sdk'
 
 // ---------------------------------------------------------------------------
 // OAuth credential management
@@ -34,6 +34,7 @@ interface OAuthRefreshResponse {
 
 function readCredentials(): ClaudeCredentials | null {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is derived from os.homedir(), not user input
     const raw = fs.readFileSync(CREDENTIALS_PATH, 'utf8')
     return JSON.parse(raw) as ClaudeCredentials
   } catch {
@@ -43,6 +44,7 @@ function readCredentials(): ClaudeCredentials | null {
 
 function writeCredentials(creds: ClaudeCredentials): void {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is derived from os.homedir(), not user input
     fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), 'utf8')
   } catch {
     // Non-fatal — worst case the next request re-refreshes

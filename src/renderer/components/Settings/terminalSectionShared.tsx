@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
 
 export type SettingsChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;

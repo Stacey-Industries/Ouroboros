@@ -2,12 +2,13 @@
  * Reads Claude Code's local JSONL session files to extract usage data.
  */
 
-import { createReadStream } from 'fs'
 import type { Dirent } from 'fs'
+import { createReadStream } from 'fs'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import readline from 'readline'
+
 import {
   addWindowUsageEntry,
   buildSessionDetail,
@@ -33,9 +34,9 @@ export type {
   UsageEntry,
   UsageSummary,
   UsageTotals,
+  WindowedUsage,
   WindowUsageBucket,
   WindowUsageBucketWithStart,
-  WindowedUsage,
 } from './usageReaderSupport'
 
 interface JsonlUsage {
@@ -116,6 +117,7 @@ function parseUsageLine(line: string): ParsedUsageLine | null {
 
 async function readProjectDirs(projectsDir: string): Promise<Dirent[]> {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- projectsDir is derived from os.homedir() + fixed Claude path
     return await fs.readdir(projectsDir, { withFileTypes: true })
   } catch {
     return []
@@ -129,6 +131,7 @@ async function getSessionFileInfo(
   const filePath = path.join(projectPath, entryName)
 
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is constructed from trusted Claude projects directory
     const stat = await fs.stat(filePath)
     return { path: filePath, mtime: stat.mtime.getTime() }
   } catch {
@@ -143,6 +146,7 @@ async function readProjectSessionFiles(
   const projectPath = path.join(projectsDir, dir.name)
 
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- projectPath is constructed from trusted Claude projects directory
     const entries = await fs.readdir(projectPath, { withFileTypes: true })
     const sessionFiles = entries.filter(isSessionFile)
     return Promise.all(
@@ -168,6 +172,7 @@ async function findSessionFiles(projectFilter?: string): Promise<SessionFile[]> 
 
 async function parseSessionFile(filePath: string): Promise<ParsedUsageLine[]> {
   const entries: ParsedUsageLine[] = []
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is constructed from trusted Claude projects directory
   const stream = createReadStream(filePath, { encoding: 'utf-8' })
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
 

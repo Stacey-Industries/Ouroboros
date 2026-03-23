@@ -1,6 +1,6 @@
 export { setupKeyHandler } from './useTerminalSetupKeyboard'
 export {
-  setupCustomKeyHandler,
-  handleMouseUp,
   handleClick,
+  handleMouseUp,
+  setupCustomKeyHandler,
 } from './useTerminalSetupShortcutMouse'

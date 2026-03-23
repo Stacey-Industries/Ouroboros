@@ -16,129 +16,18 @@ import {
   runTransaction,
   setSchemaVersion,
 } from '../storage/database';
+import {
+  parseJsonField,
+  type RawMessageRow,
+  type RawThreadRow,
+  rowToMessage,
+  SCHEMA_SQL,
+  SCHEMA_VERSION,
+  summarizeForTitle,
+  titleMatchesUserMessage,
+} from './threadStoreSqliteHelpers';
 import { normalizeThreadRecord } from './threadStoreSupport';
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
-
-const SCHEMA_VERSION = 1;
-const TITLE_MAX_LENGTH = 60;
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-function isDecorativeLine(line: string): boolean {
-  if (/^`[^`]*`$/.test(line) && /[─═━\-★]{3,}/.test(line)) return true;
-  if (/^[─═━\-*★│┃|+\s]+$/.test(line) && line.length > 2) return true;
-  if (/^```/.test(line)) return true;
-  return false;
-}
-
-function findFirstMeaningfulLine(text: string): string {
-  for (const line of text.split(/\r?\n/)) {
-    const stripped = line.trim();
-    if (stripped && !isDecorativeLine(stripped)) return stripped;
-  }
-  return text.trim();
-}
-
-function summarizeForTitle(assistantContent: string): string {
-  const trimmed = assistantContent.trim();
-  if (!trimmed) return '';
-
-  const meaningful = findFirstMeaningfulLine(trimmed);
-  const sentenceMatch = meaningful.match(/^(.+?[.!?])(?:\s|$)/);
-  const firstSentence = sentenceMatch ? sentenceMatch[1].trim() : '';
-
-  if (firstSentence && firstSentence.length <= TITLE_MAX_LENGTH) return firstSentence;
-
-  const slice = meaningful.slice(0, TITLE_MAX_LENGTH).trimEnd();
-  const lastSpace = slice.lastIndexOf(' ');
-  if (lastSpace > TITLE_MAX_LENGTH * 0.5) return `${slice.slice(0, lastSpace)}\u2026`;
-  return `${slice}\u2026`;
-}
-
-// ── Schema SQL ──────────────────────────────────────────────────────
-
-const SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS threads (
-    id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
-    createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
-    title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
-    latestOrchestration TEXT, branchInfo TEXT
-  );
-  CREATE INDEX IF NOT EXISTS idx_threads_workspace ON threads(workspaceRoot);
-  CREATE INDEX IF NOT EXISTS idx_threads_updated   ON threads(updatedAt DESC);
-  CREATE TABLE IF NOT EXISTS messages (
-    id TEXT NOT NULL, threadId TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-    role TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', createdAt INTEGER NOT NULL,
-    statusKind TEXT, orchestration TEXT, contextSummary TEXT,
-    verificationPreview TEXT, error TEXT, toolsSummary TEXT,
-    costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
-    PRIMARY KEY (id, threadId)
-  );
-  CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
-`;
-
-// ── Row types ───────────────────────────────────────────────────────
-
-interface RawThreadRow {
-  id: string;
-  workspaceRoot: string;
-  createdAt: number;
-  updatedAt: number;
-  title: string;
-  status: string;
-  latestOrchestration: string | null;
-  branchInfo: string | null;
-}
-
-interface RawMessageRow {
-  id: string;
-  threadId: string;
-  role: string;
-  content: string;
-  createdAt: number;
-  statusKind: string | null;
-  orchestration: string | null;
-  contextSummary: string | null;
-  verificationPreview: string | null;
-  error: string | null;
-  toolsSummary: string | null;
-  costSummary: string | null;
-  durationSummary: string | null;
-  tokenUsage: string | null;
-  blocks: string | null;
-}
-
-function parseJsonField<T>(raw: string | null): T | undefined {
-  if (!raw) return undefined;
-  try {
-    return JSON.parse(raw) as T;
-  } catch (error) {
-    console.warn('[threadStoreSqlite] corrupt JSON field, returning undefined:', error);
-    return undefined;
-  }
-}
-
- 
-function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
-  const base: AgentChatMessageRecord = {
-    id: row.id,
-    threadId: row.threadId,
-    role: row.role as AgentChatMessageRecord['role'],
-    content: row.content,
-    createdAt: row.createdAt,
-  };
-  if (row.statusKind) base.statusKind = row.statusKind as AgentChatMessageRecord['statusKind'];
-  if (row.orchestration) base.orchestration = parseJsonField(row.orchestration);
-  if (row.contextSummary) base.contextSummary = parseJsonField(row.contextSummary);
-  if (row.verificationPreview) base.verificationPreview = parseJsonField(row.verificationPreview);
-  if (row.error) base.error = parseJsonField(row.error);
-  if (row.toolsSummary) base.toolsSummary = row.toolsSummary;
-  if (row.costSummary) base.costSummary = row.costSummary;
-  if (row.durationSummary) base.durationSummary = row.durationSummary;
-  if (row.tokenUsage) base.tokenUsage = parseJsonField(row.tokenUsage);
-  if (row.blocks) base.blocks = parseJsonField(row.blocks);
-  return base;
-}
 
 // ── SQLite Runtime ──────────────────────────────────────────────────
 
@@ -222,11 +111,6 @@ export class ThreadStoreSqliteRuntime {
     return this.getDb().prepare('DELETE FROM threads WHERE id = ?').run(threadId).changes > 0;
   }
 
-  /**
-   * Update only thread-level metadata (status, title, latestOrchestration)
-   * WITHOUT rewriting the messages table. This eliminates the race condition
-   * where a concurrent updateThread + appendMessage could lose messages.
-   */
   async updateThreadMetadataOnly(
     threadId: string,
     patch: {
@@ -236,24 +120,9 @@ export class ThreadStoreSqliteRuntime {
       updatedAt: number;
     },
   ): Promise<AgentChatThreadRecord | null> {
-    const db = this.getDb();
-    const setClauses: string[] = ['updatedAt = ?'];
-    const params: unknown[] = [patch.updatedAt];
-
-    if (patch.title !== undefined) {
-      setClauses.push('title = ?');
-      params.push(patch.title);
-    }
-    if (patch.status !== undefined) {
-      setClauses.push('status = ?');
-      params.push(patch.status);
-    }
-    if (Object.prototype.hasOwnProperty.call(patch, 'latestOrchestration')) {
-      setClauses.push('latestOrchestration = ?');
-      params.push(patch.latestOrchestration ? JSON.stringify(patch.latestOrchestration) : null);
-    }
-
+    const { setClauses, params } = buildMetadataPatchQuery(patch);
     params.push(threadId);
+    const db = this.getDb();
     const changes = db
       .prepare(`UPDATE threads SET ${setClauses.join(', ')} WHERE id = ?`)
       .run(...params).changes;
@@ -269,23 +138,23 @@ export class ThreadStoreSqliteRuntime {
     const thread = await this.readThread(threadId);
     if (!thread) return null;
     const first = thread.messages.find((m) => m.role === 'user');
-    if (!first || !this.titleMatchesUserMessage(thread.title, first.content)) return null;
+    if (!first || !titleMatchesUserMessage(thread.title, first.content)) return null;
     const newTitle = summarizeForTitle(assistantContent);
     if (!newTitle || newTitle === thread.title) return null;
-    return this.updateThreadMetadataOnly(threadId, { title: newTitle, updatedAt: this.options.now() });
+    return this.updateThreadMetadataOnly(threadId, {
+      title: newTitle,
+      updatedAt: this.options.now(),
+    });
   }
 
-  // Serialize mutations to prevent concurrent read-modify-write races.
-  // Without this, two concurrent updateThread calls can interleave their
-  // reads and writes, causing one to overwrite the other's changes.
   private mutationQueue: Promise<unknown> = Promise.resolve();
 
   runMutation<T>(action: () => Promise<T>): Promise<T> {
     const chained = this.mutationQueue.then(
       () => action(),
-      () => action(), // continue even if previous mutation failed
+      () => action(),
     );
-    this.mutationQueue = chained.catch(() => {}); // prevent unhandled rejection
+    this.mutationQueue = chained.catch(() => {});
     return chained;
   }
 
@@ -295,17 +164,6 @@ export class ThreadStoreSqliteRuntime {
   }
 
   // ── Private ───────────────────────────────────────────────────────
-
-  private titleMatchesUserMessage(title: string, content: string): boolean {
-    const trimmed = content.trim();
-    const firstLine =
-      trimmed
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .find((l) => l.length > 0) ?? '';
-    if (title === trimmed || title === firstLine) return true;
-    return trimmed.length > 79 && title === `${firstLine.slice(0, 79).trimEnd()}\u2026`;
-  }
 
   private getDb(): Database {
     if (!this.db) {
@@ -346,9 +204,6 @@ export class ThreadStoreSqliteRuntime {
   }
 
   private upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
-    // IMPORTANT: Use INSERT ... ON CONFLICT DO UPDATE instead of INSERT OR REPLACE.
-    // INSERT OR REPLACE is implemented as DELETE + INSERT in SQLite, which triggers
-    // ON DELETE CASCADE on the messages table and silently wipes all messages.
     db.prepare(
       `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -415,4 +270,31 @@ export class ThreadStoreSqliteRuntime {
       SELECT id FROM threads ORDER BY updatedAt DESC, createdAt DESC LIMIT -1 OFFSET ?)`,
     ).run(this.options.maxThreads);
   }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function buildMetadataPatchQuery(patch: {
+  title?: string;
+  status?: string;
+  latestOrchestration?: unknown;
+  updatedAt: number;
+}): { setClauses: string[]; params: unknown[] } {
+  const setClauses: string[] = ['updatedAt = ?'];
+  const params: unknown[] = [patch.updatedAt];
+
+  if (patch.title !== undefined) {
+    setClauses.push('title = ?');
+    params.push(patch.title);
+  }
+  if (patch.status !== undefined) {
+    setClauses.push('status = ?');
+    params.push(patch.status);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'latestOrchestration')) {
+    setClauses.push('latestOrchestration = ?');
+    params.push(patch.latestOrchestration ? JSON.stringify(patch.latestOrchestration) : null);
+  }
+
+  return { setClauses, params };
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { SectionLabel } from './CodeModeSection.shared';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 

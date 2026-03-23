@@ -1,17 +1,18 @@
-import React, { memo, useCallback } from 'react';
 import type { RefObject } from 'react';
-import { SearchBar } from './SearchBar';
-import { GoToLine } from './GoToLine';
-import { Minimap } from './Minimap';
-import { SemanticScrollbar } from './SemanticScrollbar';
-import { BlameGutter } from './BlameGutter';
-import { LineNumberGutter } from './LineNumberGutter';
-import { FoldGutter } from './FoldGutter';
-import { DiffGutter } from './DiffGutter';
-import { CodeContent } from './CodeContent';
-import type { FoldRange } from './useFoldRanges';
+import React, { memo, useCallback } from 'react';
+
 import type { DiffLineInfo } from '../../types/electron';
+import { BlameGutter } from './BlameGutter';
+import { CodeContent } from './CodeContent';
 import type { CodeRow } from './codeViewTypes';
+import { DiffGutter } from './DiffGutter';
+import { FoldGutter } from './FoldGutter';
+import { GoToLine } from './GoToLine';
+import { LineNumberGutter } from './LineNumberGutter';
+import { Minimap } from './Minimap';
+import { SearchBar } from './SearchBar';
+import { SemanticScrollbar } from './SemanticScrollbar';
+import type { FoldRange } from './useFoldRanges';
 import type { ScrollMetrics } from './useScrollMetrics';
 
 export interface CodeViewProps {

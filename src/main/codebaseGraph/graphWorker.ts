@@ -13,7 +13,6 @@ import { parentPort } from 'worker_threads';
 import { indexAllFiles, reindexSingleFile, TreeCache } from './graphIndexing';
 import { initTreeSitter, resolveEdgeReferences } from './graphParser';
 import { GraphStore } from './graphStore';
-import type { GraphEdge, GraphNode } from './graphTypes';
 import type { WorkerRequest, WorkerResponse } from './graphWorkerTypes';
 
 // ── Worker-local state ────────────────────────────────────────────

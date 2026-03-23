@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { Terminal } from '@xterm/xterm'
-import { INITIAL_TERMINAL_CONTEXT_MENU } from './TerminalContextMenu'
-import type { TerminalContextMenuState } from './TerminalContextMenu'
-import { INITIAL_SELECTION_TOOLTIP } from './SelectionTooltip'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { SelectionTooltipState } from './SelectionTooltip'
+import { INITIAL_SELECTION_TOOLTIP } from './SelectionTooltip'
+import type { TerminalContextMenuState } from './TerminalContextMenu'
+import { INITIAL_TERMINAL_CONTEXT_MENU } from './TerminalContextMenu'
 import { writeChunkedPaste } from './terminalPasteHelpers'
 import { useTerminalHistory } from './useTerminalHistory'
 

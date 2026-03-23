@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 import type { FileEntry } from '../FileTree/FileListItem';
 import type { MentionItem } from './MentionAutocomplete';
-import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 
 export interface PinnedFile {
   path: string;
@@ -71,112 +72,55 @@ function buildContextSummary(pinnedFiles: PinnedFile[], totalTokens: number): st
   return `${fileLabel}, ${formatTokenCount(totalTokens)}`;
 }
 
-export function useAgentChatContext(
-  projectRoot: string | null,
-  activeThreadId: string | null,
-): AgentChatContextModel {
-  const [pinnedFiles, setPinnedFiles] = useState<PinnedFile[]>([]);
-  const [mentions, setMentions] = useState<MentionItem[]>([]);
-  const [autocompleteQuery, setAutocompleteQueryRaw] = useState('');
+function useDebouncedAutocompleteQuery(): {
+  debouncedQuery: string;
+  setAutocompleteQuery: (query: string) => void;
+} {
+  const [, setAutocompleteQueryRaw] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const roots = useMemo(() => (projectRoot ? [projectRoot] : []), [projectRoot]);
-  const { allFiles } = useProjectFileIndex({ roots, enabled: Boolean(projectRoot) });
-
-  // Reset pinned files and mentions when thread changes
   useEffect(() => {
-    setPinnedFiles([]);
-    setMentions([]);
-  }, [activeThreadId]);
+    return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); };
+  }, []);
 
-  // Debounced autocomplete query
   const setAutocompleteQuery = useCallback((query: string) => {
     setAutocompleteQueryRaw(query);
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, DEBOUNCE_MS);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS);
   }, []);
 
-  // Cleanup debounce timer
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
+  return { debouncedQuery, setAutocompleteQuery };
+}
 
-  const autocompleteResults = useMemo(() => {
-    if (!debouncedQuery || !isAutocompleteOpen) return [];
+function usePinnedFilesState(activeThreadId: string | null) {
+  const [pinnedFiles, setPinnedFiles] = useState<PinnedFile[]>([]);
+  const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
 
-    const lowerQuery = debouncedQuery.toLowerCase();
-    const pinnedPaths = new Set(pinnedFiles.map((f) => f.path));
-
-    const matches: FileEntry[] = [];
-    for (const file of allFiles) {
-      if (pinnedPaths.has(file.path)) continue;
-      if (file.relativePath.toLowerCase().includes(lowerQuery)) {
-        matches.push(file);
-        if (matches.length >= MAX_AUTOCOMPLETE_RESULTS) break;
-      }
-    }
-
-    return matches;
-  }, [allFiles, debouncedQuery, isAutocompleteOpen, pinnedFiles]);
+  useEffect(() => { setPinnedFiles([]); }, [activeThreadId]);
 
   const addFile = useCallback((file: FileEntry) => {
     setPinnedFiles((current) => {
       if (current.some((f) => f.path === file.path)) return current;
-      return [
-        ...current,
-        {
-          path: file.path,
-          relativePath: file.relativePath,
-          name: file.name,
-          estimatedTokens: estimateTokens(file),
-        },
-      ];
+      return [...current, { path: file.path, relativePath: file.relativePath, name: file.name, estimatedTokens: estimateTokens(file) }];
     });
     setIsAutocompleteOpen(false);
-    setAutocompleteQueryRaw('');
-    setDebouncedQuery('');
   }, []);
 
   const removeFile = useCallback((path: string) => {
     setPinnedFiles((current) => current.filter((f) => f.path !== path));
   }, []);
 
-  const clearFiles = useCallback(() => {
-    setPinnedFiles([]);
-  }, []);
+  const clearFiles = useCallback(() => setPinnedFiles([]), []);
+  const closeAutocomplete = useCallback(() => setIsAutocompleteOpen(false), []);
+  const openAutocomplete = useCallback(() => setIsAutocompleteOpen(true), []);
 
-  const totalTokens = useMemo(
-    () => pinnedFiles.reduce((sum, f) => sum + f.estimatedTokens, 0),
-    [pinnedFiles],
-  );
+  return { pinnedFiles, isAutocompleteOpen, addFile, removeFile, clearFiles, closeAutocomplete, openAutocomplete };
+}
 
-  const contextSummary = useMemo(
-    () => buildContextSummary(pinnedFiles, totalTokens),
-    [pinnedFiles, totalTokens],
-  );
-
-  const filePaths = useMemo(
-    () => pinnedFiles.map((f) => f.path),
-    [pinnedFiles],
-  );
-
-  const closeAutocomplete = useCallback(() => {
-    setIsAutocompleteOpen(false);
-  }, []);
-
-  const openAutocomplete = useCallback(() => {
-    setIsAutocompleteOpen(true);
-  }, []);
+function useMentionsState(activeThreadId: string | null) {
+  const [mentions, setMentions] = useState<MentionItem[]>([]);
+  useEffect(() => { setMentions([]); }, [activeThreadId]);
 
   const addMention = useCallback((mention: MentionItem) => {
     setMentions((current) => {
@@ -189,22 +133,42 @@ export function useAgentChatContext(
     setMentions((current) => current.filter((m) => m.key !== key));
   }, []);
 
+  return { mentions, addMention, removeMention };
+}
+
+export function useAgentChatContext(
+  projectRoot: string | null,
+  activeThreadId: string | null,
+): AgentChatContextModel {
+  const { debouncedQuery, setAutocompleteQuery } = useDebouncedAutocompleteQuery();
+  const { pinnedFiles, isAutocompleteOpen, addFile, removeFile, clearFiles, closeAutocomplete, openAutocomplete } = usePinnedFilesState(activeThreadId);
+  const { mentions, addMention, removeMention } = useMentionsState(activeThreadId);
+
+  const roots = useMemo(() => (projectRoot ? [projectRoot] : []), [projectRoot]);
+  const { allFiles } = useProjectFileIndex({ roots, enabled: Boolean(projectRoot) });
+
+  const autocompleteResults = useMemo(() => {
+    if (!debouncedQuery || !isAutocompleteOpen) return [];
+    const lowerQuery = debouncedQuery.toLowerCase();
+    const pinnedPaths = new Set(pinnedFiles.map((f) => f.path));
+    const matches: FileEntry[] = [];
+    for (const file of allFiles) {
+      if (pinnedPaths.has(file.path)) continue;
+      if (file.relativePath.toLowerCase().includes(lowerQuery)) {
+        matches.push(file);
+        if (matches.length >= MAX_AUTOCOMPLETE_RESULTS) break;
+      }
+    }
+    return matches;
+  }, [allFiles, debouncedQuery, isAutocompleteOpen, pinnedFiles]);
+
+  const totalTokens = useMemo(() => pinnedFiles.reduce((sum, f) => sum + f.estimatedTokens, 0), [pinnedFiles]);
+  const contextSummary = useMemo(() => buildContextSummary(pinnedFiles, totalTokens), [pinnedFiles, totalTokens]);
+  const filePaths = useMemo(() => pinnedFiles.map((f) => f.path), [pinnedFiles]);
+
   return {
-    pinnedFiles,
-    addFile,
-    removeFile,
-    clearFiles,
-    contextSummary,
-    totalTokens,
-    filePaths,
-    autocompleteResults,
-    setAutocompleteQuery,
-    isAutocompleteOpen,
-    closeAutocomplete,
-    openAutocomplete,
-    allFiles,
-    mentions,
-    addMention,
-    removeMention,
+    pinnedFiles, addFile, removeFile, clearFiles, contextSummary, totalTokens, filePaths,
+    autocompleteResults, setAutocompleteQuery, isAutocompleteOpen, closeAutocomplete, openAutocomplete,
+    allFiles, mentions, addMention, removeMention,
   };
 }

@@ -17,6 +17,12 @@ import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
 import { cleanupIpcHandlers } from './ipc';
+import {
+  loadPersistedContextCache,
+  startContextRefreshTimer,
+  stopContextRefreshTimer,
+  terminateContextWorker,
+} from './ipc-handlers/agentChat';
 import { buildApplicationMenu } from './menu';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 import {
@@ -31,7 +37,6 @@ import { runAllMigrations } from './storage/migrate';
 import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
-import { loadPersistedContextCache, startContextRefreshTimer, stopContextRefreshTimer, terminateContextWorker } from './ipc-handlers/agentChat';
 import { createWindow, getAllActiveWindows } from './windowManager';
 
 // â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -112,7 +117,7 @@ function broadcastToActiveWindows(channel: string, payload: unknown): void {
       win.webContents.send(channel, payload);
     }
   }
-  broadcastToWebClients(channel, payload)
+  broadcastToWebClients(channel, payload);
 }
 
 /** Broadcasts perf metrics to all open windows. */
@@ -214,34 +219,7 @@ function registerWindowLifecycleHandlers(): void {
   });
 }
 
-async function initializeApplication(): Promise<void> {
-  // Run JSON → SQLite data migrations before anything reads the stores
-  const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
-  runAllMigrations(defaultRoot);
-
-  // Capture all ipcMain.handle registrations into the shared registry
-  // so the WebSocket bridge can call the same handlers. Must run before
-  // createWindow() which triggers registerIpcHandlers().
-  installHandlerCapture();
-
-  initializePerfMetrics({ getActiveWindows: getAllActiveWindows });
-  mainWindow = createWindow();
-  buildApplicationMenu(mainWindow);
-  await startBackgroundServices(mainWindow);
-
-  // Initialize CLAUDE.md generator (non-fatal)
-  try {
-    initClaudeMdGenerator(mainWindow);
-    console.log('[claude-md] Generator initialized');
-  } catch (err) {
-    console.warn('[claude-md] Generator initialization failed:', err);
-  }
-
-  registerRenderProcessCrashLogging();
-  configureAutoUpdater();
-  startPerfMetrics();
-  registerWindowLifecycleHandlers();
-
+function startContextLayerAsync(defaultRoot: string | undefined): void {
   const contextLayerConfig = getConfigValue('contextLayer') ?? {
     enabled: true,
     maxModules: 50,
@@ -249,7 +227,6 @@ async function initializeApplication(): Promise<void> {
     debounceMs: 5000,
     autoSummarize: true,
   };
-  console.log('[context-layer] Starting initialization with config:', contextLayerConfig);
   initContextLayer({
     workspaceRoot: getConfigValue('defaultProjectRoot'),
     buildRepoIndex: buildRepoIndexSnapshot,
@@ -261,30 +238,52 @@ async function initializeApplication(): Promise<void> {
     .catch((error: unknown) => {
       console.warn('[context-layer] Initialization failed:', error);
     });
-
-  // Codebase graph initialization (non-fatal).
-  // Indexing runs in a worker_threads Worker so the main-process event
-  // loop stays responsive — no delay needed.
   initCodebaseGraph().catch((error) => {
     console.error('[codebase-graph] Initialization failed:', error);
   });
-
-  // Start the context cache refresh timer so chat context is always warm.
   if (defaultRoot) {
     loadPersistedContextCache();
     startContextRefreshTimer([defaultRoot]);
   }
+}
 
-  // Web remote access server (non-fatal)
+function startWebServerAsync(): void {
   const webPort = (getConfigValue('webAccessPort') as number | undefined) ?? 7890;
   const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
   const webStaticDir = path.join(outMainDir, '../web');
-  startWebServer({ port: webPort, staticDir: webStaticDir }).then(() => {
-    const token = getOrCreateWebToken();
-    console.log(`[web] Access URL: http://localhost:${webPort}?token=${token}`);
-  }).catch((error) => {
-    console.error('[web] Failed to start web server:', error);
-  });
+  startWebServer({ port: webPort, staticDir: webStaticDir })
+    .then(() => {
+      const token = getOrCreateWebToken();
+      console.log(`[web] Access URL: http://localhost:${webPort}?token=${token}`);
+    })
+    .catch((error) => {
+      console.error('[web] Failed to start web server:', error);
+    });
+}
+
+async function initializeApplication(): Promise<void> {
+  const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
+  runAllMigrations(defaultRoot);
+  installHandlerCapture();
+
+  initializePerfMetrics({ getActiveWindows: getAllActiveWindows });
+  mainWindow = createWindow();
+  buildApplicationMenu(mainWindow);
+  await startBackgroundServices(mainWindow);
+
+  try {
+    initClaudeMdGenerator(mainWindow);
+    console.log('[claude-md] Generator initialized');
+  } catch (err) {
+    console.warn('[claude-md] Generator initialization failed:', err);
+  }
+
+  registerRenderProcessCrashLogging();
+  configureAutoUpdater();
+  startPerfMetrics();
+  registerWindowLifecycleHandlers();
+  startContextLayerAsync(defaultRoot);
+  startWebServerAsync();
 }
 
 async function initCodebaseGraph(): Promise<void> {

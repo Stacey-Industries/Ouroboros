@@ -2,7 +2,8 @@
  * useContextBuilderModel.helpers.ts — Stub module for context builder state helpers.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect,useRef, useState } from 'react';
+
 import type { ContextGenerateOptions, ProjectContext } from '../../types/electron';
 
 export interface ContextBuilderState {

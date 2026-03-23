@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+
 import { buildXtermTheme } from './terminalHelpers'
 import type {
   TerminalRefs,
@@ -22,41 +23,37 @@ export function useTerminalSetupRuntimeRefs(): TerminalSetupRuntimeRefs {
   }
 }
 
+function restoreScrollPosition(
+  term: import('@xterm/xterm').Terminal,
+  isAtBottom: boolean,
+  offsetFromBottom: number,
+): void {
+  if (isAtBottom) term.scrollToBottom()
+  else if (offsetFromBottom > 0) {
+    const newTarget = term.buffer.active.baseY - offsetFromBottom
+    if (newTarget >= 0) term.scrollToLine(newTarget)
+  }
+}
+
 export function useTerminalFitHandlers(
   sessionId: string,
   refs: TerminalRefs,
   runtimeRefs: TerminalSetupRuntimeRefs,
-): {
-  fit: () => void
-  syncTheme: () => void
-} {
+): { fit: () => void; syncTheme: () => void } {
   const fitNow = useCallback(() => {
     if (!refs.isReadyRef.current) return
     const addon = refs.fitAddonRef.current
     const term = refs.terminalRef.current
     if (!addon || !term) return
-
     try {
       const proposed = addon.proposeDimensions()
       if (!proposed) return
       if (proposed.cols === term.cols && proposed.rows === term.rows) return
-
       const buffer = term.buffer.active
       const isAtBottom = buffer.viewportY >= buffer.baseY
       const offsetFromBottom = buffer.baseY - buffer.viewportY
-
       addon.fit()
-
-      if (isAtBottom) {
-        // User was at bottom — stay at bottom after reflow
-        term.scrollToBottom()
-      } else if (offsetFromBottom > 0) {
-        // User was scrolled up — maintain distance from bottom
-        const newTarget = term.buffer.active.baseY - offsetFromBottom
-        if (newTarget >= 0) {
-          term.scrollToLine(newTarget)
-        }
-      }
+      restoreScrollPosition(term, isAtBottom, offsetFromBottom)
       queuePtyResize(sessionId, term.cols, term.rows, runtimeRefs.resizeDebounceRef)
     } catch {
       // fit can throw if the container has zero dimensions

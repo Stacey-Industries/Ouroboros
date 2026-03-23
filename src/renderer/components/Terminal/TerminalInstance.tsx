@@ -1,8 +1,10 @@
-import React from 'react'
 import '@xterm/xterm/css/xterm.css'
+
+import React from 'react'
+
+import type { TerminalInstanceProps } from './TerminalInstanceController'
 import { useTerminalInstanceController } from './TerminalInstanceController'
 import { TerminalInstanceView } from './TerminalInstanceView'
-import type { TerminalInstanceProps } from './TerminalInstanceController'
 
 export type { TerminalInstanceProps } from './TerminalInstanceController'
 

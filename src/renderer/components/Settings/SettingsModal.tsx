@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+
 import { useConfig } from '../../hooks/useConfig';
 import type { AppConfig } from '../../types/electron';
-import type { SettingsEntry } from './settingsEntries';
 import { searchEntries } from './searchHelpers';
+import type { SettingsEntry } from './settingsEntries';
 import { SettingsModalPortal } from './SettingsModalParts';
-import { TABS, type TabId } from './settingsTabs';
-import { useSettingsDraft, type SettingsDraftApi } from './useSettingsDraft';
+import { type TabId,TABS } from './settingsTabs';
+import { type SettingsDraftApi,useSettingsDraft } from './useSettingsDraft';
 
 export interface SettingsModalProps {
   isOpen: boolean;

@@ -3,6 +3,7 @@
  */
 
 import React, { memo } from 'react';
+
 import { LEGEND_ITEMS } from './timelineHelpers';
 
 export const Legend = memo(function Legend(): React.ReactElement {

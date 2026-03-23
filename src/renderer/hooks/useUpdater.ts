@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect } from 'react'
+
 import { useToastContext } from '../contexts/ToastContext'
 import type { UpdaterEvent } from '../types/electron'
 

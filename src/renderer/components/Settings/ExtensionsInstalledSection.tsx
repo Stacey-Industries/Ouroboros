@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ExtensionInfo } from '../../types/electron';
 import {
   extensionsSectionActivationBadgeStyle,
@@ -63,9 +64,7 @@ interface SelectedExtensionPanelProps {
   onRefresh: () => void;
 }
 
-export function InstalledExtensionsSection({
-  model,
-}: InstalledExtensionsSectionProps): React.ReactElement {
+export function InstalledExtensionsSection({ model }: InstalledExtensionsSectionProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>Installed Extensions</SectionLabel>
@@ -82,18 +81,14 @@ export function InstalledExtensionsSection({
   );
 }
 
-function InstalledExtensionsBody({
-  model,
-}: InstalledExtensionsSectionProps): React.ReactElement {
+function InstalledExtensionsBody({ model }: InstalledExtensionsSectionProps): React.ReactElement {
   if (model.loading) return <p className="text-text-semantic-muted" style={extensionsSectionMutedTextStyle}>Loading extensions...</p>;
   if (model.error) return <ErrorPanel message={model.error} />;
   if (model.extensionsList.length === 0) return <EmptyExtensionsState />;
   return <ExtensionsList model={model} />;
 }
 
-function ExtensionsList({
-  model,
-}: InstalledExtensionsSectionProps): React.ReactElement {
+function ExtensionsList({ model }: InstalledExtensionsSectionProps): React.ReactElement {
   return (
     <div style={extensionsSectionListContainerStyle}>
       {model.extensionsList.map((extension, index) => (

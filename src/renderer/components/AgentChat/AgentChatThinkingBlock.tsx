@@ -10,41 +10,27 @@ export interface AgentChatThinkingBlockProps {
 
 function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
-    <svg
-      className={`h-3 w-3 shrink-0 transition-transform duration-200 text-text-semantic-muted ${collapsed ? '' : 'rotate-90'}`}
-      viewBox="0 0 16 16"
-      fill="none"
-    >
-      <path
-        d="M6 4l4 4-4 4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className={`h-3 w-3 shrink-0 transition-transform duration-200 text-text-semantic-muted ${collapsed ? '' : 'rotate-90'}`} viewBox="0 0 16 16" fill="none">
+      <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function DurationBadge({ duration }: { duration: number }): React.ReactElement {
-  const label = duration < 1 ? '<1s' : `${duration}s`;
-  return (
-    <span
-      className="rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-surface-raised text-text-semantic-muted"
-    >
-      {label}
-    </span>
-  );
+  return <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-text-semantic-muted">{duration < 1 ? '<1s' : `${duration}s`}</span>;
 }
 
-/**
- * Renders an extended thinking block from the assistant.
- *
- * While streaming: expanded with a pulsing left border and muted text.
- * After streaming completes: auto-collapses to "Thought for Xs" summary line.
- * Collapsed: chevron + duration badge; click to expand.
- * Expanded: full thinking text in a visually distinct style.
- */
+function getThinkingLabel(duration: number | undefined, isStreaming: boolean): string {
+  if (isStreaming) return 'Thinking...';
+  return `Thought${duration !== undefined ? ` for ${duration < 1 ? '<1' : duration}s` : ''}`;
+}
+
+function getBorderLeftColor(isStreaming: boolean, isCollapsed: boolean): string {
+  if (isStreaming) return 'var(--accent)';
+  if (isCollapsed) return 'transparent';
+  return 'var(--border)';
+}
+
 export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock({
   content,
   duration,
@@ -53,42 +39,20 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
   onToggleCollapse,
 }: AgentChatThinkingBlockProps): React.ReactElement {
   const isCollapsed = collapsed && !isStreaming;
+  const label = getThinkingLabel(duration, isStreaming);
 
   return (
-    <div
-      className={`rounded-md ${isStreaming ? 'agent-chat-thinking-pulse' : ''} ${isCollapsed ? '' : 'bg-surface-raised'}`}
-      style={{
-        borderLeft: `2px solid ${isStreaming ? 'var(--accent)' : isCollapsed ? 'transparent' : 'var(--border)'}`,
-      }}
-    >
-      {/* Header row — always visible */}
-      <button
-        onClick={onToggleCollapse}
-        className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:bg-surface-raised text-text-semantic-muted"
-      >
+    <div className={`rounded-md ${isStreaming ? 'agent-chat-thinking-pulse' : ''} ${isCollapsed ? '' : 'bg-surface-raised'}`} style={{ borderLeft: `2px solid ${getBorderLeftColor(isStreaming, isCollapsed)}` }}>
+      <button onClick={onToggleCollapse} className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised">
         <ChevronIcon collapsed={isCollapsed} />
-        <span>
-          {isStreaming
-            ? 'Thinking...'
-            : `Thought${duration !== undefined ? ` for ${duration < 1 ? '<1' : duration}s` : ''}`}
-        </span>
+        <span>{label}</span>
         {duration !== undefined && !isStreaming && <DurationBadge duration={duration} />}
       </button>
-
-      {/* Collapsible content with CSS transition */}
-      <div
-        className="agent-chat-thinking-collapse"
-        data-collapsed={isCollapsed ? 'true' : 'false'}
-      >
-        <div
-          className="px-2.5 pb-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-text-semantic-muted"
-          style={{ fontFamily: 'var(--font-ui)' }}
-        >
+      <div className="agent-chat-thinking-collapse" data-collapsed={isCollapsed ? 'true' : 'false'}>
+        <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap px-2.5 pb-2 text-xs leading-relaxed text-text-semantic-muted" style={{ fontFamily: 'var(--font-ui)' }}>
           {content || (isStreaming ? '' : '(empty)')}
         </div>
       </div>
-
-      {/* Inline pulsing animation */}
       <style>{`
         .agent-chat-thinking-pulse {
           animation: agentChatThinkingPulse 2s ease-in-out infinite;

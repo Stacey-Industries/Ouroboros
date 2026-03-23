@@ -10,6 +10,7 @@
  */
 
 import React, { memo, useEffect, useRef, useState } from 'react';
+
 import type { ToastItem, ToastType } from '../../hooks/useToast';
 
 // ── Style constants ──────────────────────────────────────────────────────────

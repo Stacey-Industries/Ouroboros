@@ -1,15 +1,16 @@
 import React, { memo } from 'react';
-import { injectLinks } from './linkDetector';
-import { parseShikiLines, computeVisibleLines } from './fileViewerUtils';
-import { EmptyState } from './EmptyState';
-import { LoadingState } from './LoadingState';
-import { ImageViewer } from './ImageViewer';
-import { PdfViewer } from './PdfViewer';
-import { HexViewer } from './HexViewer';
-import { ErrorDisplay } from './ErrorDisplay';
-import { useFileViewerState } from './useFileViewerState';
-import { FileViewerChrome } from './FileViewerChrome';
+
 import type { CodeRow } from './codeViewTypes';
+import { EmptyState } from './EmptyState';
+import { ErrorDisplay } from './ErrorDisplay';
+import { FileViewerChrome } from './FileViewerChrome';
+import { computeVisibleLines,parseShikiLines } from './fileViewerUtils';
+import { HexViewer } from './HexViewer';
+import { ImageViewer } from './ImageViewer';
+import { injectLinks } from './linkDetector';
+import { LoadingState } from './LoadingState';
+import { PdfViewer } from './PdfViewer';
+import { useFileViewerState } from './useFileViewerState';
 
 export interface FileViewerProps {
   filePath: string | null;
@@ -39,21 +40,35 @@ export const FileViewer = memo(function FileViewer(
   return <FileViewerInner {...props} />;
 });
 
-const FileViewerInner = memo(function FileViewerInner(
-  props: FileViewerProps
-): React.ReactElement {
-  const { filePath, content, isLoading, error, isImage, isPdf, isBinary, binaryContent } = props;
-  const s = useFileViewerState(props);
+function renderInitialViewerState(props: FileViewerProps): React.ReactElement | null {
+  if (!props.filePath && !props.isLoading) return <EmptyState />;
+  if (props.isLoading) return <LoadingState />;
+  if (props.error) return <ErrorDisplay error={props.error} />;
+  if (props.content === null) return <EmptyState />;
+  return null;
+}
 
-  if (!filePath && !isLoading) return <EmptyState />;
-  if (isLoading) return <LoadingState />;
+function renderFileTypeViewer(props: FileViewerProps): React.ReactElement | null {
+  const { filePath, isImage, isPdf, isBinary, binaryContent } = props;
   if (isImage && filePath) return <ImageViewer filePath={filePath} />;
   if (isPdf && filePath) return <PdfViewer filePath={filePath} />;
   if (isBinary && filePath && binaryContent) return <HexViewer content={binaryContent} filePath={filePath} />;
   if (isBinary && filePath) return <LoadingState />;
-  if (error) return <ErrorDisplay error={error} />;
-  if (content === null) return <EmptyState />;
+  return null;
+}
 
+function renderSpecialViewer(props: FileViewerProps): React.ReactElement | null {
+  return renderInitialViewerState(props) ?? renderFileTypeViewer(props);
+}
+
+const FileViewerInner = memo(function FileViewerInner(
+  props: FileViewerProps
+): React.ReactElement {
+  const s = useFileViewerState(props);
+  const specialViewer = renderSpecialViewer(props);
+  if (specialViewer) return specialViewer;
+
+  const { content } = props;
   const shikiLines = s.highlightedHtml
     ? parseShikiLines(injectLinks(s.highlightedHtml))
     : null;

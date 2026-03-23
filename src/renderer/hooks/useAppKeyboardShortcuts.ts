@@ -2,7 +2,8 @@
  * useAppKeyboardShortcuts.ts — Application keyboard shortcuts.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback,useEffect } from 'react';
+
 import type { WorkspaceLayout } from '../types/electron';
 
 interface KeyboardShortcutsDeps {
@@ -18,67 +19,58 @@ interface KeyboardShortcutsDeps {
   handleSelectLayout: (layout: WorkspaceLayout) => void
 }
 
-export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
-  const {
-    keybindings,
-    setFilePickerOpen,
-    setSymbolSearchOpen,
-    setPerfOverlayVisible,
-    spawnClaudeSession,
-    workspaceLayouts,
-    handleSelectLayout,
-  } = deps;
+function buildComboFromEvent(e: KeyboardEvent): string {
+  const parts: string[] = [];
+  if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+  if (e.shiftKey) parts.push('Shift');
+  if (e.altKey) parts.push('Alt');
+  const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  parts.push(key);
+  return parts.join('+');
+}
 
+function buildReverseMap(keybindings: Record<string, string>): Map<string, string> {
+  const reverseMap = new Map<string, string>();
+  for (const [action, combo] of Object.entries(keybindings)) {
+    reverseMap.set(combo, action);
+  }
+  return reverseMap;
+}
+
+function dispatchShortcutAction(action: string, deps: KeyboardShortcutsDeps): void {
+  if (action.includes('file-picker') || action.includes('file')) {
+    deps.setFilePickerOpen(true);
+  } else if (action.includes('symbol')) {
+    deps.setSymbolSearchOpen(true);
+  } else if (action.includes('perf')) {
+    deps.setPerfOverlayVisible((prev) => !prev);
+  } else if (action.includes('claude') || action.includes('session')) {
+    void deps.spawnClaudeSession();
+  } else {
+    matchAndApplyLayout(action, deps.workspaceLayouts, deps.handleSelectLayout);
+  }
+}
+
+function matchAndApplyLayout(action: string, layouts: WorkspaceLayout[], apply: (l: WorkspaceLayout) => void): void {
+  const matched = layouts.find((l) => action.toLowerCase().includes(l.name.toLowerCase()));
+  if (matched) apply(matched);
+}
+
+export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Build reverse map: key combo string -> action name
-      const reverseMap = new Map<string, string>();
-      for (const [action, combo] of Object.entries(keybindings)) {
-        reverseMap.set(combo, action);
-      }
-
-      // Build key string from the event
-      const parts: string[] = [];
-      if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
-      if (e.shiftKey) parts.push('Shift');
-      if (e.altKey) parts.push('Alt');
-
-      // Normalize the key
-      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-      parts.push(key);
-
-      const combo = parts.join('+');
+      const reverseMap = buildReverseMap(deps.keybindings);
+      const combo = buildComboFromEvent(e);
       const action = reverseMap.get(combo);
-
       if (!action) return;
-
       e.preventDefault();
-
-      if (action.includes('file-picker') || action.includes('file')) {
-        setFilePickerOpen(true);
-      } else if (action.includes('symbol')) {
-        setSymbolSearchOpen(true);
-      } else if (action.includes('perf')) {
-        setPerfOverlayVisible((prev) => !prev);
-      } else if (action.includes('claude') || action.includes('session')) {
-        void spawnClaudeSession();
-      } else {
-        // Check for layout shortcuts
-        const matchedLayout = workspaceLayouts.find(
-          (layout) => action.toLowerCase().includes(layout.name.toLowerCase()),
-        );
-        if (matchedLayout) {
-          handleSelectLayout(matchedLayout);
-        }
-      }
+      dispatchShortcutAction(action, deps);
     },
-    [keybindings, setFilePickerOpen, setSymbolSearchOpen, setPerfOverlayVisible, spawnClaudeSession, workspaceLayouts, handleSelectLayout],
+    [deps],
   );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 }

@@ -1,5 +1,6 @@
-import { useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { useRef } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 
 export type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;

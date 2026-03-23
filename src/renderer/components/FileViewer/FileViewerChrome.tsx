@@ -174,32 +174,7 @@ function ChromeBody({
 }: ChromeBodyProps): React.ReactElement {
   return (
     <div style={bodyStyle}>
-      <ContentRouter
-        viewMode={s.viewMode}
-        editMode={s.editMode}
-        isClaudeMd={s.isClaudeMd}
-        claudeMdEnhanced={s.claudeMdEnhanced}
-        filePath={filePath}
-        content={content}
-        ideThemeId={s.ideThemeId}
-        projectRoot={projectRoot}
-        onSave={onSave}
-        onContentChange={onContentChange}
-        onDirtyChange={onDirtyChange}
-        showHistory={s.showHistory}
-        isMarkdown={s.isMarkdown}
-        hasDiff={s.hasDiff}
-        originalContent={originalContent}
-        diffBaseContent={diffBaseContent}
-        conflictBlocks={s.conflictBlocks}
-        handleConflictResolved={s.handleConflictResolved}
-        codeViewProps={codeViewProps}
-        scrollRef={s.scrollRef}
-        codeRef={s.codeRef}
-        wordWrap={s.wordWrap}
-        showMinimap={s.showMinimap}
-        formatOnSave={s.formatOnSave}
-      />
+      <ContentRouter viewMode={s.viewMode} editMode={s.editMode} isClaudeMd={s.isClaudeMd} claudeMdEnhanced={s.claudeMdEnhanced} filePath={filePath} content={content} ideThemeId={s.ideThemeId} projectRoot={projectRoot} onSave={onSave} onContentChange={onContentChange} onDirtyChange={onDirtyChange} showHistory={s.showHistory} isMarkdown={s.isMarkdown} hasDiff={s.hasDiff} originalContent={originalContent} diffBaseContent={diffBaseContent} conflictBlocks={s.conflictBlocks} handleConflictResolved={s.handleConflictResolved} codeViewProps={codeViewProps} scrollRef={s.scrollRef} codeRef={s.codeRef} wordWrap={s.wordWrap} showMinimap={s.showMinimap} formatOnSave={s.formatOnSave} />
       <OutlinePanel s={s} />
     </div>
   );
@@ -244,10 +219,11 @@ export const FileViewerChrome = memo(function FileViewerChrome({
 }: FileViewerChromeProps): React.ReactElement {
   const codeViewProps = buildCodeViewProps({ s, lines, lineCount, gutterWidth, shikiLines, rows });
   // Wrap onSave so that Ctrl+S from Monaco also exits edit mode
+  const { setEditMode } = s;
   const handleEditorSave = useCallback((c: string) => {
     onSave?.(c);
-    s.setEditMode(false);
-  }, [onSave, s.setEditMode]);
+    setEditMode(false);
+  }, [onSave, setEditMode]);
   return (
     <div ref={s.containerRef as Ref<HTMLDivElement>} style={rootStyle}>
       <ChromeHeader projectRoot={projectRoot} isDirtyOnDisk={isDirtyOnDisk} onReload={onReload} currentContent={content} isDirty={isDirty} onSave={onSave} onCancelEdit={onCancelEdit} s={s} />

@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useRef } from 'react'
+
 import { useProject } from '../contexts/ProjectContext'
 import type { IdeToolQuery } from '../types/electron'
 

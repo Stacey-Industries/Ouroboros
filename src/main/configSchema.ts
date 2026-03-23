@@ -4,55 +4,56 @@
  * Extracted from config.ts to keep each file under the 300-line limit.
  */
 
-import { tailSchema } from './configSchemaTail'
+import { middleSchema } from './configSchemaMiddle';
+import { tailSchema } from './configSchemaTail';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const schema: any = {
   recentProjects: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   defaultProjectRoot: {
     type: 'string',
-    default: ''
+    default: '',
   },
   activeTheme: {
     type: 'string',
-    default: 'modern'
+    default: 'modern',
   },
   hooksServerPort: {
     type: 'number',
     minimum: 1024,
     maximum: 65535,
-    default: 3333
+    default: 3333,
   },
   terminalFontSize: {
     type: 'number',
     minimum: 8,
     maximum: 32,
-    default: 14
+    default: 14,
   },
   autoInstallHooks: {
     type: 'boolean',
-    default: true
+    default: true,
   },
   shell: {
     type: 'string',
-    default: ''
+    default: '',
   },
   panelSizes: {
     type: 'object',
     properties: {
       leftSidebar: { type: 'number', default: 260 },
       rightSidebar: { type: 'number', default: 340 },
-      terminal: { type: 'number', default: 220 }
+      terminal: { type: 'number', default: 220 },
     },
     default: {
       leftSidebar: 260,
       rightSidebar: 340,
-      terminal: 220
-    }
+      terminal: 220,
+    },
   },
   windowBounds: {
     type: 'object',
@@ -61,45 +62,45 @@ export const schema: any = {
       y: { type: 'number' },
       width: { type: 'number', default: 1280 },
       height: { type: 'number', default: 800 },
-      isMaximized: { type: 'boolean', default: false }
+      isMaximized: { type: 'boolean', default: false },
     },
     default: {
       width: 1280,
       height: 800,
-      isMaximized: false
-    }
+      isMaximized: false,
+    },
   },
   fontUI: {
     type: 'string',
-    default: ''
+    default: '',
   },
   fontMono: {
     type: 'string',
-    default: ''
+    default: '',
   },
   fontSizeUI: {
     type: 'number',
     minimum: 11,
     maximum: 18,
-    default: 13
+    default: 13,
   },
   keybindings: {
     type: 'object',
-    default: {}
+    default: {},
   },
   showBgGradient: {
     type: 'boolean',
-    default: true
+    default: true,
   },
   glassOpacity: {
     type: 'number',
     default: 0,
     minimum: 0,
-    maximum: 100
+    maximum: 100,
   },
   customThemeColors: {
     type: 'object',
-    default: {}
+    default: {},
   },
   terminalSessions: {
     type: 'array',
@@ -111,41 +112,41 @@ export const schema: any = {
         isClaude: { type: 'boolean' },
         isCodex: { type: 'boolean' },
         claudeSessionId: { type: 'string' },
-        codexThreadId: { type: 'string' }
-      }
+        codexThreadId: { type: 'string' },
+      },
     },
-    default: []
+    default: [],
   },
   customCSS: {
     type: 'string',
-    default: ''
+    default: '',
   },
   bookmarks: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   fileTreeIgnorePatterns: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   profiles: {
     type: 'object',
-    default: {}
+    default: {},
   },
   multiRoots: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   customPrompt: {
     type: 'string',
-    default: ''
+    default: '',
   },
   promptPreset: {
     type: 'string',
-    default: 'default'
+    default: 'default',
   },
   claudeCliSettings: {
     type: 'object',
@@ -161,7 +162,7 @@ export const schema: any = {
       addDirs: { type: 'array', items: { type: 'string' }, default: [] },
       chrome: { type: 'boolean', default: false },
       worktree: { type: 'boolean', default: false },
-      dangerouslySkipPermissions: { type: 'boolean', default: false }
+      dangerouslySkipPermissions: { type: 'boolean', default: false },
     },
     default: {
       permissionMode: 'default',
@@ -175,8 +176,8 @@ export const schema: any = {
       addDirs: [],
       chrome: false,
       worktree: false,
-      dangerouslySkipPermissions: false
-    }
+      dangerouslySkipPermissions: false,
+    },
   },
   codexCliSettings: {
     type: 'object',
@@ -189,7 +190,7 @@ export const schema: any = {
       addDirs: { type: 'array', items: { type: 'string' }, default: [] },
       search: { type: 'boolean', default: false },
       skipGitRepoCheck: { type: 'boolean', default: false },
-      dangerouslyBypassApprovalsAndSandbox: { type: 'boolean', default: false }
+      dangerouslyBypassApprovalsAndSandbox: { type: 'boolean', default: false },
     },
     default: {
       model: '',
@@ -200,122 +201,56 @@ export const schema: any = {
       addDirs: [],
       search: false,
       skipGitRepoCheck: false,
-      dangerouslyBypassApprovalsAndSandbox: false
-    }
+      dangerouslyBypassApprovalsAndSandbox: false,
+    },
   },
   notifications: {
     type: 'object',
     properties: {
       level: { type: 'string', default: 'all' },
-      alwaysNotify: { type: 'boolean', default: false }
+      alwaysNotify: { type: 'boolean', default: false },
     },
     default: {
       level: 'all',
-      alwaysNotify: false
-    }
-  },
-  agentTemplates: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        icon: { type: 'string' },
-        promptTemplate: { type: 'string' },
-        cliOverrides: { type: 'object' }
-      }
+      alwaysNotify: false,
     },
-    default: [
-      { id: 'builtin:review-pr', name: 'Review PR', icon: '\ud83d\udd0d', promptTemplate: 'Review the current PR for bugs, logic errors, and improvements. Show a summary of findings.' },
-      { id: 'builtin:write-tests', name: 'Write Tests', icon: '\u2705', promptTemplate: 'Write comprehensive tests for {{openFile}}. Cover edge cases and error paths.' },
-      { id: 'builtin:explain', name: 'Explain Codebase', icon: '\ud83d\udcda', promptTemplate: 'Give me a high-level overview of this codebase — architecture, key patterns, and how the main components fit together.' },
-      { id: 'builtin:refactor', name: 'Refactor File', icon: '\u2728', promptTemplate: 'Refactor {{openFile}} to improve readability, performance, and maintainability. Explain what you changed and why.' },
-      { id: 'builtin:fix-build', name: 'Fix Build', icon: '\ud83d\udee0\ufe0f', promptTemplate: 'Run the build, identify any errors, and fix them. Show me what you changed.' }
-    ]
   },
-  workspaceLayouts: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        name: { type: 'string' },
-        panelSizes: {
-          type: 'object',
-          properties: {
-            leftSidebar: { type: 'number' },
-            rightSidebar: { type: 'number' },
-            terminal: { type: 'number' }
-          }
-        },
-        visiblePanels: {
-          type: 'object',
-          properties: {
-            leftSidebar: { type: 'boolean' },
-            rightSidebar: { type: 'boolean' },
-            terminal: { type: 'boolean' }
-          }
-        },
-        rightSidebarTab: { type: 'string' },
-        builtIn: { type: 'boolean' }
-      }
-    },
-    default: [
-      {
-        name: 'Default',
-        panelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
-        visiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
-        builtIn: true
-      },
-      {
-        name: 'Monitoring',
-        panelSizes: { leftSidebar: 0, rightSidebar: 400, terminal: 250 },
-        visiblePanels: { leftSidebar: false, rightSidebar: true, terminal: true },
-        builtIn: true
-      },
-      {
-        name: 'Review',
-        panelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 0 },
-        visiblePanels: { leftSidebar: true, rightSidebar: true, terminal: false },
-        builtIn: true
-      }
-    ]
-  },
+  ...middleSchema,
   activeLayoutName: {
     type: 'string',
-    default: 'Default'
+    default: 'Default',
   },
   extensionsEnabled: {
     type: 'boolean',
-    default: true
+    default: true,
   },
   disabledExtensions: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   lspEnabled: {
     type: 'boolean',
-    default: false
+    default: false,
   },
   lspServers: {
     type: 'object',
-    default: {}
+    default: {},
   },
   claudeAutoLaunch: {
     type: 'boolean',
-    default: false
+    default: false,
   },
   approvalRequired: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   approvalTimeout: {
     type: 'number',
     minimum: 0,
     maximum: 300,
-    default: 0
+    default: 0,
   },
-  ...tailSchema
-}
+  ...tailSchema,
+};

@@ -3,6 +3,7 @@
  */
 
 import React, { memo } from 'react';
+
 import { useProject } from '../../contexts/ProjectContext';
 import { LauncherFooter, LauncherHeader, SlotEditor } from './MultiSessionLauncherParts';
 import { useMultiSessionLauncherModel } from './useMultiSessionLauncherModel';

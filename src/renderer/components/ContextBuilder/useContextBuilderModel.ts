@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
+
 import type { ContextGenerateOptions, ProjectContext } from '../../types/electron';
-import { useContextSelectionModel, type ContextSelectionConfig, type ContextSelectionModel } from './useContextSelectionModel';
-import { useContextBuilderState, useTimedStatus, type ContextBuilderState } from './useContextBuilderModel.helpers';
+import { type ContextBuilderState,useContextBuilderState, useTimedStatus } from './useContextBuilderModel.helpers';
+import { type ContextSelectionConfig, type ContextSelectionModel,useContextSelectionModel } from './useContextSelectionModel';
 
 export interface ContextBuilderModel {
   context: ProjectContext | null;

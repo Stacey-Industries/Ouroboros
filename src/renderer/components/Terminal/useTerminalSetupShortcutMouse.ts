@@ -1,9 +1,10 @@
-import type { Dispatch, SetStateAction } from 'react'
 import { Terminal } from '@xterm/xterm'
+import type { Dispatch, SetStateAction } from 'react'
+
 import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
 import {
-  INITIAL_SELECTION_TOOLTIP,
   classifySelection,
+  INITIAL_SELECTION_TOOLTIP,
 } from './SelectionTooltip'
 import { writeChunkedPaste } from './terminalPasteHelpers'
 import type {
@@ -63,6 +64,21 @@ export function handleClick(
   tripleClickSelect(runtimeRefs, event, container, term)
 }
 
+type ShortcutHandler = (context: TerminalSetupLifecycleContext, event: KeyboardEvent, term: Terminal) => boolean
+
+const SHORTCUT_HANDLERS: Partial<Record<NonNullable<CustomShortcut>, ShortcutHandler>> = {
+  toggleSearch: (ctx) => toggleTerminalFlag(ctx.callbacks.setShowSearch),
+  toggleRichInput: (ctx) => toggleTerminalFlag(ctx.callbacks.setRichInputActive),
+  openCmdSearch: (ctx) => openCmdSearch(ctx),
+  copyOrSigint: (ctx, _e, t) => handleCopyOrSigint(ctx, t),
+  navBlockPrev: (ctx, _e, t) => handleBlockNav(ctx, t, 'prev'),
+  navBlockNext: (ctx, _e, t) => handleBlockNav(ctx, t, 'next'),
+  fontZoomIn: (ctx, _e, t) => handleFontZoom(ctx, t, 1),
+  fontZoomOut: (ctx, _e, t) => handleFontZoom(ctx, t, -1),
+  fontZoomReset: (ctx, _e, t) => handleFontZoom(ctx, t, 0),
+  paste: (ctx, e) => { handlePasteShortcut(ctx, e); return false },
+}
+
 function handleCustomKey(
   context: TerminalSetupLifecycleContext,
   event: KeyboardEvent,
@@ -70,38 +86,36 @@ function handleCustomKey(
 ): boolean {
   const shortcut = getCustomShortcut(event)
   if (!shortcut) return true
-  if (shortcut === 'toggleSearch') return toggleTerminalFlag(context.callbacks.setShowSearch)
-  if (shortcut === 'toggleRichInput') return toggleTerminalFlag(context.callbacks.setRichInputActive)
-  if (shortcut === 'openCmdSearch') return openCmdSearch(context)
-  if (shortcut === 'copyOrSigint') return handleCopyOrSigint(context, term)
-  if (shortcut === 'navBlockPrev') return handleBlockNav(context, term, 'prev')
-  if (shortcut === 'navBlockNext') return handleBlockNav(context, term, 'next')
-  if (shortcut === 'fontZoomIn') return handleFontZoom(context, term, 1)
-  if (shortcut === 'fontZoomOut') return handleFontZoom(context, term, -1)
-  if (shortcut === 'fontZoomReset') return handleFontZoom(context, term, 0)
-  handlePasteShortcut(context, event)
-  return false
+  const handler = SHORTCUT_HANDLERS[shortcut]
+  return handler ? handler(context, event, term) : true
+}
+
+const CTRL_CODE_SHORTCUTS: Record<string, CustomShortcut> = {
+  ArrowUp: 'navBlockPrev',
+  ArrowDown: 'navBlockNext',
+  Equal: 'fontZoomIn',
+  NumpadAdd: 'fontZoomIn',
+  Minus: 'fontZoomOut',
+  NumpadSubtract: 'fontZoomOut',
+  Digit0: 'fontZoomReset',
+  Numpad0: 'fontZoomReset',
+}
+
+const PLAIN_CTRL_KEY_SHORTCUTS: Record<string, CustomShortcut> = {
+  r: 'openCmdSearch',
+  c: 'copyOrSigint',
+  v: 'paste',
 }
 
 function getCustomShortcut(event: KeyboardEvent): CustomShortcut {
   if (matchesCtrlShift(event, 'F')) return 'toggleSearch'
   if (matchesCtrlShift(event, 'Enter')) return 'toggleRichInput'
-
-  // Ctrl+Up/Down for command block navigation
-  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'ArrowUp') return 'navBlockPrev'
-  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'ArrowDown') return 'navBlockNext'
-
-  // Font zoom: Ctrl+= / Ctrl+- / Ctrl+0
-  if (event.ctrlKey && !event.altKey && !event.shiftKey) {
-    if (event.code === 'Equal' || event.code === 'NumpadAdd') return 'fontZoomIn'
-    if (event.code === 'Minus' || event.code === 'NumpadSubtract') return 'fontZoomOut'
-    if (event.code === 'Digit0' || event.code === 'Numpad0') return 'fontZoomReset'
+  if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+    const fromCode = CTRL_CODE_SHORTCUTS[event.code]
+    if (fromCode) return fromCode
   }
-
   const plainCtrlKey = getPlainCtrlKey(event)
-  if (plainCtrlKey === 'r') return 'openCmdSearch'
-  if (plainCtrlKey === 'c') return 'copyOrSigint'
-  if (plainCtrlKey === 'v') return 'paste'
+  if (plainCtrlKey) return PLAIN_CTRL_KEY_SHORTCUTS[plainCtrlKey] ?? null
   return null
 }
 

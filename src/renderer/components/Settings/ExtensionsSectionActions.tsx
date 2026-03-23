@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { Command } from '../CommandPalette/types';
 import {
   extensionsSectionActionButtonStyle,
@@ -12,7 +13,7 @@ import {
   extensionsSectionListContainerStyle,
   extensionsSectionMutedTextStyle,
 } from './extensionsSectionStyles';
-import { SectionLabel, buttonStyle } from './settingsStyles';
+import { buttonStyle,SectionLabel } from './settingsStyles';
 import type { ExtensionsSectionModel } from './useExtensionsSection';
 
 interface ActionErrorBannerProps {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { BufferExcerpt } from '../../types/electron';
 import type { BundledTheme, Highlighter } from 'shiki';
+
+import type { BufferExcerpt } from '../../types/electron';
 
 const IDE_TO_SHIKI_THEME: Record<string, BundledTheme> = {
   retro: 'monokai',

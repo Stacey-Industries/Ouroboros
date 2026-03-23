@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
+
 import type { Command, CommandMatch } from './types';
 
 export interface CommandPaletteActions {

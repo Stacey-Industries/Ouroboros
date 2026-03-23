@@ -5,7 +5,8 @@
  * The current step is highlighted. Click to jump.
  */
 
-import React, { useEffect, useRef, memo } from 'react';
+import React, { memo,useEffect, useRef } from 'react';
+
 import type { ReplayStep } from './types';
 
 const TOOL_COLOR: Record<string, string> = {

@@ -31,8 +31,8 @@ import type {
 import type {
   AppAPI,
   ApprovalAPI,
-  ConfigAPI,
   CodexAPI,
+  ConfigAPI,
   FilesAPI,
   HooksAPI,
   PtyAPI,

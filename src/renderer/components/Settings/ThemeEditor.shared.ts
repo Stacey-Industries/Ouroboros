@@ -1,4 +1,4 @@
-import { getTheme, customTheme } from '../../themes';
+import { customTheme,getTheme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
 
 export interface ColorToken {

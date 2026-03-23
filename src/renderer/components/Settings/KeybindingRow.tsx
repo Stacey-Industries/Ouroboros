@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import type { KeybindingAction } from './keybindingsData';
 import { KEYBINDING_ACTIONS } from './keybindingsData';
 

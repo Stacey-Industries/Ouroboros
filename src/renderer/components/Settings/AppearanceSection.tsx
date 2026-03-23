@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+
+import { useExtensionThemes } from '../../hooks/useExtensionThemes';
 import { customTheme, themeList } from '../../themes';
 import type { AppConfig, AppTheme } from '../../types/electron';
-import { useExtensionThemes } from '../../hooks/useExtensionThemes';
 import { AppearanceSectionContent } from './AppearanceSectionParts';
 
 interface AppearanceSectionProps {

@@ -1,14 +1,15 @@
 /* @refresh reset */
 import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
 } from 'react';
+
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
@@ -267,35 +268,31 @@ function useLinkedDetailsActions(args: {
   openDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   openOrchestration: () => void;
 } {
+  const { preferredLink, setError, loadDetails, setIsOpen, activeLink, details } = args;
+
   const openDetails = useCallback(async (link?: AgentChatOrchestrationLink): Promise<void> => {
-    const nextLink = link ?? args.preferredLink;
+    const nextLink = link ?? preferredLink;
     if (!nextLink) {
-      args.setError('Linked task details are not available for this thread yet.');
+      setError('Linked task details are not available for this thread yet.');
       return;
     }
-
-    await args.loadDetails(nextLink, true);
-  }, [args]);
+    await loadDetails(nextLink, true);
+  }, [preferredLink, setError, loadDetails]);
 
   const closeDetails = useCallback((): void => {
-    args.setIsOpen(false);
-  }, [args]);
+    setIsOpen(false);
+  }, [setIsOpen]);
 
   const openOrchestration = useOpenOrchestrationAction({
-    activeLink: args.activeLink,
-    details: args.details,
-    setError: args.setError,
+    activeLink,
+    details,
+    setError,
   });
 
   return { closeDetails, openDetails, openOrchestration };
 }
 
-export function useAgentChatLinkedDetails({
-  activeThread,
-}: UseAgentChatLinkedDetailsArgs): AgentChatLinkedDetailsState {
-  // Read just the one boolean we need instead of the full useConfig() hook.
-  // useConfig() adds 4 hooks (useState x3 + useCallback) to every component
-  // that uses it, and during HMR the extra hook state can corrupt React's fiber.
+function useAutoOpenOnFailureSetting(): boolean {
   const [autoOpenOnFailure, setAutoOpenOnFailure] = useState(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
@@ -304,30 +301,13 @@ export function useAgentChatLinkedDetails({
         .catch(() => { /* default false */ });
     }
   }, []);
+  return autoOpenOnFailure;
+}
 
-  const state = useLinkedDetailsStateContainer();
-  const { preferredLink, preferredLinkKey } = usePreferredLinkedDetails(activeThread);
-  const loadDetails = useLoadDetailsAction({ requestIdRef: state.requestIdRef, setters: state.setters });
-
-  useLinkedDetailsLifecycle({
-    activeThread,
-    autoOpenedRef: state.autoOpenedRef,
-    enabled: autoOpenOnFailure,
-    loadDetails,
-    preferredLink,
-    preferredLinkKey,
-    setters: state.setters,
-  });
-
-  const actions = useLinkedDetailsActions({
-    activeLink: state.activeLink,
-    details: state.details,
-    loadDetails,
-    preferredLink,
-    setError: state.setError,
-    setIsOpen: state.setIsOpen,
-  });
-
+function buildLinkedDetailsReturn(
+  state: LinkedDetailsStateContainer,
+  actions: ReturnType<typeof useLinkedDetailsActions>,
+): AgentChatLinkedDetailsState {
   return {
     activeLink: state.activeLink,
     closeDetails: actions.closeDetails,
@@ -338,4 +318,29 @@ export function useAgentChatLinkedDetails({
     openDetails: actions.openDetails,
     openOrchestration: actions.openOrchestration,
   };
+}
+
+export function useAgentChatLinkedDetails({
+  activeThread,
+}: UseAgentChatLinkedDetailsArgs): AgentChatLinkedDetailsState {
+  // Read just the one boolean we need instead of the full useConfig() hook.
+  // useConfig() adds 4 hooks (useState x3 + useCallback) to every component
+  // that uses it, and during HMR the extra hook state can corrupt React's fiber.
+  const autoOpenOnFailure = useAutoOpenOnFailureSetting();
+  const state = useLinkedDetailsStateContainer();
+  const { preferredLink, preferredLinkKey } = usePreferredLinkedDetails(activeThread);
+  const loadDetails = useLoadDetailsAction({ requestIdRef: state.requestIdRef, setters: state.setters });
+
+  useLinkedDetailsLifecycle({
+    activeThread, autoOpenedRef: state.autoOpenedRef,
+    enabled: autoOpenOnFailure, loadDetails,
+    preferredLink, preferredLinkKey, setters: state.setters,
+  });
+
+  const actions = useLinkedDetailsActions({
+    activeLink: state.activeLink, details: state.details, loadDetails,
+    preferredLink, setError: state.setError, setIsOpen: state.setIsOpen,
+  });
+
+  return buildLinkedDetailsReturn(state, actions);
 }

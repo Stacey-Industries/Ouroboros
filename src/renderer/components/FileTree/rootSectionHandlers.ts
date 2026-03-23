@@ -6,7 +6,7 @@
 
 import type { TreeNode } from './FileTreeItem';
 import type { EditState } from './fileTreeUtils';
-import { pathJoin, parentDir, normPath } from './fileTreeUtils';
+import { normPath,parentDir, pathJoin } from './fileTreeUtils';
 
 type ToastFn = (msg: string, type: 'success' | 'error') => void;
 

@@ -1,17 +1,18 @@
 import {
-  useReducer,
-  useEffect,
-  useCallback,
-  useRef,
   type Dispatch,
   type MutableRefObject,
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
 } from 'react';
+
 import type { AgentSession } from '../components/AgentMonitor/types';
 import type { HookPayload } from '../types/electron';
 import {
+  type AgentAction,
   initialAgentState,
   reducer,
-  type AgentAction,
 } from './useAgentEvents.helpers';
 import {
   createToolCall,
@@ -33,6 +34,24 @@ export interface UseAgentEventsReturn {
   historicalSessions: AgentSession[];
 }
 
+function deleteCompletedSessions(sessions: AgentSession[]): void {
+  const completedIds = sessions
+    .filter((s) => s.status === 'complete' || s.status === 'error')
+    .map((s) => s.id);
+  for (const id of completedIds) {
+    window.electronAPI?.sessions?.delete?.(id).catch(() => {});
+  }
+}
+
+function persistSessionNotes(sessions: AgentSession[], sessionId: string, notes: string, bookmarked?: boolean): void {
+  const session = sessions.find((candidate) => candidate.id === sessionId);
+  if (session) {
+    window.electronAPI?.sessions?.save?.({
+      ...session, notes, bookmarked: bookmarked ?? session.bookmarked,
+    }).catch(() => {});
+  }
+}
+
 export function useAgentEvents(): UseAgentEventsReturn {
   const [state, dispatch] = useReducer(reducer, initialAgentState);
   const liveSessionIdsRef = useRef<Set<string>>(new Set());
@@ -43,13 +62,8 @@ export function useAgentEvents(): UseAgentEventsReturn {
   useAgentEventSubscription(dispatch, liveSessionIdsRef);
 
   const clearCompleted = useCallback(() => {
-    const completedIds = state.sessions
-      .filter((s) => s.status === 'complete' || s.status === 'error')
-      .map((s) => s.id);
+    deleteCompletedSessions(state.sessions);
     dispatch({ type: 'CLEAR_COMPLETED' });
-    for (const id of completedIds) {
-      window.electronAPI?.sessions?.delete?.(id).catch(() => {});
-    }
   }, [state.sessions]);
 
   const dismiss = useCallback((sessionId: string) => {
@@ -59,30 +73,14 @@ export function useAgentEvents(): UseAgentEventsReturn {
 
   const updateNotes = useCallback((sessionId: string, notes: string, bookmarked?: boolean) => {
     dispatch({ type: 'SET_NOTES', sessionId, notes, bookmarked });
-
-    const session = state.sessions.find((candidate) => candidate.id === sessionId);
-    if (session) {
-      window.electronAPI?.sessions?.save?.({
-        ...session,
-        notes,
-        bookmarked: bookmarked ?? session.bookmarked,
-      }).catch(() => {});
-    }
+    persistSessionNotes(state.sessions, sessionId, notes, bookmarked);
   }, [state.sessions]);
 
-  const activeCount = state.sessions.filter((session) => session.status === 'running').length;
-  const currentSessions = state.sessions.filter((session) => !session.restored);
-  const historicalSessions = state.sessions.filter((session) => session.restored === true);
+  const activeCount = state.sessions.filter((s) => s.status === 'running').length;
+  const currentSessions = state.sessions.filter((s) => !s.restored);
+  const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  return {
-    agents: state.sessions,
-    activeCount,
-    clearCompleted,
-    dismiss,
-    updateNotes,
-    currentSessions,
-    historicalSessions,
-  };
+  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
 }
 
 function usePersistedSessionsLoader(

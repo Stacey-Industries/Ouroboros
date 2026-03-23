@@ -2,7 +2,7 @@
  * useContextSelectionModel.ts — Context selection model with toggle/select/clear actions.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo,useState } from 'react';
 
 export interface ContextSelectionIntent {
   type: string
@@ -36,10 +36,27 @@ function makeKey(groupLabel: string, itemLabel: string): string {
   return `${groupLabel}::${itemLabel}`;
 }
 
+function collectAllKeys(groups: ContextSelectionGroup[]): Set<string> {
+  const allKeys = new Set<string>();
+  for (const group of groups) {
+    for (const item of group.items) {
+      allKeys.add(makeKey(group.label, item.label));
+    }
+  }
+  return allKeys;
+}
+
+function computeSummary(groups: ContextSelectionGroup[], selectedSize: number): ContextSelectionSummary {
+  let totalCount = 0;
+  for (const group of groups) {
+    totalCount += group.items.length;
+  }
+  return { selectedCount: selectedSize, totalCount };
+}
+
 export function useContextSelectionModel(config?: ContextSelectionConfig): ContextSelectionModel {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const groups = config?.groups ?? [];
+  const groups = useMemo(() => config?.groups ?? [], [config?.groups]);
 
   const isSelected = useCallback(
     (groupLabel: string, itemLabel: string): boolean => selected.has(makeKey(groupLabel, itemLabel)),
@@ -51,11 +68,8 @@ export function useContextSelectionModel(config?: ContextSelectionConfig): Conte
       const key = makeKey(groupLabel, itemLabel);
       setSelected((prev) => {
         const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
         return next;
       });
     },
@@ -63,26 +77,12 @@ export function useContextSelectionModel(config?: ContextSelectionConfig): Conte
   );
 
   const selectAll = useCallback((): void => {
-    const allKeys = new Set<string>();
-    for (const group of groups) {
-      for (const item of group.items) {
-        allKeys.add(makeKey(group.label, item.label));
-      }
-    }
-    setSelected(allKeys);
+    setSelected(collectAllKeys(groups));
   }, [groups]);
 
-  const clearAll = useCallback((): void => {
-    setSelected(new Set());
-  }, []);
+  const clearAll = useCallback((): void => setSelected(new Set()), []);
 
-  const summary = useMemo<ContextSelectionSummary>(() => {
-    let totalCount = 0;
-    for (const group of groups) {
-      totalCount += group.items.length;
-    }
-    return { selectedCount: selected.size, totalCount };
-  }, [groups, selected]);
+  const summary = useMemo(() => computeSummary(groups, selected.size), [groups, selected]);
 
   return useMemo<ContextSelectionModel>(
     () => ({ groups, summary, isSelected, toggleItem, selectAll, clearAll }),

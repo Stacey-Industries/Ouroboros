@@ -4,8 +4,8 @@
  * Extracted from FileTreeItem.tsx to reduce complexity.
  */
 
-import type { GitFileStatus } from '../../types/electron';
 import type { HeatLevel } from '../../hooks/useFileHeatMap';
+import type { GitFileStatus } from '../../types/electron';
 
 /** Map git status to a CSS color variable. */
 export function gitStatusColor(status: GitFileStatus | undefined): string | undefined {

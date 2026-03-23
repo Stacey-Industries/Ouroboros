@@ -1,5 +1,5 @@
-import type { ToolCallEvent } from '../AgentMonitor/types';
 import type { SessionMetrics } from '../../hooks/useSessionAnalytics';
+import type { ToolCallEvent } from '../AgentMonitor/types';
 
 export type SortKey =
   | 'startedAt'

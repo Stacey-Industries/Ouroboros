@@ -5,11 +5,12 @@
  */
 
 import React from 'react';
-import { useFileViewerManager } from '../FileViewer';
-import { useIdeToolResponder } from '../../hooks/useIdeToolResponder';
+
 import { useFileTreeDirtySync } from '../../hooks/useFileTreeDirtySync';
-import { getTerminalLines } from '../Terminal/terminalRegistry';
+import { useIdeToolResponder } from '../../hooks/useIdeToolResponder';
+import { useFileViewerManager } from '../FileViewer';
 import { getEditorContent, getEditorSelection } from '../FileViewer/editorRegistry';
+import { getTerminalLines } from '../Terminal/terminalRegistry';
 
 export function IdeToolBridge(): React.ReactElement | null {
   const { openFiles, activeFile } = useFileViewerManager();

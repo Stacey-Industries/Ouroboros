@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
+
 import type { UsageSummary } from '../../types/electron';
 import { UsageModalContent, UsageModalHeader, UsageRangeControls } from './UsageModalSections';
 import { getTimeSince, type TimeRange } from './usageModalUtils';

@@ -3,9 +3,10 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import type { AppConfig } from '../../types/electron';
+
 import { useConfig } from '../../hooks/useConfig';
-import { useTheme, applyFontConfig } from '../../hooks/useTheme';
+import { applyFontConfig,useTheme } from '../../hooks/useTheme';
+import type { AppConfig } from '../../types/electron';
 
 export interface SettingsDraftApi {
   draft: AppConfig | null;

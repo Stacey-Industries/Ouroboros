@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import type { McpRegistryServer } from '../../types/electron';
 
 interface McpStoreServerCardProps {

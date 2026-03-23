@@ -2,9 +2,10 @@
  * ToolCallFeed.tsx — Scrollable list of tool calls for an agent session.
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import type { ToolCallEvent } from './types';
+import React, { memo,useCallback, useEffect, useRef, useState } from 'react';
+
 import { ToolCallRow } from './ToolCallRow';
+import type { ToolCallEvent } from './types';
 
 // ─── Feed header ──────────────────────────────────────────────────────────────
 

@@ -6,26 +6,27 @@
  */
 
 import React from 'react';
+
 import type { IconSpec } from './fileTypeData';
-import { resolveSpec, folderColor } from './fileTypeData';
+import { folderColor,resolveSpec } from './fileTypeData';
 import {
-  DocIcon,
-  TsIcon,
-  JsIcon,
-  PyIcon,
-  JsonIcon,
-  MdIcon,
-  CssIcon,
-  HtmlIcon,
-  YamlIcon,
-  RsIcon,
-  GoIcon,
-  ShIcon,
-  ImgIcon,
   CfgIcon,
-  LockIcon,
-  FolderOpenSvg,
+  CssIcon,
+  DocIcon,
   FolderClosedSvg,
+  FolderOpenSvg,
+  GoIcon,
+  HtmlIcon,
+  ImgIcon,
+  JsIcon,
+  JsonIcon,
+  LockIcon,
+  MdIcon,
+  PyIcon,
+  RsIcon,
+  ShIcon,
+  TsIcon,
+  YamlIcon,
 } from './fileTypeIcons';
 
 type ColorIcon = React.ComponentType<{ color: string }>;

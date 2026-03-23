@@ -104,6 +104,7 @@ export async function stopPtyRecording(
       return { success: true, cancelled: true }
     }
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- result.filePath comes from Electron's showSaveDialog (user-chosen path)
     await fs.writeFile(result.filePath, buildAsciicastContent(recording), 'utf-8')
     return { success: true, filePath: result.filePath }
   } catch (error) {

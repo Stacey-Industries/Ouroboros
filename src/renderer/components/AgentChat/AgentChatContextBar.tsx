@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { PinnedFile } from './useAgentChatContext';
 
 export interface AgentChatContextBarProps {

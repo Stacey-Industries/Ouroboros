@@ -3,10 +3,11 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+
 import type { AppConfig } from '../../types/electron';
-import { useToast } from './useToast';
+import { buttonStyle,SectionLabel } from './settingsStyles';
 import { ToastBanner } from './ToastBanner';
-import { SectionLabel, buttonStyle } from './settingsStyles';
+import { useToast } from './useToast';
 
 interface Props {
   onImport?: (imported: AppConfig) => void;

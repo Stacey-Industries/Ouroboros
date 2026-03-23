@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
 import { resolveTemplate } from '../../utils/templateResolver';
 

@@ -3,6 +3,7 @@
  */
 
 import React, { memo } from 'react';
+
 import { formatDurationShort } from './timelineHelpers';
 
 interface XAxisProps {

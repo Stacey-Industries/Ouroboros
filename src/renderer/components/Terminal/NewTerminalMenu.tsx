@@ -1,12 +1,11 @@
 /**
- * NewTerminalMenu — dropdown shown when clicking the "+" button in the terminal tab bar.
+ * NewTerminalMenu - dropdown shown when clicking the "+" button in the terminal tab bar.
  * Offers Terminal, Claude Code, and Codex options with hover submenus for model selection.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import type { ModelProvider, CodexModelOption } from '../../types/electron'
+import React, { useEffect, useRef, useState } from 'react'
 
-// ─── Model data hooks ────────────────────────────────────────────────────────
+import type { CodexModelOption, ModelProvider } from '../../types/electron'
 
 interface ModelOption {
   value: string
@@ -22,16 +21,18 @@ const ANTHROPIC_MODELS: ModelOption[] = [
 ]
 
 function buildAllModelOptions(providers: ModelProvider[]): ModelOption[] {
-  const providerModels = providers
-    .filter((p) => p.enabled && p.models.length > 0)
-    .flatMap((p) =>
-      p.models.map((m) => ({
-        value: `${p.id}:${m.id}`,
-        label: `${p.name} / ${m.name}`,
-        group: p.name,
-      })),
-    )
-  return [...ANTHROPIC_MODELS, ...providerModels]
+  return [
+    ...ANTHROPIC_MODELS,
+    ...providers
+      .filter((provider) => provider.enabled && provider.models.length > 0)
+      .flatMap((provider) =>
+        provider.models.map((model) => ({
+          value: `${provider.id}:${model.id}`,
+          label: `${provider.name} / ${model.name}`,
+          group: provider.name,
+        })),
+      ),
+  ]
 }
 
 function useClaudeModels(): ModelOption[] {
@@ -42,12 +43,9 @@ function useClaudeModels(): ModelOption[] {
     if (loadedRef.current) return
     if (typeof window === 'undefined' || !('electronAPI' in window)) return
     loadedRef.current = true
-    window.electronAPI.config
-      .get('modelProviders')
-      .then((providers: ModelProvider[]) => {
-        if (providers?.length) setModels(buildAllModelOptions(providers))
-      })
-      .catch(() => {})
+    window.electronAPI.config.get('modelProviders').then((providers: ModelProvider[]) => {
+      if (providers?.length) setModels(buildAllModelOptions(providers))
+    }).catch(() => {})
   }, [])
 
   return models
@@ -67,19 +65,15 @@ function useCodexModels(): CodexModelOption[] {
   return models
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function groupByName(models: ModelOption[]): Map<string, ModelOption[]> {
   const groups = new Map<string, ModelOption[]>()
-  for (const m of models) {
-    const list = groups.get(m.group) ?? []
-    list.push(m)
-    groups.set(m.group, list)
+  for (const model of models) {
+    const list = groups.get(model.group) ?? []
+    list.push(model)
+    groups.set(model.group, list)
   }
   return groups
 }
-
-// ─── Icons ───────────────────────────────────────────────────────────────────
 
 function TerminalIcon(): React.ReactElement {
   return (
@@ -99,29 +93,21 @@ function ChevronRightIcon(): React.ReactElement {
   )
 }
 
-// ─── Submenu components ──────────────────────────────────────────────────────
-
-function ClaudeSubmenu({ models, onSelect }: {
-  models: ModelOption[]
-  onSelect: (value: string) => void
-}): React.ReactElement {
+function ClaudeSubmenu({ models, onSelect }: { models: ModelOption[]; onSelect: (value: string) => void }): React.ReactElement {
   const groups = groupByName(models)
-
   return (
     <div className="absolute left-full top-0 -mt-1 ml-0.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded border border-border-semantic bg-surface-panel shadow-lg py-1">
       {Array.from(groups.entries()).map(([group, items]) => (
         <div key={group}>
-          <div className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted opacity-60">
-            {group}
-          </div>
-          {items.map((m) => (
+          <div className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted opacity-60">{group}</div>
+          {items.map((model) => (
             <button
-              key={m.value}
+              key={model.value}
               role="menuitem"
               className="w-full text-left px-3 py-1 text-[11px] text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100 cursor-pointer"
-              onClick={() => onSelect(m.value)}
+              onClick={() => onSelect(model.value)}
             >
-              {m.label}
+              {model.label}
             </button>
           ))}
         </div>
@@ -130,10 +116,7 @@ function ClaudeSubmenu({ models, onSelect }: {
   )
 }
 
-function CodexSubmenu({ models, onSelect }: {
-  models: CodexModelOption[]
-  onSelect: (value: string) => void
-}): React.ReactElement {
+function CodexSubmenu({ models, onSelect }: { models: CodexModelOption[]; onSelect: (value: string) => void }): React.ReactElement {
   return (
     <div className="absolute left-full top-0 -mt-1 ml-0.5 z-50 min-w-[200px] max-h-[280px] overflow-y-auto rounded border border-border-semantic bg-surface-panel shadow-lg py-1">
       {models.map((model) => (
@@ -151,41 +134,21 @@ function CodexSubmenu({ models, onSelect }: {
   )
 }
 
-// ─── Main menu ───────────────────────────────────────────────────────────────
-
-export interface NewTerminalMenuProps {
-  anchorRef: React.RefObject<HTMLButtonElement | null>
-  onNew: () => void
-  onNewClaude: (providerModel?: string) => void
-  onNewCodex: (model?: string) => void
-  onClose: () => void
-}
-
-const MENU_ITEM =
-  'w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100 cursor-pointer'
-
-export function NewTerminalMenu({
-  anchorRef,
-  onNew,
-  onNewClaude,
-  onNewCodex,
-  onClose,
-}: NewTerminalMenuProps): React.ReactElement {
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [submenu, setSubmenu] = useState<'claude' | 'codex' | null>(null)
+function useMenuPosition(anchorRef: React.RefObject<HTMLButtonElement | null>): { top: number; left: number } | null {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
-  const claudeModels = useClaudeModels()
-  const codexModels = useCodexModels()
-
-  // Position the menu below the anchor button using fixed positioning
-  // (escapes overflow:hidden on the terminal header)
   useEffect(() => {
     if (!anchorRef.current) return
     const rect = anchorRef.current.getBoundingClientRect()
     setPos({ top: rect.bottom + 2, left: rect.left })
   }, [anchorRef])
+  return pos
+}
 
-  // Click outside
+function useMenuDismiss(
+  menuRef: React.RefObject<HTMLDivElement | null>,
+  anchorRef: React.RefObject<HTMLButtonElement | null>,
+  onClose: () => void,
+): void {
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
       const target = e.target as Node
@@ -195,9 +158,8 @@ export function NewTerminalMenu({
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [anchorRef, onClose])
+  }, [anchorRef, menuRef, onClose])
 
-  // Escape key
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') onClose()
@@ -205,100 +167,112 @@ export function NewTerminalMenu({
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
+}
 
-  const handleNew = useCallback(() => {
-    onNew()
-    onClose()
-  }, [onNew, onClose])
+export interface NewTerminalMenuProps {
+  anchorRef: React.RefObject<HTMLButtonElement | null>
+  onNew: () => void
+  onNewClaude: (providerModel?: string) => void
+  onNewCodex: (model?: string) => void
+  onClose: () => void
+}
 
-  const handleClaude = useCallback(() => {
-    onNewClaude()
-    onClose()
-  }, [onNewClaude, onClose])
+const MENU_ITEM = 'w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100 cursor-pointer'
 
-  const handleClaudeModel = useCallback(
-    (model: string) => {
-      onNewClaude(model)
-      onClose()
-    },
-    [onNewClaude, onClose],
-  )
+function MenuRow({ onClick, children }: { onClick: () => void; children: React.ReactNode }): React.ReactElement {
+  return <button role="menuitem" className={MENU_ITEM} onClick={onClick}>{children}</button>
+}
 
-  const handleCodex = useCallback(() => {
-    onNewCodex()
-    onClose()
-  }, [onNewCodex, onClose])
+interface ProviderSectionProps {
+  active: 'claude' | 'codex' | null
+  setActive: React.Dispatch<React.SetStateAction<'claude' | 'codex' | null>>
+  submenuKey: 'claude' | 'codex'
+  label: string
+  iconClassName: string
+  showChevron: boolean
+  onClick: () => void
+  models: ModelOption[] | CodexModelOption[]
+  onSelect: (value: string) => void
+}
 
-  const handleCodexModel = useCallback(
-    (model: string) => {
-      onNewCodex(model)
-      onClose()
-    },
-    [onNewCodex, onClose],
-  )
-
-  if (!pos) return <></>
+function ProviderSection({
+  active,
+  setActive,
+  submenuKey,
+  label,
+  iconClassName,
+  showChevron,
+  onClick,
+  models,
+  onSelect,
+}: ProviderSectionProps): React.ReactElement {
+  const submenu = submenuKey === 'claude'
+    ? <ClaudeSubmenu models={models as ModelOption[]} onSelect={onSelect} />
+    : <CodexSubmenu models={models as CodexModelOption[]} onSelect={onSelect} />
 
   return (
-    <div
-      ref={menuRef}
-      role="menu"
-      className="fixed z-50 min-w-[200px] rounded border border-border-semantic bg-surface-panel shadow-lg py-1"
-      style={{ fontFamily: 'var(--font-ui)', top: pos.top, left: pos.left }}
-    >
-      {/* Plain terminal */}
-      <button role="menuitem" className={MENU_ITEM} onClick={handleNew}>
+    <div className="relative" onMouseEnter={() => setActive(submenuKey)} onMouseLeave={() => setActive(null)}>
+      <MenuRow onClick={onClick}>
+        <span className={iconClassName} style={{ fontSize: '10px', lineHeight: 1 }}>{submenuKey === 'claude' ? '◆' : '◇'}</span>
+        <span>{label}</span>
+        {showChevron && <span className="ml-auto text-text-semantic-muted"><ChevronRightIcon /></span>}
+      </MenuRow>
+      {active === submenuKey && submenu}
+    </div>
+  )
+}
+
+interface NewTerminalMenuPanelProps {
+  menuRef: React.RefObject<HTMLDivElement | null>
+  pos: { top: number; left: number }
+  submenu: 'claude' | 'codex' | null
+  setSubmenu: React.Dispatch<React.SetStateAction<'claude' | 'codex' | null>>
+  claudeModels: ModelOption[]
+  codexModels: CodexModelOption[]
+  onNew: () => void
+  onNewClaude: (providerModel?: string) => void
+  onNewCodex: (model?: string) => void
+}
+
+function NewTerminalMenuPanel({
+  menuRef,
+  pos,
+  submenu,
+  setSubmenu,
+  claudeModels,
+  codexModels,
+  onNew,
+  onNewClaude,
+  onNewCodex,
+}: NewTerminalMenuPanelProps): React.ReactElement {
+  return (
+    <div ref={menuRef} role="menu" className="fixed z-50 min-w-[200px] rounded border border-border-semantic bg-surface-panel shadow-lg py-1" style={{ fontFamily: 'var(--font-ui)', top: pos.top, left: pos.left }}>
+      <MenuRow onClick={onNew}>
         <TerminalIcon />
         <span>Terminal</span>
         <span className="ml-auto text-text-semantic-muted text-[10px] opacity-60">Ctrl+Shift+`</span>
-      </button>
-
+      </MenuRow>
       <div className="h-px bg-border-semantic my-1" />
-
-      {/* Claude Code — click for default, hover for model submenu */}
-      <div
-        className="relative"
-        onMouseEnter={() => setSubmenu('claude')}
-        onMouseLeave={() => setSubmenu(null)}
-      >
-        <button role="menuitem" className={MENU_ITEM} onClick={handleClaude}>
-          <span className="flex-shrink-0 text-interactive-accent" style={{ fontSize: '10px', lineHeight: 1 }}>
-            &#9670;
-          </span>
-          <span>Claude Code</span>
-          <span className="ml-auto text-text-semantic-muted">
-            <ChevronRightIcon />
-          </span>
-        </button>
-        {submenu === 'claude' && (
-          <ClaudeSubmenu models={claudeModels} onSelect={handleClaudeModel} />
-        )}
-      </div>
-
-      {/* Codex — click for default, hover for model submenu */}
-      <div
-        className="relative"
-        onMouseEnter={() => setSubmenu('codex')}
-        onMouseLeave={() => setSubmenu(null)}
-      >
-        <button role="menuitem" className={MENU_ITEM} onClick={handleCodex}>
-          <span
-            className="flex-shrink-0 text-[var(--accent-blue,var(--accent))]"
-            style={{ fontSize: '10px', lineHeight: 1 }}
-          >
-            &#9671;
-          </span>
-          <span>Codex</span>
-          {codexModels.length > 0 && (
-            <span className="ml-auto text-text-semantic-muted">
-              <ChevronRightIcon />
-            </span>
-          )}
-        </button>
-        {submenu === 'codex' && codexModels.length > 0 && (
-          <CodexSubmenu models={codexModels} onSelect={handleCodexModel} />
-        )}
-      </div>
+      <ProviderSection active={submenu} setActive={setSubmenu} submenuKey="claude" label="Claude Code" iconClassName="text-interactive-accent" showChevron onClick={onNewClaude} models={claudeModels} onSelect={onNewClaude} />
+      <ProviderSection active={submenu} setActive={setSubmenu} submenuKey="codex" label="Codex" iconClassName="text-[var(--accent-blue,var(--accent))]" showChevron={codexModels.length > 0} onClick={onNewCodex} models={codexModels} onSelect={onNewCodex} />
     </div>
   )
+}
+
+export function NewTerminalMenu({
+  anchorRef,
+  onNew,
+  onNewClaude,
+  onNewCodex,
+  onClose,
+}: NewTerminalMenuProps): React.ReactElement | null {
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [submenu, setSubmenu] = useState<'claude' | 'codex' | null>(null)
+  const pos = useMenuPosition(anchorRef)
+  const claudeModels = useClaudeModels()
+  const codexModels = useCodexModels()
+  useMenuDismiss(menuRef, anchorRef, onClose)
+
+  if (!pos) return null
+  return <NewTerminalMenuPanel menuRef={menuRef} pos={pos} submenu={submenu} setSubmenu={setSubmenu} claudeModels={claudeModels} codexModels={codexModels} onNew={onNew} onNewClaude={onNewClaude} onNewCodex={onNewCodex} />
 }

@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+
 import { useToastContext } from '../../contexts/ToastContext';
 import {
   BranchIcon,
   DROPDOWN_STYLE,
   SEARCH_INPUT_STYLE,
+  setElementBackground,
   StatusBarToggleButton,
   TRUNCATE_STYLE,
-  setElementBackground,
   useBranches,
   useDismissOnOutsideInteraction,
 } from './StatusBarControls.shared';

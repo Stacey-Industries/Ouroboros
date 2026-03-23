@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
+
+import { useTheme } from '../../hooks/useTheme';
 import type { Theme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
-import { useTheme } from '../../hooks/useTheme';
 import {
   BackgroundGradientSection,
   CustomCSSSection,

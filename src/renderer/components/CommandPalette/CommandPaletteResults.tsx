@@ -1,7 +1,8 @@
 import React from 'react';
+
 import { CommandItem } from './CommandItem';
-import { CategoryHeader } from './PaletteOverlay';
 import { categoryLabel, groupByCategory } from './commandSearch';
+import { CategoryHeader } from './PaletteOverlay';
 import type { Command, CommandMatch } from './types';
 
 const listStyle: React.CSSProperties = {

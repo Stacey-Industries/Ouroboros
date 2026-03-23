@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useReducer } from 'react';
-import type { DiffReviewState } from './types';
+
 import type { DiffReviewActions } from './diffReviewState';
 import {
   diffReviewReducer,
@@ -7,6 +7,7 @@ import {
   useReviewLifecycleActions,
   useSingleHunkActions,
 } from './diffReviewState';
+import type { DiffReviewState } from './types';
 
 export interface DiffReviewContextValue extends DiffReviewActions {
   state: DiffReviewState | null;

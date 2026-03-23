@@ -8,8 +8,9 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { useAgentEvents } from '../hooks/useAgentEvents';
+
 import type { UseAgentEventsReturn } from '../hooks/useAgentEvents';
+import { useAgentEvents } from '../hooks/useAgentEvents';
 
 const AgentEventsContext = createContext<UseAgentEventsReturn | null>(null);
 

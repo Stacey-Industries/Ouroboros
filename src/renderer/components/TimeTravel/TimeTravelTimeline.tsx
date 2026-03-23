@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { WorkspaceSnapshot } from '../../types/electron';
 import {
   formatFullDate,

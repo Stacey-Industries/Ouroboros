@@ -1,4 +1,5 @@
 import { Terminal } from '@xterm/xterm'
+
 import type { TerminalSetupLifecycleContext } from './useTerminalSetup.shared'
 
 type CompletionKind = 'cmd' | 'dir' | 'file'

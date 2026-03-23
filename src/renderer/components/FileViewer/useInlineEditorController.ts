@@ -1,8 +1,10 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { type MutableRefObject,useEffect, useRef } from 'react';
+
 import type { LspDiagnostic } from '../../types/electron';
 import { registerEditor, unregisterEditor } from './editorRegistry';
+import type { InlineEditorProps } from './InlineEditor';
 import {
   createEditorExtensions,
   createHighlightExtension,
@@ -16,7 +18,6 @@ import {
   hasLspApi,
   normalizeFilePath,
 } from './InlineEditor.cm';
-import type { InlineEditorProps } from './InlineEditor';
 
 interface EditorSetup {
   saveKeymap: Extension;

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import type { AgentSession } from './types';
+
 import type { NotificationSettings } from '../../types/electron';
 import { buildCompletionNotification } from './notificationBuilder';
+import type { AgentSession } from './types';
 
 type ToastFn = (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
 

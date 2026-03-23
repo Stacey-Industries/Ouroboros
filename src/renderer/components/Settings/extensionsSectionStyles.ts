@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+
 import { buttonStyle, smallButtonStyle } from './settingsStyles';
 
 const STATUS_COLORS = {

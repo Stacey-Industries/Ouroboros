@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useState } from 'react';
-import type { BufferExcerpt } from '../../types/electron';
 import type { BundledTheme } from 'shiki';
+
+import type { BufferExcerpt } from '../../types/electron';
 import { MultiBufferExcerptHeader } from './MultiBufferExcerptHeader';
 import {
   getExcerptSlice,

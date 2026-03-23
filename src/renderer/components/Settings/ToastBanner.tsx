@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import type { ToastState } from './useToast';
 
 interface ToastBannerProps {

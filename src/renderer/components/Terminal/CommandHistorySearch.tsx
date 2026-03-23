@@ -4,7 +4,7 @@
  * Renders a bottom-anchored panel with a search input and filtered command list.
  */
 
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useEffect,useRef, useState } from 'react'
 
 interface CommandSearchProps {
   commands: string[]

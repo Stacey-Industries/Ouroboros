@@ -1,12 +1,13 @@
 import React from 'react';
-import { SearchOverlay } from './SearchOverlay';
-import { RootSection } from './RootSection';
-import { PinnedSection } from './PinnedSection';
-import { StagingArea } from './StagingArea';
-import { GitFilteredView } from './GitStatusFilter';
+
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
 import type { DetailedGitStatus } from '../../hooks/useGitStatusDetailed';
 import type { TreeFilter } from './fileTreeStore';
+import { GitFilteredView } from './GitStatusFilter';
+import { PinnedSection } from './PinnedSection';
+import { RootSection } from './RootSection';
+import { SearchOverlay } from './SearchOverlay';
+import { StagingArea } from './StagingArea';
 
 export interface FileTreeBodyProps {
   roots: string[];
@@ -78,56 +79,57 @@ function RootSections({
   );
 }
 
-export function FileTreeBody({ query, roots, activeFilePath, bookmarks, expandedRoots, extraIgnorePatterns, onFileSelect, onFileOpen, onToggleRoot, onRemoveRoot, onSearchSelect, onUnpin, getHeatLevel, projectRoot, gitDetailedStatus, gitIsRepo, gitRefresh, gitFilter }: FileTreeBodyProps): React.ReactElement {
-  const isFiltered = gitFilter != null && gitFilter !== 'all';
+type NormalTreeViewProps = Omit<FileTreeBodyProps, 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'>;
+
+function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
+  return (
+    <>
+      <PinnedSection bookmarks={p.bookmarks} activeFilePath={p.activeFilePath} onFileSelect={p.onFileSelect} onUnpin={p.onUnpin} />
+      <RootSections
+        roots={p.roots}
+        expandedRoots={p.expandedRoots}
+        activeFilePath={p.activeFilePath}
+        onFileSelect={p.onFileSelect}
+        onFileOpen={p.onFileOpen}
+        onToggleRoot={p.onToggleRoot}
+        onRemoveRoot={p.onRemoveRoot}
+        bookmarks={p.bookmarks}
+        extraIgnorePatterns={p.extraIgnorePatterns}
+        getHeatLevel={p.getHeatLevel}
+      />
+      {p.query.trim().length > 0 && (
+        <SearchOverlay roots={p.roots} query={p.query} activeFilePath={p.activeFilePath} onFileSelect={p.onSearchSelect} />
+      )}
+    </>
+  );
+}
+
+function GitStagingArea({ projectRoot, gitDetailedStatus, gitIsRepo, gitRefresh, onFileSelect }: Pick<FileTreeBodyProps, 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'onFileSelect'>): React.ReactElement | null {
+  if (!gitIsRepo || !projectRoot || !gitDetailedStatus || !gitRefresh) return null;
+  return <StagingArea projectRoot={projectRoot} status={gitDetailedStatus} onRefresh={gitRefresh} onFileSelect={onFileSelect} />;
+}
+
+export function FileTreeBody(p: FileTreeBodyProps): React.ReactElement {
+  const isFiltered = p.gitFilter != null && p.gitFilter !== 'all';
 
   return (
     <div style={treeBodyStyle}>
-      {/* Staging area at the very top when in a git repo */}
-      {gitIsRepo && projectRoot && gitDetailedStatus && gitRefresh && (
-        <StagingArea
-          projectRoot={projectRoot}
-          status={gitDetailedStatus}
-          onRefresh={gitRefresh}
-          onFileSelect={onFileSelect}
-        />
-      )}
-      {/* When a git filter is active, show flat filtered list instead of tree */}
-      {isFiltered && projectRoot && gitDetailedStatus ? (
-        <GitFilteredView
-          status={gitDetailedStatus}
-          projectRoot={projectRoot}
-          onFileSelect={onFileSelect}
-        />
+      <GitStagingArea
+        projectRoot={p.projectRoot}
+        gitDetailedStatus={p.gitDetailedStatus}
+        gitIsRepo={p.gitIsRepo}
+        gitRefresh={p.gitRefresh}
+        onFileSelect={p.onFileSelect}
+      />
+      {isFiltered && p.projectRoot && p.gitDetailedStatus ? (
+        <GitFilteredView status={p.gitDetailedStatus} projectRoot={p.projectRoot} onFileSelect={p.onFileSelect} />
       ) : (
-        <>
-          <PinnedSection
-            bookmarks={bookmarks}
-            activeFilePath={activeFilePath}
-            onFileSelect={onFileSelect}
-            onUnpin={onUnpin}
-          />
-          <RootSections
-            roots={roots}
-            expandedRoots={expandedRoots}
-            activeFilePath={activeFilePath}
-            onFileSelect={onFileSelect}
-            onFileOpen={onFileOpen}
-            onToggleRoot={onToggleRoot}
-            onRemoveRoot={onRemoveRoot}
-            bookmarks={bookmarks}
-            extraIgnorePatterns={extraIgnorePatterns}
-            getHeatLevel={getHeatLevel}
-          />
-          {query.trim().length > 0 && (
-            <SearchOverlay
-              roots={roots}
-              query={query}
-              activeFilePath={activeFilePath}
-              onFileSelect={onSearchSelect}
-            />
-          )}
-        </>
+        <NormalTreeView
+          query={p.query} roots={p.roots} activeFilePath={p.activeFilePath}
+          bookmarks={p.bookmarks} expandedRoots={p.expandedRoots} extraIgnorePatterns={p.extraIgnorePatterns}
+          onFileSelect={p.onFileSelect} onFileOpen={p.onFileOpen} onToggleRoot={p.onToggleRoot}
+          onRemoveRoot={p.onRemoveRoot} onSearchSelect={p.onSearchSelect} onUnpin={p.onUnpin} getHeatLevel={p.getHeatLevel}
+        />
       )}
     </div>
   );

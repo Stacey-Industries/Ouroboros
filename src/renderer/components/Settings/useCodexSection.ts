@@ -59,27 +59,23 @@ export const CODEX_APPROVAL_POLICIES: CodexOption<CodexCliSettings['approvalPoli
   { value: 'never', label: 'Never' },
 ];
 
-export function useCodexSectionModel(
-  draft: AppConfig,
-  onChange: ConfigChangeHandler,
-): CodexSectionModel {
-  const rawSettings = draft.codexCliSettings ?? DEFAULT_CODEX_SETTINGS;
-  const settings: CodexCliSettings = {
+function buildCodexSettings(rawSettings: CodexCliSettings | undefined): CodexCliSettings {
+  const settings = rawSettings ?? DEFAULT_CODEX_SETTINGS;
+  return {
     ...DEFAULT_CODEX_SETTINGS,
-    ...rawSettings,
-    reasoningEffort: rawSettings.reasoningEffort || DEFAULT_CODEX_SETTINGS.reasoningEffort,
-    sandbox: rawSettings.sandbox || DEFAULT_CODEX_SETTINGS.sandbox,
-    approvalPolicy: rawSettings.approvalPolicy || DEFAULT_CODEX_SETTINGS.approvalPolicy,
-    addDirs: rawSettings.addDirs ?? DEFAULT_CODEX_SETTINGS.addDirs,
+    ...settings,
+    reasoningEffort: settings.reasoningEffort || DEFAULT_CODEX_SETTINGS.reasoningEffort,
+    sandbox: settings.sandbox || DEFAULT_CODEX_SETTINGS.sandbox,
+    approvalPolicy: settings.approvalPolicy || DEFAULT_CODEX_SETTINGS.approvalPolicy,
+    addDirs: settings.addDirs ?? DEFAULT_CODEX_SETTINGS.addDirs,
   };
+}
+
+function useCodexModelOptions(): CodexModelOption[] {
   const [modelOptions, setModelOptions] = useState<CodexModelOption[]>([]);
-  const updateSetting: CodexSettingUpdater = (key, value) =>
-    updateCodexSetting(settings, onChange, key, value);
-  const directoryState = useCodexDirectoryState(settings, updateSetting);
 
   useEffect(() => {
     let cancelled = false;
-
     window.electronAPI.codex.listModels().then((models) => {
       if (!cancelled) {
         setModelOptions(models);
@@ -87,11 +83,23 @@ export function useCodexSectionModel(
     }).catch((error) => {
       console.error('[settings] Failed to load Codex models:', error);
     });
-
     return () => {
       cancelled = true;
     };
   }, []);
+
+  return modelOptions;
+}
+
+export function useCodexSectionModel(
+  draft: AppConfig,
+  onChange: ConfigChangeHandler,
+): CodexSectionModel {
+  const settings = buildCodexSettings(draft.codexCliSettings);
+  const modelOptions = useCodexModelOptions();
+  const updateSetting: CodexSettingUpdater = (key, value) =>
+    updateCodexSetting(settings, onChange, key, value);
+  const directoryState = useCodexDirectoryState(settings, updateSetting);
 
   return {
     canAddDir: directoryState.canAddDir,

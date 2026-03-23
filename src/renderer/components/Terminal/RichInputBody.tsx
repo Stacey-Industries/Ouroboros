@@ -1,10 +1,10 @@
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { drawSelection, EditorView, keymap, lineNumbers, placeholder as cmPlaceholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 export interface RichInputProps { sessionId: string; onSubmit: (text: string) => void; onCancel: () => void; visible: boolean; shellType?: 'bash' | 'zsh' | 'powershell' | 'cmd'; }
 
 type HistoryDirection = 'up' | 'down';

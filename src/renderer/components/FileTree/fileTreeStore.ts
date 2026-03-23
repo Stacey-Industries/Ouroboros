@@ -28,15 +28,15 @@
 
 import { enableMapSet } from 'immer';
 import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 
 // Must be called before any immer-based store uses Map/Set
 enableMapSet();
-import type { TreeNode } from './FileTreeItem';
 import type { GitFileStatus } from '../../types/electron';
+import type { TreeNode } from './FileTreeItem';
+import { createFileTreeActions } from './fileTreeStoreActionsImpl';
 import type { EditState } from './fileTreeUtils';
-import { flattenVisibleTree } from './fileTreeUtils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -145,19 +145,26 @@ export interface FileTreeState {
   toggleNestExpansion: (path: string) => void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Initial state ────────────────────────────────────────────────────────────
 
-/**
- * Get all visible (expanded) tree nodes across all roots, flattened in display order.
- * Used for shift-click range selection and selectAll.
- */
-function getAllFlattenedNodes(state: FileTreeState): TreeNode[] {
-  const result: TreeNode[] = [];
-  for (const [, nodes] of state.roots) {
-    result.push(...flattenVisibleTree(nodes));
-  }
-  return result;
-}
+const INITIAL_STATE = {
+  roots: new Map(),
+  loadedDirs: new Set(),
+  gitStatus: new Map(),
+  selectedPaths: new Set(),
+  focusedPath: null,
+  lastSelectedPath: null,
+  expandedPaths: new Set(),
+  editState: null,
+  searchQuery: '',
+  filter: 'all' as TreeFilter,
+  sortMode: 'name' as SortMode,
+  bookmarks: [] as string[],
+  diagnostics: new Map(),
+  dirtyFiles: new Set(),
+  nestingEnabled: false,
+  nestExpandedPaths: new Set(),
+};
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
@@ -167,222 +174,7 @@ function getAllFlattenedNodes(state: FileTreeState): TreeNode[] {
  */
 export const useFileTreeStore = create<FileTreeState>()(
   persist(
-    immer((set) => ({
-      // ─── Initial state ─────────────────────────────────────────────────
-      roots: new Map(),
-      loadedDirs: new Set(),
-      gitStatus: new Map(),
-      selectedPaths: new Set(),
-      focusedPath: null,
-      lastSelectedPath: null,
-      expandedPaths: new Set(),
-      editState: null,
-      searchQuery: '',
-      filter: 'all' as TreeFilter,
-      sortMode: 'name' as SortMode,
-      bookmarks: [],
-      diagnostics: new Map(),
-      dirtyFiles: new Set(),
-      nestingEnabled: false,
-      nestExpandedPaths: new Set(),
-
-      // ─── Actions ───────────────────────────────────────────────────────
-
-      toggleExpand: (path: string) => {
-        set((state) => {
-          if (state.expandedPaths.has(path)) {
-            state.expandedPaths.delete(path);
-          } else {
-            state.expandedPaths.add(path);
-          }
-        });
-      },
-
-      ensureExpanded: (path: string) => {
-        set((state) => {
-          state.expandedPaths.add(path);
-        });
-      },
-
-      select: (path: string, modifiers: { ctrl: boolean; shift: boolean }) => {
-        set((state) => {
-          if (modifiers.shift && state.lastSelectedPath) {
-            // Shift+Click: range select on flattened visible list
-            const allNodes = getAllFlattenedNodes(state);
-            const lastIdx = allNodes.findIndex((n) => n.path === state.lastSelectedPath);
-            const clickIdx = allNodes.findIndex((n) => n.path === path);
-
-            if (lastIdx === -1 || clickIdx === -1) {
-              // Fallback to single select if anchor not visible
-              state.selectedPaths.clear();
-              state.selectedPaths.add(path);
-            } else {
-              const start = Math.min(lastIdx, clickIdx);
-              const end = Math.max(lastIdx, clickIdx);
-              // If not holding ctrl, clear first
-              if (!modifiers.ctrl) {
-                state.selectedPaths.clear();
-              }
-              for (let i = start; i <= end; i++) {
-                state.selectedPaths.add(allNodes[i].path);
-              }
-            }
-            // Don't update lastSelectedPath on shift-click to allow extending range
-          } else if (modifiers.ctrl) {
-            // Ctrl+Click: toggle individual item
-            if (state.selectedPaths.has(path)) {
-              state.selectedPaths.delete(path);
-            } else {
-              state.selectedPaths.add(path);
-            }
-            state.lastSelectedPath = path;
-          } else {
-            // Plain click: clear selection, select only clicked item
-            state.selectedPaths.clear();
-            state.selectedPaths.add(path);
-            state.lastSelectedPath = path;
-          }
-          state.focusedPath = path;
-        });
-      },
-
-      setFocus: (path: string | null) => {
-        set((state) => {
-          state.focusedPath = path;
-        });
-      },
-
-      setSearchQuery: (query: string) => {
-        set((state) => {
-          state.searchQuery = query;
-        });
-      },
-
-      setFilter: (filter: TreeFilter) => {
-        set((state) => {
-          state.filter = filter;
-        });
-      },
-
-      setSortMode: (mode: SortMode) => {
-        set((state) => {
-          state.sortMode = mode;
-        });
-      },
-
-      setEditState: (editState: EditState | null) => {
-        set((state) => {
-          state.editState = editState;
-        });
-      },
-
-      updateGitStatus: (status: Map<string, GitFileStatus>) => {
-        set((state) => {
-          state.gitStatus = status;
-        });
-      },
-
-      toggleBookmark: (path: string) => {
-        set((state) => {
-          const idx = state.bookmarks.indexOf(path);
-          if (idx >= 0) {
-            state.bookmarks.splice(idx, 1);
-          } else {
-            state.bookmarks.push(path);
-          }
-        });
-      },
-
-      setBookmarks: (bookmarks: string[]) => {
-        set((state) => {
-          state.bookmarks = bookmarks;
-        });
-      },
-
-      setRootNodes: (rootPath: string, nodes: TreeNode[]) => {
-        set((state) => {
-          state.roots.set(rootPath, nodes);
-        });
-      },
-
-      markDirLoaded: (dirPath: string) => {
-        set((state) => {
-          state.loadedDirs.add(dirPath);
-        });
-      },
-
-      clearLoadedDirs: () => {
-        set((state) => {
-          state.loadedDirs.clear();
-        });
-      },
-
-      selectAll: () => {
-        set((state) => {
-          const allNodes = getAllFlattenedNodes(state);
-          state.selectedPaths.clear();
-          for (const node of allNodes) {
-            state.selectedPaths.add(node.path);
-          }
-        });
-      },
-
-      toggleSelection: (path: string) => {
-        set((state) => {
-          if (state.selectedPaths.has(path)) {
-            state.selectedPaths.delete(path);
-          } else {
-            state.selectedPaths.add(path);
-          }
-        });
-      },
-
-      clearSelection: () => {
-        set((state) => {
-          state.selectedPaths.clear();
-        });
-      },
-
-      // ─── Diagnostics (4A) ───────────────────────────────────────────
-
-      updateDiagnostics: (diagnostics: Map<string, DiagnosticSeverity>) => {
-        set((state) => {
-          state.diagnostics = diagnostics;
-        });
-      },
-
-      // ─── Dirty files (4C) ───────────────────────────────────────────
-
-      markDirty: (path: string) => {
-        set((state) => {
-          state.dirtyFiles.add(path);
-        });
-      },
-
-      markClean: (path: string) => {
-        set((state) => {
-          state.dirtyFiles.delete(path);
-        });
-      },
-
-      // ─── File nesting (4B) ──────────────────────────────────────────
-
-      toggleNesting: () => {
-        set((state) => {
-          state.nestingEnabled = !state.nestingEnabled;
-        });
-      },
-
-      toggleNestExpansion: (path: string) => {
-        set((state) => {
-          if (state.nestExpandedPaths.has(path)) {
-            state.nestExpandedPaths.delete(path);
-          } else {
-            state.nestExpandedPaths.add(path);
-          }
-        });
-      },
-    })),
+    immer((set) => ({ ...INITIAL_STATE, ...createFileTreeActions(set) })),
     {
       name: 'file-tree-store',
       /**
@@ -429,99 +221,19 @@ export const useFileTreeStore = create<FileTreeState>()(
 );
 
 // ─── Selector hooks ──────────────────────────────────────────────────────────
-
-/** Read the search query from the store */
-export function useSearchQuery(): string {
-  return useFileTreeStore((s) => s.searchQuery);
-}
-
-/** Read the expanded paths set from the store */
-export function useExpandedPaths(): Set<string> {
-  return useFileTreeStore((s) => s.expandedPaths);
-}
-
-/** Check if a specific path is expanded */
-export function useIsExpanded(path: string): boolean {
-  return useFileTreeStore((s) => s.expandedPaths.has(path));
-}
-
-/** Get the current filter */
-export function useTreeFilter(): TreeFilter {
-  return useFileTreeStore((s) => s.filter);
-}
-
-/** Get the current sort mode */
-export function useSortMode(): SortMode {
-  return useFileTreeStore((s) => s.sortMode);
-}
-
-/** Get the selected paths set */
-export function useSelectedPaths(): Set<string> {
-  return useFileTreeStore((s) => s.selectedPaths);
-}
-
-/** Get the focused path */
-export function useFocusedPath(): string | null {
-  return useFileTreeStore((s) => s.focusedPath);
-}
-
-/** Get the selection count */
-export function useSelectionCount(): number {
-  return useFileTreeStore((s) => s.selectedPaths.size);
-}
-
-// ─── Diagnostic selectors (4A) ───────────────────────────────────────────────
-
-const SEVERITY_PRIORITY: Record<DiagnosticSeverity, number> = {
-  error: 4,
-  warning: 3,
-  info: 2,
-  hint: 1,
-};
-
-/** Get the diagnostic severity for a specific file path */
-export function useDiagnosticForPath(path: string): DiagnosticSeverity | undefined {
-  return useFileTreeStore((s) => s.diagnostics.get(path));
-}
-
-/**
- * Get the worst diagnostic severity among all children of a directory.
- * Scans the diagnostics map for paths that start with `dirPath/`.
- */
-export function useDirectoryDiagnostic(dirPath: string): DiagnosticSeverity | undefined {
-  return useFileTreeStore((s) => {
-    const prefix = dirPath.replace(/\\/g, '/') + '/';
-    let worst: DiagnosticSeverity | undefined;
-    let worstP = 0;
-    for (const [filePath, severity] of s.diagnostics) {
-      const normalizedPath = filePath.replace(/\\/g, '/');
-      if (normalizedPath.startsWith(prefix)) {
-        const p = SEVERITY_PRIORITY[severity] ?? 0;
-        if (p > worstP) {
-          worstP = p;
-          worst = severity;
-        }
-      }
-    }
-    return worst;
-  });
-}
-
-// ─── Dirty file selectors (4C) ───────────────────────────────────────────────
-
-/** Check if a specific file has unsaved changes */
-export function useIsDirty(path: string): boolean {
-  return useFileTreeStore((s) => s.dirtyFiles.has(path));
-}
-
-/** Get the total count of dirty (unsaved) files */
-export function useDirtyFileCount(): number {
-  return useFileTreeStore((s) => s.dirtyFiles.size);
-}
-
-// ─── Nesting selectors (4B) ──────────────────────────────────────────────────
-
-/** Check if file nesting is enabled */
-export function useNestingEnabled(): boolean {
-  return useFileTreeStore((s) => s.nestingEnabled);
-}
+// Re-exported from fileTreeStoreSelectors.ts for backward compatibility.
+export {
+  useDiagnosticForPath,
+  useDirectoryDiagnostic,
+  useDirtyFileCount,
+  useExpandedPaths,
+  useFocusedPath,
+  useIsDirty,
+  useIsExpanded,
+  useNestingEnabled,
+  useSearchQuery,
+  useSelectedPaths,
+  useSelectionCount,
+  useSortMode,
+  useTreeFilter,
+} from './fileTreeStoreSelectors';

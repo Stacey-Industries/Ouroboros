@@ -6,10 +6,11 @@
  */
 
 import React from 'react';
-import { AppLayout } from './AppLayout';
-import type { AppLayoutProps } from './AppLayout';
-import { useFileViewerManager } from '../FileViewer';
+
 import { useGitBranch } from '../../hooks/useGitBranch';
+import { useFileViewerManager } from '../FileViewer';
+import type { AppLayoutProps } from './AppLayout';
+import { AppLayout } from './AppLayout';
 
 function useStatusBarProps(): {
   activeFilePath: string | null;

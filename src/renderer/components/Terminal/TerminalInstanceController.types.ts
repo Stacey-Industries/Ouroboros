@@ -1,3 +1,8 @@
+import type { FitAddon } from '@xterm/addon-fit'
+import type { ProgressAddon } from '@xterm/addon-progress'
+import type { SearchAddon } from '@xterm/addon-search'
+import type { SerializeAddon } from '@xterm/addon-serialize'
+import type { Terminal } from '@xterm/xterm'
 import type {
   Dispatch,
   MouseEvent,
@@ -5,13 +10,9 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react'
-import type { FitAddon } from '@xterm/addon-fit'
-import type { SearchAddon } from '@xterm/addon-search'
-import type { ProgressAddon } from '@xterm/addon-progress'
-import type { SerializeAddon } from '@xterm/addon-serialize'
-import type { Terminal } from '@xterm/xterm'
-import type { ShellIntegrationAddon } from './shellIntegrationAddon'
+
 import type { SelectionTooltipState } from './SelectionTooltip'
+import type { ShellIntegrationAddon } from './shellIntegrationAddon'
 import type { TerminalContextMenuState } from './TerminalContextMenu'
 import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
 

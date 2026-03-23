@@ -1,48 +1,26 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { TreeNode } from './FileTreeItem';
-import { INITIAL_CONTEXT_MENU } from './ContextMenu';
+import { useCallback, useEffect, useState } from 'react';
+
 import type { ContextMenuState } from './ContextMenu';
-import {
-  removeNodeFromTree,
-  flattenVisibleTree,
-  pathJoin,
-  parentDir,
-} from './fileTreeUtils';
-import { applyNesting } from './fileNestingRules';
+import { INITIAL_CONTEXT_MENU } from './ContextMenu';
+import type { TreeNode } from './FileTreeItem';
+import { useFileTreeStore } from './fileTreeStore';
 import type { EditState } from './fileTreeUtils';
 import {
-  handleRenameOp,
-  handleNewFileOp,
-  handleNewFolderOp,
+  flattenVisibleTree,
+  parentDir,
+  pathJoin,
+  removeNodeFromTree,
+} from './fileTreeUtils';
+import {
   handleExternalDrop,
   handleInternalDrop,
+  handleNewFileOp,
+  handleNewFolderOp,
+  handleRenameOp,
 } from './rootSectionHandlers';
 import { handleTreeKeyDown } from './rootSectionKeys';
 import type { RefreshDir, SetRootNodes } from './useRootTreeState';
-import { useFileTreeStore } from './fileTreeStore';
-
-/**
- * Like flattenVisibleTree but also includes nested children (from file nesting)
- * when the parent has isNestExpanded set.
- */
-function flattenVisibleTreeWithNesting(nodes: TreeNode[]): TreeNode[] {
-  const result: TreeNode[] = [];
-  for (const node of nodes) {
-    result.push(node);
-    // Directory expansion
-    if (node.isDirectory && node.isExpanded && node.children) {
-      result.push(...flattenVisibleTreeWithNesting(node.children));
-    }
-    // File nesting expansion
-    if (node.hasNestedChildren && node.isNestExpanded && node.nestedChildren) {
-      for (const child of node.nestedChildren) {
-        result.push({ ...child, depth: node.depth + 1 });
-      }
-    }
-  }
-  return result;
-}
 
 type ToastFn = (message: string, type: 'success' | 'error') => void;
 type SetFocusIndex = Dispatch<SetStateAction<number>>;
@@ -75,40 +53,6 @@ interface KeyboardDeps {
   handleNewFolder: (dir: string) => void;
   editState: EditState | null;
   root: string;
-}
-
-function buildDisplayItems(flatRows: TreeNode[], editState: EditState | null): Array<{ node: TreeNode }> {
-  const base = flatRows.map((node) => ({ node }));
-  if (!editState || editState.mode === 'rename') {
-    return base;
-  }
-
-  const index = base.findIndex((item) => item.node.path === editState.targetPath);
-
-  const placeholder: TreeNode = {
-    name: '',
-    path: '__new_item_placeholder__',
-    relativePath: '',
-    isDirectory: editState.mode === 'newFolder',
-    depth: index === -1 ? 0 : base[index].node.depth + 1,
-    isExpanded: false,
-    isLoading: false,
-  };
-
-  // index === -1 means the target is the root directory itself (not in flatRows),
-  // so insert the placeholder at the top of the list.
-  if (index === -1) {
-    return [{ node: placeholder }, ...base];
-  }
-
-  return [...base.slice(0, index + 1), { node: placeholder }, ...base.slice(index + 1)];
-}
-
-function toggleSelectedPath(selectedPaths: Set<string>, targetPath: string): Set<string> {
-  const next = new Set(selectedPaths);
-  if (next.has(targetPath)) next.delete(targetPath);
-  else next.add(targetPath);
-  return next;
 }
 
 function createRenameState(node: TreeNode): EditState {
@@ -264,7 +208,45 @@ export function useDropHandlers(root: string, toast: ToastFn, refreshDir: Refres
   return { handleDrop, handleRootDrop };
 }
 
-export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRootNodes, pushUndo: (items: import('./useFileTreeUndo').UndoItem[]) => void) {
+type UndoItem = import('./useFileTreeUndo').UndoItem;
+
+async function softDeletePaths(
+  pathsToDelete: string[],
+  nameMap: Map<string, string>,
+  toast: ToastFn,
+): Promise<{ deleted: string[]; undoItems: UndoItem[] }> {
+  const undoItems: UndoItem[] = [];
+  const deleted: string[] = [];
+  for (const filePath of pathsToDelete) {
+    const name = nameMap.get(filePath) ?? (filePath.replace(/[\\/][^\\/]+$/, '') || filePath);
+    const result = await window.electronAPI.files.softDelete?.(filePath);
+    if (result?.success && result.tempPath) {
+      deleted.push(filePath);
+      undoItems.push({ tempPath: result.tempPath, originalPath: filePath, name });
+    } else {
+      toast(`Failed to delete: ${result?.error ?? 'unknown error'}`, 'error');
+    }
+  }
+  return { deleted, undoItems };
+}
+
+function useDeleteFocused(toast: ToastFn, setRootNodes: SetRootNodes, pushUndo: (items: UndoItem[]) => void) {
+  return useCallback(async (node: TreeNode, selectedPaths: Set<string>) => {
+    const combinedPaths = selectedPaths.size > 0 ? new Set([...selectedPaths, node.path]) : new Set([node.path]);
+    const pathsToDelete = Array.from(combinedPaths);
+    const nameMap = new Map([[node.path, node.name]]);
+    const label = pathsToDelete.length > 1 ? `${pathsToDelete.length} items` : `"${node.name}"`;
+    if (!window.confirm(`Delete ${label}? (Ctrl+Z to undo)`)) return;
+    const { deleted, undoItems } = await softDeletePaths(pathsToDelete, nameMap, toast);
+    if (deleted.length > 0) {
+      setRootNodes((prev) => deleted.reduce((tree, p) => removeNodeFromTree(tree, p), prev));
+      pushUndo(undoItems);
+      toast(`Deleted ${deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`} — Ctrl+Z to undo`, 'success');
+    }
+  }, [pushUndo, setRootNodes, toast]);
+}
+
+export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRootNodes, pushUndo: (items: UndoItem[]) => void) {
   const handleDeleted = useCallback((node: TreeNode) => {
     setRootNodes((prev) => removeNodeFromTree(prev, node.path));
   }, [setRootNodes]);
@@ -273,46 +255,17 @@ export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRo
     setRootNodes((prev) => paths.reduce((tree, path) => removeNodeFromTree(tree, path), prev));
   }, [setRootNodes]);
 
-  const handleDeleteFocused = useCallback(async (node: TreeNode, selectedPaths: Set<string>) => {
-    const combinedPaths = selectedPaths.size > 0
-      ? new Set([...selectedPaths, node.path])
-      : new Set([node.path]);
-    const pathsToDelete = Array.from(combinedPaths);
-    const nameMap = new Map<string, string>();
-    nameMap.set(node.path, node.name);
-    const label = pathsToDelete.length > 1 ? `${pathsToDelete.length} items` : `"${node.name}"`;
-    if (!window.confirm(`Delete ${label}? (Ctrl+Z to undo)`)) return;
-
-    const undoItems: import('./useFileTreeUndo').UndoItem[] = [];
-    const deleted: string[] = [];
-    for (const filePath of pathsToDelete) {
-      const name = nameMap.get(filePath) ?? (filePath.replace(/[\\/][^\\/]+$/, '') || filePath);
-      const result = await window.electronAPI.files.softDelete?.(filePath);
-      if (result?.success && result.tempPath) {
-        deleted.push(filePath);
-        undoItems.push({ tempPath: result.tempPath, originalPath: filePath, name });
-      } else {
-        toast(`Failed to delete: ${result?.error ?? 'unknown error'}`, 'error');
-      }
-    }
-
-    if (deleted.length > 0) {
-      setRootNodes((prev) => deleted.reduce((tree, p) => removeNodeFromTree(tree, p), prev));
-      pushUndo(undoItems);
-      toast(`Deleted ${deleted.length > 1 ? `${deleted.length} items` : `"${node.name}"`} — Ctrl+Z to undo`, 'success');
-    }
-  }, [pushUndo, setRootNodes, toast]);
+  const handleDeleteFocused = useDeleteFocused(toast, setRootNodes, pushUndo);
 
   const handleBookmarkToggle = useCallback(async (node: TreeNode) => {
     const current = (await window.electronAPI.config.get('bookmarks') as string[]) ?? [];
     const isBookmarked = current.includes(node.path);
     const updated = isBookmarked ? current.filter((path) => path !== node.path) : [...current, node.path];
     const result = await window.electronAPI.config.set('bookmarks', updated);
-    if (result.success) {
-      toast(isBookmarked ? `Removed "${node.name}" from Pinned` : `Pinned "${node.name}"`, 'success');
-    } else {
-      toast(`Bookmark failed: ${result.error}`, 'error');
-    }
+    toast(result.success
+      ? (isBookmarked ? `Removed "${node.name}" from Pinned` : `Pinned "${node.name}"`)
+      : `Bookmark failed: ${result.error}`,
+      result.success ? 'success' : 'error');
   }, [toast]);
 
   const handleStage = useCallback(async (node: TreeNode) => {
@@ -328,41 +281,7 @@ export function useMenuActions(root: string, toast: ToastFn, setRootNodes: SetRo
   return { handleDeleted, handleMultiDeleted, handleDeleteFocused, handleBookmarkToggle, handleStage, handleUnstage };
 }
 
-/**
- * Apply nestExpandedPaths to tree nodes, setting isNestExpanded on matching paths.
- */
-function applyNestExpansionState(nodes: TreeNode[], expandedPaths: Set<string>): TreeNode[] {
-  return nodes.map((node) => {
-    let updated = node;
-    if (node.hasNestedChildren) {
-      const isExpanded = expandedPaths.has(node.path);
-      if (node.isNestExpanded !== isExpanded) {
-        updated = { ...node, isNestExpanded: isExpanded };
-      }
-    }
-    if (updated.isDirectory && updated.children) {
-      const newChildren = applyNestExpansionState(updated.children, expandedPaths);
-      if (newChildren !== updated.children) {
-        updated = { ...updated, children: newChildren };
-      }
-    }
-    return updated;
-  });
-}
-
-export function useDisplayItems(rootNodes: TreeNode[], editState: EditState | null): Array<{ node: TreeNode }> {
-  const nestingEnabled = useFileTreeStore((s) => s.nestingEnabled);
-  const nestExpandedPaths = useFileTreeStore((s) => s.nestExpandedPaths);
-
-  const processedNodes = useMemo(() => {
-    if (!nestingEnabled) return rootNodes;
-    const nested = applyNesting(rootNodes);
-    return applyNestExpansionState(nested, nestExpandedPaths);
-  }, [rootNodes, nestingEnabled, nestExpandedPaths]);
-
-  const flatRows = useMemo(() => flattenVisibleTreeWithNesting(processedNodes), [processedNodes]);
-  return useMemo(() => buildDisplayItems(flatRows, editState), [editState, flatRows]);
-}
+export { useDisplayItems } from './useRootDisplayItems';
 
 export function useFocusClamp(displayItemCount: number, setFocusIndex: SetFocusIndex): void {
   useEffect(() => {

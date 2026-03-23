@@ -12,7 +12,7 @@
  * - Project root is used to resolve relative paths but is not required.
  */
 
-import type { Terminal, ILinkProvider, ILink } from '@xterm/xterm'
+import type { ILink,ILinkProvider, Terminal } from '@xterm/xterm'
 
 // ── File extension whitelist ─────────────────────────────────────────────────
 // Only match paths ending with known source/config file extensions.

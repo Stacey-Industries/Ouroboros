@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
-import { useContextBuilderModel, type ContextBuilderModelOptions } from './useContextBuilderModel';
+
 import { ContextBuilderView } from './ContextBuilderView';
+import { type ContextBuilderModelOptions,useContextBuilderModel } from './useContextBuilderModel';
 
 export interface ContextBuilderProps {
   contextSelection?: ContextBuilderModelOptions['contextSelection'];

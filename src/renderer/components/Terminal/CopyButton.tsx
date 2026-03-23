@@ -5,8 +5,8 @@
  * Copies the current selection, or the last output block if nothing is selected.
  */
 
-import React, { useState } from 'react'
 import type { Terminal } from '@xterm/xterm'
+import React, { useState } from 'react'
 
 interface CopyButtonProps {
   terminal: Terminal | null

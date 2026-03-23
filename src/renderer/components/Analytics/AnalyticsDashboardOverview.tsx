@@ -1,4 +1,5 @@
 import React, { memo, useMemo } from 'react';
+
 import type { AggregateMetrics, SessionMetrics, ToolDistributionEntry } from '../../hooks/useSessionAnalytics';
 import {
   formatPercent,

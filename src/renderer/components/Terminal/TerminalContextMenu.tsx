@@ -2,8 +2,9 @@
  * TerminalContextMenu — right-click context menu for terminal instances.
  */
 
-import React, { useEffect, useRef } from 'react'
 import type { Terminal } from '@xterm/xterm'
+import React, { useEffect, useRef } from 'react'
+
 import { writeChunkedPaste } from './terminalPasteHelpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────

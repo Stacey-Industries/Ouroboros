@@ -1,11 +1,25 @@
-import type { ClaudeCliSettings, CodexCliSettings } from '../config'
-import type { AgentChatContextBehavior, AgentChatDefaultView, AgentChatSettings } from './types'
-import type { OrchestrationProvider, VerificationProfileName } from '../orchestration/types'
+import type { ClaudeCliSettings, CodexCliSettings } from '../config';
+import type { OrchestrationProvider, VerificationProfileName } from '../orchestration/types';
+import type { AgentChatContextBehavior, AgentChatDefaultView, AgentChatSettings } from './types';
 
-export const AGENT_CHAT_PROVIDERS = ['anthropic-api', 'claude-code', 'codex'] as const satisfies readonly OrchestrationProvider[]
-export const AGENT_CHAT_VERIFICATION_PROFILES = ['fast', 'default', 'full'] as const satisfies readonly VerificationProfileName[]
-export const AGENT_CHAT_CONTEXT_BEHAVIORS = ['auto', 'manual'] as const satisfies readonly AgentChatContextBehavior[]
-export const AGENT_CHAT_DEFAULT_VIEWS = ['chat', 'monitor'] as const satisfies readonly AgentChatDefaultView[]
+export const AGENT_CHAT_PROVIDERS = [
+  'anthropic-api',
+  'claude-code',
+  'codex',
+] as const satisfies readonly OrchestrationProvider[];
+export const AGENT_CHAT_VERIFICATION_PROFILES = [
+  'fast',
+  'default',
+  'full',
+] as const satisfies readonly VerificationProfileName[];
+export const AGENT_CHAT_CONTEXT_BEHAVIORS = [
+  'auto',
+  'manual',
+] as const satisfies readonly AgentChatContextBehavior[];
+export const AGENT_CHAT_DEFAULT_VIEWS = [
+  'chat',
+  'monitor',
+] as const satisfies readonly AgentChatDefaultView[];
 
 export const AGENT_CHAT_SETTINGS_DEFAULTS: AgentChatSettings = {
   defaultProvider: 'claude-code',
@@ -14,7 +28,7 @@ export const AGENT_CHAT_SETTINGS_DEFAULTS: AgentChatSettings = {
   showAdvancedControls: false,
   openDetailsOnFailure: false,
   defaultView: 'chat',
-}
+};
 
 export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   permissionMode: 'default',
@@ -29,7 +43,7 @@ export const CLAUDE_CLI_SETTINGS_FALLBACK: ClaudeCliSettings = {
   chrome: false,
   worktree: false,
   dangerouslySkipPermissions: false,
-}
+};
 
 export const CODEX_CLI_SETTINGS_FALLBACK: CodexCliSettings = {
   model: '',
@@ -41,59 +55,85 @@ export const CODEX_CLI_SETTINGS_FALLBACK: CodexCliSettings = {
   search: false,
   skipGitRepoCheck: false,
   dangerouslyBypassApprovalsAndSandbox: false,
-}
+};
 
 export interface AgentChatSettingsResolverSource {
-  agentChatSettings?: Partial<AgentChatSettings> | null
-  claudeCliSettings?: Partial<ClaudeCliSettings> | null
-  codexCliSettings?: Partial<CodexCliSettings> | null
+  agentChatSettings?: Partial<AgentChatSettings> | null;
+  claudeCliSettings?: Partial<ClaudeCliSettings> | null;
+  codexCliSettings?: Partial<CodexCliSettings> | null;
 }
 
 export interface ResolvedAgentChatSettings extends AgentChatSettings {
-  claudeCliSettings: ClaudeCliSettings
-  codexCliSettings: CodexCliSettings
+  claudeCliSettings: ClaudeCliSettings;
+  codexCliSettings: CodexCliSettings;
 }
 
-type ClaudeCliStringSettings = Pick<ClaudeCliSettings, 'permissionMode' | 'model' | 'effort' | 'appendSystemPrompt' | 'allowedTools' | 'disallowedTools'>
-type ClaudeCliBooleanSettings = Pick<ClaudeCliSettings, 'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions'>
-type CodexCliStringSettings = Pick<CodexCliSettings, 'model' | 'reasoningEffort' | 'profile'>
-type CodexCliBooleanSettings = Pick<CodexCliSettings, 'search' | 'skipGitRepoCheck' | 'dangerouslyBypassApprovalsAndSandbox'>
+type ClaudeCliStringSettings = Pick<
+  ClaudeCliSettings,
+  'permissionMode' | 'model' | 'effort' | 'appendSystemPrompt' | 'allowedTools' | 'disallowedTools'
+>;
+type ClaudeCliBooleanSettings = Pick<
+  ClaudeCliSettings,
+  'verbose' | 'chrome' | 'worktree' | 'dangerouslySkipPermissions'
+>;
+type CodexCliStringSettings = Pick<CodexCliSettings, 'model' | 'reasoningEffort' | 'profile'>;
+type CodexCliBooleanSettings = Pick<
+  CodexCliSettings,
+  'search' | 'skipGitRepoCheck' | 'dangerouslyBypassApprovalsAndSandbox'
+>;
 
 function resolveBoolean(value: boolean | undefined, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 function resolveNumber(value: number | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function resolveString(value: string | undefined, fallback: string): string {
-  return typeof value === 'string' ? value : fallback
+  return typeof value === 'string' ? value : fallback;
 }
 
 function resolveStringArray(value: string[] | undefined, fallback: string[]): string[] {
   if (!Array.isArray(value)) {
-    return [...fallback]
+    return [...fallback];
   }
-  return value.filter((entry): entry is string => typeof entry === 'string')
+  return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
-function resolveChoice<T extends string>(value: string | undefined, choices: readonly T[], fallback: T): T {
-  return typeof value === 'string' && choices.includes(value as T) ? (value as T) : fallback
+function resolveChoice<T extends string>(
+  value: string | undefined,
+  choices: readonly T[],
+  fallback: T,
+): T {
+  return typeof value === 'string' && choices.includes(value as T) ? (value as T) : fallback;
 }
 
-function resolveClaudeCliStringSettings(settings?: Partial<ClaudeCliSettings> | null): ClaudeCliStringSettings {
+function resolveClaudeCliStringSettings(
+  settings?: Partial<ClaudeCliSettings> | null,
+): ClaudeCliStringSettings {
   return {
-    permissionMode: resolveString(settings?.permissionMode, CLAUDE_CLI_SETTINGS_FALLBACK.permissionMode),
+    permissionMode: resolveString(
+      settings?.permissionMode,
+      CLAUDE_CLI_SETTINGS_FALLBACK.permissionMode,
+    ),
     model: resolveString(settings?.model, CLAUDE_CLI_SETTINGS_FALLBACK.model),
     effort: resolveString(settings?.effort, CLAUDE_CLI_SETTINGS_FALLBACK.effort),
-    appendSystemPrompt: resolveString(settings?.appendSystemPrompt, CLAUDE_CLI_SETTINGS_FALLBACK.appendSystemPrompt),
+    appendSystemPrompt: resolveString(
+      settings?.appendSystemPrompt,
+      CLAUDE_CLI_SETTINGS_FALLBACK.appendSystemPrompt,
+    ),
     allowedTools: resolveString(settings?.allowedTools, CLAUDE_CLI_SETTINGS_FALLBACK.allowedTools),
-    disallowedTools: resolveString(settings?.disallowedTools, CLAUDE_CLI_SETTINGS_FALLBACK.disallowedTools),
-  }
+    disallowedTools: resolveString(
+      settings?.disallowedTools,
+      CLAUDE_CLI_SETTINGS_FALLBACK.disallowedTools,
+    ),
+  };
 }
 
-function resolveClaudeCliBooleanSettings(settings?: Partial<ClaudeCliSettings> | null): ClaudeCliBooleanSettings {
+function resolveClaudeCliBooleanSettings(
+  settings?: Partial<ClaudeCliSettings> | null,
+): ClaudeCliBooleanSettings {
   return {
     verbose: resolveBoolean(settings?.verbose, CLAUDE_CLI_SETTINGS_FALLBACK.verbose),
     chrome: resolveBoolean(settings?.chrome, CLAUDE_CLI_SETTINGS_FALLBACK.chrome),
@@ -102,38 +142,52 @@ function resolveClaudeCliBooleanSettings(settings?: Partial<ClaudeCliSettings> |
       settings?.dangerouslySkipPermissions,
       CLAUDE_CLI_SETTINGS_FALLBACK.dangerouslySkipPermissions,
     ),
-  }
+  };
 }
 
-export function resolveClaudeCliSettings(settings?: Partial<ClaudeCliSettings> | null): ClaudeCliSettings {
+export function resolveClaudeCliSettings(
+  settings?: Partial<ClaudeCliSettings> | null,
+): ClaudeCliSettings {
   return {
     ...resolveClaudeCliStringSettings(settings),
     maxBudgetUsd: resolveNumber(settings?.maxBudgetUsd, CLAUDE_CLI_SETTINGS_FALLBACK.maxBudgetUsd),
     addDirs: resolveStringArray(settings?.addDirs, CLAUDE_CLI_SETTINGS_FALLBACK.addDirs),
     ...resolveClaudeCliBooleanSettings(settings),
-  }
+  };
 }
 
-function resolveCodexCliStringSettings(settings?: Partial<CodexCliSettings> | null): CodexCliStringSettings {
+function resolveCodexCliStringSettings(
+  settings?: Partial<CodexCliSettings> | null,
+): CodexCliStringSettings {
   return {
     model: resolveString(settings?.model, CODEX_CLI_SETTINGS_FALLBACK.model),
-    reasoningEffort: resolveString(settings?.reasoningEffort, CODEX_CLI_SETTINGS_FALLBACK.reasoningEffort),
+    reasoningEffort: resolveString(
+      settings?.reasoningEffort,
+      CODEX_CLI_SETTINGS_FALLBACK.reasoningEffort,
+    ),
     profile: resolveString(settings?.profile, CODEX_CLI_SETTINGS_FALLBACK.profile),
-  }
+  };
 }
 
-function resolveCodexCliBooleanSettings(settings?: Partial<CodexCliSettings> | null): CodexCliBooleanSettings {
+function resolveCodexCliBooleanSettings(
+  settings?: Partial<CodexCliSettings> | null,
+): CodexCliBooleanSettings {
   return {
     search: resolveBoolean(settings?.search, CODEX_CLI_SETTINGS_FALLBACK.search),
-    skipGitRepoCheck: resolveBoolean(settings?.skipGitRepoCheck, CODEX_CLI_SETTINGS_FALLBACK.skipGitRepoCheck),
+    skipGitRepoCheck: resolveBoolean(
+      settings?.skipGitRepoCheck,
+      CODEX_CLI_SETTINGS_FALLBACK.skipGitRepoCheck,
+    ),
     dangerouslyBypassApprovalsAndSandbox: resolveBoolean(
       settings?.dangerouslyBypassApprovalsAndSandbox,
       CODEX_CLI_SETTINGS_FALLBACK.dangerouslyBypassApprovalsAndSandbox,
     ),
-  }
+  };
 }
 
-export function resolveCodexCliSettings(settings?: Partial<CodexCliSettings> | null): CodexCliSettings {
+export function resolveCodexCliSettings(
+  settings?: Partial<CodexCliSettings> | null,
+): CodexCliSettings {
   return {
     ...resolveCodexCliStringSettings(settings),
     sandbox: resolveChoice(
@@ -148,14 +202,20 @@ export function resolveCodexCliSettings(settings?: Partial<CodexCliSettings> | n
     ),
     addDirs: resolveStringArray(settings?.addDirs, CODEX_CLI_SETTINGS_FALLBACK.addDirs),
     ...resolveCodexCliBooleanSettings(settings),
-  }
+  };
 }
 
-export function resolveAgentChatSettings(source: AgentChatSettingsResolverSource = {}): ResolvedAgentChatSettings {
-  const settings = source.agentChatSettings
+export function resolveAgentChatSettings(
+  source: AgentChatSettingsResolverSource = {},
+): ResolvedAgentChatSettings {
+  const settings = source.agentChatSettings;
 
   return {
-    defaultProvider: resolveChoice(settings?.defaultProvider, AGENT_CHAT_PROVIDERS, AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider),
+    defaultProvider: resolveChoice(
+      settings?.defaultProvider,
+      AGENT_CHAT_PROVIDERS,
+      AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider,
+    ),
     defaultVerificationProfile: resolveChoice(
       settings?.defaultVerificationProfile,
       AGENT_CHAT_VERIFICATION_PROFILES,
@@ -166,10 +226,20 @@ export function resolveAgentChatSettings(source: AgentChatSettingsResolverSource
       AGENT_CHAT_CONTEXT_BEHAVIORS,
       AGENT_CHAT_SETTINGS_DEFAULTS.contextBehavior,
     ),
-    showAdvancedControls: resolveBoolean(settings?.showAdvancedControls, AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls),
-    openDetailsOnFailure: resolveBoolean(settings?.openDetailsOnFailure, AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure),
-    defaultView: resolveChoice(settings?.defaultView, AGENT_CHAT_DEFAULT_VIEWS, AGENT_CHAT_SETTINGS_DEFAULTS.defaultView),
+    showAdvancedControls: resolveBoolean(
+      settings?.showAdvancedControls,
+      AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls,
+    ),
+    openDetailsOnFailure: resolveBoolean(
+      settings?.openDetailsOnFailure,
+      AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure,
+    ),
+    defaultView: resolveChoice(
+      settings?.defaultView,
+      AGENT_CHAT_DEFAULT_VIEWS,
+      AGENT_CHAT_SETTINGS_DEFAULTS.defaultView,
+    ),
     claudeCliSettings: resolveClaudeCliSettings(source.claudeCliSettings),
     codexCliSettings: resolveCodexCliSettings(source.codexCliSettings),
-  }
+  };
 }

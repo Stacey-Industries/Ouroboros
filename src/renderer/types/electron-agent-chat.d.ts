@@ -1,9 +1,6 @@
 import type { AgentChatAPI as MainAgentChatAPI } from '../../main/agentChat/types'
 
 export type {
-  SessionMemoryEntry,
-  ImageAttachment,
-  ImageMimeType,
   AgentChatBranchInfo,
   AgentChatContentBlock,
   AgentChatContextBehavior,
@@ -38,6 +35,9 @@ export type {
   AgentChatThreadStatusSnapshot,
   AgentChatThreadUpdatedEvent,
   AgentChatVerificationPreview,
+  ImageAttachment,
+  ImageMimeType,
+  SessionMemoryEntry,
 } from '../../main/agentChat/types'
 
 export type AgentChatAPI = MainAgentChatAPI

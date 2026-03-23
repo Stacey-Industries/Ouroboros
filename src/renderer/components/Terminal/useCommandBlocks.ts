@@ -3,6 +3,7 @@
  */
 
 import type { Terminal } from '@xterm/xterm'
+
 import { useCommandBlocksController } from './useCommandBlocksController'
 
 export interface CommandBlock {

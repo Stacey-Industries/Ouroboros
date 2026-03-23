@@ -5,7 +5,7 @@
  * to avoid duplication with the main process's usageReader.ts.
  */
 
-import { getPricing, detectPricingKey } from '@shared/pricing';
+import { detectPricingKey,getPricing } from '@shared/pricing';
 
 // Re-export detectPricingKey so existing consumers don't break
 export { detectPricingKey };

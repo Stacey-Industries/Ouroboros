@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { MentionItem, MentionType } from './MentionAutocomplete';
 
 export interface MentionChipProps {

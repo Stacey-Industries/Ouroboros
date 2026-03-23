@@ -3,8 +3,9 @@
  */
 
 import React, { memo } from 'react';
-import type { ToolCallEvent } from './types';
+
 import { ToolCallRowHeader } from './ToolCallRowHeader';
+import type { ToolCallEvent } from './types';
 
 interface ToolCallRowProps {
   call: ToolCallEvent;

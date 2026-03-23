@@ -141,6 +141,35 @@ function clearTimerForId(
   }
 }
 
+function pushNotification(
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationEntry[]>>,
+  entry: NotificationEntry,
+): void {
+  setNotifications((prev) => {
+    const next = [entry, ...prev];
+    return next.length > MAX_NOTIFICATION_HISTORY ? next.slice(0, MAX_NOTIFICATION_HISTORY) : next;
+  });
+}
+
+function updateProgressEntry({
+  setNotifications,
+  id,
+  update,
+  summary,
+  type = 'success',
+}: {
+  setNotifications: React.Dispatch<React.SetStateAction<NotificationEntry[]>>
+  id: string
+  update: { completed?: number; total?: number; currentItem?: string }
+  summary?: string
+  type?: ToastType
+}): void {
+  setNotifications((prev) => prev.map((n) => {
+    if (n.id !== id || !n.progress) return n;
+    return { ...n, type, read: false, progress: { ...n.progress, ...(update.completed !== undefined ? { completed: update.completed } : {}), ...(update.total !== undefined ? { total: update.total } : {}), ...(update.currentItem !== undefined ? { currentItem: update.currentItem } : {}), ...(summary ? { summary } : {}) } };
+  }));
+}
+
 export function useToast(): UseToastReturn {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
@@ -153,132 +182,35 @@ export function useToast(): UseToastReturn {
 
   const scheduleAutoDismiss = useCallback((id: string, duration: number) => {
     if (duration <= 0) return;
-    const timer = setTimeout(() => {
+    timersRef.current.set(id, setTimeout(() => {
       timersRef.current.delete(id);
       startDismissAnimation(setToasts, id, timersRef.current);
-    }, duration);
-    timersRef.current.set(id, timer);
+    }, duration));
   }, []);
+  const addNotification = useCallback((id: string, message: string, type: ToastType, action?: { label: string; onClick: () => void }) => pushNotification(setNotifications, { id, message, type, createdAt: Date.now(), read: false, action }), []);
 
-  const addNotification = useCallback(
-    (id: string, message: string, type: ToastType, action?: { label: string; onClick: () => void }) => {
-      const entry: NotificationEntry = {
-        id, message, type, createdAt: Date.now(), read: false, action,
-      };
-      setNotifications((prev) => {
-        const next = [entry, ...prev];
-        return next.length > MAX_NOTIFICATION_HISTORY
-          ? next.slice(0, MAX_NOTIFICATION_HISTORY)
-          : next;
-      });
-    },
-    [],
-  );
-
-  const addToast = useCallback(
-    (message: string, type: ToastType = 'info', options?: ToastOptions): string => {
-      const id = generateToastId();
-      const effectiveDuration = options?.persistent ? 0 : (options?.duration ?? DEFAULT_DURATION);
-      const item = createToastItem(id, message, type, { ...options, duration: effectiveDuration });
-      setToasts((prev) => applyFifoOverflow([...prev, item], timersRef.current));
-      scheduleAutoDismiss(id, item.duration);
-      // Also store in persistent notification history
-      addNotification(id, message, type, options?.action);
-      return id;
-    },
-    [scheduleAutoDismiss, addNotification],
-  );
-
-  const dismiss = useCallback((id: string) => {
-    clearTimerForId(timersRef.current, id);
-    startDismissAnimation(setToasts, id, timersRef.current);
-  }, []);
-
-  const dismissAll = useCallback(() => {
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current.clear();
-    setToasts((prev) => prev.map((t) => ({ ...t, dismissing: true })));
-    const dismissAllTimer = setTimeout(() => {
-      timersRef.current.delete('dismiss-all');
-      setToasts([]);
-    }, DISMISS_ANIMATION_MS);
-    timersRef.current.set('dismiss-all', dismissAllTimer);
-  }, []);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => (n.read ? n : { ...n, read: true })));
-  }, []);
-
-  const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
-
-  const clearAllNotifications = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  const startProgress = useCallback((title: string, options?: { total?: number }): string => {
+  const addToast = useCallback((message: string, type: ToastType = 'info', options?: ToastOptions): string => {
     const id = generateToastId();
-    const entry: NotificationEntry = {
-      id,
-      message: title,
-      type: 'info',
-      createdAt: Date.now(),
-      read: false,
-      progress: {
-        status: 'active',
-        completed: 0,
-        total: options?.total ?? 0,
-      },
-    };
-    setNotifications((prev) => {
-      const next = [entry, ...prev];
-      return next.length > MAX_NOTIFICATION_HISTORY ? next.slice(0, MAX_NOTIFICATION_HISTORY) : next;
-    });
+    const effectiveDuration = options?.persistent ? 0 : (options?.duration ?? DEFAULT_DURATION);
+    const item = createToastItem(id, message, type, { ...options, duration: effectiveDuration });
+    setToasts((prev) => applyFifoOverflow([...prev, item], timersRef.current));
+    scheduleAutoDismiss(id, item.duration);
+    addNotification(id, message, type, options?.action);
     return id;
+  }, [scheduleAutoDismiss, addNotification]);
+  const dismiss = useCallback((id: string) => { clearTimerForId(timersRef.current, id); startDismissAnimation(setToasts, id, timersRef.current); }, []);
+  const dismissAll = useCallback(() => {
+    timersRef.current.forEach(clearTimeout); timersRef.current.clear();
+    setToasts((prev) => prev.map((t) => ({ ...t, dismissing: true })));
+    timersRef.current.set('dismiss-all', setTimeout(() => { timersRef.current.delete('dismiss-all'); setToasts([]); }, DISMISS_ANIMATION_MS));
   }, []);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const markAllRead = useCallback(() => setNotifications((prev) => prev.map((n) => (n.read ? n : { ...n, read: true }))), []);
+  const removeNotification = useCallback((id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id)), []);
+  const clearAllNotifications = useCallback(() => setNotifications([]), []);
+  const startProgress = useCallback((title: string, options?: { total?: number }): string => { const id = generateToastId(); pushNotification(setNotifications, { id, message: title, type: 'info', createdAt: Date.now(), read: false, progress: { status: 'active', completed: 0, total: options?.total ?? 0 } }); return id; }, []);
+  const updateProgress = useCallback((id: string, update: { completed?: number; total?: number; currentItem?: string }): void => updateProgressEntry({ setNotifications, id, update }), []);
+  const completeProgress = useCallback((id: string, summary: string, type: ToastType = 'success'): void => updateProgressEntry({ setNotifications, id, update: {}, summary, type }), []);
 
-  const updateProgress = useCallback((id: string, update: { completed?: number; total?: number; currentItem?: string }): void => {
-    setNotifications((prev) =>
-      prev.map((n) => {
-        if (n.id !== id || !n.progress) return n;
-        return {
-          ...n,
-          read: false,
-          progress: {
-            ...n.progress,
-            ...(update.completed !== undefined ? { completed: update.completed } : {}),
-            ...(update.total !== undefined ? { total: update.total } : {}),
-            ...(update.currentItem !== undefined ? { currentItem: update.currentItem } : {}),
-          },
-        };
-      }),
-    );
-  }, []);
-
-  const completeProgress = useCallback((id: string, summary: string, type: ToastType = 'success'): void => {
-    setNotifications((prev) =>
-      prev.map((n) => {
-        if (n.id !== id || !n.progress) return n;
-        return {
-          ...n,
-          type,
-          read: false,
-          progress: {
-            ...n.progress,
-            status: type === 'error' ? 'error' : 'completed',
-            summary,
-          },
-        };
-      }),
-    );
-  }, []);
-
-  return {
-    toasts, toast: addToast, dismiss, dismissAll,
-    notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications,
-    startProgress, updateProgress, completeProgress,
-  };
+  return { toasts, toast: addToast, dismiss, dismissAll, notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications, startProgress, updateProgress, completeProgress };
 }

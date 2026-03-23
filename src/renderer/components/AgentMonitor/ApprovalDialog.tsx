@@ -3,6 +3,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+
 import type { ApprovalRequest } from '../../types/electron';
 import { ApprovalDialogCard } from './ApprovalDialogCard';
 

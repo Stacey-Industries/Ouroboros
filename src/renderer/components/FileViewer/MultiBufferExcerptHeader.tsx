@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { BufferExcerpt } from '../../types/electron';
 
 const HEADER_STYLE = {

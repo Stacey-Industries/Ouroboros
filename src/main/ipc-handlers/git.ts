@@ -1,350 +1,685 @@
-import { execFile } from 'child_process'
-import { app, BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron'
-import fs from 'fs/promises'
-import path from 'path'
+import { execFile } from 'child_process';
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
+import fs from 'fs/promises';
+import path from 'path';
 
-import { getGraphController } from '../codebaseGraph/graphController'
-import { getContextLayerController } from '../contextLayer/contextLayerController'
-import { dispatchActivationEvent } from '../extensions'
-import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat'
-import { assertPathAllowed } from './pathSecurity'
-type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
-type DiffStatus = 'modified' | 'added' | 'deleted' | 'renamed'
-type DiffLineKind = 'added' | 'modified' | 'deleted'
-type GitResponse<T extends object> = ({ success: true } & T) | { success: false; error: string }
-interface ParsedHunk { header: string; oldStart: number; oldCount: number; newStart: number; newCount: number; lines: string[]; rawPatch: string }
-interface ParsedFileDiff { filePath: string; relativePath: string; status: DiffStatus; hunks: ParsedHunk[]; oldPath?: string }
-interface PorcelainStatusEntry { indexStatus: string; workTreeStatus: string; filePath: string }
-interface StatusSnapshot { files: Record<string, string>; staged: Record<string, string>; unstaged: Record<string, string> }
-interface DiffLine { line: number; kind: DiffLineKind }
-interface GitLogEntry { hash: string; author: string; email: string; date: string; message: string }
-interface ChangedFile { path: string; status: string; additions: number; deletions: number }
-interface BlameInfo { author: string; date: number; summary: string }
-interface BlameLine extends BlameInfo { hash: string; line: number }
-interface BlameMetadata extends Partial<BlameInfo> { nextIndex: number }
-interface DiffMeta { relativePath: string; status: DiffStatus; oldPath?: string; diffHeader: string; startIndex: number }
-const MB = 1024 * 1024
-const GIT_TIMEOUT_MS = 30_000
-const HUNK_HEADER_RE = /@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
-const DIFF_LINE_HEADER_RE = /^-(\d+)(?:,(\d+))?\s\+(\d+)(?:,(\d+))?\s@@/
+import { getGraphController } from '../codebaseGraph/graphController';
+import { getContextLayerController } from '../contextLayer/contextLayerController';
+import { dispatchActivationEvent } from '../extensions';
+import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat';
+import { parseBlameOutput, restoreSnapshot } from './gitBlameSnapshot';
+import { applyPatch, stagePatch } from './gitPatch';
+import { assertPathAllowed } from './pathSecurity';
+type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
+type DiffStatus = 'modified' | 'added' | 'deleted' | 'renamed';
+type DiffLineKind = 'added' | 'modified' | 'deleted';
+type GitResponse<T extends object> = ({ success: true } & T) | { success: false; error: string };
+interface ParsedHunk {
+  header: string;
+  oldStart: number;
+  oldCount: number;
+  newStart: number;
+  newCount: number;
+  lines: string[];
+  rawPatch: string;
+}
+interface ParsedFileDiff {
+  filePath: string;
+  relativePath: string;
+  status: DiffStatus;
+  hunks: ParsedHunk[];
+  oldPath?: string;
+}
+interface PorcelainStatusEntry {
+  indexStatus: string;
+  workTreeStatus: string;
+  filePath: string;
+}
+interface StatusSnapshot {
+  files: Map<string, string>;
+  staged: Map<string, string>;
+  unstaged: Map<string, string>;
+}
+interface DiffLine {
+  line: number;
+  kind: DiffLineKind;
+}
+interface GitLogEntry {
+  hash: string;
+  author: string;
+  email: string;
+  date: string;
+  message: string;
+}
+interface ChangedFile {
+  path: string;
+  status: string;
+  additions: number;
+  deletions: number;
+}
+interface DiffMeta {
+  relativePath: string;
+  status: DiffStatus;
+  oldPath?: string;
+  diffHeader: string;
+  startIndex: number;
+}
+const MB = 1024 * 1024;
+const GIT_TIMEOUT_MS = 30_000;
 function gitErrorMessage(err: unknown): string {
-  if (!(err instanceof Error)) return String(err)
-  return (err as Error & { stderr?: string }).stderr?.trim() || err.message
+  if (!(err instanceof Error)) return String(err);
+  return (err as Error & { stderr?: string }).stderr?.trim() || err.message;
 }
 function errorMessage(err: unknown, useGitMessage: boolean = false): string {
-  return useGitMessage ? gitErrorMessage(err) : err instanceof Error ? err.message : String(err)
+  return useGitMessage ? gitErrorMessage(err) : err instanceof Error ? err.message : String(err);
 }
-function gitExec(args: string[], opts: { cwd: string; maxBuffer?: number }): Promise<{ stdout: string; stderr: string }> {
+function gitExec(
+  args: string[],
+  opts: { cwd: string; maxBuffer?: number },
+): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    execFile('git', args, { ...opts, timeout: GIT_TIMEOUT_MS, maxBuffer: opts.maxBuffer ?? MB }, (err, stdout, stderr) => err ? reject(err) : resolve({ stdout, stderr }))
-  })
+    execFile(
+      'git',
+      args,
+      { ...opts, timeout: GIT_TIMEOUT_MS, maxBuffer: opts.maxBuffer ?? MB },
+      (err, stdout, stderr) => (err ? reject(err) : resolve({ stdout, stderr })),
+    );
+  });
 }
 async function gitStdout(root: string, args: string[], maxBuffer: number = MB): Promise<string> {
-  return (await gitExec(args, { cwd: root, maxBuffer })).stdout
+  return (await gitExec(args, { cwd: root, maxBuffer })).stdout;
 }
 async function gitTrimmed(root: string, args: string[], maxBuffer?: number): Promise<string> {
-  return (await gitStdout(root, args, maxBuffer)).trim()
+  return (await gitStdout(root, args, maxBuffer)).trim();
 }
-async function respond<T extends object>(work: () => Promise<T>, options: { fallback?: T; gitError?: boolean } = {}): Promise<GitResponse<T>> {
-  try { return { success: true, ...(await work()) } }
-  catch (err: unknown) { return options.fallback !== undefined ? { success: true, ...options.fallback } : { success: false, error: errorMessage(err, options.gitError) } }
+async function respond<T extends object>(
+  work: () => Promise<T>,
+  options: { fallback?: T; gitError?: boolean } = {},
+): Promise<GitResponse<T>> {
+  try {
+    return { success: true, ...(await work()) };
+  } catch (err: unknown) {
+    return options.fallback !== undefined
+      ? { success: true, ...options.fallback }
+      : { success: false, error: errorMessage(err, options.gitError) };
+  }
 }
 function nonEmptyLines(text: string): string[] {
-  return text.split('\n').filter((line) => line.trim().length > 0)
+  return text.split('\n').filter((line) => line.trim().length > 0);
+}
+function toRecord(map: Map<string, string>): Record<string, string> {
+  return Object.fromEntries(map);
 }
 function normalizeGitPath(filePath: string): string {
-  const renameIndex = filePath.indexOf(' -> ')
-  return (renameIndex === -1 ? filePath : filePath.slice(renameIndex + 4)).replace(/\\/g, '/')
+  const renameIndex = filePath.indexOf(' -> ');
+  return (renameIndex === -1 ? filePath : filePath.slice(renameIndex + 4)).replace(/\\/g, '/');
 }
 function parseStatusEntry(line: string): PorcelainStatusEntry {
-  return { indexStatus: line[0] ?? ' ', workTreeStatus: line[1] ?? ' ', filePath: normalizeGitPath(line.slice(3)) }
+  return {
+    indexStatus: line[0] ?? ' ',
+    workTreeStatus: line[1] ?? ' ',
+    filePath: normalizeGitPath(line.slice(3)),
+  };
 }
 function aggregateStatus(entry: PorcelainStatusEntry): string {
-  if (entry.indexStatus === '?' && entry.workTreeStatus === '?') return '?'
-  if (entry.indexStatus === 'R' || entry.workTreeStatus === 'R') return 'R'
-  if (entry.indexStatus === 'A' || entry.workTreeStatus === 'A') return 'A'
-  if (entry.indexStatus === 'D' || entry.workTreeStatus === 'D') return 'D'
-  return 'M'
+  if (entry.indexStatus === '?' && entry.workTreeStatus === '?') return '?';
+  if (entry.indexStatus === 'R' || entry.workTreeStatus === 'R') return 'R';
+  if (entry.indexStatus === 'A' || entry.workTreeStatus === 'A') return 'A';
+  if (entry.indexStatus === 'D' || entry.workTreeStatus === 'D') return 'D';
+  return 'M';
 }
 function addDetailedStatus(snapshot: StatusSnapshot, entry: PorcelainStatusEntry): void {
-  if (entry.indexStatus !== ' ' && entry.indexStatus !== '?') snapshot.staged[entry.filePath] = entry.indexStatus
-  if (entry.workTreeStatus === ' ') return
-  if (entry.indexStatus === '?' && entry.workTreeStatus === '?') snapshot.unstaged[entry.filePath] = '?'
-  else if (entry.workTreeStatus !== '?') snapshot.unstaged[entry.filePath] = entry.workTreeStatus
+  if (entry.indexStatus !== ' ' && entry.indexStatus !== '?')
+    snapshot.staged.set(entry.filePath, entry.indexStatus);
+  if (entry.workTreeStatus === ' ') return;
+  if (entry.indexStatus === '?' && entry.workTreeStatus === '?')
+    snapshot.unstaged.set(entry.filePath, '?');
+  else if (entry.workTreeStatus !== '?')
+    snapshot.unstaged.set(entry.filePath, entry.workTreeStatus);
 }
 function parseStatusSnapshot(stdout: string): StatusSnapshot {
-  const snapshot: StatusSnapshot = { files: {}, staged: {}, unstaged: {} }
+  const snapshot: StatusSnapshot = { files: new Map(), staged: new Map(), unstaged: new Map() };
   for (const entry of nonEmptyLines(stdout).map(parseStatusEntry)) {
-    snapshot.files[entry.filePath] = aggregateStatus(entry)
-    addDetailedStatus(snapshot, entry)
+    snapshot.files.set(entry.filePath, aggregateStatus(entry));
+    addDetailedStatus(snapshot, entry);
   }
-  return snapshot
+  return snapshot;
+}
+function parseRangeToken(token: string): { start: number; count: number } | undefined {
+  const [startText, countText] = token.split(',');
+  const start = Number(startText);
+  if (!Number.isFinite(start)) return undefined;
+  const count = countText === undefined ? 1 : Number(countText);
+  return Number.isFinite(count) ? { start, count } : undefined;
+}
+function parseHunkHeader(
+  header: string,
+): { oldStart: number; oldCount: number; newStart: number; newCount: number } | undefined {
+  const end = header.lastIndexOf(' @@');
+  if (!header.startsWith('@@ -') || end === -1) return undefined;
+  const [oldToken, newToken] = header.slice(4, end).trim().split(' +');
+  const oldRange = oldToken?.startsWith('-') ? parseRangeToken(oldToken.slice(1)) : undefined;
+  const newRange = newToken?.startsWith('+') ? parseRangeToken(newToken.slice(1)) : undefined;
+  return oldRange && newRange
+    ? {
+        oldStart: oldRange.start,
+        oldCount: oldRange.count,
+        newStart: newRange.start,
+        newCount: newRange.count,
+      }
+    : undefined;
+}
+function parseDiffLineHeader(header: string): { newStart: number } | undefined {
+  const end = header.indexOf(' @@');
+  if (!header.startsWith('-') || end === -1) return undefined;
+  const [, newToken] = header.slice(1, end).trim().split(' +');
+  const newRange = newToken?.startsWith('+') ? parseRangeToken(newToken.slice(1)) : undefined;
+  return newRange ? { newStart: newRange.start } : undefined;
 }
 function parseDiffMeta(lines: string[]): DiffMeta | undefined {
-  const header = lines[0]?.match(/^diff --git a\/(.+?) b\/(.+)$/)
-  if (!header) return undefined
-  let status: DiffStatus = 'modified'
-  let oldPath: string | undefined
+  const header = lines[0]?.match(/^diff --git a\/(.+?) b\/(.+)$/);
+  if (!header) return undefined;
+  let status: DiffStatus = 'modified';
+  let oldPath: string | undefined;
   for (const line of lines.slice(1, 6)) {
-    if (line.startsWith('new file mode')) status = 'added'
-    else if (line.startsWith('deleted file mode')) status = 'deleted'
-    else if (line.startsWith('rename from ')) { status = 'renamed'; oldPath = line.slice(12) }
+    if (line.startsWith('new file mode')) status = 'added';
+    else if (line.startsWith('deleted file mode')) status = 'deleted';
+    else if (line.startsWith('rename from ')) {
+      status = 'renamed';
+      oldPath = line.slice(12);
+    }
   }
-  if (header[1] !== header[2] && oldPath === undefined) { status = 'renamed'; oldPath = header[1] }
-  const startIndex = lines.findIndex((line, index) => index > 0 && line.startsWith('@@'))
-  return { relativePath: header[2], status, oldPath, diffHeader: `${lines.slice(0, Math.max(startIndex, 0)).join('\n')}\n`, startIndex: Math.max(startIndex, 0) }
+  if (header[1] !== header[2] && oldPath === undefined) {
+    status = 'renamed';
+    oldPath = header[1];
+  }
+  const startIndex = lines.findIndex((line, index) => index > 0 && line.startsWith('@@'));
+  return {
+    relativePath: header[2],
+    status,
+    oldPath,
+    diffHeader: `${lines.slice(0, Math.max(startIndex, 0)).join('\n')}\n`,
+    startIndex: Math.max(startIndex, 0),
+  };
 }
-function parseHunk(lines: string[], startIndex: number, diffHeader: string): { hunk?: ParsedHunk; nextIndex: number } {
-  const header = lines[startIndex]
-  const match = header?.match(HUNK_HEADER_RE)
-  if (!match || !header) return { nextIndex: startIndex + 1 }
-  let nextIndex = startIndex + 1
-  while (nextIndex < lines.length && !lines[nextIndex].startsWith('@@') && !lines[nextIndex].startsWith('diff --git')) nextIndex++
-  const hunkLines = lines.slice(startIndex + 1, nextIndex)
-  return { nextIndex, hunk: { header, oldStart: Number(match[1]), oldCount: Number(match[2] ?? '1'), newStart: Number(match[3]), newCount: Number(match[4] ?? '1'), lines: hunkLines, rawPatch: `${diffHeader}${header}\n${hunkLines.join('\n')}\n` } }
+function parseHunk(
+  lines: string[],
+  startIndex: number,
+  diffHeader: string,
+): { hunk?: ParsedHunk; nextIndex: number } {
+  const header = lines.at(startIndex);
+  const match = header ? parseHunkHeader(header) : undefined;
+  if (!match || !header) return { nextIndex: startIndex + 1 };
+  let nextIndex = startIndex + 1;
+  while (true) {
+    const nextLine = lines.at(nextIndex);
+    if (!nextLine || nextLine.startsWith('@@') || nextLine.startsWith('diff --git')) break;
+    nextIndex++;
+  }
+  const hunkLines = lines.slice(startIndex + 1, nextIndex);
+  return {
+    nextIndex,
+    hunk: {
+      header,
+      oldStart: match.oldStart,
+      oldCount: match.oldCount,
+      newStart: match.newStart,
+      newCount: match.newCount,
+      lines: hunkLines,
+      rawPatch: `${diffHeader}${header}\n${hunkLines.join('\n')}\n`,
+    },
+  };
 }
 function parseFileDiff(fileDiff: string, root: string): ParsedFileDiff | undefined {
-  const lines = fileDiff.split('\n')
-  const meta = parseDiffMeta(lines)
-  if (!meta) return undefined
-  const hunks: ParsedHunk[] = []
-  for (let index = meta.startIndex; index < lines.length;) {
-    if (!lines[index].startsWith('@@')) { index++; continue }
-    const parsed = parseHunk(lines, index, meta.diffHeader)
-    if (parsed.hunk) hunks.push(parsed.hunk)
-    index = parsed.nextIndex
+  const lines = fileDiff.split('\n');
+  const meta = parseDiffMeta(lines);
+  if (!meta) return undefined;
+  const hunks: ParsedHunk[] = [];
+  for (let index = meta.startIndex; index < lines.length; ) {
+    const line = lines.at(index);
+    if (!line?.startsWith('@@')) {
+      index++;
+      continue;
+    }
+    const parsed = parseHunk(lines, index, meta.diffHeader);
+    if (parsed.hunk) hunks.push(parsed.hunk);
+    index = parsed.nextIndex;
   }
-  return { filePath: path.resolve(root, meta.relativePath), relativePath: meta.relativePath, status: meta.status, hunks, oldPath: meta.oldPath }
+  return {
+    filePath: path.resolve(root, meta.relativePath),
+    relativePath: meta.relativePath,
+    status: meta.status,
+    hunks,
+    oldPath: meta.oldPath,
+  };
 }
 function parseDiffOutput(diffText: string, root: string): ParsedFileDiff[] {
-  if (!diffText.trim()) return []
-  return diffText.split(/^(?=diff --git )/m).map((fileDiff) => parseFileDiff(fileDiff, root)).filter((file): file is ParsedFileDiff => file !== undefined)
+  if (!diffText.trim()) return [];
+  return diffText
+    .split(/^(?=diff --git )/m)
+    .map((fileDiff) => parseFileDiff(fileDiff, root))
+    .filter((file): file is ParsedFileDiff => file !== undefined);
 }
-function flushDeleted(lines: DiffLine[], newLine: number, newStart: number, pendingDeletes: number): number {
-  if (pendingDeletes <= 0) return 0
-  lines.push({ line: newLine > newStart ? newLine - 1 : newLine, kind: 'deleted' })
-  return 0
+function flushDeleted(
+  lines: DiffLine[],
+  newLine: number,
+  newStart: number,
+  pendingDeletes: number,
+): number {
+  if (pendingDeletes <= 0) return 0;
+  lines.push({ line: newLine > newStart ? newLine - 1 : newLine, kind: 'deleted' });
+  return 0;
 }
 function parseDiffSegment(segment: string): DiffLine[] {
-  const match = segment.match(DIFF_LINE_HEADER_RE)
-  const bodyStart = segment.indexOf('\n')
-  if (!match || bodyStart === -1) return []
-  const lines: DiffLine[] = []
-  let newLine = Number(match[3])
-  let pendingDeletes = 0
+  const match = parseDiffLineHeader(segment.split('\n', 1)[0] ?? '');
+  const bodyStart = segment.indexOf('\n');
+  if (!match || bodyStart === -1) return [];
+  const lines: DiffLine[] = [];
+  let newLine = match.newStart;
+  let pendingDeletes = 0;
   for (const bodyLine of segment.slice(bodyStart + 1).split('\n')) {
-    if (bodyLine.startsWith('-')) pendingDeletes++
-    else if (bodyLine.startsWith('+')) { lines.push({ line: newLine, kind: pendingDeletes > 0 ? 'modified' : 'added' }); pendingDeletes = Math.max(0, pendingDeletes - 1); newLine++ }
-    else if (!bodyLine.startsWith('\\')) { pendingDeletes = flushDeleted(lines, newLine, Number(match[3]), pendingDeletes); newLine++ }
+    if (bodyLine.startsWith('-')) pendingDeletes++;
+    else if (bodyLine.startsWith('+')) {
+      lines.push({ line: newLine, kind: pendingDeletes > 0 ? 'modified' : 'added' });
+      pendingDeletes = Math.max(0, pendingDeletes - 1);
+      newLine++;
+    } else if (!bodyLine.startsWith('\\')) {
+      pendingDeletes = flushDeleted(lines, newLine, match.newStart, pendingDeletes);
+      newLine++;
+    }
   }
-  flushDeleted(lines, newLine, Number(match[3]), pendingDeletes)
-  return lines
+  flushDeleted(lines, newLine, match.newStart, pendingDeletes);
+  return lines;
 }
 function parseDiffLines(stdout: string): DiffLine[] {
-  return stdout.split(/^@@\s/m).slice(1).flatMap(parseDiffSegment)
+  return stdout.split(/^@@\s/m).slice(1).flatMap(parseDiffSegment);
 }
 function parseLogOutput(stdout: string): GitLogEntry[] {
   return nonEmptyLines(stdout).flatMap((line) => {
-    const match = line.match(/^([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|(.*)$/)
-    return match ? [{ hash: match[1], author: match[2], email: match[3], date: match[4], message: match[5] }] : []
-  })
+    const match = line.match(/^([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|(.*)$/);
+    return match
+      ? [{ hash: match[1], author: match[2], email: match[3], date: match[4], message: match[5] }]
+      : [];
+  });
 }
 function parseNumstat(stdout: string): ChangedFile[] {
   return nonEmptyLines(stdout).flatMap((line) => {
-    const parts = line.split('\t')
-    return parts.length < 3 ? [] : [{ path: parts[2], status: 'modified', additions: parts[0] === '-' ? 0 : Number(parts[0]), deletions: parts[1] === '-' ? 0 : Number(parts[1]) }]
-  })
+    const parts = line.split('\t');
+    return parts.length < 3
+      ? []
+      : [
+          {
+            path: parts[2],
+            status: 'modified',
+            additions: parts[0] === '-' ? 0 : Number(parts[0]),
+            deletions: parts[1] === '-' ? 0 : Number(parts[1]),
+          },
+        ];
+  });
+}
+function classifyNameStatus(prefix: string): string {
+  if (prefix.startsWith('A')) return 'added';
+  if (prefix.startsWith('D')) return 'deleted';
+  if (prefix.startsWith('R')) return 'renamed';
+  return 'modified';
 }
 function parseNameStatus(stdout: string): Record<string, string> {
-  const statusMap: Record<string, string> = {}
+  const statusMap = new Map<string, string>();
   for (const line of nonEmptyLines(stdout)) {
-    const parts = line.split('\t')
-    if (parts.length >= 2) statusMap[parts[parts.length - 1]] = parts[0].startsWith('A') ? 'added' : parts[0].startsWith('D') ? 'deleted' : parts[0].startsWith('R') ? 'renamed' : 'modified'
+    const parts = line.split('\t');
+    if (parts.length >= 2) {
+      const filePath = parts[parts.length - 1];
+      statusMap.set(filePath, classifyNameStatus(parts[0]));
+    }
   }
-  return statusMap
+  return Object.fromEntries(statusMap);
 }
-async function getChangedFilesBetween(root: string, fromHash: string, toHash: string): Promise<ChangedFile[]> {
-  const files = parseNumstat(await gitStdout(root, ['diff', '--numstat', fromHash, toHash], 4 * MB))
+async function getChangedFilesBetween(
+  root: string,
+  fromHash: string,
+  toHash: string,
+): Promise<ChangedFile[]> {
+  const files = parseNumstat(
+    await gitStdout(root, ['diff', '--numstat', fromHash, toHash], 4 * MB),
+  );
   try {
-    const statusMap = parseNameStatus(await gitStdout(root, ['diff', '--name-status', fromHash, toHash], 4 * MB))
-    return files.map((file) => statusMap[file.path] ? { ...file, status: statusMap[file.path] } : file)
-  } catch { return files }
+    const statusMap = parseNameStatus(
+      await gitStdout(root, ['diff', '--name-status', fromHash, toHash], 4 * MB),
+    );
+    return files.map((file) => {
+      const mappedStatus = statusMap[file.path];
+      return mappedStatus ? { ...file, status: mappedStatus } : file;
+    });
+  } catch {
+    return files;
+  }
 }
 async function getDirtyCount(root: string): Promise<number> {
-  return nonEmptyLines(await gitStdout(root, ['status', '--porcelain'])).length
-}
-async function getPreviousBranch(root: string): Promise<string | undefined> {
-  try {
-    const branch = await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD'])
-    return branch === 'HEAD' ? undefined : branch
-  } catch { return undefined }
-}
-async function stashDirtyChanges(root: string, dirtyCount: number): Promise<string | undefined> {
-  if (dirtyCount === 0) return undefined
-  await gitExec(['stash', 'push', '-m', `ouroboros-time-travel-${Date.now()}`, '--include-untracked'], { cwd: root })
-  try { return (await gitStdout(root, ['stash', 'list', '--format=%gd %s', '-n', '1'])).match(/^(stash@\{\d+\})/)?.[1] ?? 'stash@{0}' }
-  catch { return 'stash@{0}' }
-}
-function snapshotBranchBase(now: Date = new Date()): string {
-  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
-  return `ouroboros/snapshot-${stamp}`
-}
-async function checkoutSnapshotBranch(root: string, commitHash: string, branchName: string): Promise<string> {
-  try { await gitExec(['checkout', '-b', branchName, commitHash], { cwd: root }); return branchName }
-  catch {
-    const fallback = `${branchName}-${Math.random().toString(36).slice(2, 6)}`
-    await gitExec(['checkout', '-b', fallback, commitHash], { cwd: root })
-    return fallback
-  }
-}
-async function restoreSnapshot(root: string, commitHash: string): Promise<{ stashRef?: string; dirtyCount: number; branch: string; previousBranch?: string }> {
-  const dirtyCount = await respond(async () => ({ count: await getDirtyCount(root) }), { fallback: { count: 0 } }).then((result) => result.success ? result.count : 0)
-  const previousBranch = await getPreviousBranch(root)
-  const stashRef = await stashDirtyChanges(root, dirtyCount)
-  const branch = await checkoutSnapshotBranch(root, commitHash, snapshotBranchBase())
-  return { stashRef, dirtyCount, branch, previousBranch }
-}
-function parseBlameHeader(line: string): { hash: string; line: number } | undefined {
-  const match = line.match(/^([0-9a-f]{40})\s+\d+\s+(\d+)/)
-  return match ? { hash: match[1], line: Number(match[2]) } : undefined
-}
-function readBlameMetadata(lines: string[], startIndex: number): BlameMetadata {
-  const metadata: BlameMetadata = { nextIndex: startIndex }
-  while (metadata.nextIndex < lines.length && !lines[metadata.nextIndex].startsWith('\t')) {
-    const line = lines[metadata.nextIndex]
-    if (line.startsWith('author ')) metadata.author = line.slice(7)
-    else if (line.startsWith('author-time ')) metadata.date = Number(line.slice(12))
-    else if (line.startsWith('summary ')) metadata.summary = line.slice(8)
-    metadata.nextIndex++
-  }
-  if (lines[metadata.nextIndex]?.startsWith('\t')) metadata.nextIndex++
-  return metadata
-}
-function resolveBlameInfo(cache: Map<string, BlameInfo>, hash: string, metadata: BlameMetadata): BlameInfo {
-  const base = cache.get(hash) ?? { author: 'Unknown', date: 0, summary: '' }
-  const info = { author: metadata.author ?? base.author, date: metadata.date ?? base.date, summary: metadata.summary ?? base.summary }
-  if (metadata.author !== undefined) cache.set(hash, info)
-  return info
-}
-function parseBlameOutput(stdout: string): BlameLine[] {
-  const result: BlameLine[] = []
-  const cache = new Map<string, BlameInfo>()
-  const lines = stdout.split('\n')
-  for (let index = 0; index < lines.length;) {
-    const header = parseBlameHeader(lines[index])
-    if (!header) { index++; continue }
-    const metadata = readBlameMetadata(lines, index + 1)
-    result.push({ hash: header.hash, line: header.line, ...resolveBlameInfo(cache, header.hash, metadata) })
-    index = metadata.nextIndex
-  }
-  return result
+  return nonEmptyLines(await gitStdout(root, ['status', '--porcelain'])).length;
 }
 async function isTracked(root: string, filePath: string): Promise<boolean> {
-  try { await gitExec(['ls-files', '--error-unmatch', filePath], { cwd: root }); return true }
-  catch { return false }
-}
-async function discardFile(root: string, filePath: string): Promise<GitResponse<Record<string, never>>> {
-  return isTracked(root, filePath) ? respond(async () => { await gitExec(['checkout', 'HEAD', '--', filePath], { cwd: root }); return {} }, { gitError: true }) : respond(async () => { await fs.unlink(path.resolve(root, filePath)); return {} })
-}
-async function applyPatch(root: string, patchContent: string, reverse: boolean = false): Promise<GitResponse<Record<string, never>>> {
-  const tmpFile = path.join(app.getPath('temp'), `ouroboros-hunk-${Date.now()}.patch`)
-  try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(reverse ? ['apply', '-R', '--whitespace=nowarn', tmpFile] : ['apply', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-  catch (err: unknown) {
-    // If the patch didn't apply, check if it was already applied/reverted.
-    // A forward-apply failure where reverse-check succeeds means already applied.
-    // A reverse-apply failure where forward-check succeeds means already reverted.
-    try { await gitExec(reverse ? ['apply', '--check', '--whitespace=nowarn', tmpFile] : ['apply', '-R', '--check', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-    catch { return { success: false, error: gitErrorMessage(err) } }
+  try {
+    await gitExec(['ls-files', '--error-unmatch', filePath], { cwd: root });
+    return true;
+  } catch {
+    return false;
   }
-  finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
 }
-async function stagePatch(root: string, patchContent: string): Promise<GitResponse<Record<string, never>>> {
-  const tmpFile = path.join(app.getPath('temp'), `ouroboros-stage-${Date.now()}.patch`)
-  try { await fs.writeFile(tmpFile, patchContent, 'utf-8'); await gitExec(['apply', '--cached', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-  catch (err: unknown) {
-    // If forward-apply failed, check if the hunk is already staged by testing
-    // whether it can be reverse-applied from the index. This happens when the
-    // user re-opens a review after previously accepting hunks.
-    try { await gitExec(['apply', '--cached', '--reverse', '--check', '--whitespace=nowarn', tmpFile], { cwd: root }); return { success: true } }
-    catch { return { success: false, error: gitErrorMessage(err) } }
+async function discardFile(
+  root: string,
+  filePath: string,
+): Promise<GitResponse<Record<string, never>>> {
+  if (await isTracked(root, filePath)) {
+    return respond(
+      async () => {
+        await gitExec(['checkout', 'HEAD', '--', filePath], { cwd: root });
+        return {};
+      },
+      { gitError: true },
+    );
   }
-  finally { void fs.unlink(tmpFile).catch((error) => { console.error('[git] Failed to clean up temp patch file:', error) }) }
+  return respond(async () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is validated by assertPathAllowed in registerSecure before reaching discardFile
+    await fs.unlink(path.resolve(root, filePath));
+    return {};
+  });
 }
-function gitIsRepo(root: string) { return respond(async () => { await gitExec(['rev-parse', '--git-dir'], { cwd: root }); return { isRepo: true } }, { fallback: { isRepo: false } }) }
-function gitStatus(root: string) { return respond(async () => ({ files: parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])).files })) }
-function gitBranch(root: string) { return respond(async () => ({ branch: await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD']) })) }
-function gitDiff(root: string, filePath: string) { return respond(async () => ({ lines: parseDiffLines(await gitStdout(root, ['diff', 'HEAD', '--', filePath], 4 * MB)) }), { fallback: { lines: [] } }) }
-function gitLog(root: string, filePath: string, offset: number = 0) { return respond(async () => ({ commits: parseLogOutput(await gitStdout(root, ['log', '--pretty=format:%H|%an|%ae|%ad|%s', '--date=short', '-n', '50', `--skip=${offset}`, '--', filePath], 2 * MB)) })) }
-function gitShow(root: string, hash: string, filePath: string) { return respond(async () => ({ patch: await gitStdout(root, ['show', hash, '--', filePath], 4 * MB) })) }
-function gitBranches(root: string) { return respond(async () => ({ branches: nonEmptyLines(await gitStdout(root, ['branch', '-a', '--format=%(refname:short)'])).map((branch) => branch.trim()) })) }
-function gitCheckout(root: string, branch: string) { return respond(async () => { await gitExec(['checkout', branch], { cwd: root }); return {} }, { gitError: true }) }
-function gitStage(root: string, filePath: string) { return respond(async () => { await gitExec(['add', filePath], { cwd: root }); return {} }, { gitError: true }) }
-function gitUnstage(root: string, filePath: string) { return respond(async () => { await gitExec(['restore', '--staged', filePath], { cwd: root }); return {} }, { gitError: true }) }
-function gitStatusDetailed(root: string) { return respond(async () => { const snapshot = parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])); return { staged: snapshot.staged, unstaged: snapshot.unstaged } }) }
-function gitCommit(root: string, message: string) { return respond(async () => { await gitExec(['commit', '-m', message], { cwd: root }); dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => { console.error('[git] Failed to dispatch onGitCommit activation event:', error) }); getGraphController()?.onGitCommit(); getContextLayerController()?.onGitCommit(); invalidateAgentChatCache(); return {} }, { gitError: true }) }
-function gitStageAll(root: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); return {} }, { gitError: true }) }
-function gitUnstageAll(root: string) { return respond(async () => { await gitExec(['reset', 'HEAD'], { cwd: root }); return {} }, { gitError: true }) }
-function gitSnapshot(root: string) { return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) })) }
-function gitDiffReview(root: string, commitHash: string, filePaths?: string[]) { const ref = commitHash && commitHash !== 'INDEX' ? commitHash : ''; const args = ['diff']; if (ref) args.push(ref); args.push('--unified=3', '--no-color'); if (filePaths?.length) { args.push('--', ...filePaths) } return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) })) }
-function gitDiffCached(root: string, commitHash: string, filePaths?: string[]) { const ref = commitHash && commitHash !== 'INDEX' ? commitHash : ''; const args = ['diff', '--cached']; if (ref) args.push(ref); args.push('--unified=3', '--no-color'); if (filePaths?.length) { args.push('--', ...filePaths) } return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) })) }
-function gitFileAtCommit(root: string, commitHash: string, filePath: string) { return respond(async () => ({ content: await gitStdout(root, ['show', `${commitHash}:${normalizeGitPath(path.relative(root, filePath))}`], 4 * MB) }), { fallback: { content: '' } }) }
-function gitRevertFile(root: string, commitHash: string, filePath: string) { return respond(async () => { await gitExec(['checkout', commitHash, '--', filePath], { cwd: root }); return {} }, { gitError: true }) }
-function gitDiffBetween(root: string, fromHash: string, toHash: string) { return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, ['diff', fromHash, toHash, '--unified=3', '--no-color'], 10 * MB), root) })) }
-function gitChangedFilesBetween(root: string, fromHash: string, toHash: string) { return respond(async () => ({ files: await getChangedFilesBetween(root, fromHash, toHash) })) }
-function gitRestoreSnapshot(root: string, commitHash: string) { return respond(async () => restoreSnapshot(root, commitHash), { gitError: true }) }
-function gitCreateSnapshot(root: string, label?: string) { return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); await gitExec(['commit', '--allow-empty', '-m', `[Ouroboros Snapshot] ${label?.trim() || 'Manual snapshot'}`], { cwd: root }); return { commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) } }, { gitError: true }) }
-async function gitDirtyCount(root: string) { try { return { success: true, count: await getDirtyCount(root) } } catch (err: unknown) { return { success: false, count: 0, error: errorMessage(err) } } }
-function gitBlame(root: string, filePath: string) { return respond(async () => ({ lines: parseBlameOutput(await gitStdout(root, ['blame', '--porcelain', filePath], 4 * MB)) }), { fallback: { lines: [] } }) }
-function gitDiffRaw(root: string, filePath: string) { return respond(async () => ({ patch: (await gitStdout(root, ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath], 4 * MB)) }), { fallback: { patch: '' } }) }
-export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
-  void _senderWindow
-
-  // Registers a handler where args[0] is a `root` path that must be validated
-  // against the calling window's allowed workspace roots before proceeding.
-  const registerSecure = <T extends [string, ...unknown[]]>(
-    channel: string,
-    handler: (...args: T) => Promise<unknown>,
-  ): string => {
+function gitIsRepo(root: string) {
+  return respond(
+    async () => {
+      await gitExec(['rev-parse', '--git-dir'], { cwd: root });
+      return { isRepo: true };
+    },
+    { fallback: { isRepo: false } },
+  );
+}
+function gitStatus(root: string) {
+  return respond(async () => ({
+    files: toRecord(parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1'])).files),
+  }));
+}
+function gitBranch(root: string) {
+  return respond(async () => ({
+    branch: await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD']),
+  }));
+}
+function gitDiff(root: string, filePath: string) {
+  return respond(
+    async () => ({
+      lines: parseDiffLines(await gitStdout(root, ['diff', 'HEAD', '--', filePath], 4 * MB)),
+    }),
+    { fallback: { lines: [] } },
+  );
+}
+function gitLog(root: string, filePath: string, offset: number = 0) {
+  return respond(async () => ({
+    commits: parseLogOutput(
+      await gitStdout(
+        root,
+        [
+          'log',
+          '--pretty=format:%H|%an|%ae|%ad|%s',
+          '--date=short',
+          '-n',
+          '50',
+          `--skip=${offset}`,
+          '--',
+          filePath,
+        ],
+        2 * MB,
+      ),
+    ),
+  }));
+}
+function gitShow(root: string, hash: string, filePath: string) {
+  return respond(async () => ({
+    patch: await gitStdout(root, ['show', hash, '--', filePath], 4 * MB),
+  }));
+}
+function gitBranches(root: string) {
+  return respond(async () => ({
+    branches: nonEmptyLines(
+      await gitStdout(root, ['branch', '-a', '--format=%(refname:short)']),
+    ).map((branch) => branch.trim()),
+  }));
+}
+function gitCheckout(root: string, branch: string) {
+  return respond(
+    async () => {
+      await gitExec(['checkout', branch], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitStage(root: string, filePath: string) {
+  return respond(
+    async () => {
+      await gitExec(['add', filePath], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitUnstage(root: string, filePath: string) {
+  return respond(
+    async () => {
+      await gitExec(['restore', '--staged', filePath], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitStatusDetailed(root: string) {
+  return respond(async () => {
+    const snapshot = parseStatusSnapshot(await gitStdout(root, ['status', '--porcelain=v1']));
+    return { staged: toRecord(snapshot.staged), unstaged: toRecord(snapshot.unstaged) };
+  });
+}
+function gitCommit(root: string, message: string) {
+  return respond(
+    async () => {
+      await gitExec(['commit', '-m', message], { cwd: root });
+      dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => {
+        console.error('[git] Failed to dispatch onGitCommit activation event:', error);
+      });
+      getGraphController()?.onGitCommit();
+      getContextLayerController()?.onGitCommit();
+      invalidateAgentChatCache();
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitStageAll(root: string) {
+  return respond(
+    async () => {
+      await gitExec(['add', '-A'], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitUnstageAll(root: string) {
+  return respond(
+    async () => {
+      await gitExec(['reset', 'HEAD'], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitSnapshot(root: string) {
+  return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) }));
+}
+function gitDiffReview(root: string, commitHash: string, filePaths?: string[]) {
+  const ref = commitHash && commitHash !== 'INDEX' ? commitHash : '';
+  const args = ['diff'];
+  if (ref) args.push(ref);
+  args.push('--unified=3', '--no-color');
+  if (filePaths?.length) {
+    args.push('--', ...filePaths);
+  }
+  return respond(async () => ({
+    files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root),
+  }));
+}
+function gitDiffCached(root: string, commitHash: string, filePaths?: string[]) {
+  const ref = commitHash && commitHash !== 'INDEX' ? commitHash : '';
+  const args = ['diff', '--cached'];
+  if (ref) args.push(ref);
+  args.push('--unified=3', '--no-color');
+  if (filePaths?.length) {
+    args.push('--', ...filePaths);
+  }
+  return respond(async () => ({
+    files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root),
+  }));
+}
+function gitFileAtCommit(root: string, commitHash: string, filePath: string) {
+  return respond(
+    async () => ({
+      content: await gitStdout(
+        root,
+        ['show', `${commitHash}:${normalizeGitPath(path.relative(root, filePath))}`],
+        4 * MB,
+      ),
+    }),
+    { fallback: { content: '' } },
+  );
+}
+function gitRevertFile(root: string, commitHash: string, filePath: string) {
+  return respond(
+    async () => {
+      await gitExec(['checkout', commitHash, '--', filePath], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
+}
+function gitDiffBetween(root: string, fromHash: string, toHash: string) {
+  return respond(async () => ({
+    files: parseDiffOutput(
+      await gitStdout(root, ['diff', fromHash, toHash, '--unified=3', '--no-color'], 10 * MB),
+      root,
+    ),
+  }));
+}
+function gitChangedFilesBetween(root: string, fromHash: string, toHash: string) {
+  return respond(async () => ({ files: await getChangedFilesBetween(root, fromHash, toHash) }));
+}
+function gitRestoreSnapshot(root: string, commitHash: string) {
+  return respond(
+    async () => restoreSnapshot({ gitExec, gitStdout, gitTrimmed, root, commitHash }),
+    { gitError: true },
+  );
+}
+function gitCreateSnapshot(root: string, label?: string) {
+  return respond(
+    async () => {
+      await gitExec(['add', '-A'], { cwd: root });
+      await gitExec(
+        [
+          'commit',
+          '--allow-empty',
+          '-m',
+          `[Ouroboros Snapshot] ${label?.trim() || 'Manual snapshot'}`,
+        ],
+        { cwd: root },
+      );
+      return { commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) };
+    },
+    { gitError: true },
+  );
+}
+async function gitDirtyCount(root: string) {
+  try {
+    return { success: true, count: await getDirtyCount(root) };
+  } catch (err: unknown) {
+    return { success: false, count: 0, error: errorMessage(err) };
+  }
+}
+function gitBlame(root: string, filePath: string) {
+  return respond(
+    async () => ({
+      lines: parseBlameOutput(await gitStdout(root, ['blame', '--porcelain', filePath], 4 * MB)),
+    }),
+    { fallback: { lines: [] } },
+  );
+}
+function gitDiffRaw(root: string, filePath: string) {
+  return respond(
+    async () => ({
+      patch: await gitStdout(
+        root,
+        ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath],
+        4 * MB,
+      ),
+    }),
+    { fallback: { patch: '' } },
+  );
+}
+type SecureRegister = <T extends [string, ...unknown[]]>(
+  channel: string,
+  handler: (...args: T) => Promise<unknown>,
+) => string;
+function buildSecureRegister(): SecureRegister {
+  return (channel, handler) => {
     ipcMain.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]) => {
-      const root = args[0] as string
-      const denied = assertPathAllowed(event, root)
-      if (denied) return denied
-      return handler(...(args as T))
-    })
-    return channel
-  }
-
+      const root = args[0] as string;
+      const denied = assertPathAllowed(event, root);
+      if (denied) return denied;
+      return handler(...(args as Parameters<typeof handler>));
+    });
+    return channel;
+  };
+}
+function registerCoreGitChannels(rs: SecureRegister): string[] {
   return [
-    registerSecure('git:isRepo', gitIsRepo),
-    registerSecure('git:status', gitStatus),
-    registerSecure('git:branch', gitBranch),
-    registerSecure('git:diff', gitDiff),
-    registerSecure('git:log', gitLog),
-    registerSecure('git:show', gitShow),
-    registerSecure('git:branches', gitBranches),
-    registerSecure('git:checkout', gitCheckout),
-    registerSecure('git:stage', gitStage),
-    registerSecure('git:unstage', gitUnstage),
-    registerSecure('git:statusDetailed', gitStatusDetailed),
-    registerSecure('git:commit', gitCommit),
-    registerSecure('git:stageAll', gitStageAll),
-    registerSecure('git:unstageAll', gitUnstageAll),
-    registerSecure('git:discardFile', discardFile),
-    registerSecure('git:snapshot', gitSnapshot),
-    registerSecure('git:diffReview', gitDiffReview),
-    registerSecure('git:diffCached', gitDiffCached),
-    registerSecure('git:fileAtCommit', gitFileAtCommit),
-    registerSecure('git:applyHunk', (root: string, patchContent: string) => applyPatch(root, patchContent)),
-    registerSecure('git:revertHunk', (root: string, patchContent: string) => applyPatch(root, patchContent, true)),
-    registerSecure('git:stageHunk', (root: string, patchContent: string) => stagePatch(root, patchContent)),
-    registerSecure('git:revertFile', gitRevertFile),
-    registerSecure('git:diffBetween', gitDiffBetween),
-    registerSecure('git:changedFilesBetween', gitChangedFilesBetween),
-    registerSecure('git:restoreSnapshot', gitRestoreSnapshot),
-    registerSecure('git:createSnapshot', gitCreateSnapshot),
-    registerSecure('git:dirtyCount', gitDirtyCount),
-    registerSecure('git:blame', gitBlame),
-    registerSecure('git:diffRaw', gitDiffRaw),
-  ]
-
+    rs('git:isRepo', gitIsRepo),
+    rs('git:status', gitStatus),
+    rs('git:branch', gitBranch),
+    rs('git:diff', gitDiff),
+    rs('git:log', gitLog),
+    rs('git:show', gitShow),
+    rs('git:branches', gitBranches),
+    rs('git:checkout', gitCheckout),
+    rs('git:stage', gitStage),
+    rs('git:unstage', gitUnstage),
+    rs('git:statusDetailed', gitStatusDetailed),
+    rs('git:commit', gitCommit),
+    rs('git:stageAll', gitStageAll),
+    rs('git:unstageAll', gitUnstageAll),
+  ];
+}
+function registerSnapshotGitChannels(rs: SecureRegister): string[] {
+  return [
+    rs('git:discardFile', discardFile),
+    rs('git:snapshot', gitSnapshot),
+    rs('git:diffReview', gitDiffReview),
+    rs('git:diffCached', gitDiffCached),
+    rs('git:fileAtCommit', gitFileAtCommit),
+    rs('git:applyHunk', (root: string, patchContent: string) =>
+      applyPatch(gitExec, root, patchContent),
+    ),
+    rs('git:revertHunk', (root: string, patchContent: string) =>
+      applyPatch(gitExec, root, patchContent, true),
+    ),
+    rs('git:stageHunk', (root: string, patchContent: string) =>
+      stagePatch(gitExec, root, patchContent),
+    ),
+    rs('git:revertFile', gitRevertFile),
+    rs('git:diffBetween', gitDiffBetween),
+    rs('git:changedFilesBetween', gitChangedFilesBetween),
+    rs('git:restoreSnapshot', gitRestoreSnapshot),
+    rs('git:createSnapshot', gitCreateSnapshot),
+    rs('git:dirtyCount', gitDirtyCount),
+    rs('git:blame', gitBlame),
+    rs('git:diffRaw', gitDiffRaw),
+  ];
+}
+export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
+  void _senderWindow;
+  const rs = buildSecureRegister();
+  return [...registerCoreGitChannels(rs), ...registerSnapshotGitChannels(rs)];
 }

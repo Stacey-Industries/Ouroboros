@@ -1,3 +1,3 @@
-export { GitPanel } from './GitPanel';
-export { GitFileRow } from './GitFileRow';
 export { BranchSelector } from './BranchSelector';
+export { GitFileRow } from './GitFileRow';
+export { GitPanel } from './GitPanel';

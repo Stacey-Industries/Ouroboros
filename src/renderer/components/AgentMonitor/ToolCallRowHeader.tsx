@@ -3,10 +3,11 @@
  */
 
 import React, { memo, useCallback } from 'react';
+
+import { fileOpLabel, formatDurationShort,toolAbbr, toolColor } from './feedHelpers';
+import { ErrorIcon, RowChevron,SpinnerIcon, SuccessIcon } from './FeedIcons';
 import type { ToolCallEvent } from './types';
-import { toolColor, toolAbbr, fileOpLabel, formatDurationShort } from './feedHelpers';
 import { useElapsedSeconds } from './useElapsedSeconds';
-import { SpinnerIcon, SuccessIcon, ErrorIcon, RowChevron } from './FeedIcons';
 
 interface ToolCallRowHeaderProps {
   call: ToolCallEvent;

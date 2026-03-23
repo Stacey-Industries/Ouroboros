@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+
 import type { MenuItem } from './useContextMenuController';
 
 const MENU_SEPARATOR_STYLE: React.CSSProperties = {

@@ -108,12 +108,14 @@ export async function indexAllFiles(
   const allEdges: Array<{ source: string; target: string; type: string }> = [];
 
   for (let i = 0; i < files.length; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- i is a numeric loop index
+    const filePath = files[i];
     try {
-      const { nodes, edges } = await parseSingleFile(ctx, files[i], projectRoot);
+      const { nodes, edges } = await parseSingleFile(ctx, filePath, projectRoot);
       allNodes.push(...nodes);
       allEdges.push(...edges);
     } catch (err) {
-      console.warn(`[codebase-graph] Failed to parse ${files[i]}:`, err);
+      console.warn(`[codebase-graph] Failed to parse ${filePath}:`, err);
     }
     // Yield the event loop every 10 files so IPC and other async work
     // can interleave. Without this, tree-sitter WASM parsing starves

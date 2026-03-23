@@ -3,7 +3,7 @@
 // Spawns `claude -p --output-format stream-json` and parses NDJSON output.
 // ---------------------------------------------------------------------------
 
-import { type ChildProcess, spawn } from 'child_process'
+import { type ChildProcess, execSync, spawn } from 'child_process'
 
 import type {
   StreamJsonEvent,
@@ -106,147 +106,118 @@ function tryParseEvent(line: string): StreamJsonEvent | null {
   }
 }
 
+// ---- Process kill helper ---------------------------------------------------
+
+function killStreamJsonProcess(child: ChildProcess): void {
+  try {
+    if (process.platform !== 'win32') { child.kill('SIGTERM'); return }
+    if (child.pid) {
+      try {
+         
+        execSync(`taskkill /T /F /PID ${child.pid}`, { stdio: 'ignore', timeout: 5000 })
+      } catch { /* already dead */ }
+    }
+    try { child.kill() } catch { /* already dead */ }
+  } catch { /* already dead */ }
+}
+
+// ---- Session state container -----------------------------------------------
+
+interface StreamSessionState {
+  sessionId: string | null
+  resultEvent: StreamJsonResultEvent | null
+  stdoutBuf: string
+  stderrBuf: string
+}
+
+// ---- Stdout data handler ---------------------------------------------------
+
+interface StdoutHandlerArgs {
+  state: StreamSessionState
+  child: ChildProcess
+  onEvent: StreamJsonSpawnOptions['onEvent']
+  reject: (err: Error) => void
+}
+
+function handleStdoutData(chunk: Buffer, args: StdoutHandlerArgs): void {
+  const { state, child, onEvent, reject } = args
+  state.stdoutBuf += chunk.toString()
+  if (state.stdoutBuf.length > MAX_BUFFER_BYTES) {
+    console.error(`[stream-json] stdout buffer exceeded ${MAX_BUFFER_BYTES} bytes — killing process`)
+    reject(new Error('Stream buffer exceeded maximum allowed size (100 MB). Process killed.'))
+    try { child.kill() } catch { /* already dead */ }
+    return
+  }
+  let newlineIdx: number
+  while ((newlineIdx = state.stdoutBuf.indexOf('\n')) !== -1) {
+    const line = state.stdoutBuf.slice(0, newlineIdx)
+    state.stdoutBuf = state.stdoutBuf.slice(newlineIdx + 1)
+    const event = tryParseEvent(line)
+    if (!event) continue
+    if (!state.sessionId && event.session_id) state.sessionId = event.session_id
+    if (event.type === 'result') state.resultEvent = event as StreamJsonResultEvent
+    onEvent?.(event)
+  }
+}
+
+// ---- Close handler ---------------------------------------------------------
+
+interface CloseHandlerArgs {
+  state: StreamSessionState
+  onEvent: StreamJsonSpawnOptions['onEvent']
+  resolve: (result: StreamJsonResultEvent) => void
+  reject: (err: Error) => void
+}
+
+function applyTrailingBuf(state: StreamSessionState, onEvent: StreamJsonSpawnOptions['onEvent']): void {
+  if (!state.stdoutBuf.trim()) return
+  const event = tryParseEvent(state.stdoutBuf)
+  if (event) {
+    if (!state.sessionId && event.session_id) state.sessionId = event.session_id
+    if (event.type === 'result') state.resultEvent = event as StreamJsonResultEvent
+    onEvent?.(event)
+  }
+  state.stdoutBuf = ''
+}
+
+function handleProcessClose(code: number | null, args: CloseHandlerArgs): void {
+  const { state, onEvent, resolve, reject } = args
+  applyTrailingBuf(state, onEvent)
+  if (state.resultEvent) { resolve(state.resultEvent); return }
+  if (code === 0 || code === null) {
+    resolve({ type: 'result', subtype: 'success', is_error: false, result: '', session_id: state.sessionId ?? undefined })
+  } else {
+    reject(new Error(`Claude Code exited with code ${code}: ${state.stderrBuf.trim()}`))
+  }
+}
+
 // ---- Main export -----------------------------------------------------------
 
 export function spawnStreamJsonProcess(options: StreamJsonSpawnOptions): StreamJsonProcessHandle {
   const { command, args } = buildStreamJsonArgs(options)
+  const child: ChildProcess = spawn(command, args, { cwd: options.cwd, env: buildProcessEnv(options.env), stdio: ['pipe', 'pipe', 'pipe'] })
+  if (child.stdin) { child.stdin.write(options.prompt); child.stdin.end() }
 
-  const child: ChildProcess = spawn(command, args, {
-    cwd: options.cwd,
-    env: buildProcessEnv(options.env),
-    stdio: ['pipe', 'pipe', 'pipe'],
-  })
+  const state: StreamSessionState = { sessionId: null, resultEvent: null, stdoutBuf: '', stderrBuf: '' }
 
-  // Write prompt to stdin and close it so claude reads it from stdin
-  if (child.stdin) {
-    child.stdin.write(options.prompt)
-    child.stdin.end()
-  }
-
-  let sessionId: string | null = null
-  let resultEvent: StreamJsonResultEvent | null = null
-  let stderrBuf = ''
-  let stdoutBuf = ''
-
-  // We expose a mutable handle so `sessionId` can be updated after init.
   const handle: StreamJsonProcessHandle = {
-    result: null as unknown as Promise<StreamJsonResultEvent>, // assigned below
-    kill: () => {
-      try {
-        if (process.platform === 'win32') {
-          // On Windows, child.kill() only kills the immediate PowerShell wrapper.
-          // Use taskkill /T /F FIRST to force-kill the entire process tree
-          // (including the actual claude process), then child.kill() as cleanup.
-          // Order matters: taskkill is the reliable kill; child.kill() just
-          // ensures Node's internal state is consistent.
-          if (child.pid) {
-            try {
-              require('child_process').execSync(
-                `taskkill /T /F /PID ${child.pid}`,
-                { stdio: 'ignore', timeout: 5000 },
-              )
-            } catch {
-              // Process may already be dead — ignore.
-            }
-          }
-          try { child.kill() } catch { /* already dead */ }
-        } else {
-          child.kill('SIGTERM')
-        }
-      } catch {
-        // Process may already be dead — ignore.
-      }
-    },
+    result: null as unknown as Promise<StreamJsonResultEvent>,
+    kill: () => killStreamJsonProcess(child),
     pid: child.pid,
-    get sessionId() {
-      return sessionId
-    },
+    get sessionId() { return state.sessionId },
   }
 
   handle.result = new Promise<StreamJsonResultEvent>((resolve, reject) => {
-    // --- stdout: NDJSON line parser ---
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdoutBuf += chunk.toString()
-
-      // Security: prevent unbounded memory growth from a runaway process.
-      if (stdoutBuf.length > MAX_BUFFER_BYTES) {
-        console.error(`[stream-json] stdout buffer exceeded ${MAX_BUFFER_BYTES} bytes — killing process`)
-        reject(new Error('Stream buffer exceeded maximum allowed size (100 MB). Process killed.'))
-        try { child.kill() } catch { /* already dead */ }
-        return
-      }
-
-      let newlineIdx: number
-      while ((newlineIdx = stdoutBuf.indexOf('\n')) !== -1) {
-        const line = stdoutBuf.slice(0, newlineIdx)
-        stdoutBuf = stdoutBuf.slice(newlineIdx + 1)
-
-        const event = tryParseEvent(line)
-        if (!event) continue
-
-        // Capture session_id — prefer init event, fall back to any event carrying it
-        if (!sessionId && event.session_id) {
-          sessionId = event.session_id
-        }
-
-        // Capture result event
-        if (event.type === 'result') {
-          resultEvent = event as StreamJsonResultEvent
-        }
-
-        options.onEvent?.(event)
-      }
-    })
-
-    // --- stderr: accumulate for error reporting ---
+    const stdoutArgs: StdoutHandlerArgs = { state, child, onEvent: options.onEvent, reject }
+    child.stdout?.on('data', (chunk: Buffer) => handleStdoutData(chunk, stdoutArgs))
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderrBuf += chunk.toString()
-
-      // Security: cap stderr buffer too to prevent OOM from verbose error output.
-      if (stderrBuf.length > MAX_BUFFER_BYTES) {
-        stderrBuf = stderrBuf.slice(-MAX_BUFFER_BYTES)
-      }
+      state.stderrBuf += chunk.toString()
+      // Security: cap stderr buffer to prevent OOM from verbose error output.
+      if (state.stderrBuf.length > MAX_BUFFER_BYTES) state.stderrBuf = state.stderrBuf.slice(-MAX_BUFFER_BYTES)
     })
-
-    // --- Process close ---
-    child.on('close', (code) => {
-      // Flush any remaining partial line in stdout buffer
-      if (stdoutBuf.trim()) {
-        const event = tryParseEvent(stdoutBuf)
-        if (event) {
-          if (!sessionId && event.session_id) {
-            sessionId = event.session_id
-          }
-          if (event.type === 'result') {
-            resultEvent = event as StreamJsonResultEvent
-          }
-          options.onEvent?.(event)
-        }
-        stdoutBuf = ''
-      }
-
-      if (resultEvent) {
-        resolve(resultEvent)
-        return
-      }
-
-      if (code === 0 || code === null) {
-        // Clean exit with no explicit result event — synthesize one
-        resolve({
-          type: 'result',
-          subtype: 'success',
-          is_error: false,
-          result: '',
-          session_id: sessionId ?? undefined,
-        })
-      } else {
-        reject(new Error(`Claude Code exited with code ${code}: ${stderrBuf.trim()}`))
-      }
-    })
-
-    child.on('error', (err) => {
-      reject(err)
-    })
+    const closeArgs: CloseHandlerArgs = { state, onEvent: options.onEvent, resolve, reject }
+    child.on('close', (code) => handleProcessClose(code, closeArgs))
+    child.on('error', (err) => reject(err))
   })
 
   return handle

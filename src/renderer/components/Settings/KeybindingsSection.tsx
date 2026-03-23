@@ -1,9 +1,10 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import { KeybindingRow } from './KeybindingRow';
 import {
-  KEYBINDING_ACTIONS,
   getEffectiveShortcut,
+  KEYBINDING_ACTIONS,
 } from './keybindingsData';
 import {
   type CaptureModel,

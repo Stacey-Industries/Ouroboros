@@ -1,8 +1,9 @@
 import React from 'react';
+
 import { BreadcrumbBar } from './BreadcrumbBar';
-import { PaletteFooter } from './PaletteOverlay';
 import { CommandPaletteResults } from './CommandPaletteResults';
 import { CommandPaletteSearchInput } from './CommandPaletteSearchInput';
+import { PaletteFooter } from './PaletteOverlay';
 import type { CommandPaletteModel } from './useCommandPaletteModel';
 
 interface CommandPalettePanelProps {

@@ -5,44 +5,47 @@
  * generator in contextGenerator.ts, types in contextTypes.ts.
  */
 
-import { BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
-import { generateClaudeMdContent } from './contextGenerator'
-import { scanProject } from './contextScanner'
-import { assertPathAllowed } from './pathSecurity'
+import { generateClaudeMdContent } from './contextGenerator';
+import { scanProject } from './contextScanner';
+import { assertPathAllowed } from './pathSecurity';
 
-export type { ContextGenerateOptions,ProjectContext } from './contextTypes'
+export type { ContextGenerateOptions, ProjectContext } from './contextTypes';
 
-type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow
+type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 
- 
 export function registerContextHandlers(_senderWindow: SenderWindow): string[] {
-  const channels: string[] = []
+  void _senderWindow;
+  const channels: string[] = [];
 
   ipcMain.handle('context:scan', async (event, projectRoot: string) => {
-    const denied = assertPathAllowed(event, projectRoot)
-    if (denied) return denied
+    const denied = assertPathAllowed(event, projectRoot);
+    if (denied) return denied;
     try {
-      const context = await scanProject(projectRoot)
-      return { success: true, context }
+      const context = await scanProject(projectRoot);
+      return { success: true, context };
     } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
-  })
-  channels.push('context:scan')
+  });
+  channels.push('context:scan');
 
-  ipcMain.handle('context:generate', async (event, projectRoot: string, options?: Parameters<typeof generateClaudeMdContent>[1]) => {
-    const denied = assertPathAllowed(event, projectRoot)
-    if (denied) return denied
-    try {
-      const context = await scanProject(projectRoot)
-      const content = generateClaudeMdContent(context, options ?? {})
-      return { success: true, content, context }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-  channels.push('context:generate')
+  ipcMain.handle(
+    'context:generate',
+    async (event, projectRoot: string, options?: Parameters<typeof generateClaudeMdContent>[1]) => {
+      const denied = assertPathAllowed(event, projectRoot);
+      if (denied) return denied;
+      try {
+        const context = await scanProject(projectRoot);
+        const content = generateClaudeMdContent(context, options ?? {});
+        return { success: true, content, context };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  );
+  channels.push('context:generate');
 
-  return channels
+  return channels;
 }

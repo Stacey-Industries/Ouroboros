@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { TerminalInstance } from './TerminalInstance'
 import { SplitPaneLayoutFrame, useSplitResize } from './TerminalManagerSplitPane'
 import type { TerminalSession } from './TerminalTabs'

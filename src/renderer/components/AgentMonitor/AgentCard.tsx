@@ -3,8 +3,9 @@
  */
 
 import React, { memo, useState } from 'react';
-import { AgentCardLayout } from './AgentCardSections';
+
 import { CardView, useElapsedMs } from './AgentCardControls';
+import { AgentCardLayout } from './AgentCardSections';
 import type { AgentSession, ToolCallEvent } from './types';
 
 export interface AgentCardProps {

@@ -1,8 +1,9 @@
 import React from 'react';
-import { PaletteOverlay } from './PaletteOverlay';
+
 import { CommandPalettePanel } from './CommandPalettePanel';
-import { useCommandPaletteModel } from './useCommandPaletteModel';
+import { PaletteOverlay } from './PaletteOverlay';
 import type { Command } from './types';
+import { useCommandPaletteModel } from './useCommandPaletteModel';
 
 const PALETTE_KEYFRAMES = `
   @keyframes cp-overlay-in { from { opacity: 0; } to { opacity: 1; } }

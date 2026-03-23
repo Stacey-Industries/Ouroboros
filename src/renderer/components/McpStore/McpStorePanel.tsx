@@ -74,92 +74,46 @@ export function McpStorePanel(): React.ReactElement | null {
   if (!isMounted) return null;
 
   return createPortal(
+    <McpStoreOverlay isVisible={isVisible} onClose={close} />,
+    document.body,
+  );
+}
+
+function McpStoreHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <div className="border-b border-border-semantic" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <McpIcon />
+        <span className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 600 }}>MCP Server Store</span>
+      </div>
+      <button onClick={onClose} className="text-text-semantic-muted" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '2px 6px', borderRadius: '4px' }} title="Close (Esc)">&times;</button>
+    </div>
+  );
+}
+
+function McpStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }): React.ReactElement {
+  return (
     <>
       <style>{KEYFRAMES}</style>
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="MCP Store"
-        onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+        role="dialog" aria-modal="true" aria-label="MCP Store"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         style={{
-          position: 'fixed',
-          top: 'env(titlebar-area-height, 32px)',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10000,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(2px)',
-          animation: isVisible
-            ? 'mcp-overlay-in 180ms ease forwards'
-            : 'mcp-overlay-out 180ms ease forwards',
+          position: 'fixed', top: 'env(titlebar-area-height, 32px)', left: 0, right: 0, bottom: 0, zIndex: 10000,
+          display: 'flex', justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(2px)',
+          animation: isVisible ? 'mcp-overlay-in 180ms ease forwards' : 'mcp-overlay-out 180ms ease forwards',
         }}
       >
-        <div
-          className="bg-surface-base border-l border-border-semantic"
-          style={{
-            width: '520px',
-            maxWidth: '90vw',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
-            animation: isVisible
-              ? 'mcp-card-in 200ms ease forwards'
-              : 'mcp-card-out 200ms ease forwards',
-          }}
-        >
-          {/* Header */}
-          <div
-            className="border-b border-border-semantic"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 16px',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <McpIcon />
-              <span className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 600 }}>
-                MCP Server Store
-              </span>
-            </div>
-            <button
-              onClick={close}
-              className="text-text-semantic-muted"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '18px',
-                lineHeight: 1,
-                padding: '2px 6px',
-                borderRadius: '4px',
-              }}
-              title="Close (Esc)"
-            >
-              &times;
-            </button>
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '16px',
-            }}
-          >
-            <McpStoreSection />
-          </div>
+        <div className="bg-surface-base border-l border-border-semantic" style={{
+          width: '520px', maxWidth: '90vw', height: '100%', display: 'flex', flexDirection: 'column',
+          boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+          animation: isVisible ? 'mcp-card-in 200ms ease forwards' : 'mcp-card-out 200ms ease forwards',
+        }}>
+          <McpStoreHeader onClose={onClose} />
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}><McpStoreSection /></div>
         </div>
       </div>
-    </>,
-    document.body,
+    </>
   );
 }
 

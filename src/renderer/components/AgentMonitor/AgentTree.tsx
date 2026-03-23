@@ -9,8 +9,9 @@
  */
 
 import React, { memo, useCallback, useState } from 'react';
-import type { AgentSession } from './types';
+
 import { AgentCard } from './AgentCard';
+import type { AgentSession } from './types';
 
 interface TreeNode {
   session: AgentSession;

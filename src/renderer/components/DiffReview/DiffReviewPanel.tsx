@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import type { DiffReviewState } from './types';
+import React, { useCallback, useEffect,useMemo, useRef, useState } from 'react';
+
 import { DiffReviewLayout } from './DiffReviewPanelSections';
 import {
   getDiffReviewStateView,
   getDiffReviewStats,
 } from './DiffReviewPanelState';
+import type { DiffReviewState } from './types';
 
 interface DiffReviewPanelProps {
   state: DiffReviewState;

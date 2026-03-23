@@ -23,7 +23,7 @@ export function initMonaco(): void {
   // provide a safe fallback that uses the editor worker for everything.
   if (typeof self !== 'undefined' && !(self as Record<string, unknown>).MonacoEnvironment) {
     (self as Record<string, unknown>).MonacoEnvironment = {
-      getWorker(_workerId: string, _label: string) {
+      getWorker() {
         // Fallback: return a basic worker. In production the plugin sets the
         // correct worker URLs, so this path should rarely be hit.
         return undefined as unknown as Worker;

@@ -6,9 +6,10 @@
  */
 
 import React, { useCallback } from 'react';
+
 import { useProject } from '../../contexts/ProjectContext';
-import { useFileViewerManager } from '../FileViewer';
 import { FileTree } from '../FileTree/FileTree';
+import { useFileViewerManager } from '../FileViewer';
 
 export function SidebarFileTree(): React.ReactElement {
   const { projectRoots, removeProjectRoot } = useProject();

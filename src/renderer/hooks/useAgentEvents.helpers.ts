@@ -1,10 +1,19 @@
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
 import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
+import {
+  ensureSession,
+  findToolCallIndex,
+  getUsageDeltas,
+  hasSession,
+  loadPersistedSessions,
+  mergeOptionalTokenCount,
+  omitPendingLink,
+  resolvePendingToolCalls,
+  resolveStaleToolCalls,
+  trimToolCalls,
+  updateSession,
+} from './useAgentEvents.session-utils';
 
-const MAX_TOOL_CALLS = 50;
-/** If a tool call has been pending longer than this, auto-resolve it as success
- *  (its post_tool_use was likely lost or unmatched). Checked when new tools arrive. */
-const STALE_TOOL_CALL_MS = 120_000;
 /** Window (ms) for temporal linking: if a new agent_start arrives within this time
  *  of an unconsumed subagent tool call from another session, auto-link them.
  *  30s accounts for Claude Code subagent initialization overhead (model loading,
@@ -42,8 +51,6 @@ export type AgentAction =
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
   | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean };
-
-type SessionUpdater = (session: AgentSession) => AgentSession;
 
 export function reducer(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
@@ -166,34 +173,8 @@ function finishToolCall(
   action: Extract<AgentAction, { type: 'TOOL_END' }>,
 ): AgentState {
   return updateSession(state, action.sessionId, (session) => {
-    let targetIndex = -1;
-
-    if (action.toolCallId) {
-      targetIndex = session.toolCalls.findIndex((tc) => tc.id === action.toolCallId);
-    }
-
-    // Fallback 1: match most-recent pending call with same tool name
-    if (targetIndex < 0 && action.toolName) {
-      for (let i = session.toolCalls.length - 1; i >= 0; i--) {
-        if (session.toolCalls[i].toolName === action.toolName && session.toolCalls[i].status === 'pending') {
-          targetIndex = i;
-          break;
-        }
-      }
-    }
-
-    // Fallback 2: match ANY most-recent pending call (last resort — better than dropping)
-    if (targetIndex < 0) {
-      for (let i = session.toolCalls.length - 1; i >= 0; i--) {
-        if (session.toolCalls[i].status === 'pending') {
-          targetIndex = i;
-          break;
-        }
-      }
-    }
-
+    const targetIndex = findToolCallIndex(session.toolCalls, action.toolCallId, action.toolName);
     if (targetIndex < 0) return session;
-
     const toolCalls = session.toolCalls.map((tc, i) =>
       i === targetIndex
         ? { ...tc, duration: action.duration, status: action.status, output: action.output }
@@ -286,103 +267,3 @@ function findTemporalParent(
   return best;
 }
 
-function loadPersistedSessions(state: AgentState, sessions: AgentSession[]): AgentState {
-  const existingIds = new Set(state.sessions.map((session) => session.id));
-  return {
-    ...state,
-    sessions: [...state.sessions, ...sessions.filter((session) => !existingIds.has(session.id))],
-  };
-}
-
-function ensureSession(state: AgentState, sessionId: string, timestamp: number): AgentState {
-  if (hasSession(state.sessions, sessionId)) {
-    return state;
-  }
-
-  return {
-    ...state,
-    sessions: [createPlaceholderSession(sessionId, timestamp), ...state.sessions],
-  };
-}
-
-function updateSession(state: AgentState, sessionId: string, update: SessionUpdater): AgentState {
-  return {
-    ...state,
-    sessions: state.sessions.map((session) => session.id === sessionId ? update(session) : session),
-  };
-}
-
-function createPlaceholderSession(sessionId: string, timestamp: number): AgentSession {
-  return {
-    id: sessionId,
-    taskLabel: `Session ${sessionId.slice(0, 8)}`,
-    status: 'running',
-    startedAt: timestamp,
-    toolCalls: [],
-    inputTokens: 0,
-    outputTokens: 0,
-  };
-}
-
-/** Auto-resolve tool calls that have been pending longer than STALE_TOOL_CALL_MS.
- *  Their post_tool_use was likely lost or unmatched. */
-function resolveStaleToolCalls(toolCalls: ToolCallEvent[], now: number): ToolCallEvent[] {
-  let changed = false;
-  const resolved = toolCalls.map((tc) => {
-    if (tc.status === 'pending' && (now - tc.timestamp) > STALE_TOOL_CALL_MS) {
-      changed = true;
-      return { ...tc, status: 'success' as const, duration: now - tc.timestamp };
-    }
-    return tc;
-  });
-  return changed ? resolved : toolCalls;
-}
-
-/** Resolve any tool calls still in 'pending' state when a session ends.
- *  If the session ended normally (no error), mark them as 'success' since
- *  their post_tool_use likely arrived but wasn't matched.
- *  If the session errored, mark them as 'error'. */
-function resolvePendingToolCalls(toolCalls: ToolCallEvent[], sessionError?: string): ToolCallEvent[] {
-  const resolvedStatus: 'success' | 'error' = sessionError ? 'error' : 'success';
-  return toolCalls.map((toolCall) => (
-    toolCall.status === 'pending' ? { ...toolCall, status: resolvedStatus } : toolCall
-  ));
-}
-
-function getUsageDeltas(usage: TokenUsage): {
-  input: number;
-  output: number;
-  cacheRead: number;
-  cacheWrite: number;
-} {
-  return {
-    input: usage.input_tokens ?? 0,
-    output: usage.output_tokens ?? 0,
-    cacheRead: usage.cache_read_input_tokens ?? 0,
-    cacheWrite: usage.cache_creation_input_tokens ?? 0,
-  };
-}
-
-function mergeOptionalTokenCount(currentValue: number | undefined, delta: number): number | undefined {
-  const nextValue = (currentValue ?? 0) + delta;
-  return nextValue > 0 ? nextValue : undefined;
-}
-
-function trimToolCalls(toolCalls: ToolCallEvent[]): ToolCallEvent[] {
-  return toolCalls.length > MAX_TOOL_CALLS
-    ? toolCalls.slice(toolCalls.length - MAX_TOOL_CALLS)
-    : toolCalls;
-}
-
-function omitPendingLink(
-  pendingSubagentLinks: Record<string, string>,
-  sessionId: string,
-): Record<string, string> {
-  const { [sessionId]: removedLink, ...remainingLinks } = pendingSubagentLinks;
-  void removedLink;
-  return remainingLinks;
-}
-
-function hasSession(sessions: AgentSession[], sessionId: string): boolean {
-  return sessions.some((session) => session.id === sessionId);
-}

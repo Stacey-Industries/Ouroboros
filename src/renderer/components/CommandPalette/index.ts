@@ -1,16 +1,11 @@
-export { CommandPalette } from './CommandPalette';
-export type { CommandPaletteProps } from './CommandPalette';
-
-export { CommandItem } from './CommandItem';
 export type { CommandItemProps } from './CommandItem';
-
-export { FilePicker } from './FilePicker';
+export { CommandItem } from './CommandItem';
+export type { CommandPaletteProps } from './CommandPalette';
+export { CommandPalette } from './CommandPalette';
 export type { FilePickerProps } from './FilePicker';
-
-export { useCommandRegistry } from './useCommandRegistry';
-export type { UseCommandRegistryReturn } from './useCommandRegistry';
-
-export { useCommandPalette } from './useCommandPalette';
+export { FilePicker } from './FilePicker';
+export type { Command, CommandCategory,CommandMatch } from './types';
 export type { UseCommandPaletteReturn } from './useCommandPalette';
-
-export type { Command, CommandMatch, CommandCategory } from './types';
+export { useCommandPalette } from './useCommandPalette';
+export type { UseCommandRegistryReturn } from './useCommandRegistry';
+export { useCommandRegistry } from './useCommandRegistry';

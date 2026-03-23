@@ -7,14 +7,24 @@ import type {
   FileChangeEvent,
   HookPayload,
   IpcResult,
-  PtyCwdResult,
-  PtySpawnResult,
-  PtyStopRecordingResult,
   ReadBinaryFileResult,
   ReadDirResult,
   ReadFileResult,
   SelectFolderResult
 } from './electron-foundation'
+
+export interface PtySpawnResult extends IpcResult {
+  already?: boolean
+}
+
+export interface PtyCwdResult extends IpcResult {
+  cwd?: string
+}
+
+export interface PtyStopRecordingResult extends IpcResult {
+  filePath?: string
+  cancelled?: boolean
+}
 
 export interface ActiveSessionInfo {
   id: string

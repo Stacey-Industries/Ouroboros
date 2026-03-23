@@ -3,7 +3,8 @@
  * Extracted from LayoutSwitcher.tsx.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback,useEffect, useRef, useState } from 'react';
+
 import type { WorkspaceLayout } from '../../types/electron';
 
 export interface LayoutSaveInputProps {

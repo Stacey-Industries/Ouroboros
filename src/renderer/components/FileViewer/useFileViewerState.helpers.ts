@@ -1,7 +1,7 @@
 import type { DiffLineInfo } from '../../types/electron';
 import type { ConflictBlock } from './ConflictResolver';
-import type { ScrollMetrics } from './useScrollMetrics';
 import type { FoldRange } from './useFoldRanges';
+import type { ScrollMetrics } from './useScrollMetrics';
 
 export interface ViewerRefs {
   codeRef: React.RefObject<HTMLDivElement | null>;

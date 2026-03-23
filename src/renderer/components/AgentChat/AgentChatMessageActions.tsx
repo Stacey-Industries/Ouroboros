@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+
 import type { AgentChatMessageRecord } from '../../types/electron';
 
 export interface MessageActionsProps {

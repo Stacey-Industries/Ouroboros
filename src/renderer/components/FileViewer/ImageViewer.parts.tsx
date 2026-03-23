@@ -37,19 +37,15 @@ export interface ImageViewerToolbarProps {
   onToggleSource?: () => void;
 }
 
-export function ImageViewerToolbar({
+function ZoomModeButtons({
   zoomMode,
-  zoomLabel,
   onFit,
   onActualSize,
   onZoomOut,
   onZoomIn,
-  isSvg,
-  showSource,
-  onToggleSource,
-}: ImageViewerToolbarProps): React.ReactElement {
+}: Pick<ImageViewerToolbarProps, 'zoomMode' | 'onFit' | 'onActualSize' | 'onZoomOut' | 'onZoomIn'>): React.ReactElement {
   return (
-    <div style={toolbarStyle}>
+    <>
       <button onClick={onFit} title="Fit to window" style={getZoomButtonStyle(zoomMode === 'fit')}>
         Fit
       </button>
@@ -66,6 +62,49 @@ export function ImageViewerToolbar({
       <button onClick={onZoomIn} title="Zoom in" style={getZoomButtonStyle(false)}>
         +
       </button>
+    </>
+  );
+}
+
+function SvgSourceToggle({
+  showSource,
+  onToggleSource,
+}: Pick<ImageViewerToolbarProps, 'showSource' | 'onToggleSource'>): React.ReactElement | null {
+  if (!onToggleSource) {
+    return null;
+  }
+
+  return (
+    <button
+      onClick={onToggleSource}
+      title={showSource ? 'Show image' : 'View SVG source'}
+      style={getZoomButtonStyle(Boolean(showSource))}
+    >
+      {showSource ? 'Image' : 'Source'}
+    </button>
+  );
+}
+
+export function ImageViewerToolbar({
+  zoomMode,
+  zoomLabel,
+  onFit,
+  onActualSize,
+  onZoomOut,
+  onZoomIn,
+  isSvg,
+  showSource,
+  onToggleSource,
+}: ImageViewerToolbarProps): React.ReactElement {
+  return (
+    <div style={toolbarStyle}>
+      <ZoomModeButtons
+        zoomMode={zoomMode}
+        onFit={onFit}
+        onActualSize={onActualSize}
+        onZoomOut={onZoomOut}
+        onZoomIn={onZoomIn}
+      />
       <span
         className="text-text-semantic-faint"
         style={{
@@ -79,126 +118,9 @@ export function ImageViewerToolbar({
       {isSvg && onToggleSource && (
         <>
           <div style={{ flex: 1 }} />
-          <button
-            onClick={onToggleSource}
-            title={showSource ? 'Show image' : 'View SVG source'}
-            style={getZoomButtonStyle(!!showSource)}
-          >
-            {showSource ? 'Image' : 'Source'}
-          </button>
+          <SvgSourceToggle showSource={showSource} onToggleSource={onToggleSource} />
         </>
       )}
-    </div>
-  );
-}
-
-/** Checkerboard background pattern for transparency */
-const checkerboardBg =
-  'repeating-conic-gradient(#80808020 0% 25%, transparent 0% 50%) 0 0 / 16px 16px';
-
-export interface ImageViewportProps {
-  fileUrl: string;
-  filePath: string;
-  loadError: boolean;
-  imgRef: React.RefObject<HTMLImageElement | null>;
-  onLoad: () => void;
-  onError: () => void;
-  zoomMode: ZoomMode;
-  imgStyle: React.CSSProperties;
-  /** Pan offset (pixels) applied via CSS transform */
-  panOffset: { x: number; y: number };
-  /** Pointer handlers for pan (supports mouse, touch, pen) */
-  onPointerDown: (e: React.PointerEvent) => void;
-  onPointerMove: (e: React.PointerEvent) => void;
-  onPointerUp: (e: React.PointerEvent) => void;
-  onPointerLeave: (e: React.PointerEvent) => void;
-  /** Scroll-wheel zoom */
-  onWheel: (e: React.WheelEvent) => void;
-  /** Whether panning is in progress (changes cursor) */
-  isPanning: boolean;
-  /** Container ref for scroll-wheel coordinate math */
-  containerRef: React.RefObject<HTMLDivElement | null>;
-}
-
-export function ImageViewport({
-  fileUrl,
-  filePath,
-  loadError,
-  imgRef,
-  onLoad,
-  onError,
-  zoomMode,
-  imgStyle,
-  panOffset,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerLeave,
-  onWheel,
-  isPanning,
-  containerRef,
-}: ImageViewportProps): React.ReactElement {
-  return (
-    <div
-      ref={containerRef}
-      style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerLeave}
-      onWheel={onWheel}
-    >
-      {loadError ? (
-        <ImageLoadError fileUrl={fileUrl} />
-      ) : (
-        <div
-          style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-            background: checkerboardBg,
-            display: 'inline-block',
-            lineHeight: 0,
-          }}
-        >
-          <img
-            ref={imgRef}
-            src={fileUrl}
-            alt={filePath}
-            onLoad={onLoad}
-            onError={onError}
-            style={imgStyle}
-            draggable={false}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ImageLoadError({ fileUrl }: { fileUrl: string }): React.ReactElement {
-  return (
-    <div
-      className="text-status-error"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '0.875rem',
-        textAlign: 'center',
-      }}
-    >
-      <span style={{ fontSize: '1.5rem' }}>!</span>
-      <span>Failed to load image</span>
-      <span
-        className="text-text-semantic-faint"
-        style={{
-          fontSize: '0.75rem',
-          fontFamily: 'var(--font-mono)',
-          wordBreak: 'break-all',
-        }}
-      >
-        {fileUrl}
-      </span>
     </div>
   );
 }
@@ -262,19 +184,6 @@ export function getImageStyle(
     width: naturalWidth != null ? naturalWidth * customZoom : 'auto',
     height: naturalHeight != null ? naturalHeight * customZoom : 'auto',
     display: 'block',
-  };
-}
-
-function getImageAreaStyle(zoomMode: ZoomMode, isPanning: boolean): React.CSSProperties {
-  return {
-    flex: 1,
-    overflow: 'auto',
-    display: 'flex',
-    alignItems: zoomMode === 'fit' ? 'center' : 'flex-start',
-    justifyContent: zoomMode === 'fit' ? 'center' : 'flex-start',
-    padding: '16px',
-    backgroundColor: 'var(--surface-base)',
-    cursor: isPanning ? 'grabbing' : 'grab',
   };
 }
 

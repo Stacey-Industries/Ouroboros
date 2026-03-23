@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
 import type { RefObject } from 'react';
+import { useEffect } from 'react';
+
 import type { FoldRange } from './useFoldRanges';
 
 const LINE_HEIGHT = 20.8;

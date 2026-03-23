@@ -1,4 +1,5 @@
 import type React from 'react'
+
 import type { Completion } from './CompletionOverlay'
 
 const COMPLETION_POPUP_POS = { x: 8, y: 40 }

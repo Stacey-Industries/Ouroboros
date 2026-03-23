@@ -7,8 +7,9 @@
  */
 
 import React, { memo, useMemo, useState } from 'react';
+
+import { estimateCost,formatCost, formatTokenCount } from './costCalculator';
 import type { AgentSession } from './types';
-import { formatTokenCount, formatCost, estimateCost } from './costCalculator';
 
 interface AgentSummaryBarProps {
   sessions: AgentSession[];

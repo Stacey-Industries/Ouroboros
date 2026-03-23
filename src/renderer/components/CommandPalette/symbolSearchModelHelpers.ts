@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+
 import type { SymbolEntry } from '../../types/electron';
 import type { MatchResult } from './useSymbolSearchModel';
 

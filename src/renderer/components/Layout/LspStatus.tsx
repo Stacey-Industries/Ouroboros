@@ -6,6 +6,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { LspServerStatus, LspServerStatusType } from '../../types/electron'
 
 const STATUS_COLORS: Record<LspServerStatusType, string> = {

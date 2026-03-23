@@ -1,9 +1,10 @@
-import React, { memo } from 'react';
 import type { Ref } from 'react';
-import { InlineEditor } from './InlineEditor';
+import React, { memo } from 'react';
+
 import type { ClaudeMdEditorModel } from './ClaudeMdEditor.model';
-import { formatBytes, type ClaudeMdStats } from './ClaudeMdEditor.utils';
 import { ClaudeMdOutlineSidebar, ClaudeMdTemplateLibrary } from './ClaudeMdEditor.sidebar';
+import { type ClaudeMdStats,formatBytes } from './ClaudeMdEditor.utils';
+import { InlineEditor } from './InlineEditor';
 
 interface ClaudeMdEditorChromeProps {
   content: string;

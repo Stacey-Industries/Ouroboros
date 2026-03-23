@@ -113,6 +113,10 @@ function ActionButton({
   )
 }
 
+function shouldShowExplain(block: CommandBlock, onExplainError?: (block: CommandBlock) => void): boolean {
+  return Boolean(block.complete && block.exitCode !== undefined && block.exitCode !== 0 && onExplainError)
+}
+
 export function CommandBlockActions({
   block,
   sessionId,
@@ -121,45 +125,7 @@ export function CommandBlockActions({
   onToggleCollapse,
   onExplainError,
 }: CommandBlockActionsProps): React.ReactElement {
-  const handleRerun = useCallback(() => {
-    if (block.command) {
-      void window.electronAPI.pty.write(sessionId, block.command + '\n')
-    }
-  }, [block.command, sessionId])
-
+  const handleRerun = useCallback(() => { if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n') }, [block.command, sessionId])
   const canCollapse = block.complete && block.endLine - block.startLine > 1
-
-  return (
-    <div style={actionsBarStyle}>
-      {block.command && (
-        <ActionButton onClick={() => onCopyCommand(block)} title="Copy command">
-          <CopyIcon /> Cmd
-        </ActionButton>
-      )}
-      {block.complete && (
-        <ActionButton onClick={() => onCopyOutput(block)} title="Copy output">
-          <CopyIcon /> Output
-        </ActionButton>
-      )}
-      {block.command && (
-        <ActionButton onClick={handleRerun} title="Re-run command">
-          <RerunIcon /> Re-run
-        </ActionButton>
-      )}
-      {block.complete && block.exitCode !== undefined && block.exitCode !== 0 && onExplainError && (
-        <ActionButton onClick={() => onExplainError(block)} title="Explain this error with AI">
-          <ExplainIcon /> Explain
-        </ActionButton>
-      )}
-      {canCollapse && (
-        <ActionButton
-          onClick={() => onToggleCollapse(block.id)}
-          title={block.collapsed ? 'Expand output' : 'Collapse output'}
-        >
-          <CollapseIcon collapsed={block.collapsed} />
-          {block.collapsed ? 'Expand' : 'Collapse'}
-        </ActionButton>
-      )}
-    </div>
-  )
+  return <div style={actionsBarStyle}>{block.command && <ActionButton onClick={() => onCopyCommand(block)} title="Copy command"><CopyIcon /> Cmd</ActionButton>}{block.complete && <ActionButton onClick={() => onCopyOutput(block)} title="Copy output"><CopyIcon /> Output</ActionButton>}{block.command && <ActionButton onClick={handleRerun} title="Re-run command"><RerunIcon /> Re-run</ActionButton>}{shouldShowExplain(block, onExplainError) && <ActionButton onClick={() => onExplainError?.(block)} title="Explain this error with AI"><ExplainIcon /> Explain</ActionButton>}{canCollapse && <ActionButton onClick={() => onToggleCollapse(block.id)} title={block.collapsed ? 'Expand output' : 'Collapse output'}><CollapseIcon collapsed={block.collapsed} />{block.collapsed ? 'Expand' : 'Collapse'}</ActionButton>}</div>
 }

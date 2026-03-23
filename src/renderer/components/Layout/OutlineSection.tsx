@@ -6,14 +6,15 @@
  */
 
 import React, { useCallback } from 'react';
-import { useFileViewerManager } from '../FileViewer';
-import { useSymbolOutline } from '../../hooks/useSymbolOutline';
+
 import type { OutlineSymbol } from '../../hooks/useSymbolOutline';
+import { useSymbolOutline } from '../../hooks/useSymbolOutline';
+import { useFileViewerManager } from '../FileViewer';
 import { detectLanguage } from '../FileViewer/monacoSetup';
 import {
+  getOutlineIconStyle,
   KIND_COLOR,
   KIND_ICON,
-  getOutlineIconStyle,
   OUTLINE_NAME_STYLE,
 } from '../FileViewer/SymbolOutline.shared';
 
@@ -39,54 +40,37 @@ interface OutlineItemProps {
   onClick: (symbol: OutlineSymbol) => void;
 }
 
+const OUTLINE_ITEM_BUTTON_BASE: React.CSSProperties = {
+  background: 'none', fontFamily: 'var(--font-mono)', fontSize: '0.6875rem',
+  lineHeight: '1.5', textAlign: 'left', overflow: 'hidden',
+  whiteSpace: 'nowrap', textOverflow: 'ellipsis', minWidth: 0,
+  paddingRight: '8px', paddingTop: '2px', paddingBottom: '2px',
+};
+
+const OUTLINE_LINE_NUM_STYLE: React.CSSProperties = {
+  flexShrink: 0, fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
+  marginLeft: 'auto', paddingLeft: '4px',
+};
+
 function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
   }, []);
-
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = 'transparent';
   }, []);
-
   return (
     <button
       className="flex items-center gap-1.5 w-full border-none cursor-pointer outline-none text-text-semantic-secondary"
-      style={{
-        paddingLeft: `${8 + symbol.depth * 12}px`,
-        paddingRight: '8px',
-        paddingTop: '2px',
-        paddingBottom: '2px',
-        background: 'none',
-        fontFamily: 'var(--font-mono)',
-        fontSize: '0.6875rem',
-        lineHeight: '1.5',
-        textAlign: 'left',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        textOverflow: 'ellipsis',
-        minWidth: 0,
-      }}
+      style={{ ...OUTLINE_ITEM_BUTTON_BASE, paddingLeft: `${8 + symbol.depth * 12}px` }}
       onClick={() => onClick(symbol)}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       title={`${symbol.name} (line ${symbol.line + 1})`}
     >
-      <span style={getOutlineIconStyle(KIND_COLOR[symbol.kind])}>
-        {KIND_ICON[symbol.kind]}
-      </span>
+      <span style={getOutlineIconStyle(KIND_COLOR[symbol.kind])}>{KIND_ICON[symbol.kind]}</span>
       <span style={OUTLINE_NAME_STYLE}>{symbol.name}</span>
-      <span
-        className="text-text-semantic-faint"
-        style={{
-          flexShrink: 0,
-          fontSize: '0.6rem',
-          fontFamily: 'var(--font-mono)',
-          marginLeft: 'auto',
-          paddingLeft: '4px',
-        }}
-      >
-        {symbol.line + 1}
-      </span>
+      <span className="text-text-semantic-faint" style={OUTLINE_LINE_NUM_STYLE}>{symbol.line + 1}</span>
     </button>
   );
 }

@@ -1,27 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
 import type { FitAddon } from '@xterm/addon-fit'
-import type { SearchAddon } from '@xterm/addon-search'
 import type { ProgressAddon } from '@xterm/addon-progress'
+import type { SearchAddon } from '@xterm/addon-search'
 import type { SerializeAddon } from '@xterm/addon-serialize'
 import type { Terminal } from '@xterm/xterm'
-import type { ShellIntegrationAddon } from './shellIntegrationAddon'
+import type { Dispatch, SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import { useProject } from '../../contexts/ProjectContext'
 import type { SelectionTooltipState } from './SelectionTooltip'
-import {
-  useLatestRef,
-  useThemeSync,
-} from './TerminalInstanceUiState'
-import { useCommandBlocks } from './useCommandBlocks'
-import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
-import { useTerminalCompletions } from './useTerminalCompletions'
-import { useTerminalHistory } from './useTerminalHistory'
-import { useTerminalSetup } from './useTerminalSetup'
+import type { ShellIntegrationAddon } from './shellIntegrationAddon'
 import type {
   TerminalFoundation,
   TerminalHistoryState,
   TerminalInstanceProps,
 } from './TerminalInstanceController.types'
+import {
+  useLatestRef,
+  useThemeSync,
+} from './TerminalInstanceUiState'
+import type { CommandBlock as RichCommandBlock } from './useCommandBlocks'
+import { useCommandBlocks } from './useCommandBlocks'
+import { useTerminalCompletions } from './useTerminalCompletions'
+import { useTerminalHistory } from './useTerminalHistory'
+import { useTerminalSetup } from './useTerminalSetup'
 
 type NormalizedTerminalProps = Pick<
   TerminalFoundation,

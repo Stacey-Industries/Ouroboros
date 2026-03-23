@@ -1,8 +1,9 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
-import { SectionLabel } from './settingsStyles';
-import { HooksStatusSubsection } from './HooksStatusSubsection';
 import { ApprovalSubsection } from './HooksApprovalSubsection';
+import { HooksStatusSubsection } from './HooksStatusSubsection';
+import { SectionLabel } from './settingsStyles';
 
 interface HooksSectionProps {
   draft: AppConfig;

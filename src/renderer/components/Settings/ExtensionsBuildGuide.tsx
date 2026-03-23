@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { SectionLabel } from './settingsStyles';
 
 const ACTIVATION_EVENTS = [

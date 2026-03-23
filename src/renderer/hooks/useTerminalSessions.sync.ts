@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { useEffect, useRef } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import { hasElectronAPI, serializeSavedSessionSnapshots } from './useTerminalSessions.effects';
 
@@ -76,54 +77,51 @@ async function persistCurrentSessions(
   }
 }
 
+function usePersistRefs(sessions: TerminalSession[]): {
+  sessionsRef: MutableRefObject<TerminalSession[]>;
+  lastPersistedSerializedRef: MutableRefObject<string | null>;
+  persistInFlightRef: MutableRefObject<boolean>;
+  hasPendingPersistRef: MutableRefObject<boolean>;
+} {
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  return {
+    sessionsRef,
+    lastPersistedSerializedRef: useRef<string | null>(null),
+    persistInFlightRef: useRef(false),
+    hasPendingPersistRef: useRef(false),
+  };
+}
+
 export function usePersistSessions(
   sessions: TerminalSession[],
   enabled: boolean,
   persistedSessionsSeed: string | null,
 ): void {
-  const sessionsRef = useRef(sessions);
-  const lastPersistedSerializedRef = useRef<string | null>(null);
-  const persistInFlightRef = useRef(false);
-  const hasPendingPersistRef = useRef(false);
-  sessionsRef.current = sessions;
-
+  const { sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef } = usePersistRefs(sessions);
   const runningTopologySignature = buildRunningTopologySignature(getRunningSessions(sessions));
 
   useEffect(() => {
     if (!enabled || persistedSessionsSeed === null) return;
     if (lastPersistedSerializedRef.current !== null) return;
     lastPersistedSerializedRef.current = persistedSessionsSeed;
-  }, [enabled, persistedSessionsSeed]);
+  }, [enabled, persistedSessionsSeed, lastPersistedSerializedRef]);
 
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
-
     const timeout = setTimeout(() => {
-      void persistCurrentSessions(
-        sessionsRef,
-        lastPersistedSerializedRef,
-        persistInFlightRef,
-        hasPendingPersistRef,
-      );
+      void persistCurrentSessions(sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef);
     }, SESSION_PERSIST_DEBOUNCE_MS);
-
     return () => clearTimeout(timeout);
-  }, [enabled, runningTopologySignature]);
+  }, [enabled, runningTopologySignature, sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef]);
 
   useEffect(() => {
     if (!enabled || !hasElectronAPI()) return;
-
     const interval = setInterval(() => {
-      void persistCurrentSessions(
-        sessionsRef,
-        lastPersistedSerializedRef,
-        persistInFlightRef,
-        hasPendingPersistRef,
-      );
+      void persistCurrentSessions(sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef);
     }, SESSION_PERSIST_SAFETY_MS);
-
     return () => clearInterval(interval);
-  }, [enabled]);
+  }, [enabled, sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef]);
 }
 
 function createSessionSnapshot(session: TerminalSession, cwd: string): SavedSessionSnapshot {

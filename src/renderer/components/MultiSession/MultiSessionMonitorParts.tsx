@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
-import type { AgentSession, ToolCallEvent } from '../AgentMonitor/types';
+
 import { formatCost, formatTokenCount } from '../AgentMonitor/costCalculator';
+import type { AgentSession, ToolCallEvent } from '../AgentMonitor/types';
 import type { BatchStats, GridLayout } from './multiSessionMonitorModel';
 import { estimateSessionCost } from './multiSessionMonitorModel';
 

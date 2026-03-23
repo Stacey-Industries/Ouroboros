@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ApprovalRequest } from '../../types/electron';
 import { ToolInputPreview } from './ToolInputPreview';
 

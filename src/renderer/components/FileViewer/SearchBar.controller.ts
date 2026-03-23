@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+
 import type { SearchBarProps, SearchMatch } from './SearchBar';
 import { clearHighlights, getMatchLabel, searchInContainer, syncActiveMatch } from './SearchBar.search';
 

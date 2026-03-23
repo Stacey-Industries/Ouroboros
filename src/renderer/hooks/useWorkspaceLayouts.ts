@@ -5,6 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+
 import type { WorkspaceLayout } from '../types/electron';
 
 function hasElectronAPI(): boolean {

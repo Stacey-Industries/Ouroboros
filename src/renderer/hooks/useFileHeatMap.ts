@@ -8,14 +8,15 @@
  */
 
 import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
 } from 'react';
+
 import { useAgentEventsContext } from '../contexts/AgentEventsContext';
 import type { UseAgentEventsReturn } from './useAgentEvents';
 

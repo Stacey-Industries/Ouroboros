@@ -1,5 +1,6 @@
 import React from 'react';
-import type { SurfaceLevel, Radius } from './types';
+
+import type { Radius,SurfaceLevel } from './types';
 
 export interface SurfaceProps extends React.HTMLAttributes<HTMLDivElement> {
   level?: SurfaceLevel;

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import { SETTINGS_ENTRIES, type SettingsEntry } from './settingsEntries';
 
 export interface SearchMatch {

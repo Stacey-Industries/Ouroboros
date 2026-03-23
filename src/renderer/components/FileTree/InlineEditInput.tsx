@@ -2,7 +2,7 @@
  * InlineEditInput - input field for inline rename / new file creation.
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useCallback,useEffect, useRef, useState } from 'react';
 
 // eslint-disable-next-line no-control-regex
 const INVALID_NAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/;

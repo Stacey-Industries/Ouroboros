@@ -1,7 +1,8 @@
 import React from 'react';
+
 import { SymbolSearchPanel } from './SymbolSearchPanel';
-import { useSymbolSearchModel } from './useSymbolSearchModel';
 import type { SymbolSearchProps } from './useSymbolSearchModel';
+import { useSymbolSearchModel } from './useSymbolSearchModel';
 
 export type { SymbolSearchProps } from './useSymbolSearchModel';
 

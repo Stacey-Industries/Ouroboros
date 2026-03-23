@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback,useEffect, useRef, useState } from 'react';
 
 export interface DetailedGitStatus {
   /** Files staged in the git index: relative path -> status char (M/A/D/R) */
@@ -35,6 +35,31 @@ function toMap(record: Record<string, string> | undefined): Map<string, string> 
  * staged vs. unstaged file maps. Uses the `git:statusDetailed` IPC channel
  * which parses the two-column porcelain output.
  */
+function resetDetailedState(
+  setStatus: React.Dispatch<React.SetStateAction<DetailedGitStatus>>,
+  setIsRepo: React.Dispatch<React.SetStateAction<boolean>>,
+  isRepoRef: React.MutableRefObject<boolean>,
+): void {
+  setStatus(EMPTY_STATUS);
+  setIsRepo(false);
+  isRepoRef.current = false;
+}
+
+function setupDetailedFileWatcher(
+  projectRoot: string,
+  isRepoRef: React.MutableRefObject<boolean>,
+  activeRef: { current: boolean },
+  fetchStatus: (root: string) => Promise<void>,
+): (() => void) | null {
+  try {
+    return window.electronAPI.files.onFileChange(() => {
+      if (activeRef.current && isRepoRef.current) void fetchStatus(projectRoot);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDetailedReturn {
   const [status, setStatus] = useState<DetailedGitStatus>(EMPTY_STATUS);
   const [isRepo, setIsRepo] = useState(false);
@@ -47,32 +72,17 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
     if (!isRepoRef.current) return;
     try {
       const result = await window.electronAPI.git.statusDetailed(root);
-      if (result.success) {
-        setStatus({
-          staged: toMap(result.staged),
-          unstaged: toMap(result.unstaged),
-        });
-      }
-    } catch {
-      /* silently ignore */
-    }
+      if (result.success) setStatus({ staged: toMap(result.staged), unstaged: toMap(result.unstaged) });
+    } catch { /* silently ignore */ }
   }, []);
 
   const refresh = useCallback(() => {
     const root = rootRef.current;
-    if (root && isRepoRef.current) {
-      void fetchStatus(root);
-    }
+    if (root && isRepoRef.current) void fetchStatus(root);
   }, [fetchStatus]);
 
   useEffect(() => {
-    if (!projectRoot) {
-      setStatus(EMPTY_STATUS);
-      setIsRepo(false);
-      isRepoRef.current = false;
-      return;
-    }
-
+    if (!projectRoot) { resetDetailedState(setStatus, setIsRepo, isRepoRef); return; }
     const activeRef = { current: true };
 
     window.electronAPI.git.isRepo(projectRoot).then((result) => {
@@ -80,33 +90,16 @@ export function useGitStatusDetailed(projectRoot: string | null): UseGitStatusDe
       const repo = !!(result.success && result.isRepo);
       setIsRepo(repo);
       isRepoRef.current = repo;
-
       if (repo) {
-        fetchStatus(projectRoot);
-        intervalRef.current = setInterval(() => {
-          if (activeRef.current) fetchStatus(projectRoot);
-        }, POLL_INTERVAL_MS);
+        void fetchStatus(projectRoot);
+        intervalRef.current = setInterval(() => { if (activeRef.current) void fetchStatus(projectRoot); }, POLL_INTERVAL_MS);
       }
     });
 
-    // Also refresh on file changes
-    let cleanupWatcher: (() => void) | null = null;
-    try {
-      cleanupWatcher = window.electronAPI.files.onFileChange(() => {
-        if (activeRef.current && isRepoRef.current && projectRoot) {
-          fetchStatus(projectRoot);
-        }
-      });
-    } catch {
-      /* ignore */
-    }
-
+    const cleanupWatcher = setupDetailedFileWatcher(projectRoot, isRepoRef, activeRef, fetchStatus);
     return () => {
       activeRef.current = false;
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalRef.current !== null) { clearInterval(intervalRef.current); intervalRef.current = null; }
       cleanupWatcher?.();
     };
   }, [projectRoot, fetchStatus]);

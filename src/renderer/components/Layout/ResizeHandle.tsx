@@ -1,4 +1,5 @@
 import React, { useCallback, useRef } from 'react';
+
 import type { PanelId } from './useResizable';
 
 export interface ResizeHandleProps {

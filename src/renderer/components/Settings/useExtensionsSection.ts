@@ -1,16 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useCommandRegistry } from '../CommandPalette/useCommandRegistry';
-import type { Command } from '../CommandPalette/types';
+import { useCallback, useMemo, useState } from 'react';
+
 import type { ExtensionInfo } from '../../types/electron';
+import type { Command } from '../CommandPalette/types';
+import { useCommandRegistry } from '../CommandPalette/useCommandRegistry';
 import {
   type ExtensionLoaders,
   type ExtensionsState,
   getErrorMessage,
   handleExtensionListResult,
   hasElectronApi,
-  useExtensionStatusActions,
   useExtensionsSideEffects,
+  useExtensionStatusActions,
   useExtensionUtilityActions,
 } from './useExtensionsSectionSupport';
 

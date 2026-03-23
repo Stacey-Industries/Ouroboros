@@ -146,31 +146,39 @@ function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.Re
   );
 }
 
-// ── Daily Cost Chart ─────────────────────────────────────────────────────
-
-interface DailyBucket {
-  label: string;
-  cost: number;
-  tokens: number;
-}
+interface DailyBucket { label: string; cost: number; tokens: number }
 
 function buildDailyBuckets(sessions: SessionUsage[]): DailyBucket[] {
-  const bucketMap = new Map<string, DailyBucket>();
-
-  for (const session of sessions) {
-    const date = new Date(session.startedAt);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const bucket = bucketMap.get(key) ?? { label, cost: 0, tokens: 0 };
-    bucket.cost += session.estimatedCost;
-    bucket.tokens += session.inputTokens + session.outputTokens;
-    bucketMap.set(key, bucket);
+  const map = new Map<string, DailyBucket>();
+  for (const s of sessions) {
+    const d = new Date(s.startedAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const bucket = map.get(key) ?? { label, cost: 0, tokens: 0 };
+    bucket.cost += s.estimatedCost;
+    bucket.tokens += s.inputTokens + s.outputTokens;
+    map.set(key, bucket);
   }
+  return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([, b]) => b);
+}
 
-  // Sort by date key (YYYY-MM-DD sorts naturally)
-  return Array.from(bucketMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, bucket]) => bucket);
+function DailyBar({ bucket, maxCost, isHovered, onEnter, onLeave }: {
+  bucket: DailyBucket; maxCost: number; isHovered: boolean;
+  onEnter: () => void; onLeave: () => void;
+}): React.ReactElement {
+  const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
+  return (
+    <div className="relative flex flex-1 flex-col items-center justify-end" style={{ height: '100%' }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
+      {isHovered && (
+        <div className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap bg-surface-raised text-interactive-accent"
+          style={{ border: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', zIndex: 1 }}>
+          {formatCost(bucket.cost)}
+        </div>
+      )}
+      <div className="w-full rounded-t transition-opacity duration-100"
+        style={{ height: `${barHeight}%`, backgroundColor: 'var(--accent)', opacity: isHovered ? 1 : 0.6, minHeight: bucket.cost > 0 ? '2px' : '0' }} />
+    </div>
+  );
 }
 
 function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.ReactElement | null {
@@ -178,7 +186,6 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   if (buckets.length < 2) return null;
-
   const maxCost = Math.max(...buckets.map((b) => b.cost));
   if (maxCost === 0) return null;
 
@@ -186,37 +193,10 @@ function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.React
     <div className="px-4 py-3 border-b border-border-semantic">
       <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">Daily Spend</div>
       <div className="flex items-end gap-[3px]" style={{ height: '80px' }}>
-        {buckets.map((bucket, i) => {
-          const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
-          const isHovered = hoveredIndex === i;
-          return (
-            <div
-              key={i}
-              className="relative flex flex-1 flex-col items-center justify-end"
-              style={{ height: '100%' }}
-              onMouseEnter={() => setHoveredIndex(i)}
-              onMouseLeave={() => setHoveredIndex(null)}
-            >
-              {isHovered && (
-                <div
-                  className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap bg-surface-raised text-interactive-accent"
-                  style={{ border: '1px solid var(--border-muted)', fontFamily: 'var(--font-mono)', zIndex: 1 }}
-                >
-                  {formatCost(bucket.cost)}
-                </div>
-              )}
-              <div
-                className="w-full rounded-t transition-opacity duration-100"
-                style={{
-                  height: `${barHeight}%`,
-                  backgroundColor: 'var(--accent)',
-                  opacity: isHovered ? 1 : 0.6,
-                  minHeight: bucket.cost > 0 ? '2px' : '0',
-                }}
-              />
-            </div>
-          );
-        })}
+        {buckets.map((bucket, i) => (
+          <DailyBar key={i} bucket={bucket} maxCost={maxCost} isHovered={hoveredIndex === i}
+            onEnter={() => setHoveredIndex(i)} onLeave={() => setHoveredIndex(null)} />
+        ))}
       </div>
       <div className="mt-1 flex justify-between">
         <span className="text-[8px] text-text-semantic-faint">{buckets[0].label}</span>
@@ -245,24 +225,15 @@ function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): 
   );
 }
 
-function HistorySessionRow({
-  session,
-  isExpanded,
-  onToggle,
-}: {
-  session: SessionUsage;
-  isExpanded: boolean;
-  onToggle: () => void;
+function HistorySessionRow({ session, isExpanded, onToggle }: {
+  session: SessionUsage; isExpanded: boolean; onToggle: () => void;
 }): React.ReactElement {
   const totalTokens = session.inputTokens + session.outputTokens;
-
   return (
     <div>
-      <button
-        className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
+      <button className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
         style={{ fontFamily: 'var(--font-mono)', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-muted)', cursor: 'pointer', textAlign: 'left', padding: '4px 0' }}
-        onClick={onToggle}
-      >
+        onClick={onToggle}>
         <span className="text-text-semantic-muted" style={{ width: '70px', flexShrink: 0, fontFamily: 'var(--font-ui)' }}>{timeAgo(session.lastActiveAt)}</span>
         <span className="min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ui)' }}>{session.sessionId.slice(0, 8)}</span>
         <span className="text-text-semantic-primary" style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>{modelShortName(session.model)}</span>

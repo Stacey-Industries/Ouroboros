@@ -1,43 +1,35 @@
-import { type ChildProcess, spawn } from 'child_process'
-
+import { type ChildProcess, execSync, spawn } from 'child_process'
 export interface CodexUsage {
   input_tokens?: number
   cached_input_tokens?: number
   output_tokens?: number
 }
-
 export interface CodexThreadStartedEvent {
   type: 'thread.started'
   thread_id: string
 }
-
 export interface CodexTurnStartedEvent {
   type: 'turn.started'
 }
-
 export interface CodexTurnCompletedEvent {
   type: 'turn.completed'
   usage?: CodexUsage
 }
-
 export interface CodexTurnFailedEvent {
   type: 'turn.failed'
   error?: {
     message?: string
   }
 }
-
 export interface CodexErrorEvent {
   type: 'error'
   message?: string
 }
-
 export interface CodexAgentMessageItem {
   id: string
   type: 'agent_message'
   text?: string
 }
-
 export interface CodexCommandExecutionItem {
   id: string
   type: 'command_execution'
@@ -46,25 +38,21 @@ export interface CodexCommandExecutionItem {
   exit_code?: number | null
   status?: string
 }
-
 export interface CodexFileChange {
   path?: string
   kind?: string
 }
-
 export interface CodexFileChangeItem {
   id: string
   type: 'file_change'
   changes?: CodexFileChange[]
   status?: string
 }
-
 export interface CodexItemError {
   id: string
   type: 'error'
   message?: string
 }
-
 export interface CodexUnknownItem {
   id: string
   type: string
@@ -87,7 +75,6 @@ export interface CodexItemCompletedEvent {
   type: 'item.completed'
   item: CodexItem
 }
-
 export type CodexExecEvent =
   | CodexThreadStartedEvent
   | CodexTurnStartedEvent
@@ -125,9 +112,7 @@ export interface CodexExecArgs {
   command: string
   args: string[]
 }
-
 const MAX_BUFFER_BYTES = 100 * 1024 * 1024
-
 function normalizeEventType(type: string): string {
   switch (type) {
     case 'thread_started':
@@ -208,142 +193,134 @@ function tryParseEvent(line: string): CodexExecEvent | null {
   }
 }
 
+function killCodexProcess(child: ChildProcess): void {
+  try {
+    if (process.platform !== 'win32') { child.kill('SIGTERM'); return }
+    if (child.pid) {
+      try {
+        execSync(`taskkill /T /F /PID ${child.pid}`, { stdio: 'ignore', timeout: 5000 })
+      } catch { /* already dead */ }
+    }
+    try { child.kill() } catch { /* already dead */ }
+  } catch { /* already dead */ }
+}
+
+interface CodexSessionState {
+  threadId: string | null
+  lastUsage: CodexUsage | undefined
+  failureMessage: string | null
+  sawFailureEvent: boolean
+  stdoutBuf: string
+  stderrBuf: string
+}
+function applyThreadStarted(event: CodexExecEvent, state: CodexSessionState): void {
+  const e = event as CodexThreadStartedEvent
+  if (typeof e.thread_id === 'string') state.threadId = e.thread_id
+}
+
+function applyTurnCompleted(event: CodexExecEvent, state: CodexSessionState): void {
+  const e = event as CodexTurnCompletedEvent
+  if (e.usage) state.lastUsage = e.usage
+}
+
+function applyFailureEvent(event: CodexExecEvent, state: CodexSessionState): void {
+  state.sawFailureEvent = true
+  state.failureMessage = (event as CodexErrorEvent).message ?? state.failureMessage
+}
+
+function applyTurnFailed(event: CodexExecEvent, state: CodexSessionState): void {
+  state.sawFailureEvent = true
+  state.failureMessage = (event as CodexTurnFailedEvent).error?.message ?? state.failureMessage
+}
+
+function applyItemCompleted(event: CodexExecEvent, state: CodexSessionState): void {
+  const item = (event as CodexItemCompletedEvent).item
+  if (item.type !== 'error') return
+  state.sawFailureEvent = true
+  state.failureMessage = (item as CodexItemError).message ?? state.failureMessage
+}
+function applyCodexEvent(event: CodexExecEvent, state: CodexSessionState): void {
+  if (event.type === 'thread.started') applyThreadStarted(event, state)
+  else if (event.type === 'turn.completed') applyTurnCompleted(event, state)
+  else if (event.type === 'error') applyFailureEvent(event, state)
+  else if (event.type === 'turn.failed') applyTurnFailed(event, state)
+  else if (event.type === 'item.completed') applyItemCompleted(event, state)
+}
+
+interface CodexStdoutArgs {
+  state: CodexSessionState
+  child: ChildProcess
+  onEvent: CodexExecSpawnOptions['onEvent']
+  reject: (err: Error) => void
+}
+function handleCodexStdout(chunk: Buffer, args: CodexStdoutArgs): void {
+  const { state, child, onEvent, reject } = args
+  state.stdoutBuf += chunk.toString()
+  if (state.stdoutBuf.length > MAX_BUFFER_BYTES) {
+    reject(new Error('Codex exec stdout buffer exceeded maximum allowed size (100 MB). Process killed.'))
+    try { child.kill() } catch { /* already dead */ }
+    return
+  }
+  let newlineIdx: number
+  while ((newlineIdx = state.stdoutBuf.indexOf('\n')) !== -1) {
+    const line = state.stdoutBuf.slice(0, newlineIdx)
+    state.stdoutBuf = state.stdoutBuf.slice(newlineIdx + 1)
+    const event = tryParseEvent(line)
+    if (!event) continue
+    applyCodexEvent(event, state)
+    onEvent?.(event)
+  }
+}
+
+interface CodexCloseArgs {
+  state: CodexSessionState
+  startedAt: number
+  onEvent: CodexExecSpawnOptions['onEvent']
+  resolve: (r: CodexExecResult) => void
+  reject: (err: Error) => void
+}
+function applyCodexTrailingBuf(state: CodexSessionState, onEvent: CodexExecSpawnOptions['onEvent']): void {
+  if (!state.stdoutBuf.trim()) return
+  const event = tryParseEvent(state.stdoutBuf)
+  if (event) { applyCodexEvent(event, state); onEvent?.(event) }
+  state.stdoutBuf = ''
+}
+
+function handleCodexClose(code: number | null, args: CodexCloseArgs): void {
+  const { state, startedAt, onEvent, resolve, reject } = args; applyCodexTrailingBuf(state, onEvent)
+  if (code !== 0 && code !== null) {
+    const reason = state.failureMessage ?? state.stderrBuf.trim() ?? `Codex exited with code ${code}`
+    reject(new Error(`Codex exec exited with code ${code}: ${reason}`))
+    return
+  }
+  if (state.sawFailureEvent || state.failureMessage) {
+    reject(new Error(state.failureMessage ?? 'Codex exec reported a failure event.'))
+    return
+  }
+  resolve({ threadId: state.threadId, usage: state.lastUsage, durationMs: Date.now() - startedAt })
+}
 export function spawnCodexExecProcess(options: CodexExecSpawnOptions): CodexExecProcessHandle {
   const { command, args } = buildCodexExecArgs(options)
   const startedAt = Date.now()
-
-  const child: ChildProcess = spawn(command, args, {
-    cwd: options.cwd,
-    env: buildProcessEnv(options.env),
-    stdio: ['pipe', 'pipe', 'pipe'],
-  })
-
-  if (child.stdin) {
-    child.stdin.write(options.prompt)
-    child.stdin.end()
-  }
-
-  let threadId: string | null = null
-  let lastUsage: CodexUsage | undefined
-  let failureMessage: string | null = null
-  let sawFailureEvent = false
-  let stderrBuf = ''
-  let stdoutBuf = ''
-
+  const child: ChildProcess = spawn(command, args, { cwd: options.cwd, env: buildProcessEnv(options.env), stdio: ['pipe', 'pipe', 'pipe'] })
+  if (child.stdin) { child.stdin.write(options.prompt); child.stdin.end() }
+  const state: CodexSessionState = { threadId: null, lastUsage: undefined, failureMessage: null, sawFailureEvent: false, stdoutBuf: '', stderrBuf: '' }
   const handle: CodexExecProcessHandle = {
     result: null as unknown as Promise<CodexExecResult>,
-    kill: () => {
-      try {
-        if (process.platform === 'win32') {
-          if (child.pid) {
-            try {
-              require('child_process').execSync(
-                `taskkill /T /F /PID ${child.pid}`,
-                { stdio: 'ignore', timeout: 5000 },
-              )
-            } catch {
-              // ignore
-            }
-          }
-          try { child.kill() } catch { /* ignore */ }
-        } else {
-          child.kill('SIGTERM')
-        }
-      } catch {
-        // ignore
-      }
-    },
+    kill: () => killCodexProcess(child),
     pid: child.pid,
-    get threadId() {
-      return threadId
-    },
+    get threadId() { return state.threadId },
   }
-
   handle.result = new Promise<CodexExecResult>((resolve, reject) => {
-    const processEvent = (event: CodexExecEvent): void => {
-      if (event.type === 'thread.started') {
-        const threadStarted = event as CodexThreadStartedEvent
-        if (typeof threadStarted.thread_id === 'string') {
-          threadId = threadStarted.thread_id
-        }
-      } else if (event.type === 'turn.completed') {
-        const turnCompleted = event as CodexTurnCompletedEvent
-        if (turnCompleted.usage) {
-          lastUsage = turnCompleted.usage
-        }
-      } else if (event.type === 'error') {
-        const errorEvent = event as CodexErrorEvent
-        sawFailureEvent = true
-        failureMessage = errorEvent.message ?? failureMessage
-      } else if (event.type === 'turn.failed') {
-        const turnFailed = event as CodexTurnFailedEvent
-        sawFailureEvent = true
-        failureMessage = turnFailed.error?.message ?? failureMessage
-      } else if (event.type === 'item.completed') {
-        const completed = event as CodexItemCompletedEvent
-        if (completed.item.type === 'error') {
-          const itemError = completed.item as CodexItemError
-          sawFailureEvent = true
-          failureMessage = itemError.message ?? failureMessage
-        }
-      }
-
-      options.onEvent?.(event)
-    }
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdoutBuf += chunk.toString()
-
-      if (stdoutBuf.length > MAX_BUFFER_BYTES) {
-        reject(new Error('Codex exec stdout buffer exceeded maximum allowed size (100 MB). Process killed.'))
-        try { child.kill() } catch { /* ignore */ }
-        return
-      }
-
-      let newlineIdx: number
-      while ((newlineIdx = stdoutBuf.indexOf('\n')) !== -1) {
-        const line = stdoutBuf.slice(0, newlineIdx)
-        stdoutBuf = stdoutBuf.slice(newlineIdx + 1)
-
-        const event = tryParseEvent(line)
-        if (event) processEvent(event)
-      }
-    })
-
+    const stdoutArgs: CodexStdoutArgs = { state, child, onEvent: options.onEvent, reject }
+    child.stdout?.on('data', (chunk: Buffer) => handleCodexStdout(chunk, stdoutArgs))
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderrBuf += chunk.toString()
-      if (stderrBuf.length > MAX_BUFFER_BYTES) {
-        stderrBuf = stderrBuf.slice(-MAX_BUFFER_BYTES)
-      }
+      state.stderrBuf += chunk.toString()
+      if (state.stderrBuf.length > MAX_BUFFER_BYTES) state.stderrBuf = state.stderrBuf.slice(-MAX_BUFFER_BYTES)
     })
-
-    child.on('close', (code) => {
-      if (stdoutBuf.trim()) {
-        const event = tryParseEvent(stdoutBuf)
-        if (event) processEvent(event)
-        stdoutBuf = ''
-      }
-
-      if (code === 0 || code === null) {
-        if (sawFailureEvent || failureMessage) {
-          reject(new Error(failureMessage ?? 'Codex exec reported a failure event.'))
-          return
-        }
-        resolve({
-          threadId,
-          usage: lastUsage,
-          durationMs: Date.now() - startedAt,
-        })
-        return
-      }
-
-      const stderrMessage = stderrBuf.trim()
-      const reason = failureMessage ?? stderrMessage ?? `Codex exited with code ${code}`
-      reject(new Error(`Codex exec exited with code ${code}: ${reason}`))
-    })
-
+    const closeArgs: CodexCloseArgs = { state, startedAt, onEvent: options.onEvent, resolve, reject }
+    child.on('close', (code) => handleCodexClose(code, closeArgs))
     child.on('error', (error) => reject(error))
   })
-
   return handle
 }

@@ -61,61 +61,37 @@ function SectionBadge({ value }: { value: string | number }): React.ReactElement
   );
 }
 
-export function SidebarSection({
-  title,
-  collapsed,
-  onToggle,
-  badge,
-  children,
-  style,
-}: SidebarSectionProps): React.ReactElement {
-  return (
-    <div
-      className="flex flex-col overflow-hidden"
-      style={{
-        ...style,
-        // When collapsed, only show the header (24px)
-        ...(collapsed ? { flex: 'none', minHeight: 0 } : {}),
-      }}
-    >
-      {/* Header bar — 24px, always visible */}
-      <button
-        className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-none bg-surface-panel border-b border-border-semantic"
-        style={{
-          height: '24px',
-          minHeight: '24px',
-        }}
-        onClick={onToggle}
-        title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
-        aria-expanded={!collapsed}
-      >
-        <ChevronIcon collapsed={collapsed} />
-        <span
-          className="text-text-semantic-muted"
-          style={{
-            fontSize: '10px',
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            fontFamily: 'var(--font-ui)',
-            lineHeight: '24px',
-            flex: 1,
-            textAlign: 'left',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {title}
-        </span>
-        {badge != null && badge !== 0 && <SectionBadge value={badge} />}
-      </button>
+const SECTION_TITLE_STYLE: React.CSSProperties = {
+  fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em',
+  textTransform: 'uppercase', fontFamily: 'var(--font-ui)', lineHeight: '24px',
+  flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+};
 
-      {/* Content area — hidden when collapsed */}
+function SectionHeader({ title, collapsed, onToggle, badge }: {
+  title: string; collapsed: boolean; onToggle: () => void; badge?: string | number;
+}): React.ReactElement {
+  return (
+    <button
+      className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-none bg-surface-panel border-b border-border-semantic"
+      style={{ height: '24px', minHeight: '24px' }}
+      onClick={onToggle}
+      title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+      aria-expanded={!collapsed}
+    >
+      <ChevronIcon collapsed={collapsed} />
+      <span className="text-text-semantic-muted" style={SECTION_TITLE_STYLE}>{title}</span>
+      {badge != null && badge !== 0 && <SectionBadge value={badge} />}
+    </button>
+  );
+}
+
+export function SidebarSection({ title, collapsed, onToggle, badge, children, style }: SidebarSectionProps): React.ReactElement {
+  return (
+    <div className="flex flex-col overflow-hidden"
+      style={{ ...style, ...(collapsed ? { flex: 'none', minHeight: 0 } : {}) }}>
+      <SectionHeader title={title} collapsed={collapsed} onToggle={onToggle} badge={badge} />
       {!collapsed && (
-        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">{children}</div>
       )}
     </div>
   );

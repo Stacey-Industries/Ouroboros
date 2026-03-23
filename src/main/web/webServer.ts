@@ -14,6 +14,7 @@ import express from 'express'
 import fs from 'fs'
 import type { IncomingMessage } from 'http'
 import http from 'http'
+import path from 'path'
 import { WebSocket,WebSocketServer } from 'ws'
 
 import {
@@ -55,60 +56,72 @@ function parseCookies(header: string | undefined): Record<string, string> {
 
 // ─── Auth Middleware ─────────────────────────────────────────────────────────
 
-function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown'
-
-  // Rate limit check
-  if (isRateLimited(ip)) {
-    res.status(429).json({ error: 'Too many failed attempts. Try again later.' })
-    return
-  }
-
-  // Extract token from multiple sources
+function extractToken(req: Request): { token: string; fromQuery: boolean } {
   const cookies = parseCookies(req.headers.cookie)
   const cookieToken = cookies['webAccessToken'] || ''
   const queryToken = (req.query.token as string) || ''
   const authHeader = req.headers.authorization || ''
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-
   const token = cookieToken || queryToken || bearerToken
+  return { token, fromQuery: Boolean(queryToken) }
+}
 
-  if (token && validateToken(token)) {
-    // Valid token from query param — set cookies and redirect to clean URL
-    if (queryToken && validateToken(queryToken)) {
-      const maxAge = 30 * 24 * 60 * 60 // 30 days in seconds
-      // HttpOnly cookie for HTTP request auth
-      res.setHeader('Set-Cookie', [
-        `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-        `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-      ])
+function handleQueryParamToken(req: Request, res: Response, token: string): void {
+  const maxAge = 30 * 24 * 60 * 60
+  res.setHeader('Set-Cookie', [
+    `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
+    `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
+  ])
+  const url = new URL(req.originalUrl, `http://${req.headers.host}`)
+  url.searchParams.delete('token')
+  res.redirect(302, url.pathname + url.search)
+}
 
-      // Redirect to the same path without the token query parameter
-      const url = new URL(req.originalUrl, `http://${req.headers.host}`)
-      url.searchParams.delete('token')
-      const cleanPath = url.pathname + url.search
-      res.redirect(302, cleanPath)
-      return
-    }
-
-    // Valid token from cookie or header — proceed
-    next()
-    return
-  }
-
-  // Invalid or missing token
-  if (token) {
-    recordFailedAttempt(ip)
-  }
-
-  // Check if the client accepts HTML (browser vs API client)
-  const acceptsHtml = req.headers.accept?.includes('text/html')
-
-  if (acceptsHtml) {
+function handleUnauthorized(req: Request, res: Response, ip: string, token: string): void {
+  if (token) recordFailedAttempt(ip)
+  if (req.headers.accept?.includes('text/html')) {
     res.status(401).type('html').send(getLoginPageHtml())
   } else {
     res.status(401).json({ error: 'Unauthorized. Provide a valid token.' })
   }
+}
+
+function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown'
+  if (isRateLimited(ip)) {
+    res.status(429).json({ error: 'Too many failed attempts. Try again later.' })
+    return
+  }
+
+  const { token, fromQuery } = extractToken(req)
+  if (!validateToken(token)) {
+    handleUnauthorized(req, res, ip, token)
+    return
+  }
+
+  if (fromQuery) {
+    handleQueryParamToken(req, res, token)
+    return
+  }
+
+  next()
+}
+
+// ─── SPA fallback ───────────────────────────────────────────────────────────
+
+function registerSpaFallback(app: express.Express, staticDir: string): void {
+  const indexPath = path.join(staticDir, 'index.html')
+  app.get('/{*path}', (_req, res) => {
+    const token = getOrCreateWebToken()
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- indexPath is derived from trusted staticDir config
+      const html = fs.readFileSync(indexPath, 'utf-8')
+      const injected = html.replace('</head>', `<script>window.__WEB_TOKEN__='${token}'</script></head>`)
+      res.type('html').send(injected)
+    } catch {
+      res.sendFile(indexPath)
+    }
+  })
 }
 
 // ─── Server lifecycle ───────────────────────────────────────────────────────
@@ -117,128 +130,62 @@ function authMiddleware(req: Request, res: Response, next: NextFunction): void {
  * Starts the Express HTTP server and WebSocket server.
  * Returns a promise that resolves when the server is listening.
  */
+function handleLoginPost(req: Request, res: Response): void {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown'
+  if (isRateLimited(ip)) { res.status(429).json({ success: false, error: 'Too many attempts. Try again later.' }); return }
+  const { credential } = req.body as { credential?: string }
+  if (!credential || typeof credential !== 'string') { res.status(400).json({ success: false, error: 'Missing credential.' }); return }
+  if (!validateCredential(credential)) {
+    recordFailedAttempt(ip)
+    res.status(401).json({ success: false, error: 'Invalid credentials.' })
+    return
+  }
+  const token = getOrCreateWebToken()
+  const maxAge = 30 * 24 * 60 * 60
+  res.setHeader('Set-Cookie', [`webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`, `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`])
+  res.json({ success: true })
+}
+
+function buildExpressApp(options: WebServerOptions): express.Express {
+  const app = express()
+  app.get('/api/health', (_req, res) => { res.json({ status: 'ok', clients: wsClients.size, uptime: process.uptime() }) })
+  app.use(express.json())
+  app.post('/api/login', handleLoginPost)
+  app.use(authMiddleware)
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+    next()
+  })
+  if (options.staticDir) { app.use(express.static(options.staticDir)); registerSpaFallback(app, options.staticDir) }
+  return app
+}
+
+function handleWsConnection(ws: WebSocket, req: IncomingMessage): void {
+  const url = new URL(req.url || '', 'http://localhost')
+  const wsQueryToken = url.searchParams.get('token') || ''
+  const cookies = parseCookies(req.headers.cookie)
+  const wsCookieToken = cookies['wsToken'] || cookies['webAccessToken'] || ''
+  if (!validateToken(wsQueryToken || wsCookieToken)) { ws.close(4001, 'Unauthorized'); return }
+
+  wsClients.add(ws)
+  console.log(`[web] WebSocket client connected (total: ${wsClients.size})`)
+  ws.on('message', (data: Buffer | string) => { handleJsonRpcMessage(ws, typeof data === 'string' ? data : data.toString('utf-8')) })
+  ws.on('close', () => { wsClients.delete(ws); console.log(`[web] WebSocket client disconnected (total: ${wsClients.size})`) })
+  ws.on('error', (err: Error) => { console.error('[web] WebSocket client error:', err.message); wsClients.delete(ws) })
+  ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'connected', params: { message: 'Ouroboros WebSocket bridge ready' } }))
+}
+
 export function startWebServer(options: WebServerOptions): Promise<void> {
   return new Promise((resolve, reject) => {
-    const app = express()
-
-    // Health check endpoint (unauthenticated — must be before auth middleware)
-    app.get('/api/health', (_req, res) => {
-      res.json({
-        status: 'ok',
-        clients: wsClients.size,
-        uptime: process.uptime(),
-      })
-    })
-
-    // Login endpoint (unauthenticated — must be before auth middleware)
-    app.use(express.json())
-    app.post('/api/login', (req: Request, res: Response) => {
-      const ip = req.ip || req.socket.remoteAddress || 'unknown'
-      if (isRateLimited(ip)) {
-        res.status(429).json({ success: false, error: 'Too many attempts. Try again later.' })
-        return
-      }
-
-      const { credential } = req.body as { credential?: string }
-      if (!credential || typeof credential !== 'string') {
-        res.status(400).json({ success: false, error: 'Missing credential.' })
-        return
-      }
-
-      if (!validateCredential(credential)) {
-        recordFailedAttempt(ip)
-        res.status(401).json({ success: false, error: 'Invalid credentials.' })
-        return
-      }
-
-      const token = getOrCreateWebToken()
-      const maxAge = 30 * 24 * 60 * 60
-      res.setHeader('Set-Cookie', [
-        `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-        `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-      ])
-      res.json({ success: true })
-    })
-
-    // Auth middleware — all routes below require a valid token
-    app.use(authMiddleware)
-
-    // Cache-control — prevent stale HTML on mobile browsers
-    app.use((_req: Request, res: Response, next: NextFunction) => {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
-      res.setHeader('Pragma', 'no-cache')
-      res.setHeader('Expires', '0')
-      next()
-    })
-
-    // Serve static renderer files if a directory is provided
-    if (options.staticDir) {
-      app.use(express.static(options.staticDir))
-
-      // SPA fallback — serve index.html for all unmatched routes
-      const pathMod = require('path')
-      const indexPath = pathMod.join(options.staticDir, 'index.html')
-      app.get('/{*path}', (_req, res) => {
-        // Inject the auth token into the page so webPreload can read it for WebSocket auth
-        const token = getOrCreateWebToken()
-        try {
-          const html = fs.readFileSync(indexPath, 'utf-8')
-          const injected = html.replace(
-            '</head>',
-            `<script>window.__WEB_TOKEN__='${token}'</script></head>`
-          )
-          res.type('html').send(injected)
-        } catch {
-          res.sendFile(indexPath)
-        }
-      })
-    }
-
+    const app = buildExpressApp(options)
     httpServer = http.createServer(app)
 
     // WebSocket server attached to the HTTP server, on /ws path
     wss = new WebSocketServer({ server: httpServer, path: '/ws' })
 
-    wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      // Authenticate WebSocket connections via token query parameter or cookie
-      const url = new URL(req.url || '', 'http://localhost')
-      const wsQueryToken = url.searchParams.get('token') || ''
-      const cookies = parseCookies(req.headers.cookie)
-      const wsCookieToken = cookies['wsToken'] || cookies['webAccessToken'] || ''
-      const wsToken = wsQueryToken || wsCookieToken
-
-      if (!validateToken(wsToken)) {
-        ws.close(4001, 'Unauthorized')
-        return
-      }
-
-      wsClients.add(ws)
-      console.log(`[web] WebSocket client connected (total: ${wsClients.size})`)
-
-      ws.on('message', (data: Buffer | string) => {
-        const message = typeof data === 'string' ? data : data.toString('utf-8')
-        handleJsonRpcMessage(ws, message)
-      })
-
-      ws.on('close', () => {
-        wsClients.delete(ws)
-        console.log(`[web] WebSocket client disconnected (total: ${wsClients.size})`)
-      })
-
-      ws.on('error', (err: Error) => {
-        console.error('[web] WebSocket client error:', err.message)
-        wsClients.delete(ws)
-      })
-
-      // Send a welcome notification (JSON-RPC notification, no id)
-      ws.send(
-        JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'connected',
-          params: { message: 'Ouroboros WebSocket bridge ready' },
-        })
-      )
-    })
+    wss.on('connection', handleWsConnection)
 
     httpServer.on('error', (err: Error) => {
       console.error('[web] HTTP server error:', err.message)

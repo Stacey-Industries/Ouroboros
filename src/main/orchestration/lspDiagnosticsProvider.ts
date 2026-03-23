@@ -37,6 +37,33 @@ function isPathInsideRoot(filePath: string, rootPath: string): boolean {
   return normalizedFile === normalizedRoot || normalizedFile.startsWith(`${normalizedRoot}/`)
 }
 
+function incrementSeverityCount(summary: DiagnosticsFileSummary, severity: string): void {
+  if (severity === 'error') summary.errors += 1
+  else if (severity === 'warning') summary.warnings += 1
+  else if (severity === 'hint') summary.hints += 1
+  else summary.infos += 1
+}
+
+function collectServerDiagnostics(
+  server: { diagnosticsCache: Map<string, Array<{ severity: string; range: { startLine: number; startChar: number }; message: string }>> },
+  rootPath: string,
+  byFile: Map<string, DiagnosticsFileSummary>,
+  messagesByFile: Map<string, DiagnosticMessage[]>,
+): void {
+  for (const [uri, diagnostics] of server.diagnosticsCache.entries()) {
+    const filePath = uriToFilePath(uri)
+    if (!isPathInsideRoot(filePath, rootPath)) continue
+    const existing = byFile.get(filePath) ?? { filePath, errors: 0, warnings: 0, infos: 0, hints: 0 }
+    const messages = messagesByFile.get(filePath) ?? []
+    for (const d of diagnostics) {
+      incrementSeverityCount(existing, d.severity)
+      messages.push({ severity: d.severity as DiagnosticMessage['severity'], line: d.range.startLine + 1, character: d.range.startChar, message: d.message })
+    }
+    byFile.set(filePath, existing)
+    messagesByFile.set(filePath, messages)
+  }
+}
+
 /** Collect per-file diagnostic counts and messages from running LSP servers. */
 function collectDiagnostics(
   rootPath: string,
@@ -48,26 +75,7 @@ function collectDiagnostics(
     if (normalizePathForCompare(server.root) !== normalizePathForCompare(rootPath) || server.status !== 'running') {
       continue
     }
-    for (const [uri, diagnostics] of server.diagnosticsCache.entries()) {
-      const filePath = uriToFilePath(uri)
-      if (!isPathInsideRoot(filePath, rootPath)) continue
-      const existing = byFile.get(filePath) ?? { filePath, errors: 0, warnings: 0, infos: 0, hints: 0 }
-      const messages = messagesByFile.get(filePath) ?? []
-      for (const d of diagnostics) {
-        if (d.severity === 'error') existing.errors += 1
-        else if (d.severity === 'warning') existing.warnings += 1
-        else if (d.severity === 'hint') existing.hints += 1
-        else existing.infos += 1
-        messages.push({
-          severity: d.severity,
-          line: d.range.startLine + 1,
-          character: d.range.startChar,
-          message: d.message,
-        })
-      }
-      byFile.set(filePath, existing)
-      messagesByFile.set(filePath, messages)
-    }
+    collectServerDiagnostics(server, rootPath, byFile, messagesByFile)
   }
 
   return { byFile, messagesByFile }

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import type { ContextSelectionModel } from './useContextSelectionModel';
 
 interface ContextSelectionSectionProps {
@@ -67,6 +68,46 @@ const emptyStyle: React.CSSProperties = {
   padding: '8px 0',
 };
 
+function SummaryBar({ summary, selectAll, clearAll }: {
+  summary: ContextSelectionModel['summary'];
+  selectAll: () => void;
+  clearAll: () => void;
+}): React.ReactElement {
+  return (
+    <div className="bg-surface-raised border border-border-semantic text-text-semantic-muted" style={summaryBarStyle}>
+      <span>{summary.selectedCount} of {summary.totalCount} selected</span>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={selectAll}>
+          Select All
+        </button>
+        <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={clearAll}>
+          Clear All
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GroupItemRow({ groupLabel, item, checked, toggleItem }: {
+  groupLabel: string;
+  item: { label: string; type: string };
+  checked: boolean;
+  toggleItem: (g: string, i: string) => void;
+}): React.ReactElement {
+  return (
+    <label
+      className="text-text-semantic-primary"
+      style={itemRowStyle}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-tertiary)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+    >
+      <input type="checkbox" checked={checked} onChange={() => toggleItem(groupLabel, item.label)} style={{ accentColor: 'var(--accent)' }} />
+      <span>{item.label}</span>
+      <span className="text-text-semantic-muted" style={typeBadgeStyle}>{item.type}</span>
+    </label>
+  );
+}
+
 export function ContextSelectionSection({
   contextSelection,
 }: ContextSelectionSectionProps): React.ReactElement {
@@ -78,46 +119,13 @@ export function ContextSelectionSection({
 
   return (
     <div style={sectionStyle}>
-      <div className="bg-surface-raised border border-border-semantic text-text-semantic-muted" style={summaryBarStyle}>
-        <span>{summary.selectedCount} of {summary.totalCount} selected</span>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={selectAll}>
-            Select All
-          </button>
-          <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={clearAll}>
-            Clear All
-          </button>
-        </div>
-      </div>
-
+      <SummaryBar summary={summary} selectAll={selectAll} clearAll={clearAll} />
       {groups.map((group) => (
         <div key={group.label}>
           <div className="text-text-semantic-primary" style={groupHeaderStyle}>{group.label}</div>
-          {group.items.map((item) => {
-            const checked = isSelected(group.label, item.label);
-            return (
-              <label
-                key={item.label}
-                className="text-text-semantic-primary"
-                style={itemRowStyle}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-tertiary)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleItem(group.label, item.label)}
-                  style={{ accentColor: 'var(--accent)' }}
-                />
-                <span>{item.label}</span>
-                <span className="text-text-semantic-muted" style={typeBadgeStyle}>{item.type}</span>
-              </label>
-            );
-          })}
+          {group.items.map((item) => (
+            <GroupItemRow key={item.label} groupLabel={group.label} item={item} checked={isSelected(group.label, item.label)} toggleItem={toggleItem} />
+          ))}
         </div>
       ))}
     </div>

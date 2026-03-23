@@ -3,9 +3,10 @@
  */
 
 import React, { memo, useMemo } from 'react';
+
 import type { CostEntry } from '../../types/electron';
 import { formatCost } from './costCalculator';
-import { todayStr, daysAgo } from './costHelpers';
+import { daysAgo,todayStr } from './costHelpers';
 
 interface SummaryCardsProps {
   entries: CostEntry[];

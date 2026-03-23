@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+
 import type { Theme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
-import { ToggleSwitch } from './ToggleSwitch';
 import { ThemeEditor } from './ThemeEditor';
+import { ToggleSwitch } from './ToggleSwitch';
 
 interface ThemeGridProps {
   activeTheme: AppConfig['activeTheme'];

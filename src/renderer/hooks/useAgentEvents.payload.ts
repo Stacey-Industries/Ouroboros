@@ -80,6 +80,21 @@ export function createToolCall(payload: HookPayload): ToolCallEvent | null {
   };
 }
 
+/** All field names where Claude Code may embed the child session ID. */
+const CHILD_ID_FIELDS = [
+  'session_id', 'sessionId', 'agent_id', 'agentId', 'id',
+  'task_id', 'taskId', 'child_session_id', 'childSessionId',
+  'spawned_session_id', 'subagent_id',
+];
+
+function findChildIdInInput(input: Record<string, unknown>): string | undefined {
+  for (const field of CHILD_ID_FIELDS) {
+    const value = getStringValue(input, field);
+    if (value) return value;
+  }
+  return undefined;
+}
+
 export function getSubagentChildId(
   toolName: string,
   input: Record<string, unknown>,
@@ -87,19 +102,7 @@ export function getSubagentChildId(
   if (!isSubagentTool(toolName)) {
     return undefined;
   }
-
-  // Try all known field names where Claude Code may embed the child session ID
-  return getStringValue(input, 'session_id')
-    ?? getStringValue(input, 'sessionId')
-    ?? getStringValue(input, 'agent_id')
-    ?? getStringValue(input, 'agentId')
-    ?? getStringValue(input, 'id')
-    ?? getStringValue(input, 'task_id')
-    ?? getStringValue(input, 'taskId')
-    ?? getStringValue(input, 'child_session_id')
-    ?? getStringValue(input, 'childSessionId')
-    ?? getStringValue(input, 'spawned_session_id')
-    ?? getStringValue(input, 'subagent_id');
+  return findChildIdInInput(input);
 }
 
 export function getToolEndDetails(payload: HookPayload): ToolEndDetails {

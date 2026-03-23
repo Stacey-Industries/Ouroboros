@@ -1,8 +1,10 @@
-import React, { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App'
 import './styles/fonts.css'
 import './styles/globals.css'
+
+import React, { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+
+import App from './App'
 
 // ── Prevent Electron's default file-drop navigation ──────────────────────────
 // Without this, dropping a file anywhere on the window causes Electron to

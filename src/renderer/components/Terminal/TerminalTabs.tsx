@@ -2,7 +2,8 @@
  * TerminalTabs — tab bar for managing multiple terminal sessions.
  */
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useCallback,useRef, useState } from 'react'
+
 import { shortModelName } from './ClaudeModelMenu'
 import { NewTerminalMenu } from './NewTerminalMenu'
 
@@ -159,6 +160,22 @@ function useTabDragDrop(sessions: TerminalSession[], onReorder?: (reordered: Ter
   return { draggingId, dragOverId, handleDragStart, handleDragOver, handleDragLeave, handleDrop, handleDragEnd }
 }
 
+function renderSessionTab({
+  session,
+  activeSessionId,
+  dnd,
+  onActivate,
+  onClose,
+}: {
+  session: TerminalSession
+  activeSessionId: string | null
+  dnd: ReturnType<typeof useTabDragDrop>
+  onActivate: (id: string) => void
+  onClose: (id: string) => void
+}): React.ReactElement {
+  return <TabItem key={session.id} session={session} isActive={session.id === activeSessionId} isDragging={dnd.draggingId === session.id} isDragOver={dnd.dragOverId === session.id} onActivate={() => onActivate(session.id)} onClose={() => onClose(session.id)} onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; dnd.handleDragStart(session.id) }} onDragOver={(e) => dnd.handleDragOver(e, session.id)} onDragLeave={dnd.handleDragLeave} onDrop={() => dnd.handleDrop(session.id)} onDragEnd={dnd.handleDragEnd} />
+}
+
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
 export function TerminalTabs({
@@ -167,53 +184,7 @@ export function TerminalTabs({
   const dnd = useTabDragDrop(sessions, onReorder)
   const [showNewMenu, setShowNewMenu] = useState(false)
   const plusBtnRef = useRef<HTMLButtonElement>(null)
-
-  const handleToggleMenu = useCallback(() => {
-    setShowNewMenu((prev) => !prev)
-  }, [])
-
-  const handleMenuClose = useCallback(() => {
-    setShowNewMenu(false)
-  }, [])
-
-  return (
-    <div className="flex items-stretch h-full overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Terminal sessions">
-      {sessions.map((session) => (
-        <TabItem
-          key={session.id} session={session}
-          isActive={session.id === activeSessionId}
-          isDragging={dnd.draggingId === session.id}
-          isDragOver={dnd.dragOverId === session.id}
-          onActivate={() => onActivate(session.id)}
-          onClose={() => onClose(session.id)}
-          onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; dnd.handleDragStart(session.id) }}
-          onDragOver={(e) => dnd.handleDragOver(e, session.id)}
-          onDragLeave={dnd.handleDragLeave}
-          onDrop={() => dnd.handleDrop(session.id)}
-          onDragEnd={dnd.handleDragEnd}
-        />
-      ))}
-      <div className="relative flex items-stretch">
-        <button
-          ref={plusBtnRef}
-          onClick={handleToggleMenu}
-          aria-label="New terminal"
-          aria-haspopup="true"
-          aria-expanded={showNewMenu}
-          className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"
-        >
-          <PlusIcon />
-        </button>
-        {showNewMenu && (
-          <NewTerminalMenu
-            anchorRef={plusBtnRef}
-            onNew={onNew}
-            onNewClaude={onNewClaude}
-            onNewCodex={onNewCodex}
-            onClose={handleMenuClose}
-          />
-        )}
-      </div>
-    </div>
-  )
+  const handleToggleMenu = useCallback(() => setShowNewMenu((prev) => !prev), [])
+  const handleMenuClose = useCallback(() => setShowNewMenu(false), [])
+  return <div className="flex items-stretch h-full overflow-x-auto overflow-y-hidden" role="tablist" aria-label="Terminal sessions">{sessions.map((session) => renderSessionTab({ session, activeSessionId, dnd, onActivate, onClose }))}<div className="relative flex items-stretch"><button ref={plusBtnRef} onClick={handleToggleMenu} aria-label="New terminal" aria-haspopup="true" aria-expanded={showNewMenu} className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"><PlusIcon /></button>{showNewMenu && <NewTerminalMenu anchorRef={plusBtnRef} onNew={onNew} onNewClaude={onNewClaude} onNewCodex={onNewCodex} onClose={handleMenuClose} />}</div></div>
 }

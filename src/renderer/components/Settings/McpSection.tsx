@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
+
 import type { McpServerEntry } from '../../types/electron';
-import { SectionLabel, buttonStyle } from './settingsStyles';
 import type { ServerFormState } from './mcpHelpers';
+import { type FormHandlers, type McpSectionModel, useMcpSectionModel } from './mcpSectionModel';
 import { McpServerForm } from './McpServerForm';
 import { McpServerRow } from './McpServerRow';
-import { type FormHandlers, type McpSectionModel, useMcpSectionModel } from './mcpSectionModel';
+import { buttonStyle,SectionLabel } from './settingsStyles';
 
 export function McpSection(): React.ReactElement {
   const model = useMcpSectionModel();

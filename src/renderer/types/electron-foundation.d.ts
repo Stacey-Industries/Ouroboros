@@ -294,18 +294,6 @@ export interface SelectFolderResult extends IpcResult {
   path?: string | null
 }
 
-export interface PtySpawnResult extends IpcResult {
-  already?: boolean
-}
-
-export interface PtyCwdResult extends IpcResult {
-  cwd?: string
-}
-
-export interface PtyStopRecordingResult extends IpcResult {
-  filePath?: string
-  cancelled?: boolean
-}
 
 export interface ExtensionInfo {
   name: string

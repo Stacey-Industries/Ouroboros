@@ -4,8 +4,9 @@
  */
 
 import type { Terminal } from '@xterm/xterm'
-import { OSC133_GRACE_MS, OSC133_RE } from './terminalHelpers'
+
 import type { CommandBlock } from './terminalHelpers'
+import { OSC133_GRACE_MS, OSC133_RE } from './terminalHelpers'
 
 export interface Osc133State {
   enabledRef: React.MutableRefObject<boolean | null>

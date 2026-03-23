@@ -5,7 +5,8 @@
  * dual line-number gutters and action buttons per hunk.
  */
 
-import React, { memo, useState, type CSSProperties } from 'react';
+import React, { type CSSProperties,memo, useState } from 'react';
+
 import type { HunkDecision, ReviewHunk } from './types';
 
 interface HunkViewProps {

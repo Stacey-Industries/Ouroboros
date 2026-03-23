@@ -1,4 +1,5 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 
 type SessionSetter = Dispatch<SetStateAction<TerminalSession[]>>;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import type { CodeModeStatusResult } from '../../types/electron';
 import { getCodeModeApi, getErrorMessage } from './codeModeSectionUtils';
 

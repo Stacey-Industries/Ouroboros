@@ -1,9 +1,10 @@
 import React, { memo } from 'react';
+
 import {
   CLAUDE_MD_TEMPLATES,
-  SECTION_ICONS,
   type ClaudeMdSection,
   type ClaudeMdTemplate,
+  SECTION_ICONS,
 } from './ClaudeMdEditor.utils';
 
 const sidebarStyle: React.CSSProperties = {

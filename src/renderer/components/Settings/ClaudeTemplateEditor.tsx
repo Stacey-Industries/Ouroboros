@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
 import {
   claudeTemplateAddButtonStyle,
@@ -17,8 +18,8 @@ import {
   claudeTemplateTemplatePromptStyle,
   claudeTemplateTemplateRowStyle,
   claudeTemplateTemplateTextStyle,
-  claudeTemplateTextInputStyle,
   claudeTemplateTextareaStyle,
+  claudeTemplateTextInputStyle,
 } from './claudeTemplateEditorStyles';
 import { SectionLabel } from './settingsStyles';
 import {

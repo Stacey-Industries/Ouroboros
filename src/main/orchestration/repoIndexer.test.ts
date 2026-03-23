@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
+
 import { filePathToUri } from '../lspHelpers'
 import { servers } from '../lspState'
 import type { LspDiagnostic, LspServerInstance } from '../lspTypes'
@@ -17,7 +18,9 @@ async function createTempRoot(): Promise<string> {
 }
 
 async function writeFile(filePath: string, content: string): Promise<void> {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is test fixture path, not user-controlled
   await fs.mkdir(path.dirname(filePath), { recursive: true })
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is test fixture path, not user-controlled
   await fs.writeFile(filePath, content, 'utf-8')
 }
 
@@ -35,21 +38,38 @@ function createServer(root: string, filePath: string, diagnostics: LspDiagnostic
   }
 }
 
+async function buildDeterministicFixture(): Promise<{ root: string; entryFile: string; snapshot: Awaited<ReturnType<typeof buildRepoIndexSnapshot>> }> {
+  const root = await createTempRoot()
+  const entryFile = path.join(root, 'src', 'index.ts')
+  const utilFile = path.join(root, 'src', 'util.ts')
+  await writeFile(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture' }, null, 2))
+  await writeFile(entryFile, "import React from 'react'\nimport { answer } from './util'\nexport const value = answer\n")
+  await writeFile(utilFile, 'export const answer = 42\n')
+  servers.set('fixture-server', createServer(root, entryFile, [
+    { message: 'broken type', severity: 'error', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
+    { message: 'unused import', severity: 'warning', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 6 } },
+  ]))
+  const snapshot = await buildRepoIndexSnapshot([root], { now: 123, diagnosticsProvider: buildLspDiagnosticsSummary })
+  return { root, entryFile, snapshot }
+}
+
+function assertDiagnostics(snapshot: Awaited<ReturnType<typeof buildRepoIndexSnapshot>>, entryFile: string): void {
+  expect(snapshot.repoFacts.diagnostics).toEqual({
+    files: [{
+      filePath: entryFile,
+      errors: 1, warnings: 1, infos: 0, hints: 0,
+      messages: [
+        { severity: 'error', line: 1, character: 0, message: 'broken type' },
+        { severity: 'warning', line: 2, character: 0, message: 'unused import' },
+      ],
+    }],
+    totalErrors: 1, totalWarnings: 1, totalInfos: 0, totalHints: 0, generatedAt: 123,
+  })
+}
+
 function registerDeterministicRepoFactsTest(): void {
   it('builds deterministic repo facts with imports and diagnostics summaries', async () => {
-    const root = await createTempRoot()
-    const entryFile = path.join(root, 'src', 'index.ts')
-    const utilFile = path.join(root, 'src', 'util.ts')
-
-    await writeFile(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture' }, null, 2))
-    await writeFile(entryFile, "import React from 'react'\nimport { answer } from './util'\nexport const value = answer\n")
-    await writeFile(utilFile, 'export const answer = 42\n')
-    servers.set('fixture-server', createServer(root, entryFile, [
-      { message: 'broken type', severity: 'error', range: { startLine: 0, startChar: 0, endLine: 0, endChar: 1 } },
-      { message: 'unused import', severity: 'warning', range: { startLine: 1, startChar: 0, endLine: 1, endChar: 6 } },
-    ]))
-
-    const snapshot = await buildRepoIndexSnapshot([root], { now: 123, diagnosticsProvider: buildLspDiagnosticsSummary })
+    const { root, entryFile, snapshot } = await buildDeterministicFixture()
     const rootSnapshot = snapshot.roots[0]
     const indexedEntry = rootSnapshot.files.find((file) => file.path === entryFile)
 
@@ -62,24 +82,7 @@ function registerDeterministicRepoFactsTest(): void {
     expect(rootSnapshot.workspaceFact.recentlyEditedFiles).toContain(entryFile)
     expect(indexedEntry?.imports).toEqual(['./util', 'react'])
     expect(indexedEntry?.diagnostics).toEqual({ errors: 1, warnings: 1, infos: 0, hints: 0, total: 2 })
-    expect(snapshot.repoFacts.diagnostics).toEqual({
-      files: [{
-        filePath: entryFile,
-        errors: 1,
-        warnings: 1,
-        infos: 0,
-        hints: 0,
-        messages: [
-          { severity: 'error', line: 1, character: 0, message: 'broken type' },
-          { severity: 'warning', line: 2, character: 0, message: 'unused import' },
-        ],
-      }],
-      totalErrors: 1,
-      totalWarnings: 1,
-      totalInfos: 0,
-      totalHints: 0,
-      generatedAt: 123,
-    })
+    assertDiagnostics(snapshot, entryFile)
     expect(snapshot.repoFacts.gitDiff.changedFiles).toEqual([])
     expect(snapshot.repoFacts.recentEdits).toEqual({ files: snapshot.repoFacts.recentEdits.files, generatedAt: 123 })
   })

@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import type { DiffLineInfo } from '../../types/electron';
 import type { CodeRow } from './codeViewTypes';
 

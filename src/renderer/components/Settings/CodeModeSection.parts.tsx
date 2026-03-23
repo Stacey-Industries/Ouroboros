@@ -1,10 +1,11 @@
 import React from 'react';
-import { CodeModeOverview, ErrorBanner } from './CodeModeSectionOverview';
+
 import {
   CollapsibleSection,
   GeneratedTypesContent,
   HowItWorksContent,
 } from './CodeModeSectionDisclosures';
+import { CodeModeOverview, ErrorBanner } from './CodeModeSectionOverview';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
 export function CodeModeSectionView(props: CodeModeSectionModel): React.ReactElement {

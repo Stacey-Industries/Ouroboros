@@ -1,17 +1,18 @@
+import type { FitAddon } from '@xterm/addon-fit'
+import type { ProgressAddon } from '@xterm/addon-progress'
+import type { SearchAddon } from '@xterm/addon-search'
+import type { SerializeAddon } from '@xterm/addon-serialize'
+import type { Terminal } from '@xterm/xterm'
 import type {
   Dispatch,
   MutableRefObject,
   RefObject,
   SetStateAction,
 } from 'react'
-import type { Terminal } from '@xterm/xterm'
-import type { FitAddon } from '@xterm/addon-fit'
-import type { SearchAddon } from '@xterm/addon-search'
-import type { ProgressAddon } from '@xterm/addon-progress'
-import type { SerializeAddon } from '@xterm/addon-serialize'
-import type { CommandBlock } from './terminalHelpers'
-import type { ShellIntegrationAddon } from './shellIntegrationAddon'
+
 import type { SelectionTooltipState } from './SelectionTooltip'
+import type { ShellIntegrationAddon } from './shellIntegrationAddon'
+import type { CommandBlock } from './terminalHelpers'
 import type { CompletionState } from './useTerminalCompletions'
 import type { HistoryRefs, HistorySuggestionControls } from './useTerminalHistory'
 

@@ -1,22 +1,18 @@
-import type { TaskResult, TaskSessionRecord, VerificationSummary } from '../orchestration/types'
-import type { AgentChatMessagePatch } from './threadStore'
-import { buildAgentChatOrchestrationLink } from './chatOrchestrationBridgeSupport'
+import type { TaskResult, TaskSessionRecord, VerificationSummary } from '../orchestration/types';
+import { buildAgentChatOrchestrationLink } from './chatOrchestrationBridgeSupport';
 import {
   projectProviderFailureToAssistantMessage,
   projectProviderResultToAssistantMessage,
-} from './responseProjector'
-import type {
-  AgentChatErrorPayload,
-  AgentChatMessageRecord,
-  AgentChatThreadRecord,
-} from './types'
+} from './responseProjector';
+import type { AgentChatMessagePatch } from './threadStore';
+import type { AgentChatErrorPayload, AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 function pluralize(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 function buildProjectedMessageId(sessionId: string, kind: string): string {
-  return `agent-chat:${sessionId}:${kind}`
+  return `agent-chat:${sessionId}:${kind}`;
 }
 
 function buildContextMessage(
@@ -24,14 +20,14 @@ function buildContextMessage(
   threadId: string,
 ): AgentChatMessageRecord | null {
   if (!session.contextPacket) {
-    return null
+    return null;
   }
 
-  const selectedFileCount = session.contextPacket.files.length
-  const omittedFileCount = session.contextPacket.omittedCandidates.length
-  const parts = [`Prepared context from ${pluralize(selectedFileCount, 'file')}`]
+  const selectedFileCount = session.contextPacket.files.length;
+  const omittedFileCount = session.contextPacket.omittedCandidates.length;
+  const parts = [`Prepared context from ${pluralize(selectedFileCount, 'file')}`];
   if (omittedFileCount > 0) {
-    parts.push(`${pluralize(omittedFileCount, 'candidate')} omitted from the final packet`)
+    parts.push(`${pluralize(omittedFileCount, 'candidate')} omitted from the final packet`);
   }
 
   return {
@@ -42,29 +38,29 @@ function buildContextMessage(
     createdAt: session.contextPacket.createdAt,
     statusKind: 'context',
     orchestration: buildAgentChatOrchestrationLink(session),
-  }
+  };
 }
 
 function buildProgressMessage(
   session: TaskSessionRecord,
   threadId: string,
 ): AgentChatMessageRecord | null {
-  let content: string | null = null
+  let content: string | null = null;
 
   if (session.status === 'selecting_context') {
-    content = 'Selecting workspace context for the current request.'
+    content = 'Selecting workspace context for the current request.';
   } else if (session.status === 'awaiting_provider') {
-    content = `Handing work to ${session.request.provider}.`
+    content = `Handing work to ${session.request.provider}.`;
   } else if (session.status === 'applying') {
-    content = 'Provider work is running and changes are being applied.'
+    content = 'Provider work is running and changes are being applied.';
   } else if (session.status === 'verifying') {
-    content = `Running ${session.request.verificationProfile} verification.`
+    content = `Running ${session.request.verificationProfile} verification.`;
   } else if (session.status === 'paused') {
-    content = 'Task is paused and can be resumed.'
+    content = 'Task is paused and can be resumed.';
   }
 
   if (!content) {
-    return null
+    return null;
   }
 
   return {
@@ -75,38 +71,38 @@ function buildProgressMessage(
     createdAt: session.updatedAt,
     statusKind: 'progress',
     orchestration: buildAgentChatOrchestrationLink(session),
-  }
+  };
 }
 
 function buildVerificationPreview(summary: VerificationSummary | undefined) {
   if (!summary) {
-    return undefined
+    return undefined;
   }
 
   return {
     profile: summary.profile,
     status: summary.status,
     summary: summary.summary,
-  } satisfies AgentChatMessageRecord['verificationPreview']
+  } satisfies AgentChatMessageRecord['verificationPreview'];
 }
 
 function buildVerificationContent(summary: VerificationSummary): string {
   if (summary.status === 'pending' || summary.status === 'running') {
-    return `Running ${summary.profile} verification.`
+    return `Running ${summary.profile} verification.`;
   }
   if (summary.summary.trim()) {
-    return summary.summary.trim()
+    return summary.summary.trim();
   }
-  return `${summary.profile} verification ${summary.status}.`
+  return `${summary.profile} verification ${summary.status}.`;
 }
 
 function buildVerificationMessage(
   session: TaskSessionRecord,
   threadId: string,
 ): AgentChatMessageRecord | null {
-  const summary = session.lastVerificationSummary
+  const summary = session.lastVerificationSummary;
   if (!summary) {
-    return null
+    return null;
   }
 
   return {
@@ -118,51 +114,51 @@ function buildVerificationMessage(
     statusKind: 'verification',
     orchestration: buildAgentChatOrchestrationLink(session),
     verificationPreview: buildVerificationPreview(summary),
-  }
+  };
 }
 
 function buildResultError(result: TaskResult): AgentChatErrorPayload | undefined {
   if (result.status !== 'failed') {
-    return undefined
+    return undefined;
   }
 
-  const detail = result.unresolvedIssues.find((issue) => issue.trim().length > 0)
+  const detail = result.unresolvedIssues.find((issue) => issue.trim().length > 0);
   return {
     code: 'orchestration_failed',
     message: detail ?? result.message?.trim() ?? 'The orchestration task failed.',
     recoverable: true,
-  }
+  };
 }
 
 function buildResultContent(result: TaskResult): string {
   if (result.message?.trim()) {
-    return result.message.trim()
+    return result.message.trim();
   }
   if (result.status === 'complete') {
-    return 'Task completed successfully.'
+    return 'Task completed successfully.';
   }
   if (result.status === 'needs_review') {
-    return 'Task finished and needs review.'
+    return 'Task finished and needs review.';
   }
   if (result.status === 'failed') {
-    return 'Task failed.'
+    return 'Task failed.';
   }
   if (result.status === 'cancelled') {
-    return 'Task was cancelled.'
+    return 'Task was cancelled.';
   }
   if (result.status === 'paused') {
-    return 'Task was paused.'
+    return 'Task was paused.';
   }
-  return `Task status: ${result.status}.`
+  return `Task status: ${result.status}.`;
 }
 
 function buildResultMessage(
   session: TaskSessionRecord,
   threadId: string,
 ): AgentChatMessageRecord | null {
-  const result = session.latestResult
+  const result = session.latestResult;
   if (!result) {
-    return null
+    return null;
   }
 
   return {
@@ -173,62 +169,74 @@ function buildResultMessage(
     createdAt: session.updatedAt,
     statusKind: result.status === 'failed' ? 'error' : 'result',
     orchestration: buildAgentChatOrchestrationLink(session),
-    verificationPreview: buildVerificationPreview(result.verificationSummary ?? session.lastVerificationSummary),
+    verificationPreview: buildVerificationPreview(
+      result.verificationSummary ?? session.lastVerificationSummary,
+    ),
     error: buildResultError(result),
-  }
+  };
 }
 
 export function linksEqual(
   left: AgentChatThreadRecord['latestOrchestration'],
   right: AgentChatThreadRecord['latestOrchestration'],
 ): boolean {
-  return left?.taskId === right?.taskId
-    && left?.sessionId === right?.sessionId
-    && left?.attemptId === right?.attemptId
+  return (
+    left?.taskId === right?.taskId &&
+    left?.sessionId === right?.sessionId &&
+    left?.attemptId === right?.attemptId
+  );
 }
 
 function extractResponseText(session: TaskSessionRecord): string {
-  const latestAttempt = session.attempts.at(-1)
-  return latestAttempt?.providerArtifact?.lastMessage
-    ?? latestAttempt?.resultMessage
-    ?? session.latestResult?.message
-    ?? ''
+  const latestAttempt = session.attempts.at(-1);
+  return (
+    latestAttempt?.providerArtifact?.lastMessage ??
+    latestAttempt?.resultMessage ??
+    session.latestResult?.message ??
+    ''
+  );
 }
 
 function extractDuration(session: TaskSessionRecord): number | undefined {
-  const latestAttempt = session.attempts.at(-1)
+  const latestAttempt = session.attempts.at(-1);
   if (latestAttempt?.startedAt && latestAttempt?.completedAt) {
-    return latestAttempt.completedAt - latestAttempt.startedAt
+    return latestAttempt.completedAt - latestAttempt.startedAt;
   }
-  return undefined
+  return undefined;
 }
 
-const TERMINAL_STATUSES = new Set(['complete', 'failed', 'cancelled'])
+const TERMINAL_STATUSES = new Set(['complete', 'failed', 'cancelled']);
+
+function resolveFailureErrorMessage(session: TaskSessionRecord): string {
+  const errorDetail = session.latestResult?.unresolvedIssues?.find(
+    (issue) => issue.trim().length > 0,
+  );
+  return (
+    errorDetail ??
+    session.latestResult?.message?.trim() ??
+    (session.status === 'cancelled' ? 'Task was cancelled.' : 'Task failed.')
+  );
+}
 
 function buildAssistantMessage(
   session: TaskSessionRecord,
   threadId: string,
 ): AgentChatMessageRecord | null {
   if (!TERMINAL_STATUSES.has(session.status)) {
-    return null
+    return null;
   }
 
-  const messageId = buildProjectedMessageId(session.id, 'assistant')
-  const link = buildAgentChatOrchestrationLink(session)
+  const messageId = buildProjectedMessageId(session.id, 'assistant');
+  const link = buildAgentChatOrchestrationLink(session);
 
   if (session.status === 'failed' || session.status === 'cancelled') {
-    const errorDetail = session.latestResult?.unresolvedIssues?.find((issue) => issue.trim().length > 0)
-    const errorMessage = errorDetail
-      ?? session.latestResult?.message?.trim()
-      ?? (session.status === 'cancelled' ? 'Task was cancelled.' : 'Task failed.')
-
     return projectProviderFailureToAssistantMessage({
       threadId,
       messageId,
-      errorMessage,
+      errorMessage: resolveFailureErrorMessage(session),
       orchestrationLink: link,
       timestamp: session.updatedAt,
-    })
+    });
   }
 
   return projectProviderResultToAssistantMessage({
@@ -238,17 +246,20 @@ function buildAssistantMessage(
     orchestrationLink: link,
     durationMs: extractDuration(session),
     timestamp: session.updatedAt,
-  })
+  });
 }
 
-export function buildProjectedMessages(session: TaskSessionRecord, threadId: string): AgentChatMessageRecord[] {
+export function buildProjectedMessages(
+  session: TaskSessionRecord,
+  threadId: string,
+): AgentChatMessageRecord[] {
   return [
     buildContextMessage(session, threadId),
     buildProgressMessage(session, threadId),
     buildVerificationMessage(session, threadId),
     buildResultMessage(session, threadId),
     buildAssistantMessage(session, threadId),
-  ].filter((message): message is AgentChatMessageRecord => message !== null)
+  ].filter((message): message is AgentChatMessageRecord => message !== null);
 }
 
 export function toComparableMessage(message: AgentChatMessageRecord) {
@@ -263,7 +274,7 @@ export function toComparableMessage(message: AgentChatMessageRecord) {
     toolsSummary: message.toolsSummary,
     costSummary: message.costSummary,
     durationSummary: message.durationSummary,
-  }
+  };
 }
 
 export function messagePatchFromRecord(message: AgentChatMessageRecord): AgentChatMessagePatch {
@@ -278,5 +289,5 @@ export function messagePatchFromRecord(message: AgentChatMessageRecord): AgentCh
     toolsSummary: message.toolsSummary,
     costSummary: message.costSummary,
     durationSummary: message.durationSummary,
-  }
+  };
 }

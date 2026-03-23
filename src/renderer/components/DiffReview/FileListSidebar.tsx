@@ -5,7 +5,8 @@
  * decision progress. Click to select and scroll to that file in the main panel.
  */
 
-import React, { memo, useState, type CSSProperties } from 'react';
+import React, { type CSSProperties,memo, useState } from 'react';
+
 import type { ReviewFile } from './types';
 
 interface FileListSidebarProps {

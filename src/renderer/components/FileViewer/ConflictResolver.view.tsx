@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+
 import type { ConflictBlock, ConflictChoice, ConflictResolverProps } from './ConflictResolver.model';
 import { parseConflictBlocks, resolveConflictBlock } from './ConflictResolver.model';
 

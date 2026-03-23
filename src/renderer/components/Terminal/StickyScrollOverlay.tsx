@@ -6,8 +6,9 @@
  * Hides when the viewport naturally shows the command's prompt row.
  */
 
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import type { Terminal } from '@xterm/xterm'
+import React, { useCallback,useEffect, useMemo, useRef, useState } from 'react'
+
 import type { CommandBlock } from './useCommandBlocks'
 
 export interface StickyScrollOverlayProps {
@@ -103,6 +104,32 @@ function ensurePulseKeyframe(): void {
   document.head.appendChild(style)
 }
 
+function useStickyViewportY(terminal: Terminal | null): number {
+  const [viewportY, setViewportY] = useState(0)
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    if (!terminal) return
+    setViewportY(terminal.buffer.active.viewportY)
+    const updateViewport = () => {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => setViewportY(terminal.buffer.active.viewportY))
+    }
+    const scrollD = terminal.onScroll(updateViewport)
+    const writeD = terminal.onWriteParsed(() => {
+      const buf = terminal.buffer.active
+      if (buf.viewportY >= buf.baseY) updateViewport()
+    })
+    return () => {
+      scrollD.dispose()
+      writeD.dispose()
+      cancelAnimationFrame(rafRef.current)
+    }
+  }, [terminal])
+
+  return viewportY
+}
+
 // ── Live Duration ────────────────────────────────────────────────────────────
 
 function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | null {
@@ -136,78 +163,9 @@ function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | 
 
 export function StickyScrollOverlay({ blocks, terminal }: StickyScrollOverlayProps): React.ReactElement | null {
   ensurePulseKeyframe()
-
-  const [viewportY, setViewportY] = useState(0)
-  const rafRef = useRef(0)
-
-  useEffect(() => {
-    if (!terminal) return
-    setViewportY(terminal.buffer.active.viewportY)
-
-    const scrollD = terminal.onScroll(() => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        setViewportY(terminal.buffer.active.viewportY)
-      })
-    })
-
-    const writeD = terminal.onWriteParsed(() => {
-      // Only update viewportY tracking during writes if user is at bottom
-      // to avoid fighting with user scroll position (causes scroll jumping)
-      const buf = terminal.buffer.active
-      if (buf.viewportY >= buf.baseY) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = requestAnimationFrame(() => {
-          setViewportY(terminal.buffer.active.viewportY)
-        })
-      }
-    })
-
-    return () => {
-      scrollD.dispose()
-      writeD.dispose()
-      cancelAnimationFrame(rafRef.current)
-    }
-  }, [terminal])
-
-  const stickyBlock = useMemo(
-    () => findStickyCommand(blocks, viewportY),
-    [blocks, viewportY],
-  )
-
-  const handleClick = useCallback(() => {
-    if (!terminal || !stickyBlock) return
-    const targetRow = Math.max(0, stickyBlock.startLine - 1)
-    terminal.scrollToLine(targetRow)
-  }, [terminal, stickyBlock])
-
+  const viewportY = useStickyViewportY(terminal)
+  const stickyBlock = useMemo(() => findStickyCommand(blocks, viewportY), [blocks, viewportY])
+  const handleClick = useCallback(() => { if (!terminal || !stickyBlock) return; terminal.scrollToLine(Math.max(0, stickyBlock.startLine - 1)) }, [terminal, stickyBlock])
   if (!stickyBlock || !terminal) return null
-
-  const cellHeight = getCellHeight(terminal)
-
-  return (
-    <div
-      className="bg-surface-panel text-text-semantic-primary border-b border-border-semantic"
-      style={{ ...stickyContainerStyle, height: cellHeight }}
-      onClick={handleClick}
-      title="Click to scroll to command"
-    >
-      <ExitDot exitCode={stickyBlock.complete ? (stickyBlock.exitCode ?? 0) : undefined} />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {stickyBlock.command ? truncateCommand(stickyBlock.command) : '(command)'}
-      </span>
-      {stickyBlock.exitCode !== undefined && stickyBlock.exitCode !== 0 && (
-        <span className="text-status-error" style={{
-          fontSize: 10, padding: '0 3px', borderRadius: 2,
-          background: 'rgba(229,57,53,0.1)',
-        }}>
-          exit {stickyBlock.exitCode}
-        </span>
-      )}
-      <LiveDuration block={stickyBlock} />
-      <span className="text-text-semantic-muted" style={{ fontSize: 9, flexShrink: 0 }}>
-        {'\u2191'} scroll to prompt
-      </span>
-    </div>
-  )
+  return <div className="bg-surface-panel text-text-semantic-primary border-b border-border-semantic" style={{ ...stickyContainerStyle, height: getCellHeight(terminal) }} onClick={handleClick} title="Click to scroll to command"><ExitDot exitCode={stickyBlock.complete ? (stickyBlock.exitCode ?? 0) : undefined} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stickyBlock.command ? truncateCommand(stickyBlock.command) : '(command)'}</span>{stickyBlock.exitCode !== undefined && stickyBlock.exitCode !== 0 && <span className="text-status-error" style={{ fontSize: 10, padding: '0 3px', borderRadius: 2, background: 'rgba(229,57,53,0.1)' }}>exit {stickyBlock.exitCode}</span>}<LiveDuration block={stickyBlock} /><span className="text-text-semantic-muted" style={{ fontSize: 9, flexShrink: 0 }}>{'\u2191'} scroll to prompt</span></div>
 }

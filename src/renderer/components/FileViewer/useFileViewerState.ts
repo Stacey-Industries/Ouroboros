@@ -1,27 +1,20 @@
 import {
-  useState,
-  useEffect,
-  useRef,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
 } from 'react';
-import { useTheme } from '../../hooks/useTheme';
-import { useFoldRanges } from './useFoldRanges';
-import { useGitDiff } from '../../hooks/useGitDiff';
+
 import { useGitBlame } from '../../hooks/useGitBlame';
+import { useGitDiff } from '../../hooks/useGitDiff';
 import { useSymbolOutline } from '../../hooks/useSymbolOutline';
+import { useTheme } from '../../hooks/useTheme';
 import type { DiffLineInfo } from '../../types/electron';
-import { ensureLinkStyles, attachLinkClickHandler } from './linkDetector';
-import { hasConflictMarkers, parseConflictBlocks } from './ConflictResolver';
-import type { ConflictBlock } from './ConflictResolver';
+import { hasConflictMarkers, parseConflictBlocks } from './ConflictResolver.model';
 import { getLanguage } from './fileViewerUtils';
-import { usePersistedToggle } from './usePersistedToggle';
-import { useHighlighting } from './useHighlighting';
-import { useScrollMetrics } from './useScrollMetrics';
-import { useScrollToLine } from './useScrollToLine';
+import { attachLinkClickHandler,ensureLinkStyles } from './linkDetector';
 import { useFileViewerKeyboard } from './useFileViewerKeyboard';
-import type { ScrollMetrics } from './useScrollMetrics';
-import type { FoldRange } from './useFoldRanges';
 import {
   createDiffMap,
   createFileViewerState,
@@ -33,9 +26,16 @@ import {
   type ViewerFolds,
   type ViewerRefs,
   type ViewerToggles,
-  type ViewerUiState,
   type ViewerUiResetters,
+  type ViewerUiState,
 } from './useFileViewerState.helpers';
+import type { FoldRange } from './useFoldRanges';
+import { useFoldRanges } from './useFoldRanges';
+import { useHighlighting } from './useHighlighting';
+import { usePersistedToggle } from './usePersistedToggle';
+import type { ScrollMetrics } from './useScrollMetrics';
+import { useScrollMetrics } from './useScrollMetrics';
+import { useScrollToLine } from './useScrollToLine';
 
 export interface FileViewerStateInput {
   filePath: string | null;
@@ -158,13 +158,7 @@ function useViewerUiResetters(ui: ViewerUiState): ViewerUiResetters {
   );
 }
 
-function useViewerRefs(): ViewerRefs {
-  return {
-    codeRef: useRef<HTMLDivElement>(null),
-    scrollRef: useRef<HTMLDivElement>(null),
-    containerRef: useRef<HTMLDivElement>(null),
-  };
-}
+function useViewerRefs(): ViewerRefs { return { codeRef: useRef<HTMLDivElement>(null), scrollRef: useRef<HTMLDivElement>(null), containerRef: useRef<HTMLDivElement>(null) }; }
 
 function useViewerToggles(): ViewerToggles {
   const [wordWrap, setWordWrap] = usePersistedToggle('fileviewer:wordWrap', false);
@@ -172,19 +166,7 @@ function useViewerToggles(): ViewerToggles {
   const [showBlame, setShowBlame] = usePersistedToggle('fileviewer:blame', false);
   const [showOutline, setShowOutline] = usePersistedToggle('fileviewer:outline', false);
   const [formatOnSave, setFormatOnSave] = usePersistedToggle('fileviewer:formatOnSave', false);
-
-  return {
-    wordWrap,
-    setWordWrap,
-    showMinimap,
-    setShowMinimap,
-    showBlame,
-    setShowBlame,
-    showOutline,
-    setShowOutline,
-    formatOnSave,
-    setFormatOnSave,
-  };
+  return { wordWrap, setWordWrap, showMinimap, setShowMinimap, showBlame, setShowBlame, showOutline, setShowOutline, formatOnSave, setFormatOnSave };
 }
 
 function useViewerUiState(): ViewerUiState {
@@ -195,41 +177,12 @@ function useViewerUiState(): ViewerUiState {
   const [showHistory, setShowHistory] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [claudeMdEnhanced, setClaudeMdEnhanced] = useState(true);
-
-  return {
-    showSearch,
-    setShowSearch,
-    showGoToLine,
-    setShowGoToLine,
-    searchMatchLines,
-    setSearchMatchLines,
-    viewMode,
-    setViewMode,
-    showHistory,
-    setShowHistory,
-    editMode,
-    setEditMode,
-    claudeMdEnhanced,
-    setClaudeMdEnhanced,
-  };
+  return { showSearch, setShowSearch, showGoToLine, setShowGoToLine, searchMatchLines, setSearchMatchLines, viewMode, setViewMode, showHistory, setShowHistory, editMode, setEditMode, claudeMdEnhanced, setClaudeMdEnhanced };
 }
 
-function useViewerDerivedState({
-  filePath,
-  content,
-  originalContent,
-}: FileViewerStateInput, gitDiffBaseContent: string | null): ViewerDerivedState {
-  const diffBaseContent =
-    originalContent != null && content != null && originalContent !== content
-      ? originalContent
-      : gitDiffBaseContent;
-
-  return {
-    isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath),
-    isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath),
-    hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content,
-    diffBaseContent,
-  };
+function useViewerDerivedState({ filePath, content, originalContent }: FileViewerStateInput, gitDiffBaseContent: string | null): ViewerDerivedState {
+  const diffBaseContent = originalContent != null && content != null && originalContent !== content ? originalContent : gitDiffBaseContent;
+  return { isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath), isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath), hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content, diffBaseContent };
 }
 
 function useViewerData(
@@ -238,22 +191,14 @@ function useViewerData(
   scrollRef: React.RefObject<HTMLDivElement | null>,
   showBlame: boolean
 ): ViewerData {
-  const { highlightedHtml, highlightLang } = useHighlighting(
-    input.filePath,
-    input.content,
-    ideThemeId
-  );
+  const { highlightedHtml, highlightLang } = useHighlighting(input.filePath, input.content, ideThemeId);
   const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
-  const diffBaseContent = useGitDiffBaseContent(
-    input.projectRoot ?? null,
-    input.filePath,
-    input.content,
-    diffLines,
-  );
-  const effectiveDiffLines = useMemo(
-    () => buildEffectiveDiffLines(diffLines, diffBaseContent, input.content),
-    [diffBaseContent, diffLines, input.content],
-  );
+  const diffBaseContent = useGitDiffBaseContent(input.projectRoot ?? null, input.filePath, input.content, diffLines);
+  const effectiveDiffLines = useMemo(() => {
+    if (diffLines.length > 0) return diffLines;
+    if (diffBaseContent !== '' || input.content == null || input.content.length === 0) return diffLines;
+    return input.content.split('\n').map((_, index) => ({ line: index + 1, kind: 'added' }));
+  }, [diffBaseContent, diffLines, input.content]);
   const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
   const { foldableLines } = useFoldRanges(input.content);
   const scrollMetrics = useScrollMetrics(scrollRef);
@@ -273,6 +218,39 @@ function useViewerData(
   };
 }
 
+interface LoadGitDiffBaseContentInput {
+  projectRoot: string;
+  filePath: string;
+  content: string;
+  diffLines: DiffLineInfo[];
+  setDiffBaseContent: (value: string | null) => void;
+  isActive: () => boolean;
+}
+
+function shouldKeepGitDiffBaseContent(baseContent: string, content: string, diffLines: DiffLineInfo[]): boolean {
+  return diffLines.length > 0 || baseContent !== content;
+}
+
+async function loadGitDiffBaseContent(input: LoadGitDiffBaseContentInput): Promise<void> {
+  const { projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive } = input;
+  const clearIfActive = (): void => {
+    if (isActive()) setDiffBaseContent(null);
+  };
+
+  try {
+    const repoResult = await window.electronAPI.git.isRepo(projectRoot);
+    if (!repoResult.success || !repoResult.isRepo) return clearIfActive();
+    if (!isActive()) return;
+    const baseResult = await window.electronAPI.git.fileAtCommit(projectRoot, 'HEAD', filePath);
+    if (!isActive()) return;
+    const baseContent = baseResult.success ? (baseResult.content ?? '') : null;
+    if (baseContent == null) return clearIfActive();
+    setDiffBaseContent(shouldKeepGitDiffBaseContent(baseContent, content, diffLines) ? baseContent : null);
+  } catch {
+    clearIfActive();
+  }
+}
+
 function useGitDiffBaseContent(
   projectRoot: string | null,
   filePath: string | null,
@@ -283,54 +261,12 @@ function useGitDiffBaseContent(
 
   useEffect(() => {
     let active = true;
-
-    if (!projectRoot || !filePath || content == null) {
-      setDiffBaseContent(null);
-      return () => { active = false; };
-    }
-
-    void (async () => {
-      try {
-        const repoResult = await window.electronAPI.git.isRepo(projectRoot);
-        if (!active || !repoResult.success || !repoResult.isRepo) {
-          if (active) setDiffBaseContent(null);
-          return;
-        }
-
-        const baseResult = await window.electronAPI.git.fileAtCommit(projectRoot, 'HEAD', filePath);
-        if (!active) return;
-
-        const baseContent = baseResult.success ? (baseResult.content ?? '') : null;
-        const hasGitDiff = baseContent != null && (diffLines.length > 0 || baseContent !== content);
-        setDiffBaseContent(hasGitDiff ? baseContent : null);
-      } catch {
-        if (active) setDiffBaseContent(null);
-      }
-    })();
-
+    if (!projectRoot || !filePath || content == null) { setDiffBaseContent(null); return () => { active = false; }; }
+    void loadGitDiffBaseContent({ projectRoot, filePath, content, diffLines, setDiffBaseContent, isActive: () => active });
     return () => { active = false; };
   }, [content, diffLines, filePath, projectRoot]);
 
   return diffBaseContent;
-}
-
-function buildEffectiveDiffLines(
-  diffLines: DiffLineInfo[],
-  diffBaseContent: string | null,
-  content: string | null,
-): DiffLineInfo[] {
-  if (diffLines.length > 0) {
-    return diffLines;
-  }
-
-  if (diffBaseContent !== '' || content == null || content.length === 0) {
-    return diffLines;
-  }
-
-  return content.split('\n').map((_, index) => ({
-    line: index + 1,
-    kind: 'added',
-  }));
 }
 
 function useConflictState(
@@ -338,63 +274,28 @@ function useConflictState(
   content: string | null
 ): ViewerConflicts {
   const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
-
-  useEffect(() => {
-    setConflictBlocks(
-      parseConflictContent(content, hasConflictMarkers, parseConflictBlocks)
-    );
-  }, [content]);
-
+  useEffect(() => { setConflictBlocks(parseConflictContent(content, hasConflictMarkers, parseConflictBlocks)); }, [content]);
   const handleConflictResolved = useCallback((newContent: string) => {
-    setConflictBlocks(
-      parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks)
-    );
+    setConflictBlocks(parseConflictContent(newContent, hasConflictMarkers, parseConflictBlocks));
     if (!filePath) return;
-    window.dispatchEvent(
-      new CustomEvent('agent-ide:reload-file', { detail: { filePath } })
-    );
+    window.dispatchEvent(new CustomEvent('agent-ide:reload-file', { detail: { filePath } }));
   }, [filePath]);
-
   return { conflictBlocks, handleConflictResolved };
 }
 
-function useCollapsedFoldState(
-  filePath: string | null,
-  content: string | null
-): ViewerFolds {
+function useCollapsedFoldState(filePath: string | null, content: string | null): ViewerFolds {
   const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    setCollapsedFolds(new Set());
-  }, [filePath, content]);
-
-  const toggleFold = useCallback((startLine: number) => {
-    setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine));
-  }, []);
-
+  useEffect(() => { setCollapsedFolds(new Set()); }, [filePath, content]);
+  const toggleFold = useCallback((startLine: number) => { setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine)); }, []);
   return { collapsedFolds, setCollapsedFolds, toggleFold };
 }
 
-function useScrollReset(
-  filePath: string | null,
-  scrollRef: React.RefObject<HTMLDivElement | null>,
-): void {
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [filePath, scrollRef]);
+function useScrollReset(filePath: string | null, scrollRef: React.RefObject<HTMLDivElement | null>): void {
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [filePath, scrollRef]);
 }
 
-function useLinkHandling(
-  codeRef: React.RefObject<HTMLDivElement | null>,
-  filePath: string | null,
-  projectRoot?: string | null
-): void {
-  useEffect(() => {
-    ensureLinkStyles();
-  }, []);
-
+function useLinkHandling(codeRef: React.RefObject<HTMLDivElement | null>, filePath: string | null, projectRoot?: string | null): void {
+  useEffect(() => { ensureLinkStyles(); }, []);
   useEffect(() => {
     const element = codeRef.current;
     if (!element) return;
@@ -402,25 +303,10 @@ function useLinkHandling(
   }, [codeRef, filePath, projectRoot]);
 }
 
-function useResetViewerUi(
-  filePath: string | null,
-  resetters: ViewerUiResetters
-): void {
-  useEffect(() => {
-    resetters.setShowSearch(false);
-    resetters.setShowGoToLine(false);
-    resetters.setViewMode('code');
-    resetters.setShowHistory(false);
-    resetters.setEditMode(false);
-  }, [filePath, resetters]);
+function useResetViewerUi(filePath: string | null, resetters: ViewerUiResetters): void {
+  useEffect(() => { resetters.setShowSearch(false); resetters.setShowGoToLine(false); resetters.setViewMode('code'); resetters.setShowHistory(false); resetters.setEditMode(false); }, [filePath, resetters]);
 }
 
-function useExpandFoldsForSearch(
-  showSearch: boolean,
-  setCollapsedFolds: React.Dispatch<React.SetStateAction<Set<number>>>
-): void {
-  useEffect(() => {
-    if (!showSearch) return;
-    setCollapsedFolds((previous) => (previous.size === 0 ? previous : new Set()));
-  }, [showSearch, setCollapsedFolds]);
+function useExpandFoldsForSearch(showSearch: boolean, setCollapsedFolds: React.Dispatch<React.SetStateAction<Set<number>>>): void {
+  useEffect(() => { if (showSearch) setCollapsedFolds((previous) => (previous.size === 0 ? previous : new Set())); }, [showSearch, setCollapsedFolds]);
 }

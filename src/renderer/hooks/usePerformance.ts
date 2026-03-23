@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+
 import type { PerfMetrics } from '../types/electron';
 
 function hasElectronAPI(): boolean {
@@ -71,9 +72,7 @@ function buildSnapshot(
   };
 }
 
-export function usePerformance(active = true): PerformanceSnapshot {
-  const [snapshot, setSnapshot] = useState<PerformanceSnapshot>(INITIAL);
-
+function useFrameTimeTracker(active: boolean): React.MutableRefObject<number[]> {
   const frameTimesRef = useRef<number[]>([]);
   const lastFrameTsRef = useRef<number>(0);
   const rafHandleRef = useRef<number | null>(null);
@@ -90,48 +89,42 @@ export function usePerformance(active = true): PerformanceSnapshot {
     }
 
     let alive = true;
-
     function onFrame(ts: number): void {
       if (!alive) return;
       if (lastFrameTsRef.current > 0) {
         const delta = ts - lastFrameTsRef.current;
         frameTimesRef.current.push(delta);
-        if (frameTimesRef.current.length > 60) {
-          frameTimesRef.current.shift();
-        }
+        if (frameTimesRef.current.length > 60) frameTimesRef.current.shift();
       }
       lastFrameTsRef.current = ts;
       rafHandleRef.current = requestAnimationFrame(onFrame);
     }
 
     rafHandleRef.current = requestAnimationFrame(onFrame);
-    return () => {
-      alive = false;
-      if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current);
-    };
+    return () => { alive = false; if (rafHandleRef.current !== null) cancelAnimationFrame(rafHandleRef.current); };
   }, [active]);
+
+  return frameTimesRef;
+}
+
+export function usePerformance(active = true): PerformanceSnapshot {
+  const [snapshot, setSnapshot] = useState<PerformanceSnapshot>(INITIAL);
+  const frameTimesRef = useFrameTimeTracker(active);
 
   useEffect(() => {
     if (!active || !hasElectronAPI()) return;
-
     let alive = true;
     void window.electronAPI.perf.subscribe();
 
     const cleanup = window.electronAPI.perf.onMetrics(async (metrics: PerfMetrics) => {
       const avg = computeAvgFrameTime(frameTimesRef.current);
       const ipcLatencyMs = await measureIpcLatency();
-      if (!alive) {
-        return;
-      }
+      if (!alive) return;
       setSnapshot(buildSnapshot(metrics, Math.round(avg * 10) / 10, ipcLatencyMs));
     });
 
-    return () => {
-      alive = false;
-      cleanup();
-      void window.electronAPI.perf.unsubscribe();
-    };
-  }, [active]);
+    return () => { alive = false; cleanup(); void window.electronAPI.perf.unsubscribe(); };
+  }, [active, frameTimesRef]);
 
   return snapshot;
 }

@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import type { CodeRow } from './codeViewTypes';
 
 export interface CodeContentProps {

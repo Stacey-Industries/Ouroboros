@@ -1,7 +1,8 @@
 import React from 'react';
+
 import type { GitFileStatus } from '../../types/electron';
-import type { TreeNode } from './FileTreeItem';
 import { ContextMenuPanel } from './ContextMenuPanel';
+import type { TreeNode } from './FileTreeItem';
 import { useContextMenuController } from './useContextMenuController';
 
 export interface ContextMenuState {

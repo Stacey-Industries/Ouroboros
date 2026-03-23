@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+
 import type { PanelSizes, WorkspaceLayout } from '../../types/electron';
 import { LspStatus } from './LspStatus';
 import {

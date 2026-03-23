@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
-import { PaletteAnimations } from './paletteAnimations';
-import { PickerOverlay, PickerInput } from './PickerOverlay';
-import { PaletteFooter } from './PaletteOverlay';
-import { FilePickerItem } from './FilePickerItem';
-import type { FileEntry } from '../FileTree/FileListItem';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
+import type { FileEntry } from '../FileTree/FileListItem';
+import { FilePickerItem } from './FilePickerItem';
+import { PaletteAnimations } from './paletteAnimations';
+import { PaletteFooter } from './PaletteOverlay';
+import { PickerInput,PickerOverlay } from './PickerOverlay';
 
 const MAX_RESULTS = 30;
 const ITEM_HEIGHT = 36;

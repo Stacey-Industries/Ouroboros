@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { SessionUsage } from '../../types/electron';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

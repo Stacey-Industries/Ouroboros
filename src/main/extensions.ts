@@ -11,11 +11,10 @@ export {
   installExtension,
   listExtensions,
   uninstallExtension,
-} from './extensionsApi'
-
+} from './extensionsApi';
 export type {
   ActivationEvent,
   ExtensionInfo,
   ExtensionManifest,
   ExtensionStatus,
-} from './extensionsTypes'
+} from './extensionsTypes';

@@ -1,6 +1,7 @@
 import React from 'react';
-import { TerminalTabs } from '../Terminal/TerminalTabs';
+
 import type { TerminalSession } from '../Terminal/TerminalTabs';
+import { TerminalTabs } from '../Terminal/TerminalTabs';
 
 export interface TerminalPaneProps {
   height: number;

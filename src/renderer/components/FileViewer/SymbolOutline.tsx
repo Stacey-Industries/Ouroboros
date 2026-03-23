@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState, memo } from 'react';
+import React, { memo,useCallback, useEffect, useState } from 'react';
+
 import type { OutlineSymbol } from '../../hooks/useSymbolOutline';
 import {
   CODE_PADDING_TOP,
@@ -7,6 +8,8 @@ import {
   FLASH_DURATION_MS,
   FLASH_STYLE_ID,
   FLASH_STYLE_TEXT,
+  getOutlineIconStyle,
+  getOutlineItemStyle,
   KIND_COLOR,
   KIND_ICON,
   OUTLINE_EMPTY_STATE_STYLE,
@@ -15,8 +18,6 @@ import {
   OUTLINE_NAME_STYLE,
   OUTLINE_PANEL_STYLE,
   SCROLL_OFFSET,
-  getOutlineIconStyle,
-  getOutlineItemStyle,
 } from './SymbolOutline.shared';
 
 export interface SymbolOutlineProps {

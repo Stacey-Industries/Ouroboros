@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
+
 import type { SessionMetrics } from '../../hooks/useSessionAnalytics';
 import {
   formatDuration,

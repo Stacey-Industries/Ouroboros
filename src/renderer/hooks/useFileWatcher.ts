@@ -1,12 +1,13 @@
 import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
 } from 'react';
+
 import type { DirEntry, FileChangeEvent } from '../types/electron';
 import { subscribeToDirectoryChanges } from './directoryWatchRegistry';
 

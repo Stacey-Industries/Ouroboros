@@ -6,7 +6,8 @@
  * Supports keyboard navigation (left/right arrows).
  */
 
-import React, { useCallback, useRef, memo } from 'react';
+import React, { memo,useCallback, useRef } from 'react';
+
 import type { ReplayStep } from './types';
 
 const TOOL_COLOR: Record<string, string> = {

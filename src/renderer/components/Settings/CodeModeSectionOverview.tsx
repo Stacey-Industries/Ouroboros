@@ -1,5 +1,6 @@
 import React from 'react';
-import { SectionLabel, buttonStyle } from './CodeModeSection.shared';
+
+import { buttonStyle,SectionLabel } from './CodeModeSection.shared';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
 export function ErrorBanner({ error }: { error: string | null }): React.ReactElement | null {

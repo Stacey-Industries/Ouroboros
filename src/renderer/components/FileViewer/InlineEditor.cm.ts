@@ -1,12 +1,13 @@
-import { type Extension, type Text } from '@codemirror/state';
-import { keymap, hoverTooltip, type Tooltip, EditorView, lineNumbers, highlightActiveLine, highlightSpecialChars, drawSelection, rectangularSelection, crosshairCursor } from '@codemirror/view';
+import { autocompletion, closeBrackets, closeBracketsKeymap, type CompletionContext, completionKeymap, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { bracketMatching, indentOnInput, foldGutter, foldKeymap } from '@codemirror/language';
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap, type CompletionContext, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
-import { linter, lintKeymap, type Diagnostic as CmDiagnostic } from '@codemirror/lint';
-import type { MutableRefObject } from 'react';
+import { bracketMatching, foldGutter, foldKeymap,indentOnInput } from '@codemirror/language';
+import { type Diagnostic as CmDiagnostic,linter, lintKeymap } from '@codemirror/lint';
+import { highlightSelectionMatches,searchKeymap } from '@codemirror/search';
 import type { Compartment } from '@codemirror/state';
+import { type Extension, type Text } from '@codemirror/state';
+import { crosshairCursor,drawSelection, EditorView, highlightActiveLine, highlightSpecialChars, hoverTooltip, keymap, lineNumbers, rectangularSelection, type Tooltip } from '@codemirror/view';
+import type { MutableRefObject } from 'react';
+
 import type { LspDiagnostic } from '../../types/electron';
 import { createLanguageExtensions, getLanguageExtension } from './InlineEditor.cm.language';
 import { createHighlightExtension, editorThemeExtensions } from './InlineEditor.cm.theme';
@@ -115,7 +116,7 @@ function createHoverTooltipDom(contents: string): HTMLDivElement {
   return dom;
 }
 
-export { createLanguageExtensions, createHighlightExtension, getLanguageExtension };
+export { createHighlightExtension, createLanguageExtensions, getLanguageExtension };
 
 export function createEditorExtensions(input: CreateEditorExtensionsInput): Extension[] {
   return [

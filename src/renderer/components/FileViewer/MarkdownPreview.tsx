@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
 import DOMPurify from 'dompurify';
+import React, { useEffect, useMemo } from 'react';
+
 import { renderMarkdown } from './markdownPreviewRenderer';
 import {
   ensureMarkdownPreviewStyles,

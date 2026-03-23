@@ -1,7 +1,8 @@
-import React, { memo, useMemo, useState } from 'react';
 import type { CSSProperties, MouseEventHandler } from 'react';
+import React, { memo, useMemo, useState } from 'react';
+
 import type { SessionUsage, UsageSummary } from '../../types/electron';
-import { TIME_RANGE_OPTIONS, type SummaryCardData, type TimeRange, formatCost, formatDate, formatTokens, getModelRows, getSessionTotalTokens, getSummaryCards, modelColor, modelShortName, timeAgo } from './usageModalUtils';
+import { formatCost, formatDate, formatTokens, getModelRows, getSessionTotalTokens, getSummaryCards, modelColor, modelShortName, type SummaryCardData, TIME_RANGE_OPTIONS, timeAgo,type TimeRange } from './usageModalUtils';
 
 const sessionButtonStyle: CSSProperties = { fontFamily: 'var(--font-mono)', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-muted)', cursor: 'pointer', textAlign: 'left', padding: '4px 0' };
 

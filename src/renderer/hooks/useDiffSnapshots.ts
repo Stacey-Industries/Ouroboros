@@ -7,14 +7,15 @@
  */
 
 import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
   useCallback,
   useEffect,
   useRef,
   useState,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
 } from 'react';
+
 import type { AgentSession } from '../components/AgentMonitor/types';
 import { useAgentEventsContext } from '../contexts/AgentEventsContext';
 import { useProject } from '../contexts/ProjectContext';

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { BadgeVariant } from './types';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

@@ -4,8 +4,8 @@
  * Extracted from FileTree.tsx to reduce file size and improve reusability.
  */
 
-import type { TreeNode } from './FileTreeItem';
 import type { GitFileStatus } from '../../types/electron';
+import type { TreeNode } from './FileTreeItem';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

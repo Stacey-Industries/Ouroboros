@@ -1,9 +1,6 @@
-export { ContextBuilder } from './ContextBuilder';
 export type { ContextBuilderProps } from './ContextBuilder';
+export { ContextBuilder } from './ContextBuilder';
 export { ContextSelectionSection } from './ContextSelectionSection';
-export {
-    useContextSelectionModel,
-} from './useContextSelectionModel';
 export type {
     ContextBuilderModel,
     ContextBuilderModelOptions,
@@ -14,4 +11,7 @@ export type {
     ContextSelectionIntent,
     ContextSelectionModel,
     ContextSelectionSummary,
+} from './useContextSelectionModel';
+export {
+    useContextSelectionModel,
 } from './useContextSelectionModel';

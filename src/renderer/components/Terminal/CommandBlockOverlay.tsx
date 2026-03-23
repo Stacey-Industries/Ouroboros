@@ -1,6 +1,7 @@
 import React from 'react';
-import { CommandBlockOverlayBody } from './CommandBlockOverlayBody';
+
 import type { CommandBlockOverlayProps } from './CommandBlockOverlayBody';
+import { CommandBlockOverlayBody } from './CommandBlockOverlayBody';
 
 export type { CommandBlockOverlayProps } from './CommandBlockOverlayBody';
 

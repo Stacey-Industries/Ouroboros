@@ -270,6 +270,33 @@ function ensureCostSchema(db: Database): void {
   setSchemaVersion(db, 1);
 }
 
+function readCostHistoryJson(jsonPath: string): Array<Record<string, unknown>> | null {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+    const entries = data.entries;
+    return Array.isArray(entries) ? entries : null;
+  } catch {
+    return null;
+  }
+}
+
+function insertCostEntries(db: Database, entries: Array<Record<string, unknown>>): void {
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO cost_entries
+     (date, session_id, task_label, model, input_tokens, output_tokens,
+      cache_read_tokens, cache_write_tokens, estimated_cost, timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  runTransaction(db, () => {
+    for (const e of entries) {
+      insert.run(e.date, e.sessionId, e.taskLabel, e.model,
+        e.inputTokens, e.outputTokens, e.cacheReadTokens,
+        e.cacheWriteTokens, e.estimatedCost, e.timestamp);
+    }
+  });
+}
+
 export function migrateCostHistory(): void {
   const jsonPath = path.join(app.getPath('userData'), 'cost-history.json');
   const bakPath = jsonPath + '.bak';
@@ -277,42 +304,14 @@ export function migrateCostHistory(): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!fs.existsSync(jsonPath) || fs.existsSync(bakPath)) return;
 
-  let entries: Array<Record<string, unknown>>;
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    entries = data.entries;
-    if (!Array.isArray(entries)) return;
-  } catch {
-    return;
-  }
+  const entries = readCostHistoryJson(jsonPath);
+  if (!entries) return;
 
   let db: Database | null = null;
   try {
     db = openDatabase(path.join(app.getPath('userData'), 'cost-history.db'));
     ensureCostSchema(db);
-    const insert = db.prepare(
-      `INSERT OR IGNORE INTO cost_entries
-       (date, session_id, task_label, model, input_tokens, output_tokens,
-        cache_read_tokens, cache_write_tokens, estimated_cost, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-    runTransaction(db, () => {
-      for (const e of entries) {
-        insert.run(
-          e.date,
-          e.sessionId,
-          e.taskLabel,
-          e.model,
-          e.inputTokens,
-          e.outputTokens,
-          e.cacheReadTokens,
-          e.cacheWriteTokens,
-          e.estimatedCost,
-          e.timestamp,
-        );
-      }
-    });
+    insertCostEntries(db, entries);
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.renameSync(jsonPath, bakPath);
     console.log(`[migrate] Cost history: migrated ${entries.length} entries`);

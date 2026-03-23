@@ -3,9 +3,10 @@
  */
 
 import React, { memo, useMemo } from 'react';
+
 import type { CostEntry } from '../../types/electron';
 import { formatCost } from './costCalculator';
-import { toDateStr, daysAgo, formatDateShort } from './costHelpers';
+import { daysAgo, formatDateShort,toDateStr } from './costHelpers';
 
 interface DailyChartProps {
   entries: CostEntry[];

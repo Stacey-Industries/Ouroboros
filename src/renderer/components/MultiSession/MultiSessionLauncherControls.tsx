@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
 import type { SessionSlot } from './useMultiSessionLauncherModel';
 import { MAX_SLOTS } from './useMultiSessionLauncherModel';

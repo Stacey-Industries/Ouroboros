@@ -6,24 +6,25 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useDiffReview, DiffReviewPanel } from '../DiffReview';
+
 import { useProject } from '../../contexts/ProjectContext';
-import { SessionReplayPanel } from '../SessionReplay';
-import { SettingsPanel } from '../Settings/SettingsPanel';
-import { UsagePanel } from '../UsageModal/UsagePanel';
-import { ContextBuilder } from '../ContextBuilder';
-import { TimeTravelPanelConnected } from './TimeTravelPanelConnected';
-import { EditorTabBar, type SpecialViewType } from './EditorTabBar';
-import { CentrePane } from './CentrePane';
-import { EditorContent } from './EditorContent';
-import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
-import { ExtensionStoreSection } from '../Settings/ExtensionStoreSection';
-import { McpStoreSection } from '../Settings/McpStoreSection';
 import {
-  OPEN_SETTINGS_PANEL_EVENT,
   OPEN_EXTENSION_STORE_EVENT,
   OPEN_MCP_STORE_EVENT,
+  OPEN_SETTINGS_PANEL_EVENT,
 } from '../../hooks/appEventNames';
+import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
+import { ContextBuilder } from '../ContextBuilder';
+import { DiffReviewPanel,useDiffReview } from '../DiffReview';
+import { SessionReplayPanel } from '../SessionReplay';
+import { ExtensionStoreSection } from '../Settings/ExtensionStoreSection';
+import { McpStoreSection } from '../Settings/McpStoreSection';
+import { SettingsPanel } from '../Settings/SettingsPanel';
+import { UsagePanel } from '../UsageModal/UsagePanel';
+import { CentrePane } from './CentrePane';
+import { EditorContent } from './EditorContent';
+import { EditorTabBar, type SpecialViewType } from './EditorTabBar';
+import { TimeTravelPanelConnected } from './TimeTravelPanelConnected';
 
 // ── Event → view mapping ────────────────────────────────────────────────────
 
@@ -129,11 +130,19 @@ function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projec
   }
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Main component state hook ────────────────────────────────────────────────
 
-export function CentrePaneConnected(): React.ReactElement {
-  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
-  const { projectRoot } = useProject();
+interface CentrePaneState {
+  openViews: SpecialViewType[];
+  activeView: 'editor' | SpecialViewType;
+  replaySession: AgentMonitorSession | null;
+  setReplaySession: (s: AgentMonitorSession | null) => void;
+  setActiveView: (view: 'editor' | SpecialViewType) => void;
+  openAndActivate: (view: SpecialViewType) => void;
+  closeView: (view: SpecialViewType) => void;
+}
+
+function useCentrePaneState(closeReview: () => void): CentrePaneState {
   const [replaySession, setReplaySession] = useState<AgentMonitorSession | null>(null);
   const [openViews, setOpenViews] = useState<SpecialViewType[]>([]);
   const [activeView, setActiveView] = useState<'editor' | SpecialViewType>('editor');
@@ -150,14 +159,15 @@ export function CentrePaneConnected(): React.ReactElement {
     setActiveView((prev) => prev === view ? 'editor' : prev);
   }, []);
 
-  const activeSpecialView = activeView === 'editor' ? null : activeView;
+  return { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView };
+}
 
-  useDiffReviewEvents(openReview, setReplaySession, setActiveView);
-  useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
-  useSpecialViewEvents(openAndActivate);
-  useFileTabClicksSwitchToEditor(setActiveView);
-
-  // Global "review all changes" / "review unstaged" events (command palette, git panel)
+function useGlobalReviewEvents(
+  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void,
+  projectRoot: string | null,
+  setReplaySession: (s: AgentMonitorSession | null) => void,
+  setActiveView: (v: 'editor') => void,
+): void {
   useEffect(() => {
     function onReviewAll() {
       if (!projectRoot) return;
@@ -178,6 +188,56 @@ export function CentrePaneConnected(): React.ReactElement {
       window.removeEventListener('agent-ide:review-unstaged-changes', onReviewUnstaged);
     };
   }, [openReview, projectRoot, setReplaySession, setActiveView]);
+}
+
+function EditorViewContent({
+  activeView,
+  openViews,
+  projectRoot,
+  openAndActivate,
+  closeView,
+}: {
+  activeView: 'editor' | SpecialViewType;
+  openViews: SpecialViewType[];
+  projectRoot: string | null;
+  openAndActivate: (view: SpecialViewType) => void;
+  closeView: (view: SpecialViewType) => void;
+}): React.ReactElement {
+  const activeSpecialView = activeView === 'editor' ? null : activeView;
+  return (
+    <CentrePane
+      rootStyle={{ height: '100%' }}
+      tabBar={
+        <EditorTabBar
+          openSpecialViews={openViews}
+          activeSpecialView={activeSpecialView}
+          onSpecialViewClick={openAndActivate}
+          onSpecialViewClose={closeView}
+        />
+      }
+    >
+      <div style={{ ...layerStyle, display: activeView === 'editor' ? 'flex' : 'none' }}>
+        <EditorContent />
+      </div>
+      {openViews.map((view) => (
+        <div key={view} style={{ ...layerStyle, display: activeView === view ? 'flex' : 'none' }}>
+          <SpecialViewPanel view={view} projectRoot={projectRoot} />
+        </div>
+      ))}
+    </CentrePane>
+  );
+}
+
+export function CentrePaneConnected(): React.ReactElement {
+  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
+  const { projectRoot } = useProject();
+  const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);
+
+  useDiffReviewEvents(openReview, setReplaySession, setActiveView);
+  useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
+  useSpecialViewEvents(openAndActivate);
+  useFileTabClicksSwitchToEditor(setActiveView);
+  useGlobalReviewEvents(openReview, projectRoot, setReplaySession, setActiveView);
 
   if (state) {
     return (
@@ -199,27 +259,12 @@ export function CentrePaneConnected(): React.ReactElement {
   }
 
   return (
-    <CentrePane
-      rootStyle={{ height: '100%' }}
-      tabBar={
-        <EditorTabBar
-          openSpecialViews={openViews}
-          activeSpecialView={activeSpecialView}
-          onSpecialViewClick={openAndActivate}
-          onSpecialViewClose={closeView}
-        />
-      }
-    >
-      {/* Editor — hidden when a special view is active */}
-      <div style={{ ...layerStyle, display: activeView === 'editor' ? 'flex' : 'none' }}>
-        <EditorContent />
-      </div>
-      {/* Persistent special views — hidden but not unmounted when inactive */}
-      {openViews.map((view) => (
-        <div key={view} style={{ ...layerStyle, display: activeView === view ? 'flex' : 'none' }}>
-          <SpecialViewPanel view={view} projectRoot={projectRoot} />
-        </div>
-      ))}
-    </CentrePane>
+    <EditorViewContent
+      activeView={activeView}
+      openViews={openViews}
+      projectRoot={projectRoot}
+      openAndActivate={openAndActivate}
+      closeView={closeView}
+    />
   );
 }

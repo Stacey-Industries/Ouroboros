@@ -1,5 +1,6 @@
 import React from 'react';
-import { useFileTreeStore, useDirtyFileCount } from './fileTreeStore';
+
+import { useDirtyFileCount,useFileTreeStore } from './fileTreeStore';
 
 export interface FileTreeSearchBarProps {
   query: string;

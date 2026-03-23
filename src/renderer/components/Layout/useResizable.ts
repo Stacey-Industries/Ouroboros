@@ -1,11 +1,11 @@
 import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
 } from 'react';
 
 export type PanelId = 'leftSidebar' | 'rightSidebar' | 'terminal';
@@ -160,6 +160,24 @@ function removeDragListeners(
   document.removeEventListener('pointercancel', handlePointerUp);
 }
 
+function beginResizeDrag(direction: ResizeDirection): void {
+  document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
+  document.body.style.userSelect = 'none';
+}
+
+function finishResizeDrag(
+  dragStateRef: MutableRefObject<DragState | null>,
+  setSizes: Dispatch<SetStateAction<PanelSizes>>,
+  handlePointerMove: (event: PointerEvent) => void,
+  handlePointerUp: () => void,
+): void {
+  hidePreviewLine();
+  commitDragSize(dragStateRef.current, setSizes);
+  dragStateRef.current = null;
+  resetDocumentDragState();
+  removeDragListeners(handlePointerMove, handlePointerUp);
+}
+
 function useResizeDrag(
   setSizes: Dispatch<SetStateAction<PanelSizes>>,
   dragStateRef: MutableRefObject<DragState | null>,
@@ -176,18 +194,13 @@ function useResizeDrag(
   }, [dragStateRef]);
 
   const handlePointerUp = useCallback(() => {
-    hidePreviewLine();
-    commitDragSize(dragStateRef.current, setSizes);
-    dragStateRef.current = null;
-    resetDocumentDragState();
-    removeDragListeners(handlePointerMove, handlePointerUp);
+    finishResizeDrag(dragStateRef, setSizes, handlePointerMove, handlePointerUp);
   }, [dragStateRef, handlePointerMove, setSizes]);
 
   const startResize = useCallback(
     (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => {
       dragStateRef.current = { panel, direction, startValue, startPos, currentSize: startValue };
-      document.body.style.cursor = direction === 'vertical' ? 'col-resize' : 'row-resize';
-      document.body.style.userSelect = 'none';
+      beginResizeDrag(direction);
       document.addEventListener('pointermove', handlePointerMove);
       document.addEventListener('pointerup', handlePointerUp);
       document.addEventListener('pointercancel', handlePointerUp);

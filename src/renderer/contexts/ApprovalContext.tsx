@@ -6,7 +6,8 @@
  * there are pending approvals.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef,useState } from 'react';
+
 import { ApprovalDialog } from '../components/AgentMonitor/ApprovalDialog';
 import type { ApprovalRequest } from '../types/electron';
 

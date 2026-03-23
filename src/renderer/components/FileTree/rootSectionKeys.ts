@@ -5,9 +5,10 @@
  */
 
 import React from 'react';
+
 import type { TreeNode } from './FileTreeItem';
-import { parentDir } from './fileTreeUtils';
 import { useFileTreeStore } from './fileTreeStore';
+import { parentDir } from './fileTreeUtils';
 
 /** Number of items to skip for PageUp/PageDown */
 const PAGE_SIZE = 20;
@@ -39,7 +40,7 @@ export function handleTreeKeyDown(e: React.KeyboardEvent, deps: KeyHandlerDeps):
 
   if (handleNavKeys(e, deps)) return;
   if (handleActionKeys(e, item, deps)) return;
-  if (handleSelectionShortcuts(e, item, deps)) return;
+  if (handleSelectionShortcuts(e, item)) return;
   handleCreateKeys(e, item, deps);
 }
 
@@ -54,6 +55,21 @@ function handleNavKeys(e: React.KeyboardEvent, deps: KeyHandlerDeps): boolean {
   );
 }
 
+function extendShiftSelection(
+  store: ReturnType<typeof useFileTreeStore.getState>,
+  displayItems: Array<{ node: TreeNode }>,
+  nextIndex: number,
+  focusIndex: number,
+): void {
+  if (!displayItems[nextIndex]) return;
+  store.select(displayItems[nextIndex].node.path, { ctrl: true, shift: false });
+  if (!displayItems[focusIndex]) return;
+  const current = displayItems[focusIndex].node.path;
+  if (!store.selectedPaths.has(current)) {
+    store.toggleSelection(current);
+  }
+}
+
 function handleVerticalNavKeys(
   e: React.KeyboardEvent,
   deps: KeyHandlerDeps
@@ -65,35 +81,14 @@ function handleVerticalNavKeys(
     e.preventDefault();
     const nextIndex = Math.min(focusIndex + 1, displayItems.length - 1);
     setFocusIndex(nextIndex);
-
-    // Shift+ArrowDown: extend selection downward
-    if (e.shiftKey && displayItems[nextIndex]) {
-      store.select(displayItems[nextIndex].node.path, { ctrl: true, shift: false });
-      // Also ensure the item we're leaving stays selected
-      if (displayItems[focusIndex]) {
-        const current = displayItems[focusIndex].node.path;
-        if (!store.selectedPaths.has(current)) {
-          store.toggleSelection(current);
-        }
-      }
-    }
+    if (e.shiftKey) extendShiftSelection(store, displayItems, nextIndex, focusIndex);
     return true;
   }
   if (e.key === 'ArrowUp') {
     e.preventDefault();
     const nextIndex = Math.max(focusIndex - 1, 0);
     setFocusIndex(nextIndex);
-
-    // Shift+ArrowUp: extend selection upward
-    if (e.shiftKey && displayItems[nextIndex]) {
-      store.select(displayItems[nextIndex].node.path, { ctrl: true, shift: false });
-      if (displayItems[focusIndex]) {
-        const current = displayItems[focusIndex].node.path;
-        if (!store.selectedPaths.has(current)) {
-          store.toggleSelection(current);
-        }
-      }
-    }
+    if (e.shiftKey) extendShiftSelection(store, displayItems, nextIndex, focusIndex);
     return true;
   }
   return false;
@@ -190,7 +185,6 @@ function handleFolderNavKeys(
 function handleSelectionShortcuts(
   e: React.KeyboardEvent,
   item: { node: TreeNode } | undefined,
-  deps: KeyHandlerDeps
 ): boolean {
   const store = useFileTreeStore.getState();
 

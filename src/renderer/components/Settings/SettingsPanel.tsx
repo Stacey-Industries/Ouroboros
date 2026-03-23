@@ -3,16 +3,17 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+
 import { useConfig } from '../../hooks/useConfig';
-import { useSettingsDraft } from './useSettingsDraft';
-import type { TabId } from './settingsTabs';
 import { searchEntries } from './searchHelpers';
 import type { SettingsEntry } from './settingsEntries';
+import { cancelButtonStyle, saveButtonStyle } from './settingsModalStyles';
 import { SettingsSearchInput } from './SettingsSearchInput';
 import { SettingsSearchResults } from './SettingsSearchResults';
 import { SettingsTabBar } from './SettingsTabBar';
 import { SettingsTabContent } from './SettingsTabContent';
-import { cancelButtonStyle, saveButtonStyle } from './settingsModalStyles';
+import type { TabId } from './settingsTabs';
+import { useSettingsDraft } from './useSettingsDraft';
 
 export interface SettingsPanelProps {
   onClose: () => void;

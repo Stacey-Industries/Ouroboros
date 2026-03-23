@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import {
+  type ColorToken,
   restoreThemeColors,
   restoreTokenColor,
-  type ColorToken,
 } from './ThemeEditor.shared';
 
 type ThemeEditorActionArgs = {

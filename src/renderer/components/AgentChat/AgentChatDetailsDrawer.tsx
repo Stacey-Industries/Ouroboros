@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+
 import type { AgentChatLinkedDetailsResult, AgentChatOrchestrationLink } from '../../types/electron';
 import {
   buildResultRows,

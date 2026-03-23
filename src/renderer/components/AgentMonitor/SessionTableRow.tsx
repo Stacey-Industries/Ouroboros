@@ -3,6 +3,7 @@
  */
 
 import React, { memo, useCallback } from 'react';
+
 import type { CostEntry } from '../../types/electron';
 import { formatCost, formatTokenCount } from './costCalculator';
 import { formatDateShort } from './costHelpers';

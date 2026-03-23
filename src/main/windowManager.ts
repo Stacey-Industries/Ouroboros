@@ -7,8 +7,9 @@
 
 import { BrowserWindow, screen, session } from 'electron'
 import path from 'path'
-import { getConfigValue, setConfigValue } from './config'
+
 import type { WindowBounds } from './config'
+import { getConfigValue, setConfigValue } from './config'
 
 // mica-electron: native Windows DWM acrylic/mica effects
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -350,6 +351,7 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
   }
   // Start context refresh for the new project root (timer may already be running for another root).
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
     const { startContextRefreshTimer } = require('./ipc-handlers/agentChat')
     startContextRefreshTimer([projectRoot])
   } catch { /* agentChat module may not be loaded yet */ }

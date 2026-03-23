@@ -3,8 +3,9 @@
  * inline history suggestions (as-you-type), and Up/Down arrow history navigation.
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react'
 import Fuse from 'fuse.js'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { Completion } from './CompletionOverlay'
 
 const HISTORY_SUGGESTION_POS = { x: 8, y: 40 }

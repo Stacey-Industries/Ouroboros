@@ -3,8 +3,8 @@
  * Wraps the xterm SearchAddon with a find-next/prev UI.
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react'
 import type { SearchAddon } from '@xterm/addon-search'
+import React, { useCallback,useEffect, useRef, useState } from 'react'
 
 interface TerminalSearchBarProps {
   searchAddon: SearchAddon

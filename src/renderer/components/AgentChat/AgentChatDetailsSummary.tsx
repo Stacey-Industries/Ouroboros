@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
+
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
 } from '../../types/electron';
 import type { SummaryPillData } from './agentChatDetailsSupport';
-import { getStatusLabel, getStatusTone } from './agentChatFormatters';
 import {
   buildSummaryData,
   buildSummaryPills,
   getLatestLink,
   getStatusDescription,
 } from './agentChatDetailsSupport';
+import { getStatusLabel, getStatusTone } from './agentChatFormatters';
 
 export interface AgentChatDetailsSummaryProps {
   activeThread: AgentChatThreadRecord;

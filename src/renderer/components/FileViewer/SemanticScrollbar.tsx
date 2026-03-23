@@ -1,12 +1,13 @@
-import React, { useCallback, useRef, useState, memo } from 'react';
+import React, { memo,useCallback, useRef, useState } from 'react';
+
+import type { DiffLineInfo } from '../../types/electron';
 import {
-  HIDDEN_TOOLTIP,
-  SemanticScrollbarOverlay,
   buildMarks,
   getViewportMetrics,
+  HIDDEN_TOOLTIP,
+  SemanticScrollbarOverlay,
   updateTooltipPosition,
 } from './SemanticScrollbar.shared';
-import type { DiffLineInfo } from '../../types/electron';
 
 export interface SemanticScrollbarProps {
   totalLines: number;

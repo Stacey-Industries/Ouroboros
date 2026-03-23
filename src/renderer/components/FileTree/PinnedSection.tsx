@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+
 import { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon';
 
 interface PinnedItemInfo {

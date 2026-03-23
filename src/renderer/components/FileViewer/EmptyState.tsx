@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { EmptyState as SharedEmptyState } from '../shared';
 
 // ─── Empty state ─────────────────────────────────────────────────────────────

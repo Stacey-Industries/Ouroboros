@@ -1,7 +1,8 @@
 import React from 'react';
-import { ThemeEditorView } from './ThemeEditor.parts';
-import { useThemeEditorModel } from './ThemeEditor.model';
+
 import type { ThemeEditorInput } from './ThemeEditor.model';
+import { useThemeEditorModel } from './ThemeEditor.model';
+import { ThemeEditorView } from './ThemeEditor.parts';
 
 export type ThemeEditorProps = ThemeEditorInput;
 

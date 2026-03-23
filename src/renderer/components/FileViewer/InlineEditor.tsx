@@ -1,5 +1,6 @@
-import React, { forwardRef, memo, useImperativeHandle } from 'react';
 import { EditorSelection } from '@codemirror/state';
+import React, { forwardRef, memo, useImperativeHandle } from 'react';
+
 import { useInlineEditorController } from './useInlineEditorController';
 
 export interface InlineEditorProps {

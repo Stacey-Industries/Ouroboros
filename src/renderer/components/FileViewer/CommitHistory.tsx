@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import { useCommitHistoryModel } from './CommitHistory.model';
 import { CommitHistoryView } from './CommitHistory.view';
 

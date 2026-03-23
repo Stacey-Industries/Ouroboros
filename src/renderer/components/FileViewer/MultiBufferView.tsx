@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import type { BufferExcerpt } from '../../types/electron';
+
 import { useTheme } from '../../hooks/useTheme';
+import type { BufferExcerpt } from '../../types/electron';
 import { ExcerptSection } from './MultiBufferExcerpt';
 import { getShikiTheme } from './multiBufferViewSyntax';
 
@@ -25,6 +26,18 @@ const EMPTY_FILE_CONTENT: FileContentState = {
   isLoading: true,
 };
 
+const emptyStateContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  fontFamily: 'var(--font-ui)',
+  gap: '12px',
+  padding: '32px',
+  textAlign: 'center',
+};
+
 function getFileContent(
   fileContents: MultiBufferViewProps['fileContents'],
   filePath: string,
@@ -32,31 +45,23 @@ function getFileContent(
   return fileContents.get(filePath) ?? EMPTY_FILE_CONTENT;
 }
 
-function MultiBufferEmptyState(): React.ReactElement {
+function EmptyStateIcon(): React.ReactElement {
   return (
     <div
-      className="text-text-semantic-muted"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        fontFamily: 'var(--font-ui)',
-        gap: '12px',
-        padding: '32px',
-        textAlign: 'center',
+        fontSize: '2rem',
+        opacity: 0.4,
+        lineHeight: 1,
       }}
     >
-      <div
-        style={{
-          fontSize: '2rem',
-          opacity: 0.4,
-          lineHeight: 1,
-        }}
-      >
-        {'\u2630'}
-      </div>
+      {'\u2630'}
+    </div>
+  );
+}
+
+function EmptyStateBody(): React.ReactElement {
+  return (
+    <>
       <span className="text-text-semantic-primary" style={{ fontSize: '1rem', fontWeight: 600 }}>
         No excerpts yet
       </span>
@@ -83,6 +88,15 @@ function MultiBufferEmptyState(): React.ReactElement {
         Tip: You can collapse, remove, or click through to the full file
         for each excerpt.
       </div>
+    </>
+  );
+}
+
+function MultiBufferEmptyState(): React.ReactElement {
+  return (
+    <div className="text-text-semantic-muted" style={emptyStateContainerStyle}>
+      <EmptyStateIcon />
+      <EmptyStateBody />
     </div>
   );
 }

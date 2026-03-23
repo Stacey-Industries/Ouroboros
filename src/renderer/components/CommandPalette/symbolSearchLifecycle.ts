@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+
 import type { SymbolEntry } from '../../types/electron';
 
 const symbolCache = new Map<string, SymbolEntry[]>();

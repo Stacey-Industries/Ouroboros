@@ -3,9 +3,10 @@
  */
 
 import React, { memo, useCallback, useMemo } from 'react';
-import type { ToolCallEvent } from './types';
-import type { TooltipData } from './TimelineTooltip';
+
 import { timelineColor } from './timelineHelpers';
+import type { TooltipData } from './TimelineTooltip';
+import type { ToolCallEvent } from './types';
 
 interface TimelineBarProps {
   call: ToolCallEvent;

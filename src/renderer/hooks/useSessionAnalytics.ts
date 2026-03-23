@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from 'react';
+
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

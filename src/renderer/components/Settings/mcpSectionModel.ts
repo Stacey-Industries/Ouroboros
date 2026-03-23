@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { MCP_SERVERS_CHANGED_EVENT } from '../../hooks/appEventNames';
 import type { McpServerEntry } from '../../types/electron';
-import { EMPTY_FORM, configToForm, formToConfig, type ServerFormState } from './mcpHelpers';
+import { configToForm, EMPTY_FORM, formToConfig, type ServerFormState } from './mcpHelpers';
 
 export interface FormHandlers {
   onFieldChange: (field: keyof ServerFormState, value: string) => void;

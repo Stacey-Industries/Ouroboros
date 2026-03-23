@@ -2,10 +2,11 @@
  * LayoutSwitcher.tsx — Dropdown popover for switching workspace layouts.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback,useEffect, useRef, useState } from 'react';
+
 import type { WorkspaceLayout } from '../../types/electron';
-import { LayoutSaveInput } from './LayoutSaveInput';
 import { LayoutListItem } from './LayoutListItem';
+import { LayoutSaveInput } from './LayoutSaveInput';
 
 export interface LayoutSwitcherProps {
   layouts: WorkspaceLayout[];

@@ -141,6 +141,45 @@ export function recordFailedAttempt(ip: string): void {
  * shows a "Password" field and POSTs to /api/login. Otherwise falls back
  * to the token query-param redirect flow.
  */
+function getLoginPageStyles(): string {
+  return `<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 400px; padding: 2rem; }
+    h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center; }
+    .subtitle { color: #8b949e; text-align: center; margin-bottom: 2rem; font-size: 0.875rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; color: #c9d1d9; }
+    input[type="password"] { width: 100%; padding: 0.625rem 0.75rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.875rem; outline: none; transition: border-color 0.2s; }
+    input[type="password"]:focus { border-color: #238636; box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.3); }
+    button { width: 100%; padding: 0.625rem 1rem; background: #238636; color: #ffffff; border: 1px solid rgba(240, 246, 252, 0.1); border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 0.5rem; }
+    button:hover { background: #2ea043; }
+    button:active { background: #238636; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .error { color: #f85149; font-size: 0.8125rem; margin-top: 0.75rem; text-align: center; min-height: 1.25rem; }
+    .help { color: #8b949e; font-size: 0.75rem; text-align: center; margin-top: 1.5rem; }
+  </style>`
+}
+
+function getLoginPageScript(label: string): string {
+  return `<script>
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var credential = document.getElementById('credential').value.trim();
+      if (!credential) { document.getElementById('error').textContent = 'Please enter your ${label.toLowerCase()}.'; return; }
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Connecting...'; document.getElementById('error').textContent = '';
+      fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: credential }) })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.success) { window.location.reload(); }
+        else { document.getElementById('error').textContent = data.error || 'Invalid credentials.'; btn.disabled = false; btn.textContent = 'Connect'; }
+      })
+      .catch(function() { document.getElementById('error').textContent = 'Connection failed. Try again.'; btn.disabled = false; btn.textContent = 'Connect'; });
+    });
+  </script>`
+}
+
 export function getLoginPageHtml(): string {
   const usePassword = hasPasswordConfigured()
   const label = usePassword ? 'Password' : 'Access Token'
@@ -155,89 +194,7 @@ export function getLoginPageHtml(): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ouroboros IDE</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0d1117;
-      color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .container {
-      width: 100%;
-      max-width: 400px;
-      padding: 2rem;
-    }
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      text-align: center;
-    }
-    .subtitle {
-      color: #8b949e;
-      text-align: center;
-      margin-bottom: 2rem;
-      font-size: 0.875rem;
-    }
-    .form-group {
-      margin-bottom: 1rem;
-    }
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-      color: #c9d1d9;
-    }
-    input[type="password"] {
-      width: 100%;
-      padding: 0.625rem 0.75rem;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #e6edf3;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input[type="password"]:focus {
-      border-color: #238636;
-      box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.3);
-    }
-    button {
-      width: 100%;
-      padding: 0.625rem 1rem;
-      background: #238636;
-      color: #ffffff;
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin-top: 0.5rem;
-    }
-    button:hover { background: #2ea043; }
-    button:active { background: #238636; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .error {
-      color: #f85149;
-      font-size: 0.8125rem;
-      margin-top: 0.75rem;
-      text-align: center;
-      min-height: 1.25rem;
-    }
-    .help {
-      color: #8b949e;
-      font-size: 0.75rem;
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-  </style>
+  ${getLoginPageStyles()}
 </head>
 <body>
   <div class="container">
@@ -253,41 +210,7 @@ export function getLoginPageHtml(): string {
     </form>
     <p class="help">${helpText}</p>
   </div>
-  <script>
-    document.getElementById('login-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var credential = document.getElementById('credential').value.trim();
-      if (!credential) {
-        document.getElementById('error').textContent = 'Please enter your ${label.toLowerCase()}.';
-        return;
-      }
-      var btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.textContent = 'Connecting...';
-      document.getElementById('error').textContent = '';
-
-      fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: credential })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.success) {
-          window.location.reload();
-        } else {
-          document.getElementById('error').textContent = data.error || 'Invalid credentials.';
-          btn.disabled = false;
-          btn.textContent = 'Connect';
-        }
-      })
-      .catch(function() {
-        document.getElementById('error').textContent = 'Connection failed. Try again.';
-        btn.disabled = false;
-        btn.textContent = 'Connect';
-      });
-    });
-  </script>
+  ${getLoginPageScript(label)}
 </body>
 </html>`
 }

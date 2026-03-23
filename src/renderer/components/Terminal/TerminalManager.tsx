@@ -1,8 +1,9 @@
 import React from 'react'
-import type { TerminalSession } from './TerminalTabs'
+
 import { EmptyState } from '../shared'
 import { ActiveTerminalContent } from './TerminalManagerContent'
 import { useTerminalManagerState } from './TerminalManagerState'
+import type { TerminalSession } from './TerminalTabs'
 
 export interface TerminalManagerProps {
   sessions: TerminalSession[]

@@ -1,55 +1,55 @@
 // New hierarchical tree
-export { FileTree } from './FileTree';
 export type { FileTreeProps } from './FileTree';
+export { FileTree } from './FileTree';
+export type { FileTreeItemProps, FlatRow, MatchRange,TreeNode } from './FileTreeItem';
 export { FileTreeItem } from './FileTreeItem';
-export type { TreeNode, FlatRow, FileTreeItemProps, MatchRange } from './FileTreeItem';
 
 // Context menu
+export type { ContextMenuProps,ContextMenuState } from './ContextMenu';
 export { ContextMenu } from './ContextMenu';
-export type { ContextMenuState, ContextMenuProps } from './ContextMenu';
 
 // Store
+export type { DiagnosticSeverity,FileTreeState, SortMode, TreeFilter } from './fileTreeStore';
 export { useFileTreeStore } from './fileTreeStore';
-export type { FileTreeState, TreeFilter, SortMode, DiagnosticSeverity } from './fileTreeStore';
 export {
-  useSearchQuery,
-  useExpandedPaths,
-  useIsExpanded,
-  useTreeFilter,
-  useSortMode,
-  useSelectedPaths,
-  useFocusedPath,
-  useSelectionCount,
   useDiagnosticForPath,
   useDirectoryDiagnostic,
-  useIsDirty,
   useDirtyFileCount,
+  useExpandedPaths,
+  useFocusedPath,
+  useIsDirty,
+  useIsExpanded,
   useNestingEnabled,
+  useSearchQuery,
+  useSelectedPaths,
+  useSelectionCount,
+  useSortMode,
+  useTreeFilter,
 } from './fileTreeStore';
 
 // Search bar
-export { FileTreeSearchBar } from './FileTreeSearchBar';
 export type { FileTreeSearchBarProps } from './FileTreeSearchBar';
+export { FileTreeSearchBar } from './FileTreeSearchBar';
 
 // Staging area
-export { StagingArea } from './StagingArea';
 export type { StagingAreaProps } from './StagingArea';
+export { StagingArea } from './StagingArea';
 
 // Git status filter
-export { GitStatusFilterBar, GitFilteredView, computeStatusCounts, getFilteredFiles } from './GitStatusFilter';
-export type { GitStatusCounts, GitStatusFilterBarProps, GitFilteredViewProps } from './GitStatusFilter';
+export type { GitFilteredViewProps,GitStatusCounts, GitStatusFilterBarProps } from './GitStatusFilter';
+export { computeStatusCounts, getFilteredFiles,GitFilteredView, GitStatusFilterBar } from './GitStatusFilter';
 
 // Git branch indicator
-export { GitBranchIndicator } from './GitBranchIndicator';
 export type { GitBranchIndicatorProps } from './GitBranchIndicator';
+export { GitBranchIndicator } from './GitBranchIndicator';
 
 // File nesting rules
-export { DEFAULT_NESTING_RULES, expandNestingPattern, applyNesting } from './fileNestingRules';
+export { applyNesting,DEFAULT_NESTING_RULES, expandNestingPattern } from './fileNestingRules';
 
 // Shared
-export { ProjectPicker } from './ProjectPicker';
-export type { ProjectPickerProps } from './ProjectPicker';
-export { getFileIcon } from './fileIcons';
 export type { FileIconInfo } from './fileIcons';
-export { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon';
+export { getFileIcon } from './fileIcons';
 export type { FileTypeIconProps, FolderTypeIconProps } from './FileTypeIcon';
+export { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon';
+export type { ProjectPickerProps } from './ProjectPicker';
+export { ProjectPicker } from './ProjectPicker';

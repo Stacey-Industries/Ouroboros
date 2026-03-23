@@ -1,7 +1,8 @@
 import React from 'react';
+
 import { PaletteAnimations } from './paletteAnimations';
-import { PickerInput, PickerOverlay } from './PickerOverlay';
 import { PaletteFooter } from './PaletteOverlay';
+import { PickerInput, PickerOverlay } from './PickerOverlay';
 import { SymbolItem } from './SymbolItem';
 import type { SymbolSearchModel, SymbolSearchProps } from './useSymbolSearchModel';
 

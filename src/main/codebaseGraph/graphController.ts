@@ -1,14 +1,10 @@
-/**
- * graphController.ts — Main controller for the internal codebase graph engine.
- * Mirrors 14 tools from the codebase-memory MCP server, built natively for the IDE.
- *
- * Heavy indexing (tree-sitter WASM) runs in a worker_threads Worker so the
- * Electron main-process event loop stays responsive.
- */
+/** graphController.ts — Main controller for the internal codebase graph engine. */
 
 import path from 'path';
 import { Worker } from 'worker_threads';
 
+import { ingestTracesIntoStore, manageAdrAction } from './graphControllerSupport';
+export { getGraphController, setGraphController } from './graphControllerSupport';
 import { GraphQueryEngine } from './graphQuery';
 import { GraphStore } from './graphStore';
 import type {
@@ -73,8 +69,6 @@ export class GraphController {
     this.initialized = false;
   }
 
-  // ── Status / context ────────────────────────────────────────────
-
   getStatus(): IndexStatus {
     return {
       initialized: this.initialized,
@@ -95,8 +89,6 @@ export class GraphController {
       projectName: this.projectName,
     };
   }
-
-  // ── Event hooks ─────────────────────────────────────────────────
 
   onSessionStart(): void {
     this.reindexChangedFiles().catch((err) => {
@@ -120,8 +112,6 @@ export class GraphController {
     }, 2000);
   }
 
-  // ── Tool 1: indexRepository ─────────────────────────────────────
-
   async indexRepository(opts: {
     projectRoot: string;
     projectName: string;
@@ -137,12 +127,9 @@ export class GraphController {
     }
   }
 
-  // ── Tools 2-14 (delegates) ─────────────────────────────────────
-
   indexStatus(): IndexStatus {
     return this.getStatus();
   }
-
   listProjects(): string[] {
     return this.initialized ? [this.rootPath] : [];
   }
@@ -157,55 +144,21 @@ export class GraphController {
   async detectChanges(): Promise<ChangeDetectionResult> {
     return this.query.detectChanges();
   }
-
   getArchitecture(aspects?: string[]): ArchitectureView {
     return this.query.getArchitecture(aspects);
   }
-
   async getCodeSnippet(symbolId: string): Promise<CodeSnippetResult | null> {
     return this.query.getCodeSnippet(symbolId);
   }
-
   getGraphSchema(): GraphSchema {
     return this.query.getGraphSchema();
   }
-
   ingestTraces(traces: unknown[]): { success: boolean; ingested: number } {
-    let ingested = 0;
-    if (!Array.isArray(traces)) return { success: false, ingested: 0 };
-    for (const trace of traces) {
-      if (isTraceObject(trace)) {
-        const t = trace as { source: string; target: string; type?: string };
-        this.store.addEdge({
-          source: t.source,
-          target: t.target,
-          type: (t.type as 'calls') ?? 'calls',
-        });
-        ingested++;
-      }
-    }
-    if (ingested > 0) {
-      this.store.save().catch((e) => console.error('[codebase-graph] Save after trace:', e));
-    }
-    return { success: true, ingested };
+    return ingestTracesIntoStore(this.store, traces);
   }
-
   manageAdr(action: 'list' | 'get' | 'create' | 'update' | 'delete', id?: string): unknown {
-    const adrDir = path.join(this.rootPath, 'docs', 'adr');
-    const messages: Record<string, string> = {
-      list: 'ADR directory: ' + adrDir,
-      get: 'ADR not found',
-      create: 'ADR creation requires file system write — use files:writeFile',
-      update: 'ADR update requires file system write — use files:writeFile',
-      delete: 'ADR deletion requires file system operation',
-    };
-    // eslint-disable-next-line security/detect-object-injection
-    const msg = messages[action];
-    return msg
-      ? { success: true, ...(id ? { id } : {}), message: msg }
-      : { success: false, error: 'Unknown ADR action' };
+    return manageAdrAction(this.rootPath, action, id);
   }
-
   queryGraph(query: string): Array<Record<string, unknown>> {
     return this.query.queryGraph(query);
   }
@@ -224,8 +177,6 @@ export class GraphController {
   traceCallPath(fromId: string, toId: string, maxDepth?: number): CallPathResult {
     return this.query.traceCallPath(fromId, toId, maxDepth);
   }
-
-  // ── Worker lifecycle ────────────────────────────────────────────
 
   private spawnWorker(): void {
     if (this.worker) return;
@@ -263,8 +214,6 @@ export class GraphController {
     this.worker = null;
   }
 
-  // ── Worker message handling ─────────────────────────────────────
-
   private handleWorkerMessage(msg: WorkerResponse): void {
     switch (msg.type) {
       case 'ready':
@@ -291,7 +240,9 @@ export class GraphController {
     this.indexedAt = Date.now();
     this.indexDurationMs = durationMs;
     this.store.save().catch((e) => console.error('[codebase-graph] Save failed:', e));
-    console.log(`[codebase-graph] Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`);
+    console.log(
+      `[codebase-graph] Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`,
+    );
     this.resolvePendingInit();
     this.drainPendingReindex();
   }
@@ -318,8 +269,6 @@ export class GraphController {
     this.rejectPendingInit(new Error(message));
     this.drainPendingReindex();
   }
-
-  // ── Worker request helpers ──────────────────────────────────────
 
   private requestFullIndex(incremental: boolean): Promise<void> {
     if (this.indexingInProgress) return Promise.resolve();
@@ -354,8 +303,6 @@ export class GraphController {
       this.initReject = null;
     }
   }
-
-  // ── Incremental reindex ─────────────────────────────────────────
 
   private async reindexChangedFiles(): Promise<void> {
     if (this.indexingInProgress) {
@@ -402,22 +349,4 @@ export class GraphController {
       });
     }
   }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────
-
-function isTraceObject(trace: unknown): boolean {
-  return typeof trace === 'object' && trace !== null && 'source' in trace && 'target' in trace;
-}
-
-// ── Singleton ─────────────────────────────────────────────────────
-
-let instance: GraphController | null = null;
-
-export function getGraphController(): GraphController | null {
-  return instance;
-}
-
-export function setGraphController(controller: GraphController): void {
-  instance = controller;
 }

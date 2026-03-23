@@ -5,8 +5,9 @@
  */
 
 import React, { useCallback } from 'react';
-import { useFileViewerManager } from '../FileViewer';
+
 import { FilePicker } from '../CommandPalette/FilePicker';
+import { useFileViewerManager } from '../FileViewer';
 
 export function FilePickerConnected({
   isOpen,

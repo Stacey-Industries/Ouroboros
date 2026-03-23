@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import { ClaudeSectionContent } from './ClaudeSectionContent';
 import { useClaudeSectionModel } from './useClaudeSection';

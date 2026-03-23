@@ -1,4 +1,5 @@
 import { Terminal } from '@xterm/xterm'
+
 import { unregisterTerminal } from './terminalRegistry'
 import type {
   AttachedTerminalDisposables,

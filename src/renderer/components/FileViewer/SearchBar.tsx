@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { SearchBarPanel, useSearchBarController } from './SearchBar.parts';
 
 export interface SearchMatch {

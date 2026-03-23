@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 import {
@@ -14,15 +15,15 @@ import {
   PRESET_ORDER,
   PresetButton,
   previewBoxStyle,
+  type PromptPreset,
   resolvePromptPreset,
   SAMPLE_LINES,
   sectionHintStyle,
   type SettingsChangeHandler,
+  type ShellPreset,
   StepButton,
   terminalPreviewStyle,
   textInputStyle,
-  type PromptPreset,
-  type ShellPreset,
 } from './terminalSectionShared';
 
 interface TerminalSectionContentProps {

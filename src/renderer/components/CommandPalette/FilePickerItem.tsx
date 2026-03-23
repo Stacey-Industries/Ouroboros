@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { RangeHighlight } from './HighlightedText';
+
 import { getFileIcon } from '../FileTree/fileIcons';
+import { RangeHighlight } from './HighlightedText';
 
 const ITEM_HEIGHT = 36;
 const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];

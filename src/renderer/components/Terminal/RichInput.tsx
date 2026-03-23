@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { RichInputBody } from './RichInputBody';
+
 import type { RichInputProps } from './RichInputBody';
+import { RichInputBody } from './RichInputBody';
 
 export type { RichInputProps } from './RichInputBody';
 

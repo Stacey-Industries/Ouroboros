@@ -2,16 +2,17 @@
  * FileTree - multi-root hierarchical tree view.
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { EmptyState } from '../shared';
+import React, { useCallback, useEffect, useMemo,useRef, useState } from 'react';
+
 import { useToastContext } from '../../contexts/ToastContext';
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
 import { useGitStatusDetailed } from '../../hooks/useGitStatusDetailed';
+import { EmptyState } from '../shared';
 import { FileTreeBody } from './FileTreeBody';
 import { FileTreeSearchBar } from './FileTreeSearchBar';
-import { GitBranchIndicator } from './GitBranchIndicator';
-import { GitStatusFilterBar, computeStatusCounts } from './GitStatusFilter';
 import { useFileTreeStore } from './fileTreeStore';
+import { GitBranchIndicator } from './GitBranchIndicator';
+import { computeStatusCounts,GitStatusFilterBar } from './GitStatusFilter';
 
 export interface FileTreeProps {
   projectRoots: string[];

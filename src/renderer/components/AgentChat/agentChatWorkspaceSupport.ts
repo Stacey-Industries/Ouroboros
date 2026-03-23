@@ -101,6 +101,20 @@ function mergeThreadMessage(
   });
 }
 
+function mergeOrchestrationFields(
+  incoming: AgentChatThreadRecord['latestOrchestration'],
+  existing: AgentChatThreadRecord['latestOrchestration'],
+): AgentChatThreadRecord['latestOrchestration'] {
+  if (!incoming) return existing;
+  return {
+    ...incoming,
+    provider: incoming.provider ?? existing?.provider,
+    claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
+    codexThreadId: incoming.codexThreadId ?? existing?.codexThreadId,
+    linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
+  };
+}
+
 function mergeThreadStatus(
   threads: AgentChatThreadRecord[],
   status: AgentChatThreadStatusSnapshot,
@@ -111,17 +125,10 @@ function mergeThreadStatus(
   // Preserve linkedTerminalId from the existing thread when the incoming
   // status update doesn't carry one.  Early session updates fire before
   // the adapter has populated it, so we treat it as a "sticky" field.
-  const incoming = status.latestOrchestration;
-  const existing = targetThread.latestOrchestration;
-  const mergedOrchestration = incoming
-    ? {
-        ...incoming,
-        provider: incoming.provider ?? existing?.provider,
-        claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
-        codexThreadId: incoming.codexThreadId ?? existing?.codexThreadId,
-        linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
-      }
-    : existing;
+  const mergedOrchestration = mergeOrchestrationFields(
+    status.latestOrchestration,
+    targetThread.latestOrchestration,
+  );
 
   return mergeThreadCollection(threads, {
     ...targetThread,

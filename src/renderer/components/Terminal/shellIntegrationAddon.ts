@@ -112,83 +112,86 @@ export class ShellIntegrationAddon implements ITerminalAddon {
     }
   }
 
-  private _handleOsc633(data: string): void {
-    if (!this._terminal) return
-    const cursorRow =
-      this._terminal.buffer.active.cursorY +
-      this._terminal.buffer.active.baseY
-
-    // Parse: first char is the sub-command (A/B/C/D/E/P)
-    const subCmd = data[0]
-    const params = data.length > 2 ? data.substring(2) : ''
-
-    switch (subCmd) {
-      case 'A': // Prompt start
-        this._emit({ type: 'promptStart', row: cursorRow })
-        this._currentCommand = {
-          id: `cmd-${++this._commandCounter}`,
-          promptStartRow: cursorRow,
-          cwd: this._currentCwd,
-          startTime: Date.now(),
-          status: 'running',
-        }
-        break
-
-      case 'B': // Command start (after prompt, before execution)
-        this._emit({ type: 'commandStart', row: cursorRow })
-        if (this._currentCommand) {
-          this._currentCommand.commandStartRow = cursorRow
-        }
-        break
-
-      case 'C': // Command executed (output begins)
-        this._emit({ type: 'commandExecuted', row: cursorRow })
-        if (this._currentCommand) {
-          this._currentCommand.executionStartRow = cursorRow
-        }
-        break
-
-      case 'D': { // Command finished with exit code
-        const exitCode = params ? parseInt(params, 10) : 0
-        this._emit({ type: 'commandFinished', row: cursorRow, exitCode })
-        if (this._currentCommand) {
-          this._currentCommand.commandFinishedRow = cursorRow
-          this._currentCommand.exitCode = exitCode
-          this._currentCommand.endTime = Date.now()
-          this._currentCommand.status = 'complete'
-          const record = this._currentCommand as CommandRecord
-          this._commands.push(record)
-          for (const l of this._commandListeners) {
-            try {
-              l(record)
-            } catch {
-              // Listener errors should not break the addon
-            }
-          }
-          this._currentCommand = null
-        }
-        break
-      }
-
-      case 'E': // Command line text
-        this._emit({ type: 'commandLine', text: params })
-        if (this._currentCommand) {
-          this._currentCommand.commandText = params
-        }
-        break
-
-      case 'P': { // Property (e.g., Cwd=...)
-        const eqIdx = params.indexOf('=')
-        if (eqIdx !== -1) {
-          const key = params.substring(0, eqIdx)
-          const value = params.substring(eqIdx + 1)
-          if (key === 'Cwd') {
-            this._currentCwd = value
-            this._emit({ type: 'cwd', path: value })
-          }
-        }
-        break
+  private _emitCommand(record: CommandRecord): void {
+    for (const l of this._commandListeners) {
+      try {
+        l(record)
+      } catch {
+        // Listener errors should not break the addon
       }
     }
+  }
+
+  private _getCursorRow(): number {
+    if (!this._terminal) return 0
+    return this._terminal.buffer.active.cursorY + this._terminal.buffer.active.baseY
+  }
+
+  private _startCommand(cursorRow: number): void {
+    this._emit({ type: 'promptStart', row: cursorRow })
+    this._currentCommand = {
+      id: `cmd-${++this._commandCounter}`,
+      promptStartRow: cursorRow,
+      cwd: this._currentCwd,
+      startTime: Date.now(),
+      status: 'running',
+    }
+  }
+
+  private _updateCurrentCommand(patch: Partial<CommandRecord>): void {
+    if (this._currentCommand) {
+      Object.assign(this._currentCommand, patch)
+    }
+  }
+
+  private _finishCommand(cursorRow: number, exitCode: number): void {
+    this._emit({ type: 'commandFinished', row: cursorRow, exitCode })
+    if (!this._currentCommand) return
+    this._currentCommand.commandFinishedRow = cursorRow
+    this._currentCommand.exitCode = exitCode
+    this._currentCommand.endTime = Date.now()
+    this._currentCommand.status = 'complete'
+    const record = this._currentCommand as CommandRecord
+    this._commands.push(record)
+    this._emitCommand(record)
+    this._currentCommand = null
+  }
+
+  private _setCurrentCwd(value: string): void {
+    this._currentCwd = value
+    this._emit({ type: 'cwd', path: value })
+  }
+
+  private _handleProperty(params: string): void {
+    const eqIdx = params.indexOf('=')
+    if (eqIdx === -1) return
+    const key = params.substring(0, eqIdx)
+    if (key !== 'Cwd') return
+    this._setCurrentCwd(params.substring(eqIdx + 1))
+  }
+
+  private _handleOsc633(data: string): void {
+    if (!this._terminal || !data) return
+    const cursorRow = this._getCursorRow()
+    const subCmd = data[0]
+    const params = data.length > 2 ? data.substring(2) : ''
+    const handlers: Record<string, () => void> = {
+      A: () => this._startCommand(cursorRow),
+      B: () => {
+        this._emit({ type: 'commandStart', row: cursorRow })
+        this._updateCurrentCommand({ commandStartRow: cursorRow })
+      },
+      C: () => {
+        this._emit({ type: 'commandExecuted', row: cursorRow })
+        this._updateCurrentCommand({ executionStartRow: cursorRow })
+      },
+      D: () => this._finishCommand(cursorRow, params ? parseInt(params, 10) : 0),
+      E: () => {
+        this._emit({ type: 'commandLine', text: params })
+        this._updateCurrentCommand({ commandText: params })
+      },
+      P: () => this._handleProperty(params),
+    }
+    handlers[subCmd]?.()
   }
 }

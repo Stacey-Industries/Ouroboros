@@ -5,6 +5,7 @@
  */
 
 import type { Terminal } from '@xterm/xterm'
+
 import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
 import { writeChunkedPaste } from './terminalPasteHelpers'
 import type { CompletionState } from './useTerminalCompletions'

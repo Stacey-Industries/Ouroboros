@@ -1,277 +1,293 @@
-import Store from 'electron-store'
+import Store from 'electron-store';
 
-import type { AgentChatSettings } from './agentChat/types'
-import { schema } from './configSchema'
-import type { ContextLayerConfig } from './contextLayer/contextLayerTypes'
+import type { AgentChatSettings } from './agentChat/types';
+import { schema } from './configSchema';
+import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 
 export interface PanelSizes {
-  leftSidebar: number
-  rightSidebar: number
-  terminal: number
+  leftSidebar: number;
+  rightSidebar: number;
+  terminal: number;
 }
 
 export interface WindowBounds {
-  x?: number
-  y?: number
-  width: number
-  height: number
-  isMaximized: boolean
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized: boolean;
 }
 
 export interface TerminalSessionSnapshot {
-  cwd: string
-  title: string
-  isClaude?: boolean
-  isCodex?: boolean
+  cwd: string;
+  title: string;
+  isClaude?: boolean;
+  isCodex?: boolean;
   /** Claude Code session UUID — used to restore with --resume <id> */
-  claudeSessionId?: string
+  claudeSessionId?: string;
   /** Codex thread UUID — used to restore with `codex resume <id>` */
-  codexThreadId?: string
+  codexThreadId?: string;
 }
 
 export interface ClaudeCliSettings {
   /** Permission mode: 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' */
-  permissionMode: string
+  permissionMode: string;
   /** Model override: '' means CLI default. e.g. 'sonnet', 'opus', 'haiku', or full model ID */
-  model: string
+  model: string;
   /** Effort level: 'low' | 'medium' | 'high' | 'max' */
-  effort: string
+  effort: string;
   /** Extra system prompt appended to default */
-  appendSystemPrompt: string
+  appendSystemPrompt: string;
   /** Verbose output */
-  verbose: boolean
+  verbose: boolean;
   /** Max budget in USD (0 = unlimited) */
-  maxBudgetUsd: number
+  maxBudgetUsd: number;
   /** Allowed tools (comma-separated, empty = all) */
-  allowedTools: string
+  allowedTools: string;
   /** Disallowed tools (comma-separated, empty = none) */
-  disallowedTools: string
+  disallowedTools: string;
   /** Additional directories to allow tool access */
-  addDirs: string[]
+  addDirs: string[];
   /** Enable Claude in Chrome integration */
-  chrome: boolean
+  chrome: boolean;
   /** Use git worktree for sessions */
-  worktree: boolean
+  worktree: boolean;
   /** Dangerously skip all permission checks */
-  dangerouslySkipPermissions: boolean
+  dangerouslySkipPermissions: boolean;
 }
 
 export interface CodexCliSettings {
   /** Model override: '' means CLI default. e.g. 'gpt-5.4' */
-  model: string
+  model: string;
   /** Reasoning effort override: 'low' | 'medium' | 'high' | 'xhigh' */
-  reasoningEffort: string
+  reasoningEffort: string;
   /** Sandbox mode for command execution */
-  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access'
+  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access';
   /** Approval policy for command execution */
-  approvalPolicy: 'untrusted' | 'on-request' | 'never'
+  approvalPolicy: 'untrusted' | 'on-request' | 'never';
   /** Optional config profile from ~/.codex/config.toml */
-  profile: string
+  profile: string;
   /** Additional directories Codex can write to */
-  addDirs: string[]
+  addDirs: string[];
   /** Enable live web search */
-  search: boolean
+  search: boolean;
   /** Allow running outside a git repository */
-  skipGitRepoCheck: boolean
+  skipGitRepoCheck: boolean;
   /** Dangerously bypass approvals and sandbox entirely */
-  dangerouslyBypassApprovalsAndSandbox: boolean
+  dangerouslyBypassApprovalsAndSandbox: boolean;
 }
 
 export interface NotificationSettings {
   /** 'all' | 'errors-only' | 'none' */
-  level: string
+  level: string;
   /** Whether to notify even when the app is focused */
-  alwaysNotify: boolean
+  alwaysNotify: boolean;
 }
 
 export interface ProviderModel {
-  id: string
-  name: string
-  provider: string
-  capabilities?: string[]
+  id: string;
+  name: string;
+  provider: string;
+  capabilities?: string[];
 }
 
 export interface ModelProvider {
-  id: string
-  name: string
-  baseUrl: string
-  apiKey: string
-  models: ProviderModel[]
-  enabled: boolean
-  builtIn?: boolean
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  models: ProviderModel[];
+  enabled: boolean;
+  builtIn?: boolean;
 }
 
 export interface ModelSlotAssignments {
   /** Model for interactive Claude Code terminals (format: 'providerId:modelId') */
-  terminal: string
+  terminal: string;
   /** Model for agent chat subagent sessions */
-  agentChat: string
+  agentChat: string;
   /** Model for CLAUDE.md generation */
-  claudeMdGeneration: string
+  claudeMdGeneration: string;
 }
 
 export interface ClaudeMdSettings {
   /** Master toggle for CLAUDE.md automation */
-  enabled: boolean
+  enabled: boolean;
   /** When to trigger generation */
-  triggerMode: 'post-session' | 'post-commit' | 'manual'
+  triggerMode: 'post-session' | 'post-commit' | 'manual';
   /** Which model to use for generation */
-  model: 'haiku' | 'sonnet' | 'opus'
+  model: 'haiku' | 'sonnet' | 'opus';
   /** Auto-commit generated CLAUDE.md files */
-  autoCommit: boolean
+  autoCommit: boolean;
   /** Generate root CLAUDE.md */
-  generateRoot: boolean
+  generateRoot: boolean;
   /** Generate subdirectory CLAUDE.md files */
-  generateSubdirs: boolean
+  generateSubdirs: boolean;
   /** Directories to exclude from generation */
-  excludeDirs: string[]
+  excludeDirs: string[];
 }
 
 export interface AgentTemplate {
-  id: string
-  name: string
-  icon?: string
+  id: string;
+  name: string;
+  icon?: string;
   /** Supports {{projectRoot}}, {{projectName}}, {{openFile}}, {{openFileName}} */
-  promptTemplate: string
+  promptTemplate: string;
   /** Optional per-template CLI overrides (merged with global settings) */
-  cliOverrides?: Partial<ClaudeCliSettings>
+  cliOverrides?: Partial<ClaudeCliSettings>;
 }
 
 export interface WorkspaceLayout {
-  name: string
-  panelSizes: PanelSizes
+  name: string;
+  panelSizes: PanelSizes;
   visiblePanels: {
-    leftSidebar: boolean
-    rightSidebar: boolean
-    terminal: boolean
-  }
-  rightSidebarTab?: string
-  builtIn?: boolean
+    leftSidebar: boolean;
+    rightSidebar: boolean;
+    terminal: boolean;
+  };
+  rightSidebarTab?: string;
+  builtIn?: boolean;
 }
 
 export interface WorkspaceSnapshot {
-  id: string
-  commitHash: string
-  sessionId: string
-  sessionLabel?: string
-  timestamp: number
-  type: 'session-start' | 'session-end' | 'manual'
-  fileCount?: number
+  id: string;
+  commitHash: string;
+  sessionId: string;
+  sessionLabel?: string;
+  timestamp: number;
+  type: 'session-start' | 'session-end' | 'manual';
+  fileCount?: number;
 }
 
 export interface AppConfig {
-  recentProjects: string[]
-  defaultProjectRoot: string
-  activeTheme: 'retro' | 'modern' | 'warp' | 'cursor' | 'kiro' | 'glass' | 'light' | 'high-contrast' | 'custom'
-  hooksServerPort: number
-  terminalFontSize: number
-  autoInstallHooks: boolean
-  shell: string
-  panelSizes: PanelSizes
-  windowBounds: WindowBounds
-  fontUI: string
-  fontMono: string
-  fontSizeUI: number
-  keybindings: Record<string, string>
-  showBgGradient: boolean
-  customThemeColors: Record<string, string>
-  terminalSessions: TerminalSessionSnapshot[]
-  customCSS: string
+  recentProjects: string[];
+  defaultProjectRoot: string;
+  activeTheme:
+    | 'retro'
+    | 'modern'
+    | 'warp'
+    | 'cursor'
+    | 'kiro'
+    | 'glass'
+    | 'light'
+    | 'high-contrast'
+    | 'custom';
+  hooksServerPort: number;
+  terminalFontSize: number;
+  autoInstallHooks: boolean;
+  shell: string;
+  panelSizes: PanelSizes;
+  windowBounds: WindowBounds;
+  fontUI: string;
+  fontMono: string;
+  fontSizeUI: number;
+  keybindings: Record<string, string>;
+  showBgGradient: boolean;
+  customThemeColors: Record<string, string>;
+  terminalSessions: TerminalSessionSnapshot[];
+  customCSS: string;
   /** Absolute paths pinned to the top of the file tree */
-  bookmarks: string[]
+  bookmarks: string[];
   /** Extra ignore patterns (exact names or glob-like prefixes) merged with the hardcoded list */
-  fileTreeIgnorePatterns: string[]
-  profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>
+  fileTreeIgnorePatterns: string[];
+  profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>;
   /** All open project roots for multi-root workspace support */
-  multiRoots: string[]
+  multiRoots: string[];
   /** Empty string = use shell default PS1 */
-  customPrompt: string
+  customPrompt: string;
   /** 'default' | 'minimal' | 'powerline' | 'git' | 'custom' */
-  promptPreset: string
+  promptPreset: string;
   /** Claude CLI launch settings */
-  claudeCliSettings: ClaudeCliSettings
+  claudeCliSettings: ClaudeCliSettings;
   /** Codex CLI launch settings */
-  codexCliSettings: CodexCliSettings
-  agentChatSettings: AgentChatSettings
+  codexCliSettings: CodexCliSettings;
+  agentChatSettings: AgentChatSettings;
   /** Desktop notification preferences for agent events */
-  notifications: NotificationSettings
+  notifications: NotificationSettings;
   /** Pre-configured Claude Code launch profiles */
-  agentTemplates: AgentTemplate[]
+  agentTemplates: AgentTemplate[];
   /** Saved workspace layouts (panel arrangements) */
-  workspaceLayouts: WorkspaceLayout[]
+  workspaceLayouts: WorkspaceLayout[];
   /** Name of the currently active workspace layout */
-  activeLayoutName: string
+  activeLayoutName: string;
   /** Global toggle for the extension system */
-  extensionsEnabled: boolean
+  extensionsEnabled: boolean;
   /** Names of extensions that have been explicitly disabled */
-  disabledExtensions: string[]
+  disabledExtensions: string[];
   /** VS Code extensions installed from Open VSX registry */
   installedVsxExtensions: Array<{
-    id: string; namespace: string; name: string; displayName: string;
-    version: string; description: string; installPath: string; installedAt: string;
+    id: string;
+    namespace: string;
+    name: string;
+    displayName: string;
+    version: string;
+    description: string;
+    installPath: string;
+    installedAt: string;
     contributes: {
-      themes?: Array<{ label: string; uiTheme: string; path: string }>
-      grammars?: Array<{ language: string; scopeName: string; path: string }>
-      snippets?: Array<{ language: string; path: string }>
-      languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>
-    }
-  }>
+      themes?: Array<{ label: string; uiTheme: string; path: string }>;
+      grammars?: Array<{ language: string; scopeName: string; path: string }>;
+      snippets?: Array<{ language: string; path: string }>;
+      languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>;
+    };
+  }>;
   /** IDs of VSX extensions whose contributions are disabled */
-  disabledVsxExtensions: string[]
+  disabledVsxExtensions: string[];
   /** Whether LSP integration is enabled */
-  lspEnabled: boolean
+  lspEnabled: boolean;
   /** Custom language server commands keyed by language id */
-  lspServers: Record<string, string>
+  lspServers: Record<string, string>;
   /** Auto-launch a Claude Code session on startup instead of a plain shell */
-  claudeAutoLaunch: boolean
+  claudeAutoLaunch: boolean;
   /** Tool names that require user approval before execution */
-  approvalRequired: string[]
+  approvalRequired: string[];
   /** Auto-approve after N seconds (0 = never auto-approve) */
-  approvalTimeout: number
+  approvalTimeout: number;
   /** Workspace time-travel snapshots (capped at 100) */
-  workspaceSnapshots: WorkspaceSnapshot[]
+  workspaceSnapshots: WorkspaceSnapshot[];
   /** Terminal cursor style: 'block' | 'underline' | 'bar' */
-  terminalCursorStyle: 'block' | 'underline' | 'bar'
+  terminalCursorStyle: 'block' | 'underline' | 'bar';
   /** Enable Warp-style command block overlay on terminals */
-  commandBlocksEnabled: boolean
+  commandBlocksEnabled: boolean;
   /** Custom regex pattern for prompt detection (heuristic fallback) */
-  promptPattern: string
+  promptPattern: string;
   /** Format document before saving (requires a formatting provider in Monaco) */
-  formatOnSave: boolean
+  formatOnSave: boolean;
   /** Context layer settings for AI-assisted codebase understanding */
-  contextLayer: ContextLayerConfig
+  contextLayer: ContextLayerConfig;
   /** Automated CLAUDE.md generation settings */
-  claudeMdSettings: ClaudeMdSettings
+  claudeMdSettings: ClaudeMdSettings;
   /** Configured LLM providers (Anthropic-compatible endpoints) */
-  modelProviders: ModelProvider[]
+  modelProviders: ModelProvider[];
   /** Which provider:model to use for each session type */
-  modelSlots: ModelSlotAssignments
+  modelSlots: ModelSlotAssignments;
   /** Port for the web remote access server (default: 7890) */
-  webAccessPort: number
+  webAccessPort: number;
   /** Auth token for web remote access */
-  webAccessToken: string
+  webAccessToken: string;
   /** Password for web remote access login (alternative to token) */
-  webAccessPassword: string
-  glassOpacity: number
+  webAccessPassword: string;
+  glassOpacity: number;
 }
 
-export const store = new Store<AppConfig>({ schema })
+export const store = new Store<AppConfig>({ schema });
 
 // In-memory cache to avoid re-reading config.json from disk on every call.
 // electron-store's underlying conf library reads the file on every .get().
 // This cache is invalidated on every write via setConfigValue.
-let configCache: AppConfig | null = null
+let configCache: AppConfig | null = null;
 
 export function getConfig(): AppConfig {
-  if (!configCache) configCache = store.store
-  return configCache
+  if (!configCache) configCache = store.store;
+  return configCache;
 }
 
 export function getConfigValue<K extends keyof AppConfig>(key: K): AppConfig[K] {
-  return getConfig()[key]
+  // eslint-disable-next-line security/detect-object-injection -- key is constrained to keyof AppConfig by TypeScript
+  return getConfig()[key];
 }
 
 export function setConfigValue<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void {
-  store.set(key, value)
-  configCache = null  // invalidate cache on write
+  store.set(key, value);
+  configCache = null; // invalidate cache on write
 }

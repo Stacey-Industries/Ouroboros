@@ -2,7 +2,8 @@
  * SessionTable.tsx — Table of session cost history entries.
  */
 
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useCallback,useState } from 'react';
+
 import type { CostEntry } from '../../types/electron';
 import { SessionTableRow } from './SessionTableRow';
 

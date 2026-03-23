@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState, memo } from 'react';
+import React, { memo,useCallback, useEffect, useRef, useState } from 'react';
 
 export interface MinimapProps {
   /** Raw file content (plain text lines) */

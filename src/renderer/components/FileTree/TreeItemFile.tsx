@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
+
+import type { MatchRange,TreeNode } from './FileTreeItem';
 import { FileTypeIcon } from './FileTypeIcon';
 import { InlineEditInput } from './InlineEditInput';
-import type { TreeNode, MatchRange } from './FileTreeItem';
 
 export interface TreeItemFileProps {
   node: TreeNode;
@@ -80,6 +81,11 @@ function FileMeta({
   );
 }
 
+function FileNestIndicator({ node }: { node: TreeNode }): React.ReactElement {
+  if (node.hasNestedChildren) return <NestChevron expanded={!!node.isNestExpanded} />;
+  return <span style={{ width: '16px', flexShrink: 0 }} />;
+}
+
 export function TreeItemFile({
   node,
   isEditing,
@@ -92,11 +98,7 @@ export function TreeItemFile({
 }: TreeItemFileProps): React.ReactElement {
   return (
     <>
-      {node.hasNestedChildren ? (
-        <NestChevron expanded={!!node.isNestExpanded} />
-      ) : (
-        <span style={{ width: '16px', flexShrink: 0 }} />
-      )}
+      <FileNestIndicator node={node} />
       <FileTypeIcon filename={node.name} />
       <FileName
         node={node}

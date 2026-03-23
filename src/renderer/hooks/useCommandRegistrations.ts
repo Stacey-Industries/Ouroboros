@@ -6,14 +6,15 @@
  */
 
 import { useEffect } from 'react';
-import type { AgentTemplate, WorkspaceLayout } from '../types/electron';
+
 import type { Command } from '../components/CommandPalette/types';
+import type { AgentTemplate, WorkspaceLayout } from '../types/electron';
+import { resolveTemplate } from '../utils/templateResolver';
 import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
 } from './appEventNames';
-import { resolveTemplate } from '../utils/templateResolver';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;

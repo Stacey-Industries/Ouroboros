@@ -3,7 +3,8 @@
  * and completion overlay state management.
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { Completion } from './CompletionOverlay'
 import {
   appendCompletionValue,

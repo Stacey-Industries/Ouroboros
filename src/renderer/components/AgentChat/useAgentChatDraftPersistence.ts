@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
 
 const DRAFT_KEY_PREFIX = 'agentChat:draft:';
 const DEBOUNCE_MS = 500;
@@ -29,86 +29,76 @@ export function clearPersistedDraft(threadId: string | null): void {
   }
 }
 
+function flushDraftToStorage(key: string, draft: string): void {
+  try {
+    if (draft) {
+      localStorage.setItem(key, draft);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function restoreDraftFromStorage(key: string, setDraft: Dispatch<SetStateAction<string>>): void {
+  try {
+    const stored = localStorage.getItem(key);
+    setDraft(stored ?? '');
+  } catch {
+    setDraft('');
+  }
+}
+
+function useThreadSwitchPersistence(
+  activeThreadId: string | null,
+  setDraft: Dispatch<SetStateAction<string>>,
+  timerRef: ReturnType<typeof useRef<ReturnType<typeof setTimeout> | null>>,
+  draftRef: ReturnType<typeof useRef<string>>,
+): void {
+  const previousThreadIdRef = useRef<string | null>(activeThreadId);
+
+  useEffect(() => {
+    if (previousThreadIdRef.current === activeThreadId) return;
+    const prevId = previousThreadIdRef.current;
+    previousThreadIdRef.current = activeThreadId;
+
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    flushDraftToStorage(getDraftKey(prevId), draftRef.current);
+    restoreDraftFromStorage(getDraftKey(activeThreadId), setDraft);
+  }, [activeThreadId, setDraft, timerRef, draftRef]);
+}
+
+function useMountRestoreDraft(activeThreadId: string | null, setDraft: Dispatch<SetStateAction<string>>): void {
+  useEffect(() => {
+    const stored = localStorage.getItem(getDraftKey(activeThreadId));
+    if (stored) setDraft(stored);
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
+function useDebouncedDraftSave(activeThreadId: string | null, draft: string): void {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      flushDraftToStorage(getDraftKey(activeThreadId), draft);
+    }, DEBOUNCE_MS);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [activeThreadId, draft]);
+}
+
 export function useAgentChatDraftPersistence(
   activeThreadId: string | null,
   draft: string,
   setDraft: Dispatch<SetStateAction<string>>,
 ): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previousThreadIdRef = useRef<string | null>(activeThreadId);
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
-  // Flush old draft + restore new draft when thread changes
-  useEffect(() => {
-    if (previousThreadIdRef.current === activeThreadId) return;
-    const prevId = previousThreadIdRef.current;
-    previousThreadIdRef.current = activeThreadId;
-
-    // Flush any pending debounced save for the previous thread
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    try {
-      const prevKey = getDraftKey(prevId);
-      const prevDraft = draftRef.current;
-      if (prevDraft) {
-        localStorage.setItem(prevKey, prevDraft);
-      } else {
-        localStorage.removeItem(prevKey);
-      }
-    } catch {
-      // ignore
-    }
-
-    const key = getDraftKey(activeThreadId);
-    try {
-      const stored = localStorage.getItem(key);
-      setDraft(stored ?? '');
-    } catch {
-      setDraft('');
-    }
-  }, [activeThreadId, setDraft]);
-
-  // Restore draft on initial mount (page reload)
-  useEffect(() => {
-    const key = getDraftKey(activeThreadId);
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        setDraft(stored);
-      }
-    } catch {
-      // ignore
-    }
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Debounced save of draft to localStorage
-  useEffect(() => {
-    const key = getDraftKey(activeThreadId);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    timerRef.current = setTimeout(() => {
-      try {
-        if (draft) {
-          localStorage.setItem(key, draft);
-        } else {
-          localStorage.removeItem(key);
-        }
-      } catch {
-        // ignore
-      }
-    }, DEBOUNCE_MS);
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [activeThreadId, draft]);
+  useThreadSwitchPersistence(activeThreadId, setDraft, timerRef, draftRef);
+  useMountRestoreDraft(activeThreadId, setDraft);
+  useDebouncedDraftSave(activeThreadId, draft);
 }

@@ -94,6 +94,7 @@ function encodeForTransport(value: unknown): unknown {
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      // eslint-disable-next-line security/detect-object-injection -- k comes from Object.entries, not user input
       result[k] = encodeForTransport(v)
     }
     return result
@@ -129,78 +130,45 @@ function sendResponse(ws: WebSocket, response: JsonRpcResponse): void {
   }
 }
 
-/**
- * Handles an incoming raw WebSocket message.
- * Parses it as JSON-RPC 2.0, routes to the handler registry, and responds.
- */
-export function handleJsonRpcMessage(ws: WebSocket, raw: string): void {
-  // Parse JSON
+function parseJsonRpcMessage(ws: WebSocket, raw: string): JsonRpcRequest | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    sendResponse(ws, {
-      jsonrpc: '2.0',
-      id: null,
-      error: { code: ERROR_PARSE, message: 'Parse error: invalid JSON' },
-    })
-    return
+    sendResponse(ws, { jsonrpc: '2.0', id: null, error: { code: ERROR_PARSE, message: 'Parse error: invalid JSON' } })
+    return null
   }
-
-  // Validate JSON-RPC structure
   if (!isValidJsonRpcRequest(parsed)) {
-    sendResponse(ws, {
-      jsonrpc: '2.0',
-      id: (parsed as Record<string, unknown>)?.id as string | number ?? null,
-      error: { code: ERROR_INVALID_REQUEST, message: 'Invalid JSON-RPC 2.0 request' },
-    })
-    return
+    sendResponse(ws, { jsonrpc: '2.0', id: (parsed as Record<string, unknown>)?.id as string | number ?? null, error: { code: ERROR_INVALID_REQUEST, message: 'Invalid JSON-RPC 2.0 request' } })
+    return null
   }
+  return parsed
+}
 
-  const request = parsed
-
-  // Look up handler
-  const handler = ipcHandlerRegistry.get(request.method)
-  if (!handler) {
-    sendResponse(ws, {
-      jsonrpc: '2.0',
-      id: request.id,
-      error: {
-        code: ERROR_METHOD_NOT_FOUND,
-        message: `Method not found: ${request.method}`,
-        data: {
-          availableMethods: Array.from(ipcHandlerRegistry.keys()).length,
-        },
-      },
-    })
-    return
-  }
-
-  // Call handler with mock event + params
+function dispatchHandler(ws: WebSocket, request: JsonRpcRequest, handler: (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
   const mockEvent = createMockIpcEvent()
   const params = Array.isArray(request.params) ? request.params : []
-
   Promise.resolve()
     .then(() => handler(mockEvent, ...params))
-    .then((result: unknown) => {
-      sendResponse(ws, {
-        jsonrpc: '2.0',
-        id: request.id,
-        result: encodeForTransport(result),
-      })
-    })
+    .then((result: unknown) => { sendResponse(ws, { jsonrpc: '2.0', id: request.id, result: encodeForTransport(result) }) })
     .catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err)
       const stack = err instanceof Error ? err.stack : undefined
       console.error(`[ws-bridge] Handler error for ${request.method}:`, message)
-      sendResponse(ws, {
-        jsonrpc: '2.0',
-        id: request.id,
-        error: {
-          code: ERROR_INTERNAL,
-          message: `Handler error: ${message}`,
-          data: process.env.NODE_ENV === 'development' ? { stack } : undefined,
-        },
-      })
+      sendResponse(ws, { jsonrpc: '2.0', id: request.id, error: { code: ERROR_INTERNAL, message: `Handler error: ${message}`, data: process.env.NODE_ENV === 'development' ? { stack } : undefined } })
     })
+}
+
+/** Handles an incoming raw WebSocket message — parses JSON-RPC 2.0 and routes to the handler registry. */
+export function handleJsonRpcMessage(ws: WebSocket, raw: string): void {
+  const request = parseJsonRpcMessage(ws, raw)
+  if (!request) return
+
+  const handler = ipcHandlerRegistry.get(request.method)
+  if (!handler) {
+    sendResponse(ws, { jsonrpc: '2.0', id: request.id, error: { code: ERROR_METHOD_NOT_FOUND, message: `Method not found: ${request.method}`, data: { availableMethods: Array.from(ipcHandlerRegistry.keys()).length } } })
+    return
+  }
+
+  dispatchHandler(ws, request, handler)
 }

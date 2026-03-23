@@ -1,25 +1,26 @@
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from 'react';
 import type {
   Dispatch,
   MutableRefObject,
   SetStateAction,
 } from 'react';
-import type { FileChangeEvent } from '../../types/electron';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+
 import { subscribeToDirectoryChanges } from '../../hooks/directoryWatchRegistry';
+import type { FileChangeEvent } from '../../types/electron';
 import type { TreeNode } from './FileTreeItem';
 import {
   buildIgnorePredicate,
+  flattenVisibleTree,
   loadDirChildren,
   normPath,
-  updateNodeInTree,
-  flattenVisibleTree,
   parentDir,
+  updateNodeInTree,
 } from './fileTreeUtils';
 
 export type RefreshDir = (dirPath: string) => Promise<void>;
@@ -127,6 +128,30 @@ function clearTimers(timers: Map<string, ReturnType<typeof setTimeout>>): void {
   timers.clear();
 }
 
+function loadRootWithCancellation({
+  root,
+  shouldIgnore,
+  loadedDirsRef,
+  setRootNodes,
+  setIsLoading,
+  setError,
+}: RootLoaderArgs): () => void {
+  let cancelled = false;
+  setIsLoading(true);
+  setError(null);
+
+  void loadRootChildren(root, shouldIgnore)
+    .then((nodes) => {
+      if (cancelled) return;
+      setRootNodes(nodes);
+      loadedDirsRef.current.add(normPath(root));
+    })
+    .catch((error: unknown) => { if (!cancelled) setError(String(error)); })
+    .finally(() => { if (!cancelled) setIsLoading(false); });
+
+  return () => { cancelled = true; };
+}
+
 function useRootLoader({
   root,
   enabled,
@@ -137,39 +162,9 @@ function useRootLoader({
   setError,
 }: RootLoaderArgs): void {
   useEffect(() => {
-    if (!enabled) {
-      setIsLoading(false);
-      return;
-    }
-
-    if (loadedDirsRef.current.has(normPath(root))) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-
-    void loadRootChildren(root, shouldIgnore)
-      .then((nodes) => {
-        if (cancelled) return;
-        setRootNodes(nodes);
-        loadedDirsRef.current.add(normPath(root));
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setError(String(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    if (!enabled) { setIsLoading(false); return; }
+    if (loadedDirsRef.current.has(normPath(root))) return;
+    return loadRootWithCancellation({ root, shouldIgnore, loadedDirsRef, setRootNodes, setIsLoading, setError });
   }, [enabled, loadedDirsRef, root, setError, setIsLoading, setRootNodes, shouldIgnore]);
 }
 

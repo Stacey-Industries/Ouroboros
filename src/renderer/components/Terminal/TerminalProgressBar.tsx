@@ -12,8 +12,8 @@
  *   4 = warning/paused (yellow bar)
  */
 
-import React, { useEffect, useState, useRef, useCallback } from 'react'
 import type { IProgressState } from '@xterm/addon-progress'
+import React, { useEffect, useRef, useState } from 'react'
 
 export interface TerminalProgressBarProps {
   /** Subscribe to progress changes. Returns a dispose function. */
@@ -29,70 +29,79 @@ interface ProgressDisplay {
 
 const FADE_OUT_DELAY_MS = 2000
 
+function clearTimer(ref: React.MutableRefObject<ReturnType<typeof setTimeout> | null>): void {
+  if (ref.current !== null) {
+    clearTimeout(ref.current)
+    ref.current = null
+  }
+}
+
+function scheduleHide(ref: React.MutableRefObject<ReturnType<typeof setTimeout> | null>, fn: () => void): void {
+  ref.current = setTimeout(fn, FADE_OUT_DELAY_MS)
+}
+
+function handleProgressState(
+  progressState: IProgressState,
+  setDisplay: React.Dispatch<React.SetStateAction<ProgressDisplay>>,
+  fadeTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+): void {
+  clearTimer(fadeTimerRef)
+  if (progressState.state === 0) {
+    setDisplay({ visualState: 'hidden', value: 0 })
+  } else if (progressState.state === 1) {
+    if (progressState.value >= 100) {
+      setDisplay({ visualState: 'complete', value: 100 })
+      scheduleHide(fadeTimerRef, () => setDisplay({ visualState: 'hidden', value: 0 }))
+    } else {
+      setDisplay({ visualState: 'normal', value: progressState.value })
+    }
+  } else if (progressState.state === 2) {
+    setDisplay({ visualState: 'error', value: progressState.value || 100 })
+    scheduleHide(fadeTimerRef, () => setDisplay({ visualState: 'hidden', value: 0 }))
+  } else if (progressState.state === 3) {
+    setDisplay({ visualState: 'indeterminate', value: 0 })
+  } else if (progressState.state === 4) {
+    setDisplay({ visualState: 'warning', value: progressState.value || 50 })
+  }
+}
+
+function handleProgressDotState(
+  progressState: IProgressState,
+  setActive: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsError: React.Dispatch<React.SetStateAction<boolean>>,
+  fadeTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+): void {
+  clearTimer(fadeTimerRef)
+  if (progressState.state === 0) {
+    setActive(false)
+    setIsError(false)
+  } else if (progressState.state === 2) {
+    setActive(true)
+    setIsError(true)
+    fadeTimerRef.current = setTimeout(() => {
+      setActive(false)
+      setIsError(false)
+    }, FADE_OUT_DELAY_MS)
+  } else if (progressState.state === 1 && progressState.value >= 100) {
+    fadeTimerRef.current = setTimeout(() => setActive(false), FADE_OUT_DELAY_MS)
+  } else {
+    setActive(true)
+    setIsError(false)
+  }
+}
+
 export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): React.ReactElement | null {
   const [display, setDisplay] = useState<ProgressDisplay>({ visualState: 'hidden', value: 0 })
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const clearFadeTimer = useCallback(() => {
-    if (fadeTimerRef.current !== null) {
-      clearTimeout(fadeTimerRef.current)
-      fadeTimerRef.current = null
-    }
-  }, [])
-
   useEffect(() => {
     if (!subscribe) return
-
-    const disposable = subscribe((progressState: IProgressState) => {
-      clearFadeTimer()
-
-      switch (progressState.state) {
-        case 0:
-          // Remove progress — hide immediately
-          setDisplay({ visualState: 'hidden', value: 0 })
-          break
-
-        case 1:
-          // Normal progress
-          if (progressState.value >= 100) {
-            // Complete — flash green then fade out
-            setDisplay({ visualState: 'complete', value: 100 })
-            fadeTimerRef.current = setTimeout(() => {
-              setDisplay({ visualState: 'hidden', value: 0 })
-            }, FADE_OUT_DELAY_MS)
-          } else {
-            setDisplay({ visualState: 'normal', value: progressState.value })
-          }
-          break
-
-        case 2:
-          // Error — flash red then fade out
-          setDisplay({ visualState: 'error', value: progressState.value || 100 })
-          fadeTimerRef.current = setTimeout(() => {
-            setDisplay({ visualState: 'hidden', value: 0 })
-          }, FADE_OUT_DELAY_MS)
-          break
-
-        case 3:
-          // Indeterminate
-          setDisplay({ visualState: 'indeterminate', value: 0 })
-          break
-
-        case 4:
-          // Warning / paused
-          setDisplay({ visualState: 'warning', value: progressState.value || 50 })
-          break
-      }
-    })
-
+    const disposable = subscribe((progressState) => handleProgressState(progressState, setDisplay, fadeTimerRef))
     return () => {
       disposable.dispose()
-      clearFadeTimer()
+      clearTimer(fadeTimerRef)
     }
-  }, [subscribe, clearFadeTimer])
-
-  // Cleanup on unmount
-  useEffect(() => clearFadeTimer, [clearFadeTimer])
+  }, [subscribe])
 
   if (display.visualState === 'hidden') return null
 
@@ -121,37 +130,10 @@ export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): Re
 
   useEffect(() => {
     if (!subscribe) return
-
-    const disposable = subscribe((progressState: IProgressState) => {
-      if (fadeTimerRef.current !== null) {
-        clearTimeout(fadeTimerRef.current)
-        fadeTimerRef.current = null
-      }
-
-      if (progressState.state === 0) {
-        setActive(false)
-        setIsError(false)
-      } else if (progressState.state === 2) {
-        setActive(true)
-        setIsError(true)
-        fadeTimerRef.current = setTimeout(() => {
-          setActive(false)
-          setIsError(false)
-        }, FADE_OUT_DELAY_MS)
-      } else if (progressState.state === 1 && progressState.value >= 100) {
-        // Complete — briefly show then hide
-        fadeTimerRef.current = setTimeout(() => {
-          setActive(false)
-        }, FADE_OUT_DELAY_MS)
-      } else {
-        setActive(true)
-        setIsError(false)
-      }
-    })
-
+    const disposable = subscribe((progressState) => handleProgressDotState(progressState, setActive, setIsError, fadeTimerRef))
     return () => {
       disposable.dispose()
-      if (fadeTimerRef.current !== null) clearTimeout(fadeTimerRef.current)
+      clearTimer(fadeTimerRef)
     }
   }, [subscribe])
 

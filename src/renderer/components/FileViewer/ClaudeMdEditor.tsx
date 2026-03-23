@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import { ClaudeMdEditorChrome } from './ClaudeMdEditor.chrome';
 import { useClaudeMdEditorModel } from './ClaudeMdEditor.model';
 

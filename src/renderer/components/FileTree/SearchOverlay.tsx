@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
 import Fuse from 'fuse.js';
-import type { TreeNode, MatchRange } from './FileTreeItem';
-import { FileTreeItem } from './FileTreeItem';
+import React, { useMemo } from 'react';
+
 import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
+import type { MatchRange,TreeNode } from './FileTreeItem';
+import { FileTreeItem } from './FileTreeItem';
 
 export interface SearchOverlayProps {
   roots: string[];

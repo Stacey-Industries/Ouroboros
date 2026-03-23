@@ -6,20 +6,21 @@
  */
 
 import { useEffect, useRef } from 'react';
+
+import { clearTerminal } from '../components/Terminal/terminalRegistry';
 import { useToastContext } from '../contexts/ToastContext';
-import {
-  OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
-  OPEN_SETTINGS_PANEL_EVENT,
-  RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
-} from './appEventNames';
+import type { AppTheme, WorkspaceLayout } from '../types/electron';
 import {
   createOpenLatestAgentChatDetailsHandler,
   createResumeLatestAgentChatThreadHandler,
   handleAgentChatStatusEvent,
   type ToastFn,
 } from './agentChatUiHelpers';
-import type { AppTheme, WorkspaceLayout } from '../types/electron';
-import { clearTerminal } from '../components/Terminal/terminalRegistry';
+import {
+  OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+  OPEN_SETTINGS_PANEL_EVENT,
+  RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+} from './appEventNames';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;

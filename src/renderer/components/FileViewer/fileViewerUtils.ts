@@ -6,7 +6,8 @@
  * and fold computation logic.
  */
 
-import type { Highlighter, BundledTheme } from 'shiki';
+import type { BundledTheme,Highlighter } from 'shiki';
+
 import type { FoldRange } from './useFoldRanges';
 
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {

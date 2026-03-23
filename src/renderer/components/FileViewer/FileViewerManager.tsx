@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react';
+
 import type { FileViewerManagerProps, FileViewerState } from './FileViewerManager.internal';
 import { useFileViewerManagerState } from './FileViewerManager.internal';
 

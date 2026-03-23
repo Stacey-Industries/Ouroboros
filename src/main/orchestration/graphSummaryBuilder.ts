@@ -61,7 +61,7 @@ export function formatGraphSummary(summary: GraphSummary): string {
 }
 
 /** Build a graph summary from the native GraphController. */
-export async function buildGraphSummary(_projectRoot?: string): Promise<GraphSummary> {
+export async function buildGraphSummary(_projectRoot?: string): Promise<GraphSummary> { // eslint-disable-line @typescript-eslint/no-unused-vars
   const ctrl = getGraphController()
   if (!ctrl) return EMPTY_SUMMARY
 
@@ -81,41 +81,79 @@ export async function buildGraphSummary(_projectRoot?: string): Promise<GraphSum
   }
 }
 
-function extractHotspots(arch: Record<string, unknown>): GraphHotspot[] {
-  // The architecture view's hotspots field contains the most-connected symbols
-  const hotspots: GraphHotspot[] = []
-  const raw = (arch as { hotspots?: unknown[] }).hotspots
-  if (!Array.isArray(raw)) return hotspots
+function resolveHotspotName(e: Record<string, unknown>): string {
+  return String(e.name ?? e.id ?? e.filePath ?? '')
+}
 
+function resolveHotspotFile(e: Record<string, unknown>): string {
+  return String(e.file ?? e.path ?? e.filePath ?? '')
+}
+
+function resolveCallerCount(e: Record<string, unknown>): number {
+  return Number(e.callerCount ?? e.fanIn ?? e.fan_in ?? e.inDegree ?? 0)
+}
+
+function resolveCalleeCount(e: Record<string, unknown>): number {
+  return Number(e.calleeCount ?? e.fanOut ?? e.fan_out ?? e.outDegree ?? 0)
+}
+
+function parseHotspotEntry(entry: unknown): GraphHotspot | null {
+  if (!entry || typeof entry !== 'object') return null
+  const e = entry as Record<string, unknown>
+  return {
+    name: resolveHotspotName(e),
+    file: resolveHotspotFile(e),
+    callerCount: resolveCallerCount(e),
+    calleeCount: resolveCalleeCount(e),
+  }
+}
+
+function extractHotspots(arch: Record<string, unknown>): GraphHotspot[] {
+  const raw = (arch as { hotspots?: unknown[] }).hotspots
+  if (!Array.isArray(raw)) return []
+
+  const hotspots: GraphHotspot[] = []
   for (const entry of raw.slice(0, MAX_HOTSPOTS)) {
-    if (!entry || typeof entry !== 'object') continue
-    const e = entry as Record<string, unknown>
-    hotspots.push({
-      name: String(e.name ?? e.id ?? e.filePath ?? ''),
-      file: String(e.file ?? e.path ?? e.filePath ?? ''),
-      callerCount: Number(e.callerCount ?? e.fanIn ?? e.fan_in ?? e.inDegree ?? 0),
-      calleeCount: Number(e.calleeCount ?? e.fanOut ?? e.fan_out ?? e.outDegree ?? 0),
-    })
+    const parsed = parseHotspotEntry(entry)
+    if (parsed) hotspots.push(parsed)
   }
   return hotspots
 }
 
-function extractBlastRadius(changes: Record<string, unknown>): BlastRadiusItem[] {
-  const items: BlastRadiusItem[] = []
+function resolveAffectedList(changes: Record<string, unknown>): unknown[] | null {
   const affected = (changes as { affectedSymbols?: unknown[] }).affectedSymbols
     ?? (changes as { affected?: unknown[] }).affected
     ?? (changes as { impacted?: unknown[] }).impacted
-  if (!Array.isArray(affected)) return items
+  return Array.isArray(affected) ? affected : null
+}
 
+function resolveBlastSymbol(e: Record<string, unknown>): string {
+  return String(e.symbol ?? e.name ?? e.id ?? '')
+}
+
+function resolveBlastRisk(e: Record<string, unknown>): string {
+  return String(e.risk ?? e.level ?? 'MEDIUM')
+}
+
+function parseBlastRadiusEntry(entry: unknown): BlastRadiusItem | null {
+  if (!entry || typeof entry !== 'object') return null
+  const e = entry as Record<string, unknown>
+  return {
+    symbol: resolveBlastSymbol(e),
+    file: resolveHotspotFile(e),
+    risk: resolveBlastRisk(e),
+    hop: Number(e.hop ?? e.distance ?? 1),
+  }
+}
+
+function extractBlastRadius(changes: Record<string, unknown>): BlastRadiusItem[] {
+  const affected = resolveAffectedList(changes)
+  if (!affected) return []
+
+  const items: BlastRadiusItem[] = []
   for (const entry of affected.slice(0, MAX_BLAST_RADIUS)) {
-    if (!entry || typeof entry !== 'object') continue
-    const e = entry as Record<string, unknown>
-    items.push({
-      symbol: String(e.symbol ?? e.name ?? e.id ?? ''),
-      file: String(e.file ?? e.path ?? e.filePath ?? ''),
-      risk: String(e.risk ?? e.level ?? 'MEDIUM'),
-      hop: Number(e.hop ?? e.distance ?? 1),
-    })
+    const parsed = parseBlastRadiusEntry(entry)
+    if (parsed) items.push(parsed)
   }
   return items
 }

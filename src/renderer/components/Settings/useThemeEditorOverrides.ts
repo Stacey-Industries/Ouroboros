@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { applyCustomThemeColors } from '../../hooks/useTheme';
 import type { AppConfig } from '../../types/electron';
 import {
   buildAppliedColors,
+  type ColorToken,
   fallbackHex,
   getBaseTheme,
   readSavedColors,
-  type ColorToken,
 } from './ThemeEditor.shared';
 
 export function useThemeEditorOverrides(

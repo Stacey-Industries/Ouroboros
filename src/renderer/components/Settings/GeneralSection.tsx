@@ -1,11 +1,12 @@
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
-import { ToggleSwitch } from './ToggleSwitch';
-import { DefaultProjectFolder, RecentProjects } from './GeneralProjectSubsection';
-import { NotificationsSubsection } from './GeneralNotificationsSubsection';
 import { BackupSubsection } from './GeneralBackupSubsection';
 import { LspSubsection } from './GeneralLspSubsection';
+import { NotificationsSubsection } from './GeneralNotificationsSubsection';
+import { DefaultProjectFolder, RecentProjects } from './GeneralProjectSubsection';
 import { WebAccessSubsection } from './GeneralWebAccessSubsection';
+import { ToggleSwitch } from './ToggleSwitch';
 
 interface GeneralSectionProps {
   draft: AppConfig;

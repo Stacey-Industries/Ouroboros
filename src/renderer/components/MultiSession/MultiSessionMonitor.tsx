@@ -1,7 +1,8 @@
 import React, { memo, useCallback } from 'react';
+
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
-import { MonitorFooter, MonitorHeader, SessionGrid } from './MultiSessionMonitorParts';
 import { useMultiSessionMonitorModel } from './multiSessionMonitorModel';
+import { MonitorFooter, MonitorHeader, SessionGrid } from './MultiSessionMonitorParts';
 
 export interface MultiSessionMonitorProps {
   batchLabels: string[];

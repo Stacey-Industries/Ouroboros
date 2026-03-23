@@ -1,19 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-// ── Slash command definitions ────────────────────────────────────────────────
-
 export interface SlashCommand {
-  /** Unique identifier, e.g. 'clear' (user types /clear). */
   id: string;
-  /** Display label in the menu. */
   label: string;
-  /** Short description shown next to the label. */
   description: string;
-  /** Category icon or glyph. */
   icon: string;
-  /** The action to run when selected. Return true to also clear the draft. */
   action: () => void;
-  /** If true, clear the draft after executing. Defaults to true. */
   clearDraft?: boolean;
 }
 
@@ -25,68 +17,106 @@ export interface SlashCommandMenuProps {
   isOpen: boolean;
 }
 
-export function SlashCommandMenu({
-  query,
-  commands,
+function dispatchIdeEvent(eventName: string, detail?: string): void {
+  window.dispatchEvent(new CustomEvent(eventName, detail ? { detail } : undefined));
+}
+
+function filterCommands(query: string, commands: SlashCommand[]): SlashCommand[] {
+  const q = query.toLowerCase();
+  return commands.filter((cmd) => cmd.id.toLowerCase().includes(q) || cmd.label.toLowerCase().includes(q) || cmd.description.toLowerCase().includes(q));
+}
+
+function useSlashCommandMoveSelection(
+  filtered: SlashCommand[],
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>,
+): {
+  moveDown: () => void;
+  moveUp: () => void;
+} {
+  return {
+    moveDown: () => setSelectedIndex((index) => (index + 1) % filtered.length),
+    moveUp: () => setSelectedIndex((index) => (index - 1 + filtered.length) % filtered.length),
+  };
+}
+
+function handleSlashCommandKeyDown(args: {
+  event: KeyboardEvent;
+  isOpen: boolean;
+  filtered: SlashCommand[];
+  selectedIndex: number;
+  moveDown: () => void;
+  moveUp: () => void;
+  onSelect: (cmd: SlashCommand) => void;
+  onClose: () => void;
+}): void {
+  const { event, isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose } = args;
+  if (!isOpen || filtered.length === 0) return;
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      event.stopPropagation();
+      moveDown();
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      event.stopPropagation();
+      moveUp();
+      break;
+    case 'Enter':
+      if (event.shiftKey) break; /* falls through */
+    case 'Tab':
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect(filtered[selectedIndex]);
+      break;
+    case 'Escape':
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      break;
+  }
+}
+
+function useSlashCommandKeyboard({
+  isOpen,
+  filtered,
+  selectedIndex,
+  setSelectedIndex,
   onSelect,
   onClose,
-  isOpen,
-}: SlashCommandMenuProps): React.ReactElement | null {
+}: {
+  isOpen: boolean;
+  filtered: SlashCommand[];
+  selectedIndex: number;
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
+  onSelect: (cmd: SlashCommand) => void;
+  onClose: () => void;
+}): (event: KeyboardEvent) => void {
+  const { moveDown, moveUp } = useSlashCommandMoveSelection(filtered, setSelectedIndex);
+  return useCallback((event: KeyboardEvent) => handleSlashCommandKeyDown({ event, isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose }), [isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose]);
+}
+
+function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: SlashCommand; selected: boolean; onMouseDown: () => void; onMouseEnter: () => void; }): React.ReactElement {
+  return (
+    <button data-slash-item onMouseDown={(event) => { event.preventDefault(); onMouseDown(); }} onMouseEnter={onMouseEnter} className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-raised text-[11px] text-text-semantic-muted">{cmd.icon}</span>
+      <span className="font-medium text-interactive-accent">/{cmd.id}</span>
+      <span className="truncate text-text-semantic-muted">{cmd.description}</span>
+    </button>
+  );
+}
+
+export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }: SlashCommandMenuProps): React.ReactElement | null {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const filtered = useMemo(() => filterCommands(query, commands), [query, commands]);
+  const handleKeyDown = useSlashCommandKeyboard({ isOpen, filtered, selectedIndex, setSelectedIndex, onSelect, onClose });
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    return commands.filter(
-      (cmd) =>
-        cmd.id.toLowerCase().includes(q) ||
-        cmd.label.toLowerCase().includes(q) ||
-        cmd.description.toLowerCase().includes(q),
-    );
-  }, [query, commands]);
-
-  // Reset selection when filter changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [filtered.length, query]);
-
-  // Scroll selected item into view
+  useEffect(() => setSelectedIndex(0), [filtered.length, query]);
   useEffect(() => {
     if (!listRef.current) return;
-    const items = listRef.current.querySelectorAll('[data-slash-item]');
-    items[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+    listRef.current.querySelectorAll('[data-slash-item]')[selectedIndex]?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
-
-  // Global keyboard handler (capture phase, same pattern as MentionAutocomplete)
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isOpen || filtered.length === 0) return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        e.stopPropagation();
-        setSelectedIndex((i) => (i + 1) % filtered.length);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        e.stopPropagation();
-        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
-      } else if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        onSelect(filtered[selectedIndex]);
-      } else if (e.key === 'Tab') {
-        e.preventDefault();
-        e.stopPropagation();
-        onSelect(filtered[selectedIndex]);
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    },
-    [isOpen, filtered, selectedIndex, onSelect, onClose],
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     window.addEventListener('keydown', handleKeyDown, true);
@@ -96,48 +126,10 @@ export function SlashCommandMenu({
   if (!isOpen || filtered.length === 0) return null;
 
   return (
-    <div
-      ref={listRef}
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic shadow-lg bg-surface-base"
-    >
-      <div
-        className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted"
-      >
-        Slash Commands
-      </div>
-      {filtered.map((cmd, index) => (
-        <button
-          key={cmd.id}
-          data-slash-item
-          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${index === selectedIndex ? ' bg-surface-overlay' : ''}`}
-          onMouseDown={(e) => {
-            e.preventDefault(); // Prevent textarea blur
-            onSelect(cmd);
-          }}
-          onMouseEnter={() => setSelectedIndex(index)}
-        >
-          <span
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] bg-surface-raised text-text-semantic-muted"
-          >
-            {cmd.icon}
-          </span>
-          <span className="font-medium text-interactive-accent">
-            /{cmd.id}
-          </span>
-          <span className="truncate text-text-semantic-muted">
-            {cmd.description}
-          </span>
-        </button>
-      ))}
+    <div ref={listRef} className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-base shadow-lg">
+      <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted">Slash Commands</div>
+      {filtered.map((cmd, index) => <SlashCommandItem key={cmd.id} cmd={cmd} selected={index === selectedIndex} onMouseDown={() => onSelect(cmd)} onMouseEnter={() => setSelectedIndex(index)} />)}
     </div>
-  );
-}
-
-// ── Built-in slash commands ──────────────────────────────────────────────────
-
-function dispatchIdeEvent(eventName: string, detail?: string): void {
-  window.dispatchEvent(
-    new CustomEvent(eventName, detail ? { detail } : undefined),
   );
 }
 
@@ -151,91 +143,17 @@ export interface SlashCommandContext {
 
 export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[] {
   return [
-    {
-      id: 'clear',
-      label: 'Clear',
-      description: 'Clear the conversation',
-      icon: '⌫',
-      action: () => ctx.onClearChat?.(),
-    },
-    {
-      id: 'compact',
-      label: 'Compact',
-      description: 'Summarize conversation to save context',
-      icon: '◇',
-      action: () => ctx.onCompactChat?.(),
-    },
-    {
-      id: 'new',
-      label: 'New Thread',
-      description: 'Start a new conversation thread',
-      icon: '+',
-      action: () => ctx.onNewThread?.(),
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      description: 'Open settings panel',
-      icon: '⚙',
-      action: () => dispatchIdeEvent('agent-ide:open-settings'),
-    },
-    {
-      id: 'terminal',
-      label: 'Terminal',
-      description: 'Open a new terminal tab',
-      icon: '>',
-      action: () => dispatchIdeEvent('agent-ide:new-terminal'),
-    },
-    {
-      id: 'file',
-      label: 'File',
-      description: 'Open file picker (Ctrl+P)',
-      icon: '◰',
-      action: () => dispatchIdeEvent('agent-ide:open-file-picker'),
-    },
-    {
-      id: 'context',
-      label: 'Context',
-      description: 'Build project context packet',
-      icon: '⬡',
-      action: () => dispatchIdeEvent('agent-ide:open-context-builder'),
-    },
-    {
-      id: 'diff',
-      label: 'Diff',
-      description: 'Attach current git diff as context',
-      icon: '±',
-      action: () => { /* handled via onSelect in composer — adds @diff mention */ },
-    },
-    {
-      id: 'theme',
-      label: 'Theme',
-      description: 'Open theme selector',
-      icon: '◈',
-      action: () => dispatchIdeEvent('agent-ide:open-settings', 'appearance'),
-    },
-    {
-      id: 'help',
-      label: 'Help',
-      description: 'Show keyboard shortcuts and tips',
-      icon: '?',
-      action: () => dispatchIdeEvent('agent-ide:open-settings', 'keybindings'),
-    },
-    {
-      id: 'remember',
-      label: 'Remember',
-      description: 'Save a memory for future sessions',
-      icon: '◆',
-      action: () => { /* handled via onSelect in composer — extracts draft text */ },
-      clearDraft: true,
-    },
-    {
-      id: 'memories',
-      label: 'Memories',
-      description: 'View stored session memories',
-      icon: '≡',
-      action: () => ctx.onOpenMemories?.(),
-      clearDraft: true,
-    },
+    { id: 'clear', label: 'Clear', description: 'Clear the conversation', icon: '⌫', action: () => ctx.onClearChat?.() },
+    { id: 'compact', label: 'Compact', description: 'Summarize conversation to save context', icon: '◇', action: () => ctx.onCompactChat?.() },
+    { id: 'new', label: 'New Thread', description: 'Start a new conversation thread', icon: '+', action: () => ctx.onNewThread?.() },
+    { id: 'settings', label: 'Settings', description: 'Open settings panel', icon: '⚙', action: () => dispatchIdeEvent('agent-ide:open-settings') },
+    { id: 'terminal', label: 'Terminal', description: 'Open a new terminal tab', icon: '>', action: () => dispatchIdeEvent('agent-ide:new-terminal') },
+    { id: 'file', label: 'File', description: 'Open file picker (Ctrl+P)', icon: '◰', action: () => dispatchIdeEvent('agent-ide:open-file-picker') },
+    { id: 'context', label: 'Context', description: 'Build project context packet', icon: '⬡', action: () => dispatchIdeEvent('agent-ide:open-context-builder') },
+    { id: 'diff', label: 'Diff', description: 'Attach current git diff as context', icon: '±', action: () => {} },
+    { id: 'theme', label: 'Theme', description: 'Open theme selector', icon: '◈', action: () => dispatchIdeEvent('agent-ide:open-settings', 'appearance') },
+    { id: 'help', label: 'Help', description: 'Show keyboard shortcuts and tips', icon: '?', action: () => dispatchIdeEvent('agent-ide:open-settings', 'keybindings') },
+    { id: 'remember', label: 'Remember', description: 'Save a memory for future sessions', icon: '◆', action: () => {}, clearDraft: true },
+    { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
   ];
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClaudeTemplateEditor } from './ClaudeTemplateEditor';
+
 import {
   AdditionalDirectoriesSection,
   BudgetSection,
@@ -9,8 +9,9 @@ import {
   PermissionModeSection,
   SystemPromptSection,
 } from './ClaudeSectionConfigSections';
-import { TextInputSection, ToggleSection } from './ClaudeSectionControls';
 import { claudeSectionHeaderTextStyle } from './claudeSectionContentStyles';
+import { TextInputSection, ToggleSection } from './ClaudeSectionControls';
+import { ClaudeTemplateEditor } from './ClaudeTemplateEditor';
 import { SectionLabel } from './settingsStyles';
 import type { ClaudeSectionModel } from './useClaudeSection';
 

@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import type { CommitEntry } from '../../types/electron';
 import type { CommitHistoryViewModel } from './CommitHistory.model';
 

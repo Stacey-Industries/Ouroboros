@@ -2,14 +2,15 @@
  * ToolCallTimeline.tsx — Gantt-style horizontal timeline for tool calls.
  */
 
-import React, { useState, useEffect, memo } from 'react';
-import type { ToolCallEvent } from './types';
-import type { TooltipData } from './TimelineTooltip';
-import { formatDurationShort } from './timelineHelpers';
+import React, { memo,useEffect, useState } from 'react';
+
 import { TimelineBar } from './TimelineBar';
-import { XAxis } from './TimelineXAxis';
+import { formatDurationShort } from './timelineHelpers';
 import { Legend } from './TimelineLegend';
+import type { TooltipData } from './TimelineTooltip';
 import { Tooltip } from './TimelineTooltip';
+import { XAxis } from './TimelineXAxis';
+import type { ToolCallEvent } from './types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

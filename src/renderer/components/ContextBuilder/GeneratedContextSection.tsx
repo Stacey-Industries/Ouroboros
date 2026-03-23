@@ -1,10 +1,11 @@
 import React from 'react';
+
 import type { ProjectContext } from '../../types/electron';
 import {
   ActionButton,
-  Section,
   actionRowStyle,
   contextEditorStyle,
+  Section,
 } from './ContextBuilderPrimitives';
 import type { ContextBuilderModel } from './useContextBuilderModel';
 

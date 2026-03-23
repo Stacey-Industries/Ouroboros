@@ -6,134 +6,20 @@
  */
 
 import React, { useMemo } from 'react';
-import { useFileTreeStore, type TreeFilter } from './fileTreeStore';
+
 import type { DetailedGitStatus } from '../../hooks/useGitStatusDetailed';
-import { FileTypeIcon } from './FileTypeIcon';
+import { type TreeFilter, useFileTreeStore } from './fileTreeStore';
+import {
+  collectModifiedEntries,
+  collectStagedEntries,
+  collectUntrackedEntries,
+  filterBarStyle,
+  FilterButton,
+  FilteredFileList,
+  FILTERS,
+} from './GitStatusFilter.helpers';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface FilterDef {
-  key: TreeFilter;
-  label: string;
-  shortLabel: string;
-}
-
-interface FilteredFileEntry {
-  path: string;
-  name: string;
-  status: string;
-  /** Which set it belongs to: staged/unstaged/both */
-  source: 'staged' | 'unstaged' | 'both';
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FILTERS: FilterDef[] = [
-  { key: 'all', label: 'All Files', shortLabel: 'All' },
-  { key: 'modified', label: 'Modified', shortLabel: 'M' },
-  { key: 'staged', label: 'Staged', shortLabel: 'S' },
-  { key: 'untracked', label: 'Untracked', shortLabel: '?' },
-];
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const filterBarStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '2px',
-  padding: '4px 8px',
-  borderBottom: '1px solid var(--border-muted)',
-};
-
-const filterBtnBase: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '3px',
-  padding: '2px 6px',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'transparent',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  fontFamily: 'var(--font-ui)',
-  backgroundColor: 'transparent',
-  transition: 'all 150ms',
-  lineHeight: '18px',
-};
-
-const filterBtnActive: React.CSSProperties = {
-  ...filterBtnBase,
-  backgroundColor: 'rgba(var(--accent-rgb, 88, 166, 255), 0.1)',
-  borderColor: 'rgba(var(--accent-rgb, 88, 166, 255), 0.3)',
-};
-
-const filteredListStyle: React.CSSProperties = {
-  flex: 1,
-  overflowY: 'auto',
-  overflowX: 'hidden',
-};
-
-const filteredRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-  padding: '3px 12px',
-  cursor: 'pointer',
-  height: '26px',
-  boxSizing: 'border-box',
-  userSelect: 'none',
-};
-
-const filteredNameStyle: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-mono)',
-};
-
-const footerStyle: React.CSSProperties = {
-  padding: '4px 12px',
-  fontSize: '0.6875rem',
-  borderTop: '1px solid var(--border-muted)',
-  textAlign: 'center',
-};
-
-const FILTERED_ROW_CSS = `
-  .filtered-file-row:hover { background-color: var(--bg-tertiary); }
-`;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getFileName(filePath: string): string {
-  return filePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? filePath;
-}
-
-function statusColor(status: string): string {
-  switch (status) {
-    case 'M': return 'var(--warning, #e5a50a)';
-    case 'A': return 'var(--success, #3fb950)';
-    case 'D': return 'var(--error, #f85149)';
-    case '?': return 'var(--text-faint)';
-    case 'R': return 'var(--info, #58a6ff)';
-    default: return 'var(--text-faint)';
-  }
-}
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'M': return 'Modified';
-    case 'A': return 'Added';
-    case 'D': return 'Deleted';
-    case '?': return 'Untracked';
-    case 'R': return 'Renamed';
-    default: return status;
-  }
-}
+// ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface GitStatusCounts {
   all: number;
@@ -141,6 +27,19 @@ export interface GitStatusCounts {
   staged: number;
   untracked: number;
 }
+
+export interface GitStatusFilterBarProps {
+  counts: GitStatusCounts;
+  isRepo: boolean;
+}
+
+export interface GitFilteredViewProps {
+  status: DetailedGitStatus;
+  projectRoot: string;
+  onFileSelect: (filePath: string) => void;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function computeStatusCounts(status: DetailedGitStatus): GitStatusCounts {
   const allPaths = new Set<string>();
@@ -156,178 +55,30 @@ export function computeStatusCounts(status: DetailedGitStatus): GitStatusCounts 
     else modified++;
   }
 
-  return {
-    all: allPaths.size,
-    modified,
-    staged: status.staged.size,
-    untracked,
-  };
+  return { all: allPaths.size, modified, staged: status.staged.size, untracked };
 }
 
 export function getFilteredFiles(
   status: DetailedGitStatus,
   filter: TreeFilter,
-): FilteredFileEntry[] {
+): ReturnType<typeof collectStagedEntries> {
   if (filter === 'all') return [];
 
-  const result: FilteredFileEntry[] = [];
   const seen = new Set<string>();
+  let result: ReturnType<typeof collectStagedEntries>;
 
   if (filter === 'staged') {
-    for (const [path, s] of status.staged) {
-      if (!seen.has(path)) {
-        seen.add(path);
-        result.push({ path, name: getFileName(path), status: s, source: 'staged' });
-      }
-    }
+    result = collectStagedEntries(status.staged, seen);
   } else if (filter === 'untracked') {
-    for (const [path, s] of status.unstaged) {
-      if (s === '?' && !seen.has(path)) {
-        seen.add(path);
-        result.push({ path, name: getFileName(path), status: s, source: 'unstaged' });
-      }
-    }
-  } else if (filter === 'modified') {
-    // Unstaged modifications (not untracked)
-    for (const [path, s] of status.unstaged) {
-      if (s !== '?' && !seen.has(path)) {
-        seen.add(path);
-        result.push({ path, name: getFileName(path), status: s, source: 'unstaged' });
-      }
-    }
-    // Staged modifications not already listed
-    for (const [path, s] of status.staged) {
-      if (!seen.has(path)) {
-        seen.add(path);
-        result.push({ path, name: getFileName(path), status: s, source: 'staged' });
-      }
-    }
+    result = collectUntrackedEntries(status.unstaged, seen);
+  } else {
+    result = collectModifiedEntries(status, seen);
   }
 
   return result.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FilterButton({
-  def,
-  isActive,
-  count,
-  onClick,
-}: {
-  def: FilterDef;
-  isActive: boolean;
-  count: number;
-  onClick: () => void;
-}): React.ReactElement {
-  return (
-    <button
-      style={isActive ? filterBtnActive : filterBtnBase}
-      className={isActive ? 'text-interactive-accent' : 'text-text-semantic-faint'}
-      onClick={onClick}
-      title={`${def.label} (${count})`}
-      aria-pressed={isActive}
-      onMouseEnter={(e) => {
-        if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)';
-      }}
-    >
-      {def.shortLabel}
-      <span style={{ fontSize: '0.5625rem', opacity: 0.8 }} className={isActive ? 'text-interactive-accent' : 'text-text-semantic-faint'}>
-        {count}
-      </span>
-    </button>
-  );
-}
-
-function StatusBadge({ status }: { status: string }): React.ReactElement {
-  return (
-    <span
-      title={statusLabel(status)}
-      style={{
-        flexShrink: 0,
-        fontSize: '0.625rem',
-        fontWeight: 700,
-        fontFamily: 'var(--font-mono)',
-        color: statusColor(status),
-        width: '14px',
-        textAlign: 'center',
-        lineHeight: 1,
-      }}
-    >
-      {status}
-    </span>
-  );
-}
-
-function FilteredFileRow({
-  entry,
-  projectRoot,
-  onFileSelect,
-}: {
-  entry: FilteredFileEntry;
-  projectRoot: string;
-  onFileSelect: (filePath: string) => void;
-}): React.ReactElement {
-  const sep = projectRoot.includes('/') ? '/' : '\\';
-  const absolutePath = `${projectRoot}${sep}${entry.path.replace(/\//g, sep)}`;
-
-  return (
-    <div
-      className="filtered-file-row"
-      style={filteredRowStyle}
-      onClick={() => onFileSelect(absolutePath)}
-      title={entry.path}
-      role="listitem"
-    >
-      <FileTypeIcon filename={entry.name} />
-      <span style={filteredNameStyle} className="text-text-semantic-secondary">{entry.path}</span>
-      <StatusBadge status={entry.status} />
-    </div>
-  );
-}
-
-function FilteredFileList({
-  entries,
-  projectRoot,
-  filter,
-  onFileSelect,
-}: {
-  entries: FilteredFileEntry[];
-  projectRoot: string;
-  filter: TreeFilter;
-  onFileSelect: (filePath: string) => void;
-}): React.ReactElement {
-  const filterLabel = FILTERS.find((f) => f.key === filter)?.label ?? filter;
-
-  return (
-    <>
-      <style>{FILTERED_ROW_CSS}</style>
-      <div style={filteredListStyle} role="list" aria-label={`${filterLabel} files`}>
-        {entries.map((entry) => (
-          <FilteredFileRow
-            key={entry.path}
-            entry={entry}
-            projectRoot={projectRoot}
-            onFileSelect={onFileSelect}
-          />
-        ))}
-      </div>
-      <div style={footerStyle} className="text-text-semantic-faint">
-        Showing {entries.length} {filterLabel.toLowerCase()} file{entries.length !== 1 ? 's' : ''}
-      </div>
-    </>
-  );
-}
-
-// ─── Main components ─────────────────────────────────────────────────────────
-
-export interface GitStatusFilterBarProps {
-  counts: GitStatusCounts;
-  isRepo: boolean;
-}
+// ─── Components ───────────────────────────────────────────────────────────────
 
 /**
  * Filter bar with icon buttons for All / Modified / Staged / Untracked.
@@ -337,7 +88,7 @@ export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps):
   const filter = useFileTreeStore((s) => s.filter);
   const setFilter = useFileTreeStore((s) => s.setFilter);
 
-  if (!isRepo) return null;
+  if (!isRepo || counts.all === 0) return null;
 
   const countMap: Record<TreeFilter, number> = {
     all: counts.all,
@@ -345,9 +96,6 @@ export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps):
     staged: counts.staged,
     untracked: counts.untracked,
   };
-
-  // Only show if there are any changes
-  if (counts.all === 0) return null;
 
   return (
     <div style={filterBarStyle}>
@@ -362,12 +110,6 @@ export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps):
       ))}
     </div>
   );
-}
-
-export interface GitFilteredViewProps {
-  status: DetailedGitStatus;
-  projectRoot: string;
-  onFileSelect: (filePath: string) => void;
 }
 
 /**

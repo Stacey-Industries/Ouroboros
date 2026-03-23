@@ -7,8 +7,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useFileViewerManager } from '../components/FileViewer/FileViewerManager';
+
 import { useFileTreeStore } from '../components/FileTree/fileTreeStore';
+import { useFileViewerManager } from '../components/FileViewer/FileViewerManager';
 
 export function useFileTreeDirtySync(): void {
   const { openFiles } = useFileViewerManager();

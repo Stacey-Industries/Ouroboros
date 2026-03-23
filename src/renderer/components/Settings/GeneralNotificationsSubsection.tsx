@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
+
 import type { AppConfig, NotificationSettings } from '../../types/electron';
-import { ToggleSwitch } from './ToggleSwitch';
 import { SectionLabel } from './settingsStyles';
+import { ToggleSwitch } from './ToggleSwitch';
 
 interface Props {
   draft: AppConfig;

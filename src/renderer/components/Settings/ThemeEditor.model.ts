@@ -1,8 +1,8 @@
 import type { AppConfig } from '../../types/electron';
+import type { ColorToken } from './ThemeEditor.shared';
 import { COLOR_TOKENS } from './ThemeEditor.shared';
 import { useThemeEditorActions } from './useThemeEditorActions';
 import { useThemeEditorOverrides } from './useThemeEditorOverrides';
-import type { ColorToken } from './ThemeEditor.shared';
 
 export interface ThemeEditorInput {
   activeThemeId: string;
@@ -22,8 +22,8 @@ export interface ThemeEditorModel {
   tokens: ColorToken[];
 }
 
-export { cssColorToHex } from './ThemeEditor.shared';
 export type { ColorToken } from './ThemeEditor.shared';
+export { cssColorToHex } from './ThemeEditor.shared';
 
 export function useThemeEditorModel({
   activeThemeId,

@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
-import type {
-  ClaudeSessionOptions,
-  SessionManagerActionArgs,
-  SessionManagerActions,
-} from './useSessionManager.helpers';
 import {
   buildClaudeSessionLabel,
   buildSessionLabel,
+  generateSessionId,
   getNextActiveSessionId,
   hasElectronAPI,
   normalizeRestartTitle,
@@ -20,9 +17,13 @@ import {
   spawnManagedSession,
   updateSessionStatus,
   useLatestRef,
-  generateSessionId,
 } from './useSessionManager.core';
 import { restoreSessions } from './useSessionManager.core';
+import type {
+  ClaudeSessionOptions,
+  SessionManagerActionArgs,
+  SessionManagerActions,
+} from './useSessionManager.helpers';
 
 interface SessionManagerRefs {
   sessionsRef: MutableRefObject<TerminalSession[]>;

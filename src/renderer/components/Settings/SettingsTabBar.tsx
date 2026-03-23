@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { TABS, type TabId } from './settingsTabs';
+
+import { type TabId,TABS } from './settingsTabs';
 
 interface SettingsTabBarProps {
   activeTab: TabId;

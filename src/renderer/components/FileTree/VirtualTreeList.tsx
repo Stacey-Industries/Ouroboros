@@ -4,15 +4,16 @@
  * Extracted from RootSection to reduce complexity.
  */
 
-import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { FileTreeItem } from './FileTreeItem';
-import type { TreeNode } from './FileTreeItem';
-import type { GitFileStatus } from '../../types/electron';
+import React, { useCallback, useEffect,useRef, useState } from 'react';
+
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
-import { ITEM_HEIGHT, OVERSCAN, basename, getNodeGitStatus } from './fileTreeUtils';
-import type { EditState } from './fileTreeUtils';
-import { useFileTreeStore } from './fileTreeStore';
+import type { GitFileStatus } from '../../types/electron';
+import type { TreeNode } from './FileTreeItem';
+import { FileTreeItem } from './FileTreeItem';
 import type { DiagnosticSeverity } from './fileTreeStore';
+import { useFileTreeStore } from './fileTreeStore';
+import type { EditState } from './fileTreeUtils';
+import { basename, getNodeGitStatus,ITEM_HEIGHT, OVERSCAN } from './fileTreeUtils';
 
 /** Threshold in px/frame above which we consider the user is scrolling fast. */
 const FAST_SCROLL_DELTA = 500;
@@ -36,8 +37,7 @@ export interface VirtualTreeListProps {
   handleRootDrop: (e: React.DragEvent) => void;
 }
 
-export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement {
-  const listRef = useRef<HTMLDivElement>(null);
+function useVirtualScroll() {
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = useRef(400);
   const lastScrollTopRef = useRef(0);
@@ -50,44 +50,40 @@ export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement
     lastScrollTopRef.current = newScrollTop;
     containerHeight.current = e.currentTarget.clientHeight;
     setScrollTop(newScrollTop);
-
     if (delta > FAST_SCROLL_DELTA) {
       setIsFastScrolling(true);
-      // Clear previous timer if any
-      if (fastScrollTimerRef.current !== null) {
-        clearTimeout(fastScrollTimerRef.current);
-      }
-      // Fill in skipped items after scroll stops
-      fastScrollTimerRef.current = setTimeout(() => {
-        setIsFastScrolling(false);
-        fastScrollTimerRef.current = null;
-      }, 150);
+      if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
+      fastScrollTimerRef.current = setTimeout(() => { setIsFastScrolling(false); fastScrollTimerRef.current = null; }, 150);
     }
   }, []);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (fastScrollTimerRef.current !== null) {
-        clearTimeout(fastScrollTimerRef.current);
-      }
-    };
+  useEffect(() => () => {
+    if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
   }, []);
 
-  const totalHeight = props.displayItems.length * ITEM_HEIGHT;
-  const visibleStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
-  const visibleCount = Math.ceil(containerHeight.current / ITEM_HEIGHT) + OVERSCAN * 2;
-  const visibleEnd = Math.min(props.displayItems.length, visibleStart + visibleCount);
+  return { scrollTop, containerHeight, isFastScrolling, handleScroll };
+}
 
-  // During fast scrolling, skip odd-indexed items to reduce render load.
-  // We keep track of the original indices so focus/selection highlighting
-  // still maps correctly.
-  const rawSlice = props.displayItems.slice(visibleStart, visibleEnd);
-  const indexedSlice: Array<{ item: { node: TreeNode }; originalIndex: number }> = isFastScrolling
-    ? rawSlice
-        .map((item, i) => ({ item, originalIndex: visibleStart + i }))
-        .filter((_, i) => i % 2 === 0)
-    : rawSlice.map((item, i) => ({ item, originalIndex: visibleStart + i }));
+function computeVisibleSlice(
+  displayItems: VirtualTreeListProps['displayItems'],
+  scrollTop: number,
+  containerHeight: number,
+  isFastScrolling: boolean,
+): Array<{ item: { node: TreeNode }; originalIndex: number }> {
+  const visibleStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
+  const visibleCount = Math.ceil(containerHeight / ITEM_HEIGHT) + OVERSCAN * 2;
+  const visibleEnd = Math.min(displayItems.length, visibleStart + visibleCount);
+  const rawSlice = displayItems.slice(visibleStart, visibleEnd);
+  const indexed = rawSlice.map((item, i) => ({ item, originalIndex: visibleStart + i }));
+  return isFastScrolling ? indexed.filter((_, i) => i % 2 === 0) : indexed;
+}
+
+export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement {
+  const listRef = useRef<HTMLDivElement>(null);
+  const { scrollTop, containerHeight, isFastScrolling, handleScroll } = useVirtualScroll();
+  const totalHeight = props.displayItems.length * ITEM_HEIGHT;
+  const indexedSlice = computeVisibleSlice(props.displayItems, scrollTop, containerHeight.current, isFastScrolling);
+  const visibleStart = indexedSlice[0]?.originalIndex ?? 0;
 
   return (
     <div

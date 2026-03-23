@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { getLanguage, getShikiTheme, getHighlighter } from './fileViewerUtils';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BundledTheme } from 'shiki';
+
+import { getHighlighter, getLanguage, getShikiTheme } from './fileViewerUtils';
 
 const MAX_HIGHLIGHT_CONTENT_LENGTH = 200_000;
 
@@ -10,10 +11,6 @@ interface HighlightResult {
   shikiTheme: BundledTheme;
 }
 
-/**
- * Async syntax highlighting via Shiki.
- * Resets when filePath/content change; re-highlights when theme changes.
- */
 export function useHighlighting(
   filePath: string | null,
   content: string | null,
@@ -24,7 +21,6 @@ export function useHighlighting(
   const [highlightLang, setHighlightLang] = useState<string | null>(null);
   const currentRequestIdRef = useRef(0);
 
-  // Reset when file or content changes
   useEffect(() => {
     setHighlightedHtml(null);
     setHighlightLang(null);
@@ -33,21 +29,14 @@ export function useHighlighting(
   const highlight = useCallback(async (requestId: number) => {
     if (!filePath || !content) return;
     const lang = getLanguage(filePath);
-    if (lang === 'text') return;
-    if (content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
-
+    if (lang === 'text' || content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
     try {
       const hl = await getHighlighter();
       try {
         await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0]);
-      } catch {
-        // Language may already be loaded or not exist
-      }
-      const html = hl.codeToHtml(content, { lang, theme: shikiTheme });
-      if (requestId !== currentRequestIdRef.current) {
-        return;
-      }
-      setHighlightedHtml(html);
+      } catch { /* language may already be loaded or not exist */ }
+      if (requestId !== currentRequestIdRef.current) return;
+      setHighlightedHtml(hl.codeToHtml(content, { lang, theme: shikiTheme }));
       setHighlightLang(lang);
     } catch (err) {
       console.warn('[FileViewer] highlight failed:', err);
@@ -57,9 +46,7 @@ export function useHighlighting(
   useEffect(() => {
     currentRequestIdRef.current += 1;
     void highlight(currentRequestIdRef.current);
-    return () => {
-      currentRequestIdRef.current += 1;
-    };
+    return () => { currentRequestIdRef.current += 1; };
   }, [highlight]);
 
   return { highlightedHtml, highlightLang, shikiTheme };

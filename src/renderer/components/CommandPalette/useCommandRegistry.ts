@@ -1,10 +1,11 @@
 import {
-  useState,
-  useCallback,
-  useEffect,
   type Dispatch,
   type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
 } from 'react';
+
 import {
   OPEN_ORCHESTRATION_PANEL_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,

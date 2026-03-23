@@ -1,11 +1,12 @@
 import React from 'react';
+
 import { ExtensionsBuildGuide } from './ExtensionsBuildGuide';
+import { InstalledExtensionsSection } from './ExtensionsInstalledSection';
 import {
   ActionErrorBanner,
   ExtensionActionButtons,
   ExtensionCommandsSection,
 } from './ExtensionsSectionActions';
-import { InstalledExtensionsSection } from './ExtensionsInstalledSection';
 import { extensionsSectionRootStyle } from './extensionsSectionStyles';
 import type { ExtensionsSectionModel } from './useExtensionsSection';
 import { VsxInstalledSection } from './VsxInstalledSection';

@@ -146,23 +146,35 @@ function getChildPatternsForParent(
  * This only operates on one directory level at a time — call recursively for the
  * whole tree.
  */
-function nestSiblings(
-  nodes: TreeNode[],
-  rules: Record<string, string[]>,
-): TreeNode[] {
-  // Separate files and directories
-  const files = nodes.filter((n) => !n.isDirectory);
-  const dirs = nodes.filter((n) => n.isDirectory);
+interface FileMatchContext {
+  filesByName: Map<string, TreeNode>;
+  nestedChildNames: Set<string>;
+  children: TreeNode[];
+}
 
-  // Build a map of filename -> node for quick lookup
-  const filesByName = new Map<string, TreeNode>();
-  for (const f of files) {
-    filesByName.set(f.name, f);
+/** Find matching files for a single pattern from the file map */
+function collectMatchingFiles(
+  pattern: string,
+  parentName: string,
+  ctx: FileMatchContext,
+): void {
+  for (const [name, node] of ctx.filesByName) {
+    if (name === parentName) continue;
+    if (ctx.nestedChildNames.has(name)) continue;
+    if (matchesGlob(name, pattern)) {
+      ctx.children.push(node);
+      ctx.nestedChildNames.add(name);
+    }
   }
+}
 
-  // Track which files become children (so we remove them from top level)
+/** Build the parent -> children nesting map */
+function buildNestingMap(
+  files: TreeNode[],
+  filesByName: Map<string, TreeNode>,
+  rules: Record<string, string[]>,
+): { nestedChildNames: Set<string>; parentToChildren: Map<string, TreeNode[]> } {
   const nestedChildNames = new Set<string>();
-  // Map parent filename -> nested child nodes
   const parentToChildren = new Map<string, TreeNode[]>();
 
   for (const parentFile of files) {
@@ -170,29 +182,35 @@ function nestSiblings(
     if (childPatterns.length === 0) continue;
 
     const children: TreeNode[] = [];
+    const ctx: FileMatchContext = { filesByName, nestedChildNames, children };
     for (const pattern of childPatterns) {
-      // Check each file against the pattern
-      for (const [name, node] of filesByName) {
-        if (name === parentFile.name) continue; // don't nest under self
-        if (nestedChildNames.has(name)) continue; // already nested
-        if (matchesGlob(name, pattern)) {
-          children.push(node);
-          nestedChildNames.add(name);
-        }
-      }
+      collectMatchingFiles(pattern, parentFile.name, ctx);
     }
-
     if (children.length > 0) {
       parentToChildren.set(parentFile.name, children);
     }
   }
 
-  // Rebuild the list: dirs first, then files with nesting applied
+  return { nestedChildNames, parentToChildren };
+}
+
+function nestSiblings(
+  nodes: TreeNode[],
+  rules: Record<string, string[]>,
+): TreeNode[] {
+  const files = nodes.filter((n) => !n.isDirectory);
+  const dirs = nodes.filter((n) => n.isDirectory);
+
+  const filesByName = new Map<string, TreeNode>();
+  for (const f of files) {
+    filesByName.set(f.name, f);
+  }
+
+  const { nestedChildNames, parentToChildren } = buildNestingMap(files, filesByName, rules);
+
   const result: TreeNode[] = [...dirs];
-
   for (const file of files) {
-    if (nestedChildNames.has(file.name)) continue; // skip — it's nested under another file
-
+    if (nestedChildNames.has(file.name)) continue;
     const nested = parentToChildren.get(file.name);
     if (nested && nested.length > 0) {
       result.push({

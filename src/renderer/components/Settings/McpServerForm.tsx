@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
+
 import type { ServerFormState } from './mcpHelpers';
-import { labelStyle, inputStyle, smallBtnStyle } from './mcpHelpers';
+import { inputStyle, labelStyle, smallBtnStyle } from './mcpHelpers';
 import { buttonStyle } from './settingsStyles';
 
 interface McpServerFormProps {

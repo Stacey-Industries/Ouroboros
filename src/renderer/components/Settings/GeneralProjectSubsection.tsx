@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
-import { SectionLabel, buttonStyle } from './settingsStyles';
+import { buttonStyle,SectionLabel } from './settingsStyles';
 
 interface Props {
   draft: AppConfig;

@@ -1,5 +1,6 @@
-import { useCallback, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useCallback, useEffect } from 'react';
+
 import type { ExtensionInfo } from '../../types/electron';
 
 const ACTION_ERROR_TIMEOUT_MS = 4000;

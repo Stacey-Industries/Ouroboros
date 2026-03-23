@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
+
 import type { McpServerEntry } from '../../types/electron';
-import { summarizeArgs, smallBtnStyle } from './mcpHelpers';
+import { smallBtnStyle,summarizeArgs } from './mcpHelpers';
 
 interface McpServerRowProps {
   server: McpServerEntry;

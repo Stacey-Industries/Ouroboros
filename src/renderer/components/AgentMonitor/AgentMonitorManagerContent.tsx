@@ -1,9 +1,10 @@
 import React, { memo, useMemo } from 'react';
+
 import { MultiSessionLauncher, MultiSessionMonitor } from '../MultiSession';
-import { CostDashboard } from './CostDashboard';
 import { AgentCard } from './AgentCard';
-import { AgentTree } from './AgentTree';
 import { ComparePanel, EmptyState, PreviousSessionsSection } from './AgentMonitorManagerPanels';
+import { AgentTree } from './AgentTree';
+import { CostDashboard } from './CostDashboard';
 import type { AgentSession } from './types';
 
 /** Build a map of sessionId -> number of direct children for the given sessions. */

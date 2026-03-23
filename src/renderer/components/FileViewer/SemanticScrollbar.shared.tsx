@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { DiffLineInfo } from '../../types/electron';
 
 export interface Tooltip {

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import type { GitFileStatus } from '../../types/electron';
+
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
+import type { GitFileStatus } from '../../types/electron';
+import { FileTreeItemRow } from './FileTreeItemRow';
+import { TreeItemDirectory } from './TreeItemDirectory';
+import { TreeItemFile } from './TreeItemFile';
 import {
   gitStatusColor,
   gitStatusLabel,
-  heatTintColor,
   heatDotColor,
+  heatTintColor,
   rowBackground,
 } from './treeItemHelpers';
-import { TreeItemDirectory } from './TreeItemDirectory';
-import { TreeItemFile } from './TreeItemFile';
-import { FileTreeItemRow } from './FileTreeItemRow';
 
 export interface FileEntry {
   path: string;
@@ -164,6 +165,29 @@ function useDragHandlers(
   };
 }
 
+function renderDirectoryItem(
+  props: FileTreeItemProps,
+  statusColor: string | undefined,
+  statusLbl: string | undefined,
+  heatDot: string | undefined,
+): React.ReactElement {
+  return (
+    <TreeItemDirectory
+      node={props.node}
+      isEditing={!!props.isEditing}
+      editValue={props.editValue}
+      onEditConfirm={props.onEditConfirm}
+      onEditCancel={props.onEditCancel}
+      statusColor={statusColor}
+      statusLbl={statusLbl}
+      isBookmarked={props.isBookmarked}
+      heatDot={heatDot}
+      heatLevel={props.heatData?.heatLevel}
+      diagnosticSeverity={props.diagnosticSeverity}
+    />
+  );
+}
+
 function renderTreeItemContent(
   props: FileTreeItemProps,
   statusColor: string | undefined,
@@ -171,21 +195,7 @@ function renderTreeItemContent(
   heatDot: string | undefined
 ): React.ReactElement {
   if (props.node.isDirectory) {
-    return (
-      <TreeItemDirectory
-        node={props.node}
-        isEditing={!!props.isEditing}
-        editValue={props.editValue}
-        onEditConfirm={props.onEditConfirm}
-        onEditCancel={props.onEditCancel}
-        statusColor={statusColor}
-        statusLbl={statusLbl}
-        isBookmarked={props.isBookmarked}
-        heatDot={heatDot}
-        heatLevel={props.heatData?.heatLevel}
-        diagnosticSeverity={props.diagnosticSeverity}
-      />
-    );
+    return renderDirectoryItem(props, statusColor, statusLbl, heatDot);
   }
 
   return (

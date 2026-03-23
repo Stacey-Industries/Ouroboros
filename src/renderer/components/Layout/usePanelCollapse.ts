@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef,useState } from 'react';
 
 export type CollapseTarget = 'leftSidebar' | 'rightSidebar' | 'terminal' | 'editor';
 

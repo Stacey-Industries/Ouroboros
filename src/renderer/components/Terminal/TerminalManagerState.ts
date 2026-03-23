@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+
 import type { TerminalSession } from './TerminalTabs'
 
 function collectRunningSessionIds(sessions: TerminalSession[]): string[] {

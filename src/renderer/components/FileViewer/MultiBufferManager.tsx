@@ -5,10 +5,11 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+
 import type { BufferExcerpt, MultiBufferConfig } from '../../types/electron';
 
-export { AddExcerptForm } from './MultiBufferAddExcerptForm';
 export type { AddExcerptFormProps } from './MultiBufferAddExcerptForm';
+export { AddExcerptForm } from './MultiBufferAddExcerptForm';
 
 type FileContentState = {
   content: string | null;

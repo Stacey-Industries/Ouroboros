@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import type { RefObject } from 'react';
+import { useEffect } from 'react';
 
 const LINE_HEIGHT = 20.8;
 const PADDING_TOP = 16;

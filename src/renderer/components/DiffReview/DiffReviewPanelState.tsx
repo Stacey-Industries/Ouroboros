@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { DiffReviewState, ReviewFile } from './types';
 
 export interface DiffReviewStats {

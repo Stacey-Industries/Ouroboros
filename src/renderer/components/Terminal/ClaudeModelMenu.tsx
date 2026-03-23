@@ -3,7 +3,8 @@
  * Shown on right-click of the Claude button in TerminalTabs.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useCallback,useEffect, useRef, useState } from 'react'
+
 import type { ModelProvider } from '../../types/electron'
 
 // ─── Types ───────────────────────────────────────────────────────────────────

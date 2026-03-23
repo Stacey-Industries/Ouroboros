@@ -1,3 +1,3 @@
 export { DiffReviewProvider, useDiffReview } from './DiffReviewManager';
 export { DiffReviewPanel } from './DiffReviewPanel';
-export type { DiffReviewState, ReviewFile, ReviewHunk, HunkDecision } from './types';
+export type { DiffReviewState, HunkDecision,ReviewFile, ReviewHunk } from './types';

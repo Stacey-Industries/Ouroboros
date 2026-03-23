@@ -96,57 +96,60 @@ function renderPanel(
   return <div style={style}>{child}</div>;
 }
 
-function renderEditorContent(props: ContentRouterProps): React.ReactElement | null {
-  if (!props.editMode || !props.filePath || props.content == null || !props.onSave) {
-    return null;
-  }
+function buildEditorContent(props: ContentRouterProps): React.ReactElement {
+  if (props.isClaudeMd && props.claudeMdEnhanced) return renderClaudeMdEditor(props);
+  if (USE_MONACO) return renderMonacoEditor(props);
+  return renderInlineEditor(props);
+}
 
-  // CLAUDE.md files always use the specialised editor (CodeMirror-based)
-  if (props.isClaudeMd && props.claudeMdEnhanced) {
-    return renderPanel(
-      <ClaudeMdEditor
-        content={props.content}
-        savedContent={props.originalContent ?? props.content}
-        filePath={props.filePath}
-        themeId={props.ideThemeId}
-        projectRoot={props.projectRoot}
-        onSave={props.onSave}
-        onContentChange={props.onContentChange ?? noop}
-      />,
-    );
-  }
-
-  // When Monaco is enabled, use MonacoEditorHost — single persistent editor instance
-  // that swaps models via setModel() instead of recreating the widget on every tab switch.
-  if (USE_MONACO) {
-    return renderPanel(
-      <MonacoEditorHost
-        filePath={props.filePath}
-        content={props.content}
-        readOnly={false}
-        onSave={props.onSave}
-        onContentChange={props.onContentChange ?? noop}
-        onDirtyChange={props.onDirtyChange ?? noop}
-        wordWrap={props.wordWrap}
-        showMinimap={props.showMinimap}
-        formatOnSave={props.formatOnSave}
-      />,
-    );
-  }
-
-  // Legacy: CodeMirror InlineEditor
-  return renderPanel(
-    <InlineEditor
-      content={props.content}
-      savedContent={props.originalContent ?? props.content}
-      filePath={props.filePath}
+function renderClaudeMdEditor(props: ContentRouterProps): React.ReactElement {
+  return (
+    <ClaudeMdEditor
+      content={props.content!}
+      savedContent={props.originalContent ?? props.content!}
+      filePath={props.filePath!}
       themeId={props.ideThemeId}
       projectRoot={props.projectRoot}
-      onSave={props.onSave}
+      onSave={props.onSave!}
+      onContentChange={props.onContentChange ?? noop}
+    />
+  );
+}
+
+function renderMonacoEditor(props: ContentRouterProps): React.ReactElement {
+  return (
+    <MonacoEditorHost
+      filePath={props.filePath!}
+      content={props.content!}
+      readOnly={false}
+      onSave={props.onSave!}
+      onContentChange={props.onContentChange ?? noop}
+      onDirtyChange={props.onDirtyChange ?? noop}
+      wordWrap={props.wordWrap}
+      showMinimap={props.showMinimap}
+      formatOnSave={props.formatOnSave}
+    />
+  );
+}
+
+function renderInlineEditor(props: ContentRouterProps): React.ReactElement {
+  return (
+    <InlineEditor
+      content={props.content!}
+      savedContent={props.originalContent ?? props.content!}
+      filePath={props.filePath!}
+      themeId={props.ideThemeId}
+      projectRoot={props.projectRoot}
+      onSave={props.onSave!}
       onContentChange={props.onContentChange ?? noop}
       onDirtyChange={noop}
-    />,
+    />
   );
+}
+
+function renderEditorContent(props: ContentRouterProps): React.ReactElement | null {
+  if (!props.editMode || !props.filePath || props.content == null || !props.onSave) return null;
+  return renderPanel(buildEditorContent(props));
 }
 
 function renderHistoryContent(props: ContentRouterProps): React.ReactElement | null {

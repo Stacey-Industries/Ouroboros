@@ -90,41 +90,36 @@ export function SlitherSnake(): React.ReactElement {
 
 /* ---------- Streaming status with rotating text + snake ---------- */
 
-export function StreamingStatusMessage({ onStop }: { onStop?: () => Promise<void> }): React.ReactElement {
+function useStatusMessageCycle(): { msgIndex: number; displayChars: number; showSnake: boolean } {
   const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * OUROBOROS_MESSAGES.length));
   const [displayChars, setDisplayChars] = useState(0);
   const [showSnake, setShowSnake] = useState(false);
   const visitedRef = useRef(new Set<number>([msgIndex]));
-
   const message = OUROBOROS_MESSAGES[msgIndex];
 
-  // Typewriter: advance one character every 38ms until word is fully revealed
   useEffect(() => {
     if (displayChars >= message.length) return;
     const id = setTimeout(() => setDisplayChars((c) => c + 1), 38);
     return () => clearTimeout(id);
   }, [displayChars, message.length]);
 
-  // Once word is fully typed: show snake, then cycle to the next word
   useEffect(() => {
     if (displayChars < message.length) return;
-
-    // Brief pause, then snake starts growing
     const snakeId = setTimeout(() => setShowSnake(true), 120);
-
-    // After snake grows + hold time, advance to next word
-    // 120ms pause + 1400ms grow + 700ms hold ≈ 2.2s before next cycle
     const cycleId = setTimeout(() => {
       setMsgIndex((prev) => pickNextIndex(prev, visitedRef.current));
       setDisplayChars(0);
       setShowSnake(false);
     }, 120 + 1400 + 700);
-
-    return () => {
-      clearTimeout(snakeId);
-      clearTimeout(cycleId);
-    };
+    return () => { clearTimeout(snakeId); clearTimeout(cycleId); };
   }, [displayChars, message.length]);
+
+  return { msgIndex, displayChars, showSnake };
+}
+
+export function StreamingStatusMessage({ onStop }: { onStop?: () => Promise<void> }): React.ReactElement {
+  const { msgIndex, displayChars, showSnake } = useStatusMessageCycle();
+  const message = OUROBOROS_MESSAGES[msgIndex];
 
   return (
     <div className="pl-7 py-0.5 flex items-center justify-between pr-1">

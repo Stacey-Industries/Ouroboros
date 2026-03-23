@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import {
   findConflict,

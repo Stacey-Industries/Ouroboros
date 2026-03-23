@@ -1,19 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
+import type { AgentChatContentBlock } from '../../types/electron-agent-chat';
 import { AgentChatThinkingBlock } from './AgentChatThinkingBlock';
 import { AgentChatToolCard, ChevronIcon } from './AgentChatToolCard';
 import { StreamingChangeSummaryBar as ImportedStreamingChangeSummaryBar } from './ChangeSummaryBar';
 import { MessageMarkdown } from './MessageMarkdown';
-import {
-  BlinkingCursor,
-  StreamingStatusMessage,
-  useTypewriter,
-} from './streamingUtils';
+import { BlinkingCursor, StreamingStatusMessage, useTypewriter } from './streamingUtils';
 
-// Guard: Vite HMR can sometimes fail to resolve newly-created modules, leaving
-// the import as `undefined`. Render nothing instead of crashing the entire app.
 const StreamingChangeSummaryBar = ImportedStreamingChangeSummaryBar ?? (() => null);
-import type { AgentChatContentBlock } from '../../types/electron-agent-chat';
 
 export interface AgentChatStreamingMessageProps {
   blocks: AgentChatContentBlock[];
@@ -22,96 +16,145 @@ export interface AgentChatStreamingMessageProps {
   onStop?: () => Promise<void>;
 }
 
-/* ---------- Tool group (collapsible run of consecutive tool blocks) ---------- */
-
 interface ToolGroupProps {
-  tools: AgentChatContentBlock[];
+  tools: Array<AgentChatContentBlock & { kind: 'tool_use' }>;
   defaultExpanded: boolean;
 }
 
-const TOOL_CATEGORIES: Record<string, Set<string>> = {
-  read: new Set(['Read', 'read_file']),
-  edit: new Set(['Edit', 'edit_file', 'MultiEdit', 'multi_edit', 'Write', 'write_file', 'create_file', 'NotebookEdit']),
-  search: new Set(['Grep', 'search_files', 'Glob', 'find_files']),
-  bash: new Set(['Bash', 'execute_command']),
-  agent: new Set(['Agent', 'Task']),
-};
+const TOOL_SUMMARIES = [
+  { category: 'read', label: (count: number) => `Read ${count} file${count === 1 ? '' : 's'}`, names: new Set(['Read', 'read_file']) },
+  { category: 'edit', label: (count: number) => `Edited ${count} file${count === 1 ? '' : 's'}`, names: new Set(['Edit', 'edit_file', 'MultiEdit', 'multi_edit', 'Write', 'write_file', 'create_file', 'NotebookEdit']) },
+  { category: 'search', label: (count: number) => `${count} search${count === 1 ? '' : 'es'}`, names: new Set(['Grep', 'search_files', 'Glob', 'find_files']) },
+  { category: 'bash', label: (count: number) => `${count} command${count === 1 ? '' : 's'}`, names: new Set(['Bash', 'execute_command']) },
+  { category: 'agent', label: (count: number) => `${count} agent${count === 1 ? '' : 's'}`, names: new Set(['Agent', 'Task']) },
+] as const;
 
-function categorizeTools(tools: AgentChatContentBlock[]): string {
-  const counts: Record<string, number> = {};
-  for (const t of tools) {
-    if (t.kind !== 'tool_use') continue;
-    let cat = 'other';
-    for (const [key, names] of Object.entries(TOOL_CATEGORIES)) {
-      if (names.has(t.tool)) { cat = key; break; }
-    }
-    counts[cat] = (counts[cat] ?? 0) + 1;
+function categorizeTools(tools: Array<AgentChatContentBlock & { kind: 'tool_use' }>): string {
+  const counts = new Map<string, number>(TOOL_SUMMARIES.map((entry) => [entry.category, 0]).concat([['other', 0]]));
+  for (const tool of tools) {
+    const summary = TOOL_SUMMARIES.find((entry) => entry.names.has(tool.tool));
+    counts.set(summary?.category ?? 'other', (counts.get(summary?.category ?? 'other') ?? 0) + 1);
   }
-  const parts: string[] = [];
-  if (counts.read) parts.push(`Read ${counts.read} file${counts.read === 1 ? '' : 's'}`);
-  if (counts.edit) parts.push(`Edited ${counts.edit} file${counts.edit === 1 ? '' : 's'}`);
-  if (counts.search) parts.push(`${counts.search} search${counts.search === 1 ? '' : 'es'}`);
-  if (counts.bash) parts.push(`${counts.bash} command${counts.bash === 1 ? '' : 's'}`);
-  if (counts.agent) parts.push(`${counts.agent} agent${counts.agent === 1 ? '' : 's'}`);
-  if (counts.other) parts.push(`${counts.other} other`);
-  return parts.join(', ');
+  return TOOL_SUMMARIES.map((entry) => {
+    const count = counts.get(entry.category) ?? 0;
+    return count ? entry.label(count) : null;
+  }).concat((counts.get('other') ?? 0) ? `${counts.get('other')} other` : null).filter(Boolean).join(', ');
 }
 
 function ToolGroup({ tools, defaultExpanded }: ToolGroupProps): React.ReactElement {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   useEffect(() => {
-    if (!defaultExpanded) {
-      setExpanded(false);
-    }
+    if (!defaultExpanded) setExpanded(false);
   }, [defaultExpanded]);
-  const completeCount = tools.filter((b) => b.kind === 'tool_use' && b.status === 'complete').length;
+
+  const completeCount = tools.filter((tool) => tool.status === 'complete').length;
   const allComplete = completeCount === tools.length;
   const summary = categorizeTools(tools);
 
   return (
     <div className="my-1 rounded-md border border-border-semantic bg-surface-raised">
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-xs text-left transition-colors duration-100 hover:opacity-80"
-      >
-        <ChevronIcon collapsed={!expanded} />
-        {!allComplete ? (
-          <svg className="h-3.5 w-3.5 animate-spin shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <svg className="h-3.5 w-3.5 shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
-            <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-        <span className="truncate text-text-semantic-muted">{summary}</span>
-        <span className="ml-auto shrink-0 text-[10px] text-text-semantic-muted">
-          {allComplete ? `${tools.length} tools` : `${completeCount}/${tools.length}`}
-        </span>
-      </button>
+      <ToolGroupHeader
+        expanded={expanded}
+        allComplete={allComplete}
+        summary={summary}
+        completeCount={completeCount}
+        totalCount={tools.length}
+        onToggle={() => setExpanded((prev) => !prev)}
+      />
       {expanded && (
         <div className="space-y-1 border-t border-border-semantic px-1.5 pb-1.5 pt-1">
-          {tools.map(
-            (b) =>
-              b.kind === 'tool_use' && (
-                <AgentChatToolCard
-                  key={b.blockId}
-                  name={b.tool}
-                  status={b.status}
-                  filePath={b.filePath}
-                  inputSummary={b.inputSummary}
-                  editSummary={b.editSummary}
-                />
-              ),
-          )}
+          {tools.map((tool) => (
+            <AgentChatToolCard
+              key={tool.blockId}
+              name={tool.tool}
+              status={tool.status}
+              filePath={tool.filePath}
+              inputSummary={tool.inputSummary}
+              editSummary={tool.editSummary}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-/* ---------- Thinking block state management for streaming ---------- */
+function ToolGroupHeader({
+  expanded,
+  allComplete,
+  summary,
+  completeCount,
+  totalCount,
+  onToggle,
+}: {
+  expanded: boolean;
+  allComplete: boolean;
+  summary: string;
+  completeCount: number;
+  totalCount: number;
+  onToggle: () => void;
+}): React.ReactElement {
+  return (
+    <button onClick={onToggle} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:opacity-80">
+      <ChevronIcon collapsed={!expanded} />
+      {!allComplete ? (
+        <svg className="h-3.5 w-3.5 animate-spin shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="32" strokeDashoffset="8" strokeLinecap="round" />
+        </svg>
+      ) : (
+        <svg className="h-3.5 w-3.5 shrink-0 text-interactive-accent" viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      <span className="truncate text-text-semantic-muted">{summary}</span>
+      <span className="ml-auto shrink-0 text-[10px] text-text-semantic-muted">{allComplete ? `${totalCount} tools` : `${completeCount}/${totalCount}`}</span>
+    </button>
+  );
+}
+
+function getLastTextIndex(blocks: AgentChatContentBlock[]): number {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    if (blocks[i].kind === 'text') return i;
+  }
+  return -1;
+}
+
+type RenderItem =
+  | { type: 'text'; block: AgentChatContentBlock & { kind: 'text' }; index: number }
+  | { type: 'thinking'; block: AgentChatContentBlock & { kind: 'thinking' }; index: number }
+  | { type: 'tool'; block: AgentChatContentBlock & { kind: 'tool_use' }; index: number }
+  | { type: 'tool-group'; tools: Array<AgentChatContentBlock & { kind: 'tool_use' }>; startIndex: number };
+
+function buildRenderItems(blocks: AgentChatContentBlock[]): RenderItem[] {
+  const items: RenderItem[] = [];
+  for (let i = 0; i < blocks.length;) {
+    const block = blocks[i];
+    if (block.kind === 'text') {
+      items.push({ type: 'text', block, index: i });
+      i++;
+      continue;
+    }
+    if (block.kind === 'thinking') {
+      items.push({ type: 'thinking', block, index: i });
+      i++;
+      continue;
+    }
+
+    const run: Array<AgentChatContentBlock & { kind: 'tool_use' }> = [];
+    const startIndex = i;
+    while (i < blocks.length && blocks[i].kind === 'tool_use') {
+      run.push(blocks[i] as AgentChatContentBlock & { kind: 'tool_use' });
+      i++;
+    }
+    items.push(run.length > 1 ? { type: 'tool-group', tools: run, startIndex } : { type: 'tool', block: run[0], index: startIndex });
+  }
+  return items;
+}
+
+function renderTextBlock(content: string, index: number, showCursor: boolean): React.ReactElement {
+  return <div key={`text-${index}`} className="pl-7 pb-0.5"><MessageMarkdown content={content} />{showCursor && <BlinkingCursor />}</div>;
+}
 
 function StreamingThinkingBlock({
   block,
@@ -123,145 +166,52 @@ function StreamingThinkingBlock({
   isStreaming: boolean;
 }): React.ReactElement {
   const [collapsed, setCollapsed] = useState(false);
-  const isActivelyStreaming = isStreaming && isLast && block.duration === undefined;
+  const activelyStreaming = isStreaming && isLast && block.duration === undefined;
 
-  // Auto-collapse when thinking completes
   useEffect(() => {
-    if (block.duration !== undefined && !isActivelyStreaming) {
-      setCollapsed(true);
-    }
-  }, [block.duration, isActivelyStreaming]);
+    if (block.duration !== undefined && !activelyStreaming) setCollapsed(true);
+  }, [activelyStreaming, block.duration]);
 
   return (
     <AgentChatThinkingBlock
       content={block.content}
       duration={block.duration}
-      isStreaming={isActivelyStreaming}
+      isStreaming={activelyStreaming}
       collapsed={collapsed}
-      onToggleCollapse={() => setCollapsed((c) => !c)}
+      onToggleCollapse={() => setCollapsed((prev) => !prev)}
     />
   );
 }
-
-/* ---------- Main component ---------- */
 
 export function AgentChatStreamingMessage({
   blocks,
   isStreaming,
   onStop,
 }: AgentChatStreamingMessageProps): React.ReactElement {
-  // Find the last text block index for typewriter targeting
-  let lastTextIndex = -1;
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    if (blocks[i].kind === 'text') {
-      lastTextIndex = i;
-      break;
-    }
-  }
-
-  // The typewriter animates only the LAST text block's content
+  const lastTextIndex = getLastTextIndex(blocks);
   const lastTextContent = lastTextIndex >= 0 ? (blocks[lastTextIndex] as { kind: 'text'; content: string }).content : '';
   const displayedLastText = useTypewriter(lastTextContent, isStreaming);
   const showCursor = isStreaming || (lastTextContent.length > 0 && displayedLastText.length < lastTextContent.length);
-
-  // Group consecutive tool_use blocks together
-  type RenderItem =
-    | { type: 'text'; block: AgentChatContentBlock; index: number }
-    | { type: 'thinking'; block: AgentChatContentBlock & { kind: 'thinking' }; index: number }
-    | { type: 'tool'; block: AgentChatContentBlock; index: number }
-    | { type: 'tool-group'; tools: AgentChatContentBlock[]; startIndex: number };
-
-  const renderItems: RenderItem[] = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const block = blocks[i];
-    if (block.kind === 'text') {
-      renderItems.push({ type: 'text', block, index: i });
-      i++;
-    } else if (block.kind === 'thinking') {
-      renderItems.push({ type: 'thinking', block: block as AgentChatContentBlock & { kind: 'thinking' }, index: i });
-      i++;
-    } else {
-      // Collect consecutive tool_use blocks
-      const run: AgentChatContentBlock[] = [];
-      const startIdx = i;
-      while (i < blocks.length && blocks[i].kind === 'tool_use') {
-        run.push(blocks[i]);
-        i++;
-      }
-      if (run.length >= 2) {
-        renderItems.push({ type: 'tool-group', tools: run, startIndex: startIdx });
-      } else {
-        renderItems.push({ type: 'tool', block: run[0], index: startIdx });
-      }
-    }
-  }
-
-  function renderTextBlock(block: AgentChatContentBlock & { kind: 'text' }, blockIndex: number): React.ReactElement {
-    const isLast = blockIndex === lastTextIndex;
-    const content = isLast ? displayedLastText : block.content;
-
-    return (
-      <div key={`text-${blockIndex}`} className="pl-7 pb-0.5">
-        <MessageMarkdown content={content} />
-        {isLast && showCursor && <BlinkingCursor />}
-      </div>
-    );
-  }
+  const renderItems = buildRenderItems(blocks);
 
   return (
     <div className="flex justify-start">
       <div className="w-full max-w-[95%]">
-        {/* Blocks rendered in sequence */}
         <div className="space-y-2">
           {renderItems.map((item) => {
             if (item.type === 'text') {
-              return renderTextBlock(item.block as AgentChatContentBlock & { kind: 'text' }, item.index);
+              return renderTextBlock(item.index === lastTextIndex ? displayedLastText : item.block.content, item.index, item.index === lastTextIndex && showCursor);
             }
-
             if (item.type === 'thinking') {
-              return (
-                <StreamingThinkingBlock
-                  key={`thinking-${item.index}`}
-                  block={item.block}
-                  isLast={item.index === blocks.length - 1}
-                  isStreaming={isStreaming}
-                />
-              );
+              return <StreamingThinkingBlock key={`thinking-${item.index}`} block={item.block} isLast={item.index === blocks.length - 1} isStreaming={isStreaming} />;
             }
-
             if (item.type === 'tool-group') {
-              const anyRunning = item.tools.some(
-                (b) => b.kind === 'tool_use' && b.status === 'running',
-              );
-              return (
-                <ToolGroup
-                  key={`tool-group-${item.startIndex}`}
-                  tools={item.tools}
-                  defaultExpanded={anyRunning}
-                />
-              );
+              return <ToolGroup key={`tool-group-${item.startIndex}`} tools={item.tools} defaultExpanded={item.tools.some((tool) => tool.status === 'running')} />;
             }
-
-            // Single tool block
-            const toolBlock = item.block as AgentChatContentBlock & { kind: 'tool_use' };
-            return (
-              <AgentChatToolCard
-                key={toolBlock.blockId}
-                name={toolBlock.tool}
-                status={toolBlock.status}
-                filePath={toolBlock.filePath}
-                inputSummary={toolBlock.inputSummary}
-                editSummary={toolBlock.editSummary}
-              />
-            );
+            return <AgentChatToolCard key={item.block.blockId} name={item.block.tool} status={item.block.status} filePath={item.block.filePath} inputSummary={item.block.inputSummary} editSummary={item.block.editSummary} />;
           })}
-
-          {/* Live diff tally — shows file change stats during streaming */}
-          <StreamingChangeSummaryBar blocks={blocks} isStreaming={isStreaming} />
-
-          {/* Rotating status text + animated snake — shown throughout streaming */}
           {isStreaming && <StreamingStatusMessage onStop={onStop} />}
+          <StreamingChangeSummaryBar blocks={blocks} isStreaming={isStreaming} />
         </div>
       </div>
     </div>

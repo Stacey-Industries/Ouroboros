@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+
 import { getFileIcon } from '../FileTree/fileIcons';
 
 export interface StatusBarProps {

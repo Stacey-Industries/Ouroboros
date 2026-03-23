@@ -1,11 +1,12 @@
 import React from 'react';
-import { groupByCategory } from './commandSearch';
+
 import {
   useCommandPaletteActions,
   useCommandPaletteLifecycle,
 } from './commandPaletteActions';
 import { useCommandPaletteData, useCommandPaletteState } from './commandPaletteState';
 import { buildCommandPaletteModel } from './commandPaletteViewModel';
+import { groupByCategory } from './commandSearch';
 import type { Command, CommandMatch } from './types';
 
 interface UseCommandPaletteModelOptions {

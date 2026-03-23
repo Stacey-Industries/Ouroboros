@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 
@@ -38,12 +39,7 @@ export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElem
         <input
           type="number"
           value={draft.webAccessPort ?? 7890}
-          onChange={(e) => {
-            const val = parseInt(e.target.value, 10);
-            if (!isNaN(val) && val >= 1024 && val <= 65535) {
-              onChange('webAccessPort', val);
-            }
-          }}
+          onChange={(e) => { const val = parseInt(e.target.value, 10); if (!Number.isNaN(val) && val >= 1024 && val <= 65535) onChange('webAccessPort', val); }}
           min={1024}
           max={65535}
           className="text-text-semantic-primary"
@@ -57,25 +53,8 @@ export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElem
   );
 }
 
-const descStyle: React.CSSProperties = {
-  fontSize: '12px', marginBottom: '12px', lineHeight: 1.5,
-};
-
-const fieldRowStyle: React.CSSProperties = {
-  marginBottom: '14px',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '12px', display: 'block', marginBottom: '6px',
-};
-
-const hintStyle: React.CSSProperties = {
-  fontSize: '11px', marginTop: '4px', lineHeight: 1.4,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '6px 10px', borderRadius: '6px',
-  border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  fontSize: '13px', fontFamily: 'var(--font-ui)',
-  outline: 'none', boxSizing: 'border-box',
-};
+const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px', lineHeight: 1.5 };
+const fieldRowStyle: React.CSSProperties = { marginBottom: '14px' };
+const labelStyle: React.CSSProperties = { fontSize: '12px', display: 'block', marginBottom: '6px' };
+const hintStyle: React.CSSProperties = { fontSize: '11px', marginTop: '4px', lineHeight: 1.4 };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', fontSize: '13px', fontFamily: 'var(--font-ui)', outline: 'none', boxSizing: 'border-box' };

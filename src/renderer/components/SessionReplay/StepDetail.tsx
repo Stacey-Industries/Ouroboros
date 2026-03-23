@@ -7,9 +7,10 @@
  */
 
 import React, { memo } from 'react';
-import type { ReplayStep } from './types';
+
+import { estimateCost, formatCost,formatTokenCount } from '../AgentMonitor/costCalculator';
 import type { AgentSession } from '../AgentMonitor/types';
-import { formatTokenCount, estimateCost, formatCost } from '../AgentMonitor/costCalculator';
+import type { ReplayStep } from './types';
 
 interface StepDetailProps {
   step: ReplayStep;

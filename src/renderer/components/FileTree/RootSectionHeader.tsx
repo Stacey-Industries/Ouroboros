@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
-import { FolderIcon } from './FolderIcon';
+
 import { basename } from './fileTreeUtils';
+import { FolderIcon } from './FolderIcon';
 
 export interface RootSectionHeaderProps {
   root: string;

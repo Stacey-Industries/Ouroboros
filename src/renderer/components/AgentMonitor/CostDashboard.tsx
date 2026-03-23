@@ -2,16 +2,17 @@
  * CostDashboard.tsx — Persistent cost analytics dashboard.
  */
 
-import React, { memo, useMemo, useState, useEffect, useCallback } from 'react';
-import type { AgentSession } from './types';
+import React, { memo, useCallback,useEffect, useMemo, useState } from 'react';
+
 import type { CostEntry } from '../../types/electron';
 import { estimateCost } from './costCalculator';
+import { Controls } from './CostControls';
 import type { DateRange } from './costHelpers';
 import { daysAgo, toDateStr } from './costHelpers';
-import { Controls } from './CostControls';
-import { SummaryCards } from './SummaryCards';
 import { DailyChart } from './DailyChart';
 import { SessionTable } from './SessionTable';
+import { SummaryCards } from './SummaryCards';
+import type { AgentSession } from './types';
 
 interface CostDashboardProps {
   sessions: AgentSession[];

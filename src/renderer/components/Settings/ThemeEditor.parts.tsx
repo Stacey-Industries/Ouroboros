@@ -1,6 +1,7 @@
 import React from 'react';
-import { cssColorToHex } from './ThemeEditor.model';
+
 import type { ColorToken, ThemeEditorModel } from './ThemeEditor.model';
+import { cssColorToHex } from './ThemeEditor.model';
 
 const sectionLabelStyle: React.CSSProperties = {
   fontSize: '11px',

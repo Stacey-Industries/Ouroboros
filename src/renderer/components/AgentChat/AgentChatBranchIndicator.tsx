@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { AgentChatBranchInfo } from '../../types/electron';
 
 export interface AgentChatBranchIndicatorProps {

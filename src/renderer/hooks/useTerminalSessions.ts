@@ -1,13 +1,14 @@
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
+import type { UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 import {
   registerExitHandler,
   useKillTimers,
-  useRestoreSessions,
   useSessionSpawners,
 } from './useTerminalSessions.effects';
-import type { UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 import { useTerminalSessionHandlers } from './useTerminalSessions.handlers';
+import { useRestoreSessions } from './useTerminalSessions.restore';
 import {
   useClaudeSessionCapture,
   usePersistSessions,
@@ -15,6 +16,35 @@ import {
 } from './useTerminalSessions.sync';
 
 export type { SpawnClaudeOptions, SpawnCodexOptions, UseTerminalSessionsReturn } from './useTerminalSessions.effects';
+
+function buildAgentPtySession(id: string): TerminalSession {
+  return {
+    id,
+    title: id.startsWith('agent-pty-') ? 'Agent Claude' : `Terminal ${id}`,
+    status: 'running',
+    isClaude: true,
+  };
+}
+
+function useFocusOrCreate(
+  setSessions: React.Dispatch<React.SetStateAction<TerminalSession[]>>,
+  setActiveSessionId: React.Dispatch<React.SetStateAction<string | null>>,
+  clearKillTimers: (id: string) => void,
+): (id: string) => void {
+  const sessionsRef = useRef<TerminalSession[]>([]);
+  return useCallback((id: string) => {
+    if (sessionsRef.current.some((s) => s.id === id)) {
+      setActiveSessionId(id);
+      return;
+    }
+    setSessions((prev) => {
+      sessionsRef.current = [...prev, buildAgentPtySession(id)];
+      return sessionsRef.current;
+    });
+    setActiveSessionId(id);
+    registerExitHandler(id, setSessions, clearKillTimers);
+  }, [setActiveSessionId, setSessions, clearKillTimers]);
+}
 
 export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCreateSession: (id: string) => void } {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
@@ -24,59 +54,19 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
   const pendingClaudeAssocRef = useRef<string[]>([]);
   const timerApi = useKillTimers();
   const { spawnSession, spawnClaudeSession, spawnCodexSession } = useSessionSpawners({
-    spawnCountRef,
-    pendingClaudeAssocRef,
-    setSessions,
-    setActiveSessionId,
-    clearKillTimers: timerApi.clearKillTimers,
+    spawnCountRef, pendingClaudeAssocRef, setSessions, setActiveSessionId, clearKillTimers: timerApi.clearKillTimers,
   });
   const handlers = useTerminalSessionHandlers({
-    sessions,
-    activeSessionId,
-    recordingSessions,
-    setSessions,
-    setActiveSessionId,
-    setRecordingSessions,
-    clearKillTimers: timerApi.clearKillTimers,
-    setKillTimers: timerApi.setKillTimers,
+    sessions, activeSessionId, recordingSessions, setSessions, setActiveSessionId,
+    setRecordingSessions, clearKillTimers: timerApi.clearKillTimers, setKillTimers: timerApi.setKillTimers,
   });
-
-  const hasCompletedRestore = useRestoreSessions({
-    spawnSession,
-    spawnClaudeSession,
-    spawnCodexSession,
-    setSessions,
-    setActiveSessionId,
-    spawnCountRef,
-    clearKillTimers: timerApi.clearKillTimers,
+  const restore = useRestoreSessions({
+    spawnSession, spawnClaudeSession, spawnCodexSession, setSessions, setActiveSessionId,
+    spawnCountRef, clearKillTimers: timerApi.clearKillTimers,
   });
-  usePersistSessions(sessions, hasCompletedRestore.hasCompletedRestore, hasCompletedRestore.persistedSessionsSeed);
+  usePersistSessions(sessions, restore.hasCompletedRestore, restore.persistedSessionsSeed);
   useClaudeSessionCapture(pendingClaudeAssocRef, setSessions);
   useRecordingSync(sessions, setRecordingSessions);
-
-  // Activate a session by ID. If it doesn't exist in the sessions array
-  // (e.g. agent PTY sessions spawned by the main process), add it first.
-  const sessionsRef = useRef(sessions);
-  sessionsRef.current = sessions;
-  const focusOrCreateSession = useCallback((id: string) => {
-    const exists = sessionsRef.current.some((s) => s.id === id);
-    if (exists) {
-      setActiveSessionId(id);
-      return;
-    }
-
-    // Create a terminal tab entry for an agent PTY session that was spawned
-    // on the main process without the renderer's knowledge.
-    const session: TerminalSession = {
-      id,
-      title: id.startsWith('agent-pty-') ? 'Agent Claude' : `Terminal ${id}`,
-      status: 'running',
-      isClaude: true,
-    };
-    setSessions((prev) => [...prev, session]);
-    setActiveSessionId(id);
-    registerExitHandler(id, setSessions, timerApi.clearKillTimers);
-  }, [setActiveSessionId, setSessions, timerApi.clearKillTimers]);
-
+  const focusOrCreateSession = useFocusOrCreate(setSessions, setActiveSessionId, timerApi.clearKillTimers);
   return { sessions, activeSessionId, setActiveSessionId, recordingSessions, spawnSession, spawnClaudeSession, spawnCodexSession, focusOrCreateSession, ...handlers };
 }

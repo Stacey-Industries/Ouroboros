@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
+
+import type { TreeNode } from './FileTreeItem';
 import { FolderTypeIcon } from './FileTypeIcon';
 import { InlineEditInput } from './InlineEditInput';
-import type { TreeNode } from './FileTreeItem';
 
 export interface TreeItemDirectoryProps {
   node: TreeNode;

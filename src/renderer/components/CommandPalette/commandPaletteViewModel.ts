@@ -1,7 +1,8 @@
 import React from 'react';
-import type { Command } from './types';
+
 import type { CommandPaletteActions } from './commandPaletteActions';
 import { groupByCategory } from './commandSearch';
+import type { Command } from './types';
 
 const ROOT_FOOTER_HINTS = [
   '\u2191\u2193 navigate',

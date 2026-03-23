@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+
 import type { WorkspaceLayout } from '../../types/electron';
 
 export interface LayoutListItemProps {

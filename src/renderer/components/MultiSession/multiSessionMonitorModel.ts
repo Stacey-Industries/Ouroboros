@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { AgentSession } from '../AgentMonitor/types';
+
 import { estimateCost } from '../AgentMonitor/costCalculator';
+import type { AgentSession } from '../AgentMonitor/types';
 
 export interface BatchStats {
   completed: number;

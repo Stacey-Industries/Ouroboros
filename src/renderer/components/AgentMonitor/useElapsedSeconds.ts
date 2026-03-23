@@ -2,7 +2,7 @@
  * useElapsedSeconds.ts — Hook for counting elapsed seconds on a pending tool call.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef,useState } from 'react';
 
 export function useElapsedSeconds(startMs: number, active: boolean): number {
   const [elapsed, setElapsed] = useState(0);

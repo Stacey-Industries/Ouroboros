@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+
 import { usePerformance } from '../../hooks/usePerformance';
 
 function fmtMB(bytes: number): string {

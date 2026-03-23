@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+
 import type { SymbolKind } from '../../hooks/useSymbolOutline';
 
 export const KIND_ICON: Record<SymbolKind, string> = {

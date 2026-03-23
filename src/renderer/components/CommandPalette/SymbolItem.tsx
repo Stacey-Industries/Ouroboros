@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { RangeHighlight } from './HighlightedText';
+
 import type { SymbolEntry } from '../../types/electron';
+import { RangeHighlight } from './HighlightedText';
 
 const ITEM_HEIGHT = 40;
 const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];

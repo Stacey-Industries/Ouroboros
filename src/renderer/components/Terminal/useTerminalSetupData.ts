@@ -1,10 +1,11 @@
 import { Terminal } from '@xterm/xterm'
+
+import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
+import type { CommandBlock } from './terminalHelpers'
 import {
   OSC133_GRACE_MS,
   OSC133_RE,
 } from './terminalHelpers'
-import type { CommandBlock } from './terminalHelpers'
-import { PASTE_CONFIRM_THRESHOLD } from './PasteConfirmation'
 import { isPasteLikeInput, writeChunkedPaste } from './terminalPasteHelpers'
 import type {
   TerminalSetupLifecycleContext,
@@ -143,40 +144,24 @@ function createCommandBlock(promptRow: number): CommandBlock {
   return { promptRow, outputRow: null, exitCode: -1, complete: false }
 }
 
+const BLOCK_DECORATION_CSS =
+  'border-left:2px solid var(--border,#333);background:var(--bg-secondary,rgba(30,30,30,0.25));pointer-events:none;box-sizing:border-box;width:100%;height:100%'
+
 function registerBlockDecoration(
   runtimeRefs: TerminalSetupRuntimeRefs,
   block: CommandBlock,
   term: Terminal,
 ): void {
   if (!block.complete) return
-
   try {
     const absCursor = term.buffer.active.viewportY + term.buffer.active.cursorY
     const offset = block.promptRow - absCursor
     const height = Math.min(Math.max(1, absCursor - block.promptRow + 1), term.rows * 3)
     const marker = term.registerMarker(offset)
     if (!marker) return
-    const dec = term.registerDecoration({
-      marker,
-      x: 0,
-      width: term.cols,
-      height,
-      layer: 'bottom',
-    })
+    const dec = term.registerDecoration({ marker, x: 0, width: term.cols, height, layer: 'bottom' })
     if (!dec) return
-
-    dec.onRender((element) => {
-      element.style.cssText = [
-        'border-left:2px solid var(--border,#333)',
-        'background:var(--bg-secondary,rgba(30,30,30,0.25))',
-        'pointer-events:none',
-        'box-sizing:border-box',
-        'width:100%',
-        'height:100%',
-      ].join(';')
-    })
-
-    // Clean up decoration when marker is invalidated (e.g. line trimmed from scrollback)
+    dec.onRender((element) => { element.style.cssText = BLOCK_DECORATION_CSS })
     marker.onDispose(() => {
       try { dec.dispose() } catch { /* already disposed */ }
       const arr = runtimeRefs.blockDecorationDisposablesRef.current
@@ -184,7 +169,6 @@ function registerBlockDecoration(
         (d) => d !== dec && d !== marker,
       )
     })
-
     runtimeRefs.blockDecorationDisposablesRef.current.push(dec, marker)
   } catch {
     // ignore decoration failures

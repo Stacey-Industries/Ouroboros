@@ -1,10 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
 import Fuse from 'fuse.js';
+import React, { useMemo, useRef, useState } from 'react';
+
 import {
-  FUSE_OPTIONS,
   buildFuseMatches,
   buildRecentMatches,
   flattenAll,
+  FUSE_OPTIONS,
   groupByCategory,
 } from './commandSearch';
 import type { Command, CommandMatch } from './types';

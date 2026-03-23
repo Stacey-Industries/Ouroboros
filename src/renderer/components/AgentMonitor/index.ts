@@ -2,16 +2,16 @@
  * AgentMonitor barrel — public surface of the AgentMonitor component family.
  */
 
-export { AgentMonitorManager } from './AgentMonitorManager';
 export { AgentCard } from './AgentCard';
-export { AgentTree, hasTreeStructure } from './AgentTree';
+export { AgentEventLog } from './AgentEventLog';
+export { AgentMonitorManager } from './AgentMonitorManager';
 export { AgentSummaryBar } from './AgentSummaryBar';
+export { AgentTree, hasTreeStructure } from './AgentTree';
 export { ToolCallFeed } from './ToolCallFeed';
 export { ToolCallTimeline } from './ToolCallTimeline';
-export { AgentEventLog } from './AgentEventLog';
 export type {
   AgentSession,
   AgentStatus,
-  ToolCallEvent,
   HookPayload,
+  ToolCallEvent,
 } from './types';

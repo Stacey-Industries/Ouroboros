@@ -1,13 +1,14 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
+
 import type { SessionDetail, UsageAPI, WindowedUsage } from '../../types/electron';
 import {
-  USAGE_REFRESH_MS,
   formatCost,
   formatDuration,
   formatTokens,
   modelColor,
   modelShortName,
   StatRow,
+  USAGE_REFRESH_MS,
 } from './UsagePanelShared';
 
 const WINDOW_BUCKETS: Array<{ key: keyof WindowedUsage; label: string; sub: string }> = [

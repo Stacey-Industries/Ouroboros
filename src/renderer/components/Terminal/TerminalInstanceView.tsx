@@ -1,24 +1,24 @@
-import React, { useState, useCallback, useMemo } from 'react'
-import type { Terminal } from '@xterm/xterm'
-import { TerminalContextMenu } from './TerminalContextMenu'
-import { CompletionOverlay } from './CompletionOverlay'
-import { SelectionTooltip } from './SelectionTooltip'
+import React, { useCallback, useMemo,useState } from 'react'
+
+import { BlockNavigator } from './BlockNavigator'
+import { CommandBlockOverlay } from './CommandBlockOverlay'
 import { CommandSearchOverlay } from './CommandHistorySearch'
-import { TerminalSearchBar } from './SearchBar'
+import { CompletionOverlay } from './CompletionOverlay'
 import { CopyButton } from './CopyButton'
 import { PasteConfirmBanner } from './PasteConfirmation'
 import { RichInput } from './RichInput'
-import { CommandBlockOverlay } from './CommandBlockOverlay'
-import { BlockNavigator } from './BlockNavigator'
+import { TerminalSearchBar } from './SearchBar'
+import { SelectionTooltip } from './SelectionTooltip'
 import { StickyScrollOverlay } from './StickyScrollOverlay'
+import { TerminalContextMenu } from './TerminalContextMenu'
+import type { TerminalInstanceController } from './TerminalInstanceController'
 import { TerminalProgressBar } from './TerminalProgressBar'
 import {
-  SyncButton,
-  SplitButton,
-  RecordingButton,
   MultiLineButton,
+  RecordingButton,
+  SplitButton,
+  SyncButton,
 } from './TerminalToolbar'
-import type { TerminalInstanceController } from './TerminalInstanceController'
 
 const ROOT_STYLE: React.CSSProperties = {
   position: 'relative',
@@ -34,6 +34,16 @@ const CONTAINER_STYLE: React.CSSProperties = {
   flex: '1 1 0',
   minHeight: 0,
   overflow: 'hidden',
+}
+
+const TOOLBAR_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  bottom: 6,
+  right: 6,
+  zIndex: 10,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
 }
 
 function getRootStyle(isActive: boolean): React.CSSProperties {
@@ -70,15 +80,6 @@ function dismissCompletion(controller: TerminalInstanceController): void {
   controller.completions.state.setCompletions([])
 }
 
-function navigateBlock(
-  navigate: (terminal: Terminal) => void,
-  terminal: Terminal | null,
-): void {
-  if (terminal) {
-    navigate(terminal)
-  }
-}
-
 function TerminalToolbarLayer({
   controller,
   isHovered,
@@ -106,51 +107,16 @@ function TerminalToolbarButtons({
   controller: TerminalInstanceController
   isHovered: boolean
 }): React.ReactElement {
+  const terminal = controller.terminalRef.current
+  const showSearch = controller.showSearch
+
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: 6,
-      right: 6,
-      zIndex: 10,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-    }}>
-      {controller.onToggleSync && (
-        <SyncButton
-          syncInput={controller.syncInput}
-          isHovered={isHovered}
-          showSearch={controller.showSearch}
-          onToggleSync={controller.onToggleSync}
-        />
-      )}
-      {controller.onSplit && (
-        <SplitButton
-          sessionId={controller.sessionId}
-          isHovered={isHovered}
-          showSearch={controller.showSearch}
-          onSplit={controller.onSplit}
-        />
-      )}
-      {controller.onToggleRecording && (
-        <RecordingButton
-          sessionId={controller.sessionId}
-          isRecording={controller.isRecording}
-          isHovered={isHovered}
-          showSearch={controller.showSearch}
-          onToggleRecording={controller.onToggleRecording}
-        />
-      )}
-      {/* Copy button — last in row so it's rightmost */}
-      {!controller.showSearch && (
-        <CopyButton terminal={controller.terminalRef.current} visible={isHovered} />
-      )}
-      <MultiLineButton
-        isActive={controller.richInputActive}
-        isHovered={isHovered}
-        showSearch={controller.showSearch}
-        onClick={controller.richInputActive ? controller.handleRichInputCancel : controller.openRichInput}
-      />
+    <div style={TOOLBAR_STYLE}>
+      {controller.onToggleSync && <SyncButton syncInput={controller.syncInput} isHovered={isHovered} showSearch={showSearch} onToggleSync={controller.onToggleSync} />}
+      {controller.onSplit && <SplitButton sessionId={controller.sessionId} isHovered={isHovered} showSearch={showSearch} onSplit={controller.onSplit} />}
+      {controller.onToggleRecording && <RecordingButton sessionId={controller.sessionId} isRecording={controller.isRecording} isHovered={isHovered} showSearch={showSearch} onToggleRecording={controller.onToggleRecording} />}
+      {!showSearch && <CopyButton terminal={terminal} visible={isHovered} />}
+      <MultiLineButton isActive={controller.richInputActive} isHovered={isHovered} showSearch={showSearch} onClick={controller.richInputActive ? controller.handleRichInputCancel : controller.openRichInput} />
     </div>
   )
 }
@@ -184,35 +150,32 @@ function TerminalCommandBlocks({
     return null
   }
 
+  const { activeBlockIndex, blocks, navigateNext, navigatePrev } = controller.commandBlocks
+  const terminal = controller.terminalRef.current
+
   return (
     <>
       <CommandBlockOverlay
-        blocks={controller.commandBlocks.blocks}
-        terminal={controller.terminalRef.current}
+        blocks={blocks}
+        terminal={terminal}
         onToggleCollapse={controller.commandBlocks.toggleCollapse}
         onCopyOutput={controller.handleCopyBlockOutput}
         onCopyCommand={handleCopyCommand}
-        activeBlockIndex={controller.commandBlocks.activeBlockIndex}
+        activeBlockIndex={activeBlockIndex}
         sessionId={controller.sessionId}
       />
 
       <StickyScrollOverlay
-        blocks={controller.commandBlocks.blocks}
-        terminal={controller.terminalRef.current}
+        blocks={blocks}
+        terminal={terminal}
       />
 
       <BlockNavigator
-        totalBlocks={controller.commandBlocks.blocks.length}
-        activeIndex={controller.commandBlocks.activeBlockIndex}
-        onNavigateUp={() => navigateBlock(
-          controller.commandBlocks.navigatePrev,
-          controller.terminalRef.current,
-        )}
-        onNavigateDown={() => navigateBlock(
-          controller.commandBlocks.navigateNext,
-          controller.terminalRef.current,
-        )}
-        visible={controller.commandBlocks.blocks.length >= 2}
+        totalBlocks={blocks.length}
+        activeIndex={activeBlockIndex}
+        onNavigateUp={() => terminal && navigatePrev(terminal)}
+        onNavigateDown={() => terminal && navigateNext(terminal)}
+        visible={blocks.length >= 2}
       />
     </>
   )

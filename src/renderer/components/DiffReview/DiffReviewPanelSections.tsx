@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import type { ReviewFile } from './types';
+
+import type { DiffReviewStats } from './DiffReviewPanelState';
 import { FileListSidebar } from './FileListSidebar';
 import { HunkView } from './HunkView';
-import type { DiffReviewStats } from './DiffReviewPanelState';
+import type { ReviewFile } from './types';
 interface DiffReviewLayoutProps {
   files: ReviewFile[];
   selectedFileIdx: number;

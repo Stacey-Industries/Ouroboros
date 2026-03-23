@@ -19,60 +19,47 @@ export interface UseApplyCodeResult {
   canRevert: boolean;
 }
 
-/**
- * Computes a simple line-based diff between two strings.
- * Produces add/del/context lines for visual preview.
- */
-function computeLineDiff(oldContent: string, newContent: string): DiffLine[] {
-  const oldLines = oldContent.split('\n');
-  const newLines = newContent.split('\n');
+/** Sequential diff for large files — O(n) comparison. */
+function computeSequentialDiff(oldLines: string[], newLines: string[]): DiffLine[] {
   const result: DiffLine[] = [];
-
-  // Simple LCS-based diff for reasonable-sized content
-  const maxLen = Math.max(oldLines.length, newLines.length);
-
-  // For files under 2000 lines, use a basic O(n*m) LCS approach
-  // For larger files, fall back to a line-by-line comparison
-  if (maxLen > 2000) {
-    // Simple sequential comparison for large files
-    const minLen = Math.min(oldLines.length, newLines.length);
-    for (let i = 0; i < minLen; i++) {
-      if (oldLines[i] === newLines[i]) {
-        result.push({ type: 'context', text: oldLines[i], lineNo: i + 1 });
-      } else {
-        result.push({ type: 'del', text: oldLines[i], lineNo: i + 1 });
-        result.push({ type: 'add', text: newLines[i], lineNo: i + 1 });
-      }
-    }
-    for (let i = minLen; i < oldLines.length; i++) {
+  const minLen = Math.min(oldLines.length, newLines.length);
+  for (let i = 0; i < minLen; i++) {
+    if (oldLines[i] === newLines[i]) {
+      result.push({ type: 'context', text: oldLines[i], lineNo: i + 1 });
+    } else {
       result.push({ type: 'del', text: oldLines[i], lineNo: i + 1 });
-    }
-    for (let i = minLen; i < newLines.length; i++) {
       result.push({ type: 'add', text: newLines[i], lineNo: i + 1 });
     }
-    return result;
   }
+  for (let i = minLen; i < oldLines.length; i++) {
+    result.push({ type: 'del', text: oldLines[i], lineNo: i + 1 });
+  }
+  for (let i = minLen; i < newLines.length; i++) {
+    result.push({ type: 'add', text: newLines[i], lineNo: i + 1 });
+  }
+  return result;
+}
 
-  // Build LCS table
+/** Build LCS table for line-based diff. */
+function buildLcsTable(oldLines: string[], newLines: string[]): number[][] {
   const m = oldLines.length;
   const n = newLines.length;
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      if (oldLines[i - 1] === newLines[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
+      dp[i][j] = oldLines[i - 1] === newLines[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
     }
   }
+  return dp;
+}
 
-  // Backtrack to produce diff
+/** Backtrack through LCS table to produce diff lines. */
+function backtrackLcs(oldLines: string[], newLines: string[], dp: number[][]): DiffLine[] {
   const diffItems: DiffLine[] = [];
-  let i = m;
-  let j = n;
-
+  let i = oldLines.length;
+  let j = newLines.length;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
       diffItems.push({ type: 'context', text: oldLines[i - 1], lineNo: i });
@@ -86,155 +73,163 @@ function computeLineDiff(oldContent: string, newContent: string): DiffLine[] {
       i--;
     }
   }
-
   diffItems.reverse();
   return diffItems;
 }
 
 /**
- * Hook for applying code blocks to files.
- *
- * Reads the target file, computes a diff preview, and allows accepting
- * (writing the new content) or rejecting (discarding the diff).
- * After acceptance, a 30-second revert window is available.
+ * Computes a simple line-based diff between two strings.
+ * Produces add/del/context lines for visual preview.
  */
-export function useApplyCode(
-  code: string,
-  _language: string,
-  filePath?: string,
-): UseApplyCodeResult {
+function computeLineDiff(oldContent: string, newContent: string): DiffLine[] {
+  const oldLines = oldContent.split('\n');
+  const newLines = newContent.split('\n');
+  const maxLen = Math.max(oldLines.length, newLines.length);
+  if (maxLen > 2000) {
+    return computeSequentialDiff(oldLines, newLines);
+  }
+  const dp = buildLcsTable(oldLines, newLines);
+  return backtrackLcs(oldLines, newLines, dp);
+}
+
+interface FilesApi {
+  readFile?: (path: string) => Promise<{ success: boolean; content?: string }>;
+  saveFile?: (path: string, content: string) => Promise<{ success: boolean; error?: string }>;
+}
+
+function getFilesApi(): FilesApi | undefined {
+  return (window as unknown as { electronAPI?: { files?: FilesApi } }).electronAPI?.files;
+}
+
+function toErrorString(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
+function buildNewFileDiff(code: string): DiffLine[] {
+  return code.split('\n').map((line, idx) => ({ type: 'add' as const, text: line, lineNo: idx + 1 }));
+}
+
+interface ApplyCodeState {
+  status: ApplyCodeStatus;
+  errorMessage: string | null;
+  diffLines: DiffLine[];
+  canRevert: boolean;
+}
+
+interface ApplyCodeRefs {
+  originalContentRef: React.MutableRefObject<string | null>;
+  revertTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+}
+
+function useApplyCodeState(): ApplyCodeState & ApplyCodeRefs & {
+  setStatus: (s: ApplyCodeStatus) => void;
+  setErrorMessage: (e: string | null) => void;
+  setDiffLines: (d: DiffLine[]) => void;
+  setCanRevert: (c: boolean) => void;
+} {
   const [status, setStatus] = useState<ApplyCodeStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
   const [canRevert, setCanRevert] = useState(false);
-
   const originalContentRef = useRef<string | null>(null);
   const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up revert timer on unmount
   useEffect(() => {
-    return () => {
-      if (revertTimerRef.current) clearTimeout(revertTimerRef.current);
-    };
+    const timerRef = revertTimerRef;
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
-  const apply = useCallback(async () => {
+  return { status, errorMessage, diffLines, canRevert, originalContentRef, revertTimerRef, setStatus, setErrorMessage, setDiffLines, setCanRevert };
+}
+
+function useApplyAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  return useCallback(async () => {
     if (!filePath) {
-      setStatus('error');
-      setErrorMessage('No file path specified. Cannot apply code without a target file.');
+      state.setStatus('error');
+      state.setErrorMessage('No file path specified. Cannot apply code without a target file.');
       return;
     }
-
     try {
-      const api = (window as any).electronAPI?.files;
-      if (!api?.readFile) {
-        setStatus('error');
-        setErrorMessage('File API not available.');
-        return;
-      }
-
+      const api = getFilesApi();
+      if (!api?.readFile) { state.setStatus('error'); state.setErrorMessage('File API not available.'); return; }
       const result = await api.readFile(filePath);
       if (!result.success) {
-        // File might not exist yet - treat code as entirely new
-        originalContentRef.current = '';
-        const newLines = code.split('\n');
-        setDiffLines(newLines.map((line, idx) => ({ type: 'add' as const, text: line, lineNo: idx + 1 })));
-        setStatus('previewing');
+        state.originalContentRef.current = '';
+        state.setDiffLines(buildNewFileDiff(code));
+        state.setStatus('previewing');
         return;
       }
-
       const currentContent = result.content ?? '';
-      originalContentRef.current = currentContent;
-
-      const diff = computeLineDiff(currentContent, code);
-      setDiffLines(diff);
-      setStatus('previewing');
-      setErrorMessage(null);
+      state.originalContentRef.current = currentContent;
+      state.setDiffLines(computeLineDiff(currentContent, code));
+      state.setStatus('previewing');
+      state.setErrorMessage(null);
     } catch (err) {
-      setStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to read file for diff.');
+      state.setStatus('error');
+      state.setErrorMessage(toErrorString(err, 'Failed to read file for diff.'));
     }
-  }, [code, filePath]);
+  }, [code, filePath, state]);
+}
 
-  const accept = useCallback(async () => {
+function useAcceptAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  return useCallback(async () => {
     if (!filePath) return;
-
     try {
-      const api = (window as any).electronAPI?.files;
-      if (!api?.saveFile) {
-        setStatus('error');
-        setErrorMessage('File save API not available.');
-        return;
-      }
-
+      const api = getFilesApi();
+      if (!api?.saveFile) { state.setStatus('error'); state.setErrorMessage('File save API not available.'); return; }
       const result = await api.saveFile(filePath, code);
-      if (!result.success) {
-        setStatus('error');
-        setErrorMessage(result.error ?? 'Failed to save file.');
-        return;
-      }
-
-      setStatus('applied');
-      setDiffLines([]);
-      setErrorMessage(null);
-      setCanRevert(true);
-
-      // Clear any existing revert timer
-      if (revertTimerRef.current) {
-        clearTimeout(revertTimerRef.current);
-      }
-
-      // Allow revert for 30 seconds
-      revertTimerRef.current = setTimeout(() => {
-        setCanRevert(false);
-        originalContentRef.current = null;
-        revertTimerRef.current = null;
+      if (!result.success) { state.setStatus('error'); state.setErrorMessage(result.error ?? 'Failed to save file.'); return; }
+      state.setStatus('applied');
+      state.setDiffLines([]);
+      state.setErrorMessage(null);
+      state.setCanRevert(true);
+      if (state.revertTimerRef.current) clearTimeout(state.revertTimerRef.current);
+      state.revertTimerRef.current = setTimeout(() => {
+        state.setCanRevert(false);
+        state.originalContentRef.current = null;
+        state.revertTimerRef.current = null;
       }, 30_000);
     } catch (err) {
-      setStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to write file.');
+      state.setStatus('error');
+      state.setErrorMessage(toErrorString(err, 'Failed to write file.'));
     }
-  }, [code, filePath]);
+  }, [code, filePath, state]);
+}
 
-  const reject = useCallback(() => {
-    setStatus('idle');
-    setDiffLines([]);
-    setErrorMessage(null);
-  }, []);
-
-  const revert = useCallback(async () => {
-    if (!filePath || originalContentRef.current === null) return;
-
+function useRevertAction(filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  return useCallback(async () => {
+    if (!filePath || state.originalContentRef.current === null) return;
     try {
-      const api = (window as any).electronAPI?.files;
-      if (!api?.saveFile) {
-        setStatus('error');
-        setErrorMessage('File save API not available.');
-        return;
-      }
-
-      const result = await api.saveFile(filePath, originalContentRef.current);
-      if (!result.success) {
-        setStatus('error');
-        setErrorMessage(result.error ?? 'Failed to revert file.');
-        return;
-      }
-
-      setStatus('idle');
-      setCanRevert(false);
-      setDiffLines([]);
-      setErrorMessage(null);
-      originalContentRef.current = null;
-
-      if (revertTimerRef.current) {
-        clearTimeout(revertTimerRef.current);
-        revertTimerRef.current = null;
-      }
+      const api = getFilesApi();
+      if (!api?.saveFile) { state.setStatus('error'); state.setErrorMessage('File save API not available.'); return; }
+      const result = await api.saveFile(filePath, state.originalContentRef.current);
+      if (!result.success) { state.setStatus('error'); state.setErrorMessage(result.error ?? 'Failed to revert file.'); return; }
+      state.setStatus('idle');
+      state.setCanRevert(false);
+      state.setDiffLines([]);
+      state.setErrorMessage(null);
+      state.originalContentRef.current = null;
+      if (state.revertTimerRef.current) { clearTimeout(state.revertTimerRef.current); state.revertTimerRef.current = null; }
     } catch (err) {
-      setStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to revert file.');
+      state.setStatus('error');
+      state.setErrorMessage(toErrorString(err, 'Failed to revert file.'));
     }
-  }, [filePath]);
+  }, [filePath, state]);
+}
 
-  return { status, errorMessage, diffLines, apply, accept, reject, revert, canRevert };
+/**
+ * Hook for applying code blocks to files.
+ */
+export function useApplyCode(code: string, _language: string, filePath?: string): UseApplyCodeResult {
+  const state = useApplyCodeState();
+  const apply = useApplyAction(code, filePath, state);
+  const accept = useAcceptAction(code, filePath, state);
+  const revert = useRevertAction(filePath, state);
+  const reject = useCallback(() => {
+    state.setStatus('idle');
+    state.setDiffLines([]);
+    state.setErrorMessage(null);
+  }, [state]);
+
+  return { status: state.status, errorMessage: state.errorMessage, diffLines: state.diffLines, apply, accept, reject, revert, canRevert: state.canRevert };
 }

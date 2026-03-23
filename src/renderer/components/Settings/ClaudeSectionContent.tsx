@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { ClaudeSectionBody } from './ClaudeSectionBody';
 import { claudeSectionRootStyle } from './claudeSectionContentStyles';
 import type { ClaudeSectionModel } from './useClaudeSection';

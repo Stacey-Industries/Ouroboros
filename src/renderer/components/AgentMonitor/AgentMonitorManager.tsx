@@ -1,18 +1,19 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { useProject } from '../../contexts/ProjectContext';
+
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useToastContext } from '../../contexts/ToastContext';
-import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
 import { useCostTracking } from '../../hooks/useCostTracking';
-import { AgentSummaryBar } from './AgentSummaryBar';
-import { hasTreeStructure } from './AgentTree';
+import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
 import { AgentMonitorManagerContent } from './AgentMonitorManagerContent';
 import { MonitorToolbar, QuickActionBar } from './AgentMonitorManagerPanels';
 import { enrichSessions, filterSessions } from './agentMonitorManagerUtils';
+import { AgentSummaryBar } from './AgentSummaryBar';
+import { hasTreeStructure } from './AgentTree';
 import type { AgentSession } from './types';
-import { useCompletionNotifications } from './useCompletionNotifications';
 import { useAgentMonitorModes } from './useAgentMonitorModes';
 import { useAgentMonitorTemplates } from './useAgentMonitorTemplates';
+import { useCompletionNotifications } from './useCompletionNotifications';
 
 /**
  * Show ALL agent sessions in the monitor. Main agent sessions are tagged

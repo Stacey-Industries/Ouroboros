@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useState } from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
 import { EmptyState as SharedEmptyState } from '../shared';
 import { AgentCard } from './AgentCard';

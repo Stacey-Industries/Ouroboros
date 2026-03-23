@@ -2,8 +2,9 @@
  * mcpHelpers.ts — Types and helpers for MCP section.
  */
 
-import type { McpServerEntry, McpServerConfig } from '../../types/electron';
 import type React from 'react';
+
+import type { McpServerConfig,McpServerEntry } from '../../types/electron';
 
 export interface EnvRow {
   key: string;

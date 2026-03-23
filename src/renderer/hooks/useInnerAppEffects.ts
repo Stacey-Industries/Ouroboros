@@ -5,18 +5,18 @@
  * and event listener hooks in one place.
  */
 
-import { useUpdater } from './useUpdater';
-import { useErrorCapture } from './useErrorCapture';
+import type { Command } from '../components/CommandPalette/types';
+import type { AppTheme, WorkspaceLayout } from '../types/electron';
+import { useDomEventListeners,useMenuEvents } from './useAppEventListeners';
+import { useKeyboardShortcuts } from './useAppKeyboardShortcuts';
 import {
   useAgentChatCommands,
   useAgentTemplateCommands,
   useLayoutCommands,
   useMultiSessionCommand,
 } from './useCommandRegistrations';
-import { useMenuEvents, useDomEventListeners } from './useAppEventListeners';
-import { useKeyboardShortcuts } from './useAppKeyboardShortcuts';
-import type { AppTheme, WorkspaceLayout } from '../types/electron';
-import type { Command } from '../components/CommandPalette/types';
+import { useErrorCapture } from './useErrorCapture';
+import { useUpdater } from './useUpdater';
 
 export interface InnerAppEffectsDeps {
   projectRoot: string | null;

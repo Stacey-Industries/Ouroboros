@@ -3,7 +3,7 @@ import os from 'os'
 import type { ModelSlotAssignments } from './config'
 import { getConfigValue } from './config'
 import { resolveModelEnv } from './providers'
-import { buildShellIntegrationEnv, detectShellType } from './shellIntegration/resolve'
+import { buildShellIntegrationEnv } from './shellIntegration/resolve'
 
 export interface ResolvedSpawnOptions {
   cwd: string
@@ -87,6 +87,7 @@ function buildPromptEnv(): Record<string, string> {
     custom: configPrompt,
   }
 
+  // eslint-disable-next-line security/detect-object-injection -- preset is a validated config string from a fixed set of keys
   const prompt = preset === 'custom' ? configPrompt : presets[preset] ?? ''
   return prompt ? { PS1: prompt, PROMPT: prompt } : {}
 }
@@ -115,6 +116,7 @@ export function buildShellEnvWithIntegration(
 
 export function buildProviderEnv(slotKey: keyof ModelSlotAssignments): Record<string, string> {
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined
+  // eslint-disable-next-line security/detect-object-injection -- slotKey is constrained to keyof ModelSlotAssignments by TypeScript
   const slotValue = slots?.[slotKey] ?? ''
   return resolveModelEnv(slotValue)
 }

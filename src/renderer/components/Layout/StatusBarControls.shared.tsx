@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+
 import type { WorkspaceLayout } from '../../types/electron';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import type { StatusBarLayoutProps } from './StatusBar';

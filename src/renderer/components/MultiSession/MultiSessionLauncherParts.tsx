@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
+
 import type { AgentTemplate } from '../../types/electron';
-import type { SessionSlot } from './useMultiSessionLauncherModel';
-import { MAX_SLOTS } from './useMultiSessionLauncherModel';
 import {
   AddSessionButton,
   CloseIcon,
@@ -13,6 +12,8 @@ import {
   SlotOverrides,
   SlotPromptField,
 } from './MultiSessionLauncherControls';
+import type { SessionSlot } from './useMultiSessionLauncherModel';
+import { MAX_SLOTS } from './useMultiSessionLauncherModel';
 
 export const SlotEditor = memo(function SlotEditor({
   canRemove,

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { FileTreeItemProps, TreeNode } from './FileTreeItem';
 
 export interface TreeItemDragHandlers {

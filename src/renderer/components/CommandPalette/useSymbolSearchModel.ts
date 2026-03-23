@@ -1,12 +1,13 @@
 import React from 'react';
+
+import type { SymbolEntry } from '../../types/electron';
+import { useSymbolSearchLifecycle } from './symbolSearchLifecycle';
 import {
   buildSymbolSearchModel,
   useSymbolMatches,
   useSymbolSearchActions,
   useSymbolSearchState,
 } from './symbolSearchModelHelpers';
-import { useSymbolSearchLifecycle } from './symbolSearchLifecycle';
-import type { SymbolEntry } from '../../types/electron';
 
 export interface SymbolSearchProps {
   isOpen: boolean;

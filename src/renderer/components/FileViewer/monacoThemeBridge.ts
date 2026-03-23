@@ -84,229 +84,124 @@ function cssVarHex(name: string, fallback = '#000000'): string {
 // Theme generation
 // ────────────────────────────────────────────────────────────────────────────
 
-const THEME_NAME = 'ouroboros';
+interface ThemePalette {
+  bg: string;
+  bgSecondary: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  accent: string;
+  accentMuted: string;
+  selection: string;
+  success: string;
+  warning: string;
+  error: string;
+  purple: string;
+}
 
-/**
- * Build a Monaco IStandaloneThemeData from the current CSS custom properties.
- */
-function buildThemeData(): monaco.editor.IStandaloneThemeData {
-  const bg = cssVarHex('--monaco-bg', '#111113');
-  const bgSecondary = cssVarHex('--palette-bg-secondary', '#18181b');
-  const text = cssVarHex('--text', '#fafafa');
-  const textSecondary = cssVarHex('--text-secondary', '#a1a1aa');
-  const textMuted = cssVarHex('--text-muted', '#c0c0d4');
-  const border = cssVarHex('--border-default', '#3f3f46');
-  const accent = cssVarHex('--accent', '#818cf8');
-  const accentMuted = cssVarHex('--accent-muted', '#818cf826');
-  const selection = cssVarHex('--selection', '#6366f140');
-  const success = cssVarHex('--success', '#34d399');
-  const warning = cssVarHex('--warning', '#fbbf24');
-  const error = cssVarHex('--error', '#f87171');
-  const purple = cssVarHex('--purple', '#a78bfa');
-
+function getThemePalette(): ThemePalette {
   return {
-    base: 'vs-dark',
-    inherit: true, // inherit token rules from vs-dark for unmapped tokens
-    rules: [
-      // Comments
-      { token: 'comment', foreground: textMuted.replace('#', ''), fontStyle: 'italic' },
-      { token: 'comment.block', foreground: textMuted.replace('#', ''), fontStyle: 'italic' },
-      { token: 'comment.line', foreground: textMuted.replace('#', ''), fontStyle: 'italic' },
-
-      // Keywords
-      { token: 'keyword', foreground: accent.replace('#', '') },
-      { token: 'keyword.control', foreground: accent.replace('#', '') },
-      { token: 'keyword.operator', foreground: textSecondary.replace('#', '') },
-
-      // Strings
-      { token: 'string', foreground: success.replace('#', '') },
-      { token: 'string.escape', foreground: warning.replace('#', '') },
-
-      // Numbers
-      { token: 'number', foreground: warning.replace('#', '') },
-      { token: 'number.hex', foreground: warning.replace('#', '') },
-
-      // Types
-      { token: 'type', foreground: purple.replace('#', '') },
-      { token: 'type.identifier', foreground: purple.replace('#', '') },
-
-      // Functions
-      { token: 'entity.name.function', foreground: accent.replace('#', '') },
-      { token: 'support.function', foreground: accent.replace('#', '') },
-
-      // Variables
-      { token: 'variable', foreground: text.replace('#', '') },
-      { token: 'variable.predefined', foreground: purple.replace('#', '') },
-
-      // Constants
-      { token: 'constant', foreground: warning.replace('#', '') },
-
-      // Tags (HTML/XML)
-      { token: 'tag', foreground: error.replace('#', '') },
-      { token: 'attribute.name', foreground: accent.replace('#', '') },
-      { token: 'attribute.value', foreground: success.replace('#', '') },
-
-      // Regex
-      { token: 'regexp', foreground: error.replace('#', '') },
-
-      // Operators / Delimiters
-      { token: 'delimiter', foreground: textSecondary.replace('#', '') },
-      { token: 'operator', foreground: textSecondary.replace('#', '') },
-
-      // Markdown
-      { token: 'markup.heading', foreground: accent.replace('#', ''), fontStyle: 'bold' },
-      { token: 'markup.bold', fontStyle: 'bold' },
-      { token: 'markup.italic', fontStyle: 'italic' },
-      { token: 'markup.inline', foreground: success.replace('#', '') },
-    ],
-    colors: {
-      // Editor core
-      'editor.background': bg,
-      'editor.foreground': text,
-      'editor.lineHighlightBackground': bgSecondary,
-      'editor.lineHighlightBorder': '#00000000', // transparent
-
-      // Selection
-      'editor.selectionBackground': selection,
-      'editor.inactiveSelectionBackground': accentMuted,
-      'editor.selectionHighlightBackground': accentMuted,
-      'editor.wordHighlightBackground': accentMuted,
-      'editor.wordHighlightStrongBackground': accentMuted,
-      'editor.findMatchBackground': '#fbbf2440',
-      'editor.findMatchHighlightBackground': '#fbbf2420',
-
-      // Cursor
-      'editorCursor.foreground': accent,
-
-      // Whitespace
-      'editorWhitespace.foreground': textMuted,
-
-      // Indentation guides
-      'editorIndentGuide.background': border,
-      'editorIndentGuide.activeBackground': textMuted,
-
-      // Line numbers
-      'editorLineNumber.foreground': textMuted,
-      'editorLineNumber.activeForeground': textSecondary,
-
-      // Gutter
-      'editorGutter.background': bg,
-      'editorGutter.modifiedBackground': warning,
-      'editorGutter.addedBackground': success,
-      'editorGutter.deletedBackground': error,
-
-      // Brackets
-      'editorBracketMatch.border': accent,
-      'editorBracketMatch.background': accentMuted,
-
-      // Overview ruler (minimap scrollbar)
-      'editorOverviewRuler.border': border,
-      'editorOverviewRuler.findMatchForeground': warning,
-      'editorOverviewRuler.errorForeground': error,
-      'editorOverviewRuler.warningForeground': warning,
-      'editorOverviewRuler.infoForeground': accent,
-
-      // Minimap
-      'minimap.background': bg,
-      'minimapSlider.background': accentMuted,
-      'minimapSlider.hoverBackground': selection,
-      'minimapSlider.activeBackground': selection,
-
-      // Scrollbar
-      'scrollbar.shadow': '#00000033',
-      'scrollbarSlider.background': accentMuted,
-      'scrollbarSlider.hoverBackground': selection,
-      'scrollbarSlider.activeBackground': selection,
-
-      // Widget (find/replace, command palette, etc.)
-      'editorWidget.background': bgSecondary,
-      'editorWidget.foreground': text,
-      'editorWidget.border': border,
-      'editorWidget.resizeBorder': accent,
-
-      // Find widget input
-      'inputOption.activeBorder': accent,
-      'inputOption.activeBackground': accentMuted,
-      'inputOption.activeForeground': text,
-      'inputOption.hoverBackground': accentMuted,
-      'input.background': bg,
-      'input.foreground': text,
-      'input.border': border,
-      'input.placeholderForeground': textMuted,
-
-      // Find match highlight (current match stronger)
-      'editor.findMatchBorder': warning,
-      'editor.findMatchHighlightBorder': '#00000000',
-
-      // Suggest / autocomplete
-      'editorSuggestWidget.background': bgSecondary,
-      'editorSuggestWidget.border': border,
-      'editorSuggestWidget.foreground': text,
-      'editorSuggestWidget.selectedBackground': accentMuted,
-      'editorSuggestWidget.highlightForeground': accent,
-
-      // Peek view
-      'peekView.border': accent,
-      'peekViewEditor.background': bg,
-      'peekViewResult.background': bgSecondary,
-      'peekViewTitle.background': bgSecondary,
-
-      // Sticky scroll
-      'editorStickyScroll.background': bg,
-      'editorStickyScrollHover.background': bgSecondary,
-
-      // Diff editor
-      'diffEditor.insertedTextBackground': '#34d39920',
-      'diffEditor.removedTextBackground': '#f8717120',
-      'diffEditor.insertedLineBackground': '#34d39910',
-      'diffEditor.removedLineBackground': '#f8717110',
-    },
+    bg: cssVarHex('--monaco-bg', '#111113'),
+    bgSecondary: cssVarHex('--palette-bg-secondary', '#18181b'),
+    text: cssVarHex('--text', '#fafafa'),
+    textSecondary: cssVarHex('--text-secondary', '#a1a1aa'),
+    textMuted: cssVarHex('--text-muted', '#c0c0d4'),
+    border: cssVarHex('--border-default', '#3f3f46'),
+    accent: cssVarHex('--accent', '#818cf8'),
+    accentMuted: cssVarHex('--accent-muted', '#818cf826'),
+    selection: cssVarHex('--selection', '#6366f140'),
+    success: cssVarHex('--success', '#34d399'),
+    warning: cssVarHex('--warning', '#fbbf24'),
+    error: cssVarHex('--error', '#f87171'),
+    purple: cssVarHex('--purple', '#a78bfa'),
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Public API
-// ────────────────────────────────────────────────────────────────────────────
+function buildThemeRules(palette: ThemePalette): monaco.editor.ITokenThemeRule[] {
+  return [
+    { token: 'comment', foreground: palette.textMuted.replace('#', ''), fontStyle: 'italic' },
+    { token: 'comment.block', foreground: palette.textMuted.replace('#', ''), fontStyle: 'italic' },
+    { token: 'comment.line', foreground: palette.textMuted.replace('#', ''), fontStyle: 'italic' },
+    { token: 'keyword', foreground: palette.accent.replace('#', '') },
+    { token: 'keyword.control', foreground: palette.accent.replace('#', '') },
+    { token: 'keyword.operator', foreground: palette.textSecondary.replace('#', '') },
+    { token: 'string', foreground: palette.success.replace('#', '') },
+    { token: 'string.escape', foreground: palette.warning.replace('#', '') },
+    { token: 'number', foreground: palette.warning.replace('#', '') },
+    { token: 'number.hex', foreground: palette.warning.replace('#', '') },
+    { token: 'type', foreground: palette.purple.replace('#', '') },
+    { token: 'type.identifier', foreground: palette.purple.replace('#', '') },
+    { token: 'entity.name.function', foreground: palette.accent.replace('#', '') },
+    { token: 'support.function', foreground: palette.accent.replace('#', '') },
+    { token: 'variable', foreground: palette.text.replace('#', '') },
+    { token: 'variable.predefined', foreground: palette.purple.replace('#', '') },
+    { token: 'constant', foreground: palette.warning.replace('#', '') },
+    { token: 'tag', foreground: palette.error.replace('#', '') },
+    { token: 'attribute.name', foreground: palette.accent.replace('#', '') },
+    { token: 'attribute.value', foreground: palette.success.replace('#', '') },
+    { token: 'regexp', foreground: palette.error.replace('#', '') },
+    { token: 'delimiter', foreground: palette.textSecondary.replace('#', '') },
+    { token: 'operator', foreground: palette.textSecondary.replace('#', '') },
+    { token: 'markup.heading', foreground: palette.accent.replace('#', ''), fontStyle: 'bold' },
+    { token: 'markup.bold', fontStyle: 'bold' },
+    { token: 'markup.italic', fontStyle: 'italic' },
+    { token: 'markup.inline', foreground: palette.success.replace('#', '') },
+  ];
+}
 
-/**
- * Generate a Monaco theme from the current CSS variables and register it.
- * Call this after the theme CSS variables are applied to the DOM.
- */
+function buildThemeColors(palette: ThemePalette): monaco.editor.IColors {
+  return {
+    'editor.background': palette.bg,
+    'editor.foreground': palette.text,
+    'editor.lineHighlightBackground': palette.bgSecondary,
+    'editor.lineHighlightBorder': '#00000000',
+    'editor.selectionBackground': palette.selection,
+    'editor.inactiveSelectionBackground': palette.accentMuted,
+    'editor.selectionHighlightBackground': palette.accentMuted,
+    'editor.wordHighlightBackground': palette.accentMuted,
+    'editor.wordHighlightStrongBackground': palette.accentMuted,
+    'editor.findMatchBackground': '#fbbf2440',
+    'editor.findMatchHighlightBackground': '#fbbf2420',
+    'editorCursor.foreground': palette.accent,
+    'editorBracketMatch.background': palette.accentMuted,
+    'editorBracketMatch.border': palette.accent,
+    'editorIndentGuide.background1': palette.border,
+    'editorIndentGuide.activeBackground1': palette.accentMuted,
+    'editorGutter.background': palette.bg,
+    'editorGutter.modifiedBackground': palette.warning,
+    'editorGutter.addedBackground': palette.success,
+    'editorGutter.deletedBackground': palette.error,
+    'editorError.foreground': palette.error,
+    'editorWarning.foreground': palette.warning,
+    'editorInfo.foreground': palette.accent,
+  };
+}
+
+const THEME_NAME = 'ouroboros';
+
+function buildThemeData(): monaco.editor.IStandaloneThemeData {
+  const palette = getThemePalette();
+  return { base: 'vs-dark', inherit: true, rules: buildThemeRules(palette), colors: buildThemeColors(palette) };
+}
+
 export function createOuroborosTheme(): void {
   const themeData = buildThemeData();
   monaco.editor.defineTheme(THEME_NAME, themeData);
   monaco.editor.setTheme(THEME_NAME);
 }
 
-/**
- * Re-read CSS variables, rebuild the theme, and apply it.
- * Call this whenever the Ouroboros theme changes.
- */
 export function syncMonacoTheme(): void {
   createOuroborosTheme();
 }
 
-/**
- * React hook that initializes the Monaco theme on mount and keeps it in sync
- * with the Ouroboros theme system.
- *
- * Listens for the 'agent-ide:theme-applied' DOM event that `applyThemeToDom()`
- * dispatches whenever CSS variables are updated.
- */
 export function useMonacoTheme(): void {
   useEffect(() => {
-    // Initial theme setup — defer slightly so CSS vars are computed
-    const frame = requestAnimationFrame(() => {
-      createOuroborosTheme();
-    });
-
-    // Re-sync whenever the IDE theme changes
+    const frame = requestAnimationFrame(createOuroborosTheme);
     const handleThemeChange = (): void => {
       syncMonacoTheme();
     };
-
     window.addEventListener('agent-ide:theme-applied', handleThemeChange);
-
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('agent-ide:theme-applied', handleThemeChange);

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { Command } from './types';
 
 export interface BreadcrumbBarProps {

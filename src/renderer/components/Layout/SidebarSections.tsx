@@ -6,10 +6,11 @@
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { SidebarSection } from './SidebarSection';
-import { SidebarFileTree } from './SidebarFileTree';
-import { OutlineSection, useOutlineSymbolCount } from './OutlineSection';
+
 import { BookmarksSection, useBookmarkCount } from './BookmarksSection';
+import { OutlineSection, useOutlineSymbolCount } from './OutlineSection';
+import { SidebarFileTree } from './SidebarFileTree';
+import { SidebarSection } from './SidebarSection';
 import { TimelineSection } from './TimelineSection';
 
 // ── Persisted state hook ──────────────────────────────────────────────────────
@@ -106,100 +107,68 @@ function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProp
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Toggle helpers ────────────────────────────────────────────────────────────
 
-export function SidebarSections(): React.ReactElement {
-  const [collapsed, setCollapsed] = usePersistedState<CollapseState>(
-    'agent-ide:sidebar-sections',
-    DEFAULT_COLLAPSE,
-  );
-  const [explorerRatio, setExplorerRatio] = usePersistedState<number>(
-    'agent-ide:sidebar-explorer-ratio',
-    0.6,
-  );
+function useSectionToggles(setCollapsed: (fn: (prev: CollapseState) => CollapseState) => void) {
+  const toggle = useCallback((key: keyof CollapseState) => {
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, [setCollapsed]);
+  return {
+    toggleExplorer: useCallback(() => toggle('explorer'), [toggle]),
+    toggleOutline: useCallback(() => toggle('outline'), [toggle]),
+    toggleTimeline: useCallback(() => toggle('timeline'), [toggle]),
+    toggleBookmarks: useCallback(() => toggle('bookmarks'), [toggle]),
+  };
+}
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
+// ── Sections JSX ──────────────────────────────────────────────────────────────
 
-  const symbolCount = useOutlineSymbolCount();
-  const bookmarkCount = useBookmarkCount();
-
-  // Toggle helpers
-  const toggleExplorer = useCallback(
-    () => setCollapsed((prev) => ({ ...prev, explorer: !prev.explorer })),
-    [setCollapsed],
-  );
-  const toggleOutline = useCallback(
-    () => setCollapsed((prev) => ({ ...prev, outline: !prev.outline })),
-    [setCollapsed],
-  );
-  const toggleTimeline = useCallback(
-    () => setCollapsed((prev) => ({ ...prev, timeline: !prev.timeline })),
-    [setCollapsed],
-  );
-  const toggleBookmarks = useCallback(
-    () => setCollapsed((prev) => ({ ...prev, bookmarks: !prev.bookmarks })),
-    [setCollapsed],
-  );
-
-  // Resize drag handler
-  const handleDrag = useCallback(
-    (deltaRatio: number) => {
-      setExplorerRatio((prev) => Math.min(0.85, Math.max(0.15, prev + deltaRatio)));
-    },
-    [setExplorerRatio],
-  );
-
-  // Compute flex values for the two resizable sections
-  const explorerFlex = collapsed.outline ? 1 : explorerRatio;
-  const outlineFlex = collapsed.explorer ? 1 : 1 - explorerRatio;
-  const showDivider = !collapsed.explorer && !collapsed.outline;
-
+function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivider, handleDrag, containerRef, symbolCount, bookmarkCount, toggles }: {
+  collapsed: CollapseState; explorerFlex: number; outlineFlex: number; showDivider: boolean;
+  handleDrag: (dr: number) => void; containerRef: React.RefObject<HTMLDivElement | null>;
+  symbolCount: number; bookmarkCount: number;
+  toggles: ReturnType<typeof useSectionToggles>;
+}): React.ReactElement {
   return (
     <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
-      {/* Explorer section */}
-      <SidebarSection
-        title="Explorer"
-        collapsed={collapsed.explorer}
-        onToggle={toggleExplorer}
-        style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}
-      >
+      <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer}
+        style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
         <SidebarFileTree />
       </SidebarSection>
-
-      {/* Resize divider between explorer and outline */}
-      {showDivider && (
-        <SidebarResizeDivider onDrag={handleDrag} containerRef={containerRef} />
-      )}
-
-      {/* Outline section */}
-      <SidebarSection
-        title="Outline"
-        collapsed={collapsed.outline}
-        onToggle={toggleOutline}
-        badge={symbolCount}
-        style={{ flex: outlineFlex, minHeight: collapsed.outline ? undefined : 80 }}
-      >
+      {showDivider && <SidebarResizeDivider onDrag={handleDrag} containerRef={containerRef} />}
+      <SidebarSection title="Outline" collapsed={collapsed.outline} onToggle={toggles.toggleOutline}
+        badge={symbolCount} style={{ flex: outlineFlex, minHeight: collapsed.outline ? undefined : 80 }}>
         <OutlineSection />
       </SidebarSection>
-
-      {/* Timeline section — collapsed by default */}
-      <SidebarSection
-        title="Timeline"
-        collapsed={collapsed.timeline}
-        onToggle={toggleTimeline}
-      >
+      <SidebarSection title="Timeline" collapsed={collapsed.timeline} onToggle={toggles.toggleTimeline}>
         <TimelineSection />
       </SidebarSection>
-
-      {/* Bookmarks section — collapsed by default */}
-      <SidebarSection
-        title="Bookmarks"
-        collapsed={collapsed.bookmarks}
-        onToggle={toggleBookmarks}
-        badge={bookmarkCount}
-      >
+      <SidebarSection title="Bookmarks" collapsed={collapsed.bookmarks} onToggle={toggles.toggleBookmarks} badge={bookmarkCount}>
         <BookmarksSection />
       </SidebarSection>
     </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function SidebarSections(): React.ReactElement {
+  const [collapsed, setCollapsed] = usePersistedState<CollapseState>('agent-ide:sidebar-sections', DEFAULT_COLLAPSE);
+  const [explorerRatio, setExplorerRatio] = usePersistedState<number>('agent-ide:sidebar-explorer-ratio', 0.6);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const symbolCount = useOutlineSymbolCount();
+  const bookmarkCount = useBookmarkCount();
+  const toggles = useSectionToggles(setCollapsed);
+  const handleDrag = useCallback((deltaRatio: number) => {
+    setExplorerRatio((prev) => Math.min(0.85, Math.max(0.15, prev + deltaRatio)));
+  }, [setExplorerRatio]);
+
+  return (
+    <SidebarSectionsLayout collapsed={collapsed}
+      explorerFlex={collapsed.outline ? 1 : explorerRatio}
+      outlineFlex={collapsed.explorer ? 1 : 1 - explorerRatio}
+      showDivider={!collapsed.explorer && !collapsed.outline}
+      handleDrag={handleDrag} containerRef={containerRef}
+      symbolCount={symbolCount} bookmarkCount={bookmarkCount} toggles={toggles} />
   );
 }

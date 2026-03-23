@@ -9,8 +9,8 @@
  * (if any) will work. LSP formatting will plug in later via Monaco's
  * DocumentFormattingEditProvider.
  */
-import { useCallback, useRef } from 'react';
 import type * as monaco from 'monaco-editor';
+import { useCallback, useRef } from 'react';
 
 export interface UseFormatOnSaveOptions {
   /** Whether format-on-save is enabled */

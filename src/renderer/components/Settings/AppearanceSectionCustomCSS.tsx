@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+
 import type { AppConfig } from '../../types/electron';
 
 interface CustomCSSSectionProps {

@@ -1,5 +1,5 @@
-import type { CodexCliSettings } from './config'
 import { buildCodexCliArgs } from './codex'
+import type { CodexCliSettings } from './config'
 
 function escapePowerShellArg(arg: string): string {
   return `'${arg.replace(/'/g, "''")}'`

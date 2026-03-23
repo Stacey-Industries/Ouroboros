@@ -1,4 +1,5 @@
 import React, { memo, useMemo, useState } from 'react';
+
 import type { BlameLine } from '../../types/electron';
 
 export interface BlameGutterProps {

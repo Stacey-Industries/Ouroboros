@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import type { Command } from './types';
+
 import { CharHighlight } from './HighlightedText';
+import type { Command } from './types';
 
 // ─── CommandItem ──────────────────────────────────────────────────────────────
 

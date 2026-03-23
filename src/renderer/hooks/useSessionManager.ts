@@ -7,6 +7,7 @@
  */
 
 import { useRef, useState } from 'react';
+
 import type { AppLayoutProps } from '../components/Layout/AppLayout';
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import {

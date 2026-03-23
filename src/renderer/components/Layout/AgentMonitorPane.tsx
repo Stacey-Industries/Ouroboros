@@ -14,7 +14,6 @@ export interface AgentMonitorPaneProps {
 export function AgentMonitorPane({
   width,
   collapsed,
-  onToggleCollapse: _onToggleCollapse,
   children,
   focusStyle,
   onFocus,

@@ -145,6 +145,99 @@ function collectToolRun(
   return run;
 }
 
+function ToolUseBlock({
+  block,
+  index,
+  allBlocks,
+}: {
+  block: AgentChatContentBlock & { kind: 'tool_use' };
+  index: number;
+  allBlocks?: AgentChatContentBlock[];
+}): React.ReactElement {
+  if (allBlocks) {
+    const run = collectToolRun(allBlocks, index);
+    if (run.length >= 2) {
+      return <AgentChatToolGroup blocks={run} />;
+    }
+  }
+  return (
+    <AgentChatToolCard
+      name={block.tool}
+      status={block.status === 'error' ? 'complete' : block.status}
+      filePath={block.filePath}
+      input={block.input}
+      duration={block.duration}
+      inputSummary={block.inputSummary}
+      editSummary={block.editSummary}
+      errorOutput={block.status === 'error' ? block.output : undefined}
+    />
+  );
+}
+
+function ThinkingBlock({
+  block,
+  isStreaming,
+  isLastBlock,
+}: {
+  block: AgentChatContentBlock & { kind: 'thinking' };
+  isStreaming: boolean;
+  isLastBlock: boolean;
+}): React.ReactElement {
+  const [thinkingCollapsed, setThinkingCollapsed] = useState(!isStreaming);
+  return (
+    <AgentChatThinkingBlock
+      content={block.content}
+      duration={block.duration}
+      isStreaming={isStreaming && isLastBlock}
+      collapsed={thinkingCollapsed}
+      onToggleCollapse={() => setThinkingCollapsed((c) => !c)}
+    />
+  );
+}
+
+interface DispatchBlockArgs {
+  block: AgentChatContentBlock;
+  index: number;
+  isStreaming: boolean;
+  isLastBlock: boolean;
+  allBlocks?: AgentChatContentBlock[];
+}
+
+function dispatchBlockByKind({
+  block, index, isStreaming, isLastBlock, allBlocks,
+}: DispatchBlockArgs): React.ReactElement {
+  switch (block.kind) {
+    case 'text':
+      return <MessageMarkdown content={block.content} />;
+    case 'thinking':
+      return <ThinkingBlock block={block} isStreaming={isStreaming} isLastBlock={isLastBlock} />;
+    case 'tool_use':
+      return <ToolUseBlock block={block} index={index} allBlocks={allBlocks} />;
+    case 'tool_result':
+      return (
+        <div className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
+          {block.content}
+        </div>
+      );
+    case 'code':
+      return <CodeBlockRenderer block={block} />;
+    case 'diff':
+      return <DiffBlockRenderer block={block} />;
+    case 'plan':
+      return (
+        <AgentChatPlanBlock
+          steps={block.steps}
+          completedCount={block.completedCount}
+          isStreaming={isStreaming && isLastBlock}
+        />
+      );
+    case 'error':
+      return <ErrorBlockRenderer block={block} />;
+    default:
+      return <UnknownBlockRenderer block={block} />;
+  }
+}
+
 /**
  * Renders a single content block by dispatching on its `kind`.
  *
@@ -163,79 +256,8 @@ export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer
   allBlocks,
   skipRender,
 }: AgentChatBlockRendererProps): React.ReactElement {
-  const [thinkingCollapsed, setThinkingCollapsed] = useState(!isStreaming);
-
-  // If this block is part of a tool group that was already rendered, skip it
   if (skipRender) {
     return <></>;
   }
-
-  switch (block.kind) {
-    case 'text':
-      return <MessageMarkdown content={block.content} />;
-
-    case 'thinking':
-      return (
-        <AgentChatThinkingBlock
-          content={block.content}
-          duration={block.duration}
-          isStreaming={isStreaming && isLastBlock}
-          collapsed={thinkingCollapsed}
-          onToggleCollapse={() => setThinkingCollapsed((c) => !c)}
-        />
-      );
-
-    case 'tool_use': {
-      // When allBlocks is provided, check if this is the start of a consecutive run
-      if (allBlocks) {
-        const run = collectToolRun(allBlocks, index);
-        if (run.length >= 2) {
-          return <AgentChatToolGroup blocks={run} />;
-        }
-      }
-
-      return (
-        <AgentChatToolCard
-          name={block.tool}
-          status={block.status === 'error' ? 'complete' : block.status}
-          filePath={block.filePath}
-          input={block.input}
-          duration={block.duration}
-          inputSummary={block.inputSummary}
-          editSummary={block.editSummary}
-          errorOutput={block.status === 'error' ? block.output : undefined}
-        />
-      );
-    }
-
-    case 'tool_result':
-      // Tool results are typically displayed within the tool_use card
-      // Render as muted text for standalone occurrences
-      return (
-        <div className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
-          {block.content}
-        </div>
-      );
-
-    case 'code':
-      return <CodeBlockRenderer block={block} />;
-
-    case 'diff':
-      return <DiffBlockRenderer block={block} />;
-
-    case 'plan':
-      return (
-        <AgentChatPlanBlock
-          steps={block.steps}
-          completedCount={block.completedCount}
-          isStreaming={isStreaming && isLastBlock}
-        />
-      );
-
-    case 'error':
-      return <ErrorBlockRenderer block={block} />;
-
-    default:
-      return <UnknownBlockRenderer block={block} />;
-  }
+  return dispatchBlockByKind({ block, index, isStreaming, isLastBlock, allBlocks });
 });

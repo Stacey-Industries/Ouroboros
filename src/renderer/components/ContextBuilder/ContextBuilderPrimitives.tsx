@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ProjectContext } from '../../types/electron';
 
 const SPINNER_KEYFRAMES = '@keyframes cb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';

@@ -3,6 +3,7 @@
  */
 
 import React, { useRef, useState } from 'react';
+
 import type { AppConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 

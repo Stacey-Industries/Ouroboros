@@ -6,36 +6,39 @@
  * All handlers return serialisable values (no class instances).
  */
 
-import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
-import { listCodexModels } from './codex'
-import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager'
-import { getConfigValue } from './config'
-import { getAllProviders } from './providers'
+import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager';
+import { listCodexModels } from './codex';
+import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
-cleanupConfigWatcher,
-cleanupFileWatchers,
-lspStopAll,
+  cleanupConfigWatcher,
+  cleanupFileWatchers,
+  lspStopAll,
   registerAgentChatHandlers,
   registerAppHandlers,
   registerClaudeMdHandlers,
-  registerConfigHandlers,   registerContextHandlers,
+  registerConfigHandlers,
+  registerContextHandlers,
   registerExtensionStoreHandlers,
-  registerFileHandlers,   registerGitHandlers,
+  registerFileHandlers,
+  registerGitHandlers,
   registerIdeToolsHandlers,
   registerMcpHandlers,
   registerMcpStoreHandlers,
-  registerMiscHandlers,   registerPtyHandlers,
+  registerMiscHandlers,
+  registerPtyHandlers,
   registerSessionHandlers,
-} from './ipc-handlers'
-import { clearRegistry } from './web/handlerRegistry'
+} from './ipc-handlers';
+import { getAllProviders } from './providers';
+import { clearRegistry } from './web/handlerRegistry';
 
 /** Resolve the BrowserWindow that sent an IPC event. */
 function senderWindow(event: IpcMainInvokeEvent): BrowserWindow {
-  const win = BrowserWindow.fromWebContents(event.sender)
-  if (!win) throw new Error('IPC event from unknown window')
-  return win
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) throw new Error('IPC event from unknown window');
+  return win;
 }
 
 function registerDomainHandlers(win: BrowserWindow): string[] {
@@ -54,17 +57,17 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
     ...registerClaudeMdHandlers(senderWindow),
-  ]
+  ];
 }
 
 async function withCodeModeManager<T>(
-  action: (manager: typeof import('./codemode/codemodeManager')) => Promise<T> | T
+  action: (manager: typeof import('./codemode/codemodeManager')) => Promise<T> | T,
 ): Promise<T | { success: false; error: string }> {
   try {
-    const manager = await import('./codemode/codemodeManager')
-    return await action(manager)
+    const manager = await import('./codemode/codemodeManager');
+    return await action(manager);
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : String(err) }
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -79,29 +82,33 @@ async function withCodeModeManager<T>(
 function registerOrchestrationStubHandlers(channels: string[]): void {
   ipcMain.handle('orchestration:previewContext', async (_event, request: unknown) => {
     try {
-      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
-      const { buildRepoFacts } = await import('./orchestration/repoIndexer')
-      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider')
-      const req = request as { workspaceRoots: string[] }
-      const repoFacts = await buildRepoFacts(req.workspaceRoots, { diagnosticsProvider: buildLspDiagnosticsSummary })
-      return buildContextPacket({ request: req, repoFacts })
+      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder');
+      const { buildRepoFacts } = await import('./orchestration/repoIndexer');
+      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider');
+      const req = request as { workspaceRoots: string[] };
+      const repoFacts = await buildRepoFacts(req.workspaceRoots, {
+        diagnosticsProvider: buildLspDiagnosticsSummary,
+      });
+      return buildContextPacket({ request: req, repoFacts });
     } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
-  })
+  });
 
   ipcMain.handle('orchestration:buildContextPacket', async (_event, request: unknown) => {
     try {
-      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder')
-      const { buildRepoFacts } = await import('./orchestration/repoIndexer')
-      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider')
-      const req = request as { workspaceRoots: string[] }
-      const repoFacts = await buildRepoFacts(req.workspaceRoots, { diagnosticsProvider: buildLspDiagnosticsSummary })
-      return buildContextPacket({ request: req, repoFacts })
+      const { buildContextPacket } = await import('./orchestration/contextPacketBuilder');
+      const { buildRepoFacts } = await import('./orchestration/repoIndexer');
+      const { buildLspDiagnosticsSummary } = await import('./orchestration/lspDiagnosticsProvider');
+      const req = request as { workspaceRoots: string[] };
+      const repoFacts = await buildRepoFacts(req.workspaceRoots, {
+        diagnosticsProvider: buildLspDiagnosticsSummary,
+      });
+      return buildContextPacket({ request: req, repoFacts });
     } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
-  })
+  });
 
   // NOTE: orchestration:cancelTask has been intentionally removed.
   // It created a fresh ClaudeCodeAdapter instance on every call (empty process Maps),
@@ -111,40 +118,46 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
   // orchestration.cancelTask() for renderer compatibility — it now routes to
   // agentChat:cancelTask under the hood.
 
-  channels.push('orchestration:previewContext', 'orchestration:buildContextPacket')
+  channels.push('orchestration:previewContext', 'orchestration:buildContextPacket');
 }
 
 function registerCodeModeHandlers(channels: string[]): void {
-  ipcMain.handle('codemode:enable', (_event, args: { serverNames: string[]; scope: 'global' | 'project'; projectRoot?: string }) =>
-    withCodeModeManager((manager) => manager.enableCodeMode(args.serverNames, args.scope, args.projectRoot))
-  )
-  ipcMain.handle('codemode:disable', () => withCodeModeManager((manager) => manager.disableCodeMode()))
+  ipcMain.handle(
+    'codemode:enable',
+    (_event, args: { serverNames: string[]; scope: 'global' | 'project'; projectRoot?: string }) =>
+      withCodeModeManager((manager) =>
+        manager.enableCodeMode(args.serverNames, args.scope, args.projectRoot),
+      ),
+  );
+  ipcMain.handle('codemode:disable', () =>
+    withCodeModeManager((manager) => manager.disableCodeMode()),
+  );
   ipcMain.handle('codemode:status', () =>
-    withCodeModeManager((manager) => ({ success: true, ...manager.getCodeModeStatus() }))
-  )
-  channels.push('codemode:enable', 'codemode:disable', 'codemode:status')
+    withCodeModeManager((manager) => ({ success: true, ...manager.getCodeModeStatus() })),
+  );
+  channels.push('codemode:enable', 'codemode:disable', 'codemode:status');
 }
 
 function registerProviderHandlers(channels: string[]): void {
   ipcMain.handle('providers:list', () => {
-    const providers = getAllProviders()
-    return providers.map(p => ({
+    const providers = getAllProviders();
+    return providers.map((p) => ({
       ...p,
       apiKey: p.apiKey ? '\u2022\u2022\u2022\u2022' + p.apiKey.slice(-4) : '',
-    }))
-  })
+    }));
+  });
 
   ipcMain.handle('providers:getSlots', () => {
-    return getConfigValue('modelSlots')
-  })
+    return getConfigValue('modelSlots');
+  });
 
-  ipcMain.handle('codex:listModels', () => listCodexModels())
+  ipcMain.handle('codex:listModels', () => listCodexModels());
 
-  channels.push('providers:list', 'providers:getSlots', 'codex:listModels')
+  channels.push('providers:list', 'providers:getSlots', 'codex:listModels');
 }
 
-let handlersRegistered = false
-let allChannels: string[] = []
+let handlersRegistered = false;
+let allChannels: string[] = [];
 
 /**
  * Register all ipcMain handlers. Handlers are registered globally (once) and
@@ -154,38 +167,44 @@ let allChannels: string[] = []
  */
 export function registerIpcHandlers(win: BrowserWindow): () => void {
   if (handlersRegistered) {
-    return () => { /* no-op â€” handled globally */ }
+    return () => {
+      /* no-op â€” handled globally */
+    };
   }
 
-  handlersRegistered = true
-  allChannels = registerDomainHandlers(win)
-  registerCodeModeHandlers(allChannels)
-  registerProviderHandlers(allChannels)
-  registerOrchestrationStubHandlers(allChannels)
-  startApprovalManagerCleanup()
+  handlersRegistered = true;
+  allChannels = registerDomainHandlers(win);
+  registerCodeModeHandlers(allChannels);
+  registerProviderHandlers(allChannels);
+  registerOrchestrationStubHandlers(allChannels);
+  startApprovalManagerCleanup();
 
-  return () => { cleanupIpcHandlers() }
+  return () => {
+    cleanupIpcHandlers();
+  };
 }
 
 export function cleanupIpcHandlers(): void {
   // Close all file watchers
-  cleanupFileWatchers()
+  cleanupFileWatchers();
 
   // Close settings file watcher
-  cleanupConfigWatcher()
+  cleanupConfigWatcher();
 
-  cleanupAgentChatHandlers()
-  stopApprovalManagerCleanup()
+  cleanupAgentChatHandlers();
+  stopApprovalManagerCleanup();
 
   // Stop all LSP servers
-  lspStopAll().catch((error) => { console.error('[ipc] Failed to stop LSP servers during cleanup:', error) })
+  lspStopAll().catch((error) => {
+    console.error('[ipc] Failed to stop LSP servers during cleanup:', error);
+  });
 
   // Remove all handlers from ipcMain and the WebSocket bridge registry
   for (const channel of allChannels) {
-    ipcMain.removeHandler(channel)
+    ipcMain.removeHandler(channel);
   }
-  clearRegistry()
+  clearRegistry();
 
-  allChannels = []
-  handlersRegistered = false
+  allChannels = [];
+  handlersRegistered = false;
 }

@@ -18,6 +18,16 @@ function normalizePath(p: string): string {
   return p.replace(/\\/g, '/');
 }
 
+function notifySubscribers(cbs: Set<ChangeCallback>, change: FileChangeEvent): void {
+  for (const cb of cbs) {
+    try {
+      cb(change);
+    } catch {
+      // swallow listener errors to avoid one bad callback breaking others
+    }
+  }
+}
+
 function ensureGlobalListener(): void {
   if (globalCleanup) return;
   if (!window.electronAPI?.files?.onFileChange) return;
@@ -28,13 +38,7 @@ function ensureGlobalListener(): void {
     for (const [dirPath, cbs] of subscribers) {
       const normalizedDir = normalizePath(dirPath);
       if (normalizedChange.startsWith(normalizedDir)) {
-        for (const cb of cbs) {
-          try {
-            cb(change);
-          } catch {
-            // swallow listener errors to avoid one bad callback breaking others
-          }
-        }
+        notifySubscribers(cbs, change);
       }
     }
   });

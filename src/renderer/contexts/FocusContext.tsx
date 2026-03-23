@@ -90,9 +90,6 @@ export function useFocusPanel(): FocusContextValue {
 
 // ─── Utility: returns inline style for focused panel ring ─────────────────────
 
-export function focusRingStyle(
-  panel: FocusPanel,
-  focusedPanel: FocusPanel,
-): React.CSSProperties {
+export function focusRingStyle(): React.CSSProperties {
   return {};
 }
