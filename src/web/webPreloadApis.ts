@@ -1,25 +1,25 @@
 /**
  * webPreloadApis.ts — electronAPI namespace builders (first half).
  * Exports: desktopOnlyStub, desktopOnlyNoop, buildPtyApis, buildCoreApis.
- * Second half of APIs lives in webPreloadApis2.ts.
+ * Second half of APIs lives in webPreloadApisSupplemental.ts.
  */
 
-import type { WebSocketTransport } from './webPreloadTransport'
+import type { WebSocketTransport } from './webPreloadTransport';
 
 // ─── Desktop-Only Stubs ──────────────────────────────────────────────────────
 
-const DESKTOP_ONLY_ERROR = 'This feature is only available in the desktop app.'
+const DESKTOP_ONLY_ERROR = 'This feature is only available in the desktop app.';
 
 export function desktopOnlyStub(channel: string) {
   return async () => ({
     success: false,
     cancelled: true,
     error: `${channel}: ${DESKTOP_ONLY_ERROR}`,
-  })
+  });
 }
 
 export function desktopOnlyNoop() {
-  return async () => ({ success: true })
+  return async () => ({ success: true });
 }
 
 // ─── PTY + Codex APIs ────────────────────────────────────────────────────────
@@ -40,13 +40,13 @@ export function buildPtyApis(t: WebSocketTransport) {
       t.on(`pty:data:${id}`, cb as (v: unknown) => void),
     onExit: (
       id: string,
-      cb: (result: { exitCode: number | null; signal: number | null }) => void
+      cb: (result: { exitCode: number | null; signal: number | null }) => void,
     ) => t.on(`pty:exit:${id}`, cb as (v: unknown) => void),
     onRecordingState: (id: string, cb: (state: { recording: boolean }) => void) =>
       t.on(`pty:recordingState:${id}`, cb as (v: unknown) => void),
-  }
-  const codexAPI = { listModels: () => t.invoke('codex:listModels') }
-  return { ptyAPI, codexAPI }
+  };
+  const codexAPI = { listModels: () => t.invoke('codex:listModels') };
+  return { ptyAPI, codexAPI };
 }
 
 // ─── Config API ──────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ export function buildConfigApi(t: WebSocketTransport) {
     import: desktopOnlyStub('config:import'),
     openSettingsFile: desktopOnlyStub('config:openSettingsFile'),
     onExternalChange: (cb: (config: unknown) => void) => t.on('config:externalChange', cb),
-  }
+  };
 }
 
 // ─── Files API ───────────────────────────────────────────────────────────────
@@ -68,8 +68,7 @@ export function buildConfigApi(t: WebSocketTransport) {
 export function buildFilesApi(t: WebSocketTransport) {
   return {
     writeFile: (filePath: string, data: string) => t.invoke('files:writeFile', filePath, data),
-    saveFile: (filePath: string, content: string) =>
-      t.invoke('files:saveFile', filePath, content),
+    saveFile: (filePath: string, content: string) => t.invoke('files:saveFile', filePath, content),
     readFile: (filePath: string) => t.invoke('files:readFile', filePath),
     readBinaryFile: (filePath: string) => t.invoke('files:readBinaryFile', filePath),
     readDir: (dirPath: string) => t.invoke('files:readDir', dirPath),
@@ -87,7 +86,7 @@ export function buildFilesApi(t: WebSocketTransport) {
       t.invoke('files:restoreDeleted', tempPath, originalPath),
     showImageDialog: desktopOnlyStub('files:showImageDialog'),
     onFileChange: (cb: (change: unknown) => void) => t.on('files:change', cb),
-  }
+  };
 }
 
 // ─── Hooks API ───────────────────────────────────────────────────────────────
@@ -97,11 +96,11 @@ export function buildHooksApi(t: WebSocketTransport) {
     onAgentEvent: (cb: (payload: unknown) => void) => t.on('hooks:event', cb),
     onToolCall: (cb: (payload: unknown) => void) => {
       return t.on('hooks:event', (payload: unknown) => {
-        const p = payload as { type?: string }
-        if (p.type === 'pre_tool_use' || p.type === 'post_tool_use') cb(payload)
-      })
+        const p = payload as { type?: string };
+        if (p.type === 'pre_tool_use' || p.type === 'post_tool_use') cb(payload);
+      });
     },
-  }
+  };
 }
 
 /** @deprecated Use buildConfigApi / buildFilesApi / buildHooksApi directly */
@@ -110,7 +109,7 @@ export function buildDataApis(t: WebSocketTransport) {
     configAPI: buildConfigApi(t),
     filesAPI: buildFilesApi(t),
     hooksAPI: buildHooksApi(t),
-  }
+  };
 }
 
 // ─── App API ─────────────────────────────────────────────────────────────────
@@ -120,22 +119,22 @@ const MENU_EVENTS = [
   'menu:new-terminal',
   'menu:command-palette',
   'menu:settings',
-]
+];
 
 export function buildAppApi(t: WebSocketTransport) {
   return {
     getVersion: () => t.invoke('app:getVersion'),
     getPlatform: () => t.invoke('app:getPlatform'),
     openExternal: (url: string) => {
-      window.open(url, '_blank')
-      return Promise.resolve({ success: true })
+      window.open(url, '_blank');
+      return Promise.resolve({ success: true });
     },
     setTitleBarOverlay: desktopOnlyNoop(),
     notify: (options: unknown) => t.invoke('app:notify', options),
     rebuildWeb: () => t.invoke('app:rebuildWeb'),
     onMenuEvent: (cb: (event: string) => void) => {
-      const cleanups = MENU_EVENTS.map((e) => t.on(e, () => cb(e)))
-      return () => cleanups.forEach((c) => c())
+      const cleanups = MENU_EVENTS.map((e) => t.on(e, () => cb(e)));
+      return () => cleanups.forEach((c) => c());
     },
     minimizeWindow: desktopOnlyNoop(),
     toggleMaximizeWindow: desktopOnlyNoop(),
@@ -145,16 +144,19 @@ export function buildAppApi(t: WebSocketTransport) {
     toggleDevTools: desktopOnlyNoop(),
     openLogsFolder: desktopOnlyNoop(),
     zoomIn: async () => {
-      document.body.style.zoom = String(parseFloat(document.body.style.zoom || '1') + 0.1)
-      return { success: true }
+      document.body.style.zoom = String(parseFloat(document.body.style.zoom || '1') + 0.1);
+      return { success: true };
     },
     zoomOut: async () => {
-      const cur = parseFloat(document.body.style.zoom || '1')
-      document.body.style.zoom = String(Math.max(0.5, cur - 0.1))
-      return { success: true }
+      const cur = parseFloat(document.body.style.zoom || '1');
+      document.body.style.zoom = String(Math.max(0.5, cur - 0.1));
+      return { success: true };
     },
-    zoomReset: async () => { document.body.style.zoom = '1'; return { success: true } },
-  }
+    zoomReset: async () => {
+      document.body.style.zoom = '1';
+      return { success: true };
+    },
+  };
 }
 
 // ─── Shell + Theme APIs ───────────────────────────────────────────────────────
@@ -163,18 +165,18 @@ export function buildShellThemeApis(t: WebSocketTransport) {
   const shellAPI = {
     showItemInFolder: desktopOnlyNoop(),
     openExtensionsFolder: desktopOnlyNoop(),
-  }
+  };
   const themeAPI = {
     get: () => t.invoke('theme:get'),
     set: (theme: string) => t.invoke('theme:set', theme),
     onChange: (cb: (theme: unknown) => void) => t.on('theme:changed', cb),
-  }
-  return { shellAPI, themeAPI }
+  };
+  return { shellAPI, themeAPI };
 }
 
 /** @deprecated Use buildAppApi / buildShellThemeApis directly */
 export function buildAppApis(t: WebSocketTransport) {
-  return { appAPI: buildAppApi(t), ...buildShellThemeApis(t) }
+  return { appAPI: buildAppApi(t), ...buildShellThemeApis(t) };
 }
 
 // ─── Git API ─────────────────────────────────────────────────────────────────
@@ -204,7 +206,7 @@ function buildGitReadApi(t: WebSocketTransport) {
     changedFilesBetween: (root: string, fromHash: string, toHash: string) =>
       t.invoke('git:changedFilesBetween', root, fromHash, toHash),
     dirtyCount: (root: string) => t.invoke('git:dirtyCount', root),
-  }
+  };
 }
 
 function buildGitWriteApi(t: WebSocketTransport) {
@@ -215,8 +217,7 @@ function buildGitWriteApi(t: WebSocketTransport) {
     stageAll: (root: string) => t.invoke('git:stageAll', root),
     unstageAll: (root: string) => t.invoke('git:unstageAll', root),
     commit: (root: string, message: string) => t.invoke('git:commit', root, message),
-    discardFile: (root: string, filePath: string) =>
-      t.invoke('git:discardFile', root, filePath),
+    discardFile: (root: string, filePath: string) => t.invoke('git:discardFile', root, filePath),
     snapshot: (root: string) => t.invoke('git:snapshot', root),
     applyHunk: (root: string, patchContent: string) =>
       t.invoke('git:applyHunk', root, patchContent),
@@ -228,11 +229,10 @@ function buildGitWriteApi(t: WebSocketTransport) {
       t.invoke('git:revertFile', root, commitHash, filePath),
     restoreSnapshot: (root: string, commitHash: string) =>
       t.invoke('git:restoreSnapshot', root, commitHash),
-    createSnapshot: (root: string, label?: string) =>
-      t.invoke('git:createSnapshot', root, label),
-  }
+    createSnapshot: (root: string, label?: string) => t.invoke('git:createSnapshot', root, label),
+  };
 }
 
 export function buildGitApi(t: WebSocketTransport) {
-  return { ...buildGitReadApi(t), ...buildGitWriteApi(t) }
+  return { ...buildGitReadApi(t), ...buildGitWriteApi(t) };
 }

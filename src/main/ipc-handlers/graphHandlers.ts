@@ -1,5 +1,5 @@
 /**
- * miscGraphHandlers.ts — Graph IPC handler registration.
+ * graphHandlers.ts — Graph IPC handler registration.
  *
  * Split from miscRegistrars.ts to keep that file under the 300-line limit.
  */

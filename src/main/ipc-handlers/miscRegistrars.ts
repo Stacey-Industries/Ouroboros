@@ -1,3 +1,7 @@
+// TODO: miscRegistrars.ts spans multiple unrelated domains (updater, cost, usage,
+// crash logs, perf, shell history, symbols, approval, window, extensions).
+// Each domain should eventually be extracted to its own named handler file
+// (e.g. updaterHandlers.ts, costHandlers.ts, usageHandlers.ts, etc.).
 import { app, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
@@ -18,8 +22,8 @@ import { registerExtensionHandlers, registerWindowHandlers } from './miscRegistr
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
 
-export { registerGraphHandlers } from './miscGraphHandlers';
-export { registerLspHandlers } from './miscLspHandlers';
+export { registerGraphHandlers } from './graphHandlers';
+export { registerLspHandlers } from './lspHandlers';
 
 type ChannelList = string[];
 type IpcHandler = Parameters<typeof ipcMain.handle>[1];

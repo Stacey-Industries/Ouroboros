@@ -27,6 +27,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "knip": "knip",
+    "licenses": "generate-license-file --input package.json --output THIRD_PARTY_LICENSES --overwrite",
     "depcheck": "depcheck",
     "audit:prod": "npm audit --omit=dev",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
@@ -121,6 +122,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-security": "^4.0.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "generate-license-file": "^4.1.1",
     "knip": "^5.87.0",
     "lint-staged": "^16.4.0",
     "postcss": "^8.4.49",
@@ -143,6 +145,7 @@
     },
     "files": [
       "out/**/*",
+      "THIRD_PARTY_LICENSES",
       "!**/*.map",
       "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,readme}",
       "!**/node_modules/*/{test,__tests__,tests,example,examples}",
