@@ -8,12 +8,17 @@ Ouroboros follows Electron's standard three-process architecture with strict iso
 ┌──────────────────────────────────────────────────────────┐
 │                    Main Process (Node.js)                 │
 │  main.ts → Window creation, lifecycle, security          │
-│  ipc.ts  → IPC handler registration (18+ channels)      │
+│  ipc.ts  → IPC orchestration (delegates to ipc-handlers/)│
 │  pty.ts  → node-pty session management                   │
 │  hooks.ts → Named pipe / TCP server for Claude events    │
 │  config.ts → electron-store persistence                  │
-│  menu.ts → Native application menu                       │
 │  hookInstaller.ts → Auto-install Claude Code hooks       │
+│  approvalManager.ts → Pre-execution approval flow        │
+│  agentChat/ → Chat threads, orchestration bridge         │
+│  contextLayer/ → Repo-aware context enrichment           │
+│  orchestration/ → Context prep, provider coordination    │
+│  storage/ → SQLite database layer                        │
+│  web/ → HTTP + WebSocket server for web access           │
 └──────────────────┬───────────────────────────────────────┘
                    │ contextBridge (IPC)
 ┌──────────────────┴───────────────────────────────────────┐
@@ -25,11 +30,12 @@ Ouroboros follows Electron's standard three-process architecture with strict iso
                    │ window.electronAPI
 ┌──────────────────┴───────────────────────────────────────┐
 │              Renderer (React + Tailwind)                  │
-│  App.tsx → Root: config bootstrap, theme, context wiring │
+│  App.tsx → Three-layer bootstrap (config gate → providers │
+│            → hook orchestration)                         │
 │  Components → Feature folders with barrel exports        │
 │  Hooks → useConfig, useTheme, usePty, useAgentEvents     │
-│  Contexts → ProjectContext                               │
-│  Themes → 5 theme definitions (CSS var maps)             │
+│  Contexts → Project, FileViewer, AgentEvents, Approval   │
+│  Themes → built-in + custom/extension themes (CSS vars)  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -48,39 +54,55 @@ Ouroboros follows Electron's standard three-process architecture with strict iso
    └─ contextBridge.exposeInMainWorld('electronAPI', { ... })
 
 3. Renderer
-   ├─ index.tsx → ReactDOM.render(<App />)
-   ├─ App()
+   ├─ index.tsx → createRoot().render(<App />), splash fade-out
+   ├─ App()                          # Config gate
    │   ├─ useTheme() → apply CSS vars to :root
    │   ├─ useConfig() → load config via IPC
    │   ├─ Show LoadingScreen while config loads
-   │   └─ Render ProjectProvider → InnerApp
-   └─ InnerApp()
-       ├─ Wire up menu event listeners
-       ├─ Wire up custom DOM event listeners
-       └─ Render FileViewerManager → AppLayout + CommandPalette + SettingsModal
+   │   └─ Render ConfiguredApp
+   ├─ ConfiguredApp()                # Provider stack
+   │   └─ ToastProvider > FocusProvider > AgentEventsProvider
+   │       > ApprovalProvider > ProjectProvider → InnerApp
+   └─ InnerApp()                     # Hook orchestration
+       ├─ Call all top-level hooks (useTerminalSessions, useWorkspaceLayouts, ...)
+       ├─ Build layout props via buildInnerAppLayoutProps()
+       └─ Render <InnerAppLayout>
+           └─ Providers (FileViewerManager, DiffReviewProvider, ...)
+               └─ AppLayoutConnected → AppLayout (structural shell)
 ```
 
 ## Process Boundaries & Module Responsibilities
 
 ### Main Process — Each File Has One Job
 
-| File | Single Responsibility | Does NOT |
-|------|----------------------|----------|
-| `main.ts` | App lifecycle, window creation, security setup | Handle IPC, manage PTY, serve hooks |
-| `ipc.ts` | Register/cleanup IPC handlers, delegate to domain modules | Implement business logic directly |
-| `pty.ts` | node-pty session CRUD, bridge data/exit to renderer | Read config, handle files |
-| `hooks.ts` | Socket server, NDJSON parsing, event dispatch to renderer | Manage PTY, read files |
-| `config.ts` | electron-store read/write with schema validation | Handle IPC registration |
-| `menu.ts` | Build native menu, send menu events to renderer | Handle responses |
-| `hookInstaller.ts` | Write/update hook scripts in ~/.claude/hooks/ | Serve hooks, manage config |
+| File / Directory     | Single Responsibility                                                    | Does NOT                            |
+| -------------------- | ------------------------------------------------------------------------ | ----------------------------------- |
+| `main.ts`            | App lifecycle, window creation, security setup                           | Handle IPC, manage PTY, serve hooks |
+| `ipc.ts`             | Register/cleanup IPC handlers, delegate to domain modules                | Implement business logic directly   |
+| `ipc-handlers/`      | Domain-split IPC handler registrars (files, git, config, sessions, etc.) | Cross-domain logic                  |
+| `pty.ts`             | node-pty session CRUD, bridge data/exit to renderer                      | Read config, handle files           |
+| `hooks.ts`           | Named pipe server, NDJSON parsing, event dispatch to renderer            | Manage PTY, read files              |
+| `config.ts`          | electron-store read/write with schema validation                         | Handle IPC registration             |
+| `hookInstaller.ts`   | Write/update hook scripts in ~/.claude/hooks/                            | Serve hooks, manage config          |
+| `approvalManager.ts` | Pre-execution approval flow via response-file protocol                   | Serve hooks, manage PTY             |
+| `agentChat/`         | Chat thread persistence, orchestration bridge, session projection        | Terminal management                 |
+| `contextLayer/`      | Repo-aware context enrichment for agent sessions                         | Serve IPC directly                  |
+| `orchestration/`     | Context preparation, provider coordination                               | UI/renderer interaction             |
+| `codebaseGraph/`     | In-process codebase knowledge graph engine                               | IPC registration                    |
+| `storage/`           | SQLite database layer and JSON→SQLite migration                          | Business logic                      |
+| `web/`               | HTTP + WebSocket server for browser-based IDE access                     | Electron window management          |
 
 ### Preload
+
 Single file (`preload.ts`) that maps raw IPC channels to a typed API object:
-- Groups by domain: `pty`, `config`, `files`, `hooks`, `app`, `theme`
+
+- Groups by domain: `pty`, `config`, `files`, `hooks`, `app`, `theme`, `git`, `agentChat`, `sessions`, `lsp`, `extensions`, `mcp`, `claudeMd`, `contextLayer`, and more
 - Wraps `ipcRenderer.on` into functions that return cleanup callbacks
 - Never exposes `ipcRenderer` directly
+- Full type contract in `src/renderer/types/` (split across `electron-*.d.ts` files, assembled in `electron-workspace.d.ts`)
 
 ### Renderer
+
 React SPA with no Node.js access. All system interaction through `window.electronAPI`.
 
 ## Component Tree
@@ -89,32 +111,48 @@ React SPA with no Node.js access. All system interaction through `window.electro
 App
 ├── useTheme()                        # Apply CSS vars to :root
 ├── useConfig()                       # Load persisted config
-├── ProjectProvider                   # Project root context
-│   └── InnerApp
-│       ├── FileViewerManager         # Open files context provider
-│       │   ├── AppLayout             # Three-column + bottom panel
-│       │   │   ├── Sidebar
-│       │   │   │   ├── ProjectPicker           # Folder selector dropdown
-│       │   │   │   └── FileList                # Fuzzy-searchable file tree
-│       │   │   │       └── FileListItem[]      # Virtualised rows
-│       │   │   ├── CentrePane
-│       │   │   │   ├── EditorTabBar            # Open file tabs
-│       │   │   │   │   └── FileViewerTabs
-│       │   │   │   └── EditorContent
-│       │   │   │       ├── Breadcrumb
-│       │   │   │       └── FileViewer          # Syntax-highlighted (shiki)
-│       │   │   ├── AgentMonitorPane
-│       │   │   │   └── AgentMonitorManager
-│       │   │   │       ├── AgentSummaryBar
-│       │   │   │       ├── AgentCard[]
-│       │   │   │       ├── AgentEventLog
-│       │   │   │       └── ToolCallFeed
-│       │   │   └── TerminalPane
-│       │   │       └── TerminalManager
-│       │   │           ├── TerminalTabs
-│       │   │           └── TerminalInstance[]   # xterm.js instances
-│       │   ├── CommandPalette                   # Fixed overlay
-│       │   └── SettingsModal                    # Fixed overlay
+├── ConfiguredApp                     # Provider stack
+│   ├── ToastProvider
+│   ├── FocusProvider
+│   ├── AgentEventsProvider
+│   ├── ApprovalProvider
+│   └── ProjectProvider               # Project root context
+│       └── InnerApp                  # Hook orchestration layer
+│           └── InnerAppLayout        # Wiring layer: providers + slot resolution
+│               ├── FileViewerManager     # Context provider: open files, active tab
+│               ├── MultiBufferManager    # Context provider: multi-buffer views
+│               ├── DiffReviewProvider    # Context provider: diff state
+│               └── AppLayoutConnected    # Reads FileViewer context for status bar
+│                   └── AppLayout         # Structural shell: resize + collapse state
+│                       ├── TitleBar              # Dropdown menus, notifications
+│                       ├── ActivityBar           # VS Code-style 40px icon strip
+│                       ├── Sidebar               # Left panel (file tree / search / git)
+│                       │   └── SidebarSections
+│                       │       ├── ProjectPicker       # Folder selector
+│                       │       └── FileTree            # Virtualised file tree
+│                       ├── CentrePane            # Editor area
+│                       │   ├── EditorTabBar        # Open file tabs + split button
+│                       │   └── EditorContent       # File viewer / multi-buffer
+│                       │       └── FileViewer      # Syntax-highlighted (shiki)
+│                       ├── AgentMonitorPane      # Right sidebar container
+│                       │   └── RightSidebarTabs    # Chat-dominant with view switcher
+│                       │       ├── AgentChatWorkspace    # Chat thread UI
+│                       │       ├── AgentMonitorManager   # Hook event aggregation
+│                       │       │   ├── AgentCard[]
+│                       │       │   ├── AgentEventLog
+│                       │       │   ├── CostDashboard
+│                       │       │   └── ToolCallFeed
+│                       │       ├── GitPanel              # Staging area + branch ops
+│                       │       └── AnalyticsDashboard    # Usage analytics (lazy)
+│                       ├── TerminalPane          # Bottom panel
+│                       │   └── TerminalManager
+│                       │       ├── TerminalTabs
+│                       │       └── TerminalInstance[]  # xterm.js instances
+│                       └── StatusBar             # Branch, file info, LSP status
+│           ├── CommandPalette                    # Fixed overlay
+│           ├── SymbolSearch                      # Fixed overlay
+│           ├── FilePicker                        # Fixed overlay
+│           └── SettingsModal                     # Fixed overlay (full settings panel)
 ```
 
 ### Feature Folder Structure
@@ -123,95 +161,160 @@ Each feature folder under `src/renderer/components/` is self-contained:
 
 ```
 components/
-  Terminal/
-    TerminalManager.tsx    # State owner: sessions, spawn/kill lifecycle
-    TerminalInstance.tsx    # Single xterm.js terminal (no state ownership)
-    TerminalTabs.tsx       # Pure presentational: tab bar rendering
-    index.ts               # Barrel exports
-  FileTree/
-    FileList.tsx           # State owner: file collection, search, virtualisation
-    FileListItem.tsx       # Pure presentational: single file row
-    ProjectPicker.tsx      # State owner: dropdown open/close, folder selection
-  FileViewer/
-    FileViewerManager.tsx  # Context provider: open files, active tab
-    FileViewer.tsx         # Pure presentational: syntax-highlighted content
-    FileViewerTabs.tsx     # Pure presentational: tab bar
-    Breadcrumb.tsx         # Pure presentational: path breadcrumb
+  AgentChat/
+    AgentChatWorkspace.tsx    # State owner: thread list, active thread
+    AgentChatConversation.tsx # Message stream rendering
+    AgentChatComposer.tsx     # Input composer with mentions, slash commands
+    AgentChatTabBar.tsx       # Thread tab management
+    AgentChatThreadList.tsx   # Thread history sidebar
+    AgentChatToolCard.tsx     # Tool call display
+    SessionMemoryPanel.tsx    # Cross-session memory viewer
+    (+ many more message/block renderers and hooks)
   AgentMonitor/
-    AgentMonitorManager.tsx  # State owner: event aggregation
-    AgentCard.tsx            # Pure presentational
-    AgentEventLog.tsx        # Pure presentational
-    AgentSummaryBar.tsx      # Pure presentational
-    ToolCallFeed.tsx         # Pure presentational
-  Layout/
-    AppLayout.tsx          # Slot-based layout shell (no business logic)
-    Sidebar.tsx            # Structural: width, collapse, header/content slots
-    CentrePane.tsx         # Structural: tabBar/content slots
-    AgentMonitorPane.tsx   # Structural: width, collapse, summary/content slots
-    TerminalPane.tsx       # Structural: height, collapse, tabs/content slots
-    useResizable.ts        # Hook: drag-to-resize with persistence
-    usePanelCollapse.ts    # Hook: collapse state with keyboard shortcuts
-    ResizeHandle.tsx       # Pure presentational
+    AgentMonitorManager.tsx   # State owner: event aggregation
+    AgentCard.tsx             # Per-session card
+    AgentEventLog.tsx         # Event stream display
+    AgentSummaryBar.tsx       # Summary stats
+    CostDashboard.tsx         # Token/cost tracking
+    ToolCallFeed.tsx          # Tool call stream
+    ApprovalDialog.tsx        # Pre-execution approval UI
+  Analytics/
+    AnalyticsDashboard.tsx    # Usage analytics overview (lazy-loaded)
   CommandPalette/
-    CommandPalette.tsx     # Overlay with search/filter
-    CommandItem.tsx        # Pure presentational
-    useCommandPalette.ts   # Hook: open/close state
-    useCommandRegistry.ts  # Hook: command definitions, execution
+    CommandPalette.tsx        # Overlay with search/filter
+    SymbolSearch.tsx          # Symbol search overlay
+  ContextBuilder/
+    ContextBuilder.tsx        # Manual context selection UI
+  DiffReview/
+    DiffReviewManager.tsx     # State owner: diff review flow
+    DiffReviewPanel.tsx       # Unified diff view
+  ExtensionStore/
+    ExtensionStorePanel.tsx   # Open VSX extension browser
+  FileTree/
+    FileTree.tsx              # State owner: virtual tree, multi-root
+    FileTreeItem.tsx          # Single tree node
+    ProjectPicker.tsx         # Folder selector dropdown
+    StagingArea.tsx           # Git staging area in file tree
+    VirtualTreeList.tsx       # Virtualised row renderer
+  FileViewer/
+    FileViewerManager.tsx     # Context provider: open files, active tab
+    FileViewer.tsx            # Syntax-highlighted content (shiki)
+    MultiBufferManager.tsx    # Multi-buffer / excerpt view
+  GitPanel/
+    GitPanel.tsx              # State owner: git status, staging, commits
+    BranchSelector.tsx        # Branch switch/create
+  Layout/
+    AppLayout.tsx             # Structural shell (slot-based, no business logic)
+    InnerAppLayout.tsx        # Wiring layer: providers + overlay rendering
+    Sidebar.tsx               # Left sidebar container
+    CentrePane.tsx            # Editor area container
+    AgentMonitorPane.tsx      # Right sidebar container
+    TerminalPane.tsx          # Bottom panel container
+    RightSidebarTabs.tsx      # Right sidebar view switcher
+    TitleBar.tsx              # Window title bar + menus
+    StatusBar.tsx             # Bottom status bar
+    ActivityBar.tsx           # VS Code-style icon strip
+    useResizable.ts           # Hook: drag-to-resize with persistence
+    usePanelCollapse.ts       # Hook: collapse state with keyboard shortcuts
+  McpStore/
+    McpStorePanel.tsx         # MCP server registry browser
+  MultiSession/
+    MultiSessionLauncher.tsx  # Launch multiple agent sessions
+    MultiSessionMonitor.tsx   # Monitor parallel sessions
+  SessionReplay/
+    SessionReplayPanel.tsx    # Replay recorded agent sessions
+  Settings/
+    SettingsModal.tsx         # Full settings panel (tabbed)
+    SettingsPanel.tsx         # Settings content area
+    (sections: General, Appearance, Terminal, Claude, Codex, Hooks,
+               Keybindings, Extensions, Providers, ModelSlots, MCP, etc.)
+  Terminal/
+    TerminalManager.tsx       # State owner: sessions, spawn/kill lifecycle
+    TerminalInstance.tsx      # Single xterm.js terminal
+    TerminalTabs.tsx          # Tab bar rendering
+  TimeTravel/
+    TimeTravelPanel.tsx       # Workspace snapshot timeline
+  UsageModal/
+    UsageModal.tsx            # Token/cost usage display
+  primitives/
+    Button, Card, Input, Surface, Badge, Dropdown, Menu, TextArea, Divider
+  shared/
+    ErrorBoundary, Toast, Tooltip, Skeleton, NotificationCenter, EmptyState
 ```
 
 ## Layout System
 
 ```
-┌─────────────┬───────────────────────┬──────────────────┐
-│  Sidebar    │                       │  Agent Monitor   │
-│  (220px)    │    Centre Pane        │  (300px)         │
-│  resizable  │    (flex: 1)          │  resizable       │
-│  collapsible│                       │  collapsible     │
-├─────────────┴───────────────────────┴──────────────────┤
-│                Terminal Pane (280px)                     │
-│                resizable, collapsible                    │
-└─────────────────────────────────────────────────────────┘
+┌────┬────────────┬───────────────────────┬──────────────────┐
+│Act │  Sidebar   │                       │  Right Sidebar   │
+│Bar │  (220px)   │    Centre Pane        │  (300px)         │
+│40px│  resizable │    (flex: 1)          │  resizable       │
+│    │  collapsible                       │  collapsible     │
+├────┴────────────┴───────────────────────┴──────────────────┤
+│                Terminal Pane (280px)                        │
+│                resizable, collapsible                       │
+├─────────────────────────────────────────────────────────────┤
+│  Status Bar (24px)                                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-- Outer container: `flex-col h-screen`
-- Main row: `flex flex-1 min-h-0` (three columns)
+- Outer container: `flex-col h-screen` with `TitleBar` at top, `StatusBar` at bottom
+- ActivityBar: fixed 40px, never collapses, far-left icon strip
+- Main row: `flex flex-1 min-h-0` (three columns: Sidebar + CentrePane + RightSidebar)
 - CentrePane: `flex-1` fills remaining horizontal space
 - Sidebars: explicit `width`/`minWidth` via style prop
 - Terminal: explicit `height` via style prop, below the flex row
+- Right sidebar uses `display:none` when collapsed (not unmounted) — preserves streaming chat state
 - All panels independently collapsible (Ctrl+B, Ctrl+J, Ctrl+\\)
-- Resize via drag handles with `useResizable()` hook (rAF-throttled mouse tracking)
+- Resize via drag handles with `useResizable()` hook (pointer-drag, snaps on `pointerup`)
 
 ## State Management
 
 No external state library. State is managed through three patterns:
 
 ### 1. React Context (shared across component subtrees)
-| Context | Provider | Hook | Scope |
-|---------|----------|------|-------|
-| ProjectContext | `ProjectProvider` | `useProject()` | Project root path |
-| FileViewerContext | `FileViewerManager` | `useFileViewerManager()` | Open file tabs |
+
+| Context            | Provider              | Hook                     | Scope                  |
+| ------------------ | --------------------- | ------------------------ | ---------------------- |
+| ProjectContext     | `ProjectProvider`     | `useProject()`           | Project root path      |
+| FileViewerContext  | `FileViewerManager`   | `useFileViewerManager()` | Open file tabs         |
+| MultiBufferContext | `MultiBufferManager`  | `useMultiBuffer()`       | Multi-buffer excerpts  |
+| DiffReviewContext  | `DiffReviewProvider`  | `useDiffReview()`        | Diff review state      |
+| AgentEventsContext | `AgentEventsProvider` | `useAgentEvents()`       | Hook event stream      |
+| ApprovalContext    | `ApprovalProvider`    | `useApproval()`          | Pre-execution approval |
+| ToastContext       | `ToastProvider`       | `useToast()`             | Toast notifications    |
+| FocusContext       | `FocusProvider`       | `useFocus()`             | Panel focus management |
 
 ### 2. Component-Local State (owned by manager components)
-| Component | State | Persistence |
-|-----------|-------|-------------|
-| TerminalManager | `sessions[]`, `activeSessionId` | None (ephemeral) |
-| AgentMonitorManager | `events[]`, `agents[]` | None (ephemeral) |
-| CommandPalette | `isOpen`, `query`, `recentIds` | None |
-| usePanelCollapse | `collapsed{}` | localStorage |
-| useResizable | `sizes{}` | localStorage + electron-store |
+
+| Component           | State                           | Persistence                   |
+| ------------------- | ------------------------------- | ----------------------------- |
+| TerminalManager     | `sessions[]`, `activeSessionId` | None (ephemeral)              |
+| AgentMonitorManager | `events[]`, `agents[]`          | None (ephemeral)              |
+| AgentChatWorkspace  | `threads[]`, `activeThreadId`   | SQLite via IPC                |
+| FileTree            | virtual tree, selection, search | None (ephemeral)              |
+| GitPanel            | git status, staged files        | None (ephemeral)              |
+| CommandPalette      | `isOpen`, `query`, `recentIds`  | None                          |
+| usePanelCollapse    | `collapsed{}`                   | localStorage                  |
+| useResizable        | `sizes{}`                       | localStorage + electron-store |
 
 ### 3. Custom Hooks (encapsulate IPC + state)
-| Hook | Purpose |
-|------|---------|
-| `useConfig()` | Load/write electron-store config via IPC, optimistic updates |
-| `useTheme()` | Apply theme CSS vars, persist selection |
-| `useAgentEvents()` | Aggregate hook events into agent sessions |
-| `useFileWatcher()` | Track file change events from chokidar |
-| `usePty()` | PTY session lifecycle (used by TerminalInstance) |
+
+| Hook                    | Purpose                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| `useConfig()`           | Load/write electron-store config via IPC, optimistic updates |
+| `useTheme()`            | Apply theme CSS vars, persist selection                      |
+| `useAgentEvents()`      | Aggregate hook events into agent sessions                    |
+| `useFileWatcher()`      | Track file change events from chokidar                       |
+| `usePty()`              | PTY session lifecycle (used by TerminalInstance)             |
+| `useCostTracking()`     | Token/cost aggregation from hook events                      |
+| `useDiffSnapshots()`    | Workspace snapshot management                                |
+| `useTerminalSessions()` | Terminal session restore across reloads                      |
 
 ## Data Flow Patterns
 
 ### Config Read/Write
+
 ```
 Renderer                    Preload                     Main
 useConfig() ──invoke──→ config:getAll ──handle──→ store.store
@@ -219,6 +322,7 @@ config.set() ──invoke──→ config:set ──handle──→ store.set()
 ```
 
 ### Terminal I/O
+
 ```
 Renderer                    Preload                     Main
 TerminalManager             ptyAPI                      pty.ts
@@ -229,6 +333,7 @@ TerminalManager             ptyAPI                      pty.ts
 ```
 
 ### File Operations
+
 ```
 Renderer                    Preload                     Main
 FileList                    filesAPI                    ipc.ts
@@ -240,27 +345,34 @@ FileViewerManager
 ```
 
 ### Hook Events (Claude Code → Ouroboros)
+
 ```
 Claude Code Hook Script
   └─ Writes NDJSON to named pipe \\.\pipe\agent-ide-hooks
-       └─ hooks.ts parses → dispatchToRenderer()
-            └─ win.webContents.send('hooks:event', payload)
-                 └─ preload: hooks.onAgentEvent(cb)
-                      └─ AgentMonitorManager / useAgentEvents
+       └─ hooksNet.ts parses → onPayload callback
+            └─ hooks.ts dispatchToRenderer() + approval flow + graph invalidation
+                 └─ win.webContents.send('hooks:event', payload)
+                      └─ preload: hooks.onAgentEvent(cb)
+                           └─ AgentEventsProvider / useAgentEvents (renderer)
+                                └─ AgentMonitorManager, AgentChatWorkspace
 ```
 
 ## Rendering Patterns
 
 ### Virtualised Lists
+
 `FileList` uses manual virtualisation (not react-window): fixed 32px item height, `visibleStart`/`visibleEnd` computed from scroll position, overscan of 5 items, Fuse.js for fuzzy search with match highlighting.
 
 ### Terminal Instances
+
 All sessions rendered simultaneously with `display: none/block` toggling (prevents xterm.js teardown/recreation on tab switch). Canvas renderer is used (not WebGL). Double-rAF guard for fit() calls after open().
 
 ### File Viewer
+
 Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-byte heuristic. Dirty-on-disk tracking via chokidar events.
 
 ### Theming
+
 5 built-in themes defined as CSS var maps in `src/renderer/themes/`. Applied by setting vars on `document.documentElement.style`. Terminal theme colors derived from `--term-*` CSS vars. Theme switch triggers `theme:changed` IPC event + `requestAnimationFrame` sync.
 
 ## Ownership Rules
@@ -269,6 +381,8 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
    - `TerminalManager` owns `sessions[]`
    - `FileViewerManager` owns `openFiles[]`
    - `AgentMonitorManager` owns `events[]`
+   - `AgentChatWorkspace` owns `threads[]`, `activeThreadId`
+   - `GitPanel` owns git status, staged files
    - `App/InnerApp` owns `recentProjects`, `settingsOpen`
 
 2. **Structural components** — Layout shells that accept `React.ReactNode` slots:
@@ -276,7 +390,7 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
    - These know about sizing/collapse but NOT about business data
 
 3. **Presentational components** — Pure render based on props:
-   - `FileListItem`, `FileViewer`, `Breadcrumb`, `AgentCard`, `CommandItem`
+   - `FileTreeItem`, `FileViewer`, `AgentCard`, `CommandItem`
    - Zero state, zero side effects
 
 4. **Hooks** — Encapsulate IPC + state for reuse:
@@ -285,16 +399,18 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
 
 ### What Goes Where
 
-| Need to... | Put it in... |
-|------------|-------------|
-| Read/write files | `ipc.ts` handler → `files:readFile` / `files:readDir` |
-| Spawn a terminal | `pty.ts` via `ipc.ts` handler → `pty:spawn` |
-| Persist user preference | `config.ts` via `ipc.ts` handler → `config:set` |
-| Add a UI panel | `Layout/` structural component with slots |
-| Add file tree feature | `FileTree/` — state in FileList, display in FileListItem |
-| Add keyboard shortcut | `usePanelCollapse.ts` (layout) or `useCommandRegistry.ts` (commands) |
-| Add a theme | `themes/` — new ThemeDefinition + register in `themes/index.ts` |
-| Handle Claude Code events | `hooks.ts` (server) → preload → `useAgentEvents.ts` (renderer) |
+| Need to...                | Put it in...                                                          |
+| ------------------------- | --------------------------------------------------------------------- |
+| Read/write files          | `ipc.ts` handler → `files:readFile` / `files:readDir`                 |
+| Spawn a terminal          | `pty.ts` via `ipc.ts` handler → `pty:spawn`                           |
+| Persist user preference   | `config.ts` via `ipc.ts` handler → `config:set`                       |
+| Add a UI panel            | `Layout/` structural component with slots                             |
+| Add file tree feature     | `FileTree/` — state in `FileTree.tsx`, display in `FileTreeItem.tsx`  |
+| Add keyboard shortcut     | `usePanelCollapse.ts` (layout) or `useCommandRegistry.ts` (commands)  |
+| Add a theme               | `themes/` — new ThemeDefinition + register in `themes/index.ts`       |
+| Handle Claude Code events | `hooks.ts` (server) → preload → `useAgentEvents.ts` (renderer)        |
+| Add a settings section    | `Settings/` — new `*Section.tsx` + register in `settingsTabs.ts`      |
+| Add agent chat feature    | `AgentChat/` — extend `AgentChatWorkspace` or add a new renderer/hook |
 
 ## Security Model
 
@@ -308,10 +424,10 @@ Syntax highlighting via shiki (lazy-loaded grammars). Binary detection via null-
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Ctrl+B | Toggle left sidebar |
-| Ctrl+J | Toggle terminal |
-| Ctrl+\\ | Toggle agent monitor |
-| Ctrl+, | Toggle settings |
-| Ctrl+Shift+P | Command palette |
+| Shortcut     | Action               |
+| ------------ | -------------------- |
+| Ctrl+B       | Toggle left sidebar  |
+| Ctrl+J       | Toggle terminal      |
+| Ctrl+\\      | Toggle agent monitor |
+| Ctrl+,       | Toggle settings      |
+| Ctrl+Shift+P | Command palette      |

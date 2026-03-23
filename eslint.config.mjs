@@ -15,6 +15,7 @@ export default tseslint.config(
       'out/',
       'build-resources/',
       'coverage/',
+      'e2e/',
       '*.config.*',
     ],
   },
