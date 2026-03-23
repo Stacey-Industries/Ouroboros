@@ -72,7 +72,13 @@ function PlanStepItem({ step }: { step: PlanStep }): React.ReactElement {
 
   return (
     <li>
-      <div className={`flex items-center gap-2 py-0.5 ${hasDetail ? 'cursor-pointer' : ''}`} onClick={toggle}>
+      <div
+        className={`flex items-center gap-2 py-0.5 ${hasDetail ? 'cursor-pointer' : ''}`}
+        onClick={toggle}
+        role={hasDetail ? 'button' : undefined}
+        tabIndex={hasDetail ? 0 : undefined}
+        onKeyDown={hasDetail ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } } : undefined}
+      >
         <span className="flex shrink-0 items-center"><StatusIcon status={step.status} /></span>
         <span className={`flex-1 text-xs transition-all duration-150 ${getStepTextClass(step.status)}`}>{step.title}</span>
         {hasDetail && <span className="shrink-0 text-text-semantic-muted"><ChevronIcon expanded={expanded} /></span>}

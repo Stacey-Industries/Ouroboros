@@ -194,7 +194,7 @@ function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): R
       chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
       monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
       gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
-      analyticsContent={<ErrorBoundary label="Analytics"><React.Suspense fallback={<div />}><AnalyticsDashboard /></React.Suspense></ErrorBoundary>}
+      analyticsContent={<ErrorBoundary label="Analytics"><React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #8b949e)' }}>Loading...</div>}><AnalyticsDashboard /></React.Suspense></ErrorBoundary>}
       memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}

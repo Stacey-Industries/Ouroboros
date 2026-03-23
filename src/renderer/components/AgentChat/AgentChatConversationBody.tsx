@@ -162,7 +162,7 @@ interface MessageListProps {
 
 export function MessageList(props: MessageListProps): React.ReactElement {
   return (
-    <div ref={props.scrollRef} onScroll={props.onScroll} className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+    <div ref={props.scrollRef} onScroll={props.onScroll} aria-live="polite" aria-relevant="additions" className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
       <div className="mt-auto space-y-4">
         {props.activeThread.branchInfo && props.onSelectThread && (
           <AgentChatBranchIndicator branchInfo={props.activeThread.branchInfo} onSwitchToParent={props.onSelectThread} />

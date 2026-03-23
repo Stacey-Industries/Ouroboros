@@ -97,17 +97,33 @@ function normalizeBootstrapConfig(config?: Partial<ThemeBootstrapConfig> | null)
   };
 }
 
+function detectSystemTheme(): string {
+  try {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+  } catch {
+    // matchMedia not available — fall through
+  }
+  return defaultThemeId;
+}
+
 async function readThemeBootstrapConfig(): Promise<ThemeBootstrapConfig> {
   try {
     const api = window.electronAPI;
     if (api?.config?.getAll) {
       const stored = await api.config.getAll();
+      // If no theme has been explicitly saved, default based on system preference
+      if (!stored?.activeTheme) {
+        return normalizeBootstrapConfig({ ...stored, activeTheme: detectSystemTheme() });
+      }
       return normalizeBootstrapConfig(stored);
     }
   } catch {
     // IPC not available (e.g. dev/test env) — fall through to default
   }
-  return DEFAULT_BOOTSTRAP_CONFIG;
+  // No IPC — still respect system preference on first launch
+  return { ...DEFAULT_BOOTSTRAP_CONFIG, activeTheme: detectSystemTheme() };
 }
 
 async function writeThemeToStore(id: AppTheme): Promise<void> {

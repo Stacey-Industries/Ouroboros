@@ -198,6 +198,14 @@ const BlameAnnotationRow = memo(function BlameAnnotationRow({
   return (
     <div
       onClick={(event) => onClick(event, blame)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(e as unknown as React.MouseEvent, blame);
+        }
+      }}
       className="text-text-semantic-faint"
       style={{ ...BLAME_ANNOTATION_STYLE, backgroundColor }}
       title={formatBlameTitle(blame)}
@@ -243,7 +251,7 @@ const BlameTooltip = memo(function BlameTooltip({
   const { blame, top, left } = tooltipInfo;
   return (
     <>
-      <div onClick={onClose} style={TOOLTIP_BACKDROP_STYLE} />
+      <div onClick={onClose} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); onClose(); } }} role="button" tabIndex={0} aria-label="Close blame tooltip" style={TOOLTIP_BACKDROP_STYLE} />
       <div className="text-text-semantic-primary" style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}>
         <div style={TOOLTIP_HEADER_STYLE}>
           <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>{blame.hash.slice(0, 8)}</span>
