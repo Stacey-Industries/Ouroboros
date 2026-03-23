@@ -5,20 +5,25 @@
  * and provides helpers for creating, focusing, and listing windows.
  */
 
-import { BrowserWindow, screen, session } from 'electron'
+import { BrowserWindow } from 'electron'
 import path from 'path'
 
-import type { WindowBounds } from './config'
-import { getConfigValue, setConfigValue } from './config'
-
-// mica-electron: native Windows DWM acrylic/mica effects
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const MicaBrowserWindow = process.platform === 'win32' ? require('mica-electron').MicaBrowserWindow : null
-
-/** Resolve the `out/main/` directory. electron-vite may code-split into `out/main/chunks/`. */
-const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname
+import { getConfigValue } from './config'
 import { registerIpcHandlers } from './ipc'
 import { killPtySessionsForWindow } from './pty'
+import {
+  applyMicaEffect,
+  createBoundsSaveHandler,
+  ensureCSP,
+  getInitialWindowPlacement,
+  getInitialWindowSize,
+  markWindowMaximized,
+  MicaBrowserWindow,
+  outMainDir,
+  saveWindowBounds,
+  validateBounds,
+  type WindowCreationState,
+} from './windowManagerHelpers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,15 +38,6 @@ export interface WindowInfo {
   projectRoot: string | null
 }
 
-interface WindowCreationState {
-  isFirst: boolean
-  savedBounds: WindowBounds | null
-  width: number
-  height: number
-  x?: number
-  y?: number
-}
-
 // ─── State ───────────────────────────────────────────────────────────────────
 
 const windows = new Map<number, ManagedWindow>()
@@ -52,55 +48,11 @@ const windowCleanups = new Map<number, () => void>()
 // Per-window bounds-save timers
 const boundsTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Private helpers ──────────────────────────────────────────────────────────
 
-function validateBounds(bounds: WindowBounds): WindowBounds | null {
-  if (bounds.x === undefined || bounds.y === undefined) return null
-
-  const displays = screen.getAllDisplays()
-  const isOnScreen = displays.some((display) => {
-    const { x, y, width, height } = display.workArea
-    return (
-      bounds.x! >= x &&
-      bounds.y! >= y &&
-      bounds.x! + bounds.width <= x + width &&
-      bounds.y! + bounds.height <= y + height
-    )
-  })
-
-  return isOnScreen ? bounds : null
-}
-
-/** Offset new window positions so they cascade instead of stacking. */
-function getCascadeOffset(): { x?: number; y?: number } {
-  const count = windows.size
-  if (count === 0) return {}
-  return { x: 40 + count * 30, y: 40 + count * 30 }
-}
-
-function getSavedWindowBounds(isFirst: boolean): WindowBounds | null {
+function getSavedWindowBounds(isFirst: boolean) {
   if (!isFirst) return null
   return getConfigValue('windowBounds')
-}
-
-function getInitialWindowSize(bounds: WindowBounds | null): Pick<WindowCreationState, 'width' | 'height'> {
-  if (!bounds) {
-    return { width: 1280, height: 800 }
-  }
-
-  return {
-    width: bounds.width,
-    height: bounds.height,
-  }
-}
-
-function getInitialWindowPlacement(bounds: WindowBounds | null, isFirst: boolean): Pick<WindowCreationState, 'x' | 'y'> {
-  if (bounds?.x !== undefined && bounds.y !== undefined) {
-    return { x: bounds.x, y: bounds.y }
-  }
-
-  if (isFirst) return {}
-  return getCascadeOffset()
 }
 
 function getWindowCreationState(): WindowCreationState {
@@ -108,30 +60,22 @@ function getWindowCreationState(): WindowCreationState {
   const savedBounds = getSavedWindowBounds(isFirst)
   const validatedBounds = savedBounds ? validateBounds(savedBounds) : null
   const size = getInitialWindowSize(validatedBounds)
-  const placement = getInitialWindowPlacement(validatedBounds, isFirst)
-
-  return {
-    isFirst,
-    savedBounds,
-    width: size.width,
-    height: size.height,
-    x: placement.x,
-    y: placement.y,
-  }
-}
-
-function getWindowPosition(state: WindowCreationState): { x?: number; y?: number } {
-  if (state.x === undefined || state.y === undefined) return {}
-  return { x: state.x, y: state.y }
+  const placement = getInitialWindowPlacement(validatedBounds, isFirst, windows.size)
+  return { isFirst, savedBounds, width: size.width, height: size.height, ...placement }
 }
 
 function createBrowserWindow(preloadPath: string, state: WindowCreationState): BrowserWindow {
-  const WindowClass = (MicaBrowserWindow && process.platform === 'win32') ? MicaBrowserWindow : BrowserWindow
+  const WindowClass =
+    MicaBrowserWindow && process.platform === 'win32' ? MicaBrowserWindow : BrowserWindow
+
+  const position = state.x !== undefined && state.y !== undefined
+    ? { x: state.x, y: state.y }
+    : {}
 
   const win = new WindowClass({
     width: state.width,
     height: state.height,
-    ...getWindowPosition(state),
+    ...position,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -146,37 +90,18 @@ function createBrowserWindow(preloadPath: string, state: WindowCreationState): B
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
-      experimentalFeatures: false
-    }
+      experimentalFeatures: false,
+    },
   })
 
-  // Always apply glass — acrylic is the permanent visual layer
-  if (process.platform === 'win32' && MicaBrowserWindow && win instanceof MicaBrowserWindow) {
-    win.setDarkTheme()
-    win.setMicaAcrylicEffect()
-    win.setRoundedCorner()
-    // Toggle alwaysFocused per-window so the active window keeps vibrant
-    // acrylic while inactive windows dim naturally. This avoids the DWM
-    // focus-fight flashing that occurs when multiple windows all claim
-    // alwaysFocused(true) simultaneously.
-    win.alwaysFocused(true)
-    win.on('focus', () => { win.alwaysFocused(true) })
-    win.on('blur', () => { win.alwaysFocused(false) })
-  }
-
+  applyMicaEffect(win)
   return win
 }
 
 function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number {
   const winId = win.id
-
-  windows.set(winId, {
-    id: winId,
-    win,
-    projectRoot: projectRoot ?? null,
-  })
+  windows.set(winId, { id: winId, win, projectRoot: projectRoot ?? null })
   windowCleanups.set(winId, registerIpcHandlers(win))
-
   return winId
 }
 
@@ -186,7 +111,6 @@ function loadWindowContent(win: BrowserWindow): void {
     win.loadURL(rendererUrl)
     return
   }
-
   win.loadFile(path.join(outMainDir, '../renderer/index.html'))
 }
 
@@ -197,9 +121,7 @@ function openDevToolsInDevelopment(win: BrowserWindow): void {
 
 function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
   win.once('ready-to-show', () => {
-    if (state.isFirst && state.savedBounds?.isMaximized) {
-      win.maximize()
-    }
+    if (state.isFirst && state.savedBounds?.isMaximized) win.maximize()
     win.show()
     openDevToolsInDevelopment(win)
   })
@@ -212,39 +134,12 @@ function clearBoundsTimer(winId: number): void {
   boundsTimers.delete(winId)
 }
 
-function saveWindowBounds(win: BrowserWindow, isMaximized: boolean): void {
-  const { x, y, width, height } = win.getBounds()
-  setConfigValue('windowBounds', { x, y, width, height, isMaximized })
-}
-
-function markWindowMaximized(): void {
-  const current = getConfigValue('windowBounds')
-  setConfigValue('windowBounds', { ...current, isMaximized: true })
-}
-
-function createBoundsSaveHandler(win: BrowserWindow, winId: number): () => void {
-  return () => {
-    clearBoundsTimer(winId)
-    boundsTimers.set(
-      winId,
-      setTimeout(() => {
-        boundsTimers.delete(winId)
-        if (win.isDestroyed() || win.isMaximized()) return
-        saveWindowBounds(win, false)
-      }, 500)
-    )
-  }
-}
-
 function setupWindowBoundsHandlers(win: BrowserWindow, winId: number): void {
-  const scheduleSaveBounds = createBoundsSaveHandler(win, winId)
-
+  const scheduleSaveBounds = createBoundsSaveHandler(win, winId, boundsTimers)
   win.on('resize', scheduleSaveBounds)
   win.on('move', scheduleSaveBounds)
   win.on('maximize', markWindowMaximized)
-  win.on('unmaximize', () => {
-    saveWindowBounds(win, false)
-  })
+  win.on('unmaximize', () => { saveWindowBounds(win, false) })
 }
 
 function cleanupIpcHandlers(winId: number): void {
@@ -257,12 +152,9 @@ function cleanupIpcHandlers(winId: number): void {
 function setupWindowCloseHandler(win: BrowserWindow, winId: number): void {
   win.on('close', () => {
     clearBoundsTimer(winId)
-    if (!win.isMaximized()) {
-      saveWindowBounds(win, false)
-    }
+    if (!win.isMaximized()) saveWindowBounds(win, false)
     killPtySessionsForWindow(winId)
   })
-
   // Defer IPC handler cleanup to 'closed' — the renderer still makes IPC
   // calls (config:set, files:readDir, etc.) during beforeunload/unload which
   // run AFTER 'close' but BEFORE the window is destroyed.
@@ -278,37 +170,6 @@ function setupWindowLifecycle(win: BrowserWindow, winId: number, state: WindowCr
   setupWindowCloseHandler(win, winId)
 }
 
-// ─── CSP (only install once) ─────────────────────────────────────────────────
-
-let cspInstalled = false
-
-function ensureCSP(): void {
-  if (cspInstalled) return
-  cspInstalled = true
-
-  const isDev = process.env.NODE_ENV === 'development'
-  const webPort = isDev ? '*' : String((getConfigValue('webAccessPort') as number) ?? 7890)
-
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
-            "style-src 'self' 'unsafe-inline'",
-            "font-src 'self' data:",
-            "img-src 'self' data: blob: https:",
-            `connect-src 'self' ws://localhost:${webPort} http://localhost:${webPort}`,
-            "worker-src 'self' blob:"
-          ].join('; ')
-        ]
-      }
-    })
-  })
-}
-
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -321,14 +182,8 @@ export function createWindow(projectRoot?: string): BrowserWindow {
   const preloadPath = path.join(outMainDir, '../preload/index.js')
   const win = createBrowserWindow(preloadPath, state)
   const winId = registerManagedWindow(win, projectRoot)
-
   loadWindowContent(win)
   setupWindowLifecycle(win, winId, state)
-
-  // ── Debounced bounds persistence (only for the focused window) ────────────
-
-  // ── Cleanup on close ──────────────────────────────────────────────────────
-
   return win
 }
 
@@ -341,17 +196,12 @@ export function getAllWindows(): ManagedWindow[] {
 }
 
 export function getWindowInfos(): WindowInfo[] {
-  return Array.from(windows.values()).map((mw) => ({
-    id: mw.id,
-    projectRoot: mw.projectRoot,
-  }))
+  return Array.from(windows.values()).map((mw) => ({ id: mw.id, projectRoot: mw.projectRoot }))
 }
 
 export function setWindowProjectRoot(winId: number, projectRoot: string): void {
   const managed = windows.get(winId)
-  if (managed) {
-    managed.projectRoot = projectRoot
-  }
+  if (managed) managed.projectRoot = projectRoot
   // Start context refresh for the new project root (timer may already be running for another root).
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
@@ -362,9 +212,7 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
 
 export function closeWindow(id: number): void {
   const managed = windows.get(id)
-  if (managed && !managed.win.isDestroyed()) {
-    managed.win.close()
-  }
+  if (managed && !managed.win.isDestroyed()) managed.win.close()
 }
 
 /**
@@ -401,9 +249,7 @@ export function getWindowCount(): number {
 export function getAllActiveWindows(): BrowserWindow[] {
   const result: BrowserWindow[] = []
   for (const managed of windows.values()) {
-    if (!managed.win.isDestroyed()) {
-      result.push(managed.win)
-    }
+    if (!managed.win.isDestroyed()) result.push(managed.win)
   }
   return result
 }

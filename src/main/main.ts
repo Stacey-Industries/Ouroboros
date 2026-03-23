@@ -1,5 +1,4 @@
 import { app, BrowserWindow, crashReporter } from 'electron';
-import fs from 'fs/promises';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
@@ -23,6 +22,7 @@ import {
   stopContextRefreshTimer,
   terminateContextWorker,
 } from './ipc-handlers/agentChat';
+import { configureAutoUpdater, writeCrashLog } from './mainStartup';
 import { buildApplicationMenu } from './menu';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 import {
@@ -34,8 +34,7 @@ import {
 } from './perfMetrics';
 import { killAllPtySessions } from './pty';
 import { runAllMigrations } from './storage/migrate';
-import { getAutoUpdater } from './updater';
-import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
+import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
 import { createWindow, getAllActiveWindows } from './windowManager';
@@ -46,36 +45,6 @@ crashReporter.start({
   uploadToServer: false,
   compress: true,
 });
-
-// â”€â”€â”€ Crash logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async function getCrashLogDir(): Promise<string> {
-  const dir = path.join(app.getPath('userData'), 'crashes');
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
-  await fs.mkdir(dir, { recursive: true });
-  return dir;
-}
-
-async function writeCrashLog(source: string, details: string): Promise<void> {
-  try {
-    const dir = await getCrashLogDir();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const file = path.join(dir, `crash-${timestamp}.log`);
-    const content = [
-      `Source: ${source}`,
-      `Timestamp: ${new Date().toISOString()}`,
-      `App version: ${app.getVersion()}`,
-      `Platform: ${process.platform} ${process.arch}`,
-      '',
-      details,
-    ].join('\n');
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.writeFile(file, content, 'utf-8');
-    console.error(`[crash] Logged to ${file}`);
-  } catch (err) {
-    console.error('[crash] Failed to write crash log:', err);
-  }
-}
 
 // Capture uncaught main-process exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -106,16 +75,6 @@ let mainWindow: BrowserWindow | null = null;
 
 // â”€â”€â”€ Performance metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function broadcastToActiveWindows(channel: string, payload: unknown): void {
-  for (const win of getAllActiveWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(channel, payload);
-    }
-  }
-  broadcastToWebClients(channel, payload);
-}
-
-/** Broadcasts perf metrics to all open windows. */
 function startPerfMetrics(): void {
   startManagedPerfMetrics();
 }
@@ -153,54 +112,6 @@ function registerRenderProcessCrashLogging(): void {
     console.error('[crash] render-process-gone:', msg);
     void writeCrashLog('renderer:render-process-gone', msg);
   });
-}
-
-function registerAutoUpdaterEvents(): void {
-  const updater = getAutoUpdater();
-  if (!updater) return;
-  updater.on('checking-for-update', () =>
-    broadcastToActiveWindows('updater:event', { type: 'checking-for-update' }),
-  );
-  updater.on('update-available', (info: unknown) =>
-    broadcastToActiveWindows('updater:event', { type: 'update-available', info }),
-  );
-  updater.on('update-not-available', (info: unknown) =>
-    broadcastToActiveWindows('updater:event', { type: 'update-not-available', info }),
-  );
-  updater.on('download-progress', (progress: unknown) =>
-    broadcastToActiveWindows('updater:event', { type: 'download-progress', progress }),
-  );
-  updater.on('update-downloaded', (info: unknown) =>
-    broadcastToActiveWindows('updater:event', { type: 'update-downloaded', info }),
-  );
-  updater.on('error', (err: unknown) =>
-    broadcastToActiveWindows('updater:event', {
-      type: 'error',
-      error: err instanceof Error ? err.message : String(err),
-    }),
-  );
-}
-
-function scheduleAutoUpdateCheck(): void {
-  if (!app.isPackaged) {
-    return;
-  }
-  const updater = getAutoUpdater();
-  if (!updater) return;
-  setTimeout(() => {
-    updater.checkForUpdates().catch((err: Error) => {
-      console.log('[updater] Auto-check failed:', err.message);
-    });
-  }, 5000);
-}
-
-function configureAutoUpdater(): void {
-  if (!getAutoUpdater()) {
-    return;
-  }
-  // autoDownload / autoInstallOnAppQuit are set in updater.ts
-  registerAutoUpdaterEvents();
-  scheduleAutoUpdateCheck();
 }
 
 function registerWindowLifecycleHandlers(): void {

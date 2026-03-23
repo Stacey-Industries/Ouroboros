@@ -176,53 +176,49 @@ function registerMessageHandlers(channels: string[], svc: AgentChatService): voi
   );
 }
 
+// ─── Memory handler helpers ───────────────────────────────────────────────────
+
+async function handleCreateMemory(workspaceRoot: unknown, entry: unknown) {
+  const root = requireValidString(workspaceRoot, 'workspaceRoot');
+  const obj = requireValidObject(entry, 'memory entry');
+  const newEntry = sessionMemoryStore.createEntry('manual', {
+    type: (obj.type as SessionMemoryEntry['type']) || 'preference',
+    content: requireValidString(obj.content, 'content'),
+    relevantFiles: Array.isArray(obj.relevantFiles) ? (obj.relevantFiles as string[]) : [],
+  });
+  await sessionMemoryStore.saveMemories(root, [newEntry]);
+  return { success: true, memory: newEntry };
+}
+
+async function handleUpdateMemory(workspaceRoot: unknown, memoryId: unknown, updates: unknown) {
+  const root = requireValidString(workspaceRoot, 'workspaceRoot');
+  const id = requireValidString(memoryId, 'memoryId');
+  const obj = requireValidObject(updates, 'updates');
+  const updated = await sessionMemoryStore.updateEntry(
+    root,
+    id,
+    obj as Partial<Pick<SessionMemoryEntry, 'content' | 'type' | 'relevantFiles'>>,
+  );
+  if (!updated) return { success: false, error: 'Memory not found' };
+  return { success: true, memory: updated };
+}
+
+async function handleDeleteMemory(workspaceRoot: unknown, memoryId: unknown) {
+  const root = requireValidString(workspaceRoot, 'workspaceRoot');
+  const id = requireValidString(memoryId, 'memoryId');
+  const deleted = await sessionMemoryStore.deleteEntry(root, id);
+  if (!deleted) return { success: false, error: 'Memory not found' };
+  return { success: true };
+}
+
 function registerMemoryHandlers(channels: string[]): void {
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.listMemories, async (workspaceRoot: unknown) => {
     const root = requireValidString(workspaceRoot, 'workspaceRoot');
     return { success: true, memories: await sessionMemoryStore.loadMemories(root) };
   });
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.createMemory,
-    async (workspaceRoot: unknown, entry: unknown) => {
-      const root = requireValidString(workspaceRoot, 'workspaceRoot');
-      const obj = requireValidObject(entry, 'memory entry');
-      const newEntry = sessionMemoryStore.createEntry('manual', {
-        type: (obj.type as SessionMemoryEntry['type']) || 'preference',
-        content: requireValidString(obj.content, 'content'),
-        relevantFiles: Array.isArray(obj.relevantFiles) ? (obj.relevantFiles as string[]) : [],
-      });
-      await sessionMemoryStore.saveMemories(root, [newEntry]);
-      return { success: true, memory: newEntry };
-    },
-  );
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.updateMemory,
-    async (workspaceRoot: unknown, memoryId: unknown, updates: unknown) => {
-      const root = requireValidString(workspaceRoot, 'workspaceRoot');
-      const id = requireValidString(memoryId, 'memoryId');
-      const obj = requireValidObject(updates, 'updates');
-      const updated = await sessionMemoryStore.updateEntry(
-        root,
-        id,
-        obj as Partial<Pick<SessionMemoryEntry, 'content' | 'type' | 'relevantFiles'>>,
-      );
-      if (!updated) return { success: false, error: 'Memory not found' };
-      return { success: true, memory: updated };
-    },
-  );
-  register(
-    channels,
-    AGENT_CHAT_INVOKE_CHANNELS.deleteMemory,
-    async (workspaceRoot: unknown, memoryId: unknown) => {
-      const root = requireValidString(workspaceRoot, 'workspaceRoot');
-      const id = requireValidString(memoryId, 'memoryId');
-      const deleted = await sessionMemoryStore.deleteEntry(root, id);
-      if (!deleted) return { success: false, error: 'Memory not found' };
-      return { success: true };
-    },
-  );
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.createMemory, handleCreateMemory);
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.updateMemory, handleUpdateMemory);
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, handleDeleteMemory);
 }
 
 // ─── Session event projection ─────────────────────────────────────────────────

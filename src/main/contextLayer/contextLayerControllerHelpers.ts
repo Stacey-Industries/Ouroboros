@@ -1,13 +1,19 @@
 /**
- * contextLayerControllerHelpers.ts — Low-level helpers for module detection.
- * Contains directory tree building, module creation, and utility functions.
+ * contextLayerControllerHelpers.ts — Low-level helpers for module detection
+ * and controller lifecycle extracted from contextLayerController.ts.
  */
 
 import { createHash } from 'crypto';
+import { readFile } from 'fs/promises';
 import path from 'path';
 
 import type { IndexedRepoFile } from '../orchestration/repoIndexer';
-import { getStrategyForExtension } from './languageStrategies';
+import {
+  aiEnrichModules,
+  type AiSummarizerState,
+} from './contextLayerAiSummarizer';
+import type { ModuleCacheState } from './contextLayerRefresher';
+import { configureTypeScriptAliases, getStrategyForExtension } from './languageStrategies';
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -213,4 +219,117 @@ export function selectRepresentativeFiles(mod: DetectedModule): IndexedRepoFile[
   if (remaining[0]) selected.push(remaining[0]);
 
   return selected.slice(0, 3);
+}
+
+// ---------------------------------------------------------------------------
+// Controller lifecycle helpers
+// ---------------------------------------------------------------------------
+
+export async function loadPathAliases(workspaceRoots: string[]): Promise<void> {
+  if (workspaceRoots.length === 0) return;
+  const root = workspaceRoots[0];
+  const candidates = ['tsconfig.node.json', 'tsconfig.web.json', 'tsconfig.json'];
+  const mergedPaths: Record<string, string[]> = {};
+  for (const name of candidates) {
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from known config file names within workspace root
+      const raw = await readFile(path.join(root, name), 'utf-8');
+      const parsed = JSON.parse(raw) as { compilerOptions?: { paths?: Record<string, string[]> } };
+      const paths = parsed?.compilerOptions?.paths;
+      if (paths && typeof paths === 'object') Object.assign(mergedPaths, paths);
+    } catch {
+      // File doesn't exist or isn't valid JSON — skip
+    }
+  }
+  if (Object.keys(mergedPaths).length > 0) configureTypeScriptAliases(mergedPaths);
+}
+
+export function logInitResults(
+  modules: DetectedModule[],
+  cachedModules: Map<string, CachedModuleData>,
+  startMs: number,
+): void {
+  const elapsedMs = Date.now() - startMs;
+  const updated = modules.filter((m) => {
+    const cached = cachedModules.get(m.id);
+    return cached && !cached.aiEnriched;
+  }).length;
+  const skipped = modules.length - updated;
+  console.log(
+    `[context-layer] Indexed ${modules.length} modules in ${elapsedMs}ms` +
+      ` (${updated} updated, ${skipped} unchanged)`,
+  );
+  if (updated > 0 && modules.length < 80) logModuleDetails(modules);
+}
+
+function logModuleDetails(modules: DetectedModule[]): void {
+  const sorted = modules.slice().sort((a, b) => b.files.length - a.files.length);
+  for (const m of sorted) {
+    const s = m.boundarySignals;
+    const importInfo =
+      s.barrelImportCount + s.directImportCount > 0
+        ? `, imports: ${s.barrelImportCount}barrel/${s.directImportCount}direct`
+        : '';
+    console.log(
+      `[context-layer]   ${m.id} (${m.files.length} files, ${s.boundaryStrength}${s.hasBarrel ? ', barrel' : ''}, cohesion: ${(m.cohesion * 100).toFixed(0)}%${importInfo})`,
+    );
+  }
+}
+
+interface FireEnrichmentOpts {
+  modules: DetectedModule[];
+  autoSummarize: boolean;
+  moduleCache: ModuleCacheState;
+  aiState: AiSummarizerState;
+  workspaceRoots: string[];
+}
+
+export function fireAndForgetEnrichment(opts: FireEnrichmentOpts): void {
+  const { modules, autoSummarize, moduleCache, aiState, workspaceRoots } = opts;
+  if (!autoSummarize) return;
+  const toEnrich = modules
+    .filter((m) => {
+      const cached = moduleCache.cachedModules.get(m.id);
+      return cached && !cached.aiEnriched;
+    })
+    .map((m) => m.id);
+  if (toEnrich.length === 0) return;
+  console.log(`[context-layer] Queuing AI enrichment for ${toEnrich.length} module(s)`);
+  aiEnrichModules({
+    moduleIds: toEnrich,
+    cachedModules: moduleCache.cachedModules,
+    aiState,
+    workspaceRoots,
+  }).catch((err: unknown) => {
+    console.warn('[context-layer] AI enrichment failed:', err);
+  });
+}
+
+export function enrichUnenrichedModules(
+  moduleCache: ModuleCacheState,
+  aiState: AiSummarizerState,
+  workspaceRoots: string[],
+): void {
+  const unenriched = Array.from(moduleCache.cachedModules.entries())
+    .filter(([, v]) => !v.aiEnriched)
+    .map(([id]) => id);
+  if (unenriched.length === 0) return;
+  console.log(
+    `[context-layer] AutoSummarize enabled — enriching ${unenriched.length} cached modules`,
+  );
+  aiEnrichModules({
+    moduleIds: unenriched,
+    cachedModules: moduleCache.cachedModules,
+    aiState,
+    workspaceRoots,
+  }).catch((err: unknown) => {
+    console.warn('[context-layer] AI enrichment on autoSummarize enable failed:', err);
+  });
+}
+
+export function clearModuleCache(moduleCache: ModuleCacheState): void {
+  console.log('[context-layer] Disabled — clearing cache');
+  moduleCache.cachedModules.clear();
+  moduleCache.cachedRepoMap = null;
+  moduleCache.lastSnapshotCacheKey = null;
 }

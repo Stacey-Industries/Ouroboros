@@ -2,8 +2,7 @@ import path from 'path'
 
 import {
   type ContextFileSnapshot,
-  extractImportSpecifiers,
-  referencesTarget,
+  escapeRegExp,
   resolveWorkspaceFile,
   toPathKey,
   uniqueFiles,
@@ -145,4 +144,78 @@ export function buildSeedFiles(
     ...diagnosticFiles,
     ...(liveIdeState.activeFile ? [liveIdeState.activeFile] : []),
   ])
+}
+
+export function extractKeywords(
+  goal: string,
+  stopWords: ReadonlySet<string>,
+  limit = 12,
+): string[] {
+  const tokens: string[] = []
+  for (const raw of goal.split(/\s+/)) {
+    const stripped = raw.replace(/^[^\w]+|[^\w]+$/g, '')
+    if (!stripped) continue
+    for (const part of stripped.split(/[-_]+/)) {
+      for (const sub of part.replace(/([a-z])([A-Z])/g, '$1 $2').split(' ')) {
+        tokens.push(sub.toLowerCase())
+      }
+    }
+  }
+  return [
+    ...new Set(tokens.filter((t) => t.length >= 3 && !stopWords.has(t) && !/^\d+$/.test(t))),
+  ].slice(0, limit)
+}
+
+export function findKeywordMatches(
+  filePath: string,
+  content: string | null,
+  keywords: string[],
+): string[] {
+  const pathValue = filePath.toLowerCase()
+  const matches: string[] = []
+  for (const keyword of keywords) {
+    if (
+      pathValue.includes(keyword) ||
+      // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp above
+      (content && new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(content))
+    ) {
+      matches.push(keyword)
+    }
+  }
+  return matches
+}
+
+export function extractImportSpecifiers(content: string | null): string[] {
+  if (!content) return []
+  return Array.from(
+    content.matchAll(
+      /(?:import\s+[^'"]*from\s*|export\s+[^'"]*from\s*|require\()\s*['"]([^'"]+)['"]/g,
+    ),
+  ).flatMap((match) => (match[1] ? [match[1]] : []))
+}
+
+export function referencesTarget(
+  sourceFile: string,
+  targetFile: string,
+  imports: string[],
+): boolean {
+  const relativeValue = path.posix
+    .normalize(path.relative(path.dirname(sourceFile), targetFile).replace(/\\/g, '/'))
+    .replace(/\.(tsx?|jsx?|mjs|cjs|json)$/i, '')
+    .replace(/\/index$/i, '')
+  const baseValue = path.basename(targetFile).replace(/\.(tsx?|jsx?|mjs|cjs|json)$/i, '')
+  const candidates = new Set([
+    relativeValue,
+    relativeValue.startsWith('.') ? relativeValue : `./${relativeValue}`,
+    baseValue,
+  ])
+  return imports.some(
+    (entry) =>
+      candidates.has(
+        entry
+          .replace(/\\/g, '/')
+          .replace(/\.(tsx?|jsx?|mjs|cjs|json)$/i, '')
+          .replace(/\/index$/i, ''),
+      ) || entry.endsWith(`/${baseValue}`),
+  )
 }

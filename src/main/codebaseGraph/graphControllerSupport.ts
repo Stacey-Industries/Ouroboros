@@ -7,7 +7,48 @@ import path from 'path';
 
 import type { GraphController } from './graphController';
 import type { GraphStore } from './graphStore';
-import type { GraphEdge } from './graphTypes';
+import type { GraphEdge, GraphNode } from './graphTypes';
+
+// ---------------------------------------------------------------------------
+// Worker path helpers
+// ---------------------------------------------------------------------------
+
+export function resolveWorkerPath(dirname: string): string {
+  const outMainDir = dirname.endsWith('chunks') ? path.dirname(dirname) : dirname;
+  return path.join(outMainDir, 'graphWorker.js');
+}
+
+// ---------------------------------------------------------------------------
+// Index application helpers
+// ---------------------------------------------------------------------------
+
+export function applyFullIndexToStore(
+  store: GraphStore,
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+): void {
+  store.clear();
+  store.addBulk(nodes, edges);
+  store.save().catch((e: unknown) => console.error('[codebase-graph] Save failed:', e));
+}
+
+export function applyReindexToStore(
+  store: GraphStore,
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  removedRelPaths: string[],
+): void {
+  for (const relPath of removedRelPaths) store.clearFile(relPath);
+  for (const node of nodes) store.addNode(node);
+  store.replaceAllEdges(edges);
+  store.save().catch((e: unknown) => console.error('[codebase-graph] Save failed:', e));
+}
+
+export function logIndexProgress(processed: number, total: number): void {
+  if (processed % 50 === 0 || processed === total) {
+    console.log(`[codebase-graph] Indexed ${processed}/${total} files`);
+  }
+}
 
 export function isTraceObject(trace: unknown): boolean {
   return typeof trace === 'object' && trace !== null && 'source' in trace && 'target' in trace;

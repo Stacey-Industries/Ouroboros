@@ -63,6 +63,35 @@ export type { ActiveStreamContext, AgentChatBridgeRuntime };
 // Send message
 // ---------------------------------------------------------------------------
 
+function findActiveThreadConflict(
+  activeSends: AgentChatBridgeRuntime['activeSends'],
+  threadId: string | undefined,
+): string | undefined {
+  if (!threadId) return undefined;
+  for (const [, ctx] of activeSends) {
+    if (ctx.threadId === threadId) {
+      return 'A task is already running for this thread. Wait for it to finish or stop it first.';
+    }
+  }
+  return undefined;
+}
+
+function buildEarlyReturnResult(pending: Awaited<ReturnType<typeof preparePendingSend>>): AgentChatSendResult {
+  console.log(
+    '[agentChat:debug] sendMessage returning thread:',
+    pending.thread.id,
+    'messages:',
+    pending.thread.messages.length,
+    'ids:',
+    pending.thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(', '),
+  );
+  return {
+    success: true,
+    thread: pending.thread,
+    message: pending.thread.messages.find((m) => m.id === pending.messageId),
+  } as AgentChatSendResult;
+}
+
 async function sendMessageWithBridge(
   runtime: AgentChatBridgeRuntime,
   request: AgentChatSendMessageRequest,
@@ -70,16 +99,8 @@ async function sendMessageWithBridge(
   const validationError = validateSendRequest(request);
   if (validationError) return buildSendFailureResult({ error: validationError });
 
-  if (request.threadId) {
-    for (const [, ctx] of runtime.activeSends) {
-      if (ctx.threadId === request.threadId) {
-        return buildSendFailureResult({
-          error:
-            'A task is already running for this thread. Wait for it to finish or stop it first.',
-        });
-      }
-    }
-  }
+  const conflictError = findActiveThreadConflict(runtime.activeSends, request.threadId);
+  if (conflictError) return buildSendFailureResult({ error: conflictError });
 
   try {
     const pending = await preparePendingSend({
@@ -100,20 +121,7 @@ async function sendMessageWithBridge(
       console.error('[agentChat] background executePendingSend failed:', getErrorMessage(err));
     });
 
-    console.log(
-      '[agentChat:debug] sendMessage returning thread:',
-      pending.thread.id,
-      'messages:',
-      pending.thread.messages.length,
-      'ids:',
-      pending.thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(', '),
-    );
-
-    return {
-      success: true,
-      thread: pending.thread,
-      message: pending.thread.messages.find((m) => m.id === pending.messageId),
-    } as AgentChatSendResult;
+    return buildEarlyReturnResult(pending);
   } catch (error) {
     console.error('[agentChat] sendMessage failed:', getErrorMessage(error));
     if (error instanceof Error && error.stack) console.error(error.stack);

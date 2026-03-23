@@ -7,7 +7,22 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+import {
+  DEPENDENCY_PATTERNS,
+  FRAMEWORK_SIGNATURES,
+  MONOREPO_MARKERS,
+  TEST_FRAMEWORKS,
+} from './contextDetectorsHelpers';
 import type { ProjectContext } from './contextTypes';
+
+// Re-export constants consumed by contextScanner.ts and contextGenerator.ts
+export {
+  CONFIG_FILES,
+  DEPENDENCY_PATTERNS,
+  DIR_PURPOSES,
+  FRAMEWORK_SIGNATURES,
+  TEST_FRAMEWORKS,
+} from './contextDetectorsHelpers';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -46,191 +61,6 @@ export async function readTextSafe(filePath: string, maxBytes = 8192): Promise<s
   }
 }
 
-// ─── Detection data ──────────────────────────────────────────────────────────
-
-export const FRAMEWORK_SIGNATURES: Record<string, { deps: string[]; label: string }> = {
-  next: { deps: ['next'], label: 'Next.js' },
-  nuxt: { deps: ['nuxt', 'nuxt3'], label: 'Nuxt' },
-  remix: { deps: ['@remix-run/node', '@remix-run/react'], label: 'Remix' },
-  astro: { deps: ['astro'], label: 'Astro' },
-  sveltekit: { deps: ['@sveltejs/kit'], label: 'SvelteKit' },
-  gatsby: { deps: ['gatsby'], label: 'Gatsby' },
-  react: { deps: ['react'], label: 'React' },
-  vue: { deps: ['vue'], label: 'Vue' },
-  svelte: { deps: ['svelte'], label: 'Svelte' },
-  angular: { deps: ['@angular/core'], label: 'Angular' },
-  express: { deps: ['express'], label: 'Express' },
-  fastify: { deps: ['fastify'], label: 'Fastify' },
-  hono: { deps: ['hono'], label: 'Hono' },
-  nestjs: { deps: ['@nestjs/core'], label: 'NestJS' },
-  electron: { deps: ['electron'], label: 'Electron' },
-  tauri: { deps: ['@tauri-apps/api'], label: 'Tauri' },
-  django: { deps: ['django', 'Django'], label: 'Django' },
-  flask: { deps: ['flask', 'Flask'], label: 'Flask' },
-  fastapi: { deps: ['fastapi'], label: 'FastAPI' },
-  rails: { deps: ['rails'], label: 'Ruby on Rails' },
-};
-
-export const TEST_FRAMEWORKS: Record<string, string[]> = {
-  vitest: ['vitest'],
-  jest: ['jest', '@jest/core'],
-  mocha: ['mocha'],
-  ava: ['ava'],
-  tap: ['tap'],
-  pytest: ['pytest'],
-  unittest: [],
-  rspec: ['rspec'],
-  'cargo test': [],
-  'go test': [],
-};
-
-export const DIR_PURPOSES: Record<string, string> = {
-  src: 'Source code',
-  lib: 'Library code',
-  app: 'Application code (may contain routes/pages)',
-  pages: 'Page routes',
-  components: 'UI components',
-  hooks: 'Custom hooks',
-  utils: 'Utility functions',
-  helpers: 'Helper functions',
-  types: 'Type definitions',
-  models: 'Data models',
-  services: 'Service layer',
-  api: 'API routes or handlers',
-  routes: 'Route definitions',
-  middleware: 'Middleware functions',
-  controllers: 'Controller layer',
-  views: 'View templates',
-  templates: 'Template files',
-  static: 'Static assets',
-  public: 'Public assets (served directly)',
-  assets: 'Assets (images, fonts, etc.)',
-  styles: 'Stylesheets',
-  css: 'CSS files',
-  config: 'Configuration files',
-  scripts: 'Build/utility scripts',
-  test: 'Test files',
-  tests: 'Test files',
-  __tests__: 'Test files (Jest convention)',
-  spec: 'Test specifications',
-  e2e: 'End-to-end tests',
-  docs: 'Documentation',
-  doc: 'Documentation',
-  migrations: 'Database migrations',
-  prisma: 'Prisma schema and migrations',
-  db: 'Database configuration',
-  locales: 'Internationalization files',
-  i18n: 'Internationalization',
-  plugins: 'Plugin modules',
-  extensions: 'Extension modules',
-  '.github': 'GitHub workflows and config',
-  '.vscode': 'VS Code workspace settings',
-  dist: 'Build output',
-  build: 'Build output',
-  out: 'Build output',
-  node_modules: 'npm dependencies (auto-managed)',
-  vendor: 'Vendored dependencies',
-  packages: 'Monorepo packages',
-  apps: 'Monorepo applications',
-  crates: 'Rust workspace crates',
-};
-
-export const CONFIG_FILES = [
-  'tsconfig.json',
-  'jsconfig.json',
-  '.eslintrc',
-  '.eslintrc.js',
-  '.eslintrc.json',
-  '.eslintrc.yml',
-  'eslint.config.js',
-  'eslint.config.mjs',
-  '.prettierrc',
-  '.prettierrc.js',
-  '.prettierrc.json',
-  'prettier.config.js',
-  'vite.config.ts',
-  'vite.config.js',
-  'vite.config.mts',
-  'webpack.config.js',
-  'webpack.config.ts',
-  'rollup.config.js',
-  'rollup.config.mjs',
-  'esbuild.config.js',
-  'esbuild.config.mjs',
-  'turbo.json',
-  'nx.json',
-  'lerna.json',
-  '.babelrc',
-  'babel.config.js',
-  'babel.config.json',
-  'tailwind.config.js',
-  'tailwind.config.ts',
-  'tailwind.config.mjs',
-  'postcss.config.js',
-  'postcss.config.cjs',
-  'jest.config.js',
-  'jest.config.ts',
-  'jest.config.json',
-  'vitest.config.ts',
-  'vitest.config.js',
-  '.env',
-  '.env.example',
-  '.env.local',
-  'docker-compose.yml',
-  'docker-compose.yaml',
-  'Dockerfile',
-  'Makefile',
-  '.github/workflows',
-  'vercel.json',
-  'netlify.toml',
-  'electron-builder.yml',
-  'electron-builder.json5',
-  'pyproject.toml',
-  'setup.py',
-  'setup.cfg',
-  'Cargo.toml',
-  'go.mod',
-  'Gemfile',
-  '.gitignore',
-];
-
-const MONOREPO_MARKERS = ['pnpm-workspace.yaml', 'lerna.json', 'turbo.json', 'nx.json'];
-
-const DEPENDENCY_PATTERNS = [
-  {
-    label: 'Tailwind CSS',
-    matches: (allDeps: Record<string, string>) => Boolean(allDeps['tailwindcss']),
-  },
-  {
-    label: 'Prisma ORM',
-    matches: (allDeps: Record<string, string>) =>
-      Boolean(allDeps['prisma'] || allDeps['@prisma/client']),
-  },
-  {
-    label: 'Drizzle ORM',
-    matches: (allDeps: Record<string, string>) => Boolean(allDeps['drizzle-orm']),
-  },
-  {
-    label: 'tRPC',
-    matches: (allDeps: Record<string, string>) =>
-      Boolean(allDeps['trpc'] || allDeps['@trpc/server']),
-  },
-  {
-    label: 'GraphQL',
-    matches: (allDeps: Record<string, string>) =>
-      Boolean(allDeps['graphql'] || allDeps['@apollo/client'] || allDeps['@graphql-tools/schema']),
-  },
-  {
-    label: 'Docker',
-    matches: (allDeps: Record<string, string>, keyConfigs: string[]) =>
-      Boolean(allDeps['docker-compose'] || keyConfigs.some((c) => c.startsWith('docker'))),
-  },
-  {
-    label: 'Electron app',
-    matches: (allDeps: Record<string, string>) => Boolean(allDeps['electron']),
-  },
-];
-
 // ─── Detection functions ─────────────────────────────────────────────────────
 
 export function detectFramework(allDeps: Record<string, string>): string | null {
@@ -267,16 +97,11 @@ async function detectTypeScriptPatterns(
   allDeps: Record<string, string>,
   projectRoot: string,
 ): Promise<string[]> {
-  if (!allDeps['typescript']) {
-    return [];
-  }
-
+  if (!allDeps['typescript']) return [];
   const patterns: string[] = [];
   const tsconfig = await readJsonSafe(path.join(projectRoot, 'tsconfig.json'));
   const compilerOptions = tsconfig?.compilerOptions as Record<string, unknown> | undefined;
-  if (compilerOptions?.strict === true) {
-    patterns.push('TypeScript strict mode');
-  }
+  if (compilerOptions?.strict === true) patterns.push('TypeScript strict mode');
   const moduleType = compilerOptions?.module;
   if (
     typeof moduleType === 'string' &&
@@ -295,13 +120,9 @@ async function isMonorepoProject(
   projectRoot: string,
   pkg: Record<string, unknown> | null,
 ): Promise<boolean> {
-  if (pkg?.workspaces) {
-    return true;
-  }
+  if (pkg?.workspaces) return true;
   for (const marker of MONOREPO_MARKERS) {
-    if (await fileExists(path.join(projectRoot, marker))) {
-      return true;
-    }
+    if (await fileExists(path.join(projectRoot, marker))) return true;
   }
   return false;
 }
@@ -309,12 +130,8 @@ async function isMonorepoProject(
 async function detectProjectPatterns(projectRoot: string): Promise<string[]> {
   const pkg = await readPackageJson(projectRoot);
   const patterns: string[] = [];
-  if (pkg?.type === 'module') {
-    patterns.push('ESM modules');
-  }
-  if (await isMonorepoProject(projectRoot, pkg)) {
-    patterns.push('Monorepo');
-  }
+  if (pkg?.type === 'module') patterns.push('ESM modules');
+  if (await isMonorepoProject(projectRoot, pkg)) patterns.push('Monorepo');
   return patterns;
 }
 

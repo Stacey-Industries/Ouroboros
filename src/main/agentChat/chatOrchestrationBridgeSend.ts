@@ -153,6 +153,27 @@ export function buildStreamContext(
   };
 }
 
+async function startTaskWithCleanup(args: {
+  orchestration: OrchestrationClient;
+  runtime: AgentChatBridgeRuntime;
+  streamCtx: ActiveStreamContext;
+  taskId: string;
+  et0: number;
+}): Promise<StartTaskResult> {
+  const { orchestration, runtime, streamCtx, taskId, et0 } = args;
+  const et3 = Date.now();
+  try {
+    const started = await orchestration.startTask(taskId);
+    console.log('[agentChat:timing:main] startTask:', Date.now() - et3, 'ms');
+    console.log('[agentChat:timing:main] total executePendingSend:', Date.now() - et0, 'ms');
+    return started;
+  } catch (err) {
+    stopIncrementalFlush(streamCtx);
+    runtime.activeSends.delete(taskId);
+    throw err;
+  }
+}
+
 export async function executePendingSendCore(args: {
   orchestration: OrchestrationClient;
   pending: PreparedSend;
@@ -163,20 +184,12 @@ export async function executePendingSendCore(args: {
   linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] };
   et0: number;
 }): Promise<AgentChatSendResult> {
-  const { orchestration, runtime, threadStore, streamCtx, created, linked, et0 } = args;
+  const { orchestration, runtime, threadStore, streamCtx, created, linked } = args;
   try {
     startIncrementalFlush(runtime, streamCtx);
-    let started: StartTaskResult;
-    try {
-      const et3 = Date.now();
-      started = await orchestration.startTask(created.taskId);
-      console.log('[agentChat:timing:main] startTask:', Date.now() - et3, 'ms');
-      console.log('[agentChat:timing:main] total executePendingSend:', Date.now() - et0, 'ms');
-    } catch (err) {
-      stopIncrementalFlush(streamCtx);
-      runtime.activeSends.delete(created.taskId);
-      throw err;
-    }
+    const started = await startTaskWithCleanup({
+      orchestration, runtime, streamCtx, taskId: created.taskId, et0: args.et0,
+    });
     if (!started.success) {
       console.error('[agentChat] startTask failed:', started.error);
       stopIncrementalFlush(streamCtx);
@@ -200,15 +213,17 @@ export async function executePendingSendCore(args: {
 // Execute pending send (main entry)
 // ---------------------------------------------------------------------------
 
-export async function executePendingSend(args: {
+type ValidCreated = CreateTaskResult & {
+  taskId: string;
+  session: NonNullable<CreateTaskResult['session']>;
+};
+
+async function createAndLinkTask(args: {
   orchestration: OrchestrationClient;
   pending: PreparedSend;
-  runtime: AgentChatBridgeRuntime;
   threadStore: AgentChatThreadStore;
-}): Promise<AgentChatSendResult> {
-  const et0 = Date.now();
-  await new Promise<void>((r) => setTimeout(r, 0));
-
+  et0: number;
+}): Promise<{ validCreated: ValidCreated; linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] } } | AgentChatSendResult> {
   const preSnapshotPromise = captureHeadHash(args.pending.thread.workspaceRoot);
   const et1 = Date.now();
   const created = await args.orchestration.createTask(args.pending.taskRequest);
@@ -227,21 +242,33 @@ export async function executePendingSend(args: {
   }
 
   const et2 = Date.now();
-  const linked = await persistCreatedLink({
-    created,
-    pending: args.pending,
-    threadStore: args.threadStore,
-  });
+  const linked = await persistCreatedLink({ created, pending: args.pending, threadStore: args.threadStore });
   console.log('[agentChat:timing:main] persistCreatedLink:', Date.now() - et2, 'ms');
   if (preSnapshotHash) linked.link.preSnapshotHash = preSnapshotHash;
+  return { validCreated: created as ValidCreated, linked };
+}
 
-  const validCreated = created as CreateTaskResult & {
-    taskId: string;
-    session: NonNullable<CreateTaskResult['session']>;
-  };
-  const assistantMessageId = buildAssistantMessageId(args.runtime.createId, created.session.id);
+export async function executePendingSend(args: {
+  orchestration: OrchestrationClient;
+  pending: PreparedSend;
+  runtime: AgentChatBridgeRuntime;
+  threadStore: AgentChatThreadStore;
+}): Promise<AgentChatSendResult> {
+  const et0 = Date.now();
+  await new Promise<void>((r) => setTimeout(r, 0));
+
+  const result = await createAndLinkTask({
+    orchestration: args.orchestration,
+    pending: args.pending,
+    threadStore: args.threadStore,
+    et0,
+  });
+  if ('success' in result) return result;
+
+  const { validCreated, linked } = result;
+  const assistantMessageId = buildAssistantMessageId(args.runtime.createId, validCreated.session.id);
   const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId);
-  args.runtime.activeSends.set(created.taskId, streamCtx);
+  args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 
   return executePendingSendCore({
     orchestration: args.orchestration,

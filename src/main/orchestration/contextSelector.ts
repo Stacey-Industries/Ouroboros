@@ -4,8 +4,6 @@ import path from 'path'
 import {
   collectLiveIdeState,
   type ContextFileSnapshot,
-  extractKeywords,
-  findKeywordMatches,
   getPersistentSnapshotCache,
   loadContextFileSnapshotFast,
   resolveWorkspaceFile,
@@ -15,6 +13,8 @@ import {
 import {
   addReason,
   buildSeedFiles,
+  extractKeywords,
+  findKeywordMatches,
   findRelatedSeeds,
   getOrCreateCandidate,
   type MutableCandidate,

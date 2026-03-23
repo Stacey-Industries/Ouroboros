@@ -4,18 +4,21 @@
  * attaches them to context packets before they reach the provider.
  */
 
-import { readFile } from 'fs/promises';
-import path from 'path';
-
 import { buildLspDiagnosticsSummary } from '../orchestration/lspDiagnosticsProvider';
 import { buildRepoIndexSnapshot, type RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { ContextPacket } from '../orchestration/types';
 import {
-  aiEnrichModules,
   type AiSummarizerState,
   createAiSummarizerState,
   loadPersistedSummaries,
 } from './contextLayerAiSummarizer';
+import {
+  clearModuleCache,
+  enrichUnenrichedModules,
+  fireAndForgetEnrichment,
+  loadPathAliases,
+  logInitResults,
+} from './contextLayerControllerHelpers';
 import {
   applyGraphAnalysis,
   applyImportAnalysis,
@@ -35,7 +38,6 @@ import {
   updateModuleCache,
 } from './contextLayerRefresher';
 import type { ContextLayerConfig } from './contextLayerTypes';
-import { configureTypeScriptAliases } from './languageStrategies';
 
 // ---------------------------------------------------------------------------
 // Public interface
@@ -93,28 +95,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
   }
 
   private async loadPathAliases(): Promise<void> {
-    if (this.workspaceRoots.length === 0) return;
-    const root = this.workspaceRoots[0];
-    const candidates = ['tsconfig.node.json', 'tsconfig.web.json', 'tsconfig.json'];
-    const mergedPaths: Record<string, string[]> = {};
-
-    for (const name of candidates) {
-      try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from known config file names within workspace root
-        const raw = await readFile(path.join(root, name), 'utf-8');
-        const parsed = JSON.parse(raw);
-        const paths = parsed?.compilerOptions?.paths;
-        if (paths && typeof paths === 'object') {
-          Object.assign(mergedPaths, paths);
-        }
-      } catch {
-        // File doesn't exist or isn't valid JSON — skip
-      }
-    }
-
-    if (Object.keys(mergedPaths).length > 0) {
-      configureTypeScriptAliases(mergedPaths);
-    }
+    await loadPathAliases(this.workspaceRoots);
   }
 
   async initialize(): Promise<void> {
@@ -151,56 +132,17 @@ class ContextLayerControllerImpl implements ContextLayerController {
   }
 
   private logInitResults(modules: DetectedModule[], startMs: number): void {
-    const elapsedMs = Date.now() - startMs;
-    const updated = modules.filter((m) => {
-      const cached = this.moduleCache.cachedModules.get(m.id);
-      return cached && !cached.aiEnriched;
-    }).length;
-    const skipped = modules.length - updated;
-
-    console.log(
-      `[context-layer] Indexed ${modules.length} modules in ${elapsedMs}ms` +
-        ` (${updated} updated, ${skipped} unchanged)`,
-    );
-    if (updated > 0 && modules.length < 80) {
-      this.logModuleDetails(modules);
-    }
-  }
-
-  private logModuleDetails(modules: DetectedModule[]): void {
-    const sorted = modules.slice().sort((a, b) => b.files.length - a.files.length);
-    for (const m of sorted) {
-      const s = m.boundarySignals;
-      const importInfo =
-        s.barrelImportCount + s.directImportCount > 0
-          ? `, imports: ${s.barrelImportCount}barrel/${s.directImportCount}direct`
-          : '';
-      console.log(
-        `[context-layer]   ${m.id} (${m.files.length} files, ${s.boundaryStrength}${s.hasBarrel ? ', barrel' : ''}, cohesion: ${(m.cohesion * 100).toFixed(0)}%${importInfo})`,
-      );
-    }
+    logInitResults(modules, this.moduleCache.cachedModules, startMs);
   }
 
   private fireAndForgetEnrichment(modules: DetectedModule[]): void {
-    if (!this.config.autoSummarize) return;
-    const toEnrich = modules
-      .filter((m) => {
-        const cached = this.moduleCache.cachedModules.get(m.id);
-        return cached && !cached.aiEnriched;
-      })
-      .map((m) => m.id);
-
-    if (toEnrich.length > 0) {
-      console.log(`[context-layer] Queuing AI enrichment for ${toEnrich.length} module(s)`);
-      aiEnrichModules({
-        moduleIds: toEnrich,
-        cachedModules: this.moduleCache.cachedModules,
-        aiState: this.aiState,
-        workspaceRoots: this.workspaceRoots,
-      }).catch((err) => {
-        console.warn('[context-layer] AI enrichment failed:', err);
-      });
-    }
+    fireAndForgetEnrichment({
+      modules,
+      autoSummarize: this.config.autoSummarize,
+      moduleCache: this.moduleCache,
+      aiState: this.aiState,
+      workspaceRoots: this.workspaceRoots,
+    });
   }
 
   async enrichPacket(
@@ -253,29 +195,11 @@ class ContextLayerControllerImpl implements ContextLayerController {
   }
 
   private clearCache(): void {
-    console.log('[context-layer] Disabled — clearing cache');
-    this.moduleCache.cachedModules.clear();
-    this.moduleCache.cachedRepoMap = null;
-    this.moduleCache.lastSnapshotCacheKey = null;
+    clearModuleCache(this.moduleCache);
   }
 
   private enrichUnenrichedModules(): void {
-    const unenriched = Array.from(this.moduleCache.cachedModules.entries())
-      .filter(([, v]) => !v.aiEnriched)
-      .map(([id]) => id);
-    if (unenriched.length > 0) {
-      console.log(
-        `[context-layer] AutoSummarize enabled — enriching ${unenriched.length} cached modules`,
-      );
-      aiEnrichModules({
-        moduleIds: unenriched,
-        cachedModules: this.moduleCache.cachedModules,
-        aiState: this.aiState,
-        workspaceRoots: this.workspaceRoots,
-      }).catch((err) => {
-        console.warn('[context-layer] AI enrichment on autoSummarize enable failed:', err);
-      });
-    }
+    enrichUnenrichedModules(this.moduleCache, this.aiState, this.workspaceRoots);
   }
 
   onSessionStart(): void {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
+import { app, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -13,13 +13,7 @@ import {
   getUsageSummary,
   getWindowedUsage,
 } from '../usageReader';
-import {
-  closeWindow,
-  createWindow,
-  focusWindow,
-  getWindowInfos,
-  setWindowProjectRoot,
-} from '../windowManager';
+import { registerExtensionHandlers, registerWindowHandlers } from './miscRegistrarsHelpers';
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
 
@@ -32,7 +26,6 @@ type FailureResponse = { success: false; error: string };
 type EmptySuccessResponse = { success: true };
 type SuccessResponse<T extends object> = EmptySuccessResponse & T;
 
-// AutoUpdaterLike interface kept for the createUpdaterHandler helper below.
 interface AutoUpdaterLike {
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
@@ -152,33 +145,10 @@ async function writeCrashLog(source: string, message: string, stack?: string): P
   await fs.writeFile(filePath, content, 'utf-8');
 }
 
-async function registerExtensionTask<T>(
-  task: (extensions: typeof import('../extensions')) => Promise<T> | T,
-): Promise<T | FailureResponse> {
-  try {
-    const extensions = await import('../extensions');
-    return await task(extensions);
-  } catch (error) {
-    return fail(error);
-  }
-}
-
 export function registerUpdaterHandlers(channels: ChannelList): void {
-  registerChannel(
-    channels,
-    'updater:check',
-    createUpdaterHandler((updater) => updater.checkForUpdates()),
-  );
-  registerChannel(
-    channels,
-    'updater:download',
-    createUpdaterHandler((updater) => updater.downloadUpdate()),
-  );
-  registerChannel(
-    channels,
-    'updater:install',
-    createUpdaterHandler((updater) => updater.quitAndInstall()),
-  );
+  registerChannel(channels, 'updater:check', createUpdaterHandler((u) => u.checkForUpdates()));
+  registerChannel(channels, 'updater:download', createUpdaterHandler((u) => u.downloadUpdate()));
+  registerChannel(channels, 'updater:install', createUpdaterHandler((u) => u.quitAndInstall()));
 }
 
 export function registerCostHandlers(channels: ChannelList): void {
@@ -254,96 +224,7 @@ export function registerSymbolHandlers(channels: ChannelList): void {
   });
 }
 
-function registerWindowFrameControls(channels: ChannelList): void {
-  registerChannel(channels, 'window:minimize', async (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.minimize();
-    return ok();
-  });
-  registerChannel(channels, 'window:maximize-toggle', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) {
-      if (win.isMaximized()) win.unmaximize();
-      else win.maximize();
-    }
-    return ok();
-  });
-  registerChannel(channels, 'window:close-self', async (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.close();
-    return ok();
-  });
-  registerChannel(channels, 'window:toggle-fullscreen', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) win.setFullScreen(!win.isFullScreen());
-    return ok();
-  });
-  registerChannel(channels, 'window:toggle-devtools', async (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools();
-    return ok();
-  });
-}
-
-export function registerWindowHandlers(channels: ChannelList): void {
-  registerChannel(channels, 'window:new', (_event, projectRoot?: string) =>
-    runQuery(() => {
-      const newWindow = createWindow(projectRoot);
-      if (projectRoot) setWindowProjectRoot(newWindow.id, projectRoot);
-      return { windowId: newWindow.id };
-    }),
-  );
-  registerChannel(channels, 'window:list', async () =>
-    runQuery(() => ({ windows: getWindowInfos() })),
-  );
-  registerChannel(channels, 'window:focus', async (_event, windowId: number) =>
-    runAction(() => focusWindow(windowId)),
-  );
-  registerChannel(channels, 'window:close', async (_event, windowId: number) =>
-    runAction(() => closeWindow(windowId)),
-  );
-  registerWindowFrameControls(channels);
-  registerChannel(channels, 'app:open-logs-folder', async () => {
-    await shell.openPath(app.getPath('logs'));
-    return ok();
-  });
-}
-
-export function registerExtensionHandlers(channels: ChannelList): void {
-  registerChannel(channels, 'extensions:list', async () =>
-    registerExtensionTask((extensions) => ok({ extensions: extensions.listExtensions() })),
-  );
-  registerChannel(channels, 'extensions:enable', async (_event, name: string) =>
-    registerExtensionTask((extensions) => extensions.enableExtension(name)),
-  );
-  registerChannel(channels, 'extensions:disable', async (_event, name: string) =>
-    registerExtensionTask((extensions) => extensions.disableExtension(name)),
-  );
-  registerChannel(channels, 'extensions:install', async (_event, sourcePath: string) =>
-    registerExtensionTask((extensions) => extensions.installExtension(sourcePath)),
-  );
-  registerChannel(channels, 'extensions:uninstall', async (_event, name: string) =>
-    registerExtensionTask((extensions) => extensions.uninstallExtension(name)),
-  );
-  registerChannel(channels, 'extensions:getLog', async (_event, name: string) =>
-    registerExtensionTask((extensions) => extensions.getExtensionLog(name)),
-  );
-  registerChannel(channels, 'extensions:openFolder', async () =>
-    registerExtensionTask(async (extensions) => {
-      const extensionsPath = extensions.getExtensionsDirPath();
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- extensionsPath derived from extensions module, not user input
-      await fs.mkdir(extensionsPath, { recursive: true });
-      await shell.openPath(extensionsPath);
-      return ok();
-    }),
-  );
-  registerChannel(channels, 'extensions:activate', async (_event, name: string) =>
-    registerExtensionTask((extensions) => extensions.forceActivateExtension(name)),
-  );
-  registerChannel(channels, 'extensions:commandExecuted', async (_event, commandId: string) =>
-    registerExtensionTask(async (extensions) => {
-      await extensions.dispatchCommandEvent(commandId);
-      return ok();
-    }),
-  );
-}
+export { registerExtensionHandlers,registerWindowHandlers };
 
 export function registerApprovalHandlers(channels: ChannelList): void {
   registerChannel(
@@ -354,9 +235,7 @@ export function registerApprovalHandlers(channels: ChannelList): void {
         const written = await respondToApproval(requestId, { decision, reason });
         return { error: written ? undefined : 'Failed to write response file' };
       }).then((result) => {
-        if (!result.success) {
-          return result;
-        }
+        if (!result.success) return result;
         return { success: result.error === undefined, error: result.error };
       }),
   );

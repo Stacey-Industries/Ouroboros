@@ -3,7 +3,14 @@
 import path from 'path';
 import { Worker } from 'worker_threads';
 
-import { ingestTracesIntoStore, manageAdrAction } from './graphControllerSupport';
+import {
+  applyFullIndexToStore,
+  applyReindexToStore,
+  ingestTracesIntoStore,
+  logIndexProgress,
+  manageAdrAction,
+  resolveWorkerPath,
+} from './graphControllerSupport';
 export { getGraphController, setGraphController } from './graphControllerSupport';
 import { GraphQueryEngine } from './graphQuery';
 import { GraphStore } from './graphStore';
@@ -180,12 +187,7 @@ export class GraphController {
 
   private spawnWorker(): void {
     if (this.worker) return;
-
-    // Workers are emitted at out/main/. __dirname may be out/main/chunks/
-    // when electron-vite code-splits, so resolve from the known output root.
-    const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname;
-    const workerPath = path.join(outMainDir, 'graphWorker.js');
-    this.worker = new Worker(workerPath);
+    this.worker = new Worker(resolveWorkerPath(__dirname));
 
     this.worker.on('message', (msg: WorkerResponse) => {
       this.handleWorkerMessage(msg);
@@ -226,20 +228,20 @@ export class GraphController {
         this.applyReindex(msg.nodes, msg.edges, msg.removedRelPaths);
         break;
       case 'progress':
-        this.logProgress(msg.filesProcessed, msg.totalFiles);
+        logIndexProgress(msg.filesProcessed, msg.totalFiles);
         break;
       case 'error':
-        this.handleWorkerError(msg.message, msg.requestType);
+        console.error(`[codebase-graph] Worker error (${msg.requestType}):`, msg.message);
+        this.rejectPendingInit(new Error(msg.message));
+        this.drainPendingReindex();
         break;
     }
   }
 
   private applyFullIndex(nodes: GraphNode[], edges: GraphEdge[], durationMs: number): void {
-    this.store.clear();
-    this.store.addBulk(nodes, edges);
+    applyFullIndexToStore(this.store, nodes, edges);
     this.indexedAt = Date.now();
     this.indexDurationMs = durationMs;
-    this.store.save().catch((e) => console.error('[codebase-graph] Save failed:', e));
     console.log(
       `[codebase-graph] Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`,
     );
@@ -248,25 +250,8 @@ export class GraphController {
   }
 
   private applyReindex(nodes: GraphNode[], edges: GraphEdge[], removedRelPaths: string[]): void {
-    for (const relPath of removedRelPaths) {
-      this.store.clearFile(relPath);
-    }
-    for (const node of nodes) this.store.addNode(node);
-    this.store.replaceAllEdges(edges);
+    applyReindexToStore(this.store, nodes, edges, removedRelPaths);
     this.indexedAt = Date.now();
-    this.store.save().catch((e) => console.error('[codebase-graph] Save failed:', e));
-    this.drainPendingReindex();
-  }
-
-  private logProgress(processed: number, total: number): void {
-    if (processed % 50 === 0 || processed === total) {
-      console.log(`[codebase-graph] Indexed ${processed}/${total} files`);
-    }
-  }
-
-  private handleWorkerError(message: string, requestType: string): void {
-    console.error(`[codebase-graph] Worker error (${requestType}):`, message);
-    this.rejectPendingInit(new Error(message));
     this.drainPendingReindex();
   }
 

@@ -117,18 +117,11 @@ async function createTask(
   return { success: true, taskId, session, state: { status: 'idle', updatedAt: Date.now() } };
 }
 
-async function startTask(taskId: string, state: TaskState): Promise<TaskMutationResult> {
-  const { sessions, providerListeners, sessionListeners, defaultAdapter } = state;
-  const session = sessions.get(taskId);
-  if (!session) return { success: false, error: `Task ${taskId} not found` };
-
-  const sink: ProviderProgressSink = {
-    emit: (event: ProviderProgressEvent) => providerListeners.forEach((l) => l(event)),
-  };
-  const adapter = providerRegistry.has(session.request.provider)
-    ? getAdapter(session.request.provider)
-    : defaultAdapter;
-
+async function submitTaskToAdapter(
+  session: TaskSessionRecord,
+  adapter: ProviderAdapter,
+  sink: ProviderProgressSink,
+): Promise<{ session: TaskSessionRecord } | { error: string }> {
   try {
     const launched = await adapter.submitTask(
       {
@@ -141,27 +134,30 @@ async function startTask(taskId: string, state: TaskState): Promise<TaskMutation
       },
       sink,
     );
-    const updated = {
-      ...session,
-      status: 'applying' as const,
-      updatedAt: Date.now(),
-      providerSession: launched.session,
-    };
-    sessions.set(taskId, updated);
-    sessionListeners.forEach((l) => l(updated));
-    return {
-      success: true,
-      taskId,
-      session: updated,
-      state: { status: 'applying', updatedAt: Date.now() },
-    };
+    return { session: { ...session, status: 'applying' as const, updatedAt: Date.now(), providerSession: launched.session } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-      taskId,
-    };
+    return { error: error instanceof Error ? error.message : String(error) };
   }
+}
+
+async function startTask(taskId: string, state: TaskState): Promise<TaskMutationResult> {
+  const { sessions, providerListeners, sessionListeners, defaultAdapter } = state;
+  const session = sessions.get(taskId);
+  if (!session) return { success: false, error: `Task ${taskId} not found` };
+
+  const sink: ProviderProgressSink = {
+    emit: (event: ProviderProgressEvent) => providerListeners.forEach((l) => l(event)),
+  };
+  const adapter = providerRegistry.has(session.request.provider)
+    ? getAdapter(session.request.provider)
+    : defaultAdapter;
+
+  const result = await submitTaskToAdapter(session, adapter, sink);
+  if ('error' in result) return { success: false, error: result.error, taskId };
+
+  sessions.set(taskId, result.session);
+  sessionListeners.forEach((l) => l(result.session));
+  return { success: true, taskId, session: result.session, state: { status: 'applying', updatedAt: Date.now() } };
 }
 
 async function cancelTask(taskId: string, state: TaskState): Promise<TaskMutationResult> {
