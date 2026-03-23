@@ -55,7 +55,9 @@ function saveSizes(sizes: PanelSizes): void {
     // ignore storage errors
   }
   if (typeof window !== 'undefined' && window.electronAPI?.config?.set) {
-    window.electronAPI.config.set('panelSizes', sizes).catch((error) => { console.error('[layout] Failed to persist panel sizes:', error) });
+    window.electronAPI.config.set('panelSizes', sizes).catch((error) => {
+      console.error('[layout] Failed to persist panel sizes:', error);
+    });
   }
 }
 
@@ -71,7 +73,7 @@ function getPreviewLine(): HTMLDivElement {
     previewLine = document.createElement('div');
     previewLine.style.cssText =
       'position:fixed;z-index:9999;pointer-events:none;display:none;' +
-      'background:var(--accent, #58a6ff);opacity:0.6;transition:none;';
+      'background:var(--interactive-accent, #58a6ff);opacity:0.6;transition:none;';
     document.body.appendChild(previewLine);
   }
   return previewLine;
@@ -103,7 +105,12 @@ function hidePreviewLine(): void {
 
 export interface UseResizableReturn {
   sizes: PanelSizes;
-  startResize: (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => void;
+  startResize: (
+    panel: PanelId,
+    direction: ResizeDirection,
+    startValue: number,
+    startPos: number,
+  ) => void;
   resetSize: (panel: PanelId) => void;
   /** Apply a complete set of panel sizes (used by workspace layout switching) */
   applySizes: (newSizes: PanelSizes) => void;
@@ -182,16 +189,21 @@ function useResizeDrag(
   setSizes: Dispatch<SetStateAction<PanelSizes>>,
   dragStateRef: MutableRefObject<DragState | null>,
 ): UseResizableReturn['startResize'] {
-  const handlePointerMove = useCallback((event: PointerEvent) => {
-    const dragState = dragStateRef.current;
-    if (!dragState) return;
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
+      const dragState = dragStateRef.current;
+      if (!dragState) return;
 
-    dragState.currentSize = clampPanelSize(
-      dragState.panel,
-      dragState.startValue + getResizeSign(dragState.panel) * getResizeDelta(dragState.direction, event, dragState.startPos),
-    );
-    updatePreviewLine(dragState.direction, event);
-  }, [dragStateRef]);
+      dragState.currentSize = clampPanelSize(
+        dragState.panel,
+        dragState.startValue +
+          getResizeSign(dragState.panel) *
+            getResizeDelta(dragState.direction, event, dragState.startPos),
+      );
+      updatePreviewLine(dragState.direction, event);
+    },
+    [dragStateRef],
+  );
 
   const handlePointerUp = useCallback(() => {
     finishResizeDrag(dragStateRef, setSizes, handlePointerMove, handlePointerUp);

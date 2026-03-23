@@ -32,7 +32,11 @@ export function SessionReplayLayout({
       <ReplayHeader session={session} onClose={onClose} />
       <ReplayTransportBar replay={replay} />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <StepList steps={replay.steps} currentStep={replay.currentStep} onSelect={replay.handleSeek} />
+        <StepList
+          steps={replay.steps}
+          currentStep={replay.currentStep}
+          onSelect={replay.handleSeek}
+        />
         <div style={{ flex: 1, overflow: 'hidden' }}>
           {replay.currentStepData && (
             <StepDetail
@@ -75,8 +79,13 @@ function ReplayHeader({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className="text-text-semantic-primary" style={{ fontWeight: 600 }}>Session Replay</span>
-        <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-text-semantic-primary" style={{ fontWeight: 600 }}>
+          Session Replay
+        </span>
+        <span
+          className="text-text-semantic-muted"
+          style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
+        >
           {session.taskLabel}
         </span>
       </div>
@@ -102,7 +111,11 @@ function ReplayTransportBar({ replay }: { replay: SessionReplayController }): Re
   );
 }
 
-function ReplayTransportControls({ replay }: { replay: SessionReplayController }): React.ReactElement {
+function ReplayTransportControls({
+  replay,
+}: {
+  replay: SessionReplayController;
+}): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}>
       <ReplayTransportButtons replay={replay} />
@@ -112,10 +125,18 @@ function ReplayTransportControls({ replay }: { replay: SessionReplayController }
   );
 }
 
-function ReplayTransportButtons({ replay }: { replay: SessionReplayController }): React.ReactElement {
+function ReplayTransportButtons({
+  replay,
+}: {
+  replay: SessionReplayController;
+}): React.ReactElement {
   return (
     <>
-      <TransportBtn onClick={replay.handlePrev} disabled={replay.currentStep === 0} title="Previous step (Left arrow)">
+      <TransportBtn
+        onClick={replay.handlePrev}
+        disabled={replay.currentStep === 0}
+        title="Previous step (Left arrow)"
+      >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
           <path d="M3 6l5-4v8z" />
           <rect x="1" y="2" width="1.5" height="8" rx="0.5" />
@@ -232,8 +253,8 @@ function TransportBtn({
         height: '24px',
         borderRadius: '4px',
         border: 'none',
-        background: hovered && !disabled ? 'var(--bg-tertiary)' : 'transparent',
-        color: disabled ? 'var(--text-faint)' : 'var(--text)',
+        background: hovered && !disabled ? 'var(--surface-raised)' : 'transparent',
+        color: disabled ? 'var(--text-faint)' : 'var(--text-primary)',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.4 : 1,
         transition: 'background 0.1s',
@@ -266,16 +287,29 @@ function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElement {
         gap: '4px',
         padding: '2px 6px',
         borderRadius: '4px',
-        border: `1px solid ${copied ? 'var(--success)' : 'var(--border)'}`,
+        border: `1px solid ${copied ? 'var(--status-success)' : 'var(--border-default)'}`,
         background: 'transparent',
-        color: copied ? 'var(--success)' : hovered ? 'var(--text)' : 'var(--text-muted)',
+        color: copied
+          ? 'var(--status-success)'
+          : hovered
+            ? 'var(--text-primary)'
+            : 'var(--text-muted)',
         cursor: 'pointer',
         fontSize: '0.625rem',
         fontFamily: 'var(--font-ui)',
         transition: 'color 0.15s, border-color 0.15s',
       }}
     >
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3" />
         <path d="M8 2v8M5 7l3 3 3-3" />
       </svg>
@@ -302,11 +336,19 @@ function CloseBtn({ onClick }: { onClick: () => void }): React.ReactElement {
         borderRadius: '4px',
         border: 'none',
         background: 'transparent',
-        color: hovered ? 'var(--text)' : 'var(--text-faint)',
+        color: hovered ? 'var(--text-primary)' : 'var(--text-faint)',
         cursor: 'pointer',
       }}
     >
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
         <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" />
       </svg>
     </button>

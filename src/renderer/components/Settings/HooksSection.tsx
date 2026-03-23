@@ -32,13 +32,28 @@ function TcpPortSection({ draft, onChange }: HooksSectionProps): React.ReactElem
   return (
     <section>
       <SectionLabel>TCP Fallback Port</SectionLabel>
-      <p className="text-text-semantic-muted" style={descStyle}>Port for the TCP hook server (macOS/Linux). Range: 1024-65535.</p>
+      <p className="text-text-semantic-muted" style={descStyle}>
+        Port for the TCP hook server (macOS/Linux). Range: 1024-65535.
+      </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <input type="number" min={1024} max={65535} value={draft.hooksServerPort}
-          onChange={handlePortChange} aria-label="TCP hooks server port" className="text-text-semantic-primary" style={portInputStyle}
+        <input
+          type="number"
+          min={1024}
+          max={65535}
+          value={draft.hooksServerPort}
+          onChange={handlePortChange}
+          aria-label="TCP hooks server port"
+          className="text-text-semantic-primary"
+          style={portInputStyle}
         />
         {draft.hooksServerPort !== 3333 && (
-          <button onClick={() => onChange('hooksServerPort', 3333)} className="text-text-semantic-muted" style={resetBtnStyle}>Reset to 3333</button>
+          <button
+            onClick={() => onChange('hooksServerPort', 3333)}
+            className="text-text-semantic-muted"
+            style={resetBtnStyle}
+          >
+            Reset to 3333
+          </button>
         )}
       </div>
       <p className="text-status-warning" style={{ fontSize: '11px', marginTop: '8px' }}>
@@ -52,7 +67,9 @@ function HookScriptsLocation(): React.ReactElement {
   return (
     <section>
       <SectionLabel>Hook Scripts Location</SectionLabel>
-      <div className="text-text-semantic-secondary" style={locationBoxStyle}>~/.claude/hooks/</div>
+      <div className="text-text-semantic-secondary" style={locationBoxStyle}>
+        ~/.claude/hooks/
+      </div>
     </section>
   );
 }
@@ -60,17 +77,30 @@ function HookScriptsLocation(): React.ReactElement {
 const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
 
 const portInputStyle: React.CSSProperties = {
-  width: '100px', padding: '7px 10px', borderRadius: '6px',
-  border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
+  width: '100px',
+  padding: '7px 10px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '13px',
+  fontFamily: 'var(--font-mono)',
+  outline: 'none',
 };
 
 const resetBtnStyle: React.CSSProperties = {
-  padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)',
-  background: 'transparent', fontSize: '11px', cursor: 'pointer',
+  padding: '4px 8px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-default)',
+  background: 'transparent',
+  fontSize: '11px',
+  cursor: 'pointer',
 };
 
 const locationBoxStyle: React.CSSProperties = {
-  padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)', fontSize: '12px', fontFamily: 'var(--font-mono)',
+  padding: '10px 14px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '12px',
+  fontFamily: 'var(--font-mono)',
 };

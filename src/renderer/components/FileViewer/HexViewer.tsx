@@ -26,7 +26,7 @@ const toolbarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '8px',
   padding: '4px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
   fontSize: '0.6875rem',
@@ -59,7 +59,7 @@ const headerStyle: React.CSSProperties = {
   flexShrink: 0,
   display: 'flex',
   padding: '4px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   fontSize: '0.625rem',
   fontFamily: 'var(--font-mono)',
@@ -99,7 +99,7 @@ function buildHexRow(data: Uint8Array, offset: number): { hex: string; ascii: st
     asciiParts.push(isPrintable(b) ? String.fromCharCode(b) : '.');
 
     // Extra space between groups of 8
-    if ((i - offset) === 7) {
+    if (i - offset === 7) {
       hexParts.push('');
     }
   }
@@ -109,7 +109,7 @@ function buildHexRow(data: Uint8Array, offset: number): { hex: string; ascii: st
   for (let i = 0; i < remaining; i++) {
     hexParts.push('  ');
     asciiParts.push(' ');
-    if ((end - offset + i) === 7) {
+    if (end - offset + i === 7) {
       hexParts.push('');
     }
   }
@@ -182,18 +182,42 @@ function useHexViewerViewport({
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => { for (const entry of entries) setViewHeight(entry.contentRect.height); });
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setViewHeight(entry.contentRect.height);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [scrollRef]);
-  const goToMatch = useCallback((index: number) => {
-    if (index < 0 || index >= matchOffsets.length) return;
-    const row = Math.floor(matchOffsets[index] / BYTES_PER_ROW);
-    scrollRef.current?.scrollTo({ top: Math.max(0, row * ROW_HEIGHT - viewHeight / 3), behavior: 'smooth' });
-  }, [matchOffsets, scrollRef, viewHeight]);
-  const openExternal = useCallback(() => { window.electronAPI.app.openExternal(`file:///${filePath.replace(/\\/g, '/').replace(/^\//, '')}`); }, [filePath]);
-  const onScroll = useCallback(() => { if (scrollRef.current) setScrollTop(scrollRef.current.scrollTop); }, [scrollRef]);
-  return { goToMatch, openExternal, onScroll, totalRows: Math.ceil(content.length / BYTES_PER_ROW), startRow: Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2), endRow: Math.min(Math.ceil(content.length / BYTES_PER_ROW), Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + 2) };
+  const goToMatch = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= matchOffsets.length) return;
+      const row = Math.floor(matchOffsets[index] / BYTES_PER_ROW);
+      scrollRef.current?.scrollTo({
+        top: Math.max(0, row * ROW_HEIGHT - viewHeight / 3),
+        behavior: 'smooth',
+      });
+    },
+    [matchOffsets, scrollRef, viewHeight],
+  );
+  const openExternal = useCallback(() => {
+    window.electronAPI.app.openExternal(
+      `file:///${filePath.replace(/\\/g, '/').replace(/^\//, '')}`,
+    );
+  }, [filePath]);
+  const onScroll = useCallback(() => {
+    if (scrollRef.current) setScrollTop(scrollRef.current.scrollTop);
+  }, [scrollRef]);
+  return {
+    goToMatch,
+    openExternal,
+    onScroll,
+    totalRows: Math.ceil(content.length / BYTES_PER_ROW),
+    startRow: Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2),
+    endRow: Math.min(
+      Math.ceil(content.length / BYTES_PER_ROW),
+      Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + 2,
+    ),
+  };
 }
 
 function useHexViewerState(content: Uint8Array, filePath: string) {
@@ -203,7 +227,11 @@ function useHexViewerState(content: Uint8Array, filePath: string) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const pattern = parseSearchQuery(searchQuery);
-    if (!pattern) { setMatchOffsets([]); setActiveMatchIndex(-1); return; }
+    if (!pattern) {
+      setMatchOffsets([]);
+      setActiveMatchIndex(-1);
+      return;
+    }
     const matches = findMatches(content, pattern);
     setMatchOffsets(matches);
     setActiveMatchIndex(matches.length > 0 ? 0 : -1);
@@ -212,11 +240,25 @@ function useHexViewerState(content: Uint8Array, filePath: string) {
     const rows = new Set<number>();
     const pattern = parseSearchQuery(searchQuery);
     if (!pattern) return rows;
-    for (const offset of matchOffsets) for (let r = Math.floor(offset / BYTES_PER_ROW); r <= Math.floor((offset + pattern.length - 1) / BYTES_PER_ROW); r++) rows.add(r);
+    for (const offset of matchOffsets)
+      for (
+        let r = Math.floor(offset / BYTES_PER_ROW);
+        r <= Math.floor((offset + pattern.length - 1) / BYTES_PER_ROW);
+        r++
+      )
+        rows.add(r);
     return rows;
   }, [matchOffsets, searchQuery]);
   const viewport = useHexViewerViewport({ scrollRef, content, matchOffsets, filePath });
-  return { searchQuery, setSearchQuery, matchOffsets, activeMatchIndex, matchedRows, ...viewport, scrollRef };
+  return {
+    searchQuery,
+    setSearchQuery,
+    matchOffsets,
+    activeMatchIndex,
+    matchedRows,
+    ...viewport,
+    scrollRef,
+  };
 }
 
 function HexViewerToolbar({
@@ -236,16 +278,58 @@ function HexViewerToolbar({
   openExternal: () => void;
   contentLength: number;
 }): React.ReactElement {
-  return <div className="text-text-semantic-muted" style={toolbarStyle}>
-    <span style={{ fontWeight: 600 }}>Hex</span>
-    <span>{formatBytes(contentLength)}</span>
-    <div style={{ width: 1, height: 16, backgroundColor: 'var(--border-semantic)', margin: '0 4px' }} />
-    <input type="text" placeholder="Search hex or ASCII..." className="text-text-semantic-primary" style={searchInputStyle} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-    {matchOffsets.length > 0 ? <><span>{activeMatchIndex + 1} / {matchOffsets.length}</span><button onClick={() => goToMatch(activeMatchIndex - 1)} className="text-text-semantic-muted" style={btnStyle} disabled={activeMatchIndex <= 0}>Prev</button><button onClick={() => goToMatch(activeMatchIndex + 1)} className="text-text-semantic-muted" style={btnStyle} disabled={activeMatchIndex >= matchOffsets.length - 1}>Next</button></> : null}
-    {searchQuery && matchOffsets.length === 0 ? <span className="text-status-error">No matches</span> : null}
-    <div style={{ flex: 1 }} />
-    <button onClick={openExternal} className="text-text-semantic-muted" style={btnStyle} title="Open in external application">Open External</button>
-  </div>;
+  return (
+    <div className="text-text-semantic-muted" style={toolbarStyle}>
+      <span style={{ fontWeight: 600 }}>Hex</span>
+      <span>{formatBytes(contentLength)}</span>
+      <div
+        style={{ width: 1, height: 16, backgroundColor: 'var(--border-semantic)', margin: '0 4px' }}
+      />
+      <input
+        type="text"
+        placeholder="Search hex or ASCII..."
+        className="text-text-semantic-primary"
+        style={searchInputStyle}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      {matchOffsets.length > 0 ? (
+        <>
+          <span>
+            {activeMatchIndex + 1} / {matchOffsets.length}
+          </span>
+          <button
+            onClick={() => goToMatch(activeMatchIndex - 1)}
+            className="text-text-semantic-muted"
+            style={btnStyle}
+            disabled={activeMatchIndex <= 0}
+          >
+            Prev
+          </button>
+          <button
+            onClick={() => goToMatch(activeMatchIndex + 1)}
+            className="text-text-semantic-muted"
+            style={btnStyle}
+            disabled={activeMatchIndex >= matchOffsets.length - 1}
+          >
+            Next
+          </button>
+        </>
+      ) : null}
+      {searchQuery && matchOffsets.length === 0 ? (
+        <span className="text-status-error">No matches</span>
+      ) : null}
+      <div style={{ flex: 1 }} />
+      <button
+        onClick={openExternal}
+        className="text-text-semantic-muted"
+        style={btnStyle}
+        title="Open in external application"
+      >
+        Open External
+      </button>
+    </div>
+  );
 }
 
 function HexViewerRows({
@@ -263,12 +347,70 @@ function HexViewerRows({
   for (let row = startRow; row < endRow; row++) {
     const offset = row * BYTES_PER_ROW;
     const { hex, ascii } = buildHexRow(content, offset);
-    rows.push(<div key={row} style={{ position: 'absolute', top: row * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT, display: 'flex', alignItems: 'center', padding: '0 12px', backgroundColor: matchedRows.has(row) ? 'rgba(255, 200, 0, 0.15)' : undefined }}><span className="text-text-semantic-faint" style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>{toOffset(offset)}</span><span className="text-text-semantic-primary" style={{ width: HEX_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}>{hex}</span><span className="text-interactive-accent" style={{ width: ASCII_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}>{ascii}</span></div>);
+    rows.push(
+      <div
+        key={row}
+        style={{
+          position: 'absolute',
+          top: row * ROW_HEIGHT,
+          left: 0,
+          right: 0,
+          height: ROW_HEIGHT,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 12px',
+          backgroundColor: matchedRows.has(row) ? 'rgba(255, 200, 0, 0.15)' : undefined,
+        }}
+      >
+        <span className="text-text-semantic-faint" style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>
+          {toOffset(offset)}
+        </span>
+        <span
+          className="text-text-semantic-primary"
+          style={{ width: HEX_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
+        >
+          {hex}
+        </span>
+        <span
+          className="text-interactive-accent"
+          style={{ width: ASCII_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
+        >
+          {ascii}
+        </span>
+      </div>,
+    );
   }
   return <div style={{ height: endRow * ROW_HEIGHT, position: 'relative' }}>{rows}</div>;
 }
 
 export function HexViewer({ content, filePath }: HexViewerProps): React.ReactElement {
   const state = useHexViewerState(content, filePath);
-  return <div style={rootStyle}><HexViewerToolbar searchQuery={state.searchQuery} setSearchQuery={state.setSearchQuery} matchOffsets={state.matchOffsets} activeMatchIndex={state.activeMatchIndex} goToMatch={state.goToMatch} openExternal={state.openExternal} contentLength={content.length} /><div className="text-text-semantic-faint" style={headerStyle}><span style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>Offset</span><span style={{ width: HEX_WIDTH, flexShrink: 0 }}>00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F</span><span style={{ width: ASCII_WIDTH, flexShrink: 0 }}>ASCII</span></div><div ref={state.scrollRef} style={scrollContainerStyle} onScroll={state.onScroll}><HexViewerRows content={content} startRow={state.startRow} endRow={state.endRow} matchedRows={state.matchedRows} /></div></div>;
+  return (
+    <div style={rootStyle}>
+      <HexViewerToolbar
+        searchQuery={state.searchQuery}
+        setSearchQuery={state.setSearchQuery}
+        matchOffsets={state.matchOffsets}
+        activeMatchIndex={state.activeMatchIndex}
+        goToMatch={state.goToMatch}
+        openExternal={state.openExternal}
+        contentLength={content.length}
+      />
+      <div className="text-text-semantic-faint" style={headerStyle}>
+        <span style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>Offset</span>
+        <span style={{ width: HEX_WIDTH, flexShrink: 0 }}>
+          00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+        </span>
+        <span style={{ width: ASCII_WIDTH, flexShrink: 0 }}>ASCII</span>
+      </div>
+      <div ref={state.scrollRef} style={scrollContainerStyle} onScroll={state.onScroll}>
+        <HexViewerRows
+          content={content}
+          startRow={state.startRow}
+          endRow={state.endRow}
+          matchedRows={state.matchedRows}
+        />
+      </div>
+    </div>
+  );
 }

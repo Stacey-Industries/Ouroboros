@@ -42,41 +42,86 @@ export const CommandItem = memo(function CommandItem({
 
 function ItemIcon({ icon, isSelected }: { icon: string; isSelected: boolean }): React.ReactElement {
   return (
-    <span style={{ flexShrink: 0, width: '18px', fontSize: '12px', textAlign: 'center', opacity: isSelected ? 0.85 : 0.7, fontFamily: 'var(--font-mono)' }}>
+    <span
+      style={{
+        flexShrink: 0,
+        width: '18px',
+        fontSize: '12px',
+        textAlign: 'center',
+        opacity: isSelected ? 0.85 : 0.7,
+        fontFamily: 'var(--font-mono)',
+      }}
+    >
       {icon}
     </span>
   );
 }
 
-function ItemLabel({ command, isSelected, matchIndices }: { command: Command; isSelected: boolean; matchIndices: number[] }): React.ReactElement {
+function ItemLabel({
+  command,
+  isSelected,
+  matchIndices,
+}: {
+  command: Command;
+  isSelected: boolean;
+  matchIndices: number[];
+}): React.ReactElement {
   return (
     <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
       {command.category !== undefined && (
-        <span style={{ flexShrink: 0, fontSize: '11px', opacity: isSelected ? 0.7 : 0.45, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+        <span
+          style={{
+            flexShrink: 0,
+            fontSize: '11px',
+            opacity: isSelected ? 0.7 : 0.45,
+            fontFamily: 'var(--font-mono)',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {command.category}
         </span>
       )}
-      <span style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span
+        style={{
+          fontSize: '13px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
         <CharHighlight text={command.label} matchIndices={isSelected ? [] : matchIndices} />
       </span>
     </span>
   );
 }
 
-function RightIndicator({ command, isSelected, hasChildren }: { command: Command; isSelected: boolean; hasChildren: boolean }): React.ReactElement | null {
+function RightIndicator({
+  command,
+  isSelected,
+  hasChildren,
+}: {
+  command: Command;
+  isSelected: boolean;
+  hasChildren: boolean;
+}): React.ReactElement | null {
   if (hasChildren) {
     return (
-      <span aria-hidden="true" style={{ flexShrink: 0, fontSize: '13px', fontFamily: 'var(--font-mono)', opacity: isSelected ? 0.7 : 0.4, color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)' }}>
+      <span
+        aria-hidden="true"
+        style={{
+          flexShrink: 0,
+          fontSize: '13px',
+          fontFamily: 'var(--font-mono)',
+          opacity: isSelected ? 0.7 : 0.4,
+          color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)',
+        }}
+      >
         &rarr;
       </span>
     );
   }
   if (command.shortcut !== undefined) {
-    return (
-      <kbd style={kbdStyle(isSelected)}>
-        {command.shortcut}
-      </kbd>
-    );
+    return <kbd style={kbdStyle(isSelected)}>{command.shortcut}</kbd>;
   }
   return null;
 }
@@ -92,8 +137,8 @@ function itemStyle(isSelected: boolean): React.CSSProperties {
     cursor: 'pointer',
     borderRadius: '4px',
     margin: '0 4px',
-    backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-    color: isSelected ? 'var(--text-on-accent)' : 'var(--text)',
+    backgroundColor: isSelected ? 'var(--interactive-accent)' : 'transparent',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text-primary)',
     transition: 'background-color 80ms ease',
     userSelect: 'none',
     minWidth: 0,
@@ -107,9 +152,9 @@ function kbdStyle(isSelected: boolean): React.CSSProperties {
     fontFamily: 'var(--font-mono)',
     padding: '1px 5px',
     borderRadius: '3px',
-    backgroundColor: isSelected ? 'rgba(0,0,0,0.15)' : 'var(--bg-tertiary)',
+    backgroundColor: isSelected ? 'rgba(0,0,0,0.15)' : 'var(--surface-raised)',
     color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)',
-    border: `1px solid ${isSelected ? 'rgba(0,0,0,0.2)' : 'var(--border)'}`,
+    border: `1px solid ${isSelected ? 'rgba(0,0,0,0.2)' : 'var(--border-default)'}`,
     whiteSpace: 'nowrap',
   };
 }

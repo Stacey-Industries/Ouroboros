@@ -44,7 +44,7 @@ const OUTLINE_WIDTH = '180px';
 export const OUTLINE_PANEL_STYLE: CSSProperties = {
   width: OUTLINE_WIDTH,
   flexShrink: 0,
-  borderLeft: '1px solid var(--border-muted)',
+  borderLeft: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-base)',
   display: 'flex',
   flexDirection: 'column',
@@ -54,7 +54,7 @@ export const OUTLINE_PANEL_STYLE: CSSProperties = {
 export const OUTLINE_EMPTY_STATE_STYLE: CSSProperties = {
   width: OUTLINE_WIDTH,
   flexShrink: 0,
-  borderLeft: '1px solid var(--border-muted)',
+  borderLeft: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-base)',
   display: 'flex',
   alignItems: 'center',
@@ -68,7 +68,7 @@ export const OUTLINE_EMPTY_STATE_STYLE: CSSProperties = {
 export const OUTLINE_HEADER_STYLE: CSSProperties = {
   flexShrink: 0,
   padding: '4px 8px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
   letterSpacing: '0.05em',
@@ -90,10 +90,7 @@ export const OUTLINE_NAME_STYLE: CSSProperties = {
   minWidth: 0,
 };
 
-export function getOutlineItemStyle(
-  depth: number,
-  isActive: boolean
-): CSSProperties {
+export function getOutlineItemStyle(depth: number, isActive: boolean): CSSProperties {
   return {
     display: 'flex',
     alignItems: 'center',
@@ -111,7 +108,7 @@ export function getOutlineItemStyle(
     fontFamily: 'var(--font-mono)',
     fontSize: '0.6875rem',
     lineHeight: '1.5',
-    color: isActive ? 'var(--text)' : 'var(--text-muted)',
+    color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
     overflow: 'hidden',
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',

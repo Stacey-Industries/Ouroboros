@@ -15,10 +15,8 @@
  */
 
 const URL_RE = /https?:\/\/[^\s"'<>&]+/g;
-const IMPORT_PATH_RE =
-  /(?:from\s+|import\s+|require\s*\(\s*)(['"])((?:\.\.?\/)[^'"<>&\s]+)\1/g;
-const PROJECT_PATH_RE =
-  /(['"])((?:\/src\/|src\/|\.\/|\.\.\/)[^'"<>&\s]+\.[a-z]{1,6})\1/g;
+const IMPORT_PATH_RE = /(?:from\s+|import\s+|require\s*\(\s*)(['"])((?:\.\.?\/)[^'"<>&\s]+)\1/g;
+const PROJECT_PATH_RE = /(['"])((?:\/src\/|src\/|\.\/|\.\.\/)[^'"<>&\s]+\.[a-z]{1,6})\1/g;
 
 const STYLE_ID = '__fv-link-styles__';
 
@@ -29,10 +27,10 @@ export function ensureLinkStyles(): void {
   style.id = STYLE_ID;
   style.textContent = [
     'a.fv-link { color: inherit; text-decoration: none; cursor: pointer; }',
-    'a.fv-link:hover { color: var(--accent); text-decoration: underline; }',
-    'a.fv-link[data-link-type="url"]:hover { color: var(--accent); }',
-    'a.fv-link[data-link-type="import"]:hover { color: var(--accent); }',
-    'a.fv-link[data-link-type="path"]:hover { color: var(--accent); }',
+    'a.fv-link:hover { color: var(--interactive-accent); text-decoration: underline; }',
+    'a.fv-link[data-link-type="url"]:hover { color: var(--interactive-accent); }',
+    'a.fv-link[data-link-type="import"]:hover { color: var(--interactive-accent); }',
+    'a.fv-link[data-link-type="path"]:hover { color: var(--interactive-accent); }',
   ].join('\n');
   document.head.appendChild(style);
 }
@@ -60,14 +58,10 @@ function processSpanContent(spanInner: string): string {
   let result = spanInner.replace(URL_RE, (url) => wrapUrl(url));
   if (/<[a-z]/i.test(result)) return result;
 
-  result = result.replace(IMPORT_PATH_RE, (full, quote, path) =>
-    wrapImport(full, quote, path)
-  );
+  result = result.replace(IMPORT_PATH_RE, (full, quote, path) => wrapImport(full, quote, path));
   if (/<[a-z]/i.test(result)) return result;
 
-  return result.replace(PROJECT_PATH_RE, (full, quote, path) =>
-    wrapProjectPath(full, quote, path)
-  );
+  return result.replace(PROJECT_PATH_RE, (full, quote, path) => wrapProjectPath(full, quote, path));
 }
 
 /**
@@ -80,7 +74,7 @@ function processSpanContent(spanInner: string): string {
 export function injectLinks(html: string): string {
   return html.replace(
     /(<span\b[^>]*>)([\s\S]*?)(<\/span>)/g,
-    (_match, open, inner, close) => `${open}${processSpanContent(inner)}${close}`
+    (_match, open, inner, close) => `${open}${processSpanContent(inner)}${close}`,
   );
 }
 
@@ -91,7 +85,7 @@ export function injectLinks(html: string): string {
 export function attachLinkClickHandler(
   container: HTMLElement,
   getActiveFilePath: () => string | null,
-  getProjectRoot: () => string | null
+  getProjectRoot: () => string | null,
 ): () => void {
   function handleClick(event: MouseEvent): void {
     const target = getLinkTarget(event);
@@ -113,13 +107,15 @@ function getLinkTarget(event: MouseEvent): HTMLAnchorElement | null {
 function handleLinkTarget(
   target: HTMLAnchorElement,
   getActiveFilePath: () => string | null,
-  getProjectRoot: () => string | null
+  getProjectRoot: () => string | null,
 ): void {
   const href = target.dataset.href ?? '';
   if (!href) return;
 
   if (target.dataset.linkType === 'url') {
-    window.electronAPI?.app?.openExternal(href).catch((error) => { console.error('[linkDetector] Failed to open external URL:', href, error) });
+    window.electronAPI?.app?.openExternal(href).catch((error) => {
+      console.error('[linkDetector] Failed to open external URL:', href, error);
+    });
     return;
   }
 
@@ -127,14 +123,14 @@ function handleLinkTarget(
   if (!resolvedPath) return;
 
   window.dispatchEvent(
-    new CustomEvent('agent-ide:open-file', { detail: { filePath: resolvedPath } })
+    new CustomEvent('agent-ide:open-file', { detail: { filePath: resolvedPath } }),
   );
 }
 
 function resolveLinkedFilePath(
   href: string,
   getActiveFilePath: () => string | null,
-  getProjectRoot: () => string | null
+  getProjectRoot: () => string | null,
 ): string | null {
   const activeFile = getActiveFilePath();
   if (!activeFile) return null;
@@ -165,11 +161,7 @@ function resolveRelativePath(baseDir: string, relative: string): string {
     else if (part !== '.') parts.push(part);
   }
 
-  const prefix = dir.startsWith('/')
-    ? '/'
-    : dir.match(/^[A-Za-z]:/)
-      ? `${dir.slice(0, 2)}/`
-      : '';
+  const prefix = dir.startsWith('/') ? '/' : dir.match(/^[A-Za-z]:/) ? `${dir.slice(0, 2)}/` : '';
 
   return prefix + parts.join('/');
 }

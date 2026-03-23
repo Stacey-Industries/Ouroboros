@@ -5,7 +5,7 @@ import type { MenuItem } from './useContextMenuController';
 const MENU_SEPARATOR_STYLE: React.CSSProperties = {
   height: '1px',
   margin: '4px 8px',
-  background: 'var(--border-muted, var(--border))',
+  background: 'var(--border-subtle)',
 };
 
 const MENU_BUTTON_STYLE: React.CSSProperties = {
@@ -56,13 +56,11 @@ function MenuSeparator(): React.ReactElement {
 }
 
 function getMenuButtonColor(item: MenuItem): string {
-  return item.danger ? 'var(--error, #e55)' : 'var(--text)';
+  return item.danger ? 'var(--status-error)' : 'var(--text-primary)';
 }
 
 function getMenuHoverColor(item: MenuItem): string {
-  return item.danger
-    ? 'rgba(255, 80, 80, 0.12)'
-    : 'rgba(var(--accent-rgb, 88, 166, 255), 0.15)';
+  return item.danger ? 'rgba(255, 80, 80, 0.12)' : 'rgba(var(--accent-rgb, 88, 166, 255), 0.15)';
 }
 
 function setMenuHoverColor(target: HTMLButtonElement, item: MenuItem): void {
@@ -78,7 +76,11 @@ function MenuShortcut({ shortcut }: { shortcut?: string }): React.ReactElement |
     return null;
   }
 
-  return <span className="text-text-semantic-faint" style={MENU_SHORTCUT_STYLE}>{shortcut}</span>;
+  return (
+    <span className="text-text-semantic-faint" style={MENU_SHORTCUT_STYLE}>
+      {shortcut}
+    </span>
+  );
 }
 
 function useConstrainedMenuPosition({

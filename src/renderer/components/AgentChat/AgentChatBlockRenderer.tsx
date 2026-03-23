@@ -30,7 +30,11 @@ export interface AgentChatBlockRendererProps {
 
 /* ---------- Code block — delegates to ChatCodeBlock ---------- */
 
-function CodeBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 'code' } }): React.ReactElement {
+function CodeBlockRenderer({
+  block,
+}: {
+  block: AgentChatContentBlock & { kind: 'code' };
+}): React.ReactElement {
   return (
     <ChatCodeBlock
       code={block.content}
@@ -43,7 +47,11 @@ function CodeBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: '
 
 /* ---------- Error block ---------- */
 
-function ErrorBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 'error' } }): React.ReactElement {
+function ErrorBlockRenderer({
+  block,
+}: {
+  block: AgentChatContentBlock & { kind: 'error' };
+}): React.ReactElement {
   return (
     <div
       className="my-1.5 rounded-md border px-3 py-2 text-xs text-status-error"
@@ -53,7 +61,16 @@ function ErrorBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 
       }}
     >
       <div className="flex items-center gap-1.5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -70,27 +87,51 @@ function ErrorBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 
 
 /* ---------- Diff block (placeholder — Phase 2 will enhance) ---------- */
 
-function DiffBlockRenderer({ block }: { block: AgentChatContentBlock & { kind: 'diff' } }): React.ReactElement {
+function DiffBlockRenderer({
+  block,
+}: {
+  block: AgentChatContentBlock & { kind: 'diff' };
+}): React.ReactElement {
   return (
-    <div
-      className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs"
-    >
+    <div className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs">
       <div className="flex items-center gap-1.5 text-text-semantic-muted">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M12 3v18M3 12h18" />
         </svg>
         <span className="font-medium text-text-semantic-primary">{block.filePath}</span>
         <span
           className="ml-auto rounded-full px-1.5 py-0.5 text-[10px]"
           style={{
-            backgroundColor: block.status === 'accepted' ? 'rgba(63, 185, 80, 0.15)' : block.status === 'rejected' ? 'rgba(248, 81, 73, 0.15)' : 'var(--surface-base)',
-            color: block.status === 'accepted' ? '#3fb950' : block.status === 'rejected' ? '#f85149' : 'var(--text-muted)',
+            backgroundColor:
+              block.status === 'accepted'
+                ? 'rgba(63, 185, 80, 0.15)'
+                : block.status === 'rejected'
+                  ? 'rgba(248, 81, 73, 0.15)'
+                  : 'var(--surface-base)',
+            color:
+              block.status === 'accepted'
+                ? 'var(--status-success)'
+                : block.status === 'rejected'
+                  ? 'var(--status-error)'
+                  : 'var(--text-muted)',
           }}
         >
           {block.status}
         </span>
       </div>
-      <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap text-[11px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
+      <pre
+        className="mt-1.5 overflow-x-auto whitespace-pre-wrap text-[11px] text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
         {block.hunks}
       </pre>
     </div>
@@ -106,9 +147,7 @@ function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): Reac
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div
-      className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs"
-    >
+    <div className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs">
       <button
         onClick={() => setExpanded((e) => !e)}
         className="flex items-center gap-1.5 text-text-semantic-muted hover:opacity-80"
@@ -116,7 +155,10 @@ function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): Reac
         <span>Unknown block: {(block as { kind: string }).kind}</span>
       </button>
       {expanded && (
-        <pre className="mt-1.5 max-h-[200px] overflow-auto whitespace-pre-wrap text-[10px] text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
+        <pre
+          className="mt-1.5 max-h-[200px] overflow-auto whitespace-pre-wrap text-[10px] text-text-semantic-muted"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
           {JSON.stringify(block, null, 2)}
         </pre>
       )}
@@ -204,7 +246,11 @@ interface DispatchBlockArgs {
 }
 
 function dispatchBlockByKind({
-  block, index, isStreaming, isLastBlock, allBlocks,
+  block,
+  index,
+  isStreaming,
+  isLastBlock,
+  allBlocks,
 }: DispatchBlockArgs): React.ReactElement {
   switch (block.kind) {
     case 'text':
@@ -215,7 +261,10 @@ function dispatchBlockByKind({
       return <ToolUseBlock block={block} index={index} allBlocks={allBlocks} />;
     case 'tool_result':
       return (
-        <div className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)' }}>
+        <div
+          className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
           {block.content}
         </div>
       );

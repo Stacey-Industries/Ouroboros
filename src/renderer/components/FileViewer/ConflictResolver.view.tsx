@@ -1,6 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
-import type { ConflictBlock, ConflictChoice, ConflictResolverProps } from './ConflictResolver.model';
+import type {
+  ConflictBlock,
+  ConflictChoice,
+  ConflictResolverProps,
+} from './ConflictResolver.model';
 import { parseConflictBlocks, resolveConflictBlock } from './ConflictResolver.model';
 
 interface ConflictRenderLine {
@@ -56,7 +60,11 @@ const actionsStyle: React.CSSProperties = {
   borderTop: '1px solid var(--border-semantic)',
 };
 
-function resolveBlockContent(content: string, blockIndex: number, choice: ConflictChoice): string | null {
+function resolveBlockContent(
+  content: string,
+  blockIndex: number,
+  choice: ConflictChoice,
+): string | null {
   const currentLines = content.split('\n');
   const currentBlocks = parseConflictBlocks(currentLines);
   const block = currentBlocks[blockIndex];
@@ -85,29 +93,32 @@ function useConflictActions(
 } {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const handleResolve = useCallback(async (blockIndex: number, choice: ConflictChoice) => {
-    if (!filePath) {
-      return;
-    }
-    const newContent = resolveBlockContent(content, blockIndex, choice);
-    if (newContent == null) {
-      return;
-    }
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      const error = await saveResolvedContent(filePath, newContent);
-      if (error) {
-        setSaveError(error);
+  const handleResolve = useCallback(
+    async (blockIndex: number, choice: ConflictChoice) => {
+      if (!filePath) {
         return;
       }
-      onResolved(newContent);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  }, [content, filePath, onResolved]);
+      const newContent = resolveBlockContent(content, blockIndex, choice);
+      if (newContent == null) {
+        return;
+      }
+      setIsSaving(true);
+      setSaveError(null);
+      try {
+        const error = await saveResolvedContent(filePath, newContent);
+        if (error) {
+          setSaveError(error);
+          return;
+        }
+        onResolved(newContent);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [content, filePath, onResolved],
+  );
   return { isSaving, saveError, handleResolve };
 }
 
@@ -129,7 +140,11 @@ function buildRenderItems(lines: string[], blocks: ConflictBlock[]): ConflictRen
   return items;
 }
 
-function getSectionHeaderStyle(background: string, color: string, borderColor: string): React.CSSProperties {
+function getSectionHeaderStyle(
+  background: string,
+  color: string,
+  borderColor: string,
+): React.CSSProperties {
   return {
     padding: '4px 8px',
     background,
@@ -150,7 +165,11 @@ function getSectionBodyStyle(background: string): React.CSSProperties {
   };
 }
 
-function ActionButton(props: { label: string; color: string; onClick: () => void }): React.ReactElement {
+function ActionButton(props: {
+  label: string;
+  color: string;
+  onClick: () => void;
+}): React.ReactElement {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -193,7 +212,12 @@ function ConflictSection(props: {
       </div>
       <div className="text-text-semantic-primary" style={getSectionBodyStyle(props.bodyBackground)}>
         {props.lines.length === 0 ? (
-          <span className="text-text-semantic-faint" style={{ fontStyle: 'italic', fontSize: '0.75rem' }}>(empty)</span>
+          <span
+            className="text-text-semantic-faint"
+            style={{ fontStyle: 'italic', fontSize: '0.75rem' }}
+          >
+            (empty)
+          </span>
         ) : (
           props.lines.map((line, index) => (
             <div key={index} style={{ minHeight: '1.6em', lineHeight: '1.6' }}>
@@ -212,9 +236,21 @@ function ConflictActions(props: {
 }): React.ReactElement {
   return (
     <div style={actionsStyle}>
-      <ActionButton label="Accept Ours" color="var(--git-deleted, #f85149)" onClick={() => props.onResolve(props.blockIndex, 'ours')} />
-      <ActionButton label="Accept Both" color="var(--accent)" onClick={() => props.onResolve(props.blockIndex, 'both')} />
-      <ActionButton label="Accept Theirs" color="var(--git-added, #3fb950)" onClick={() => props.onResolve(props.blockIndex, 'theirs')} />
+      <ActionButton
+        label="Accept Ours"
+        color="var(--git-deleted, var(--status-error))"
+        onClick={() => props.onResolve(props.blockIndex, 'ours')}
+      />
+      <ActionButton
+        label="Accept Both"
+        color="var(--interactive-accent)"
+        onClick={() => props.onResolve(props.blockIndex, 'both')}
+      />
+      <ActionButton
+        label="Accept Theirs"
+        color="var(--git-added, var(--status-success))"
+        onClick={() => props.onResolve(props.blockIndex, 'theirs')}
+      />
     </div>
   );
 }
@@ -229,7 +265,7 @@ function ConflictCard(props: {
       <ConflictSection
         title="Ours"
         label={props.block.oursLabel}
-        color="var(--git-deleted, #f85149)"
+        color="var(--git-deleted, var(--status-error))"
         headerBackground="rgba(255,100,100,0.15)"
         headerBorder="rgba(255,100,100,0.2)"
         bodyBackground="rgba(255,100,100,0.06)"
@@ -239,7 +275,7 @@ function ConflictCard(props: {
       <ConflictSection
         title="Theirs"
         label={props.block.theirsLabel}
-        color="var(--git-added, #3fb950)"
+        color="var(--git-added, var(--status-success))"
         headerBackground="rgba(100,200,100,0.15)"
         headerBorder="rgba(100,200,100,0.2)"
         bodyBackground="rgba(100,200,100,0.06)"
@@ -267,18 +303,36 @@ function ConflictStatus(props: {
         backgroundColor: hasConflicts ? 'rgba(255,100,100,0.12)' : 'rgba(63,185,80,0.12)',
         borderBottom: `1px solid ${hasConflicts ? 'rgba(255,100,100,0.3)' : 'rgba(63,185,80,0.3)'}`,
         fontSize: '0.8125rem',
-        color: hasConflicts ? 'var(--git-deleted, #f85149)' : 'var(--git-added, #3fb950)',
+        color: hasConflicts
+          ? 'var(--git-deleted, var(--status-error))'
+          : 'var(--git-added, var(--status-success))',
       }}
     >
-      <span>{hasConflicts ? `${props.conflictCount} conflict${props.conflictCount === 1 ? '' : 's'} remaining` : 'All conflicts resolved.'}</span>
-      {props.isSaving ? <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>Saving...</span> : null}
-      {props.saveError ? <span className="text-status-error" style={{ fontSize: '0.75rem' }}>{props.saveError}</span> : null}
+      <span>
+        {hasConflicts
+          ? `${props.conflictCount} conflict${props.conflictCount === 1 ? '' : 's'} remaining`
+          : 'All conflicts resolved.'}
+      </span>
+      {props.isSaving ? (
+        <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>
+          Saving...
+        </span>
+      ) : null}
+      {props.saveError ? (
+        <span className="text-status-error" style={{ fontSize: '0.75rem' }}>
+          {props.saveError}
+        </span>
+      ) : null}
     </div>
   );
 }
 
 function NormalLine({ line }: { line: string }): React.ReactElement {
-  return <div className="text-text-semantic-primary" style={lineStyle}>{line}</div>;
+  return (
+    <div className="text-text-semantic-primary" style={lineStyle}>
+      {line}
+    </div>
+  );
 }
 
 function ConflictContent(props: {
@@ -287,11 +341,18 @@ function ConflictContent(props: {
 }): React.ReactElement {
   return (
     <div style={scrollBodyStyle}>
-      {props.items.map((item) => (
-        item.type === 'block'
-          ? <ConflictCard key={`conflict-${item.lineIdx}`} block={item.block} blockIndex={item.blockIndex} onResolve={props.onResolve} />
-          : <NormalLine key={`line-${item.lineIdx}`} line={item.line} />
-      ))}
+      {props.items.map((item) =>
+        item.type === 'block' ? (
+          <ConflictCard
+            key={`conflict-${item.lineIdx}`}
+            block={item.block}
+            blockIndex={item.blockIndex}
+            onResolve={props.onResolve}
+          />
+        ) : (
+          <NormalLine key={`line-${item.lineIdx}`} line={item.line} />
+        ),
+      )}
     </div>
   );
 }

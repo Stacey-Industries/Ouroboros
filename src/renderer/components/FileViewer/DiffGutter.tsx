@@ -33,7 +33,7 @@ export const DiffGutter = memo(function DiffGutter({
         position: 'sticky',
         left: `${gutterWidth + foldGutterWidth}px`,
         zIndex: 2,
-        borderRight: '1px solid var(--border-muted)',
+        borderRight: '1px solid var(--border-subtle)',
         userSelect: 'none',
       }}
     >
@@ -47,7 +47,7 @@ export const DiffGutter = memo(function DiffGutter({
             kind={diffMap.get(row.index + 1)}
             diffGutterWidth={diffGutterWidth}
           />
-        )
+        ),
       )}
     </div>
   );
@@ -59,11 +59,7 @@ interface DiffGutterLineProps {
   diffGutterWidth: number;
 }
 
-function DiffGutterLine({
-  index,
-  kind,
-  diffGutterWidth,
-}: DiffGutterLineProps): React.ReactElement {
+function DiffGutterLine({ index, kind, diffGutterWidth }: DiffGutterLineProps): React.ReactElement {
   if (!kind) return <DiffSpacer index={index} />;
   if (kind === 'deleted') return <DeletedDiffMarker />;
   return <ChangedDiffMarker kind={kind} diffGutterWidth={diffGutterWidth} />;
@@ -90,7 +86,7 @@ function DeletedDiffMarker(): React.ReactElement {
           height: 0,
           borderLeft: '3px solid transparent',
           borderRight: '3px solid transparent',
-          borderTop: '5px solid #f85149',
+          borderTop: '5px solid var(--status-error)',
           display: 'block',
         }}
       />
@@ -132,6 +128,6 @@ function getChangedDiffMarker(kind: Exclude<DiffLineInfo['kind'], 'deleted'>): {
   tooltip: string;
 } {
   return kind === 'added'
-    ? { color: '#3fb950', tooltip: 'Added line' }
-    : { color: '#58a6ff', tooltip: 'Modified line' };
+    ? { color: 'var(--status-success)', tooltip: 'Added line' }
+    : { color: 'var(--interactive-accent)', tooltip: 'Modified line' };
 }

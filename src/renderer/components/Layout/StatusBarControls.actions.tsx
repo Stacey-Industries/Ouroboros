@@ -137,13 +137,19 @@ function BranchDropdownContent({
   onCheckout: (branch: string) => void;
 }): React.ReactElement {
   if (loading) {
-    return <BranchDropdownMessage color="var(--text-faint, var(--text-secondary))">Loading branches...</BranchDropdownMessage>;
+    return (
+      <BranchDropdownMessage color="var(--text-faint, var(--text-secondary))">
+        Loading branches...
+      </BranchDropdownMessage>
+    );
   }
   if (error) {
-    return <BranchDropdownMessage color="var(--error)">{error}</BranchDropdownMessage>;
+    return <BranchDropdownMessage color="var(--status-error)">{error}</BranchDropdownMessage>;
   }
   if (filteredBranches.length === 0) {
-    return <BranchDropdownMessage color="var(--text-faint)">No branches match.</BranchDropdownMessage>;
+    return (
+      <BranchDropdownMessage color="var(--text-faint)">No branches match.</BranchDropdownMessage>
+    );
   }
   return (
     <>
@@ -206,7 +212,13 @@ function BranchDropdown({
   useDismissOnOutsideInteraction(dropdownRef, onClose);
 
   return (
-    <div ref={dropdownRef} role="listbox" aria-label="Switch branch" className="bg-surface-panel border border-border-semantic" style={DROPDOWN_STYLE}>
+    <div
+      ref={dropdownRef}
+      role="listbox"
+      aria-label="Switch branch"
+      className="bg-surface-panel border border-border-semantic"
+      style={DROPDOWN_STYLE}
+    >
       <BranchSearchInput search={search} onSearchChange={setSearch} />
       <div style={MENU_BODY_STYLE}>
         <BranchDropdownContent
@@ -231,22 +243,25 @@ function useBranchCheckout(
 } {
   const { toast } = useToastContext();
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
-  const handleCheckout = useCallback(async (branch: string) => {
-    setCheckingOut(branch);
-    try {
-      const result = await window.electronAPI.git.checkout(projectRoot, branch);
-      if (result.success) {
-        toast(`Switched to branch ${branch}`, 'success');
-        onSuccess();
-      } else {
-        toast(result.error ?? `Failed to checkout ${branch}`, 'error');
+  const handleCheckout = useCallback(
+    async (branch: string) => {
+      setCheckingOut(branch);
+      try {
+        const result = await window.electronAPI.git.checkout(projectRoot, branch);
+        if (result.success) {
+          toast(`Switched to branch ${branch}`, 'success');
+          onSuccess();
+        } else {
+          toast(result.error ?? `Failed to checkout ${branch}`, 'error');
+        }
+      } catch (errorValue) {
+        toast(errorValue instanceof Error ? errorValue.message : String(errorValue), 'error');
+      } finally {
+        setCheckingOut(null);
       }
-    } catch (errorValue) {
-      toast(errorValue instanceof Error ? errorValue.message : String(errorValue), 'error');
-    } finally {
-      setCheckingOut(null);
-    }
-  }, [onSuccess, projectRoot, toast]);
+    },
+    [onSuccess, projectRoot, toast],
+  );
 
   return { checkingOut, handleCheckout };
 }
@@ -262,7 +277,8 @@ export function BranchButton({
   const closeMenu = useCallback(() => setOpen(false), []);
   const { checkingOut, handleCheckout } = useBranchCheckout(projectRoot, closeMenu);
   const label = checkingOut !== null ? 'switching...' : gitBranch;
-  const restingColor = checkingOut !== null ? 'var(--text-faint, var(--text-secondary))' : 'var(--text-secondary)';
+  const restingColor =
+    checkingOut !== null ? 'var(--text-faint, var(--text-secondary))' : 'var(--text-secondary)';
 
   return (
     <div style={TOGGLE_CONTAINER_STYLE}>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useDirtyFileCount,useFileTreeStore } from './fileTreeStore';
+import { useDirtyFileCount, useFileTreeStore } from './fileTreeStore';
 
 export interface FileTreeSearchBarProps {
   query: string;
@@ -14,7 +14,7 @@ export interface FileTreeSearchBarProps {
 const searchBarStyle: React.CSSProperties = {
   padding: '6px 8px',
   flexShrink: 0,
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
 };
 
 const searchRowStyle: React.CSSProperties = {
@@ -35,11 +35,11 @@ const searchInputStyle: React.CSSProperties = {
 };
 
 function handleInputFocus(e: React.FocusEvent<HTMLInputElement>): void {
-  e.currentTarget.style.borderColor = 'var(--accent)';
+  e.currentTarget.style.borderColor = 'var(--interactive-accent)';
 }
 
 function handleInputBlur(e: React.FocusEvent<HTMLInputElement>): void {
-  e.currentTarget.style.borderColor = 'var(--border)';
+  e.currentTarget.style.borderColor = 'var(--border-default)';
 }
 
 function heatMapTitle(enabled: boolean, count: number): string {
@@ -57,9 +57,7 @@ function heatMapStyle(enabled: boolean): React.CSSProperties {
     height: '26px',
     padding: 0,
     background: enabled ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-    border: enabled
-      ? '1px solid rgba(239, 68, 68, 0.3)'
-      : '1px solid var(--border)',
+    border: enabled ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border-default)',
     borderRadius: '4px',
     cursor: 'pointer',
     color: enabled ? '#ef4444' : 'var(--text-faint)',
@@ -69,13 +67,7 @@ function heatMapStyle(enabled: boolean): React.CSSProperties {
 
 function HeatMapIcon({ enabled }: { enabled: boolean }): React.ReactElement {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M8 1C8 1 3 6 3 10a5 5 0 0 0 10 0c0-4-5-9-5-9zM6.5 12.5a2 2 0 0 1-1-1.73c0-1.5 2.5-4.27 2.5-4.27s2.5 2.77 2.5 4.27a2 2 0 0 1-1 1.73"
         stroke="currentColor"
@@ -123,9 +115,7 @@ function nestingButtonStyle(enabled: boolean): React.CSSProperties {
     height: '26px',
     padding: 0,
     background: enabled ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-    border: enabled
-      ? '1px solid rgba(59, 130, 246, 0.3)'
-      : '1px solid var(--border)',
+    border: enabled ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid var(--border-default)',
     borderRadius: '4px',
     cursor: 'pointer',
     color: enabled ? '#3b82f6' : 'var(--text-faint)',
@@ -218,11 +208,7 @@ export function FileTreeSearchBar({
           onBlur={handleInputBlur}
         />
         <NestingToggle />
-        <HeatMapToggle
-          enabled={heatMapEnabled}
-          count={heatMapCount}
-          onToggle={onToggleHeatMap}
-        />
+        <HeatMapToggle enabled={heatMapEnabled} count={heatMapCount} onToggle={onToggleHeatMap} />
       </div>
       <DirtyFileCount />
     </div>

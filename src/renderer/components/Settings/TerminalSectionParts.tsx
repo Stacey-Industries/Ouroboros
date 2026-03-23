@@ -70,7 +70,7 @@ function FontSizeResetButton({
         marginLeft: '8px',
         padding: '4px 8px',
         borderRadius: '4px',
-        border: '1px solid var(--border)',
+        border: '1px solid var(--border-default)',
         background: 'transparent',
         fontSize: '11px',
         cursor: 'pointer',
@@ -91,7 +91,11 @@ function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.R
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <StepButton disabled={fontSize <= FONT_SIZE_MIN} label="Decrease font size" onClick={() => onChange(fontSize - 1)}>
+      <StepButton
+        disabled={fontSize <= FONT_SIZE_MIN}
+        label="Decrease font size"
+        onClick={() => onChange(fontSize - 1)}
+      >
         -
       </StepButton>
       <input
@@ -104,10 +108,16 @@ function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.R
         className="text-text-semantic-primary"
         style={inlineInputStyle}
       />
-      <StepButton disabled={fontSize >= FONT_SIZE_MAX} label="Increase font size" onClick={() => onChange(fontSize + 1)}>
+      <StepButton
+        disabled={fontSize >= FONT_SIZE_MAX}
+        label="Increase font size"
+        onClick={() => onChange(fontSize + 1)}
+      >
         +
       </StepButton>
-      <span className="text-text-semantic-muted" style={{ fontSize: '12px', marginLeft: '4px' }}>px</span>
+      <span className="text-text-semantic-muted" style={{ fontSize: '12px', marginLeft: '4px' }}>
+        px
+      </span>
       <FontSizeResetButton fontSize={fontSize} onReset={() => onChange(DEFAULT_FONT_SIZE)} />
     </div>
   );
@@ -224,7 +234,11 @@ function PromptSection({
           onCustomPromptChange={onCustomPromptChange}
         />
       )}
-      <div aria-label="Prompt preview" className="text-text-semantic-primary" style={previewBoxStyle}>
+      <div
+        aria-label="Prompt preview"
+        className="text-text-semantic-primary"
+        style={previewBoxStyle}
+      >
         {preview}
       </div>
       <p className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '6px' }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { buttonStyle,SectionLabel } from './CodeModeSection.shared';
+import { buttonStyle, SectionLabel } from './CodeModeSection.shared';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
 export function ErrorBanner({ error }: { error: string | null }): React.ReactElement | null {
@@ -15,8 +15,8 @@ export function ErrorBanner({ error }: { error: string | null }): React.ReactEle
       style={{
         padding: '8px 12px',
         borderRadius: '6px',
-        border: '1px solid var(--error)',
-        background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
+        border: '1px solid var(--status-error)',
+        background: 'color-mix(in srgb, var(--status-error) 10%, var(--surface-panel))',
         fontSize: '12px',
       }}
     >
@@ -42,7 +42,9 @@ function StatusDot({ isEnabled }: { isEnabled: boolean }): React.ReactElement {
 function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Proxied servers:</span>
+      <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+        Proxied servers:
+      </span>
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
         {servers.map((name) => (
           <span
@@ -51,8 +53,8 @@ function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement 
               fontSize: '11px',
               padding: '1px 6px',
               borderRadius: '3px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-default)',
+              background: 'var(--surface-raised)',
               fontFamily: 'var(--font-mono)',
             }}
           >
@@ -80,7 +82,9 @@ function StatusIndicator({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Status:</span>
+        <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+          Status:
+        </span>
         <StatusDot isEnabled={isEnabled} />
         <span
           style={{
@@ -123,8 +127,8 @@ function ServerNamesField({
           width: '100%',
           padding: '7px 10px',
           borderRadius: '6px',
-          border: '1px solid var(--border)',
-          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--border-default)',
+          background: 'var(--surface-raised)',
           fontSize: '13px',
           fontFamily: 'var(--font-mono)',
           outline: 'none',
@@ -147,9 +151,9 @@ function EnableButton({
       style={{
         ...buttonStyle,
         background: canEnable
-          ? 'color-mix(in srgb, var(--accent) 15%, var(--bg-tertiary))'
-          : 'var(--bg-tertiary)',
-        color: canEnable ? 'var(--accent)' : 'var(--text-muted)',
+          ? 'color-mix(in srgb, var(--interactive-accent) 15%, var(--surface-raised))'
+          : 'var(--surface-raised)',
+        color: canEnable ? 'var(--interactive-accent)' : 'var(--text-muted)',
         opacity: enabling ? 0.6 : 1,
         cursor: canEnable ? 'pointer' : 'not-allowed',
       }}
@@ -190,17 +194,23 @@ function ActionButtons({
   handleEnable,
 }: Pick<
   CodeModeSectionModel,
-  'canDisable' | 'canEnable' | 'disabling' | 'enabling' | 'fetchStatus' | 'handleDisable' | 'handleEnable'
+  | 'canDisable'
+  | 'canEnable'
+  | 'disabling'
+  | 'enabling'
+  | 'fetchStatus'
+  | 'handleDisable'
+  | 'handleEnable'
 >): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       <EnableButton canEnable={canEnable} enabling={enabling} handleEnable={handleEnable} />
-      <DisableButton
-        canDisable={canDisable}
-        disabling={disabling}
-        handleDisable={handleDisable}
-      />
-      <button onClick={() => void fetchStatus()} className="text-text-semantic-primary" style={buttonStyle}>
+      <DisableButton canDisable={canDisable} disabling={disabling} handleDisable={handleDisable} />
+      <button
+        onClick={() => void fetchStatus()}
+        className="text-text-semantic-primary"
+        style={buttonStyle}
+      >
         Refresh
       </button>
     </div>
@@ -230,10 +240,7 @@ export function CodeModeOverview(props: CodeModeSectionModel): React.ReactElemen
         loading={props.loading}
         proxiedServers={props.proxiedServers}
       />
-      <ServerNamesField
-        serverNames={props.serverNames}
-        setServerNames={props.setServerNames}
-      />
+      <ServerNamesField serverNames={props.serverNames} setServerNames={props.setServerNames} />
       <ActionButtons
         canDisable={props.canDisable}
         canEnable={props.canEnable}

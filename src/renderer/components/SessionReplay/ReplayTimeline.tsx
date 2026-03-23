@@ -6,19 +6,19 @@
  * Supports keyboard navigation (left/right arrows).
  */
 
-import React, { memo,useCallback, useRef } from 'react';
+import React, { memo, useCallback, useRef } from 'react';
 
 import type { ReplayStep } from './types';
 
 const TOOL_COLOR: Record<string, string> = {
-  Read:     'var(--accent)',
-  Edit:     'var(--warning)',
-  Write:    'var(--warning)',
-  Bash:     'var(--success)',
-  Grep:     'var(--purple, #a371f7)',
-  Glob:     'var(--purple, #a371f7)',
-  Task:     'var(--purple, #a371f7)',
-  Agent:    'var(--purple, #a371f7)',
+  Read: 'var(--interactive-accent)',
+  Edit: 'var(--status-warning)',
+  Write: 'var(--status-warning)',
+  Bash: 'var(--status-success)',
+  Grep: 'var(--palette-purple)',
+  Glob: 'var(--palette-purple)',
+  Task: 'var(--palette-purple)',
+  Agent: 'var(--palette-purple)',
 };
 
 function toolColor(name: string): string {
@@ -58,8 +58,8 @@ const PLAYHEAD_BASE_STYLE: React.CSSProperties = {
   top: 0,
   bottom: 0,
   width: '2px',
-  background: 'var(--accent)',
-  boxShadow: '0 0 6px var(--accent)',
+  background: 'var(--interactive-accent)',
+  boxShadow: '0 0 6px var(--interactive-accent)',
   transition: 'left 0.15s ease',
   zIndex: 1,
 };
@@ -104,14 +104,17 @@ function useTimelineSeekHandler(
   totalDurationMs: number,
   onSeek: (stepIndex: number) => void,
 ): (event: React.MouseEvent) => void {
-  return useCallback((event: React.MouseEvent) => {
-    const track = trackRef.current;
-    if (!track || totalDurationMs <= 0) return;
+  return useCallback(
+    (event: React.MouseEvent) => {
+      const track = trackRef.current;
+      if (!track || totalDurationMs <= 0) return;
 
-    const rect = track.getBoundingClientRect();
-    const pct = clampPct((event.clientX - rect.left) / rect.width);
-    onSeek(findClosestStepIndex(steps, pct * totalDurationMs));
-  }, [onSeek, steps, totalDurationMs, trackRef]);
+      const rect = track.getBoundingClientRect();
+      const pct = clampPct((event.clientX - rect.left) / rect.width);
+      onSeek(findClosestStepIndex(steps, pct * totalDurationMs));
+    },
+    [onSeek, steps, totalDurationMs, trackRef],
+  );
 }
 
 function getSegmentStyle(
@@ -126,7 +129,7 @@ function getSegmentStyle(
     width: `${widthPct}%`,
     background: color,
     opacity: isActive ? 1 : 0.5,
-    border: isActive ? '1px solid var(--text)' : 'none',
+    border: isActive ? '1px solid var(--text-primary)' : 'none',
   };
 }
 
@@ -160,7 +163,10 @@ function ReplayTimelineSegments({
         return (
           <div
             key={step.toolCall.id}
-            onClick={(event) => { event.stopPropagation(); onSeek(idx); }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSeek(idx);
+            }}
             style={style}
             title={`${step.toolCall.toolName}: ${step.toolCall.input}`}
           />

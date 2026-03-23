@@ -95,7 +95,7 @@ function IndentGuides({
             top: 0,
             bottom: 0,
             width: '1px',
-            backgroundColor: 'var(--border-muted)',
+            backgroundColor: 'var(--border-subtle)',
             opacity: 0.4,
           }}
         />
@@ -108,7 +108,7 @@ function startDrag(e: React.DragEvent, node: TreeNode): void {
   e.dataTransfer.setData('text/plain', node.path);
   e.dataTransfer.setData(
     'application/json',
-    JSON.stringify({ path: node.path, isDirectory: node.isDirectory, name: node.name })
+    JSON.stringify({ path: node.path, isDirectory: node.isDirectory, name: node.name }),
   );
   e.dataTransfer.effectAllowed = 'move';
 }
@@ -121,12 +121,10 @@ function enterDrag(e: React.DragEvent, setIsDragOver: DragSetter): void {
 function dragOverNode(
   e: React.DragEvent,
   node: TreeNode,
-  onDragOver?: FileTreeItemProps['onDragOver']
+  onDragOver?: FileTreeItemProps['onDragOver'],
 ): void {
   e.preventDefault();
-  e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files')
-    ? 'copy'
-    : 'move';
+  e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move';
   if (onDragOver) onDragOver(e, node);
 }
 
@@ -138,7 +136,7 @@ function dropOnNode(
   e: React.DragEvent,
   node: TreeNode,
   setIsDragOver: DragSetter,
-  onDrop?: FileTreeItemProps['onDrop']
+  onDrop?: FileTreeItemProps['onDrop'],
 ): void {
   e.preventDefault();
   e.stopPropagation();
@@ -150,7 +148,7 @@ function useDragHandlers(
   node: TreeNode,
   isEditing: boolean | undefined,
   onDragOver?: FileTreeItemProps['onDragOver'],
-  onDrop?: FileTreeItemProps['onDrop']
+  onDrop?: FileTreeItemProps['onDrop'],
 ) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -192,7 +190,7 @@ function renderTreeItemContent(
   props: FileTreeItemProps,
   statusColor: string | undefined,
   statusLbl: string | undefined,
-  heatDot: string | undefined
+  heatDot: string | undefined,
 ): React.ReactElement {
   if (props.node.isDirectory) {
     return renderDirectoryItem(props, statusColor, statusLbl, heatDot);
@@ -218,10 +216,9 @@ function renderTreeItemContent(
 }
 
 export const FileTreeItem = React.memo(function FileTreeItem(
-  props: FileTreeItemProps
+  props: FileTreeItemProps,
 ): React.ReactElement {
-  const { node, depth, isActive, isFocused, isEditing, isSelected, heatData } =
-    props;
+  const { node, depth, isActive, isFocused, isEditing, isSelected, heatData } = props;
   const drag = useDragHandlers(node, isEditing, props.onDragOver, props.onDrop);
   const statusColor = gitStatusColor(props.gitStatus);
   const statusLbl = gitStatusLabel(props.gitStatus);

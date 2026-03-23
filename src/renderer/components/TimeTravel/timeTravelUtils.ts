@@ -42,9 +42,9 @@ export function snapshotTypeLabel(type: WorkspaceSnapshot['type']): string {
 }
 
 export function snapshotTypeColor(type: WorkspaceSnapshot['type']): string {
-  if (type === 'session-start') return 'var(--accent, #58a6ff)';
-  if (type === 'session-end') return '#3fb950';
-  if (type === 'manual') return 'var(--text-muted, #8b949e)';
+  if (type === 'session-start') return 'var(--interactive-accent)';
+  if (type === 'session-end') return 'var(--status-success)';
+  if (type === 'manual') return 'var(--text-muted)';
   return 'var(--text-muted)';
 }
 
@@ -56,17 +56,21 @@ export function statusIcon(status: string): string {
 }
 
 export function statusColor(status: string): string {
-  if (status === 'added') return '#3fb950';
-  if (status === 'deleted') return '#f85149';
-  if (status === 'renamed') return '#d29922';
-  return 'var(--accent, #58a6ff)';
+  if (status === 'added') return 'var(--status-success)';
+  if (status === 'deleted') return 'var(--status-error)';
+  if (status === 'renamed') return 'var(--status-warning)';
+  return 'var(--interactive-accent)';
 }
 
 export function buildRestoreStatusMessage(
   result: { branch?: string; previousBranch?: string; stashRef?: string },
   commitHash: string,
 ): string {
-  const parts = [result.branch ? `Restored to branch ${result.branch}` : `Restored to ${truncateHash(commitHash)}`];
+  const parts = [
+    result.branch
+      ? `Restored to branch ${result.branch}`
+      : `Restored to ${truncateHash(commitHash)}`,
+  ];
   if (result.previousBranch) parts.push(`Previous branch: ${result.previousBranch}`);
   if (result.stashRef) parts.push(`Changes stashed as ${result.stashRef}`);
   return `${parts.join('. ')}.`;

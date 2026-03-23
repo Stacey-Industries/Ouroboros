@@ -17,12 +17,18 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
   const notifications = draft.notifications ?? { level: 'all', alwaysNotify: false };
 
   function handleLevelChange(e: React.ChangeEvent<HTMLSelectElement>): void {
-    const current: NotificationSettings = draft.notifications ?? { level: 'all', alwaysNotify: false };
+    const current: NotificationSettings = draft.notifications ?? {
+      level: 'all',
+      alwaysNotify: false,
+    };
     onChange('notifications', { ...current, level: e.target.value });
   }
 
   function handleAlwaysNotify(val: boolean): void {
-    const current: NotificationSettings = draft.notifications ?? { level: 'all', alwaysNotify: false };
+    const current: NotificationSettings = draft.notifications ?? {
+      level: 'all',
+      alwaysNotify: false,
+    };
     onChange('notifications', { ...current, alwaysNotify: val });
   }
 
@@ -33,8 +39,20 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
         Desktop notifications when agent sessions complete or encounter errors.
       </p>
       <div style={levelRowStyle}>
-        <label htmlFor="notif-level" className="text-text-semantic-secondary" style={levelLabelStyle}>Notification level</label>
-        <select id="notif-level" value={notifications.level} onChange={handleLevelChange} className="text-text-semantic-primary" style={selectStyle}>
+        <label
+          htmlFor="notif-level"
+          className="text-text-semantic-secondary"
+          style={levelLabelStyle}
+        >
+          Notification level
+        </label>
+        <select
+          id="notif-level"
+          value={notifications.level}
+          onChange={handleLevelChange}
+          className="text-text-semantic-primary"
+          style={selectStyle}
+        >
           <option value="all">All (complete + errors)</option>
           <option value="errors-only">Errors only</option>
           <option value="none">None</option>
@@ -51,11 +69,22 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
 }
 
 const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px' };
-const levelRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' };
+const levelRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  marginBottom: '12px',
+};
 const levelLabelStyle: React.CSSProperties = { fontSize: '12px', whiteSpace: 'nowrap' };
 
 const selectStyle: React.CSSProperties = {
-  flex: 1, maxWidth: '200px', padding: '6px 10px', borderRadius: '6px',
-  border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  fontSize: '12px', fontFamily: 'var(--font-ui)', cursor: 'pointer',
+  flex: 1,
+  maxWidth: '200px',
+  padding: '6px 10px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '12px',
+  fontFamily: 'var(--font-ui)',
+  cursor: 'pointer',
 };

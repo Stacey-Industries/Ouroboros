@@ -4,7 +4,7 @@
 
 import type React from 'react';
 
-import type { McpServerConfig,McpServerEntry } from '../../types/electron';
+import type { McpServerConfig, McpServerEntry } from '../../types/electron';
 
 export interface EnvRow {
   key: string;
@@ -21,14 +21,22 @@ export interface ServerFormState {
 }
 
 export const EMPTY_FORM: ServerFormState = {
-  name: '', command: '', args: '', url: '', envRows: [], scope: 'global',
+  name: '',
+  command: '',
+  args: '',
+  url: '',
+  envRows: [],
+  scope: 'global',
 };
 
 export function formToConfig(form: ServerFormState): McpServerConfig {
   const config: McpServerConfig = {};
   if (form.command.trim()) config.command = form.command;
 
-  const args = form.args.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  const args = form.args
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (args.length > 0) config.args = args;
 
   const env: Record<string, string> = {};
@@ -60,19 +68,28 @@ export function summarizeArgs(args?: string[]): string {
 }
 
 export const labelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 500,
+  fontSize: '11px',
+  fontWeight: 500,
 };
 
 export const inputStyle: React.CSSProperties = {
-  padding: '6px 10px', borderRadius: '4px',
-  border: '1px solid var(--border)', background: 'var(--bg)',
-  fontSize: '12px', fontFamily: 'var(--font-ui)',
-  outline: 'none', width: '100%', boxSizing: 'border-box',
+  padding: '6px 10px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-base)',
+  fontSize: '12px',
+  fontFamily: 'var(--font-ui)',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
 };
 
 export const smallBtnStyle: React.CSSProperties = {
-  padding: '3px 8px', borderRadius: '4px',
-  border: '1px solid var(--border)', background: 'var(--bg)',
+  padding: '3px 8px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-base)',
   fontSize: '11px',
-  cursor: 'pointer', whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 };

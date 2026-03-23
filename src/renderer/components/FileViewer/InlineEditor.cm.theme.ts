@@ -1,4 +1,4 @@
-import { HighlightStyle,syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
@@ -32,7 +32,11 @@ function createHighlightStyle(palette: HighlightPalette): HighlightStyle {
     { tag: tags.keyword, color: palette.keyword, fontWeight: 'bold' },
     { tag: tags.controlKeyword, color: palette.keyword, fontWeight: 'bold' },
     { tag: tags.definitionKeyword, color: palette.keyword, fontWeight: 'bold' },
-    { tag: [tags.comment, tags.lineComment, tags.blockComment], color: palette.comment, fontStyle: 'italic' },
+    {
+      tag: [tags.comment, tags.lineComment, tags.blockComment],
+      color: palette.comment,
+      fontStyle: 'italic',
+    },
     { tag: [tags.string, tags.special(tags.string), tags.regexp], color: palette.string },
     { tag: [tags.number, tags.integer, tags.float, tags.bool, tags.null], color: palette.number },
     { tag: [tags.function(tags.name), tags.function(tags.variableName)], color: palette.function },
@@ -166,15 +170,17 @@ export const editorThemeExtensions: Extension[] = [
   EditorView.theme({
     '&': { height: '100%', fontSize: '0.8125rem' },
     '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.6', overflow: 'auto' },
-    '.cm-content': { caretColor: 'var(--accent)', padding: '8px 0' },
-    '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--accent)' },
-    '&.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'rgba(88, 166, 255, 0.2)' },
+    '.cm-content': { caretColor: 'var(--interactive-accent)', padding: '8px 0' },
+    '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--interactive-accent)' },
+    '&.cm-focused .cm-selectionBackground, ::selection': {
+      backgroundColor: 'rgba(88, 166, 255, 0.2)',
+    },
     '.cm-selectionBackground': { backgroundColor: 'rgba(88, 166, 255, 0.15)' },
     '.cm-activeLine': { backgroundColor: 'rgba(88, 166, 255, 0.06)' },
     '.cm-gutters': {
       backgroundColor: 'var(--surface-panel)',
       color: 'var(--text-faint)',
-      borderRight: '1px solid var(--border-muted)',
+      borderRight: '1px solid var(--border-subtle)',
     },
     '.cm-activeLineGutter': { backgroundColor: 'rgba(88, 166, 255, 0.08)' },
     '.cm-foldPlaceholder': {
@@ -186,12 +192,12 @@ export const editorThemeExtensions: Extension[] = [
     },
     '.cm-searchMatch': { backgroundColor: 'rgba(229, 192, 123, 0.3)' },
     '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'rgba(229, 192, 123, 0.5)' },
-    '.cm-panels': { backgroundColor: 'var(--surface-panel)', color: 'var(--text)' },
+    '.cm-panels': { backgroundColor: 'var(--surface-panel)', color: 'var(--text-primary)' },
     '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--border-semantic)' },
     '.cm-panel.cm-search': { padding: '4px 8px' },
     '.cm-panel.cm-search input': {
       backgroundColor: 'var(--surface-base)',
-      color: 'var(--text)',
+      color: 'var(--text-primary)',
       border: '1px solid var(--border-semantic)',
       borderRadius: '3px',
       padding: '2px 6px',
@@ -201,15 +207,22 @@ export const editorThemeExtensions: Extension[] = [
     '.cm-panel.cm-search button': {
       backgroundColor: 'transparent',
       color: 'var(--text-muted)',
-      border: '1px solid var(--border)',
+      border: '1px solid var(--border-default)',
       borderRadius: '3px',
       padding: '2px 8px',
       cursor: 'pointer',
       fontSize: '0.75rem',
     },
-    '.cm-panel.cm-search button:hover': { backgroundColor: 'var(--border)', color: 'var(--text)' },
+    '.cm-panel.cm-search button:hover': {
+      backgroundColor: 'var(--border-default)',
+      color: 'var(--text-primary)',
+    },
     '.cm-panel.cm-search label': { color: 'var(--text-muted)', fontSize: '0.75rem' },
-    '.cm-tooltip': { backgroundColor: 'var(--surface-panel)', border: '1px solid var(--border-semantic)', color: 'var(--text)' },
+    '.cm-tooltip': {
+      backgroundColor: 'var(--surface-panel)',
+      border: '1px solid var(--border-semantic)',
+      color: 'var(--text-primary)',
+    },
     '.cm-tooltip-autocomplete': {
       '& > ul > li[aria-selected]': { backgroundColor: 'rgba(88, 166, 255, 0.15)' },
     },
@@ -217,7 +230,7 @@ export const editorThemeExtensions: Extension[] = [
   EditorView.theme({
     '&': {
       backgroundColor: 'var(--surface-base)',
-      color: 'var(--text)',
+      color: 'var(--text-primary)',
     },
   }),
 ];

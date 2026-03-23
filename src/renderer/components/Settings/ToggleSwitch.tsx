@@ -90,8 +90,14 @@ function SwitchText({
 }): React.ReactElement {
   return (
     <label htmlFor={controlId} style={textWrapperStyle(disabled)}>
-      <div id={labelId} className="text-text-semantic-primary" style={labelStyle}>{label}</div>
-      {description && <div id={descriptionId} className="text-text-semantic-muted" style={descriptionStyle}>{description}</div>}
+      <div id={labelId} className="text-text-semantic-primary" style={labelStyle}>
+        {label}
+      </div>
+      {description && (
+        <div id={descriptionId} className="text-text-semantic-muted" style={descriptionStyle}>
+          {description}
+        </div>
+      )}
     </label>
   );
 }
@@ -112,7 +118,7 @@ const switchButtonStyle = (checked: boolean, disabled: boolean): React.CSSProper
   border: '1px solid transparent',
   padding: 0,
   cursor: disabled ? 'not-allowed' : 'pointer',
-  backgroundColor: checked ? 'var(--accent)' : 'var(--bg-tertiary)',
+  backgroundColor: checked ? 'var(--interactive-accent)' : 'var(--surface-raised)',
   transition: 'background-color 180ms ease',
   marginTop: '1px',
   outlineOffset: '2px',
@@ -125,7 +131,7 @@ const switchKnobStyle = (checked: boolean): React.CSSProperties => ({
   width: '16px',
   height: '16px',
   borderRadius: '50%',
-  backgroundColor: 'var(--text)',
+  backgroundColor: 'var(--text-primary)',
   transition: 'left 180ms ease',
   boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
 });

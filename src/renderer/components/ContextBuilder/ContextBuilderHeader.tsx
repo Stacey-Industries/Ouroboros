@@ -5,7 +5,7 @@ const headerStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '12px 20px',
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1px solid var(--border-default)',
   flexShrink: 0,
 };
 
@@ -55,7 +55,12 @@ export function ContextBuilderHeader({
   return (
     <div style={headerStyle}>
       <HeaderTitle scanning={scanning} statusMessage={statusMessage} />
-      <button onClick={onClose} aria-label="Close context builder" className="text-text-semantic-muted" style={closeButtonStyle}>
+      <button
+        onClick={onClose}
+        aria-label="Close context builder"
+        className="text-text-semantic-muted"
+        style={closeButtonStyle}
+      >
         x
       </button>
     </div>
@@ -69,7 +74,9 @@ function HeaderTitle({
   return (
     <div style={titleRowStyle}>
       <ContextBuilderIcon />
-      <span className="text-text-semantic-primary" style={titleStyle}>Context Builder</span>
+      <span className="text-text-semantic-primary" style={titleStyle}>
+        Context Builder
+      </span>
       <HeaderStatus scanning={scanning} statusMessage={statusMessage} />
     </div>
   );
@@ -85,8 +92,16 @@ function HeaderStatus({
 
   return (
     <>
-      {scanning && <span className="text-text-semantic-muted" style={scanningStyle}>Scanning...</span>}
-      {statusMessage && <span className="text-interactive-accent" style={statusStyle}>{statusMessage}</span>}
+      {scanning && (
+        <span className="text-text-semantic-muted" style={scanningStyle}>
+          Scanning...
+        </span>
+      )}
+      {statusMessage && (
+        <span className="text-interactive-accent" style={statusStyle}>
+          {statusMessage}
+        </span>
+      )}
     </>
   );
 }
@@ -96,11 +111,11 @@ function ContextBuilderIcon(): React.ReactElement {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path
         d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z"
-        stroke="var(--accent)"
+        stroke="var(--interactive-accent)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <circle cx="8" cy="8" r="2" fill="var(--accent)" />
+      <circle cx="8" cy="8" r="2" fill="var(--interactive-accent)" />
     </svg>
   );
 }

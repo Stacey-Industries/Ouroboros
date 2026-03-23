@@ -1,17 +1,47 @@
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { bracketMatching, HighlightStyle, indentOnInput, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
+import {
+  bracketMatching,
+  HighlightStyle,
+  indentOnInput,
+  StreamLanguage,
+  syntaxHighlighting,
+} from '@codemirror/language';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
-import { drawSelection, EditorView, keymap, lineNumbers, placeholder as cmPlaceholder } from '@codemirror/view';
+import {
+  drawSelection,
+  EditorView,
+  keymap,
+  lineNumbers,
+  placeholder as cmPlaceholder,
+} from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-export interface RichInputProps { sessionId: string; onSubmit: (text: string) => void; onCancel: () => void; visible: boolean; shellType?: 'bash' | 'zsh' | 'powershell' | 'cmd'; }
+export interface RichInputProps {
+  sessionId: string;
+  onSubmit: (text: string) => void;
+  onCancel: () => void;
+  visible: boolean;
+  shellType?: 'bash' | 'zsh' | 'powershell' | 'cmd';
+}
 
 type HistoryDirection = 'up' | 'down';
-type HistoryRefs = { currentDraft: React.MutableRefObject<string>; historyIndex: React.MutableRefObject<number>; historyItems: React.MutableRefObject<string[]> };
+type HistoryRefs = {
+  currentDraft: React.MutableRefObject<string>;
+  historyIndex: React.MutableRefObject<number>;
+  historyItems: React.MutableRefObject<string[]>;
+};
 type ViewRef = React.MutableRefObject<EditorView | null>;
 type CompartmentRef = React.MutableRefObject<Compartment>;
-type EditorMountOptions = { containerRef: React.RefObject<HTMLDivElement | null>; doCancel: () => void; doSubmit: () => void; highlightCompartment: CompartmentRef; lineNumCompartment: CompartmentRef; navigateHistory: (direction: HistoryDirection) => void; viewRef: ViewRef };
+type EditorMountOptions = {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  doCancel: () => void;
+  doSubmit: () => void;
+  highlightCompartment: CompartmentRef;
+  lineNumCompartment: CompartmentRef;
+  navigateHistory: (direction: HistoryDirection) => void;
+  viewRef: ViewRef;
+};
 const MAX_HISTORY = 50;
 const shellTokenMatchers = [
   { pattern: /"([^"\\]|\\.)*"/, token: 'string' },
@@ -22,8 +52,16 @@ const shellTokenMatchers = [
   { pattern: /\$[0-9#?@!$*-]/, token: 'variableName' },
   { pattern: /\b\d+\b/, token: 'number' },
   { pattern: /[|&;><]+/, token: 'operator' },
-  { pattern: /\b(if|then|else|elif|fi|for|while|do|done|case|esac|in|function|return|exit|export|source|alias|unalias|local|readonly|declare|typeset|set|unset|shift|trap|break|continue|select|until|coproc|time)\b/, token: 'keyword' },
-  { pattern: /\b(cd|ls|cp|mv|rm|mkdir|rmdir|cat|echo|grep|sed|awk|find|sort|uniq|wc|head|tail|chmod|chown|curl|wget|git|npm|npx|node|python|pip|docker|ssh|scp|tar|zip|unzip|make|cmake|cargo|go|rustc|gcc|clang|claude)\b/, token: 'atom' },
+  {
+    pattern:
+      /\b(if|then|else|elif|fi|for|while|do|done|case|esac|in|function|return|exit|export|source|alias|unalias|local|readonly|declare|typeset|set|unset|shift|trap|break|continue|select|until|coproc|time)\b/,
+    token: 'keyword',
+  },
+  {
+    pattern:
+      /\b(cd|ls|cp|mv|rm|mkdir|rmdir|cat|echo|grep|sed|awk|find|sort|uniq|wc|head|tail|chmod|chown|curl|wget|git|npm|npx|node|python|pip|docker|ssh|scp|tar|zip|unzip|make|cmake|cargo|go|rustc|gcc|clang|claude)\b/,
+    token: 'atom',
+  },
   { pattern: /-{1,2}[A-Za-z0-9_-]+/, token: 'attributeName' },
 ] as const;
 
@@ -54,55 +92,130 @@ const richInputHighlightStyle = HighlightStyle.define([
   { tag: tags.attributeName, color: 'var(--rich-input-flag, #ffb86c)' },
 ]);
 const richInputEditorTheme = EditorView.theme({
-  '&': { fontSize: 'var(--term-font-size, 13px)', backgroundColor: 'transparent', color: 'var(--term-fg, var(--text, #f8f8f2))' },
-  '.cm-scroller': { fontFamily: 'var(--font-mono, monospace)', lineHeight: '1.5', overflow: 'auto', maxHeight: 'calc(1.5em * 10 + 16px)' },
-  '.cm-content': { caretColor: 'var(--term-cursor, var(--accent, #f8f8f0))', padding: '8px 4px', minHeight: '4em' },
+  '&': {
+    fontSize: 'var(--term-font-size, 13px)',
+    backgroundColor: 'transparent',
+    color: 'var(--term-fg, var(--text, #f8f8f2))',
+  },
+  '.cm-scroller': {
+    fontFamily: 'var(--font-mono, monospace)',
+    lineHeight: '1.5',
+    overflow: 'auto',
+    maxHeight: 'calc(1.5em * 10 + 16px)',
+  },
+  '.cm-content': {
+    caretColor: 'var(--term-cursor, var(--accent, #f8f8f0))',
+    padding: '8px 4px',
+    minHeight: '4em',
+  },
   '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--term-cursor, var(--accent, #f8f8f0))' },
-  '&.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.25))' },
+  '&.cm-focused .cm-selectionBackground, ::selection': {
+    backgroundColor: 'var(--term-selection, rgba(88,166,255,0.25))',
+  },
   '.cm-selectionBackground': { backgroundColor: 'var(--term-selection, rgba(88,166,255,0.15))' },
   '.cm-activeLine': { backgroundColor: 'transparent' },
-  '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--text-semantic-faint, #555)', borderRight: '1px solid var(--border, #333)', minWidth: '2.5em' },
+  '.cm-gutters': {
+    backgroundColor: 'transparent',
+    color: 'var(--text-semantic-faint, #555)',
+    borderRight: '1px solid var(--border, #333)',
+    minWidth: '2.5em',
+  },
   '.cm-activeLineGutter': { backgroundColor: 'transparent' },
   '.cm-scroller::-webkit-scrollbar': { width: '6px' },
   '.cm-scroller::-webkit-scrollbar-track': { background: 'transparent' },
-  '.cm-scroller::-webkit-scrollbar-thumb': { background: 'var(--border, #444)', borderRadius: '3px' },
+  '.cm-scroller::-webkit-scrollbar-thumb': {
+    background: 'var(--border, #444)',
+    borderRadius: '3px',
+  },
 });
 const toolbarStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 8px', borderBottom: '1px solid var(--border, #333)',
-  backgroundColor: 'var(--rich-input-toolbar-bg, rgba(40,40,40,0.9))', minHeight: 24,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '2px 8px',
+  borderBottom: '1px solid var(--border, #333)',
+  backgroundColor: 'var(--rich-input-toolbar-bg, rgba(40,40,40,0.9))',
+  minHeight: 24,
 };
 const toolbarPrimaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontFamily: 'var(--font-ui, sans-serif)', userSelect: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 11,
+  fontFamily: 'var(--font-ui, sans-serif)',
+  userSelect: 'none',
 };
 const toolbarSecondaryStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, fontFamily: 'var(--font-ui, sans-serif)', userSelect: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 10,
+  fontFamily: 'var(--font-ui, sans-serif)',
+  userSelect: 'none',
 };
 const toolbarTitleStyle: React.CSSProperties = { fontWeight: 600, letterSpacing: '0.02em' };
-const dividerStyle: React.CSSProperties = { color: 'var(--border, #444)' };
+const dividerStyle: React.CSSProperties = { color: 'var(--border-default)' };
 const panelStyle: React.CSSProperties = {
-  position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-  borderTop: '2px solid var(--accent, #58a6ff)', backgroundColor: 'var(--rich-input-bg, rgba(30,30,30,0.97))', display: 'flex',
-  flexDirection: 'column', overflow: 'hidden', animation: 'richInputSlideUp 0.15s ease-out',
-  minHeight: '120px', maxHeight: '50%',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  zIndex: 20,
+  borderTop: '2px solid var(--interactive-accent)',
+  backgroundColor: 'var(--rich-input-bg, rgba(30,30,30,0.97))',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  animation: 'richInputSlideUp 0.15s ease-out',
+  minHeight: '120px',
+  maxHeight: '50%',
 };
-const editorHostStyle: React.CSSProperties = { overflow: 'auto', minHeight: '6em', flex: '1 1 auto' };
-const richInputAnimationCss = '@keyframes richInputSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }';
+const editorHostStyle: React.CSSProperties = {
+  overflow: 'auto',
+  minHeight: '6em',
+  flex: '1 1 auto',
+};
+const richInputAnimationCss =
+  '@keyframes richInputSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }';
 function getLineNumberButtonStyle(showLineNumbers: boolean): React.CSSProperties {
   return {
-    background: 'none', border: showLineNumbers ? '1px solid var(--accent, #58a6ff)' : '1px solid transparent', borderRadius: 3,
-    color: showLineNumbers ? 'var(--accent, #58a6ff)' : 'var(--text-semantic-faint, #666)', cursor: 'pointer', fontSize: 10, padding: '1px 5px',
+    background: 'none',
+    border: showLineNumbers ? '1px solid var(--interactive-accent)' : '1px solid transparent',
+    borderRadius: 3,
+    color: showLineNumbers ? 'var(--interactive-accent)' : 'var(--text-semantic-faint, #666)',
+    cursor: 'pointer',
+    fontSize: 10,
+    padding: '1px 5px',
     fontFamily: 'var(--font-ui, sans-serif)',
   };
 }
-function ToolbarStart({ onToggleLineNumbers, showLineNumbers }: { onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
+function ToolbarStart({
+  onToggleLineNumbers,
+  showLineNumbers,
+}: {
+  onToggleLineNumbers: () => void;
+  showLineNumbers: boolean;
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={toolbarPrimaryStyle}>
       <span style={toolbarTitleStyle}>Multi-line Input</span>
-      <button onClick={onToggleLineNumbers} title="Toggle line numbers" style={getLineNumberButtonStyle(showLineNumbers)}>#</button>
+      <button
+        onClick={onToggleLineNumbers}
+        title="Toggle line numbers"
+        style={getLineNumberButtonStyle(showLineNumbers)}
+      >
+        #
+      </button>
     </div>
   );
 }
-function ToolbarEnd({ doCancel, doSubmit }: { doCancel: () => void; doSubmit: () => void }): React.ReactElement {
+function ToolbarEnd({
+  doCancel,
+  doSubmit,
+}: {
+  doCancel: () => void;
+  doSubmit: () => void;
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-faint" style={toolbarSecondaryStyle}>
       <span>Ctrl+Up/Down: history</span>
@@ -111,21 +224,51 @@ function ToolbarEnd({ doCancel, doSubmit }: { doCancel: () => void; doSubmit: ()
       <button
         onClick={doCancel}
         title="Close multi-line input"
-        style={{ background: 'transparent', border: '1px solid var(--border, #444)', borderRadius: 3, color: 'var(--text-semantic-muted, #a0a0a0)', cursor: 'pointer', fontSize: 10, padding: '2px 8px', fontFamily: 'var(--font-ui, sans-serif)' }}
+        style={{
+          background: 'transparent',
+          border: '1px solid var(--border-default)',
+          borderRadius: 3,
+          color: 'var(--text-semantic-muted, #a0a0a0)',
+          cursor: 'pointer',
+          fontSize: 10,
+          padding: '2px 8px',
+          fontFamily: 'var(--font-ui, sans-serif)',
+        }}
       >
         Close
       </button>
       <button
         onClick={doSubmit}
         title="Submit (Ctrl+Enter)"
-        style={{ background: 'var(--accent, #58a6ff)', border: 'none', borderRadius: 3, color: '#fff', cursor: 'pointer', fontSize: 10, padding: '2px 10px', fontFamily: 'var(--font-ui, sans-serif)', fontWeight: 600, letterSpacing: '0.02em' }}
+        style={{
+          background: 'var(--interactive-accent)',
+          border: 'none',
+          borderRadius: 3,
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: 10,
+          padding: '2px 10px',
+          fontFamily: 'var(--font-ui, sans-serif)',
+          fontWeight: 600,
+          letterSpacing: '0.02em',
+        }}
       >
         Submit
       </button>
     </div>
   );
 }
-function RichInputToolbar({ doCancel, doSubmit, onToggleLineNumbers, showLineNumbers }: { doCancel: () => void; doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
+function RichInputToolbar({
+  doCancel,
+  doSubmit,
+  onToggleLineNumbers,
+  showLineNumbers,
+}: {
+  doCancel: () => void;
+  doSubmit: () => void;
+  onToggleLineNumbers: () => void;
+  showLineNumbers: boolean;
+}): React.ReactElement {
   return (
     <div style={toolbarStyle}>
       <ToolbarStart onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
@@ -133,10 +276,27 @@ function RichInputToolbar({ doCancel, doSubmit, onToggleLineNumbers, showLineNum
     </div>
   );
 }
-function RichInputPanel({ containerRef, doCancel, doSubmit, onToggleLineNumbers, showLineNumbers }: { containerRef: React.RefObject<HTMLDivElement | null>; doCancel: () => void; doSubmit: () => void; onToggleLineNumbers: () => void; showLineNumbers: boolean }): React.ReactElement {
+function RichInputPanel({
+  containerRef,
+  doCancel,
+  doSubmit,
+  onToggleLineNumbers,
+  showLineNumbers,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  doCancel: () => void;
+  doSubmit: () => void;
+  onToggleLineNumbers: () => void;
+  showLineNumbers: boolean;
+}): React.ReactElement {
   return (
     <div style={panelStyle}>
-      <RichInputToolbar doCancel={doCancel} doSubmit={doSubmit} onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
+      <RichInputToolbar
+        doCancel={doCancel}
+        doSubmit={doSubmit}
+        onToggleLineNumbers={onToggleLineNumbers}
+        showLineNumbers={showLineNumbers}
+      />
       <div ref={containerRef} style={editorHostStyle} />
       <style>{richInputAnimationCss}</style>
     </div>
@@ -148,9 +308,15 @@ function useLatestRef<T>(value: T): React.MutableRefObject<T> {
   return ref;
 }
 function replaceDocument(view: EditorView, text: string): void {
-  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: text.length } });
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: text },
+    selection: { anchor: text.length },
+  });
 }
-function resetHistoryState({ currentDraft, historyIndex }: Pick<HistoryRefs, 'currentDraft' | 'historyIndex'>): void {
+function resetHistoryState({
+  currentDraft,
+  historyIndex,
+}: Pick<HistoryRefs, 'currentDraft' | 'historyIndex'>): void {
   historyIndex.current = -1;
   currentDraft.current = '';
 }
@@ -161,11 +327,22 @@ function pushHistoryItem(historyItems: React.MutableRefObject<string[]>, text: s
   items.unshift(text);
   if (items.length > MAX_HISTORY) items.length = MAX_HISTORY;
 }
-function getNextHistoryIndex(direction: HistoryDirection, currentIndex: number, itemCount: number): number | null {
-  if (direction === 'up') return currentIndex === -1 ? 0 : currentIndex < itemCount - 1 ? currentIndex + 1 : null;
+function getNextHistoryIndex(
+  direction: HistoryDirection,
+  currentIndex: number,
+  itemCount: number,
+): number | null {
+  if (direction === 'up')
+    return currentIndex === -1 ? 0 : currentIndex < itemCount - 1 ? currentIndex + 1 : null;
   return currentIndex <= 0 ? -1 : currentIndex - 1;
 }
-function useSubmitAction({ currentDraft, historyIndex, historyItems, onSubmit, viewRef }: HistoryRefs & { onSubmit: (text: string) => void; viewRef: ViewRef }): () => void {
+function useSubmitAction({
+  currentDraft,
+  historyIndex,
+  historyItems,
+  onSubmit,
+  viewRef,
+}: HistoryRefs & { onSubmit: (text: string) => void; viewRef: ViewRef }): () => void {
   const onSubmitRef = useLatestRef(onSubmit);
   return useCallback(() => {
     const view = viewRef.current;
@@ -178,7 +355,15 @@ function useSubmitAction({ currentDraft, historyIndex, historyItems, onSubmit, v
     onSubmitRef.current(text);
   }, [currentDraft, historyIndex, historyItems, onSubmitRef, viewRef]);
 }
-function useCancelAction({ currentDraft, historyIndex, onCancel, viewRef }: Pick<HistoryRefs, 'currentDraft' | 'historyIndex'> & { onCancel: () => void; viewRef: ViewRef }): () => void {
+function useCancelAction({
+  currentDraft,
+  historyIndex,
+  onCancel,
+  viewRef,
+}: Pick<HistoryRefs, 'currentDraft' | 'historyIndex'> & {
+  onCancel: () => void;
+  viewRef: ViewRef;
+}): () => void {
   const onCancelRef = useLatestRef(onCancel);
   return useCallback(() => {
     const view = viewRef.current;
@@ -187,22 +372,42 @@ function useCancelAction({ currentDraft, historyIndex, onCancel, viewRef }: Pick
     onCancelRef.current();
   }, [currentDraft, historyIndex, onCancelRef, viewRef]);
 }
-function useHistoryNavigation({ currentDraft, historyIndex, historyItems, viewRef }: HistoryRefs & { viewRef: ViewRef }): (direction: HistoryDirection) => void {
-  return useCallback((direction: HistoryDirection) => {
-    const view = viewRef.current;
-    if (!view || historyItems.current.length === 0) return;
-    if (direction === 'up' && historyIndex.current === -1) currentDraft.current = view.state.doc.toString();
-    const nextIndex = getNextHistoryIndex(direction, historyIndex.current, historyItems.current.length);
-    if (nextIndex === null) return;
-    historyIndex.current = nextIndex;
-    replaceDocument(view, nextIndex === -1 ? currentDraft.current : historyItems.current[nextIndex]);
-  }, [currentDraft, historyIndex, historyItems, viewRef]);
+function useHistoryNavigation({
+  currentDraft,
+  historyIndex,
+  historyItems,
+  viewRef,
+}: HistoryRefs & { viewRef: ViewRef }): (direction: HistoryDirection) => void {
+  return useCallback(
+    (direction: HistoryDirection) => {
+      const view = viewRef.current;
+      if (!view || historyItems.current.length === 0) return;
+      if (direction === 'up' && historyIndex.current === -1)
+        currentDraft.current = view.state.doc.toString();
+      const nextIndex = getNextHistoryIndex(
+        direction,
+        historyIndex.current,
+        historyItems.current.length,
+      );
+      if (nextIndex === null) return;
+      historyIndex.current = nextIndex;
+      replaceDocument(
+        view,
+        nextIndex === -1 ? currentDraft.current : historyItems.current[nextIndex],
+      );
+    },
+    [currentDraft, historyIndex, historyItems, viewRef],
+  );
 }
 function runEditorAction(action: () => void): boolean {
   action();
   return true;
 }
-function createRichInputKeymap(doSubmit: () => void, doCancel: () => void, navigateHistory: (direction: HistoryDirection) => void) {
+function createRichInputKeymap(
+  doSubmit: () => void,
+  doCancel: () => void,
+  navigateHistory: (direction: HistoryDirection) => void,
+) {
   return keymap.of([
     { key: 'Ctrl-Enter', run: () => runEditorAction(doSubmit) },
     { key: 'Shift-Enter', run: () => runEditorAction(doSubmit) },
@@ -211,7 +416,11 @@ function createRichInputKeymap(doSubmit: () => void, doCancel: () => void, navig
     { key: 'Ctrl-ArrowDown', run: () => runEditorAction(() => navigateHistory('down')) },
   ]);
 }
-function createEditorExtensions(keyBinding: ReturnType<typeof createRichInputKeymap>, highlightCompartment: Compartment, lineNumCompartment: Compartment) {
+function createEditorExtensions(
+  keyBinding: ReturnType<typeof createRichInputKeymap>,
+  highlightCompartment: Compartment,
+  lineNumCompartment: Compartment,
+) {
   return [
     Prec.highest(keyBinding),
     lineNumCompartment.of([]),
@@ -227,21 +436,58 @@ function createEditorExtensions(keyBinding: ReturnType<typeof createRichInputKey
     cmPlaceholder('Type a command... (Ctrl+Enter to submit, Esc to cancel)'),
   ];
 }
-function createEditorView({ doCancel, doSubmit, highlightCompartment, lineNumCompartment, navigateHistory, parent }: { doCancel: () => void; doSubmit: () => void; highlightCompartment: Compartment; lineNumCompartment: Compartment; navigateHistory: (direction: HistoryDirection) => void; parent: HTMLDivElement }): EditorView {
+function createEditorView({
+  doCancel,
+  doSubmit,
+  highlightCompartment,
+  lineNumCompartment,
+  navigateHistory,
+  parent,
+}: {
+  doCancel: () => void;
+  doSubmit: () => void;
+  highlightCompartment: Compartment;
+  lineNumCompartment: Compartment;
+  navigateHistory: (direction: HistoryDirection) => void;
+  parent: HTMLDivElement;
+}): EditorView {
   const keyBinding = createRichInputKeymap(doSubmit, doCancel, navigateHistory);
   const extensions = createEditorExtensions(keyBinding, highlightCompartment, lineNumCompartment);
   return new EditorView({ state: EditorState.create({ doc: '', extensions }), parent });
 }
-function useRichInputEditorMount({ containerRef, doCancel, doSubmit, highlightCompartment, lineNumCompartment, navigateHistory, viewRef }: EditorMountOptions): void {
+function useRichInputEditorMount({
+  containerRef,
+  doCancel,
+  doSubmit,
+  highlightCompartment,
+  lineNumCompartment,
+  navigateHistory,
+  viewRef,
+}: EditorMountOptions): void {
   useEffect(() => {
     const parent = containerRef.current;
     if (!parent) return;
-    viewRef.current = createEditorView({ doCancel, doSubmit, highlightCompartment: highlightCompartment.current, lineNumCompartment: lineNumCompartment.current, navigateHistory, parent });
+    viewRef.current = createEditorView({
+      doCancel,
+      doSubmit,
+      highlightCompartment: highlightCompartment.current,
+      lineNumCompartment: lineNumCompartment.current,
+      navigateHistory,
+      parent,
+    });
     return () => {
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-  }, [containerRef, doCancel, doSubmit, highlightCompartment, lineNumCompartment, navigateHistory, viewRef]);
+  }, [
+    containerRef,
+    doCancel,
+    doSubmit,
+    highlightCompartment,
+    lineNumCompartment,
+    navigateHistory,
+    viewRef,
+  ]);
 }
 function useVisibleFocus(viewRef: ViewRef, visible: boolean): void {
   useEffect(() => {
@@ -253,18 +499,30 @@ function useVisibleFocus(viewRef: ViewRef, visible: boolean): void {
       });
     });
     // Fallback in case rAFs don't fire (e.g. tab not visible)
-    const timer = setTimeout(() => { viewRef.current?.focus(); }, 100);
+    const timer = setTimeout(() => {
+      viewRef.current?.focus();
+    }, 100);
     return () => clearTimeout(timer);
   }, [viewRef, visible]);
 }
-function useLineNumberConfig(lineNumCompartment: CompartmentRef, showLineNumbers: boolean, viewRef: ViewRef): void {
+function useLineNumberConfig(
+  lineNumCompartment: CompartmentRef,
+  showLineNumbers: boolean,
+  viewRef: ViewRef,
+): void {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    view.dispatch({ effects: lineNumCompartment.current.reconfigure(showLineNumbers ? lineNumbers() : []) });
+    view.dispatch({
+      effects: lineNumCompartment.current.reconfigure(showLineNumbers ? lineNumbers() : []),
+    });
   }, [lineNumCompartment, showLineNumbers, viewRef]);
 }
-export const RichInputBody = memo(function RichInputBody({ onCancel, onSubmit, visible }: RichInputProps): React.ReactElement | null {
+export const RichInputBody = memo(function RichInputBody({
+  onCancel,
+  onSubmit,
+  visible,
+}: RichInputProps): React.ReactElement | null {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const highlightCompartment = useRef(new Compartment());
@@ -275,9 +533,30 @@ export const RichInputBody = memo(function RichInputBody({ onCancel, onSubmit, v
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const doSubmit = useSubmitAction({ currentDraft, historyIndex, historyItems, onSubmit, viewRef });
   const doCancel = useCancelAction({ currentDraft, historyIndex, onCancel, viewRef });
-  const navigateHistory = useHistoryNavigation({ currentDraft, historyIndex, historyItems, viewRef });
-  useRichInputEditorMount({ containerRef, doCancel, doSubmit, highlightCompartment, lineNumCompartment, navigateHistory, viewRef });
+  const navigateHistory = useHistoryNavigation({
+    currentDraft,
+    historyIndex,
+    historyItems,
+    viewRef,
+  });
+  useRichInputEditorMount({
+    containerRef,
+    doCancel,
+    doSubmit,
+    highlightCompartment,
+    lineNumCompartment,
+    navigateHistory,
+    viewRef,
+  });
   useVisibleFocus(viewRef, visible);
   useLineNumberConfig(lineNumCompartment, showLineNumbers, viewRef);
-  return visible ? <RichInputPanel containerRef={containerRef} doCancel={doCancel} doSubmit={doSubmit} onToggleLineNumbers={() => setShowLineNumbers((value) => !value)} showLineNumbers={showLineNumbers} /> : null;
+  return visible ? (
+    <RichInputPanel
+      containerRef={containerRef}
+      doCancel={doCancel}
+      doSubmit={doSubmit}
+      onToggleLineNumbers={() => setShowLineNumbers((value) => !value)}
+      showLineNumbers={showLineNumbers}
+    />
+  ) : null;
 });

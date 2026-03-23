@@ -13,7 +13,7 @@ function getChipColor(type: MentionType): { bg: string; border: string; text: st
       return {
         bg: 'rgba(100, 100, 255, 0.08)',
         border: 'rgba(100, 100, 255, 0.25)',
-        text: 'var(--accent)',
+        text: 'var(--interactive-accent)',
       };
     case 'folder':
       return {
@@ -25,7 +25,7 @@ function getChipColor(type: MentionType): { bg: string; border: string; text: st
       return {
         bg: 'rgba(63, 185, 80, 0.08)',
         border: 'rgba(63, 185, 80, 0.25)',
-        text: '#3fb950',
+        text: 'var(--status-success)',
       };
     case 'terminal':
       return {
@@ -40,26 +40,62 @@ function ChipIcon({ type }: { type: MentionType }): React.ReactElement {
   switch (type) {
     case 'file':
       return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
         </svg>
       );
     case 'folder':
       return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
       );
     case 'diff':
       return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M12 3v18M3 12h18" />
         </svg>
       );
     case 'terminal':
       return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <polyline points="4 17 10 11 4 5" />
           <line x1="12" y1="19" x2="20" y2="19" />
         </svg>
@@ -99,8 +135,7 @@ export function MentionChip({ mention, onRemove }: MentionChipProps): React.Reac
       <span className="max-w-[140px] truncate" style={{ fontFamily: 'var(--font-mono)' }}>
         {mention.type === 'file' || mention.type === 'folder'
           ? truncatePath(mention.path)
-          : mention.label
-        }
+          : mention.label}
       </span>
       <button
         onClick={(e) => {
@@ -122,17 +157,17 @@ export interface MentionChipsBarProps {
   totalTokens: number;
 }
 
-export function MentionChipsBar({ mentions, onRemove, totalTokens }: MentionChipsBarProps): React.ReactElement | null {
+export function MentionChipsBar({
+  mentions,
+  onRemove,
+  totalTokens,
+}: MentionChipsBarProps): React.ReactElement | null {
   if (mentions.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-1 pb-1.5 pt-1">
       {mentions.map((mention) => (
-        <MentionChip
-          key={mention.key}
-          mention={mention}
-          onRemove={() => onRemove(mention.key)}
-        />
+        <MentionChip key={mention.key} mention={mention} onRemove={() => onRemove(mention.key)} />
       ))}
       <span className="ml-auto text-[10px] text-text-semantic-muted">
         {formatTokenCount(totalTokens)} tokens

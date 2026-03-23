@@ -23,17 +23,20 @@ function computeBarLayout(
   nowMs: number,
 ): { leftPct: number; widthPct: number } {
   const startOffsetMs = call.timestamp - sessionStartMs;
-  const endMs = call.duration !== undefined
-    ? call.timestamp + call.duration
-    : call.status === 'pending' ? nowMs : call.timestamp + 100;
+  const endMs =
+    call.duration !== undefined
+      ? call.timestamp + call.duration
+      : call.status === 'pending'
+        ? nowMs
+        : call.timestamp + 100;
   const durationMs = endMs - call.timestamp;
 
-  const leftPct = totalDurationMs > 0
-    ? Math.max(0, Math.min(100, (startOffsetMs / totalDurationMs) * 100))
-    : 0;
-  const widthPct = totalDurationMs > 0
-    ? Math.max(0.5, Math.min(100 - leftPct, (durationMs / totalDurationMs) * 100))
-    : 0.5;
+  const leftPct =
+    totalDurationMs > 0 ? Math.max(0, Math.min(100, (startOffsetMs / totalDurationMs) * 100)) : 0;
+  const widthPct =
+    totalDurationMs > 0
+      ? Math.max(0.5, Math.min(100 - leftPct, (durationMs / totalDurationMs) * 100))
+      : 0.5;
 
   return { leftPct, widthPct };
 }
@@ -62,7 +65,7 @@ function buildBarStyle(
     cursor: 'default',
     animation: status === 'pending' ? 'timeline-pulse 1.5s ease-in-out infinite' : undefined,
     transition: status === 'pending' ? 'width 200ms linear' : undefined,
-    boxShadow: status === 'error' ? '0 0 0 1px var(--error)' : undefined,
+    boxShadow: status === 'error' ? '0 0 0 1px var(--status-error)' : undefined,
   };
 }
 
@@ -73,9 +76,12 @@ function useTimelineBarHover(
   handleHover: (event: React.MouseEvent) => void;
   handleLeave: () => void;
 } {
-  const handleHover = useCallback((event: React.MouseEvent) => {
-    onHover({ ...tooltipBase, x: event.clientX, y: event.clientY });
-  }, [onHover, tooltipBase]);
+  const handleHover = useCallback(
+    (event: React.MouseEvent) => {
+      onHover({ ...tooltipBase, x: event.clientX, y: event.clientY });
+    },
+    [onHover, tooltipBase],
+  );
 
   const handleLeave = useCallback(() => onHover(null), [onHover]);
 
@@ -93,7 +99,12 @@ export const TimelineBar = memo(function TimelineBar({
   const startOffsetMs = call.timestamp - sessionStartMs;
   const { leftPct, widthPct } = computeBarLayout(call, sessionStartMs, totalDurationMs, nowMs);
   const tooltipBase = useMemo(
-    () => ({ toolName: call.toolName, status: call.status, duration: call.duration, startOffsetMs }),
+    () => ({
+      toolName: call.toolName,
+      status: call.status,
+      duration: call.duration,
+      startOffsetMs,
+    }),
     [call.toolName, call.status, call.duration, startOffsetMs],
   );
   const { handleHover, handleLeave } = useTimelineBarHover(tooltipBase, onHover);

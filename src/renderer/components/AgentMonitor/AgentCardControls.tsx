@@ -8,9 +8,9 @@ export type CardView = 'feed' | 'timeline';
 
 const STATUS_CONFIG = {
   idle: { label: 'Idle', dotColor: 'var(--text-faint)', pulse: false },
-  running: { label: 'Running', dotColor: 'var(--accent)', pulse: true },
-  complete: { label: 'Done', dotColor: 'var(--success)', pulse: false },
-  error: { label: 'Error', dotColor: 'var(--error)', pulse: false },
+  running: { label: 'Running', dotColor: 'var(--interactive-accent)', pulse: true },
+  complete: { label: 'Done', dotColor: 'var(--status-success)', pulse: false },
+  error: { label: 'Error', dotColor: 'var(--status-error)', pulse: false },
 } as const;
 
 const VIEW_OPTIONS: CardView[] = ['feed', 'timeline'];
@@ -89,8 +89,8 @@ export function formatDuration(ms: number): string {
 
 export function getCardContainerStyle(status: AgentSession['status']): React.CSSProperties {
   return {
-    borderColor: 'var(--border-muted)',
-    borderLeft: status === 'error' ? '3px solid var(--error)' : '3px solid transparent',
+    borderColor: 'var(--border-subtle)',
+    borderLeft: status === 'error' ? '3px solid var(--status-error)' : '3px solid transparent',
     opacity: status === 'complete' ? 0.7 : 1,
     transition: 'opacity 200ms ease',
   };
@@ -123,12 +123,20 @@ export function ActionIconButton({
   );
 }
 
-export const StatusBadge = memo(function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
+export const StatusBadge = memo(function StatusBadge({
+  status,
+}: StatusBadgeProps): React.ReactElement {
   const config = STATUS_CONFIG[status];
 
   return (
     <span className="inline-flex items-center gap-1">
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: config.dotColor, animation: config.pulse ? 'pulse 1.5s ease-in-out infinite' : undefined }} />
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{
+          background: config.dotColor,
+          animation: config.pulse ? 'pulse 1.5s ease-in-out infinite' : undefined,
+        }}
+      />
       <span className="text-[10px] font-medium" style={{ color: config.dotColor }}>
         {config.label}
       </span>
@@ -146,8 +154,24 @@ function SpinnerIcon(): React.ReactElement {
   return (
     <>
       <style>{SPIN_KEYFRAMES}</style>
-      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ animation: 'spin 0.9s linear infinite', flexShrink: 0 }}>
-        <circle cx="5.5" cy="5.5" r="4" stroke="var(--accent)" strokeWidth="1.5" strokeDasharray="12 8" strokeLinecap="round" />
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 11 11"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        style={{ animation: 'spin 0.9s linear infinite', flexShrink: 0 }}
+      >
+        <circle
+          cx="5.5"
+          cy="5.5"
+          r="4"
+          stroke="var(--interactive-accent)"
+          strokeWidth="1.5"
+          strokeDasharray="12 8"
+          strokeLinecap="round"
+        />
       </svg>
     </>
   );
@@ -170,9 +194,15 @@ export const RunningProgress = memo(function RunningProgress({
   const elapsedLabel = formatElapsedLabel(useElapsedSeconds(startedAt, true));
 
   return (
-    <span className="inline-flex items-center gap-1 shrink-0" aria-label={`Running for ${elapsedLabel}, ${completedToolCallCount} tool calls completed`}>
+    <span
+      className="inline-flex items-center gap-1 shrink-0"
+      aria-label={`Running for ${elapsedLabel}, ${completedToolCallCount} tool calls completed`}
+    >
       <SpinnerIcon />
-      <span className="text-[10px] tabular-nums" style={{ color: 'var(--accent)', opacity: 0.85 }}>
+      <span
+        className="text-[10px] tabular-nums"
+        style={{ color: 'var(--interactive-accent)', opacity: 0.85 }}
+      >
         {elapsedLabel}
       </span>
       <RunningCallCount count={completedToolCallCount} />
@@ -180,9 +210,15 @@ export const RunningProgress = memo(function RunningProgress({
   );
 });
 
-export const ViewToggle = memo(function ViewToggle({ view, onChange }: ViewToggleProps): React.ReactElement {
+export const ViewToggle = memo(function ViewToggle({
+  view,
+  onChange,
+}: ViewToggleProps): React.ReactElement {
   return (
-    <div className="inline-flex items-center rounded overflow-hidden shrink-0" style={{ border: '1px solid var(--border-muted)' }}>
+    <div
+      className="inline-flex items-center rounded overflow-hidden shrink-0"
+      style={{ border: '1px solid var(--border-subtle)' }}
+    >
       {VIEW_OPTIONS.map((option) => {
         const active = view === option;
 
@@ -194,7 +230,13 @@ export const ViewToggle = memo(function ViewToggle({ view, onChange }: ViewToggl
               onChange(option);
             }}
             className="px-2 py-0.5 text-[10px] font-medium transition-colors"
-            style={{ background: active ? 'var(--accent)' : 'transparent', color: active ? 'var(--text-on-accent)' : 'var(--text-faint)', border: 'none', cursor: 'pointer', lineHeight: '1.4' }}
+            style={{
+              background: active ? 'var(--interactive-accent)' : 'transparent',
+              color: active ? 'var(--text-on-accent)' : 'var(--text-faint)',
+              border: 'none',
+              cursor: 'pointer',
+              lineHeight: '1.4',
+            }}
             title={option === 'feed' ? 'Tool call feed' : 'Gantt timeline'}
           >
             {option === 'feed' ? 'Feed' : 'Timeline'}
@@ -205,10 +247,26 @@ export const ViewToggle = memo(function ViewToggle({ view, onChange }: ViewToggl
   );
 });
 
-export const ChevronIcon = memo(function ChevronIcon({ open }: ChevronIconProps): React.ReactElement {
+export const ChevronIcon = memo(function ChevronIcon({
+  open,
+}: ChevronIconProps): React.ReactElement {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}>
-      <path d="M4 2.5L7.5 6L4 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}
+    >
+      <path
+        d="M4 2.5L7.5 6L4 9.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 });
@@ -217,15 +275,29 @@ export const DismissButton = memo(function DismissButton({
   sessionId,
   onDismiss,
 }: DismissButtonProps): React.ReactElement {
-  const handleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    onDismiss(sessionId);
-  }, [onDismiss, sessionId]);
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      onDismiss(sessionId);
+    },
+    [onDismiss, sessionId],
+  );
 
   return (
-    <ActionIconButton title="Dismiss" ariaLabel="Dismiss session" color="var(--text-faint)" hoverColor="var(--text)" onClick={handleClick}>
+    <ActionIconButton
+      title="Dismiss"
+      ariaLabel="Dismiss session"
+      color="var(--text-faint)"
+      hoverColor="var(--text-primary)"
+      onClick={handleClick}
+    >
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-        <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path
+          d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
       </svg>
     </ActionIconButton>
   );
@@ -248,24 +320,31 @@ function useOutsideClick(
   }, [open, onClose, ref]);
 }
 
-function useExportSession(session: AgentSession, closeMenu: () => void): (format: 'json' | 'markdown') => Promise<void> {
+function useExportSession(
+  session: AgentSession,
+  closeMenu: () => void,
+): (format: 'json' | 'markdown') => Promise<void> {
   const { toast } = useToastContext();
 
-  return useCallback(async (format: 'json' | 'markdown') => {
-    closeMenu();
-    if (!window.electronAPI?.sessions?.export) {
-      toast('Export not available', 'error');
-      return;
-    }
+  return useCallback(
+    async (format: 'json' | 'markdown') => {
+      closeMenu();
+      if (!window.electronAPI?.sessions?.export) {
+        toast('Export not available', 'error');
+        return;
+      }
 
-    try {
-      const result = await window.electronAPI.sessions.export(session, format);
-      if (!result.success) toast(`Export failed: ${result.error ?? 'unknown error'}`, 'error');
-      else if (!result.cancelled) toast(`Session exported as ${format === 'json' ? 'JSON' : 'Markdown'}`, 'success');
-    } catch {
-      toast('Export failed', 'error');
-    }
-  }, [closeMenu, session, toast]);
+      try {
+        const result = await window.electronAPI.sessions.export(session, format);
+        if (!result.success) toast(`Export failed: ${result.error ?? 'unknown error'}`, 'error');
+        else if (!result.cancelled)
+          toast(`Session exported as ${format === 'json' ? 'JSON' : 'Markdown'}`, 'success');
+      } catch {
+        toast('Export failed', 'error');
+      }
+    },
+    [closeMenu, session, toast],
+  );
 }
 
 function ExportMenu({
@@ -274,18 +353,41 @@ function ExportMenu({
   onExport: (format: 'json' | 'markdown') => Promise<void>;
 }): React.ReactElement {
   return (
-    <div className="absolute right-0 z-50 rounded shadow-lg py-0.5 bg-surface-panel border border-border-semantic" style={{ top: '100%', marginTop: '2px', minWidth: '130px' }}>
-      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary" onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('json')}>
+    <div
+      className="absolute right-0 z-50 rounded shadow-lg py-0.5 bg-surface-panel border border-border-semantic"
+      style={{ top: '100%', marginTop: '2px', minWidth: '130px' }}
+    >
+      <button
+        className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary"
+        onMouseEnter={(event) => {
+          event.currentTarget.style.background = 'var(--surface-raised)';
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = 'transparent';
+        }}
+        onClick={() => void onExport('json')}
+      >
         Export as JSON
       </button>
-      <button className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary" onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--bg-tertiary)'; }} onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }} onClick={() => void onExport('markdown')}>
+      <button
+        className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary"
+        onMouseEnter={(event) => {
+          event.currentTarget.style.background = 'var(--surface-raised)';
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.background = 'transparent';
+        }}
+        onClick={() => void onExport('markdown')}
+      >
         Export as Markdown
       </button>
     </div>
   );
 }
 
-export const ExportButton = memo(function ExportButton({ session }: ExportButtonProps): React.ReactElement {
+export const ExportButton = memo(function ExportButton({
+  session,
+}: ExportButtonProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setOpen(false), []);
@@ -295,9 +397,24 @@ export const ExportButton = memo(function ExportButton({ session }: ExportButton
 
   return (
     <div className="relative shrink-0" ref={menuRef}>
-      <ActionIconButton title="Export session" ariaLabel="Export session" color="var(--text-faint)" hoverColor="var(--text)" onClick={(event) => { event.stopPropagation(); setOpen((value) => !value); }}>
+      <ActionIconButton
+        title="Export session"
+        ariaLabel="Export session"
+        color="var(--text-faint)"
+        hoverColor="var(--text-primary)"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((value) => !value);
+        }}
+      >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-          <path d="M5 1v5M2.5 4L5 6.5 7.5 4M1.5 8.5h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M5 1v5M2.5 4L5 6.5 7.5 4M1.5 8.5h7"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </ActionIconButton>
       {open && <ExportMenu onExport={handleExport} />}

@@ -17,9 +17,7 @@ export interface FilePickerItemProps {
 }
 
 function getDirectoryPart(relativePath: string): string {
-  return relativePath.includes('/')
-    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
-    : '';
+  return relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/')) : '';
 }
 
 function getItemStyle(isSelected: boolean): React.CSSProperties {
@@ -33,8 +31,8 @@ function getItemStyle(isSelected: boolean): React.CSSProperties {
     margin: '0 4px',
     height: `${ITEM_HEIGHT}px`,
     boxSizing: 'border-box',
-    backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-    color: isSelected ? 'var(--text-on-accent)' : 'var(--text)',
+    backgroundColor: isSelected ? 'var(--interactive-accent)' : 'transparent',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text-primary)',
     transition: 'background-color 80ms ease',
     userSelect: 'none',
     minWidth: 0,
@@ -65,7 +63,9 @@ export const FilePickerItem = memo(function FilePickerItem({
     >
       <ColorDot color={icon.color} dimmed={isSelected} />
       <FileName name={name} indices={highlightedNameIndices} />
-      {dirPart && <DirPath dir={dirPart} indices={highlightedPathIndices} isSelected={isSelected} />}
+      {dirPart && (
+        <DirPath dir={dirPart} indices={highlightedPathIndices} isSelected={isSelected} />
+      )}
     </div>
   );
 });
@@ -85,7 +85,13 @@ function ColorDot({ color, dimmed }: { color: string; dimmed: boolean }): React.
   );
 }
 
-function FileName({ name, indices }: { name: string; indices: ReadonlyArray<readonly [number, number]> }): React.ReactElement {
+function FileName({
+  name,
+  indices,
+}: {
+  name: string;
+  indices: ReadonlyArray<readonly [number, number]>;
+}): React.ReactElement {
   return (
     <span style={{ flexShrink: 0, fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap' }}>
       <RangeHighlight text={name} indices={indices} />
@@ -93,7 +99,15 @@ function FileName({ name, indices }: { name: string; indices: ReadonlyArray<read
   );
 }
 
-function DirPath({ dir, indices, isSelected }: { dir: string; indices: ReadonlyArray<readonly [number, number]>; isSelected: boolean }): React.ReactElement {
+function DirPath({
+  dir,
+  indices,
+  isSelected,
+}: {
+  dir: string;
+  indices: ReadonlyArray<readonly [number, number]>;
+  isSelected: boolean;
+}): React.ReactElement {
   return (
     <span
       style={{

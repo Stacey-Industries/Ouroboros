@@ -2,7 +2,7 @@
  * SessionTable.tsx — Table of session cost history entries.
  */
 
-import React, { memo, useCallback,useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 
 import type { CostEntry } from '../../types/electron';
 import { SessionTableRow } from './SessionTableRow';
@@ -19,7 +19,9 @@ const TABLE_HEADER_COLS = [
   { label: 'Cost', width: '52px', align: 'right' as const },
 ];
 
-export const SessionTable = memo(function SessionTable({ entries }: SessionTableProps): React.ReactElement {
+export const SessionTable = memo(function SessionTable({
+  entries,
+}: SessionTableProps): React.ReactElement {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleToggle = useCallback((id: string) => {
@@ -42,7 +44,12 @@ export const SessionTable = memo(function SessionTable({ entries }: SessionTable
       <TableHeader />
       <div className="overflow-y-auto" style={{ maxHeight: '240px' }}>
         {entries.map((entry) => (
-          <SessionTableRow key={entry.sessionId} entry={entry} isExpanded={expandedId === entry.sessionId} onToggle={handleToggle} />
+          <SessionTableRow
+            key={entry.sessionId}
+            entry={entry}
+            isExpanded={expandedId === entry.sessionId}
+            onToggle={handleToggle}
+          />
         ))}
       </div>
     </div>
@@ -53,7 +60,7 @@ function TableHeader(): React.ReactElement {
   return (
     <div
       className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       {TABLE_HEADER_COLS.map((col) => (
         <span

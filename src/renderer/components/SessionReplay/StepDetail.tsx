@@ -8,7 +8,7 @@
 
 import React, { memo } from 'react';
 
-import { estimateCost, formatCost,formatTokenCount } from '../AgentMonitor/costCalculator';
+import { estimateCost, formatCost, formatTokenCount } from '../AgentMonitor/costCalculator';
 import type { AgentSession } from '../AgentMonitor/types';
 import type { ReplayStep } from './types';
 
@@ -20,12 +20,12 @@ interface StepDetailProps {
 }
 
 const TOOL_COLOR: Record<string, string> = {
-  Read:     'var(--accent)',
-  Edit:     'var(--warning)',
-  Write:    'var(--warning)',
-  Bash:     'var(--success)',
-  Grep:     'var(--purple, #a371f7)',
-  Glob:     'var(--purple, #a371f7)',
+  Read: 'var(--interactive-accent)',
+  Edit: 'var(--status-warning)',
+  Write: 'var(--status-warning)',
+  Bash: 'var(--status-success)',
+  Grep: 'var(--palette-purple)',
+  Glob: 'var(--palette-purple)',
 };
 
 const SESSION_START_STYLE: React.CSSProperties = { padding: '12px', fontFamily: 'var(--font-ui)' };
@@ -39,7 +39,12 @@ const TOOL_DETAIL_STYLE: React.CSSProperties = {
 
 const TOOL_HEADER_STYLE: React.CSSProperties = { flexShrink: 0, padding: '8px 12px' };
 
-const TOOL_META_STYLE: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' };
+const TOOL_META_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  marginTop: '6px',
+};
 
 const TOOL_BADGE_STYLE: React.CSSProperties = {
   display: 'inline-flex',
@@ -88,7 +93,7 @@ const OUTPUT_PANEL_STYLE: React.CSSProperties = {
   margin: '0 12px 8px',
   padding: '8px',
   borderRadius: '4px',
-  border: '1px solid var(--border-muted)',
+  border: '1px solid var(--border-subtle)',
   overflow: 'auto',
   fontSize: '0.75rem',
   fontFamily: 'var(--font-mono)',
@@ -127,11 +132,23 @@ const METADATA_LABEL_STYLE: React.CSSProperties = { whiteSpace: 'nowrap' };
 
 type ReplayToolCall = NonNullable<ReplayStep['toolCall']>;
 
-interface MetadataItem { label: string; value: string; color?: string; }
+interface MetadataItem {
+  label: string;
+  value: string;
+  color?: string;
+}
 
-interface SessionStartDetailProps { session: AgentSession; stepNumber: number; totalSteps: number; }
+interface SessionStartDetailProps {
+  session: AgentSession;
+  stepNumber: number;
+  totalSteps: number;
+}
 
-interface ToolCallDetailProps { toolCall: ReplayToolCall; stepNumber: number; totalSteps: number; }
+interface ToolCallDetailProps {
+  toolCall: ReplayToolCall;
+  stepNumber: number;
+  totalSteps: number;
+}
 
 function toolColor(name: string): string {
   return TOOL_COLOR[name] ?? 'var(--text-muted)';
@@ -151,9 +168,9 @@ function formatTime(ms: number): string {
 }
 
 function statusColor(status: AgentSession['status'] | ReplayToolCall['status']): string {
-  if (status === 'complete' || status === 'success') return 'var(--success, #4CAF50)';
-  if (status === 'error') return 'var(--error, #f85149)';
-  return 'var(--accent)';
+  if (status === 'complete' || status === 'success') return 'var(--status-success)';
+  if (status === 'error') return 'var(--status-error)';
+  return 'var(--interactive-accent)';
 }
 
 function hasTokenUsage(session: AgentSession): boolean {
@@ -161,13 +178,15 @@ function hasTokenUsage(session: AgentSession): boolean {
 }
 
 function estimateSessionCost(session: AgentSession): string {
-  return formatCost(estimateCost({
-    inputTokens: session.inputTokens,
-    outputTokens: session.outputTokens,
-    model: session.model ?? 'claude-sonnet-4-20250514',
-    cacheReadTokens: session.cacheReadTokens,
-    cacheWriteTokens: session.cacheWriteTokens,
-  }).totalCost);
+  return formatCost(
+    estimateCost({
+      inputTokens: session.inputTokens,
+      outputTokens: session.outputTokens,
+      model: session.model ?? 'claude-sonnet-4-20250514',
+      cacheReadTokens: session.cacheReadTokens,
+      cacheWriteTokens: session.cacheWriteTokens,
+    }).totalCost,
+  );
 }
 
 function getSessionMetadata(session: AgentSession): MetadataItem[] {
@@ -206,7 +225,9 @@ export const StepDetail = memo(function StepDetail({
     return <SessionStartDetail session={session} stepNumber={stepNumber} totalSteps={totalSteps} />;
   }
 
-  return <ToolCallDetail toolCall={step.toolCall!} stepNumber={stepNumber} totalSteps={totalSteps} />;
+  return (
+    <ToolCallDetail toolCall={step.toolCall!} stepNumber={stepNumber} totalSteps={totalSteps} />
+  );
 });
 
 function SessionStartDetail({
@@ -232,8 +253,12 @@ function SessionStartDetail({
 function SessionHeading({ taskLabel }: { taskLabel: string }): React.ReactElement {
   return (
     <>
-      <h3 className="text-text-semantic-primary" style={SESSION_TITLE_STYLE}>Session Started</h3>
-      <div className="text-text-semantic-muted" style={SESSION_LABEL_STYLE}>{taskLabel}</div>
+      <h3 className="text-text-semantic-primary" style={SESSION_TITLE_STYLE}>
+        Session Started
+      </h3>
+      <div className="text-text-semantic-muted" style={SESSION_LABEL_STYLE}>
+        {taskLabel}
+      </div>
     </>
   );
 }
@@ -284,45 +309,87 @@ function ToolBadge({ name }: { name: string }): React.ReactElement {
 }
 
 function ToolStatus({ status }: { status: ReplayToolCall['status'] }): React.ReactElement {
-  return <span style={{ ...STATUS_TEXT_STYLE, color: statusColor(status) }}>{status.toUpperCase()}</span>;
+  return (
+    <span style={{ ...STATUS_TEXT_STYLE, color: statusColor(status) }}>{status.toUpperCase()}</span>
+  );
 }
 
 function ToolDuration({ duration }: { duration: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, fontFamily: 'var(--font-mono)' }}>{formatDuration(duration)}</span>;
+  return (
+    <span
+      className="text-text-semantic-faint"
+      style={{ ...META_TEXT_STYLE, fontFamily: 'var(--font-mono)' }}
+    >
+      {formatDuration(duration)}
+    </span>
+  );
 }
 
 function ToolTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, marginLeft: 'auto' }}>{formatTime(timestamp)}</span>;
+  return (
+    <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, marginLeft: 'auto' }}>
+      {formatTime(timestamp)}
+    </span>
+  );
 }
 
 function ToolInputSummary({ input }: { input?: string }): React.ReactElement {
-  return <div className="bg-surface-panel text-text-semantic-muted" style={TOOL_INPUT_STYLE}>{input || '(no input)'}</div>;
+  return (
+    <div className="bg-surface-panel text-text-semantic-muted" style={TOOL_INPUT_STYLE}>
+      {input || '(no input)'}
+    </div>
+  );
 }
 
 function OutputPanel({ output }: { output?: string }): React.ReactElement {
   return (
     <div style={OUTPUT_CONTAINER_STYLE}>
-      <div className="text-text-semantic-faint" style={OUTPUT_LABEL_STYLE}>Output</div>
+      <div className="text-text-semantic-faint" style={OUTPUT_LABEL_STYLE}>
+        Output
+      </div>
       <div className="bg-surface-panel text-text-semantic-primary" style={OUTPUT_PANEL_STYLE}>
-        {output || <span className="text-text-semantic-faint" style={EMPTY_OUTPUT_STYLE}>No output captured</span>}
+        {output || (
+          <span className="text-text-semantic-faint" style={EMPTY_OUTPUT_STYLE}>
+            No output captured
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 function StepCounter({ step, total }: { step: number; total: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={STEP_COUNTER_STYLE}>Step {step} of {total}</span>;
+  return (
+    <span className="text-text-semantic-faint" style={STEP_COUNTER_STYLE}>
+      Step {step} of {total}
+    </span>
+  );
 }
 
 function MetadataGrid({ children }: { children: React.ReactNode }): React.ReactElement {
   return <div style={METADATA_GRID_STYLE}>{children}</div>;
 }
 
-function MetadataRow({ label, value, color }: { label: string; value: string; color?: string }): React.ReactElement {
+function MetadataRow({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}): React.ReactElement {
   return (
     <>
-      <span className="text-text-semantic-faint" style={METADATA_LABEL_STYLE}>{label}</span>
-      <span style={{ color: color ?? undefined }} className={color ? undefined : 'text-text-semantic-muted'}>{value}</span>
+      <span className="text-text-semantic-faint" style={METADATA_LABEL_STYLE}>
+        {label}
+      </span>
+      <span
+        style={{ color: color ?? undefined }}
+        className={color ? undefined : 'text-text-semantic-muted'}
+      >
+        {value}
+      </span>
     </>
   );
 }

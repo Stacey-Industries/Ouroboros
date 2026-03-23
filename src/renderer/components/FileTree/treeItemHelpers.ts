@@ -51,8 +51,8 @@ export function rowBackground(opts: {
   heatTint: string | undefined;
 }): string {
   if (opts.isDragOver) return 'rgba(var(--accent-rgb, 88, 166, 255), 0.15)';
-  if (opts.isActive) return 'var(--accent-muted, rgba(var(--accent-rgb, 88, 166, 255), 0.12))';
+  if (opts.isActive) return 'var(--interactive-muted)';
   if (opts.isSelected) return 'rgba(var(--accent-rgb, 88, 166, 255), 0.08)';
-  if (opts.isFocused) return 'var(--bg-tertiary)';
+  if (opts.isFocused) return 'var(--surface-raised)';
   return opts.heatTint ?? 'transparent';
 }

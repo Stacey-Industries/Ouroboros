@@ -4,8 +4,8 @@
 
 import React, { memo, useCallback } from 'react';
 
-import { fileOpLabel, formatDurationShort,toolAbbr, toolColor } from './feedHelpers';
-import { ErrorIcon, RowChevron,SpinnerIcon, SuccessIcon } from './FeedIcons';
+import { fileOpLabel, formatDurationShort, toolAbbr, toolColor } from './feedHelpers';
+import { ErrorIcon, RowChevron, SpinnerIcon, SuccessIcon } from './FeedIcons';
 import type { ToolCallEvent } from './types';
 import { useElapsedSeconds } from './useElapsedSeconds';
 
@@ -49,9 +49,12 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
         outline: 'none',
       }}
       onMouseEnter={(e) => {
-        if (isExpandable) (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-tertiary)';
+        if (isExpandable)
+          (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-raised)';
       }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+      }}
       onClick={handleClick}
       aria-expanded={isExpandable ? expanded : undefined}
     >
@@ -68,7 +71,10 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
 
 function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): React.ReactElement {
   return (
-    <span className="shrink-0 mt-0.5 text-text-semantic-faint" style={{ opacity: visible ? 1 : 0.3, width: '10px' }}>
+    <span
+      className="shrink-0 mt-0.5 text-text-semantic-faint"
+      style={{ opacity: visible ? 1 : 0.3, width: '10px' }}
+    >
       <RowChevron open={open} />
     </span>
   );
@@ -79,7 +85,9 @@ function ToolBadge({ color, toolName }: { color: string; toolName: string }): Re
     <span
       className="shrink-0 mt-0.5 inline-flex items-center justify-center rounded text-[10px] font-bold leading-none"
       style={{
-        width: '20px', height: '16px', color,
+        width: '20px',
+        height: '16px',
+        color,
         background: `color-mix(in srgb, ${color} 15%, transparent)`,
         border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
       }}
@@ -90,7 +98,15 @@ function ToolBadge({ color, toolName }: { color: string; toolName: string }): Re
   );
 }
 
-function ToolLabel({ call, fileLabel, isPending }: { call: ToolCallEvent; fileLabel: string | null; isPending: boolean }): React.ReactElement {
+function ToolLabel({
+  call,
+  fileLabel,
+  isPending,
+}: {
+  call: ToolCallEvent;
+  fileLabel: string | null;
+  isPending: boolean;
+}): React.ReactElement {
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
       <span className="text-[11px] font-medium leading-none text-text-semantic-muted">
@@ -99,7 +115,7 @@ function ToolLabel({ call, fileLabel, isPending }: { call: ToolCallEvent; fileLa
       <span
         className="text-[11px] leading-snug truncate selectable"
         style={{
-          color: fileLabel && isPending ? 'var(--accent)' : 'var(--text-faint)',
+          color: fileLabel && isPending ? 'var(--interactive-accent)' : 'var(--text-faint)',
           fontStyle: fileLabel && isPending ? 'italic' : 'normal',
         }}
         title={call.input}
@@ -110,16 +126,30 @@ function ToolLabel({ call, fileLabel, isPending }: { call: ToolCallEvent; fileLa
   );
 }
 
-function DurationSlot({ call, elapsedSec, isPending }: { call: ToolCallEvent; elapsedSec: number; isPending: boolean }): React.ReactElement {
+function DurationSlot({
+  call,
+  elapsedSec,
+  isPending,
+}: {
+  call: ToolCallEvent;
+  elapsedSec: number;
+  isPending: boolean;
+}): React.ReactElement {
   return (
     <>
       {call.duration !== undefined && (
-        <span className="shrink-0 text-[10px] tabular-nums mt-0.5" style={{ color: 'var(--text-faint)' }}>
+        <span
+          className="shrink-0 text-[10px] tabular-nums mt-0.5"
+          style={{ color: 'var(--text-faint)' }}
+        >
           {formatDurationShort(call.duration)}
         </span>
       )}
       {isPending && elapsedSec > 0 && (
-        <span className="shrink-0 text-[10px] tabular-nums mt-0.5" style={{ color: 'var(--accent)', opacity: 0.8 }}>
+        <span
+          className="shrink-0 text-[10px] tabular-nums mt-0.5"
+          style={{ color: 'var(--interactive-accent)', opacity: 0.8 }}
+        >
           {elapsedSec}s
         </span>
       )}

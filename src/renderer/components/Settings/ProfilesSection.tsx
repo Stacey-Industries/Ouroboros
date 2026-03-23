@@ -55,15 +55,15 @@ const profileInputStyle: React.CSSProperties = {
   flex: 1,
   padding: '7px 10px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '13px',
   fontFamily: 'var(--font-ui)',
   outline: 'none',
 };
 
 const profileListStyle: React.CSSProperties = {
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   borderRadius: '6px',
   overflow: 'hidden',
 };
@@ -88,7 +88,7 @@ const applyButtonStyle: React.CSSProperties = {
   flexShrink: 0,
   padding: '4px 10px',
   borderRadius: '5px',
-  border: '1px solid var(--accent)',
+  border: '1px solid var(--interactive-accent)',
   background: 'transparent',
   fontSize: '11px',
   fontWeight: 600,
@@ -130,7 +130,11 @@ function applyProfileSnapshot(snapshot: ProfileSnapshot, onChange: ConfigChangeH
   }
 }
 
-function buildSavedProfiles(profiles: ProfileMap, draft: AppConfig, name: string): AppConfig['profiles'] {
+function buildSavedProfiles(
+  profiles: ProfileMap,
+  draft: AppConfig,
+  name: string,
+): AppConfig['profiles'] {
   return { ...profiles, [name]: snapshotConfig(draft) } as AppConfig['profiles'];
 }
 
@@ -145,8 +149,8 @@ function getSaveButtonStyle(enabled: boolean): React.CSSProperties {
     flexShrink: 0,
     padding: '7px 14px',
     borderRadius: '6px',
-    border: '1px solid var(--border)',
-    background: enabled ? 'var(--accent)' : 'var(--bg-tertiary)',
+    border: '1px solid var(--border-default)',
+    background: enabled ? 'var(--interactive-accent)' : 'var(--surface-raised)',
     color: enabled ? 'var(--text-on-accent)' : 'var(--text-muted)',
     fontSize: '12px',
     fontWeight: 600,
@@ -157,10 +161,11 @@ function getSaveButtonStyle(enabled: boolean): React.CSSProperties {
 }
 
 function getToastStyle(kind: ToastState['kind']): React.CSSProperties {
-  const tone = kind === 'success' ? 'var(--success)' : 'var(--error)';
-  const background = kind === 'success'
-    ? 'color-mix(in srgb, var(--success) 10%, var(--bg-secondary))'
-    : 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))';
+  const tone = kind === 'success' ? 'var(--status-success)' : 'var(--status-error)';
+  const background =
+    kind === 'success'
+      ? 'color-mix(in srgb, var(--status-success) 10%, var(--surface-panel))'
+      : 'color-mix(in srgb, var(--status-error) 10%, var(--surface-panel))';
 
   return {
     padding: '10px 14px',
@@ -187,14 +192,14 @@ function useToast(): [ToastState | null, (message: string, kind: ToastState['kin
 function useProfilesManager(
   draft: AppConfig,
   onChange: ConfigChangeHandler,
-  showToast: (message: string, kind: ToastState['kind']) => void
+  showToast: (message: string, kind: ToastState['kind']) => void,
 ): ProfilesManager {
   const profiles = getProfiles(draft);
   const profileNames = Object.keys(profiles).sort();
 
   function saveProfile(name: string): boolean {
     const trimmed = name.trim();
-    if (!trimmed) return showToast('Enter a profile name first.', 'error'), false;
+    if (!trimmed) return (showToast('Enter a profile name first.', 'error'), false);
     onChange('profiles', buildSavedProfiles(profiles, draft, trimmed));
     showToast(`Profile "${trimmed}" saved.`, 'success');
     return true;
@@ -216,7 +221,11 @@ function useProfilesManager(
 }
 
 function ToastBanner({ toast }: { toast: ToastState }): React.ReactElement {
-  return <div role="status" aria-live="polite" style={getToastStyle(toast.kind)}>{toast.message}</div>;
+  return (
+    <div role="status" aria-live="polite" style={getToastStyle(toast.kind)}>
+      {toast.message}
+    </div>
+  );
 }
 
 function SaveProfileSection({
@@ -233,10 +242,30 @@ function SaveProfileSection({
   return (
     <section>
       <SectionLabel>Save Current Settings as Profile</SectionLabel>
-      <p className="text-text-semantic-muted" style={helperTextStyle}>Snapshots the current theme, fonts, terminal size, and other appearance settings. Project paths and window layout are not included.</p>
+      <p className="text-text-semantic-muted" style={helperTextStyle}>
+        Snapshots the current theme, fonts, terminal size, and other appearance settings. Project
+        paths and window layout are not included.
+      </p>
       <div style={inputRowStyle}>
-        <input type="text" value={newName} onChange={(event) => onNameChange(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onSave(); } }} placeholder="Profile name..." className="text-text-semantic-primary" style={profileInputStyle} autoComplete="off" spellCheck={false} />
-        <button onClick={onSave} disabled={!canSave} style={getSaveButtonStyle(canSave)}>Save Profile</button>
+        <input
+          type="text"
+          value={newName}
+          onChange={(event) => onNameChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onSave();
+            }
+          }}
+          placeholder="Profile name..."
+          className="text-text-semantic-primary"
+          style={profileInputStyle}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <button onClick={onSave} disabled={!canSave} style={getSaveButtonStyle(canSave)}>
+          Save Profile
+        </button>
       </div>
     </section>
   );
@@ -256,11 +285,40 @@ function ProfileRow({
   onDelete: (name: string) => void;
 }): React.ReactElement {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', gap: '10px', borderBottom: isLast ? 'none' : '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
-      <span className="text-text-semantic-primary" style={profileNameStyle} title={name}>{name}</span>
-      {previewTheme && <span className="text-text-semantic-muted" style={themePreviewStyle}>{previewTheme}</span>}
-      <button aria-label={`Apply profile ${name}`} onClick={() => onApply(name)} className="text-interactive-accent" style={applyButtonStyle}>Apply</button>
-      <button aria-label={`Delete profile ${name}`} onClick={() => onDelete(name)} className="text-text-semantic-muted" style={deleteButtonStyle}>x</button>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '9px 12px',
+        gap: '10px',
+        borderBottom: isLast ? 'none' : '1px solid var(--border-default)',
+        background: 'var(--surface-raised)',
+      }}
+    >
+      <span className="text-text-semantic-primary" style={profileNameStyle} title={name}>
+        {name}
+      </span>
+      {previewTheme && (
+        <span className="text-text-semantic-muted" style={themePreviewStyle}>
+          {previewTheme}
+        </span>
+      )}
+      <button
+        aria-label={`Apply profile ${name}`}
+        onClick={() => onApply(name)}
+        className="text-interactive-accent"
+        style={applyButtonStyle}
+      >
+        Apply
+      </button>
+      <button
+        aria-label={`Delete profile ${name}`}
+        onClick={() => onDelete(name)}
+        className="text-text-semantic-muted"
+        style={deleteButtonStyle}
+      >
+        x
+      </button>
     </div>
   );
 }
@@ -279,9 +337,22 @@ function ProfilesList({
   return (
     <section>
       <SectionLabel>Saved Profiles</SectionLabel>
-      {profileNames.length === 0 ? <p className="text-text-semantic-muted" style={emptyStateStyle}>No profiles saved yet.</p> : (
+      {profileNames.length === 0 ? (
+        <p className="text-text-semantic-muted" style={emptyStateStyle}>
+          No profiles saved yet.
+        </p>
+      ) : (
         <div style={profileListStyle}>
-          {profileNames.map((name, index) => <ProfileRow key={name} name={name} previewTheme={profiles[name]?.activeTheme} isLast={index === profileNames.length - 1} onApply={onApply} onDelete={onDelete} />)}
+          {profileNames.map((name, index) => (
+            <ProfileRow
+              key={name}
+              name={name}
+              previewTheme={profiles[name]?.activeTheme}
+              isLast={index === profileNames.length - 1}
+              onApply={onApply}
+              onDelete={onDelete}
+            />
+          ))}
         </div>
       )}
     </section>
@@ -301,7 +372,12 @@ export function ProfilesSection({ draft, onChange }: ProfilesSectionProps): Reac
     <div style={stackStyle}>
       {toast && <ToastBanner toast={toast} />}
       <SaveProfileSection newName={newName} onNameChange={setNewName} onSave={handleSave} />
-      <ProfilesList profiles={manager.profiles} profileNames={manager.profileNames} onApply={manager.applyProfile} onDelete={manager.deleteProfile} />
+      <ProfilesList
+        profiles={manager.profiles}
+        profileNames={manager.profileNames}
+        onApply={manager.applyProfile}
+        onDelete={manager.deleteProfile}
+      />
     </div>
   );
 }

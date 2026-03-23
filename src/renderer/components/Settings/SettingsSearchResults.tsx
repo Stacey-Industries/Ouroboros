@@ -30,11 +30,7 @@ export function SettingsSearchResults({
   return (
     <div style={listStyle}>
       {searchResults.map((match, idx) => (
-        <SearchResultItem
-          key={idx}
-          match={match}
-          onClick={() => onResultClick(match.entry)}
-        />
+        <SearchResultItem key={idx} match={match} onClick={() => onResultClick(match.entry)} />
       ))}
     </div>
   );
@@ -53,10 +49,14 @@ function SearchResultItem({
         <span className="text-text-semantic-primary" style={labelStyle}>
           <HighlightedText text={match.entry.label} ranges={match.labelRanges} />
         </span>
-        <span className="text-interactive-accent" style={badgeStyle}>{match.entry.sectionLabel}</span>
+        <span className="text-interactive-accent" style={badgeStyle}>
+          {match.entry.sectionLabel}
+        </span>
       </div>
       {match.entry.description && (
-        <span className="text-text-semantic-muted" style={descStyle}>{match.entry.description}</span>
+        <span className="text-text-semantic-muted" style={descStyle}>
+          {match.entry.description}
+        </span>
       )}
     </button>
   );
@@ -80,8 +80,8 @@ const itemStyle: React.CSSProperties = {
   gap: '4px',
   padding: '10px 14px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-secondary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-panel)',
   cursor: 'pointer',
   textAlign: 'left',
   width: '100%',

@@ -13,7 +13,7 @@ const sectionLabelStyle: React.CSSProperties = {
 const ghostButtonStyle: React.CSSProperties = {
   padding: '5px 10px',
   borderRadius: '5px',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   background: 'transparent',
   fontSize: '11px',
   cursor: 'pointer',
@@ -24,7 +24,7 @@ const accentButtonStyle: React.CSSProperties = {
   padding: '5px 10px',
   borderRadius: '5px',
   border: 'none',
-  background: 'var(--accent)',
+  background: 'var(--interactive-accent)',
   fontSize: '11px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -33,7 +33,7 @@ const accentButtonStyle: React.CSSProperties = {
 
 const disabledButtonStyle: React.CSSProperties = {
   ...accentButtonStyle,
-  background: 'var(--bg-tertiary)',
+  background: 'var(--surface-raised)',
   cursor: 'not-allowed',
 };
 
@@ -68,7 +68,9 @@ function ThemeEditorHeader({
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div className="text-text-semantic-muted" style={sectionLabelStyle}>Color Tokens</div>
+      <div className="text-text-semantic-muted" style={sectionLabelStyle}>
+        Color Tokens
+      </div>
       <div style={{ display: 'flex', gap: '8px' }}>
         {hasOverrides ? (
           <button
@@ -131,7 +133,7 @@ function TokenLabel({
       <div
         style={{
           fontSize: '12px',
-          color: isOverridden ? 'var(--accent)' : 'var(--text-secondary)',
+          color: isOverridden ? 'var(--interactive-accent)' : 'var(--text-secondary)',
           fontWeight: isOverridden ? 500 : 400,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -181,7 +183,7 @@ function ResetTokenButton({
         borderRadius: '4px',
         border: 'none',
         background: 'transparent',
-        color: isHovered ? 'var(--error)' : 'var(--text-muted)',
+        color: isHovered ? 'var(--status-error)' : 'var(--text-muted)',
         fontSize: '12px',
         cursor: 'pointer',
         lineHeight: 1,
@@ -200,9 +202,9 @@ function getTokenRowStyle(overridden: boolean): React.CSSProperties {
     padding: '7px 10px',
     borderRadius: '6px',
     background: overridden
-      ? 'color-mix(in srgb, var(--accent) 6%, var(--bg-secondary))'
-      : 'var(--bg-secondary)',
-    border: `1px solid ${overridden ? 'color-mix(in srgb, var(--accent) 30%, var(--border))' : 'var(--border-muted)'}`,
+      ? 'color-mix(in srgb, var(--interactive-accent) 6%, var(--surface-panel))'
+      : 'var(--surface-panel)',
+    border: `1px solid ${overridden ? 'color-mix(in srgb, var(--interactive-accent) 30%, var(--border-default))' : 'var(--border-subtle)'}`,
     transition: 'background 120ms ease, border-color 120ms ease',
   };
 }
@@ -231,7 +233,9 @@ function ColorTokenRow({
         onChange={(newHex) => onColorChange(token, newHex)}
       />
       <TokenLabel cssVar={token.cssVar} isOverridden={overridden} label={token.label} />
-      {overridden ? <ResetTokenButton label={token.label} onReset={() => onResetToken(token)} /> : null}
+      {overridden ? (
+        <ResetTokenButton label={token.label} onReset={() => onResetToken(token)} />
+      ) : null}
     </div>
   );
 }

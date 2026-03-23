@@ -4,12 +4,12 @@
 
 /** Tool badge colors for the feed view. */
 export const TOOL_COLOR: Record<string, string> = {
-  Read:  'var(--accent)',
-  Edit:  'var(--warning)',
-  Write: 'var(--warning)',
-  Bash:  'var(--success)',
-  Grep:  'var(--purple)',
-  Glob:  'var(--purple)',
+  Read: 'var(--interactive-accent)',
+  Edit: 'var(--status-warning)',
+  Write: 'var(--status-warning)',
+  Bash: 'var(--status-success)',
+  Grep: 'var(--palette-purple)',
+  Glob: 'var(--palette-purple)',
 };
 
 export function toolColor(toolName: string): string {

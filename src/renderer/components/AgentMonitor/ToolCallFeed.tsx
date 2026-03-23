@@ -2,7 +2,7 @@
  * ToolCallFeed.tsx — Scrollable list of tool calls for an agent session.
  */
 
-import React, { memo,useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ToolCallRow } from './ToolCallRow';
 import type { ToolCallEvent } from './types';
@@ -16,11 +16,16 @@ interface FeedHeaderProps {
   onCollapseAll: () => void;
 }
 
-const FeedHeader = memo(function FeedHeader({ count, allExpanded, onExpandAll, onCollapseAll }: FeedHeaderProps): React.ReactElement {
+const FeedHeader = memo(function FeedHeader({
+  count,
+  allExpanded,
+  onExpandAll,
+  onCollapseAll,
+}: FeedHeaderProps): React.ReactElement {
   return (
     <div
       className="flex items-center justify-between px-3 py-1"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <span className="text-[10px] font-medium text-text-semantic-faint">
         {count} tool call{count !== 1 ? 's' : ''}
@@ -28,10 +33,15 @@ const FeedHeader = memo(function FeedHeader({ count, allExpanded, onExpandAll, o
       <button
         onClick={allExpanded ? onCollapseAll : onExpandAll}
         className="shrink-0 text-[10px] px-1.5 py-0.5 rounded transition-colors"
-        style={{ color: 'var(--text-faint)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+        style={{
+          color: 'var(--text-faint)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+        }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-          (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-tertiary)';
+          (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-raised)';
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)';
@@ -102,13 +112,8 @@ export const ToolCallFeed = memo(function ToolCallFeed({
 }: ToolCallFeedProps): React.ReactElement {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const {
-    expandedIds,
-    allExpanded,
-    handleToggle,
-    handleExpandAll,
-    handleCollapseAll,
-  } = useExpandedToolCalls(toolCalls);
+  const { expandedIds, allExpanded, handleToggle, handleExpandAll, handleCollapseAll } =
+    useExpandedToolCalls(toolCalls);
 
   useAutoScrollToBottom(toolCalls.length, containerRef, bottomRef);
 
@@ -122,11 +127,25 @@ export const ToolCallFeed = memo(function ToolCallFeed({
 
   return (
     <div className="flex flex-col">
-      <FeedHeader count={toolCalls.length} allExpanded={allExpanded} onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
-      <div ref={containerRef} className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: '320px' }}>
+      <FeedHeader
+        count={toolCalls.length}
+        allExpanded={allExpanded}
+        onExpandAll={handleExpandAll}
+        onCollapseAll={handleCollapseAll}
+      />
+      <div
+        ref={containerRef}
+        className="overflow-y-auto overflow-x-hidden"
+        style={{ maxHeight: '320px' }}
+      >
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         {toolCalls.map((call) => (
-          <ToolCallRow key={call.id} call={call} expanded={expandedIds.has(call.id)} onToggle={handleToggle} />
+          <ToolCallRow
+            key={call.id}
+            call={call}
+            expanded={expandedIds.has(call.id)}
+            onToggle={handleToggle}
+          />
         ))}
         <div ref={bottomRef} />
       </div>

@@ -42,8 +42,8 @@ const tagStyle: React.CSSProperties = {
   gap: '4px',
   padding: '3px 8px',
   borderRadius: '4px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
   userSelect: 'none',
@@ -75,8 +75,8 @@ const addButtonStyle: React.CSSProperties = {
   flexShrink: 0,
   padding: '7px 12px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
@@ -90,7 +90,8 @@ const emptyStateStyle: React.CSSProperties = {
 function validatePattern(value: string, patterns: string[]): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return 'Pattern cannot be empty';
-  if (trimmed.includes('/') || trimmed.includes('\\')) return 'Use bare names only (e.g. vendor or *.log), not paths';
+  if (trimmed.includes('/') || trimmed.includes('\\'))
+    return 'Use bare names only (e.g. vendor or *.log), not paths';
   if (patterns.includes(trimmed)) return 'Pattern already exists';
   return null;
 }
@@ -100,8 +101,8 @@ function getInputStyle(hasError: boolean): React.CSSProperties {
     width: '100%',
     padding: '7px 10px',
     borderRadius: '6px',
-    border: hasError ? '1px solid var(--error, #e55)' : '1px solid var(--border)',
-    background: 'var(--bg)',
+    border: hasError ? '1px solid var(--status-error, #e55)' : '1px solid var(--border-default)',
+    background: 'var(--surface-base)',
     fontSize: '12px',
     fontFamily: 'var(--font-mono)',
     outline: 'none',
@@ -111,7 +112,7 @@ function getInputStyle(hasError: boolean): React.CSSProperties {
 
 function useFileFilterInput(
   patterns: string[],
-  onChange: FileFilterSectionProps['onChange']
+  onChange: FileFilterSectionProps['onChange'],
 ): FileFilterInputState {
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState<string | null>(null);
@@ -151,7 +152,16 @@ function FileFilterTag({
   return (
     <span className="text-text-semantic-secondary" style={tagStyle}>
       {label}
-      {onRemove && <button aria-label={`Remove ${label}`} onClick={onRemove} className="text-text-semantic-muted" style={removeButtonStyle}>x</button>}
+      {onRemove && (
+        <button
+          aria-label={`Remove ${label}`}
+          onClick={onRemove}
+          className="text-text-semantic-muted"
+          style={removeButtonStyle}
+        >
+          x
+        </button>
+      )}
     </span>
   );
 }
@@ -160,7 +170,22 @@ function FilterInputError({ message }: { message: string | null }): React.ReactE
   if (!message) return null;
 
   return (
-    <div className="text-status-error" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '2px', padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-secondary, var(--bg))', border: '1px solid var(--error, #e55)', fontSize: '11px', zIndex: 1 }}>
+    <div
+      className="text-status-error"
+      style={{
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        marginTop: '2px',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        background: 'var(--surface-panel, var(--surface-base))',
+        border: '1px solid var(--status-error, #e55)',
+        fontSize: '11px',
+        zIndex: 1,
+      }}
+    >
       {message}
     </div>
   );
@@ -170,8 +195,15 @@ function BaselinePatternsSection(): React.ReactElement {
   return (
     <section>
       <SectionLabel>Always Ignored (built-in)</SectionLabel>
-      <p className="text-text-semantic-muted" style={helperTextStyle}>These patterns are always active and cannot be removed. Dotfiles and common project folders stay visible unless you add them below.</p>
-      <div style={tagListStyle}>{BASELINE_PATTERNS.map((pattern) => <FileFilterTag key={pattern} label={pattern} />)}</div>
+      <p className="text-text-semantic-muted" style={helperTextStyle}>
+        These patterns are always active and cannot be removed. Dotfiles and common project folders
+        stay visible unless you add them below.
+      </p>
+      <div style={tagListStyle}>
+        {BASELINE_PATTERNS.map((pattern) => (
+          <FileFilterTag key={pattern} label={pattern} />
+        ))}
+      </div>
     </section>
   );
 }
@@ -194,10 +226,31 @@ function PatternInputRow({
   return (
     <div style={inputRowStyle}>
       <div style={inputWrapperStyle}>
-        <input ref={inputRef} type="text" value={inputValue} placeholder="e.g. vendor or *.log" onChange={onChange} onKeyDown={onKeyDown} className="text-text-semantic-primary" style={getInputStyle(Boolean(inputError))} onFocus={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--accent)'; }} onBlur={(event) => { event.currentTarget.style.borderColor = inputError ? 'var(--error, #e55)' : 'var(--border)'; }} />
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          placeholder="e.g. vendor or *.log"
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          className="text-text-semantic-primary"
+          style={getInputStyle(Boolean(inputError))}
+          onFocus={(event) => {
+            event.currentTarget.style.borderColor = inputError
+              ? 'var(--status-error, #e55)'
+              : 'var(--interactive-accent)';
+          }}
+          onBlur={(event) => {
+            event.currentTarget.style.borderColor = inputError
+              ? 'var(--status-error, #e55)'
+              : 'var(--border-default)';
+          }}
+        />
         <FilterInputError message={inputError} />
       </div>
-      <button onClick={onAdd} className="text-text-semantic-primary" style={addButtonStyle}>Add</button>
+      <button onClick={onAdd} className="text-text-semantic-primary" style={addButtonStyle}>
+        Add
+      </button>
     </div>
   );
 }
@@ -210,12 +263,18 @@ function ActivePatternList({
   onRemove: (pattern: string) => void;
 }): React.ReactElement {
   if (patterns.length === 0) {
-    return <p className="text-text-semantic-muted" style={emptyStateStyle}>No custom patterns. The built-in list above is still applied.</p>;
+    return (
+      <p className="text-text-semantic-muted" style={emptyStateStyle}>
+        No custom patterns. The built-in list above is still applied.
+      </p>
+    );
   }
 
   return (
     <div style={tagListStyle}>
-      {patterns.map((pattern) => <FileFilterTag key={pattern} label={pattern} onRemove={() => onRemove(pattern)} />)}
+      {patterns.map((pattern) => (
+        <FileFilterTag key={pattern} label={pattern} onRemove={() => onRemove(pattern)} />
+      ))}
     </div>
   );
 }
@@ -232,22 +291,43 @@ function CustomPatternsSection({
   return (
     <section>
       <SectionLabel>Custom Ignore Patterns</SectionLabel>
-      <p className="text-text-semantic-muted" style={helperTextStyle}>Add patterns to skip additional files or folders. Use exact names like <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>vendor</code> or glob-like suffixes like <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>.log</code> with a wildcard prefix, for example <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>*.log</code>.</p>
-      <PatternInputRow inputError={input.inputError} inputRef={input.inputRef} inputValue={input.inputValue} onAdd={input.handleAdd} onChange={input.handleChange} onKeyDown={input.handleKeyDown} />
+      <p className="text-text-semantic-muted" style={helperTextStyle}>
+        Add patterns to skip additional files or folders. Use exact names like{' '}
+        <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>
+          vendor
+        </code>{' '}
+        or glob-like suffixes like{' '}
+        <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>
+          .log
+        </code>{' '}
+        with a wildcard prefix, for example{' '}
+        <code className="text-text-semantic-secondary" style={{ fontFamily: 'var(--font-mono)' }}>
+          *.log
+        </code>
+        .
+      </p>
+      <PatternInputRow
+        inputError={input.inputError}
+        inputRef={input.inputRef}
+        inputValue={input.inputValue}
+        onAdd={input.handleAdd}
+        onChange={input.handleChange}
+        onKeyDown={input.handleKeyDown}
+      />
       <ActivePatternList patterns={patterns} onRemove={onRemove} />
     </section>
   );
 }
 
-export function FileFilterSection({
-  draft,
-  onChange,
-}: FileFilterSectionProps): React.ReactElement {
+export function FileFilterSection({ draft, onChange }: FileFilterSectionProps): React.ReactElement {
   const patterns = draft.fileTreeIgnorePatterns ?? [];
   const input = useFileFilterInput(patterns, onChange);
 
   function handleRemove(pattern: string): void {
-    onChange('fileTreeIgnorePatterns', patterns.filter((candidate) => candidate !== pattern));
+    onChange(
+      'fileTreeIgnorePatterns',
+      patterns.filter((candidate) => candidate !== pattern),
+    );
   }
 
   return (

@@ -4,7 +4,7 @@
  * Extracted from InnerApp's render method to reduce component size.
  */
 
-import React, { type ErrorInfo,useCallback, useReducer } from 'react';
+import React, { type ErrorInfo, useCallback, useReducer } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
 import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
@@ -23,7 +23,9 @@ import { AppLayoutConnected } from './AppLayoutConnected';
 import { CentrePaneConnected } from './CentrePaneConnected';
 import { FilePickerConnected } from './FilePickerConnected';
 import { RightSidebarTabs } from './RightSidebarTabs';
-const AnalyticsDashboard = React.lazy(() => import('../Analytics').then(m => ({ default: m.AnalyticsDashboard })));
+const AnalyticsDashboard = React.lazy(() =>
+  import('../Analytics').then((m) => ({ default: m.AnalyticsDashboard })),
+);
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
@@ -48,13 +50,18 @@ class ChatErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-text-semantic-muted" style={{ minHeight: 120 }}>
-          <span className="text-sm font-medium text-status-error">
-            Chat crashed
+        <div
+          className="flex flex-col items-center justify-center gap-3 p-6 text-center text-text-semantic-muted"
+          style={{ minHeight: 120 }}
+        >
+          <span className="text-sm font-medium text-status-error">Chat crashed</span>
+          <span className="text-xs">
+            {this.state.error?.message ?? 'An unexpected error occurred.'}
           </span>
-          <span className="text-xs">{this.state.error?.message ?? 'An unexpected error occurred.'}</span>
-          <button className="mt-1 rounded px-3 py-1 text-xs bg-surface-raised border border-border-semantic text-text-semantic-primary"
-            onClick={() => this.setState({ hasError: false, error: null })}>
+          <button
+            className="mt-1 rounded px-3 py-1 text-xs bg-surface-raised border border-border-semantic text-text-semantic-primary"
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
             Retry
           </button>
         </div>
@@ -120,15 +127,31 @@ type ProjectPickerSlotProps = Pick<
 
 type TerminalPanelContentProps = Pick<
   InnerAppLayoutProps,
-  'sessions' | 'activeSessionId' | 'recordingSessions' | 'handleTerminalRestart' | 'handleTerminalClose' |
-  'handleTerminalTitleChange' | 'spawnSession' | 'handleToggleRecording' | 'handleSplit' | 'handleCloseSplit'
+  | 'sessions'
+  | 'activeSessionId'
+  | 'recordingSessions'
+  | 'handleTerminalRestart'
+  | 'handleTerminalClose'
+  | 'handleTerminalTitleChange'
+  | 'spawnSession'
+  | 'handleToggleRecording'
+  | 'handleSplit'
+  | 'handleCloseSplit'
 >;
 
 type LayoutOverlaysProps = Pick<
   InnerAppLayoutProps,
-  'paletteOpen' | 'closePalette' | 'commands' | 'recentIds' | 'handleExecute' |
-  'filePickerOpen' | 'setFilePickerOpen' | 'projectRoot' |
-  'symbolSearchOpen' | 'setSymbolSearchOpen' | 'perfOverlayVisible'
+  | 'paletteOpen'
+  | 'closePalette'
+  | 'commands'
+  | 'recentIds'
+  | 'handleExecute'
+  | 'filePickerOpen'
+  | 'setFilePickerOpen'
+  | 'projectRoot'
+  | 'symbolSearchOpen'
+  | 'setSymbolSearchOpen'
+  | 'perfOverlayVisible'
 >;
 
 function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutProps'] {
@@ -191,11 +214,39 @@ function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): R
 
   return (
     <RightSidebarTabs
-      chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
-      monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
-      gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
-      analyticsContent={<ErrorBoundary label="Analytics"><React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #8b949e)' }}>Loading...</div>}><AnalyticsDashboard /></React.Suspense></ErrorBoundary>}
-      memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
+      chatContent={
+        <ChatErrorBoundary>
+          <AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} />
+        </ChatErrorBoundary>
+      }
+      monitorContent={
+        <ErrorBoundary label="Agent Monitor">
+          <AgentMonitorManager />
+        </ErrorBoundary>
+      }
+      gitContent={
+        <ErrorBoundary label="Git Panel">
+          <GitPanel />
+        </ErrorBoundary>
+      }
+      analyticsContent={
+        <ErrorBoundary label="Analytics">
+          <React.Suspense
+            fallback={
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading...
+              </div>
+            }
+          >
+            <AnalyticsDashboard />
+          </React.Suspense>
+        </ErrorBoundary>
+      }
+      memoryContent={
+        <ErrorBoundary label="Memory">
+          <SessionMemoryPanel workspaceRoot={projectRoot} />
+        </ErrorBoundary>
+      }
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}
@@ -243,12 +294,15 @@ function ProjectPickerSlot({
   setRecentProjects,
   rootCount,
 }: ProjectPickerSlotProps): React.ReactElement {
-  const handleAddProject = useCallback((path: string) => {
-    addProjectRoot(path);
-    const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
-    setRecentProjects(updated);
-    if (hasElectronAPI()) void window.electronAPI.config.set('recentProjects', updated);
-  }, [addProjectRoot, recentProjects, setRecentProjects]);
+  const handleAddProject = useCallback(
+    (path: string) => {
+      addProjectRoot(path);
+      const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
+      setRecentProjects(updated);
+      if (hasElectronAPI()) void window.electronAPI.config.set('recentProjects', updated);
+    },
+    [addProjectRoot, recentProjects, setRecentProjects],
+  );
 
   return (
     <ProjectPicker
@@ -269,7 +323,11 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
+      sidebarContent={
+        <ErrorBoundary label="File Tree">
+          <SidebarSections />
+        </ErrorBoundary>
+      }
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<TerminalPanelContent {...props} />}
@@ -292,9 +350,23 @@ function LayoutOverlays({
 }: LayoutOverlaysProps): React.ReactElement {
   return (
     <>
-      <CommandPalette isOpen={paletteOpen} onClose={closePalette} commands={commands} recentIds={recentIds} onExecute={handleExecute} />
-      <FilePickerConnected isOpen={filePickerOpen} onClose={() => setFilePickerOpen(false)} projectRoot={projectRoot} />
-      <SymbolSearch isOpen={symbolSearchOpen} onClose={() => setSymbolSearchOpen(false)} projectRoot={projectRoot} />
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={closePalette}
+        commands={commands}
+        recentIds={recentIds}
+        onExecute={handleExecute}
+      />
+      <FilePickerConnected
+        isOpen={filePickerOpen}
+        onClose={() => setFilePickerOpen(false)}
+        projectRoot={projectRoot}
+      />
+      <SymbolSearch
+        isOpen={symbolSearchOpen}
+        onClose={() => setSymbolSearchOpen(false)}
+        projectRoot={projectRoot}
+      />
       <PerformanceOverlay visible={perfOverlayVisible} />
     </>
   );

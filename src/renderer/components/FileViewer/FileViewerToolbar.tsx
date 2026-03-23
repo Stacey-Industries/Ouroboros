@@ -31,7 +31,7 @@ const containerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '6px',
   padding: '3px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
@@ -41,7 +41,7 @@ const containerStyle: React.CSSProperties = {
  * history, and edit mode.
  */
 export const FileViewerToolbar = memo(function FileViewerToolbar(
-  props: FileViewerToolbarProps
+  props: FileViewerToolbarProps,
 ): React.ReactElement {
   return (
     <div style={containerStyle}>
@@ -69,11 +69,7 @@ interface ToolbarToggleDefinition {
   title: string;
 }
 
-function ViewerToggleButtons({
-  props,
-}: {
-  props: FileViewerToolbarProps;
-}): React.ReactElement {
+function ViewerToggleButtons({ props }: { props: FileViewerToolbarProps }): React.ReactElement {
   const buttons = getToolbarToggleButtons(props);
 
   return (
@@ -85,9 +81,7 @@ function ViewerToggleButtons({
   );
 }
 
-function getToolbarToggleButtons(
-  props: FileViewerToolbarProps
-): ToolbarToggleDefinition[] {
+function getToolbarToggleButtons(props: FileViewerToolbarProps): ToolbarToggleDefinition[] {
   const buttons: ToolbarToggleDefinition[] = [
     {
       label: 'Wrap',
@@ -156,7 +150,10 @@ function EditModeButtons({
   onSave,
   onCancelEdit,
   setEditMode,
-}: Pick<EditControlsProps, 'currentContent' | 'isDirty' | 'onSave' | 'onCancelEdit' | 'setEditMode'>): React.ReactElement {
+}: Pick<
+  EditControlsProps,
+  'currentContent' | 'isDirty' | 'onSave' | 'onCancelEdit' | 'setEditMode'
+>): React.ReactElement {
   const handleSave = () => {
     if (currentContent == null) {
       return;
@@ -200,11 +197,7 @@ function ClaudeMdToggle({
       label={claudeMdEnhanced ? 'Enhanced' : 'Plain'}
       active={claudeMdEnhanced}
       onClick={() => setClaudeMdEnhanced(toggleBoolean)}
-      title={
-        claudeMdEnhanced
-          ? 'Switch to plain editor'
-          : 'Switch to enhanced CLAUDE.md editor'
-      }
+      title={claudeMdEnhanced ? 'Switch to plain editor' : 'Switch to enhanced CLAUDE.md editor'}
     />
   );
 }

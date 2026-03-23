@@ -29,7 +29,7 @@ const summaryBarStyle: React.CSSProperties = {
 
 const summaryButtonStyle: React.CSSProperties = {
   background: 'none',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   borderRadius: '4px',
   padding: '2px 8px',
   fontSize: '11px',
@@ -56,8 +56,8 @@ const itemRowStyle: React.CSSProperties = {
 const typeBadgeStyle: React.CSSProperties = {
   fontSize: '10px',
   fontFamily: 'var(--font-mono)',
-  backgroundColor: 'var(--bg-tertiary)',
-  border: '1px solid var(--border)',
+  backgroundColor: 'var(--surface-raised)',
+  border: '1px solid var(--border-default)',
   borderRadius: '3px',
   padding: '1px 5px',
 };
@@ -68,19 +68,38 @@ const emptyStyle: React.CSSProperties = {
   padding: '8px 0',
 };
 
-function SummaryBar({ summary, selectAll, clearAll }: {
+function SummaryBar({
+  summary,
+  selectAll,
+  clearAll,
+}: {
   summary: ContextSelectionModel['summary'];
   selectAll: () => void;
   clearAll: () => void;
 }): React.ReactElement {
   return (
-    <div className="bg-surface-raised border border-border-semantic text-text-semantic-muted" style={summaryBarStyle}>
-      <span>{summary.selectedCount} of {summary.totalCount} selected</span>
+    <div
+      className="bg-surface-raised border border-border-semantic text-text-semantic-muted"
+      style={summaryBarStyle}
+    >
+      <span>
+        {summary.selectedCount} of {summary.totalCount} selected
+      </span>
       <div style={{ display: 'flex', gap: '6px' }}>
-        <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={selectAll}>
+        <button
+          type="button"
+          className="text-interactive-accent"
+          style={summaryButtonStyle}
+          onClick={selectAll}
+        >
           Select All
         </button>
-        <button type="button" className="text-interactive-accent" style={summaryButtonStyle} onClick={clearAll}>
+        <button
+          type="button"
+          className="text-interactive-accent"
+          style={summaryButtonStyle}
+          onClick={clearAll}
+        >
           Clear All
         </button>
       </div>
@@ -88,7 +107,12 @@ function SummaryBar({ summary, selectAll, clearAll }: {
   );
 }
 
-function GroupItemRow({ groupLabel, item, checked, toggleItem }: {
+function GroupItemRow({
+  groupLabel,
+  item,
+  checked,
+  toggleItem,
+}: {
   groupLabel: string;
   item: { label: string; type: string };
   checked: boolean;
@@ -98,12 +122,23 @@ function GroupItemRow({ groupLabel, item, checked, toggleItem }: {
     <label
       className="text-text-semantic-primary"
       style={itemRowStyle}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-tertiary)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-raised)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+      }}
     >
-      <input type="checkbox" checked={checked} onChange={() => toggleItem(groupLabel, item.label)} style={{ accentColor: 'var(--accent)' }} />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={() => toggleItem(groupLabel, item.label)}
+        style={{ accentColor: 'var(--interactive-accent)' }}
+      />
       <span>{item.label}</span>
-      <span className="text-text-semantic-muted" style={typeBadgeStyle}>{item.type}</span>
+      <span className="text-text-semantic-muted" style={typeBadgeStyle}>
+        {item.type}
+      </span>
     </label>
   );
 }
@@ -114,7 +149,11 @@ export function ContextSelectionSection({
   const { groups, summary, isSelected, toggleItem, selectAll, clearAll } = contextSelection;
 
   if (groups.length === 0) {
-    return <div className="text-text-semantic-muted" style={emptyStyle}>No context groups available.</div>;
+    return (
+      <div className="text-text-semantic-muted" style={emptyStyle}>
+        No context groups available.
+      </div>
+    );
   }
 
   return (
@@ -122,9 +161,17 @@ export function ContextSelectionSection({
       <SummaryBar summary={summary} selectAll={selectAll} clearAll={clearAll} />
       {groups.map((group) => (
         <div key={group.label}>
-          <div className="text-text-semantic-primary" style={groupHeaderStyle}>{group.label}</div>
+          <div className="text-text-semantic-primary" style={groupHeaderStyle}>
+            {group.label}
+          </div>
           {group.items.map((item) => (
-            <GroupItemRow key={item.label} groupLabel={group.label} item={item} checked={isSelected(group.label, item.label)} toggleItem={toggleItem} />
+            <GroupItemRow
+              key={item.label}
+              groupLabel={group.label}
+              item={item}
+              checked={isSelected(group.label, item.label)}
+              toggleItem={toggleItem}
+            />
           ))}
         </div>
       ))}

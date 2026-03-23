@@ -8,7 +8,7 @@ const toolbarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '6px',
   padding: '3px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
@@ -19,7 +19,7 @@ const statusBarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '12px',
   padding: '2px 12px',
-  borderTop: '1px solid var(--border-muted)',
+  borderTop: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   fontSize: '0.6875rem',
   userSelect: 'none',
@@ -43,7 +43,10 @@ function ZoomModeButtons({
   onActualSize,
   onZoomOut,
   onZoomIn,
-}: Pick<ImageViewerToolbarProps, 'zoomMode' | 'onFit' | 'onActualSize' | 'onZoomOut' | 'onZoomIn'>): React.ReactElement {
+}: Pick<
+  ImageViewerToolbarProps,
+  'zoomMode' | 'onFit' | 'onActualSize' | 'onZoomOut' | 'onZoomIn'
+>): React.ReactElement {
   return (
     <>
       <button onClick={onFit} title="Fit to window" style={getZoomButtonStyle(zoomMode === 'fit')}>
@@ -161,7 +164,7 @@ export function getImageStyle(
   zoomMode: ZoomMode,
   naturalWidth: number | null,
   naturalHeight: number | null,
-  customZoom: number
+  customZoom: number,
 ): React.CSSProperties {
   if (zoomMode === 'fit') {
     return {

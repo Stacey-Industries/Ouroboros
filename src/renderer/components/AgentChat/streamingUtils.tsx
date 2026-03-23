@@ -57,16 +57,18 @@ export function SlitherSnake(): React.ReactElement {
       className="inline-flex items-center ml-1.5"
       style={{ animation: 'snakeSway 3.5s ease-in-out infinite' }}
     >
-      <span style={{
-        display: 'inline-block',
-        overflow: 'hidden',
-        animation: 'snakeGrow 1.4s ease-out forwards',
-      }}>
+      <span
+        style={{
+          display: 'inline-block',
+          overflow: 'hidden',
+          animation: 'snakeGrow 1.4s ease-out forwards',
+        }}
+      >
         <svg width="26" height="14" viewBox="0 0 26 14" fill="none" style={{ overflow: 'visible' }}>
           {/* Wavy body with flowing segments */}
           <path
             d="M1 7 C4 2, 7 2, 10 7 C13 12, 16 12, 19 7"
-            stroke="var(--accent)"
+            stroke="var(--interactive-accent)"
             strokeWidth="1.6"
             strokeLinecap="round"
             fill="none"
@@ -74,13 +76,23 @@ export function SlitherSnake(): React.ReactElement {
             style={{ animation: 'snakeFlow 1.2s linear infinite' }}
           />
           {/* Head */}
-          <ellipse cx="21" cy="6.5" rx="2.2" ry="2" fill="var(--accent)" />
+          <ellipse cx="21" cy="6.5" rx="2.2" ry="2" fill="var(--interactive-accent)" />
           {/* Eye */}
-          <circle cx="21.5" cy="5.8" r="0.6" fill="var(--bg, #1a1a2e)" />
+          <circle cx="21.5" cy="5.8" r="0.6" fill="var(--surface-base, #1a1a2e)" />
           {/* Forked tongue */}
           <g style={{ animation: 'snakeTongue 2s ease-in-out infinite' }}>
-            <path d="M23 6.5 L24.5 5.5" stroke="var(--error, #f85149)" strokeWidth="0.5" strokeLinecap="round" />
-            <path d="M23 6.5 L24.5 7.5" stroke="var(--error, #f85149)" strokeWidth="0.5" strokeLinecap="round" />
+            <path
+              d="M23 6.5 L24.5 5.5"
+              stroke="var(--status-error, #f85149)"
+              strokeWidth="0.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M23 6.5 L24.5 7.5"
+              stroke="var(--status-error, #f85149)"
+              strokeWidth="0.5"
+              strokeLinecap="round"
+            />
           </g>
         </svg>
       </span>
@@ -91,7 +103,9 @@ export function SlitherSnake(): React.ReactElement {
 /* ---------- Streaming status with rotating text + snake ---------- */
 
 function useStatusMessageCycle(): { msgIndex: number; displayChars: number; showSnake: boolean } {
-  const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * OUROBOROS_MESSAGES.length));
+  const [msgIndex, setMsgIndex] = useState(() =>
+    Math.floor(Math.random() * OUROBOROS_MESSAGES.length),
+  );
   const [displayChars, setDisplayChars] = useState(0);
   const [showSnake, setShowSnake] = useState(false);
   const visitedRef = useRef(new Set<number>([msgIndex]));
@@ -106,18 +120,28 @@ function useStatusMessageCycle(): { msgIndex: number; displayChars: number; show
   useEffect(() => {
     if (displayChars < message.length) return;
     const snakeId = setTimeout(() => setShowSnake(true), 120);
-    const cycleId = setTimeout(() => {
-      setMsgIndex((prev) => pickNextIndex(prev, visitedRef.current));
-      setDisplayChars(0);
-      setShowSnake(false);
-    }, 120 + 1400 + 700);
-    return () => { clearTimeout(snakeId); clearTimeout(cycleId); };
+    const cycleId = setTimeout(
+      () => {
+        setMsgIndex((prev) => pickNextIndex(prev, visitedRef.current));
+        setDisplayChars(0);
+        setShowSnake(false);
+      },
+      120 + 1400 + 700,
+    );
+    return () => {
+      clearTimeout(snakeId);
+      clearTimeout(cycleId);
+    };
   }, [displayChars, message.length]);
 
   return { msgIndex, displayChars, showSnake };
 }
 
-export function StreamingStatusMessage({ onStop }: { onStop?: () => Promise<void> }): React.ReactElement {
+export function StreamingStatusMessage({
+  onStop,
+}: {
+  onStop?: () => Promise<void>;
+}): React.ReactElement {
   const { msgIndex, displayChars, showSnake } = useStatusMessageCycle();
   const message = OUROBOROS_MESSAGES[msgIndex];
 
@@ -202,4 +226,3 @@ export function useTypewriter(text: string, isStreaming: boolean, charsPerFrame 
 
   return text.slice(0, pos);
 }
-

@@ -50,11 +50,7 @@ interface ModalContentProps {
   searchResults: SettingsEntry[];
 }
 
-function ModalOverlay({
-  children,
-  isVisible,
-  onCancel,
-}: ModalFrameProps): React.ReactElement {
+function ModalOverlay({ children, isVisible, onCancel }: ModalFrameProps): React.ReactElement {
   return (
     <div
       role="dialog"
@@ -85,10 +81,7 @@ function ModalOverlay({
   );
 }
 
-function ModalCard({
-  children,
-  isVisible,
-}: Omit<ModalFrameProps, 'onCancel'>): React.ReactElement {
+function ModalCard({ children, isVisible }: Omit<ModalFrameProps, 'onCancel'>): React.ReactElement {
   return (
     <div
       role="document"
@@ -99,8 +92,8 @@ function ModalCard({
         display: 'flex',
         flexDirection: 'column',
         borderRadius: '10px',
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
+        background: 'var(--surface-base)',
+        border: '1px solid var(--border-default)',
         boxShadow: '0 32px 80px rgba(0, 0, 0, 0.7)',
         overflow: 'hidden',
         animation: isVisible
@@ -121,11 +114,14 @@ function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px 20px',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border-default)',
         flexShrink: 0,
       }}
     >
-      <h2 className="text-text-semantic-primary" style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>
+      <h2
+        className="text-text-semantic-primary"
+        style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}
+      >
         Settings
       </h2>
       <button
@@ -174,7 +170,10 @@ function TabContentPanel({
   onChange,
   onImport,
   onPreviewTheme,
-}: Pick<ModalContentProps, 'activeTab' | 'draft' | 'onChange' | 'onImport' | 'onPreviewTheme'>): React.ReactElement {
+}: Pick<
+  ModalContentProps,
+  'activeTab' | 'draft' | 'onChange' | 'onImport' | 'onPreviewTheme'
+>): React.ReactElement {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px' }}>
       <SettingsTabContent
@@ -189,23 +188,21 @@ function TabContentPanel({
 }
 
 function ModalContent(props: ModalContentProps): React.ReactElement {
-  return props.isSearching
-    ? (
-        <SearchResultsPanel
-          onResultClick={props.onResultClick}
-          searchQuery={props.searchQuery}
-          searchResults={props.searchResults}
-        />
-      )
-    : (
-        <TabContentPanel
-          activeTab={props.activeTab}
-          draft={props.draft}
-          onChange={props.onChange}
-          onImport={props.onImport}
-          onPreviewTheme={props.onPreviewTheme}
-        />
-      );
+  return props.isSearching ? (
+    <SearchResultsPanel
+      onResultClick={props.onResultClick}
+      searchQuery={props.searchQuery}
+      searchResults={props.searchResults}
+    />
+  ) : (
+    <TabContentPanel
+      activeTab={props.activeTab}
+      draft={props.draft}
+      onChange={props.onChange}
+      onImport={props.onImport}
+      onPreviewTheme={props.onPreviewTheme}
+    />
+  );
 }
 
 function ModalFooter({
@@ -227,9 +224,9 @@ function ModalFooter({
         justifyContent: 'flex-end',
         gap: '10px',
         padding: '14px 20px',
-        borderTop: '1px solid var(--border)',
+        borderTop: '1px solid var(--border-default)',
         flexShrink: 0,
-        background: 'var(--bg-secondary)',
+        background: 'var(--surface-panel)',
       }}
     >
       {saveError && (
@@ -237,7 +234,12 @@ function ModalFooter({
           {saveError}
         </span>
       )}
-      <button onClick={onCancel} disabled={isSaving} className="text-text-semantic-secondary" style={cancelButtonStyle}>
+      <button
+        onClick={onCancel}
+        disabled={isSaving}
+        className="text-text-semantic-secondary"
+        style={cancelButtonStyle}
+      >
         Cancel
       </button>
       <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>
@@ -247,11 +249,32 @@ function ModalFooter({
   );
 }
 
-function ModalMain({ activeTab, draft, isSaving, isSearching, onCancel, onChange, onImport, onPreviewTheme, onResultClick, onSave, saveError, searchInputRef, searchQuery, searchResults, setActiveTab, setSearchQuery }: SettingsModalPortalProps): React.ReactElement {
+function ModalMain({
+  activeTab,
+  draft,
+  isSaving,
+  isSearching,
+  onCancel,
+  onChange,
+  onImport,
+  onPreviewTheme,
+  onResultClick,
+  onSave,
+  saveError,
+  searchInputRef,
+  searchQuery,
+  searchResults,
+  setActiveTab,
+  setSearchQuery,
+}: SettingsModalPortalProps): React.ReactElement {
   return (
     <>
       <ModalHeader onClose={onCancel} />
-      <SettingsSearchInput inputRef={searchInputRef} value={searchQuery} onChange={setSearchQuery} />
+      <SettingsSearchInput
+        inputRef={searchInputRef}
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
       {!isSearching && <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />}
       <ModalContent
         activeTab={activeTab}
@@ -264,12 +287,7 @@ function ModalMain({ activeTab, draft, isSaving, isSearching, onCancel, onChange
         searchQuery={searchQuery}
         searchResults={searchResults}
       />
-      <ModalFooter
-        isSaving={isSaving}
-        onCancel={onCancel}
-        onSave={onSave}
-        saveError={saveError}
-      />
+      <ModalFooter isSaving={isSaving} onCancel={onCancel} onSave={onSave} saveError={saveError} />
     </>
   );
 }

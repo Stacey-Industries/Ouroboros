@@ -1,4 +1,4 @@
-import React, { memo,useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 export interface MinimapProps {
   /** Raw file content (plain text lines) */
@@ -49,7 +49,7 @@ function useMinimapCanvas(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   lines: string[],
   totalMinimapHeight: number,
-  visible: boolean
+  visible: boolean,
 ): void {
   const drawCanvas = useCallback(() => {
     drawMinimapCanvas(canvasRef.current, lines, totalMinimapHeight);
@@ -69,7 +69,7 @@ function useMinimapCanvas(
 function useMinimapViewport(
   scrollContainer: HTMLDivElement | null,
   totalMinimapHeight: number,
-  visible: boolean
+  visible: boolean,
 ): { top: number; height: number } {
   const [viewportRect, setViewportRect] = useState({ top: 0, height: 0 });
   const updateViewport = useCallback(() => {
@@ -96,7 +96,7 @@ function useMinimapViewport(
 function useMinimapDrag(
   containerRef: React.RefObject<HTMLDivElement | null>,
   scrollContainer: HTMLDivElement | null,
-  totalMinimapHeight: number
+  totalMinimapHeight: number,
 ): (event: React.PointerEvent) => void {
   const isDraggingRef = useRef(false);
 
@@ -105,11 +105,21 @@ function useMinimapDrag(
       event.preventDefault();
       (event.target as HTMLElement).setPointerCapture(event.pointerId);
       isDraggingRef.current = true;
-      scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, event.clientY);
+      scrollToMinimapPointer(
+        containerRef.current,
+        scrollContainer,
+        totalMinimapHeight,
+        event.clientY,
+      );
 
       const handlePointerMove = (moveEvent: PointerEvent) => {
         if (!isDraggingRef.current) return;
-        scrollToMinimapPointer(containerRef.current, scrollContainer, totalMinimapHeight, moveEvent.clientY);
+        scrollToMinimapPointer(
+          containerRef.current,
+          scrollContainer,
+          totalMinimapHeight,
+          moveEvent.clientY,
+        );
       };
 
       const handlePointerUp = () => {
@@ -123,7 +133,7 @@ function useMinimapDrag(
       document.addEventListener('pointerup', handlePointerUp);
       document.addEventListener('pointercancel', handlePointerUp);
     },
-    [containerRef, scrollContainer, totalMinimapHeight]
+    [containerRef, scrollContainer, totalMinimapHeight],
   );
 }
 
@@ -141,7 +151,11 @@ function MinimapPanel({
   onPointerDown,
 }: MinimapPanelProps): React.ReactElement {
   return (
-    <div ref={containerRef} onPointerDown={onPointerDown} style={{ ...minimapContainerStyle, touchAction: 'none' }}>
+    <div
+      ref={containerRef}
+      onPointerDown={onPointerDown}
+      style={{ ...minimapContainerStyle, touchAction: 'none' }}
+    >
       <canvas ref={canvasRef} />
       <div style={getViewportIndicatorStyle(viewportRect)} />
     </div>
@@ -151,7 +165,7 @@ function MinimapPanel({
 function drawMinimapCanvas(
   canvas: HTMLCanvasElement | null,
   lines: string[],
-  totalMinimapHeight: number
+  totalMinimapHeight: number,
 ): void {
   if (!canvas) return;
   const context = canvas.getContext('2d');
@@ -167,12 +181,10 @@ function drawMinimapCanvas(
   drawMinimapLines(context, lines);
 }
 
-function drawMinimapLines(
-  context: CanvasRenderingContext2D,
-  lines: string[]
-): void {
+function drawMinimapLines(context: CanvasRenderingContext2D, lines: string[]): void {
   const charWidth = (MINIMAP_WIDTH - 4) / MAX_LINE_CHARS;
-  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+  const textColor =
+    getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
 
   for (let index = 0; index < lines.length; index += 1) {
     const trimmed = lines[index].replace(/^\s+/, '');
@@ -185,7 +197,7 @@ function drawMinimapLines(
       2 + indent * charWidth,
       index * MINIMAP_LINE_TOTAL,
       Math.max(Math.min(trimmed.length, MAX_LINE_CHARS - indent) * charWidth, 2),
-      LINE_HEIGHT
+      LINE_HEIGHT,
     );
   }
 
@@ -194,7 +206,7 @@ function drawMinimapLines(
 
 function getViewportRect(
   scrollContainer: HTMLDivElement | null,
-  totalMinimapHeight: number
+  totalMinimapHeight: number,
 ): { top: number; height: number } {
   if (!scrollContainer || scrollContainer.scrollHeight === 0) {
     return { top: 0, height: 0 };
@@ -211,7 +223,7 @@ function scrollToMinimapPointer(
   container: HTMLDivElement | null,
   scrollContainer: HTMLDivElement | null,
   totalMinimapHeight: number,
-  clientY: number
+  clientY: number,
 ): void {
   if (!container || !scrollContainer) return;
 
@@ -222,7 +234,7 @@ function scrollToMinimapPointer(
 
   scrollContainer.scrollTop = Math.max(
     0,
-    Math.min(targetScroll, scrollContainer.scrollHeight - scrollContainer.clientHeight)
+    Math.min(targetScroll, scrollContainer.scrollHeight - scrollContainer.clientHeight),
   );
 }
 
@@ -236,7 +248,7 @@ const minimapContainerStyle: React.CSSProperties = {
   cursor: 'pointer',
   zIndex: 3,
   backgroundColor: 'var(--surface-base)',
-  borderLeft: '1px solid var(--border-muted)',
+  borderLeft: '1px solid var(--border-subtle)',
   opacity: 0.85,
 };
 

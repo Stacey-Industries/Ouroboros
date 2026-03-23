@@ -9,51 +9,86 @@ export interface GitPanelContentProps extends GitPanelModel {
 }
 type EmptyStateProps = { message: string; centered?: boolean };
 type ErrorBannerProps = { error: string; onDismiss: () => void };
-type SectionHeaderProps = { count: number; title: string; toggleAllLabel?: string; onToggleAll?: () => Promise<void> };
+type SectionHeaderProps = {
+  count: number;
+  title: string;
+  toggleAllLabel?: string;
+  onToggleAll?: () => Promise<void>;
+};
 type ChangeSectionProps = {
-  count: number; emptyLabel: string; files: Array<[string, string]>;
-  isStaged: boolean; title: string;
+  count: number;
+  emptyLabel: string;
+  files: Array<[string, string]>;
+  isStaged: boolean;
+  title: string;
   onDiscard?: (filePath: string) => Promise<void>;
   onToggle: (filePath: string) => Promise<void>;
-  onToggleAll?: () => Promise<void>; toggleAllLabel?: string;
+  onToggleAll?: () => Promise<void>;
+  toggleAllLabel?: string;
 };
 type CommitSectionProps = {
-  canCommit: boolean; commitMessage: string; isCommitting: boolean; stagedCount: number;
-  onCommit: () => Promise<void>; onCommitMessageChange: (value: string) => void;
+  canCommit: boolean;
+  commitMessage: string;
+  isCommitting: boolean;
+  stagedCount: number;
+  onCommit: () => Promise<void>;
+  onCommitMessageChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 };
 type CommitMessageInputProps = {
-  commitMessage: string; onCommitMessageChange: (value: string) => void;
+  commitMessage: string;
+  onCommitMessageChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 };
 type CommitButtonProps = {
-  canCommit: boolean; isCommitting: boolean; stagedCount: number; title: string; onCommit: () => Promise<void>;
+  canCommit: boolean;
+  isCommitting: boolean;
+  stagedCount: number;
+  title: string;
+  onCommit: () => Promise<void>;
 };
 
 function EmptyState({ message, centered = false }: EmptyStateProps): React.ReactElement {
   return (
     <div className={`p-4 ${centered ? 'flex h-full items-center justify-center' : ''}`}>
-      <span className={`text-xs text-text-semantic-muted ${centered ? 'text-center' : ''}`}>{message}</span>
+      <span className={`text-xs text-text-semantic-muted ${centered ? 'text-center' : ''}`}>
+        {message}
+      </span>
     </div>
   );
 }
 
 function ErrorBanner({ error, onDismiss }: ErrorBannerProps): React.ReactElement {
   return (
-    <div className="flex-shrink-0 border-b border-border-semantic px-2 py-1 text-xs text-status-error"
-      style={{ backgroundColor: 'rgba(248, 81, 73, 0.1)' }}>
+    <div
+      className="flex-shrink-0 border-b border-border-semantic px-2 py-1 text-xs text-status-error"
+      style={{ backgroundColor: 'rgba(248, 81, 73, 0.1)' }}
+    >
       {error}
-      <button onClick={onDismiss} className="ml-2 underline text-status-error">dismiss</button>
+      <button onClick={onDismiss} className="ml-2 underline text-status-error">
+        dismiss
+      </button>
     </div>
   );
 }
 
-function SectionHeader({ count, title, toggleAllLabel, onToggleAll }: SectionHeaderProps): React.ReactElement {
+function SectionHeader({
+  count,
+  title,
+  toggleAllLabel,
+  onToggleAll,
+}: SectionHeaderProps): React.ReactElement {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">{title} ({count})</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">
+        {title} ({count})
+      </span>
       {count > 0 && toggleAllLabel && onToggleAll ? (
-        <button onClick={() => void onToggleAll()} className="rounded px-1.5 py-0.5 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted" title={toggleAllLabel}>
+        <button
+          onClick={() => void onToggleAll()}
+          className="rounded px-1.5 py-0.5 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted"
+          title={toggleAllLabel}
+        >
           {toggleAllLabel}
         </button>
       ) : null}
@@ -81,9 +116,7 @@ function ChangeSection({
         toggleAllLabel={toggleAllLabel}
       />
       {count === 0 ? (
-        <div className="px-2 py-2 text-xs text-text-semantic-muted">
-          {emptyLabel}
-        </div>
+        <div className="px-2 py-2 text-xs text-text-semantic-muted">{emptyLabel}</div>
       ) : (
         files.map(([filePath, status]) => (
           <GitFileRow
@@ -105,9 +138,7 @@ function getCommitTitle(stagedCount: number, commitMessage: string): string {
     return 'No staged changes';
   }
 
-  return commitMessage.trim()
-    ? 'Commit (Ctrl+Enter)'
-    : 'Enter a commit message';
+  return commitMessage.trim() ? 'Commit (Ctrl+Enter)' : 'Enter a commit message';
 }
 
 function getCommitButtonLabel(isCommitting: boolean, stagedCount: number): string {
@@ -160,7 +191,7 @@ function CommitButton({
         disabled:cursor-not-allowed disabled:opacity-40
       "
       style={{
-        backgroundColor: canCommit ? 'var(--accent)' : 'var(--bg-tertiary)',
+        backgroundColor: canCommit ? 'var(--interactive-accent)' : 'var(--surface-raised)',
         color: canCommit ? 'var(--text-on-accent)' : 'var(--text-muted)',
       }}
       title={title}
@@ -289,5 +320,9 @@ function RepoContent(props: GitPanelContentProps): React.ReactElement {
 
 export function GitPanelContent(props: GitPanelContentProps): React.ReactElement {
   const emptyStateMessage = getEmptyStateMessage(props.projectRoot, props.isRepo);
-  return emptyStateMessage ? <EmptyState centered message={emptyStateMessage} /> : <RepoContent {...props} />;
+  return emptyStateMessage ? (
+    <EmptyState centered message={emptyStateMessage} />
+  ) : (
+    <RepoContent {...props} />
+  );
 }

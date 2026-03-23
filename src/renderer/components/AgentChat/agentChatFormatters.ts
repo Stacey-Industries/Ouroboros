@@ -36,27 +36,32 @@ export function getRoleLabel(role: AgentChatMessageRole): string {
 export function getStatusTone(status: AgentChatThreadStatus): CSSProperties {
   if (status === 'failed' || status === 'cancelled') {
     return {
-      borderColor: 'var(--error, #f85149)',
-      color: 'var(--error, #f85149)',
+      borderColor: 'var(--status-error, #f85149)',
+      color: 'var(--status-error, #f85149)',
     };
   }
 
   if (status === 'needs_review') {
     return {
-      borderColor: 'var(--warning, #d29922)',
-      color: 'var(--warning, #d29922)',
+      borderColor: 'var(--status-warning, #d29922)',
+      color: 'var(--status-warning, #d29922)',
     };
   }
 
-  if (status === 'running' || status === 'submitting' || status === 'verifying' || status === 'complete') {
+  if (
+    status === 'running' ||
+    status === 'submitting' ||
+    status === 'verifying' ||
+    status === 'complete'
+  ) {
     return {
-      borderColor: 'var(--accent)',
-      color: 'var(--accent)',
+      borderColor: 'var(--interactive-accent)',
+      color: 'var(--interactive-accent)',
     };
   }
 
   return {
-    borderColor: 'var(--border)',
+    borderColor: 'var(--border-default)',
     color: 'var(--text-muted)',
   };
 }
@@ -64,35 +69,35 @@ export function getStatusTone(status: AgentChatThreadStatus): CSSProperties {
 export function getMessageTone(message: AgentChatMessageRecord): CSSProperties {
   if (message.role === 'user') {
     return {
-      borderColor: 'var(--accent)',
-      backgroundColor: 'var(--bg-secondary)',
+      borderColor: 'var(--interactive-accent)',
+      backgroundColor: 'var(--surface-panel)',
     };
   }
 
   if (message.role === 'assistant') {
     return {
-      borderColor: 'var(--accent)',
+      borderColor: 'var(--interactive-accent)',
       backgroundColor: 'rgba(100, 100, 255, 0.04)',
     };
   }
 
   if (message.role === 'status') {
     return {
-      borderColor: 'var(--accent)',
-      backgroundColor: 'var(--bg-tertiary)',
+      borderColor: 'var(--interactive-accent)',
+      backgroundColor: 'var(--surface-raised)',
     };
   }
 
   if (message.role === 'system') {
     return {
-      borderColor: 'var(--border)',
-      backgroundColor: 'var(--bg-secondary)',
+      borderColor: 'var(--border-default)',
+      backgroundColor: 'var(--surface-panel)',
     };
   }
 
   return {
-    borderColor: 'var(--border)',
-    backgroundColor: 'var(--bg)',
+    borderColor: 'var(--border-default)',
+    backgroundColor: 'var(--surface-base)',
   };
 }
 

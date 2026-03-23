@@ -61,7 +61,10 @@ export function GeneratedTypesContent({
 }: Pick<CodeModeSectionModel, 'generatedTypes' | 'isEnabled'>): React.ReactElement {
   if (!generatedTypes) {
     return (
-      <p className="text-text-semantic-muted" style={{ fontSize: '12px', fontStyle: 'italic', margin: 0 }}>
+      <p
+        className="text-text-semantic-muted"
+        style={{ fontSize: '12px', fontStyle: 'italic', margin: 0 }}
+      >
         {isEnabled
           ? 'No types generated yet.'
           : 'Enable Code Mode to generate TypeScript types for your MCP servers.'}
@@ -73,12 +76,12 @@ export function GeneratedTypesContent({
     <pre
       className="text-text-semantic-secondary"
       style={{
-        background: 'var(--bg)',
+        background: 'var(--surface-base)',
         fontFamily: 'var(--font-mono)',
         fontSize: '0.75rem',
         padding: '10px 12px',
         borderRadius: '6px',
-        border: '1px solid var(--border)',
+        border: '1px solid var(--border-default)',
         overflowX: 'auto',
         maxHeight: '300px',
         overflowY: 'auto',
@@ -112,8 +115,12 @@ export function HowItWorksContent(): React.ReactElement {
         </code>{' '}
         tool to Claude
       </li>
-      <li>Claude writes TypeScript code against the typed API instead of calling N individual tools</li>
-      <li>Code Mode executes the code in a sandboxed VM, dispatching calls to the real MCP servers</li>
+      <li>
+        Claude writes TypeScript code against the typed API instead of calling N individual tools
+      </li>
+      <li>
+        Code Mode executes the code in a sandboxed VM, dispatching calls to the real MCP servers
+      </li>
     </ol>
   );
 }

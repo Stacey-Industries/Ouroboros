@@ -8,7 +8,11 @@ export interface PaletteOverlayProps {
   children: React.ReactNode;
 }
 
-export function PaletteOverlay({ isVisible, onClose, children }: PaletteOverlayProps): React.ReactElement | null {
+export function PaletteOverlay({
+  isVisible,
+  onClose,
+  children,
+}: PaletteOverlayProps): React.ReactElement | null {
   if (!isVisible) return null;
 
   return (
@@ -19,7 +23,11 @@ export function PaletteOverlay({ isVisible, onClose, children }: PaletteOverlayP
       onClick={onClose}
       style={overlayStyle}
     >
-      <div onClick={(e) => e.stopPropagation()} className="bg-surface-panel border border-border-semantic" style={cardStyle}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-surface-panel border border-border-semantic"
+        style={cardStyle}
+      >
         {children}
       </div>
     </div>
@@ -87,7 +95,7 @@ const footerStyle: React.CSSProperties = {
   display: 'flex',
   gap: '14px',
   padding: '6px 14px',
-  borderTop: '1px solid var(--border)',
+  borderTop: '1px solid var(--border-default)',
   fontSize: '11px',
   fontFamily: 'var(--font-mono)',
 };

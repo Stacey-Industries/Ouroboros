@@ -4,7 +4,7 @@
 
 import React from 'react';
 
-import { type TabId,TABS } from './settingsTabs';
+import { type TabId, TABS } from './settingsTabs';
 
 interface SettingsTabBarProps {
   activeTab: TabId;
@@ -27,7 +27,7 @@ export function SettingsTabBar({
           onMouseEnter={(e) => {
             if (activeTab !== tab.id) {
               e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.15)';
-              e.currentTarget.style.color = 'var(--text)';
+              e.currentTarget.style.color = 'var(--text-primary)';
             }
           }}
           onMouseLeave={(e) => {
@@ -59,7 +59,7 @@ function tabStyle(active: boolean): React.CSSProperties {
     background: active ? 'rgba(128,128,128,0.15)' : 'transparent',
     border: 'none',
     borderRadius: '6px',
-    color: active ? 'var(--text)' : 'var(--text-muted)',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
     fontSize: '13px',
     fontWeight: active ? 500 : 400,
     cursor: 'pointer',

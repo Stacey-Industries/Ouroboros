@@ -2,7 +2,10 @@ import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
 
-export type SettingsChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+export type SettingsChangeHandler = <K extends keyof AppConfig>(
+  key: K,
+  value: AppConfig[K],
+) => void;
 export type PromptPreset = 'default' | 'minimal' | 'git' | 'powerline' | 'custom';
 type ShellPresetPlatform = 'win32' | 'darwin' | 'linux' | 'all';
 
@@ -47,16 +50,14 @@ const PRESET_PREVIEWS: Record<Exclude<PromptPreset, 'custom'>, string> = {
   powerline: ' user ~/project ',
 };
 
-export const PRESET_ORDER: PromptPreset[] = [
-  'default',
-  'minimal',
-  'git',
-  'powerline',
-  'custom',
-];
+export const PRESET_ORDER: PromptPreset[] = ['default', 'minimal', 'git', 'powerline', 'custom'];
 
 const SHELL_PRESETS: ShellPreset[] = [
-  { label: 'PowerShell 5', path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', platform: 'win32' },
+  {
+    label: 'PowerShell 5',
+    path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+    platform: 'win32',
+  },
   { label: 'PowerShell 7', path: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe', platform: 'win32' },
   { label: 'cmd.exe', path: 'C:\\Windows\\System32\\cmd.exe', platform: 'win32' },
   { label: 'Git Bash', path: 'C:\\Program Files\\Git\\bin\\bash.exe', platform: 'win32' },
@@ -95,8 +96,8 @@ export const inlineInputStyle: React.CSSProperties = {
   width: '60px',
   padding: '7px 8px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '13px',
   textAlign: 'center',
   outline: 'none',
@@ -107,8 +108,8 @@ export const textInputStyle: React.CSSProperties = {
   width: '100%',
   padding: '7px 10px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -116,8 +117,8 @@ export const textInputStyle: React.CSSProperties = {
 };
 
 export const previewBoxStyle: React.CSSProperties = {
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
+  background: 'var(--surface-base)',
+  border: '1px solid var(--border-default)',
   borderRadius: '4px',
   padding: '8px 12px',
   fontFamily: 'var(--font-mono)',
@@ -128,7 +129,7 @@ export const previewBoxStyle: React.CSSProperties = {
 
 export const terminalPreviewStyle: React.CSSProperties = {
   background: 'var(--term-bg, #0c0c0e)',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   borderRadius: '6px',
   padding: '14px 16px',
   fontFamily: 'var(--font-mono)',
@@ -187,9 +188,9 @@ export function PresetButton({
       style={{
         padding: '4px 12px',
         borderRadius: '4px',
-        border: active ? '1px solid var(--accent)' : '1px solid var(--border)',
-        background: active ? 'var(--accent)' : 'transparent',
-        color: active ? 'var(--text-on-accent)' : 'var(--text)',
+        border: active ? '1px solid var(--interactive-accent)' : '1px solid var(--border-default)',
+        background: active ? 'var(--interactive-accent)' : 'transparent',
+        color: active ? 'var(--text-on-accent)' : 'var(--text-primary)',
         fontSize: '12px',
         cursor: 'pointer',
         fontFamily: 'var(--font-ui)',
@@ -219,9 +220,9 @@ export function StepButton({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: '6px',
-        border: '1px solid var(--border)',
-        background: 'var(--bg-tertiary)',
-        color: disabled ? 'var(--text-muted)' : 'var(--text)',
+        border: '1px solid var(--border-default)',
+        background: 'var(--surface-raised)',
+        color: disabled ? 'var(--text-muted)' : 'var(--text-primary)',
         fontSize: '16px',
         cursor: disabled ? 'not-allowed' : 'pointer',
         lineHeight: 1,

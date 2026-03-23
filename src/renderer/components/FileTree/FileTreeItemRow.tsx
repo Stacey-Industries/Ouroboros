@@ -30,7 +30,7 @@ function rowStyle(
   depth: number,
   backgroundColor: string,
   isDragOver: boolean,
-  isActive: boolean
+  isActive: boolean,
 ): React.CSSProperties {
   return {
     display: 'flex',
@@ -40,8 +40,8 @@ function rowStyle(
     paddingRight: '8px',
     cursor: 'pointer',
     backgroundColor,
-    outline: isDragOver ? '1px dashed var(--accent)' : undefined,
-    borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+    outline: isDragOver ? '1px dashed var(--interactive-accent)' : undefined,
+    borderLeft: isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
     userSelect: 'none',
     height: '28px',
     boxSizing: 'border-box',
@@ -53,7 +53,19 @@ function rowStyle(
   };
 }
 
-export function FileTreeItemRow({ node, depth, isActive, isEditing, backgroundColor, heatTitle, drag, onClick, onDoubleClick, onContextMenu, children }: FileTreeItemRowProps): React.ReactElement {
+export function FileTreeItemRow({
+  node,
+  depth,
+  isActive,
+  isEditing,
+  backgroundColor,
+  heatTitle,
+  drag,
+  onClick,
+  onDoubleClick,
+  onContextMenu,
+  children,
+}: FileTreeItemRowProps): React.ReactElement {
   return (
     <div
       role="option"

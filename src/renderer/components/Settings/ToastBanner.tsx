@@ -14,7 +14,7 @@ export function ToastBanner({ toast }: ToastBannerProps): React.ReactElement | n
   if (!toast) return null;
 
   const isSuccess = toast.kind === 'success';
-  const color = isSuccess ? 'var(--success)' : 'var(--error)';
+  const color = isSuccess ? 'var(--status-success)' : 'var(--status-error)';
 
   return (
     <div
@@ -24,7 +24,7 @@ export function ToastBanner({ toast }: ToastBannerProps): React.ReactElement | n
         padding: '10px 14px',
         borderRadius: '6px',
         border: `1px solid ${color}`,
-        background: `color-mix(in srgb, ${color} 10%, var(--bg-secondary))`,
+        background: `color-mix(in srgb, ${color} 10%, var(--surface-panel))`,
         fontSize: '12px',
         color,
         fontWeight: 500,

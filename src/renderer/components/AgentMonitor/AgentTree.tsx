@@ -36,7 +36,7 @@ const guideContainerStyle: React.CSSProperties = {
 
 const branchContainerStyle: React.CSSProperties = {
   paddingLeft: '8px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
 };
 
 function buildTree(sessions: AgentSession[]): TreeNode[] {
@@ -56,14 +56,18 @@ function buildTree(sessions: AgentSession[]): TreeNode[] {
   }, []);
 }
 
-function getGuideStyle(depthIndex: number, depth: number, truncateLastGuide: boolean): React.CSSProperties {
+function getGuideStyle(
+  depthIndex: number,
+  depth: number,
+  truncateLastGuide: boolean,
+): React.CSSProperties {
   return {
     position: 'absolute',
     left: `${depthIndex * INDENT_PX + 8}px`,
     top: 0,
     bottom: depthIndex === depth - 1 && truncateLastGuide ? '50%' : 0,
     width: '1px',
-    backgroundColor: 'var(--border-muted)',
+    backgroundColor: 'var(--border-subtle)',
     opacity: 0.5,
   };
 }
@@ -75,14 +79,14 @@ function getConnectorStyle(depth: number): React.CSSProperties {
     top: '18px',
     width: `${INDENT_PX - 4}px`,
     height: '1px',
-    backgroundColor: 'var(--border-muted)',
+    backgroundColor: 'var(--border-subtle)',
     opacity: 0.5,
   };
 }
 
 function setBranchToggleHover(target: HTMLButtonElement, hovered: boolean): void {
   target.style.color = hovered ? 'var(--text-muted)' : 'var(--text-faint)';
-  target.style.background = hovered ? 'var(--bg-tertiary)' : 'transparent';
+  target.style.background = hovered ? 'var(--surface-raised)' : 'transparent';
 }
 
 function getBranchLabel(childCount: number): string {
@@ -106,9 +110,33 @@ const BranchToggle = memo(function BranchToggle({
   onToggle,
 }: BranchToggleProps): React.ReactElement {
   return (
-    <button onClick={onToggle} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors text-text-semantic-faint" style={branchToggleStyle} onMouseEnter={(event) => setBranchToggleHover(event.currentTarget, true)} onMouseLeave={(event) => setBranchToggleHover(event.currentTarget, false)} title={expanded ? 'Collapse subagents' : 'Expand subagents'}>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}>
-        <path d="M3 1.5L7 5L3 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    <button
+      onClick={onToggle}
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors text-text-semantic-faint"
+      style={branchToggleStyle}
+      onMouseEnter={(event) => setBranchToggleHover(event.currentTarget, true)}
+      onMouseLeave={(event) => setBranchToggleHover(event.currentTarget, false)}
+      title={expanded ? 'Collapse subagents' : 'Expand subagents'}
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        style={{
+          transform: expanded ? 'rotate(90deg)' : 'none',
+          transition: 'transform 150ms ease',
+        }}
+      >
+        <path
+          d="M3 1.5L7 5L3 8.5"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
       <span>{getBranchLabel(childCount)}</span>
     </button>
@@ -137,7 +165,12 @@ function TreeGuides({
 
   return (
     <div style={guideContainerStyle}>
-      {Array.from({ length: depth }, (_, index) => <span key={`guide-${index}`} style={getGuideStyle(index, depth, isLastChild && !hasChildren)} />)}
+      {Array.from({ length: depth }, (_, index) => (
+        <span
+          key={`guide-${index}`}
+          style={getGuideStyle(index, depth, isLastChild && !hasChildren)}
+        />
+      ))}
       <span style={getConnectorStyle(depth)} />
     </div>
   );
@@ -161,7 +194,11 @@ function TreeNodeContent({
   return (
     <div style={{ paddingLeft: `${indent}px` }}>
       <AgentCard session={session} onDismiss={onDismiss} childCount={childCount} />
-      {childCount > 0 && <div className="flex items-center" style={branchContainerStyle}><BranchToggle expanded={!isCollapsed} childCount={childCount} onToggle={onToggle} /></div>}
+      {childCount > 0 && (
+        <div className="flex items-center" style={branchContainerStyle}>
+          <BranchToggle expanded={!isCollapsed} childCount={childCount} onToggle={onToggle} />
+        </div>
+      )}
     </div>
   );
 }
@@ -181,7 +218,17 @@ function TreeChildren({
 }): React.ReactElement {
   return (
     <div>
-      {nodes.map((child, index) => <TreeNodeRenderer key={child.session.id} node={child} depth={depth + 1} onDismiss={onDismiss} collapsedIds={collapsedIds} onToggleCollapse={onToggleCollapse} isLastChild={index === nodes.length - 1} />)}
+      {nodes.map((child, index) => (
+        <TreeNodeRenderer
+          key={child.session.id}
+          node={child}
+          depth={depth + 1}
+          onDismiss={onDismiss}
+          collapsedIds={collapsedIds}
+          onToggleCollapse={onToggleCollapse}
+          isLastChild={index === nodes.length - 1}
+        />
+      ))}
     </div>
   );
 }
@@ -200,8 +247,23 @@ const TreeNodeRenderer = memo(function TreeNodeRenderer({
   return (
     <div className="relative">
       <TreeGuides depth={depth} hasChildren={hasChildren} isLastChild={isLastChild} />
-      <TreeNodeContent childCount={node.children.length} indent={depth * INDENT_PX} isCollapsed={isCollapsed} onDismiss={onDismiss} onToggle={() => onToggleCollapse(node.session.id)} session={node.session} />
-      {hasChildren && !isCollapsed && <TreeChildren nodes={node.children} depth={depth} onDismiss={onDismiss} collapsedIds={collapsedIds} onToggleCollapse={onToggleCollapse} />}
+      <TreeNodeContent
+        childCount={node.children.length}
+        indent={depth * INDENT_PX}
+        isCollapsed={isCollapsed}
+        onDismiss={onDismiss}
+        onToggle={() => onToggleCollapse(node.session.id)}
+        session={node.session}
+      />
+      {hasChildren && !isCollapsed && (
+        <TreeChildren
+          nodes={node.children}
+          depth={depth}
+          onDismiss={onDismiss}
+          collapsedIds={collapsedIds}
+          onToggleCollapse={onToggleCollapse}
+        />
+      )}
     </div>
   );
 });
@@ -229,7 +291,17 @@ export const AgentTree = memo(function AgentTree({
 
   return (
     <div>
-      {roots.map((root, index) => <TreeNodeRenderer key={root.session.id} node={root} depth={0} onDismiss={onDismiss} collapsedIds={collapsedIds} onToggleCollapse={handleToggleCollapse} isLastChild={index === roots.length - 1} />)}
+      {roots.map((root, index) => (
+        <TreeNodeRenderer
+          key={root.session.id}
+          node={root}
+          depth={0}
+          onDismiss={onDismiss}
+          collapsedIds={collapsedIds}
+          onToggleCollapse={handleToggleCollapse}
+          isLastChild={index === roots.length - 1}
+        />
+      ))}
     </div>
   );
 });

@@ -2,7 +2,8 @@ import React from 'react';
 
 import type { ProjectContext } from '../../types/electron';
 
-const SPINNER_KEYFRAMES = '@keyframes cb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+const SPINNER_KEYFRAMES =
+  '@keyframes cb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
 
 const sectionHeaderStyle: React.CSSProperties = {
   fontSize: '11px',
@@ -16,8 +17,8 @@ const sectionHeaderStyle: React.CSSProperties = {
 export const cardStyle: React.CSSProperties = {
   padding: '12px 14px',
   borderRadius: '8px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   marginBottom: '8px',
 };
 
@@ -32,8 +33,8 @@ export const contextEditorStyle: React.CSSProperties = {
   minHeight: '300px',
   padding: '12px',
   borderRadius: '8px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   lineHeight: 1.6,
@@ -97,8 +98,8 @@ export const optionCardStyle: React.CSSProperties = {
 const buttonStyle: React.CSSProperties = {
   padding: '7px 14px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
@@ -107,9 +108,9 @@ const buttonStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
   ...buttonStyle,
-  background: 'var(--accent)',
+  background: 'var(--interactive-accent)',
   color: '#fff',
-  borderColor: 'var(--accent)',
+  borderColor: 'var(--interactive-accent)',
 };
 
 const emptyStateStyle: React.CSSProperties = {
@@ -127,19 +128,15 @@ export function Section({
 }): React.ReactElement {
   return (
     <>
-      <div className="text-text-semantic-muted" style={sectionHeaderStyle}>{title}</div>
+      <div className="text-text-semantic-muted" style={sectionHeaderStyle}>
+        {title}
+      </div>
       {children}
     </>
   );
 }
 
-export function Badge({
-  color,
-  label,
-}: {
-  color?: string;
-  label: string;
-}): React.ReactElement {
+export function Badge({ color, label }: { color?: string; label: string }): React.ReactElement {
   return (
     <span
       style={{
@@ -148,7 +145,7 @@ export function Badge({
         borderRadius: '10px',
         fontSize: '11px',
         fontWeight: 500,
-        background: color ?? 'var(--accent)',
+        background: color ?? 'var(--interactive-accent)',
         color: '#fff',
         marginRight: '4px',
         marginBottom: '4px',
@@ -209,14 +206,23 @@ export function ActionButton({
   primary?: boolean;
 }): React.ReactElement {
   return (
-    <button disabled={disabled} onClick={onClick} className="text-text-semantic-primary" style={primary ? primaryButtonStyle : buttonStyle}>
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className="text-text-semantic-primary"
+      style={primary ? primaryButtonStyle : buttonStyle}
+    >
       {label}
     </button>
   );
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="text-text-semantic-muted" style={emptyStateStyle}>{children}</div>;
+  return (
+    <div className="text-text-semantic-muted" style={emptyStateStyle}>
+      {children}
+    </div>
+  );
 }
 
 export function LoadingState(): React.ReactElement {
@@ -230,10 +236,10 @@ export function LoadingState(): React.ReactElement {
           fill="none"
           style={{ animation: 'cb-spin 1s linear infinite', display: 'inline-block' }}
         >
-          <circle cx="12" cy="12" r="10" stroke="var(--border)" strokeWidth="2" />
+          <circle cx="12" cy="12" r="10" stroke="var(--border-default)" strokeWidth="2" />
           <path
             d="M12 2a10 10 0 0 1 10 10"
-            stroke="var(--accent)"
+            stroke="var(--interactive-accent)"
             strokeWidth="2"
             strokeLinecap="round"
           />

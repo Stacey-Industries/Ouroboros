@@ -12,7 +12,13 @@ export interface PickerOverlayProps {
   children: React.ReactNode;
 }
 
-export function PickerOverlay({ label, animPrefix, maxWidth, onClose, children }: PickerOverlayProps): React.ReactElement {
+export function PickerOverlay({
+  label,
+  animPrefix,
+  maxWidth,
+  onClose,
+  children,
+}: PickerOverlayProps): React.ReactElement {
   return (
     <div
       aria-modal="true"
@@ -75,7 +81,9 @@ export function PickerInput({
 }: PickerInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
-      <span className="text-text-semantic-muted" style={prefixStyle}>{prefix}</span>
+      <span className="text-text-semantic-muted" style={prefixStyle}>
+        {prefix}
+      </span>
       <input
         ref={inputRef}
         type="text"
@@ -94,7 +102,11 @@ export function PickerInput({
         autoCapitalize="off"
         spellCheck={false}
       />
-      {statusText && <span className="text-text-semantic-muted" style={statusStyle}>{statusText}</span>}
+      {statusText && (
+        <span className="text-text-semantic-muted" style={statusStyle}>
+          {statusText}
+        </span>
+      )}
     </div>
   );
 }
@@ -104,7 +116,7 @@ const inputContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '10px',
   padding: '0 14px',
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1px solid var(--border-default)',
   height: '46px',
 };
 
@@ -121,7 +133,7 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
   fontSize: '14px',
   fontFamily: 'var(--font-ui)',
-  caretColor: 'var(--accent)',
+  caretColor: 'var(--interactive-accent)',
 };
 
 const statusStyle: React.CSSProperties = {

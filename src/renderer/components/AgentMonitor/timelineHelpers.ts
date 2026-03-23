@@ -4,18 +4,18 @@
 
 /** Color mapping for tool types in timelines. */
 export const TOOL_TIMELINE_COLOR: Record<string, string> = {
-  Read:     'var(--accent)',
-  Edit:     'var(--warning)',
-  Write:    'var(--warning)',
-  Bash:     'var(--success)',
-  Grep:     'var(--purple)',
-  Glob:     'var(--purple)',
-  Task:     'var(--purple)',
-  Agent:    'var(--purple)',
-  Subagent: 'var(--purple)',
-  task:     'var(--purple)',
-  agent:    'var(--purple)',
-  subagent: 'var(--purple)',
+  Read: 'var(--interactive-accent)',
+  Edit: 'var(--status-warning)',
+  Write: 'var(--status-warning)',
+  Bash: 'var(--status-success)',
+  Grep: 'var(--palette-purple)',
+  Glob: 'var(--palette-purple)',
+  Task: 'var(--palette-purple)',
+  Agent: 'var(--palette-purple)',
+  Subagent: 'var(--palette-purple)',
+  task: 'var(--palette-purple)',
+  agent: 'var(--palette-purple)',
+  subagent: 'var(--palette-purple)',
 };
 
 export function timelineColor(toolName: string): string {
@@ -32,9 +32,9 @@ export function formatDurationShort(ms: number): string {
 
 /** Legend items for timeline display. */
 export const LEGEND_ITEMS = [
-  { label: 'Read', color: 'var(--accent)' },
-  { label: 'Write/Edit', color: 'var(--warning)' },
-  { label: 'Bash', color: 'var(--success)' },
-  { label: 'Agent/Task', color: 'var(--purple)' },
+  { label: 'Read', color: 'var(--interactive-accent)' },
+  { label: 'Write/Edit', color: 'var(--status-warning)' },
+  { label: 'Bash', color: 'var(--status-success)' },
+  { label: 'Agent/Task', color: 'var(--palette-purple)' },
   { label: 'Other', color: 'var(--text-faint)' },
 ] as const;

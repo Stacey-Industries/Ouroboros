@@ -7,13 +7,13 @@ const ITEM_HEIGHT = 40;
 const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  function:  { bg: 'rgba(88, 166, 255, 0.18)',  text: '#58a6ff', label: 'fn'  },
-  fn:        { bg: 'rgba(88, 166, 255, 0.18)',  text: '#58a6ff', label: 'fn'  },
-  class:     { bg: 'rgba(188, 140, 255, 0.18)', text: '#bc8cff', label: 'cls' },
-  interface: { bg: 'rgba(56, 201, 187, 0.18)',  text: '#38c9bb', label: 'if'  },
-  type:      { bg: 'rgba(255, 166, 77, 0.18)',  text: '#ffa64d', label: 'ty'  },
-  const:     { bg: 'rgba(63, 185, 80, 0.18)',   text: '#3fb950', label: 'co'  },
-  def:       { bg: 'rgba(255, 197, 61, 0.18)',  text: '#ffc53d', label: 'def' },
+  function: { bg: 'rgba(88, 166, 255, 0.18)', text: 'var(--interactive-accent)', label: 'fn' },
+  fn: { bg: 'rgba(88, 166, 255, 0.18)', text: 'var(--interactive-accent)', label: 'fn' },
+  class: { bg: 'rgba(188, 140, 255, 0.18)', text: 'var(--palette-purple)', label: 'cls' },
+  interface: { bg: 'rgba(56, 201, 187, 0.18)', text: '#38c9bb', label: 'if' },
+  type: { bg: 'rgba(255, 166, 77, 0.18)', text: '#ffa64d', label: 'ty' },
+  const: { bg: 'rgba(63, 185, 80, 0.18)', text: 'var(--status-success)', label: 'co' },
+  def: { bg: 'rgba(255, 197, 61, 0.18)', text: '#ffc53d', label: 'def' },
 };
 
 const DEFAULT_BADGE = { bg: 'rgba(140, 140, 140, 0.18)', text: '#8c8c8c' };
@@ -32,9 +32,7 @@ function getBadge(type: string): { bg: string; text: string; label: string } {
 }
 
 function getDirectoryPart(relativePath: string): string {
-  return relativePath.includes('/')
-    ? relativePath.slice(0, relativePath.lastIndexOf('/'))
-    : '';
+  return relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/')) : '';
 }
 
 function getItemStyle(isSelected: boolean): React.CSSProperties {
@@ -48,8 +46,8 @@ function getItemStyle(isSelected: boolean): React.CSSProperties {
     margin: '0 4px',
     height: `${ITEM_HEIGHT}px`,
     boxSizing: 'border-box',
-    backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-    color: isSelected ? 'var(--text-on-accent)' : 'var(--text)',
+    backgroundColor: isSelected ? 'var(--interactive-accent)' : 'transparent',
+    color: isSelected ? 'var(--text-on-accent)' : 'var(--text-primary)',
     transition: 'background-color 80ms ease',
     userSelect: 'none',
     minWidth: 0,
@@ -80,13 +78,23 @@ export const SymbolItem = memo(function SymbolItem({
     >
       <TypeBadge badge={badge} isSelected={isSelected} />
       <SymbolName name={entry.name} indices={highlightedNameIndices} />
-      <SymbolPath path={dirPart || entry.relativePath} indices={highlightedPathIndices} isSelected={isSelected} />
+      <SymbolPath
+        path={dirPart || entry.relativePath}
+        indices={highlightedPathIndices}
+        isSelected={isSelected}
+      />
       <LineNumber line={entry.line} isSelected={isSelected} />
     </div>
   );
 });
 
-function TypeBadge({ badge, isSelected }: { badge: { bg: string; text: string; label: string }; isSelected: boolean }): React.ReactElement {
+function TypeBadge({
+  badge,
+  isSelected,
+}: {
+  badge: { bg: string; text: string; label: string };
+  isSelected: boolean;
+}): React.ReactElement {
   return (
     <span
       style={{
@@ -108,15 +116,37 @@ function TypeBadge({ badge, isSelected }: { badge: { bg: string; text: string; l
   );
 }
 
-function SymbolName({ name, indices }: { name: string; indices: ReadonlyArray<readonly [number, number]> }): React.ReactElement {
+function SymbolName({
+  name,
+  indices,
+}: {
+  name: string;
+  indices: ReadonlyArray<readonly [number, number]>;
+}): React.ReactElement {
   return (
-    <span style={{ flexShrink: 0, fontSize: '13px', fontWeight: 500, fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+    <span
+      style={{
+        flexShrink: 0,
+        fontSize: '13px',
+        fontWeight: 500,
+        fontFamily: 'var(--font-mono)',
+        whiteSpace: 'nowrap',
+      }}
+    >
       <RangeHighlight text={name} indices={indices} />
     </span>
   );
 }
 
-function SymbolPath({ path, indices, isSelected }: { path: string; indices: ReadonlyArray<readonly [number, number]>; isSelected: boolean }): React.ReactElement {
+function SymbolPath({
+  path,
+  indices,
+  isSelected,
+}: {
+  path: string;
+  indices: ReadonlyArray<readonly [number, number]>;
+  isSelected: boolean;
+}): React.ReactElement {
   return (
     <span
       style={{
@@ -135,7 +165,13 @@ function SymbolPath({ path, indices, isSelected }: { path: string; indices: Read
   );
 }
 
-function LineNumber({ line, isSelected }: { line: number; isSelected: boolean }): React.ReactElement {
+function LineNumber({
+  line,
+  isSelected,
+}: {
+  line: number;
+  isSelected: boolean;
+}): React.ReactElement {
   return (
     <span
       style={{

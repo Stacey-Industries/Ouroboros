@@ -41,7 +41,7 @@ export const filterBarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '2px',
   padding: '4px 8px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
 };
 
 const filterBtnBase: React.CSSProperties = {
@@ -98,12 +98,12 @@ const filteredNameStyle: React.CSSProperties = {
 const footerStyle: React.CSSProperties = {
   padding: '4px 12px',
   fontSize: '0.6875rem',
-  borderTop: '1px solid var(--border-muted)',
+  borderTop: '1px solid var(--border-subtle)',
   textAlign: 'center',
 };
 
 const FILTERED_ROW_CSS = `
-  .filtered-file-row:hover { background-color: var(--bg-tertiary); }
+  .filtered-file-row:hover { background-color: var(--surface-raised); }
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -114,23 +114,35 @@ export function getFileName(filePath: string): string {
 
 export function statusColor(status: string): string {
   switch (status) {
-    case 'M': return 'var(--warning, #e5a50a)';
-    case 'A': return 'var(--success, #3fb950)';
-    case 'D': return 'var(--error, #f85149)';
-    case '?': return 'var(--text-faint)';
-    case 'R': return 'var(--info, #58a6ff)';
-    default: return 'var(--text-faint)';
+    case 'M':
+      return 'var(--warning, #e5a50a)';
+    case 'A':
+      return 'var(--status-success)';
+    case 'D':
+      return 'var(--status-error)';
+    case '?':
+      return 'var(--text-faint)';
+    case 'R':
+      return 'var(--info, #58a6ff)';
+    default:
+      return 'var(--text-faint)';
   }
 }
 
 export function statusLabel(status: string): string {
   switch (status) {
-    case 'M': return 'Modified';
-    case 'A': return 'Added';
-    case 'D': return 'Deleted';
-    case '?': return 'Untracked';
-    case 'R': return 'Renamed';
-    default: return status;
+    case 'M':
+      return 'Modified';
+    case 'A':
+      return 'Added';
+    case 'D':
+      return 'Deleted';
+    case '?':
+      return 'Untracked';
+    case 'R':
+      return 'Renamed';
+    default:
+      return status;
   }
 }
 
@@ -203,7 +215,7 @@ export function FilterButton({
       title={`${def.label} (${count})`}
       aria-pressed={isActive}
       onMouseEnter={(e) => {
-        if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text)';
+        if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
       }}
       onMouseLeave={(e) => {
         if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-faint)';
@@ -261,7 +273,9 @@ function FilteredFileRow({
       role="listitem"
     >
       <FileTypeIcon filename={entry.name} />
-      <span style={filteredNameStyle} className="text-text-semantic-secondary">{entry.path}</span>
+      <span style={filteredNameStyle} className="text-text-semantic-secondary">
+        {entry.path}
+      </span>
       <StatusBadge status={entry.status} />
     </div>
   );

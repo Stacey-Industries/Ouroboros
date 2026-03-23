@@ -2,7 +2,7 @@
  * InlineEditInput - input field for inline rename / new file creation.
  */
 
-import React, { useCallback,useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // eslint-disable-next-line no-control-regex
 const INVALID_NAME_CHARS = /[<>:"/\\|?*\x00-\x1f]/;
@@ -24,10 +24,7 @@ function trimmedValue(value: string): string {
   return value.trim();
 }
 
-function selectInitialName(
-  input: HTMLInputElement,
-  initialValue: string
-): void {
+function selectInitialName(input: HTMLInputElement, initialValue: string): void {
   const dotIndex = initialValue.lastIndexOf('.');
   if (dotIndex > 0) {
     input.setSelectionRange(0, dotIndex);
@@ -38,7 +35,7 @@ function selectInitialName(
 
 function useInitialSelection(
   inputRef: React.RefObject<HTMLInputElement | null>,
-  initialValue: string
+  initialValue: string,
 ): void {
   useEffect(() => {
     if (!inputRef.current) return;
@@ -50,7 +47,7 @@ function useInitialSelection(
 function submitInlineEdit(
   value: string,
   setError: React.Dispatch<React.SetStateAction<string | null>>,
-  onConfirm: (value: string) => void
+  onConfirm: (value: string) => void,
 ): void {
   const error = validate(value);
   if (error) {
@@ -62,7 +59,7 @@ function submitInlineEdit(
 
 function useKeyDownHandler(
   submitValue: () => void,
-  onCancel: () => void
+  onCancel: () => void,
 ): (e: React.KeyboardEvent) => void {
   return useCallback(
     (e: React.KeyboardEvent) => {
@@ -77,7 +74,7 @@ function useKeyDownHandler(
         onCancel();
       }
     },
-    [onCancel, submitValue]
+    [onCancel, submitValue],
   );
 }
 
@@ -121,7 +118,7 @@ function useInlineEditHandlers({
 } {
   const submitValue = useCallback(
     () => submitInlineEdit(value, setError, onConfirm),
-    [onConfirm, setError, value]
+    [onConfirm, setError, value],
   );
 
   return {
@@ -134,7 +131,7 @@ function inputStyle(error: string | null): React.CSSProperties {
   return {
     width: '100%',
     padding: '0 4px',
-    border: error ? '1px solid var(--error, #e55)' : '1px solid var(--accent)',
+    border: error ? '1px solid var(--status-error)' : '1px solid var(--interactive-accent)',
     borderRadius: '2px',
     fontSize: '0.8125rem',
     fontFamily: 'var(--font-mono)',

@@ -53,14 +53,14 @@ const TOAST_STYLES = `
 function getTypeColor(type: ToastType): string {
   switch (type) {
     case 'success':
-      return 'var(--success, #3fb950)';
+      return 'var(--status-success)';
     case 'error':
-      return 'var(--error, #f85149)';
+      return 'var(--status-error)';
     case 'warning':
-      return 'var(--warning, #d29922)';
+      return 'var(--status-warning)';
     case 'info':
     default:
-      return 'var(--accent, #58a6ff)';
+      return 'var(--interactive-accent)';
   }
 }
 
@@ -75,7 +75,13 @@ function ToastIcon({ type }: { type: ToastType }): React.ReactElement {
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path d="M5 8l2 2 4-4" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M5 8l2 2 4-4"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case 'error':
@@ -88,7 +94,12 @@ function ToastIcon({ type }: { type: ToastType }): React.ReactElement {
     case 'warning':
       return (
         <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M8 1.5l6.93 12H1.07L8 1.5z" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+          <path
+            d="M8 1.5l6.93 12H1.07L8 1.5z"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
           <path d="M8 6.5v3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="8" cy="11.5" r="0.75" fill={color} />
         </svg>
@@ -173,7 +184,9 @@ function buildToastItemStyle(typeColor: string, dismissing: boolean): React.CSSP
     fontSize: '0.8125rem',
     lineHeight: '1.4',
     overflow: 'hidden',
-    animation: dismissing ? 'toast-fade-out 300ms ease-in forwards' : 'toast-slide-in 300ms ease-out',
+    animation: dismissing
+      ? 'toast-fade-out 300ms ease-in forwards'
+      : 'toast-slide-in 300ms ease-out',
   };
 }
 
@@ -206,7 +219,11 @@ function ToastMessage({
     <div style={{ flex: 1, minWidth: 0 }}>
       <span style={{ wordBreak: 'break-word' }}>{item.message}</span>
       {item.action && (
-        <button type="button" onClick={item.action.onClick} style={buildToastActionStyle(typeColor)}>
+        <button
+          type="button"
+          onClick={item.action.onClick}
+          style={buildToastActionStyle(typeColor)}
+        >
           {item.action.label}
         </button>
       )}

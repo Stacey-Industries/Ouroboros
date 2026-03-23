@@ -40,7 +40,9 @@ export const SlotEditor = memo(function SlotEditor({
         slot={slot}
         templates={templates}
       />
-      {slot.templateId === '__custom__' ? <SlotPromptField index={index} onUpdate={onUpdate} slot={slot} /> : null}
+      {slot.templateId === '__custom__' ? (
+        <SlotPromptField index={index} onUpdate={onUpdate} slot={slot} />
+      ) : null}
       <SlotOverrides index={index} onUpdate={onUpdate} slot={slot} />
     </div>
   );
@@ -56,7 +58,7 @@ export function LauncherHeader({ onClose }: { onClose: () => void }): React.Reac
       <IconButton
         ariaLabel="Close multi-session launcher"
         defaultColor="var(--text-faint)"
-        hoverColor="var(--text)"
+        hoverColor="var(--text-primary)"
         onClick={onClose}
         title="Close"
       >

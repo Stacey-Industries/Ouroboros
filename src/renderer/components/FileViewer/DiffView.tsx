@@ -78,7 +78,7 @@ const DIFF_HEADER_STYLE: React.CSSProperties = {
   alignItems: 'center',
   gap: '12px',
   padding: '6px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   fontSize: '0.8125rem',
   userSelect: 'none',
@@ -114,7 +114,7 @@ const DIFF_MARKER_STYLE: React.CSSProperties = {
   textAlign: 'center',
   userSelect: 'none',
   fontWeight: 600,
-  borderRight: '1px solid var(--border-muted)',
+  borderRight: '1px solid var(--border-subtle)',
 };
 
 const DIFF_CONTENT_CELL_STYLE: React.CSSProperties = {
@@ -210,7 +210,7 @@ function getDiffVisuals(type: DiffLineType): DiffVisuals {
       backgroundColor: 'rgba(255, 80, 80, 0.12)',
       gutterBackground: 'rgba(255, 80, 80, 0.18)',
       marker: '-',
-      markerColor: 'var(--error, #f85149)',
+      markerColor: 'var(--status-error)',
     };
   }
   return {
@@ -239,10 +239,7 @@ function DiffStatsHeader({ stats, lineCount }: DiffStatsHeaderProps): React.Reac
   );
 }
 
-function DiffLinesList({
-  diffLines,
-  gutterWidths,
-}: DiffLinesListProps): React.ReactElement {
+function DiffLinesList({ diffLines, gutterWidths }: DiffLinesListProps): React.ReactElement {
   return (
     <div style={DIFF_CONTENT_STYLE}>
       <div style={DIFF_LIST_STYLE}>
@@ -296,7 +293,11 @@ function DiffMarkerCell({ marker, visuals }: DiffMarkerCellProps): React.ReactEl
 }
 
 function DiffContentCell({ text }: Pick<DiffLine, 'text'>): React.ReactElement {
-  return <pre className="text-text-semantic-primary" style={DIFF_CONTENT_CELL_STYLE}>{text}</pre>;
+  return (
+    <pre className="text-text-semantic-primary" style={DIFF_CONTENT_CELL_STYLE}>
+      {text}
+    </pre>
+  );
 }
 
 const DiffLineRow = memo(function DiffLineRow({

@@ -1,38 +1,38 @@
-import React from 'react'
+import React from 'react';
 
-import { EmptyState } from '../shared'
-import { ActiveTerminalContent } from './TerminalManagerContent'
-import { useTerminalManagerState } from './TerminalManagerState'
-import type { TerminalSession } from './TerminalTabs'
+import { EmptyState } from '../shared';
+import { ActiveTerminalContent } from './TerminalManagerContent';
+import { useTerminalManagerState } from './TerminalManagerState';
+import type { TerminalSession } from './TerminalTabs';
 
 export interface TerminalManagerProps {
-  sessions: TerminalSession[]
-  activeSessionId: string | null
-  onRestart: (id: string) => void
-  onClose: (id: string) => void
-  onTitleChange: (id: string, title: string) => void
-  onSpawn: () => void
-  recordingSessions?: Set<string>
-  onToggleRecording?: (sessionId: string) => void
-  onSplit?: (sessionId: string) => void
-  onCloseSplit?: (sessionId: string) => void
+  sessions: TerminalSession[];
+  activeSessionId: string | null;
+  onRestart: (id: string) => void;
+  onClose: (id: string) => void;
+  onTitleChange: (id: string, title: string) => void;
+  onSpawn: () => void;
+  recordingSessions?: Set<string>;
+  onToggleRecording?: (sessionId: string) => void;
+  onSplit?: (sessionId: string) => void;
+  onCloseSplit?: (sessionId: string) => void;
 }
 
-const NOOP = (): void => {}
+const NOOP = (): void => {};
 
 function TerminalManagerShell({
   activeContent,
   isEmpty,
   onSpawn,
 }: {
-  activeContent: React.ReactNode
-  isEmpty: boolean
-  onSpawn: () => void
+  activeContent: React.ReactNode;
+  isEmpty: boolean;
+  onSpawn: () => void;
 }): React.ReactElement {
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--term-bg, var(--bg))' }}
+      style={{ backgroundColor: 'var(--term-bg, var(--surface-base))' }}
     >
       <div className="relative flex-1 min-h-0">
         {activeContent}
@@ -46,7 +46,7 @@ function TerminalManagerShell({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function TerminalManager({
@@ -61,8 +61,10 @@ export function TerminalManager({
   onSplit,
   onCloseSplit,
 }: TerminalManagerProps): React.ReactElement {
-  const { activeSession, allSessionIds, syncInput, handleToggleSync } =
-    useTerminalManagerState(sessions, activeSessionId)
+  const { activeSession, allSessionIds, syncInput, handleToggleSync } = useTerminalManagerState(
+    sessions,
+    activeSessionId,
+  );
   const activeContent = activeSession ? (
     <div className="absolute inset-0">
       <ActiveTerminalContent
@@ -80,7 +82,7 @@ export function TerminalManager({
         onToggleSync={handleToggleSync}
       />
     </div>
-  ) : null
+  ) : null;
 
   return (
     <TerminalManagerShell
@@ -88,5 +90,5 @@ export function TerminalManager({
       isEmpty={sessions.length === 0}
       onSpawn={onSpawn}
     />
-  )
+  );
 }

@@ -17,9 +17,9 @@ export interface TooltipData {
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending: { label: 'In progress', color: 'var(--accent)' },
-  success: { label: 'Success', color: 'var(--success)' },
-  error: { label: 'Error', color: 'var(--error)' },
+  pending: { label: 'In progress', color: 'var(--interactive-accent)' },
+  success: { label: 'Success', color: 'var(--status-success)' },
+  error: { label: 'Error', color: 'var(--status-error)' },
 };
 
 export const Tooltip = memo(function Tooltip({ data }: { data: TooltipData }): React.ReactElement {

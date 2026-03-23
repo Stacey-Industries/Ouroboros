@@ -6,8 +6,7 @@ export interface BlameGutterProps {
   blameLines: BlameLine[];
   /** The row descriptors from FileViewer (line or fold-placeholder) */
   rows: Array<
-    | { type: 'line'; index: number }
-    | { type: 'fold-placeholder'; startLine: number; count: number }
+    { type: 'line'; index: number } | { type: 'fold-placeholder'; startLine: number; count: number }
   >;
 }
 
@@ -44,7 +43,7 @@ const GUTTER_STYLE: React.CSSProperties = {
   paddingBottom: '16px',
   overflow: 'hidden',
   userSelect: 'none',
-  borderRight: '1px solid var(--border-muted)',
+  borderRight: '1px solid var(--border-subtle)',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-ui)',
   lineHeight: '1.6',
@@ -157,10 +156,7 @@ function buildBlameMap(blameLines: BlameLine[]): Map<number, BlameLine> {
   return map;
 }
 
-function buildFirstInGroup(
-  rows: BlameGutterRow[],
-  blameMap: Map<number, BlameLine>,
-): Set<number> {
+function buildFirstInGroup(rows: BlameGutterRow[], blameMap: Map<number, BlameLine>): Set<number> {
   const firstInGroup = new Set<number>();
   let previousHash: string | null = null;
 
@@ -210,8 +206,12 @@ const BlameAnnotationRow = memo(function BlameAnnotationRow({
       style={{ ...BLAME_ANNOTATION_STYLE, backgroundColor }}
       title={formatBlameTitle(blame)}
     >
-      <span className="text-text-semantic-muted" style={BLAME_AUTHOR_STYLE}>{shortAuthor(blame.author)}</span>
-      <span className="text-text-semantic-faint" style={BLAME_DATE_STYLE}>{relativeDate(blame.date)}</span>
+      <span className="text-text-semantic-muted" style={BLAME_AUTHOR_STYLE}>
+        {shortAuthor(blame.author)}
+      </span>
+      <span className="text-text-semantic-faint" style={BLAME_DATE_STYLE}>
+        {relativeDate(blame.date)}
+      </span>
     </div>
   );
 });
@@ -233,13 +233,7 @@ const BlameRow = memo(function BlameRow({
     return <div style={{ ...BLAME_ROW_STYLE, backgroundColor }} />;
   }
 
-  return (
-    <BlameAnnotationRow
-      blame={blame}
-      backgroundColor={backgroundColor}
-      onClick={onClick}
-    />
-  );
+  return <BlameAnnotationRow blame={blame} backgroundColor={backgroundColor} onClick={onClick} />;
 });
 
 const BlameTooltip = memo(function BlameTooltip({
@@ -251,16 +245,37 @@ const BlameTooltip = memo(function BlameTooltip({
   const { blame, top, left } = tooltipInfo;
   return (
     <>
-      <div onClick={onClose} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); onClose(); } }} role="button" tabIndex={0} aria-label="Close blame tooltip" style={TOOLTIP_BACKDROP_STYLE} />
-      <div className="text-text-semantic-primary" style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}>
+      <div
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Close blame tooltip"
+        style={TOOLTIP_BACKDROP_STYLE}
+      />
+      <div
+        className="text-text-semantic-primary"
+        style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}
+      >
         <div style={TOOLTIP_HEADER_STYLE}>
-          <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>{blame.hash.slice(0, 8)}</span>
-          <span className="text-text-semantic-muted" style={TOOLTIP_AUTHOR_STYLE}>{blame.author}</span>
+          <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>
+            {blame.hash.slice(0, 8)}
+          </span>
+          <span className="text-text-semantic-muted" style={TOOLTIP_AUTHOR_STYLE}>
+            {blame.author}
+          </span>
         </div>
         <div className="text-text-semantic-faint" style={TOOLTIP_DATE_STYLE}>
           {new Date(blame.date * 1000).toLocaleString()}
         </div>
-        <div className="text-text-semantic-primary" style={TOOLTIP_SUMMARY_STYLE}>{blame.summary}</div>
+        <div className="text-text-semantic-primary" style={TOOLTIP_SUMMARY_STYLE}>
+          {blame.summary}
+        </div>
       </div>
     </>
   );

@@ -22,7 +22,10 @@ function UsageTabBar({
   onSelect: (tab: UsageTab) => void;
 }): React.ReactElement {
   return (
-    <div className="flex border-b border-border-semantic bg-surface-panel" style={{ flexShrink: 0 }}>
+    <div
+      className="flex border-b border-border-semantic bg-surface-panel"
+      style={{ flexShrink: 0 }}
+    >
       {TABS.map((tab) => (
         <button
           key={tab.key}
@@ -31,8 +34,11 @@ function UsageTabBar({
           style={{
             background: 'none',
             border: 'none',
-            borderBottom: activeTab === tab.key ? '2px solid var(--accent)' : '2px solid transparent',
-            color: activeTab === tab.key ? 'var(--text)' : 'var(--text-muted)',
+            borderBottom:
+              activeTab === tab.key
+                ? '2px solid var(--interactive-accent)'
+                : '2px solid transparent',
+            color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
             fontWeight: activeTab === tab.key ? 600 : 400,
             cursor: 'pointer',
             marginBottom: '-1px',

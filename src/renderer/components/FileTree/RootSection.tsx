@@ -45,12 +45,19 @@ function buildRootNode(root: string): TreeNode {
 }
 
 function RootSectionError({ error }: { error: string }): React.ReactElement {
-  return <div className="text-status-error" style={{ padding: '12px', fontSize: '0.8125rem' }}>{error}</div>;
+  return (
+    <div className="text-status-error" style={{ padding: '12px', fontSize: '0.8125rem' }}>
+      {error}
+    </div>
+  );
 }
 
 function RootSectionEmpty(): React.ReactElement {
   return (
-    <div className="text-text-semantic-faint" style={{ padding: '16px 12px', fontSize: '0.8125rem', textAlign: 'center' }}>
+    <div
+      className="text-text-semantic-faint"
+      style={{ padding: '16px 12px', fontSize: '0.8125rem', textAlign: 'center' }}
+    >
       No files found in this directory.
     </div>
   );
@@ -121,22 +128,34 @@ function ExpandedRootSection({
   );
 }
 
-function useRootSectionHandlers(props: RootSectionProps, model: ReturnType<typeof useRootSectionModel>) {
+function useRootSectionHandlers(
+  props: RootSectionProps,
+  model: ReturnType<typeof useRootSectionModel>,
+) {
   const { handleContextMenu } = model;
-  const handleHeaderContextMenu = useCallback((event: React.MouseEvent) => {
-    event.preventDefault();
-    handleContextMenu(event, buildRootNode(props.root));
-  }, [handleContextMenu, props.root]);
+  const handleHeaderContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      handleContextMenu(event, buildRootNode(props.root));
+    },
+    [handleContextMenu, props.root],
+  );
 
-  const handleContextMenuNewFile = useCallback((parentDir: string) => {
-    if (!props.isExpanded) props.onToggle();
-    model.handleNewFile(parentDir);
-  }, [model, props]);
+  const handleContextMenuNewFile = useCallback(
+    (parentDir: string) => {
+      if (!props.isExpanded) props.onToggle();
+      model.handleNewFile(parentDir);
+    },
+    [model, props],
+  );
 
-  const handleContextMenuNewFolder = useCallback((parentDir: string) => {
-    if (!props.isExpanded) props.onToggle();
-    model.handleNewFolder(parentDir);
-  }, [model, props]);
+  const handleContextMenuNewFolder = useCallback(
+    (parentDir: string) => {
+      if (!props.isExpanded) props.onToggle();
+      model.handleNewFolder(parentDir);
+    },
+    [model, props],
+  );
 
   return { handleHeaderContextMenu, handleContextMenuNewFile, handleContextMenuNewFolder };
 }
@@ -179,7 +198,7 @@ export function RootSection(props: RootSectionProps): React.ReactElement {
   });
   const handlers = useRootSectionHandlers(props, model);
   return (
-    <div style={{ borderBottom: '1px solid var(--border-muted)' }}>
+    <div style={{ borderBottom: '1px solid var(--border-subtle)' }}>
       <RootSectionHeader
         root={props.root}
         isExpanded={props.isExpanded}
@@ -188,9 +207,20 @@ export function RootSection(props: RootSectionProps): React.ReactElement {
         onContextMenu={handlers.handleHeaderContextMenu}
       />
       {props.isExpanded ? (
-        <ExpandedRootSection root={props.root} activeFilePath={props.activeFilePath} bookmarks={props.bookmarks} getHeatLevel={props.getHeatLevel} model={model} />
+        <ExpandedRootSection
+          root={props.root}
+          activeFilePath={props.activeFilePath}
+          bookmarks={props.bookmarks}
+          getHeatLevel={props.getHeatLevel}
+          model={model}
+        />
       ) : null}
-      <RootContextMenu root={props.root} bookmarks={props.bookmarks} model={model} handlers={handlers} />
+      <RootContextMenu
+        root={props.root}
+        bookmarks={props.bookmarks}
+        model={model}
+        handlers={handlers}
+      />
     </div>
   );
 }

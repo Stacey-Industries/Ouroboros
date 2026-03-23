@@ -18,21 +18,21 @@ const ICON_MAP: Record<string, FileIconInfo> = {
   mjs: { color: '#f7df1e', label: 'MJS' },
   cjs: { color: '#f7df1e', label: 'CJS' },
   // JSON / config
-  json: { color: 'var(--success)', label: 'JSON' },
-  jsonc: { color: 'var(--success)', label: 'JSONC' },
-  yaml: { color: 'var(--success)', label: 'YAML' },
-  yml: { color: 'var(--success)', label: 'YAML' },
-  toml: { color: 'var(--success)', label: 'TOML' },
+  json: { color: 'var(--status-success)', label: 'JSON' },
+  jsonc: { color: 'var(--status-success)', label: 'JSONC' },
+  yaml: { color: 'var(--status-success)', label: 'YAML' },
+  yml: { color: 'var(--status-success)', label: 'YAML' },
+  toml: { color: 'var(--status-success)', label: 'TOML' },
   // Markup
-  html: { color: 'var(--warning)', label: 'HTML' },
-  htm: { color: 'var(--warning)', label: 'HTML' },
-  xml: { color: 'var(--warning)', label: 'XML' },
-  svg: { color: 'var(--warning)', label: 'SVG' },
+  html: { color: 'var(--status-warning)', label: 'HTML' },
+  htm: { color: 'var(--status-warning)', label: 'HTML' },
+  xml: { color: 'var(--status-warning)', label: 'XML' },
+  svg: { color: 'var(--status-warning)', label: 'SVG' },
   // Styles
-  css: { color: 'var(--purple)', label: 'CSS' },
-  scss: { color: 'var(--purple)', label: 'SCSS' },
-  sass: { color: 'var(--purple)', label: 'SASS' },
-  less: { color: 'var(--purple)', label: 'LESS' },
+  css: { color: 'var(--palette-purple)', label: 'CSS' },
+  scss: { color: 'var(--palette-purple)', label: 'SCSS' },
+  sass: { color: 'var(--palette-purple)', label: 'SASS' },
+  less: { color: 'var(--palette-purple)', label: 'LESS' },
   // Markdown / docs
   md: { color: 'var(--text-semantic-muted)', label: 'MD' },
   mdx: { color: 'var(--text-semantic-muted)', label: 'MDX' },
@@ -42,17 +42,17 @@ const ICON_MAP: Record<string, FileIconInfo> = {
   py: { color: '#4b8bbe', label: 'PY' },
   pyi: { color: '#4b8bbe', label: 'PYI' },
   // Rust
-  rs: { color: 'var(--warning)', label: 'RS' },
+  rs: { color: 'var(--status-warning)', label: 'RS' },
   // Go
   go: { color: '#00acd7', label: 'GO' },
   // Ruby
   rb: { color: '#cc342d', label: 'RB' },
   // Shell
-  sh: { color: 'var(--success)', label: 'SH' },
-  bash: { color: 'var(--success)', label: 'SH' },
-  zsh: { color: 'var(--success)', label: 'SH' },
-  fish: { color: 'var(--success)', label: 'SH' },
-  bat: { color: 'var(--success)', label: 'BAT' },
+  sh: { color: 'var(--status-success)', label: 'SH' },
+  bash: { color: 'var(--status-success)', label: 'SH' },
+  zsh: { color: 'var(--status-success)', label: 'SH' },
+  fish: { color: 'var(--status-success)', label: 'SH' },
+  bat: { color: 'var(--status-success)', label: 'BAT' },
   // C / C++
   c: { color: '#a8b9cc', label: 'C' },
   h: { color: '#a8b9cc', label: 'H' },
@@ -73,7 +73,7 @@ const ICON_MAP: Record<string, FileIconInfo> = {
   sql: { color: '#e38c00', label: 'SQL' },
   prisma: { color: 'var(--interactive-accent)', label: 'PRISMA' },
   // Config / dotfiles
-  env: { color: 'var(--success)', label: 'ENV' },
+  env: { color: 'var(--status-success)', label: 'ENV' },
   gitignore: { color: 'var(--text-semantic-faint)', label: 'GIT' },
   dockerfile: { color: '#384d54', label: 'DOCK' },
   // Misc

@@ -13,7 +13,7 @@ function createHighlightOverlay(top: number, height: number): HTMLDivElement {
   el.style.right = '0';
   el.style.top = `${top}px`;
   el.style.height = `${height}px`;
-  el.style.backgroundColor = 'var(--accent)';
+  el.style.backgroundColor = 'var(--interactive-accent)';
   el.style.opacity = '0.25';
   el.style.pointerEvents = 'none';
   el.style.transition = HIGHLIGHT_OPACITY_TRANSITION;
@@ -48,7 +48,7 @@ function flashHighlight(container: HTMLElement, line: number): void {
 export function useScrollToLine(
   filePath: string | null,
   scrollRef: RefObject<HTMLDivElement | null>,
-  codeRef: RefObject<HTMLDivElement | null>
+  codeRef: RefObject<HTMLDivElement | null>,
 ): void {
   useEffect(() => {
     function onScrollToLine(e: Event): void {
@@ -58,9 +58,8 @@ export function useScrollToLine(
 
       const container = scrollRef.current;
       const gutterLines = container.querySelectorAll('[aria-hidden="true"] > div');
-      const lineHeight = gutterLines.length > 0
-        ? (gutterLines[0] as HTMLElement).offsetHeight
-        : LINE_HEIGHT;
+      const lineHeight =
+        gutterLines.length > 0 ? (gutterLines[0] as HTMLElement).offsetHeight : LINE_HEIGHT;
 
       const scrollTarget = PADDING_TOP + (detail.line - 1) * lineHeight;
       container.scrollTo({

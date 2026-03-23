@@ -18,8 +18,8 @@ const sectionLabelStyle: React.CSSProperties = {
 const panelStyle: React.CSSProperties = {
   padding: '14px',
   borderRadius: '8px',
-  background: 'var(--bg-secondary)',
-  border: '1px solid var(--border-muted)',
+  background: 'var(--surface-panel)',
+  border: '1px solid var(--border-subtle)',
   display: 'flex',
   flexDirection: 'column',
   gap: '10px',
@@ -30,8 +30,8 @@ const textareaStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono, monospace)',
   fontSize: '12px',
   lineHeight: 1.6,
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
+  background: 'var(--surface-base)',
+  border: '1px solid var(--border-default)',
   borderRadius: '6px',
   padding: '10px 12px',
   resize: 'vertical',
@@ -42,7 +42,7 @@ const textareaStyle: React.CSSProperties = {
 const resetButtonStyle: React.CSSProperties = {
   padding: '5px 12px',
   borderRadius: '5px',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   background: 'transparent',
   fontSize: '12px',
   cursor: 'pointer',
@@ -52,7 +52,7 @@ const getSaveButtonStyle = (saved: boolean): React.CSSProperties => ({
   padding: '5px 14px',
   borderRadius: '5px',
   border: 'none',
-  background: saved ? 'var(--success)' : 'var(--accent)',
+  background: saved ? 'var(--status-success)' : 'var(--interactive-accent)',
   fontSize: '12px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -60,7 +60,11 @@ const getSaveButtonStyle = (saved: boolean): React.CSSProperties => ({
 });
 
 function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="text-text-semantic-muted" style={sectionLabelStyle}>{children}</div>;
+  return (
+    <div className="text-text-semantic-muted" style={sectionLabelStyle}>
+      {children}
+    </div>
+  );
 }
 
 function countRuleBlocks(css: string): number {
@@ -68,7 +72,10 @@ function countRuleBlocks(css: string): number {
   return trimmedCss ? (trimmedCss.match(/\{/g) ?? []).length : 0;
 }
 
-function useSavedReset(saved: boolean, setSaved: React.Dispatch<React.SetStateAction<boolean>>): void {
+function useSavedReset(
+  saved: boolean,
+  setSaved: React.Dispatch<React.SetStateAction<boolean>>,
+): void {
   useEffect(() => {
     if (!saved) {
       return undefined;
@@ -137,7 +144,11 @@ function CustomCSSActions({
         <button onClick={onReset} className="text-text-semantic-muted" style={resetButtonStyle}>
           Reset
         </button>
-        <button onClick={onSave} className="text-text-semantic-on-accent" style={getSaveButtonStyle(saved)}>
+        <button
+          onClick={onSave}
+          className="text-text-semantic-on-accent"
+          style={getSaveButtonStyle(saved)}
+        >
           {saved ? 'Saved!' : 'Apply CSS'}
         </button>
       </div>
@@ -174,20 +185,12 @@ function CustomCSSBody({
         className="text-text-semantic-primary"
         style={textareaStyle}
       />
-      <CustomCSSActions
-        onReset={onReset}
-        onSave={onSave}
-        ruleCount={ruleCount}
-        saved={saved}
-      />
+      <CustomCSSActions onReset={onReset} onSave={onSave} ruleCount={ruleCount} saved={saved} />
     </div>
   );
 }
 
-export function CustomCSSSection({
-  draft,
-  onChange,
-}: CustomCSSSectionProps): React.ReactElement {
+export function CustomCSSSection({ draft, onChange }: CustomCSSSectionProps): React.ReactElement {
   const { handleReset, handleSave, localCSS, ruleCount, saved, setLocalCSS } =
     useCustomCSSController({
       customCSS: draft.customCSS,

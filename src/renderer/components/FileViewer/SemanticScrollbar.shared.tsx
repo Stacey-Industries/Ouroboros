@@ -51,17 +51,16 @@ const MARK_HEIGHT = 2;
 const EDGE_PADDING = 12;
 
 const DIFF_MARK_APPEARANCE = {
-  added: { color: '#3fb950', label: 'added' },
-  deleted: { color: '#f85149', label: 'deleted' },
-  modified: { color: '#58a6ff', label: 'modified' },
+  added: { color: 'var(--status-success)', label: 'added' },
+  deleted: { color: 'var(--status-error)', label: 'deleted' },
+  modified: { color: 'var(--interactive-accent)', label: 'modified' },
 } as const;
 
 export const HIDDEN_TOOLTIP: Tooltip = { visible: false, label: '', y: 0 };
 
 function getDiffMarkAppearance(kind: DiffLineInfo['kind']) {
   return (
-    DIFF_MARK_APPEARANCE[kind as keyof typeof DIFF_MARK_APPEARANCE] ??
-    DIFF_MARK_APPEARANCE.modified
+    DIFF_MARK_APPEARANCE[kind as keyof typeof DIFF_MARK_APPEARANCE] ?? DIFF_MARK_APPEARANCE.modified
   );
 }
 
@@ -69,11 +68,7 @@ function getMarkPosition(line: number, totalLines: number): number {
   return (line - 1) / Math.max(totalLines - 1, 1);
 }
 
-function createFoldMarks(
-  foldedLines: number[],
-  totalLines: number,
-  seen: Set<number>
-): Mark[] {
+function createFoldMarks(foldedLines: number[], totalLines: number, seen: Set<number>): Mark[] {
   const marks: Mark[] = [];
   for (const startLine of foldedLines) {
     const line = startLine + 1;
@@ -89,11 +84,7 @@ function createFoldMarks(
   return marks;
 }
 
-function createDiffMarks(
-  diffLines: DiffLineInfo[],
-  totalLines: number,
-  seen: Set<number>
-): Mark[] {
+function createDiffMarks(diffLines: DiffLineInfo[], totalLines: number, seen: Set<number>): Mark[] {
   const marks: Mark[] = [];
   for (const diffLine of diffLines) {
     if (seen.has(diffLine.line)) continue;
@@ -112,7 +103,7 @@ function createDiffMarks(
 function createSearchMarks(
   searchMatchLines: number[],
   totalLines: number,
-  seen: Set<number>
+  seen: Set<number>,
 ): Mark[] {
   const marks: Mark[] = [];
   for (const line of searchMatchLines) {
@@ -131,7 +122,7 @@ export function buildMarks(
   totalLines: number,
   foldedLines: number[],
   diffLines: DiffLineInfo[],
-  searchMatchLines: number[]
+  searchMatchLines: number[],
 ): Mark[] {
   const seen = new Set<number>();
   return [
@@ -144,7 +135,7 @@ export function buildMarks(
 export function getViewportMetrics(
   scrollTop: number,
   containerHeight: number,
-  scrollHeight: number
+  scrollHeight: number,
 ): ViewportMetrics | null {
   const trackHeight = containerHeight - EDGE_PADDING * 2;
   if (trackHeight <= 0) return null;
@@ -163,7 +154,7 @@ export function getViewportMetrics(
 export function updateTooltipPosition(
   event: React.MouseEvent<HTMLDivElement>,
   scrollbar: HTMLDivElement | null,
-  setTooltip: React.Dispatch<React.SetStateAction<Tooltip>>
+  setTooltip: React.Dispatch<React.SetStateAction<Tooltip>>,
 ): void {
   if (!scrollbar) return;
   const rect = scrollbar.getBoundingClientRect();
@@ -242,11 +233,7 @@ function ScrollbarMarkList({
   );
 }
 
-function ScrollbarTooltip({
-  tooltip,
-}: {
-  tooltip: Tooltip;
-}): React.ReactElement | null {
+function ScrollbarTooltip({ tooltip }: { tooltip: Tooltip }): React.ReactElement | null {
   if (!tooltip.visible) return null;
   return (
     <div

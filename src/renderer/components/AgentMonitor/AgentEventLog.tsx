@@ -9,7 +9,7 @@
  * All content rendered as text - no dangerouslySetInnerHTML.
  */
 
-import React, { memo,useCallback, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 
 import type { ToolCallEvent } from './types';
 
@@ -24,8 +24,8 @@ const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
 
 const STATUS_COLORS: Record<ToolCallEvent['status'], string> = {
   pending: 'var(--text-faint)',
-  success: 'var(--success)',
-  error: 'var(--error)',
+  success: 'var(--status-success)',
+  error: 'var(--status-error)',
 };
 
 function formatTimestamp(ms: number): string {
@@ -44,12 +44,13 @@ function eventToLogLine(call: ToolCallEvent): string {
 }
 
 function filterToolCalls(toolCalls: ToolCallEvent[], filter: FilterType): ToolCallEvent[] {
-  return filter === 'all'
-    ? toolCalls
-    : toolCalls.filter((call) => call.status === filter);
+  return filter === 'all' ? toolCalls : toolCalls.filter((call) => call.status === filter);
 }
 
-function useCopyLog(toolCalls: ToolCallEvent[], sessionId: string): {
+function useCopyLog(
+  toolCalls: ToolCallEvent[],
+  sessionId: string,
+): {
   copied: boolean;
   handleCopy: () => void;
 } {
@@ -58,12 +59,15 @@ function useCopyLog(toolCalls: ToolCallEvent[], sessionId: string): {
   const handleCopy = useCallback(() => {
     const header = `Session: ${sessionId}\n${'\u2500'.repeat(60)}\n`;
     const lines = toolCalls.map(eventToLogLine).join('\n');
-    navigator.clipboard.writeText(header + lines).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch((error) => {
-      console.error('[agentEventLog] Failed to copy event log to clipboard:', error);
-    });
+    navigator.clipboard
+      .writeText(header + lines)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch((error) => {
+        console.error('[agentEventLog] Failed to copy event log to clipboard:', error);
+      });
   }, [toolCalls, sessionId]);
 
   return { copied, handleCopy };
@@ -74,7 +78,10 @@ interface FilterBarProps {
   onChange: (filter: FilterType) => void;
 }
 
-const FilterBar = memo(function FilterBar({ active, onChange }: FilterBarProps): React.ReactElement {
+const FilterBar = memo(function FilterBar({
+  active,
+  onChange,
+}: FilterBarProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1">
       {FILTER_OPTIONS.map((option) => (
@@ -83,9 +90,9 @@ const FilterBar = memo(function FilterBar({ active, onChange }: FilterBarProps):
           onClick={() => onChange(option.value)}
           className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors"
           style={{
-            background: active === option.value ? 'var(--bg-tertiary)' : 'transparent',
-            color: active === option.value ? 'var(--text)' : 'var(--text-faint)',
-            border: `1px solid ${active === option.value ? 'var(--border)' : 'transparent'}`,
+            background: active === option.value ? 'var(--surface-raised)' : 'transparent',
+            color: active === option.value ? 'var(--text-primary)' : 'var(--text-faint)',
+            border: `1px solid ${active === option.value ? 'var(--border-default)' : 'transparent'}`,
           }}
         >
           {option.label}
@@ -111,10 +118,14 @@ const LogToolbar = memo(function LogToolbar({
   return (
     <div
       className="flex-shrink-0 flex items-center justify-between px-3 py-1.5"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <FilterBar active={active} onChange={onChange} />
-      <button onClick={onCopy} className="btn-ghost px-2 py-0.5 text-[10px]" title="Copy log to clipboard">
+      <button
+        onClick={onCopy}
+        className="btn-ghost px-2 py-0.5 text-[10px]"
+        title="Copy log to clipboard"
+      >
         {copied ? 'Copied!' : 'Copy'}
       </button>
     </div>
@@ -126,9 +137,10 @@ interface LogLineProps {
 }
 
 const LogLine = memo(function LogLine({ call }: LogLineProps): React.ReactElement {
-  const durationText = call.duration !== undefined
-    ? <span style={{ color: 'var(--text-faint)' }}> [{call.duration}ms]</span>
-    : null;
+  const durationText =
+    call.duration !== undefined ? (
+      <span style={{ color: 'var(--text-faint)' }}> [{call.duration}ms]</span>
+    ) : null;
 
   return (
     <div className="flex items-baseline gap-2 px-3 py-0.5 leading-snug hover:bg-surface-raised">
@@ -171,7 +183,13 @@ const LogEntries = memo(function LogEntries({ calls }: LogEntriesProps): React.R
     );
   }
 
-  return <>{calls.map((call) => <LogLine key={call.id} call={call} />)}</>;
+  return (
+    <>
+      {calls.map((call) => (
+        <LogLine key={call.id} call={call} />
+      ))}
+    </>
+  );
 });
 
 export interface AgentEventLogProps {
@@ -190,7 +208,10 @@ export const AgentEventLog = memo(function AgentEventLog({
   return (
     <div className="flex flex-col" style={{ height: '320px' }}>
       <LogToolbar active={filter} copied={copied} onChange={setFilter} onCopy={handleCopy} />
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto py-1" style={{ fontFamily: 'var(--font-mono)' }}>
+      <div
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-auto py-1"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
         <LogEntries calls={filteredCalls} />
       </div>
     </div>

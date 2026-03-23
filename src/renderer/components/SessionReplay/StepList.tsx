@@ -5,19 +5,19 @@
  * The current step is highlighted. Click to jump.
  */
 
-import React, { memo,useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 
 import type { ReplayStep } from './types';
 
 const TOOL_COLOR: Record<string, string> = {
-  Read:     'var(--accent)',
-  Edit:     'var(--warning)',
-  Write:    'var(--warning)',
-  Bash:     'var(--success)',
-  Grep:     'var(--purple, #a371f7)',
-  Glob:     'var(--purple, #a371f7)',
-  Task:     'var(--purple, #a371f7)',
-  Agent:    'var(--purple, #a371f7)',
+  Read: 'var(--interactive-accent)',
+  Edit: 'var(--status-warning)',
+  Write: 'var(--status-warning)',
+  Bash: 'var(--status-success)',
+  Grep: 'var(--palette-purple)',
+  Glob: 'var(--palette-purple)',
+  Task: 'var(--palette-purple)',
+  Agent: 'var(--palette-purple)',
 };
 
 function toolColor(name: string): string {
@@ -47,7 +47,7 @@ const HEADER_STYLE: React.CSSProperties = {
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1px solid var(--border-default)',
   userSelect: 'none',
 };
 
@@ -57,7 +57,7 @@ const ROW_STYLE: React.CSSProperties = {
   gap: '6px',
   padding: '4px 8px',
   cursor: 'pointer',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   transition: 'background-color 0.1s',
   fontSize: '0.6875rem',
   fontFamily: 'var(--font-mono)',
@@ -99,15 +99,11 @@ function getRowStyle(isActive: boolean): React.CSSProperties {
   return {
     ...ROW_STYLE,
     backgroundColor: isActive ? 'rgba(88, 166, 255, 0.1)' : 'transparent',
-    borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+    borderLeft: isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
   };
 }
 
-function updateRowHover(
-  target: HTMLDivElement,
-  isActive: boolean,
-  entering: boolean,
-): void {
+function updateRowHover(target: HTMLDivElement, isActive: boolean, entering: boolean): void {
   if (!isActive) {
     target.style.backgroundColor = entering ? 'rgba(255,255,255,0.03)' : 'transparent';
   }
@@ -158,16 +154,14 @@ export const StepList = memo(function StepList({
 });
 
 function StepListHeader({ count }: { count: number }): React.ReactElement {
-  return <div className="text-text-semantic-faint" style={HEADER_STYLE}>Steps ({count})</div>;
+  return (
+    <div className="text-text-semantic-faint" style={HEADER_STYLE}>
+      Steps ({count})
+    </div>
+  );
 }
 
-function StepRow({
-  step,
-  index,
-  isActive,
-  onSelect,
-  rowRef,
-}: StepRowProps): React.ReactElement {
+function StepRow({ step, index, isActive, onSelect, rowRef }: StepRowProps): React.ReactElement {
   const duration = step.toolCall?.duration;
 
   return (
@@ -187,12 +181,20 @@ function StepRow({
 }
 
 function StepIndex({ index }: { index: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={STEP_INDEX_STYLE}>{index}</span>;
+  return (
+    <span className="text-text-semantic-faint" style={STEP_INDEX_STYLE}>
+      {index}
+    </span>
+  );
 }
 
 function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | null {
   if (step.type === 'session_start') {
-    return <span className="text-interactive-accent" style={START_BADGE_STYLE}>START</span>;
+    return (
+      <span className="text-interactive-accent" style={START_BADGE_STYLE}>
+        START
+      </span>
+    );
   }
 
   if (step.toolCall === undefined) {
@@ -215,5 +217,9 @@ function StepLabel({ label }: { label: string }): React.ReactElement {
 }
 
 function StepDuration({ duration }: { duration: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={STEP_DURATION_STYLE}>{formatDurationShort(duration)}</span>;
+  return (
+    <span className="text-text-semantic-faint" style={STEP_DURATION_STYLE}>
+      {formatDurationShort(duration)}
+    </span>
+  );
 }

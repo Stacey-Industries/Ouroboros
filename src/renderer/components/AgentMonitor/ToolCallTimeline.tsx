@@ -2,7 +2,7 @@
  * ToolCallTimeline.tsx — Gantt-style horizontal timeline for tool calls.
  */
 
-import React, { memo,useEffect, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 
 import { TimelineBar } from './TimelineBar';
 import { formatDurationShort } from './timelineHelpers';
@@ -20,9 +20,12 @@ function computeTotalDuration(
   nowMs: number,
 ): number {
   const lastEnd = toolCalls.reduce((max, tc) => {
-    const end = tc.duration !== undefined
-      ? tc.timestamp + tc.duration
-      : tc.status === 'pending' ? nowMs : tc.timestamp;
+    const end =
+      tc.duration !== undefined
+        ? tc.timestamp + tc.duration
+        : tc.status === 'pending'
+          ? nowMs
+          : tc.timestamp;
     return Math.max(max, end);
   }, sessionStartedAt);
 
@@ -63,7 +66,10 @@ function TimelineRows({
 }): React.ReactElement {
   return (
     <>
-      <div className="overflow-y-auto overflow-x-hidden px-3 pt-2 pb-1" style={{ maxHeight: '320px' }}>
+      <div
+        className="overflow-y-auto overflow-x-hidden px-3 pt-2 pb-1"
+        style={{ maxHeight: '320px' }}
+      >
         <div className="flex flex-col gap-0.5">
           {toolCalls.map((call) => (
             <TimelineBar
@@ -136,11 +142,14 @@ interface TimelineHeaderProps {
   totalMs: number;
 }
 
-const TimelineHeader = memo(function TimelineHeader({ count, totalMs }: TimelineHeaderProps): React.ReactElement {
+const TimelineHeader = memo(function TimelineHeader({
+  count,
+  totalMs,
+}: TimelineHeaderProps): React.ReactElement {
   return (
     <div
       className="flex items-center justify-between px-3 py-1"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <span className="text-[10px] font-medium text-text-semantic-faint">
         {count} tool call{count !== 1 ? 's' : ''}

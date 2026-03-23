@@ -6,7 +6,7 @@ import React, { memo, useMemo } from 'react';
 
 import type { CostEntry } from '../../types/electron';
 import { formatCost } from './costCalculator';
-import { daysAgo, formatDateShort,toDateStr } from './costHelpers';
+import { daysAgo, formatDateShort, toDateStr } from './costHelpers';
 
 interface DailyChartProps {
   entries: CostEntry[];
@@ -27,7 +27,13 @@ function buildChartData(entries: CostEntry[], days: number) {
   return result;
 }
 
-function DailyBar({ day, maxCost }: { day: { date: string; cost: number }; maxCost: number }): React.ReactElement {
+function DailyBar({
+  day,
+  maxCost,
+}: {
+  day: { date: string; cost: number };
+  maxCost: number;
+}): React.ReactElement {
   const barHeight = maxCost > 0 ? Math.max((day.cost / maxCost) * 100, day.cost > 0 ? 3 : 0) : 0;
   return (
     <div
@@ -39,7 +45,7 @@ function DailyBar({ day, maxCost }: { day: { date: string; cost: number }; maxCo
         className="w-full rounded-t"
         style={{
           height: `${barHeight}%`,
-          background: 'var(--accent)',
+          background: 'var(--interactive-accent)',
           opacity: day.cost > 0 ? 0.8 : 0.15,
           minHeight: day.cost > 0 ? '2px' : '1px',
           transition: 'height 300ms ease',
@@ -49,29 +55,40 @@ function DailyBar({ day, maxCost }: { day: { date: string; cost: number }; maxCo
   );
 }
 
-export const DailyChart = memo(function DailyChart({ entries, days }: DailyChartProps): React.ReactElement {
+export const DailyChart = memo(function DailyChart({
+  entries,
+  days,
+}: DailyChartProps): React.ReactElement {
   const chartData = useMemo(() => buildChartData(entries, days), [entries, days]);
   const maxCost = useMemo(() => Math.max(...chartData.map((d) => d.cost), 0.01), [chartData]);
   const labelInterval = Math.ceil(days / 7);
 
   return (
-    <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border-muted)' }}>
+    <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
           Daily Cost (Last {days} days)
         </span>
-        <span className="text-[10px] tabular-nums ml-auto text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
+        <span
+          className="text-[10px] tabular-nums ml-auto text-text-semantic-faint"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
           max {formatCost(maxCost)}
         </span>
       </div>
       <div className="flex items-end gap-[2px]" style={{ height: '60px' }}>
-        {chartData.map((day) => <DailyBar key={day.date} day={day} maxCost={maxCost} />)}
+        {chartData.map((day) => (
+          <DailyBar key={day.date} day={day} maxCost={maxCost} />
+        ))}
       </div>
       <div className="flex gap-[2px] mt-0.5">
         {chartData.map((day, i) => (
           <div key={day.date} className="flex-1 text-center">
             {i % labelInterval === 0 ? (
-              <span className="text-[8px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
+              <span
+                className="text-[8px] tabular-nums text-text-semantic-faint"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
                 {formatDateShort(day.date)}
               </span>
             ) : null}

@@ -5,7 +5,7 @@ const inputContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '10px',
   padding: '0 14px',
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1px solid var(--border-default)',
   height: '46px',
 };
 
@@ -22,7 +22,7 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
   fontSize: '14px',
   fontFamily: 'var(--font-ui)',
-  caretColor: 'var(--accent)',
+  caretColor: 'var(--interactive-accent)',
 };
 
 interface CommandPaletteSearchInputProps {
@@ -46,7 +46,9 @@ export function CommandPaletteSearchInput({
 }: CommandPaletteSearchInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
-      <span className="text-text-semantic-muted" style={inputPrefixStyle}>&gt;</span>
+      <span className="text-text-semantic-muted" style={inputPrefixStyle}>
+        &gt;
+      </span>
       <input
         ref={inputRef}
         type="text"

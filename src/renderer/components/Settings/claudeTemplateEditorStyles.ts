@@ -5,7 +5,7 @@ import { smallButtonStyle } from './settingsStyles';
 export const claudeTemplateAddButtonStyle: CSSProperties = {
   padding: '6px 14px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   background: 'transparent',
   fontSize: '12px',
   cursor: 'pointer',
@@ -21,8 +21,8 @@ export const claudeTemplateButtonRowStyle: CSSProperties = {
 export const claudeTemplateEditCardStyle: CSSProperties = {
   padding: '10px',
   borderRadius: '6px',
-  border: '1px solid var(--accent)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--interactive-accent)',
+  background: 'var(--surface-raised)',
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
@@ -59,8 +59,8 @@ export const claudeTemplateTextInputStyle: CSSProperties = {
   width: '100%',
   padding: '7px 10px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   fontFamily: 'var(--font-mono)',
   outline: 'none',
@@ -93,8 +93,8 @@ export const claudeTemplateListStyle: CSSProperties = {
 
 export const claudeTemplateSaveButtonStyle: CSSProperties = {
   ...smallButtonStyle,
-  background: 'var(--accent)',
-  borderColor: 'var(--accent)',
+  background: 'var(--interactive-accent)',
+  borderColor: 'var(--interactive-accent)',
 };
 
 export const claudeTemplateTemplateNameStyle: CSSProperties = {
@@ -115,8 +115,8 @@ export const claudeTemplateTemplateRowStyle: CSSProperties = {
   gap: '8px',
   padding: '8px 10px',
   borderRadius: '6px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
 };
 
 export const claudeTemplateTemplateTextStyle: CSSProperties = {

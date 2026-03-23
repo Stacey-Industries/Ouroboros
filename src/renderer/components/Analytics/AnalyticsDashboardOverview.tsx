@@ -1,6 +1,10 @@
 import React, { memo, useMemo } from 'react';
 
-import type { AggregateMetrics, SessionMetrics, ToolDistributionEntry } from '../../hooks/useSessionAnalytics';
+import type {
+  AggregateMetrics,
+  SessionMetrics,
+  ToolDistributionEntry,
+} from '../../hooks/useSessionAnalytics';
 import {
   formatPercent,
   formatTokens,
@@ -36,11 +40,15 @@ interface SparklineDotsProps {
   points: { x: number; y: number }[];
 }
 
-const SummaryCard = memo(function SummaryCard({ label, value, sub }: SummaryCardProps): React.ReactElement {
+const SummaryCard = memo(function SummaryCard({
+  label,
+  value,
+  sub,
+}: SummaryCardProps): React.ReactElement {
   return (
     <div
       className="flex flex-col items-center rounded-md px-2 py-2 min-w-0 bg-surface-raised"
-      style={{ border: '1px solid var(--border-muted)' }}
+      style={{ border: '1px solid var(--border-subtle)' }}
     >
       <span className="text-[9px] font-semibold uppercase tracking-wider text-text-semantic-faint">
         {label}
@@ -61,14 +69,30 @@ export const AnalyticsSummaryGrid = memo(function AnalyticsSummaryGrid({
 }: AnalyticsSummaryGridProps): React.ReactElement {
   return (
     <div className="grid grid-cols-2 gap-2 px-4 py-3 border-b border-border-semantic">
-      <SummaryCard label="Sessions" value={String(aggregate.totalSessions)} sub={`${aggregate.totalToolCalls} tool calls`} />
+      <SummaryCard
+        label="Sessions"
+        value={String(aggregate.totalSessions)}
+        sub={`${aggregate.totalToolCalls} tool calls`}
+      />
       <SummaryCard
         label="Tokens / Edit"
-        value={aggregate.avgTokensPerEdit > 0 ? formatTokens(Math.round(aggregate.avgTokensPerEdit)) : '--'}
+        value={
+          aggregate.avgTokensPerEdit > 0
+            ? formatTokens(Math.round(aggregate.avgTokensPerEdit))
+            : '--'
+        }
         sub={`${aggregate.totalFileEdits} edits total`}
       />
-      <SummaryCard label="Retry Rate" value={formatPercent(aggregate.avgRetryRate)} sub="3+ edits = retry" />
-      <SummaryCard label="Error Rate" value={formatPercent(aggregate.errorRate)} sub={`${aggregate.totalErrors} errors`} />
+      <SummaryCard
+        label="Retry Rate"
+        value={formatPercent(aggregate.avgRetryRate)}
+        sub="3+ edits = retry"
+      />
+      <SummaryCard
+        label="Error Rate"
+        value={formatPercent(aggregate.errorRate)}
+        sub={`${aggregate.totalErrors} errors`}
+      />
     </div>
   );
 });
@@ -89,18 +113,34 @@ const ToolDistributionRow = memo(function ToolDistributionRow({
       <div className="flex-1 h-[6px] rounded-full overflow-hidden bg-surface-base">
         <div
           className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${Math.max((entry.count / maxCount) * 100, 2)}%`, background: getToolColor(entry.toolName), opacity: 0.7 }}
+          style={{
+            width: `${Math.max((entry.count / maxCount) * 100, 2)}%`,
+            background: getToolColor(entry.toolName),
+            opacity: 0.7,
+          }}
         />
       </div>
-      <span className="text-[10px] tabular-nums text-text-semantic-muted" style={{ fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}>
+      <span
+        className="text-[10px] tabular-nums text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}
+      >
         {entry.count}
       </span>
-      <span className="text-[10px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)', width: '36px', textAlign: 'right', flexShrink: 0 }}>
+      <span
+        className="text-[10px] tabular-nums text-text-semantic-faint"
+        style={{ fontFamily: 'var(--font-mono)', width: '36px', textAlign: 'right', flexShrink: 0 }}
+      >
         {formatPercent(entry.percentage)}
       </span>
       {entry.errorCount > 0 ? (
         <span
-          className="text-[9px] tabular-nums text-status-error" style={{ fontFamily: 'var(--font-mono)', width: '24px', textAlign: 'right', flexShrink: 0 }}
+          className="text-[9px] tabular-nums text-status-error"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            width: '24px',
+            textAlign: 'right',
+            flexShrink: 0,
+          }}
           title={`${entry.errorCount} error(s)`}
         >
           {entry.errorCount}err
@@ -130,16 +170,33 @@ export const ToolDistributionChart = memo(function ToolDistributionChart({
         Tool Distribution
       </div>
       <div className="flex flex-col gap-1">
-        {distribution.map((entry) => <ToolDistributionRow key={entry.toolName} entry={entry} maxCount={distribution[0].count} />)}
+        {distribution.map((entry) => (
+          <ToolDistributionRow
+            key={entry.toolName}
+            entry={entry}
+            maxCount={distribution[0].count}
+          />
+        ))}
       </div>
     </div>
   );
 });
 
-const SparklineDots = memo(function SparklineDots({ points }: SparklineDotsProps): React.ReactElement {
+const SparklineDots = memo(function SparklineDots({
+  points,
+}: SparklineDotsProps): React.ReactElement {
   return (
     <>
-      {points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r="2" fill="var(--accent)" opacity="0.6" />)}
+      {points.map((point, index) => (
+        <circle
+          key={index}
+          cx={point.x}
+          cy={point.y}
+          r="2"
+          fill="var(--interactive-accent)"
+          opacity="0.6"
+        />
+      ))}
     </>
   );
 });
@@ -158,10 +215,21 @@ export const EfficiencySparkline = memo(function EfficiencySparkline({
         Tokens per Edit Trend (lower is better)
       </div>
       <svg width="200" height="40" viewBox="0 0 200 40" style={{ overflow: 'visible' }}>
-        <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
+        <polyline
+          points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+          fill="none"
+          stroke="var(--interactive-accent)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.8"
+        />
         <SparklineDots points={points} />
       </svg>
-      <div className="flex justify-between text-[9px] tabular-nums mt-1 text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
+      <div
+        className="flex justify-between text-[9px] tabular-nums mt-1 text-text-semantic-faint"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
         <span>{formatTokens(Math.round(dataPoints[0]))}</span>
         <span>{formatTokens(Math.round(dataPoints[dataPoints.length - 1]))}</span>
       </div>
@@ -172,7 +240,17 @@ export const EfficiencySparkline = memo(function EfficiencySparkline({
 export const AnalyticsEmptyState = memo(function AnalyticsEmptyState(): React.ReactElement {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <svg width="32" height="32" viewBox="0 0 16 16" fill="none" stroke="var(--text-faint)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
+      <svg
+        width="32"
+        height="32"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="var(--text-faint)"
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+      >
         <path d="M1 12 L4 4 L7 8 L10 2 L15 10" />
         <line x1="1" y1="14" x2="15" y2="14" />
       </svg>

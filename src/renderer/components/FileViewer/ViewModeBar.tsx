@@ -13,15 +13,12 @@ const containerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '2px',
   padding: '3px 12px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   backgroundColor: 'var(--surface-panel)',
   userSelect: 'none',
 };
 
-function modeButtonStyle(
-  active: boolean,
-  borderRadius: string
-): React.CSSProperties {
+function modeButtonStyle(active: boolean, borderRadius: string): React.CSSProperties {
   return {
     padding: '2px 10px',
     fontSize: '0.75rem',

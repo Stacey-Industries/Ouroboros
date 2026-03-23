@@ -37,10 +37,7 @@ const FOLD_BUTTON_STYLE: React.CSSProperties = {
   borderRadius: '2px',
 };
 
-function getFoldGutterStyle(
-  foldGutterWidth: number,
-  gutterWidth: number
-): React.CSSProperties {
+function getFoldGutterStyle(foldGutterWidth: number, gutterWidth: number): React.CSSProperties {
   return {
     flexShrink: 0,
     width: `${foldGutterWidth}px`,
@@ -54,15 +51,11 @@ function getFoldGutterStyle(
   };
 }
 
-function handleFoldButtonMouseOver(
-  event: React.MouseEvent<HTMLButtonElement>
-): void {
-  event.currentTarget.style.backgroundColor = 'var(--border-muted)';
+function handleFoldButtonMouseOver(event: React.MouseEvent<HTMLButtonElement>): void {
+  event.currentTarget.style.backgroundColor = 'var(--border-subtle)';
 }
 
-function handleFoldButtonMouseOut(
-  event: React.MouseEvent<HTMLButtonElement>
-): void {
+function handleFoldButtonMouseOut(event: React.MouseEvent<HTMLButtonElement>): void {
   event.currentTarget.style.backgroundColor = 'transparent';
 }
 
@@ -73,10 +66,7 @@ interface FoldGutterRowContext {
   toggleFold: (startLine: number) => void;
 }
 
-function renderFoldGutterRow(
-  row: CodeRow,
-  context: FoldGutterRowContext
-): React.ReactElement {
+function renderFoldGutterRow(row: CodeRow, context: FoldGutterRowContext): React.ReactElement {
   if (row.type === 'fold-placeholder') {
     return <div key={`fg-fp-${row.startLine}`} style={FOLD_PLACEHOLDER_STYLE} />;
   }
@@ -169,11 +159,7 @@ function FoldGutterLine({
   return (
     <div style={FOLD_GUTTER_LINE_STYLE}>
       {showIndicator ? (
-        <FoldToggleButton
-          index={index}
-          isCollapsed={isCollapsed}
-          toggleFold={toggleFold}
-        />
+        <FoldToggleButton index={index} isCollapsed={isCollapsed} toggleFold={toggleFold} />
       ) : null}
     </div>
   );

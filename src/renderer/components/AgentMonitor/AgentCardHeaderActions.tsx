@@ -15,7 +15,15 @@ interface AgentCardHeaderActionsProps {
 
 function BookmarkIcon({ filled }: { filled: boolean }): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden="true"
+    >
       <path d="M2 1h6v8L5 7 2 9V1z" />
     </svg>
   );
@@ -23,7 +31,15 @@ function BookmarkIcon({ filled }: { filled: boolean }): React.ReactElement {
 
 function NotesIcon(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden="true"
+    >
       <path d="M1 2h8M1 5h5M1 8h6" strokeLinecap="round" />
     </svg>
   );
@@ -39,7 +55,15 @@ function ReplayIcon(): React.ReactElement {
 
 function ReviewIcon(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      aria-hidden="true"
+    >
       <path d="M1 3h8M1 5h4M6 5l2 2-2 2M1 7h3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -55,7 +79,15 @@ function BookmarkAction({
   if (!onUpdateNotes) return null;
 
   return (
-    <ActionIconButton title={session.bookmarked ? 'Remove bookmark' : 'Bookmark this session'} ariaLabel={session.bookmarked ? 'Remove bookmark' : 'Bookmark session'} color={session.bookmarked ? 'var(--accent)' : 'var(--text-faint)'} onClick={(event) => { event.stopPropagation(); onUpdateNotes(session.id, session.notes ?? '', !session.bookmarked); }}>
+    <ActionIconButton
+      title={session.bookmarked ? 'Remove bookmark' : 'Bookmark this session'}
+      ariaLabel={session.bookmarked ? 'Remove bookmark' : 'Bookmark session'}
+      color={session.bookmarked ? 'var(--interactive-accent)' : 'var(--text-faint)'}
+      onClick={(event) => {
+        event.stopPropagation();
+        onUpdateNotes(session.id, session.notes ?? '', !session.bookmarked);
+      }}
+    >
       <BookmarkIcon filled={Boolean(session.bookmarked)} />
     </ActionIconButton>
   );
@@ -75,7 +107,15 @@ function NotesAction({
   if (!onUpdateNotes || (!isDone && !session.restored)) return null;
 
   return (
-    <ActionIconButton title="Add/edit notes" ariaLabel="Toggle notes" color={session.notes ? 'var(--accent)' : 'var(--text-faint)'} onClick={(event) => { event.stopPropagation(); onToggleNotes(); }}>
+    <ActionIconButton
+      title="Add/edit notes"
+      ariaLabel="Toggle notes"
+      color={session.notes ? 'var(--interactive-accent)' : 'var(--text-faint)'}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggleNotes();
+      }}
+    >
       <NotesIcon />
     </ActionIconButton>
   );
@@ -93,7 +133,16 @@ function ReplayAction({
   if (!isDone || session.toolCalls.length < 1 || !onReplay) return null;
 
   return (
-    <ActionIconButton title="Replay this session step by step" ariaLabel="Replay session" color="var(--text-faint)" hoverColor="var(--accent)" onClick={(event) => { event.stopPropagation(); onReplay(session.id); }}>
+    <ActionIconButton
+      title="Replay this session step by step"
+      ariaLabel="Replay session"
+      color="var(--text-faint)"
+      hoverColor="var(--interactive-accent)"
+      onClick={(event) => {
+        event.stopPropagation();
+        onReplay(session.id);
+      }}
+    >
       <ReplayIcon />
     </ActionIconButton>
   );
@@ -111,7 +160,16 @@ function ReviewChangesAction({
   if (!isDone || !session.snapshotHash || !onReviewChanges) return null;
 
   return (
-    <ActionIconButton title="Review changes made by this agent" ariaLabel="Review changes" color="var(--text-faint)" hoverColor="var(--accent)" onClick={(event) => { event.stopPropagation(); onReviewChanges(session.id); }}>
+    <ActionIconButton
+      title="Review changes made by this agent"
+      ariaLabel="Review changes"
+      color="var(--text-faint)"
+      hoverColor="var(--interactive-accent)"
+      onClick={(event) => {
+        event.stopPropagation();
+        onReviewChanges(session.id);
+      }}
+    >
       <ReviewIcon />
     </ActionIconButton>
   );
@@ -129,7 +187,12 @@ export function AgentCardHeaderActions({
   return (
     <>
       <BookmarkAction session={session} onUpdateNotes={onUpdateNotes} />
-      <NotesAction session={session} isDone={isDone} onToggleNotes={onToggleNotes} onUpdateNotes={onUpdateNotes} />
+      <NotesAction
+        session={session}
+        isDone={isDone}
+        onToggleNotes={onToggleNotes}
+        onUpdateNotes={onUpdateNotes}
+      />
       <ReplayAction session={session} isDone={isDone} onReplay={onReplay} />
       <ReviewChangesAction session={session} isDone={isDone} onReviewChanges={onReviewChanges} />
       {(isDone || session.restored) && <ExportButton session={session} />}

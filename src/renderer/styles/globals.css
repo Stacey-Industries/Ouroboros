@@ -23,7 +23,7 @@
 
   /* Map shadcn/ui CSS vars (used by Streamdown) to our theme vars */
   --background: transparent;
-  --foreground: var(--text);
+  --foreground: var(--text-primary);
   --sidebar: transparent;
 }
 
@@ -46,8 +46,8 @@
   body {
     margin: 0;
     padding: 0;
-    background-color: var(--bg);
-    color: var(--text);
+    background-color: var(--surface-base);
+    color: var(--text-primary);
     font-family: var(--font-ui);
     font-size: 0.875rem;
     line-height: 1.5;
@@ -89,7 +89,7 @@
 
   /* Focus ring — exclude xterm internals (helper textarea, decorations) */
   :focus-visible {
-    outline: 2px solid var(--focus-ring);
+    outline: 2px solid var(--interactive-focus);
     outline-offset: 2px;
   }
   .xterm :focus-visible,
@@ -99,8 +99,8 @@
 
   /* Selection */
   ::selection {
-    background-color: var(--selection);
-    color: var(--text);
+    background-color: var(--interactive-selection);
+    color: var(--text-primary);
   }
 
   /* Code / monospace */
@@ -133,15 +133,15 @@
   }
 
   .border-surface {
-    border-color: var(--border);
+    border-color: var(--border-default);
   }
 
   .border-surface-muted {
-    border-color: var(--border-muted);
+    border-color: var(--border-subtle);
   }
 
   .text-ink {
-    color: var(--text);
+    color: var(--text-primary);
   }
 
   .text-ink-muted {
@@ -161,7 +161,7 @@
   }
   .resize-handle-x:hover,
   .resize-handle-x.dragging {
-    background: var(--accent-muted);
+    background: var(--interactive-muted);
   }
 
   .resize-handle-y {
@@ -172,7 +172,7 @@
   }
   .resize-handle-y:hover,
   .resize-handle-y.dragging {
-    background: var(--accent-muted);
+    background: var(--interactive-muted);
   }
 }
 
@@ -182,16 +182,16 @@
   /* Sidebar panel */
   .sidebar {
     @apply flex flex-col overflow-hidden;
-    background: var(--bg-secondary);
-    border-color: var(--border);
+    background: var(--surface-panel);
+    border-color: var(--border-default);
   }
 
   /* Toolbar / header within a panel */
   .panel-header {
     @apply flex items-center gap-2 px-3 shrink-0;
     height: 36px;
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-default);
   }
 
   /* Generic button */
@@ -208,17 +208,17 @@
     background: transparent;
   }
   .btn-ghost:hover {
-    background: var(--accent-muted);
-    color: var(--text);
+    background: var(--interactive-muted);
+    color: var(--text-primary);
   }
 
   .btn-primary {
     @apply btn;
-    background: var(--accent);
+    background: var(--interactive-accent);
     color: var(--text-on-accent);
   }
   .btn-primary:hover {
-    background: var(--accent-hover);
+    background: var(--interactive-hover);
     color: var(--text-on-accent);
   }
 
@@ -227,18 +227,18 @@
     @apply flex items-center gap-1.5 px-3 py-1 text-sm cursor-pointer shrink-0;
     @apply border-r border-surface-border transition-colors;
     color: var(--text-muted);
-    background: var(--bg-secondary);
+    background: var(--surface-panel);
     min-width: 80px;
     max-width: 180px;
   }
   .tab-item:hover {
-    color: var(--text);
-    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    background: var(--surface-raised);
   }
   .tab-item.active {
-    color: var(--text);
-    background: var(--bg);
-    border-bottom: 2px solid var(--accent);
+    color: var(--text-primary);
+    background: var(--surface-base);
+    border-bottom: 2px solid var(--interactive-accent);
   }
 }
 
@@ -263,7 +263,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--bg);
+  background: var(--surface-base);
 }
 
 /* ─── Monaco transparent background for glass mode ─────────────────────── */
@@ -436,7 +436,7 @@
   content: '|';
   display: inline;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--interactive-accent);
   animation: agent-chat-cursor-blink 800ms ease-in-out infinite;
 }
 
@@ -479,7 +479,7 @@
 /* 4A: Status badge pulse */
 @keyframes agent-chat-status-pulse {
   0% {
-    background-color: var(--accent);
+    background-color: var(--interactive-accent);
     color: var(--text-on-accent);
   }
   100% {
@@ -609,7 +609,7 @@
   margin: 0.75em 0 0.35em;
   font-weight: 600;
   line-height: 1.3;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .agent-chat-markdown h1 {
@@ -654,8 +654,8 @@
   font-size: 0.88em;
   padding: 0.15em 0.35em;
   border-radius: 4px;
-  background-color: var(--bg-tertiary, rgba(100, 100, 100, 0.12));
-  color: var(--text);
+  background-color: var(--surface-raised, rgba(100, 100, 100, 0.12));
+  color: var(--text-primary);
 }
 
 /* Fenced code blocks — Streamdown wraps these in its own bordered container,
@@ -676,14 +676,14 @@
   background: none;
   border-radius: 0;
   font-size: 0.85em;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 /* Blockquotes */
 .agent-chat-markdown blockquote {
   margin: 0.5em 0;
   padding: 0.25em 0 0.25em 0.75em;
-  border-left: 3px solid var(--accent, #58a6ff);
+  border-left: 3px solid var(--interactive-accent, #58a6ff);
   color: var(--text-muted);
 }
 
@@ -695,12 +695,12 @@
 .agent-chat-markdown hr {
   margin: 0.75em 0;
   border: none;
-  border-top: 1px solid var(--border-muted, var(--border));
+  border-top: 1px solid var(--border-subtle, var(--border-default));
 }
 
 /* Links */
 .agent-chat-markdown a {
-  color: var(--accent, #58a6ff);
+  color: var(--interactive-accent, #58a6ff);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
@@ -721,19 +721,19 @@
 .agent-chat-markdown th,
 .agent-chat-markdown td {
   padding: 0.3em 0.6em;
-  border: 1px solid var(--border-muted, var(--border));
+  border: 1px solid var(--border-subtle, var(--border-default));
   text-align: left;
 }
 
 .agent-chat-markdown th {
   font-weight: 600;
-  background-color: var(--bg-tertiary, rgba(100, 100, 100, 0.08));
+  background-color: var(--surface-raised, rgba(100, 100, 100, 0.08));
 }
 
 /* Strong / emphasis */
 .agent-chat-markdown strong {
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .agent-chat-markdown em {
@@ -754,9 +754,9 @@
   right: 4px;
   opacity: 0;
   transition: opacity 120ms ease;
-  background: var(--bg-tertiary);
+  background: var(--surface-raised);
   color: var(--text-muted);
-  border: 1px solid var(--border-muted, var(--border));
+  border: 1px solid var(--border-subtle, var(--border-default));
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 10px;
@@ -774,7 +774,7 @@
 }
 
 .monaco-editor .ouroboros-monaco-diff-line-modified {
-  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
 }
 
 .monaco-editor .ouroboros-monaco-diff-line-deleted {
@@ -782,15 +782,15 @@
 }
 
 .monaco-editor .ouroboros-monaco-diff-gutter-added {
-  border-left: 3px solid var(--success, #3fb950);
+  border-left: 3px solid var(--status-success, #3fb950);
 }
 
 .monaco-editor .ouroboros-monaco-diff-gutter-modified {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--interactive-accent);
 }
 
 .monaco-editor .ouroboros-monaco-diff-gutter-deleted {
-  border-left: 3px solid var(--error, #f85149);
+  border-left: 3px solid var(--status-error, #f85149);
 }
 
 /* ─── Glass (always-on) ────────────────────────────────────────────────────── */
@@ -803,7 +803,7 @@ body {
 }
 
 /* Activity bar: remove brightness filter */
-[data-layout="activity-bar"] {
+[data-layout='activity-bar'] {
   filter: none !important;
 }
 
@@ -815,18 +815,18 @@ body {
    which is the correct signal to fix it at the source. */
 
 /* Prevent browser default from turning selected items black */
-[role="option"][aria-selected="true"] {
-  color: var(--text) !important;
+[role='option'][aria-selected='true'] {
+  color: var(--text-primary) !important;
 }
 
 /* Notification panel — anchor to right edge so it doesn't overflow the window */
-[aria-label="Notification center"] {
+[aria-label='Notification center'] {
   left: auto !important;
   right: 0 !important;
 }
 
 /* Resize dividers: invisible */
-[data-layout="resize-handle"] {
+[data-layout='resize-handle'] {
   background: transparent !important;
 }
 
@@ -839,14 +839,14 @@ body {
 
 /* ─── Overlays & popups: frosted glass (readable over transparent content) ── */
 
-[role="menu"],
-[role="dialog"],
-[role="alert"],
-[role="listbox"][aria-label="Switch branch"],
-[role="listbox"][aria-label="Workspace layouts"],
-[role="listbox"][aria-label="Project selector"],
-[data-layout="title-bar"] [style*="position: absolute"],
-[data-layout="title-bar"] [style*="position:absolute"] {
+[role='menu'],
+[role='dialog'],
+[role='alert'],
+[role='listbox'][aria-label='Switch branch'],
+[role='listbox'][aria-label='Workspace layouts'],
+[role='listbox'][aria-label='Project selector'],
+[data-layout='title-bar'] [style*='position: absolute'],
+[data-layout='title-bar'] [style*='position:absolute'] {
   background-color: rgba(10, 10, 14, 0.92) !important;
   backdrop-filter: blur(24px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
@@ -871,12 +871,12 @@ body {
 select,
 select option {
   background-color: rgba(10, 10, 14, 0.95) !important;
-  color: var(--text) !important;
+  color: var(--text-primary) !important;
   color-scheme: dark !important;
 }
 
 /* Notification dropdown — prevent right-side cutoff */
-[data-layout="title-bar"] {
+[data-layout='title-bar'] {
   overflow: visible !important;
 }
 
@@ -900,25 +900,25 @@ select {
 }
 
 /* ─── Borderless panels (experimental — remove this block to restore) ──── */
-[data-layout="activity-bar"],
-[data-layout="sidebar"],
-[data-layout="centre-column"],
-[data-layout="editor-tab-bar"],
-[data-layout="terminal-header"],
-[data-layout="agent-sidebar"],
-[data-layout="collapsed-agent-strip"],
-[data-layout="status-bar"],
-[data-layout="title-bar"],
-[data-layout="resize-handle"],
-[data-layout="app"] {
+[data-layout='activity-bar'],
+[data-layout='sidebar'],
+[data-layout='centre-column'],
+[data-layout='editor-tab-bar'],
+[data-layout='terminal-header'],
+[data-layout='agent-sidebar'],
+[data-layout='collapsed-agent-strip'],
+[data-layout='status-bar'],
+[data-layout='title-bar'],
+[data-layout='resize-handle'],
+[data-layout='app'] {
   border-color: transparent !important;
 }
-[data-layout="activity-bar"] *,
-[data-layout="sidebar"] *,
-[data-layout="agent-sidebar"] *,
-[data-layout="terminal-header"] *,
-[data-layout="centre-column"] > *,
-[data-layout="editor-tab-bar"] *,
-[data-layout="status-bar"] * {
+[data-layout='activity-bar'] *,
+[data-layout='sidebar'] *,
+[data-layout='agent-sidebar'] *,
+[data-layout='terminal-header'] *,
+[data-layout='centre-column'] > *,
+[data-layout='editor-tab-bar'] *,
+[data-layout='status-bar'] * {
   border-color: transparent !important;
 }

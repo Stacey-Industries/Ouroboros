@@ -17,7 +17,7 @@ const bannerStyle: React.CSSProperties = {
 
 const reloadButtonStyle: React.CSSProperties = {
   background: 'none',
-  border: '1px solid var(--warning)',
+  border: '1px solid var(--status-warning)',
   borderRadius: '4px',
   cursor: 'pointer',
   fontSize: '0.75rem',

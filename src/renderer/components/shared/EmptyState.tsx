@@ -37,7 +37,7 @@ const actionButtonStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   borderRadius: '4px',
   border: 'none',
-  backgroundColor: 'var(--accent)',
+  backgroundColor: 'var(--interactive-accent)',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui)',
   fontWeight: 500,
@@ -87,12 +87,7 @@ function DocumentIcon(): React.ReactElement {
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path
-        d="M28 8V16H36"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
+      <path d="M28 8V16H36" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
       <path
         d="M18 24H30M18 30H30M18 36H26"
         stroke="currentColor"
@@ -115,7 +110,9 @@ function AgentIcon(): React.ReactElement {
       aria-hidden="true"
     >
       <rect x="12" y="14" width="24" height="22" rx="4" stroke="currentColor" strokeWidth="1.5" />
-      {AGENT_EYE_POSITIONS.map((cx) => <circle key={cx} cx={cx} cy="24" r="2" fill="currentColor" />)}
+      {AGENT_EYE_POSITIONS.map((cx) => (
+        <circle key={cx} cx={cx} cy="24" r="2" fill="currentColor" />
+      ))}
       <path
         d="M19 31C19 31 21 34 24 34C27 34 29 31 29 31"
         stroke="currentColor"
@@ -149,15 +146,7 @@ function TerminalIcon(): React.ReactElement {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <rect
-        x="6"
-        y="10"
-        width="36"
-        height="28"
-        rx="3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
+      <rect x="6" y="10" width="36" height="28" rx="3" stroke="currentColor" strokeWidth="1.5" />
       <path d="M6 16H42" stroke="currentColor" strokeWidth="1.5" />
       <path
         d="M14 24L20 28L14 32"
@@ -199,11 +188,17 @@ function EmptyStateDescription({
 }: {
   description?: string;
 }): React.ReactElement | null {
-  return description ? <span className="text-text-semantic-faint" style={descriptionStyle}>{description}</span> : null;
+  return description ? (
+    <span className="text-text-semantic-faint" style={descriptionStyle}>
+      {description}
+    </span>
+  ) : null;
 }
 
 function handleActionHover(target: HTMLButtonElement, hovering: boolean): void {
-  target.style.backgroundColor = hovering ? 'var(--accent-hover)' : 'var(--accent)';
+  target.style.backgroundColor = hovering
+    ? 'var(--interactive-hover)'
+    : 'var(--interactive-accent)';
 }
 
 function EmptyStateAction({
@@ -244,7 +239,9 @@ export const EmptyState = memo(function EmptyState({
       <div style={iconWrapperStyle}>
         <IconComponent />
       </div>
-      <span className="text-text-semantic-muted" style={titleStyle}>{title}</span>
+      <span className="text-text-semantic-muted" style={titleStyle}>
+        {title}
+      </span>
       <EmptyStateDescription description={description} />
       {action && <EmptyStateAction action={action} />}
     </div>

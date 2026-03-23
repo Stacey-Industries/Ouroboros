@@ -13,7 +13,12 @@ interface McpStoreServerCardProps {
   onClick: () => void;
 }
 
-export function McpStoreServerCard({ server, isInstalled, isLast, onClick }: McpStoreServerCardProps): React.ReactElement {
+export function McpStoreServerCard({
+  server,
+  isInstalled,
+  isLast,
+  onClick,
+}: McpStoreServerCardProps): React.ReactElement {
   const displayName = server.title || extractShortName(server.name);
   const pkg = server.packages?.[0];
   const registryType = pkg?.registry_type ?? 'npm';
@@ -23,18 +28,26 @@ export function McpStoreServerCard({ server, isInstalled, isLast, onClick }: Mcp
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onClick();
+      }}
       style={cardStyle(isLast)}
       className="mcp-store-card"
     >
       <div style={cardBodyStyle}>
         {/* Top row: name + installed badge */}
         <div style={topRowStyle}>
-          <span className="text-text-semantic-primary" style={nameStyle}>{displayName}</span>
+          <span className="text-text-semantic-primary" style={nameStyle}>
+            {displayName}
+          </span>
           {isInstalled ? (
-            <span className="text-interactive-accent" style={installedBadgeStyle}>Installed</span>
+            <span className="text-interactive-accent" style={installedBadgeStyle}>
+              Installed
+            </span>
           ) : (
-            <span className="text-text-semantic-muted" style={arrowStyle}>&rarr;</span>
+            <span className="text-text-semantic-muted" style={arrowStyle}>
+              &rarr;
+            </span>
           )}
         </div>
 
@@ -47,8 +60,12 @@ export function McpStoreServerCard({ server, isInstalled, isLast, onClick }: Mcp
 
         {/* Footer: type badge + version */}
         <div style={footerStyle}>
-          <span className="text-interactive-accent" style={typeBadgeStyle}>{registryType}</span>
-          <span className="text-text-semantic-muted" style={versionStyle}>v{server.version}</span>
+          <span className="text-interactive-accent" style={typeBadgeStyle}>
+            {registryType}
+          </span>
+          <span className="text-text-semantic-muted" style={versionStyle}>
+            v{server.version}
+          </span>
         </div>
       </div>
     </div>
@@ -70,8 +87,8 @@ function extractShortName(name: string | undefined): string {
 function cardStyle(isLast: boolean): React.CSSProperties {
   return {
     padding: '10px 12px',
-    borderBottom: isLast ? 'none' : '1px solid var(--border)',
-    background: 'var(--bg-tertiary)',
+    borderBottom: isLast ? 'none' : '1px solid var(--border-default)',
+    background: 'var(--surface-raised)',
     cursor: 'pointer',
     transition: 'background 120ms ease',
   };
@@ -119,8 +136,8 @@ const typeBadgeStyle: React.CSSProperties = {
   fontSize: '10px',
   padding: '1px 5px',
   borderRadius: '3px',
-  border: '1px solid var(--border)',
-  background: 'color-mix(in srgb, var(--accent) 10%, var(--bg))',
+  border: '1px solid var(--border-default)',
+  background: 'color-mix(in srgb, var(--interactive-accent) 10%, var(--surface-base))',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
@@ -135,7 +152,7 @@ const installedBadgeStyle: React.CSSProperties = {
   fontSize: '11px',
   padding: '1px 6px',
   borderRadius: '3px',
-  background: 'color-mix(in srgb, var(--accent) 15%, var(--bg))',
+  background: 'color-mix(in srgb, var(--interactive-accent) 15%, var(--surface-base))',
   fontWeight: 600,
   flexShrink: 0,
 };

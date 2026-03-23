@@ -64,7 +64,9 @@ interface SelectedExtensionPanelProps {
   onRefresh: () => void;
 }
 
-export function InstalledExtensionsSection({ model }: InstalledExtensionsSectionProps): React.ReactElement {
+export function InstalledExtensionsSection({
+  model,
+}: InstalledExtensionsSectionProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>Installed Extensions</SectionLabel>
@@ -74,7 +76,9 @@ export function InstalledExtensionsSection({ model }: InstalledExtensionsSection
           extension={model.selectedExtension}
           extLog={model.extLog}
           logLoading={model.logLoading}
-          onRefresh={() => void model.fetchLog(model.selectedExtensionName ?? model.selectedExtension.name)}
+          onRefresh={() =>
+            void model.fetchLog(model.selectedExtensionName ?? model.selectedExtension.name)
+          }
         />
       )}
     </section>
@@ -82,7 +86,12 @@ export function InstalledExtensionsSection({ model }: InstalledExtensionsSection
 }
 
 function InstalledExtensionsBody({ model }: InstalledExtensionsSectionProps): React.ReactElement {
-  if (model.loading) return <p className="text-text-semantic-muted" style={extensionsSectionMutedTextStyle}>Loading extensions...</p>;
+  if (model.loading)
+    return (
+      <p className="text-text-semantic-muted" style={extensionsSectionMutedTextStyle}>
+        Loading extensions...
+      </p>
+    );
   if (model.error) return <ErrorPanel message={model.error} />;
   if (model.extensionsList.length === 0) return <EmptyExtensionsState />;
   return <ExtensionsList model={model} />;
@@ -132,26 +141,30 @@ function ExtensionRow({
   );
 }
 
-function ExtensionSummary({
-  extension,
-}: {
-  extension: ExtensionInfo;
-}): React.ReactElement {
+function ExtensionSummary({ extension }: { extension: ExtensionInfo }): React.ReactElement {
   return (
     <div style={extensionsSectionSummaryColumnStyle}>
       <div style={extensionsSectionSummaryHeaderStyle}>
         <span style={extensionsSectionStatusDotStyle(extension.status)} />
-        <span className="text-text-semantic-primary" style={extensionsSectionExtensionNameStyle}>{extension.name}</span>
-        <span className="text-text-semantic-muted" style={extensionsSectionVersionStyle}>v{extension.version}</span>
+        <span className="text-text-semantic-primary" style={extensionsSectionExtensionNameStyle}>
+          {extension.name}
+        </span>
+        <span className="text-text-semantic-muted" style={extensionsSectionVersionStyle}>
+          v{extension.version}
+        </span>
         <span style={extensionsSectionStatusBadgeStyle(extension.status)}>
           {STATUS_LABELS[extension.status]}
         </span>
       </div>
       {extension.description && (
-        <span className="text-text-semantic-muted" style={extensionsSectionDescriptionStyle}>{extension.description}</span>
+        <span className="text-text-semantic-muted" style={extensionsSectionDescriptionStyle}>
+          {extension.description}
+        </span>
       )}
       {extension.status === 'error' && extension.errorMessage && (
-        <span className="text-status-error" style={extensionsSectionErrorLineStyle}>Error: {extension.errorMessage}</span>
+        <span className="text-status-error" style={extensionsSectionErrorLineStyle}>
+          Error: {extension.errorMessage}
+        </span>
       )}
     </div>
   );
@@ -170,7 +183,7 @@ function ExtensionControls({
           onClick={(event) => stopAndRun(event, () => onForceActivate(extension.name))}
           title="Force activate this pending extension"
           className="text-status-warning"
-          style={{ ...smallButtonStyle, borderColor: '#facc15' }}
+          style={{ ...smallButtonStyle, borderColor: 'var(--status-warning)' }}
         >
           Activate
         </button>
@@ -208,17 +221,20 @@ function SelectedExtensionPanel({
   );
 }
 
-function ExtensionDetailsHeader({
-  extension,
-}: {
-  extension: ExtensionInfo;
-}): React.ReactElement {
+function ExtensionDetailsHeader({ extension }: { extension: ExtensionInfo }): React.ReactElement {
   return (
     <div style={extensionsSectionDetailHeaderStyle}>
       <div className="text-text-semantic-primary" style={extensionsSectionDetailTitleStyle}>
-        {extension.name} <span className="text-text-semantic-muted" style={extensionsSectionDetailVersionStyle}>v{extension.version}</span>
+        {extension.name}{' '}
+        <span className="text-text-semantic-muted" style={extensionsSectionDetailVersionStyle}>
+          v{extension.version}
+        </span>
       </div>
-      {extension.author && <div className="text-text-semantic-muted" style={extensionsSectionAuthorStyle}>Author: {extension.author}</div>}
+      {extension.author && (
+        <div className="text-text-semantic-muted" style={extensionsSectionAuthorStyle}>
+          Author: {extension.author}
+        </div>
+      )}
       {extension.permissions.length > 0 && <BadgeStrip values={extension.permissions} />}
       <ActivationEvents events={extension.activationEvents} />
     </div>
@@ -229,7 +245,11 @@ function BadgeStrip({ values }: { values: string[] }): React.ReactElement {
   return (
     <div style={extensionsSectionBadgeStripStyle}>
       {values.map((value) => (
-        <span key={value} className="text-text-semantic-muted" style={extensionsSectionPermissionBadgeStyle}>
+        <span
+          key={value}
+          className="text-text-semantic-muted"
+          style={extensionsSectionPermissionBadgeStyle}
+        >
           {value}
         </span>
       ))}
@@ -240,9 +260,15 @@ function BadgeStrip({ values }: { values: string[] }): React.ReactElement {
 function ActivationEvents({ events }: { events: string[] }): React.ReactElement {
   return (
     <div style={extensionsSectionActivationRowStyle}>
-      <span className="text-text-semantic-muted" style={extensionsSectionActivationLabelStyle}>Activates on:</span>
+      <span className="text-text-semantic-muted" style={extensionsSectionActivationLabelStyle}>
+        Activates on:
+      </span>
       {events.map((eventName) => (
-        <span key={eventName} className="text-interactive-accent" style={extensionsSectionActivationBadgeStyle}>
+        <span
+          key={eventName}
+          className="text-interactive-accent"
+          style={extensionsSectionActivationBadgeStyle}
+        >
           {eventName}
         </span>
       ))}
@@ -258,14 +284,22 @@ function ExtensionLogPanel({
   return (
     <>
       <div style={extensionsSectionLogHeaderStyle}>
-        <span className="text-text-semantic-muted" style={extensionsSectionLogTitleStyle}>Console Output</span>
-        <button onClick={onRefresh} className="text-text-semantic-primary" style={extensionsSectionRefreshButtonStyle}>
+        <span className="text-text-semantic-muted" style={extensionsSectionLogTitleStyle}>
+          Console Output
+        </span>
+        <button
+          onClick={onRefresh}
+          className="text-text-semantic-primary"
+          style={extensionsSectionRefreshButtonStyle}
+        >
           Refresh
         </button>
       </div>
       <div className="text-text-semantic-secondary" style={extensionsSectionLogBodyStyle}>
         {logLoading ? (
-          <span className="text-text-semantic-muted" style={extensionsSectionItalicMutedTextStyle}>Loading...</span>
+          <span className="text-text-semantic-muted" style={extensionsSectionItalicMutedTextStyle}>
+            Loading...
+          </span>
         ) : (
           <LogContent extLog={extLog} />
         )}
@@ -276,7 +310,11 @@ function ExtensionLogPanel({
 
 function LogContent({ extLog }: { extLog: string[] }): React.ReactElement {
   if (extLog.length === 0) {
-    return <span className="text-text-semantic-muted" style={extensionsSectionItalicMutedTextStyle}>No output.</span>;
+    return (
+      <span className="text-text-semantic-muted" style={extensionsSectionItalicMutedTextStyle}>
+        No output.
+      </span>
+    );
   }
 
   return (
@@ -300,19 +338,20 @@ function EmptyExtensionsState(): React.ReactElement {
 }
 
 function ErrorPanel({ message }: { message: string }): React.ReactElement {
-  return <div className="text-status-error" style={extensionsSectionErrorPanelStyle}>{message}</div>;
+  return (
+    <div className="text-status-error" style={extensionsSectionErrorPanelStyle}>
+      {message}
+    </div>
+  );
 }
 
 function getLogLineColor(line: string): string {
-  if (line.includes('[error]')) return '#f87171';
-  if (line.includes('[warn]')) return '#fbbf24';
+  if (line.includes('[error]')) return 'var(--status-error)';
+  if (line.includes('[warn]')) return 'var(--status-warning)';
   return 'var(--text-secondary)';
 }
 
-function stopAndRun(
-  event: React.MouseEvent<HTMLButtonElement>,
-  action: () => Promise<void>,
-): void {
+function stopAndRun(event: React.MouseEvent<HTMLButtonElement>, action: () => Promise<void>): void {
   event.stopPropagation();
   void action();
 }

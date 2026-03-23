@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
-import { buttonStyle,SectionLabel } from './settingsStyles';
+import { buttonStyle, SectionLabel } from './settingsStyles';
 import { ToastBanner } from './ToastBanner';
 import { useToast } from './useToast';
 
@@ -62,7 +62,9 @@ function ExportImportSection({
   return (
     <section>
       <SectionLabel>Settings Backup</SectionLabel>
-      <p className="text-text-semantic-muted" style={descStyle}>Export or import settings as JSON.</p>
+      <p className="text-text-semantic-muted" style={descStyle}>
+        Export or import settings as JSON.
+      </p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
           onClick={() => void handleExportSettings(setIsExporting, showToast)}
@@ -111,9 +113,18 @@ function OpenSettingsFileSection({
     <section>
       <SectionLabel>Power User</SectionLabel>
       <p className="text-text-semantic-muted" style={descStyle}>
-        Open <code className="text-text-semantic-secondary" style={codeStyle}>settings.json</code> in your system editor.
+        Open{' '}
+        <code className="text-text-semantic-secondary" style={codeStyle}>
+          settings.json
+        </code>{' '}
+        in your system editor.
       </p>
-      <button onClick={() => void handleOpen()} disabled={isOpeningFile} className="text-text-semantic-primary" style={actionBtn(isOpeningFile)}>
+      <button
+        onClick={() => void handleOpen()}
+        disabled={isOpeningFile}
+        className="text-text-semantic-primary"
+        style={actionBtn(isOpeningFile)}
+      >
         {isOpeningFile ? 'Opening...' : 'Open settings.json'}
       </button>
     </section>
@@ -139,8 +150,15 @@ function UpdatesSection({ showToast }: { showToast: ToastFn }): React.ReactEleme
   return (
     <section>
       <SectionLabel>Updates</SectionLabel>
-      <p className="text-text-semantic-muted" style={descStyle}>Check for a new version of Ouroboros.</p>
-      <button onClick={() => void handleCheck()} disabled={isChecking} className="text-text-semantic-primary" style={actionBtn(isChecking)}>
+      <p className="text-text-semantic-muted" style={descStyle}>
+        Check for a new version of Ouroboros.
+      </p>
+      <button
+        onClick={() => void handleCheck()}
+        disabled={isChecking}
+        className="text-text-semantic-primary"
+        style={actionBtn(isChecking)}
+      >
         {isChecking ? 'Checking...' : 'Check for Updates'}
       </button>
     </section>
@@ -228,13 +246,24 @@ function CrashLogsSection({ showToast }: { showToast: ToastFn }): React.ReactEle
   return (
     <section>
       <SectionLabel>Crash Logs</SectionLabel>
-      <p className="text-text-semantic-muted" style={descStyle}>{crashLogsSummary(count)}</p>
+      <p className="text-text-semantic-muted" style={descStyle}>
+        {crashLogsSummary(count)}
+      </p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button onClick={() => void window.electronAPI.crash.openCrashLogDir()} className="text-text-semantic-primary" style={buttonStyle}>
+        <button
+          onClick={() => void window.electronAPI.crash.openCrashLogDir()}
+          className="text-text-semantic-primary"
+          style={buttonStyle}
+        >
           View Crash Logs
         </button>
         {count > 0 && (
-          <button onClick={() => void clearCrashLogs(setIsClearing, setCount, showToast)} disabled={isClearing} className="text-status-error" style={dangerBtn(isClearing)}>
+          <button
+            onClick={() => void clearCrashLogs(setIsClearing, setCount, showToast)}
+            disabled={isClearing}
+            className="text-status-error"
+            style={dangerBtn(isClearing)}
+          >
             {isClearing ? 'Clearing...' : 'Clear Logs'}
           </button>
         )}
@@ -265,20 +294,26 @@ async function clearCrashLogs(
 }
 
 function crashLogsSummary(count: number): string {
-  return count === 0 ? 'No crash logs on record.' : `${count} crash log${count !== 1 ? 's' : ''} recorded.`;
+  return count === 0
+    ? 'No crash logs on record.'
+    : `${count} crash log${count !== 1 ? 's' : ''} recorded.`;
 }
 
 const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '12px' };
 const codeStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' };
 
 function actionBtn(disabled: boolean): React.CSSProperties {
-  return { ...buttonStyle, opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' };
+  return {
+    ...buttonStyle,
+    opacity: disabled ? 0.6 : 1,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  };
 }
 
 function dangerBtn(disabled: boolean): React.CSSProperties {
   return {
     ...buttonStyle,
-    borderColor: 'var(--error)',
+    borderColor: 'var(--status-error)',
     background: 'transparent',
     opacity: disabled ? 0.6 : 1,
     cursor: disabled ? 'not-allowed' : 'pointer',

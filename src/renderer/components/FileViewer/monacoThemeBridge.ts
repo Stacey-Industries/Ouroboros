@@ -18,9 +18,7 @@ import { useEffect } from 'react';
  */
 function getCssVar(name: string, fallback = ''): string {
   if (typeof document === 'undefined') return fallback;
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return value || fallback;
 }
 
@@ -48,9 +46,7 @@ function toHex(cssColor: string): string {
     if (resolved.startsWith('#')) return resolved;
 
     // Parse rgba(r, g, b, a) format
-    const match = resolved.match(
-      /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
-    );
+    const match = resolved.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
     if (match) {
       const r = parseInt(match[1], 10);
       const g = parseInt(match[2], 10);
@@ -104,17 +100,17 @@ function getThemePalette(): ThemePalette {
   return {
     bg: cssVarHex('--monaco-bg', '#111113'),
     bgSecondary: cssVarHex('--palette-bg-secondary', '#18181b'),
-    text: cssVarHex('--text', '#fafafa'),
+    text: cssVarHex('--text-primary', '#fafafa'),
     textSecondary: cssVarHex('--text-secondary', '#a1a1aa'),
     textMuted: cssVarHex('--text-muted', '#c0c0d4'),
     border: cssVarHex('--border-default', '#3f3f46'),
-    accent: cssVarHex('--accent', '#818cf8'),
-    accentMuted: cssVarHex('--accent-muted', '#818cf826'),
-    selection: cssVarHex('--selection', '#6366f140'),
-    success: cssVarHex('--success', '#34d399'),
-    warning: cssVarHex('--warning', '#fbbf24'),
-    error: cssVarHex('--error', '#f87171'),
-    purple: cssVarHex('--purple', '#a78bfa'),
+    accent: cssVarHex('--interactive-accent', '#818cf8'),
+    accentMuted: cssVarHex('--interactive-muted', '#818cf826'),
+    selection: cssVarHex('--interactive-selection', '#6366f140'),
+    success: cssVarHex('--status-success', '#34d399'),
+    warning: cssVarHex('--status-warning', '#fbbf24'),
+    error: cssVarHex('--status-error', '#f87171'),
+    purple: cssVarHex('--palette-purple', '#a78bfa'),
   };
 }
 
@@ -182,7 +178,12 @@ const THEME_NAME = 'ouroboros';
 
 function buildThemeData(): monaco.editor.IStandaloneThemeData {
   const palette = getThemePalette();
-  return { base: 'vs-dark', inherit: true, rules: buildThemeRules(palette), colors: buildThemeColors(palette) };
+  return {
+    base: 'vs-dark',
+    inherit: true,
+    rules: buildThemeRules(palette),
+    colors: buildThemeColors(palette),
+  };
 }
 
 export function createOuroborosTheme(): void {

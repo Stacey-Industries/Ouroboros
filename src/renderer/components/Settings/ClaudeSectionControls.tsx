@@ -56,7 +56,9 @@ export function ToggleSection({
       <div style={claudeSectionToggleRowStyle}>
         <div>
           <SectionLabel>{title}</SectionLabel>
-          <p className="text-text-semantic-muted" style={claudeSectionInlineDescriptionStyle}>{description}</p>
+          <p className="text-text-semantic-muted" style={claudeSectionInlineDescriptionStyle}>
+            {description}
+          </p>
         </div>
         <SwitchControl checked={checked} label={label} onChange={onChange} />
       </div>
@@ -75,7 +77,9 @@ export function TextInputSection({
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>{description}</p>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        {description}
+      </p>
       <input
         type="text"
         value={value}
@@ -100,7 +104,9 @@ export function SelectSection({
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
-      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>{description}</p>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        {description}
+      </p>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -120,7 +126,7 @@ export function SwitchControl({
   label,
   onChange,
 }: SwitchControlProps): React.ReactElement {
-  const activeColor = danger ? '#ef4444' : 'var(--accent)';
+  const activeColor = danger ? '#ef4444' : 'var(--interactive-accent)';
   return (
     <button
       role="switch"

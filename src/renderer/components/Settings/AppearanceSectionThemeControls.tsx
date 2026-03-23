@@ -31,8 +31,8 @@ const sectionLabelStyle: React.CSSProperties = {
 const panelStyle: React.CSSProperties = {
   padding: '10px 14px',
   borderRadius: '8px',
-  background: 'var(--bg-secondary)',
-  border: '1px solid var(--border-muted)',
+  background: 'var(--surface-panel)',
+  border: '1px solid var(--border-subtle)',
 };
 
 const toggleButtonStyle: React.CSSProperties = {
@@ -42,14 +42,18 @@ const toggleButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: '10px 14px',
   borderRadius: '8px',
-  background: 'var(--bg-secondary)',
-  border: '1px solid var(--border-muted)',
+  background: 'var(--surface-panel)',
+  border: '1px solid var(--border-subtle)',
   cursor: 'pointer',
   textAlign: 'left',
 };
 
 function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="text-text-semantic-muted" style={sectionLabelStyle}>{children}</div>;
+  return (
+    <div className="text-text-semantic-muted" style={sectionLabelStyle}>
+      {children}
+    </div>
+  );
 }
 
 function ThemeCardSwatches({ theme }: { theme: Theme }): React.ReactElement {
@@ -90,7 +94,7 @@ function ThemeCardName({
       style={{
         fontSize: '12px',
         fontWeight: isActive ? 600 : 400,
-        color: isActive ? 'var(--accent)' : 'var(--text)',
+        color: isActive ? 'var(--interactive-accent)' : 'var(--text-primary)',
         lineHeight: 1.3,
       }}
     >
@@ -119,7 +123,7 @@ function ThemeCardStatus(): React.ReactElement {
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          background: 'var(--accent)',
+          background: 'var(--interactive-accent)',
         }}
       />
       Active
@@ -128,10 +132,14 @@ function ThemeCardStatus(): React.ReactElement {
 }
 
 function getThemeCardStyle(isActive: boolean, isFocused: boolean): React.CSSProperties {
-  const borderColor = isActive ? 'var(--accent)' : isFocused ? 'var(--accent-hover)' : 'var(--border)';
+  const borderColor = isActive
+    ? 'var(--interactive-accent)'
+    : isFocused
+      ? 'var(--interactive-hover)'
+      : 'var(--border-default)';
   const background = isActive
-    ? 'color-mix(in srgb, var(--accent) 8%, var(--bg-secondary))'
-    : 'var(--bg-secondary)';
+    ? 'color-mix(in srgb, var(--interactive-accent) 8%, var(--surface-panel))'
+    : 'var(--surface-panel)';
 
   return {
     display: 'flex',
@@ -245,7 +253,15 @@ export function GlassOpacitySection({
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Darken the transparent glass background
             </span>
-            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-muted)',
+                minWidth: '32px',
+                textAlign: 'right',
+              }}
+            >
               {value}%
             </span>
           </div>
@@ -255,7 +271,7 @@ export function GlassOpacitySection({
             max={100}
             value={value}
             onChange={(e) => onChange(Number(e.target.value))}
-            style={{ width: '100%', accentColor: 'var(--accent)' }}
+            style={{ width: '100%', accentColor: 'var(--interactive-accent)' }}
           />
         </div>
       </div>
@@ -273,7 +289,9 @@ function ThemeEditorHeader({
   return (
     <button onClick={() => setEditorOpen((value) => !value)} style={toggleButtonStyle}>
       <div>
-        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>Theme Editor</div>
+        <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500 }}>
+          Theme Editor
+        </div>
         <div className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
           Customize individual color tokens and save as a custom theme
         </div>

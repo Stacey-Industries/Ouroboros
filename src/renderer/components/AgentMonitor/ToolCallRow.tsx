@@ -42,8 +42,8 @@ function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement {
     <div
       className="mx-3 mb-2 ml-8 rounded overflow-hidden"
       style={{
-        border: '1px solid var(--border-muted)',
-        background: 'color-mix(in srgb, var(--bg) 80%, var(--bg-tertiary))',
+        border: '1px solid var(--border-subtle)',
+        background: 'color-mix(in srgb, var(--surface-base) 80%, var(--surface-raised))',
       }}
     >
       <div
@@ -51,7 +51,7 @@ function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement {
         style={{
           maxHeight: '200px',
           fontFamily: 'var(--font-mono)',
-          color: call.status === 'error' ? 'var(--error)' : 'var(--text)',
+          color: call.status === 'error' ? 'var(--status-error)' : 'var(--text-primary)',
         }}
       >
         {call.output}
@@ -66,8 +66,8 @@ function EmptyOutput(): React.ReactElement {
       className="mx-3 mb-2 ml-8 px-2 py-1.5 rounded text-[10px] italic"
       style={{
         color: 'var(--text-faint)',
-        background: 'color-mix(in srgb, var(--bg) 80%, var(--bg-tertiary))',
-        border: '1px solid var(--border-muted)',
+        background: 'color-mix(in srgb, var(--surface-base) 80%, var(--surface-raised))',
+        border: '1px solid var(--border-subtle)',
       }}
     >
       No output captured.

@@ -27,7 +27,14 @@ export interface TerminalPaneProps {
 const MIN_HEIGHT = 120;
 type TerminalPaneHeaderProps = Pick<
   TerminalPaneProps,
-  'sessions' | 'activeSessionId' | 'onActivate' | 'onClose' | 'onNew' | 'onNewClaude' | 'onNewCodex' | 'onReorder'
+  | 'sessions'
+  | 'activeSessionId'
+  | 'onActivate'
+  | 'onClose'
+  | 'onNew'
+  | 'onNewClaude'
+  | 'onNewCodex'
+  | 'onReorder'
 >;
 
 function TerminalPaneHeader({
@@ -85,7 +92,7 @@ export function TerminalPane(props: TerminalPaneProps): React.ReactElement {
       className={`
         flex flex-col overflow-hidden
         ${fillContainer ? '' : 'flex-shrink-0'}
-        bg-[var(--term-bg,var(--bg))]
+        bg-[var(--term-bg,var(--surface-base))]
       `}
       style={{
         ...(fillContainer && !collapsed
@@ -100,9 +107,7 @@ export function TerminalPane(props: TerminalPaneProps): React.ReactElement {
 
       {/* Terminal content */}
       {!collapsed && (
-        <div className="flex-1 min-h-0 overflow-hidden relative font-mono text-sm">
-          {children}
-        </div>
+        <div className="flex-1 min-h-0 overflow-hidden relative font-mono text-sm">{children}</div>
       )}
     </div>
   );

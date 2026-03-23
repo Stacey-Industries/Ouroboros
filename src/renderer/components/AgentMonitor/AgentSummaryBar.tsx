@@ -8,7 +8,7 @@
 
 import React, { memo, useMemo, useState } from 'react';
 
-import { estimateCost,formatCost, formatTokenCount } from './costCalculator';
+import { estimateCost, formatCost, formatTokenCount } from './costCalculator';
 import type { AgentSession } from './types';
 
 interface AgentSummaryBarProps {
@@ -68,9 +68,9 @@ function SummarySeparator(): React.ReactElement {
 
 function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement {
   const items = [
-    { count: summary.running, color: 'var(--accent)', label: 'running' },
-    { count: summary.complete, color: 'var(--success)', label: 'done' },
-    { count: summary.errors, color: 'var(--error)', label: 'failed' },
+    { count: summary.running, color: 'var(--interactive-accent)', label: 'running' },
+    { count: summary.complete, color: 'var(--status-success)', label: 'done' },
+    { count: summary.errors, color: 'var(--status-error)', label: 'failed' },
   ].filter((item) => item.count > 0);
 
   return (
@@ -99,8 +99,10 @@ function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.Rea
         style={{ fontFamily: 'var(--font-mono)' }}
         title={`Total: ↓${tokenTotals.inputTokens.toLocaleString()} input, ↑${tokenTotals.outputTokens.toLocaleString()} output`}
       >
-        {'↓'}{formatTokenCount(tokenTotals.inputTokens)}
-        {' ↑'}{formatTokenCount(tokenTotals.outputTokens)}
+        {'↓'}
+        {formatTokenCount(tokenTotals.inputTokens)}
+        {' ↑'}
+        {formatTokenCount(tokenTotals.outputTokens)}
       </span>
       <span className="text-interactive-accent" style={{ fontFamily: 'var(--font-mono)' }}>
         ~{formatCost(tokenTotals.totalCost)}
@@ -109,11 +111,7 @@ function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.Rea
   );
 }
 
-function ClearCompletedButton({
-  onClick,
-}: {
-  onClick: () => void;
-}): React.ReactElement {
+function ClearCompletedButton({ onClick }: { onClick: () => void }): React.ReactElement {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -122,7 +120,7 @@ function ClearCompletedButton({
       className="shrink-0 text-[10px] px-1.5 py-0.5 rounded transition-colors"
       style={{
         color: hovered ? 'var(--text-muted)' : 'var(--text-faint)',
-        background: hovered ? 'var(--bg-tertiary)' : 'transparent',
+        background: hovered ? 'var(--surface-raised)' : 'transparent',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -138,7 +136,7 @@ function RunningDot(): React.ReactElement {
     <span
       className="w-1.5 h-1.5 rounded-full shrink-0"
       style={{
-        background: 'var(--accent)',
+        background: 'var(--interactive-accent)',
         animation: 'pulse 1.5s ease-in-out infinite',
       }}
     />
@@ -154,7 +152,7 @@ export const AgentSummaryBar = memo(function AgentSummaryBar({
   return (
     <div
       className="flex items-center gap-2 px-3 py-1.5"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       {summary.running > 0 && <RunningDot />}
       <span className="flex-1 flex items-center gap-1.5 text-[11px] font-mono flex-wrap">

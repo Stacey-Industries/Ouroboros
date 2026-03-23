@@ -44,34 +44,74 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
 
   return (
     <div style={panelStyle}>
-      <SettingsSearchInput inputRef={searchInputRef} value={searchQuery} onChange={setSearchQuery} />
+      <SettingsSearchInput
+        inputRef={searchInputRef}
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
       {!isSearching && <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />}
 
       {isSearching ? (
         <div style={contentScrollStyle}>
-          <SettingsSearchResults searchQuery={searchQuery} searchResults={searchResults} onResultClick={handleResultClick} />
+          <SettingsSearchResults
+            searchQuery={searchQuery}
+            searchResults={searchResults}
+            onResultClick={handleResultClick}
+          />
         </div>
       ) : (
         <div style={tabContentStyle}>
-          <SettingsTabContent activeTab={activeTab} draft={api.draft} onChange={api.handleChange} onImport={api.handleImport} onPreviewTheme={api.handlePreviewTheme} />
+          <SettingsTabContent
+            activeTab={activeTab}
+            draft={api.draft}
+            onChange={api.handleChange}
+            onImport={api.handleImport}
+            onPreviewTheme={api.handlePreviewTheme}
+          />
         </div>
       )}
 
-      <PanelFooter isSaving={api.isSaving} saveError={api.saveError} onCancel={doCancel} onSave={doSave} />
+      <PanelFooter
+        isSaving={api.isSaving}
+        saveError={api.saveError}
+        onCancel={doCancel}
+        onSave={doSave}
+      />
     </div>
   );
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function PanelFooter({ isSaving, saveError, onCancel, onSave }: {
-  isSaving: boolean; saveError: string | null; onCancel: () => void; onSave: () => void;
+function PanelFooter({
+  isSaving,
+  saveError,
+  onCancel,
+  onSave,
+}: {
+  isSaving: boolean;
+  saveError: string | null;
+  onCancel: () => void;
+  onSave: () => void;
 }): React.ReactElement {
   return (
     <div style={footerStyle}>
-      {saveError && <span role="alert" className="text-status-error" style={{ flex: 1, fontSize: '12px' }}>{saveError}</span>}
-      <button onClick={onCancel} disabled={isSaving} className="text-text-semantic-secondary" style={cancelButtonStyle}>Cancel</button>
-      <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>{isSaving ? 'Saving...' : 'Save'}</button>
+      {saveError && (
+        <span role="alert" className="text-status-error" style={{ flex: 1, fontSize: '12px' }}>
+          {saveError}
+        </span>
+      )}
+      <button
+        onClick={onCancel}
+        disabled={isSaving}
+        className="text-text-semantic-secondary"
+        style={cancelButtonStyle}
+      >
+        Cancel
+      </button>
+      <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>
+        {isSaving ? 'Saving...' : 'Save'}
+      </button>
     </div>
   );
 }
@@ -88,7 +128,7 @@ function useSnapshotEffect(
       api.originalThemeRef.current = config.activeTheme;
       api.originalGradientRef.current = config.showBgGradient ?? true;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 }
 
@@ -106,20 +146,33 @@ function useExternalChangeEffect(
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 const panelStyle: React.CSSProperties = {
-  display: 'flex', flexDirection: 'column', height: '100%',
-  background: 'var(--bg)', fontFamily: 'var(--font-ui)',
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  background: 'var(--surface-base)',
+  fontFamily: 'var(--font-ui)',
 };
 
 const contentScrollStyle: React.CSSProperties = {
-  flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px',
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '12px 16px',
 };
 
 const tabContentStyle: React.CSSProperties = {
-  flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 24px',
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '24px 24px',
 };
 
 const footerStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-  gap: '10px', padding: '14px 20px',
-  flexShrink: 0, background: 'transparent',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: '10px',
+  padding: '14px 20px',
+  flexShrink: 0,
+  background: 'transparent',
 };

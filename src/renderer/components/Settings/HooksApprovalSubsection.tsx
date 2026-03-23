@@ -19,7 +19,10 @@ export function ApprovalSubsection({ draft, onChange }: Props): React.ReactEleme
 
   function toggleTool(tool: string): void {
     if (currentTools.includes(tool)) {
-      onChange('approvalRequired', currentTools.filter((t) => t !== tool));
+      onChange(
+        'approvalRequired',
+        currentTools.filter((t) => t !== tool),
+      );
     } else {
       onChange('approvalRequired', [...currentTools, tool]);
     }
@@ -29,18 +32,29 @@ export function ApprovalSubsection({ draft, onChange }: Props): React.ReactEleme
     <>
       <section>
         <SectionLabel>Pre-Execution Approval</SectionLabel>
-        <p className="text-text-semantic-muted" style={descStyle}>Require manual approval before Claude Code executes certain tools.</p>
+        <p className="text-text-semantic-muted" style={descStyle}>
+          Require manual approval before Claude Code executes certain tools.
+        </p>
         <ToolToggleGrid tools={COMMON_TOOLS} currentTools={currentTools} onToggle={toggleTool} />
         <ApprovalStatus currentTools={currentTools} />
-        <CustomToolInput currentTools={currentTools} onAdd={(t) => onChange('approvalRequired', [...currentTools, t])} />
+        <CustomToolInput
+          currentTools={currentTools}
+          onAdd={(t) => onChange('approvalRequired', [...currentTools, t])}
+        />
       </section>
       <TimeoutSection draft={draft} onChange={onChange} />
     </>
   );
 }
 
-function ToolToggleGrid({ tools, currentTools, onToggle }: {
-  tools: string[]; currentTools: string[]; onToggle: (tool: string) => void;
+function ToolToggleGrid({
+  tools,
+  currentTools,
+  onToggle,
+}: {
+  tools: string[];
+  currentTools: string[];
+  onToggle: (tool: string) => void;
 }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
@@ -59,15 +73,24 @@ function ToolToggleGrid({ tools, currentTools, onToggle }: {
 function ApprovalStatus({ currentTools }: { currentTools: string[] }): React.ReactElement {
   return (
     <div className="text-text-semantic-primary" style={statusBoxStyle}>
-      {currentTools.length === 0
-        ? <span className="text-text-semantic-muted">No tools require approval.</span>
-        : <><span className="text-text-semantic-muted">Requiring approval: </span>{currentTools.join(', ')}</>}
+      {currentTools.length === 0 ? (
+        <span className="text-text-semantic-muted">No tools require approval.</span>
+      ) : (
+        <>
+          <span className="text-text-semantic-muted">Requiring approval: </span>
+          {currentTools.join(', ')}
+        </>
+      )}
     </div>
   );
 }
 
-function CustomToolInput({ currentTools, onAdd }: {
-  currentTools: string[]; onAdd: (tool: string) => void;
+function CustomToolInput({
+  currentTools,
+  onAdd,
+}: {
+  currentTools: string[];
+  onAdd: (tool: string) => void;
 }): React.ReactElement {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,12 +105,26 @@ function CustomToolInput({ currentTools, onAdd }: {
 
   return (
     <div style={{ display: 'flex', gap: '6px' }}>
-      <input ref={inputRef} type="text" value={value}
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
-        placeholder="Custom tool name..." className="text-text-semantic-primary" style={inputStyle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAdd();
+          }
+        }}
+        placeholder="Custom tool name..."
+        className="text-text-semantic-primary"
+        style={inputStyle}
       />
-      <button onClick={handleAdd} disabled={!value.trim() || currentTools.includes(value.trim())} style={addBtnStyle(!value.trim())}>
+      <button
+        onClick={handleAdd}
+        disabled={!value.trim() || currentTools.includes(value.trim())}
+        style={addBtnStyle(!value.trim())}
+      >
         Add
       </button>
     </div>
@@ -98,17 +135,27 @@ function TimeoutSection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section>
       <SectionLabel>Auto-Approve Timeout</SectionLabel>
-      <p className="text-text-semantic-muted" style={descStyle}>Auto-approve tool calls after a timeout (seconds). Set to 0 for manual approval.</p>
+      <p className="text-text-semantic-muted" style={descStyle}>
+        Auto-approve tool calls after a timeout (seconds). Set to 0 for manual approval.
+      </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <input type="number" min={0} max={300} value={draft.approvalTimeout ?? 0}
+        <input
+          type="number"
+          min={0}
+          max={300}
+          value={draft.approvalTimeout ?? 0}
           onChange={(e) => {
             const val = parseInt(e.target.value, 10);
             if (!isNaN(val) && val >= 0 && val <= 300) onChange('approvalTimeout', val);
           }}
-          aria-label="Auto-approve timeout in seconds" className="text-text-semantic-primary" style={numberInputStyle}
+          aria-label="Auto-approve timeout in seconds"
+          className="text-text-semantic-primary"
+          style={numberInputStyle}
         />
         <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
-          {(draft.approvalTimeout ?? 0) === 0 ? 'Never auto-approve' : `Auto-approve after ${draft.approvalTimeout}s`}
+          {(draft.approvalTimeout ?? 0) === 0
+            ? 'Never auto-approve'
+            : `Auto-approve after ${draft.approvalTimeout}s`}
         </span>
       </div>
     </section>
@@ -118,37 +165,57 @@ function TimeoutSection({ draft, onChange }: Props): React.ReactElement {
 const descStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
 
 const statusBoxStyle: React.CSSProperties = {
-  padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)', fontSize: '12px', marginBottom: '10px',
+  padding: '8px 12px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '12px',
+  marginBottom: '10px',
 };
 
 function toolBtnStyle(isActive: boolean): React.CSSProperties {
   return {
-    padding: '4px 10px', borderRadius: '4px',
-    border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
-    background: isActive ? 'var(--accent)' : 'transparent',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    border: `1px solid ${isActive ? 'var(--interactive-accent)' : 'var(--border-default)'}`,
+    background: isActive ? 'var(--interactive-accent)' : 'transparent',
     color: isActive ? 'var(--text-on-accent)' : 'var(--text-muted)',
-    fontSize: '12px', cursor: 'pointer', fontWeight: isActive ? 600 : 400,
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: isActive ? 600 : 400,
     transition: 'all 0.15s',
   };
 }
 
 const inputStyle: React.CSSProperties = {
-  flex: 1, padding: '6px 10px', borderRadius: '6px',
-  border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  fontSize: '12px', outline: 'none',
+  flex: 1,
+  padding: '6px 10px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '12px',
+  outline: 'none',
 };
 
 function addBtnStyle(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)',
-    background: 'var(--bg-tertiary)', color: disabled ? 'var(--text-muted)' : 'var(--text)',
-    fontSize: '12px', cursor: disabled ? 'not-allowed' : 'pointer',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-default)',
+    background: 'var(--surface-raised)',
+    color: disabled ? 'var(--text-muted)' : 'var(--text-primary)',
+    fontSize: '12px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
   };
 }
 
 const numberInputStyle: React.CSSProperties = {
-  width: '80px', padding: '7px 10px', borderRadius: '6px',
-  border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-  fontSize: '13px', fontFamily: 'var(--font-mono)', outline: 'none',
+  width: '80px',
+  padding: '7px 10px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
+  fontSize: '13px',
+  fontFamily: 'var(--font-mono)',
+  outline: 'none',
 };

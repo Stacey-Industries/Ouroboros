@@ -97,31 +97,81 @@ const copyButtonStyle: React.CSSProperties = {
   transition: 'color 100ms ease',
 };
 
-function normalizePath(path: string): string { return path.replace(/\\/g, '/'); }
-function splitPath(filePath: string): string[] { return normalizePath(filePath).split('/').filter(Boolean); }
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/');
+}
+function splitPath(filePath: string): string[] {
+  return normalizePath(filePath).split('/').filter(Boolean);
+}
 function buildBreadcrumbData(filePath: string, projectRoot: string | null): BreadcrumbData {
   const normalizedPath = normalizePath(filePath);
   const normalizedRoot = projectRoot ? normalizePath(projectRoot) : null;
-  const displayPath = normalizedRoot && normalizedPath.startsWith(normalizedRoot) ? normalizedPath.slice(normalizedRoot.length).replace(/^\//, '') : normalizedPath;
+  const displayPath =
+    normalizedRoot && normalizedPath.startsWith(normalizedRoot)
+      ? normalizedPath.slice(normalizedRoot.length).replace(/^\//, '')
+      : normalizedPath;
   return { segments: splitPath(displayPath), absoluteSegments: splitPath(normalizedPath) };
 }
 function buildDirPath(data: BreadcrumbData, segmentIndex: number): string {
   const absoluteIndex = data.absoluteSegments.length - data.segments.length + segmentIndex;
   return `/${data.absoluteSegments.slice(0, absoluteIndex + 1).join('/')}`;
 }
-function truncateSegments(data: BreadcrumbData): { visibleSegments: string[]; startOffset: number; isTruncated: boolean } {
+function truncateSegments(data: BreadcrumbData): {
+  visibleSegments: string[];
+  startOffset: number;
+  isTruncated: boolean;
+} {
   const total = data.segments.length;
-  if (total <= MAX_VISIBLE_SEGMENTS) return { visibleSegments: data.segments, startOffset: 0, isTruncated: false };
+  if (total <= MAX_VISIBLE_SEGMENTS)
+    return { visibleSegments: data.segments, startOffset: 0, isTruncated: false };
   const startOffset = total - MAX_VISIBLE_SEGMENTS;
   return { visibleSegments: data.segments.slice(startOffset), startOffset, isTruncated: true };
 }
 function CopyIcon(): React.ReactElement {
-  return <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" /><path d="M2 8.5H1.5C1.224 8.5 1 8.276 1 8V1.5C1 1.224 1.224 1 1.5 1H8C8.276 1 8.5 1.224 8.5 1.5V2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>;
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M2 8.5H1.5C1.224 8.5 1 8.276 1 8V1.5C1 1.224 1.224 1 1.5 1H8C8.276 1 8.5 1.224 8.5 1.5V2"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 function ChevronIcon(): React.ReactElement {
-  return <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}><path d="M2.5 1.5L5 4L2.5 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return (
+    <svg
+      width="8"
+      height="8"
+      viewBox="0 0 8 8"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M2.5 1.5L5 4L2.5 6.5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
-function useCopyFeedback(filePath: string | null): { copied: boolean; handleCopy: () => Promise<void> } {
+function useCopyFeedback(filePath: string | null): {
+  copied: boolean;
+  handleCopy: () => Promise<void>;
+} {
   const [copied, setCopied] = useState(false);
   const handleCopy = useCallback(async () => {
     if (!filePath) {
@@ -140,7 +190,10 @@ function useCopyFeedback(filePath: string | null): { copied: boolean; handleCopy
   return { copied, handleCopy };
 }
 
-function setDirectoryButtonHoverState(target: HTMLButtonElement, hovering: boolean): void { target.style.color = hovering ? 'var(--text)' : 'var(--text-muted)'; target.style.textDecoration = hovering ? 'underline' : 'none'; }
+function setDirectoryButtonHoverState(target: HTMLButtonElement, hovering: boolean): void {
+  target.style.color = hovering ? 'var(--text-primary)' : 'var(--text-muted)';
+  target.style.textDecoration = hovering ? 'underline' : 'none';
+}
 
 function DirectorySegmentButton(props: {
   segment: string;
@@ -183,7 +236,13 @@ function ChevronSeparator(): React.ReactElement {
   );
 }
 
-function EllipsisBadge(): React.ReactElement { return <span className="text-text-semantic-faint" style={ellipsisStyle} title="Path truncated">...</span>; }
+function EllipsisBadge(): React.ReactElement {
+  return (
+    <span className="text-text-semantic-faint" style={ellipsisStyle} title="Path truncated">
+      ...
+    </span>
+  );
+}
 
 function BreadcrumbSegmentItem(props: {
   segment: string;
@@ -249,7 +308,13 @@ function BreadcrumbSegments(props: {
   );
 }
 
-function setCopyButtonHoverState(target: HTMLButtonElement, copied: boolean, hovering: boolean): void { if (!copied) target.style.color = hovering ? 'var(--text)' : 'var(--text-faint)'; }
+function setCopyButtonHoverState(
+  target: HTMLButtonElement,
+  copied: boolean,
+  hovering: boolean,
+): void {
+  if (!copied) target.style.color = hovering ? 'var(--text-primary)' : 'var(--text-faint)';
+}
 
 function CopyPathButton(props: {
   copied: boolean;
@@ -263,7 +328,7 @@ function CopyPathButton(props: {
       }}
       title={copied ? 'Copied!' : 'Copy full path'}
       aria-label="Copy full file path"
-      style={{ ...copyButtonStyle, color: copied ? 'var(--success)' : 'var(--text-faint)' }}
+      style={{ ...copyButtonStyle, color: copied ? 'var(--status-success)' : 'var(--text-faint)' }}
       onMouseEnter={(e) => {
         setCopyButtonHoverState(e.currentTarget, copied, true);
       }}
@@ -276,7 +341,13 @@ function CopyPathButton(props: {
   );
 }
 
-function EmptyBreadcrumb(): React.ReactElement { return <div className="text-text-semantic-faint" style={emptyStateStyle}>No file open</div>; }
+function EmptyBreadcrumb(): React.ReactElement {
+  return (
+    <div className="text-text-semantic-faint" style={emptyStateStyle}>
+      No file open
+    </div>
+  );
+}
 
 function BreadcrumbLayout(props: {
   data: BreadcrumbData;
@@ -300,5 +371,12 @@ export function Breadcrumb({
 }: BreadcrumbProps): React.ReactElement {
   const { copied, handleCopy } = useCopyFeedback(filePath);
   if (!filePath) return <EmptyBreadcrumb />;
-  return <BreadcrumbLayout data={buildBreadcrumbData(filePath, projectRoot)} copied={copied} onCopy={handleCopy} onNavigateToDir={onNavigateToDir} />;
+  return (
+    <BreadcrumbLayout
+      data={buildBreadcrumbData(filePath, projectRoot)}
+      copied={copied}
+      onCopy={handleCopy}
+      onNavigateToDir={onNavigateToDir}
+    />
+  );
 }

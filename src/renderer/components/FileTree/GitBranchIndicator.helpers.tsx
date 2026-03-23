@@ -14,7 +14,7 @@ export const indicatorStyle: React.CSSProperties = {
   padding: '4px 8px',
   cursor: 'pointer',
   userSelect: 'none',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
   minHeight: '26px',
   position: 'relative',
 };
@@ -43,7 +43,7 @@ export const dropdownStyle: React.CSSProperties = {
 
 export const dropdownHeaderStyle: React.CSSProperties = {
   padding: '6px 8px',
-  borderBottom: '1px solid var(--border-muted)',
+  borderBottom: '1px solid var(--border-subtle)',
 };
 
 export const searchInputStyle: React.CSSProperties = {
@@ -92,13 +92,13 @@ export const createBtnStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   fontFamily: 'var(--font-ui)',
   userSelect: 'none',
-  borderTop: '1px solid var(--border-muted)',
+  borderTop: '1px solid var(--border-subtle)',
   minHeight: '28px',
 };
 
 export const DROPDOWN_CSS = `
-  .branch-item:hover { background-color: var(--bg-tertiary); }
-  .branch-create-btn:hover { background-color: var(--bg-tertiary); }
+  .branch-item:hover { background-color: var(--surface-raised); }
+  .branch-create-btn:hover { background-color: var(--surface-raised); }
 `;
 
 const chevronStyle: React.CSSProperties = {
@@ -110,8 +110,23 @@ const chevronStyle: React.CSSProperties = {
 
 export function BranchIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
-      <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 7v4M11 7C11 9 9 11 5 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="text-interactive-accent"
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM11 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 7v4M11 7C11 9 9 11 5 11"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -119,42 +134,90 @@ export function BranchIcon(): React.ReactElement {
 export function DropdownChevron({ open }: { open: boolean }): React.ReactElement {
   return (
     <svg
-      width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      aria-hidden="true"
       className="text-text-semantic-faint"
       style={{ ...chevronStyle, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
     >
-      <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M2 4L5 7L8 4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function CheckMark(): React.ReactElement {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" className="text-interactive-accent" style={{ flexShrink: 0 }}>
-      <path d="M2 5L4 7L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      aria-hidden="true"
+      className="text-interactive-accent"
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M2 5L4 7L8 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export function BranchItem({ name, isCurrent, onClick }: {
-  name: string; isCurrent: boolean; onClick: () => void;
+export function BranchItem({
+  name,
+  isCurrent,
+  onClick,
+}: {
+  name: string;
+  isCurrent: boolean;
+  onClick: () => void;
 }): React.ReactElement {
   return (
     <div
       className={`branch-item ${isCurrent ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
       style={isCurrent ? branchItemActiveStyle : branchItemStyle}
-      onClick={onClick} role="option" aria-selected={isCurrent} title={name}
+      onClick={onClick}
+      role="option"
+      aria-selected={isCurrent}
+      title={name}
     >
       {isCurrent ? <CheckMark /> : <span style={{ width: '10px', flexShrink: 0 }} />}
-      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {name}
+      </span>
     </div>
   );
 }
 
 export function CreateBranchRow({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
-    <div className="branch-create-btn text-interactive-accent" style={createBtnStyle} onClick={onClick} role="button" tabIndex={0}>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <div
+      className="branch-create-btn text-interactive-accent"
+      style={createBtnStyle}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        aria-hidden="true"
+        style={{ flexShrink: 0 }}
+      >
         <path d="M5 2V8M2 5H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <span>Create new branch...</span>

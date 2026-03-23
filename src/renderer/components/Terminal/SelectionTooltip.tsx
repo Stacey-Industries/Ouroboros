@@ -3,16 +3,16 @@
  * looks like a URL or file path. Offers to open the resource.
  */
 
-import React from 'react'
+import React from 'react';
 
-export type TooltipAction = 'url' | 'file' | null
+export type TooltipAction = 'url' | 'file' | null;
 
 export interface SelectionTooltipState {
-  visible: boolean
-  x: number
-  y: number
-  text: string
-  action: TooltipAction
+  visible: boolean;
+  x: number;
+  y: number;
+  text: string;
+  action: TooltipAction;
 }
 
 export const INITIAL_SELECTION_TOOLTIP: SelectionTooltipState = {
@@ -21,47 +21,56 @@ export const INITIAL_SELECTION_TOOLTIP: SelectionTooltipState = {
   y: 0,
   text: '',
   action: null,
-}
+};
 
 export function classifySelection(text: string): TooltipAction {
-  const trimmed = text.trim()
-  if (!trimmed) return null
+  const trimmed = text.trim();
+  if (!trimmed) return null;
   // URL: starts with http:// or https://
-  if (/^https?:\/\//i.test(trimmed)) return 'url'
+  if (/^https?:\/\//i.test(trimmed)) return 'url';
   // File path: contains a slash or backslash and a dot extension
-  if (/(\/|\\)/.test(trimmed) && /\.\w+/.test(trimmed)) return 'file'
-  return null
+  if (/(\/|\\)/.test(trimmed) && /\.\w+/.test(trimmed)) return 'file';
+  return null;
 }
 
 interface SelectionTooltipProps {
-  state: SelectionTooltipState
-  onOpenUrl: (url: string) => void
-  onOpenFile: (filePath: string) => void
-  onDismiss: () => void
+  state: SelectionTooltipState;
+  onOpenUrl: (url: string) => void;
+  onOpenFile: (filePath: string) => void;
+  onDismiss: () => void;
 }
 
 const tooltipStyle: React.CSSProperties = {
-  position: 'fixed', zIndex: 1000,
-  padding: '3px 10px', borderRadius: 4,
-  border: '1px solid var(--accent, #58a6ff)',
-  fontFamily: 'var(--font-ui, sans-serif)', fontSize: 11,
-  cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-  userSelect: 'none', whiteSpace: 'nowrap', pointerEvents: 'auto',
-}
+  position: 'fixed',
+  zIndex: 1000,
+  padding: '3px 10px',
+  borderRadius: 4,
+  border: '1px solid var(--interactive-accent)',
+  fontFamily: 'var(--font-ui, sans-serif)',
+  fontSize: 11,
+  cursor: 'pointer',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+  userSelect: 'none',
+  whiteSpace: 'nowrap',
+  pointerEvents: 'auto',
+};
 
 export function SelectionTooltip({
-  state, onOpenUrl, onOpenFile, onDismiss,
+  state,
+  onOpenUrl,
+  onOpenFile,
+  onDismiss,
 }: SelectionTooltipProps): React.ReactElement | null {
-  if (!state.visible || !state.action) return null
+  if (!state.visible || !state.action) return null;
 
-  const label = state.action === 'url' ? 'Open link' : 'Open file'
+  const label = state.action === 'url' ? 'Open link' : 'Open file';
 
   function handleClick(e: React.MouseEvent): void {
-    e.stopPropagation()
-    const trimmed = state.text.trim()
-    if (state.action === 'url') onOpenUrl(trimmed)
-    else onOpenFile(trimmed)
-    onDismiss()
+    e.stopPropagation();
+    const trimmed = state.text.trim();
+    if (state.action === 'url') onOpenUrl(trimmed);
+    else onOpenFile(trimmed);
+    onDismiss();
   }
 
   return (
@@ -73,5 +82,5 @@ export function SelectionTooltip({
     >
       {label}
     </div>
-  )
+  );
 }

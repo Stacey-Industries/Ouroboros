@@ -26,10 +26,7 @@ export function searchEntries(query: string): SearchMatch[] {
   });
 }
 
-function findLabelRanges(
-  label: string,
-  query: string,
-): Array<[number, number]> {
+function findLabelRanges(label: string, query: string): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let start = 0;
   while (true) {
@@ -72,7 +69,7 @@ export function HighlightedText({
 }
 
 const highlightStyle: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+  background: 'color-mix(in srgb, var(--interactive-accent) 30%, transparent)',
   color: 'inherit',
   borderRadius: '2px',
   padding: '0 1px',

@@ -2,7 +2,7 @@
  * CostControls.tsx — Date range selector and clear button for CostDashboard.
  */
 
-import React, { memo, useCallback,useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 
 import type { DateRange } from './costHelpers';
 
@@ -40,11 +40,14 @@ export const Controls = memo(function Controls({
   return (
     <div
       className="flex items-center gap-2 px-3 py-1.5"
-      style={{ borderBottom: '1px solid var(--border-muted)' }}
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <RangeSelector range={range} onRangeChange={onRangeChange} />
       <span className="flex-1" />
-      <span className="text-[10px] tabular-nums text-text-semantic-faint" style={{ fontFamily: 'var(--font-mono)' }}>
+      <span
+        className="text-[10px] tabular-nums text-text-semantic-faint"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
         {entryCount} entries
       </span>
       {entryCount > 0 && <ClearButton confirmClear={confirmClear} onClick={handleClear} />}
@@ -52,7 +55,13 @@ export const Controls = memo(function Controls({
   );
 });
 
-function RangeSelector({ range, onRangeChange }: { range: DateRange; onRangeChange: (r: DateRange) => void }): React.ReactElement {
+function RangeSelector({
+  range,
+  onRangeChange,
+}: {
+  range: DateRange;
+  onRangeChange: (r: DateRange) => void;
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-1">
       {RANGES.map((r) => (
@@ -61,9 +70,13 @@ function RangeSelector({ range, onRangeChange }: { range: DateRange; onRangeChan
           onClick={() => onRangeChange(r.key)}
           className="px-1.5 py-0.5 rounded text-[10px] transition-colors"
           style={{
-            background: range === r.key ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
-            color: range === r.key ? 'var(--accent)' : 'var(--text-faint)',
-            border: range === r.key ? '1px solid var(--accent)' : '1px solid transparent',
+            background:
+              range === r.key
+                ? 'color-mix(in srgb, var(--interactive-accent) 20%, transparent)'
+                : 'transparent',
+            color: range === r.key ? 'var(--interactive-accent)' : 'var(--text-faint)',
+            border:
+              range === r.key ? '1px solid var(--interactive-accent)' : '1px solid transparent',
             cursor: 'pointer',
             fontFamily: 'var(--font-ui)',
           }}
@@ -75,15 +88,23 @@ function RangeSelector({ range, onRangeChange }: { range: DateRange; onRangeChan
   );
 }
 
-function ClearButton({ confirmClear, onClick }: { confirmClear: boolean; onClick: () => void }): React.ReactElement {
+function ClearButton({
+  confirmClear,
+  onClick,
+}: {
+  confirmClear: boolean;
+  onClick: () => void;
+}): React.ReactElement {
   return (
     <button
       onClick={onClick}
       className="px-1.5 py-0.5 rounded text-[10px] transition-colors"
       style={{
-        background: confirmClear ? 'color-mix(in srgb, var(--error) 20%, transparent)' : 'transparent',
-        color: confirmClear ? 'var(--error)' : 'var(--text-faint)',
-        border: confirmClear ? '1px solid var(--error)' : '1px solid var(--border)',
+        background: confirmClear
+          ? 'color-mix(in srgb, var(--status-error) 20%, transparent)'
+          : 'transparent',
+        color: confirmClear ? 'var(--status-error)' : 'var(--text-faint)',
+        border: confirmClear ? '1px solid var(--status-error)' : '1px solid var(--border-default)',
         cursor: 'pointer',
         fontFamily: 'var(--font-ui)',
       }}

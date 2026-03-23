@@ -2,8 +2,8 @@
  * Skeleton.tsx — Reusable loading skeleton components with shimmer animation.
  *
  * Uses CSS custom properties for theme compatibility:
- *   - var(--bg-tertiary) for the skeleton base color
- *   - var(--bg-secondary) for the shimmer highlight
+ *   - var(--surface-raised) for the skeleton base color
+ *   - var(--surface-panel) for the shimmer highlight
  */
 
 import React, { memo } from 'react';
@@ -27,10 +27,7 @@ if (typeof document !== 'undefined') {
 
 // ── Shared shimmer style ────────────────────────────────────────────────────
 
-function shimmerStyle(
-  width?: string | number,
-  height?: string | number,
-): React.CSSProperties {
+function shimmerStyle(width?: string | number, height?: string | number): React.CSSProperties {
   return {
     width: width ?? '100%',
     height: height ?? '12px',
@@ -172,7 +169,20 @@ export const FileTreeSkeleton = memo(function FileTreeSkeleton(): React.ReactEle
 
 // ── CodeSkeleton ──────────────────────────────────────────────────────────────
 
-const CODE_SKELETON_LINE_WIDTHS = ['80%', '65%', '90%', '45%', '75%', '55%', '85%', '40%', '70%', '60%', '50%', '72%'];
+const CODE_SKELETON_LINE_WIDTHS = [
+  '80%',
+  '65%',
+  '90%',
+  '45%',
+  '75%',
+  '55%',
+  '85%',
+  '40%',
+  '70%',
+  '60%',
+  '50%',
+  '72%',
+];
 
 function CodeSkeletonGutter({ lineCount }: { lineCount: number }): React.ReactElement {
   return (
@@ -181,7 +191,7 @@ function CodeSkeletonGutter({ lineCount }: { lineCount: number }): React.ReactEl
         flexShrink: 0,
         width: '44px',
         paddingTop: '16px',
-        borderRight: '1px solid var(--border-muted)',
+        borderRight: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
@@ -217,12 +227,7 @@ function CodeSkeletonContent({
       }}
     >
       {lineWidths.map((width, i) => (
-        <SkeletonLine
-          key={i}
-          width={width}
-          height={8}
-          style={{ animationDelay: `${i * 0.06}s` }}
-        />
+        <SkeletonLine key={i} width={width} height={8} style={{ animationDelay: `${i * 0.06}s` }} />
       ))}
     </div>
   );
@@ -258,7 +263,7 @@ export const AgentCardSkeleton = memo(function AgentCardSkeleton(): React.ReactE
       aria-hidden="true"
       style={{
         padding: '12px',
-        borderBottom: '1px solid var(--border-muted)',
+        borderBottom: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',

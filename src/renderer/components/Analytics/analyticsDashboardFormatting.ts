@@ -24,7 +24,7 @@ const TOOL_COLORS: Record<string, string> = {
   Read: '#60a5fa',
   Edit: '#f59e0b',
   Write: '#f97316',
-  Bash: '#a78bfa',
+  Bash: 'var(--palette-purple)',
   Grep: '#34d399',
   Glob: '#2dd4bf',
   Skill: '#e879f9',
@@ -77,7 +77,7 @@ export function timeAgo(ts: number): string {
 export function getToolColor(toolName: string): string {
   if (TOOL_COLORS[toolName]) return TOOL_COLORS[toolName];
   if (toolName.startsWith('mcp__')) return '#94a3b8';
-  return 'var(--accent)';
+  return 'var(--interactive-accent)';
 }
 
 export function sortSessionMetrics(
@@ -109,12 +109,14 @@ export function getModelBadgeLabel(model: string): string {
 }
 
 export function getToolCallStatusColor(status: ToolCallEvent['status']): string {
-  if (status === 'pending') return '#fbbf24';
-  if (status === 'error') return 'var(--error, #f87171)';
-  return '#34d399';
+  if (status === 'pending') return 'var(--status-warning)';
+  if (status === 'error') return 'var(--status-error)';
+  return 'var(--status-success)';
 }
 
-export function getSortedFileEditEntries(fileEditCounts: Record<string, number>): [string, number][] {
+export function getSortedFileEditEntries(
+  fileEditCounts: Record<string, number>,
+): [string, number][] {
   return Object.entries(fileEditCounts).sort(([, a], [, b]) => b - a);
 }
 
@@ -146,6 +148,6 @@ export function getSparklinePoints(
 
   return dataPoints.map((val, index) => ({
     x: padding + (index / (dataPoints.length - 1)) * (width - 2 * padding),
-    y: (height - padding) - ((val - minVal) / range) * (height - 2 * padding),
+    y: height - padding - ((val - minVal) / range) * (height - 2 * padding),
   }));
 }

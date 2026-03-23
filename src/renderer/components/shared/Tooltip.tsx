@@ -35,9 +35,9 @@ if (typeof document !== 'undefined' && !document.getElementById(TOOLTIP_STYLE_ID
 }
 
 .agent-ide-tooltip__body {
-  background: var(--bg-tertiary, #333);
-  color: var(--text, #eee);
-  border: 1px solid var(--border, #555);
+  background: var(--surface-raised, #333);
+  color: var(--text-primary, #eee);
+  border: 1px solid var(--border-default, #555);
   font-family: var(--font-ui, system-ui);
   font-size: 11px;
   line-height: 1.3;
@@ -54,8 +54,8 @@ if (typeof document !== 'undefined' && !document.getElementById(TOOLTIP_STYLE_ID
   position: absolute;
   width: 6px;
   height: 6px;
-  background: var(--bg-tertiary, #333);
-  border: 1px solid var(--border, #555);
+  background: var(--surface-raised, #333);
+  border: 1px solid var(--border-default, #555);
   transform: rotate(45deg);
 }
 
@@ -107,7 +107,10 @@ export interface TooltipProps {
   disabled?: boolean;
 }
 
-function useTooltipVisibility(delay: number, disabled: boolean): {
+function useTooltipVisibility(
+  delay: number,
+  disabled: boolean,
+): {
   visible: boolean;
   coords: TooltipCoords | null;
   setCoords: React.Dispatch<React.SetStateAction<TooltipCoords | null>>;
@@ -214,7 +217,12 @@ export const Tooltip = memo(function Tooltip({
     setCoords: tooltip.setCoords,
   });
   useTooltipCleanup(tooltip.clearTimer);
-  const child = cloneTooltipChild({ children, triggerRef: tooltip.triggerRef, show: tooltip.show, hide: tooltip.hide });
+  const child = cloneTooltipChild({
+    children,
+    triggerRef: tooltip.triggerRef,
+    show: tooltip.show,
+    hide: tooltip.hide,
+  });
 
   return (
     <>

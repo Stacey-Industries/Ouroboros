@@ -89,7 +89,7 @@ function createHoverHandler(color: string) {
 
 const clearHover = createHoverHandler('transparent');
 const actionHover = createHoverHandler('rgba(88, 166, 255, 0.1)');
-const recentHover = createHoverHandler('var(--bg-secondary)');
+const recentHover = createHoverHandler('var(--surface-panel)');
 
 function FolderIcon(): React.ReactElement {
   return (
@@ -204,7 +204,9 @@ function RecentProjectButton({
       onMouseLeave={clearHover}
     >
       <span style={TRUNCATE_STYLE}>{basename(path)}</span>
-      <span className="text-text-semantic-faint" style={RECENT_PATH_STYLE}>{path}</span>
+      <span className="text-text-semantic-faint" style={RECENT_PATH_STYLE}>
+        {path}
+      </span>
     </button>
   );
 }
@@ -221,7 +223,9 @@ function RecentProjectsSection({
   }
   return (
     <div>
-      <div className="text-text-semantic-faint" style={SECTION_LABEL_STYLE}>Recent</div>
+      <div className="text-text-semantic-faint" style={SECTION_LABEL_STYLE}>
+        Recent
+      </div>
       {recents.map((path) => (
         <RecentProjectButton key={path} path={path} onSelect={onSelectRecent} />
       ))}
@@ -259,9 +263,13 @@ export function ProjectPickerToggle({
       className={busy ? 'text-text-semantic-faint' : 'text-text-semantic-primary'}
       style={{ ...TOGGLE_BUTTON_STYLE, cursor: busy ? 'wait' : 'pointer' }}
     >
-      <span className="text-text-semantic-muted"><FolderIcon /></span>
+      <span className="text-text-semantic-muted">
+        <FolderIcon />
+      </span>
       <span style={{ ...TRUNCATE_STYLE, flex: 1, textAlign: 'left' }}>{label}</span>
-      <span className="text-text-semantic-muted"><ChevronDownIcon /></span>
+      <span className="text-text-semantic-muted">
+        <ChevronDownIcon />
+      </span>
     </button>
   );
 }
@@ -283,12 +291,25 @@ export function ProjectPickerMenu({
 }): React.ReactElement {
   const openFolderLabel = rootCount > 0 ? 'Open folder... (replace workspace)' : 'Open folder...';
   return (
-    <div role="listbox" aria-label="Project selector" className="bg-surface-raised border border-border-semantic" style={MENU_STYLE}>
-      <ActionButton borderBottom="1px solid var(--border-muted)" icon={<FolderIcon />} onClick={onOpenFolder}>
+    <div
+      role="listbox"
+      aria-label="Project selector"
+      className="bg-surface-raised border border-border-semantic"
+      style={MENU_STYLE}
+    >
+      <ActionButton
+        borderBottom="1px solid var(--border-subtle)"
+        icon={<FolderIcon />}
+        onClick={onOpenFolder}
+      >
         {openFolderLabel}
       </ActionButton>
       {canAddProject ? (
-        <ActionButton borderBottom="1px solid var(--border-muted)" icon={<PlusIcon />} onClick={onAddFolder}>
+        <ActionButton
+          borderBottom="1px solid var(--border-subtle)"
+          icon={<PlusIcon />}
+          onClick={onAddFolder}
+        >
           Add folder to workspace...
         </ActionButton>
       ) : null}

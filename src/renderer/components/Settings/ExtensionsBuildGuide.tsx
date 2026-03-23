@@ -57,13 +57,11 @@ export function ExtensionsBuildGuide({
 }: ExtensionsBuildGuideProps): React.ReactElement {
   return (
     <section>
-      <button
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        style={guideToggleStyle(isOpen)}
-      >
+      <button onClick={onToggle} aria-expanded={isOpen} style={guideToggleStyle(isOpen)}>
         <SectionLabel style={{ marginBottom: 0 }}>How to Build an Extension</SectionLabel>
-        <span className="text-text-semantic-muted" style={guideArrowStyle(isOpen)}>{'\u25B6'}</span>
+        <span className="text-text-semantic-muted" style={guideArrowStyle(isOpen)}>
+          {'\u25B6'}
+        </span>
       </button>
       {isOpen && <BuildGuideContent />}
     </section>
@@ -90,9 +88,12 @@ function BuildGuideContent(): React.ReactElement {
 function GuideDescription(): React.ReactElement {
   return (
     <p className="text-text-semantic-muted" style={guideTextStyle}>
-      Create a folder with a <code className="text-text-semantic-secondary" style={inlineCodeStyle}>manifest.json</code> and a JavaScript
-      entry file, then install via &quot;Install from Folder&quot; or copy directly to the
-      extensions directory.
+      Create a folder with a{' '}
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>
+        manifest.json
+      </code>{' '}
+      and a JavaScript entry file, then install via &quot;Install from Folder&quot; or copy directly
+      to the extensions directory.
     </p>
   );
 }
@@ -101,7 +102,12 @@ function EventBadgeList(): React.ReactElement {
   return (
     <div style={badgeListStyle}>
       {ACTIVATION_EVENTS.map(({ event, description }) => (
-        <span key={event} title={description} className="text-text-semantic-secondary" style={guideBadgeStyle}>
+        <span
+          key={event}
+          title={description}
+          className="text-text-semantic-secondary"
+          style={guideBadgeStyle}
+        >
           {event}
         </span>
       ))}
@@ -112,9 +118,12 @@ function EventBadgeList(): React.ReactElement {
 function ActivationHelp(): React.ReactElement {
   return (
     <p className="text-text-semantic-muted" style={guideTextStyle}>
-      Extensions without <code className="text-text-semantic-secondary" style={inlineCodeStyle}>activationEvents</code> activate on
-      startup (backward compatible). Extensions with specific events remain &quot;pending&quot;
-      until the matching event fires.
+      Extensions without{' '}
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>
+        activationEvents
+      </code>{' '}
+      activate on startup (backward compatible). Extensions with specific events remain
+      &quot;pending&quot; until the matching event fires.
     </p>
   );
 }
@@ -127,7 +136,11 @@ function PermissionsList(): React.ReactElement {
       </p>
       <div style={{ ...badgeListStyle, marginBottom: '6px' }}>
         {VALID_PERMISSIONS.map((permission) => (
-          <code key={permission} className="text-text-semantic-secondary" style={permissionCodeStyle}>
+          <code
+            key={permission}
+            className="text-text-semantic-secondary"
+            style={permissionCodeStyle}
+          >
             {permission}
           </code>
         ))}
@@ -138,17 +151,30 @@ function PermissionsList(): React.ReactElement {
 
 function SandboxNote(): React.ReactElement {
   return (
-    <p className="text-text-semantic-muted" style={{ ...guideTextStyle, marginTop: '8px', marginBottom: 0 }}>
+    <p
+      className="text-text-semantic-muted"
+      style={{ ...guideTextStyle, marginTop: '8px', marginBottom: 0 }}
+    >
       Extensions run in a sandboxed VM with no access to{' '}
-      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>require()</code>,{' '}
-      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>process</code>, or the filesystem directly. All capabilities
-      are gated by the permissions declared in the manifest.
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>
+        require()
+      </code>
+      ,{' '}
+      <code className="text-text-semantic-secondary" style={inlineCodeStyle}>
+        process
+      </code>
+      , or the filesystem directly. All capabilities are gated by the permissions declared in the
+      manifest.
     </p>
   );
 }
 
 function CodeBlock({ code }: { code: string }): React.ReactElement {
-  return <pre className="text-text-semantic-secondary" style={codeBlockStyle}>{code}</pre>;
+  return (
+    <pre className="text-text-semantic-secondary" style={codeBlockStyle}>
+      {code}
+    </pre>
+  );
 }
 
 function guideToggleStyle(isOpen: boolean): React.CSSProperties {
@@ -181,12 +207,12 @@ const badgeListStyle: React.CSSProperties = {
 };
 
 const codeBlockStyle: React.CSSProperties = {
-  background: 'var(--bg)',
+  background: 'var(--surface-base)',
   fontFamily: 'var(--font-mono)',
   fontSize: '0.75rem',
   padding: '8px',
   borderRadius: '4px',
-  border: '1px solid var(--border)',
+  border: '1px solid var(--border-default)',
   overflowX: 'auto',
   margin: '0 0 12px 0',
   lineHeight: 1.6,
@@ -197,8 +223,8 @@ const guideBadgeStyle: React.CSSProperties = {
   fontSize: '11px',
   padding: '2px 6px',
   borderRadius: '3px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontFamily: 'var(--font-mono)',
   cursor: 'help',
 };
@@ -216,7 +242,7 @@ const permissionCodeStyle: React.CSSProperties = {
   fontSize: '11px',
   padding: '1px 6px',
   borderRadius: '3px',
-  border: '1px solid var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border-default)',
+  background: 'var(--surface-raised)',
   fontFamily: 'var(--font-mono)',
 };

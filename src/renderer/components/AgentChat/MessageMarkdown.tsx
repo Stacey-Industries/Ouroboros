@@ -35,7 +35,8 @@ function CopyButton({ text }: { text: string }): React.ReactElement {
 
 function getMarkdownText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
-  if (Array.isArray(children)) return children.map((child) => (typeof child === 'string' ? child : '')).join('');
+  if (Array.isArray(children))
+    return children.map((child) => (typeof child === 'string' ? child : '')).join('');
   return '';
 }
 
@@ -57,9 +58,29 @@ function MarkdownCodeBlock({
   const codeStr = String(children).replace(/\n$/, '');
   return (
     <div className="group/code relative my-2">
-      {match && <div className="rounded-t px-3 py-1 text-[10px] font-medium bg-surface-raised text-text-semantic-muted" style={{ borderBottom: '1px solid var(--border)' }}>{match[1]}</div>}
-      <pre className={match ? 'rounded-b' : 'rounded'} style={{ margin: 0, padding: '0.65em 0.85em', backgroundColor: 'var(--bg-tertiary, rgba(30, 30, 40, 0.6))', border: '1px solid var(--border)', borderTop: match ? 'none' : undefined, overflowX: 'auto', lineHeight: 1.5 }}>
-        <code className={className} style={{ fontSize: '0.85em' }} {...rest}>{children}</code>
+      {match && (
+        <div
+          className="rounded-t px-3 py-1 text-[10px] font-medium bg-surface-raised text-text-semantic-muted"
+          style={{ borderBottom: '1px solid var(--border-default)' }}
+        >
+          {match[1]}
+        </div>
+      )}
+      <pre
+        className={match ? 'rounded-b' : 'rounded'}
+        style={{
+          margin: 0,
+          padding: '0.65em 0.85em',
+          backgroundColor: 'var(--surface-raised, rgba(30, 30, 40, 0.6))',
+          border: '1px solid var(--border-default)',
+          borderTop: match ? 'none' : undefined,
+          overflowX: 'auto',
+          lineHeight: 1.5,
+        }}
+      >
+        <code className={className} style={{ fontSize: '0.85em' }} {...rest}>
+          {children}
+        </code>
       </pre>
       <CopyButton text={codeStr} />
     </div>
@@ -76,7 +97,16 @@ function MarkdownInlineCode({
   rest: Record<string, unknown>;
 }): React.ReactElement {
   return (
-    <code className={`${className ?? ''} bg-surface-raised`} style={{ padding: '0.15em 0.35em', borderRadius: '4px', fontSize: '0.9em', fontFamily: 'var(--font-mono)' }} {...rest}>
+    <code
+      className={`${className ?? ''} bg-surface-raised`}
+      style={{
+        padding: '0.15em 0.35em',
+        borderRadius: '4px',
+        fontSize: '0.9em',
+        fontFamily: 'var(--font-mono)',
+      }}
+      {...rest}
+    >
       {children}
     </code>
   );
@@ -93,32 +123,93 @@ function MarkdownCode({
 }): React.ReactElement {
   const match = /language-(\w+)/.exec(className || '');
   const codeStr = String(children).replace(/\n$/, '');
-  return codeStr.includes('\n') || match
-    ? <MarkdownCodeBlock className={className} rest={rest as Record<string, unknown>}>{children}</MarkdownCodeBlock>
-    : <MarkdownInlineCode className={className} rest={rest as Record<string, unknown>}>{children}</MarkdownInlineCode>;
+  return codeStr.includes('\n') || match ? (
+    <MarkdownCodeBlock className={className} rest={rest as Record<string, unknown>}>
+      {children}
+    </MarkdownCodeBlock>
+  ) : (
+    <MarkdownInlineCode className={className} rest={rest as Record<string, unknown>}>
+      {children}
+    </MarkdownInlineCode>
+  );
 }
 
 function MarkdownTable({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="my-2 overflow-x-auto"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85em', fontFamily: 'var(--font-mono)' }}>{children}</table></div>;
+  return (
+    <div className="my-2 overflow-x-auto">
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.85em',
+          fontFamily: 'var(--font-mono)',
+        }}
+      >
+        {children}
+      </table>
+    </div>
+  );
 }
 
 function MarkdownTh({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <th className="text-text-semantic-primary" style={{ padding: '0.4em 0.75em', textAlign: 'left', borderBottom: '2px solid var(--border)', fontWeight: 600, whiteSpace: 'nowrap' }}>{children}</th>;
+  return (
+    <th
+      className="text-text-semantic-primary"
+      style={{
+        padding: '0.4em 0.75em',
+        textAlign: 'left',
+        borderBottom: '2px solid var(--border-default)',
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </th>
+  );
 }
 
 function MarkdownTd({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <td className="text-text-semantic-muted" style={{ padding: '0.35em 0.75em', borderBottom: '1px solid var(--border)' }}>{children}</td>;
+  return (
+    <td
+      className="text-text-semantic-muted"
+      style={{ padding: '0.35em 0.75em', borderBottom: '1px solid var(--border-default)' }}
+    >
+      {children}
+    </td>
+  );
 }
 
-function MarkdownLink({ href, children }: { href?: string; children?: React.ReactNode }): React.ReactElement {
-  return <a href={href} className="text-interactive-accent underline">{children}</a>;
+function MarkdownLink({
+  href,
+  children,
+}: {
+  href?: string;
+  children?: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <a href={href} className="text-interactive-accent underline">
+      {children}
+    </a>
+  );
 }
 
 function MarkdownParagraph({ children }: { children: React.ReactNode }): React.ReactElement {
   const text = getMarkdownText(children);
   if (isTreeLikeText(text)) {
     return (
-      <pre className="text-text-semantic-muted" style={{ margin: '0.4em 0', fontFamily: 'var(--font-mono)', fontSize: '0.85em', lineHeight: 1.5, whiteSpace: 'pre-wrap', background: 'none', border: 'none', padding: 0 }}>
+      <pre
+        className="text-text-semantic-muted"
+        style={{
+          margin: '0.4em 0',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.85em',
+          lineHeight: 1.5,
+          whiteSpace: 'pre-wrap',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+        }}
+      >
         {children}
       </pre>
     );
@@ -127,29 +218,65 @@ function MarkdownParagraph({ children }: { children: React.ReactNode }): React.R
 }
 
 function MarkdownBlockquote({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <blockquote className="text-text-semantic-muted" style={{ margin: '0.5em 0', padding: '0.25em 0 0.25em 0.75em', borderLeft: '3px solid var(--accent, #58a6ff)' }}>{children}</blockquote>;
+  return (
+    <blockquote
+      className="text-text-semantic-muted"
+      style={{
+        margin: '0.5em 0',
+        padding: '0.25em 0 0.25em 0.75em',
+        borderLeft: '3px solid var(--interactive-accent, #58a6ff)',
+      }}
+    >
+      {children}
+    </blockquote>
+  );
 }
 
 function MarkdownHr(): React.ReactElement {
-  return <hr style={{ margin: '0.75em 0', border: 'none', borderTop: '1px solid var(--border)' }} />;
+  return (
+    <hr
+      style={{ margin: '0.75em 0', border: 'none', borderTop: '1px solid var(--border-default)' }}
+    />
+  );
 }
 
 function MarkdownHeading(level: 1 | 2 | 3, children: React.ReactNode): React.ReactElement {
   const Tag = `h${level}` as const;
-  const style = level === 1
-    ? { fontSize: '1.3em', fontWeight: 700, margin: '0.6em 0 0.3em' }
-    : level === 2
-      ? { fontSize: '1.15em', fontWeight: 600, margin: '0.5em 0 0.25em' }
-      : { fontSize: '1.05em', fontWeight: 600, margin: '0.4em 0 0.2em' };
-  return <Tag className="text-text-semantic-primary" style={style}>{children}</Tag>;
+  const style =
+    level === 1
+      ? { fontSize: '1.3em', fontWeight: 700, margin: '0.6em 0 0.3em' }
+      : level === 2
+        ? { fontSize: '1.15em', fontWeight: 600, margin: '0.5em 0 0.25em' }
+        : { fontSize: '1.05em', fontWeight: 600, margin: '0.4em 0 0.2em' };
+  return (
+    <Tag className="text-text-semantic-primary" style={style}>
+      {children}
+    </Tag>
+  );
 }
 
-function MarkdownList({ ordered, children }: { ordered: boolean; children: React.ReactNode }): React.ReactElement {
-  return ordered ? <ol style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'decimal' }}>{children}</ol> : <ul style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'disc' }}>{children}</ul>;
+function MarkdownList({
+  ordered,
+  children,
+}: {
+  ordered: boolean;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return ordered ? (
+    <ol style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'decimal' }}>
+      {children}
+    </ol>
+  ) : (
+    <ul style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'disc' }}>{children}</ul>
+  );
 }
 
 function MarkdownListItem({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <li className="text-text-semantic-primary" style={{ margin: '0.15em 0' }}>{children}</li>;
+  return (
+    <li className="text-text-semantic-primary" style={{ margin: '0.15em 0' }}>
+      {children}
+    </li>
+  );
 }
 
 const markdownComponents: Components = {
@@ -173,7 +300,9 @@ const markdownComponents: Components = {
  * Renders markdown using react-markdown + remark-gfm.
  * Full control over every rendered element — no third-party wrappers or borders.
  */
-export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: MessageMarkdownProps): React.ReactElement {
+export const MessageMarkdown = React.memo(function MessageMarkdown({
+  content,
+}: MessageMarkdownProps): React.ReactElement {
   const handleLinkClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
@@ -183,7 +312,9 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
     if (!href) return;
 
     e.preventDefault();
-    const api = (window as unknown as { electronAPI?: { app?: { openExternal?: (url: string) => void } } }).electronAPI;
+    const api = (
+      window as unknown as { electronAPI?: { app?: { openExternal?: (url: string) => void } } }
+    ).electronAPI;
     if (api?.app?.openExternal) {
       api.app.openExternal(href);
     } else {
@@ -191,5 +322,14 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({ content }: 
     }
   }, []);
 
-  return <div className="agent-chat-markdown text-sm leading-relaxed text-text-semantic-primary" onClick={handleLinkClick}><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{content || ' '}</ReactMarkdown></div>;
+  return (
+    <div
+      className="agent-chat-markdown text-sm leading-relaxed text-text-semantic-primary"
+      onClick={handleLinkClick}
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {content || ' '}
+      </ReactMarkdown>
+    </div>
+  );
 });

@@ -9,14 +9,18 @@ import type { ServerFormState } from './mcpHelpers';
 import { type FormHandlers, type McpSectionModel, useMcpSectionModel } from './mcpSectionModel';
 import { McpServerForm } from './McpServerForm';
 import { McpServerRow } from './McpServerRow';
-import { buttonStyle,SectionLabel } from './settingsStyles';
+import { buttonStyle, SectionLabel } from './settingsStyles';
 
 export function McpSection(): React.ReactElement {
   const model = useMcpSectionModel();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {model.actionError && <div role="alert" className="text-status-error" style={errorBannerStyle}>{model.actionError}</div>}
+      {model.actionError && (
+        <div role="alert" className="text-status-error" style={errorBannerStyle}>
+          {model.actionError}
+        </div>
+      )}
       <McpHeader onRefresh={() => void model.refresh()} onAdd={model.startAdd} />
       {model.isAdding && <AddFormWrapper {...buildAddFormProps(model)} />}
       <McpBody {...buildMcpBodyProps(model)} />
@@ -25,16 +29,37 @@ export function McpSection(): React.ReactElement {
   );
 }
 
-function McpHeader({ onRefresh, onAdd }: { onRefresh: () => void; onAdd: () => void }): React.ReactElement {
+function McpHeader({
+  onRefresh,
+  onAdd,
+}: {
+  onRefresh: () => void;
+  onAdd: () => void;
+}): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
         <SectionLabel style={{ marginBottom: '4px' }}>MCP Servers</SectionLabel>
-        <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>Configure MCP servers for Claude Code.</p>
+        <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>
+          Configure MCP servers for Claude Code.
+        </p>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        <button onClick={onRefresh} className="text-text-semantic-primary" style={buttonStyle}>Refresh</button>
-        <button onClick={onAdd} className="text-text-semantic-on-accent" style={{ ...buttonStyle, background: 'var(--accent)', border: 'none', fontWeight: 600 }}>+ Add Server</button>
+        <button onClick={onRefresh} className="text-text-semantic-primary" style={buttonStyle}>
+          Refresh
+        </button>
+        <button
+          onClick={onAdd}
+          className="text-text-semantic-on-accent"
+          style={{
+            ...buttonStyle,
+            background: 'var(--interactive-accent)',
+            border: 'none',
+            fontWeight: 600,
+          }}
+        >
+          + Add Server
+        </button>
       </div>
     </div>
   );
@@ -52,9 +77,27 @@ function AddFormWrapper({
   onCancel: () => void;
 }): React.ReactElement {
   return (
-    <div style={{ border: '1px solid var(--accent)', borderRadius: '6px', overflow: 'hidden' }}>
-      <div className="text-text-semantic-primary" style={addFormHeaderStyle}>New MCP Server</div>
-      <McpServerForm form={form} isEdit={false} onFieldChange={formHandlers.onFieldChange} onScopeChange={formHandlers.onScopeChange} onAddEnvRow={formHandlers.onAddEnvRow} onRemoveEnvRow={formHandlers.onRemoveEnvRow} onUpdateEnvRow={formHandlers.onUpdateEnvRow} onSubmit={onSubmit} onCancel={onCancel} />
+    <div
+      style={{
+        border: '1px solid var(--interactive-accent)',
+        borderRadius: '6px',
+        overflow: 'hidden',
+      }}
+    >
+      <div className="text-text-semantic-primary" style={addFormHeaderStyle}>
+        New MCP Server
+      </div>
+      <McpServerForm
+        form={form}
+        isEdit={false}
+        onFieldChange={formHandlers.onFieldChange}
+        onScopeChange={formHandlers.onScopeChange}
+        onAddEnvRow={formHandlers.onAddEnvRow}
+        onRemoveEnvRow={formHandlers.onRemoveEnvRow}
+        onUpdateEnvRow={formHandlers.onUpdateEnvRow}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />
     </div>
   );
 }
@@ -80,9 +123,24 @@ interface McpBodyProps {
 }
 
 function McpBody(props: McpBodyProps): React.ReactElement | null {
-  if (props.loading) return <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>Loading MCP servers...</p>;
-  if (props.error) return <div className="text-status-error" style={errorBannerStyle}>{props.error}</div>;
-  if (props.servers.length === 0 && !props.isAdding) return <div className="text-text-semantic-muted" style={emptyStyle}>No MCP servers configured.</div>;
+  if (props.loading)
+    return (
+      <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
+        Loading MCP servers...
+      </p>
+    );
+  if (props.error)
+    return (
+      <div className="text-status-error" style={errorBannerStyle}>
+        {props.error}
+      </div>
+    );
+  if (props.servers.length === 0 && !props.isAdding)
+    return (
+      <div className="text-text-semantic-muted" style={emptyStyle}>
+        No MCP servers configured.
+      </div>
+    );
 
   return (
     <>
@@ -106,7 +164,13 @@ function ServerGroupList({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <SectionLabel>{title}</SectionLabel>
-      <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+      <div
+        style={{
+          border: '1px solid var(--border-default)',
+          borderRadius: '6px',
+          overflow: 'hidden',
+        }}
+      >
         {servers.map((server, idx) => (
           <McpServerRow
             key={`${server.scope}:${server.name}`}
@@ -134,19 +198,36 @@ function buildEditForm({
   onUpdate,
   onCancelEdit,
 }: Pick<McpBodyProps, 'form' | 'formHandlers' | 'onUpdate' | 'onCancelEdit'>): React.ReactElement {
-  return <McpServerForm form={form} isEdit={true} onFieldChange={formHandlers.onFieldChange} onScopeChange={formHandlers.onScopeChange} onAddEnvRow={formHandlers.onAddEnvRow} onRemoveEnvRow={formHandlers.onRemoveEnvRow} onUpdateEnvRow={formHandlers.onUpdateEnvRow} onSubmit={onUpdate} onCancel={onCancelEdit} />;
+  return (
+    <McpServerForm
+      form={form}
+      isEdit={true}
+      onFieldChange={formHandlers.onFieldChange}
+      onScopeChange={formHandlers.onScopeChange}
+      onAddEnvRow={formHandlers.onAddEnvRow}
+      onRemoveEnvRow={formHandlers.onRemoveEnvRow}
+      onUpdateEnvRow={formHandlers.onUpdateEnvRow}
+      onSubmit={onUpdate}
+      onCancel={onCancelEdit}
+    />
+  );
 }
 
 function McpHelpText(): React.ReactElement {
   return (
     <section>
       <SectionLabel>About MCP Servers</SectionLabel>
-      <p className="text-text-semantic-muted" style={helpStyle}>MCP servers provide additional tools and capabilities to Claude Code.</p>
       <p className="text-text-semantic-muted" style={helpStyle}>
-        <strong className="text-text-semantic-primary">Global</strong> servers are available in all projects.{' '}
-        <strong className="text-text-semantic-primary">Project</strong> servers are specific to the current project.
+        MCP servers provide additional tools and capabilities to Claude Code.
       </p>
-      <p className="text-text-semantic-muted" style={{ ...helpStyle, margin: 0 }}>Changes are written directly to Claude Code settings files.</p>
+      <p className="text-text-semantic-muted" style={helpStyle}>
+        <strong className="text-text-semantic-primary">Global</strong> servers are available in all
+        projects. <strong className="text-text-semantic-primary">Project</strong> servers are
+        specific to the current project.
+      </p>
+      <p className="text-text-semantic-muted" style={{ ...helpStyle, margin: 0 }}>
+        Changes are written directly to Claude Code settings files.
+      </p>
     </section>
   );
 }
@@ -189,8 +270,8 @@ function buildMcpBodyProps(model: McpSectionModel): McpBodyProps {
 
 const addFormHeaderStyle: React.CSSProperties = {
   padding: '8px 12px',
-  background: 'color-mix(in srgb, var(--accent) 10%, var(--bg-secondary))',
-  borderBottom: '1px solid var(--border)',
+  background: 'color-mix(in srgb, var(--interactive-accent) 10%, var(--surface-panel))',
+  borderBottom: '1px solid var(--border-default)',
   fontSize: '12px',
   fontWeight: 600,
 };
@@ -198,16 +279,16 @@ const addFormHeaderStyle: React.CSSProperties = {
 const errorBannerStyle: React.CSSProperties = {
   padding: '8px 12px',
   borderRadius: '6px',
-  border: '1px solid var(--error)',
-  background: 'color-mix(in srgb, var(--error) 10%, var(--bg-secondary))',
+  border: '1px solid var(--status-error)',
+  background: 'color-mix(in srgb, var(--status-error) 10%, var(--surface-panel))',
   fontSize: '12px',
 };
 
 const emptyStyle: React.CSSProperties = {
   padding: '16px',
   borderRadius: '6px',
-  border: '1px dashed var(--border)',
-  background: 'var(--bg-tertiary)',
+  border: '1px dashed var(--border-default)',
+  background: 'var(--surface-raised)',
   fontSize: '12px',
   fontStyle: 'italic',
   textAlign: 'center',

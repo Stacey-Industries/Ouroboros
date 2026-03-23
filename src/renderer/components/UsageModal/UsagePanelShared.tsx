@@ -29,7 +29,12 @@ export function formatCost(n: number): string {
 }
 
 export function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function timeAgo(ts: number): string {
@@ -77,7 +82,9 @@ export function modelShortName(model: string): string {
   return model.slice(0, 12);
 }
 
-export function summarizeModels(sessions: SessionUsage[]): Array<{ name: string; color: string; tokens: number; cost: number }> {
+export function summarizeModels(
+  sessions: SessionUsage[],
+): Array<{ name: string; color: string; tokens: number; cost: number }> {
   const models = new Map<string, { name: string; color: string; tokens: number; cost: number }>();
   sessions.forEach((session) => {
     const name = modelShortName(session.model);
@@ -89,11 +96,27 @@ export function summarizeModels(sessions: SessionUsage[]): Array<{ name: string;
   return Array.from(models.values()).sort((left, right) => right.tokens - left.tokens);
 }
 
-export function StatRow({ label, value, color }: { label: string; value: string; color?: string }): React.ReactElement {
+export function StatRow({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}): React.ReactElement {
   return (
-    <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border-muted)' }}>
+    <div
+      className="flex items-center justify-between py-1"
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
+    >
       <span className="text-[11px] text-text-semantic-muted">{label}</span>
-      <span className="text-[12px] font-semibold tabular-nums" style={{ color: color ?? 'var(--text)', fontFamily: 'var(--font-mono)' }}>{value}</span>
+      <span
+        className="text-[12px] font-semibold tabular-nums"
+        style={{ color: color ?? 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

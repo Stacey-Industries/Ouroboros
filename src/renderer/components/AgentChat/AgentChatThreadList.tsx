@@ -28,8 +28,12 @@ function ThreadListHeader({ onNewChat }: { onNewChat: () => void }): React.React
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-text-semantic-muted">Chats</div>
-        <div className="mt-1 text-xs text-text-semantic-muted">Recent agent threads for this project</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-text-semantic-muted">
+          Chats
+        </div>
+        <div className="mt-1 text-xs text-text-semantic-muted">
+          Recent agent threads for this project
+        </div>
       </div>
       <button
         onClick={onNewChat}
@@ -41,7 +45,11 @@ function ThreadListHeader({ onNewChat }: { onNewChat: () => void }): React.React
   );
 }
 
-function ThreadStatusBadge({ status }: { status: AgentChatThreadRecord['status'] }): React.ReactElement {
+function ThreadStatusBadge({
+  status,
+}: {
+  status: AgentChatThreadRecord['status'];
+}): React.ReactElement {
   return (
     <span
       className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
@@ -66,8 +74,8 @@ function ThreadListItem(props: {
       onClick={() => props.onSelectThread(props.thread.id)}
       className="w-full rounded border px-3 py-2 text-left transition-colors duration-100"
       style={{
-        borderColor: isActive ? 'var(--accent)' : 'var(--border)',
-        backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+        borderColor: isActive ? 'var(--interactive-accent)' : 'var(--border-default)',
+        backgroundColor: isActive ? 'var(--surface-panel)' : 'transparent',
         marginLeft: `${props.depth * 16}px`,
         width: `calc(100% - ${props.depth * 16}px)`,
       }}
@@ -78,11 +86,15 @@ function ThreadListItem(props: {
             {isBranch && <span className="mr-1 text-text-semantic-faint">{'\u21B3'}</span>}
             {props.thread.title}
           </div>
-          <div className="mt-1 line-clamp-2 text-xs text-text-semantic-muted">{formatThreadPreview(props.thread)}</div>
+          <div className="mt-1 line-clamp-2 text-xs text-text-semantic-muted">
+            {formatThreadPreview(props.thread)}
+          </div>
         </div>
         <ThreadStatusBadge status={props.thread.status} />
       </div>
-      <div className="mt-2 text-[11px] text-text-semantic-faint">{formatTimestamp(props.thread.updatedAt)}</div>
+      <div className="mt-2 text-[11px] text-text-semantic-faint">
+        {formatTimestamp(props.thread.updatedAt)}
+      </div>
     </button>
   );
 }

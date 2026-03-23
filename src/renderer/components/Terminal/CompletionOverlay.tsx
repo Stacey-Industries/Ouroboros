@@ -5,25 +5,25 @@
  * git subcommands, and common CLI completions. Keyboard-navigable.
  */
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react';
 
 export interface Completion {
-  value: string
-  type: 'file' | 'dir' | 'branch' | 'cmd' | 'git-subcmd'
+  value: string;
+  type: 'file' | 'dir' | 'branch' | 'cmd' | 'git-subcmd';
 }
 
 export interface CompletionOverlayProps {
-  completions: Completion[]
-  selectedIndex: number
-  visible: boolean
-  position: { x: number; y: number }
-  onSelect: (value: string) => void
-  onNavigate: (delta: number) => void
-  onDismiss: () => void
+  completions: Completion[];
+  selectedIndex: number;
+  visible: boolean;
+  position: { x: number; y: number };
+  onSelect: (value: string) => void;
+  onNavigate: (delta: number) => void;
+  onDismiss: () => void;
 }
 
-const MAX_VISIBLE = 8
-const ITEM_HEIGHT = 24
+const MAX_VISIBLE = 8;
+const ITEM_HEIGHT = 24;
 
 const TYPE_LABELS: Record<Completion['type'], string> = {
   file: 'file',
@@ -31,25 +31,25 @@ const TYPE_LABELS: Record<Completion['type'], string> = {
   branch: 'branch',
   cmd: 'cmd',
   'git-subcmd': 'git',
-}
+};
 
 const TYPE_COLORS: Record<Completion['type'], string> = {
   file: 'var(--text-muted, #888)',
-  dir: 'var(--accent, #58a6ff)',
-  branch: 'var(--git-added, #3fb950)',
+  dir: 'var(--interactive-accent)',
+  branch: 'var(--git-added, var(--status-success))',
   cmd: 'var(--text-secondary, #aaa)',
   'git-subcmd': 'var(--text-secondary, #aaa)',
-}
+};
 
 function useSelectedItemScroll(
   listRef: React.RefObject<HTMLDivElement | null>,
   selectedIndex: number,
 ): void {
   useEffect(() => {
-    if (!listRef.current) return
-    const item = listRef.current.children[selectedIndex] as HTMLElement | undefined
-    item?.scrollIntoView({ block: 'nearest' })
-  }, [listRef, selectedIndex])
+    if (!listRef.current) return;
+    const item = listRef.current.children[selectedIndex] as HTMLElement | undefined;
+    item?.scrollIntoView({ block: 'nearest' });
+  }, [listRef, selectedIndex]);
 }
 
 export function CompletionOverlay({
@@ -60,11 +60,11 @@ export function CompletionOverlay({
   onSelect,
   onNavigate,
 }: CompletionOverlayProps): React.ReactElement | null {
-  const listRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null);
 
-  useSelectedItemScroll(listRef, selectedIndex)
+  useSelectedItemScroll(listRef, selectedIndex);
 
-  if (!visible || completions.length === 0) return null
+  if (!visible || completions.length === 0) return null;
 
   return (
     <CompletionOverlayBody
@@ -75,7 +75,7 @@ export function CompletionOverlay({
       onSelect={onSelect}
       onNavigate={onNavigate}
     />
-  )
+  );
 }
 
 function CompletionOverlayBody({
@@ -86,15 +86,20 @@ function CompletionOverlayBody({
   onSelect,
   onNavigate,
 }: {
-  listRef: React.RefObject<HTMLDivElement | null>
-  completions: Completion[]
-  position: { x: number; y: number }
-  selectedIndex: number
-  onSelect: (value: string) => void
-  onNavigate: (delta: number) => void
+  listRef: React.RefObject<HTMLDivElement | null>;
+  completions: Completion[];
+  position: { x: number; y: number };
+  selectedIndex: number;
+  onSelect: (value: string) => void;
+  onNavigate: (delta: number) => void;
 }): React.ReactElement {
   return (
-    <div ref={listRef} onMouseDown={(e) => e.preventDefault()} className="bg-surface-panel border border-border-semantic" style={getOverlayStyle(position)}>
+    <div
+      ref={listRef}
+      onMouseDown={(e) => e.preventDefault()}
+      className="bg-surface-panel border border-border-semantic"
+      style={getOverlayStyle(position)}
+    >
       {completions.map((completion, index) => (
         <CompletionItem
           key={`${completion.type}:${completion.value}:${index}`}
@@ -106,7 +111,7 @@ function CompletionOverlayBody({
       ))}
       <CompletionHint />
     </div>
-  )
+  );
 }
 
 function getOverlayStyle(position: { x: number; y: number }): React.CSSProperties {
@@ -124,7 +129,7 @@ function getOverlayStyle(position: { x: number; y: number }): React.CSSPropertie
     fontFamily: 'var(--font-mono, monospace)',
     fontSize: 12,
     userSelect: 'none',
-  }
+  };
 }
 
 function CompletionItem({
@@ -133,24 +138,26 @@ function CompletionItem({
   onClick,
   onHover,
 }: {
-  completion: Completion
-  isSelected: boolean
-  onClick: () => void
-  onHover: () => void
+  completion: Completion;
+  isSelected: boolean;
+  onClick: () => void;
+  onHover: () => void;
 }): React.ReactElement {
-  const color = TYPE_COLORS[completion.type]
+  const color = TYPE_COLORS[completion.type];
 
   return (
     <div
       onClick={onClick}
       onMouseEnter={onHover}
-      className={isSelected ? 'bg-surface-raised text-text-semantic-primary' : 'text-text-semantic-muted'}
+      className={
+        isSelected ? 'bg-surface-raised text-text-semantic-primary' : 'text-text-semantic-muted'
+      }
       style={getCompletionItemStyle(isSelected)}
     >
       <CompletionTypeBadge type={completion.type} color={color} />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{completion.value}</span>
     </div>
-  )
+  );
 }
 
 function getCompletionItemStyle(isSelected: boolean): React.CSSProperties {
@@ -161,19 +168,19 @@ function getCompletionItemStyle(isSelected: boolean): React.CSSProperties {
     padding: '3px 8px',
     height: 24,
     cursor: 'pointer',
-    borderLeft: isSelected ? '2px solid var(--accent, #58a6ff)' : '2px solid transparent',
+    borderLeft: isSelected ? '2px solid var(--interactive-accent)' : '2px solid transparent',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-  }
+  };
 }
 
 function CompletionTypeBadge({
   type,
   color,
 }: {
-  type: Completion['type']
-  color: string
+  type: Completion['type'];
+  color: string;
 }): React.ReactElement {
   return (
     <span
@@ -193,7 +200,7 @@ function CompletionTypeBadge({
     >
       {TYPE_LABELS[type]}
     </span>
-  )
+  );
 }
 
 function CompletionHint(): React.ReactElement {
@@ -209,5 +216,5 @@ function CompletionHint(): React.ReactElement {
     >
       Tab/Enter to select · Esc to dismiss
     </div>
-  )
+  );
 }
