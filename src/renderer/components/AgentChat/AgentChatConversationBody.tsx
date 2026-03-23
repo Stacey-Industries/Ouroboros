@@ -21,12 +21,19 @@ import {
 } from './AgentChatMessageComponents';
 import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
+import { VirtualizedMessageList } from './VirtualizedMessageList';
 
 /* ---------- File-modifying tool set ---------- */
 
 const FILE_MODIFYING_TOOLS_SET = new Set([
-  'Write', 'Edit', 'MultiEdit', 'write_file', 'edit_file', 'multi_edit',
-  'NotebookEdit', 'create_file',
+  'Write',
+  'Edit',
+  'MultiEdit',
+  'write_file',
+  'edit_file',
+  'multi_edit',
+  'NotebookEdit',
+  'create_file',
 ]);
 
 /* ---------- Scroll hook ---------- */
@@ -44,7 +51,9 @@ export function useSmartAutoScroll(deps: unknown[]): {
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 50;
   }, []);
 
-  const onScroll = useCallback(() => { checkNearBottom(); }, [checkNearBottom]);
+  const onScroll = useCallback(() => {
+    checkNearBottom();
+  }, [checkNearBottom]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -57,10 +66,16 @@ export function useSmartAutoScroll(deps: unknown[]): {
 
 /* ---------- Streaming helpers ---------- */
 
-function dispatchDiffReviewEvent(thread: AgentChatThreadRecord, streaming: AgentChatStreamingState): void {
+function dispatchDiffReviewEvent(
+  thread: AgentChatThreadRecord,
+  streaming: AgentChatStreamingState,
+): void {
   let lastAssistant: AgentChatMessageRecord | undefined;
   for (let i = thread.messages.length - 1; i >= 0; i--) {
-    if (thread.messages[i].role === 'assistant') { lastAssistant = thread.messages[i]; break; }
+    if (thread.messages[i].role === 'assistant') {
+      lastAssistant = thread.messages[i];
+      break;
+    }
   }
   const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
   if (!snapshotHash || !thread.workspaceRoot) return;
@@ -68,13 +83,25 @@ function dispatchDiffReviewEvent(thread: AgentChatThreadRecord, streaming: Agent
     (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
   );
   if (fileEditBlocks.length === 0) return;
-  const filePaths = [...new Set(fileEditBlocks.filter((b) => b.filePath).map((b) => b.filePath as string))];
-  window.dispatchEvent(new CustomEvent('agent-ide:open-diff-review', {
-    detail: { sessionId: lastAssistant!.id, snapshotHash, projectRoot: thread.workspaceRoot, filePaths },
-  }));
+  const filePaths = [
+    ...new Set(fileEditBlocks.filter((b) => b.filePath).map((b) => b.filePath as string)),
+  ];
+  window.dispatchEvent(
+    new CustomEvent('agent-ide:open-diff-review', {
+      detail: {
+        sessionId: lastAssistant!.id,
+        snapshotHash,
+        projectRoot: thread.workspaceRoot,
+        filePaths,
+      },
+    }),
+  );
 }
 
-export function useStreamingCompletionEffect(activeThread: AgentChatThreadRecord | null, streaming: AgentChatStreamingState): void {
+export function useStreamingCompletionEffect(
+  activeThread: AgentChatThreadRecord | null,
+  streaming: AgentChatStreamingState,
+): void {
   const wasStreamingRef = useRef(false);
   useEffect(() => {
     const wasStreaming = wasStreamingRef.current;
@@ -113,7 +140,10 @@ function buildSyntheticStreamingMessage(
 
 /* ---------- Edit state hook ---------- */
 
-export function useEditState(activeThread: AgentChatThreadRecord | null, onEdit: (msg: AgentChatMessageRecord) => void) {
+export function useEditState(
+  activeThread: AgentChatThreadRecord | null,
+  onEdit: (msg: AgentChatMessageRecord) => void,
+) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
 
@@ -122,7 +152,10 @@ export function useEditState(activeThread: AgentChatThreadRecord | null, onEdit:
     setEditDraft(message.content);
   }, []);
 
-  const handleCancelEdit = useCallback(() => { setEditingMessageId(null); setEditDraft(''); }, []);
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+    setEditDraft('');
+  }, []);
 
   const handleEditSubmit = useCallback(() => {
     const trimmed = editDraft.trim();
@@ -133,7 +166,14 @@ export function useEditState(activeThread: AgentChatThreadRecord | null, onEdit:
     setEditDraft('');
   }, [editDraft, editingMessageId, activeThread, onEdit]);
 
-  return { editingMessageId, editDraft, setEditDraft, handleStartEdit, handleCancelEdit, handleEditSubmit };
+  return {
+    editingMessageId,
+    editDraft,
+    setEditDraft,
+    handleStartEdit,
+    handleCancelEdit,
+    handleEditSubmit,
+  };
 }
 
 /* ---------- Message list ---------- */
@@ -162,10 +202,19 @@ interface MessageListProps {
 
 export function MessageList(props: MessageListProps): React.ReactElement {
   return (
-    <div ref={props.scrollRef} onScroll={props.onScroll} aria-live="polite" aria-relevant="additions" className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+    <div
+      ref={props.scrollRef}
+      onScroll={props.onScroll}
+      aria-live="polite"
+      aria-relevant="additions"
+      className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
+    >
       <div className="mt-auto space-y-4">
         {props.activeThread.branchInfo && props.onSelectThread && (
-          <AgentChatBranchIndicator branchInfo={props.activeThread.branchInfo} onSwitchToParent={props.onSelectThread} />
+          <AgentChatBranchIndicator
+            branchInfo={props.activeThread.branchInfo}
+            onSwitchToParent={props.onSelectThread}
+          />
         )}
         {props.messagesWithStreaming.map((message) => (
           <MessageCard
@@ -186,7 +235,9 @@ export function MessageList(props: MessageListProps): React.ReactElement {
             onOpenLinkedDetails={props.onOpenLinkedDetails}
           />
         ))}
-        {props.pendingUserMessage && props.isSending && <PendingUserBubble text={props.pendingUserMessage} />}
+        {props.pendingUserMessage && props.isSending && (
+          <PendingUserBubble text={props.pendingUserMessage} />
+        )}
         <FailedBanner activeThread={props.activeThread} />
         <InlineError error={props.error} />
       </div>
@@ -226,29 +277,57 @@ function useMessagesWithStreaming(
   streaming: AgentChatStreamingState,
   onStop: (() => Promise<void>) | undefined,
 ): AgentChatMessageRecord[] {
-  const threadIsActive = activeThread?.status === 'submitting' || activeThread?.status === 'running';
+  const threadIsActive =
+    activeThread?.status === 'submitting' || activeThread?.status === 'running';
   const streamingIsActive = streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
   const streamingAlreadyPersisted = Boolean(
-    streaming.streamingMessageId && activeThread?.messages.some((m) => m.id === streaming.streamingMessageId),
+    streaming.streamingMessageId &&
+    activeThread?.messages.some((m) => m.id === streaming.streamingMessageId),
   );
   return useMemo(() => {
     if (!activeThread) return [];
     const filtered = buildFilteredMessages(activeThread.messages);
     if (streamingIsActive && !streamingAlreadyPersisted) {
-      filtered.push(buildSyntheticStreamingMessage(activeThread, streaming, threadIsActive, onStop));
+      filtered.push(
+        buildSyntheticStreamingMessage(activeThread, streaming, threadIsActive, onStop),
+      );
     }
     return filtered;
-  }, [activeThread, streaming, streamingIsActive, streamingAlreadyPersisted, threadIsActive, onStop]);
+  }, [
+    activeThread,
+    streaming,
+    streamingIsActive,
+    streamingAlreadyPersisted,
+    threadIsActive,
+    onStop,
+  ]);
 }
 
 function PendingStreamingView({
-  scrollRef, onScroll, pendingUserMessage, onStop,
-}: { scrollRef: React.RefObject<HTMLDivElement>; onScroll: () => void; pendingUserMessage: string; onStop?: () => Promise<void> }): React.ReactElement {
+  scrollRef,
+  onScroll,
+  pendingUserMessage,
+  onStop,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement>;
+  onScroll: () => void;
+  pendingUserMessage: string;
+  onStop?: () => Promise<void>;
+}): React.ReactElement {
   return (
-    <div ref={scrollRef} onScroll={onScroll} className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3">
+    <div
+      ref={scrollRef}
+      onScroll={onScroll}
+      className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
+    >
       <div className="mt-auto space-y-4">
         <PendingUserBubble text={pendingUserMessage} />
-        <AgentChatStreamingMessage blocks={[]} isStreaming={true} activeTextContent="" onStop={onStop} />
+        <AgentChatStreamingMessage
+          blocks={[]}
+          isStreaming={true}
+          activeTextContent=""
+          onStop={onStop}
+        />
       </div>
     </div>
   );
@@ -258,9 +337,19 @@ export function ConversationBody(props: ConversationBodyProps): React.ReactEleme
   const { onEdit, onStop, activeThread, streaming } = props;
   useStreamingCompletionEffect(activeThread, streaming);
 
-  const { editingMessageId, editDraft, setEditDraft, handleStartEdit, handleCancelEdit, handleEditSubmit } = useEditState(activeThread, onEdit);
+  const {
+    editingMessageId,
+    editDraft,
+    setEditDraft,
+    handleStartEdit,
+    handleCancelEdit,
+    handleEditSubmit,
+  } = useEditState(activeThread, onEdit);
   const { scrollRef, onScroll } = useSmartAutoScroll([
-    activeThread?.messages.length, activeThread?.status, streaming.blocks.length, streaming.activeTextContent,
+    activeThread?.messages.length,
+    activeThread?.status,
+    streaming.blocks.length,
+    streaming.activeTextContent,
   ]);
   const messagesWithStreaming = useMessagesWithStreaming(activeThread, streaming, onStop);
 
@@ -268,13 +357,20 @@ export function ConversationBody(props: ConversationBodyProps): React.ReactEleme
   if (props.isLoading) return <LoadingState />;
   if (!activeThread) {
     if (props.isSending && props.pendingUserMessage) {
-      return <PendingStreamingView scrollRef={scrollRef} onScroll={onScroll} pendingUserMessage={props.pendingUserMessage} onStop={onStop} />;
+      return (
+        <PendingStreamingView
+          scrollRef={scrollRef}
+          onScroll={onScroll}
+          pendingUserMessage={props.pendingUserMessage}
+          onStop={onStop}
+        />
+      );
     }
     return <EmptyConversationState onSelectPrompt={props.onDraftChange} />;
   }
 
   return (
-    <MessageList
+    <VirtualizedMessageList
       activeThread={activeThread}
       messagesWithStreaming={messagesWithStreaming}
       lastUserMessageId={findLastUserMessageId(activeThread.messages)}
@@ -292,8 +388,6 @@ export function ConversationBody(props: ConversationBodyProps): React.ReactEleme
       pendingUserMessage={props.pendingUserMessage}
       isSending={props.isSending}
       error={props.error}
-      scrollRef={scrollRef}
-      onScroll={onScroll}
     />
   );
 }
