@@ -2,7 +2,8 @@ import type {
   ContextPacketResult,
   TaskMutationResult,
   TaskRequest,
-} from '../../main/orchestration/types';
+} from '@shared/types/orchestration';
+
 import type { AgentChatAPI } from './electron-agent-chat';
 import type { ClaudeMdAPI } from './electron-claude-md';
 import type { ExtensionStoreAPI } from './electron-extension-store';

@@ -1,6 +1,10 @@
-import type { AgentChatAPI as MainAgentChatAPI } from '../../main/agentChat/types'
-
 export type {
+  AgentChatEventChannel,
+  AgentChatEventType,
+  AgentChatInvokeChannel,
+} from '@shared/ipc/agentChatChannels';
+export type {
+  AgentChatAPI,
   AgentChatBranchInfo,
   AgentChatContentBlock,
   AgentChatContextBehavior,
@@ -38,12 +42,4 @@ export type {
   ImageAttachment,
   ImageMimeType,
   SessionMemoryEntry,
-} from '../../main/agentChat/types'
-
-export type AgentChatAPI = MainAgentChatAPI
-
-export type {
-  AgentChatEventChannel,
-  AgentChatEventType,
-  AgentChatInvokeChannel,
-} from '../../main/agentChat/events'
+} from '@shared/types/agentChat';

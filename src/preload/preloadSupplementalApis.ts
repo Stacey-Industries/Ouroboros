@@ -1,12 +1,10 @@
-import { ipcRenderer } from 'electron'
-
 import {
   AGENT_CHAT_EVENT_CHANNELS,
   AGENT_CHAT_INVOKE_CHANNELS,
-} from '../main/agentChat/events'
-import {
-  ORCHESTRATION_INVOKE_CHANNELS,
-} from '../main/orchestration/events'
+} from '@shared/ipc/agentChatChannels';
+import { ORCHESTRATION_INVOKE_CHANNELS } from '@shared/ipc/orchestrationChannels';
+import { ipcRenderer } from 'electron';
+
 import type {
   AgentChatEvent,
   AgentChatMessageRecord,
@@ -23,7 +21,7 @@ import type {
   LspServerStatus,
   PerfMetrics,
   UpdaterEvent,
-} from '../renderer/types/electron'
+} from '../renderer/types/electron';
 
 type SupplementalApiKey =
   | 'approval'
@@ -47,14 +45,14 @@ type SupplementalApiKey =
   | 'agentChat'
   | 'orchestration'
   | 'contextLayer'
-  | 'claudeMd'
+  | 'claudeMd';
 
-type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>
+type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
 function onChannel<T>(channel: string, callback: (payload: T) => void): () => void {
-  const handler = (_event: Electron.IpcRendererEvent, payload: T) => callback(payload)
-  ipcRenderer.on(channel, handler)
-  return () => ipcRenderer.removeListener(channel, handler)
+  const handler = (_event: Electron.IpcRendererEvent, payload: T) => callback(payload);
+  ipcRenderer.on(channel, handler);
+  return () => ipcRenderer.removeListener(channel, handler);
 }
 
 export const supplementalApis: SupplementalApis = {
@@ -102,7 +100,8 @@ export const supplementalApis: SupplementalApis = {
     getCrashLogs: () => ipcRenderer.invoke('app:getCrashLogs'),
     clearCrashLogs: () => ipcRenderer.invoke('app:clearCrashLogs'),
     openCrashLogDir: () => ipcRenderer.invoke('app:openCrashLogDir'),
-    logError: (source, message, stack) => ipcRenderer.invoke('app:logError', source, message, stack),
+    logError: (source, message, stack) =>
+      ipcRenderer.invoke('app:logError', source, message, stack),
   },
 
   perf: {
@@ -126,12 +125,17 @@ export const supplementalApis: SupplementalApis = {
     definition: (root, filePath, line, character) =>
       ipcRenderer.invoke('lsp:definition', { root, filePath, line, character }),
     diagnostics: (root, filePath) => ipcRenderer.invoke('lsp:diagnostics', root, filePath),
-    didOpen: (root, filePath, content) => ipcRenderer.invoke('lsp:didOpen', root, filePath, content),
-    didChange: (root, filePath, content) => ipcRenderer.invoke('lsp:didChange', root, filePath, content),
+    didOpen: (root, filePath, content) =>
+      ipcRenderer.invoke('lsp:didOpen', root, filePath, content),
+    didChange: (root, filePath, content) =>
+      ipcRenderer.invoke('lsp:didChange', root, filePath, content),
     didClose: (root, filePath) => ipcRenderer.invoke('lsp:didClose', root, filePath),
     getStatus: () => ipcRenderer.invoke('lsp:getStatus'),
     onDiagnostics: (callback) =>
-      onChannel<{ filePath: string; diagnostics: LspDiagnostic[] }>('lsp:diagnostics:push', callback),
+      onChannel<{ filePath: string; diagnostics: LspDiagnostic[] }>(
+        'lsp:diagnostics:push',
+        callback,
+      ),
     onStatusChange: (callback) => onChannel<LspServerStatus[]>('lsp:statusChange', callback),
   },
 
@@ -157,28 +161,37 @@ export const supplementalApis: SupplementalApis = {
   },
 
   mcp: {
-    getServers: (projectRoot) => ipcRenderer.invoke('mcp:getServers', projectRoot ? { projectRoot } : undefined),
-    addServer: (name, config, scope, projectRoot) => ipcRenderer.invoke('mcp:addServer', { name, config, scope, projectRoot }),
-    removeServer: (name, scope, projectRoot) => ipcRenderer.invoke('mcp:removeServer', { name, scope, projectRoot }),
-    updateServer: (name, config, scope, projectRoot) => ipcRenderer.invoke('mcp:updateServer', { name, config, scope, projectRoot }),
-    toggleServer: (name, enabled, scope, projectRoot) => ipcRenderer.invoke('mcp:toggleServer', { name, enabled, scope, projectRoot }),
+    getServers: (projectRoot) =>
+      ipcRenderer.invoke('mcp:getServers', projectRoot ? { projectRoot } : undefined),
+    addServer: (name, config, scope, projectRoot) =>
+      ipcRenderer.invoke('mcp:addServer', { name, config, scope, projectRoot }),
+    removeServer: (name, scope, projectRoot) =>
+      ipcRenderer.invoke('mcp:removeServer', { name, scope, projectRoot }),
+    updateServer: (name, config, scope, projectRoot) =>
+      ipcRenderer.invoke('mcp:updateServer', { name, config, scope, projectRoot }),
+    toggleServer: (name, enabled, scope, projectRoot) =>
+      ipcRenderer.invoke('mcp:toggleServer', { name, enabled, scope, projectRoot }),
   },
 
   mcpStore: {
     search: (query, cursor) => ipcRenderer.invoke('mcpStore:search', query, cursor),
     searchNpm: (query, offset) => ipcRenderer.invoke('mcpStore:searchNpm', query, offset),
     getServerDetails: (name) => ipcRenderer.invoke('mcpStore:getDetails', name),
-    installServer: (server, scope, envOverrides) => ipcRenderer.invoke('mcpStore:install', server, scope, envOverrides),
+    installServer: (server, scope, envOverrides) =>
+      ipcRenderer.invoke('mcpStore:install', server, scope, envOverrides),
     getInstalledServerNames: () => ipcRenderer.invoke('mcpStore:getInstalled'),
   },
 
   extensionStore: {
     search: (query, offset) => ipcRenderer.invoke('extensionStore:search', query, offset),
-    searchMarketplace: (query, offset, category) => ipcRenderer.invoke('extensionStore:searchMarketplace', query, offset, category),
+    searchMarketplace: (query, offset, category) =>
+      ipcRenderer.invoke('extensionStore:searchMarketplace', query, offset, category),
     getDetails: (ns, name) => ipcRenderer.invoke('extensionStore:getDetails', ns, name),
-    getMarketplaceDetails: (ns, name) => ipcRenderer.invoke('extensionStore:getMarketplaceDetails', ns, name),
+    getMarketplaceDetails: (ns, name) =>
+      ipcRenderer.invoke('extensionStore:getMarketplaceDetails', ns, name),
     install: (ns, name, version) => ipcRenderer.invoke('extensionStore:install', ns, name, version),
-    installMarketplace: (ns, name, version) => ipcRenderer.invoke('extensionStore:installMarketplace', ns, name, version),
+    installMarketplace: (ns, name, version) =>
+      ipcRenderer.invoke('extensionStore:installMarketplace', ns, name, version),
     uninstall: (id) => ipcRenderer.invoke('extensionStore:uninstall', id),
     getInstalled: () => ipcRenderer.invoke('extensionStore:getInstalled'),
     enableContributions: (id) => ipcRenderer.invoke('extensionStore:enableContributions', id),
@@ -188,7 +201,8 @@ export const supplementalApis: SupplementalApis = {
 
   context: {
     scan: (projectRoot) => ipcRenderer.invoke('context:scan', projectRoot),
-    generate: (projectRoot, options) => ipcRenderer.invoke('context:generate', projectRoot, options),
+    generate: (projectRoot, options) =>
+      ipcRenderer.invoke('context:generate', projectRoot, options),
   },
 
   ideTools: {
@@ -207,7 +221,8 @@ export const supplementalApis: SupplementalApis = {
 
   agentChat: {
     createThread: (request) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.createThread, request),
-    deleteThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteThread, threadId),
+    deleteThread: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.deleteThread, threadId),
     loadThread: (threadId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.loadThread, threadId),
     listThreads: (workspaceRoot) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listThreads, workspaceRoot),
@@ -224,8 +239,7 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getBufferedChunks, threadId),
     revertToSnapshot: (threadId, messageId) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, threadId, messageId),
-    cancelTask: (taskId) =>
-      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+    cancelTask: (taskId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
     listMemories: (workspaceRoot) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listMemories, workspaceRoot),
     createMemory: (workspaceRoot, entry) =>
@@ -246,7 +260,8 @@ export const supplementalApis: SupplementalApis = {
   },
 
   orchestration: {
-    previewContext: (request) => ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
+    previewContext: (request) =>
+      ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
     buildContextPacket: (request) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.buildContextPacket, request),
     // Routes to agentChat:cancelTask (singleton orchestration) — the old
@@ -260,9 +275,12 @@ export const supplementalApis: SupplementalApis = {
   },
 
   claudeMd: {
-    generate: (projectRoot, options) => ipcRenderer.invoke('claudeMd:generate', projectRoot, options),
-    generateForDir: (projectRoot, dirPath) => ipcRenderer.invoke('claudeMd:generateForDir', projectRoot, dirPath),
+    generate: (projectRoot, options) =>
+      ipcRenderer.invoke('claudeMd:generate', projectRoot, options),
+    generateForDir: (projectRoot, dirPath) =>
+      ipcRenderer.invoke('claudeMd:generateForDir', projectRoot, dirPath),
     getStatus: () => ipcRenderer.invoke('claudeMd:getStatus'),
-    onStatusChange: (callback) => onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
+    onStatusChange: (callback) =>
+      onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
   },
-}
+};

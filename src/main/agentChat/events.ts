@@ -1,55 +1,29 @@
-import type { AgentChatEvent, AgentChatThreadStatus } from './types'
+import type { AgentChatEvent, AgentChatThreadStatus } from './types';
 
-export const AGENT_CHAT_INVOKE_CHANNELS = {
-  createThread: 'agentChat:createThread',
-  deleteThread: 'agentChat:deleteThread',
-  loadThread: 'agentChat:loadThread',
-  listThreads: 'agentChat:listThreads',
-  sendMessage: 'agentChat:sendMessage',
-  resumeLatestThread: 'agentChat:resumeLatestThread',
-  getLinkedDetails: 'agentChat:getLinkedDetails',
-  branchThread: 'agentChat:branchThread',
-  getLinkedTerminal: 'agentChat:getLinkedTerminal',
-  getBufferedChunks: 'agentChat:getBufferedChunks',
-  revertToSnapshot: 'agentChat:revertToSnapshot',
-  cancelTask: 'agentChat:cancelTask',
-  listMemories: 'agentChat:listMemories',
-  createMemory: 'agentChat:createMemory',
-  updateMemory: 'agentChat:updateMemory',
-  deleteMemory: 'agentChat:deleteMemory',
-} as const
+// Re-export everything from shared so existing imports of this file continue to work
+export type {
+  AgentChatEventChannel,
+  AgentChatEventType,
+  AgentChatInvokeChannel,
+} from '@shared/ipc/agentChatChannels';
+export {
+  AGENT_CHAT_EVENT_CHANNELS,
+  AGENT_CHAT_EVENT_TYPES,
+  AGENT_CHAT_INVOKE_CHANNELS,
+  AGENT_CHAT_STATUS_NAMES,
+} from '@shared/ipc/agentChatChannels';
 
-export const AGENT_CHAT_EVENT_CHANNELS = {
-  thread: 'agentChat:thread',
-  message: 'agentChat:message',
-  status: 'agentChat:status',
-  stream: 'agentChat:stream',
-  event: 'agentChat:event',
-} as const
+// Keep the satisfies constraints here so the main process can validate the types
+// at compile time. These are not re-exported (they're inferred in the shared file).
+import {
+  AGENT_CHAT_EVENT_TYPES as _EVENT_TYPES,
+  AGENT_CHAT_STATUS_NAMES as _STATUS_NAMES,
+} from '@shared/ipc/agentChatChannels';
 
-export const AGENT_CHAT_STATUS_NAMES = {
-  idle: 'idle',
-  submitting: 'submitting',
-  running: 'running',
-  verifying: 'verifying',
-  needsReview: 'needs_review',
-  complete: 'complete',
-  failed: 'failed',
-  cancelled: 'cancelled',
-} as const satisfies Record<string, AgentChatThreadStatus>
+// Type-check that shared constants satisfy the expected types
+const _statusCheck: Record<string, AgentChatThreadStatus> = _STATUS_NAMES;
+const _eventCheck: Record<string, AgentChatEvent['type']> = _EVENT_TYPES;
 
-export type AgentChatInvokeChannel =
-  (typeof AGENT_CHAT_INVOKE_CHANNELS)[keyof typeof AGENT_CHAT_INVOKE_CHANNELS]
-
-export type AgentChatEventChannel =
-  (typeof AGENT_CHAT_EVENT_CHANNELS)[keyof typeof AGENT_CHAT_EVENT_CHANNELS]
-
-export const AGENT_CHAT_EVENT_TYPES = {
-  threadUpdated: 'thread_updated',
-  messageUpdated: 'message_updated',
-  statusChanged: 'status_changed',
-  streamChunk: 'stream_chunk',
-} as const satisfies Record<string, AgentChatEvent['type']>
-
-export type AgentChatEventType =
-  (typeof AGENT_CHAT_EVENT_TYPES)[keyof typeof AGENT_CHAT_EVENT_TYPES]
+// Suppress unused variable warnings — these exist only to validate types
+void _statusCheck;
+void _eventCheck;

@@ -1,55 +1,29 @@
-import type { OrchestrationEvent, OrchestrationStatus } from './types'
+import type { OrchestrationEvent, OrchestrationStatus } from './types';
 
-export const ORCHESTRATION_INVOKE_CHANNELS = {
-  createTask: 'orchestration:createTask',
-  startTask: 'orchestration:startTask',
-  previewContext: 'orchestration:previewContext',
-  buildContextPacket: 'orchestration:buildContextPacket',
-  loadSession: 'orchestration:loadSession',
-  loadSessions: 'orchestration:loadSessions',
-  loadLatestSession: 'orchestration:loadLatestSession',
-  updateSession: 'orchestration:updateSession',
-  resumeTask: 'orchestration:resumeTask',
-  rerunVerification: 'orchestration:rerunVerification',
-  // cancelTask removed — cancel routes through agentChat:cancelTask (singleton adapter).
-  // See agentChat.ts createMinimalOrchestration() for the working cancel path.
-  pauseTask: 'orchestration:pauseTask',
-} as const
+// Re-export everything from shared so existing imports of this file continue to work
+export type {
+  OrchestrationEventChannel,
+  OrchestrationEventType,
+  OrchestrationInvokeChannel,
+} from '@shared/ipc/orchestrationChannels';
+export {
+  ORCHESTRATION_EVENT_CHANNELS,
+  ORCHESTRATION_EVENT_TYPES,
+  ORCHESTRATION_INVOKE_CHANNELS,
+  ORCHESTRATION_STATE_NAMES,
+} from '@shared/ipc/orchestrationChannels';
 
-export const ORCHESTRATION_EVENT_CHANNELS = {
-  state: 'orchestration:state',
-  provider: 'orchestration:provider',
-  verification: 'orchestration:verification',
-  session: 'orchestration:session',
-  event: 'orchestration:event',
-} as const
+// Keep the satisfies constraints here so the main process can validate the types
+// at compile time.
+import {
+  ORCHESTRATION_EVENT_TYPES as _EVENT_TYPES,
+  ORCHESTRATION_STATE_NAMES as _STATE_NAMES,
+} from '@shared/ipc/orchestrationChannels';
 
-export const ORCHESTRATION_STATE_NAMES = {
-  idle: 'idle',
-  selectingContext: 'selecting_context',
-  awaitingProvider: 'awaiting_provider',
-  applying: 'applying',
-  verifying: 'verifying',
-  needsReview: 'needs_review',
-  complete: 'complete',
-  failed: 'failed',
-  cancelled: 'cancelled',
-  paused: 'paused',
-} as const satisfies Record<string, OrchestrationStatus>
+// Type-check that shared constants satisfy the expected types
+const _stateCheck: Record<string, OrchestrationStatus> = _STATE_NAMES;
+const _eventCheck: Record<string, OrchestrationEvent['type']> = _EVENT_TYPES;
 
-export type OrchestrationInvokeChannel =
-  (typeof ORCHESTRATION_INVOKE_CHANNELS)[keyof typeof ORCHESTRATION_INVOKE_CHANNELS]
-
-export type OrchestrationEventChannel =
-  (typeof ORCHESTRATION_EVENT_CHANNELS)[keyof typeof ORCHESTRATION_EVENT_CHANNELS]
-
-export const ORCHESTRATION_EVENT_TYPES = {
-  stateChanged: 'state_changed',
-  providerProgress: 'provider_progress',
-  verificationUpdated: 'verification_updated',
-  sessionUpdated: 'session_updated',
-  taskResult: 'task_result',
-} as const satisfies Record<string, OrchestrationEvent['type']>
-
-export type OrchestrationEventType =
-  (typeof ORCHESTRATION_EVENT_TYPES)[keyof typeof ORCHESTRATION_EVENT_TYPES]
+// Suppress unused variable warnings — these exist only to validate types
+void _stateCheck;
+void _eventCheck;
