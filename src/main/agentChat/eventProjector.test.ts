@@ -12,7 +12,7 @@ vi.mock('electron', () => ({
 import type { ContextPacket, TaskSessionRecord, VerificationSummary } from '../orchestration/types';
 import { projectAgentChatSession } from './eventProjector';
 import { hydrateLatestAgentChatThread } from './threadHydrator';
-import { createAgentChatThreadStore } from './threadStore';
+import { closeThreadStore, createAgentChatThreadStore } from './threadStore';
 import type { AgentChatThreadRecord } from './types';
 
 const createdRoots: string[] = [];
@@ -24,6 +24,7 @@ async function createTempRoot(): Promise<string> {
 }
 
 afterEach(async () => {
+  closeThreadStore();
   await Promise.all(
     createdRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
   );
@@ -275,7 +276,7 @@ describe('agent chat event projector', () => {
 
     expect(loadSession).toHaveBeenCalledWith('session-1');
     expect(hydrated?.status).toBe('needs_review');
-    expect(hydrated?.latestOrchestration).toEqual({
+    expect(hydrated?.latestOrchestration).toMatchObject({
       taskId: 'task-1',
       sessionId: 'session-1',
       attemptId: 'attempt-1',

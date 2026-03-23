@@ -44,6 +44,7 @@ vi.mock('fs', () => ({
 // ── Import after mocks are set up ─────────────────────────────────────────────
 import {
   CURRENT_HOOK_VERSION,
+  getCurrentHookVersion,
   hooksAreUpToDate,
   installHooks,
   uninstallHooks,
@@ -93,12 +94,16 @@ function registerInstallHooksSkipTests(): void {
     mockFs.existsSync.mockImplementation(
       (p: string) => p === markerPath || (typeof p === 'string' && p.includes('assets')),
     );
-    mockFs.readFileSync.mockReturnValue(CURRENT_HOOK_VERSION);
+    // readFileSync is called both for the version marker and for hook asset files
+    // (to compute the SHA-256 hash). Return the real computed version for the marker
+    // by letting getCurrentHookVersion() run first, then stubbing readFileSync.
+    const currentVersion = getCurrentHookVersion();
+    mockFs.readFileSync.mockReturnValue(currentVersion);
 
     const result = await installHooks();
 
     expect(result.installed).toBe(false);
-    expect(result.skippedReason).toMatch(CURRENT_HOOK_VERSION);
+    expect(result.skippedReason).toMatch(currentVersion);
     expect(mockFs.copyFileSync).not.toHaveBeenCalled();
   });
 }
@@ -109,6 +114,10 @@ function registerInstallHooksInstallTests(): void {
     mockFs.existsSync.mockImplementation(
       (p: string) => typeof p === 'string' && p.includes('assets'),
     );
+    // Capture the real computed version before we stub readFileSync to throw.
+    // getCurrentHookVersion() is cached after the first call so we get the
+    // same hash that installHooks() will use internally.
+    const currentVersion = getCurrentHookVersion();
     mockFs.readFileSync.mockImplementation(() => {
       throw new Error('ENOENT');
     });
@@ -119,7 +128,7 @@ function registerInstallHooksInstallTests(): void {
     expect(result.firstInstall).toBe(true);
     expect(mockFs.mkdirSync).toHaveBeenCalledWith(claudeHooksDir, { recursive: true });
     expect(mockFs.copyFileSync).toHaveBeenCalled();
-    expect(mockFs.writeFileSync).toHaveBeenCalledWith(markerPath, CURRENT_HOOK_VERSION, 'utf8');
+    expect(mockFs.writeFileSync).toHaveBeenCalledWith(markerPath, currentVersion, 'utf8');
   });
 
   it('updates existing install when version is stale', async () => {
@@ -155,8 +164,13 @@ function registerInstallHooksMissingSourceTest(): void {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('CURRENT_HOOK_VERSION', () => {
-  it('is a semver string', () => {
-    expect(CURRENT_HOOK_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+  it('is the static sentinel value "auto"', () => {
+    expect(CURRENT_HOOK_VERSION).toBe('auto');
+  });
+
+  it('getCurrentHookVersion() returns a 16-char hex hash', () => {
+    // Reset the module cache so getCurrentHookVersion() recomputes from mocked fs
+    expect(getCurrentHookVersion()).toMatch(/^[0-9a-f]{16}$/);
   });
 });
 
@@ -173,7 +187,7 @@ describe('hooksAreUpToDate()', () => {
 
   it('returns true when marker matches current version', () => {
     mockFs.existsSync.mockImplementation((p: string) => p === markerPath);
-    mockFs.readFileSync.mockReturnValue(CURRENT_HOOK_VERSION);
+    mockFs.readFileSync.mockReturnValue(getCurrentHookVersion());
 
     expect(hooksAreUpToDate()).toBe(true);
   });
