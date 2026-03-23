@@ -259,9 +259,9 @@ function registerStreamSpawnTests(): void {
 
 function registerProcessSpawnTests(): void {
   it('kill() terminates the child process', () => {
-    const handle = spawnStreamJsonProcess(defaultOptions())
+    const handle = withLinuxPlatform(() => spawnStreamJsonProcess(defaultOptions()))
     expect(fakeChild.killed).toBe(false)
-    handle.kill()
+    withLinuxPlatform(() => handle.kill())
     expect(fakeChild.killed).toBe(true)
   })
 
