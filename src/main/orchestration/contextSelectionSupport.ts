@@ -322,9 +322,9 @@ export function findKeywordMatches(
   const pathValue = filePath.toLowerCase();
   const matches: string[] = [];
   for (const keyword of keywords) {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp above
     if (
       pathValue.includes(keyword) ||
+      // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp above
       (content && new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'i').test(content))
     ) {
       matches.push(keyword);

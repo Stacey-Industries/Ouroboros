@@ -195,8 +195,8 @@ export class AgentChatThreadStoreRuntime {
     await Promise.all(
       threads
         .slice(this.options.maxThreads)
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from hashed thread ID
         .map((thread) =>
+          // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from hashed thread ID
           fs.unlink(this.getThreadFilePath(thread.id)).catch((error) => {
             console.error('[agentChat] Failed to delete excess thread file:', thread.id, error);
           }),

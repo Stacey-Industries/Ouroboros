@@ -194,9 +194,9 @@ async function loadBinaryContent(filePath: string): Promise<{ success: true; dat
 async function listDirectoryItems(
   dirPath: string,
 ): Promise<{ success: true; items: ReturnType<typeof createDirItem>[] }> {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- dirPath is validated before this helper runs
   return {
     success: true,
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- dirPath is validated before this helper runs
     items: (await fs.readdir(dirPath, { withFileTypes: true })).map((entry) =>
       createDirItem(dirPath, entry),
     ),

@@ -148,8 +148,8 @@ function handleToolBlock(args: BlockHandlerArgs, toolActivity: ToolActivity): vo
   } else if (toolActivity.status === 'complete') {
     // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
     const block = ctx.accumulatedBlocks[blockIndex];
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
     if (block.kind === 'tool_use')
+      // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
       ctx.accumulatedBlocks[blockIndex] = { ...block, status: 'complete' } as AgentChatContentBlock;
     emitMonitorToolEnd(ctx, blockIndex, toolActivity.name, now);
   }

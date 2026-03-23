@@ -108,6 +108,7 @@ function killStreamJsonProcess(child: ChildProcess): void {
       return;
     }
     if (child.pid) {
+      // eslint-disable-next-line security/detect-child-process -- PID is a numeric process ID from child_process.spawn, not user input
       exec(`taskkill /T /F /PID ${child.pid}`, { timeout: 5000 }, () => {
         try { child.kill(); } catch { /* already dead */ }
       });

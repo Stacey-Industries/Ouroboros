@@ -30,8 +30,8 @@ export function broadcastStatusChange(): void {
   try {
     // Keep the web bridge optional here so importing LSP state in tests does
     // not pull the full Electron/window manager graph into module evaluation.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import in tests
     const { broadcastToWebClients } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import in tests
       require('./web/webServer') as typeof import('./web/webServer');
     broadcastToWebClients('lsp:statusChange', getRunningServers());
   } catch {

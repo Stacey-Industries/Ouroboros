@@ -66,6 +66,7 @@ async function removeRevertedFiles(workspaceRoot: string, filesToRemove: string[
   for (let i = 0; i < results.length; i++) {
     // eslint-disable-next-line security/detect-object-injection -- numeric indices into local arrays
     if (results[i].status === 'rejected')
+      // eslint-disable-next-line security/detect-object-injection -- numeric indices into local arrays
       console.warn(`[agentChat] revert: failed to remove added file ${filesToRemove[i]}`);
   }
 }

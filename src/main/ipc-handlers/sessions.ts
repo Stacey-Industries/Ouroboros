@@ -41,9 +41,9 @@ async function pruneOldSessions(): Promise<void> {
 
     stats.sort((left, right) => left.mtime - right.mtime);
     const toDelete = stats.slice(0, stats.length - MAX_SESSION_FILES);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
     await Promise.all(
       toDelete.map((entry) =>
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
         fs.unlink(path.join(sessionsDir, entry.name)).catch((error) => {
           console.error('[sessions] Failed to delete old session file:', entry.name, error);
         }),
