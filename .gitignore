@@ -74,3 +74,8 @@ stats/
 audit/
 plan/
 screenshots/
+
+# Temporary lint analysis artifacts
+tmp-*.js
+lint-output.txt
+.lint-report.json

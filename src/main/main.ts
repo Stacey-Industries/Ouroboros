@@ -253,8 +253,8 @@ function startWebServerAsync(): void {
   const webStaticDir = path.join(outMainDir, '../web');
   startWebServer({ port: webPort, staticDir: webStaticDir })
     .then(() => {
-      const token = getOrCreateWebToken();
-      console.log(`[web] Access URL: http://localhost:${webPort}?token=${token}`);
+      getOrCreateWebToken(); // Ensure token is generated; retrieve via Settings > General > Web Access
+      console.log(`[web] Access URL: http://localhost:${webPort}`);
     })
     .catch((error) => {
       console.error('[web] Failed to start web server:', error);
@@ -306,6 +306,10 @@ async function initCodebaseGraph(): Promise<void> {
 
 app.setName('Ouroboros');
 app.whenReady().then(initializeApplication);
+
+// Graceful shutdown on POSIX signals (Docker, systemd, etc.)
+process.on('SIGTERM', () => app.quit());
+process.on('SIGINT', () => app.quit());
 
 app.on('window-all-closed', async () => {
   stopContextRefreshTimer();

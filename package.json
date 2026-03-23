@@ -1,10 +1,14 @@
 {
   "name": "ouroboros",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "author": "Ouroboros",
   "main": "out/main/index.js",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -26,8 +30,8 @@
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
     "build:web": "vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
     "prepare": "simple-git-hooks",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
+    "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -52,8 +56,6 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.39.17",
-    "@types/express": "^5.0.6",
-    "@types/ws": "^8.18.1",
     "@xterm/addon-clipboard": "^0.2.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-image": "^0.9.0",
@@ -79,10 +81,11 @@
     "monaco-vim": "^0.4.4",
     "node-pty": "^1.2.0-beta.11",
     "pdfjs-dist": "^5.5.207",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "shiki": "^1.24.0",
-    "streamdown": "^2.4.0",
     "tree-sitter-wasms": "^0.1.13",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-languageserver-protocol": "^3.17.5",
@@ -91,14 +94,16 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.1",
     "@eslint/js": "^9.39.4",
     "@types/adm-zip": "^0.5.8",
     "@types/better-sqlite3": "^7.6.13",
     "@types/dompurify": "^3.0.5",
-    "@types/marked": "^5.0.2",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.17.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.20",
@@ -116,8 +121,6 @@
     "lint-staged": "^16.4.0",
     "postcss": "^8.4.49",
     "prettier": "^3.8.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "rollup-plugin-visualizer": "^7.0.1",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^3.4.17",
@@ -129,7 +132,7 @@
   "build": {
     "appId": "com.arcflow.ouroboros",
     "productName": "Ouroboros",
-    "copyright": "Copyright © 2025 Ouroboros",
+    "copyright": "Copyright © 2025-2026 Ouroboros",
     "directories": {
       "output": "dist",
       "buildResources": "build-resources"
@@ -145,6 +148,7 @@
     "npmRebuild": false,
     "asarUnpack": [
       "**/node_modules/node-pty/**",
+      "**/node_modules/better-sqlite3/**",
       "**/node_modules/web-tree-sitter/**",
       "**/node_modules/tree-sitter-wasms/**"
     ],
@@ -191,8 +195,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "ouroboros",
-      "repo": "ouroboros"
+      "owner": "colesam",
+      "repo": "agent-ide"
     }
   },
   "simple-git-hooks": {

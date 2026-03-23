@@ -91,7 +91,7 @@ function createGetFileContentHandler(queryRenderer: ToolHandlerDeps['queryRender
 
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated by the caller as a string param
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.promises.readFile(filePath, 'utf-8');
       return { path: filePath, content, unsaved: false };
     } catch (err) {
       throw new Error(`Cannot read file: ${(err as Error).message}`);
