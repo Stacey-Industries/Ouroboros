@@ -5,6 +5,7 @@
 
 import { type ChildProcess, exec, spawn } from 'child_process';
 
+import log from '../../logger';
 import type {
   StreamJsonEvent,
   StreamJsonProcessHandle,
@@ -91,10 +92,10 @@ function tryParseEvent(line: string): StreamJsonEvent | null {
     if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
       return parsed as StreamJsonEvent;
     }
-    console.warn('[stream-json] parsed JSON lacks "type" field:', trimmed.slice(0, 120));
+    log.warn('parsed JSON lacks "type" field:', trimmed.slice(0, 120));
     return null;
   } catch {
-    console.warn('[stream-json] malformed line:', trimmed.slice(0, 120));
+    log.warn('malformed line:', trimmed.slice(0, 120));
     return null;
   }
 }
@@ -110,10 +111,18 @@ function killStreamJsonProcess(child: ChildProcess): void {
     if (child.pid) {
       // eslint-disable-next-line security/detect-child-process -- PID is a numeric process ID from child_process.spawn, not user input
       exec(`taskkill /T /F /PID ${child.pid}`, { timeout: 5000 }, () => {
-        try { child.kill(); } catch { /* already dead */ }
+        try {
+          child.kill();
+        } catch {
+          /* already dead */
+        }
       });
     } else {
-      try { child.kill(); } catch { /* already dead */ }
+      try {
+        child.kill();
+      } catch {
+        /* already dead */
+      }
     }
   } catch {
     /* already dead */
@@ -142,9 +151,7 @@ function handleStdoutData(chunk: Buffer, args: StdoutHandlerArgs): void {
   const { state, child, onEvent, reject } = args;
   state.stdoutBuf += chunk.toString();
   if (state.stdoutBuf.length > MAX_BUFFER_BYTES) {
-    console.error(
-      `[stream-json] stdout buffer exceeded ${MAX_BUFFER_BYTES} bytes — killing process`,
-    );
+    log.error(`stdout buffer exceeded ${MAX_BUFFER_BYTES} bytes — killing process`);
     reject(new Error('Stream buffer exceeded maximum allowed size (100 MB). Process killed.'));
     try {
       child.kill();

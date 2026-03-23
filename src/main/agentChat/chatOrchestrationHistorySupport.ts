@@ -4,6 +4,7 @@
  * Extracted from chatOrchestrationRequestSupport.ts to keep file line counts under the ESLint limit.
  */
 
+import log from '../logger';
 import type { ConversationMessage } from '../orchestration/types';
 import { computeAdaptiveBudgets } from './adaptiveBudget';
 import {
@@ -58,7 +59,7 @@ export function getAdaptiveBudgets(model: string, thread?: AgentChatThreadRecord
       contextPacketMaxTokens: adaptive.contextPacketMaxTokens,
     };
   } catch (err) {
-    console.warn('[agentChat] adaptive budget failed, using static fallback:', err);
+    log.warn('adaptive budget failed, using static fallback:', err);
     return getHistoryBudgets(model);
   }
 }
@@ -191,7 +192,7 @@ export function buildConversationHistory(
     const compacted = tryCompact(filtered, budgets, thread);
     if (compacted) return compacted;
   } catch (err) {
-    console.warn('[agentChat] Compaction failed, falling back to message dropping:', err);
+    log.warn('Compaction failed, falling back to message dropping:', err);
   }
 
   return dropOldestToFit(filtered, budgets);

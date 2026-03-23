@@ -1,4 +1,5 @@
 /* @refresh reset */
+import log from 'electron-log/renderer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type {
@@ -10,10 +11,7 @@ import type {
   ImageAttachment,
   ModelProvider,
 } from '../../types/electron';
-import {
-  buildAgentChatWorkspaceModel,
-  useAgentChatActions,
-} from './agentChatWorkspaceActions';
+import { buildAgentChatWorkspaceModel, useAgentChatActions } from './agentChatWorkspaceActions';
 import {
   useActiveThread,
   useAgentChatEventSubscriptions,
@@ -82,7 +80,11 @@ export interface AgentChatWorkspaceModel {
   sendQueuedMessageNow: (id: string) => Promise<void>;
 }
 
-const DEFAULT_CHAT_OVERRIDES: ChatOverrides = { model: '', effort: 'medium', permissionMode: 'default' };
+const DEFAULT_CHAT_OVERRIDES: ChatOverrides = {
+  model: '',
+  effort: 'medium',
+  permissionMode: 'default',
+};
 
 let queueIdCounter = 0;
 
@@ -97,12 +99,18 @@ interface ModelSettingsSetters {
 
 type CfgType = Awaited<ReturnType<typeof window.electronAPI.config.getAll>>;
 
-function getSettingsModel(cfg: CfgType): string { return cfg?.claudeCliSettings?.model ?? ''; }
-function getCodexSettingsModel(cfg: CfgType): string { return cfg?.codexCliSettings?.model ?? ''; }
+function getSettingsModel(cfg: CfgType): string {
+  return cfg?.claudeCliSettings?.model ?? '';
+}
+function getCodexSettingsModel(cfg: CfgType): string {
+  return cfg?.codexCliSettings?.model ?? '';
+}
 function getDefaultProvider(cfg: CfgType): 'claude-code' | 'codex' | 'anthropic-api' {
   return cfg?.agentChatSettings?.defaultProvider ?? 'claude-code';
 }
-function getModelProviders(cfg: CfgType): ModelProvider[] { return cfg?.modelProviders ?? []; }
+function getModelProviders(cfg: CfgType): ModelProvider[] {
+  return cfg?.modelProviders ?? [];
+}
 
 function applyModelSettingsConfig(cfg: CfgType, setters: ModelSettingsSetters): void {
   setters.setSettingsModel(getSettingsModel(cfg));
@@ -114,18 +122,33 @@ function applyModelSettingsConfig(cfg: CfgType, setters: ModelSettingsSetters): 
 function useModelSettings() {
   const [settingsModel, setSettingsModel] = useState('');
   const [codexSettingsModel, setCodexSettingsModel] = useState('');
-  const [defaultProvider, setDefaultProvider] = useState<'claude-code' | 'codex' | 'anthropic-api'>('claude-code');
+  const [defaultProvider, setDefaultProvider] = useState<'claude-code' | 'codex' | 'anthropic-api'>(
+    'claude-code',
+  );
   const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
   const [codexModels, setCodexModels] = useState<CodexModelOption[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
-      window.electronAPI.config.getAll()
-        .then((cfg) => applyModelSettingsConfig(cfg, { setSettingsModel, setCodexSettingsModel, setDefaultProvider, setModelProviders }))
-        .catch((error) => { console.error('[agentChat] Failed to load config:', error); });
-      window.electronAPI.codex.listModels().then(setCodexModels).catch((error) => {
-        console.error('[agentChat] Failed to load Codex models:', error);
-      });
+      window.electronAPI.config
+        .getAll()
+        .then((cfg) =>
+          applyModelSettingsConfig(cfg, {
+            setSettingsModel,
+            setCodexSettingsModel,
+            setDefaultProvider,
+            setModelProviders,
+          }),
+        )
+        .catch((error) => {
+          log.error('Failed to load config:', error);
+        });
+      window.electronAPI.codex
+        .listModels()
+        .then(setCodexModels)
+        .catch((error) => {
+          log.error('Failed to load Codex models:', error);
+        });
     }
   }, []);
 
@@ -138,10 +161,13 @@ function usePerThreadOverrides(activeThreadId: string | null) {
   const [chatOverrides, setChatOverridesState] = useState<ChatOverrides>(DEFAULT_CHAT_OVERRIDES);
   const chatOverridesMapRef = useRef<Map<string | null, ChatOverrides>>(new Map());
 
-  const setChatOverrides = useCallback((overrides: ChatOverrides) => {
-    setChatOverridesState(overrides);
-    chatOverridesMapRef.current.set(activeThreadId, overrides);
-  }, [activeThreadId]);
+  const setChatOverrides = useCallback(
+    (overrides: ChatOverrides) => {
+      setChatOverridesState(overrides);
+      chatOverridesMapRef.current.set(activeThreadId, overrides);
+    },
+    [activeThreadId],
+  );
 
   useEffect(() => {
     const saved = chatOverridesMapRef.current.get(activeThreadId);
@@ -167,13 +193,16 @@ function useQueueActions(setDraft: (v: string) => void) {
     ]);
   }, []);
 
-  const editQueuedMessage = useCallback((id: string) => {
-    setQueuedMessages((prev) => {
-      const item = prev.find((m) => m.id === id);
-      if (item) setDraft(item.content);
-      return prev.filter((m) => m.id !== id);
-    });
-  }, [setDraft]);
+  const editQueuedMessage = useCallback(
+    (id: string) => {
+      setQueuedMessages((prev) => {
+        const item = prev.find((m) => m.id === id);
+        if (item) setDraft(item.content);
+        return prev.filter((m) => m.id !== id);
+      });
+    },
+    [setDraft],
+  );
 
   const deleteQueuedMessage = useCallback((id: string) => {
     setQueuedMessages((prev) => prev.filter((m) => m.id !== id));
@@ -205,11 +234,21 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
   useAgentChatDraftPersistence(threadState.activeThreadId, draft, setDraft);
 
   return {
-    activeThread, attachments, contextFilePaths,
-    draft, isSending, pendingUserMessage,
-    ...modelSettings, ...overrides, ...queue,
-    setAttachments, setContextFilePaths, setDraft, setIsSending,
-    setPendingUserMessage, threadState,
+    activeThread,
+    attachments,
+    contextFilePaths,
+    draft,
+    isSending,
+    pendingUserMessage,
+    ...modelSettings,
+    ...overrides,
+    ...queue,
+    setAttachments,
+    setContextFilePaths,
+    setDraft,
+    setIsSending,
+    setPendingUserMessage,
+    threadState,
   };
 }
 
@@ -218,17 +257,23 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
 export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWorkspaceModel {
   const controller = useAgentChatWorkspaceController(projectRoot);
   const actions = useAgentChatActions({
-    ...controller, projectRoot,
+    ...controller,
+    projectRoot,
     activeThread: controller.activeThread,
     activeThreadId: controller.threadState.activeThreadId,
     setActiveThreadId: controller.threadState.setActiveThreadId,
     setError: controller.threadState.setError,
     setThreads: controller.threadState.setThreads,
   });
-  const { sendMessage, sendQueuedMessageNow, detailsState, startNewChat } = useWorkspaceHooks(controller, actions);
+  const { sendMessage, sendQueuedMessageNow, detailsState, startNewChat } = useWorkspaceHooks(
+    controller,
+    actions,
+  );
 
   return buildAgentChatWorkspaceModel({
-    ...controller, ...actions, ...detailsState,
+    ...controller,
+    ...actions,
+    ...detailsState,
     activeThreadId: controller.threadState.activeThreadId,
     closeDetails: detailsState.closeDetails,
     details: detailsState.details,
@@ -242,7 +287,8 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
     openLinkedDetails: detailsState.openDetails,
     projectRoot,
     reloadThreads: controller.threadState.reloadThreads,
-    sendMessage, startNewChat,
+    sendMessage,
+    startNewChat,
     threads: controller.threadState.threads,
     sendQueuedMessageNow,
   });

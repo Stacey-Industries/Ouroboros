@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -70,7 +71,11 @@ export function mergeThreadCollection(
   // existing one (possible due to race conditions or stale snapshots),
   // merge message arrays by ID to avoid losing messages.
   let merged = nextThread;
-  if (existing && existing.messages.length > 0 && nextThread.messages.length < existing.messages.length) {
+  if (
+    existing &&
+    existing.messages.length > 0 &&
+    nextThread.messages.length < existing.messages.length
+  ) {
     const messageMap = new Map<string, AgentChatMessageRecord>();
     for (const msg of existing.messages) messageMap.set(msg.id, msg);
     // Incoming messages take priority (they may have updated fields)
@@ -158,7 +163,9 @@ async function listThreadsForWorkspace(workspaceRoot: string): Promise<AgentChat
   return result.threads ?? [];
 }
 
-async function resumeLatestThreadForWorkspace(workspaceRoot: string): Promise<AgentChatThreadRecord | null> {
+async function resumeLatestThreadForWorkspace(
+  workspaceRoot: string,
+): Promise<AgentChatThreadRecord | null> {
   const result = await window.electronAPI.agentChat.resumeLatestThread(workspaceRoot);
   if (!result.success) {
     throw new Error(result.error ?? 'Unable to resume the latest chat thread.');
@@ -194,13 +201,7 @@ function useInitialThreadReload(reloadThreads: () => Promise<void>): void {
 }
 
 function useReloadThreads(args: ReloadThreadsArgs): () => Promise<void> {
-  const {
-    projectRoot,
-    setActiveThreadId,
-    setError,
-    setIsLoading,
-    setThreads,
-  } = args;
+  const { projectRoot, setActiveThreadId, setError, setIsLoading, setThreads } = args;
 
   return useCallback(async (): Promise<void> => {
     if (!projectRoot || !hasElectronAPI()) {
@@ -223,7 +224,9 @@ function useReloadThreads(args: ReloadThreadsArgs): () => Promise<void> {
         ? mergeThreadCollection(listedThreads, latestThread)
         : listedThreads;
       setThreads(nextThreads);
-      setActiveThreadId((currentThreadId) => latestThread?.id ?? pickActiveThreadId(nextThreads, currentThreadId));
+      setActiveThreadId(
+        (currentThreadId) => latestThread?.id ?? pickActiveThreadId(nextThreads, currentThreadId),
+      );
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -270,14 +273,26 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
 
     const cleanupThread = window.electronAPI.agentChat.onThreadUpdate((thread) => {
       if (thread.workspaceRoot !== projectRootRef.current) return;
-      console.log('[agentChat:debug] onThreadUpdate:', thread.id,
-        'messages:', thread.messages.length, 'status:', thread.status,
-        'ids:', thread.messages.map(m => `${m.role}:${m.id.slice(-6)}`).join(', '));
+      log.info(
+        'onThreadUpdate:',
+        thread.id,
+        'messages:',
+        thread.messages.length,
+        'status:',
+        thread.status,
+        'ids:',
+        thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(', '),
+      );
       setThreads((currentThreads) => {
-        const existing = currentThreads.find(t => t.id === thread.id);
+        const existing = currentThreads.find((t) => t.id === thread.id);
         if (existing && existing.messages.length > thread.messages.length) {
-          console.warn('[agentChat:debug] INCOMING THREAD HAS FEWER MESSAGES!',
-            'existing:', existing.messages.length, 'incoming:', thread.messages.length);
+          log.warn(
+            'INCOMING THREAD HAS FEWER MESSAGES!',
+            'existing:',
+            existing.messages.length,
+            'incoming:',
+            thread.messages.length,
+          );
         }
         return mergeThreadCollection(currentThreads, thread);
       });
@@ -316,10 +331,13 @@ export function useThreadSelectionActions(
   setActiveThreadId: Dispatch<SetStateAction<string | null>>,
   setError: Dispatch<SetStateAction<string | null>>,
 ) {
-  const selectThread = useCallback((threadId: string | null) => {
-    setActiveThreadId(threadId);
-    setError(null);
-  }, [setActiveThreadId, setError]);
+  const selectThread = useCallback(
+    (threadId: string | null) => {
+      setActiveThreadId(threadId);
+      setError(null);
+    },
+    [setActiveThreadId, setError],
+  );
 
   const startNewChat = useCallback(() => {
     setActiveThreadId(null);

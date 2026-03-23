@@ -7,6 +7,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import type TreeSitterModule from 'web-tree-sitter';
 
+import log from '../logger';
 import { parseFileWithTree, resolveEdgeReferences, walkDirectory } from './graphParser';
 import type { GraphQueryEngine } from './graphQuery';
 import type { GraphStore } from './graphStore';
@@ -102,7 +103,7 @@ export async function indexAllFiles(
   if (!incremental) ctx.store.clear();
 
   const files = await walkDirectory(projectRoot);
-  console.log(`[codebase-graph] Found ${files.length} files to index`);
+  log.info(`Found ${files.length} files to index`);
 
   const allNodes: GraphNode[] = [];
   const allEdges: Array<{ source: string; target: string; type: string }> = [];
@@ -115,7 +116,7 @@ export async function indexAllFiles(
       allNodes.push(...nodes);
       allEdges.push(...edges);
     } catch (err) {
-      console.warn(`[codebase-graph] Failed to parse ${filePath}:`, err);
+      log.warn(`Failed to parse ${filePath}:`, err);
     }
     // Yield the event loop every 10 files so IPC and other async work
     // can interleave. Without this, tree-sitter WASM parsing starves
@@ -152,7 +153,7 @@ export async function reindexSingleFile(ctx: IndexContext, fullPath: string): Pr
     for (const node of result.nodes) ctx.store.addNode(node);
     for (const edge of result.edges) ctx.store.addEdge(edge);
   } catch (err) {
-    console.warn(`[codebase-graph] Failed to reindex ${fullPath}:`, err);
+    log.warn(`Failed to reindex ${fullPath}:`, err);
   }
 }
 

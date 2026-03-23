@@ -31,6 +31,7 @@ import {
   registerPtyHandlers,
   registerSessionHandlers,
 } from './ipc-handlers';
+import log from './logger';
 import { getAllProviders } from './providers';
 import { clearRegistry } from './web/handlerRegistry';
 
@@ -196,7 +197,7 @@ export function cleanupIpcHandlers(): void {
 
   // Stop all LSP servers
   lspStopAll().catch((error) => {
-    console.error('[ipc] Failed to stop LSP servers during cleanup:', error);
+    log.error('Failed to stop LSP servers during cleanup:', error);
   });
 
   // Remove all handlers from ipcMain and the WebSocket bridge registry

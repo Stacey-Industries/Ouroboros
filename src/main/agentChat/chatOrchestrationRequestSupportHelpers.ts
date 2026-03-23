@@ -8,7 +8,13 @@
 
 import type { ModelSlotAssignments } from '../config';
 import { getConfigValue } from '../config';
-import type { OrchestrationMode, TaskRequest, TaskRequestContextSelection, TaskRequestMetadata } from '../orchestration/types';
+import log from '../logger';
+import type {
+  OrchestrationMode,
+  TaskRequest,
+  TaskRequestContextSelection,
+  TaskRequestMetadata,
+} from '../orchestration/types';
 import { buildConversationHistory, getAdaptiveBudgets } from './chatOrchestrationHistorySupport';
 import type { ResolvedAgentChatSettings } from './settingsResolver';
 import { isNonEmptyString } from './threadStoreSupport';
@@ -90,7 +96,11 @@ export function buildContextSummary(
         ...(norm.includedFiles ?? []),
       ]).size
     : 0;
-  return { selectedFileCount, omittedFileCount: norm?.excludedFiles?.length ?? 0, usedAdvancedControls };
+  return {
+    selectedFileCount,
+    omittedFileCount: norm?.excludedFiles?.length ?? 0,
+    usedAdvancedControls,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,10 +119,17 @@ export function mapSourceToOrigin(
 // Task request builder
 // ---------------------------------------------------------------------------
 
-function applyBudgetCap(taskRequest: TaskRequest, model: string, thread: AgentChatThreadRecord): TaskRequest {
+function applyBudgetCap(
+  taskRequest: TaskRequest,
+  model: string,
+  thread: AgentChatThreadRecord,
+): TaskRequest {
   const budgets = getAdaptiveBudgets(model, thread);
   if (!budgets.contextPacketMaxTokens) return taskRequest;
-  return { ...taskRequest, budget: { ...taskRequest.budget, maxTokens: budgets.contextPacketMaxTokens } };
+  return {
+    ...taskRequest,
+    budget: { ...taskRequest.budget, maxTokens: budgets.contextPacketMaxTokens },
+  };
 }
 
 export function buildBaseTaskRequest(args: {
@@ -133,7 +150,8 @@ export function buildBaseTaskRequest(args: {
     verificationProfile: args.resolved.verificationProfile,
     model: args.currentModel || undefined,
     effort: args.resolved.effort || undefined,
-    permissionMode: args.resolved.permissionMode !== 'default' ? args.resolved.permissionMode : undefined,
+    permissionMode:
+      args.resolved.permissionMode !== 'default' ? args.resolved.permissionMode : undefined,
     contextSelection: normalizeContextSelection(args.request.contextSelection),
     conversationHistory: args.canResume
       ? []
@@ -156,9 +174,15 @@ export function buildTaskRequest(args: {
   thread: AgentChatThreadRecord;
 }): TaskRequest {
   const currentModel = args.resolved.model || '';
-  const { canResume, resumeSessionId, providerChanged } = resolveResumeInfo(args.thread, args.resolved.provider);
+  const { canResume, resumeSessionId, providerChanged } = resolveResumeInfo(
+    args.thread,
+    args.resolved.provider,
+  );
   if (!canResume && args.thread.messages.some((m) => m.role === 'assistant')) {
-    logResumeSkipped(args.thread, args.resolved.provider, currentModel, { providerChanged, resumeSessionId });
+    logResumeSkipped(args.thread, args.resolved.provider, currentModel, {
+      providerChanged,
+      resumeSessionId,
+    });
   }
   args.thread.turnCount = (args.thread.turnCount ?? 0) + 1;
   const base = buildBaseTaskRequest({ ...args, currentModel, canResume, resumeSessionId });
@@ -195,7 +219,7 @@ function logResumeSkipped(
   model: string,
   info: { providerChanged: boolean; resumeSessionId: string | undefined },
 ): void {
-  console.log('[agentChat:resume] resume skipped:', {
+  log.info('resume skipped:', {
     resumeSessionId: info.resumeSessionId ?? 'undefined',
     providerChanged: info.providerChanged,
     currentProvider: provider,
@@ -210,15 +234,25 @@ function logResumeSkipped(
 // Send options resolution helpers
 // ---------------------------------------------------------------------------
 
-function resolveProviderModel(settings: ResolvedAgentChatSettings, provider: AgentChatSettings['defaultProvider']): string {
+function resolveProviderModel(
+  settings: ResolvedAgentChatSettings,
+  provider: AgentChatSettings['defaultProvider'],
+): string {
   return provider === 'codex' ? settings.codexCliSettings.model : settings.claudeCliSettings.model;
 }
 
-function resolvePermissionMode(settings: ResolvedAgentChatSettings, provider: AgentChatSettings['defaultProvider']): string {
+function resolvePermissionMode(
+  settings: ResolvedAgentChatSettings,
+  provider: AgentChatSettings['defaultProvider'],
+): string {
   return provider === 'codex' ? 'default' : settings.claudeCliSettings.permissionMode || 'default';
 }
 
-function resolveModelWithSlot(override: string | undefined, settings: ResolvedAgentChatSettings, provider: AgentChatSettings['defaultProvider']): string {
+function resolveModelWithSlot(
+  override: string | undefined,
+  settings: ResolvedAgentChatSettings,
+  provider: AgentChatSettings['defaultProvider'],
+): string {
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined;
   const slotDefault = slots?.agentChat || '';
   return override || slotDefault || resolveProviderModel(settings, provider);

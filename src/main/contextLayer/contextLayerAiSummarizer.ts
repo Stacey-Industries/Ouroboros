@@ -6,6 +6,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import type { ModuleContextSummary } from '../orchestration/types';
 import type { CachedModuleData, DetectedModule } from './contextLayerControllerHelpers';
 import { selectRepresentativeFiles } from './contextLayerControllerHelpers';
@@ -117,13 +118,9 @@ function parseAiResponse(
 function handleAiFailure(state: AiSummarizerState, moduleId: string, err: unknown): void {
   state.failureCount++;
   if (state.failureCount >= state.maxFailures) {
-    console.warn(
-      '[context-layer] AI enrichment disabled after',
-      state.failureCount,
-      'consecutive failures',
-    );
+    log.warn('AI enrichment disabled after', state.failureCount, 'consecutive failures');
   } else {
-    console.warn(`[context-layer] AI summarize failed for ${moduleId}:`, err);
+    log.warn(`AI summarize failed for ${moduleId}:`, err);
   }
 }
 
@@ -151,7 +148,7 @@ export async function aiEnrichModules(opts: {
       const enriched = await aiSummarizeModule(aiState, cached.module, cached.summary);
       if (enriched) {
         cachedModules.set(id, { ...cached, summary: enriched, aiEnriched: true });
-        console.log(`[context-layer] AI enriched: ${id}`);
+        log.info(`AI enriched: ${id}`);
       }
     }
   };

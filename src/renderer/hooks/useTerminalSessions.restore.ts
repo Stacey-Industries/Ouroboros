@@ -1,8 +1,13 @@
+import log from 'electron-log/renderer';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
-import type { SavedSessionSnapshot, SpawnClaudeOptions, SpawnCodexOptions } from './useTerminalSessions.effects';
+import type {
+  SavedSessionSnapshot,
+  SpawnClaudeOptions,
+  SpawnCodexOptions,
+} from './useTerminalSessions.effects';
 import {
   hasElectronAPI,
   registerExitHandler,
@@ -41,10 +46,14 @@ function isOptionalBoolean(value: unknown): boolean {
 function isSavedSessionSnapshot(value: unknown): value is SavedSessionSnapshot {
   if (!value || typeof value !== 'object') return false;
   const s = value as SavedSessionSnapshot;
-  return typeof s.cwd === 'string'
-    && isOptionalString(s.title) && isOptionalBoolean(s.isClaude)
-    && isOptionalBoolean(s.isCodex) && isOptionalString(s.claudeSessionId)
-    && isOptionalString(s.codexThreadId);
+  return (
+    typeof s.cwd === 'string' &&
+    isOptionalString(s.title) &&
+    isOptionalBoolean(s.isClaude) &&
+    isOptionalBoolean(s.isCodex) &&
+    isOptionalString(s.claudeSessionId) &&
+    isOptionalString(s.codexThreadId)
+  );
 }
 
 async function readSavedSessionSnapshots(): Promise<SavedSessionSnapshot[]> {
@@ -70,12 +79,14 @@ export function useRestoreSessions(deps: RestoreDependencies): RestoreState {
     if (hasRestoredRef.current) return;
     hasRestoredRef.current = true;
 
-    void restoreSessionsAsync(depsRef.current).then((seed) => {
-      setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: seed });
-    }).catch((error) => {
-      console.error('[terminal] Failed to restore terminal sessions:', error);
-      setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: null });
-    });
+    void restoreSessionsAsync(depsRef.current)
+      .then((seed) => {
+        setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: seed });
+      })
+      .catch((error) => {
+        log.error('Failed to restore terminal sessions:', error);
+        setRestoreState({ hasCompletedRestore: true, persistedSessionsSeed: null });
+      });
   }, []);
 
   return restoreState;
@@ -133,7 +144,10 @@ function restoreSessionFromSnapshot(
 function matchActiveSessionsToSavedOrder(
   active: Array<{ id: string; cwd: string }>,
   savedSnapshots: SavedSessionSnapshot[],
-): Array<{ activeSession: { id: string; cwd: string }; savedSnapshot: SavedSessionSnapshot }> | null {
+): Array<{
+  activeSession: { id: string; cwd: string };
+  savedSnapshot: SavedSessionSnapshot;
+}> | null {
   if (savedSnapshots.length !== active.length) return null;
 
   const activeByCwd = new Map<string, Array<{ id: string; cwd: string }>>();
@@ -153,17 +167,25 @@ function matchActiveSessionsToSavedOrder(
   const hasUnmatched = Array.from(activeByCwd.values()).some((bucket) => bucket.length > 0);
   if (hasUnmatched) return null;
 
-  return matches as Array<{ activeSession: { id: string; cwd: string }; savedSnapshot: SavedSessionSnapshot }>;
+  return matches as Array<{
+    activeSession: { id: string; cwd: string };
+    savedSnapshot: SavedSessionSnapshot;
+  }>;
 }
 
 function reconnectSessions(
   active: Array<{ id: string; cwd: string }>,
   savedSnapshots: SavedSessionSnapshot[],
-  deps: Pick<RestoreDependencies, 'setSessions' | 'setActiveSessionId' | 'spawnCountRef' | 'clearKillTimers'>,
+  deps: Pick<
+    RestoreDependencies,
+    'setSessions' | 'setActiveSessionId' | 'spawnCountRef' | 'clearKillTimers'
+  >,
 ): string | null {
   const matchedSessions = matchActiveSessionsToSavedOrder(active, savedSnapshots);
   const reconnected: TerminalSession[] = matchedSessions
-    ? matchedSessions.map(({ activeSession, savedSnapshot }, i) => restoreSessionFromSnapshot(activeSession, i, savedSnapshot))
+    ? matchedSessions.map(({ activeSession, savedSnapshot }, i) =>
+        restoreSessionFromSnapshot(activeSession, i, savedSnapshot),
+      )
     : active.map((session, i) => restoreSessionFromSnapshot(session, i));
 
   deps.setSessions(reconnected);
@@ -194,11 +216,17 @@ async function spawnSavedSession(
   deps: Pick<RestoreDependencies, 'spawnSession' | 'spawnClaudeSession' | 'spawnCodexSession'>,
 ): Promise<void> {
   if (snapshot.isClaude || autoLaunch) {
-    await deps.spawnClaudeSession(snapshot.cwd, { label: snapshot.title, resumeMode: snapshot.claudeSessionId ?? 'continue' });
+    await deps.spawnClaudeSession(snapshot.cwd, {
+      label: snapshot.title,
+      resumeMode: snapshot.claudeSessionId ?? 'continue',
+    });
     return;
   }
   if (snapshot.isCodex) {
-    await deps.spawnCodexSession(snapshot.cwd, { label: snapshot.title, resumeThreadId: snapshot.codexThreadId });
+    await deps.spawnCodexSession(snapshot.cwd, {
+      label: snapshot.title,
+      resumeThreadId: snapshot.codexThreadId,
+    });
     return;
   }
   await deps.spawnSession(snapshot.cwd);

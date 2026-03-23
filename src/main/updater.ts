@@ -15,7 +15,8 @@ interface AutoUpdaterLike {
   on(event: string, listener: (...args: unknown[]) => void): this;
 }
 
- 
+import log from './logger';
+
 let _autoUpdater: AutoUpdaterLike | null = null;
 
 try {
@@ -26,7 +27,7 @@ try {
   _autoUpdater.autoDownload = false;
   _autoUpdater.autoInstallOnAppQuit = true;
 } catch {
-  console.log('[updater] electron-updater not installed — auto-update disabled');
+  log.info('electron-updater not installed — auto-update disabled');
 }
 
 /**

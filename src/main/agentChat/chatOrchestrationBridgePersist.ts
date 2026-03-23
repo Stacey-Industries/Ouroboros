@@ -5,6 +5,7 @@
  * Handles SQLite persistence for completed, cancelled, and failed agent turns.
  */
 
+import log from '../logger';
 import type { ProviderProgressEvent } from '../orchestration/types';
 import { emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import {
@@ -156,7 +157,10 @@ async function persistCompletedTurnInner(
 ): Promise<void> {
   const { threadId, assistantMessageId } = ctx;
   const updatedThread = await upsertAssistantMessage(
-    runtime, threadId, assistantMessageId, assistantMessage,
+    runtime,
+    threadId,
+    assistantMessageId,
+    assistantMessage,
   );
   const thread = await runtime.threadStore.loadThread(threadId);
   const freshLink = buildFreshLink(ctx, thread?.latestOrchestration, providerSessionIdFromStream);
@@ -190,7 +194,7 @@ export async function persistCompletedTurn(
   try {
     await persistCompletedTurnInner(ctx, runtime, assistantMessage, providerSessionIdFromStream);
   } catch (error) {
-    console.error('[agentChat] completion persistence failed for thread', threadId, error);
+    log.error('completion persistence failed for thread', threadId, error);
   } finally {
     emitTurnComplete(runtime, ctx);
   }
@@ -219,14 +223,21 @@ export async function persistCancelledTurn(
 
   try {
     const { updatedThread } = await upsertOrAppendMessage({
-      runtime, threadId, messageId: assistantMessageId, message: partialMessage,
-      update: { content: partialMessage.content, orchestration: partialMessage.orchestration,
-        toolsSummary: partialMessage.toolsSummary, blocks: partialMessage.blocks },
+      runtime,
+      threadId,
+      messageId: assistantMessageId,
+      message: partialMessage,
+      update: {
+        content: partialMessage.content,
+        orchestration: partialMessage.orchestration,
+        toolsSummary: partialMessage.toolsSummary,
+        blocks: partialMessage.blocks,
+      },
     });
     const finalThread = await finalizeThreadStatus(runtime, updatedThread, 'cancelled', ctx.link);
     emitSnapshotChunk(runtime, threadId, assistantMessageId, finalThread);
   } catch (error) {
-    console.error('[agentChat] cancel persistence failed for thread', threadId, error);
+    log.error('cancel persistence failed for thread', threadId, error);
   } finally {
     emitTurnComplete(runtime, ctx, 'Cancelled');
   }
@@ -257,14 +268,21 @@ export async function persistFailedTurnWithContent(
 
   try {
     const { updatedThread } = await upsertOrAppendMessage({
-      runtime, threadId, messageId: assistantMessageId, message: partialMessage,
-      update: { content: partialMessage.content, orchestration: partialMessage.orchestration,
-        toolsSummary: partialMessage.toolsSummary, blocks: partialMessage.blocks },
+      runtime,
+      threadId,
+      messageId: assistantMessageId,
+      message: partialMessage,
+      update: {
+        content: partialMessage.content,
+        orchestration: partialMessage.orchestration,
+        toolsSummary: partialMessage.toolsSummary,
+        blocks: partialMessage.blocks,
+      },
     });
     const finalThread = await finalizeThreadStatus(runtime, updatedThread, 'failed', ctx.link);
     emitSnapshotChunk(runtime, threadId, assistantMessageId, finalThread);
   } catch (error) {
-    console.error('[agentChat] failure persistence failed for thread', threadId, error);
+    log.error('failure persistence failed for thread', threadId, error);
   } finally {
     emitTurnError(runtime, ctx, errorMessage);
   }
@@ -291,14 +309,20 @@ export async function persistFailedTurnNoContent(
 
   try {
     const { updatedThread } = await upsertOrAppendMessage({
-      runtime, threadId, messageId: assistantMessageId, message: failureMessage,
-      update: { content: failureMessage.content, orchestration: failureMessage.orchestration,
-        error: failureMessage.error },
+      runtime,
+      threadId,
+      messageId: assistantMessageId,
+      message: failureMessage,
+      update: {
+        content: failureMessage.content,
+        orchestration: failureMessage.orchestration,
+        error: failureMessage.error,
+      },
     });
     const finalThread = await finalizeThreadStatus(runtime, updatedThread, 'failed', ctx.link);
     emitSnapshotChunk(runtime, threadId, assistantMessageId, finalThread);
   } catch (error) {
-    console.error('[agentChat] failure persistence failed for thread', threadId, error);
+    log.error('failure persistence failed for thread', threadId, error);
   } finally {
     emitTurnError(runtime, ctx, errorMessage);
   }

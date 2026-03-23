@@ -1,10 +1,5 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import log from 'electron-log/renderer';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
 
 import {
   OPEN_ORCHESTRATION_PANEL_EVENT,
@@ -15,7 +10,7 @@ import type { Command } from './types';
 const RECENT_KEY = 'agent-ide:command-recent';
 const MAX_RECENT = 5;
 
-const EMPTY_ACTION: Command['action'] = () => { };
+const EMPTY_ACTION: Command['action'] = () => {};
 
 const THEME_OPTIONS = [
   { id: 'retro', label: 'Retro', icon: '🟢' },
@@ -26,9 +21,26 @@ const THEME_OPTIONS = [
 ] as const;
 
 const TERMINAL_OPTIONS = [
-  { id: 'terminal:new-tab', label: 'New Tab', shortcut: 'Ctrl+Shift+`', icon: '+', eventName: 'agent-ide:new-terminal' },
-  { id: 'terminal:close-tab', label: 'Close Tab', icon: '×', eventName: 'agent-ide:close-terminal' },
-  { id: 'terminal:toggle', label: 'Toggle Panel', shortcut: 'Ctrl+J', icon: '⬛', eventName: 'agent-ide:toggle-terminal' },
+  {
+    id: 'terminal:new-tab',
+    label: 'New Tab',
+    shortcut: 'Ctrl+Shift+`',
+    icon: '+',
+    eventName: 'agent-ide:new-terminal',
+  },
+  {
+    id: 'terminal:close-tab',
+    label: 'Close Tab',
+    icon: '×',
+    eventName: 'agent-ide:close-terminal',
+  },
+  {
+    id: 'terminal:toggle',
+    label: 'Toggle Panel',
+    shortcut: 'Ctrl+J',
+    icon: '⬛',
+    eventName: 'agent-ide:toggle-terminal',
+  },
 ] as const;
 
 interface DomCommandConfig {
@@ -76,9 +88,7 @@ function pushRecent(id: string, prev: string[]): string[] {
 
 function dispatchDomEvent(eventName: string, detail?: unknown): void {
   window.dispatchEvent(
-    detail === undefined
-      ? new CustomEvent(eventName)
-      : new CustomEvent(eventName, { detail }),
+    detail === undefined ? new CustomEvent(eventName) : new CustomEvent(eventName, { detail }),
   );
 }
 
@@ -90,34 +100,28 @@ function createDomCommand(config: DomCommandConfig): Command {
   };
 }
 
-function createSubmenu(
-  config: {
-    id: string;
-    label: string;
-    category: Command['category'];
-    icon: string;
-    children: Command[];
-  },
-): Command {
-  const {
-    id,
-    label,
-    category,
-    icon,
-    children,
-  } = config;
+function createSubmenu(config: {
+  id: string;
+  label: string;
+  category: Command['category'];
+  icon: string;
+  children: Command[];
+}): Command {
+  const { id, label, category, icon, children } = config;
   return { id, label, category, icon, action: EMPTY_ACTION, children };
 }
 
 function buildThemeMenu(): Command {
-  const children = THEME_OPTIONS.map((theme) => createDomCommand({
-    id: `theme:${theme.id}`,
-    label: theme.label,
-    category: 'view',
-    icon: theme.icon,
-    eventName: 'agent-ide:set-theme',
-    detail: theme.id,
-  }));
+  const children = THEME_OPTIONS.map((theme) =>
+    createDomCommand({
+      id: `theme:${theme.id}`,
+      label: theme.label,
+      category: 'view',
+      icon: theme.icon,
+      eventName: 'agent-ide:set-theme',
+      detail: theme.id,
+    }),
+  );
 
   return createSubmenu({ id: 'theme', label: 'Theme', category: 'view', icon: '🎨', children });
 }
@@ -151,12 +155,20 @@ function buildViewCommands(): Command[] {
 }
 
 function buildTerminalMenu(): Command {
-  const children = TERMINAL_OPTIONS.map((command) => createDomCommand({
-    ...command,
-    category: 'terminal',
-  }));
+  const children = TERMINAL_OPTIONS.map((command) =>
+    createDomCommand({
+      ...command,
+      category: 'terminal',
+    }),
+  );
 
-  return createSubmenu({ id: 'terminal', label: 'Terminal', category: 'terminal', icon: '>_', children });
+  return createSubmenu({
+    id: 'terminal',
+    label: 'Terminal',
+    category: 'terminal',
+    icon: '>_',
+    children,
+  });
 }
 
 function buildFileCommands(): Command[] {
@@ -268,32 +280,43 @@ function buildBuiltinCommands(): Command[] {
 function useCommandExecutor(
   setRecentIds: Dispatch<SetStateAction<string[]>>,
 ): (command: Command) => Promise<void> {
-  return useCallback(async (command: Command): Promise<void> => {
-    setRecentIds((prev) => pushRecent(command.id, prev));
-    await command.action();
-    window.electronAPI.extensions.commandExecuted(command.id).catch((error) => { console.error('[commandPalette] Failed to record command execution:', command.id, error) });
-  }, [setRecentIds]);
+  return useCallback(
+    async (command: Command): Promise<void> => {
+      setRecentIds((prev) => pushRecent(command.id, prev));
+      await command.action();
+      window.electronAPI.extensions.commandExecuted(command.id).catch((error) => {
+        log.error('Failed to record command execution:', command.id, error);
+      });
+    },
+    [setRecentIds],
+  );
 }
 
 function useRegisterCommand(
   setCommands: Dispatch<SetStateAction<Command[]>>,
 ): (command: Command) => void {
-  return useCallback((command: Command): void => {
-    setCommands((prev) => {
-      const exists = prev.some((candidate) => candidate.id === command.id);
-      return exists
-        ? prev.map((candidate) => (candidate.id === command.id ? command : candidate))
-        : [...prev, command];
-    });
-  }, [setCommands]);
+  return useCallback(
+    (command: Command): void => {
+      setCommands((prev) => {
+        const exists = prev.some((candidate) => candidate.id === command.id);
+        return exists
+          ? prev.map((candidate) => (candidate.id === command.id ? command : candidate))
+          : [...prev, command];
+      });
+    },
+    [setCommands],
+  );
 }
 
 function useUnregisterCommand(
   setCommands: Dispatch<SetStateAction<Command[]>>,
 ): (id: string) => void {
-  return useCallback((id: string): void => {
-    setCommands((prev) => prev.filter((command) => command.id !== id));
-  }, [setCommands]);
+  return useCallback(
+    (id: string): void => {
+      setCommands((prev) => prev.filter((command) => command.id !== id));
+    },
+    [setCommands],
+  );
 }
 
 function useCommandRegistryBridge(

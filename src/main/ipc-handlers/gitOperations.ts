@@ -12,6 +12,7 @@ import path from 'path';
 import { getGraphController } from '../codebaseGraph/graphController';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchActivationEvent } from '../extensions';
+import log from '../logger';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat';
 import { parseBlameOutput, restoreSnapshot } from './gitBlameSnapshot';
 import {
@@ -67,11 +68,19 @@ export function gitExec(
   });
 }
 
-export async function gitStdout(root: string, args: string[], maxBuffer: number = MB): Promise<string> {
+export async function gitStdout(
+  root: string,
+  args: string[],
+  maxBuffer: number = MB,
+): Promise<string> {
   return (await gitExec(args, { cwd: root, maxBuffer })).stdout;
 }
 
-export async function gitTrimmed(root: string, args: string[], maxBuffer?: number): Promise<string> {
+export async function gitTrimmed(
+  root: string,
+  args: string[],
+  maxBuffer?: number,
+): Promise<string> {
   return (await gitStdout(root, args, maxBuffer)).trim();
 }
 
@@ -103,10 +112,16 @@ export async function getDirtyCount(root: string): Promise<number> {
   return nonEmptyLines(await gitStdout(root, ['status', '--porcelain'])).length;
 }
 
-export async function discardFile(root: string, filePath: string): Promise<GitResponse<Record<string, never>>> {
+export async function discardFile(
+  root: string,
+  filePath: string,
+): Promise<GitResponse<Record<string, never>>> {
   if (await isTracked(root, filePath)) {
     return respond(
-      async () => { await gitExec(['checkout', 'HEAD', '--', filePath], { cwd: root }); return {}; },
+      async () => {
+        await gitExec(['checkout', 'HEAD', '--', filePath], { cwd: root });
+        return {};
+      },
       { gitError: true },
     );
   }
@@ -119,7 +134,10 @@ export async function discardFile(root: string, filePath: string): Promise<GitRe
 
 export function gitIsRepo(root: string) {
   return respond(
-    async () => { await gitExec(['rev-parse', '--git-dir'], { cwd: root }); return { isRepo: true }; },
+    async () => {
+      await gitExec(['rev-parse', '--git-dir'], { cwd: root });
+      return { isRepo: true };
+    },
     { fallback: { isRepo: false } },
   );
 }
@@ -131,12 +149,16 @@ export function gitStatus(root: string) {
 }
 
 export function gitBranch(root: string) {
-  return respond(async () => ({ branch: await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD']) }));
+  return respond(async () => ({
+    branch: await gitTrimmed(root, ['rev-parse', '--abbrev-ref', 'HEAD']),
+  }));
 }
 
 export function gitDiff(root: string, filePath: string) {
   return respond(
-    async () => ({ lines: parseDiffLines(await gitStdout(root, ['diff', 'HEAD', '--', filePath], 4 * MB)) }),
+    async () => ({
+      lines: parseDiffLines(await gitStdout(root, ['diff', 'HEAD', '--', filePath], 4 * MB)),
+    }),
     { fallback: { lines: [] } },
   );
 }
@@ -144,38 +166,64 @@ export function gitDiff(root: string, filePath: string) {
 export function gitLog(root: string, filePath: string, offset: number = 0) {
   return respond(async () => ({
     commits: parseLogOutput(
-      await gitStdout(root, ['log', '--pretty=format:%H|%an|%ae|%ad|%s', '--date=short', '-n', '50', `--skip=${offset}`, '--', filePath], 2 * MB),
+      await gitStdout(
+        root,
+        [
+          'log',
+          '--pretty=format:%H|%an|%ae|%ad|%s',
+          '--date=short',
+          '-n',
+          '50',
+          `--skip=${offset}`,
+          '--',
+          filePath,
+        ],
+        2 * MB,
+      ),
     ),
   }));
 }
 
 export function gitShow(root: string, hash: string, filePath: string) {
-  return respond(async () => ({ patch: await gitStdout(root, ['show', hash, '--', filePath], 4 * MB) }));
+  return respond(async () => ({
+    patch: await gitStdout(root, ['show', hash, '--', filePath], 4 * MB),
+  }));
 }
 
 export function gitBranches(root: string) {
   return respond(async () => ({
-    branches: nonEmptyLines(await gitStdout(root, ['branch', '-a', '--format=%(refname:short)'])).map((b) => b.trim()),
+    branches: nonEmptyLines(
+      await gitStdout(root, ['branch', '-a', '--format=%(refname:short)']),
+    ).map((b) => b.trim()),
   }));
 }
 
 export function gitCheckout(root: string, branch: string) {
   return respond(
-    async () => { await gitExec(['checkout', branch], { cwd: root }); return {}; },
+    async () => {
+      await gitExec(['checkout', branch], { cwd: root });
+      return {};
+    },
     { gitError: true },
   );
 }
 
 export function gitStage(root: string, filePath: string) {
   return respond(
-    async () => { await gitExec(['add', filePath], { cwd: root }); return {}; },
+    async () => {
+      await gitExec(['add', filePath], { cwd: root });
+      return {};
+    },
     { gitError: true },
   );
 }
 
 export function gitUnstage(root: string, filePath: string) {
   return respond(
-    async () => { await gitExec(['restore', '--staged', filePath], { cwd: root }); return {}; },
+    async () => {
+      await gitExec(['restore', '--staged', filePath], { cwd: root });
+      return {};
+    },
     { gitError: true },
   );
 }
@@ -192,7 +240,7 @@ export function gitCommit(root: string, message: string) {
     async () => {
       await gitExec(['commit', '-m', message], { cwd: root });
       dispatchActivationEvent('onGitCommit', { root, message }).catch((error) => {
-        console.error('[git] Failed to dispatch onGitCommit activation event:', error);
+        log.error('Failed to dispatch onGitCommit activation event:', error);
       });
       getGraphController()?.onGitCommit();
       getContextLayerController()?.onGitCommit();
@@ -204,11 +252,23 @@ export function gitCommit(root: string, message: string) {
 }
 
 export function gitStageAll(root: string) {
-  return respond(async () => { await gitExec(['add', '-A'], { cwd: root }); return {}; }, { gitError: true });
+  return respond(
+    async () => {
+      await gitExec(['add', '-A'], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
 }
 
 export function gitUnstageAll(root: string) {
-  return respond(async () => { await gitExec(['reset', 'HEAD'], { cwd: root }); return {}; }, { gitError: true });
+  return respond(
+    async () => {
+      await gitExec(['reset', 'HEAD'], { cwd: root });
+      return {};
+    },
+    { gitError: true },
+  );
 }
 
 export function gitSnapshot(root: string) {
@@ -221,7 +281,9 @@ export function gitDiffReview(root: string, commitHash: string, filePaths?: stri
   if (ref) args.push(ref);
   args.push('--unified=3', '--no-color');
   if (filePaths?.length) args.push('--', ...filePaths);
-  return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) }));
+  return respond(async () => ({
+    files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root),
+  }));
 }
 
 export function gitDiffCached(root: string, commitHash: string, filePaths?: string[]) {
@@ -230,13 +292,19 @@ export function gitDiffCached(root: string, commitHash: string, filePaths?: stri
   if (ref) args.push(ref);
   args.push('--unified=3', '--no-color');
   if (filePaths?.length) args.push('--', ...filePaths);
-  return respond(async () => ({ files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root) }));
+  return respond(async () => ({
+    files: parseDiffOutput(await gitStdout(root, args, 10 * MB), root),
+  }));
 }
 
 export function gitFileAtCommit(root: string, commitHash: string, filePath: string) {
   return respond(
     async () => ({
-      content: await gitStdout(root, ['show', `${commitHash}:${normalizeGitPath(path.relative(root, filePath))}`], 4 * MB),
+      content: await gitStdout(
+        root,
+        ['show', `${commitHash}:${normalizeGitPath(path.relative(root, filePath))}`],
+        4 * MB,
+      ),
     }),
     { fallback: { content: '' } },
   );
@@ -244,19 +312,27 @@ export function gitFileAtCommit(root: string, commitHash: string, filePath: stri
 
 export function gitRevertFile(root: string, commitHash: string, filePath: string) {
   return respond(
-    async () => { await gitExec(['checkout', commitHash, '--', filePath], { cwd: root }); return {}; },
+    async () => {
+      await gitExec(['checkout', commitHash, '--', filePath], { cwd: root });
+      return {};
+    },
     { gitError: true },
   );
 }
 
 export function gitDiffBetween(root: string, fromHash: string, toHash: string) {
   return respond(async () => ({
-    files: parseDiffOutput(await gitStdout(root, ['diff', fromHash, toHash, '--unified=3', '--no-color'], 10 * MB), root),
+    files: parseDiffOutput(
+      await gitStdout(root, ['diff', fromHash, toHash, '--unified=3', '--no-color'], 10 * MB),
+      root,
+    ),
   }));
 }
 
 export function gitChangedFilesBetween(root: string, fromHash: string, toHash: string) {
-  return respond(async () => ({ files: await getChangedFilesBetween({ root, fromHash, toHash, gitStdout, MB }) }));
+  return respond(async () => ({
+    files: await getChangedFilesBetween({ root, fromHash, toHash, gitStdout, MB }),
+  }));
 }
 
 export function gitRestoreSnapshot(root: string, commitHash: string) {
@@ -270,7 +346,15 @@ export function gitCreateSnapshot(root: string, label?: string) {
   return respond(
     async () => {
       await gitExec(['add', '-A'], { cwd: root });
-      await gitExec(['commit', '--allow-empty', '-m', `[Ouroboros Snapshot] ${label?.trim() || 'Manual snapshot'}`], { cwd: root });
+      await gitExec(
+        [
+          'commit',
+          '--allow-empty',
+          '-m',
+          `[Ouroboros Snapshot] ${label?.trim() || 'Manual snapshot'}`,
+        ],
+        { cwd: root },
+      );
       return { commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) };
     },
     { gitError: true },
@@ -287,14 +371,22 @@ export async function gitDirtyCount(root: string) {
 
 export function gitBlame(root: string, filePath: string) {
   return respond(
-    async () => ({ lines: parseBlameOutput(await gitStdout(root, ['blame', '--porcelain', filePath], 4 * MB)) }),
+    async () => ({
+      lines: parseBlameOutput(await gitStdout(root, ['blame', '--porcelain', filePath], 4 * MB)),
+    }),
     { fallback: { lines: [] } },
   );
 }
 
 export function gitDiffRaw(root: string, filePath: string) {
   return respond(
-    async () => ({ patch: await gitStdout(root, ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath], 4 * MB) }),
+    async () => ({
+      patch: await gitStdout(
+        root,
+        ['diff', 'HEAD', '--unified=3', '--no-color', '--', filePath],
+        4 * MB,
+      ),
+    }),
     { fallback: { patch: '' } },
   );
 }

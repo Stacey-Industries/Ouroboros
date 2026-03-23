@@ -8,6 +8,7 @@ import { execFile } from 'child_process';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 
+import log from '../logger';
 import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';
 import type { AgentChatThreadStore } from './threadStore';
 import type { AgentChatRevertResult } from './types';
@@ -67,7 +68,7 @@ async function removeRevertedFiles(workspaceRoot: string, filesToRemove: string[
     // eslint-disable-next-line security/detect-object-injection -- numeric indices into local arrays
     if (results[i].status === 'rejected')
       // eslint-disable-next-line security/detect-object-injection -- numeric indices into local arrays
-      console.warn(`[agentChat] revert: failed to remove added file ${filesToRemove[i]}`);
+      log.warn(`revert: failed to remove added file ${filesToRemove[i]}`);
   }
 }
 

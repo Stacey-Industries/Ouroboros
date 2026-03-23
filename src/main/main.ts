@@ -22,6 +22,7 @@ import {
   stopContextRefreshTimer,
   terminateContextWorker,
 } from './ipc-handlers/agentChat';
+import log from './logger';
 import { configureAutoUpdater, writeCrashLog } from './mainStartup';
 import { buildApplicationMenu } from './menu';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
@@ -48,13 +49,13 @@ crashReporter.start({
 
 // Capture uncaught main-process exceptions
 process.on('uncaughtException', (err: Error) => {
-  console.error('[main] uncaughtException:', err);
+  log.error('uncaughtException:', err);
   void writeCrashLog('main:uncaughtException', `${err.stack ?? err.message}`);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
   const msg = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
-  console.error('[main] unhandledRejection:', msg);
+  log.error('unhandledRejection:', msg);
   void writeCrashLog('main:unhandledRejection', msg);
 });
 
@@ -90,13 +91,13 @@ async function runStartupStep(
   try {
     await step();
   } catch (err) {
-    console.error(errorMessage, err);
+    log.error(errorMessage, err);
   }
 }
 
 async function startIdeTools(): Promise<void> {
   const toolAddr = await startIdeToolServer();
-  if (toolAddr) console.log(`[main] IDE tool server started at ${toolAddr.address}`);
+  if (toolAddr) log.info(`IDE tool server started at ${toolAddr.address}`);
 }
 
 async function startBackgroundServices(win: BrowserWindow): Promise<void> {
@@ -109,7 +110,7 @@ async function startBackgroundServices(win: BrowserWindow): Promise<void> {
 function registerRenderProcessCrashLogging(): void {
   app.on('render-process-gone', (_event, _webContents, details) => {
     const msg = `Reason: ${details.reason}\nExitCode: ${details.exitCode}`;
-    console.error('[crash] render-process-gone:', msg);
+    log.error('render-process-gone:', msg);
     void writeCrashLog('renderer:render-process-gone', msg);
   });
 }
@@ -145,13 +146,13 @@ function startContextLayerAsync(defaultRoot: string | undefined): void {
     config: contextLayerConfig,
   })
     .then(() => {
-      console.log('[context-layer] Initialization complete');
+      log.info('Initialization complete');
     })
     .catch((error: unknown) => {
-      console.warn('[context-layer] Initialization failed:', error);
+      log.warn('Initialization failed:', error);
     });
   initCodebaseGraph().catch((error) => {
-    console.error('[codebase-graph] Initialization failed:', error);
+    log.error('Initialization failed:', error);
   });
   if (defaultRoot) {
     loadPersistedContextCache();
@@ -166,10 +167,10 @@ function startWebServerAsync(): void {
   startWebServer({ port: webPort, staticDir: webStaticDir })
     .then(() => {
       getOrCreateWebToken(); // Ensure token is generated; retrieve via Settings > General > Web Access
-      console.log(`[web] Access URL: http://localhost:${webPort}`);
+      log.info(`Access URL: http://localhost:${webPort}`);
     })
     .catch((error) => {
-      console.error('[web] Failed to start web server:', error);
+      log.error('Failed to start web server:', error);
     });
 }
 
@@ -185,9 +186,9 @@ async function initializeApplication(): Promise<void> {
 
   try {
     initClaudeMdGenerator(mainWindow);
-    console.log('[claude-md] Generator initialized');
+    log.info('Generator initialized');
   } catch (err) {
-    console.warn('[claude-md] Generator initialization failed:', err);
+    log.warn('Generator initialization failed:', err);
   }
 
   registerRenderProcessCrashLogging();
@@ -201,7 +202,7 @@ async function initializeApplication(): Promise<void> {
 async function initCodebaseGraph(): Promise<void> {
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   if (!defaultRoot) {
-    console.log('[codebase-graph] No default project root configured, skipping graph init');
+    log.info('No default project root configured, skipping graph init');
     return;
   }
 
@@ -209,9 +210,9 @@ async function initCodebaseGraph(): Promise<void> {
     const controller = new GraphController(defaultRoot);
     await controller.initialize();
     setGraphController(controller);
-    console.log('[codebase-graph] Controller initialized successfully');
+    log.info('Controller initialized successfully');
   } catch (err) {
-    console.warn('[codebase-graph] Failed to start:', err);
+    log.warn('Failed to start:', err);
     // Non-fatal -- app continues without graph
   }
 }
@@ -248,7 +249,7 @@ app.on('will-quit', async () => {
   try {
     await getGraphController()?.dispose();
   } catch (err) {
-    console.warn('[codebase-graph] Dispose error during shutdown:', err);
+    log.warn('Dispose error during shutdown:', err);
   }
 });
 

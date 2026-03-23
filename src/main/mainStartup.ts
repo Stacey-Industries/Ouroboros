@@ -7,6 +7,7 @@ import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
+import log from './logger';
 import { getAutoUpdater } from './updater';
 import { broadcastToWebClients } from './web';
 import { getAllActiveWindows } from './windowManager';
@@ -37,9 +38,9 @@ export async function writeCrashLog(source: string, details: string): Promise<vo
     ].join('\n');
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.writeFile(file, content, 'utf-8');
-    console.error(`[crash] Logged to ${file}`);
+    log.error(`Logged to ${file}`);
   } catch (err) {
-    console.error('[crash] Failed to write crash log:', err);
+    log.error('Failed to write crash log:', err);
   }
 }
 
@@ -92,7 +93,7 @@ function scheduleAutoUpdateCheck(): void {
   if (!updater) return;
   setTimeout(() => {
     updater.checkForUpdates().catch((err: Error) => {
-      console.log('[updater] Auto-check failed:', err.message);
+      log.info('Auto-check failed:', err.message);
     });
   }, 5000);
 }

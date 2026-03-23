@@ -3,6 +3,8 @@
  * actual usage reported by the CLI after each turn.
  */
 
+import log from '../logger';
+
 const WINDOW_SIZE = 10;
 
 interface Observation {
@@ -31,8 +33,8 @@ function recomputeRatio(): void {
   cachedRatio = computeMedian(observations.map((o) => o.ratio));
   const shift = Math.abs(cachedRatio - prev) / (prev || 1);
   if (shift > 0.1) {
-    console.debug(
-      `[tokenCalibration] ratio shifted ${(shift * 100).toFixed(1)}%: ${prev.toFixed(3)} → ${cachedRatio.toFixed(3)} (${observations.length} observations)`,
+    log.debug(
+      `ratio shifted ${(shift * 100).toFixed(1)}%: ${prev.toFixed(3)} → ${cachedRatio.toFixed(3)} (${observations.length} observations)`,
     );
   }
 }

@@ -5,6 +5,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import type { GraphEdge, GraphNode } from './graphTypes';
 
 export class GraphStore {
@@ -121,7 +122,7 @@ export class GraphStore {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.writeFile(this.persistPath, JSON.stringify(data), 'utf-8');
     } catch (err) {
-      console.warn('[graph-store] Failed to persist graph:', err);
+      log.warn('Failed to persist graph:', err);
     }
   }
 

@@ -5,6 +5,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import { buildFileTree, buildHotspots, buildModules } from './graphQueryArchitecture';
 import { executeCypherLike, matchesWhereFilter } from './graphQuerySupport';
 import type { GraphStore } from './graphStore';
@@ -299,7 +300,7 @@ export class GraphQueryEngine {
     try {
       return executeCypherLike(query, this.store, matchesWhereFilter);
     } catch (err) {
-      console.warn('[graph-query] Query parse error:', err);
+      log.warn('Query parse error:', err);
       return [];
     }
   }

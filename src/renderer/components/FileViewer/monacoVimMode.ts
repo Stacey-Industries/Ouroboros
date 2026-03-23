@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 /**
  * Monaco Vim/Emacs keybinding mode support.
  *
@@ -10,11 +11,10 @@ import type { RefObject } from 'react';
 import type { DiffLineInfo } from '../../types/electron';
 
 // monaco-vim uses a default export
- 
-let initVimMode: ((
-  editor: monaco.editor.IStandaloneCodeEditor,
-  statusBarNode: HTMLElement,
-) => VimModeHandle) | null = null;
+
+let initVimMode:
+  | ((editor: monaco.editor.IStandaloneCodeEditor, statusBarNode: HTMLElement) => VimModeHandle)
+  | null = null;
 
 interface VimModeHandle {
   dispose: () => void;
@@ -34,13 +34,13 @@ async function ensureVimImported(): Promise<boolean> {
     const mod = await import('monaco-vim');
     initVimMode = mod.initVimMode ?? mod.default?.initVimMode ?? mod.default;
     if (typeof initVimMode !== 'function') {
-      console.warn('[monacoVimMode] monaco-vim loaded but initVimMode not found');
+      log.warn('monaco-vim loaded but initVimMode not found');
       importFailed = true;
       return false;
     }
     return true;
   } catch (err) {
-    console.warn('[monacoVimMode] Failed to load monaco-vim:', err);
+    log.warn('Failed to load monaco-vim:', err);
     importFailed = true;
     return false;
   }
@@ -70,7 +70,7 @@ export async function enableVimMode(
 
   const available = await ensureVimImported();
   if (!available || !initVimMode) {
-    console.warn('[monacoVimMode] Vim mode not available — monaco-vim package not loaded');
+    log.warn('Vim mode not available — monaco-vim package not loaded');
     return null;
   }
 
@@ -100,7 +100,7 @@ export function disableVimMode(): void {
  * @returns A dispose function, or null if not available
  */
 export async function enableEmacsMode(
-  _editor: monaco.editor.IStandaloneCodeEditor
+  _editor: monaco.editor.IStandaloneCodeEditor,
 ): Promise<(() => void) | null> {
   void _editor;
   // TODO: Install and integrate `monaco-emacs` package
@@ -108,9 +108,7 @@ export async function enableEmacsMode(
   // const ext = new EmacsExtension(editor);
   // ext.start();
   // return () => ext.dispose();
-  console.warn(
-    '[monacoVimMode] Emacs mode not yet implemented — install monaco-emacs package',
-  );
+  log.warn('Emacs mode not yet implemented — install monaco-emacs package');
   return null;
 }
 
@@ -121,7 +119,11 @@ export function filePathToUri(filePath: string): monaco.Uri {
   return monaco.Uri.parse(`file:///${normalized.replace(/^\/+/, '')}`);
 }
 
-export function getOrCreateModel(filePath: string, content: string, language: string): monaco.editor.ITextModel {
+export function getOrCreateModel(
+  filePath: string,
+  content: string,
+  language: string,
+): monaco.editor.ITextModel {
   const uri = filePathToUri(filePath);
   const existing = monaco.editor.getModel(uri);
   if (existing) {
@@ -166,29 +168,40 @@ export function createEditorOptions(
 
 export function getOverviewRulerColor(kind: DiffLineInfo['kind']): string {
   switch (kind) {
-    case 'added': return '#3fb950';
-    case 'deleted': return '#f85149';
-    case 'modified': return '#2f81f7';
-    default: return '#6e7681';
+    case 'added':
+      return '#3fb950';
+    case 'deleted':
+      return '#f85149';
+    case 'modified':
+      return '#2f81f7';
+    default:
+      return '#6e7681';
   }
 }
 
-export function buildDiffDecorations(diffLines: DiffLineInfo[]): monaco.editor.IModelDeltaDecoration[] {
+export function buildDiffDecorations(
+  diffLines: DiffLineInfo[],
+): monaco.editor.IModelDeltaDecoration[] {
   const seen = new Set<string>();
   return diffLines.flatMap((diffLine) => {
     const lineNumber = Math.max(1, diffLine.line);
     const key = `${lineNumber}:${diffLine.kind}`;
     if (seen.has(key)) return [];
     seen.add(key);
-    return [{
-      range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-      options: {
-        isWholeLine: true,
-        className: `ouroboros-monaco-diff-line-${diffLine.kind}`,
-        linesDecorationsClassName: `ouroboros-monaco-diff-gutter-${diffLine.kind}`,
-        overviewRuler: { color: getOverviewRulerColor(diffLine.kind), position: monaco.editor.OverviewRulerLane.Left },
+    return [
+      {
+        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+        options: {
+          isWholeLine: true,
+          className: `ouroboros-monaco-diff-line-${diffLine.kind}`,
+          linesDecorationsClassName: `ouroboros-monaco-diff-gutter-${diffLine.kind}`,
+          overviewRuler: {
+            color: getOverviewRulerColor(diffLine.kind),
+            position: monaco.editor.OverviewRulerLane.Left,
+          },
+        },
       },
-    }];
+    ];
   });
 }
 
@@ -205,7 +218,10 @@ export function getHostViewState(filePath: string): monaco.editor.ICodeEditorVie
   return viewStateMap.get(filePath);
 }
 
-export function setHostViewState(filePath: string, state: monaco.editor.ICodeEditorViewState): void {
+export function setHostViewState(
+  filePath: string,
+  state: monaco.editor.ICodeEditorViewState,
+): void {
   viewStateMap.set(filePath, state);
 }
 
@@ -252,7 +268,8 @@ export function setHostDirtyState(
   onDirtyChangeRef: RefObject<((dirty: boolean) => void) | undefined>,
 ): void {
   const savedVersion = getHostSavedVersion(model.uri.toString());
-  const nowDirty = savedVersion !== undefined ? model.getAlternativeVersionId() !== savedVersion : false;
+  const nowDirty =
+    savedVersion !== undefined ? model.getAlternativeVersionId() !== savedVersion : false;
   if (nowDirty !== isDirtyRef.current) {
     isDirtyRef.current = nowDirty;
     onDirtyChangeRef.current?.(nowDirty);

@@ -16,6 +16,7 @@ import os from 'os';
 import path from 'path';
 
 import { getConfigValue } from './config';
+import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -196,7 +197,7 @@ function prepareResponseFilePath(requestId: string): string | null {
     ensureApprovalsDir();
     return getResponseFilePath(requestId);
   } catch (err) {
-    console.error(`[approval] failed to prepare response path for ${requestId}:`, err);
+    log.error(`failed to prepare response path for ${requestId}:`, err);
     return null;
   }
 }
@@ -227,8 +228,8 @@ async function writeResponseWithRetry(
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from APPROVALS_DIR + requestId
       fs.writeFileSync(filePath, data, 'utf8');
-      console.log(
-        `[approval] wrote response for ${requestId}: ${decision}${attempt > 0 ? ` (retry ${attempt})` : ''}`,
+      log.info(
+        `wrote response for ${requestId}: ${decision}${attempt > 0 ? ` (retry ${attempt})` : ''}`,
       );
       notifyApprovalResolved(requestId, decision);
       return true;
@@ -239,14 +240,17 @@ async function writeResponseWithRetry(
     }
   }
 
-  console.error(`[approval] failed to write response file for ${requestId}:`, lastError);
+  log.error(`failed to write response file for ${requestId}:`, lastError);
   return false;
 }
 
 /**
  * Write an approval response file so the hook script can pick it up.
  */
-export async function respondToApproval(requestId: string, response: ApprovalResponse): Promise<boolean> {
+export async function respondToApproval(
+  requestId: string,
+  response: ApprovalResponse,
+): Promise<boolean> {
   pendingRequests.delete(requestId);
   clearAutoApproveTimer(requestId);
 
@@ -261,7 +265,7 @@ export async function respondToApproval(requestId: string, response: ApprovalRes
  */
 export function addAlwaysAllowRule(sessionId: string, toolName: string): void {
   alwaysAllowRules.add(`${sessionId}:${toolName}`);
-  console.log(`[approval] always-allow rule added: ${sessionId}:${toolName}`);
+  log.info(`always-allow rule added: ${sessionId}:${toolName}`);
 }
 
 /**

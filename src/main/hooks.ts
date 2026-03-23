@@ -15,6 +15,7 @@ import { getContextLayerController } from './contextLayer/contextLayerController
 import { dispatchActivationEvent } from './extensions';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat';
+import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -129,7 +130,7 @@ function inferSessionId(payload: HookPayload): HookPayload {
   }
 
   if (bestId) {
-    console.log(`[hooks] inferred session for tool event: ${payload.sessionId} → ${bestId}`);
+    log.info(`inferred session for tool event: ${payload.sessionId} → ${bestId}`);
     return { ...payload, sessionId: bestId };
   }
 
@@ -141,7 +142,7 @@ function isRenderableWindow(window: BrowserWindow | null): window is BrowserWind
 }
 
 function queuePendingPayload(payload: HookPayload): void {
-  console.log(`[hooks] queuing event (no window): ${payload.type} session=${payload.sessionId}`);
+  log.info(`queuing event (no window): ${payload.type} session=${payload.sessionId}`);
   if (pendingQueue.length < MAX_PENDING_QUEUE) {
     pendingQueue.push(payload);
   }
@@ -191,16 +192,16 @@ function triggerClaudeMdGeneration(
     sessionCwdMap.delete(payload.sessionId);
 
     if (!projectRoot) {
-      console.log(
-        `[claude-md] Skipping auto-generation — cannot determine project root for session ${payload.sessionId}`,
+      log.info(
+        `Skipping auto-generation — cannot determine project root for session ${payload.sessionId}`,
       );
       return;
     }
 
-    console.log(`[claude-md] Auto-generating for ${projectRoot} (session ${payload.sessionId})`);
+    log.info(`Auto-generating for ${projectRoot} (session ${payload.sessionId})`);
 
     generateClaudeMd(projectRoot).catch((err: unknown) => {
-      console.error('[claude-md] Auto-generation failed:', err);
+      log.error('Auto-generation failed:', err);
     });
   } catch {
     // Config not available yet — ignore
@@ -274,8 +275,8 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   }
 
   flushPendingQueue(windows);
-  console.log(
-    `[hooks] dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
+  log.info(
+    `dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
   );
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);

@@ -5,6 +5,7 @@ import vm from 'vm';
 
 import { appendLog, buildSandboxAPI, getSafeSandboxGlobals } from './extensionsSandbox';
 import { type ExtensionManifest, type LoadedExtension, VALID_PERMISSIONS } from './extensionsTypes';
+import log from './logger';
 
 export const extensions = new Map<string, LoadedExtension>();
 
@@ -119,7 +120,7 @@ function createLoadedExtension(extDir: string, manifest: ExtensionManifest): Loa
 function createLoadErrorExtension(extDir: string, error: unknown): LoadedExtension {
   const name = path.basename(extDir);
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[extensions] Failed to load ${name}:`, error);
+  log.error(`Failed to load ${name}:`, error);
   return {
     manifest: {
       name,
@@ -196,7 +197,7 @@ function markActivationFailure(ext: LoadedExtension, error: unknown): void {
   ext.status = 'error';
   ext.errorMessage = error instanceof Error ? error.message : String(error);
   appendLog(ext, `Activation failed: ${ext.errorMessage}`);
-  console.error(`[extensions] Failed to activate ${ext.manifest.name}:`, error);
+  log.error(`Failed to activate ${ext.manifest.name}:`, error);
 }
 
 export async function activateExtension(ext: LoadedExtension): Promise<void> {

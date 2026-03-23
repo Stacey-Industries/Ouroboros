@@ -3,6 +3,7 @@
 import path from 'path';
 import { Worker } from 'worker_threads';
 
+import log from '../logger';
 import {
   applyFullIndexToStore,
   applyReindexToStore,
@@ -99,13 +100,13 @@ export class GraphController {
 
   onSessionStart(): void {
     this.reindexChangedFiles().catch((err) => {
-      console.warn('[codebase-graph] Session-start reindex failed:', err);
+      log.warn('Session-start reindex failed:', err);
     });
   }
 
   onGitCommit(): void {
     this.reindexChangedFiles().catch((err) => {
-      console.warn('[codebase-graph] Git-commit reindex failed:', err);
+      log.warn('Git-commit reindex failed:', err);
     });
   }
 
@@ -114,7 +115,7 @@ export class GraphController {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.reindexChangedFiles().catch((err) => {
-        console.warn('[codebase-graph] Debounced reindex failed:', err);
+        log.warn('Debounced reindex failed:', err);
       });
     }, 2000);
   }
@@ -129,7 +130,7 @@ export class GraphController {
       await this.requestFullIndex(opts.incremental);
       return { success: true };
     } catch (err) {
-      console.error('[codebase-graph] Index failed:', err);
+      log.error('Index failed:', err);
       return { success: false };
     }
   }
@@ -194,13 +195,13 @@ export class GraphController {
     });
 
     this.worker.on('error', (err) => {
-      console.error('[codebase-graph] Worker error:', err);
+      log.error('Worker error:', err);
       this.rejectPendingInit(err);
     });
 
     this.worker.on('exit', (code) => {
       if (code !== 0) {
-        console.warn(`[codebase-graph] Worker exited with code ${code}`);
+        log.warn(`Worker exited with code ${code}`);
       }
       this.worker = null;
     });
@@ -219,7 +220,7 @@ export class GraphController {
   private handleWorkerMessage(msg: WorkerResponse): void {
     switch (msg.type) {
       case 'ready':
-        console.log('[codebase-graph] Worker thread ready');
+        log.info('Worker thread ready');
         break;
       case 'indexComplete':
         this.applyFullIndex(msg.nodes, msg.edges, msg.durationMs);
@@ -231,7 +232,7 @@ export class GraphController {
         logIndexProgress(msg.filesProcessed, msg.totalFiles);
         break;
       case 'error':
-        console.error(`[codebase-graph] Worker error (${msg.requestType}):`, msg.message);
+        log.error(`Worker error (${msg.requestType}):`, msg.message);
         this.rejectPendingInit(new Error(msg.message));
         this.drainPendingReindex();
         break;
@@ -242,9 +243,7 @@ export class GraphController {
     applyFullIndexToStore(this.store, nodes, edges);
     this.indexedAt = Date.now();
     this.indexDurationMs = durationMs;
-    console.log(
-      `[codebase-graph] Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`,
-    );
+    log.info(`Index complete: ${nodes.length} nodes, ${edges.length} edges (${durationMs}ms)`);
     this.resolvePendingInit();
     this.drainPendingReindex();
   }
@@ -330,7 +329,7 @@ export class GraphController {
       this.pendingReindex = null;
       this.pendingChanges.push(...deferred);
       this.reindexChangedFiles().catch((err) => {
-        console.warn('[codebase-graph] Deferred reindex failed:', err);
+        log.warn('Deferred reindex failed:', err);
       });
     }
   }

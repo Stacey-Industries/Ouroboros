@@ -7,6 +7,7 @@ import { BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'elect
 import fs from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import {
   broadcastFileChange,
   createExclusiveFile,
@@ -103,7 +104,7 @@ function bindWatcherEvents(watcher: FSWatcher): void {
     watcher.on(eventName, (changedPath) => broadcastFileChange(changeType, changedPath));
   }
   watcher.on('error', (err) => {
-    console.error('[watcher] error:', err);
+    log.error('watcher error:', err);
   });
 }
 

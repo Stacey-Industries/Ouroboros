@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useEffect, useState } from 'react';
 import type { BundledTheme, Highlighter } from 'shiki';
 
@@ -16,17 +17,55 @@ const DEFAULT_SHIKI_THEME: BundledTheme = 'github-dark';
 function getLanguage(filePath: string): string {
   const ext = filePath.toLowerCase().split('.').pop() ?? '';
   const langMap: Record<string, string> = {
-    ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
-    mjs: 'javascript', cjs: 'javascript', json: 'json', jsonc: 'jsonc',
-    yaml: 'yaml', yml: 'yaml', toml: 'toml', html: 'html', htm: 'html',
-    xml: 'xml', svg: 'xml', css: 'css', scss: 'scss', sass: 'sass',
-    less: 'less', md: 'markdown', mdx: 'mdx', py: 'python', rs: 'rust',
-    go: 'go', rb: 'ruby', sh: 'bash', bash: 'bash', zsh: 'bash',
-    fish: 'fish', bat: 'batch', c: 'c', h: 'c', cpp: 'cpp', cc: 'cpp',
-    cxx: 'cpp', hpp: 'cpp', cs: 'csharp', java: 'java', kt: 'kotlin',
-    swift: 'swift', php: 'php', sql: 'sql', prisma: 'prisma',
-    graphql: 'graphql', gql: 'graphql', dockerfile: 'dockerfile',
-    txt: 'text', log: 'text', env: 'ini',
+    ts: 'typescript',
+    tsx: 'tsx',
+    js: 'javascript',
+    jsx: 'jsx',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    json: 'json',
+    jsonc: 'jsonc',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'toml',
+    html: 'html',
+    htm: 'html',
+    xml: 'xml',
+    svg: 'xml',
+    css: 'css',
+    scss: 'scss',
+    sass: 'sass',
+    less: 'less',
+    md: 'markdown',
+    mdx: 'mdx',
+    py: 'python',
+    rs: 'rust',
+    go: 'go',
+    rb: 'ruby',
+    sh: 'bash',
+    bash: 'bash',
+    zsh: 'bash',
+    fish: 'fish',
+    bat: 'batch',
+    c: 'c',
+    h: 'c',
+    cpp: 'cpp',
+    cc: 'cpp',
+    cxx: 'cpp',
+    hpp: 'cpp',
+    cs: 'csharp',
+    java: 'java',
+    kt: 'kotlin',
+    swift: 'swift',
+    php: 'php',
+    sql: 'sql',
+    prisma: 'prisma',
+    graphql: 'graphql',
+    gql: 'graphql',
+    dockerfile: 'dockerfile',
+    txt: 'text',
+    log: 'text',
+    env: 'ini',
   };
   return langMap[ext] ?? 'text';
 }
@@ -71,9 +110,7 @@ async function highlightExcerpt(
 
   const highlighter = await getHighlighterSingleton();
   try {
-    await highlighter.loadLanguage(
-      lang as Parameters<typeof highlighter.loadLanguage>[0],
-    );
+    await highlighter.loadLanguage(lang as Parameters<typeof highlighter.loadLanguage>[0]);
   } catch {
     // Language may already be loaded or unsupported.
   }
@@ -121,7 +158,7 @@ export function useHighlightedExcerptLines(
         if (!cancelled) setHighlightedLines(nextLines);
       })
       .catch((error) => {
-        console.error('[multiBuffer] Syntax highlighting failed:', error);
+        log.error('Syntax highlighting failed:', error);
         if (!cancelled) setHighlightedLines(null);
       });
 

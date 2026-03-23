@@ -25,6 +25,7 @@ import type {
   AgentChatOrchestrationLink,
   AgentChatSendMessageRequest,
 } from '../agentChat/types';
+import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
 import {
   invalidateSnapshotCache,
@@ -275,7 +276,7 @@ function registerEventForwarders(svc: AgentChatService, win: BrowserWindow): voi
         try {
           await projectAndSendSessionUpdate(svc, session, safeSend);
         } catch (error) {
-          console.error('[agentChat] session-update projection failed:', error);
+          log.error('session-update projection failed:', error);
         }
       })();
     }),

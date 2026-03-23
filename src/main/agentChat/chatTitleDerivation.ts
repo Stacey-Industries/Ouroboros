@@ -4,6 +4,7 @@
 
 import path from 'path';
 
+import log from '../logger';
 import { DEFAULT_THREAD_TITLE } from './threadStoreSupport';
 
 const TITLE_MAX_LENGTH = 80;
@@ -151,8 +152,8 @@ export async function generateLlmTitle(args: {
   try {
     return await callHaikuForTitle(args);
   } catch (error) {
-    console.warn(
-      '[agentChat] LLM title generation failed (heuristic title preserved):',
+    log.warn(
+      'LLM title generation failed (heuristic title preserved):',
       error instanceof Error ? error.message : error,
     );
     return null;

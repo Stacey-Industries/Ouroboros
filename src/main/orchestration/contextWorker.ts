@@ -8,36 +8,42 @@
  * GraphController lives on the main thread -- graph summary is attached there.
  */
 
-import { parentPort } from 'worker_threads'
+import { parentPort } from 'worker_threads';
 
-import { buildContextPacket } from './contextPacketBuilder'
-import type { ContextWorkerRequest, ContextWorkerResponse } from './contextWorkerTypes'
-import { buildRepoIndexSnapshot } from './repoIndexer'
-import type { ContextPacket, TaskRequest } from './types'
+import log from '../logger';
+import { buildContextPacket } from './contextPacketBuilder';
+import type { ContextWorkerRequest, ContextWorkerResponse } from './contextWorkerTypes';
+import { buildRepoIndexSnapshot } from './repoIndexer';
+import type { ContextPacket, TaskRequest } from './types';
 
 // -- Helpers ---------------------------------------------------------------
 
 function post(msg: ContextWorkerResponse): void {
-  parentPort?.postMessage(msg)
+  parentPort?.postMessage(msg);
 }
 
 // -- Handlers --------------------------------------------------------------
 
 async function handleBuildContext(id: string, roots: string[]): Promise<void> {
-  const start = Date.now()
-  const snapshot = await buildRepoIndexSnapshot(roots)
+  const start = Date.now();
+  const snapshot = await buildRepoIndexSnapshot(roots);
 
-  let packet: ContextPacket | undefined
+  let packet: ContextPacket | undefined;
   try {
-    const dummyRequest = { workspaceRoots: roots, goal: '', mode: 'chat', provider: 'claude-code' } as TaskRequest
+    const dummyRequest = {
+      workspaceRoots: roots,
+      goal: '',
+      mode: 'chat',
+      provider: 'claude-code',
+    } as TaskRequest;
     const result = await buildContextPacket({
       request: dummyRequest,
       repoFacts: snapshot.repoFacts,
       repoSnapshot: snapshot,
-    })
-    packet = result.packet
+    });
+    packet = result.packet;
   } catch (err) {
-    console.warn('[context-worker] buildContextPacket failed:', err instanceof Error ? err.message : err)
+    log.warn('buildContextPacket failed:', err instanceof Error ? err.message : err);
   }
 
   post({
@@ -46,7 +52,7 @@ async function handleBuildContext(id: string, roots: string[]): Promise<void> {
     snapshot,
     packet,
     durationMs: Date.now() - start,
-  })
+  });
 }
 
 // -- Message router --------------------------------------------------------
@@ -55,21 +61,21 @@ async function handleMessage(msg: ContextWorkerRequest): Promise<void> {
   try {
     switch (msg.type) {
       case 'buildContext':
-        await handleBuildContext(msg.id, msg.roots)
-        break
+        await handleBuildContext(msg.id, msg.roots);
+        break;
       default:
-        post({ type: 'error', id: '', message: 'Unknown request type' })
+        post({ type: 'error', id: '', message: 'Unknown request type' });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    post({ type: 'error', id: msg.id, message })
+    const message = err instanceof Error ? err.message : String(err);
+    post({ type: 'error', id: msg.id, message });
   }
 }
 
 // -- Bootstrap -------------------------------------------------------------
 
 parentPort?.on('message', (msg: ContextWorkerRequest) => {
-  void handleMessage(msg)
-})
+  void handleMessage(msg);
+});
 
-post({ type: 'ready' })
+post({ type: 'ready' });

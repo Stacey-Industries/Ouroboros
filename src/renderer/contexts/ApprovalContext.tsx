@@ -6,7 +6,8 @@
  * there are pending approvals.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useRef,useState } from 'react';
+import log from 'electron-log/renderer';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { ApprovalDialog } from '../components/AgentMonitor/ApprovalDialog';
 import type { ApprovalRequest } from '../types/electron';
@@ -38,7 +39,10 @@ function playApprovalTone(audioCtxRef: React.MutableRefObject<AudioContext | nul
   }
 }
 
-function useApprovalRequests(): [ApprovalRequest[], React.Dispatch<React.SetStateAction<ApprovalRequest[]>>] {
+function useApprovalRequests(): [
+  ApprovalRequest[],
+  React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
+] {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -69,33 +73,45 @@ function useApprovalRequests(): [ApprovalRequest[], React.Dispatch<React.SetStat
 function useApprovalActions(
   setRequests: React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
 ): Pick<React.ComponentProps<typeof ApprovalDialog>, 'onApprove' | 'onReject' | 'onAlwaysAllow'> {
-  const removeRequest = useCallback((requestId: string): void => {
-    setRequests((prev) => prev.filter((request) => request.requestId !== requestId));
-  }, [setRequests]);
+  const removeRequest = useCallback(
+    (requestId: string): void => {
+      setRequests((prev) => prev.filter((request) => request.requestId !== requestId));
+    },
+    [setRequests],
+  );
 
-  const onApprove = useCallback((requestId: string) => {
-    removeRequest(requestId);
-    window.electronAPI?.approval?.respond(requestId, 'approve').catch((err) => {
-      console.error('[ApprovalProvider] failed to send approve:', err);
-    });
-  }, [removeRequest]);
+  const onApprove = useCallback(
+    (requestId: string) => {
+      removeRequest(requestId);
+      window.electronAPI?.approval?.respond(requestId, 'approve').catch((err) => {
+        log.error('failed to send approve:', err);
+      });
+    },
+    [removeRequest],
+  );
 
-  const onReject = useCallback((requestId: string, reason?: string) => {
-    removeRequest(requestId);
-    window.electronAPI?.approval?.respond(requestId, 'reject', reason).catch((err) => {
-      console.error('[ApprovalProvider] failed to send reject:', err);
-    });
-  }, [removeRequest]);
+  const onReject = useCallback(
+    (requestId: string, reason?: string) => {
+      removeRequest(requestId);
+      window.electronAPI?.approval?.respond(requestId, 'reject', reason).catch((err) => {
+        log.error('failed to send reject:', err);
+      });
+    },
+    [removeRequest],
+  );
 
-  const onAlwaysAllow = useCallback((requestId: string, sessionId: string, toolName: string) => {
-    removeRequest(requestId);
-    Promise.all([
-      window.electronAPI?.approval?.respond(requestId, 'approve'),
-      window.electronAPI?.approval?.alwaysAllow(sessionId, toolName),
-    ]).catch((err) => {
-      console.error('[ApprovalProvider] failed to always-allow:', err);
-    });
-  }, [removeRequest]);
+  const onAlwaysAllow = useCallback(
+    (requestId: string, sessionId: string, toolName: string) => {
+      removeRequest(requestId);
+      Promise.all([
+        window.electronAPI?.approval?.respond(requestId, 'approve'),
+        window.electronAPI?.approval?.alwaysAllow(sessionId, toolName),
+      ]).catch((err) => {
+        log.error('failed to always-allow:', err);
+      });
+    },
+    [removeRequest],
+  );
 
   return { onApprove, onReject, onAlwaysAllow };
 }

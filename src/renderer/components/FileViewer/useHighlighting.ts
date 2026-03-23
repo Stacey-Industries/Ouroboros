@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BundledTheme } from 'shiki';
 
@@ -14,7 +15,7 @@ interface HighlightResult {
 export function useHighlighting(
   filePath: string | null,
   content: string | null,
-  ideThemeId: string
+  ideThemeId: string,
 ): HighlightResult {
   const shikiTheme = getShikiTheme(ideThemeId);
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
@@ -26,27 +27,34 @@ export function useHighlighting(
     setHighlightLang(null);
   }, [filePath, content]);
 
-  const highlight = useCallback(async (requestId: number) => {
-    if (!filePath || !content) return;
-    const lang = getLanguage(filePath);
-    if (lang === 'text' || content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
-    try {
-      const hl = await getHighlighter();
+  const highlight = useCallback(
+    async (requestId: number) => {
+      if (!filePath || !content) return;
+      const lang = getLanguage(filePath);
+      if (lang === 'text' || content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
       try {
-        await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0]);
-      } catch { /* language may already be loaded or not exist */ }
-      if (requestId !== currentRequestIdRef.current) return;
-      setHighlightedHtml(hl.codeToHtml(content, { lang, theme: shikiTheme }));
-      setHighlightLang(lang);
-    } catch (err) {
-      console.warn('[FileViewer] highlight failed:', err);
-    }
-  }, [filePath, content, shikiTheme]);
+        const hl = await getHighlighter();
+        try {
+          await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0]);
+        } catch {
+          /* language may already be loaded or not exist */
+        }
+        if (requestId !== currentRequestIdRef.current) return;
+        setHighlightedHtml(hl.codeToHtml(content, { lang, theme: shikiTheme }));
+        setHighlightLang(lang);
+      } catch (err) {
+        log.warn('highlight failed:', err);
+      }
+    },
+    [filePath, content, shikiTheme],
+  );
 
   useEffect(() => {
     currentRequestIdRef.current += 1;
     void highlight(currentRequestIdRef.current);
-    return () => { currentRequestIdRef.current += 1; };
+    return () => {
+      currentRequestIdRef.current += 1;
+    };
   }, [highlight]);
 
   return { highlightedHtml, highlightLang, shikiTheme };

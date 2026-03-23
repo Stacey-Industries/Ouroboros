@@ -1,5 +1,7 @@
 import { type ChildProcess, exec } from 'child_process';
 
+import log from '../../logger';
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -173,13 +175,20 @@ export function buildProcessEnv(extraEnv?: Record<string, string>): Record<strin
 
 function normalizeEventType(type: string): string {
   switch (type) {
-    case 'thread_started': return 'thread.started';
-    case 'turn_started': return 'turn.started';
-    case 'turn_completed': return 'turn.completed';
-    case 'turn_failed': return 'turn.failed';
-    case 'item_started': return 'item.started';
-    case 'item_completed': return 'item.completed';
-    default: return type;
+    case 'thread_started':
+      return 'thread.started';
+    case 'turn_started':
+      return 'turn.started';
+    case 'turn_completed':
+      return 'turn.completed';
+    case 'turn_failed':
+      return 'turn.failed';
+    case 'item_started':
+      return 'item.started';
+    case 'item_completed':
+      return 'item.completed';
+    default:
+      return type;
   }
 }
 
@@ -195,10 +204,10 @@ export function tryParseEvent(line: string): CodexExecEvent | null {
       }
       return parsed as CodexExecEvent;
     }
-    console.warn('[codex-exec] parsed JSON lacks "type" field:', trimmed.slice(0, 120));
+    log.warn('parsed JSON lacks "type" field:', trimmed.slice(0, 120));
     return null;
   } catch {
-    console.warn('[codex-exec] malformed line:', trimmed.slice(0, 120));
+    log.warn('malformed line:', trimmed.slice(0, 120));
     return null;
   }
 }
@@ -216,10 +225,18 @@ export function killCodexProcess(child: ChildProcess): void {
     if (child.pid) {
       // eslint-disable-next-line security/detect-child-process -- PID is a numeric process ID from child_process.spawn, not user input
       exec(`taskkill /T /F /PID ${child.pid}`, { timeout: 5000 }, () => {
-        try { child.kill(); } catch { /* already dead */ }
+        try {
+          child.kill();
+        } catch {
+          /* already dead */
+        }
       });
     } else {
-      try { child.kill(); } catch { /* already dead */ }
+      try {
+        child.kill();
+      } catch {
+        /* already dead */
+      }
     }
   } catch {
     /* already dead */
@@ -254,6 +271,7 @@ export function applyCodexEvent(event: CodexExecEvent, state: CodexSessionState)
   if (event.type === 'thread.started') applyThreadStarted(event, state);
   else if (event.type === 'turn.completed') applyTurnCompleted(event, state);
   else if (event.type === 'error') applyFailure(state, (event as CodexErrorEvent).message);
-  else if (event.type === 'turn.failed') applyFailure(state, (event as CodexTurnFailedEvent).error?.message);
+  else if (event.type === 'turn.failed')
+    applyFailure(state, (event as CodexTurnFailedEvent).error?.message);
   else if (event.type === 'item.completed') applyItemCompleted(event, state);
 }

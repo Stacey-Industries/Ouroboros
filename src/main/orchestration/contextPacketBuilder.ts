@@ -1,10 +1,8 @@
 import { createHash, randomUUID } from 'crypto';
 
+import log from '../logger';
 import { buildFilePayload } from './contextPacketBuilderHelpers';
-import {
-  buildBudgetSummary,
-  getModelBudgets,
-} from './contextPacketBuilderSupport';
+import { buildBudgetSummary, getModelBudgets } from './contextPacketBuilderSupport';
 import { type ContextFileSnapshot } from './contextSelectionSupport';
 import { type ContextSelectionResult, selectContextFiles } from './contextSelector';
 import type { RepoIndexSnapshot } from './repoIndexer';
@@ -105,10 +103,7 @@ function checkContextPacketCache(
   ) {
     return null;
   }
-  console.log(
-    '[context-packet] Cache hit — reusing context packet (age: %dms)',
-    Date.now() - cached.cachedAt,
-  );
+  log.info('Cache hit — reusing context packet (age: %dms)', Date.now() - cached.cachedAt);
   const updatedPacket: ContextPacket = {
     ...cached.result.packet,
     id: randomUUID(),
@@ -119,13 +114,94 @@ function checkContextPacketCache(
 }
 
 const GOAL_STOP_WORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'but', 'nor', 'for', 'of', 'to', 'in', 'on', 'at', 'by',
-  'as', 'is', 'it', 'its', 'be', 'are', 'was', 'were', 'been', 'being', 'have', 'has', 'had',
-  'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'shall', 'can',
-  'i', 'me', 'my', 'we', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'they', 'them',
-  'their', 'this', 'that', 'these', 'those', 'not', 'no', 'from', 'with', 'into', 'than', 'then',
-  'when', 'where', 'why', 'how', 'what', 'which', 'who', 'all', 'any', 'some', 'also', 'just',
-  'now', 'only', 'too', 'very', 'there', 'here', 'if', 'so', 'up', 'out', 'about', 'do', 'made',
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'nor',
+  'for',
+  'of',
+  'to',
+  'in',
+  'on',
+  'at',
+  'by',
+  'as',
+  'is',
+  'it',
+  'its',
+  'be',
+  'are',
+  'was',
+  'were',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'i',
+  'me',
+  'my',
+  'we',
+  'our',
+  'you',
+  'your',
+  'he',
+  'him',
+  'his',
+  'she',
+  'her',
+  'they',
+  'them',
+  'their',
+  'this',
+  'that',
+  'these',
+  'those',
+  'not',
+  'no',
+  'from',
+  'with',
+  'into',
+  'than',
+  'then',
+  'when',
+  'where',
+  'why',
+  'how',
+  'what',
+  'which',
+  'who',
+  'all',
+  'any',
+  'some',
+  'also',
+  'just',
+  'now',
+  'only',
+  'too',
+  'very',
+  'there',
+  'here',
+  'if',
+  'so',
+  'up',
+  'out',
+  'about',
+  'do',
+  'made',
   'make',
 ]);
 
@@ -181,14 +257,32 @@ async function buildPacketFiles(options: {
   const omittedCandidates = [...selection.omittedCandidates];
   for (const rankedFile of selection.rankedFiles) {
     if (files.length >= maxFiles) {
-      omittedCandidates.push({ filePath: rankedFile.filePath, reason: 'Excluded after ranking because maxFiles budget was reached' });
-      budget.droppedContentNotes.push(`Skipped ${rankedFile.filePath} because maxFiles=${maxFiles} was reached`);
+      omittedCandidates.push({
+        filePath: rankedFile.filePath,
+        reason: 'Excluded after ranking because maxFiles budget was reached',
+      });
+      budget.droppedContentNotes.push(
+        `Skipped ${rankedFile.filePath} because maxFiles=${maxFiles} was reached`,
+      );
       continue;
     }
-    const filePayload = await buildFilePayload({ rankedFile, liveIdeState: selection.liveIdeState, maxSnippetsPerFile, budget, cache, fullFileLineLimit: options.fullFileLineLimit, targetedSnippetLineLimit: options.targetedSnippetLineLimit });
+    const filePayload = await buildFilePayload({
+      rankedFile,
+      liveIdeState: selection.liveIdeState,
+      maxSnippetsPerFile,
+      budget,
+      cache,
+      fullFileLineLimit: options.fullFileLineLimit,
+      targetedSnippetLineLimit: options.targetedSnippetLineLimit,
+    });
     if (!filePayload) {
-      omittedCandidates.push({ filePath: rankedFile.filePath, reason: 'All snippets were omitted by packet budgeting rules' });
-      budget.droppedContentNotes.push(`Omitted ${rankedFile.filePath} because no snippets fit within the budget`);
+      omittedCandidates.push({
+        filePath: rankedFile.filePath,
+        reason: 'All snippets were omitted by packet budgeting rules',
+      });
+      budget.droppedContentNotes.push(
+        `Omitted ${rankedFile.filePath} because no snippets fit within the budget`,
+      );
       continue;
     }
     files.push(filePayload);
@@ -253,6 +347,6 @@ export async function buildContextPacket(options: {
 
   const result = await buildFullContextPacket(options);
   contextPacketCache.set(cacheKey, { fingerprint, result, cachedAt: Date.now() });
-  console.log('[context-packet] Cache miss — built and cached new context packet');
+  log.info('Cache miss — built and cached new context packet');
   return result;
 }

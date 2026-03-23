@@ -18,6 +18,7 @@ import net from 'net';
 
 import type { ToolHandler } from './ideToolServerHandlers';
 import { createToolHandlers, execGitStatus } from './ideToolServerHandlers';
+import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -178,7 +179,7 @@ function parseToolRequest(line: string): { request?: ToolRequest; errorResponse?
 }
 
 function dispatchToolRequest(socket: net.Socket, connId: number, request: ToolRequest): void {
-  console.log(`[ide-tools] #${connId} request: ${request.method}`);
+  log.info(`#${connId} request: ${request.method}`);
 
   void handleRequest(request)
     .then((response) => {
@@ -230,7 +231,7 @@ function handleSocketChunk(
   const nextBuffer = rawBuffer + chunk;
 
   if (Buffer.byteLength(nextBuffer, 'utf8') > MAX_BUFFER_BYTES) {
-    console.warn(`[ide-tools] #${connId} buffer overflow â€” dropping connection`);
+    log.warn(`#${connId} buffer overflow — dropping connection`);
     socket.destroy();
     return '';
   }
@@ -240,14 +241,14 @@ function handleSocketChunk(
 
 function logSocketError(connId: number, err: NodeJS.ErrnoException): void {
   if (err.code !== 'EPIPE' && err.code !== 'ECONNRESET') {
-    console.error(`[ide-tools] #${connId} socket error: ${err.message}`);
+    log.error(`#${connId} socket error: ${err.message}`);
   }
 }
 
 // â”€â”€â”€ Per-connection handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function handleSocket(socket: net.Socket, connId: number): void {
-  console.log(`[ide-tools] connection #${connId} opened`);
+  log.info(`connection #${connId} opened`);
 
   let rawBuffer = '';
 
@@ -267,7 +268,7 @@ function handleSocket(socket: net.Socket, connId: number): void {
   });
 
   socket.on('close', () => {
-    console.log(`[ide-tools] connection #${connId} closed`);
+    log.info(`connection #${connId} closed`);
   });
 }
 
@@ -345,16 +346,16 @@ export async function startIdeToolServer(): Promise<{ address: string } | null> 
     try {
       await listenPipe(nextServer, PIPE_NAME);
       server = nextServer;
-      console.log(`[ide-tools] listening on named pipe ${PIPE_NAME}`);
+      log.info(`listening on named pipe ${PIPE_NAME}`);
       return { address: PIPE_NAME };
     } catch (err: unknown) {
       const nodeErr = err as NodeJS.ErrnoException;
       nextServer.close();
       if (nodeErr.code === 'EADDRINUSE') {
-        console.log(`[ide-tools] pipe already held by another instance — skipping`);
+        log.info(`pipe already held by another instance — skipping`);
         return null;
       }
-      console.warn(`[ide-tools] named pipe unavailable (${nodeErr.code ?? 'unknown'})`);
+      log.warn(`named pipe unavailable (${nodeErr.code ?? 'unknown'})`);
       throw err;
     }
   }
@@ -362,16 +363,16 @@ export async function startIdeToolServer(): Promise<{ address: string } | null> 
   try {
     await listenUnix(nextServer, UNIX_SOCKET_PATH);
     server = nextServer;
-    console.log(`[ide-tools] listening on Unix socket ${UNIX_SOCKET_PATH}`);
+    log.info(`listening on Unix socket ${UNIX_SOCKET_PATH}`);
     return { address: UNIX_SOCKET_PATH };
   } catch (err: unknown) {
     const nodeErr = err as NodeJS.ErrnoException;
     nextServer.close();
     if (nodeErr.code === 'EADDRINUSE') {
-      console.log(`[ide-tools] socket already held by another instance — skipping`);
+      log.info(`socket already held by another instance — skipping`);
       return null;
     }
-    console.warn(`[ide-tools] Unix socket unavailable (${nodeErr.code ?? 'unknown'})`);
+    log.warn(`Unix socket unavailable (${nodeErr.code ?? 'unknown'})`);
     throw err;
   }
 }
@@ -387,7 +388,7 @@ export function stopIdeToolServer(): Promise<void> {
 
     server.close(() => {
       server = null;
-      console.log('[ide-tools] server stopped');
+      log.info('server stopped');
       cleanupUnixSocket();
       resolve();
     });

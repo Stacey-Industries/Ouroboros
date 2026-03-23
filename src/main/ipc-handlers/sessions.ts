@@ -7,6 +7,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { getErrorMessage } from '../agentChat/utils';
+import log from '../logger';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 type SessionRecord = Record<string, unknown>;
@@ -45,7 +46,7 @@ async function pruneOldSessions(): Promise<void> {
       toDelete.map((entry) =>
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from sessionsDir + readdir entry
         fs.unlink(path.join(sessionsDir, entry.name)).catch((error) => {
-          console.error('[sessions] Failed to delete old session file:', entry.name, error);
+          log.error('Failed to delete old session file:', entry.name, error);
         }),
       ),
     );

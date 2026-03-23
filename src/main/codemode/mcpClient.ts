@@ -5,6 +5,7 @@
 
 import { ChildProcess, spawn } from 'child_process';
 
+import log from '../logger';
 import { McpToolSchema, UpstreamServer } from './types';
 
 export interface McpServerConfig {
@@ -98,7 +99,7 @@ function makeNotification(method: string, params?: object): Buffer {
 }
 
 function createLogger(name: string): LogFn {
-  return (...args) => console.log(`[codemode:${name}]`, ...args);
+  return (...args) => log.info(`[codemode:${name}]`, ...args);
 }
 
 function getCommand(name: string, config: McpServerConfig): string {

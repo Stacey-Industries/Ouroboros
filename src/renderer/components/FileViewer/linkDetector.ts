@@ -1,3 +1,5 @@
+import log from 'electron-log/renderer';
+
 /**
  * linkDetector.ts â€” Post-processes Shiki-highlighted HTML to make URLs,
  * relative imports, and project-path references clickable.
@@ -114,7 +116,7 @@ function handleLinkTarget(
 
   if (target.dataset.linkType === 'url') {
     window.electronAPI?.app?.openExternal(href).catch((error) => {
-      console.error('[linkDetector] Failed to open external URL:', href, error);
+      log.error('Failed to open external URL:', href, error);
     });
     return;
   }

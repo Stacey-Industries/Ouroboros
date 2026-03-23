@@ -13,6 +13,7 @@ import path from 'path';
 
 import { store } from '../config';
 import { loadExtensionThemes, type OuroborosTheme } from '../contributions/themeLoader';
+import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
 
 export interface VsxExtensionSummary {
@@ -118,11 +119,19 @@ function buildContributes(
   if (rawContributes.themes?.length)
     contributes.themes = rawContributes.themes
       .filter((t) => t.label && t.path)
-      .map((t) => ({ label: t.label!, uiTheme: t.uiTheme ?? 'vs-dark', path: path.join(extensionRoot, t.path!) }));
+      .map((t) => ({
+        label: t.label!,
+        uiTheme: t.uiTheme ?? 'vs-dark',
+        path: path.join(extensionRoot, t.path!),
+      }));
   if (rawContributes.grammars?.length)
     contributes.grammars = rawContributes.grammars
       .filter((g) => g.language && g.scopeName && g.path)
-      .map((g) => ({ language: g.language!, scopeName: g.scopeName!, path: path.join(extensionRoot, g.path!) }));
+      .map((g) => ({
+        language: g.language!,
+        scopeName: g.scopeName!,
+        path: path.join(extensionRoot, g.path!),
+      }));
   if (rawContributes.snippets?.length)
     contributes.snippets = rawContributes.snippets
       .filter((s) => s.language && s.path)
@@ -147,9 +156,11 @@ async function readPackageJson(
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from EXTENSIONS_DIR + validated extension ID
     return JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8')) as ExtensionPackageJson;
   } catch (error) {
-    console.error(`[extensionStore] Failed to parse package.json for ${extensionId}:`, error);
+    log.error(`Failed to parse package.json for ${extensionId}:`, error);
     await fs.rm(targetDir, { recursive: true, force: true }).catch(() => {});
-    throw new Error(`Extension ${extensionId} has an invalid or missing package.json and cannot be installed.`);
+    throw new Error(
+      `Extension ${extensionId} has an invalid or missing package.json and cannot be installed.`,
+    );
   }
 }
 
@@ -164,7 +175,11 @@ async function extractAndParse(
   zip.extractAllTo(targetDir, true);
   const extensionRoot = path.join(targetDir, 'extension');
   return {
-    pkgJson: await readPackageJson(path.join(extensionRoot, 'package.json'), extensionId, targetDir),
+    pkgJson: await readPackageJson(
+      path.join(extensionRoot, 'package.json'),
+      extensionId,
+      targetDir,
+    ),
     targetDir,
     extensionRoot,
   };
@@ -182,18 +197,35 @@ function updateInstalledRegistry(
   if (disabled.includes(extensionId)) setDisabledList(disabled.filter((id) => id !== extensionId));
 }
 
-export async function installExtensionFromBuffer(options: InstallFromBufferOptions): Promise<InstalledVsxExtension> {
-  const { buffer, tempPath, extensionId, namespace, name, version, displayName, description, existing } = options;
+export async function installExtensionFromBuffer(
+  options: InstallFromBufferOptions,
+): Promise<InstalledVsxExtension> {
+  const {
+    buffer,
+    tempPath,
+    extensionId,
+    namespace,
+    name,
+    version,
+    displayName,
+    description,
+    existing,
+  } = options;
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- tempPath derived from os.tmpdir() + sanitised extension ID
     await fs.writeFile(tempPath, buffer);
     const { pkgJson, targetDir, extensionRoot } = await extractAndParse(tempPath, extensionId);
     const contributes = buildContributes(pkgJson.contributes ?? {}, extensionRoot);
     const installed: InstalledVsxExtension = {
-      id: extensionId, namespace, name,
+      id: extensionId,
+      namespace,
+      name,
       displayName: pkgJson.displayName ?? displayName ?? name,
-      version, description: pkgJson.description ?? description ?? '',
-      installPath: targetDir, installedAt: new Date().toISOString(), contributes,
+      version,
+      description: pkgJson.description ?? description ?? '',
+      installPath: targetDir,
+      installedAt: new Date().toISOString(),
+      contributes,
     };
     updateInstalledRegistry(extensionId, installed, existing);
     broadcastToWindows('extensionStore:installed', installed);
@@ -210,7 +242,9 @@ export async function uninstallExtension(id: string): Promise<Record<string, nev
   if (!entry) throw new Error(`Extension "${id}" is not installed.`);
   try {
     await fs.rm(entry.installPath, { recursive: true, force: true });
-  } catch { /* already gone */ }
+  } catch {
+    /* already gone */
+  }
   setInstalledList(existing.filter((e) => e.id !== id));
   const disabled = getDisabledList();
   if (disabled.includes(id)) setDisabledList(disabled.filter((d) => d !== id));

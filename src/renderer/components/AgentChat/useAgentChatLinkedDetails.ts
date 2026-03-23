@@ -1,4 +1,5 @@
 /* @refresh reset */
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -56,7 +57,9 @@ function getLinkKey(link?: AgentChatOrchestrationLink): string | null {
   return parts.length > 0 ? parts.join(':') : null;
 }
 
-function getLatestThreadLink(thread: AgentChatThreadRecord | null): AgentChatOrchestrationLink | undefined {
+function getLatestThreadLink(
+  thread: AgentChatThreadRecord | null,
+): AgentChatOrchestrationLink | undefined {
   if (!thread) {
     return undefined;
   }
@@ -103,7 +106,8 @@ function useRefreshLinkedDetails(args: {
   preferredLinkKey: string | null;
   setters: LinkedDetailsStateSetters;
 }): void {
-  const { activeThread, autoOpenedRef, loadDetails, preferredLink, preferredLinkKey, setters } = args;
+  const { activeThread, autoOpenedRef, loadDetails, preferredLink, preferredLinkKey, setters } =
+    args;
 
   useEffect(() => {
     if (!preferredLink) {
@@ -112,7 +116,14 @@ function useRefreshLinkedDetails(args: {
     }
 
     void loadDetails(preferredLink, false);
-  }, [activeThread?.updatedAt, autoOpenedRef, loadDetails, preferredLink, preferredLinkKey, setters]);
+  }, [
+    activeThread?.updatedAt,
+    autoOpenedRef,
+    loadDetails,
+    preferredLink,
+    preferredLinkKey,
+    setters,
+  ]);
 }
 
 function useAutoOpenLinkedDetails(args: {
@@ -123,7 +134,8 @@ function useAutoOpenLinkedDetails(args: {
   preferredLink: AgentChatOrchestrationLink | undefined;
   preferredLinkKey: string | null;
 }): void {
-  const { activeThread, autoOpenedRef, enabled, loadDetails, preferredLink, preferredLinkKey } = args;
+  const { activeThread, autoOpenedRef, enabled, loadDetails, preferredLink, preferredLinkKey } =
+    args;
 
   useEffect(() => {
     const autoOpenKey = createAutoOpenKey(activeThread, preferredLinkKey);
@@ -155,7 +167,7 @@ function useOpenOrchestrationAction(args: {
     }
 
     // Orchestration panel removed — linked details are now surfaced in chat
-    console.log('[agent-chat] linked orchestration session:', sessionId);
+    log.info('linked orchestration session:', sessionId);
   }, [activeLink?.sessionId, details?.result?.sessionId, details?.session?.id, setError]);
 }
 
@@ -180,15 +192,29 @@ function useLinkedDetailsStateContainer(): LinkedDetailsStateContainer {
   const [activeLink, setActiveLink] = useState<AgentChatOrchestrationLink | undefined>();
   const requestIdRef = useRef(0);
   const autoOpenedRef = useRef<string | null>(null);
-  const setters = useMemo<LinkedDetailsStateSetters>(() => ({
-    setActiveLink,
-    setDetails,
-    setError,
-    setIsLoading,
-    setIsOpen,
-  }), [setActiveLink, setDetails, setError, setIsLoading, setIsOpen]);
+  const setters = useMemo<LinkedDetailsStateSetters>(
+    () => ({
+      setActiveLink,
+      setDetails,
+      setError,
+      setIsLoading,
+      setIsOpen,
+    }),
+    [setActiveLink, setDetails, setError, setIsLoading, setIsOpen],
+  );
 
-  return { activeLink, autoOpenedRef, details, error, isLoading, isOpen, requestIdRef, setError, setIsOpen, setters };
+  return {
+    activeLink,
+    autoOpenedRef,
+    details,
+    error,
+    isLoading,
+    isOpen,
+    requestIdRef,
+    setError,
+    setIsOpen,
+    setters,
+  };
 }
 
 function usePreferredLinkedDetails(activeThread: AgentChatThreadRecord | null): {
@@ -206,41 +232,44 @@ function useLoadDetailsAction(args: {
 }): (link: AgentChatOrchestrationLink, reveal: boolean) => Promise<void> {
   const { requestIdRef, setters } = args;
 
-  return useCallback(async (link: AgentChatOrchestrationLink, reveal: boolean): Promise<void> => {
-    if (!hasElectronAPI()) {
-      return;
-    }
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    setters.setActiveLink(link);
-    setters.setError(null);
-    setters.setIsLoading(true);
-    if (reveal) {
-      setters.setIsOpen(true);
-    }
-
-    try {
-      const result = await window.electronAPI.agentChat.getLinkedDetails(link);
-      if (requestId !== requestIdRef.current) {
+  return useCallback(
+    async (link: AgentChatOrchestrationLink, reveal: boolean): Promise<void> => {
+      if (!hasElectronAPI()) {
         return;
       }
-      if (!result.success) {
-        throw new Error(result.error ?? 'Unable to load linked task details.');
+
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      setters.setActiveLink(link);
+      setters.setError(null);
+      setters.setIsLoading(true);
+      if (reveal) {
+        setters.setIsOpen(true);
       }
-      setters.setDetails(result);
-    } catch (loadError) {
-      if (requestId !== requestIdRef.current) {
-        return;
+
+      try {
+        const result = await window.electronAPI.agentChat.getLinkedDetails(link);
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+        if (!result.success) {
+          throw new Error(result.error ?? 'Unable to load linked task details.');
+        }
+        setters.setDetails(result);
+      } catch (loadError) {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+        setters.setDetails(null);
+        setters.setError(getErrorMessage(loadError));
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setters.setIsLoading(false);
+        }
       }
-      setters.setDetails(null);
-      setters.setError(getErrorMessage(loadError));
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setters.setIsLoading(false);
-      }
-    }
-  }, [requestIdRef, setters]);
+    },
+    [requestIdRef, setters],
+  );
 }
 
 function useLinkedDetailsLifecycle(args: {
@@ -270,14 +299,17 @@ function useLinkedDetailsActions(args: {
 } {
   const { preferredLink, setError, loadDetails, setIsOpen, activeLink, details } = args;
 
-  const openDetails = useCallback(async (link?: AgentChatOrchestrationLink): Promise<void> => {
-    const nextLink = link ?? preferredLink;
-    if (!nextLink) {
-      setError('Linked task details are not available for this thread yet.');
-      return;
-    }
-    await loadDetails(nextLink, true);
-  }, [preferredLink, setError, loadDetails]);
+  const openDetails = useCallback(
+    async (link?: AgentChatOrchestrationLink): Promise<void> => {
+      const nextLink = link ?? preferredLink;
+      if (!nextLink) {
+        setError('Linked task details are not available for this thread yet.');
+        return;
+      }
+      await loadDetails(nextLink, true);
+    },
+    [preferredLink, setError, loadDetails],
+  );
 
   const closeDetails = useCallback((): void => {
     setIsOpen(false);
@@ -296,9 +328,12 @@ function useAutoOpenOnFailureSetting(): boolean {
   const [autoOpenOnFailure, setAutoOpenOnFailure] = useState(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && 'electronAPI' in window) {
-      window.electronAPI.config.getAll()
+      window.electronAPI.config
+        .getAll()
         .then((cfg) => setAutoOpenOnFailure(Boolean(cfg?.agentChatSettings?.openDetailsOnFailure)))
-        .catch(() => { /* default false */ });
+        .catch(() => {
+          /* default false */
+        });
     }
   }, []);
   return autoOpenOnFailure;
@@ -329,17 +364,28 @@ export function useAgentChatLinkedDetails({
   const autoOpenOnFailure = useAutoOpenOnFailureSetting();
   const state = useLinkedDetailsStateContainer();
   const { preferredLink, preferredLinkKey } = usePreferredLinkedDetails(activeThread);
-  const loadDetails = useLoadDetailsAction({ requestIdRef: state.requestIdRef, setters: state.setters });
+  const loadDetails = useLoadDetailsAction({
+    requestIdRef: state.requestIdRef,
+    setters: state.setters,
+  });
 
   useLinkedDetailsLifecycle({
-    activeThread, autoOpenedRef: state.autoOpenedRef,
-    enabled: autoOpenOnFailure, loadDetails,
-    preferredLink, preferredLinkKey, setters: state.setters,
+    activeThread,
+    autoOpenedRef: state.autoOpenedRef,
+    enabled: autoOpenOnFailure,
+    loadDetails,
+    preferredLink,
+    preferredLinkKey,
+    setters: state.setters,
   });
 
   const actions = useLinkedDetailsActions({
-    activeLink: state.activeLink, details: state.details, loadDetails,
-    preferredLink, setError: state.setError, setIsOpen: state.setIsOpen,
+    activeLink: state.activeLink,
+    details: state.details,
+    loadDetails,
+    preferredLink,
+    setError: state.setError,
+    setIsOpen: state.setIsOpen,
   });
 
   return buildLinkedDetailsReturn(state, actions);

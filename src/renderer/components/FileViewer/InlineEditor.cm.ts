@@ -1,11 +1,31 @@
-import { autocompletion, closeBrackets, closeBracketsKeymap, type CompletionContext, completionKeymap, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
+import {
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  type CompletionContext,
+  completionKeymap,
+  type CompletionResult,
+  type CompletionSource,
+} from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { bracketMatching, foldGutter, foldKeymap,indentOnInput } from '@codemirror/language';
-import { type Diagnostic as CmDiagnostic,linter, lintKeymap } from '@codemirror/lint';
-import { highlightSelectionMatches,searchKeymap } from '@codemirror/search';
+import { bracketMatching, foldGutter, foldKeymap, indentOnInput } from '@codemirror/language';
+import { type Diagnostic as CmDiagnostic, linter, lintKeymap } from '@codemirror/lint';
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import type { Compartment } from '@codemirror/state';
 import { type Extension, type Text } from '@codemirror/state';
-import { crosshairCursor,drawSelection, EditorView, highlightActiveLine, highlightSpecialChars, hoverTooltip, keymap, lineNumbers, rectangularSelection, type Tooltip } from '@codemirror/view';
+import {
+  crosshairCursor,
+  drawSelection,
+  EditorView,
+  highlightActiveLine,
+  highlightSpecialChars,
+  hoverTooltip,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
+  type Tooltip,
+} from '@codemirror/view';
+import log from 'electron-log/renderer';
 import type { MutableRefObject } from 'react';
 
 import type { LspDiagnostic } from '../../types/electron';
@@ -85,14 +105,16 @@ function scheduleLspDidChange(
   content: string,
   didChangeTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
   projectRootRef: NullableStringRef,
-  filePathRef: StringRef
+  filePathRef: StringRef,
 ): void {
   const root = projectRootRef.current;
   const filePath = filePathRef.current;
   if (!root || !filePath || !hasLspApi()) return;
   if (didChangeTimerRef.current) clearTimeout(didChangeTimerRef.current);
   didChangeTimerRef.current = setTimeout(() => {
-    window.electronAPI.lsp.didChange(root, filePath, content).catch((error) => { console.error('[inlineEditor] LSP didChange notification failed:', error) });
+    window.electronAPI.lsp.didChange(root, filePath, content).catch((error) => {
+      log.error('LSP didChange notification failed:', error);
+    });
   }, 200);
 }
 
@@ -100,7 +122,7 @@ function updateDirtyState(
   currentContent: string,
   initialContentRef: MutableRefObject<string>,
   isDirtyRef: MutableRefObject<boolean>,
-  onDirtyChangeRef: MutableRefObject<(dirty: boolean) => void>
+  onDirtyChangeRef: MutableRefObject<(dirty: boolean) => void>,
 ): void {
   const dirty = currentContent !== initialContentRef.current;
   if (dirty === isDirtyRef.current) return;
@@ -111,8 +133,12 @@ function updateDirtyState(
 function createHoverTooltipDom(contents: string): HTMLDivElement {
   const dom = document.createElement('div');
   dom.className = 'cm-lsp-hover';
-  dom.style.cssText = 'padding: 4px 8px; max-width: 500px; max-height: 300px; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.5;';
-  dom.textContent = contents.replace(/^```[\w]*\n?/gm, '').replace(/^```$/gm, '').trim();
+  dom.style.cssText =
+    'padding: 4px 8px; max-width: 500px; max-height: 300px; overflow: auto; white-space: pre-wrap; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.5;';
+  dom.textContent = contents
+    .replace(/^```[\w]*\n?/gm, '')
+    .replace(/^```$/gm, '')
+    .trim();
   return dom;
 }
 
@@ -132,7 +158,9 @@ export function createEditorExtensions(input: CreateEditorExtensionsInput): Exte
     bracketMatching(),
     closeBrackets(),
     highlightSelectionMatches(),
-    input.highlightCompartment.of(createHighlightExtension(input.filePath ? input.themeId : 'modern')),
+    input.highlightCompartment.of(
+      createHighlightExtension(input.filePath ? input.themeId : 'modern'),
+    ),
     keymap.of([
       ...closeBracketsKeymap,
       ...defaultKeymap,
@@ -155,14 +183,18 @@ export function createEditorExtensions(input: CreateEditorExtensionsInput): Exte
   ];
 }
 
-export function createSaveKeymap(onSaveRef: MutableRefObject<(content: string) => void>): Extension {
-  return keymap.of([{
-    key: 'Mod-s',
-    run: (view) => {
-      onSaveRef.current(view.state.doc.toString());
-      return true;
+export function createSaveKeymap(
+  onSaveRef: MutableRefObject<(content: string) => void>,
+): Extension {
+  return keymap.of([
+    {
+      key: 'Mod-s',
+      run: (view) => {
+        onSaveRef.current(view.state.doc.toString());
+        return true;
+      },
     },
-  }]);
+  ]);
 }
 
 export function createUpdateListener(input: CreateUpdateListenerInput): Extension {
@@ -170,18 +202,35 @@ export function createUpdateListener(input: CreateUpdateListenerInput): Extensio
     if (!update.docChanged) return;
     const currentContent = update.state.doc.toString();
     input.onContentChangeRef.current(currentContent);
-    updateDirtyState(currentContent, input.initialContentRef, input.isDirtyRef, input.onDirtyChangeRef);
-    scheduleLspDidChange(currentContent, input.didChangeTimerRef, input.projectRootRef, input.filePathRef);
+    updateDirtyState(
+      currentContent,
+      input.initialContentRef,
+      input.isDirtyRef,
+      input.onDirtyChangeRef,
+    );
+    scheduleLspDidChange(
+      currentContent,
+      input.didChangeTimerRef,
+      input.projectRootRef,
+      input.filePathRef,
+    );
   });
 }
 
-export function lspPosToCmOffset(doc: Pick<Text, 'line' | 'lines'>, line: number, character: number): number {
+export function lspPosToCmOffset(
+  doc: Pick<Text, 'line' | 'lines'>,
+  line: number,
+  character: number,
+): number {
   const cmLineNumber = Math.min(line + 1, doc.lines);
   const lineInfo = doc.line(cmLineNumber);
   return Math.min(lineInfo.from + character, lineInfo.to);
 }
 
-export function cmOffsetToLspPos(doc: Pick<Text, 'lineAt'>, offset: number): { line: number; character: number } {
+export function cmOffsetToLspPos(
+  doc: Pick<Text, 'lineAt'>,
+  offset: number,
+): { line: number; character: number } {
   const lineInfo = doc.lineAt(offset);
   return { line: lineInfo.number - 1, character: offset - lineInfo.from };
 }
@@ -190,7 +239,10 @@ export function hasLspApi(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window && !!window.electronAPI?.lsp;
 }
 
-export function createLspCompletionSource(filePathRef: StringRef, projectRootRef: NullableStringRef): CompletionSource {
+export function createLspCompletionSource(
+  filePathRef: StringRef,
+  projectRootRef: NullableStringRef,
+): CompletionSource {
   return async (context: CompletionContext): Promise<CompletionResult | null> => {
     const root = projectRootRef.current;
     const filePath = filePathRef.current;
@@ -198,7 +250,12 @@ export function createLspCompletionSource(filePathRef: StringRef, projectRootRef
 
     try {
       const position = cmOffsetToLspPos(context.state.doc, context.pos);
-      const result = await window.electronAPI.lsp.completion(root, filePath, position.line, position.character);
+      const result = await window.electronAPI.lsp.completion(
+        root,
+        filePath,
+        position.line,
+        position.character,
+      );
       if (!result.success || !result.items?.length) return null;
 
       const word = context.matchBefore(/[\w$]*/);
@@ -218,42 +275,60 @@ export function createLspCompletionSource(filePathRef: StringRef, projectRootRef
   };
 }
 
-export function createLspHoverTooltipSource(filePathRef: StringRef, projectRootRef: NullableStringRef): Extension {
-  return hoverTooltip(async (view: EditorView, pos: number): Promise<Tooltip | null> => {
-    const root = projectRootRef.current;
-    const filePath = filePathRef.current;
-    if (!root || !filePath || !hasLspApi()) return null;
+export function createLspHoverTooltipSource(
+  filePathRef: StringRef,
+  projectRootRef: NullableStringRef,
+): Extension {
+  return hoverTooltip(
+    async (view: EditorView, pos: number): Promise<Tooltip | null> => {
+      const root = projectRootRef.current;
+      const filePath = filePathRef.current;
+      if (!root || !filePath || !hasLspApi()) return null;
 
-    try {
-      const position = cmOffsetToLspPos(view.state.doc, pos);
-      const result = await window.electronAPI.lsp.hover(root, filePath, position.line, position.character);
-      const contents = result.contents;
-      if (!result.success || typeof contents !== 'string' || contents.length === 0) return null;
+      try {
+        const position = cmOffsetToLspPos(view.state.doc, pos);
+        const result = await window.electronAPI.lsp.hover(
+          root,
+          filePath,
+          position.line,
+          position.character,
+        );
+        const contents = result.contents;
+        if (!result.success || typeof contents !== 'string' || contents.length === 0) return null;
 
-      return {
-        pos: view.state.wordAt(pos)?.from ?? pos,
-        above: true,
-        create: () => ({ dom: createHoverTooltipDom(contents) }),
-      };
-    } catch {
-      return null;
-    }
-  }, { hoverTime: 300 });
+        return {
+          pos: view.state.wordAt(pos)?.from ?? pos,
+          above: true,
+          create: () => ({ dom: createHoverTooltipDom(contents) }),
+        };
+      } catch {
+        return null;
+      }
+    },
+    { hoverTime: 300 },
+  );
 }
 
 export function createLspLinter(diagnosticsRef: MutableRefObject<LspDiagnostic[]>): Extension {
-  return linter((view): CmDiagnostic[] => {
-    if (diagnosticsRef.current.length === 0) return [];
-    return diagnosticsRef.current.map((diagnostic) => ({
-      from: lspPosToCmOffset(view.state.doc, diagnostic.range.startLine, diagnostic.range.startChar),
-      to: Math.max(
-        lspPosToCmOffset(view.state.doc, diagnostic.range.endLine, diagnostic.range.endChar),
-        lspPosToCmOffset(view.state.doc, diagnostic.range.startLine, diagnostic.range.startChar)
-      ),
-      severity: getLspSeverity(diagnostic.severity),
-      message: diagnostic.message,
-    }));
-  }, { delay: 500 });
+  return linter(
+    (view): CmDiagnostic[] => {
+      if (diagnosticsRef.current.length === 0) return [];
+      return diagnosticsRef.current.map((diagnostic) => ({
+        from: lspPosToCmOffset(
+          view.state.doc,
+          diagnostic.range.startLine,
+          diagnostic.range.startChar,
+        ),
+        to: Math.max(
+          lspPosToCmOffset(view.state.doc, diagnostic.range.endLine, diagnostic.range.endChar),
+          lspPosToCmOffset(view.state.doc, diagnostic.range.startLine, diagnostic.range.startChar),
+        ),
+        severity: getLspSeverity(diagnostic.severity),
+        message: diagnostic.message,
+      }));
+    },
+    { delay: 500 },
+  );
 }
 
 export function normalizeFilePath(filePath: string): string {

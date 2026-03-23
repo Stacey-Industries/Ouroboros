@@ -1,6 +1,7 @@
 /**
  * FileViewerManager event listeners — extracted from FileViewerManager.internal.ts.
  */
+import log from 'electron-log/renderer';
 import type { RefObject } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -17,7 +18,10 @@ import {
   type SplitState,
 } from './FileViewerManager.internal';
 
-export function useProjectChangeListener(projectRoot: string | null, setOpenFiles: SetOpenFiles): void {
+export function useProjectChangeListener(
+  projectRoot: string | null,
+  setOpenFiles: SetOpenFiles,
+): void {
   useEffect(() => {
     if (!projectRoot) return;
     const cleanup = window.electronAPI.files.onFileChange((change: FileChangeEvent) => {
@@ -42,14 +46,17 @@ export function useReloadFileListener(setOpenFiles: SetOpenFiles): void {
 export function useOpenFileListener(openFile: (filePath: string) => Promise<void>): void {
   useEffect(() => {
     function onOpenFile(event: Event): void {
-      const detail = (event as CustomEvent<{ filePath: string; line?: number; col?: number }>).detail;
+      const detail = (event as CustomEvent<{ filePath: string; line?: number; col?: number }>)
+        .detail;
       if (!detail.filePath) return;
       void openFile(detail.filePath).then(() => {
         if (detail.line == null || detail.line <= 0) return;
         requestAnimationFrame(() => {
-          window.dispatchEvent(new CustomEvent('agent-ide:scroll-to-line', {
-            detail: { filePath: detail.filePath, line: detail.line, col: detail.col },
-          }));
+          window.dispatchEvent(
+            new CustomEvent('agent-ide:scroll-to-line', {
+              detail: { filePath: detail.filePath, line: detail.line, col: detail.col },
+            }),
+          );
         });
       });
     }
@@ -69,7 +76,11 @@ export function useSaveAllDirtyListener(
       const dirtyFiles = files.filter((f) => f.isDirty && f.content != null);
       if (dirtyFiles.length === 0) return;
       const savePromise = Promise.all(
-        dirtyFiles.map((f) => saveFile(f.path, f.content!).catch((error) => { console.error('[fileViewer] Failed to save dirty file:', f.path, error); })),
+        dirtyFiles.map((f) =>
+          saveFile(f.path, f.content!).catch((error) => {
+            log.error('Failed to save dirty file:', f.path, error);
+          }),
+        ),
       ).then(() => {});
       if (typeof detail?.addPromise === 'function') detail.addPromise(savePromise);
     }
@@ -121,9 +132,18 @@ export function useNewFileListener(
     function onNewFile(): void {
       const fileName = `Untitled-${untitledCounter++}`;
       const newFile: OpenFile = {
-        path: fileName, name: fileName, content: '', originalContent: '',
-        diskContent: null, isLoading: false, error: null, isDirty: false,
-        isPinned: true, isPreview: false, isDirtyOnDisk: false, saveError: null,
+        path: fileName,
+        name: fileName,
+        content: '',
+        originalContent: '',
+        diskContent: null,
+        isLoading: false,
+        error: null,
+        isDirty: false,
+        isPinned: true,
+        isPreview: false,
+        isDirtyOnDisk: false,
+        saveError: null,
       };
       setOpenFiles((prev) => {
         const next = [...prev, newFile];
@@ -139,13 +159,17 @@ export function useNewFileListener(
 export function useSplitState(openFiles: OpenFile[], activeIndex: number) {
   const [split, setSplit] = useState<SplitState>(DEFAULT_SPLIT_STATE);
 
-  const splitRight = useCallback((filePath?: string) => {
-    setSplit((prev) => ({
-      isSplit: true, activeSplit: 'right',
-      rightFilePath: filePath ?? openFiles[activeIndex]?.path ?? null,
-      splitRatio: prev.isSplit ? prev.splitRatio : 0.5,
-    }));
-  }, [openFiles, activeIndex]);
+  const splitRight = useCallback(
+    (filePath?: string) => {
+      setSplit((prev) => ({
+        isSplit: true,
+        activeSplit: 'right',
+        rightFilePath: filePath ?? openFiles[activeIndex]?.path ?? null,
+        splitRatio: prev.isSplit ? prev.splitRatio : 0.5,
+      }));
+    },
+    [openFiles, activeIndex],
+  );
 
   const closeSplit = useCallback(() => {
     setSplit({ ...DEFAULT_SPLIT_STATE, activeSplit: 'left' });
@@ -166,9 +190,10 @@ export function useSplitState(openFiles: OpenFile[], activeIndex: number) {
     if (!rightStillOpen) setSplit(DEFAULT_SPLIT_STATE);
   }, [openFiles, split.isSplit, split.rightFilePath]);
 
-  const rightFile = split.isSplit && split.rightFilePath
-    ? openFiles.find((f) => f.path === split.rightFilePath) ?? null
-    : null;
+  const rightFile =
+    split.isSplit && split.rightFilePath
+      ? (openFiles.find((f) => f.path === split.rightFilePath) ?? null)
+      : null;
 
   return { split, splitRight, closeSplit, setActiveSplit, setSplitRatio, rightFile };
 }

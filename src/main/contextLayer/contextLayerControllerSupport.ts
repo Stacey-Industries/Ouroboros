@@ -5,6 +5,7 @@
 
 import path from 'path';
 
+import log from '../logger';
 import type { IndexedRepoFile, RootRepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { RepoMapSummary } from '../orchestration/types';
 import {
@@ -261,17 +262,15 @@ function logGraphResults(
   }>,
   iterations: number,
 ): void {
-  console.log(
-    `[context-layer] Import graph: ${graph.edges.length} edges resolved, ` +
+  log.info(
+    `Import graph: ${graph.edges.length} edges resolved, ` +
       `${graph.unresolvedCount} unresolved of ${graph.totalRelativeImports} relative imports`,
   );
   if (movements.length === 0) return;
-  console.log(
-    `[context-layer] Refinement: ${movements.length} file(s) moved in ${iterations} iteration(s)`,
-  );
+  log.info(`Refinement: ${movements.length} file(s) moved in ${iterations} iteration(s)`);
   for (const move of movements) {
-    console.log(
-      `[context-layer]   ${path.basename(move.filePath)}: ${move.fromModuleId} → ${move.toModuleId} (affinity ${(move.affinityScore * 100).toFixed(0)}%)`,
+    log.info(
+      `  ${path.basename(move.filePath)}: ${move.fromModuleId} → ${move.toModuleId} (affinity ${(move.affinityScore * 100).toFixed(0)}%)`,
     );
   }
 }

@@ -3,6 +3,8 @@ import { app } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+import log from '../logger';
+
 export interface SessionMemoryEntry {
   id: string;
   timestamp: string;
@@ -46,7 +48,7 @@ async function writeFile(workspaceRoot: string, entries: SessionMemoryEntry[]): 
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from SHA1 hash of workspaceRoot
     await fs.writeFile(filePath, JSON.stringify(entries, null, 2), 'utf-8');
   } catch (error) {
-    console.warn('[sessionMemory] write failed:', error);
+    log.warn('write failed:', error);
   }
 }
 

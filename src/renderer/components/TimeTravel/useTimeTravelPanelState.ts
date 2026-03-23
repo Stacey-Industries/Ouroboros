@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -26,22 +27,30 @@ interface ChangedFilesArgs {
   compareToId: string | null;
 }
 
-function findSnapshotById(sortedSnapshots: WorkspaceSnapshot[], id: string | null): WorkspaceSnapshot | null {
+function findSnapshotById(
+  sortedSnapshots: WorkspaceSnapshot[],
+  id: string | null,
+): WorkspaceSnapshot | null {
   if (!id) return null;
   return sortedSnapshots.find((snapshot) => snapshot.id === id) ?? null;
 }
 
-function useCurrentHead(projectRoot?: string): [string | null, Dispatch<SetStateAction<string | null>>] {
+function useCurrentHead(
+  projectRoot?: string,
+): [string | null, Dispatch<SetStateAction<string | null>>] {
   const [currentHead, setCurrentHead] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectRoot) return;
     let cancelled = false;
-    void window.electronAPI.git.snapshot(projectRoot)
+    void window.electronAPI.git
+      .snapshot(projectRoot)
       .then((result) => {
         if (!cancelled && result.success && result.commitHash) setCurrentHead(result.commitHash);
       })
-      .catch((error) => { console.error('[timeTravel] Failed to fetch git snapshot:', error) });
+      .catch((error) => {
+        log.error('Failed to fetch git snapshot:', error);
+      });
 
     return () => {
       cancelled = true;
@@ -51,12 +60,19 @@ function useCurrentHead(projectRoot?: string): [string | null, Dispatch<SetState
   return [currentHead, setCurrentHead];
 }
 
-async function getChangedFilesBetween(projectRoot: string, fromHash: string, toHash: string): Promise<ChangedFile[]> {
+async function getChangedFilesBetween(
+  projectRoot: string,
+  fromHash: string,
+  toHash: string,
+): Promise<ChangedFile[]> {
   const result = await window.electronAPI.git.changedFilesBetween(projectRoot, fromHash, toHash);
   return result.success && result.files ? result.files : [];
 }
 
-function getPreviousSnapshot(sortedSnapshots: WorkspaceSnapshot[], selectedId: string | null): WorkspaceSnapshot | null {
+function getPreviousSnapshot(
+  sortedSnapshots: WorkspaceSnapshot[],
+  selectedId: string | null,
+): WorkspaceSnapshot | null {
   if (!selectedId) return null;
   const currentIndex = sortedSnapshots.findIndex((snapshot) => snapshot.id === selectedId);
   return currentIndex < sortedSnapshots.length - 1 ? sortedSnapshots[currentIndex + 1] : null;
@@ -78,18 +94,29 @@ async function requestSelectedChangedFiles(args: ChangedFilesArgs): Promise<Chan
   if (!args.projectRoot || !args.selectedSnapshot) return [];
   const previousSnapshot = getPreviousSnapshot(args.sortedSnapshots, args.selectedId);
   if (!previousSnapshot) return [];
-  return getChangedFilesBetween(args.projectRoot, previousSnapshot.commitHash, args.selectedSnapshot.commitHash);
+  return getChangedFilesBetween(
+    args.projectRoot,
+    previousSnapshot.commitHash,
+    args.selectedSnapshot.commitHash,
+  );
 }
 
 async function requestChangedFiles(args: ChangedFilesArgs): Promise<ChangedFile[]> {
   if (!args.projectRoot) return [];
-  return isComparisonRequest(args) ? requestComparisonChangedFiles(args) : requestSelectedChangedFiles(args);
+  return isComparisonRequest(args)
+    ? requestComparisonChangedFiles(args)
+    : requestSelectedChangedFiles(args);
 }
 
-function useChangedFiles(args: ChangedFilesArgs): { changedFiles: ChangedFile[]; loadingFiles: boolean } {
+function useChangedFiles(args: ChangedFilesArgs): {
+  changedFiles: ChangedFile[];
+  loadingFiles: boolean;
+} {
   const [changedFiles, setChangedFiles] = useState<ChangedFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
-  const hasSelection = Boolean(args.selectedSnapshot || (args.compareMode && args.compareFromId && args.compareToId));
+  const hasSelection = Boolean(
+    args.selectedSnapshot || (args.compareMode && args.compareFromId && args.compareToId),
+  );
 
   useEffect(() => {
     if (!args.projectRoot || !hasSelection) {
@@ -104,7 +131,7 @@ function useChangedFiles(args: ChangedFilesArgs): { changedFiles: ChangedFile[];
         if (!cancelled) setChangedFiles(files);
       })
       .catch((error) => {
-        console.error('[timeTravel] Failed to load changed files:', error);
+        log.error('Failed to load changed files:', error);
         if (!cancelled) setChangedFiles([]);
       })
       .finally(() => {
@@ -183,17 +210,34 @@ function useSnapshotSelection(sortedSnapshots: WorkspaceSnapshot[]) {
   const [compareToId, setCompareToId] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
 
-  const selectedSnapshot = useMemo(() => findSnapshotById(sortedSnapshots, selectedId), [selectedId, sortedSnapshots]);
-  const compareFromSnapshot = useMemo(() => findSnapshotById(sortedSnapshots, compareFromId), [compareFromId, sortedSnapshots]);
-  const compareToSnapshot = useMemo(() => findSnapshotById(sortedSnapshots, compareToId), [compareToId, sortedSnapshots]);
+  const selectedSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, selectedId),
+    [selectedId, sortedSnapshots],
+  );
+  const compareFromSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, compareFromId),
+    [compareFromId, sortedSnapshots],
+  );
+  const compareToSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, compareToId),
+    [compareToId, sortedSnapshots],
+  );
   const comparisonReady = compareMode && Boolean(compareFromSnapshot && compareToSnapshot);
 
-  const handleSnapshotClick = useCallback((snapshot: WorkspaceSnapshot) => {
-    const next = getNextSelectionState(snapshot.id, { selectedId, compareFromId, compareToId, compareMode });
-    setSelectedId(next.selectedId);
-    setCompareFromId(next.compareFromId);
-    setCompareToId(next.compareToId);
-  }, [compareFromId, compareMode, compareToId, selectedId]);
+  const handleSnapshotClick = useCallback(
+    (snapshot: WorkspaceSnapshot) => {
+      const next = getNextSelectionState(snapshot.id, {
+        selectedId,
+        compareFromId,
+        compareToId,
+        compareMode,
+      });
+      setSelectedId(next.selectedId);
+      setCompareFromId(next.compareFromId);
+      setCompareToId(next.compareToId);
+    },
+    [compareFromId, compareMode, compareToId, selectedId],
+  );
 
   const toggleCompareMode = useCallback(() => {
     setCompareMode((current) => !current);
@@ -228,10 +272,13 @@ function useRestoreState(
   const [dirtyCount, setDirtyCount] = useState(0);
   const [restoring, setRestoring] = useState(false);
 
-  const handleRestoreClick = useCallback(async (snapshot: WorkspaceSnapshot) => {
-    setDirtyCount(await getDirtyCount(projectRoot));
-    setConfirmRestore(snapshot);
-  }, [projectRoot]);
+  const handleRestoreClick = useCallback(
+    async (snapshot: WorkspaceSnapshot) => {
+      setDirtyCount(await getDirtyCount(projectRoot));
+      setConfirmRestore(snapshot);
+    },
+    [projectRoot],
+  );
 
   const handleConfirmRestore = useCallback(async () => {
     if (!projectRoot || !confirmRestore) return;
@@ -269,7 +316,11 @@ function useCreateSnapshotState(
   const handleCreateSnapshot = useCallback(async () => {
     setCreatingSnapshot(true);
     try {
-      const result = await createSnapshotAndRefresh(onCreateSnapshot, onRefreshSnapshots, snapshotLabel);
+      const result = await createSnapshotAndRefresh(
+        onCreateSnapshot,
+        onRefreshSnapshots,
+        snapshotLabel,
+      );
       setStatusMessage(result.message);
       if (result.snapshot) {
         setSnapshotLabel('');
@@ -289,7 +340,10 @@ function useCreateSnapshotState(
 }
 
 export function useTimeTravelPanelState(args: UseTimeTravelPanelStateArgs) {
-  const sortedSnapshots = useMemo(() => [...args.snapshots].sort((left, right) => right.timestamp - left.timestamp), [args.snapshots]);
+  const sortedSnapshots = useMemo(
+    () => [...args.snapshots].sort((left, right) => right.timestamp - left.timestamp),
+    [args.snapshots],
+  );
   const { statusMessage, setStatusMessage } = useStatusMessage();
   const [currentHead, setCurrentHead] = useCurrentHead(args.projectRoot);
   const selectionState = useSnapshotSelection(sortedSnapshots);

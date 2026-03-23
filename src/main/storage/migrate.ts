@@ -9,6 +9,7 @@ import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 
+import log from '../logger';
 import type { Database } from './database';
 import {
   closeDatabase,
@@ -106,11 +107,11 @@ export function migrateGraphStore(projectRoot: string): void {
     insertGraphData(db, data);
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.renameSync(jsonPath, bakPath);
-    console.log(
-      `[migrate] Graph store: migrated ${data.nodes.length} nodes, ${(data.edges ?? []).length} edges`,
+    log.info(
+      `Graph store: migrated ${data.nodes.length} nodes, ${(data.edges ?? []).length} edges`,
     );
   } catch (err) {
-    console.warn('[migrate] Graph store migration failed:', err);
+    log.warn('Graph store migration failed:', err);
   } finally {
     closeDatabase(db);
   }
@@ -214,7 +215,7 @@ function migrateThreadFiles(
     try {
       if (migrateOneThreadFile(db, insertThread, insertMsg, path.join(dir, file))) migrated++;
     } catch (err) {
-      console.warn(`[migrate] Failed to migrate thread file ${file}:`, err);
+      log.warn(`Failed to migrate thread file ${file}:`, err);
     }
   }
   return migrated;
@@ -243,9 +244,9 @@ export function migrateThreadStore(threadsDir?: string): void {
     );
 
     const migrated = migrateThreadFiles({ db, insertThread, insertMsg, dir }, jsonFiles);
-    if (migrated > 0) console.log(`[migrate] Thread store: migrated ${migrated} threads`);
+    if (migrated > 0) log.info(`Thread store: migrated ${migrated} threads`);
   } catch (err) {
-    console.warn('[migrate] Thread store migration failed:', err);
+    log.warn('Thread store migration failed:', err);
   } finally {
     closeDatabase(db);
   }
@@ -290,9 +291,18 @@ function insertCostEntries(db: Database, entries: Array<Record<string, unknown>>
   );
   runTransaction(db, () => {
     for (const e of entries) {
-      insert.run(e.date, e.sessionId, e.taskLabel, e.model,
-        e.inputTokens, e.outputTokens, e.cacheReadTokens,
-        e.cacheWriteTokens, e.estimatedCost, e.timestamp);
+      insert.run(
+        e.date,
+        e.sessionId,
+        e.taskLabel,
+        e.model,
+        e.inputTokens,
+        e.outputTokens,
+        e.cacheReadTokens,
+        e.cacheWriteTokens,
+        e.estimatedCost,
+        e.timestamp,
+      );
     }
   });
 }
@@ -314,9 +324,9 @@ export function migrateCostHistory(): void {
     insertCostEntries(db, entries);
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.renameSync(jsonPath, bakPath);
-    console.log(`[migrate] Cost history: migrated ${entries.length} entries`);
+    log.info(`Cost history: migrated ${entries.length} entries`);
   } catch (err) {
-    console.warn('[migrate] Cost history migration failed:', err);
+    log.warn('Cost history migration failed:', err);
   } finally {
     closeDatabase(db);
   }
@@ -325,13 +335,13 @@ export function migrateCostHistory(): void {
 // ── Run all migrations ─────────────────────────────────────────────────────
 
 export function runAllMigrations(projectRoot?: string): void {
-  console.log('[migrate] Running SQLite data migrations...');
+  log.info('Running SQLite data migrations...');
   try {
     if (projectRoot) migrateGraphStore(projectRoot);
     migrateThreadStore();
     migrateCostHistory();
-    console.log('[migrate] All migrations complete');
+    log.info('All migrations complete');
   } catch (err) {
-    console.warn('[migrate] Migration runner encountered an error:', err);
+    log.warn('Migration runner encountered an error:', err);
   }
 }

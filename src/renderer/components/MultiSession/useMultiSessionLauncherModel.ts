@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import { useCallback, useEffect, useState } from 'react';
 
 import type { AgentTemplate, ClaudeCliSettings } from '../../types/electron';
@@ -85,13 +86,15 @@ function applySlotOverrides(
 }
 
 function dispatchLaunch(entry: LaunchEntry): void {
-  window.dispatchEvent(new CustomEvent('agent-ide:spawn-claude-template', {
-    detail: {
-      prompt: entry.prompt,
-      label: entry.label,
-      cliOverrides: entry.cliOverrides,
-    },
-  }));
+  window.dispatchEvent(
+    new CustomEvent('agent-ide:spawn-claude-template', {
+      detail: {
+        prompt: entry.prompt,
+        label: entry.label,
+        cliOverrides: entry.cliOverrides,
+      },
+    }),
+  );
 }
 
 function isLaunchableSlot(slot: SessionSlot): boolean {
@@ -122,14 +125,15 @@ function useAgentTemplates(): AgentTemplate[] {
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
 
   useEffect(() => {
-    window.electronAPI?.config?.get('agentTemplates')
+    window.electronAPI?.config
+      ?.get('agentTemplates')
       .then((items) => {
         if (items) {
           setTemplates(items);
         }
       })
       .catch((error) => {
-        console.error('[multiSession] Failed to load agent templates:', error);
+        log.error('Failed to load agent templates:', error);
         setTemplates([]);
       });
   }, []);
@@ -146,9 +150,9 @@ function useSessionSlots(): {
   const [slots, setSlots] = useState<SessionSlot[]>(() => [createSlot(), createSlot()]);
 
   const handleUpdate = useCallback((id: string, updates: Partial<SessionSlot>) => {
-    setSlots((previous) => previous.map((slot) => (
-      slot.id === id ? { ...slot, ...updates } : slot
-    )));
+    setSlots((previous) =>
+      previous.map((slot) => (slot.id === id ? { ...slot, ...updates } : slot)),
+    );
   }, []);
 
   const handleRemove = useCallback((id: string) => {
@@ -156,9 +160,7 @@ function useSessionSlots(): {
   }, []);
 
   const handleAddSlot = useCallback(() => {
-    setSlots((previous) => (
-      previous.length >= MAX_SLOTS ? previous : [...previous, createSlot()]
-    ));
+    setSlots((previous) => (previous.length >= MAX_SLOTS ? previous : [...previous, createSlot()]));
   }, []);
 
   return { slots, handleAddSlot, handleRemove, handleUpdate };

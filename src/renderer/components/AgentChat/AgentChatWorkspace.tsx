@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
@@ -25,7 +26,24 @@ function buildSlashCommandContext(
   };
 }
 
-function buildConversationThreadProps(model: AgentChatWorkspaceModel): Pick<React.ComponentProps<typeof AgentChatConversation>, 'activeThread' | 'pendingUserMessage' | 'error' | 'hasProject' | 'isDetailsOpen' | 'isLoading' | 'isSending' | 'draft' | 'closeDetails' | 'details' | 'detailsError' | 'detailsIsLoading' | 'canSend'> {
+function buildConversationThreadProps(
+  model: AgentChatWorkspaceModel,
+): Pick<
+  React.ComponentProps<typeof AgentChatConversation>,
+  | 'activeThread'
+  | 'pendingUserMessage'
+  | 'error'
+  | 'hasProject'
+  | 'isDetailsOpen'
+  | 'isLoading'
+  | 'isSending'
+  | 'draft'
+  | 'closeDetails'
+  | 'details'
+  | 'detailsError'
+  | 'detailsIsLoading'
+  | 'canSend'
+> {
   return {
     activeThread: model.activeThread,
     pendingUserMessage: model.pendingUserMessage,
@@ -46,7 +64,22 @@ function buildConversationThreadProps(model: AgentChatWorkspaceModel): Pick<Reac
 function buildConversationContextProps(
   model: AgentChatWorkspaceModel,
   context: ReturnType<typeof useAgentChatContext>,
-): Pick<React.ComponentProps<typeof AgentChatConversation>, 'pinnedFiles' | 'onRemoveFile' | 'contextSummary' | 'autocompleteResults' | 'isAutocompleteOpen' | 'onAutocompleteQuery' | 'onSelectFile' | 'onCloseAutocomplete' | 'onOpenAutocomplete' | 'mentions' | 'onAddMention' | 'onRemoveMention' | 'allFiles'> {
+): Pick<
+  React.ComponentProps<typeof AgentChatConversation>,
+  | 'pinnedFiles'
+  | 'onRemoveFile'
+  | 'contextSummary'
+  | 'autocompleteResults'
+  | 'isAutocompleteOpen'
+  | 'onAutocompleteQuery'
+  | 'onSelectFile'
+  | 'onCloseAutocomplete'
+  | 'onOpenAutocomplete'
+  | 'mentions'
+  | 'onAddMention'
+  | 'onRemoveMention'
+  | 'allFiles'
+> {
   return {
     pinnedFiles: context.pinnedFiles,
     onRemoveFile: context.removeFile,
@@ -64,7 +97,36 @@ function buildConversationContextProps(
   };
 }
 
-function buildConversationActionProps(model: AgentChatWorkspaceModel, slashCommandContext: SlashCommandContext): Pick<React.ComponentProps<typeof AgentChatConversation>, 'onDraftChange' | 'onEdit' | 'onRetry' | 'onBranch' | 'onRevert' | 'onOpenLinkedDetails' | 'onOpenLinkedTask' | 'onSend' | 'onStop' | 'onSelectThread' | 'chatOverrides' | 'onChatOverridesChange' | 'settingsModel' | 'codexSettingsModel' | 'defaultProvider' | 'modelProviders' | 'codexModels' | 'queuedMessages' | 'onEditQueuedMessage' | 'onDeleteQueuedMessage' | 'onSendQueuedMessageNow' | 'attachments' | 'onAttachmentsChange' | 'slashCommandContext'> {
+function buildConversationActionProps(
+  model: AgentChatWorkspaceModel,
+  slashCommandContext: SlashCommandContext,
+): Pick<
+  React.ComponentProps<typeof AgentChatConversation>,
+  | 'onDraftChange'
+  | 'onEdit'
+  | 'onRetry'
+  | 'onBranch'
+  | 'onRevert'
+  | 'onOpenLinkedDetails'
+  | 'onOpenLinkedTask'
+  | 'onSend'
+  | 'onStop'
+  | 'onSelectThread'
+  | 'chatOverrides'
+  | 'onChatOverridesChange'
+  | 'settingsModel'
+  | 'codexSettingsModel'
+  | 'defaultProvider'
+  | 'modelProviders'
+  | 'codexModels'
+  | 'queuedMessages'
+  | 'onEditQueuedMessage'
+  | 'onDeleteQueuedMessage'
+  | 'onSendQueuedMessageNow'
+  | 'attachments'
+  | 'onAttachmentsChange'
+  | 'slashCommandContext'
+> {
   return {
     onDraftChange: model.setDraft,
     onEdit: model.editAndResend,
@@ -93,7 +155,11 @@ function buildConversationActionProps(model: AgentChatWorkspaceModel, slashComma
   };
 }
 
-function buildConversationProps(model: AgentChatWorkspaceModel, context: ReturnType<typeof useAgentChatContext>, slashCommandContext: SlashCommandContext): React.ComponentProps<typeof AgentChatConversation> {
+function buildConversationProps(
+  model: AgentChatWorkspaceModel,
+  context: ReturnType<typeof useAgentChatContext>,
+  slashCommandContext: SlashCommandContext,
+): React.ComponentProps<typeof AgentChatConversation> {
   return {
     ...buildConversationThreadProps(model),
     ...buildConversationContextProps(model, context),
@@ -101,25 +167,31 @@ function buildConversationProps(model: AgentChatWorkspaceModel, context: ReturnT
   };
 }
 
-export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorkspaceProps): React.ReactElement {
+export function AgentChatWorkspace({
+  projectRoot,
+  onModelReady,
+}: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
   const { toast } = useToastContext();
 
-  const onRemember = useCallback(async (content: string) => {
-    if (!content.trim()) return;
-    try {
-      await window.electronAPI.agentChat.createMemory(projectRoot ?? '', {
-        type: 'preference',
-        content: content.trim(),
-        relevantFiles: [],
-      });
-      toast('Memory saved', 'success');
-    } catch (err) {
-      console.warn('[agentChat] failed to save memory:', err);
-      toast('Failed to save memory', 'error');
-    }
-  }, [projectRoot, toast]);
+  const onRemember = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
+      try {
+        await window.electronAPI.agentChat.createMemory(projectRoot ?? '', {
+          type: 'preference',
+          content: content.trim(),
+          relevantFiles: [],
+        });
+        toast('Memory saved', 'success');
+      } catch (err) {
+        log.warn('failed to save memory:', err);
+        toast('Failed to save memory', 'error');
+      }
+    },
+    [projectRoot, toast],
+  );
 
   const onOpenMemories = useCallback(() => {
     window.dispatchEvent(
@@ -131,12 +203,24 @@ export function AgentChatWorkspace({ projectRoot, onModelReady }: AgentChatWorks
     model.setContextFilePaths(context.filePaths);
   }, [context.filePaths, model]);
 
-  const slashCommandContext = useMemo(() => buildSlashCommandContext(model, onRemember, onOpenMemories), [model, onRemember, onOpenMemories]);
-  const conversationProps = useMemo(() => buildConversationProps(model, context, slashCommandContext), [model, context, slashCommandContext]);
+  const slashCommandContext = useMemo(
+    () => buildSlashCommandContext(model, onRemember, onOpenMemories),
+    [model, onRemember, onOpenMemories],
+  );
+  const conversationProps = useMemo(
+    () => buildConversationProps(model, context, slashCommandContext),
+    [model, context, slashCommandContext],
+  );
 
   useEffect(() => {
     onModelReady?.(model);
   }, [model, onModelReady]);
 
-  return <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel"><div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation {...conversationProps} /></div></div>;
+  return (
+    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <AgentChatConversation {...conversationProps} />
+      </div>
+    </div>
+  );
 }

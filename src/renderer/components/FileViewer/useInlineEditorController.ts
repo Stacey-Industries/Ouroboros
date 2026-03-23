@@ -1,6 +1,7 @@
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { type MutableRefObject,useEffect, useRef } from 'react';
+import log from 'electron-log/renderer';
+import { type MutableRefObject, useEffect, useRef } from 'react';
 
 import type { LspDiagnostic } from '../../types/electron';
 import { registerEditor, unregisterEditor } from './editorRegistry';
@@ -87,7 +88,7 @@ function useInlineEditorRuntime(props: InlineEditorProps): InlineEditorRuntime {
 
 function syncRuntimeRefs(
   runtime: Omit<InlineEditorRuntime, 'setup'>,
-  props: InlineEditorProps
+  props: InlineEditorProps,
 ): void {
   runtime.onSaveRef.current = props.onSave;
   runtime.onContentChangeRef.current = props.onContentChange;
@@ -96,7 +97,11 @@ function syncRuntimeRefs(
   runtime.projectRootRef.current = props.projectRoot;
 }
 
-function createEditorSetup({ runtime }: { runtime: Omit<InlineEditorRuntime, 'setup'> }): EditorSetup {
+function createEditorSetup({
+  runtime,
+}: {
+  runtime: Omit<InlineEditorRuntime, 'setup'>;
+}): EditorSetup {
   return {
     saveKeymap: createSaveKeymap(runtime.onSaveRef),
     updateListener: createUpdateListener({
@@ -115,7 +120,18 @@ function createEditorSetup({ runtime }: { runtime: Omit<InlineEditorRuntime, 'se
 }
 
 function useEditorMount(runtime: InlineEditorRuntime): void {
-  const { containerRef, viewRef, languageCompartment, highlightCompartment, lspCompartment, savedContentRef, initialFilePathRef, initialThemeIdRef, didChangeTimerRef, setup } = runtime;
+  const {
+    containerRef,
+    viewRef,
+    languageCompartment,
+    highlightCompartment,
+    lspCompartment,
+    savedContentRef,
+    initialFilePathRef,
+    initialThemeIdRef,
+    didChangeTimerRef,
+    setup,
+  } = runtime;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -155,18 +171,16 @@ function useEditorMount(runtime: InlineEditorRuntime): void {
   ]);
 }
 
-function createMountedEditorView(
-  input: {
-    initialContentRef: MutableRefObject<string>;
-    initialThemeIdRef: MutableRefObject<string>;
-    languageCompartment: MutableRefObject<Compartment>;
-    highlightCompartment: MutableRefObject<Compartment>;
-    lspCompartment: MutableRefObject<Compartment>;
-    setup: EditorSetup;
-    mountedFilePath: string;
-    parent: HTMLDivElement;
-  }
-): EditorView {
+function createMountedEditorView(input: {
+  initialContentRef: MutableRefObject<string>;
+  initialThemeIdRef: MutableRefObject<string>;
+  languageCompartment: MutableRefObject<Compartment>;
+  highlightCompartment: MutableRefObject<Compartment>;
+  lspCompartment: MutableRefObject<Compartment>;
+  setup: EditorSetup;
+  mountedFilePath: string;
+  parent: HTMLDivElement;
+}): EditorView {
   return new EditorView({
     state: EditorState.create({
       doc: input.initialContentRef.current,
@@ -192,7 +206,7 @@ function useEditorLspLifecycle(
   runtime: InlineEditorRuntime,
   content: string,
   filePath: string,
-  projectRoot: string | null | undefined
+  projectRoot: string | null | undefined,
 ): void {
   const { diagnosticsRef, filePathRef, projectRootRef, viewRef } = runtime;
 
@@ -202,7 +216,9 @@ function useEditorLspLifecycle(
     if (!root || !currentFilePath || !hasLspApi()) return;
 
     const currentContent = viewRef.current?.state.doc.toString() ?? content;
-    window.electronAPI.lsp.didOpen(root, currentFilePath, currentContent).catch((error) => { console.error('[inlineEditor] LSP didOpen notification failed:', error) });
+    window.electronAPI.lsp.didOpen(root, currentFilePath, currentContent).catch((error) => {
+      log.error('LSP didOpen notification failed:', error);
+    });
     const cleanupDiagnostics = window.electronAPI.lsp.onDiagnostics((event) => {
       if (normalizeFilePath(event.filePath) !== normalizeFilePath(currentFilePath)) return;
       diagnosticsRef.current = event.diagnostics;
@@ -220,14 +236,16 @@ function useEditorLspLifecycle(
 
 function closeLspDocument(root: string, filePath: string): void {
   if (hasLspApi()) {
-    window.electronAPI.lsp.didClose(root, filePath).catch((error) => { console.error('[inlineEditor] LSP didClose notification failed:', error) });
+    window.electronAPI.lsp.didClose(root, filePath).catch((error) => {
+      log.error('LSP didClose notification failed:', error);
+    });
   }
 }
 
 function useEditorThemeSync(
   viewRef: MutableRefObject<EditorView | null>,
   highlightCompartment: MutableRefObject<Compartment>,
-  themeId: string
+  themeId: string,
 ): void {
   useEffect(() => {
     const view = viewRef.current;
@@ -242,15 +260,9 @@ function useEditorDocumentSync(
   runtime: InlineEditorRuntime,
   content: string,
   savedContent: string,
-  filePath: string
+  filePath: string,
 ): void {
-  const {
-    viewRef,
-    savedContentRef,
-    isDirtyRef,
-    onDirtyChangeRef,
-    languageCompartment,
-  } = runtime;
+  const { viewRef, savedContentRef, isDirtyRef, onDirtyChangeRef, languageCompartment } = runtime;
 
   useEffect(() => {
     const view = viewRef.current;
@@ -271,14 +283,23 @@ function useEditorDocumentSync(
 
     view.dispatch({
       effects: languageCompartment.current.reconfigure(
-        createLanguageExtensions(getLanguageExtension(filePath))
+        createLanguageExtensions(getLanguageExtension(filePath)),
       ),
     });
-  }, [content, filePath, savedContent, savedContentRef, isDirtyRef, languageCompartment, onDirtyChangeRef, viewRef]);
+  }, [
+    content,
+    filePath,
+    savedContent,
+    savedContentRef,
+    isDirtyRef,
+    languageCompartment,
+    onDirtyChangeRef,
+    viewRef,
+  ]);
 }
 
 function clearPendingDidChange(
-  didChangeTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>
+  didChangeTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
 ): void {
   const timer = didChangeTimerRef.current;
   if (timer) clearTimeout(timer);

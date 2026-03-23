@@ -2,7 +2,8 @@
  * CostDashboard.tsx — Persistent cost analytics dashboard.
  */
 
-import React, { memo, useCallback,useEffect, useMemo, useState } from 'react';
+import log from 'electron-log/renderer';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { CostEntry } from '../../types/electron';
 import { estimateCost } from './costCalculator';
@@ -59,20 +60,34 @@ function mergeEntries(sessions: AgentSession[], historicalEntries: CostEntry[]):
   return merged;
 }
 
-export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashboardProps): React.ReactElement {
+export const CostDashboard = memo(function CostDashboard({
+  sessions,
+}: CostDashboardProps): React.ReactElement {
   const [historicalEntries, setHistoricalEntries] = useState<CostEntry[]>([]);
   const [range, setRange] = useState<DateRange>('30d');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!window.electronAPI?.cost?.getHistory) { setIsLoading(false); return; }
-    window.electronAPI.cost.getHistory().then((result) => {
-      if (result.success && result.entries) setHistoricalEntries(result.entries);
+    if (!window.electronAPI?.cost?.getHistory) {
       setIsLoading(false);
-    }).catch((error) => { console.error('[costDashboard] Failed to load cost history:', error); setIsLoading(false) });
+      return;
+    }
+    window.electronAPI.cost
+      .getHistory()
+      .then((result) => {
+        if (result.success && result.entries) setHistoricalEntries(result.entries);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        log.error('Failed to load cost history:', error);
+        setIsLoading(false);
+      });
   }, []);
 
-  const allEntries = useMemo(() => mergeEntries(sessions, historicalEntries), [sessions, historicalEntries]);
+  const allEntries = useMemo(
+    () => mergeEntries(sessions, historicalEntries),
+    [sessions, historicalEntries],
+  );
 
   const filteredEntries = useMemo(() => {
     if (range === 'all') return allEntries;
@@ -82,9 +97,14 @@ export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashb
 
   const handleClearHistory = useCallback(() => {
     if (!window.electronAPI?.cost?.clearHistory) return;
-    window.electronAPI.cost.clearHistory().then((result) => {
-      if (result.success) setHistoricalEntries([]);
-    }).catch((error) => { console.error('[costDashboard] Failed to clear cost history:', error) });
+    window.electronAPI.cost
+      .clearHistory()
+      .then((result) => {
+        if (result.success) setHistoricalEntries([]);
+      })
+      .catch((error) => {
+        log.error('Failed to clear cost history:', error);
+      });
   }, []);
 
   if (isLoading) {
@@ -97,7 +117,12 @@ export const CostDashboard = memo(function CostDashboard({ sessions }: CostDashb
 
   return (
     <div className="flex flex-col">
-      <Controls range={range} onRangeChange={setRange} onClearHistory={handleClearHistory} entryCount={allEntries.length} />
+      <Controls
+        range={range}
+        onRangeChange={setRange}
+        onClearHistory={handleClearHistory}
+        entryCount={allEntries.length}
+      />
       <SummaryCards entries={allEntries} />
       <DailyChart entries={allEntries} days={range === '7d' ? 7 : 14} />
       <SessionTable entries={filteredEntries} />

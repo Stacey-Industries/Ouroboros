@@ -12,6 +12,7 @@ import {
   writeClaudeMd,
 } from './claudeMdGeneratorSupport';
 import { getConfigValue, setConfigValue } from './config';
+import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 
 export type { ClaudeMdGenerationResult, ClaudeMdGenerationStatus };
@@ -92,7 +93,7 @@ function isExcluded(relPath: string, excludeDirs: string[]): boolean {
 export function initClaudeMdGenerator(win: BrowserWindow): void {
   mainWindow = win;
   lastCompletedAt = loadCooldownTimestamp();
-  console.log('[claude-md] Generator initialized');
+  log.info('Generator initialized');
 }
 
 export async function generateForDirectory(
@@ -150,7 +151,7 @@ async function collectCandidateDirs(projectRoot: string): Promise<string[]> {
     try {
       allDirs.push(...(await discoverDirectories(path.join(projectRoot, 'src'))));
     } catch {
-      console.log('[claude-md] Could not discover directories under src/');
+      log.info('Could not discover directories under src/');
     }
   }
 
@@ -218,7 +219,7 @@ export async function generateClaudeMd(
     const targetDirs = await resolveTargetDirs(projectRoot, allDirs, options?.fullSweep ?? false);
     results.push(...(await processDirectories(projectRoot, targetDirs)));
   } catch (err) {
-    console.log(`[claude-md] Fatal error: ${err instanceof Error ? err.message : String(err)}`);
+    log.info(`Fatal error: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     finalizeGeneration(results);
   }

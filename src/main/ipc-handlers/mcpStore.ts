@@ -12,6 +12,7 @@ import path from 'path';
 
 import { getErrorMessage } from '../agentChat/utils';
 import { store } from '../config';
+import log from '../logger';
 import {
   type McpRegistryPackage,
   type McpRegistryServer,
@@ -64,7 +65,7 @@ async function readSettingsFile(filePath: string): Promise<SettingsRecord> {
     }
     // Other errors (parse failures, permission errors) should not silently return empty —
     // that would cause data loss when the settings are written back.
-    console.error(`[mcpStore] Failed to read settings file ${filePath}:`, error);
+    log.error(`Failed to read settings file ${filePath}:`, error);
     throw error;
   }
 }

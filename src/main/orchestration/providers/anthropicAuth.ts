@@ -3,6 +3,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import log from '../../logger';
+
 // ---------------------------------------------------------------------------
 // OAuth credential management
 // ---------------------------------------------------------------------------
@@ -52,7 +54,7 @@ function writeCredentials(creds: ClaudeCredentials): void {
     fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), 'utf8');
     cachedCredentials = creds;
   } catch (err) {
-    console.warn('[anthropic-api] Failed to write credentials:', err);
+    log.warn('Failed to write credentials:', err);
   }
 }
 
@@ -74,9 +76,7 @@ async function refreshOAuthToken(refreshToken: string): Promise<ClaudeOAuthData 
     });
 
     if (!response.ok) {
-      console.warn(
-        `[anthropic-api] OAuth refresh failed: ${response.status} ${response.statusText}`,
-      );
+      log.warn(`OAuth refresh failed: ${response.status} ${response.statusText}`);
       return null;
     }
 
@@ -90,8 +90,8 @@ async function refreshOAuthToken(refreshToken: string): Promise<ClaudeOAuthData 
     };
   } catch (error) {
     const isTimeout = error instanceof DOMException && error.name === 'TimeoutError';
-    console.warn(
-      `[anthropic-api] OAuth refresh ${isTimeout ? 'timed out' : 'error'}:`,
+    log.warn(
+      `OAuth refresh ${isTimeout ? 'timed out' : 'error'}:`,
       error instanceof Error ? error.message : error,
     );
     return null;
@@ -114,15 +114,15 @@ export async function ensureValidOAuthToken(): Promise<string | undefined> {
 
   // Token expired or expiring soon — attempt refresh
   if (!oauth.refreshToken) {
-    console.warn('[anthropic-api] OAuth token expired and no refresh token available');
+    log.warn('OAuth token expired and no refresh token available');
     return undefined;
   }
 
-  console.log('[anthropic-api] OAuth token expired or expiring soon, refreshing...');
+  log.info('OAuth token expired or expiring soon, refreshing...');
   const refreshed = await refreshOAuthToken(oauth.refreshToken);
   if (!refreshed) {
-    console.warn(
-      '[anthropic-api] OAuth refresh failed — token may be expired. Run "claude auth login" to re-authenticate.',
+    log.warn(
+      'OAuth refresh failed — token may be expired. Run "claude auth login" to re-authenticate.',
     );
     return undefined;
   }
@@ -133,7 +133,7 @@ export async function ensureValidOAuthToken(): Promise<string | undefined> {
     claudeAiOauth: { ...oauth, ...refreshed },
   };
   writeCredentials(updatedCreds);
-  console.log('[anthropic-api] OAuth token refreshed successfully');
+  log.info('OAuth token refreshed successfully');
   return refreshed.accessToken;
 }
 

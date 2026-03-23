@@ -9,6 +9,7 @@
  * All content rendered as text - no dangerouslySetInnerHTML.
  */
 
+import log from 'electron-log/renderer';
 import React, { memo, useCallback, useState } from 'react';
 
 import type { ToolCallEvent } from './types';
@@ -66,7 +67,7 @@ function useCopyLog(
         setTimeout(() => setCopied(false), 1500);
       })
       .catch((error) => {
-        console.error('[agentEventLog] Failed to copy event log to clipboard:', error);
+        log.error('Failed to copy event log to clipboard:', error);
       });
   }, [toolCalls, sessionId]);
 

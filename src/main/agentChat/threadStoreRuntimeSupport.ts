@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+import log from '../logger';
 import { hashThreadId, normalizeThreadRecord } from './threadStoreSupport';
 import type { AgentChatThreadRecord } from './types';
 
@@ -193,14 +194,12 @@ export class AgentChatThreadStoreRuntime {
     if (threads.length <= this.options.maxThreads) return;
 
     await Promise.all(
-      threads
-        .slice(this.options.maxThreads)
-        .map((thread) =>
-          // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from hashed thread ID
-          fs.unlink(this.getThreadFilePath(thread.id)).catch((error) => {
-            console.error('[agentChat] Failed to delete excess thread file:', thread.id, error);
-          }),
-        ),
+      threads.slice(this.options.maxThreads).map((thread) =>
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from hashed thread ID
+        fs.unlink(this.getThreadFilePath(thread.id)).catch((error) => {
+          log.error('Failed to delete excess thread file:', thread.id, error);
+        }),
+      ),
     );
   }
 }

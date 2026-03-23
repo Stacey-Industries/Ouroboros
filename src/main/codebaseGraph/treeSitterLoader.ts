@@ -11,6 +11,8 @@
 import path from 'path';
 import Parser from 'web-tree-sitter';
 
+import log from '../logger';
+
 // Track initialization state
 let parserReady = false;
 let initPromise: Promise<void> | null = null;
@@ -153,7 +155,7 @@ export async function getLanguageForExtension(ext: string): Promise<Parser.Langu
     await initTreeSitter();
     return await loadLanguage(grammarName);
   } catch (err) {
-    console.warn(`[tree-sitter] Failed to load grammar for ${ext}:`, err);
+    log.warn(`Failed to load grammar for ${ext}:`, err);
     return null;
   }
 }

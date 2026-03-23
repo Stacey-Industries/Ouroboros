@@ -4,6 +4,7 @@
  * attaches them to context packets before they reach the provider.
  */
 
+import log from '../logger';
 import { buildLspDiagnosticsSummary } from '../orchestration/lspDiagnosticsProvider';
 import { buildRepoIndexSnapshot, type RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { ContextPacket } from '../orchestration/types';
@@ -100,7 +101,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
   async initialize(): Promise<void> {
     if (!this.config.enabled || this.workspaceRoots.length === 0) {
-      console.log('[context-layer] Skipping init — disabled or no workspace root');
+      log.info('Skipping init — disabled or no workspace root');
       return;
     }
 
@@ -185,7 +186,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.config = config;
 
     if (config.enabled && !wasEnabled) {
-      console.log('[context-layer] Enabled — running initial index');
+      log.info('Enabled — running initial index');
       await this.initialize();
     } else if (!config.enabled) {
       this.clearCache();
@@ -208,14 +209,14 @@ class ContextLayerControllerImpl implements ContextLayerController {
       this.lastInitCompletedAt > 0 &&
       msSinceLastInit < ContextLayerControllerImpl.INIT_COOLDOWN_MS
     ) {
-      console.log(
-        `[context-layer] Skipping session-start re-index — last init was ${(msSinceLastInit / 1000).toFixed(1)}s ago`,
+      log.info(
+        `Skipping session-start re-index — last init was ${(msSinceLastInit / 1000).toFixed(1)}s ago`,
       );
       return;
     }
 
     this.initPromise = this.initialize().catch((err) => {
-      console.warn('[context-layer] Re-index on session start failed:', err);
+      log.warn('Re-index on session start failed:', err);
     });
   }
 
@@ -229,10 +230,10 @@ class ContextLayerControllerImpl implements ContextLayerController {
         clearContextPacketCache();
       })
       .catch((error) => {
-        console.error('[context-layer] Failed to clear context packet cache on git commit:', error);
+        log.error('Failed to clear context packet cache on git commit:', error);
       });
 
-    console.log('[context-layer] Git commit detected — all modules marked dirty');
+    log.info('Git commit detected — all modules marked dirty');
   }
 
   onFileChange(_type: string, filePath: string): void {
@@ -253,8 +254,8 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.markDirtyModulesFromPaths(paths);
 
     if (this.moduleCache.dirtyModuleIds.size > 0) {
-      console.log(
-        `[context-layer] ${paths.length} file change(s) debounced — ${this.moduleCache.dirtyModuleIds.size} module(s) marked dirty`,
+      log.info(
+        `${paths.length} file change(s) debounced — ${this.moduleCache.dirtyModuleIds.size} module(s) marked dirty`,
       );
     }
   }
@@ -265,17 +266,14 @@ class ContextLayerControllerImpl implements ContextLayerController {
         clearContextPacketCache();
       })
       .catch((error) => {
-        console.error(
-          '[context-layer] Failed to clear context packet cache on file change:',
-          error,
-        );
+        log.error('Failed to clear context packet cache on file change:', error);
       });
     import('../orchestration/contextSelectionSupport')
       .then(({ invalidateSnapshotCache }) => {
         invalidateSnapshotCache(paths);
       })
       .catch((error) => {
-        console.error('[context-layer] Failed to invalidate snapshot cache on file change:', error);
+        log.error('Failed to invalidate snapshot cache on file change:', error);
       });
   }
 
@@ -325,7 +323,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
     const elapsedMs = Date.now() - startMs;
     const refreshed = countRefreshedModules(modules, this.moduleCache.cachedModules);
-    console.log(`[context-layer] Refreshed ${refreshed} dirty modules in ${elapsedMs}ms`);
+    log.info(`Refreshed ${refreshed} dirty modules in ${elapsedMs}ms`);
 
     fireAndForgetRefreshEnrichment({
       modules,

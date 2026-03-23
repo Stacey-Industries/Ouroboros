@@ -10,6 +10,7 @@ import net from 'net';
 
 import { getConfigValue } from './config';
 import type { HookPayload } from './hooks';
+import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 
 const PIPE_NAME = '\\\\.\\pipe\\agent-ide-hooks';
@@ -41,15 +42,13 @@ function parseHookLine(line: string, connId: number): HookPayload | null {
   try {
     const parsed = JSON.parse(line);
     if (!isValidPayload(parsed)) {
-      console.warn(`[hooks] #${connId} invalid payload shape - skipping`, JSON.stringify(parsed));
+      log.warn(`#${connId} invalid payload shape - skipping`, JSON.stringify(parsed));
       return null;
     }
-    console.log(
-      `[hooks] #${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`,
-    );
+    log.info(`#${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`);
     return parsed;
   } catch {
-    console.warn(`[hooks] #${connId} malformed JSON - skipping line`);
+    log.warn(`#${connId} malformed JSON - skipping line`);
     return null;
   }
 }
@@ -66,7 +65,7 @@ function processSocketChunk(args: SocketChunkArgs): string {
   const { socket, connId, rawBuffer, chunk, onPayload } = args;
   const nextBuffer = rawBuffer + chunk;
   if (Buffer.byteLength(nextBuffer, 'utf8') > MAX_BUFFER_BYTES) {
-    console.warn(`[hooks] #${connId} buffer overflow - dropping connection`);
+    log.warn(`#${connId} buffer overflow - dropping connection`);
     socket.destroy();
     return '';
   }
@@ -91,7 +90,7 @@ function handleSocket(
   connId: number,
   onPayload: (p: HookPayload) => void,
 ): void {
-  console.log(`[hooks] connection #${connId} opened`);
+  log.info(`connection #${connId} opened`);
   let rawBuffer = '';
   socket.setEncoding('utf8');
   socket.setTimeout(60_000);
@@ -104,11 +103,11 @@ function handleSocket(
   });
   socket.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code !== 'EPIPE' && error.code !== 'ECONNRESET') {
-      console.error(`[hooks] #${connId} socket error: ${error.message}`);
+      log.error(`#${connId} socket error: ${error.message}`);
     }
   });
   socket.on('close', () => {
-    console.log(`[hooks] connection #${connId} closed`);
+    log.info(`connection #${connId} closed`);
   });
 }
 
@@ -169,13 +168,11 @@ export async function startHooksNetServer(
     try {
       await listenPipe(pipeServer, PIPE_NAME);
       server = pipeServer;
-      console.log(`[hooks] listening on named pipe ${PIPE_NAME}`);
+      log.info(`listening on named pipe ${PIPE_NAME}`);
       return { port: PIPE_NAME };
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
-      console.warn(
-        `[hooks] named pipe unavailable (${nodeError.code ?? 'unknown'}) - falling back to TCP`,
-      );
+      log.warn(`named pipe unavailable (${nodeError.code ?? 'unknown'}) - falling back to TCP`);
       pipeServer.close();
     }
   }
@@ -184,7 +181,7 @@ export async function startHooksNetServer(
   const tcpServer = createNetServer(onPayload);
   await listenTcp(tcpServer, port);
   server = tcpServer;
-  console.log(`[hooks] TCP server listening on 127.0.0.1:${port}`);
+  log.info(`TCP server listening on 127.0.0.1:${port}`);
   return { port };
 }
 
@@ -196,7 +193,7 @@ export function stopHooksNetServer(): Promise<void> {
     }
     server.close(() => {
       server = null;
-      console.log('[hooks] server stopped');
+      log.info('server stopped');
       resolve();
     });
   });

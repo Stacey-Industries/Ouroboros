@@ -6,6 +6,7 @@
 
 import type { HookPayload } from '../hooks';
 import { dispatchSyntheticHookEvent } from '../hooks';
+import log from '../logger';
 import type {
   ActiveStreamContext,
   AgentChatBridgeRuntime,
@@ -160,7 +161,7 @@ export async function flushPartialMessage(
       await runtime.threadStore.appendMessage(ctx.threadId, partialMessage);
     }
   } catch (error) {
-    console.warn('[agentChat] incremental flush failed for thread', ctx.threadId, error);
+    log.warn('incremental flush failed for thread', ctx.threadId, error);
   }
 }
 

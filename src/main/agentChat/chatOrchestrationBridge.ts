@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 
 import { getConfigValue } from '../config';
+import log from '../logger';
 import { revertToSnapshotWithBridge } from './chatOrchestrationBridgeGit';
 import { stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
 import { handleProviderProgress } from './chatOrchestrationBridgeProgress';
@@ -76,9 +77,11 @@ function findActiveThreadConflict(
   return undefined;
 }
 
-function buildEarlyReturnResult(pending: Awaited<ReturnType<typeof preparePendingSend>>): AgentChatSendResult {
-  console.log(
-    '[agentChat:debug] sendMessage returning thread:',
+function buildEarlyReturnResult(
+  pending: Awaited<ReturnType<typeof preparePendingSend>>,
+): AgentChatSendResult {
+  log.info(
+    'sendMessage returning thread:',
     pending.thread.id,
     'messages:',
     pending.thread.messages.length,
@@ -118,13 +121,13 @@ async function sendMessageWithBridge(
       runtime,
       threadStore: runtime.threadStore,
     }).catch((err) => {
-      console.error('[agentChat] background executePendingSend failed:', getErrorMessage(err));
+      log.error('background executePendingSend failed:', getErrorMessage(err));
     });
 
     return buildEarlyReturnResult(pending);
   } catch (error) {
-    console.error('[agentChat] sendMessage failed:', getErrorMessage(error));
-    if (error instanceof Error && error.stack) console.error(error.stack);
+    log.error('sendMessage failed:', getErrorMessage(error));
+    if (error instanceof Error && error.stack) log.error(error.stack);
     return buildSendFailureResult({ error: getErrorMessage(error) });
   }
 }

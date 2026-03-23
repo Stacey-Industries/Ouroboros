@@ -5,6 +5,7 @@ import path from 'path';
 import { getErrorMessage } from '../agentChat/utils';
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager';
 import { clearCostHistory, type CostEntry, getCostHistory, saveCostEntry } from '../costHistory';
+import log from '../logger';
 import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
 import { getAutoUpdater } from '../updater';
 import {
@@ -121,7 +122,7 @@ async function clearCrashLogs(): Promise<void> {
     logFiles.map((fileName) =>
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from crashLogDir constant + sanitised filename
       fs.unlink(path.join(crashLogDir, fileName)).catch((error) => {
-        console.error('[crash] Failed to delete crash log file:', fileName, error);
+        log.error('Failed to delete crash log file:', fileName, error);
       }),
     ),
   );
@@ -146,9 +147,21 @@ async function writeCrashLog(source: string, message: string, stack?: string): P
 }
 
 export function registerUpdaterHandlers(channels: ChannelList): void {
-  registerChannel(channels, 'updater:check', createUpdaterHandler((u) => u.checkForUpdates()));
-  registerChannel(channels, 'updater:download', createUpdaterHandler((u) => u.downloadUpdate()));
-  registerChannel(channels, 'updater:install', createUpdaterHandler((u) => u.quitAndInstall()));
+  registerChannel(
+    channels,
+    'updater:check',
+    createUpdaterHandler((u) => u.checkForUpdates()),
+  );
+  registerChannel(
+    channels,
+    'updater:download',
+    createUpdaterHandler((u) => u.downloadUpdate()),
+  );
+  registerChannel(
+    channels,
+    'updater:install',
+    createUpdaterHandler((u) => u.quitAndInstall()),
+  );
 }
 
 export function registerCostHandlers(channels: ChannelList): void {
@@ -224,7 +237,7 @@ export function registerSymbolHandlers(channels: ChannelList): void {
   });
 }
 
-export { registerExtensionHandlers,registerWindowHandlers };
+export { registerExtensionHandlers, registerWindowHandlers };
 
 export function registerApprovalHandlers(channels: ChannelList): void {
   registerChannel(

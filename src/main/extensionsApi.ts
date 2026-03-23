@@ -20,6 +20,7 @@ import {
   type ExtensionLogResult,
   type LoadedExtension,
 } from './extensionsTypes';
+import log from './logger';
 
 function formatActivationEvents(events?: string[]): string {
   return (events ?? []).join(', ');
@@ -70,7 +71,7 @@ async function readExtensionEntries(dir: string): Promise<string[] | null> {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   } catch {
-    console.error('[extensions] Failed to read extensions directory');
+    log.error('Failed to read extensions directory');
     return null;
   }
 }
@@ -126,8 +127,8 @@ export async function dispatchActivationEvent(
     return;
   }
 
-  console.log(
-    `[extensions] Activation event "${eventName}" activating ${pending.length} extension(s): ${pending.map((ext) => ext.manifest.name).join(', ')}`,
+  log.info(
+    `Activation event "${eventName}" activating ${pending.length} extension(s): ${pending.map((ext) => ext.manifest.name).join(', ')}`,
   );
 
   for (const ext of pending) {
@@ -179,9 +180,7 @@ export async function initExtensions(): Promise<void> {
     }
   }
 
-  console.log(
-    `[extensions] Loaded ${extensions.size} extension(s): ${eagerCount} active, ${pendingCount} pending`,
-  );
+  log.info(`Loaded ${extensions.size} extension(s): ${eagerCount} active, ${pendingCount} pending`);
 }
 
 export function listExtensions(): ExtensionInfo[] {

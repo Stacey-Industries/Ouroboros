@@ -17,6 +17,7 @@ import os from 'os';
 import path from 'path';
 
 import { getConfigValue } from './config';
+import log from './logger';
 
 // â”€â”€â”€ Version â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Auto-computed from hook script contents — no manual bumping needed.
@@ -197,7 +198,7 @@ function registerHooksInSettings(hooksDir: string): void {
   for (const [eventType, command] of Object.entries(buildHookCommands(hooksDir))) {
     const entries = ensureHookMatchers(hooks, eventType);
     if (!registerHookCommand(entries, command)) continue;
-    console.log(`[hookInstaller] registered ${eventType} hook in settings.json`);
+    log.info(`registered ${eventType} hook in settings.json`);
   }
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/settings.json
@@ -228,7 +229,7 @@ function installHookFile(entry: HookEntry, assetsDir: string, hooksDir: string):
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from assets dir + hook manifest entry
   if (!fs.existsSync(srcPath)) {
-    console.warn(`[hookInstaller] source script not found: ${srcPath}`);
+    log.warn(`source script not found: ${srcPath}`);
     return;
   }
 
@@ -239,7 +240,7 @@ function installHookFile(entry: HookEntry, assetsDir: string, hooksDir: string):
     fs.chmodSync(destPath, 0o755);
   }
 
-  console.log(`[hookInstaller] installed ${entry.dest} -> ${destPath}`);
+  log.info(`installed ${entry.dest} -> ${destPath}`);
 }
 
 function installHookFiles(assetsDir: string, hooksDir: string): void {
@@ -260,7 +261,7 @@ function syncHooksIntoSettings(hooksDir: string): void {
   try {
     registerHooksInSettings(hooksDir);
   } catch (err) {
-    console.warn('[hookInstaller] could not update settings.json:', err);
+    log.warn('could not update settings.json:', err);
   }
 }
 
@@ -277,8 +278,8 @@ function maybeShowInstallNotification(firstInstall: boolean, hooksDir: string): 
 }
 
 function logInstallComplete(firstInstall: boolean): void {
-  console.log(
-    `[hookInstaller] ${firstInstall ? 'first' : 'updated'} install complete — version ${getCurrentHookVersion()}`,
+  log.info(
+    `${firstInstall ? 'first' : 'updated'} install complete — version ${getCurrentHookVersion()}`,
   );
 }
 
@@ -347,5 +348,5 @@ export function uninstallHooks(): void {
     fs.rmSync(markerPath, { force: true });
   }
 
-  console.log('[hookInstaller] hooks uninstalled');
+  log.info('hooks uninstalled');
 }

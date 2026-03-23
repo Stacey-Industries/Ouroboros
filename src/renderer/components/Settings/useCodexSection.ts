@@ -1,10 +1,7 @@
+import log from 'electron-log/renderer';
 import { useEffect, useState } from 'react';
 
-import type {
-  AppConfig,
-  CodexCliSettings,
-  CodexModelOption,
-} from '../../types/electron';
+import type { AppConfig, CodexCliSettings, CodexModelOption } from '../../types/electron';
 
 interface CodexOption<T extends string = string> {
   label: string;
@@ -76,13 +73,16 @@ function useCodexModelOptions(): CodexModelOption[] {
 
   useEffect(() => {
     let cancelled = false;
-    window.electronAPI.codex.listModels().then((models) => {
-      if (!cancelled) {
-        setModelOptions(models);
-      }
-    }).catch((error) => {
-      console.error('[settings] Failed to load Codex models:', error);
-    });
+    window.electronAPI.codex
+      .listModels()
+      .then((models) => {
+        if (!cancelled) {
+          setModelOptions(models);
+        }
+      })
+      .catch((error) => {
+        log.error('Failed to load Codex models:', error);
+      });
     return () => {
       cancelled = true;
     };

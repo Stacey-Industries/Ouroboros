@@ -8,6 +8,7 @@ import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import type { GitExecFn } from './gitBlameSnapshot';
 
 type GitResponse<T extends object> = ({ success: true } & T) | { success: false; error: string };
@@ -25,7 +26,7 @@ async function writeTempPatch(tmpFile: string, patchContent: string): Promise<vo
 function cleanupTempFile(tmpFile: string): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- tmpFile derived from app.getPath('temp') + timestamp, not user input
   void fs.unlink(tmpFile).catch((error) => {
-    console.error('[git] Failed to clean up temp patch file:', error);
+    log.error('Failed to clean up temp patch file:', error);
   });
 }
 

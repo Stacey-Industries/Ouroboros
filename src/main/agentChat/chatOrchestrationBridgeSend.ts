@@ -5,6 +5,7 @@
  * Handles task creation, linking, context building, and start flow.
  */
 
+import log from '../logger';
 import { captureHeadHash } from './chatOrchestrationBridgeGit';
 import { startIncrementalFlush, stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
 import {
@@ -164,8 +165,8 @@ async function startTaskWithCleanup(args: {
   const et3 = Date.now();
   try {
     const started = await orchestration.startTask(taskId);
-    console.log('[agentChat:timing:main] startTask:', Date.now() - et3, 'ms');
-    console.log('[agentChat:timing:main] total executePendingSend:', Date.now() - et0, 'ms');
+    log.info('startTask:', Date.now() - et3, 'ms');
+    log.info('total executePendingSend:', Date.now() - et0, 'ms');
     return started;
   } catch (err) {
     stopIncrementalFlush(streamCtx);
@@ -188,10 +189,14 @@ export async function executePendingSendCore(args: {
   try {
     startIncrementalFlush(runtime, streamCtx);
     const started = await startTaskWithCleanup({
-      orchestration, runtime, streamCtx, taskId: created.taskId, et0: args.et0,
+      orchestration,
+      runtime,
+      streamCtx,
+      taskId: created.taskId,
+      et0: args.et0,
     });
     if (!started.success) {
-      console.error('[agentChat] startTask failed:', started.error);
+      log.error('startTask failed:', started.error);
       stopIncrementalFlush(streamCtx);
       runtime.activeSends.delete(created.taskId);
     }
@@ -223,16 +228,22 @@ async function createAndLinkTask(args: {
   pending: PreparedSend;
   threadStore: AgentChatThreadStore;
   et0: number;
-}): Promise<{ validCreated: ValidCreated; linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] } } | AgentChatSendResult> {
+}): Promise<
+  | {
+      validCreated: ValidCreated;
+      linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] };
+    }
+  | AgentChatSendResult
+> {
   const preSnapshotPromise = captureHeadHash(args.pending.thread.workspaceRoot);
   const et1 = Date.now();
   const created = await args.orchestration.createTask(args.pending.taskRequest);
-  console.log('[agentChat:timing:main] createTask:', Date.now() - et1, 'ms');
+  log.info('createTask:', Date.now() - et1, 'ms');
   const preSnapshotHash = await preSnapshotPromise;
-  console.log('[agentChat:timing:main] total up to createTask:', Date.now() - et0, 'ms');
+  log.info('total up to createTask:', Date.now() - et0, 'ms');
 
   if (!created.success || !created.taskId || !created.session) {
-    console.error('[agentChat] createTask failed:', created.error);
+    log.error('createTask failed:', created.error);
     return failPendingSend({
       error: created.error ?? 'Failed to create the orchestration task.',
       messageId: args.pending.messageId,
@@ -242,8 +253,12 @@ async function createAndLinkTask(args: {
   }
 
   const et2 = Date.now();
-  const linked = await persistCreatedLink({ created, pending: args.pending, threadStore: args.threadStore });
-  console.log('[agentChat:timing:main] persistCreatedLink:', Date.now() - et2, 'ms');
+  const linked = await persistCreatedLink({
+    created,
+    pending: args.pending,
+    threadStore: args.threadStore,
+  });
+  log.info('persistCreatedLink:', Date.now() - et2, 'ms');
   if (preSnapshotHash) linked.link.preSnapshotHash = preSnapshotHash;
   return { validCreated: created as ValidCreated, linked };
 }
@@ -266,7 +281,10 @@ export async function executePendingSend(args: {
   if ('success' in result) return result;
 
   const { validCreated, linked } = result;
-  const assistantMessageId = buildAssistantMessageId(args.runtime.createId, validCreated.session.id);
+  const assistantMessageId = buildAssistantMessageId(
+    args.runtime.createId,
+    validCreated.session.id,
+  );
   const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId);
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 

@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -9,11 +10,7 @@ import {
 
 import type { AgentSession } from '../components/AgentMonitor/types';
 import type { HookPayload } from '../types/electron';
-import {
-  type AgentAction,
-  initialAgentState,
-  reducer,
-} from './useAgentEvents.helpers';
+import { type AgentAction, initialAgentState, reducer } from './useAgentEvents.helpers';
 import {
   createToolCall,
   deriveTaskLabel,
@@ -43,12 +40,21 @@ function deleteCompletedSessions(sessions: AgentSession[]): void {
   }
 }
 
-function persistSessionNotes(sessions: AgentSession[], sessionId: string, notes: string, bookmarked?: boolean): void {
+function persistSessionNotes(
+  sessions: AgentSession[],
+  sessionId: string,
+  notes: string,
+  bookmarked?: boolean,
+): void {
   const session = sessions.find((candidate) => candidate.id === sessionId);
   if (session) {
-    window.electronAPI?.sessions?.save?.({
-      ...session, notes, bookmarked: bookmarked ?? session.bookmarked,
-    }).catch(() => {});
+    window.electronAPI?.sessions
+      ?.save?.({
+        ...session,
+        notes,
+        bookmarked: bookmarked ?? session.bookmarked,
+      })
+      .catch(() => {});
   }
 }
 
@@ -71,16 +77,27 @@ export function useAgentEvents(): UseAgentEventsReturn {
     window.electronAPI?.sessions?.delete?.(sessionId).catch(() => {});
   }, []);
 
-  const updateNotes = useCallback((sessionId: string, notes: string, bookmarked?: boolean) => {
-    dispatch({ type: 'SET_NOTES', sessionId, notes, bookmarked });
-    persistSessionNotes(state.sessions, sessionId, notes, bookmarked);
-  }, [state.sessions]);
+  const updateNotes = useCallback(
+    (sessionId: string, notes: string, bookmarked?: boolean) => {
+      dispatch({ type: 'SET_NOTES', sessionId, notes, bookmarked });
+      persistSessionNotes(state.sessions, sessionId, notes, bookmarked);
+    },
+    [state.sessions],
+  );
 
   const activeCount = state.sessions.filter((s) => s.status === 'running').length;
   const currentSessions = state.sessions.filter((s) => !s.restored);
   const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
+  return {
+    agents: state.sessions,
+    activeCount,
+    clearCompleted,
+    dismiss,
+    updateNotes,
+    currentSessions,
+    historicalSessions,
+  };
 }
 
 function usePersistedSessionsLoader(
@@ -154,7 +171,7 @@ function handleAgentEvent(
 ): void {
   const payload = toHookPayload(event);
   if (!payload) {
-    console.warn('[useAgentEvents] toHookPayload returned null for:', JSON.stringify(event));
+    log.warn('toHookPayload returned null for:', JSON.stringify(event));
     return;
   }
 
@@ -270,9 +287,9 @@ function shouldPersistSession(
   savedSessionIdsRef: MutableRefObject<Set<string>>,
 ): boolean {
   return (
-    (session.status === 'complete' || session.status === 'error')
-    && !savedSessionIdsRef.current.has(session.id)
-    && liveSessionIdsRef.current.has(session.id)
+    (session.status === 'complete' || session.status === 'error') &&
+    !savedSessionIdsRef.current.has(session.id) &&
+    liveSessionIdsRef.current.has(session.id)
   );
 }
 

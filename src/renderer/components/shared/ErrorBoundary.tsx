@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import React from 'react';
 
 interface ErrorBoundaryProps {
@@ -29,7 +30,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    console.error(`[ErrorBoundary${this.props.label ? `:${this.props.label}` : ''}] caught:`, error, info.componentStack);
+    log.error(
+      `ErrorBoundary${this.props.label ? `:${this.props.label}` : ''} caught:`,
+      error,
+      info.componentStack,
+    );
   }
 
   private handleRetry = (): void => {

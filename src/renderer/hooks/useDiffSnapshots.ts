@@ -6,6 +6,7 @@
  * Also exposes methods for manual snapshot creation and snapshot retrieval.
  */
 
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -74,14 +75,20 @@ function filterSnapshotsForProject(
 ): WorkspaceSnapshot[] {
   if (!Array.isArray(stored)) return [];
   const snapshots = stored as WorkspaceSnapshot[];
-  return snapshots.filter((snapshot) => !snapshot.projectRoot || snapshot.projectRoot === projectRoot);
+  return snapshots.filter(
+    (snapshot) => !snapshot.projectRoot || snapshot.projectRoot === projectRoot,
+  );
 }
 
 function syncSnapshotLookup(snapshotsRef: SnapshotMapRef, snapshots: WorkspaceSnapshot[]): void {
-  snapshotsRef.current = new Map(snapshots.map((snapshot) => [snapshot.sessionId, snapshot.commitHash]));
+  snapshotsRef.current = new Map(
+    snapshots.map((snapshot) => [snapshot.sessionId, snapshot.commitHash]),
+  );
 }
 
-async function readProjectSnapshots(projectRoot: string | null): Promise<WorkspaceSnapshot[] | null> {
+async function readProjectSnapshots(
+  projectRoot: string | null,
+): Promise<WorkspaceSnapshot[] | null> {
   const getConfig = window.electronAPI?.config?.get;
   if (!getConfig) return null;
   const stored = await getConfig('workspaceSnapshots');
@@ -106,19 +113,28 @@ async function loadSnapshots(
 function saveSnapshots(snapshots: WorkspaceSnapshot[]): void {
   const setConfig = window.electronAPI?.config?.set;
   if (!setConfig) return;
-  void setConfig('workspaceSnapshots', snapshots).catch((error) => { console.error('[diffSnapshots] Failed to persist workspace snapshots:', error) });
+  void setConfig('workspaceSnapshots', snapshots).catch((error) => {
+    log.error('Failed to persist workspace snapshots:', error);
+  });
 }
 
 function upsertSnapshot(
   previous: WorkspaceSnapshot[],
   snapshot: WorkspaceSnapshot,
 ): WorkspaceSnapshot[] {
-  return [snapshot, ...previous.filter((candidate) => candidate.id !== snapshot.id)].slice(0, MAX_SNAPSHOTS);
+  return [snapshot, ...previous.filter((candidate) => candidate.id !== snapshot.id)].slice(
+    0,
+    MAX_SNAPSHOTS,
+  );
 }
 
-function createSessionSnapshot(
-  { commitHash, fileCount, projectRoot, session, type }: SessionSnapshotRecordOptions,
-): WorkspaceSnapshot {
+function createSessionSnapshot({
+  commitHash,
+  fileCount,
+  projectRoot,
+  session,
+  type,
+}: SessionSnapshotRecordOptions): WorkspaceSnapshot {
   return {
     id: `${session.id}-${type === 'session-start' ? 'start' : 'end'}`,
     commitHash,
@@ -152,14 +168,21 @@ function shouldCaptureStartSnapshot(
   snapshotsRef: SnapshotMapRef,
   pendingRef: SessionIdSetRef,
 ): boolean {
-  return session.status === 'running'
-    && !snapshotsRef.current.has(session.id)
-    && !pendingRef.current.has(session.id);
+  return (
+    session.status === 'running' &&
+    !snapshotsRef.current.has(session.id) &&
+    !pendingRef.current.has(session.id)
+  );
 }
 
-function shouldCaptureEndSnapshot(session: AgentSession, endedSessionsRef: SessionIdSetRef): boolean {
-  return (session.status === 'complete' || session.status === 'error')
-    && !endedSessionsRef.current.has(session.id);
+function shouldCaptureEndSnapshot(
+  session: AgentSession,
+  endedSessionsRef: SessionIdSetRef,
+): boolean {
+  return (
+    (session.status === 'complete' || session.status === 'error') &&
+    !endedSessionsRef.current.has(session.id)
+  );
 }
 
 async function getChangedFileCount(
@@ -178,9 +201,13 @@ async function getChangedFileCount(
   }
 }
 
-async function snapshotRunningSession(
-  { pendingRef, persistSnapshot, projectRoot, session, snapshotsRef }: RunningSnapshotOptions,
-): Promise<void> {
+async function snapshotRunningSession({
+  pendingRef,
+  persistSnapshot,
+  projectRoot,
+  session,
+  snapshotsRef,
+}: RunningSnapshotOptions): Promise<void> {
   const gitApi = window.electronAPI?.git;
   if (!gitApi?.snapshot || !shouldCaptureStartSnapshot(session, snapshotsRef, pendingRef)) return;
 
@@ -189,7 +216,14 @@ async function snapshotRunningSession(
     const result = await gitApi.snapshot(projectRoot);
     if (!result.success || !result.commitHash) return;
     snapshotsRef.current.set(session.id, result.commitHash);
-    await persistSnapshot(createSessionSnapshot({ session, projectRoot, commitHash: result.commitHash, type: 'session-start' }));
+    await persistSnapshot(
+      createSessionSnapshot({
+        session,
+        projectRoot,
+        commitHash: result.commitHash,
+        type: 'session-start',
+      }),
+    );
   } catch {
     // ignore
   } finally {
@@ -197,9 +231,13 @@ async function snapshotRunningSession(
   }
 }
 
-async function snapshotEndedSession(
-  { endedSessionsRef, persistSnapshot, projectRoot, session, snapshotsRef }: EndedSnapshotOptions,
-): Promise<void> {
+async function snapshotEndedSession({
+  endedSessionsRef,
+  persistSnapshot,
+  projectRoot,
+  session,
+  snapshotsRef,
+}: EndedSnapshotOptions): Promise<void> {
   const gitApi = window.electronAPI?.git;
   if (!gitApi?.snapshot || !shouldCaptureEndSnapshot(session, endedSessionsRef)) return;
 
@@ -207,27 +245,36 @@ async function snapshotEndedSession(
   try {
     const result = await gitApi.snapshot(projectRoot);
     if (!result.success || !result.commitHash) return;
-    const fileCount = await getChangedFileCount(projectRoot, snapshotsRef.current.get(session.id), result.commitHash);
-    await persistSnapshot(createSessionSnapshot({
-      session,
+    const fileCount = await getChangedFileCount(
       projectRoot,
-      commitHash: result.commitHash,
-      type: 'session-end',
-      fileCount,
-    }));
+      snapshotsRef.current.get(session.id),
+      result.commitHash,
+    );
+    await persistSnapshot(
+      createSessionSnapshot({
+        session,
+        projectRoot,
+        commitHash: result.commitHash,
+        type: 'session-end',
+        fileCount,
+      }),
+    );
   } catch {
     // ignore
   }
 }
 
 function usePersistSnapshot(setSnapshots: SnapshotSetter): PersistSnapshot {
-  return useCallback(async (snapshot: WorkspaceSnapshot) => {
-    setSnapshots((previous) => {
-      const next = upsertSnapshot(previous, snapshot);
-      saveSnapshots(next);
-      return next;
-    });
-  }, [setSnapshots]);
+  return useCallback(
+    async (snapshot: WorkspaceSnapshot) => {
+      setSnapshots((previous) => {
+        const next = upsertSnapshot(previous, snapshot);
+        saveSnapshots(next);
+        return next;
+      });
+    },
+    [setSnapshots],
+  );
 }
 
 function usePersistedProjectSnapshots(
@@ -240,24 +287,44 @@ function usePersistedProjectSnapshots(
   }, [projectRoot, setSnapshots, snapshotsRef]);
 }
 
-function useRunningSessionSnapshots(
-  { agents, pendingRef, persistSnapshot, projectRoot, snapshotsRef }: RunningSnapshotEffectOptions,
-): void {
+function useRunningSessionSnapshots({
+  agents,
+  pendingRef,
+  persistSnapshot,
+  projectRoot,
+  snapshotsRef,
+}: RunningSnapshotEffectOptions): void {
   useEffect(() => {
     if (!projectRoot) return;
     for (const session of agents) {
-      void snapshotRunningSession({ session, projectRoot, snapshotsRef, pendingRef, persistSnapshot });
+      void snapshotRunningSession({
+        session,
+        projectRoot,
+        snapshotsRef,
+        pendingRef,
+        persistSnapshot,
+      });
     }
   }, [agents, pendingRef, persistSnapshot, projectRoot, snapshotsRef]);
 }
 
-function useEndedSessionSnapshots(
-  { agents, endedSessionsRef, persistSnapshot, projectRoot, snapshotsRef }: EndedSnapshotEffectOptions,
-): void {
+function useEndedSessionSnapshots({
+  agents,
+  endedSessionsRef,
+  persistSnapshot,
+  projectRoot,
+  snapshotsRef,
+}: EndedSnapshotEffectOptions): void {
   useEffect(() => {
     if (!projectRoot) return;
     for (const session of agents) {
-      void snapshotEndedSession({ session, projectRoot, snapshotsRef, endedSessionsRef, persistSnapshot });
+      void snapshotEndedSession({
+        session,
+        projectRoot,
+        snapshotsRef,
+        endedSessionsRef,
+        persistSnapshot,
+      });
     }
   }, [agents, endedSessionsRef, persistSnapshot, projectRoot, snapshotsRef]);
 }
@@ -266,20 +333,23 @@ function useManualSnapshot(
   projectRoot: string | null,
   persistSnapshot: PersistSnapshot,
 ): (label?: string) => Promise<WorkspaceSnapshot | null> {
-  return useCallback(async (label?: string) => {
-    const gitApi = window.electronAPI?.git;
-    if (!projectRoot || !gitApi?.createSnapshot) return null;
+  return useCallback(
+    async (label?: string) => {
+      const gitApi = window.electronAPI?.git;
+      if (!projectRoot || !gitApi?.createSnapshot) return null;
 
-    try {
-      const result = await gitApi.createSnapshot(projectRoot, label);
-      if (!result.success || !result.commitHash) return null;
-      const snapshot = createManualSnapshotRecord(projectRoot, result.commitHash, label);
-      await persistSnapshot(snapshot);
-      return snapshot;
-    } catch {
-      return null;
-    }
-  }, [persistSnapshot, projectRoot]);
+      try {
+        const result = await gitApi.createSnapshot(projectRoot, label);
+        if (!result.success || !result.commitHash) return null;
+        const snapshot = createManualSnapshotRecord(projectRoot, result.commitHash, label);
+        await persistSnapshot(snapshot);
+        return snapshot;
+      } catch {
+        return null;
+      }
+    },
+    [persistSnapshot, projectRoot],
+  );
 }
 
 function useRefreshSnapshots(
@@ -313,9 +383,18 @@ export function useDiffSnapshots(): {
 
   usePersistedProjectSnapshots(projectRoot, setSnapshots, snapshotsRef);
   useRunningSessionSnapshots({ agents, projectRoot, snapshotsRef, pendingRef, persistSnapshot });
-  useEndedSessionSnapshots({ agents, projectRoot, snapshotsRef, endedSessionsRef, persistSnapshot });
+  useEndedSessionSnapshots({
+    agents,
+    projectRoot,
+    snapshotsRef,
+    endedSessionsRef,
+    persistSnapshot,
+  });
 
-  const getSnapshotHash = useCallback((sessionId: string): string | null => snapshotsRef.current.get(sessionId) ?? null, []);
+  const getSnapshotHash = useCallback(
+    (sessionId: string): string | null => snapshotsRef.current.get(sessionId) ?? null,
+    [],
+  );
   const createManualSnapshot = useManualSnapshot(projectRoot, persistSnapshot);
   const refreshSnapshots = useRefreshSnapshots(projectRoot, setSnapshots, snapshotsRef);
 

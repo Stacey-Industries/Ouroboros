@@ -9,6 +9,7 @@ import path from 'path';
 
 import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config';
 import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes';
+import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
@@ -146,12 +147,12 @@ function createCoreHandlers(): ConfigHandlerEntry[] {
                 const ctrl = getContextLayerController();
                 if (ctrl) {
                   ctrl.onConfigChange(value as ContextLayerConfig).catch((err: unknown) => {
-                    console.warn('[context-layer] onConfigChange failed:', err);
+                    log.warn('onConfigChange failed:', err);
                   });
                 }
               })
               .catch((err) => {
-                console.warn('[context-layer] failed to import controller:', err);
+                log.warn('failed to import controller:', err);
               });
           }
           return { success: true };

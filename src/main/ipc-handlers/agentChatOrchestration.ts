@@ -8,6 +8,7 @@
 
 import { formatMemoriesForContext } from '../agentChat/memoryExtractor';
 import { sessionMemoryStore } from '../agentChat/sessionMemory';
+import log from '../logger';
 import { formatGraphSummary } from '../orchestration/graphSummaryBuilder';
 import { createClaudeCodeAdapter } from '../orchestration/providers/claudeCodeAdapter';
 import { createCodexAdapter } from '../orchestration/providers/codexAdapter';
@@ -53,7 +54,7 @@ function createId(prefix: string): string {
 
 function resolveContextPacket(request: TaskRequest): ContextPacket | undefined {
   const ctx = getCachedContext(request.workspaceRoots);
-  console.log('[agentChat:timing:main] createTask.getCachedContext:', ctx ? 'hit' : 'miss');
+  log.info('createTask.getCachedContext:', ctx ? 'hit' : 'miss');
   if (!ctx?.cachedPacket) return undefined;
   const packet = ctx.cachedPacket;
   if (!packet.graphSummary) {
@@ -113,7 +114,7 @@ async function createTask(
     contextPacket,
   };
   sessions.set(taskId, session);
-  console.log('[agentChat:timing:main] createTask total:', Date.now() - ct0, 'ms');
+  log.info('createTask total:', Date.now() - ct0, 'ms');
   return { success: true, taskId, session, state: { status: 'idle', updatedAt: Date.now() } };
 }
 
@@ -134,7 +135,14 @@ async function submitTaskToAdapter(
       },
       sink,
     );
-    return { session: { ...session, status: 'applying' as const, updatedAt: Date.now(), providerSession: launched.session } };
+    return {
+      session: {
+        ...session,
+        status: 'applying' as const,
+        updatedAt: Date.now(),
+        providerSession: launched.session,
+      },
+    };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
@@ -157,7 +165,12 @@ async function startTask(taskId: string, state: TaskState): Promise<TaskMutation
 
   sessions.set(taskId, result.session);
   sessionListeners.forEach((l) => l(result.session));
-  return { success: true, taskId, session: result.session, state: { status: 'applying', updatedAt: Date.now() } };
+  return {
+    success: true,
+    taskId,
+    session: result.session,
+    state: { status: 'applying', updatedAt: Date.now() },
+  };
 }
 
 async function cancelTask(taskId: string, state: TaskState): Promise<TaskMutationResult> {

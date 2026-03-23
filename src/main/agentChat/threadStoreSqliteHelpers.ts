@@ -3,6 +3,7 @@
  * for the SQLite-backed thread store runtime.
  */
 
+import log from '../logger';
 import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ export function parseJsonField<T>(raw: string | null): T | undefined {
   try {
     return JSON.parse(raw) as T;
   } catch (error) {
-    console.warn('[threadStoreSqlite] corrupt JSON field, returning undefined:', error);
+    log.warn('corrupt JSON field, returning undefined:', error);
     return undefined;
   }
 }

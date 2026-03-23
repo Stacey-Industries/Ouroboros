@@ -4,6 +4,7 @@
  * Extracted from contextLayerController.ts to stay under the max-lines limit.
  */
 
+import log from '../logger';
 import type {
   IndexedRepoFile,
   RepoIndexSnapshot,
@@ -126,7 +127,7 @@ export function fireAndForgetRefreshEnrichment(opts: {
       aiState: opts.aiState,
       workspaceRoots: opts.workspaceRoots,
     }).catch((err) => {
-      console.warn('[context-layer] AI enrichment on refresh failed:', err);
+      log.warn('AI enrichment on refresh failed:', err);
     });
   }
 }

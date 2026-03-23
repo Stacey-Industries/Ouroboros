@@ -7,11 +7,9 @@ import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+import log from '../logger';
 import type { IndexedRepoFile } from '../orchestration/repoIndexer';
-import {
-  aiEnrichModules,
-  type AiSummarizerState,
-} from './contextLayerAiSummarizer';
+import { aiEnrichModules, type AiSummarizerState } from './contextLayerAiSummarizer';
 import type { ModuleCacheState } from './contextLayerRefresher';
 import { configureTypeScriptAliases, getStrategyForExtension } from './languageStrategies';
 
@@ -255,8 +253,8 @@ export function logInitResults(
     return cached && !cached.aiEnriched;
   }).length;
   const skipped = modules.length - updated;
-  console.log(
-    `[context-layer] Indexed ${modules.length} modules in ${elapsedMs}ms` +
+  log.info(
+    `Indexed ${modules.length} modules in ${elapsedMs}ms` +
       ` (${updated} updated, ${skipped} unchanged)`,
   );
   if (updated > 0 && modules.length < 80) logModuleDetails(modules);
@@ -270,8 +268,8 @@ function logModuleDetails(modules: DetectedModule[]): void {
       s.barrelImportCount + s.directImportCount > 0
         ? `, imports: ${s.barrelImportCount}barrel/${s.directImportCount}direct`
         : '';
-    console.log(
-      `[context-layer]   ${m.id} (${m.files.length} files, ${s.boundaryStrength}${s.hasBarrel ? ', barrel' : ''}, cohesion: ${(m.cohesion * 100).toFixed(0)}%${importInfo})`,
+    log.info(
+      `  ${m.id} (${m.files.length} files, ${s.boundaryStrength}${s.hasBarrel ? ', barrel' : ''}, cohesion: ${(m.cohesion * 100).toFixed(0)}%${importInfo})`,
     );
   }
 }
@@ -294,14 +292,14 @@ export function fireAndForgetEnrichment(opts: FireEnrichmentOpts): void {
     })
     .map((m) => m.id);
   if (toEnrich.length === 0) return;
-  console.log(`[context-layer] Queuing AI enrichment for ${toEnrich.length} module(s)`);
+  log.info(`Queuing AI enrichment for ${toEnrich.length} module(s)`);
   aiEnrichModules({
     moduleIds: toEnrich,
     cachedModules: moduleCache.cachedModules,
     aiState,
     workspaceRoots,
   }).catch((err: unknown) => {
-    console.warn('[context-layer] AI enrichment failed:', err);
+    log.warn('AI enrichment failed:', err);
   });
 }
 
@@ -314,21 +312,19 @@ export function enrichUnenrichedModules(
     .filter(([, v]) => !v.aiEnriched)
     .map(([id]) => id);
   if (unenriched.length === 0) return;
-  console.log(
-    `[context-layer] AutoSummarize enabled — enriching ${unenriched.length} cached modules`,
-  );
+  log.info(`AutoSummarize enabled — enriching ${unenriched.length} cached modules`);
   aiEnrichModules({
     moduleIds: unenriched,
     cachedModules: moduleCache.cachedModules,
     aiState,
     workspaceRoots,
   }).catch((err: unknown) => {
-    console.warn('[context-layer] AI enrichment on autoSummarize enable failed:', err);
+    log.warn('AI enrichment on autoSummarize enable failed:', err);
   });
 }
 
 export function clearModuleCache(moduleCache: ModuleCacheState): void {
-  console.log('[context-layer] Disabled — clearing cache');
+  log.info('Disabled — clearing cache');
   moduleCache.cachedModules.clear();
   moduleCache.cachedRepoMap = null;
   moduleCache.lastSnapshotCacheKey = null;

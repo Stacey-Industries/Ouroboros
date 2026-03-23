@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 import {
   type Dispatch,
   type MutableRefObject,
@@ -27,7 +28,7 @@ export interface UseFileWatcherReturn {
 }
 
 const DEBOUNCE_MS = 100;
-const noop = (): void => { };
+const noop = (): void => {};
 
 type TimerRef = MutableRefObject<ReturnType<typeof setTimeout> | null>;
 type CleanupWatcher = () => void;
@@ -79,7 +80,10 @@ function clearDebounceTimer(debounceTimer: TimerRef): void {
   debounceTimer.current = null;
 }
 
-async function loadWatchedDirectory(dir: string, { setFiles, setIsLoading, setError }: FileWatcherState): Promise<void> {
+async function loadWatchedDirectory(
+  dir: string,
+  { setFiles, setIsLoading, setError }: FileWatcherState,
+): Promise<void> {
   setIsLoading(true);
   setError(null);
 
@@ -130,7 +134,7 @@ async function startDirectoryWatcher(options: DirectoryWatchStartOptions): Promi
     });
   } catch (error) {
     if (options.isActive()) {
-      console.warn('[useFileWatcher] watchDir error:', error);
+      log.warn('watchDir error:', error);
     }
 
     return noop;
@@ -204,13 +208,14 @@ export function useFileWatcher(dirPath: string | null): UseFileWatcherReturn {
   }, [load]);
 
   useEffect(
-    () => setupDirectoryWatcher({
-      dirPath,
-      currentDir,
-      debounceTimer,
-      load,
-      state: { setFiles, setIsLoading, setError },
-    }),
+    () =>
+      setupDirectoryWatcher({
+        dirPath,
+        currentDir,
+        debounceTimer,
+        load,
+        state: { setFiles, setIsLoading, setError },
+      }),
     [dirPath, load],
   );
 

@@ -6,6 +6,7 @@
  * Languages 6-10 (Rust, C/C++, Ruby, PHP, C#) are in languageStrategiesSupport.ts.
  */
 
+import log from '../logger';
 import { cCpp, csharp, java, kotlin, php, ruby, rust } from './languageStrategiesSupport';
 
 // ---------------------------------------------------------------------------
@@ -382,8 +383,8 @@ export function configureTypeScriptAliases(pathsEntries: Record<string, string[]
     tsPathAliases.push({ prefix, replacement });
   }
   if (tsPathAliases.length > 0) {
-    console.log(
-      `[context-layer] Configured ${tsPathAliases.length} path alias(es): ` +
+    log.info(
+      `Configured ${tsPathAliases.length} path alias(es): ` +
         tsPathAliases.map((a) => `${a.prefix} → ${a.replacement}`).join(', '),
     );
   }

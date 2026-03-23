@@ -5,26 +5,27 @@
  * a cost entry via the cost IPC API. Deduplicates by session ID.
  */
 
-import { useEffect, useRef } from 'react'
+import log from 'electron-log/renderer';
+import { useEffect, useRef } from 'react';
 
-import { estimateCost } from '../components/AgentMonitor/costCalculator'
-import type { AgentSession } from '../components/AgentMonitor/types'
-import type { CostEntry } from '../types/electron'
+import { estimateCost } from '../components/AgentMonitor/costCalculator';
+import type { AgentSession } from '../components/AgentMonitor/types';
+import type { CostEntry } from '../types/electron';
 
 function isFinishedSession(session: AgentSession): boolean {
-  return session.status === 'complete' || session.status === 'error'
+  return session.status === 'complete' || session.status === 'error';
 }
 
 function shouldRecord(session: AgentSession, recorded: Set<string>): boolean {
-  return isFinishedSession(session) && !recorded.has(session.id) && !session.restored
+  return isFinishedSession(session) && !recorded.has(session.id) && !session.restored;
 }
 
 function formatDateStr(timestamp: number | undefined): string {
-  const now = new Date(timestamp ?? Date.now())
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  const now = new Date(timestamp ?? Date.now());
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function buildCostEntry(session: AgentSession): CostEntry {
@@ -34,7 +35,7 @@ function buildCostEntry(session: AgentSession): CostEntry {
     model: session.model,
     cacheReadTokens: session.cacheReadTokens,
     cacheWriteTokens: session.cacheWriteTokens,
-  })
+  });
 
   return {
     date: formatDateStr(session.completedAt),
@@ -47,27 +48,27 @@ function buildCostEntry(session: AgentSession): CostEntry {
     cacheWriteTokens: session.cacheWriteTokens ?? 0,
     estimatedCost: cost.totalCost,
     timestamp: session.completedAt ?? Date.now(),
-  }
+  };
 }
 
 /**
  * Monitors agent sessions and auto-records cost entries when they finish.
  */
 export function useCostTracking(sessions: AgentSession[]): void {
-  const recordedRef = useRef<Set<string>>(new Set())
+  const recordedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!window.electronAPI?.cost?.addEntry) return
+    if (!window.electronAPI?.cost?.addEntry) return;
 
     for (const session of sessions) {
-      if (!shouldRecord(session, recordedRef.current)) continue
+      if (!shouldRecord(session, recordedRef.current)) continue;
 
-      recordedRef.current.add(session.id)
+      recordedRef.current.add(session.id);
 
-      const entry = buildCostEntry(session)
+      const entry = buildCostEntry(session);
       window.electronAPI.cost.addEntry(entry).catch((error) => {
-        console.error('[costTracking] Failed to persist cost entry:', error)
-      })
+        log.error('Failed to persist cost entry:', error);
+      });
     }
-  }, [sessions])
+  }, [sessions]);
 }

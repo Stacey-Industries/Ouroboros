@@ -1,3 +1,4 @@
+import log from 'electron-log/renderer';
 /**
  * useFormatOnSave — Hook that wraps the save action with optional formatting.
  *
@@ -46,7 +47,7 @@ export function useFormatOnSave(options: UseFormatOnSaveOptions): {
               onSave(editor.getValue());
             })
             .catch((error) => {
-              console.error('[fileViewer] Format on save failed, saving without formatting:', error);
+              log.error('Format on save failed, saving without formatting:', error);
               onSave(editor.getValue());
             });
           return;

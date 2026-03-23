@@ -10,6 +10,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Worker } from 'worker_threads';
 
+import log from '../logger';
 import {
   buildGraphSummary,
   formatGraphSummary,
@@ -90,9 +91,9 @@ export function loadPersistedContextCache(): void {
     for (const [key, entry] of entries) {
       contextCache.set(key, entry);
     }
-    console.log(`[agentChat] Loaded persisted context cache (${entries.length} entries)`);
+    log.info(`Loaded persisted context cache (${entries.length} entries)`);
   } catch (err) {
-    console.warn('[agentChat] Failed to load persisted context cache:', err);
+    log.warn('Failed to load persisted context cache:', err);
   }
 }
 
@@ -112,16 +113,16 @@ function ensureContextWorker(): Worker | null {
     contextWorker = new Worker(workerPath);
     contextWorker.on('message', handleContextWorkerMessage);
     contextWorker.on('error', (err) => {
-      console.warn('[agentChat] context worker error:', err);
+      log.warn('context worker error:', err);
       contextWorker = null;
     });
     contextWorker.on('exit', (code) => {
-      if (code !== 0) console.warn('[agentChat] context worker exited with code', code);
+      if (code !== 0) log.warn('context worker exited with code', code);
       contextWorker = null;
     });
     return contextWorker;
   } catch (err) {
-    console.warn('[agentChat] Failed to create context worker:', err);
+    log.warn('Failed to create context worker:', err);
     return null;
   }
 }
@@ -137,11 +138,11 @@ type WorkerMessage = {
 
 function handleContextWorkerMessage(msg: WorkerMessage): void {
   if (msg.type === 'ready') {
-    console.log('[agentChat] context worker ready');
+    log.info('context worker ready');
     return;
   }
   if (msg.type === 'error') {
-    console.warn('[agentChat] context worker error for', msg.id, ':', msg.message);
+    log.warn('context worker error for', msg.id, ':', msg.message);
     contextBuildInFlight.delete(msg.id ?? '');
     return;
   }
@@ -180,7 +181,7 @@ function onContextReady(
     cachedPacket: packet,
   };
   contextCache.set(key, entry);
-  console.log('[agentChat] Context cache built via worker in', durationMs, 'ms for key:', key);
+  log.info('Context cache built via worker in', durationMs, 'ms for key:', key);
   persistContextCache();
   attachGraphSummary(entry, key, roots);
 }
@@ -217,12 +218,10 @@ let contextRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startContextRefreshTimer(roots: string[]): void {
   if (contextRefreshTimer) return;
-  console.log('[agentChat] Starting context refresh timer for roots:', roots);
-  console.log('[agentChat] Current cache size:', contextCache.size, 'keys:', [
-    ...contextCache.keys(),
-  ]);
+  log.info('Starting context refresh timer for roots:', roots);
+  log.info('Current cache size:', contextCache.size, 'keys:', [...contextCache.keys()]);
   setTimeout(() => {
-    console.log('[agentChat] Initial warm-up triggered for roots:', roots);
+    log.info('Initial warm-up triggered for roots:', roots);
     warmSnapshotCache(roots);
   }, 5_000);
   contextRefreshTimer = setInterval(() => warmSnapshotCache(roots), CONTEXT_REFRESH_MS);
