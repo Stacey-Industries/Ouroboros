@@ -79,12 +79,15 @@ function registerAutoUpdaterEvents(): void {
   updater.on('update-downloaded', (info: unknown) =>
     broadcastToActiveWindows('updater:event', { type: 'update-downloaded', info }),
   );
-  updater.on('error', (err: unknown) =>
-    broadcastToActiveWindows('updater:event', {
-      type: 'error',
-      error: err instanceof Error ? err.message : String(err),
-    }),
-  );
+  updater.on('error', (err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Suppress 404 errors — just means no releases published yet
+    if (msg.includes('404') || msg.includes('HttpError')) {
+      log.info('Update check: no releases found (404)');
+      return;
+    }
+    broadcastToActiveWindows('updater:event', { type: 'error', error: msg });
+  });
 }
 
 function scheduleAutoUpdateCheck(): void {
