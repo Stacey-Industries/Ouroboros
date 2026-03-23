@@ -124,7 +124,11 @@ function buildTerminalMenu(): MenuDefinition {
 function showAbout(): void {
   void window.electronAPI?.app?.getVersion?.().then((version) => {
     void window.electronAPI?.app?.getPlatform?.().then((platform) => {
-      alert(`Ouroboros IDE\nVersion: ${version}\nPlatform: ${platform}\n\nBuilt with Electron + React + Monaco`);
+      window.dispatchEvent(
+        new CustomEvent('agent-ide:show-about', {
+          detail: { version, platform },
+        }),
+      );
     });
   });
 }

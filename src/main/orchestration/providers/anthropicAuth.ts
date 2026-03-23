@@ -14,6 +14,8 @@ const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 const ANTHROPIC_TOKEN_ENDPOINT = 'https://console.anthropic.com/v1/oauth/token';
 
+let cachedCredentials: ClaudeCredentials | null = null;
+
 interface ClaudeOAuthData {
   accessToken?: string;
   refreshToken?: string;
@@ -33,10 +35,12 @@ interface OAuthRefreshResponse {
 }
 
 function readCredentials(): ClaudeCredentials | null {
+  if (cachedCredentials) return cachedCredentials;
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is derived from os.homedir(), not user input
     const raw = fs.readFileSync(CREDENTIALS_PATH, 'utf8');
-    return JSON.parse(raw) as ClaudeCredentials;
+    cachedCredentials = JSON.parse(raw) as ClaudeCredentials;
+    return cachedCredentials;
   } catch {
     return null;
   }
@@ -46,8 +50,9 @@ function writeCredentials(creds: ClaudeCredentials): void {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is derived from os.homedir(), not user input
     fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(creds, null, 2), 'utf8');
-  } catch {
-    // Non-fatal — worst case the next request re-refreshes
+    cachedCredentials = creds;
+  } catch (err) {
+    console.warn('[anthropic-api] Failed to write credentials:', err);
   }
 }
 

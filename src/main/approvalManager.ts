@@ -170,7 +170,7 @@ export function requestApproval(request: ApprovalRequest): void {
   if (timeoutSec && timeoutSec > 0) {
     const timer = setTimeout(() => {
       if (pendingRequests.has(request.requestId)) {
-        respondToApproval(request.requestId, {
+        void respondToApproval(request.requestId, {
           decision: 'approve',
           reason: 'auto-approved (timeout)',
         });
@@ -178,16 +178,6 @@ export function requestApproval(request: ApprovalRequest): void {
     }, timeoutSec * 1000);
     autoApproveTimers.set(request.requestId, timer);
   }
-}
-
-/**
- * Synchronous sleep using SharedArrayBuffer + Atomics.wait.
- * Only used for EMFILE retry — keeps respondToApproval synchronous
- * so callers don't need to change.
- */
-function sleepSync(ms: number): void {
-  const buf = new SharedArrayBuffer(4);
-  Atomics.wait(new Int32Array(buf), 0, 0, ms);
 }
 
 const EMFILE_MAX_RETRIES = 2;
@@ -226,12 +216,12 @@ function isRetryableError(err: unknown): boolean {
   return code === 'EMFILE' || code === 'ENFILE';
 }
 
-function writeResponseWithRetry(
+async function writeResponseWithRetry(
   filePath: string,
   data: string,
   requestId: string,
   decision: string,
-): boolean {
+): Promise<boolean> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= EMFILE_MAX_RETRIES; attempt++) {
     try {
@@ -245,7 +235,7 @@ function writeResponseWithRetry(
     } catch (err) {
       lastError = err;
       if (!isRetryableError(err)) break;
-      sleepSync(EMFILE_RETRY_DELAY_MS);
+      await new Promise<void>((r) => setTimeout(r, EMFILE_RETRY_DELAY_MS));
     }
   }
 
@@ -256,7 +246,7 @@ function writeResponseWithRetry(
 /**
  * Write an approval response file so the hook script can pick it up.
  */
-export function respondToApproval(requestId: string, response: ApprovalResponse): boolean {
+export async function respondToApproval(requestId: string, response: ApprovalResponse): Promise<boolean> {
   pendingRequests.delete(requestId);
   clearAutoApproveTimer(requestId);
 

@@ -19,6 +19,7 @@ import {
   getWindowInfos,
   setWindowProjectRoot,
 } from '../windowManager';
+import { getAutoUpdater } from '../updater';
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
 
@@ -31,6 +32,7 @@ type FailureResponse = { success: false; error: string };
 type EmptySuccessResponse = { success: true };
 type SuccessResponse<T extends object> = EmptySuccessResponse & T;
 
+// AutoUpdaterLike interface kept for the createUpdaterHandler helper below.
 interface AutoUpdaterLike {
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
@@ -38,17 +40,6 @@ interface AutoUpdaterLike {
 }
 
 const crashLogDir = path.join(app.getPath('userData'), 'crashes');
-let autoUpdater: AutoUpdaterLike | null = null;
-
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { autoUpdater: updater } = require('electron-updater') as {
-    autoUpdater: AutoUpdaterLike;
-  };
-  autoUpdater = updater;
-} catch {
-  // Not installed - no-op.
-}
 
 function registerChannel(channels: ChannelList, channel: string, handler: IpcHandler): void {
   ipcMain.handle(channel, handler);
@@ -90,8 +81,9 @@ function createUpdaterHandler(
   action: (updater: AutoUpdaterLike) => Promise<unknown> | unknown,
 ): IpcHandler {
   return async () => {
-    if (!autoUpdater) return { success: false, error: 'electron-updater not installed' };
-    return runAction(() => action(autoUpdater!));
+    const updater = getAutoUpdater() as AutoUpdaterLike | null;
+    if (!updater) return { success: false, error: 'electron-updater not installed' };
+    return runAction(() => action(updater));
   };
 }
 
@@ -358,8 +350,8 @@ export function registerApprovalHandlers(channels: ChannelList): void {
     channels,
     'approval:respond',
     async (_event, requestId: string, decision: 'approve' | 'reject', reason?: string) =>
-      runQuery(() => {
-        const written = respondToApproval(requestId, { decision, reason });
+      runQuery(async () => {
+        const written = await respondToApproval(requestId, { decision, reason });
         return { error: written ? undefined : 'Failed to write response file' };
       }).then((result) => {
         if (!result.success) {

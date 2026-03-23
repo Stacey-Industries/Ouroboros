@@ -37,20 +37,8 @@ import { runAllMigrations } from './storage/migrate';
 import { broadcastToWebClients, startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
+import { getAutoUpdater } from './updater';
 import { createWindow, getAllActiveWindows } from './windowManager';
-
-// â”€â”€â”€ Auto-updater (electron-updater â€” optional dep) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let autoUpdater: any = null;
-try {
-  // electron-updater is an optional dependency; gracefully skip if absent
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const updaterModule = require('electron-updater');
-  autoUpdater = updaterModule.autoUpdater;
-} catch {
-  console.log('[updater] electron-updater not installed â€” auto-update disabled');
-}
 
 // â”€â”€â”€ Crash logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -161,23 +149,28 @@ function registerRenderProcessCrashLogging(): void {
 }
 
 function registerAutoUpdaterEvents(): void {
-  autoUpdater.on('checking-for-update', () =>
+  const updater = getAutoUpdater();
+  if (!updater) return;
+  updater.on('checking-for-update', () =>
     broadcastToActiveWindows('updater:event', { type: 'checking-for-update' }),
   );
-  autoUpdater.on('update-available', (info: unknown) =>
+  updater.on('update-available', (info: unknown) =>
     broadcastToActiveWindows('updater:event', { type: 'update-available', info }),
   );
-  autoUpdater.on('update-not-available', (info: unknown) =>
+  updater.on('update-not-available', (info: unknown) =>
     broadcastToActiveWindows('updater:event', { type: 'update-not-available', info }),
   );
-  autoUpdater.on('download-progress', (progress: unknown) =>
+  updater.on('download-progress', (progress: unknown) =>
     broadcastToActiveWindows('updater:event', { type: 'download-progress', progress }),
   );
-  autoUpdater.on('update-downloaded', (info: unknown) =>
+  updater.on('update-downloaded', (info: unknown) =>
     broadcastToActiveWindows('updater:event', { type: 'update-downloaded', info }),
   );
-  autoUpdater.on('error', (err: Error) =>
-    broadcastToActiveWindows('updater:event', { type: 'error', error: err.message }),
+  updater.on('error', (err: unknown) =>
+    broadcastToActiveWindows('updater:event', {
+      type: 'error',
+      error: err instanceof Error ? err.message : String(err),
+    }),
   );
 }
 
@@ -185,19 +178,20 @@ function scheduleAutoUpdateCheck(): void {
   if (!app.isPackaged) {
     return;
   }
+  const updater = getAutoUpdater();
+  if (!updater) return;
   setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((err: Error) => {
+    updater.checkForUpdates().catch((err: Error) => {
       console.log('[updater] Auto-check failed:', err.message);
     });
   }, 5000);
 }
 
 function configureAutoUpdater(): void {
-  if (!autoUpdater) {
+  if (!getAutoUpdater()) {
     return;
   }
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // autoDownload / autoInstallOnAppQuit are set in updater.ts
   registerAutoUpdaterEvents();
   scheduleAutoUpdateCheck();
 }

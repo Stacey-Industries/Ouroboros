@@ -242,7 +242,7 @@ function handleApprovalRequest(payload: HookPayload): void {
   }
 
   if (!toolRequiresApproval(payload.toolName, payload.sessionId)) {
-    respondToApproval(payload.requestId, { decision: 'approve' });
+    void respondToApproval(payload.requestId, { decision: 'approve' });
     return;
   }
 

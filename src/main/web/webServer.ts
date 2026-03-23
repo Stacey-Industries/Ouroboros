@@ -39,6 +39,7 @@ export interface WebServerOptions {
 // ─── State ──────────────────────────────────────────────────────────────────
 
 let httpServer: http.Server | null = null
+let cachedIndexHtml: string | null = null
 let wss: WebSocketServer | null = null
 const wsClients = new Set<WebSocket>()
 
@@ -114,9 +115,11 @@ function registerSpaFallback(app: express.Express, staticDir: string): void {
   app.get('/{*path}', (_req, res) => {
     const token = getOrCreateWebToken()
     try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- indexPath is derived from trusted staticDir config
-      const html = fs.readFileSync(indexPath, 'utf-8')
-      const injected = html.replace('</head>', `<script>window.__WEB_TOKEN__='${token}'</script></head>`)
+      if (!cachedIndexHtml) {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- indexPath is derived from trusted staticDir config
+        cachedIndexHtml = fs.readFileSync(indexPath, 'utf-8')
+      }
+      const injected = cachedIndexHtml.replace('</head>', `<script>window.__WEB_TOKEN__='${token}'</script></head>`)
       res.type('html').send(injected)
     } catch {
       res.sendFile(indexPath)

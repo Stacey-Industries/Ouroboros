@@ -151,7 +151,7 @@ async function searchServers(
   if (cursor) params.set('cursor', cursor);
 
   const url = `${REGISTRY_BASE}/servers?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
   if (!response.ok) {
     throw new Error(`Registry search failed: ${response.status} ${response.statusText}`);
@@ -166,7 +166,7 @@ async function searchServers(
 
 async function getServerDetails(name: string): Promise<{ server: McpRegistryServer }> {
   const url = `${REGISTRY_BASE}/servers/${encodeURIComponent(name)}/versions/latest`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
   if (!response.ok) {
     throw new Error(`Registry fetch failed: ${response.status} ${response.statusText}`);

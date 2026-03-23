@@ -161,7 +161,7 @@ export async function searchNpmServers(
   });
 
   const url = `https://registry.npmjs.org/-/v1/search?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
   if (!response.ok) {
     throw new Error(`npm search failed: ${response.status} ${response.statusText}`);

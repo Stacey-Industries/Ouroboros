@@ -172,6 +172,7 @@ async function queryMarketplace(body: object): Promise<MarketplaceQueryResponse>
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok)
     throw new Error(`VS Code Marketplace query failed: ${response.status} ${response.statusText}`);
@@ -211,7 +212,7 @@ async function tryFetchReadme(ext: MarketplaceExtension): Promise<string | undef
   );
   if (!readmeFile?.source) return undefined;
   try {
-    const resp = await fetch(readmeFile.source);
+    const resp = await fetch(readmeFile.source, { signal: AbortSignal.timeout(15_000) });
     return resp.ok ? await resp.text() : undefined;
   } catch {
     return undefined;
@@ -249,7 +250,7 @@ function buildVsixDownloadUrl(namespace: string, name: string, version: string):
 }
 
 async function downloadMarketplaceVsix(downloadUrl: string): Promise<Buffer> {
-  const vsixResponse = await fetch(downloadUrl);
+  const vsixResponse = await fetch(downloadUrl, { signal: AbortSignal.timeout(15_000) });
   if (!vsixResponse.ok) {
     throw new Error(
       `Failed to download VSIX from Marketplace: ${vsixResponse.status} ${vsixResponse.statusText}`,
