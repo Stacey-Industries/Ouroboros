@@ -87,7 +87,11 @@ function dismissSplash(): void {
   })
 }
 
-createRoot(rootElement).render(
+const root = (rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot
+  ?? createRoot(rootElement);
+(rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot = root;
+
+root.render(
   <StrictMode>
     <RootErrorBoundary>
       <App />
