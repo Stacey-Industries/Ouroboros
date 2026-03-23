@@ -1,18 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-The **Controller Object pattern** used here (`useTerminalInstanceController` → single typed object) is a deliberate inversion of the typical React pattern where state lives in the view. By assembling a controller from ~10 hooks and passing it down, `TerminalInstanceView` becomes a pure presentation layer with zero local state — the same separation you'd find in an MVC architecture, applied to React hooks. The `.types.ts` / `.build.ts` / `.helpers.ts` split mirrors how large frameworks decompose service objects.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md is now clean. Changes from the previous version:
-
-- Removed the stale meta-commentary header (lines 1–13 that described the file rather than documenting it)
-- Corrected file names to match actual filenames: `useTerminalSetupKeyboard.ts`, `useTerminalSetupData.ts`, `useTerminalSetupCleanup.ts` (the old version used dot-notation names that don't match the actual files)
-- Added a new gotcha for `getCellHeight`'s use of xterm internals (`term._core._renderService.dimensions`) — a real breakage risk on version bumps
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Terminal — xterm.js Multi-Session Terminal UI
 
 Full-featured terminal subsystem: xterm.js rendering, PTY IPC, shell integration (OSC 633/133), command blocks, tab completions, history search, rich multiline input, session persistence, and split panes.
@@ -53,31 +38,22 @@ The controller is built by `useTerminalInstanceController` (entry: `useTerminalS
 | `shellIntegrationAddon.ts`                                       | Custom xterm addon — parses OSC 633 (VS Code shell integration) into typed events                       |
 | `osc133Handler.ts`                                               | OSC 133 command block detection (heuristic fallback when OSC 633 unavailable)                           |
 | `useCommandBlocks.ts`                                            | `CommandBlock` state — thin hook                                                                        |
-| `useCommandBlocksController.ts`                                  | Command block event processing, collapse/expand logic                                                   |
 | `CommandBlockOverlay.tsx` / `CommandBlockOverlayBody.tsx`        | Visual Warp-style command separators rendered over xterm canvas                                         |
 | `CommandBlockActions.tsx`                                        | Per-block action bar (copy, explain, re-run)                                                            |
 | `terminalKeyHandlers.ts`                                         | All custom key bindings (Tab, history arrows, Ctrl+R/V, Ctrl+Shift+F/Enter)                             |
 | `RichInput.tsx` / `RichInputBody.tsx`                            | CodeMirror-based multiline input overlay (activated by Ctrl+Shift+Enter)                                |
 | `useTerminalCompletions.ts` / `useTerminalCompletions.shared.ts` | Tab completion: IPC call → overlay display → apply                                                      |
-| `CompletionOverlay.tsx`                                          | Completion dropdown                                                                                     |
 | `useTerminalHistory.ts`                                          | Command history state + suggestion controls                                                             |
 | `CommandHistorySearch.tsx`                                       | Ctrl+R fuzzy history search overlay                                                                     |
 | `useTerminalPersistence.ts`                                      | SerializeAddon-based session save/restore across reloads                                                |
 | `terminalRegistry.ts`                                            | Global `Map<sessionId, Terminal>` — used by `useIdeToolResponder` to read buffer without prop threading |
 | `terminalLinkProvider.ts`                                        | Custom xterm link provider (file paths, URLs)                                                           |
-| `terminalTheme.ts`                                               | Maps CSS custom properties to xterm `ITheme`                                                            |
 | `StickyScrollOverlay.tsx`                                        | Sticky header showing current command context while scrolling                                           |
 | `TerminalProgressBar.tsx`                                        | OSC progress escape sequence renderer                                                                   |
 | `TerminalTabs.tsx`                                               | Tab strip with rename, close, reorder                                                                   |
-| `TerminalToolbar.tsx`                                            | Icon buttons: sync, split, record, multiline toggle                                                     |
 | `TerminalContextMenu.tsx`                                        | Right-click menu                                                                                        |
-| `SearchBar.tsx` / `TerminalSearchBar.tsx`                        | In-terminal text search (uses SearchAddon)                                                              |
-| `SelectionTooltip.tsx`                                           | Floating tooltip on text selection (copy/explain actions)                                               |
-| `PasteConfirmation.tsx`                                          | Banner for large paste confirmation                                                                     |
-| `BlockNavigator.tsx`                                             | Keyboard navigation between command blocks                                                              |
+| `SearchBar.tsx`                                                  | In-terminal text search (uses SearchAddon)                                                              |
 | `CopyButton.tsx`                                                 | Floating copy button                                                                                    |
-| `terminalHelpers.ts`                                             | Misc utils (title parsing, shell detection)                                                             |
-| `terminalPasteHelpers.ts`                                        | Chunked paste writer for large pastes                                                                   |
 | `index.ts`                                                       | Barrel — exports `TerminalManager`, `useTerminalInstanceController`                                     |
 
 ## Patterns

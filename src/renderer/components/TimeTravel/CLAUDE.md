@@ -1,19 +1,3 @@
-<!-- claude-md-auto:start -->
-
-Here's the generated content — improvements over the previous version:
-
-- **IPC section** converted to a table (faster to scan when debugging which git call is responsible for a failure)
-- **Compare mode** section rewritten as a numbered flow matching the actual `getNextSelectionState` logic (the "third click resets" behavior is easy to miss)
-- **Added the `useChangedFiles` deps gotcha** — the `args` object dependency means adding fields to `ChangedFilesArgs` without stabilizing the reference will cause the effect to re-fire every render, a subtle bug source
-
-`★ Insight ─────────────────────────────────────`
-The "state bucket" pattern here (`useTimeTravelPanelState` composed from 5 smaller hooks, each owning one concern) is a deliberate alternative to a single large reducer. It keeps each concern's logic self-contained and independently testable — `useStatusMessage` is a clean example: 15 lines that auto-dismiss after 5s with a timer cleanup, zero coupling to the rest of the panel. Compare this to a reducer where all that logic gets flattened into case branches.
-`─────────────────────────────────────────────────`
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # TimeTravel — Git snapshot browser with compare and restore
 
 ## Key Files

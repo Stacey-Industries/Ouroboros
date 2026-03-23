@@ -286,6 +286,9 @@ function ensureCSP(): void {
   if (cspInstalled) return
   cspInstalled = true
 
+  const isDev = process.env.NODE_ENV === 'development'
+  const webPort = isDev ? '*' : String((getConfigValue('webAccessPort') as number) ?? 7890)
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -297,7 +300,7 @@ function ensureCSP(): void {
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' data:",
             "img-src 'self' data: blob: https:",
-            "connect-src 'self' ws://localhost:* http://localhost:*",
+            `connect-src 'self' ws://localhost:${webPort} http://localhost:${webPort}`,
             "worker-src 'self' blob:"
           ].join('; ')
         ]

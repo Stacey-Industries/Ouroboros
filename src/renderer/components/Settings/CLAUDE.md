@@ -1,23 +1,3 @@
-<!-- claude-md-auto:start -->
-
-Here's the generated CLAUDE.md content for `src/renderer/components/Settings/`:
-
----
-
-`★ Insight ─────────────────────────────────────`
-**Three architectural decisions worth understanding here:**
-
-1. **Two-host, one-draft** — `SettingsModal` and `SettingsPanel` are completely separate React trees but share `useSettingsDraft()`. This separation lets the modal animate in/out independently without the panel needing to know about portal rendering.
-2. **Draft-then-commit with live preview** — Theme changes apply immediately (via `setTheme`) but are tracked in `originalThemeRef` for rollback. Only on "Save" does `persistDraft` fire `set()` for every config key in parallel. This is why cancel must call `setTheme(originalThemeRef.current)`.
-3. **Flat search index** — `settingsEntries.ts` is a pure data file with no component deps. `searchEntries()` runs against it synchronously. This means full-text search costs zero IPC and doesn't re-render any section components until the user clicks a result.
-   `─────────────────────────────────────────────────`
-
-The CLAUDE.md covers the two-host architecture, the 5-layer decomposition pattern for large sections, the draft/commit flow, the self-contained store sections (`ExtensionStore`, `McpStore`) that bypass draft, the step-by-step guide for adding new tabs, and gotchas including the animated modal lifecycle, `originalThemeRef` rollback, `ContextDocsSection`'s nested config shape, and `persistDraft`'s parallel writes.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Settings — Full settings UI: modal, inline panel, 14 tabbed sections
 
 ## Architecture

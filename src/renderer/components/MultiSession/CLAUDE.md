@@ -1,22 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-The three-layer component decomposition here (atoms → sections → panel) is deliberately more granular than most directories in this project. This matters because `MultiSessionLauncherControls` contains reusable primitives like `IconButton` that could be consumed by future multi-session UI variants without touching the composed `*Parts` files — it's a mini component library within the feature folder.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md for `src/renderer/components/MultiSession/` has been written. It covers:
-
-- **Three-layer component hierarchy** (atoms → sections → panel) for both Launcher and Monitor
-- **Label-based session matching** — the non-obvious reason sessions can't be matched by ID at dispatch time
-- **`haveSameIds` stability guard** — prevents re-render cascades on every agent heartbeat
-- **`MAX_SLOTS = 4` hard cap** and its grid layout implications
-- **`agent-ide:spawn-claude-template` CustomEvent** dispatch path (not IPC)
-- **Template override layering** — slot-level model/effort merges over template `cliOverrides`
-- All external dependencies mapped
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # MultiSession — Parallel Agent Session Launcher & Monitor
 
 Two-phase UI for configuring and observing parallel Claude Code sessions: a **Launcher** (configure + fire) and a **Monitor** (watch the batch in a live grid).

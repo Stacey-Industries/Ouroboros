@@ -1,26 +1,3 @@
-<!-- claude-md-auto:start -->
-
-The CLAUDE.md already exists for this directory with accurate, comprehensive content. Here's what it contains (no changes needed):
-
-`★ Insight ─────────────────────────────────────`
-
-- The **pure-function extraction pattern** in `analyticsDashboardFormatting.ts` (zero React imports, all exports are pure) is a strong signal — it keeps components focused on rendering and makes formatting logic independently testable. Worth replicating in other data-heavy views.
-- `Infinity` propagation for `efficiencyScore` (tokens ÷ edits when edits = 0) is a deliberate domain choice — it distinguishes "no edits made" from "zero efficiency", but requires guards at every display site (`--`) and special `normalizeMetricValue()` handling before sorting (since `Infinity - Infinity = NaN` breaks `Array.sort`).
-  `─────────────────────────────────────────────────`
-
-The existing CLAUDE.md covers:
-
-- **Data flow**: `AgentEventsContext` → `useSessionAnalytics` → dashboard components (no IPC, all derived data)
-- **File roles**: root wiring, overview panel, sessions table, pure formatting utilities, barrel export
-- **Key patterns**: `memo` with named functions, inline interfaces co-located per component, CSS variables only for colors
-- **Gotchas**: `Infinity` efficiency scores needing `--` display + sort guard, sparkline requiring ≥2 points, hover using `onMouseEnter/Leave` style manipulation instead of Tailwind (because selected-row highlight also needs inline styles for CSS variable support)
-
-The CLAUDE.md at `src/renderer/components/Analytics/CLAUDE.md` is already up to date — no write needed.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Analytics — Claude Code Session Metrics Dashboard
 
 Read-only dashboard that visualizes aggregate and per-session metrics from Claude Code agent runs. Mounted in `InnerAppLayout` as a sidebar/panel view.

@@ -1,13 +1,3 @@
-<!-- claude-md-auto:start -->
-
-The CLAUDE.md already exists for this directory (shown in the system reminder). The content is current and accurate — it covers all the key files, the color token contract, extension theme registration, the mutable `customTheme` singleton, and the add-a-theme checklist.
-
-No changes needed.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Themes — Runtime theme definitions and registry
 
 ## Key Files

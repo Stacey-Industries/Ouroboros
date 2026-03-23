@@ -1,29 +1,3 @@
-<!-- claude-md-auto:start -->
-
-The CLAUDE.md already exists for this directory (shown as `AM` in git status — added/modified). The existing content is already comprehensive and complete. Here's a summary of what it covers:
-
-The file documents the **CommandPalette** directory as a VS Code-style command palette, file picker, and symbol search with three independent picker UIs sharing overlay primitives.
-
-Key documentation it includes:
-
-- **Architecture table** — three pickers (command palette, file picker, symbol search), each with its own state pipeline and Fuse.js instance
-- **Key files table** — 13 files from `types.ts` through `symbolSearchLifecycle.ts` with roles
-- **MVVM decomposition pattern** — State → Actions → ViewModel → View pipeline across separate files
-- **Navigation stack** — how `Command.children` enables nested submenus
-- **Gotchas** — two flatten functions (`flattenLeaves` vs `flattenAll`), `PaletteOverlay` vs `PickerOverlay` distinction, inline `<style>` keyframes, centralized command registration, DOM events only
-
-`★ Insight ─────────────────────────────────────`
-**The CLAUDE.md already exists** (git status `AM` = Added in index, Modified in working tree). The file was auto-generated during the modernization initiative and already captures the key architectural patterns. The system-reminder confirms its full content — no action needed unless you want to revise specific sections.
-
-**MVVM in hooks**: This codebase adapts the MVVM pattern to React — `commandPaletteState.ts` is the Model, `commandPaletteActions.ts` is the Controller, `commandPaletteViewModel.ts` is the ViewModel (a pure function), and `CommandPalettePanel.tsx` is the View. This strict separation means the panel component is only 45 lines — purely declarative.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md at `src/renderer/components/CommandPalette/CLAUDE.md` already exists and is complete. No file needs to be written — it's already checked into the working tree.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # CommandPalette — VS Code-style command palette, file picker, and symbol search
 
 ## Architecture

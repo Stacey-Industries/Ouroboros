@@ -1,15 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-This directory uses a **"workspace model" pattern** — a single hook (`useAgentChatWorkspace`) aggregates all state into one typed `AgentChatWorkspaceModel` object and passes it down as explicit props rather than using React context. This is intentional: it makes data flow traceable via TypeScript (grep for `AgentChatWorkspaceModel` to find all consumers) and avoids the re-render surface area problems that context creates for high-frequency state like streaming deltas.
-`─────────────────────────────────────────────────`
-
-Done. The file was cleaned up — the leaking `<!-- claude-md-auto:start -->` block and surrounding generation artifacts (lines 1–13) have been removed. The actual CLAUDE.md content (architecture diagram, key files table, patterns, gotchas, and types reference) is preserved unchanged.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # AgentChat — Multi-threaded chat UI for Claude Code agent conversations
 
 ## Architecture
@@ -54,8 +42,6 @@ AgentChatWorkspace          ← mounts hooks, builds model
 | `AgentChatDiffPreview.tsx`        | Inline diff preview for code apply operations.                                                                                                                                                           |
 | `useDiffReview.ts`                | State hook for diff review lifecycle (open/close, file accept/reject).                                                                                                                                   |
 | `AgentChatTabBar.tsx`             | Horizontal tab bar for thread switching with branch indicators, overflow dropdown.                                                                                                                       |
-| `AgentChatThreadList.tsx`         | Vertical thread list (history panel) with tree-structured branch hierarchy.                                                                                                                              |
-| `buildThreadTree.ts`              | Builds tree of threads from `branchInfo.parentThreadId` relationships.                                                                                                                                   |
 | `ChatHistoryPanel.tsx`            | Sidebar panel for browsing/searching chat history.                                                                                                                                                       |
 | `AgentChatMessageActions.tsx`     | Per-message action bar: retry, edit + resend, branch, revert, copy. Separate components for user vs assistant messages.                                                                                  |
 | `AgentChatDetailsDrawer.tsx`      | Slide-in drawer showing linked orchestration session details (tokens, changed files, verification).                                                                                                      |
@@ -63,7 +49,6 @@ AgentChatWorkspace          ← mounts hooks, builds model
 | `AgentChatBranchIndicator.tsx`    | Visual indicator shown between messages when a branch point exists.                                                                                                                                      |
 | `AgentChatContextBar.tsx`         | Bar above composer showing active context files and token count.                                                                                                                                         |
 | `agentChatFormatters.ts`          | Timestamp formatting, thread preview text, status labels/tones.                                                                                                                                          |
-| `agentChatDetailsSupport.ts`      | Extracts summary data from linked orchestration details (context tokens, changed files, verification).                                                                                                   |
 | `useAgentChatLinkedDetails.ts`    | Fetches orchestration session details linked to a thread.                                                                                                                                                |
 | `useAgentChatDraftPersistence.ts` | Persists/restores draft text per thread in localStorage. Cleared on send.                                                                                                                                |
 | `useAgentChatDefaultView.ts`      | Determines whether to show thread list or conversation on mount.                                                                                                                                         |

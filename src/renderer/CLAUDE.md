@@ -1,5 +1,3 @@
-<!-- claude-md-auto:start -->
-
 # Renderer — React Entry Point & Root Orchestration
 
 React browser process. Entry at `index.tsx`, root component in `App.tsx`. Everything under `src/renderer/` runs in the Chromium renderer process — no Node APIs.
@@ -50,4 +48,3 @@ React browser process. Entry at `index.tsx`, root component in `App.tsx`. Everyt
 - All contexts in `src/renderer/contexts/` are mounted by `ConfiguredApp`
 - `InnerAppLayout` (`components/Layout/InnerAppLayout.tsx`) is the sole render output of `InnerApp`
 - Theme CSS vars are initialized by `useThemeRuntimeBootstrap` before the app tree renders
-<!-- claude-md-auto:end -->

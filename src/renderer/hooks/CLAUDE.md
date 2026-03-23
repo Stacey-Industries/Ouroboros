@@ -1,24 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-**Hook decomposition pattern**: The `useX.ts` / `useX.effects.ts` / `useX.handlers.ts` / `useX.sync.ts` split is a deliberate architectural choice — it keeps each file under ~300 lines and separates effects (side-effect-heavy `useEffect` logic), handlers (stable callback references), and sync (persistence/IPC sync). The `.ts` entry file acts purely as an assembler. This mirrors how large components get decomposed, applied at the hook level.
-
-**Two subagent-linking strategies coexist** in `useAgentEvents.helpers.ts`: an explicit path (child session ID present in tool input — reliable) and a temporal stamp path (no ID yet — uses a 30-second window to auto-link a subsequent `agent_start` as the child). The 30-second window isn't arbitrary — it accounts for Claude Code model-load latency in subagent initialization.
-
-**`directoryWatchRegistry`** solves a subtle IPC fan-out problem: if three different components each call `files:watchDir` on the same path, you'd get three IPC channels and three sets of callbacks. The registry deduplicates at the renderer level, keeping a single IPC subscription per directory regardless of how many hooks are watching it.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md has been written to `src/renderer/hooks/CLAUDE.md`. It covers:
-
-- **Full file map** for all 43 files with their roles
-- **Split-hook naming convention** (`useX.ts` / `effects` / `handlers` / `sync` / `actions`) with the key rule that entry files are pure assemblers
-- **Two event systems** distinction — the most common source of confusion in this codebase
-- **Non-obvious gotchas**: `appEventNames.ts` as canonical event name source, `useSymbolOutline` being regex-only, the dual subagent-linking strategies, and the 100-snapshot cap
-- **Dependencies** pointing to the contexts and type files consumed
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Renderer Hooks
 
 All shared React hooks for the renderer process — IPC bridges, session management, agent monitoring, theming, git, and app-wide event wiring.
@@ -67,7 +46,6 @@ All shared React hooks for the renderer process — IPC bridges, session managem
 | `useExtensionThemes.ts`                         | Loads and registers extension-provided themes                                                      |
 | `useErrorCapture.ts`                            | Window `error`/`unhandledrejection` → IPC error reporting                                          |
 | `useProjectManagement.ts`                       | Open/close project, recent projects list                                                           |
-| `useSessionReplay.ts` / `agentChatUiHelpers.ts` | Session replay controls; chat UI status toast helpers                                              |
 | `directoryWatchRegistry.ts`                     | Singleton registry — deduplicates `files:watchDir` subscriptions across hook instances             |
 
 ## Naming Conventions

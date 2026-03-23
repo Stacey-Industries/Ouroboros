@@ -1,19 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-The previous file had a classic generation artifact: the `<!-- claude-md-auto:start -->` block was capturing the _response text_ from the prior session (the "Done. The CLAUDE.md covers..." summary) rather than just the documentation. The structural lesson is that auto-generated blocks should only ever contain derived documentation — any conversational framing must stay out of the file.
-`─────────────────────────────────────────────────`
-
-Done. The CLAUDE.md for `src/renderer/types/` is now clean. Key things it covers:
-
-- **File structure table** — all 10 declaration files with their domains and the specific `*API` types they export
-- **Dependency graph** — shows `electron-workspace.d.ts` as the hub assembling `ElectronAPI`, `electron.d.ts` as the final barrel augmenting `Window`
-- **Conventions** — `IpcResult` pattern, cleanup function returns, `*Result`/`*API`/`*Event` naming
-- **Gotchas** — the two cross-boundary imports into `src/main/`, the `AppConfig`↔`config.ts` sync requirement, the `(string & {})` trick on `AppTheme`, the 4-step process for new API domains, and Knip's exclusion of this directory
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Types — IPC Type Contract (Single Source of Truth)
 
 Type declarations for the entire `window.electronAPI` surface. Every renderer→main IPC call is typed here. This is the contract between the preload bridge and the renderer — if a method isn't declared here, the renderer can't call it.

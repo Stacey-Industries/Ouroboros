@@ -1,22 +1,3 @@
-<!-- claude-md-auto:start -->
-
-The CLAUDE.md already exists and is well-structured. Looking at it, it's accurate and comprehensive. No generation needed — the file is already in good shape.
-
-The existing `src/main/ipc-handlers/CLAUDE.md` covers:
-
-- Directory purpose and registration pattern
-- Full key files table (all 23 files)
-- Response convention (`{ success, error? }`)
-- Path security requirements
-- Gotchas (misc vs miscRegistrars, web broadcasts, removed AgentLoopController, channel naming, ESLint limits)
-- Dependency table
-
-No changes are required. The file already matches the actual directory contents accurately.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # IPC Handlers — Domain-split `ipcMain.handle()` registrars
 
 All Electron IPC handler registration lives here. Each file is a domain registrar that binds `ipcMain.handle()` calls and returns a list of registered channel names. Imported and orchestrated by `../ipc.ts`.

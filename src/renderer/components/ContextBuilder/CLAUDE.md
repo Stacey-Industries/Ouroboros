@@ -1,23 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-Three patterns worth noting in this module:
-
-1. **`buildContextBuilderModel()` as a pure assembler** — it's a plain function, not a hook. This is a deliberate boundary: hooks handle effects/subscriptions, the builder just shapes data. This makes the public `ContextBuilderModel` interface stable even if internal hook structure changes.
-2. **`useContextRegeneration` vs `useContextScan`** — two separate hooks serve different lifecycles. `useContextScan` is imperative (returns a callable). `useContextRegeneration` is declarative (fires on `options` change). Keeping them separate avoids a tangled effect that tries to do both.
-3. **`ContextSelectionModel` uses `"group::item"` composite keys** in a `Set<string>` rather than nested Maps. Simple, serializable, and avoids reference equality issues with object keys.
-   `─────────────────────────────────────────────────`
-
-The CLAUDE.md has been written. Here's what the new version adds over the old:
-
-- **`ContextSelectionModel` is optional** — documents the `null` case when no `contextSelection` config is passed (previously undocumented)
-- **Initial scan on mount** — explains the `useContextBuilderScanLifecycle` effect fires exactly once, clarifying the dependency chain
-- **State bundling rationale** — explains why `useContextBuilderState` exists as a separate helper
-- Merged the duplicate manual/auto sections into one authoritative document
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # ContextBuilder — Project context scanner and CLAUDE.md generator
 
 Scans a project directory, generates structured context (commands, structure, deps), and lets users edit/export the result as a CLAUDE.md file or system prompt injected into Claude CLI settings.

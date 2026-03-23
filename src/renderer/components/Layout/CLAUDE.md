@@ -1,5 +1,3 @@
-<!-- claude-md-auto:start -->
-
 # Layout — IDE shell: panels, resizing, collapse, status bar, and workspace layouts
 
 ## Architecture
@@ -118,5 +116,3 @@ Event name constants live in `../../hooks/appEventNames`. Never dispatch these f
 | Consumes    | `AgentMonitor`, `GitPanel`, `Analytics`, `CommandPalette`, `ExtensionStore`, `McpStore` |
 | Consumes    | `../../hooks/appEventNames`, `../../types/electron` (WorkspaceLayout, PanelSizes)       |
 | Consumed by | `App.tsx` (renderer root) via `InnerAppLayout` only                                     |
-
-<!-- claude-md-auto:end -->

@@ -1,15 +1,3 @@
-<!-- claude-md-auto:start -->
-
-A CLAUDE.md already exists for this directory. Here's the current content versus what I'd write — let me check if it needs updating:
-
-The existing file looks accurate and complete. It already covers all five contexts, their patterns, gotchas, and dependencies. The content matches what the files actually contain.
-
-No update needed — the existing `CLAUDE.md` is current and accurate.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Contexts — App-level React state providers
 
 React contexts that lift shared state above the component tree so it survives panel mount/unmount cycles.

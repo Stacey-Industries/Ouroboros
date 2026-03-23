@@ -1,6 +1,3 @@
-<!-- claude-md-auto:start -->
-<!-- claude-md-auto:start -->
-
 # src/main/storage/ — SQLite database layer and JSON→SQLite migration
 
 Provides a shared `better-sqlite3` foundation and one-time migration of three legacy JSON stores into SQLite databases. Called at app startup; must complete before any store consumers open their databases.
@@ -45,5 +42,3 @@ Provides a shared `better-sqlite3` foundation and one-time migration of three le
 - **`threads.db` lives inside the threads directory** (`userData/agent-chat/threads/threads.db`) — not alongside it. The migration reads `*.json` from that same dir, so the db file itself is excluded by the `.json` filter.
 - **Schema is defined inline in `migrate.ts`**, not in the consuming store modules. If `threadStoreSqlite.ts` or `codebaseGraph` add columns later, they must bump `user_version` and handle their own ALTER TABLE — `migrate.ts` only runs once.
 - **`metadata` TEXT column in `edges` table has no default** — insertions must pass `null` explicitly for rows without metadata (see `insertGraphData`).
-  <!-- claude-md-auto:end -->
-  <!-- claude-md-auto:end -->

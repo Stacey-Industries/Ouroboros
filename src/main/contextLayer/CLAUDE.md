@@ -1,23 +1,3 @@
-<!-- claude-md-auto:start -->
-
-The CLAUDE.md for this directory already exists and is accurate. The system reminder shows it was previously generated and verified. No changes needed.
-
-The existing `src/main/contextLayer/CLAUDE.md` is current and covers:
-
-- The three-stage module detection pipeline (Options A/B/C)
-- All four files with their roles
-- Key patterns (caching, debounce, cooldown, AI enrichment, goal-based selection)
-- Dependencies (repoIndexer upstream, claudeCodeAdapter downstream)
-- Gotchas (duplicate `isCodeFile`, duplicate `resolveRelativeImport`, path alias mutation order, graph analysis cost threshold)
-
-`★ Insight ─────────────────────────────────────`
-The most interesting architectural detail here is the **progressive cost escalation**: Option A (directory walk) runs on every file change; Option B (import signal scoring) runs when modules are dirty; Option C (full graph cohesion + seed clustering) only fires when ≥10% of modules are dirty or ≥5 absolute. This means casual edits pay near-zero cost while large refactors trigger the expensive but accurate analysis.
-`─────────────────────────────────────────────────`
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # contextLayer — Repo-aware context enrichment for agent sessions
 
 Builds three context layers (repo map, module summaries, dependency graph) from the repo indexer's data and injects them into context packets before they reach the LLM provider.

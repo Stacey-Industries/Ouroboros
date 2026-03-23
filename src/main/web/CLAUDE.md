@@ -1,21 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-Three architectural choices in this module are worth noting:
-
-1. **Monkey-patching `ipcMain.handle`** is the zero-friction way to make all IPC handlers available over WebSocket without touching any handler file — but it creates a hard call-order dependency that's invisible at the call sites. The `captureInstalled` guard makes it idempotent, which is important since module evaluation order isn't always obvious.
-
-2. **Two cookies for one token** exists because the browser WebSocket API (`new WebSocket(url)`) offers no way to set custom headers — you can only pass a URL. So the `wsToken` cookie must be non-HttpOnly so JS can read it and attach it as a query parameter, while the HttpOnly `webAccessToken` cookie is used for regular HTTP requests where the browser attaches cookies automatically.
-
-3. **`ptyBatcher`'s 16ms window** isn't arbitrary — it matches the browser's `requestAnimationFrame` cadence (~60fps). node-pty can emit data many times per millisecond during heavy output. Without batching, each byte would be a separate WebSocket frame, saturating the network and overwhelming the browser's message event loop.
-   `─────────────────────────────────────────────────`
-
-The CLAUDE.md is written. The key changes from the previous version: removed the meta-comment scaffolding (`<!-- claude-md-auto:start -->` / `<!-- claude-md-manual:preserved -->`) that contained notes-about-the-doc rather than actual documentation, and produced a clean standalone file.
-
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # Web Remote Access — HTTP + WebSocket server for browser-based IDE access
 
 Serves the same renderer UI over HTTP/WS instead of Electron's BrowserWindow, reusing all existing IPC handlers via a JSON-RPC 2.0 bridge.

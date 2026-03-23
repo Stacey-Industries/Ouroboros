@@ -1,23 +1,3 @@
-<!-- claude-md-auto:start -->
-
-`★ Insight ─────────────────────────────────────`
-The three-hook split in `diffReviewState.ts` (`useReviewLifecycleActions`, `useSingleHunkActions`, `useBulkReviewActions`) is a maintainability pattern worth noting: rather than one monolithic `useDiffReview` hook that returns 8 callbacks, the logic is grouped by concern and assembled at the context level in `DiffReviewManager`. Each group closes over only what it needs — lifecycle only needs `dispatch`, while single/bulk hunk hooks also close over `state` — making the dependency arrays precise and the re-render surface minimal.
-`─────────────────────────────────────────────────`
-
-The CLAUDE.md is written. Key things captured:
-
-- **Component tree** — visual hierarchy from provider to leaf `HunkView`
-- **Null-as-closed** — the reducer's `null` initial state is non-obvious; documented explicitly
-- **Three action-hook split** — why it's structured that way and the `[dispatch, state]` dep requirement
-- **Bulk reject ordering** — the `reduceRight` + reverse-file iteration that prevents patch offset drift (the most dangerous gotcha)
-- **Optimistic updates + rollback** — the accept/reject pattern
-- **Sequential bulk ops** — `for...of` await, not `Promise.all`, to avoid git lock
-- **`getDiffReviewStateView` guard pattern** — where to add new loading/error states
-- **Styling convention** — inline `CSSProperties` + CSS vars only, no Tailwind
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-
 # DiffReview — Per-Hunk Accept/Reject UI for Agent Diffs
 
 Presents a code review interface for agent-generated changes: users can accept (stage) or reject (revert) individual hunks or entire files before committing.
