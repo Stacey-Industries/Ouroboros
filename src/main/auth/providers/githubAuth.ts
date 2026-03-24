@@ -5,7 +5,7 @@ import { shell } from 'electron';
 
 import log from '../../logger';
 import { deleteCredential, getCredential, setCredential } from '../credentialStore';
-import { clearPendingPkceFlow, setPendingPkceFlow } from '../protocolHandler';
+import { clearPendingPkceFlow, startCallbackServer } from '../protocolHandler';
 import type {
   AuthState,
   AuthUser,
@@ -70,15 +70,11 @@ type PollAction = 'continue' | 'slow_down' | 'terminal';
 
 // -- Helpers: HTTP ----------------------------------------------------------
 
+/** Public OAuth App client ID — safe to embed (not a secret). */
+const DEFAULT_GITHUB_CLIENT_ID = 'Ov23ctW6o4aAEKFeo9jU';
+
 function getClientId(): string {
-  const id = process.env.GITHUB_CLIENT_ID;
-  if (!id) {
-    throw new Error(
-      'GITHUB_CLIENT_ID is not set. Add it to your environment ' +
-        'variables or .env file before using GitHub authentication.',
-    );
-  }
-  return id;
+  return process.env.GITHUB_CLIENT_ID || DEFAULT_GITHUB_CLIENT_ID;
 }
 
 async function requestDeviceCode(
@@ -274,16 +270,28 @@ export function startGitHubLogin(callback: GitHubLoginCallback): void {
 /** Start GitHub login via browser-based Authorization Code + PKCE flow. */
 export function startGitHubPkceLogin(callback: GitHubLoginCallback): void {
   cancelGitHubLogin();
-  const clientId = getClientId();
-  const { verifier, challenge, state } = generatePkceChallenge();
-  const authUrl = buildAuthorizationUrl(clientId, challenge, state);
   const abort = new AbortController();
   activeAbort = abort;
+  void launchPkceFlow(callback, abort);
+}
 
-  setPendingPkceFlow({ state, verifier, clientId, callback, abort });
-  void shell.openExternal(authUrl);
-  callback({ type: 'browser_opened', authUrl });
-  log.info('[GitHubAuth] PKCE flow started — browser opened');
+async function launchPkceFlow(
+  callback: GitHubLoginCallback,
+  abort: AbortController,
+): Promise<void> {
+  try {
+    const clientId = getClientId();
+    const { verifier, challenge, state } = generatePkceChallenge();
+    const redirectUri = await startCallbackServer({ state, verifier, clientId, callback, abort });
+    const authUrl = buildAuthorizationUrl(clientId, challenge, state, redirectUri);
+    void shell.openExternal(authUrl);
+    callback({ type: 'browser_opened', authUrl });
+    log.info('[GitHubAuth] PKCE flow started — browser opened');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error(`[GitHubAuth] Failed to start PKCE flow: ${msg}`);
+    callback({ type: 'error', message: msg });
+  }
 }
 
 export function cancelGitHubLogin(): void {

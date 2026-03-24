@@ -3,7 +3,6 @@ import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
 import { getCredential } from './auth/credentialStore';
-import { handleProtocolUrl, registerProtocolHandler } from './auth/protocolHandler';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import {
@@ -126,19 +125,13 @@ function registerWindowLifecycleHandlers(): void {
     }
   });
 
-  app.on('second-instance', (_event, argv) => {
+  app.on('second-instance', () => {
     const windows = getAllActiveWindows();
     if (windows.length > 0) {
       const win = windows[windows.length - 1];
       if (win.isMinimized()) win.restore();
       win.focus();
     }
-    const callbackUrl = argv.find((arg) => arg.startsWith('ouroboros://'));
-    if (callbackUrl) handleProtocolUrl(callbackUrl);
-  });
-
-  app.on('open-url', (_event, url) => {
-    handleProtocolUrl(url);
   });
 }
 
@@ -239,7 +232,6 @@ async function initCodebaseGraph(): Promise<void> {
 }
 
 app.setName('Ouroboros');
-registerProtocolHandler();
 app.whenReady().then(initializeApplication);
 
 // Graceful shutdown on POSIX signals (Docker, systemd, etc.)

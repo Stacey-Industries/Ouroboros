@@ -4,7 +4,7 @@
  * Pure functions for generating PKCE challenges, building authorization URLs,
  * and exchanging authorization codes for tokens. No side effects.
  */
-import { GITHUB_PKCE_SCOPES, GITHUB_REDIRECT_URI } from '@shared/types/auth';
+import { GITHUB_PKCE_SCOPES } from '@shared/types/auth';
 import { createHash, randomBytes } from 'crypto';
 
 // -- Constants ----------------------------------------------------------------
@@ -41,10 +41,15 @@ export function generatePkceChallenge(): PkceChallenge {
 
 // -- URL building -------------------------------------------------------------
 
-export function buildAuthorizationUrl(clientId: string, challenge: string, state: string): string {
+export function buildAuthorizationUrl(
+  clientId: string,
+  challenge: string,
+  state: string,
+  redirectUri: string,
+): string {
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: GITHUB_REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: GITHUB_PKCE_SCOPES,
     code_challenge: challenge,
     code_challenge_method: 'S256',
@@ -55,20 +60,25 @@ export function buildAuthorizationUrl(clientId: string, challenge: string, state
 
 // -- Token exchange -----------------------------------------------------------
 
+interface ExchangeArgs {
+  clientId: string;
+  code: string;
+  verifier: string;
+  redirectUri: string;
+}
+
 export async function exchangeCodeForToken(
-  clientId: string,
-  code: string,
-  verifier: string,
+  args: ExchangeArgs,
   signal: AbortSignal,
 ): Promise<TokenResult> {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify({
-      client_id: clientId,
-      code,
-      code_verifier: verifier,
-      redirect_uri: GITHUB_REDIRECT_URI,
+      client_id: args.clientId,
+      code: args.code,
+      code_verifier: args.verifier,
+      redirect_uri: args.redirectUri,
     }),
     signal,
   });

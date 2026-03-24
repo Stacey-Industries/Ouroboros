@@ -69,8 +69,5 @@ export type GitHubLoginEvent =
   | { type: 'error'; message: string }
   | { type: 'cancelled' };
 
-/** Custom protocol redirect URI for OAuth callbacks. */
-export const GITHUB_REDIRECT_URI = 'ouroboros://auth/github/callback';
-
 /** OAuth scopes for GitHub PKCE flow — includes repo for git push/pull. */
 export const GITHUB_PKCE_SCOPES = 'read:user user:email repo';
