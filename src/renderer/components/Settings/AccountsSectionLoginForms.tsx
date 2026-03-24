@@ -20,32 +20,31 @@ export function ExpandedArea({
   model: AccountsSectionModel;
 }): React.ReactElement {
   if (provider === 'github') {
-    return <GitHubDeviceFlowArea model={model} />;
+    return <GitHubLoginArea model={model} />;
   }
   return <ApiKeyInputArea provider={provider} model={model} />;
 }
 
-function GitHubDeviceFlowArea({ model }: { model: AccountsSectionModel }): React.ReactElement {
+function GitHubLoginArea({ model }: { model: AccountsSectionModel }): React.ReactElement {
   const event = model.githubLoginEvent;
-  const isWaiting = event?.type === 'device_code';
-  const hasError = event?.type === 'error';
 
-  if (!isWaiting && !hasError) {
-    return <GitHubStartPrompt model={model} />;
-  }
-
-  if (hasError) {
+  if (event?.type === 'error') {
     return <GitHubErrorState message={event.message} model={model} />;
   }
-
-  return <GitHubPollingState event={event} model={model} />;
+  if (event?.type === 'browser_opened') {
+    return <GitHubBrowserWaitState authUrl={event.authUrl} model={model} />;
+  }
+  if (event?.type === 'device_code') {
+    return <GitHubPollingState event={event} model={model} />;
+  }
+  return <GitHubStartPrompt model={model} />;
 }
 
 function GitHubStartPrompt({ model }: { model: AccountsSectionModel }): React.ReactElement {
   return (
     <div style={S.actionAreaStyle}>
       <div className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
-        Sign in via GitHub Device Flow. A code will be shown to enter on GitHub.
+        Sign in with your GitHub account. A browser window will open for authorization.
       </div>
       <div style={S.buttonRowStyle}>
         <button
@@ -58,12 +57,44 @@ function GitHubStartPrompt({ model }: { model: AccountsSectionModel }): React.Re
           }}
           onClick={() => void model.login('github')}
         >
-          Start Sign In
+          Sign in with GitHub
         </button>
         <button
           className="text-text-semantic-muted"
           style={smallButtonStyle}
           onClick={model.collapseCard}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GitHubBrowserWaitState({
+  authUrl,
+  model,
+}: {
+  authUrl: string;
+  model: AccountsSectionModel;
+}): React.ReactElement {
+  return (
+    <div style={S.actionAreaStyle}>
+      <div className="text-text-semantic-muted" style={S.pollingTextStyle}>
+        Waiting for authorization in your browser...
+      </div>
+      <div style={S.buttonRowStyle}>
+        <button
+          className="text-interactive-accent"
+          style={smallButtonStyle}
+          onClick={() => void model.openExternal(authUrl)}
+        >
+          Reopen browser
+        </button>
+        <button
+          className="text-text-semantic-muted"
+          style={smallButtonStyle}
+          onClick={() => void model.cancelLogin('github')}
         >
           Cancel
         </button>
@@ -193,7 +224,12 @@ function ApiKeyInputArea({
   model: AccountsSectionModel;
 }): React.ReactElement {
   const placeholder = provider === 'anthropic' ? 'sk-ant-...' : 'sk-...';
-  const helpUrl = provider === 'openai' ? 'https://platform.openai.com/api-keys' : null;
+  const helpUrl =
+    provider === 'openai'
+      ? 'https://platform.openai.com/api-keys'
+      : provider === 'anthropic'
+        ? 'https://console.anthropic.com/settings/keys'
+        : null;
 
   return (
     <div style={S.actionAreaStyle}>
@@ -269,7 +305,9 @@ function ApiKeyActions({
           style={S.linkTextStyle}
           onClick={() => void model.openExternal(helpUrl)}
         >
-          Get your API key at platform.openai.com
+          {provider === 'anthropic'
+            ? 'Get API key at console.anthropic.com'
+            : 'Get API key at platform.openai.com'}
         </button>
       )}
     </div>

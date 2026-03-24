@@ -87,30 +87,7 @@ export function DiffBadge({
 
 /* ---------- renderDiffLine ---------- */
 
-export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElement {
-  if (line.type === 'header')
-    return (
-      <tr key={i}>
-        <td
-          colSpan={3}
-          className="select-text bg-surface-raised px-2 py-0.5 font-semibold text-text-semantic-muted"
-        >
-          {line.text}
-        </td>
-      </tr>
-    );
-  if (line.type === 'hunk')
-    return (
-      <tr key={i}>
-        <td
-          colSpan={3}
-          className="select-text px-2 py-0.5 text-interactive-accent"
-          style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
-        >
-          {line.text}
-        </td>
-      </tr>
-    );
+function renderChangeDiffLine(line: ParsedDiffLine, i: number): React.ReactElement {
   const bg =
     line.type === 'add'
       ? 'var(--diff-add-bg, rgba(46, 160, 67, 0.15))'
@@ -142,6 +119,33 @@ export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElem
       </td>
     </tr>
   );
+}
+
+export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElement {
+  if (line.type === 'header')
+    return (
+      <tr key={i}>
+        <td
+          colSpan={3}
+          className="select-text bg-surface-raised px-2 py-0.5 font-semibold text-text-semantic-muted"
+        >
+          {line.text}
+        </td>
+      </tr>
+    );
+  if (line.type === 'hunk')
+    return (
+      <tr key={i}>
+        <td
+          colSpan={3}
+          className="select-text px-2 py-0.5 text-interactive-accent"
+          style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
+        >
+          {line.text}
+        </td>
+      </tr>
+    );
+  return renderChangeDiffLine(line, i);
 }
 
 /* ---------- InlineDiffView ---------- */

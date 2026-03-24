@@ -2,6 +2,37 @@ import React, { useEffect, useRef } from 'react';
 
 import type { OpenFile } from './FileViewerManager';
 
+export const MENU_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  zIndex: 10000,
+  minWidth: '160px',
+  backgroundColor: 'var(--surface-base)',
+  border: '1px solid var(--border-semantic)',
+  borderRadius: '4px',
+  padding: '4px 0',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+};
+
+export const MENU_ITEM_STYLE: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  padding: '4px 12px',
+  border: 'none',
+  background: 'transparent',
+  textAlign: 'left',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  fontSize: 'inherit',
+};
+
+export const MENU_SEPARATOR_STYLE: React.CSSProperties = {
+  height: '1px',
+  margin: '4px 0',
+  backgroundColor: 'var(--border-semantic)',
+};
+
 export const OVERFLOW_DROPDOWN_STYLE: React.CSSProperties = {
   position: 'absolute',
   top: '100%',
@@ -65,19 +96,20 @@ function OverflowDirtyDot(): React.ReactElement {
   );
 }
 
+type OverflowItemProps = {
+  file: OpenFile;
+  index: number;
+  activeIndex: number;
+  onActivate: (filePath: string) => void;
+  onDismiss: () => void;
+};
 function OverflowItem({
   file,
   index,
   activeIndex,
   onActivate,
   onDismiss,
-}: {
-  file: OpenFile;
-  index: number;
-  activeIndex: number;
-  onActivate: (filePath: string) => void;
-  onDismiss: () => void;
-}): React.ReactElement {
+}: OverflowItemProps): React.ReactElement {
   const isActive = index === activeIndex;
   return (
     <button

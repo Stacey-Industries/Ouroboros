@@ -123,22 +123,13 @@ function ChangeSection({
 }
 
 function getCommitTitle(stagedCount: number, commitMessage: string): string {
-  if (stagedCount === 0) {
-    return 'No staged changes';
-  }
-
+  if (stagedCount === 0) return 'No staged changes';
   return commitMessage.trim() ? 'Commit (Ctrl+Enter)' : 'Enter a commit message';
 }
 
 function getCommitButtonLabel(isCommitting: boolean, stagedCount: number): string {
-  if (isCommitting) {
-    return 'Committing...';
-  }
-
-  if (stagedCount === 0) {
-    return 'Commit';
-  }
-
+  if (isCommitting) return 'Committing...';
+  if (stagedCount === 0) return 'Commit';
   return `Commit (${stagedCount} file${stagedCount !== 1 ? 's' : ''})`;
 }
 
@@ -230,18 +221,9 @@ function CommitSection(props: {
 }
 
 function getEmptyStateMessage(projectRoot: string | null, isRepo: boolean | null): string | null {
-  if (!projectRoot) {
-    return 'No project open';
-  }
-
-  if (isRepo === false) {
-    return 'Not a git repository';
-  }
-
-  if (isRepo === null) {
-    return 'Loading...';
-  }
-
+  if (!projectRoot) return 'No project open';
+  if (isRepo === false) return 'Not a git repository';
+  if (isRepo === null) return 'Loading...';
   return null;
 }
 

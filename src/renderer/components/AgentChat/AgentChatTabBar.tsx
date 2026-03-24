@@ -54,15 +54,23 @@ function ChevronDownIcon(): React.ReactElement {
   );
 }
 
-function Tab({
-  branchMessageIndex,
-  branchParentTitle,
-  isActive,
-  isBranch,
-  onClose,
-  onSelect,
-  title,
-}: {
+function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <span
+      role="button"
+      tabIndex={-1}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
+      className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
+    >
+      &times;
+    </span>
+  );
+}
+
+type TabProps = {
   branchMessageIndex?: number;
   branchParentTitle?: string;
   isActive: boolean;
@@ -70,33 +78,27 @@ function Tab({
   onClose: () => void;
   onSelect: () => void;
   title: string;
-}): React.ReactElement {
+};
+
+function Tab(props: TabProps): React.ReactElement {
   return (
     <button
-      onClick={onSelect}
-      className={`group relative flex shrink-0 items-center gap-1 rounded-t px-2.5 py-1 text-[11px] transition-colors duration-100 ${isActive ? 'bg-surface-base text-text-semantic-primary' : 'text-text-semantic-muted'}`}
+      onClick={props.onSelect}
+      className={`group relative flex shrink-0 items-center gap-1 rounded-t px-2.5 py-1 text-[11px] transition-colors duration-100 ${props.isActive ? 'bg-surface-base text-text-semantic-primary' : 'text-text-semantic-muted'}`}
       style={{
-        borderBottom: isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent',
+        borderBottom: props.isActive
+          ? '2px solid var(--interactive-accent)'
+          : '2px solid transparent',
       }}
     >
-      {isBranch && (
+      {props.isBranch && (
         <BranchTabIcon
-          parentTitle={branchParentTitle ?? ''}
-          messageIndex={branchMessageIndex ?? 0}
+          parentTitle={props.branchParentTitle ?? ''}
+          messageIndex={props.branchMessageIndex ?? 0}
         />
       )}
-      <span className="max-w-[120px] truncate">{truncateTitle(title)}</span>
-      <span
-        role="button"
-        tabIndex={-1}
-        onClick={(event) => {
-          event.stopPropagation();
-          onClose();
-        }}
-        className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
-      >
-        &times;
-      </span>
+      <span className="max-w-[120px] truncate">{truncateTitle(props.title)}</span>
+      <TabCloseButton onClose={props.onClose} />
     </button>
   );
 }
@@ -179,58 +181,71 @@ function DropdownToggleButton({
   );
 }
 
-function AgentChatTabBarContent({
-  activeThreadId,
-  barRef,
+function TabBarDropdown({
   dropdownOpen,
   dropdownRect,
-  linkedSession,
-  onDeleteThread,
-  onCloseDropdown,
-  onNewChat,
-  onSelectThread,
-  onToggleDropdown,
-  scrollRef,
+  activeThreadId,
   threads,
-}: TabBarContentProps): React.ReactElement {
+  onCloseDropdown,
+  onDeleteThread,
+  onSelectThread,
+}: {
+  dropdownOpen: boolean;
+  dropdownRect: DOMRect | null;
+  activeThreadId: string | null;
+  threads: AgentChatThreadRecord[];
+  onCloseDropdown: () => void;
+  onDeleteThread: (id: string) => void;
+  onSelectThread: (id: string) => void;
+}): React.ReactElement | null {
+  if (!dropdownOpen || !dropdownRect) return null;
+  return (
+    <ThreadDropdown
+      activeThreadId={activeThreadId}
+      onClose={onCloseDropdown}
+      onDeleteThread={onDeleteThread}
+      onSelectThread={onSelectThread}
+      threads={threads}
+      triggerRect={dropdownRect}
+    />
+  );
+}
+
+function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement {
+  const activeThreadModel =
+    props.threads.find((t) => t.id === props.activeThreadId)?.latestOrchestration?.model ?? null;
   return (
     <div
-      ref={barRef}
+      ref={props.barRef}
       className="relative flex items-center border-b border-border-semantic bg-surface-panel"
       style={{ minHeight: 32 }}
     >
       <button
-        onClick={onNewChat}
+        onClick={props.onNewChat}
         className="flex h-full w-7 shrink-0 items-center justify-center text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
         title="New chat (Ctrl+L)"
       >
         <PlusIcon />
       </button>
-      <div ref={scrollRef}>
+      <div ref={props.scrollRef}>
         <ThreadTabs
-          activeThreadId={activeThreadId}
-          onDeleteThread={onDeleteThread}
-          onSelectThread={onSelectThread}
-          threads={threads}
+          activeThreadId={props.activeThreadId}
+          onDeleteThread={props.onDeleteThread}
+          onSelectThread={props.onSelectThread}
+          threads={props.threads}
         />
       </div>
-      <DropdownToggleButton show={threads.length > 1} onClick={onToggleDropdown} />
-      <OpenInTerminalButton
-        linkedSession={linkedSession}
-        threadModel={
-          threads.find((t) => t.id === activeThreadId)?.latestOrchestration?.model ?? null
-        }
+      <DropdownToggleButton show={props.threads.length > 1} onClick={props.onToggleDropdown} />
+      <OpenInTerminalButton linkedSession={props.linkedSession} threadModel={activeThreadModel} />
+      <TabBarDropdown
+        dropdownOpen={props.dropdownOpen}
+        dropdownRect={props.dropdownRect}
+        activeThreadId={props.activeThreadId}
+        threads={props.threads}
+        onCloseDropdown={props.onCloseDropdown}
+        onDeleteThread={props.onDeleteThread}
+        onSelectThread={props.onSelectThread}
       />
-      {dropdownOpen && dropdownRect && (
-        <ThreadDropdown
-          activeThreadId={activeThreadId}
-          onClose={onCloseDropdown}
-          onDeleteThread={onDeleteThread}
-          onSelectThread={onSelectThread}
-          threads={threads}
-          triggerRect={dropdownRect}
-        />
-      )}
     </div>
   );
 }

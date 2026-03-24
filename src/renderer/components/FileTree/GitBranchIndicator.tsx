@@ -24,37 +24,30 @@ export interface GitBranchIndicatorProps {
 function useBranchFetch(projectRoot: string, isRepo: boolean) {
   const [branch, setBranch] = useState<string | null>(null);
   const [branches, setBranches] = useState<string[]>([]);
-
   const fetchBranch = useCallback(async () => {
     if (!projectRoot || !isRepo) return;
     try {
-      const result = await window.electronAPI.git.branch(projectRoot);
-      if (result.success && result.branch) setBranch(result.branch);
+      const r = await window.electronAPI.git.branch(projectRoot);
+      if (r.success && r.branch) setBranch(r.branch);
     } catch {
       /* ignore */
     }
   }, [projectRoot, isRepo]);
-
   const fetchBranches = useCallback(async () => {
     if (!projectRoot) return;
     try {
-      const result = await window.electronAPI.git.branches(projectRoot);
-      if (result.success && result.branches) {
-        setBranches(
-          result.branches.filter((b) => !b.includes('/HEAD') && !b.startsWith('origin/')),
-        );
-      }
+      const r = await window.electronAPI.git.branches(projectRoot);
+      if (r.success && r.branches)
+        setBranches(r.branches.filter((b) => !b.includes('/HEAD') && !b.startsWith('origin/')));
     } catch {
       /* ignore */
     }
   }, [projectRoot]);
-
   useEffect(() => {
     fetchBranch();
     const interval = setInterval(fetchBranch, 5000);
     return () => clearInterval(interval);
   }, [fetchBranch]);
-
   return { branch, setBranch, branches, fetchBranches };
 }
 
@@ -64,7 +57,6 @@ function useBranchActions(
   setBranch: (b: string) => void,
 ) {
   const [switching, setSwitching] = useState(false);
-
   const handleCheckout = useCallback(
     async (targetBranch: string, setIsOpen: (v: boolean) => void) => {
       if (!projectRoot || targetBranch === branch) {
@@ -83,7 +75,6 @@ function useBranchActions(
     },
     [projectRoot, branch, setBranch],
   );
-
   const handleCreateBranch = useCallback(
     async (setIsOpen: (v: boolean) => void) => {
       setSwitching(true);
@@ -98,7 +89,6 @@ function useBranchActions(
     },
     [projectRoot, setBranch],
   );
-
   return { switching, handleCheckout, handleCreateBranch };
 }
 
@@ -119,45 +109,40 @@ function useBranchDropdown(
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (isOpen) {
       void fetchBranches();
       requestAnimationFrame(() => searchInputRef.current?.focus());
     } else setSearch('');
   }, [isOpen, fetchBranches]);
-
   useEffect(() => {
     if (!isOpen) return;
     const handleClick = (e: MouseEvent): void => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node))
-        setIsOpen(false);
+      if (!containerRef.current?.contains(e.target as Node)) setIsOpen(false);
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [isOpen, containerRef]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e: KeyboardEvent): void => {
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') setIsOpen(false);
     };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [isOpen]);
-
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, containerRef]);
   return { isOpen, setIsOpen, search, setSearch, searchInputRef };
 }
 
+type SearchInputProps = {
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  search: string;
+  setSearch: (v: string) => void;
+};
 function BranchSearchInput({
   searchInputRef,
   search,
   setSearch,
-}: {
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
-  search: string;
-  setSearch: (v: string) => void;
-}): React.ReactElement {
+}: SearchInputProps): React.ReactElement {
   return (
     <input
       ref={searchInputRef}
@@ -177,19 +162,20 @@ function BranchSearchInput({
   );
 }
 
+type BranchListProps = {
+  filteredBranches: string[];
+  branch: string;
+  search: string;
+  handleCheckout: (b: string, setOpen: (v: boolean) => void) => Promise<void>;
+  setIsOpen: (v: boolean) => void;
+};
 function BranchList({
   filteredBranches,
   branch,
   search,
   handleCheckout,
   setIsOpen,
-}: {
-  filteredBranches: string[];
-  branch: string;
-  search: string;
-  handleCheckout: (b: string, setOpen: (v: boolean) => void) => Promise<void>;
-  setIsOpen: (v: boolean) => void;
-}): React.ReactElement {
+}: BranchListProps): React.ReactElement {
   const emptyMsg = search ? 'No matching branches' : 'No branches found';
   return (
     <div role="listbox" aria-label="Git branches">
@@ -213,16 +199,7 @@ function BranchList({
   );
 }
 
-function BranchDropdown({
-  search,
-  setSearch,
-  searchInputRef,
-  filteredBranches,
-  branch,
-  handleCheckout,
-  handleCreateBranch,
-  setIsOpen,
-}: {
+type BranchDropdownProps = {
   search: string;
   setSearch: (v: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -231,38 +208,44 @@ function BranchDropdown({
   handleCheckout: (b: string, setOpen: (v: boolean) => void) => Promise<void>;
   handleCreateBranch: (setOpen: (v: boolean) => void) => Promise<void>;
   setIsOpen: (v: boolean) => void;
-}): React.ReactElement {
+};
+function BranchDropdown(p: BranchDropdownProps): React.ReactElement {
   return (
     <div className="bg-surface-panel border border-border-semantic" style={dropdownStyle}>
       <div style={dropdownHeaderStyle}>
-        <BranchSearchInput searchInputRef={searchInputRef} search={search} setSearch={setSearch} />
+        <BranchSearchInput
+          searchInputRef={p.searchInputRef}
+          search={p.search}
+          setSearch={p.setSearch}
+        />
       </div>
       <div className="text-text-semantic-faint" style={sectionLabelStyle}>
         Local Branches
       </div>
       <BranchList
-        filteredBranches={filteredBranches}
-        branch={branch}
-        search={search}
-        handleCheckout={handleCheckout}
-        setIsOpen={setIsOpen}
+        filteredBranches={p.filteredBranches}
+        branch={p.branch}
+        search={p.search}
+        handleCheckout={p.handleCheckout}
+        setIsOpen={p.setIsOpen}
       />
-      <CreateBranchRow onClick={() => void handleCreateBranch(setIsOpen)} />
+      <CreateBranchRow onClick={() => void p.handleCreateBranch(p.setIsOpen)} />
     </div>
   );
 }
 
+type BarProps = {
+  displayName: string;
+  switching: boolean;
+  isOpen: boolean;
+  setIsOpen: (v: boolean) => void;
+};
 function BranchIndicatorBar({
   displayName,
   switching,
   isOpen,
   setIsOpen,
-}: {
-  displayName: string;
-  switching: boolean;
-  isOpen: boolean;
-  setIsOpen: (v: boolean) => void;
-}): React.ReactElement {
+}: BarProps): React.ReactElement {
   return (
     <div
       style={{

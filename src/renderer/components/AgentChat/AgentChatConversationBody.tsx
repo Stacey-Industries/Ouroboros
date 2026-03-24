@@ -2,13 +2,18 @@
  * AgentChatConversationBody.tsx — Body and composer sub-components for AgentChatConversation.
  * Extracted to keep AgentChatConversation.tsx under the 300-line limit.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
 } from '../../types/electron';
+import {
+  findLastUserMessageId,
+  PendingStreamingView,
+  useMessagesWithStreaming,
+} from './AgentChatBodyHelpers';
 import { AgentChatBranchIndicator } from './AgentChatBranchIndicator';
 import {
   EmptyConversationState,
@@ -19,12 +24,7 @@ import {
   MissingProjectState,
   PendingUserBubble,
 } from './AgentChatMessageComponents';
-import {
-  buildFilteredMessages,
-  buildSyntheticStreamingMessage,
-  dispatchDiffReviewEvent,
-} from './AgentChatStreamingHelpers';
-import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
+import { dispatchDiffReviewEvent } from './AgentChatStreamingHelpers';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
 
@@ -134,6 +134,32 @@ interface MessageListProps {
   onScroll: () => void;
 }
 
+function MessageCards(props: MessageListProps): React.ReactElement {
+  return (
+    <>
+      {props.messagesWithStreaming.map((message) => (
+        <MessageCard
+          key={message.id}
+          message={message}
+          editingMessageId={props.editingMessageId}
+          editDraft={props.editDraft}
+          isLastUserMessage={message.id === props.lastUserMessageId}
+          threadStatus={props.activeThread.status}
+          workspaceRoot={props.activeThread.workspaceRoot}
+          onCancelEdit={props.onCancelEdit}
+          onEdit={props.onStartEdit}
+          onEditDraftChange={props.onEditDraftChange}
+          onEditSubmit={props.onEditSubmit}
+          onRetry={props.onRetry}
+          onBranch={props.onBranch}
+          onRevert={props.onRevert}
+          onOpenLinkedDetails={props.onOpenLinkedDetails}
+        />
+      ))}
+    </>
+  );
+}
+
 export function MessageList(props: MessageListProps): React.ReactElement {
   return (
     <div
@@ -150,25 +176,7 @@ export function MessageList(props: MessageListProps): React.ReactElement {
             onSwitchToParent={props.onSelectThread}
           />
         )}
-        {props.messagesWithStreaming.map((message) => (
-          <MessageCard
-            key={message.id}
-            message={message}
-            editingMessageId={props.editingMessageId}
-            editDraft={props.editDraft}
-            isLastUserMessage={message.id === props.lastUserMessageId}
-            threadStatus={props.activeThread.status}
-            workspaceRoot={props.activeThread.workspaceRoot}
-            onCancelEdit={props.onCancelEdit}
-            onEdit={props.onStartEdit}
-            onEditDraftChange={props.onEditDraftChange}
-            onEditSubmit={props.onEditSubmit}
-            onRetry={props.onRetry}
-            onBranch={props.onBranch}
-            onRevert={props.onRevert}
-            onOpenLinkedDetails={props.onOpenLinkedDetails}
-          />
-        ))}
+        <MessageCards {...props} />
         {props.pendingUserMessage && props.isSending && (
           <PendingUserBubble text={props.pendingUserMessage} />
         )}
@@ -199,93 +207,10 @@ export interface ConversationBodyProps {
   onDraftChange?: (value: string) => void;
 }
 
-function findLastUserMessageId(messages: AgentChatMessageRecord[]): string | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === 'user') return messages[i].id;
-  }
-  return null;
-}
-
-function useMessagesWithStreaming(
-  activeThread: AgentChatThreadRecord | null,
-  streaming: AgentChatStreamingState,
-  onStop: (() => Promise<void>) | undefined,
-): AgentChatMessageRecord[] {
-  const threadIsActive =
-    activeThread?.status === 'submitting' || activeThread?.status === 'running';
-  const streamingIsActive = streaming.isStreaming || streaming.blocks.length > 0 || threadIsActive;
-  const streamingAlreadyPersisted = Boolean(
-    streaming.streamingMessageId &&
-    activeThread?.messages.some((m) => m.id === streaming.streamingMessageId),
-  );
-  return useMemo(() => {
-    if (!activeThread) return [];
-    const filtered = buildFilteredMessages(activeThread.messages);
-    if (streamingIsActive && !streamingAlreadyPersisted) {
-      filtered.push(
-        buildSyntheticStreamingMessage({
-          activeThread,
-          streamingBlocks: streaming.blocks,
-          streamingMessageId: streaming.streamingMessageId,
-          activeTextContent: streaming.activeTextContent,
-          isStreaming: streaming.isStreaming,
-          threadIsActive,
-          onStop,
-        }),
-      );
-    }
-    return filtered;
-  }, [
-    activeThread,
-    streaming,
-    streamingIsActive,
-    streamingAlreadyPersisted,
-    threadIsActive,
-    onStop,
-  ]);
-}
-
-function PendingStreamingView({
-  scrollRef,
-  onScroll,
-  pendingUserMessage,
-  onStop,
-}: {
-  scrollRef: React.RefObject<HTMLDivElement>;
-  onScroll: () => void;
-  pendingUserMessage: string;
-  onStop?: () => Promise<void>;
-}): React.ReactElement {
-  return (
-    <div
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="selectable flex flex-1 flex-col overflow-y-auto px-4 py-3"
-    >
-      <div className="mt-auto space-y-4">
-        <PendingUserBubble text={pendingUserMessage} />
-        <AgentChatStreamingMessage
-          blocks={[]}
-          isStreaming={true}
-          activeTextContent=""
-          onStop={onStop}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function ConversationBody(props: ConversationBodyProps): React.ReactElement {
+function useConversationBodyState(props: ConversationBodyProps) {
   const { onEdit, onStop, activeThread, streaming } = props;
   useStreamingCompletionEffect(activeThread, streaming);
-  const {
-    editingMessageId,
-    editDraft,
-    setEditDraft,
-    handleStartEdit,
-    handleCancelEdit,
-    handleEditSubmit,
-  } = useEditState(activeThread, onEdit);
+  const editState = useEditState(activeThread, onEdit);
   const { scrollRef, onScroll } = useSmartAutoScroll([
     activeThread?.messages.length,
     activeThread?.status,
@@ -293,34 +218,26 @@ export function ConversationBody(props: ConversationBodyProps): React.ReactEleme
     streaming.activeTextContent,
   ]);
   const messagesWithStreaming = useMessagesWithStreaming(activeThread, streaming, onStop);
+  return { ...editState, scrollRef, onScroll, messagesWithStreaming };
+}
 
-  if (!props.hasProject) return <MissingProjectState />;
-  if (props.isLoading) return <LoadingState />;
-  if (!activeThread) {
-    if (props.isSending && props.pendingUserMessage) {
-      return (
-        <PendingStreamingView
-          scrollRef={scrollRef}
-          onScroll={onScroll}
-          pendingUserMessage={props.pendingUserMessage}
-          onStop={onStop}
-        />
-      );
-    }
-    return <EmptyConversationState onSelectPrompt={props.onDraftChange} />;
-  }
+type BodyState = ReturnType<typeof useConversationBodyState>;
 
+function ConversationBodyWithThread(
+  props: ConversationBodyProps &
+    BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
+): React.ReactElement {
   return (
     <VirtualizedMessageList
-      activeThread={activeThread}
-      messagesWithStreaming={messagesWithStreaming}
-      lastUserMessageId={findLastUserMessageId(activeThread.messages)}
-      editingMessageId={editingMessageId}
-      editDraft={editDraft}
-      onCancelEdit={handleCancelEdit}
-      onStartEdit={handleStartEdit}
-      onEditDraftChange={setEditDraft}
-      onEditSubmit={handleEditSubmit}
+      activeThread={props.activeThread}
+      messagesWithStreaming={props.messagesWithStreaming}
+      lastUserMessageId={findLastUserMessageId(props.activeThread.messages)}
+      editingMessageId={props.editingMessageId}
+      editDraft={props.editDraft}
+      onCancelEdit={props.handleCancelEdit}
+      onStartEdit={props.handleStartEdit}
+      onEditDraftChange={props.setEditDraft}
+      onEditSubmit={props.handleEditSubmit}
       onRetry={props.onRetry}
       onBranch={props.onBranch}
       onRevert={props.onRevert}
@@ -331,6 +248,27 @@ export function ConversationBody(props: ConversationBodyProps): React.ReactEleme
       error={props.error}
     />
   );
+}
+
+export function ConversationBody(props: ConversationBodyProps): React.ReactElement {
+  const state = useConversationBodyState(props);
+  const { scrollRef, onScroll } = state;
+  const { onStop, activeThread } = props;
+  if (!props.hasProject) return <MissingProjectState />;
+  if (props.isLoading) return <LoadingState />;
+  if (!activeThread) {
+    if (props.isSending && props.pendingUserMessage)
+      return (
+        <PendingStreamingView
+          scrollRef={scrollRef}
+          onScroll={onScroll}
+          pendingUserMessage={props.pendingUserMessage}
+          onStop={onStop}
+        />
+      );
+    return <EmptyConversationState onSelectPrompt={props.onDraftChange} />;
+  }
+  return <ConversationBodyWithThread {...props} {...state} activeThread={activeThread} />;
 }
 
 export type { ComposerSectionProps } from './AgentChatComposerSection';

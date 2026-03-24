@@ -84,6 +84,50 @@ function RestoreDialogBody({ snapshot }: { snapshot: WorkspaceSnapshot }): React
   );
 }
 
+const DIALOG_OVERLAY_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 10000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+};
+const DIALOG_PANEL_STYLE: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '420px',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+  padding: '20px',
+};
+
+function DialogInner({
+  snapshot,
+  dirtyCount,
+  onConfirm,
+  onCancel,
+}: {
+  snapshot: WorkspaceSnapshot;
+  dirtyCount: number;
+  onConfirm: () => Promise<void>;
+  onCancel: () => void;
+}): React.ReactElement {
+  return (
+    <div className="bg-surface-panel border border-border-semantic" style={DIALOG_PANEL_STYLE}>
+      <h3
+        className="text-text-semantic-primary"
+        style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}
+      >
+        Restore Workspace State
+      </h3>
+      <RestoreDialogBody snapshot={snapshot} />
+      <DirtyWarning dirtyCount={dirtyCount} />
+      <RestoreDialogActions onConfirm={onConfirm} onCancel={onCancel} />
+    </div>
+  );
+}
+
 export function RestoreConfirmDialog({
   snapshot,
   dirtyCount,
@@ -96,38 +140,13 @@ export function RestoreConfirmDialog({
   onCancel: () => void;
 }): React.ReactElement {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      }}
-    >
-      <div
-        className="bg-surface-panel border border-border-semantic"
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-          padding: '20px',
-        }}
-      >
-        <h3
-          className="text-text-semantic-primary"
-          style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}
-        >
-          Restore Workspace State
-        </h3>
-        <RestoreDialogBody snapshot={snapshot} />
-        <DirtyWarning dirtyCount={dirtyCount} />
-        <RestoreDialogActions onConfirm={onConfirm} onCancel={onCancel} />
-      </div>
+    <div style={DIALOG_OVERLAY_STYLE}>
+      <DialogInner
+        snapshot={snapshot}
+        dirtyCount={dirtyCount}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
     </div>
   );
 }

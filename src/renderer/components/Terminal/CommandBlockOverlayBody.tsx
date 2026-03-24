@@ -10,20 +10,11 @@ import {
   EXPLAIN_TERMINAL_ERROR_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
 } from '../../hooks/appEventNames';
-import { CommandBlockActions } from './CommandBlockActions';
+import { CollapsedOverlay, CommandBlockDecorationHeader } from './CommandBlockOverlayBody.parts';
 import {
-  actionsContainerStyle,
-  collapsedOverlayStyle,
-  commandLabelStyle,
-  formatDuration,
-  formatRelativeTime,
   getCellHeight,
-  gutterStyle,
   overlayContainerStyle,
   readTerminalLines,
-  separatorLineStyle,
-  timestampStyle,
-  truncateCommand,
 } from './CommandBlockOverlayBody.styles';
 import type { CommandBlock } from './useCommandBlocks';
 
@@ -38,203 +29,6 @@ export interface CommandBlockOverlayProps {
 }
 
 type VisibleBlock = { block: CommandBlock; index: number };
-
-// ── Gutter Icons ─────────────────────────────────────────────────────────────
-
-function SpinnerIcon(): React.ReactElement {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      style={{ animation: 'agent-ide-spin 1s linear infinite' }}
-    >
-      <circle
-        cx="8"
-        cy="8"
-        r="6"
-        fill="none"
-        stroke="var(--interactive-accent)"
-        strokeWidth="2"
-        strokeDasharray="20 18"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SuccessIcon(): React.ReactElement {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="7" stroke="var(--status-success)" strokeWidth="1.5" opacity="0.8" />
-      <path
-        d="M5 8l2 2 4-4"
-        stroke="var(--status-success)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ErrorIcon(): React.ReactElement {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="7" stroke="var(--status-error)" strokeWidth="1.5" opacity="0.8" />
-      <path
-        d="M5.5 5.5l5 5M10.5 5.5l-5 5"
-        stroke="var(--status-error)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
-  if (!block.complete) return <SpinnerIcon />;
-  if (block.exitCode === 0 || block.exitCode === undefined) return <SuccessIcon />;
-  return <ErrorIcon />;
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-const OutputBorder = ({
-  color,
-  active,
-}: {
-  color: string;
-  active: boolean;
-}): React.ReactElement => (
-  <div
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: 2,
-      height: '100%',
-      background: color,
-      opacity: active ? 0.9 : 0.4,
-      transition: 'opacity 0.15s ease',
-    }}
-  />
-);
-
-const CommandLabel = ({
-  command,
-  cellHeight,
-}: {
-  command: string;
-  cellHeight: number;
-}): React.ReactElement => (
-  <div
-    className="text-interactive-accent"
-    style={{ ...commandLabelStyle, top: (cellHeight - 14) / 2, height: 14 }}
-    title={command}
-  >
-    {truncateCommand(command)}
-  </div>
-);
-
-function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
-  const [text, setText] = useState(() => formatRelativeTime(timestamp));
-  useEffect(() => {
-    const id = setInterval(() => setText(formatRelativeTime(timestamp)), 5000);
-    return () => clearInterval(id);
-  }, [timestamp]);
-  return <span>{text}</span>;
-}
-
-const TimestampRow = ({
-  timestamp,
-  duration,
-  cellHeight,
-}: {
-  timestamp: number;
-  duration?: number;
-  cellHeight: number;
-}): React.ReactElement => (
-  <div
-    className="text-text-semantic-muted"
-    style={{ ...timestampStyle, top: (cellHeight - 12) / 2, height: 12, lineHeight: '12px' }}
-  >
-    <RelativeTimestamp timestamp={timestamp} />
-    {duration !== undefined && duration > 500 && (
-      <span
-        style={{ marginLeft: 6, color: duration > 10000 ? 'var(--warning, #f0a030)' : undefined }}
-      >
-        {formatDuration(duration)}
-      </span>
-    )}
-  </div>
-);
-
-const ActionBar = ({
-  hovered,
-  cellHeight,
-  block,
-  sessionId,
-  onToggleCollapse,
-  onCopyOutput,
-  onCopyCommand,
-  onExplainError,
-}: {
-  hovered: boolean;
-  cellHeight: number;
-  block: CommandBlock;
-  sessionId: string;
-  onToggleCollapse: (blockId: string) => void;
-  onCopyOutput: (block: CommandBlock) => void;
-  onCopyCommand: (block: CommandBlock) => void;
-  onExplainError: (block: CommandBlock) => void;
-}): React.ReactElement => (
-  <div
-    style={{
-      ...actionsContainerStyle,
-      top: (cellHeight - 18) / 2,
-      opacity: hovered ? 1 : 0,
-      pointerEvents: hovered ? 'auto' : 'none',
-    }}
-  >
-    <CommandBlockActions
-      block={block}
-      sessionId={sessionId}
-      onCopyOutput={onCopyOutput}
-      onCopyCommand={onCopyCommand}
-      onToggleCollapse={onToggleCollapse}
-      onExplainError={onExplainError}
-    />
-  </div>
-);
-
-const CollapsedOverlay = ({
-  block,
-  cellHeight,
-  borderColor,
-  collapsedLines,
-  onToggleCollapse,
-}: {
-  block: CommandBlock;
-  cellHeight: number;
-  borderColor: string;
-  collapsedLines: number;
-  onToggleCollapse: (blockId: string) => void;
-}): React.ReactElement => (
-  <div
-    className="bg-surface-panel text-text-semantic-muted border-l-2"
-    style={{
-      ...collapsedOverlayStyle,
-      top: cellHeight,
-      height: '100%',
-      borderLeftColor: borderColor,
-    }}
-    onClick={() => onToggleCollapse(block.id)}
-    title="Click to expand"
-  >
-    {collapsedLines} line{collapsedLines !== 1 ? 's' : ''} collapsed - click to expand
-  </div>
-);
 
 // ── Decoration View ───────────────────────────────────────────────────────────
 
@@ -254,85 +48,41 @@ interface CommandBlockDecorationViewProps {
   sessionId: string;
 }
 
-function CommandBlockDecorationHeader({
-  block,
-  cellHeight,
-  borderColor,
-  isActive,
-  hovered,
-  sessionId,
-  onToggleCollapse,
-  onCopyOutput,
-  onCopyCommand,
-  onExplainError,
-}: Omit<
-  CommandBlockDecorationViewProps,
-  'separatorY' | 'outputHeight' | 'setHovered'
->): React.ReactElement {
+const DECORATION_WRAPPER: React.CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  pointerEvents: 'none',
+};
+
+function DecorationHeader(p: CommandBlockDecorationViewProps): React.ReactElement {
   return (
-    <>
-      <div className="bg-border-semantic" style={{ ...separatorLineStyle, top: 0 }} />
-      <OutputBorder color={borderColor} active={isActive} />
-      <div style={{ ...gutterStyle, top: (cellHeight - 20) / 2 }}>
-        <GutterIcon block={block} />
-      </div>
-      {block.command && <CommandLabel command={block.command} cellHeight={cellHeight} />}
-      <TimestampRow timestamp={block.timestamp} duration={block.duration} cellHeight={cellHeight} />
-      <ActionBar
-        hovered={hovered}
-        cellHeight={cellHeight}
-        block={block}
-        sessionId={sessionId}
-        onToggleCollapse={onToggleCollapse}
-        onCopyOutput={onCopyOutput}
-        onCopyCommand={onCopyCommand}
-        onExplainError={onExplainError}
-      />
-    </>
+    <CommandBlockDecorationHeader
+      block={p.block}
+      cellHeight={p.cellHeight}
+      borderColor={p.borderColor}
+      isActive={p.isActive}
+      hovered={p.hovered}
+      sessionId={p.sessionId}
+      onToggleCollapse={p.onToggleCollapse}
+      onCopyOutput={p.onCopyOutput}
+      onCopyCommand={p.onCopyCommand}
+      onExplainError={p.onExplainError}
+    />
   );
 }
 
-function CommandBlockDecorationView({
-  block,
-  cellHeight,
-  separatorY,
-  outputHeight,
-  borderColor,
-  isActive,
-  hovered,
-  setHovered,
-  onToggleCollapse,
-  onCopyOutput,
-  onCopyCommand,
-  onExplainError,
-  sessionId,
-}: CommandBlockDecorationViewProps): React.ReactElement {
+function CommandBlockDecorationView(props: CommandBlockDecorationViewProps): React.ReactElement {
+  const { block, cellHeight, separatorY, outputHeight, borderColor, setHovered, onToggleCollapse } =
+    props;
   const collapsedLines = block.collapsed ? block.endLine - block.outputStartLine : 0;
   return (
     <div
-      style={{
-        position: 'absolute',
-        top: separatorY,
-        left: 0,
-        right: 0,
-        height: outputHeight,
-        pointerEvents: 'none',
-      }}
+      style={{ ...DECORATION_WRAPPER, top: separatorY, height: outputHeight }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <CommandBlockDecorationHeader
-        block={block}
-        cellHeight={cellHeight}
-        borderColor={borderColor}
-        isActive={isActive}
-        hovered={hovered}
-        sessionId={sessionId}
-        onToggleCollapse={onToggleCollapse}
-        onCopyOutput={onCopyOutput}
-        onCopyCommand={onCopyCommand}
-        onExplainError={onExplainError}
-      />
+      <DecorationHeader {...props} />
       {block.collapsed && collapsedLines > 0 && (
         <CollapsedOverlay
           block={block}
@@ -419,7 +169,6 @@ function useVisibleBlocks(blocks: CommandBlock[], terminal: Terminal | null): Vi
 function useScrollViewportY(terminal: Terminal | null): number {
   const [viewportY, setViewportY] = useState(0);
   const rafRef = useRef(0);
-
   useEffect(() => {
     if (!terminal || !terminal.element) return;
     const core = (terminal as unknown as { _core?: { _isDisposed?: boolean } })._core;
@@ -452,7 +201,6 @@ function useScrollViewportY(terminal: Terminal | null): number {
       cancelAnimationFrame(rafRef.current);
     };
   }, [terminal]);
-
   return viewportY;
 }
 
@@ -484,10 +232,8 @@ export function CommandBlockOverlayBody({
   const visibleBlocks = useVisibleBlocks(blocks, terminal);
   const viewportY = useScrollViewportY(terminal);
   const handleExplainError = useExplainErrorHandler(terminal);
-
   if (!terminal || visibleBlocks.length === 0) return null;
   const cellHeight = getCellHeight(terminal);
-
   return (
     <div style={overlayContainerStyle}>
       {visibleBlocks.map(({ block, index }) => (

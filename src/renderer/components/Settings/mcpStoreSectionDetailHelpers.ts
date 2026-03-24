@@ -47,6 +47,23 @@ export function getEnvironmentVariables(
   return pkg && 'environmentVariables' in pkg ? (pkg.environmentVariables ?? []) : [];
 }
 
+export function isSensitiveKey(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.includes('key') || lower.includes('secret') || lower.includes('token');
+}
+
+export function buildEnvOverrides(
+  envVars: McpRegistryEnvVar[],
+  envValues: Record<string, string>,
+): Record<string, string> | undefined {
+  const overrides: Record<string, string> = {};
+  for (const ev of envVars) {
+    const val = envValues[ev.name]?.trim();
+    if (val) overrides[ev.name] = val;
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
+
 export function installButtonStyle(disabled: boolean): React.CSSProperties {
   return {
     padding: '7px 14px',

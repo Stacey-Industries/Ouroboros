@@ -183,30 +183,60 @@ function SessionNotes({
   return null;
 }
 
-export const AgentCardLayout = memo(function AgentCardLayout({
-  session,
-  expanded,
-  showLog,
-  showNotes,
-  notesDraft,
-  cardView,
-  childCount,
-  isRunning,
-  isDone,
-  completedCallCount,
-  displayDuration,
-  latestCall,
-  onDismiss,
-  onUpdateNotes,
-  onReviewChanges,
-  onReplay,
-  onToggleExpanded,
-  onToggleLog,
-  onToggleNotes,
-  onNotesDraftChange,
-  onSaveNotes,
-  onCardViewChange,
-}: AgentCardLayoutProps): React.ReactElement {
+function AgentCardBody(props: AgentCardLayoutProps): React.ReactElement {
+  const {
+    session,
+    expanded,
+    showLog,
+    showNotes,
+    notesDraft,
+    cardView,
+    latestCall,
+    isRunning,
+    childCount,
+  } = props;
+  return (
+    <>
+      <AgentCardMeta session={session} childCount={childCount} />
+      <SessionErrorBanner error={session.status === 'error' ? session.error : undefined} />
+      <SessionNotes
+        session={session}
+        showNotes={showNotes}
+        notesDraft={notesDraft}
+        onNotesDraftChange={props.onNotesDraftChange}
+        onSaveNotes={props.onSaveNotes}
+      />
+      <AgentCardExpandedContent
+        session={session}
+        expanded={expanded}
+        cardView={cardView}
+        showLog={showLog}
+        latestCall={latestCall}
+        isRunning={isRunning}
+        onToggleLog={props.onToggleLog}
+        onCardViewChange={props.onCardViewChange}
+      />
+    </>
+  );
+}
+
+export const AgentCardLayout = memo(function AgentCardLayout(
+  props: AgentCardLayoutProps,
+): React.ReactElement {
+  const {
+    session,
+    expanded,
+    isRunning,
+    isDone,
+    completedCallCount,
+    displayDuration,
+    onDismiss,
+    onUpdateNotes,
+    onReviewChanges,
+    onReplay,
+    onToggleExpanded,
+    onToggleNotes,
+  } = props;
   return (
     <div className="border-b" style={getCardContainerStyle(session.status)}>
       <AgentCardHeader
@@ -223,25 +253,7 @@ export const AgentCardLayout = memo(function AgentCardLayout({
         onReplay={onReplay}
         onToggleExpanded={onToggleExpanded}
       />
-      <AgentCardMeta session={session} childCount={childCount} />
-      <SessionErrorBanner error={session.status === 'error' ? session.error : undefined} />
-      <SessionNotes
-        session={session}
-        showNotes={showNotes}
-        notesDraft={notesDraft}
-        onNotesDraftChange={onNotesDraftChange}
-        onSaveNotes={onSaveNotes}
-      />
-      <AgentCardExpandedContent
-        session={session}
-        expanded={expanded}
-        cardView={cardView}
-        showLog={showLog}
-        latestCall={latestCall}
-        isRunning={isRunning}
-        onToggleLog={onToggleLog}
-        onCardViewChange={onCardViewChange}
-      />
+      <AgentCardBody {...props} />
     </div>
   );
 });

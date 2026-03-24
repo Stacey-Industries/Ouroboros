@@ -50,6 +50,47 @@ function shortenPath(fullPath: string): string {
   return parts.length <= 3 ? parts.join('/') : `.../${parts.slice(-3).join('/')}`;
 }
 
+function FileRowExpandedActions({
+  onAccept,
+  onReject,
+}: {
+  onAccept: () => void;
+  onReject: () => void;
+}): React.ReactElement {
+  return (
+    <div className="mt-2 flex items-center gap-1.5">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onAccept();
+        }}
+        className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
+        style={{
+          backgroundColor: 'rgba(63, 185, 80, 0.15)',
+          color: 'var(--status-success)',
+          border: '1px solid rgba(63, 185, 80, 0.3)',
+        }}
+      >
+        Accept
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onReject();
+        }}
+        className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
+        style={{
+          backgroundColor: 'rgba(248, 81, 73, 0.15)',
+          color: 'var(--status-error)',
+          border: '1px solid rgba(248, 81, 73, 0.3)',
+        }}
+      >
+        Reject
+      </button>
+    </div>
+  );
+}
+
 function FileRowExpanded({
   file,
   status,
@@ -73,38 +114,7 @@ function FileRowExpanded({
           No diff content available.
         </div>
       )}
-      {status === 'pending' && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAccept();
-            }}
-            className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-            style={{
-              backgroundColor: 'rgba(63, 185, 80, 0.15)',
-              color: 'var(--status-success)',
-              border: '1px solid rgba(63, 185, 80, 0.3)',
-            }}
-          >
-            Accept
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onReject();
-            }}
-            className="rounded px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-            style={{
-              backgroundColor: 'rgba(248, 81, 73, 0.15)',
-              color: 'var(--status-error)',
-              border: '1px solid rgba(248, 81, 73, 0.3)',
-            }}
-          >
-            Reject
-          </button>
-        </div>
-      )}
+      {status === 'pending' && <FileRowExpandedActions onAccept={onAccept} onReject={onReject} />}
     </div>
   );
 }
@@ -202,13 +212,7 @@ function DiffReviewFooter({
   );
 }
 
-export function AgentChatDiffReview({
-  files,
-  onAcceptAll,
-  onRejectAll,
-  onAcceptFile,
-  onRejectFile,
-}: AgentChatDiffReviewProps): React.ReactElement {
+function useDiffReviewState(files: DiffFile[], onAcceptAll?: () => void, onRejectAll?: () => void) {
   const [fileStatuses, setFileStatuses] = useState<Record<string, FileStatus>>(() =>
     Object.fromEntries(files.map((f) => [f.path, 'pending' as FileStatus])),
   );
@@ -228,6 +232,18 @@ export function AgentChatDiffReview({
     onRejectAll?.();
   }, [files, onRejectAll]);
   const pendingCount = Object.values(fileStatuses).filter((s) => s === 'pending').length;
+  return { fileStatuses, setStatus, handleAcceptAll, handleRejectAll, pendingCount };
+}
+
+export function AgentChatDiffReview({
+  files,
+  onAcceptAll,
+  onRejectAll,
+  onAcceptFile,
+  onRejectFile,
+}: AgentChatDiffReviewProps): React.ReactElement {
+  const { fileStatuses, setStatus, handleAcceptAll, handleRejectAll, pendingCount } =
+    useDiffReviewState(files, onAcceptAll, onRejectAll);
   return (
     <div className="my-2 rounded-lg border border-border-semantic bg-surface-panel">
       <DiffReviewHeader files={files} />

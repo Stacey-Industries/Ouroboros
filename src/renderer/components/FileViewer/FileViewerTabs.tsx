@@ -186,6 +186,20 @@ function useFileViewerTabsState(files: OpenFile[], activeIndex: number) {
   };
 }
 
+interface TabListProps {
+  sortedFiles: SortedFile[];
+  activeIndex: number;
+  activeTabRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onActivate: (filePath: string) => void;
+  onClose: (filePath: string) => void;
+  onPin?: (filePath: string) => void;
+  onUnpin?: (filePath: string) => void;
+  onTogglePin?: (filePath: string) => void;
+  onCloseOthers?: (filePath: string) => void;
+  onCloseToRight?: (filePath: string) => void;
+  onCloseAll?: () => void;
+}
 function TabList({
   sortedFiles,
   activeIndex,
@@ -199,20 +213,7 @@ function TabList({
   onCloseOthers,
   onCloseToRight,
   onCloseAll,
-}: {
-  sortedFiles: SortedFile[];
-  activeIndex: number;
-  activeTabRef: React.RefObject<HTMLDivElement | null>;
-  scrollRef: React.RefObject<HTMLDivElement | null>;
-  onActivate: (filePath: string) => void;
-  onClose: (filePath: string) => void;
-  onPin?: (filePath: string) => void;
-  onUnpin?: (filePath: string) => void;
-  onTogglePin?: (filePath: string) => void;
-  onCloseOthers?: (filePath: string) => void;
-  onCloseToRight?: (filePath: string) => void;
-  onCloseAll?: () => void;
-}): React.ReactElement {
+}: TabListProps): React.ReactElement {
   return (
     <div ref={scrollRef} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
       {sortedFiles.map(({ file, originalIndex }) => (
@@ -235,70 +236,75 @@ function TabList({
   );
 }
 
-export function FileViewerTabs({
-  files,
-  activeIndex,
-  onActivate,
-  onClose,
-  onPin,
-  onUnpin,
-  onTogglePin,
-  onCloseOthers,
-  onCloseToRight,
-  onCloseAll,
-}: FileViewerTabsProps): React.ReactElement {
-  const {
-    scrollRef,
-    activeTabRef,
-    sortedFiles,
-    showScrollLeft,
-    showScrollRight,
-    hasOverflow,
-    showOverflow,
-    scrollLeft,
-    scrollRight,
-    toggleOverflow,
-    dismissOverflow,
-  } = useFileViewerTabsState(files, activeIndex);
-  if (files.length === 0) return <EmptyTabs />;
+type OverflowButtonProps = {
+  hasOverflow: boolean;
+  toggleOverflow: () => void;
+  showOverflow: boolean;
+  files: OpenFile[];
+  activeIndex: number;
+  onActivate: (f: string) => void;
+  dismissOverflow: () => void;
+};
+
+function OverflowButton(p: OverflowButtonProps): React.ReactElement | null {
+  if (!p.hasOverflow) return null;
   return (
-    <div style={CONTAINER_STYLE}>
-      <ScrollButton direction="left" onClick={scrollLeft} visible={showScrollLeft} />
-      <TabList
-        sortedFiles={sortedFiles}
-        activeIndex={activeIndex}
-        activeTabRef={activeTabRef}
-        scrollRef={scrollRef}
-        onActivate={onActivate}
-        onClose={onClose}
-        onPin={onPin}
-        onUnpin={onUnpin}
-        onTogglePin={onTogglePin}
-        onCloseOthers={onCloseOthers}
-        onCloseToRight={onCloseToRight}
-        onCloseAll={onCloseAll}
-      />
-      <ScrollButton direction="right" onClick={scrollRight} visible={showScrollRight} />
-      {hasOverflow && (
-        <button
-          className="text-text-semantic-muted"
-          style={OVERFLOW_BUTTON_STYLE}
-          onClick={toggleOverflow}
-          aria-label="Show all tabs"
-          tabIndex={-1}
-          title="Show all open tabs"
-        >
-          <ChevronDownIcon />
-        </button>
-      )}
-      {showOverflow && (
+    <>
+      <button
+        className="text-text-semantic-muted"
+        style={OVERFLOW_BUTTON_STYLE}
+        onClick={p.toggleOverflow}
+        aria-label="Show all tabs"
+        tabIndex={-1}
+        title="Show all open tabs"
+      >
+        <ChevronDownIcon />
+      </button>
+      {p.showOverflow && (
         <OverflowDropdown
-          files={files}
-          activeIndex={activeIndex}
-          onActivate={onActivate}
-          onDismiss={dismissOverflow}
+          files={p.files}
+          activeIndex={p.activeIndex}
+          onActivate={p.onActivate}
+          onDismiss={p.dismissOverflow}
         />
       )}
+    </>
+  );
+}
+
+export function FileViewerTabs(props: FileViewerTabsProps): React.ReactElement {
+  const { files, activeIndex, onActivate } = props;
+  const st = useFileViewerTabsState(files, activeIndex);
+  if (files.length === 0) return <EmptyTabs />;
+  const tabListProps: TabListProps = {
+    sortedFiles: st.sortedFiles,
+    activeIndex,
+    activeTabRef: st.activeTabRef,
+    scrollRef: st.scrollRef,
+    onActivate: props.onActivate,
+    onClose: props.onClose,
+    onPin: props.onPin,
+    onUnpin: props.onUnpin,
+    onTogglePin: props.onTogglePin,
+    onCloseOthers: props.onCloseOthers,
+    onCloseToRight: props.onCloseToRight,
+    onCloseAll: props.onCloseAll,
+  };
+  const overflowProps: OverflowButtonProps = {
+    hasOverflow: st.hasOverflow,
+    toggleOverflow: st.toggleOverflow,
+    showOverflow: st.showOverflow,
+    files,
+    activeIndex,
+    onActivate,
+    dismissOverflow: st.dismissOverflow,
+  };
+  return (
+    <div style={CONTAINER_STYLE}>
+      <ScrollButton direction="left" onClick={st.scrollLeft} visible={st.showScrollLeft} />
+      <TabList {...tabListProps} />
+      <ScrollButton direction="right" onClick={st.scrollRight} visible={st.showScrollRight} />
+      <OverflowButton {...overflowProps} />
     </div>
   );
 }

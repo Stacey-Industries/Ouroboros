@@ -200,22 +200,24 @@ function sortRecentThreads(threads: AgentChatThreadRecord[]): AgentChatThreadRec
   return [...threads].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_RECENT_TABS);
 }
 
-export function RecentThreadTabs({
-  threads,
-  activeThreadId,
-  onSelect,
-  onClose,
-  draftTabs,
-}: {
+interface RecentThreadTabsProps {
   threads: AgentChatThreadRecord[];
   activeThreadId: string | null;
   onSelect: (id: string | null) => void;
   onClose: (id: string) => void;
   draftTabs?: string[];
-}): React.ReactElement | null {
-  const recentThreads = sortRecentThreads(threads);
-  const drafts = draftTabs ?? [];
-  if (recentThreads.length === 0 && drafts.length === 0) return null;
+}
+
+function ThreadTabList({
+  drafts,
+  recentThreads,
+  activeThreadId,
+  onSelect,
+  onClose,
+}: Pick<RecentThreadTabsProps, 'activeThreadId' | 'onSelect' | 'onClose'> & {
+  drafts: string[];
+  recentThreads: AgentChatThreadRecord[];
+}): React.ReactElement {
   return (
     <div
       className="flex-shrink-0 flex items-center gap-0.5 px-1 overflow-x-auto border-b bg-surface-panel"
@@ -240,5 +242,26 @@ export function RecentThreadTabs({
         />
       ))}
     </div>
+  );
+}
+
+export function RecentThreadTabs({
+  threads,
+  activeThreadId,
+  onSelect,
+  onClose,
+  draftTabs,
+}: RecentThreadTabsProps): React.ReactElement | null {
+  const recentThreads = sortRecentThreads(threads);
+  const drafts = draftTabs ?? [];
+  if (recentThreads.length === 0 && drafts.length === 0) return null;
+  return (
+    <ThreadTabList
+      drafts={drafts}
+      recentThreads={recentThreads}
+      activeThreadId={activeThreadId}
+      onSelect={onSelect}
+      onClose={onClose}
+    />
   );
 }

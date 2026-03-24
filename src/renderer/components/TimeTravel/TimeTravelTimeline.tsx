@@ -187,6 +187,24 @@ interface SnapshotNodeProps {
   onSelect: (snapshot: WorkspaceSnapshot) => void;
 }
 
+function snapshotNodeStyle(isSelected: boolean, borderColor: string): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+    width: '100%',
+    padding: '8px 12px',
+    background: isSelected ? 'rgba(88, 166, 255, 0.08)' : 'transparent',
+    border: 'none',
+    borderLeft: `2px solid ${borderColor}`,
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: 'var(--font-ui)',
+    fontSize: '12px',
+    transition: 'background 100ms',
+  };
+}
+
 function SnapshotNode({
   snapshot,
   isSelected,
@@ -202,21 +220,7 @@ function SnapshotNode({
       onClick={() => onSelect(snapshot)}
       title={snapshotTitle(snapshot)}
       className="text-text-semantic-primary"
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '10px',
-        width: '100%',
-        padding: '8px 12px',
-        background: isSelected ? 'rgba(88, 166, 255, 0.08)' : 'transparent',
-        border: 'none',
-        borderLeft: `2px solid ${borderColor}`,
-        cursor: 'pointer',
-        textAlign: 'left',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '12px',
-        transition: 'background 100ms',
-      }}
+      style={snapshotNodeStyle(isSelected, borderColor)}
     >
       <SnapshotMarker dotColor={dotColor} isHead={isHead} />
       <SnapshotNodeLabel

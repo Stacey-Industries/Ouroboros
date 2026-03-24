@@ -169,3 +169,33 @@ export function useComposerAutocompleteReset(
     setSelectedIndex(0);
   }, [autocompleteResultsLength, setSelectedIndex]);
 }
+
+export function useComposerMenuState() {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [isMentionAutocompleteOpen, setIsMentionAutocompleteOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
+  const closeMentionAutocomplete = useCallback(() => {
+    setIsMentionAutocompleteOpen(false);
+    setMentionQuery(null);
+  }, []);
+  const closeSlashMenu = useCallback(() => {
+    setIsSlashMenuOpen(false);
+    setSlashQuery(null);
+  }, []);
+  return {
+    selectedIndex,
+    setSelectedIndex,
+    mentionQuery,
+    setMentionQuery,
+    isMentionAutocompleteOpen,
+    setIsMentionAutocompleteOpen,
+    slashQuery,
+    setSlashQuery,
+    isSlashMenuOpen,
+    setIsSlashMenuOpen,
+    closeMentionAutocomplete,
+    closeSlashMenu,
+  };
+}

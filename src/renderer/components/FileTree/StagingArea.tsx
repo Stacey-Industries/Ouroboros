@@ -7,11 +7,9 @@ import {
   Chevron,
   DiscardButton,
   StageButton,
-  StagedSection,
   StagingFileRow,
   SubSectionHeader,
   UnstageButton,
-  UnstagedSection,
 } from './StagingArea.parts';
 import {
   STAGING_CSS,
@@ -131,17 +129,7 @@ function StagingAreaHeader({
   );
 }
 
-function FilesSection({
-  title,
-  entries,
-  projectRoot,
-  onFileSelect,
-  onAction,
-  onBulk,
-  bulkLabel,
-  onDiscard,
-  kind,
-}: {
+interface FilesSectionProps {
   title: string;
   entries: StagingFileEntry[];
   projectRoot: string;
@@ -151,41 +139,94 @@ function FilesSection({
   bulkLabel: string;
   onDiscard?: (filePath: string) => Promise<void>;
   kind: 'staged' | 'unstaged';
-}): React.ReactElement | null {
+}
+function FileRowActions(
+  p: Pick<FilesSectionProps, 'kind' | 'onAction' | 'onDiscard'> & { path: string },
+): React.ReactElement {
+  if (p.kind === 'staged') return <UnstageButton onClick={() => void p.onAction(p.path)} />;
+  return (
+    <>
+      <StageButton onClick={() => void p.onAction(p.path)} />
+      <DiscardButton onClick={() => void p.onDiscard?.(p.path)} />
+    </>
+  );
+}
+
+function FilesSection(p: FilesSectionProps): React.ReactElement | null {
   const [expanded, setExpanded] = useState(true);
-  if (entries.length === 0) return null;
+  if (p.entries.length === 0) return null;
+  const ariaLabel = p.kind === 'staged' ? 'Staged files' : 'Unstaged files';
   return (
     <div>
       <SubSectionHeader
-        title={title}
-        count={entries.length}
+        title={p.title}
+        count={p.entries.length}
         expanded={expanded}
         onToggle={() => setExpanded((v) => !v)}
-        headerAction={<BulkActionButton label={bulkLabel} onClick={() => void onBulk()} />}
+        headerAction={<BulkActionButton label={p.bulkLabel} onClick={() => void p.onBulk()} />}
       />
       {expanded && (
-        <div role="list" aria-label={kind === 'staged' ? 'Staged files' : 'Unstaged files'}>
-          {entries.map((entry) => (
+        <div role="list" aria-label={ariaLabel}>
+          {p.entries.map((entry) => (
             <StagingFileRow
               key={entry.path}
               entry={entry}
-              projectRoot={projectRoot}
-              onFileSelect={onFileSelect}
+              projectRoot={p.projectRoot}
+              onFileSelect={p.onFileSelect}
               actions={
-                kind === 'staged' ? (
-                  <UnstageButton onClick={() => void onAction(entry.path)} />
-                ) : (
-                  <>
-                    <StageButton onClick={() => void onAction(entry.path)} />
-                    <DiscardButton onClick={() => void onDiscard?.(entry.path)} />
-                  </>
-                )
+                <FileRowActions
+                  kind={p.kind}
+                  onAction={p.onAction}
+                  onDiscard={p.onDiscard}
+                  path={entry.path}
+                />
               }
             />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+type StagingBodyProps = {
+  stagedEntries: StagingFileEntry[];
+  unstagedEntries: StagingFileEntry[];
+  projectRoot: string;
+  onFileSelect: (filePath: string) => void;
+  actions: ReturnType<typeof useStagingActions>;
+};
+function StagingBody({
+  stagedEntries,
+  unstagedEntries,
+  projectRoot,
+  onFileSelect,
+  actions,
+}: StagingBodyProps): React.ReactElement {
+  return (
+    <>
+      <FilesSection
+        kind="staged"
+        title="Staged Changes"
+        entries={stagedEntries}
+        projectRoot={projectRoot}
+        onFileSelect={onFileSelect}
+        onAction={actions.unstage}
+        onBulk={actions.unstageAll}
+        bulkLabel="-All"
+      />
+      <FilesSection
+        kind="unstaged"
+        title="Changes"
+        entries={unstagedEntries}
+        projectRoot={projectRoot}
+        onFileSelect={onFileSelect}
+        onAction={actions.stage}
+        onBulk={actions.stageAll}
+        bulkLabel="+All"
+        onDiscard={actions.discard}
+      />
+    </>
   );
 }
 
@@ -199,13 +240,8 @@ export function StagingArea({
   const stagedEntries = toEntries(status.staged);
   const unstagedEntries = toEntries(status.unstaged);
   const totalCount = stagedEntries.length + unstagedEntries.length;
-  const { unstage, unstageAll, stage, stageAll, discard } = useStagingActions(
-    projectRoot,
-    onRefresh,
-  );
-
+  const actions = useStagingActions(projectRoot, onRefresh);
   if (totalCount === 0) return null;
-
   return (
     <div style={stagingSectionStyle}>
       <style>{STAGING_CSS}</style>
@@ -215,34 +251,16 @@ export function StagingArea({
         onToggle={() => setIsExpanded((v) => !v)}
       />
       {isExpanded && (
-        <>
-          <FilesSection
-            kind="staged"
-            title="Staged Changes"
-            entries={stagedEntries}
-            projectRoot={projectRoot}
-            onFileSelect={onFileSelect}
-            onAction={unstage}
-            onBulk={unstageAll}
-            bulkLabel="-All"
-          />
-          <FilesSection
-            kind="unstaged"
-            title="Changes"
-            entries={unstagedEntries}
-            projectRoot={projectRoot}
-            onFileSelect={onFileSelect}
-            onAction={stage}
-            onBulk={stageAll}
-            bulkLabel="+All"
-            onDiscard={discard}
-          />
-        </>
+        <StagingBody
+          stagedEntries={stagedEntries}
+          unstagedEntries={unstagedEntries}
+          projectRoot={projectRoot}
+          onFileSelect={onFileSelect}
+          actions={actions}
+        />
       )}
     </div>
   );
 }
 
-// Re-export parts for external consumers that import directly from StagingArea.parts
-export { StagedSection, UnstagedSection };
 export type { StagingFileEntry };

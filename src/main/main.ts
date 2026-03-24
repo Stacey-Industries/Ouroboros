@@ -2,6 +2,8 @@ import { app, BrowserWindow, crashReporter } from 'electron';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
+import { getCredential } from './auth/credentialStore';
+import { handleProtocolUrl, registerProtocolHandler } from './auth/protocolHandler';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import {
@@ -35,6 +37,7 @@ import {
   stopPerfMetrics as stopManagedPerfMetrics,
 } from './perfMetrics';
 import { killAllPtySessions } from './pty';
+import { setGithubTokenForPty } from './ptyEnv';
 import { runAllMigrations } from './storage/migrate';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
@@ -123,13 +126,19 @@ function registerWindowLifecycleHandlers(): void {
     }
   });
 
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     const windows = getAllActiveWindows();
     if (windows.length > 0) {
       const win = windows[windows.length - 1];
       if (win.isMinimized()) win.restore();
       win.focus();
     }
+    const callbackUrl = argv.find((arg) => arg.startsWith('ouroboros://'));
+    if (callbackUrl) handleProtocolUrl(callbackUrl);
+  });
+
+  app.on('open-url', (_event, url) => {
+    handleProtocolUrl(url);
   });
 }
 
@@ -197,8 +206,18 @@ async function initializeApplication(): Promise<void> {
   startPerfMetrics();
   startTokenRefreshManager();
   registerWindowLifecycleHandlers();
+  void seedGithubTokenForPty();
   startContextLayerAsync(defaultRoot);
   startWebServerAsync();
+}
+
+async function seedGithubTokenForPty(): Promise<void> {
+  try {
+    const cred = await getCredential('github');
+    if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
+  } catch (err) {
+    log.warn('Failed to seed GitHub token for PTY:', err);
+  }
 }
 
 async function initCodebaseGraph(): Promise<void> {
@@ -220,6 +239,7 @@ async function initCodebaseGraph(): Promise<void> {
 }
 
 app.setName('Ouroboros');
+registerProtocolHandler();
 app.whenReady().then(initializeApplication);
 
 // Graceful shutdown on POSIX signals (Docker, systemd, etc.)

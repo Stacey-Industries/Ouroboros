@@ -12,62 +12,16 @@ import { SelectionTooltip } from './SelectionTooltip';
 import { StickyScrollOverlay } from './StickyScrollOverlay';
 import { TerminalContextMenu } from './TerminalContextMenu';
 import type { TerminalInstanceController } from './TerminalInstanceController';
+import {
+  applyCompletionSelection,
+  CONTAINER_STYLE,
+  dismissCompletion,
+  getRootStyle,
+  navigateCompletion,
+  TOOLBAR_STYLE,
+} from './TerminalInstanceView.helpers';
 import { TerminalProgressBar } from './TerminalProgressBar';
 import { MultiLineButton, RecordingButton, SplitButton, SyncButton } from './TerminalToolbar';
-
-const ROOT_STYLE: React.CSSProperties = {
-  position: 'relative',
-  width: '100%',
-  height: '100%',
-  overflow: 'hidden',
-  flexDirection: 'column',
-  backgroundColor: 'var(--term-bg, var(--surface-base))',
-};
-
-const CONTAINER_STYLE: React.CSSProperties = {
-  width: '100%',
-  flex: '1 1 0',
-  minHeight: 0,
-  overflow: 'hidden',
-};
-
-const TOOLBAR_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  bottom: 6,
-  right: 6,
-  zIndex: 10,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-};
-
-function getRootStyle(isActive: boolean): React.CSSProperties {
-  return { ...ROOT_STYLE, display: isActive ? 'flex' : 'none' };
-}
-
-function applyCompletionSelection(controller: TerminalInstanceController, value: string): void {
-  const type =
-    controller.completions.state.completions.find((completion) => completion.value === value)
-      ?.type ?? 'file';
-  controller.completions.actions.applyCompletion(value, type);
-}
-
-function navigateCompletion(controller: TerminalInstanceController, delta: number): void {
-  const maxIndex = controller.completions.state.completions.length - 1;
-  const nextIndex = Math.max(
-    0,
-    Math.min(controller.completions.state.completionIndex + delta, maxIndex),
-  );
-  controller.completions.state.setCompletionIndex(nextIndex);
-  controller.completions.state.completionIndexRef.current = nextIndex;
-}
-
-function dismissCompletion(controller: TerminalInstanceController): void {
-  controller.completions.state.setCompletionVisible(false);
-  controller.completions.state.completionVisibleRef.current = false;
-  controller.historyHook.suggestionControls.isHistorySuggestionRef.current = false;
-  controller.completions.state.setCompletions([]);
-}
 
 function TerminalToolbarLayer({
   controller,
@@ -77,13 +31,11 @@ function TerminalToolbarLayer({
   isHovered: boolean;
 }): React.ReactElement {
   const searchAddon = controller.searchAddonRef.current;
-
   return (
     <>
       {controller.showSearch && searchAddon && (
         <TerminalSearchBar searchAddon={searchAddon} onClose={controller.closeSearch} />
       )}
-
       <TerminalToolbarButtons controller={controller} isHovered={isHovered} />
     </>
   );
@@ -137,11 +89,10 @@ function TerminalToolbarButtons({
   isHovered: boolean;
 }): React.ReactElement {
   const terminal = controller.terminalRef.current;
-  const showSearch = controller.showSearch;
+  const { showSearch } = controller;
   const richInputOnClick = controller.richInputActive
     ? controller.handleRichInputCancel
     : controller.openRichInput;
-
   return (
     <div style={TOOLBAR_STYLE}>
       <TerminalOptionalButtons
@@ -171,7 +122,6 @@ function TerminalProgressBarLayer({
     return (cb: (state: import('@xterm/addon-progress').IProgressState) => void) =>
       addon.onChange(cb);
   }, [controller.progressAddonRef]);
-
   return <TerminalProgressBar subscribe={subscribe} />;
 }
 
@@ -181,18 +131,11 @@ function TerminalCommandBlocks({
   controller: TerminalInstanceController;
 }): React.ReactElement | null {
   const handleCopyCommand = useCallback((block: import('./useCommandBlocks').CommandBlock) => {
-    if (block.command) {
-      void navigator.clipboard.writeText(block.command);
-    }
+    if (block.command) void navigator.clipboard.writeText(block.command);
   }, []);
-
-  if (!controller.commandBlocksEnabled) {
-    return null;
-  }
-
+  if (!controller.commandBlocksEnabled) return null;
   const { activeBlockIndex, blocks, navigateNext, navigatePrev } = controller.commandBlocks;
   const terminal = controller.terminalRef.current;
-
   return (
     <>
       <CommandBlockOverlay
@@ -204,9 +147,7 @@ function TerminalCommandBlocks({
         activeBlockIndex={activeBlockIndex}
         sessionId={controller.sessionId}
       />
-
       <StickyScrollOverlay blocks={blocks} terminal={terminal} />
-
       <BlockNavigator
         totalBlocks={blocks.length}
         activeIndex={activeBlockIndex}
@@ -223,16 +164,14 @@ function TerminalCompletionLayer({
 }: {
   controller: TerminalInstanceController;
 }): React.ReactElement | null {
-  if (!controller.completions.state.completionVisible) {
-    return null;
-  }
-
+  if (!controller.completions.state.completionVisible) return null;
+  const { completions: cpl } = controller;
   return (
     <CompletionOverlay
-      completions={controller.completions.state.completions}
-      selectedIndex={controller.completions.state.completionIndex}
-      visible={controller.completions.state.completionVisible}
-      position={controller.completions.state.completionPos}
+      completions={cpl.state.completions}
+      selectedIndex={cpl.state.completionIndex}
+      visible={cpl.state.completionVisible}
+      position={cpl.state.completionPos}
       onSelect={(value) => applyCompletionSelection(controller, value)}
       onNavigate={(delta) => navigateCompletion(controller, delta)}
       onDismiss={() => dismissCompletion(controller)}
@@ -258,6 +197,7 @@ function TerminalOverlayModals({
 }: {
   controller: TerminalInstanceController;
 }): React.ReactElement {
+  const { cmdSearch } = controller.historyHook;
   return (
     <>
       {controller.pendingPaste && (
@@ -280,9 +220,9 @@ function TerminalOverlayModals({
         onOpenFile={controller.handleTooltipOpenFile}
         onDismiss={controller.handleTooltipDismiss}
       />
-      {controller.historyHook.cmdSearch.showCmdSearch && (
+      {cmdSearch.showCmdSearch && (
         <CommandSearchOverlay
-          commands={controller.historyHook.cmdSearch.cmdHistory}
+          commands={cmdSearch.cmdHistory}
           onSelect={controller.handleCmdSearchSelect}
           onClose={controller.handleCmdSearchClose}
         />

@@ -91,13 +91,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
 
 /* ---------- InlineDiffViewer ---------- */
 
-export function InlineDiffViewer({
-  filePath,
-  projectRoot,
-}: {
-  filePath: string;
-  projectRoot: string;
-}): React.ReactElement {
+function useDiffPatch(projectRoot: string, filePath: string) {
   const [patch, setPatch] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -117,6 +111,29 @@ export function InlineDiffViewer({
       active = false;
     };
   }, [filePath, projectRoot]);
+  return { patch, loading };
+}
+
+function DiffLineRow({ line }: { line: DiffLine }): React.ReactElement {
+  return (
+    <div
+      className={`px-3 py-0 ${line.type === 'context' ? 'text-text-semantic-muted' : line.type === 'header' ? 'text-interactive-accent' : ''}`}
+      style={diffLineColors[line.type]}
+    >
+      <span className="inline-block w-3 select-none opacity-40">{line.prefix}</span>
+      {line.content}
+    </div>
+  );
+}
+
+export function InlineDiffViewer({
+  filePath,
+  projectRoot,
+}: {
+  filePath: string;
+  projectRoot: string;
+}): React.ReactElement {
+  const { patch, loading } = useDiffPatch(projectRoot, filePath);
   if (loading)
     return (
       <div className="px-3 py-2 text-[10px] italic text-text-semantic-faint">Loading diff...</div>
@@ -138,14 +155,7 @@ export function InlineDiffViewer({
       }}
     >
       {lines.map((line, i) => (
-        <div
-          key={i}
-          className={`px-3 py-0 ${line.type === 'context' ? 'text-text-semantic-muted' : line.type === 'header' ? 'text-interactive-accent' : ''}`}
-          style={diffLineColors[line.type]}
-        >
-          <span className="inline-block w-3 select-none opacity-40">{line.prefix}</span>
-          {line.content}
-        </div>
+        <DiffLineRow key={i} line={line} />
       ))}
     </div>
   );
@@ -200,44 +210,44 @@ export function FileChangeRow({
 
 /* ---------- CompletedChangeHeader ---------- */
 
-export function CompletedChangeHeader({
-  fileCount,
-  expanded,
-  tally,
-  onToggleExpanded,
-  onOpenFullReview,
-}: {
+function TallyLines({ tally }: { tally: ChangeTally }): React.ReactElement | null {
+  const hasTallyLines = tally.linesAdded > 0 || tally.linesRemoved > 0;
+  if (!hasTallyLines) return null;
+  return (
+    <span className="flex items-center gap-1.5">
+      {tally.linesAdded > 0 && <span className="text-status-success">+{tally.linesAdded}</span>}
+      {tally.linesRemoved > 0 && <span className="text-status-error">-{tally.linesRemoved}</span>}
+    </span>
+  );
+}
+
+type CompletedChangeHeaderProps = {
   fileCount: number;
   expanded: boolean;
   tally?: ChangeTally;
   onToggleExpanded: () => void;
   onOpenFullReview: () => void;
-}): React.ReactElement {
+};
+
+export function CompletedChangeHeader(p: CompletedChangeHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2 border-b border-border-semantic px-3 py-1.5 text-[11px] text-text-semantic-muted">
-      {fileCount > 0 && (
+      {p.fileCount > 0 && (
         <button
-          onClick={onToggleExpanded}
+          onClick={p.onToggleExpanded}
           className="flex shrink-0 items-center gap-1 border-none bg-none p-0"
           style={{ background: 'none', border: 'none', cursor: 'pointer' }}
         >
-          <ChevronIcon expanded={expanded} />
+          <ChevronIcon expanded={p.expanded} />
         </button>
       )}
       <DiffIcon />
       <span>
-        {fileCount > 0 ? `${fileCount} file${fileCount !== 1 ? 's' : ''} changed` : 'Changes'}
+        {p.fileCount > 0 ? `${p.fileCount} file${p.fileCount !== 1 ? 's' : ''} changed` : 'Changes'}
       </span>
-      {tally && (tally.linesAdded > 0 || tally.linesRemoved > 0) && (
-        <span className="flex items-center gap-1.5">
-          {tally.linesAdded > 0 && <span className="text-status-success">+{tally.linesAdded}</span>}
-          {tally.linesRemoved > 0 && (
-            <span className="text-status-error">-{tally.linesRemoved}</span>
-          )}
-        </span>
-      )}
+      {p.tally && <TallyLines tally={p.tally} />}
       <button
-        onClick={onOpenFullReview}
+        onClick={p.onOpenFullReview}
         className="ml-auto shrink-0 border-none bg-none p-0 text-[10px] font-medium text-interactive-accent"
         style={{ background: 'none', border: 'none', cursor: 'pointer' }}
       >

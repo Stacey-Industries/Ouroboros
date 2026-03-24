@@ -137,47 +137,44 @@ function useToolCardState(props: AgentChatToolCardProps): ToolCardState {
   };
 }
 
-export const AgentChatToolCard = React.memo(function AgentChatToolCard(
-  props: AgentChatToolCardProps,
+function ToolCardBody(
+  props: AgentChatToolCardProps & ReturnType<typeof useToolCardState>,
 ): React.ReactElement {
-  const { name, status, filePath, duration, errorOutput, editSummary } = props;
-  const {
-    collapsed,
-    errorExpanded,
-    setCollapsed,
-    setErrorExpanded,
-    showDiffPreview,
-    displaySummary,
-    headerDetail,
-  } = useToolCardState(props);
   return (
     <div
-      className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${errorOutput ? '' : 'border-border-semantic'}`}
-      style={errorOutput ? { borderColor: 'rgba(248, 81, 73, 0.3)' } : undefined}
+      className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${props.errorOutput ? '' : 'border-border-semantic'}`}
+      style={props.errorOutput ? { borderColor: 'rgba(248, 81, 73, 0.3)' } : undefined}
     >
       <ToolHeader
-        name={name}
-        status={status}
-        headerDetail={headerDetail}
-        editSummary={editSummary}
-        duration={duration}
-        collapsed={collapsed}
-        onToggle={() => setCollapsed((prev) => !prev)}
+        name={props.name}
+        status={props.status}
+        headerDetail={props.headerDetail}
+        editSummary={props.editSummary}
+        duration={props.duration}
+        collapsed={props.collapsed}
+        onToggle={() => props.setCollapsed((prev) => !prev)}
         ChevronIconComponent={ChevronIcon}
       />
-      {!collapsed && (
+      {!props.collapsed && (
         <ToolDetails
-          filePath={filePath}
-          displaySummary={displaySummary}
-          editSummary={editSummary}
-          showDiffPreview={showDiffPreview}
-          errorOutput={errorOutput}
-          status={status}
-          errorExpanded={errorExpanded}
-          onToggleErrorExpanded={() => setErrorExpanded((prev) => !prev)}
+          filePath={props.filePath}
+          displaySummary={props.displaySummary}
+          editSummary={props.editSummary}
+          showDiffPreview={props.showDiffPreview}
+          errorOutput={props.errorOutput}
+          status={props.status}
+          errorExpanded={props.errorExpanded}
+          onToggleErrorExpanded={() => props.setErrorExpanded((prev) => !prev)}
           ChevronIconComponent={ChevronIcon}
         />
       )}
     </div>
   );
+}
+
+export const AgentChatToolCard = React.memo(function AgentChatToolCard(
+  props: AgentChatToolCardProps,
+): React.ReactElement {
+  const state = useToolCardState(props);
+  return <ToolCardBody {...props} {...state} />;
 });

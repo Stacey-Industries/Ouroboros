@@ -13,17 +13,19 @@ import {
   importGitHubCliCredentials,
   importOpenAiCliCredentials,
 } from '../auth/cliCredentialImporter';
-import { getAllAuthStates, setCredential } from '../auth/credentialStore';
+import { getAllAuthStates, getCredential, setCredential } from '../auth/credentialStore';
 import { logoutAnthropic, setAnthropicApiKey } from '../auth/providers/anthropicAuth';
 import {
   cancelGitHubLogin,
   type GitHubLoginEvent,
   logoutGitHub,
   startGitHubLogin,
+  startGitHubPkceLogin,
 } from '../auth/providers/githubAuth';
 import { logoutOpenAi, setOpenAiApiKey } from '../auth/providers/openaiAuth';
 import type { AuthProvider } from '../auth/types';
 import log from '../logger';
+import { setGithubTokenForPty } from '../ptyEnv';
 import { broadcastToWebClients } from '../web/webServer';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
@@ -108,15 +110,25 @@ function handleStartLogin(
   return { success: false, error: 'Use auth:setApiKey' };
 }
 
+function onGitHubAuthenticated(win: BrowserWindow): void {
+  void broadcastAuthState(win);
+  void getCredential('github').then((cred) => {
+    if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
+  });
+}
+
 function startGitHubFlow(event: IpcMainInvokeEvent, win: BrowserWindow): { success: true } {
   const callback = (loginEvent: GitHubLoginEvent): void => {
     event.sender.send('auth:loginEvent', loginEvent);
     broadcastToWebClients('auth:loginEvent', loginEvent);
-    if (loginEvent.type === 'authenticated') {
-      void broadcastAuthState(win);
-    }
+    if (loginEvent.type === 'authenticated') onGitHubAuthenticated(win);
   };
-  startGitHubLogin(callback);
+  const isElectron = typeof process.versions.electron !== 'undefined';
+  if (isElectron) {
+    startGitHubPkceLogin(callback);
+  } else {
+    startGitHubLogin(callback);
+  }
   return { success: true };
 }
 
@@ -160,7 +172,10 @@ async function handleLogout(
 }
 
 async function callLogout(provider: AuthProvider): Promise<void> {
-  if (provider === 'github') return logoutGitHub();
+  if (provider === 'github') {
+    setGithubTokenForPty(null);
+    return logoutGitHub();
+  }
   if (provider === 'anthropic') return logoutAnthropic();
   if (provider === 'openai') return logoutOpenAi();
   throw new Error(`Unknown provider: ${provider}`);

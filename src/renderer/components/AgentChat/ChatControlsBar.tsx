@@ -102,45 +102,73 @@ function PermissionModeIndicator(props: {
   );
 }
 
-function ContextRing(props: {
+type ContextRingProps = {
   pct: number;
   tone: string;
   label: string;
   size?: number;
   stroke?: number;
-}): React.ReactElement {
+};
+
+type ArcProps = {
+  cx: number;
+  cy: number;
+  r: number;
+  stroke: number;
+  tone: string;
+  circumference: number;
+  offset: number;
+};
+
+function ContextRingArcs(p: ArcProps): React.ReactElement {
+  return (
+    <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+      <circle
+        cx={p.cx}
+        cy={p.cy}
+        r={p.r}
+        fill="none"
+        stroke="var(--border-default)"
+        strokeWidth={p.stroke}
+      />
+      <circle
+        cx={p.cx}
+        cy={p.cy}
+        r={p.r}
+        fill="none"
+        stroke={p.tone}
+        strokeWidth={p.stroke}
+        strokeDasharray={p.circumference}
+        strokeDashoffset={p.offset}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+      />
+    </g>
+  );
+}
+
+function ContextRing(props: ContextRingProps): React.ReactElement {
   const size = props.size ?? 26;
   const stroke = props.stroke ?? 2.5;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (props.pct / 100) * circumference;
+  const cx = size / 2;
+  const cy = size / 2;
   return (
     <svg width={size} height={size} style={{ pointerEvents: 'none' }}>
-      <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--border-default)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={props.tone}
-          strokeWidth={stroke}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
-        />
-      </g>
+      <ContextRingArcs
+        cx={cx}
+        cy={cy}
+        r={radius}
+        stroke={stroke}
+        tone={props.tone}
+        circumference={circumference}
+        offset={offset}
+      />
       <text
-        x={size / 2}
-        y={size / 2}
+        x={cx}
+        y={cy}
         textAnchor="middle"
         dominantBaseline="central"
         fill="var(--text-primary)"

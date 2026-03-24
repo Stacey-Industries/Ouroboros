@@ -6,12 +6,13 @@ import React, { useState } from 'react';
 
 import type { McpRegistryEnvVar, McpRegistryServer } from '../../types/electron';
 import type { McpStoreModel } from './mcpStoreModel';
+import { RuntimeInfo, ServerMetadataSection } from './McpStoreSectionDetail.parts';
 import {
-  buildCommand,
+  buildEnvOverrides,
   extractShortName,
-  formatDate,
   getEnvironmentVariables,
   installButtonStyle,
+  isSensitiveKey,
   mcpExtractShortName,
 } from './mcpStoreSectionDetailHelpers';
 import {
@@ -28,24 +29,12 @@ import {
   envVarLabelStyle,
   envVarRowStyle,
   installAreaStyle,
-  metadataContainerStyle,
-  metadataLabelStyle,
-  metadataRowStyle,
-  metadataValueStyle,
-  monoLineStyle,
   registryNameStyle,
-  runtimeBodyStyle,
   runtimeContainerStyle,
-  runtimeLabelStyle,
 } from './mcpStoreSectionDetailStyles';
 import { SectionLabel } from './settingsStyles';
 
 export { mcpExtractShortName };
-
-function isSensitiveKey(name: string): boolean {
-  const lower = name.toLowerCase();
-  return lower.includes('key') || lower.includes('secret') || lower.includes('token');
-}
 
 function EnvVarRow({
   ev,
@@ -111,19 +100,6 @@ export function ServerEnvironmentVariablesSection({
   );
 }
 
-function MetadataRow({ label, value }: { label: string; value: string }): React.ReactElement {
-  return (
-    <div style={metadataRowStyle}>
-      <span className="text-text-semantic-muted" style={metadataLabelStyle}>
-        {label}
-      </span>
-      <span className="text-text-semantic-primary" style={metadataValueStyle}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
 function ServerDetailHeader({
   displayName,
   server,
@@ -150,62 +126,6 @@ function ServerDetailHeader({
         <p className="text-text-semantic-muted" style={detailDescriptionStyle}>
           {server.description}
         </p>
-      )}
-    </div>
-  );
-}
-
-export function ServerMetadataSection({
-  server,
-  pkg,
-}: {
-  server: McpRegistryServer;
-  pkg?: NonNullable<McpRegistryServer['packages'][0]>;
-}): React.ReactElement {
-  return (
-    <div style={metadataContainerStyle}>
-      {pkg && <MetadataRow label="Package" value={`${pkg.registry_type} ${pkg.name}`} />}
-      <MetadataRow label="Status" value={server._meta.status} />
-      <MetadataRow label="Published" value={formatDate(server._meta.publishedAt)} />
-      {server._meta.updatedAt && server._meta.updatedAt !== server._meta.publishedAt && (
-        <MetadataRow label="Updated" value={formatDate(server._meta.updatedAt)} />
-      )}
-    </div>
-  );
-}
-
-function RuntimeInfo({
-  pkg,
-}: {
-  pkg: NonNullable<McpRegistryServer['packages'][0]>;
-}): React.ReactElement {
-  const runtime = pkg.runtime;
-  const command = buildCommand(pkg);
-  return (
-    <div style={runtimeBodyStyle}>
-      <div className="text-text-semantic-primary" style={monoLineStyle}>
-        <span className="text-text-semantic-muted" style={runtimeLabelStyle}>
-          Command:
-        </span>{' '}
-        {command}
-      </div>
-      {runtime?.args && runtime.args.length > 0 && (
-        <div className="text-text-semantic-primary" style={monoLineStyle}>
-          <span className="text-text-semantic-muted" style={runtimeLabelStyle}>
-            Args:
-          </span>{' '}
-          {runtime.args.join(' ')}
-        </div>
-      )}
-      {runtime?.env && Object.keys(runtime.env).length > 0 && (
-        <div className="text-text-semantic-primary" style={monoLineStyle}>
-          <span className="text-text-semantic-muted" style={runtimeLabelStyle}>
-            Env:
-          </span>{' '}
-          {Object.entries(runtime.env)
-            .map(([k, v]) => `${k}=${v}`)
-            .join(', ')}
-        </div>
       )}
     </div>
   );
@@ -248,21 +168,51 @@ function ServerInstallSection({
   );
 }
 
-function buildEnvOverrides(
-  envVars: McpRegistryEnvVar[],
-  envValues: Record<string, string>,
-): Record<string, string> | undefined {
-  const overrides: Record<string, string> = {};
-  for (const ev of envVars) {
-    const val = envValues[ev.name]?.trim();
-    if (val) overrides[ev.name] = val;
-  }
-  return Object.keys(overrides).length > 0 ? overrides : undefined;
+interface ServerDetailBodyProps {
+  server: McpRegistryServer;
+  pkg?: NonNullable<McpRegistryServer['packages'][0]>;
+  isInstalled: boolean;
+  isInstalling: boolean;
+  envVars: McpRegistryEnvVar[];
+  envValues: Record<string, string>;
+  onEnvChange: (n: string, v: string) => void;
+  onInstall: (scope: 'global' | 'project') => void;
+}
+
+function ServerDetailBody(props: ServerDetailBodyProps): React.ReactElement {
+  const { server, pkg, isInstalled, isInstalling, envVars, envValues, onEnvChange, onInstall } =
+    props;
+  return (
+    <>
+      <ServerDetailHeader
+        displayName={server.title || extractShortName(server.name)}
+        server={server}
+      />
+      <ServerMetadataSection server={server} pkg={pkg} />
+      {pkg?.runtime && (
+        <div style={runtimeContainerStyle}>
+          <SectionLabel style={{ marginBottom: '6px' }}>Runtime Config</SectionLabel>
+          <RuntimeInfo pkg={pkg} />
+        </div>
+      )}
+      {envVars.length > 0 && !isInstalled && (
+        <ServerEnvironmentVariablesSection
+          envVars={envVars}
+          envValues={envValues}
+          onEnvChange={onEnvChange}
+        />
+      )}
+      <ServerInstallSection
+        isInstalled={isInstalled}
+        isInstalling={isInstalling}
+        onInstall={onInstall}
+      />
+    </>
+  );
 }
 
 export function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElement {
   const server = model.selectedServer!;
-  const displayName = server.title || extractShortName(server.name);
   const isInstalled = model.installedNames.has(mcpExtractShortName(server.name));
   const isInstalling = model.installInProgress === server.name;
   const pkg = server.packages?.[0];
@@ -281,24 +231,14 @@ export function ServerDetailPanel({ model }: { model: McpStoreModel }): React.Re
       >
         &larr; Back to results
       </button>
-      <ServerDetailHeader displayName={displayName} server={server} />
-      <ServerMetadataSection server={server} pkg={pkg} />
-      {pkg?.runtime && (
-        <div style={runtimeContainerStyle}>
-          <SectionLabel style={{ marginBottom: '6px' }}>Runtime Config</SectionLabel>
-          <RuntimeInfo pkg={pkg} />
-        </div>
-      )}
-      {envVars.length > 0 && !isInstalled && (
-        <ServerEnvironmentVariablesSection
-          envVars={envVars}
-          envValues={envValues}
-          onEnvChange={handleEnvChange}
-        />
-      )}
-      <ServerInstallSection
+      <ServerDetailBody
+        server={server}
+        pkg={pkg}
         isInstalled={isInstalled}
         isInstalling={isInstalling}
+        envVars={envVars}
+        envValues={envValues}
+        onEnvChange={handleEnvChange}
         onInstall={handleInstall}
       />
     </div>

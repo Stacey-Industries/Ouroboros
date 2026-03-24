@@ -132,6 +132,24 @@ const CHANGED_FILE_DIFF_STYLE = {
   flexShrink: 0,
 } as const;
 
+const FILE_STATUS_ICON_STYLE = (color: string): React.CSSProperties => ({
+  fontFamily: 'var(--font-mono)',
+  fontSize: '10px',
+  fontWeight: 600,
+  color,
+  width: '12px',
+  textAlign: 'center',
+  flexShrink: 0,
+});
+const FILE_PATH_STYLE: React.CSSProperties = {
+  flex: 1,
+  fontFamily: 'var(--font-mono)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  fontSize: '11px',
+};
+
 function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement {
   return (
     <div
@@ -144,30 +162,10 @@ function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement {
         fontSize: '11px',
       }}
     >
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '10px',
-          fontWeight: 600,
-          color: statusColor(file.status),
-          width: '12px',
-          textAlign: 'center',
-          flexShrink: 0,
-        }}
-      >
+      <span style={FILE_STATUS_ICON_STYLE(statusColor(file.status))}>
         {statusIcon(file.status)}
       </span>
-      <span
-        className="text-text-semantic-secondary"
-        style={{
-          flex: 1,
-          fontFamily: 'var(--font-mono)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontSize: '11px',
-        }}
-      >
+      <span className="text-text-semantic-secondary" style={FILE_PATH_STYLE}>
         {file.path}
       </span>
       <span style={{ ...CHANGED_FILE_DIFF_STYLE, color: 'var(--status-success)' }}>

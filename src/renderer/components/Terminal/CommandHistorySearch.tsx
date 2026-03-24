@@ -109,6 +109,14 @@ function handleKeyDown(e: React.KeyboardEvent, context: KeyDownContext): void {
   }
 }
 
+const closeButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '2px 4px',
+  fontSize: 14,
+};
+
 function SearchInputRow({
   inputRef,
   query,
@@ -137,13 +145,7 @@ function SearchInputRow({
       <button
         onClick={onClose}
         className="text-text-semantic-muted"
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '2px 4px',
-          fontSize: 14,
-        }}
+        style={closeButtonStyle}
         title="Close (Esc)"
       >
         &#x2715;

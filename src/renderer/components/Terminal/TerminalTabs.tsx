@@ -146,67 +146,83 @@ interface TabItemProps {
   onDragEnd: () => void;
 }
 
-function TabItem({
-  session,
-  isActive,
-  isDragging,
-  isDragOver,
-  onActivate,
+function TabCloseButton({
+  title,
   onClose,
-  onDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onDragEnd,
-}: TabItemProps): React.ReactElement {
-  const [hovered, setHovered] = useState(false);
-  const isExited = session.status === 'exited';
-  const modelSuffix = session.model ? ` (${shortModelName(session.model)})` : '';
-  const label = isExited
-    ? `${session.title} [exited]${modelSuffix}`
-    : `${session.title}${modelSuffix}`;
+}: {
+  title: string;
+  onClose: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="flex-shrink-0 p-0.5 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-panel transition-colors duration-100"
+      title={`Close ${title}`}
+      aria-label={`Close ${title}`}
+    >
+      <CloseIcon />
+    </button>
+  );
+}
 
+interface TabItemContentProps extends TabItemProps {
+  hovered: boolean;
+  setHovered: React.Dispatch<React.SetStateAction<boolean>>;
+  isExited: boolean;
+  label: string;
+}
+
+function TabItemContent(p: TabItemContentProps): React.ReactElement {
   return (
     <div
       draggable
       role="tab"
-      aria-selected={isActive}
+      aria-selected={p.isActive}
       tabIndex={0}
-      title={label}
-      className={getTabClasses(isActive, isExited, isDragging, isDragOver)}
-      onClick={onActivate}
+      title={p.label}
+      className={getTabClasses(p.isActive, p.isExited, p.isDragging, p.isDragOver)}
+      onClick={p.onActivate}
       onMouseDown={(e) => {
         if (e.button === 1) {
           e.preventDefault();
-          onClose();
+          p.onClose();
         }
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onKeyDown={(e) => e.key === 'Enter' && onActivate()}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      onMouseEnter={() => p.setHovered(true)}
+      onMouseLeave={() => p.setHovered(false)}
+      onKeyDown={(e) => e.key === 'Enter' && p.onActivate()}
+      onDragStart={p.onDragStart}
+      onDragOver={p.onDragOver}
+      onDragLeave={p.onDragLeave}
+      onDrop={p.onDrop}
+      onDragEnd={p.onDragEnd}
     >
-      <TabBadges session={session} isExited={isExited} />
-      <span className="truncate max-w-[120px]">{label}</span>
-      {(hovered || isActive) && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-0.5 rounded text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-panel transition-colors duration-100"
-          title={`Close ${session.title}`}
-          aria-label={`Close ${session.title}`}
-        >
-          <CloseIcon />
-        </button>
-      )}
+      <TabBadges session={p.session} isExited={p.isExited} />
+      <span className="truncate max-w-[120px]">{p.label}</span>
+      {(p.hovered || p.isActive) && <TabCloseButton title={p.session.title} onClose={p.onClose} />}
     </div>
+  );
+}
+
+function TabItem(props: TabItemProps): React.ReactElement {
+  const [hovered, setHovered] = useState(false);
+  const isExited = props.session.status === 'exited';
+  const modelSuffix = props.session.model ? ` (${shortModelName(props.session.model)})` : '';
+  const label = isExited
+    ? `${props.session.title} [exited]${modelSuffix}`
+    : `${props.session.title}${modelSuffix}`;
+  return (
+    <TabItemContent
+      {...props}
+      hovered={hovered}
+      setHovered={setHovered}
+      isExited={isExited}
+      label={label}
+    />
   );
 }
 

@@ -1,11 +1,9 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo } from 'react';
 
-import { useToastContext } from '../../contexts/ToastContext';
 import { DirtyCloseDialog } from './DirtyCloseDialog';
-import { type DirtyCloseChoice, finalizeDirtyCloseChoice } from './dirtyCloseFlow';
 import type { OpenFile } from './FileViewerManager';
-import { useFileViewerManager } from './FileViewerManager';
-import { CloseTabButton, type ContextMenuState, TabContextMenu } from './FileViewerTabItem.parts';
+import { useTabActions, useTabItemState } from './FileViewerTabItem.helpers';
+import { CloseTabButton, TabContextMenu } from './FileViewerTabItem.parts';
 
 export interface FileViewerTabItemProps {
   file: OpenFile;
@@ -121,124 +119,88 @@ function PinIndicator(): React.ReactElement {
   );
 }
 
-function useTabActions({
+type TabBodyProps = {
+  file: OpenFile;
+  isActive: boolean;
+  tabRef?: React.Ref<HTMLDivElement>;
+  isTabHovered: boolean;
+  setIsTabHovered: (v: boolean) => void;
+  tabActions: ReturnType<typeof useTabActions>;
+  requestClose: () => void;
+  handleContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
+};
+
+function TabBody(p: TabBodyProps): React.ReactElement {
+  const { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown } = p.tabActions;
+  return (
+    <div
+      ref={p.tabRef}
+      role="tab"
+      aria-selected={p.isActive}
+      tabIndex={p.isActive ? 0 : -1}
+      title={p.file.path}
+      onClick={handleActivate}
+      onDoubleClick={handleDoubleClick}
+      onAuxClick={handleAuxClick}
+      onKeyDown={handleKeyDown}
+      onContextMenu={p.handleContextMenu}
+      onMouseEnter={() => p.setIsTabHovered(true)}
+      onMouseLeave={() => p.setIsTabHovered(false)}
+      style={getTabStyle(p.isActive, p.isTabHovered, p.file.isPinned)}
+    >
+      <TabIndicator file={p.file} />
+      <TabLabel file={p.file} />
+      {p.file.isPinned ? (
+        <PinIndicator />
+      ) : (
+        <CloseTabButton
+          fileName={p.file.name}
+          isActive={p.isActive}
+          isDirty={!!p.file.isDirty}
+          isTabHovered={p.isTabHovered}
+          onRequestClose={p.requestClose}
+        />
+      )}
+    </div>
+  );
+}
+
+type TabOverlaysProps = Pick<
+  FileViewerTabItemProps,
+  'file' | 'onClose' | 'onCloseOthers' | 'onCloseToRight' | 'onCloseAll' | 'onTogglePin'
+> & {
+  contextMenu: ReturnType<typeof useTabItemState>['contextMenu'];
+  dismissContextMenu: () => void;
+  isDialogOpen: boolean;
+  handleDialogAction: ReturnType<typeof useTabItemState>['handleDialogAction'];
+};
+function TabOverlays({
   file,
-  onActivate,
-  onRequestClose,
-  onPin,
-}: {
-  file: OpenFile;
-  onActivate: (filePath: string) => void;
-  onRequestClose: () => void;
-  onPin?: (filePath: string) => void;
-}) {
-  const handleActivate = useCallback(() => onActivate(file.path), [file.path, onActivate]);
-  const handleDoubleClick = useCallback(() => {
-    if (file.isPreview && onPin) onPin(file.path);
-  }, [file.isPreview, file.path, onPin]);
-  const handleAuxClick = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (event.button !== 1) return;
-      event.preventDefault();
-      onRequestClose();
-    },
-    [onRequestClose],
+  onClose,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
+  onTogglePin,
+  contextMenu,
+  dismissContextMenu,
+  isDialogOpen,
+  handleDialogAction,
+}: TabOverlaysProps): React.ReactElement {
+  return (
+    <>
+      <TabContextMenu
+        menu={contextMenu}
+        file={file}
+        onClose={onClose}
+        onCloseOthers={onCloseOthers}
+        onCloseToRight={onCloseToRight}
+        onCloseAll={onCloseAll}
+        onTogglePin={onTogglePin}
+        onDismiss={dismissContextMenu}
+      />
+      <DirtyCloseDialog fileName={file.name} isOpen={isDialogOpen} onAction={handleDialogAction} />
+    </>
   );
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Enter' || event.key === ' ') handleActivate();
-    },
-    [handleActivate],
-  );
-  return { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown };
-}
-
-function useRequestClose(
-  file: OpenFile,
-  onClose: (filePath: string) => void,
-  setIsDialogOpen: (open: boolean) => void,
-): () => void {
-  return useCallback(() => {
-    if (file.isPinned) return;
-    if (!file.isDirty) {
-      onClose(file.path);
-      return;
-    }
-    setIsDialogOpen(true);
-  }, [file.isDirty, file.isPinned, file.path, onClose, setIsDialogOpen]);
-}
-
-interface HandleDialogActionArgs {
-  file: OpenFile;
-  onClose: (filePath: string) => void;
-  setIsDialogOpen: (open: boolean) => void;
-  saveFile: ReturnType<typeof useFileViewerManager>['saveFile'];
-  discardDraft: ReturnType<typeof useFileViewerManager>['discardDraft'];
-  toast: ReturnType<typeof useToastContext>['toast'];
-}
-
-function useHandleDialogAction(args: HandleDialogActionArgs) {
-  const { file, onClose, setIsDialogOpen, saveFile, discardDraft, toast } = args;
-  return useCallback(
-    async (choice: DirtyCloseChoice) => {
-      setIsDialogOpen(false);
-      const resolution = await finalizeDirtyCloseChoice({
-        choice,
-        discardDraft,
-        filePath: file.path,
-        saveFile,
-      });
-      if (resolution.outcome !== 'close') {
-        toast(
-          resolution.choice === 'save' ? resolution.error : `Kept ${file.name} open`,
-          resolution.choice === 'save' ? 'error' : 'info',
-        );
-        return;
-      }
-      toast(`Closed ${file.name}`, 'info');
-      onClose(file.path);
-    },
-    [discardDraft, file.name, file.path, onClose, saveFile, setIsDialogOpen, toast],
-  );
-}
-
-function useTabItemState(
-  file: OpenFile,
-  onActivate: (p: string) => void,
-  onClose: (p: string) => void,
-  onPin?: (p: string) => void,
-) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isTabHovered, setIsTabHovered] = useState(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0 });
-  const { saveFile, discardDraft } = useFileViewerManager();
-  const { toast } = useToastContext();
-  const requestClose = useRequestClose(file, onClose, setIsDialogOpen);
-  const handleDialogAction = useHandleDialogAction({
-    file,
-    onClose,
-    setIsDialogOpen,
-    saveFile,
-    discardDraft,
-    toast,
-  });
-  const tabActions = useTabActions({ file, onActivate, onRequestClose: requestClose, onPin });
-  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setContextMenu({ visible: true, x: e.clientX, y: e.clientY });
-  }, []);
-  const dismissContextMenu = useCallback(() => setContextMenu({ visible: false, x: 0, y: 0 }), []);
-  return {
-    isDialogOpen,
-    isTabHovered,
-    setIsTabHovered,
-    contextMenu,
-    dismissContextMenu,
-    handleContextMenu,
-    requestClose,
-    handleDialogAction,
-    tabActions,
-  };
 }
 
 export const FileViewerTabItem = memo(function FileViewerTabItem({
@@ -253,60 +215,31 @@ export const FileViewerTabItem = memo(function FileViewerTabItem({
   onCloseAll,
   tabRef,
 }: FileViewerTabItemProps): React.ReactElement {
-  const {
-    isDialogOpen,
-    isTabHovered,
-    setIsTabHovered,
-    contextMenu,
-    dismissContextMenu,
-    handleContextMenu,
-    requestClose,
-    handleDialogAction,
-    tabActions,
-  } = useTabItemState(file, onActivate, onClose, onPin);
-  const { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown } = tabActions;
+  const s = useTabItemState(file, onActivate, onClose, onPin);
   return (
     <>
-      <div
-        ref={tabRef}
-        role="tab"
-        aria-selected={isActive}
-        tabIndex={isActive ? 0 : -1}
-        title={file.path}
-        onClick={handleActivate}
-        onDoubleClick={handleDoubleClick}
-        onAuxClick={handleAuxClick}
-        onKeyDown={handleKeyDown}
-        onContextMenu={handleContextMenu}
-        onMouseEnter={() => setIsTabHovered(true)}
-        onMouseLeave={() => setIsTabHovered(false)}
-        style={getTabStyle(isActive, isTabHovered, file.isPinned)}
-      >
-        <TabIndicator file={file} />
-        <TabLabel file={file} />
-        {file.isPinned ? (
-          <PinIndicator />
-        ) : (
-          <CloseTabButton
-            fileName={file.name}
-            isActive={isActive}
-            isDirty={!!file.isDirty}
-            isTabHovered={isTabHovered}
-            onRequestClose={requestClose}
-          />
-        )}
-      </div>
-      <TabContextMenu
-        menu={contextMenu}
+      <TabBody
+        file={file}
+        isActive={isActive}
+        tabRef={tabRef}
+        isTabHovered={s.isTabHovered}
+        setIsTabHovered={s.setIsTabHovered}
+        tabActions={s.tabActions}
+        requestClose={s.requestClose}
+        handleContextMenu={s.handleContextMenu}
+      />
+      <TabOverlays
         file={file}
         onClose={onClose}
         onCloseOthers={onCloseOthers}
         onCloseToRight={onCloseToRight}
         onCloseAll={onCloseAll}
         onTogglePin={onTogglePin}
-        onDismiss={dismissContextMenu}
+        contextMenu={s.contextMenu}
+        dismissContextMenu={s.dismissContextMenu}
+        isDialogOpen={s.isDialogOpen}
+        handleDialogAction={s.handleDialogAction}
       />
-      <DirtyCloseDialog fileName={file.name} isOpen={isDialogOpen} onAction={handleDialogAction} />
     </>
   );
 });

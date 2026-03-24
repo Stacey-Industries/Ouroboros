@@ -247,16 +247,7 @@ export function CodeHeaderToggles({
 
 /* ---------- CodeHeaderActions ---------- */
 
-export function CodeHeaderActions({
-  showApply,
-  filePath,
-  isApplied,
-  status,
-  apply,
-  handleOpenInEditor,
-  copied,
-  handleCopy,
-}: {
+type CodeHeaderActionsProps = {
   showApply: boolean;
   filePath?: string;
   isApplied: boolean;
@@ -265,22 +256,36 @@ export function CodeHeaderActions({
   handleOpenInEditor: () => void;
   copied: boolean;
   handleCopy: () => void;
-}): React.ReactElement {
+};
+
+function ApplyButton({
+  show,
+  apply,
+}: {
+  show: boolean;
+  apply: () => Promise<void>;
+}): React.ReactElement | null {
+  if (!show) return null;
+  return (
+    <button
+      onClick={() => void apply()}
+      title="Apply to file"
+      className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
+      style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
+    >
+      Apply
+    </button>
+  );
+}
+
+export function CodeHeaderActions(p: CodeHeaderActionsProps): React.ReactElement {
+  const showApplyButton = p.showApply && !!p.filePath && !p.isApplied && p.status === 'idle';
   return (
     <>
-      {showApply && filePath && !isApplied && status === 'idle' && (
+      <ApplyButton show={showApplyButton} apply={p.apply} />
+      {p.filePath && (
         <button
-          onClick={() => void apply()}
-          title="Apply to file"
-          className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
-          style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
-        >
-          Apply
-        </button>
-      )}
-      {filePath && (
-        <button
-          onClick={handleOpenInEditor}
+          onClick={p.handleOpenInEditor}
           title="Open in editor"
           className="rounded p-0.5 text-text-semantic-muted transition-colors hover:bg-surface-base hover:text-text-semantic-primary"
         >
@@ -288,13 +293,13 @@ export function CodeHeaderActions({
         </button>
       )}
       <button
-        onClick={handleCopy}
-        title={copied ? 'Copied!' : 'Copy code'}
+        onClick={p.handleCopy}
+        title={p.copied ? 'Copied!' : 'Copy code'}
         className="rounded p-0.5 text-text-semantic-muted transition-colors hover:bg-surface-base hover:text-text-semantic-primary"
       >
-        {copied ? <CheckIcon /> : <CopyIcon />}
+        {p.copied ? <CheckIcon /> : <CopyIcon />}
       </button>
-      {copied && (
+      {p.copied && (
         <span className="text-[10px] font-medium" style={{ color: 'var(--status-success)' }}>
           Copied!
         </span>

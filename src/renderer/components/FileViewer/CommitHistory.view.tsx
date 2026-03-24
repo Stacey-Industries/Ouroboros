@@ -126,6 +126,20 @@ type ListPanelProps = Omit<
   'onBack' | 'patch' | 'patchError' | 'patchLoading' | 'selectedHash'
 >;
 
+function LoadMoreButton({ loadMore }: { loadMore: () => Promise<void> }): React.ReactElement {
+  return (
+    <div style={{ padding: '8px 12px', textAlign: 'center' }}>
+      <button
+        onClick={() => void loadMore()}
+        className="text-text-semantic-muted"
+        style={{ ...buttonStyle, fontSize: '0.75rem', padding: '4px 12px' }}
+      >
+        Load more
+      </button>
+    </div>
+  );
+}
+
 function CommitListBody({
   commits,
   error,
@@ -149,17 +163,7 @@ function CommitListBody({
       {commits.map((commit) => (
         <CommitRow key={commit.hash} commit={commit} onSelect={onSelectCommit} />
       ))}
-      {hasMore && !isLoading && commits.length > 0 ? (
-        <div style={{ padding: '8px 12px', textAlign: 'center' }}>
-          <button
-            onClick={() => void loadMore()}
-            className="text-text-semantic-muted"
-            style={{ ...buttonStyle, fontSize: '0.75rem', padding: '4px 12px' }}
-          >
-            Load more
-          </button>
-        </div>
-      ) : null}
+      {hasMore && !isLoading && commits.length > 0 ? <LoadMoreButton loadMore={loadMore} /> : null}
       {isLoading ? (
         <div
           className="text-text-semantic-faint"

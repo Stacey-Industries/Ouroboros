@@ -180,15 +180,7 @@ export interface NewTerminalMenuProps {
   onClose: () => void;
 }
 
-function NewTerminalMenuItems({
-  submenu,
-  setSubmenu,
-  claudeModels,
-  codexModels,
-  onNew,
-  onNewClaude,
-  onNewCodex,
-}: {
+interface NewTerminalMenuItemsProps {
   submenu: 'claude' | 'codex' | null;
   setSubmenu: React.Dispatch<React.SetStateAction<'claude' | 'codex' | null>>;
   claudeModels: ModelOption[];
@@ -196,10 +188,12 @@ function NewTerminalMenuItems({
   onNew: () => void;
   onNewClaude: (providerModel?: string) => void;
   onNewCodex: (model?: string) => void;
-}): React.ReactElement {
+}
+
+function NewTerminalMenuItems(p: NewTerminalMenuItemsProps): React.ReactElement {
   return (
     <>
-      <MenuRow onClick={onNew}>
+      <MenuRow onClick={p.onNew}>
         <TerminalIcon />
         <span>Terminal</span>
         <span className="ml-auto text-text-semantic-muted text-[10px] opacity-60">
@@ -208,26 +202,26 @@ function NewTerminalMenuItems({
       </MenuRow>
       <div className="h-px bg-border-semantic my-1" />
       <ProviderSection
-        active={submenu}
-        setActive={setSubmenu}
+        active={p.submenu}
+        setActive={p.setSubmenu}
         submenuKey="claude"
         label="Claude Code"
         iconClassName="text-interactive-accent"
         showChevron
-        onClick={onNewClaude}
-        models={claudeModels}
-        onSelect={onNewClaude}
+        onClick={p.onNewClaude}
+        models={p.claudeModels}
+        onSelect={p.onNewClaude}
       />
       <ProviderSection
-        active={submenu}
-        setActive={setSubmenu}
+        active={p.submenu}
+        setActive={p.setSubmenu}
         submenuKey="codex"
         label="Codex"
         iconClassName="text-[var(--accent-blue,var(--interactive-accent))]"
-        showChevron={codexModels.length > 0}
-        onClick={onNewCodex}
-        models={codexModels}
-        onSelect={onNewCodex}
+        showChevron={p.codexModels.length > 0}
+        onClick={p.onNewCodex}
+        models={p.codexModels}
+        onSelect={p.onNewCodex}
       />
     </>
   );

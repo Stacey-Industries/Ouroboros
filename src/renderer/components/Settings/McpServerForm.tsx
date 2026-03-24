@@ -20,11 +20,9 @@ interface McpServerFormProps {
   onCancel: () => void;
 }
 
-function FormFields({
-  form,
-  isEdit,
-  onFieldChange,
-}: Pick<McpServerFormProps, 'form' | 'isEdit' | 'onFieldChange'>): React.ReactElement {
+type FormFieldsProps = Pick<McpServerFormProps, 'form' | 'isEdit' | 'onFieldChange'>;
+
+function FormFields({ form, isEdit, onFieldChange }: FormFieldsProps): React.ReactElement {
   return (
     <>
       {!isEdit && (
@@ -158,22 +156,20 @@ function EnvRowsEditor({
   );
 }
 
-function EnvRowInput({
-  row,
-  idx,
-  onUpdate,
-  onRemove,
-}: {
+const monoInputBase: React.CSSProperties = {
+  ...inputStyle,
+  fontFamily: 'var(--font-mono)',
+  fontSize: '11px',
+};
+
+interface EnvRowInputProps {
   row: { key: string; value: string };
   idx: number;
   onUpdate: (idx: number, field: 'key' | 'value', val: string) => void;
   onRemove: (idx: number) => void;
-}): React.ReactElement {
-  const monoInput: React.CSSProperties = {
-    ...inputStyle,
-    fontFamily: 'var(--font-mono)',
-    fontSize: '11px',
-  };
+}
+
+function EnvRowInput({ row, idx, onUpdate, onRemove }: EnvRowInputProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
       <input
@@ -182,7 +178,7 @@ function EnvRowInput({
         onChange={(e) => onUpdate(idx, 'key', e.target.value)}
         placeholder="KEY"
         className="text-text-semantic-primary"
-        style={{ ...monoInput, flex: 1 }}
+        style={{ ...monoInputBase, flex: 1 }}
       />
       <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
         =
@@ -193,7 +189,7 @@ function EnvRowInput({
         onChange={(e) => onUpdate(idx, 'value', e.target.value)}
         placeholder="value"
         className="text-text-semantic-primary"
-        style={{ ...monoInput, flex: 2 }}
+        style={{ ...monoInputBase, flex: 2 }}
       />
       <button
         onClick={() => onRemove(idx)}

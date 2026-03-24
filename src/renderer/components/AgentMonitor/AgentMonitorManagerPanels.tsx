@@ -165,6 +165,11 @@ const ToolbarButton = memo(function ToolbarButton({
   );
 });
 
+type ToolbarButtonsProps = Omit<
+  MonitorToolbarProps,
+  'filterQuery' | 'hasAnySessions' | 'onFilterChange'
+>;
+
 function ToolbarButtons({
   compareMode,
   costMode,
@@ -172,10 +177,8 @@ function ToolbarButtons({
   onToggleCompare,
   onToggleCost,
   onToggleMultiSession,
-}: Omit<
-  MonitorToolbarProps,
-  'filterQuery' | 'hasAnySessions' | 'onFilterChange'
->): React.ReactElement {
+}: ToolbarButtonsProps): React.ReactElement {
+  const multiActive = multiSessionMode !== 'off';
   return (
     <>
       <ToolbarButton
@@ -187,14 +190,10 @@ function ToolbarButtons({
         <CostIcon />
       </ToolbarButton>
       <ToolbarButton
-        active={multiSessionMode !== 'off'}
+        active={multiActive}
         onClick={onToggleMultiSession}
         ariaLabel="Toggle multi-session mode"
-        title={
-          multiSessionMode !== 'off'
-            ? 'Exit multi-session mode'
-            : 'Launch parallel Claude Code sessions'
-        }
+        title={multiActive ? 'Exit multi-session mode' : 'Launch parallel Claude Code sessions'}
       >
         <MultiSessionIcon />
       </ToolbarButton>

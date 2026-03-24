@@ -31,17 +31,7 @@ function SearchIcon(): React.ReactElement {
 
 type HistorySections = Record<'active' | 'recent' | 'older', AgentChatThreadRecord[]>;
 
-function useHistoryPanelState(
-  panelRef: React.RefObject<HTMLDivElement>,
-  threads: AgentChatThreadRecord[],
-  onClose: () => void,
-  onSelect: (id: string) => void,
-) {
-  const searchRef = useRef<HTMLInputElement>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  useEffect(() => {
-    searchRef.current?.focus();
-  }, []);
+function usePanelDismiss(panelRef: React.RefObject<HTMLDivElement>, onClose: () => void) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -61,6 +51,20 @@ function useHistoryPanelState(
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose, panelRef]);
+}
+
+function useHistoryPanelState(
+  panelRef: React.RefObject<HTMLDivElement>,
+  threads: AgentChatThreadRecord[],
+  onClose: () => void,
+  onSelect: (id: string) => void,
+) {
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
+  usePanelDismiss(panelRef, onClose);
   const filteredThreads = useMemo(
     () =>
       searchQuery.trim()
@@ -131,6 +135,48 @@ function HistoryPanelFooter({ count }: { count: number }): React.ReactElement | 
   );
 }
 
+type PanelBodyProps = {
+  searchQuery: string;
+  filteredThreads: AgentChatThreadRecord[];
+  sections: HistorySections;
+  activeThreadId: string | null;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+function HistoryPanelBody(p: PanelBodyProps): React.ReactElement {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+      {p.filteredThreads.length === 0 && (
+        <div className="px-3 py-4 text-center text-xs text-text-semantic-muted">
+          {p.searchQuery ? 'No matching conversations' : 'No conversations yet'}
+        </div>
+      )}
+      {(['active', 'recent', 'older'] as const).map((section) => (
+        <ThreadSectionView
+          key={section}
+          section={section}
+          items={p.sections[section]}
+          filteredCount={p.filteredThreads.length}
+          activeThreadId={p.activeThreadId}
+          onSelect={p.onSelect}
+          onDelete={p.onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
+const PANEL_STYLE: React.CSSProperties = {
+  top: 0,
+  maxHeight: '60%',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+  backgroundColor: 'var(--surface-overlay)',
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+  borderRadius: '0 0 10px 10px',
+};
+
 export function ChatHistoryPanel({
   threads,
   activeThreadId,
@@ -145,39 +191,21 @@ export function ChatHistoryPanel({
     <div
       ref={panelRef}
       className="absolute left-0 right-0 z-50 flex flex-col overflow-hidden border-b border-border-semantic"
-      style={{
-        top: 0,
-        maxHeight: '60%',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-        backgroundColor: 'var(--surface-overlay)',
-        backdropFilter: 'blur(24px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        borderRadius: '0 0 10px 10px',
-      }}
+      style={PANEL_STYLE}
     >
       <HistoryPanelSearch
         searchRef={searchRef}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-        {filteredThreads.length === 0 && (
-          <div className="px-3 py-4 text-center text-xs text-text-semantic-muted">
-            {searchQuery ? 'No matching conversations' : 'No conversations yet'}
-          </div>
-        )}
-        {(['active', 'recent', 'older'] as const).map((section) => (
-          <ThreadSectionView
-            key={section}
-            section={section}
-            items={sections[section]}
-            filteredCount={filteredThreads.length}
-            activeThreadId={activeThreadId}
-            onSelect={handleSelect}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
+      <HistoryPanelBody
+        searchQuery={searchQuery}
+        filteredThreads={filteredThreads}
+        sections={sections}
+        activeThreadId={activeThreadId}
+        onSelect={handleSelect}
+        onDelete={onDelete}
+      />
       <HistoryPanelFooter count={threads.length} />
     </div>
   );

@@ -79,22 +79,13 @@ function useInlineEditorRuntime(props: InlineEditorProps): InlineEditorRuntime {
     diagnosticsRef: useRef<LspDiagnostic[]>([]),
   };
   const setupRef = useRef<EditorSetup | null>(null);
-
-  syncRuntimeRefs(runtime, props);
-  setupRef.current ??= createEditorSetup({ runtime });
-
-  return { ...runtime, setup: setupRef.current };
-}
-
-function syncRuntimeRefs(
-  runtime: Omit<InlineEditorRuntime, 'setup'>,
-  props: InlineEditorProps,
-): void {
   runtime.onSaveRef.current = props.onSave;
   runtime.onContentChangeRef.current = props.onContentChange;
   runtime.onDirtyChangeRef.current = props.onDirtyChange;
   runtime.filePathRef.current = props.filePath;
   runtime.projectRootRef.current = props.projectRoot;
+  setupRef.current ??= createEditorSetup({ runtime });
+  return { ...runtime, setup: setupRef.current };
 }
 
 function createEditorSetup({
@@ -153,31 +144,9 @@ function mountEditorView(
 }
 
 function useEditorMount(runtime: InlineEditorRuntime): void {
-  const {
-    containerRef,
-    viewRef,
-    languageCompartment,
-    highlightCompartment,
-    lspCompartment,
-    savedContentRef,
-    initialFilePathRef,
-    initialThemeIdRef,
-    didChangeTimerRef,
-    setup,
-  } = runtime;
-
+  const { viewRef, didChangeTimerRef } = runtime;
   useEffect(() => {
-    const result = mountEditorView({
-      containerRef,
-      viewRef,
-      languageCompartment,
-      highlightCompartment,
-      lspCompartment,
-      savedContentRef,
-      initialFilePathRef,
-      initialThemeIdRef,
-      setup,
-    });
+    const result = mountEditorView(runtime);
     if (!result) return;
     const { view, mountedFilePath } = result;
     return () => {
@@ -186,18 +155,8 @@ function useEditorMount(runtime: InlineEditorRuntime): void {
       view.destroy();
       viewRef.current = null;
     };
-  }, [
-    containerRef,
-    didChangeTimerRef,
-    highlightCompartment,
-    savedContentRef,
-    initialFilePathRef,
-    initialThemeIdRef,
-    languageCompartment,
-    lspCompartment,
-    setup,
-    viewRef,
-  ]);
+    // runtime is a stable object created once per mount (refs never change identity)
+  }, [runtime, didChangeTimerRef, viewRef]);
 }
 
 function createMountedEditorView(input: {

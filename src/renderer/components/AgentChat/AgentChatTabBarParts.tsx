@@ -1,14 +1,15 @@
 /**
- * AgentChatTabBarParts.tsx — Sub-components and hooks for AgentChatTabBar.
+ * AgentChatTabBarParts.tsx — Sub-components for AgentChatTabBar.
  * Extracted to keep AgentChatTabBar.tsx under the 300-line limit.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import { OPEN_CHAT_IN_TERMINAL_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatThreadRecord } from '../../types/electron';
-
-export type LinkedSession = { provider: 'claude-code' | 'codex' | null; sessionId: string | null };
+import type { LinkedSession } from './AgentChatTabBarHooks';
+export { resolveLinkedProvider, useLinkedSessionId } from './AgentChatTabBarHooks';
+export type { LinkedSession };
 
 export const THREAD_DROPDOWN_STYLE: React.CSSProperties = {
   position: 'fixed',
@@ -25,32 +26,6 @@ export const THREAD_DROPDOWN_STYLE: React.CSSProperties = {
   border: '1px solid rgba(255, 255, 255, 0.08)',
   borderRadius: 10,
 };
-
-export function resolveLinkedProvider(
-  provider: unknown,
-  codexThreadId?: string | null,
-  claudeSessionId?: string | null,
-): LinkedSession['provider'] {
-  return provider === 'claude-code' || provider === 'codex'
-    ? provider
-    : codexThreadId
-      ? 'codex'
-      : claudeSessionId
-        ? 'claude-code'
-        : null;
-}
-
-function getInitialLinkedSession(thread: AgentChatThreadRecord | null): LinkedSession {
-  const orchestration = thread?.latestOrchestration;
-  return {
-    provider: resolveLinkedProvider(
-      orchestration?.provider,
-      orchestration?.codexThreadId,
-      orchestration?.claudeSessionId,
-    ),
-    sessionId: orchestration?.codexThreadId ?? orchestration?.claudeSessionId ?? null,
-  };
-}
 
 export function BranchTabIcon({
   parentTitle,
@@ -104,20 +79,37 @@ function useThreadDropdownDismiss(
   }, [dropdownRef, onClose]);
 }
 
-function ThreadDropdownItem({
-  activeThreadId,
-  onClose,
+function DropdownItemDeleteButton({
+  threadId,
   onDeleteThread,
-  onSelectThread,
-  thread,
 }: {
+  threadId: string;
+  onDeleteThread: (id: string) => void;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={(event) => {
+        event.stopPropagation();
+        onDeleteThread(threadId);
+      }}
+      className="rounded px-1 text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100"
+      title="Delete conversation"
+    >
+      &times;
+    </button>
+  );
+}
+
+type ThreadDropdownItemProps = {
   activeThreadId: string | null;
   onClose: () => void;
   onDeleteThread: (id: string) => void;
   onSelectThread: (id: string) => void;
   thread: AgentChatThreadRecord;
-}): React.ReactElement {
-  const isActive = thread.id === activeThreadId;
+};
+
+function ThreadDropdownItem(p: ThreadDropdownItemProps): React.ReactElement {
+  const isActive = p.thread.id === p.activeThreadId;
   return (
     <div
       className="group flex cursor-pointer items-center gap-2 px-3 py-1.5 transition-colors duration-75 hover:bg-surface-raised"
@@ -127,47 +119,30 @@ function ThreadDropdownItem({
           : undefined,
       }}
       onClick={() => {
-        onSelectThread(thread.id);
-        onClose();
+        p.onSelectThread(p.thread.id);
+        p.onClose();
       }}
     >
-      {thread.branchInfo && (
+      {p.thread.branchInfo && (
         <BranchTabIcon
-          parentTitle={thread.branchInfo.parentTitle ?? ''}
-          messageIndex={thread.branchInfo.fromMessageIndex ?? 0}
+          parentTitle={p.thread.branchInfo.parentTitle ?? ''}
+          messageIndex={p.thread.branchInfo.fromMessageIndex ?? 0}
         />
       )}
       <span
         className={`flex-1 truncate text-xs ${isActive ? 'text-interactive-accent' : 'text-text-semantic-primary'}`}
       >
-        {thread.title}
+        {p.thread.title}
       </span>
       <span className="text-[10px] text-text-semantic-muted">
-        {thread.messages?.length ?? 0} msgs
+        {p.thread.messages?.length ?? 0} msgs
       </span>
-      <button
-        onClick={(event) => {
-          event.stopPropagation();
-          onDeleteThread(thread.id);
-        }}
-        className="rounded px-1 text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100"
-        title="Delete conversation"
-      >
-        &times;
-      </button>
+      <DropdownItemDeleteButton threadId={p.thread.id} onDeleteThread={p.onDeleteThread} />
     </div>
   );
 }
 
-function ThreadDropdownContent({
-  activeThreadId,
-  dropdownRef,
-  onClose,
-  onDeleteThread,
-  onSelectThread,
-  threads,
-  triggerRect,
-}: {
+type ThreadDropdownContentProps = {
   activeThreadId: string | null;
   dropdownRef: React.RefObject<HTMLDivElement>;
   onClose: () => void;
@@ -175,27 +150,29 @@ function ThreadDropdownContent({
   onSelectThread: (id: string) => void;
   threads: AgentChatThreadRecord[];
   triggerRect: DOMRect;
-}): React.ReactElement {
+};
+
+function ThreadDropdownContent(p: ThreadDropdownContentProps): React.ReactElement {
   return (
     <div
-      ref={dropdownRef}
+      ref={p.dropdownRef}
       style={{
         ...THREAD_DROPDOWN_STYLE,
-        top: triggerRect.bottom + 2,
-        left: triggerRect.left,
-        width: triggerRect.width,
+        top: p.triggerRect.bottom + 2,
+        left: p.triggerRect.left,
+        width: p.triggerRect.width,
       }}
     >
-      {threads.length === 0 && (
+      {p.threads.length === 0 && (
         <div className="px-3 py-2 text-xs text-text-semantic-muted">No conversations</div>
       )}
-      {threads.map((thread) => (
+      {p.threads.map((thread) => (
         <ThreadDropdownItem
           key={thread.id}
-          activeThreadId={activeThreadId}
-          onClose={onClose}
-          onDeleteThread={onDeleteThread}
-          onSelectThread={onSelectThread}
+          activeThreadId={p.activeThreadId}
+          onClose={p.onClose}
+          onDeleteThread={p.onDeleteThread}
+          onSelectThread={p.onSelectThread}
           thread={thread}
         />
       ))}
@@ -234,6 +211,24 @@ export function ThreadDropdown({
   );
 }
 
+function TerminalIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="4 17 10 11 4 5" />
+      <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  );
+}
+
 export function OpenInTerminalButton({
   linkedSession,
   threadModel,
@@ -253,7 +248,6 @@ export function OpenInTerminalButton({
       }),
     );
   }, [linkedSession.provider, linkedSession.sessionId, threadModel]);
-
   if (!linkedSession.sessionId) return null;
   return (
     <button
@@ -261,76 +255,8 @@ export function OpenInTerminalButton({
       className="flex shrink-0 items-center gap-1 px-2 py-1.5 text-xs text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
       title="Resume this chat session in an interactive terminal"
     >
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="4 17 10 11 4 5" />
-        <line x1="12" y1="19" x2="20" y2="19" />
-      </svg>
+      <TerminalIcon />
       <span>Terminal</span>
     </button>
   );
-}
-
-function useLinkedTerminalPoll(
-  thread: AgentChatThreadRecord | null,
-  setState: React.Dispatch<React.SetStateAction<LinkedSession>>,
-): void {
-  useEffect(() => {
-    if (!thread?.id || !window.electronAPI?.agentChat?.getLinkedTerminal) {
-      setState({ provider: null, sessionId: null });
-      return;
-    }
-    let cancelled = false;
-    const query = () => {
-      void window.electronAPI.agentChat.getLinkedTerminal(thread.id).then((result) => {
-        if (cancelled || !result?.success) return;
-        const provider = resolveLinkedProvider(
-          result.provider,
-          result.codexThreadId,
-          result.claudeSessionId,
-        );
-        const sessionId = result.codexThreadId ?? result.claudeSessionId ?? null;
-        if (provider && sessionId) setState({ provider, sessionId });
-      });
-    };
-    query();
-    const isActive =
-      thread.status === 'submitting' ||
-      thread.status === 'running' ||
-      thread.status === 'verifying';
-    const intervalId = isActive ? setInterval(query, 2000) : undefined;
-    return () => {
-      cancelled = true;
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [thread?.id, thread?.status, setState]);
-}
-
-export function useLinkedSessionId(thread: AgentChatThreadRecord | null): LinkedSession {
-  const [state, setState] = useState<LinkedSession>(() => getInitialLinkedSession(thread));
-  const orchestration = thread?.latestOrchestration;
-  useEffect(() => {
-    if (orchestration?.codexThreadId) {
-      setState({ provider: 'codex', sessionId: orchestration.codexThreadId });
-      return;
-    }
-    if (orchestration?.claudeSessionId) {
-      setState({ provider: 'claude-code', sessionId: orchestration.claudeSessionId });
-      return;
-    }
-    setState((previous) => ({
-      provider: orchestration?.provider ?? previous.provider,
-      sessionId: previous.sessionId,
-    }));
-  }, [orchestration?.claudeSessionId, orchestration?.codexThreadId, orchestration?.provider]);
-  useLinkedTerminalPoll(thread, setState);
-  return state;
 }

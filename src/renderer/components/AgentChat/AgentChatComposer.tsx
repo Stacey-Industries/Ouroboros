@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 
 import type {
   AgentChatMessageRecord,
@@ -11,6 +11,7 @@ import {
   useComposerAutocompleteReset,
   useComposerDraftHandlers,
   useComposerDraftSync,
+  useComposerMenuState,
   useImageAttachmentHandlers,
 } from './AgentChatComposerHooks';
 import { AttachmentChipsBar, ComposerInput, ComposerMenus } from './AgentChatComposerParts';
@@ -107,98 +108,88 @@ type ComposerState = {
   handlers: ReturnType<typeof useComposerDraftHandlers>;
 };
 
+type ComposerRefs = {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  lastSyncedDraft: React.MutableRefObject<string>;
+};
+
+function useComposerHandlers(
+  p: AgentChatComposerProps,
+  refs: ComposerRefs,
+  menu: ReturnType<typeof useComposerMenuState>,
+  useMentionSystem: boolean,
+) {
+  return useComposerDraftHandlers({
+    textareaRef: refs.textareaRef,
+    lastSyncedDraft: refs.lastSyncedDraft,
+    draft: p.draft,
+    messages: p.messages,
+    canSend: p.canSend,
+    isAutocompleteOpen: p.isAutocompleteOpen ?? false,
+    autocompleteResults: p.autocompleteResults ?? [],
+    selectedIndex: menu.selectedIndex,
+    setSelectedIndex: menu.setSelectedIndex,
+    isSlashMenuOpen: menu.isSlashMenuOpen,
+    isMentionAutocompleteOpen: menu.isMentionAutocompleteOpen,
+    useMentionSystem,
+    mentionQuery: menu.mentionQuery,
+    setMentionQuery: menu.setMentionQuery,
+    setIsMentionAutocompleteOpen: menu.setIsMentionAutocompleteOpen,
+    slashQuery: menu.slashQuery,
+    setSlashQuery: menu.setSlashQuery,
+    setIsSlashMenuOpen: menu.setIsSlashMenuOpen,
+    chatOverrides: p.chatOverrides,
+    onChatOverridesChange: p.onChatOverridesChange,
+    defaultProvider: p.defaultProvider,
+    codexModels: p.codexModels,
+    onAutocompleteQuery: p.onAutocompleteQuery,
+    onOpenAutocomplete: p.onOpenAutocomplete,
+    onCloseAutocomplete: p.onCloseAutocomplete,
+    onChange: p.onChange,
+    onSubmit: p.onSubmit,
+    slashCommandContext: p.slashCommandContext,
+    onAddMention: p.onAddMention,
+    onSelectFile: p.onSelectFile,
+  });
+}
+
 function useComposerState(props: AgentChatComposerProps): ComposerState {
-  const {
-    draft,
-    autocompleteResults = [],
-    isAutocompleteOpen = false,
-    onAutocompleteQuery,
-    onSelectFile,
-    onCloseAutocomplete,
-    onOpenAutocomplete,
-    canSend,
-    messages,
-    chatOverrides,
-    onChatOverridesChange,
-    defaultProvider,
-    codexModels,
-    onChange,
-    onSubmit,
-    slashCommandContext,
-    onAddMention,
-    attachments = [],
-    onAttachmentsChange,
-  } = props;
+  const { onCloseAutocomplete, slashCommandContext, attachments, onAttachmentsChange } = props;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const lastSyncedDraft = useRef(draft);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [isMentionAutocompleteOpen, setIsMentionAutocompleteOpen] = useState(false);
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
-  const useMentionSystem = Boolean(onAddMention);
-  const attachmentHandlers = useImageAttachmentHandlers(attachments, onAttachmentsChange);
+  const lastSyncedDraft = useRef(props.draft);
+  const menuState = useComposerMenuState();
+  const useMentionSystem = Boolean(props.onAddMention);
+  const attachmentHandlers = useImageAttachmentHandlers(attachments ?? [], onAttachmentsChange);
   const slashCommands = useMemo(
     () => buildChatSlashCommands(slashCommandContext ?? {}),
     [slashCommandContext],
   );
   const closeAutocomplete = useCallback(() => onCloseAutocomplete?.(), [onCloseAutocomplete]);
-  const closeMentionAutocomplete = useCallback(() => {
-    setIsMentionAutocompleteOpen(false);
-    setMentionQuery(null);
-  }, []);
-  const closeSlashMenu = useCallback(() => {
-    setIsSlashMenuOpen(false);
-    setSlashQuery(null);
-  }, []);
-  const handlers = useComposerDraftHandlers({
-    textareaRef,
-    lastSyncedDraft,
-    draft,
-    messages,
-    canSend,
-    isAutocompleteOpen,
-    autocompleteResults,
-    selectedIndex,
-    setSelectedIndex,
-    isSlashMenuOpen,
-    isMentionAutocompleteOpen,
+  const handlers = useComposerHandlers(
+    props,
+    { textareaRef, lastSyncedDraft },
+    menuState,
     useMentionSystem,
-    mentionQuery,
-    setMentionQuery,
-    setIsMentionAutocompleteOpen,
-    slashQuery,
-    setSlashQuery,
-    setIsSlashMenuOpen,
-    chatOverrides,
-    onChatOverridesChange,
-    defaultProvider,
-    codexModels,
-    onAutocompleteQuery,
-    onOpenAutocomplete,
-    onCloseAutocomplete,
-    onChange,
-    onSubmit,
-    slashCommandContext,
-    onAddMention,
-    onSelectFile,
-  });
-  useComposerDraftSync(textareaRef, lastSyncedDraft, draft);
-  useComposerAutocompleteReset(setSelectedIndex, autocompleteResults.length);
+  );
+  useComposerDraftSync(textareaRef, lastSyncedDraft, props.draft);
+  useComposerAutocompleteReset(
+    menuState.setSelectedIndex,
+    (props.autocompleteResults ?? []).length,
+  );
   return {
     textareaRef,
     lastSyncedDraft,
-    selectedIndex,
-    mentionQuery,
-    isMentionAutocompleteOpen,
-    slashQuery,
-    isSlashMenuOpen,
+    selectedIndex: menuState.selectedIndex,
+    mentionQuery: menuState.mentionQuery,
+    isMentionAutocompleteOpen: menuState.isMentionAutocompleteOpen,
+    slashQuery: menuState.slashQuery,
+    isSlashMenuOpen: menuState.isSlashMenuOpen,
     useMentionSystem,
     attachmentHandlers,
     slashCommands,
     closeAutocomplete,
-    closeMentionAutocomplete,
-    closeSlashMenu,
+    closeMentionAutocomplete: menuState.closeMentionAutocomplete,
+    closeSlashMenu: menuState.closeSlashMenu,
     handlers,
   };
 }
@@ -234,61 +225,54 @@ function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): R
 
 /* ---------- ComposerBody ---------- */
 
-function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
-  const {
-    canSend,
-    disabled,
-    draft,
-    isSending,
-    threadIsBusy = false,
-    pinnedFiles = [],
-    onRemoveFile,
-    contextSummary,
-    mentions = [],
-    onRemoveMention,
-    attachments = [],
-    onSubmit,
-  } = cp;
+function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
   const { attachmentHandlers, handlers } = state;
-  const mentionChips = state.useMentionSystem ? (
-    <MentionChipsBar
-      mentions={mentions}
-      onRemove={onRemoveMention ?? noop}
-      totalTokens={mentions.reduce((sum, m) => sum + m.estimatedTokens, 0)}
+  return (
+    <ComposerInput
+      canSend={cp.canSend}
+      disabled={cp.disabled}
+      draft={cp.draft}
+      handleChange={handlers.handleChange}
+      handleDragLeave={attachmentHandlers.handleDragLeave}
+      handleDragOver={attachmentHandlers.handleDragOver}
+      handleDrop={attachmentHandlers.handleDrop}
+      handleKeyDown={handlers.handleKeyDown}
+      handlePaste={attachmentHandlers.handlePaste}
+      isSending={cp.isSending}
+      onPickImage={attachmentHandlers.handlePickImage}
+      onSubmit={cp.onSubmit}
+      threadIsBusy={cp.threadIsBusy ?? false}
+      textareaRef={state.textareaRef}
+      useMentionSystem={state.useMentionSystem}
+      onCloseAutocomplete={state.closeAutocomplete}
+      onCloseMentionAutocomplete={state.closeMentionAutocomplete}
     />
-  ) : null;
+  );
+}
+
+function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
+  const mentions = cp.mentions ?? [];
+  const totalMentionTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
   return (
     <div className="px-3">
       <AgentChatContextBar
-        pinnedFiles={pinnedFiles}
-        onRemoveFile={onRemoveFile ?? noop}
-        contextSummary={contextSummary ?? null}
+        pinnedFiles={cp.pinnedFiles ?? []}
+        onRemoveFile={cp.onRemoveFile ?? noop}
+        contextSummary={cp.contextSummary ?? null}
       />
-      {mentionChips}
+      {state.useMentionSystem && (
+        <MentionChipsBar
+          mentions={mentions}
+          onRemove={cp.onRemoveMention ?? noop}
+          totalTokens={totalMentionTokens}
+        />
+      )}
       <AttachmentChipsBar
-        attachments={attachments}
-        onRemove={attachmentHandlers.handleRemoveAttachment}
+        attachments={cp.attachments ?? []}
+        onRemove={state.attachmentHandlers.handleRemoveAttachment}
       />
       <ComposerMenusSection state={state} composerProps={cp} />
-      <ComposerInput
-        canSend={canSend}
-        disabled={disabled}
-        draft={draft}
-        handleChange={handlers.handleChange}
-        handleDragLeave={attachmentHandlers.handleDragLeave}
-        handleDragOver={attachmentHandlers.handleDragOver}
-        handleDrop={attachmentHandlers.handleDrop}
-        handleKeyDown={handlers.handleKeyDown}
-        handlePaste={attachmentHandlers.handlePaste}
-        isSending={isSending}
-        onPickImage={attachmentHandlers.handlePickImage}
-        onSubmit={onSubmit}
-        threadIsBusy={threadIsBusy}
-        textareaRef={state.textareaRef}
-        useMentionSystem={state.useMentionSystem}
-        onCloseAutocomplete={state.closeAutocomplete}
-        onCloseMentionAutocomplete={state.closeMentionAutocomplete}
-      />
+      <ComposerInputSection state={state} composerProps={cp} />
     </div>
   );
 }

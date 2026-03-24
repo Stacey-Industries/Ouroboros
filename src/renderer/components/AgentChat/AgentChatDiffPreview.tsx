@@ -128,15 +128,10 @@ function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement
   );
 }
 
-function DiffControls({
-  loading,
-  expanded,
-  diffLines,
-  copied,
-  onFetch,
-  onOpen,
-  onCopy,
-}: {
+const DIFF_CTRL_BTN =
+  'flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 border border-border-semantic';
+
+type DiffControlsProps = {
   loading: boolean;
   expanded: boolean;
   diffLines: DiffLine[] | null;
@@ -144,33 +139,35 @@ function DiffControls({
   onFetch: () => void;
   onOpen: () => void;
   onCopy: () => void;
-}): React.ReactElement {
+};
+
+function DiffControls(props: DiffControlsProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5">
       <button
-        onClick={onFetch}
-        disabled={loading}
-        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
+        onClick={props.onFetch}
+        disabled={props.loading}
+        className={`${DIFF_CTRL_BTN} text-interactive-accent`}
         style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
       >
-        {loading ? 'Loading...' : expanded ? 'Hide Changes' : 'View Changes'}
+        {props.loading ? 'Loading...' : props.expanded ? 'Hide Changes' : 'View Changes'}
       </button>
       <button
-        onClick={onOpen}
-        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-text-semantic-muted border border-border-semantic"
+        onClick={props.onOpen}
+        className={`${DIFF_CTRL_BTN} text-text-semantic-muted`}
         title="Open in Editor"
       >
         <ExternalIcon />
         Open
       </button>
-      {diffLines !== null && (
+      {props.diffLines !== null && (
         <button
-          onClick={onCopy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-text-semantic-muted border border-border-semantic"
+          onClick={props.onCopy}
+          className={`${DIFF_CTRL_BTN} text-text-semantic-muted`}
           title="Copy Diff"
         >
           <CopyIcon />
-          {copied ? 'Copied!' : 'Copy Diff'}
+          {props.copied ? 'Copied!' : 'Copy Diff'}
         </button>
       )}
     </div>
@@ -188,15 +185,13 @@ function DiffError({ error }: { error: string }): React.ReactElement {
   );
 }
 
-function useDiffPreview(filePath: string) {
+function useDiffFetch(filePath: string) {
   const { projectRoot, projectRoots } = useProject();
   const [diffLines, setDiffLines] = useState<DiffLine[] | null>(null);
   const [rawPatch, setRawPatch] = useState('');
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
   const fetchDiff = useCallback(async () => {
     if (diffLines !== null) {
       setExpanded((prev) => !prev);
@@ -219,11 +214,15 @@ function useDiffPreview(filePath: string) {
       setLoading(false);
     }
   }, [diffLines, filePath, projectRoot, projectRoots]);
+  return { loading, expanded, diffLines, rawPatch, error, fetchDiff };
+}
 
+function useDiffPreview(filePath: string) {
+  const { loading, expanded, diffLines, rawPatch, error, fetchDiff } = useDiffFetch(filePath);
+  const [copied, setCopied] = useState(false);
   const handleOpenInEditor = useCallback(() => {
     window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { filePath } }));
   }, [filePath]);
-
   const handleCopyDiff = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(rawPatch);
@@ -233,7 +232,6 @@ function useDiffPreview(filePath: string) {
       /* Clipboard write failed silently. */
     }
   }, [rawPatch]);
-
   return {
     loading,
     expanded,

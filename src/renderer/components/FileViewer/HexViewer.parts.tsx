@@ -105,19 +105,54 @@ export function findMatches(data: Uint8Array, pattern: Uint8Array): number[] {
   return matches;
 }
 
+type HexSearchProps = {
+  searchQuery: string;
+  setSearchQuery: (v: string) => void;
+  matchOffsets: number[];
+  activeMatchIndex: number;
+  goToMatch: (i: number) => void;
+};
+function HexMatchNavButtons({
+  matchOffsets,
+  activeMatchIndex,
+  goToMatch,
+}: Pick<
+  HexSearchProps,
+  'matchOffsets' | 'activeMatchIndex' | 'goToMatch'
+>): React.ReactElement | null {
+  if (matchOffsets.length === 0) return null;
+  return (
+    <>
+      <span>
+        {activeMatchIndex + 1} / {matchOffsets.length}
+      </span>
+      <button
+        onClick={() => goToMatch(activeMatchIndex - 1)}
+        className="text-text-semantic-muted"
+        style={btnStyle}
+        disabled={activeMatchIndex <= 0}
+      >
+        Prev
+      </button>
+      <button
+        onClick={() => goToMatch(activeMatchIndex + 1)}
+        className="text-text-semantic-muted"
+        style={btnStyle}
+        disabled={activeMatchIndex >= matchOffsets.length - 1}
+      >
+        Next
+      </button>
+    </>
+  );
+}
+
 function HexToolbarSearch({
   searchQuery,
   setSearchQuery,
   matchOffsets,
   activeMatchIndex,
   goToMatch,
-}: {
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  matchOffsets: number[];
-  activeMatchIndex: number;
-  goToMatch: (index: number) => void;
-}): React.ReactElement {
+}: HexSearchProps): React.ReactElement {
   return (
     <>
       <input
@@ -128,29 +163,11 @@ function HexToolbarSearch({
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
-      {matchOffsets.length > 0 ? (
-        <>
-          <span>
-            {activeMatchIndex + 1} / {matchOffsets.length}
-          </span>
-          <button
-            onClick={() => goToMatch(activeMatchIndex - 1)}
-            className="text-text-semantic-muted"
-            style={btnStyle}
-            disabled={activeMatchIndex <= 0}
-          >
-            Prev
-          </button>
-          <button
-            onClick={() => goToMatch(activeMatchIndex + 1)}
-            className="text-text-semantic-muted"
-            style={btnStyle}
-            disabled={activeMatchIndex >= matchOffsets.length - 1}
-          >
-            Next
-          </button>
-        </>
-      ) : null}
+      <HexMatchNavButtons
+        matchOffsets={matchOffsets}
+        activeMatchIndex={activeMatchIndex}
+        goToMatch={goToMatch}
+      />
       {searchQuery && matchOffsets.length === 0 ? (
         <span className="text-status-error">No matches</span>
       ) : null}
@@ -158,6 +175,15 @@ function HexToolbarSearch({
   );
 }
 
+type HexToolbarProps = {
+  searchQuery: string;
+  setSearchQuery: (v: string) => void;
+  matchOffsets: number[];
+  activeMatchIndex: number;
+  goToMatch: (i: number) => void;
+  openExternal: () => void;
+  contentLength: number;
+};
 export function HexViewerToolbar({
   searchQuery,
   setSearchQuery,
@@ -166,15 +192,7 @@ export function HexViewerToolbar({
   goToMatch,
   openExternal,
   contentLength,
-}: {
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  matchOffsets: number[];
-  activeMatchIndex: number;
-  goToMatch: (index: number) => void;
-  openExternal: () => void;
-  contentLength: number;
-}): React.ReactElement {
+}: HexToolbarProps): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={toolbarStyle}>
       <span style={{ fontWeight: 600 }}>Hex</span>
@@ -202,52 +220,68 @@ export function HexViewerToolbar({
   );
 }
 
+type HexRowsProps = {
+  content: Uint8Array;
+  startRow: number;
+  endRow: number;
+  matchedRows: Set<number>;
+};
+
+type HexRowProps = { row: number; offset: number; hex: string; ascii: string; isMatch: boolean };
+function HexRow({ row, offset, hex, ascii, isMatch }: HexRowProps): React.ReactElement {
+  return (
+    <div
+      key={row}
+      style={{
+        position: 'absolute',
+        top: row * ROW_HEIGHT,
+        left: 0,
+        right: 0,
+        height: ROW_HEIGHT,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 12px',
+        backgroundColor: isMatch ? 'rgba(255, 200, 0, 0.15)' : undefined,
+      }}
+    >
+      <span className="text-text-semantic-faint" style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>
+        {toOffset(offset)}
+      </span>
+      <span
+        className="text-text-semantic-primary"
+        style={{ width: HEX_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
+      >
+        {hex}
+      </span>
+      <span
+        className="text-interactive-accent"
+        style={{ width: ASCII_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
+      >
+        {ascii}
+      </span>
+    </div>
+  );
+}
+
 export function HexViewerRows({
   content,
   startRow,
   endRow,
   matchedRows,
-}: {
-  content: Uint8Array;
-  startRow: number;
-  endRow: number;
-  matchedRows: Set<number>;
-}): React.ReactElement {
+}: HexRowsProps): React.ReactElement {
   const rows: React.ReactElement[] = [];
   for (let row = startRow; row < endRow; row++) {
     const offset = row * BYTES_PER_ROW;
     const { hex, ascii } = buildHexRow(content, offset);
     rows.push(
-      <div
+      <HexRow
         key={row}
-        style={{
-          position: 'absolute',
-          top: row * ROW_HEIGHT,
-          left: 0,
-          right: 0,
-          height: ROW_HEIGHT,
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          backgroundColor: matchedRows.has(row) ? 'rgba(255, 200, 0, 0.15)' : undefined,
-        }}
-      >
-        <span className="text-text-semantic-faint" style={{ width: OFFSET_WIDTH, flexShrink: 0 }}>
-          {toOffset(offset)}
-        </span>
-        <span
-          className="text-text-semantic-primary"
-          style={{ width: HEX_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
-        >
-          {hex}
-        </span>
-        <span
-          className="text-interactive-accent"
-          style={{ width: ASCII_WIDTH, flexShrink: 0, whiteSpace: 'pre' }}
-        >
-          {ascii}
-        </span>
-      </div>,
+        row={row}
+        offset={offset}
+        hex={hex}
+        ascii={ascii}
+        isMatch={matchedRows.has(row)}
+      />,
     );
   }
   return <div style={{ height: endRow * ROW_HEIGHT, position: 'relative' }}>{rows}</div>;

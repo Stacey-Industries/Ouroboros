@@ -37,24 +37,7 @@ function LineNumbers({ count }: { count: number }): React.ReactElement {
   );
 }
 
-function CodeHeader({
-  language,
-  filePath,
-  showLineNumbers,
-  setShowLineNumbers,
-  wordWrap,
-  setWordWrap,
-  showApply,
-  isApplied,
-  canRevert,
-  apply,
-  revert,
-  status,
-  errorMessage,
-  handleOpenInEditor,
-  copied,
-  handleCopy,
-}: {
+type CodeHeaderProps = {
   language?: string;
   filePath?: string;
   showLineNumbers: boolean;
@@ -71,40 +54,42 @@ function CodeHeader({
   handleOpenInEditor: () => void;
   copied: boolean;
   handleCopy: () => void;
-}): React.ReactElement {
+};
+
+function CodeHeader(props: CodeHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5 border-b border-border-semantic px-2.5 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-        {language && (
+        {props.language && (
           <span className="shrink-0 text-[10px] font-medium text-text-semantic-muted">
-            {language}
+            {props.language}
           </span>
         )}
-        {filePath && <FilePathBreadcrumb filePath={filePath} />}
+        {props.filePath && <FilePathBreadcrumb filePath={props.filePath} />}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <CodeHeaderStatus
-          isApplied={isApplied}
-          canRevert={canRevert}
-          revert={revert}
-          status={status}
-          errorMessage={errorMessage}
+          isApplied={props.isApplied}
+          canRevert={props.canRevert}
+          revert={props.revert}
+          status={props.status}
+          errorMessage={props.errorMessage}
         />
         <CodeHeaderToggles
-          showLineNumbers={showLineNumbers}
-          setShowLineNumbers={setShowLineNumbers}
-          wordWrap={wordWrap}
-          setWordWrap={setWordWrap}
+          showLineNumbers={props.showLineNumbers}
+          setShowLineNumbers={props.setShowLineNumbers}
+          wordWrap={props.wordWrap}
+          setWordWrap={props.setWordWrap}
         />
         <CodeHeaderActions
-          showApply={showApply}
-          filePath={filePath}
-          isApplied={isApplied}
-          status={status}
-          apply={apply}
-          handleOpenInEditor={handleOpenInEditor}
-          copied={copied}
-          handleCopy={handleCopy}
+          showApply={props.showApply}
+          filePath={props.filePath}
+          isApplied={props.isApplied}
+          status={props.status}
+          apply={props.apply}
+          handleOpenInEditor={props.handleOpenInEditor}
+          copied={props.copied}
+          handleCopy={props.handleCopy}
         />
       </div>
     </div>
@@ -179,61 +164,51 @@ function useChatCodeBlockState(
   };
 }
 
-export const ChatCodeBlock = React.memo(function ChatCodeBlock({
-  code,
-  language,
-  filePath,
-  showApply = true,
-}: ChatCodeBlockProps): React.ReactElement {
-  const {
-    lineCount,
-    showLineNumbers,
-    setShowLineNumbers,
-    wordWrap,
-    setWordWrap,
-    copied,
-    handleCopy,
-    handleOpenInEditor,
-    status,
-    errorMessage,
-    diffLines,
-    apply,
-    accept,
-    reject,
-    revert,
-    canRevert,
-  } = useChatCodeBlockState(code, language, filePath);
-  const isApplied = status === 'applied';
+type ChatCodeBlockState = ReturnType<typeof useChatCodeBlockState>;
+
+function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React.ReactElement {
+  const isApplied = props.status === 'applied';
   return (
     <div className="group/code my-2 rounded-md border border-border-semantic bg-surface-raised">
       <CodeHeader
-        language={language}
-        filePath={filePath}
-        showLineNumbers={showLineNumbers}
-        setShowLineNumbers={setShowLineNumbers}
-        wordWrap={wordWrap}
-        setWordWrap={setWordWrap}
-        showApply={showApply}
+        language={props.language}
+        filePath={props.filePath}
+        showLineNumbers={props.showLineNumbers}
+        setShowLineNumbers={props.setShowLineNumbers}
+        wordWrap={props.wordWrap}
+        setWordWrap={props.setWordWrap}
+        showApply={props.showApply ?? true}
         isApplied={isApplied}
-        canRevert={canRevert}
-        apply={apply}
-        revert={revert}
-        status={status}
-        errorMessage={errorMessage}
-        handleOpenInEditor={handleOpenInEditor}
-        copied={copied}
-        handleCopy={handleCopy}
+        canRevert={props.canRevert}
+        apply={props.apply}
+        revert={props.revert}
+        status={props.status}
+        errorMessage={props.errorMessage}
+        handleOpenInEditor={props.handleOpenInEditor}
+        copied={props.copied}
+        handleCopy={props.handleCopy}
       />
       <CodeBody
-        code={code}
-        language={language}
-        wordWrap={wordWrap}
-        showLineNumbers={showLineNumbers}
-        lineCount={lineCount}
+        code={props.code}
+        language={props.language}
+        wordWrap={props.wordWrap}
+        showLineNumbers={props.showLineNumbers}
+        lineCount={props.lineCount}
       />
-      {status === 'previewing' && diffLines.length > 0 && (
-        <ApplyDiffPreview diffLines={diffLines} onAccept={() => void accept()} onReject={reject} />
+      {props.status === 'previewing' && props.diffLines.length > 0 && (
+        <ApplyDiffPreview
+          diffLines={props.diffLines}
+          onAccept={() => void props.accept()}
+          onReject={props.reject}
+        />
       )}
     </div>
   );
+}
+
+export const ChatCodeBlock = React.memo(function ChatCodeBlock(
+  props: ChatCodeBlockProps,
+): React.ReactElement {
+  const state = useChatCodeBlockState(props.code, props.language, props.filePath);
+  return <CodeBlockContent {...props} {...state} />;
 });

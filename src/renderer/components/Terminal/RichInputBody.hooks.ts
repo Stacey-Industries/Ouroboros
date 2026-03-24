@@ -268,10 +268,7 @@ export function useLineNumberConfig(
   }, [lineNumCompartment, showLineNumbers, viewRef]);
 }
 
-export function useRichInputEditorState(
-  onSubmit: (text: string) => void,
-  onCancel: () => void,
-): {
+export type RichInputEditorStateResult = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   viewRef: ViewRef;
   highlightCompartment: CompartmentRef;
@@ -281,7 +278,12 @@ export function useRichInputEditorState(
   doSubmit: () => void;
   doCancel: () => void;
   navigateHistory: (direction: HistoryDirection) => void;
-} {
+};
+
+export function useRichInputEditorState(
+  onSubmit: (text: string) => void,
+  onCancel: () => void,
+): RichInputEditorStateResult {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const highlightCompartment = useRef(new Compartment());

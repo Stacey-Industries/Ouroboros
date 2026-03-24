@@ -1,8 +1,11 @@
 /**
- * githubAuth.ts — GitHub Device Flow (RFC 8628) authentication provider.
+ * githubAuth.ts — GitHub authentication provider (Device Flow + PKCE).
  */
+import { shell } from 'electron';
+
 import log from '../../logger';
 import { deleteCredential, getCredential, setCredential } from '../credentialStore';
+import { clearPendingPkceFlow, setPendingPkceFlow } from '../protocolHandler';
 import type {
   AuthState,
   AuthUser,
@@ -10,6 +13,7 @@ import type {
   GitHubLoginEvent,
   OAuthCredential,
 } from '../types';
+import { buildAuthorizationUrl, generatePkceChallenge } from './githubPkce';
 
 // -- Public types (re-export from shared for consumers) --------------------
 
@@ -110,7 +114,7 @@ async function pollTokenOnce(
   return (await res.json()) as TokenResponse;
 }
 
-async function fetchGitHubUser(accessToken: string, signal: AbortSignal): Promise<AuthUser> {
+export async function fetchGitHubUser(accessToken: string, signal: AbortSignal): Promise<AuthUser> {
   const res = await fetch(USER_URL, {
     headers: { ...JSON_HEADERS, Authorization: `Bearer ${accessToken}` },
     signal,
@@ -126,7 +130,7 @@ async function fetchGitHubUser(accessToken: string, signal: AbortSignal): Promis
 
 // -- Helpers: builders ------------------------------------------------------
 
-function buildCredential(token: string, scopes: string): OAuthCredential {
+export function buildCredential(token: string, scopes: string): OAuthCredential {
   return {
     type: 'oauth',
     provider: PROVIDER,
@@ -135,7 +139,7 @@ function buildCredential(token: string, scopes: string): OAuthCredential {
   };
 }
 
-function buildAuthState(user: AuthUser): AuthState {
+export function buildAuthState(user: AuthUser): AuthState {
   return { provider: PROVIDER, status: 'authenticated', user, credentialType: 'oauth' };
 }
 
@@ -259,11 +263,27 @@ async function initiateDeviceFlow(
 
 // -- Public API -------------------------------------------------------------
 
+/** Start GitHub login via Device Flow (web-mode fallback). */
 export function startGitHubLogin(callback: GitHubLoginCallback): void {
   cancelGitHubLogin();
   const abort = new AbortController();
   activeAbort = abort;
   void initiateDeviceFlow(callback, abort);
+}
+
+/** Start GitHub login via browser-based Authorization Code + PKCE flow. */
+export function startGitHubPkceLogin(callback: GitHubLoginCallback): void {
+  cancelGitHubLogin();
+  const clientId = getClientId();
+  const { verifier, challenge, state } = generatePkceChallenge();
+  const authUrl = buildAuthorizationUrl(clientId, challenge, state);
+  const abort = new AbortController();
+  activeAbort = abort;
+
+  setPendingPkceFlow({ state, verifier, clientId, callback, abort });
+  void shell.openExternal(authUrl);
+  callback({ type: 'browser_opened', authUrl });
+  log.info('[GitHubAuth] PKCE flow started — browser opened');
 }
 
 export function cancelGitHubLogin(): void {
@@ -275,6 +295,7 @@ export function cancelGitHubLogin(): void {
     clearTimeout(activeTimer);
     activeTimer = null;
   }
+  clearPendingPkceFlow();
 }
 
 export async function logoutGitHub(): Promise<void> {

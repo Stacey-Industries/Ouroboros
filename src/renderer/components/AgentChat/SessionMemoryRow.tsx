@@ -133,44 +133,49 @@ interface MemoryEditFormProps {
   onSave: () => void;
 }
 
-function MemoryEditForm({
-  editContent,
-  editFiles,
-  onContentChange,
-  onFilesChange,
+function MemoryEditActions({
   onCancel,
   onSave,
-}: MemoryEditFormProps): React.ReactElement {
+}: {
+  onCancel: () => void;
+  onSave: () => void;
+}): React.ReactElement {
+  return (
+    <div className="flex justify-end gap-1.5">
+      <button
+        onClick={onCancel}
+        className="rounded border border-border-semantic px-2 py-0.5 text-[11px] text-text-semantic-muted transition-colors duration-75 hover:bg-surface-raised"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={onSave}
+        className="rounded bg-interactive-accent px-2 py-0.5 text-[11px] text-white transition-opacity duration-75 hover:opacity-90"
+      >
+        Save
+      </button>
+    </div>
+  );
+}
+
+function MemoryEditForm(props: MemoryEditFormProps): React.ReactElement {
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
       <textarea
-        value={editContent}
-        onChange={(e) => onContentChange(e.target.value)}
+        value={props.editContent}
+        onChange={(e) => props.onContentChange(e.target.value)}
         className="w-full resize-y rounded border border-border-semantic bg-surface-raised px-2 py-1.5 text-xs text-text-semantic-primary"
         style={{ fontFamily: 'var(--font-mono)', minHeight: 60 }}
         autoFocus
       />
       <input
-        value={editFiles}
-        onChange={(e) => onFilesChange(e.target.value)}
+        value={props.editFiles}
+        onChange={(e) => props.onFilesChange(e.target.value)}
         placeholder="Relevant files (comma-separated)"
         className="w-full rounded border border-border-semantic bg-surface-raised px-2 py-1 text-[11px] text-text-semantic-primary"
         style={{ fontFamily: 'var(--font-mono)' }}
       />
-      <div className="flex justify-end gap-1.5">
-        <button
-          onClick={onCancel}
-          className="rounded border border-border-semantic px-2 py-0.5 text-[11px] text-text-semantic-muted transition-colors duration-75 hover:bg-surface-raised"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onSave}
-          className="rounded bg-interactive-accent px-2 py-0.5 text-[11px] text-white transition-opacity duration-75 hover:opacity-90"
-        >
-          Save
-        </button>
-      </div>
+      <MemoryEditActions onCancel={props.onCancel} onSave={props.onSave} />
     </div>
   );
 }
@@ -222,11 +227,46 @@ function useMemoryRowState(entry: SessionMemoryEntry, onUpdate: SessionMemoryRow
   };
 }
 
-export const SessionMemoryRow = memo(function SessionMemoryRow({
+const ROW_STYLE: React.CSSProperties = {
+  borderColor: 'color-mix(in srgb, var(--border-default) 40%, transparent)',
+  fontSize: 12,
+  lineHeight: 1.4,
+  fontFamily: 'var(--font-ui)',
+};
+
+type RowState = ReturnType<typeof useMemoryRowState>;
+
+function MemoryRowHeader({
   entry,
-  onUpdate,
+  editing,
+  setEditing,
   onDelete,
-}: SessionMemoryRowProps): React.ReactElement {
+}: {
+  entry: SessionMemoryEntry;
+  editing: boolean;
+  setEditing: (v: boolean) => void;
+  onDelete: (id: string) => void;
+}): React.ReactElement {
+  return (
+    <div className="mb-1 flex items-center gap-2">
+      <TypeBadge type={entry.type} />
+      <ConfidenceBar confidence={entry.confidence} />
+      <span className="flex-1" />
+      <span className="whitespace-nowrap text-[10px] text-text-semantic-faint">
+        {formatRelativeTime(entry.timestamp)}
+      </span>
+      {!editing && (
+        <MemoryActions onEdit={() => setEditing(true)} onDelete={() => onDelete(entry.id)} />
+      )}
+    </div>
+  );
+}
+
+function MemoryRowBody(props: {
+  entry: SessionMemoryRowProps;
+  state: RowState;
+}): React.ReactElement {
+  const { entry, onDelete } = props.entry;
   const {
     editing,
     setEditing,
@@ -236,28 +276,15 @@ export const SessionMemoryRow = memo(function SessionMemoryRow({
     setEditFiles,
     resetEditState,
     saveEdit,
-  } = useMemoryRowState(entry, onUpdate);
+  } = props.state;
   return (
-    <div
-      className="border-b px-3 py-2.5 text-text-semantic-primary"
-      style={{
-        borderColor: 'color-mix(in srgb, var(--border-default) 40%, transparent)',
-        fontSize: 12,
-        lineHeight: 1.4,
-        fontFamily: 'var(--font-ui)',
-      }}
-    >
-      <div className="mb-1 flex items-center gap-2">
-        <TypeBadge type={entry.type} />
-        <ConfidenceBar confidence={entry.confidence} />
-        <span className="flex-1" />
-        <span className="whitespace-nowrap text-[10px] text-text-semantic-faint">
-          {formatRelativeTime(entry.timestamp)}
-        </span>
-        {!editing && (
-          <MemoryActions onEdit={() => setEditing(true)} onDelete={() => onDelete(entry.id)} />
-        )}
-      </div>
+    <div className="border-b px-3 py-2.5 text-text-semantic-primary" style={ROW_STYLE}>
+      <MemoryRowHeader
+        entry={entry}
+        editing={editing}
+        setEditing={setEditing}
+        onDelete={onDelete}
+      />
       {editing ? (
         <MemoryEditForm
           editContent={editContent}
@@ -272,4 +299,11 @@ export const SessionMemoryRow = memo(function SessionMemoryRow({
       )}
     </div>
   );
+}
+
+export const SessionMemoryRow = memo(function SessionMemoryRow(
+  props: SessionMemoryRowProps,
+): React.ReactElement {
+  const state = useMemoryRowState(props.entry, props.onUpdate);
+  return <MemoryRowBody entry={props} state={state} />;
 });

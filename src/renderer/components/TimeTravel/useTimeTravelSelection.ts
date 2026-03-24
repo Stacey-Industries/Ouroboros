@@ -38,33 +38,17 @@ function useSnapshotSelectionIds() {
   };
 }
 
-export function useSnapshotSelection(sortedSnapshots: WorkspaceSnapshot[]) {
+function useSnapshotClickHandler(ids: ReturnType<typeof useSnapshotSelectionIds>) {
   const {
     selectedId,
-    setSelectedId,
     compareFromId,
-    setCompareFromId,
     compareToId,
-    setCompareToId,
     compareMode,
-    setCompareMode,
-  } = useSnapshotSelectionIds();
-
-  const selectedSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, selectedId),
-    [selectedId, sortedSnapshots],
-  );
-  const compareFromSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, compareFromId),
-    [compareFromId, sortedSnapshots],
-  );
-  const compareToSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, compareToId),
-    [compareToId, sortedSnapshots],
-  );
-  const comparisonReady = compareMode && Boolean(compareFromSnapshot && compareToSnapshot);
-
-  const handleSnapshotClick = useCallback(
+    setSelectedId,
+    setCompareFromId,
+    setCompareToId,
+  } = ids;
+  return useCallback(
     (snapshot: WorkspaceSnapshot) => {
       const next = getNextSelectionState(snapshot.id, {
         selectedId,
@@ -86,13 +70,53 @@ export function useSnapshotSelection(sortedSnapshots: WorkspaceSnapshot[]) {
       setCompareToId,
     ],
   );
+}
 
+function useResolvedSnapshots(
+  sortedSnapshots: WorkspaceSnapshot[],
+  selectedId: string | null,
+  compareFromId: string | null,
+  compareToId: string | null,
+) {
+  const selectedSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, selectedId),
+    [selectedId, sortedSnapshots],
+  );
+  const compareFromSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, compareFromId),
+    [compareFromId, sortedSnapshots],
+  );
+  const compareToSnapshot = useMemo(
+    () => findSnapshotById(sortedSnapshots, compareToId),
+    [compareToId, sortedSnapshots],
+  );
+  return { selectedSnapshot, compareFromSnapshot, compareToSnapshot };
+}
+
+export function useSnapshotSelection(sortedSnapshots: WorkspaceSnapshot[]) {
+  const ids = useSnapshotSelectionIds();
+  const {
+    selectedId,
+    compareFromId,
+    compareToId,
+    compareMode,
+    setCompareMode,
+    setCompareFromId,
+    setCompareToId,
+  } = ids;
+  const { selectedSnapshot, compareFromSnapshot, compareToSnapshot } = useResolvedSnapshots(
+    sortedSnapshots,
+    selectedId,
+    compareFromId,
+    compareToId,
+  );
+  const comparisonReady = compareMode && Boolean(compareFromSnapshot && compareToSnapshot);
+  const handleSnapshotClick = useSnapshotClickHandler(ids);
   const toggleCompareMode = useCallback(() => {
     setCompareMode((current) => !current);
     setCompareFromId(null);
     setCompareToId(null);
   }, [setCompareMode, setCompareFromId, setCompareToId]);
-
   return {
     selectedId,
     compareFromId,

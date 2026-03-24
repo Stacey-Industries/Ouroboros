@@ -181,6 +181,27 @@ function RunningStatus({ status }: { status: ClaudeMdGenerationStatus }): React.
   );
 }
 
+function ResultCountRow({
+  label,
+  value,
+  labelClass = 'text-text-semantic-primary',
+  valueClass,
+}: {
+  label: string;
+  value: number;
+  labelClass?: string;
+  valueClass?: string;
+}): React.ReactElement {
+  return (
+    <div className="text-text-semantic-secondary" style={resultRowStyle}>
+      <span className={labelClass} style={resultLabelStyle}>
+        {label}
+      </span>
+      <span className={valueClass}>{value}</span>
+    </div>
+  );
+}
+
 function LastRunStatus({
   lastRun,
 }: {
@@ -197,31 +218,20 @@ function LastRunStatus({
       </div>
       {resultCounts && (
         <div>
-          <div className="text-text-semantic-secondary" style={resultRowStyle}>
-            <span className="text-text-semantic-primary" style={resultLabelStyle}>
-              Created
-            </span>
-            <span>{resultCounts.created}</span>
-          </div>
-          <div className="text-text-semantic-secondary" style={resultRowStyle}>
-            <span className="text-text-semantic-primary" style={resultLabelStyle}>
-              Updated
-            </span>
-            <span>{resultCounts.updated}</span>
-          </div>
-          <div className="text-text-semantic-secondary" style={resultRowStyle}>
-            <span className="text-text-semantic-primary" style={resultLabelStyle}>
-              Skipped
-            </span>
-            <span className="text-text-semantic-muted">{resultCounts.skipped}</span>
-          </div>
+          <ResultCountRow label="Created" value={resultCounts.created} />
+          <ResultCountRow label="Updated" value={resultCounts.updated} />
+          <ResultCountRow
+            label="Skipped"
+            value={resultCounts.skipped}
+            valueClass="text-text-semantic-muted"
+          />
           {resultCounts.errors > 0 && (
-            <div className="text-text-semantic-secondary" style={resultRowStyle}>
-              <span className="text-status-error" style={resultLabelStyle}>
-                Errors
-              </span>
-              <span className="text-status-error">{resultCounts.errors}</span>
-            </div>
+            <ResultCountRow
+              label="Errors"
+              value={resultCounts.errors}
+              labelClass="text-status-error"
+              valueClass="text-status-error"
+            />
           )}
         </div>
       )}

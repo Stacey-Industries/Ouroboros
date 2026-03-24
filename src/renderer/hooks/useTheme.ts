@@ -72,15 +72,16 @@ let hydrationPromise: Promise<void> | null = null;
 let themeChangeCleanup: (() => void) | null = null;
 
 function cloneRuntimeState(): ThemeRuntimeState {
+  const s = runtimeState;
   return {
-    themeId: runtimeState.themeId,
-    showBgGradient: runtimeState.showBgGradient,
-    glassOpacity: runtimeState.glassOpacity,
-    customThemeColors: { ...runtimeState.customThemeColors },
-    fontUI: runtimeState.fontUI,
-    fontMono: runtimeState.fontMono,
-    fontSizeUI: runtimeState.fontSizeUI,
-    hydrated: runtimeState.hydrated,
+    themeId: s.themeId,
+    showBgGradient: s.showBgGradient,
+    glassOpacity: s.glassOpacity,
+    customThemeColors: { ...s.customThemeColors },
+    fontUI: s.fontUI,
+    fontMono: s.fontMono,
+    fontSizeUI: s.fontSizeUI,
+    hydrated: s.hydrated,
   };
 }
 
@@ -170,9 +171,8 @@ interface UseThemeReturn {
 
 function applyRuntimeState(nextState: ThemeRuntimeState): void {
   runtimeState = nextState;
-  if (Object.keys(nextState.customThemeColors).length > 0) {
+  if (Object.keys(nextState.customThemeColors).length > 0)
     Object.assign(customTheme.colors, nextState.customThemeColors);
-  }
   const theme = getTheme(nextState.themeId);
   applyThemeToDom(theme, nextState.showBgGradient, nextState.glassOpacity);
   applyFontConfig(nextState.fontUI, nextState.fontMono, nextState.fontSizeUI);
@@ -200,11 +200,7 @@ function registerThemeChangeListener(): void {
   });
 }
 
-/**
- * Fetch extension theme contributions from the main process and register
- * them into the themes registry.  Called once at startup so that a saved
- * `ext:*` activeTheme resolves before the first render.
- */
+/** Fetch extension theme contributions and register them into the themes registry. */
 async function loadExtensionThemesIntoRegistry(): Promise<void> {
   try {
     const api = window.electronAPI?.extensionStore;
@@ -250,10 +246,7 @@ async function hydrateThemeOnMount(config?: Partial<ThemeBootstrapConfig> | null
 }
 
 function ensureThemeRuntime(): void {
-  if (runtimeState.hydrated || hydrationPromise) {
-    return;
-  }
-
+  if (runtimeState.hydrated || hydrationPromise) return;
   hydrationPromise = hydrateThemeOnMount().finally(() => {
     hydrationPromise = null;
   });

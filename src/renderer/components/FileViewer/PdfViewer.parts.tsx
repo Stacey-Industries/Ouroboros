@@ -109,6 +109,16 @@ export function isRenderingCancelledError(err: unknown): boolean {
   );
 }
 
+export interface RenderPdfPageArgs {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  doc: PDFDocumentProxy;
+  pageNum: number;
+  zoomMode: ZoomMode;
+  customScale: number;
+  containerWidth: number;
+  renderTaskRef: React.RefObject<ReturnType<PDFPageProxy['render']> | null>;
+  cancelledRef: () => boolean;
+}
 export async function renderPdfPageCanvas({
   canvasRef,
   doc,
@@ -118,16 +128,7 @@ export async function renderPdfPageCanvas({
   containerWidth,
   renderTaskRef,
   cancelledRef,
-}: {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  doc: PDFDocumentProxy;
-  pageNum: number;
-  zoomMode: ZoomMode;
-  customScale: number;
-  containerWidth: number;
-  renderTaskRef: React.RefObject<ReturnType<PDFPageProxy['render']> | null>;
-  cancelledRef: () => boolean;
-}): Promise<void> {
+}: RenderPdfPageArgs): Promise<void> {
   const canvas = canvasRef.current;
   if (!canvas) return;
   try {
@@ -152,26 +153,20 @@ export async function renderPdfPageCanvas({
   }
 }
 
-function PdfPageNavButtons({
-  currentPage,
-  numPages,
-  goToPage,
-  pageInputValue,
-  setPageInputValue,
-  handlePageInput,
-}: {
+type PdfNavProps = {
   currentPage: number;
   numPages: number;
-  goToPage: (page: number) => void;
+  goToPage: (p: number) => void;
   pageInputValue: string;
   setPageInputValue: (v: string) => void;
   handlePageInput: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}): React.ReactElement {
+};
+function PdfPageNavButtons(p: PdfNavProps): React.ReactElement {
   return (
     <>
       <button
-        onClick={() => goToPage(currentPage - 1)}
-        disabled={currentPage <= 1}
+        onClick={() => p.goToPage(p.currentPage - 1)}
+        disabled={p.currentPage <= 1}
         className="text-text-semantic-muted"
         style={btnStyle}
         title="Previous page"
@@ -182,15 +177,15 @@ function PdfPageNavButtons({
         type="text"
         className="text-text-semantic-primary"
         style={pageInputStyle}
-        value={pageInputValue}
-        onChange={(e) => setPageInputValue(e.target.value)}
-        onKeyDown={handlePageInput}
+        value={p.pageInputValue}
+        onChange={(e) => p.setPageInputValue(e.target.value)}
+        onKeyDown={p.handlePageInput}
         title="Go to page"
       />
-      <span>/ {numPages}</span>
+      <span>/ {p.numPages}</span>
       <button
-        onClick={() => goToPage(currentPage + 1)}
-        disabled={currentPage >= numPages}
+        onClick={() => p.goToPage(p.currentPage + 1)}
+        disabled={p.currentPage >= p.numPages}
         className="text-text-semantic-muted"
         style={btnStyle}
         title="Next page"
@@ -201,19 +196,20 @@ function PdfPageNavButtons({
   );
 }
 
+type PdfZoomProps = {
+  zoomMode: ZoomMode;
+  setZoomMode: (m: ZoomMode) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomLabel: string;
+};
 function PdfZoomButtons({
   zoomMode,
   setZoomMode,
   zoomIn,
   zoomOut,
   zoomLabel,
-}: {
-  zoomMode: ZoomMode;
-  setZoomMode: (mode: ZoomMode) => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  zoomLabel: string;
-}): React.ReactElement {
+}: PdfZoomProps): React.ReactElement {
   return (
     <>
       <div
@@ -248,53 +244,28 @@ function PdfZoomButtons({
   );
 }
 
-export function PdfToolbar({
-  currentPage,
-  numPages,
-  goToPage,
-  pageInputValue,
-  setPageInputValue,
-  handlePageInput,
-  zoomMode,
-  setZoomMode,
-  zoomIn,
-  zoomOut,
-  zoomLabel,
-  openExternal,
-}: {
-  currentPage: number;
-  numPages: number;
-  goToPage: (page: number) => void;
-  pageInputValue: string;
-  setPageInputValue: (v: string) => void;
-  handlePageInput: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  zoomMode: ZoomMode;
-  setZoomMode: (mode: ZoomMode) => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  zoomLabel: string;
-  openExternal: () => void;
-}): React.ReactElement {
+export type PdfToolbarProps = PdfNavProps & PdfZoomProps & { openExternal: () => void };
+export function PdfToolbar(p: PdfToolbarProps): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={toolbarStyle}>
       <PdfPageNavButtons
-        currentPage={currentPage}
-        numPages={numPages}
-        goToPage={goToPage}
-        pageInputValue={pageInputValue}
-        setPageInputValue={setPageInputValue}
-        handlePageInput={handlePageInput}
+        currentPage={p.currentPage}
+        numPages={p.numPages}
+        goToPage={p.goToPage}
+        pageInputValue={p.pageInputValue}
+        setPageInputValue={p.setPageInputValue}
+        handlePageInput={p.handlePageInput}
       />
       <PdfZoomButtons
-        zoomMode={zoomMode}
-        setZoomMode={setZoomMode}
-        zoomIn={zoomIn}
-        zoomOut={zoomOut}
-        zoomLabel={zoomLabel}
+        zoomMode={p.zoomMode}
+        setZoomMode={p.setZoomMode}
+        zoomIn={p.zoomIn}
+        zoomOut={p.zoomOut}
+        zoomLabel={p.zoomLabel}
       />
       <div style={{ flex: 1 }} />
       <button
-        onClick={openExternal}
+        onClick={p.openExternal}
         className="text-text-semantic-muted"
         style={btnStyle}
         title="Open in external application"
@@ -305,26 +276,8 @@ export function PdfToolbar({
   );
 }
 
-export function PdfLoadingView(): React.ReactElement {
-  return (
-    <div style={rootStyle}>
-      <div
-        className="text-text-semantic-faint"
-        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        Loading PDF...
-      </div>
-    </div>
-  );
-}
-
-export function PdfErrorView({
-  error,
-  openExternal,
-}: {
-  error: string;
-  openExternal: () => void;
-}): React.ReactElement {
+type PdfErrorViewProps = { error: string; openExternal: () => void };
+export function PdfErrorView({ error, openExternal }: PdfErrorViewProps): React.ReactElement {
   return (
     <div style={rootStyle}>
       <div

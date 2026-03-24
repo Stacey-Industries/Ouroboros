@@ -60,87 +60,76 @@ export function getStatusDisplay(status: string): StatusDisplay {
   }
 }
 
+function SpinnerSvg({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg
+      className="h-3 w-3 animate-spin shrink-0"
+      viewBox="0 0 16 16"
+      fill="none"
+      style={{ color }}
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeDasharray="32"
+        strokeDashoffset="8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckSvg({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
+      <path
+        d="M3.5 8.5L6.5 11.5L12.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function WarningSvg({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
+      <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M8 6v3M8 11h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ErrorSvg({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M5.5 5.5l5 5M10.5 5.5l-5 5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function StatusIcon({ display }: { display: StatusDisplay }): React.ReactElement {
-  switch (display.icon) {
-    case 'spinner':
-      return (
-        <svg
-          className="h-3 w-3 animate-spin shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          style={{ color: display.color }}
-        >
-          <circle
-            cx="8"
-            cy="8"
-            r="6.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeDasharray="32"
-            strokeDashoffset="8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'check':
-      return (
-        <svg
-          className="h-3 w-3 shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          style={{ color: display.color }}
-        >
-          <path
-            d="M3.5 8.5L6.5 11.5L12.5 4.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case 'warning':
-      return (
-        <svg
-          className="h-3 w-3 shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          style={{ color: display.color }}
-        >
-          <path
-            d="M8 2L14 13H2L8 2Z"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-          />
-          <path d="M8 6v3M8 11h.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      );
-    case 'error':
-      return (
-        <svg
-          className="h-3 w-3 shrink-0"
-          viewBox="0 0 16 16"
-          fill="none"
-          style={{ color: display.color }}
-        >
-          <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
-          <path
-            d="M5.5 5.5l5 5M10.5 5.5l-5 5"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    default:
-      return (
-        <span
-          className="flex-shrink-0 h-2 w-2 rounded-full"
-          style={{ backgroundColor: display.color }}
-        />
-      );
-  }
+  if (display.icon === 'spinner') return <SpinnerSvg color={display.color} />;
+  if (display.icon === 'check') return <CheckSvg color={display.color} />;
+  if (display.icon === 'warning') return <WarningSvg color={display.color} />;
+  if (display.icon === 'error') return <ErrorSvg color={display.color} />;
+  return (
+    <span
+      className="flex-shrink-0 h-2 w-2 rounded-full"
+      style={{ backgroundColor: display.color }}
+    />
+  );
 }
 
 export function classifyThread(thread: AgentChatThreadRecord): 'active' | 'recent' | 'older' {
@@ -184,15 +173,13 @@ export function BranchIcon(): React.ReactElement {
 
 /* ---------- ThreadItem ---------- */
 
-function ThreadItemBody({
-  thread,
-  isActive,
-  display,
-}: {
+type ThreadItemBodyProps = {
   thread: AgentChatThreadRecord;
   isActive: boolean;
   display: StatusDisplay;
-}): React.ReactElement {
+};
+
+function ThreadItemBody({ thread, isActive, display }: ThreadItemBodyProps): React.ReactElement {
   const msgCount = thread.messages?.length ?? 0;
   return (
     <div className="min-w-0 flex-1">
@@ -228,6 +215,31 @@ function ThreadItemBody({
   );
 }
 
+function ThreadDeleteButton({ onDelete }: { onDelete: () => void }): React.ReactElement {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete();
+      }}
+      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100"
+      title="Delete conversation"
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
+        <path d="M2 2l6 6M8 2l-6 6" />
+      </svg>
+    </button>
+  );
+}
+
 export function ThreadItem({
   thread,
   isActive,
@@ -253,26 +265,7 @@ export function ThreadItem({
     >
       <StatusIcon display={display} />
       <ThreadItemBody thread={thread} isActive={isActive} display={display} />
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100"
-        title="Delete conversation"
-      >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        >
-          <path d="M2 2l6 6M8 2l-6 6" />
-        </svg>
-      </button>
+      <ThreadDeleteButton onDelete={onDelete} />
     </div>
   );
 }

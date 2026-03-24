@@ -28,52 +28,65 @@ function applyReorder(
   onReorder(reordered);
 }
 
+interface DragCtx {
+  ref: React.MutableRefObject<string | null>;
+  setId: (id: string | null) => void;
+  setOver: (id: string | null) => void;
+}
+
+function useDragStartEnd(ctx: DragCtx) {
+  const handleDragStart = useCallback(
+    (id: string) => {
+      ctx.ref.current = id;
+      ctx.setId(id);
+    },
+    [ctx],
+  );
+  const handleDragEnd = useCallback(() => {
+    ctx.ref.current = null;
+    ctx.setId(null);
+    ctx.setOver(null);
+  }, [ctx]);
+  const handleDragLeave = useCallback(() => ctx.setOver(null), [ctx]);
+  return { handleDragStart, handleDragEnd, handleDragLeave };
+}
+
+function useDragDropHandlers(
+  ctx: DragCtx,
+  sessions: TerminalSession[],
+  onReorder?: (reordered: TerminalSession[]) => void,
+) {
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, id: string) => {
+      e.preventDefault();
+      if (ctx.ref.current !== id) ctx.setOver(id);
+    },
+    [ctx],
+  );
+  const handleDrop = useCallback(
+    (targetId: string) => {
+      const sourceId = ctx.ref.current;
+      if (!sourceId || sourceId === targetId || !onReorder) {
+        ctx.setOver(null);
+        return;
+      }
+      applyReorder(sessions, sourceId, targetId, onReorder);
+      ctx.setOver(null);
+    },
+    [ctx, sessions, onReorder],
+  );
+  return { handleDragOver, handleDrop };
+}
+
 export function useTabDragDrop(
   sessions: TerminalSession[],
   onReorder?: (reordered: TerminalSession[]) => void,
 ): TabDragDropState {
-  const draggingIdRef = useRef<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-
-  const handleDragStart = useCallback((id: string) => {
-    draggingIdRef.current = id;
-    setDraggingId(id);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggingIdRef.current !== id) setDragOverId(id);
-  }, []);
-
-  const handleDrop = useCallback(
-    (targetId: string) => {
-      const sourceId = draggingIdRef.current;
-      if (!sourceId || sourceId === targetId || !onReorder) {
-        setDragOverId(null);
-        return;
-      }
-      applyReorder(sessions, sourceId, targetId, onReorder);
-      setDragOverId(null);
-    },
-    [sessions, onReorder],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    draggingIdRef.current = null;
-    setDraggingId(null);
-    setDragOverId(null);
-  }, []);
-
-  const handleDragLeave = useCallback(() => setDragOverId(null), []);
-
-  return {
-    draggingId,
-    dragOverId,
-    handleDragStart,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleDragEnd,
-  };
+  const ref = useRef<string | null>(null) as React.MutableRefObject<string | null>;
+  const [draggingId, setId] = useState<string | null>(null);
+  const [dragOverId, setOver] = useState<string | null>(null);
+  const ctx: DragCtx = { ref, setId, setOver };
+  const startEnd = useDragStartEnd(ctx);
+  const dropHandlers = useDragDropHandlers(ctx, sessions, onReorder);
+  return { draggingId, dragOverId, ...startEnd, ...dropHandlers };
 }

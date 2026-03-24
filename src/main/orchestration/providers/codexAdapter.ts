@@ -1,16 +1,12 @@
-import { randomUUID } from 'crypto';
-import { unlink, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-
-import type { ImageAttachment } from '../../agentChat/types';
-import {
-  applyCodexPermissionModeOverride,
-  buildCodexCliArgs,
-  mapEffortToCodexReasoning,
-} from '../../codex';
-import { type CodexCliSettings, getConfigValue } from '../../config';
 import log from '../../logger';
 import type { ProviderCapabilities } from '../types';
+import {
+  buildFailureMessage,
+  cleanupTempFiles,
+  createCodexCapabilities,
+  materializeAttachments,
+  resolveCodexSettings,
+} from './codexAdapterHelpers';
 import { buildPrompt } from './codexContextBuilder';
 import { type CodexEvent } from './codexEventHandler';
 import { type CodexExecProcessHandle } from './codexExecRunner';
@@ -36,70 +32,9 @@ export type { CodexCompletionArgs };
 const activeProcesses = new Map<string, CodexExecProcessHandle>();
 const cancelledTasks = new Set<string>();
 
-function createCapabilities(): ProviderCapabilities {
-  return {
-    provider: 'codex',
-    supportsStreaming: true,
-    supportsResume: true,
-    supportsStructuredEdits: false,
-    supportsToolUse: true,
-    supportsContextCaching: false,
-    maxContextHint: null,
-    requiresTerminalSession: false,
-    requiresHookEvents: false,
-  };
-}
-
-async function materializeAttachments(
-  attachments: ImageAttachment[],
-): Promise<{ imagePaths: string[] }> {
-  const imagePaths: string[] = [];
-  for (const attachment of attachments) {
-    const ext = attachment.mimeType.split('/')[1] ?? 'png';
-    const tempPath = `${tmpdir()}/${randomUUID()}.${ext}`;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- tempPath is randomUUID-based, not user-controlled
-    await writeFile(tempPath, Buffer.from(attachment.base64Data, 'base64'));
-    imagePaths.push(tempPath);
-  }
-  return { imagePaths };
-}
-
-async function cleanupTempFiles(tempPaths: string[]): Promise<void> {
-  for (const tempPath of tempPaths) {
-    try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- tempPath is randomUUID-based, not user-controlled
-      await unlink(tempPath);
-    } catch {
-      // ignore temp cleanup errors
-    }
-  }
-}
-
-function buildFailureMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function cleanupLaunchArtifacts(taskId: string, invocationTempPaths: string[]): void {
   activeProcesses.delete(taskId);
   void cleanupTempFiles(invocationTempPaths);
-}
-
-function resolveSettings(context: ProviderLaunchContext | ProviderResumeContext): {
-  cliArgs: string[];
-  model: string;
-} {
-  const baseSettings = getConfigValue('codexCliSettings') as CodexCliSettings;
-  const permissionAdjusted = applyCodexPermissionModeOverride(
-    baseSettings,
-    context.request.permissionMode,
-  );
-  const requestReasoning = mapEffortToCodexReasoning(context.request.effort);
-  const settings: CodexCliSettings = {
-    ...permissionAdjusted,
-    model: context.request.model || permissionAdjusted.model || '',
-    reasoningEffort: requestReasoning ?? permissionAdjusted.reasoningEffort ?? '',
-  };
-  return { cliArgs: buildCodexCliArgs(settings, 'exec'), model: settings.model };
 }
 
 export function handleLaunchSuccess(
@@ -201,14 +136,12 @@ async function scheduleCodexLaunch(args: {
   );
 }
 
-function launchCodex(
+function setupCodexLaunch(
   context: ProviderLaunchContext | ProviderResumeContext,
   sink: ProviderProgressSink,
+  requestId: string,
   resumeThreadId?: string,
-): ProviderLaunchResult {
-  const requestId = `orchestration-${context.attemptId}`;
-  const cwd = context.request.workspaceRoots[0];
-  const { cliArgs, model } = resolveSettings(context);
+) {
   const sessionRef = buildCodexSessionRef(context, requestId, resumeThreadId);
   sink.emit({
     provider: 'codex',
@@ -226,6 +159,61 @@ function launchCodex(
     context,
     activeProcesses,
   );
+  return {
+    sessionRef,
+    eventHandler,
+    getNextBlockIndex,
+    getUsage,
+    placeholder,
+    getCancelledBeforeLaunch,
+  };
+}
+
+interface CodexLaunchScheduleArgs {
+  context: ProviderLaunchContext | ProviderResumeContext;
+  cwd: string;
+  cliArgs: string[];
+  model: string;
+  resumeThreadId: string | undefined;
+  invocationTempPaths: string[];
+  getCancelledBeforeLaunch: () => boolean;
+  eventHandler: (event: CodexEvent) => void;
+  completionArgs: CodexCompletionArgs;
+}
+
+function scheduleLaunchAndNotify(args: CodexLaunchScheduleArgs): void {
+  const { completionArgs } = args;
+  scheduleCodexLaunch({
+    context: args.context,
+    cwd: args.cwd,
+    cliArgs: args.cliArgs,
+    model: args.model,
+    resumeThreadId: args.resumeThreadId,
+    invocationTempPaths: args.invocationTempPaths,
+    getCancelledBeforeLaunch: args.getCancelledBeforeLaunch,
+    eventHandler: args.eventHandler,
+  }).then(
+    (result) => handleLaunchSuccess(result, completionArgs),
+    (error) => handleLaunchError(error, completionArgs),
+  );
+}
+
+function launchCodex(
+  context: ProviderLaunchContext | ProviderResumeContext,
+  sink: ProviderProgressSink,
+  resumeThreadId?: string,
+): ProviderLaunchResult {
+  const requestId = `orchestration-${context.attemptId}`;
+  const cwd = context.request.workspaceRoots[0];
+  const { cliArgs, model } = resolveCodexSettings(context);
+  const {
+    sessionRef,
+    eventHandler,
+    getNextBlockIndex,
+    getUsage,
+    placeholder,
+    getCancelledBeforeLaunch,
+  } = setupCodexLaunch(context, sink, requestId, resumeThreadId);
   activeProcesses.set(context.taskId, placeholder);
   const invocationTempPaths: string[] = [];
   const completionArgs = buildCodexCompletionArgs({
@@ -236,7 +224,7 @@ function launchCodex(
     getNextBlockIndex,
     invocationTempPaths,
   });
-  scheduleCodexLaunch({
+  scheduleLaunchAndNotify({
     context,
     cwd,
     cliArgs,
@@ -245,10 +233,8 @@ function launchCodex(
     invocationTempPaths,
     getCancelledBeforeLaunch,
     eventHandler,
-  }).then(
-    (result) => handleLaunchSuccess(result, completionArgs),
-    (error) => handleLaunchError(error, completionArgs),
-  );
+    completionArgs,
+  });
   return buildCodexLaunchResult(sessionRef, sink);
 }
 
@@ -256,7 +242,7 @@ export class CodexAdapter implements ProviderAdapter {
   readonly provider = 'codex' as const;
 
   getCapabilities(): ProviderCapabilities {
-    return createCapabilities();
+    return createCodexCapabilities();
   }
 
   async submitTask(

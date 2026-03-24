@@ -1,4 +1,39 @@
-export type SectionType = 'commands' | 'files' | 'conventions' | 'issues' | 'context' | 'skip-list' | 'other';
+import type React from 'react';
+
+export type SectionType =
+  | 'commands'
+  | 'files'
+  | 'conventions'
+  | 'issues'
+  | 'context'
+  | 'skip-list'
+  | 'other';
+
+export const SIDEBAR_TEMPLATE_CARD_STYLE: React.CSSProperties = {
+  margin: '6px 8px',
+  padding: '8px 10px',
+  border: '1px solid var(--border-semantic)',
+  borderRadius: '6px',
+  backgroundColor: 'rgba(255,255,255,0.02)',
+};
+export const SIDEBAR_TEMPLATE_CARD_TITLE_STYLE: React.CSSProperties = {
+  fontWeight: 600,
+  marginBottom: '4px',
+  fontSize: '0.6875rem',
+};
+export const SIDEBAR_ADD_SECTION_WRAPPER_STYLE: React.CSSProperties = {
+  padding: '8px 10px',
+  borderTop: '1px solid var(--border-semantic)',
+  marginTop: '4px',
+};
+export const SIDEBAR_ADD_SECTION_LABEL_STYLE: React.CSSProperties = {
+  padding: 0,
+  marginBottom: '4px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  fontSize: '0.625rem',
+};
 
 export interface ClaudeMdSection {
   title: string;
@@ -98,7 +133,10 @@ export const CLAUDE_MD_TEMPLATES: ClaudeMdTemplate[] = [
 
 function classifySection(title: string): SectionType {
   const normalizedTitle = title.trim();
-  for (const [type, matcher] of Object.entries(SECTION_KEYWORDS) as [Exclude<SectionType, 'other'>, RegExp][]) {
+  for (const [type, matcher] of Object.entries(SECTION_KEYWORDS) as [
+    Exclude<SectionType, 'other'>,
+    RegExp,
+  ][]) {
     if (matcher.test(normalizedTitle)) {
       return type;
     }
@@ -171,7 +209,11 @@ function normalizeHeading(line: string): string {
   return line.replace(/^(#{1,6})\s+/, '$1 ');
 }
 
-function shouldInsertBlankLine(line: string, previousBlank: boolean, resultLength: number): boolean {
+function shouldInsertBlankLine(
+  line: string,
+  previousBlank: boolean,
+  resultLength: number,
+): boolean {
   return isHeading(line) && resultLength > 0 && !previousBlank;
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "ouroboros",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "author": "Ouroboros",
   "main": "out/main/index.js",
@@ -211,8 +211,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix"
     ],
     "*.css": [
       "prettier --write"

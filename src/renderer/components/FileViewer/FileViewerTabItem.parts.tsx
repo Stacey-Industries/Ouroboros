@@ -1,37 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { OpenFile } from './FileViewerManager';
+import { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE } from './FileViewerTabs.parts';
 
-export const MENU_STYLE: React.CSSProperties = {
-  position: 'fixed',
-  zIndex: 10000,
-  minWidth: '160px',
-  backgroundColor: 'var(--surface-base)',
-  border: '1px solid var(--border-semantic)',
-  borderRadius: '4px',
-  padding: '4px 0',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-  fontFamily: 'var(--font-ui)',
-  fontSize: '0.8125rem',
-};
-
-export const MENU_ITEM_STYLE: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  padding: '4px 12px',
-  border: 'none',
-  background: 'transparent',
-  textAlign: 'left',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  fontSize: 'inherit',
-};
-
-export const MENU_SEPARATOR_STYLE: React.CSSProperties = {
-  height: '1px',
-  margin: '4px 0',
-  backgroundColor: 'var(--border-semantic)',
-};
+export { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE };
 
 export function CloseIcon(): React.ReactElement {
   return (
@@ -94,6 +66,29 @@ function DirtyDotButton({
   );
 }
 
+const CLOSE_X_BUTTON_BASE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '16px',
+  height: '16px',
+  borderRadius: '3px',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  flexShrink: 0,
+  transition: 'opacity 100ms ease, background-color 100ms ease',
+};
+
+type CloseXButtonProps = {
+  fileName: string;
+  isHovered: boolean;
+  isActive: boolean;
+  isTabHovered: boolean;
+  handleClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+};
 function CloseXButton({
   fileName,
   isHovered,
@@ -102,35 +97,17 @@ function CloseXButton({
   handleClick,
   onMouseEnter,
   onMouseLeave,
-}: {
-  fileName: string;
-  isHovered: boolean;
-  isActive: boolean;
-  isTabHovered: boolean;
-  handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}): React.ReactElement {
+}: CloseXButtonProps): React.ReactElement {
   return (
     <button
       onClick={handleClick}
       aria-label={`Close ${fileName}`}
       tabIndex={-1}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '16px',
-        height: '16px',
-        borderRadius: '3px',
-        border: 'none',
+        ...CLOSE_X_BUTTON_BASE,
         background: isHovered ? 'var(--surface-raised)' : 'transparent',
         color: isHovered ? 'var(--text-primary)' : 'var(--text-faint)',
-        cursor: 'pointer',
-        padding: 0,
-        flexShrink: 0,
         opacity: isHovered || isActive || isTabHovered ? 1 : 0,
-        transition: 'opacity 100ms ease, background-color 100ms ease',
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -140,19 +117,20 @@ function CloseXButton({
   );
 }
 
+type CloseTabButtonProps = {
+  fileName: string;
+  isActive: boolean;
+  isDirty: boolean;
+  isTabHovered: boolean;
+  onRequestClose: () => void;
+};
 export function CloseTabButton({
   fileName,
   isActive,
   isDirty,
   isTabHovered,
   onRequestClose,
-}: {
-  fileName: string;
-  isActive: boolean;
-  isDirty: boolean;
-  isTabHovered: boolean;
-  onRequestClose: () => void;
-}): React.ReactElement {
+}: CloseTabButtonProps): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -161,16 +139,17 @@ export function CloseTabButton({
     },
     [onRequestClose],
   );
-  if (isDirty && !isHovered) {
+  const enter = () => setIsHovered(true);
+  const leave = () => setIsHovered(false);
+  if (isDirty && !isHovered)
     return (
       <DirtyDotButton
         fileName={fileName}
         handleClick={handleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
       />
     );
-  }
   return (
     <CloseXButton
       fileName={fileName}
@@ -178,8 +157,8 @@ export function CloseTabButton({
       isActive={isActive}
       isTabHovered={isTabHovered}
       handleClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
     />
   );
 }
@@ -199,12 +178,15 @@ interface ContextMenuCallbacks {
   onDismiss: () => void;
 }
 
-function buildContextMenuItems(
-  file: OpenFile,
-  cbs: ContextMenuCallbacks,
-): Array<{ label: string; action: () => void } | 'separator'> {
+type MenuItem = { label: string; action: () => void } | 'separator';
+
+function buildContextMenuItems(file: OpenFile, cbs: ContextMenuCallbacks): MenuItem[] {
   const { onClose, onCloseOthers, onCloseToRight, onCloseAll, onTogglePin, onDismiss } = cbs;
-  const items: Array<{ label: string; action: () => void } | 'separator'> = [
+  const act = (fn: () => void) => () => {
+    fn();
+    onDismiss();
+  };
+  const items: MenuItem[] = [
     {
       label: 'Close',
       action: () => {
@@ -215,39 +197,18 @@ function buildContextMenuItems(
     },
   ];
   if (onCloseOthers)
-    items.push({
-      label: 'Close Others',
-      action: () => {
-        onCloseOthers(file.path);
-        onDismiss();
-      },
-    });
+    items.push({ label: 'Close Others', action: act(() => onCloseOthers(file.path)) });
   if (onCloseToRight)
-    items.push({
-      label: 'Close to the Right',
-      action: () => {
-        onCloseToRight(file.path);
-        onDismiss();
-      },
-    });
+    items.push({ label: 'Close to the Right', action: act(() => onCloseToRight(file.path)) });
   if (onCloseAll) {
     items.push('separator');
-    items.push({
-      label: 'Close All',
-      action: () => {
-        onCloseAll();
-        onDismiss();
-      },
-    });
+    items.push({ label: 'Close All', action: act(onCloseAll) });
   }
   if (onTogglePin) {
     items.push('separator');
     items.push({
       label: file.isPinned ? 'Unpin' : 'Pin',
-      action: () => {
-        onTogglePin(file.path);
-        onDismiss();
-      },
+      action: act(() => onTogglePin(file.path)),
     });
   }
   return items;
@@ -286,6 +247,25 @@ interface TabContextMenuProps {
   onDismiss: () => void;
 }
 
+function ContextMenuItem({ item }: { item: MenuItem }): React.ReactElement {
+  if (item === 'separator') return <div style={MENU_SEPARATOR_STYLE} />;
+  return (
+    <button
+      className="text-text-semantic-primary"
+      style={MENU_ITEM_STYLE}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface-raised)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+      }}
+      onClick={item.action}
+    >
+      {item.label}
+    </button>
+  );
+}
+
 export function TabContextMenu({
   menu,
   file,
@@ -309,27 +289,9 @@ export function TabContextMenu({
   });
   return (
     <div ref={menuRef} style={{ ...MENU_STYLE, left: menu.x, top: menu.y }}>
-      {items.map((item, idx) =>
-        item === 'separator' ? (
-          <div key={`sep-${idx}`} style={MENU_SEPARATOR_STYLE} />
-        ) : (
-          <button
-            key={item.label}
-            className="text-text-semantic-primary"
-            style={MENU_ITEM_STYLE}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                'var(--surface-raised)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-            }}
-            onClick={item.action}
-          >
-            {item.label}
-          </button>
-        ),
-      )}
+      {items.map((item, idx) => (
+        <ContextMenuItem key={item === 'separator' ? `sep-${idx}` : item.label} item={item} />
+      ))}
     </div>
   );
 }

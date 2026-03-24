@@ -128,6 +128,18 @@ function DeleteControls({
   );
 }
 
+interface ServerControlsProps {
+  server: McpServerEntry;
+  isEditing: boolean;
+  isConfirmingDelete: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}
+
 function ServerControls({
   server,
   isEditing,
@@ -138,17 +150,7 @@ function ServerControls({
   onDelete,
   onConfirmDelete,
   onCancelDelete,
-}: {
-  server: McpServerEntry;
-  isEditing: boolean;
-  isConfirmingDelete: boolean;
-  onToggle: () => void;
-  onEdit: () => void;
-  onCancelEdit: () => void;
-  onDelete: () => void;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
-}): React.ReactElement {
+}: ServerControlsProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
       <button

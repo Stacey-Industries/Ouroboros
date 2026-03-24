@@ -118,6 +118,13 @@ function ToolDistributionBar({
   );
 }
 
+const MONO_FIXED = (width: string): React.CSSProperties => ({
+  fontFamily: 'var(--font-mono)',
+  width,
+  textAlign: 'right',
+  flexShrink: 0,
+});
+
 const ToolDistributionRow = memo(function ToolDistributionRow({
   entry,
   maxCount,
@@ -134,25 +141,20 @@ const ToolDistributionRow = memo(function ToolDistributionRow({
       <ToolDistributionBar entry={entry} maxCount={maxCount} />
       <span
         className="text-[10px] tabular-nums text-text-semantic-muted"
-        style={{ fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}
+        style={MONO_FIXED('32px')}
       >
         {entry.count}
       </span>
       <span
         className="text-[10px] tabular-nums text-text-semantic-faint"
-        style={{ fontFamily: 'var(--font-mono)', width: '36px', textAlign: 'right', flexShrink: 0 }}
+        style={MONO_FIXED('36px')}
       >
         {formatPercent(entry.percentage)}
       </span>
       {entry.errorCount > 0 ? (
         <span
           className="text-[9px] tabular-nums text-status-error"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            width: '24px',
-            textAlign: 'right',
-            flexShrink: 0,
-          }}
+          style={MONO_FIXED('24px')}
           title={`${entry.errorCount} error(s)`}
         >
           {entry.errorCount}err
