@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
+import { getModelProviderLogo } from '../shared/ProviderLogos';
 import { SelectPill } from './SelectPill';
 
 export interface ChatOverrides {
@@ -22,7 +23,7 @@ function formatProviderModelName(providerId: string, modelName: string): string 
 }
 
 function modelDisplayName(modelId: string): string {
-  if (!modelId) return 'CLI default';
+  if (!modelId) return 'Default';
   if (modelId.includes(':')) {
     const modelPart = modelId.slice(modelId.indexOf(':') + 1);
     return modelPart.length > 20 ? `${modelPart.slice(0, 18)}...` : modelPart;
@@ -35,7 +36,7 @@ function modelDisplayName(modelId: string): string {
 }
 
 function getDisplayModelName(modelId: string): string {
-  if (!modelId) return 'CLI default';
+  if (!modelId) return 'Default';
   if (modelId.includes(':')) {
     const providerId = modelId.slice(0, modelId.indexOf(':'));
     const modelPart = modelId.slice(modelId.indexOf(':') + 1);
@@ -51,7 +52,7 @@ function getDisplayModelName(modelId: string): string {
 
 function extractDefaultModelName(label: string): string {
   const match = label.match(/^Default \((.+)\)$/);
-  return match ? match[1] : label.replace(/^Default\s*/, '').trim() || 'CLI default';
+  return match ? match[1] : label.replace(/^Default\s*/, '').trim() || 'Default';
 }
 
 const ANTHROPIC_OPTIONS: OptionItem[] = [
@@ -114,7 +115,7 @@ function buildModelOptions(args: {
   const defaultModel =
     args.defaultProvider === 'codex' ? args.codexSettingsModel : args.settingsModel;
   return {
-    defaultOption: { value: '', label: `Default (${getDisplayModelName(defaultModel)})` },
+    defaultOption: { value: '', label: defaultModel ? `Default (${getDisplayModelName(defaultModel)})` : 'Default' },
     groups: [
       { label: 'Anthropic', options: ANTHROPIC_OPTIONS },
       ...buildProviderGroups(args.providers),
@@ -217,6 +218,7 @@ function ModelSelect(props: {
   defaultOption: OptionItem;
   groups: OptionGroup[];
   onChange: (value: string) => void;
+  codexModelIds?: string[];
 }): React.ReactElement {
   return (
     <SelectPill
@@ -226,6 +228,7 @@ function ModelSelect(props: {
       groups={props.groups}
       onChange={props.onChange}
       title={getSelectedModelLabel(props.value, props.defaultOption, props.groups)}
+      icon={getModelProviderLogo(props.value, props.codexModelIds)}
     />
   );
 }
@@ -386,6 +389,7 @@ export function ChatControlsBar(props: {
         defaultOption={defaultOption}
         groups={groups}
         onChange={(model) => props.onChange({ ...props.overrides, model })}
+        codexModelIds={props.codexModels?.map((m) => m.id)}
       />
       <ControlSelect
         label="Effort"

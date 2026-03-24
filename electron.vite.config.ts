@@ -9,6 +9,25 @@ const monacoEditorPlugin = (monacoEditorPluginModule as { default: typeof monaco
 // Enable bundle analysis with ANALYZE=true npm run build
 const analyze = process.env.ANALYZE === 'true'
 
+// Paths the Vite dev-server file watcher should ignore. Without this, any
+// file created/deleted via the IDE's file tree (or by an agent) triggers a
+// full Electron restart because electron-vite treats every FS event in the
+// project root as a source change.
+const watchIgnored = [
+  '**/node_modules/**',
+  '**/out/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/coverage/**',
+  '**/docs/**',
+  '**/plan/**',
+  '**/ai/**',
+  '**/stats/**',
+  '**/.vite/**',
+  '**/*.md',
+  '**/.env*',
+]
+
 export default defineConfig({
   main: {
     plugins: [
@@ -20,6 +39,9 @@ export default defineConfig({
         '@main': resolve('src/main'),
         '@shared': resolve('src/shared')
       }
+    },
+    server: {
+      watch: { ignored: watchIgnored }
     },
     build: {
       rollupOptions: {
@@ -41,6 +63,9 @@ export default defineConfig({
         '@preload': resolve('src/preload'),
         '@shared': resolve('src/shared')
       }
+    },
+    server: {
+      watch: { ignored: watchIgnored }
     },
     build: {
       rollupOptions: {
@@ -68,6 +93,9 @@ export default defineConfig({
         '@renderer': resolve('src/renderer'),
         '@shared': resolve('src/shared')
       }
+    },
+    server: {
+      watch: { ignored: watchIgnored }
     },
     optimizeDeps: {
       // Force Vite to re-scan deps on dev cold starts. Prevents stale hash

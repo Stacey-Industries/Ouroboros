@@ -12,6 +12,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { getGraphController } from '../codebaseGraph/graphController';
+import log from '../logger';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchFileOpenEvent } from '../extensions';
 import { broadcastToWebClients } from '../web/webServer';
@@ -137,8 +138,10 @@ export async function writeBinaryFile(filePath: string, data: Uint8Array): Promi
 }
 
 export async function writeTextFile(filePath: string, content: string): Promise<{ success: true }> {
+  log.info(`[writeTextFile] path=${filePath} contentLength=${content.length} first80=${JSON.stringify(content.slice(0, 80))}`);
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   await fs.writeFile(filePath, content, 'utf-8');
+  log.info(`[writeTextFile] write complete for ${filePath}`);
   return { success: true };
 }
 

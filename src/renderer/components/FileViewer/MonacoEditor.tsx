@@ -3,6 +3,7 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
 import { registerMonacoEditor, unregisterMonacoEditor } from './editorRegistry';
+import { saveEditorState } from './editorStateStore';
 import { detectLanguage, initMonaco } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
 import { enableEmacsMode, enableVimMode, type KeybindingMode } from './monacoVimMode';
@@ -16,6 +17,7 @@ import {
   scheduleHostViewStateFlush,
   setHostDirtyState,
   setHostSavedVersion,
+  useStableCallbackRefs,
 } from './monacoVimMode';
 import { ScrollIndicator } from './ScrollIndicator';
 
@@ -40,6 +42,8 @@ interface RuntimeInput {
   vimStatusRef: React.RefObject<HTMLDivElement | null>; vimDisposeRef: React.RefObject<(() => void) | null>; isDirtyRef: React.RefObject<boolean>;
   contentChangeDisposableRef: React.RefObject<monaco.IDisposable | null>; saveActionDisposableRef: React.RefObject<monaco.IDisposable | null>;
   diffDecorationIdsRef: React.RefObject<string[]>;
+  /** Stable refs that track the latest callback props across re-renders */
+  callbackRefs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean>; formatOnSaveRef: React.RefObject<boolean>; filePathRef: React.RefObject<string> };
 }
 
 interface EditorCallbackRefs {
@@ -152,16 +156,12 @@ function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch
   const model = getOrCreateModel(filePath, content, language);
   if (model.getValue() !== content) model.setValue(content);
   if (!hasHostSavedVersion(model.uri.toString())) setHostSavedVersion(model.uri.toString(), model.getAlternativeVersionId());
-  const editor = monaco.editor.create(containerRef.current!, createEditorOptions(readOnly, wordWrap, showMinimap));
+  const editor = monaco.editor.create(containerRef.current!, { ...createEditorOptions(readOnly, wordWrap, showMinimap), model });
   editorRef.current = editor;
   registerMonacoEditor(filePath, editor);
   const savedViewState = getHostViewState(filePath);
   if (savedViewState) requestAnimationFrame(() => editor.restoreViewState(savedViewState));
-  const refs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean>; formatOnSaveRef: React.RefObject<boolean>; filePathRef: React.RefObject<string> } = {
-    onSaveRef: { current: input.onSave }, onDirtyChangeRef: { current: input.onDirtyChange },
-    onContentChangeRef: { current: input.onContentChange }, readOnlyRef: { current: readOnly },
-    formatOnSaveRef: { current: input.formatOnSave }, filePathRef: { current: filePath },
-  };
+  const refs = input.callbackRefs;
   bindSaveAction(editor, refs, isDirtyRef, saveActionDisposableRef);
   bindContentChange(model, refs, isDirtyRef, contentChangeDisposableRef);
   const disposeGoto = bindGotoLineHandler(editor, refs.filePathRef);
@@ -295,10 +295,11 @@ export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps)
   const contentChangeDisposableRef = useRef<monaco.IDisposable | null>(null);
   const saveActionDisposableRef = useRef<monaco.IDisposable | null>(null);
   const diffDecorationIdsRef = useRef<string[]>([]);
+  const callbackRefs = useStableCallbackRefs({ onSave, onDirtyChange, onContentChange, readOnly, formatOnSave, filePath });
   useMonacoTheme();
   const language = languageOverride ?? detectLanguage(filePath);
   const { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling } = useMonacoEditorRuntime({
-    filePath, content, language, readOnly, onSave, onDirtyChange, onContentChange, keybindingMode, wordWrap, showMinimap, formatOnSave, diffLines, containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, diffDecorationIdsRef,
+    filePath, content, language, readOnly, onSave, onDirtyChange, onContentChange, keybindingMode, wordWrap, showMinimap, formatOnSave, diffLines, containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, diffDecorationIdsRef, callbackRefs,
   });
   return (
     <div className={className} style={frameStyle}>

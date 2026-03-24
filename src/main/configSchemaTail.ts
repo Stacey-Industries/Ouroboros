@@ -144,6 +144,10 @@ export const tailSchema = {
       claudeMdGeneration: '',
     },
   },
+  authOnboardingDismissed: {
+    type: 'boolean',
+    default: false,
+  },
   claudeMdSettings: {
     type: 'object',
     additionalProperties: false,

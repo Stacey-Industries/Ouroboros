@@ -386,7 +386,9 @@ export function ChatHistoryPanel({
         top: 0,
         maxHeight: '60%',
         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-        backgroundColor: 'var(--surface-base)',
+        backgroundColor: 'var(--surface-overlay)',
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
         borderRadius: '0 0 10px 10px',
       }}
     >

@@ -3,6 +3,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { getCredential } from '../../auth/credentialStore';
+import { refreshAnthropicToken } from '../../auth/providers/anthropicAuth';
+import type { Credential } from '../../auth/types';
 import log from '../../logger';
 
 // ---------------------------------------------------------------------------
@@ -137,13 +140,87 @@ export async function ensureValidOAuthToken(): Promise<string | undefined> {
   return refreshed.accessToken;
 }
 
+// ---------------------------------------------------------------------------
+// Credential store integration
+// ---------------------------------------------------------------------------
+
+type CredentialStoreToken =
+  | { type: 'apikey'; apiKey: string }
+  | { type: 'oauth'; accessToken: string };
+
+function isStoreTokenExpired(credential: Credential): boolean {
+  if (credential.type !== 'oauth') return false;
+  if (!credential.expiresAt) return false;
+  return Date.now() >= credential.expiresAt - TOKEN_EXPIRY_BUFFER_MS;
+}
+
+async function tryRefreshStoreToken(credential: Credential): Promise<string | null> {
+  if (credential.type !== 'oauth' || !credential.refreshToken) return null;
+
+  log.debug('[credentialStore] OAuth token expired, attempting refresh...');
+  const result = await refreshAnthropicToken();
+  if (!result.success) {
+    log.warn(`[credentialStore] OAuth refresh failed: ${result.error ?? 'unknown'}`);
+    return null;
+  }
+
+  const refreshed = await getCredential('anthropic');
+  return refreshed?.type === 'oauth' ? refreshed.accessToken : null;
+}
+
+async function getCredentialStoreToken(): Promise<CredentialStoreToken | null> {
+  try {
+    const credential = await getCredential('anthropic');
+    if (!credential) return null;
+
+    if (credential.type === 'apikey') {
+      log.debug('[credentialStore] Using stored API key');
+      return { type: 'apikey', apiKey: credential.apiKey };
+    }
+
+    // OAuth — check expiry and refresh if needed
+    if (!isStoreTokenExpired(credential)) {
+      log.debug('[credentialStore] Using stored OAuth token');
+      return { type: 'oauth', accessToken: credential.accessToken };
+    }
+
+    const refreshedToken = await tryRefreshStoreToken(credential);
+    if (refreshedToken) {
+      log.debug('[credentialStore] Using refreshed OAuth token');
+      return { type: 'oauth', accessToken: refreshedToken };
+    }
+
+    return null;
+  } catch (err) {
+    log.warn('[credentialStore] Error reading credentials, falling through:', err);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client factory
+// ---------------------------------------------------------------------------
+
 export async function createAnthropicClient(): Promise<Anthropic> {
-  // API key subscribers — standard auth path
+  // 1. Try the credential store first
+  const storeToken = await getCredentialStoreToken();
+  if (storeToken?.type === 'apikey') {
+    return new Anthropic({ apiKey: storeToken.apiKey });
+  }
+  if (storeToken?.type === 'oauth') {
+    return new Anthropic({
+      authToken: storeToken.accessToken,
+      defaultHeaders: { 'anthropic-beta': 'oauth-2025-04-20' },
+    });
+  }
+
+  // 2. Fallback: environment variable
+  log.info('No credential store token — falling back to legacy auth');
   if (process.env.ANTHROPIC_API_KEY) {
     return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }
 
-  // Claude.ai subscription users — OAuth token with auto-refresh
+  // 3. Fallback: ~/.claude/.credentials.json OAuth
   const oauthToken = await ensureValidOAuthToken();
   if (oauthToken) {
     return new Anthropic({

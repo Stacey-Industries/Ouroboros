@@ -8,6 +8,7 @@
 import React from 'react';
 
 import type { AuthProvider, AuthState } from '../../types/electron';
+import { ClaudeLogo, GitHubLogo, OpenAILogo } from '../shared/ProviderLogos';
 import { ExpandedArea } from './AccountsSectionLoginForms';
 import * as S from './AccountsSectionStyles';
 import { buttonStyle, smallButtonStyle } from './settingsStyles';
@@ -18,21 +19,25 @@ interface ProviderCardProps {
   model: AccountsSectionModel;
 }
 
-const PROVIDER_META: Record<AuthProvider, { label: string; icon: string }> = {
-  github: { label: 'GitHub', icon: 'GH' },
-  anthropic: { label: 'Claude (Anthropic)', icon: 'AN' },
-  openai: { label: 'OpenAI', icon: 'OA' },
+const PROVIDER_LOGOS: Record<AuthProvider, React.ComponentType> = {
+  github: GitHubLogo,
+  anthropic: ClaudeLogo,
+  openai: OpenAILogo,
+};
+
+const PROVIDER_META: Record<AuthProvider, { label: string }> = {
+  github: { label: 'GitHub' },
+  anthropic: { label: 'Claude Code' },
+  openai: { label: 'Codex' },
 };
 
 export function ProviderCard({ provider, model }: ProviderCardProps): React.ReactElement {
   const state = model.getProviderState(provider);
   const isExpanded = model.expandedCard === provider;
-  const meta = PROVIDER_META[provider];
 
   return (
     <div style={S.cardStyle}>
       <CardHeader
-        meta={meta}
         state={state}
         provider={provider}
         isExpanded={isExpanded}
@@ -43,28 +48,21 @@ export function ProviderCard({ provider, model }: ProviderCardProps): React.Reac
   );
 }
 
-interface CardHeaderProps {
-  meta: { label: string; icon: string };
-  state: AuthState | undefined;
-  provider: AuthProvider;
-  isExpanded: boolean;
-  model: AccountsSectionModel;
-}
-
 function CardHeader({
-  meta,
   state,
   provider,
   isExpanded,
   model,
-}: CardHeaderProps): React.ReactElement {
+}: { state: AuthState | undefined; provider: AuthProvider; isExpanded: boolean; model: AccountsSectionModel }): React.ReactElement {
   const isConnected = state?.status === 'authenticated';
   const isExpired = state?.status === 'expired';
+  const meta = PROVIDER_META[provider];
+  const Logo = PROVIDER_LOGOS[provider];
 
   return (
     <div style={S.cardHeaderStyle}>
       <div>
-        <ProviderLabel meta={meta} />
+        <ProviderLabel label={meta.label} Logo={Logo} />
         <StatusIndicator state={state} />
         {isConnected && state?.user?.name && (
           <div className="text-text-semantic-muted" style={S.userInfoStyle}>
@@ -84,11 +82,11 @@ function CardHeader({
   );
 }
 
-function ProviderLabel({ meta }: { meta: { label: string; icon: string } }): React.ReactElement {
+function ProviderLabel({ label, Logo }: { label: string; Logo: React.ComponentType }): React.ReactElement {
   return (
     <div className="text-text-semantic-primary" style={S.providerNameStyle}>
-      <span style={{ marginRight: '8px', opacity: 0.6 }}>{meta.icon}</span>
-      {meta.label}
+      <span style={{ marginRight: '8px', opacity: 0.7, display: 'inline-flex', verticalAlign: 'middle' }}><Logo /></span>
+      {label}
     </div>
   );
 }

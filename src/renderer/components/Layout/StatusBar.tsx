@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 
 import type { PanelSizes, WorkspaceLayout } from '../../types/electron';
 import { LspStatus } from './LspStatus';
+import { StatusBarAuthIndicator } from './StatusBarAuthIndicator';
 import {
   BranchButton,
   BranchIcon,
@@ -175,6 +176,8 @@ function RightSection({
           <Divider />
         </>
       )}
+      <StatusBarAuthIndicator />
+      <Divider />
       <LspStatus />
       <Divider />
       <StatusItem>UTF-8</StatusItem>

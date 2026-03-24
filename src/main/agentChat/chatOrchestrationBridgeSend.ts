@@ -240,7 +240,7 @@ async function createAndLinkTask(args: {
   const created = await args.orchestration.createTask(args.pending.taskRequest);
   log.info('createTask:', Date.now() - et1, 'ms');
   const preSnapshotHash = await preSnapshotPromise;
-  log.info('total up to createTask:', Date.now() - et0, 'ms');
+  log.info('total up to createTask:', Date.now() - args.et0, 'ms');
 
   if (!created.success || !created.taskId || !created.session) {
     log.error('createTask failed:', created.error);

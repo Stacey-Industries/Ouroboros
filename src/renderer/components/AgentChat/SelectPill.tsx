@@ -16,6 +16,8 @@ export interface SelectPillProps {
   defaultOption?: OptionItem;
   onChange: (value: string) => void;
   title?: string;
+  /** Optional icon component rendered before the label inside the pill button */
+  icon?: React.ComponentType<{ size?: number }> | null;
 }
 
 function getDisplayLabel(value: string, options?: ReadonlyArray<OptionItem>, groups?: OptionGroup[], defaultOption?: OptionItem): string {
@@ -103,7 +105,7 @@ const ForwardedSelectPillMenu = React.forwardRef<HTMLDivElement, {
   style?: React.CSSProperties;
 }>(SelectPillMenu);
 
-export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title }: SelectPillProps): React.ReactElement {
+export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title, icon: Icon }: SelectPillProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -124,6 +126,7 @@ export function SelectPill({ label: _label, value, options, groups, defaultOptio
   return (
     <>
       <button type="button" ref={buttonRef} onClick={toggle} aria-expanded={open} aria-haspopup="listbox" aria-label={_label} className="items-center gap-1 text-[11px] transition-colors duration-150 hover:bg-[rgba(128,128,128,0.15)]" style={{ display: 'inline-flex', width: 'fit-content', flex: '0 0 auto', borderRadius: '9999px', padding: '2px 18px', fontFamily: 'var(--font-ui)' }} title={title ?? displayLabel}>
+        {Icon && <Icon size={13} />}
         <span className="text-text-semantic-primary">{displayLabel}</span>
         <ChevronUp />
       </button>

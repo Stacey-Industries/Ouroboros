@@ -25,6 +25,7 @@ import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { useConfig } from './hooks/useConfig';
 import { useExtensionThemes } from './hooks/useExtensionThemes';
+import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
 import { useProjectManagement } from './hooks/useProjectManagement';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
@@ -185,6 +186,9 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
 
   // Register extension themes at startup so they're available before opening settings
   useExtensionThemes();
+
+  // On first launch with no providers authenticated, open Settings → Accounts
+  useFirstLaunchAuth();
 
   useInnerAppLifecycle({
     ctx,

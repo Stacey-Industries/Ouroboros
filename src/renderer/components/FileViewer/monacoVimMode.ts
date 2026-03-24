@@ -7,6 +7,7 @@ import log from 'electron-log/renderer';
  */
 import * as monaco from 'monaco-editor';
 import type { RefObject } from 'react';
+import { useRef } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
 
@@ -274,4 +275,39 @@ export function setHostDirtyState(
     isDirtyRef.current = nowDirty;
     onDirtyChangeRef.current?.(nowDirty);
   }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Stable callback refs — keeps closures in mountMonacoEditor in sync with
+// the latest React props without re-running the mount effect.
+// ────────────────────────────────────────────────────────────────────────────
+
+interface StableCallbackProps {
+  onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void;
+  onContentChange?: (content: string) => void; readOnly: boolean; formatOnSave: boolean; filePath: string;
+}
+
+export interface StableCallbackRefs {
+  onSaveRef: RefObject<((content: string) => void) | undefined>;
+  onDirtyChangeRef: RefObject<((dirty: boolean) => void) | undefined>;
+  onContentChangeRef: RefObject<((content: string) => void) | undefined>;
+  readOnlyRef: RefObject<boolean>; formatOnSaveRef: RefObject<boolean>; filePathRef: RefObject<string>;
+}
+
+export function useStableCallbackRefs(p: StableCallbackProps): StableCallbackRefs {
+  const s = useRef<StableCallbackRefs | null>(null);
+  if (!s.current) {
+    s.current = {
+      onSaveRef: { current: p.onSave }, onDirtyChangeRef: { current: p.onDirtyChange },
+      onContentChangeRef: { current: p.onContentChange }, readOnlyRef: { current: p.readOnly },
+      formatOnSaveRef: { current: p.formatOnSave }, filePathRef: { current: p.filePath },
+    };
+  }
+  s.current.onSaveRef.current = p.onSave;
+  s.current.onDirtyChangeRef.current = p.onDirtyChange;
+  s.current.onContentChangeRef.current = p.onContentChange;
+  s.current.readOnlyRef.current = p.readOnly;
+  s.current.formatOnSaveRef.current = p.formatOnSave;
+  s.current.filePathRef.current = p.filePath;
+  return s.current;
 }

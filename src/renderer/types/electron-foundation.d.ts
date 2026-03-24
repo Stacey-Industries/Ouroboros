@@ -198,6 +198,7 @@ export interface AppConfig {
   webAccessPort: number;
   webAccessPassword: string;
   glassOpacity: number;
+  authOnboardingDismissed: boolean;
 }
 
 export interface ContextLayerConfig {
