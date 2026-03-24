@@ -62,6 +62,7 @@ export function buildAuthorizationUrl(
 
 interface ExchangeArgs {
   clientId: string;
+  clientSecret: string;
   code: string;
   verifier: string;
   redirectUri: string;
@@ -76,6 +77,7 @@ export async function exchangeCodeForToken(
     headers: JSON_HEADERS,
     body: JSON.stringify({
       client_id: args.clientId,
+      client_secret: args.clientSecret,
       code: args.code,
       code_verifier: args.verifier,
       redirect_uri: args.redirectUri,

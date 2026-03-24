@@ -70,11 +70,16 @@ type PollAction = 'continue' | 'slow_down' | 'terminal';
 
 // -- Helpers: HTTP ----------------------------------------------------------
 
-/** Public OAuth App client ID — safe to embed (not a secret). */
+/** OAuth App credentials — standard practice for native desktop apps. */
 const DEFAULT_GITHUB_CLIENT_ID = 'Ov23ctW6o4aAEKFeo9jU';
+const DEFAULT_GITHUB_CLIENT_SECRET = '14397199d5c860050d55c315533429f132a5fa07';
 
 function getClientId(): string {
   return process.env.GITHUB_CLIENT_ID || DEFAULT_GITHUB_CLIENT_ID;
+}
+
+function getClientSecret(): string {
+  return process.env.GITHUB_CLIENT_SECRET || DEFAULT_GITHUB_CLIENT_SECRET;
 }
 
 async function requestDeviceCode(
@@ -281,8 +286,16 @@ async function launchPkceFlow(
 ): Promise<void> {
   try {
     const clientId = getClientId();
+    const clientSecret = getClientSecret();
     const { verifier, challenge, state } = generatePkceChallenge();
-    const redirectUri = await startCallbackServer({ state, verifier, clientId, callback, abort });
+    const redirectUri = await startCallbackServer({
+      state,
+      verifier,
+      clientId,
+      clientSecret,
+      callback,
+      abort,
+    });
     const authUrl = buildAuthorizationUrl(clientId, challenge, state, redirectUri);
     void shell.openExternal(authUrl);
     callback({ type: 'browser_opened', authUrl });

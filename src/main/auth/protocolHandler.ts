@@ -28,6 +28,7 @@ export interface PendingPkceFlow {
   state: string;
   verifier: string;
   clientId: string;
+  clientSecret: string;
   redirectUri: string;
   callback: GitHubLoginCallback;
   abort: AbortController;
@@ -88,7 +89,13 @@ function parseCallback(url: string): { code: string; state: string } | null {
 async function completeTokenExchange(flow: PendingPkceFlow, code: string): Promise<void> {
   try {
     const result = await exchangeCodeForToken(
-      { clientId: flow.clientId, code, verifier: flow.verifier, redirectUri: flow.redirectUri },
+      {
+        clientId: flow.clientId,
+        clientSecret: flow.clientSecret,
+        code,
+        verifier: flow.verifier,
+        redirectUri: flow.redirectUri,
+      },
       flow.abort.signal,
     );
     const credential = buildCredential(result.access_token, result.scope);
