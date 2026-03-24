@@ -37,12 +37,7 @@ export function ProviderCard({ provider, model }: ProviderCardProps): React.Reac
 
   return (
     <div style={S.cardStyle}>
-      <CardHeader
-        state={state}
-        provider={provider}
-        isExpanded={isExpanded}
-        model={model}
-      />
+      <CardHeader state={state} provider={provider} isExpanded={isExpanded} model={model} />
       {isExpanded && <ExpandedArea provider={provider} model={model} />}
     </div>
   );
@@ -53,7 +48,12 @@ function CardHeader({
   provider,
   isExpanded,
   model,
-}: { state: AuthState | undefined; provider: AuthProvider; isExpanded: boolean; model: AccountsSectionModel }): React.ReactElement {
+}: {
+  state: AuthState | undefined;
+  provider: AuthProvider;
+  isExpanded: boolean;
+  model: AccountsSectionModel;
+}): React.ReactElement {
   const isConnected = state?.status === 'authenticated';
   const isExpired = state?.status === 'expired';
   const meta = PROVIDER_META[provider];
@@ -82,10 +82,25 @@ function CardHeader({
   );
 }
 
-function ProviderLabel({ label, Logo }: { label: string; Logo: React.ComponentType }): React.ReactElement {
+function ProviderLabel({
+  label,
+  Logo,
+}: {
+  label: string;
+  Logo: React.ComponentType;
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-primary" style={S.providerNameStyle}>
-      <span style={{ marginRight: '8px', opacity: 0.7, display: 'inline-flex', verticalAlign: 'middle' }}><Logo /></span>
+      <span
+        style={{
+          marginRight: '8px',
+          opacity: 0.7,
+          display: 'inline-flex',
+          verticalAlign: 'middle',
+        }}
+      >
+        <Logo />
+      </span>
       {label}
     </div>
   );
@@ -154,7 +169,10 @@ function HeaderActions({
         border: 'none',
         fontWeight: 600,
       }}
-      onClick={() => model.expandCard(provider)}
+      onClick={() => {
+        model.expandCard(provider);
+        if (provider === 'github') void model.login('github');
+      }}
     >
       {provider === 'github' ? 'Sign in with GitHub' : 'Enter API Key'}
     </button>

@@ -155,6 +155,15 @@ function useAutoDetectCliCreds(detectCliCreds: () => Promise<void>): void {
   }, [detectCliCreds]);
 }
 
+function useAutoCollapseOnAuth(
+  githubLoginEvent: GitHubLoginEvent | null,
+  collapseCard: () => void,
+): void {
+  useEffect(() => {
+    if (githubLoginEvent?.type === 'authenticated') collapseCard();
+  }, [githubLoginEvent, collapseCard]);
+}
+
 export function useAccountsSectionModel(): AccountsSectionModel {
   const auth = useAuth();
   const ui = useAccountsUiState();
@@ -162,6 +171,7 @@ export function useAccountsSectionModel(): AccountsSectionModel {
 
   useCopyResetEffect(ui.copied, ui.setCopied);
   useAutoDetectCliCreds(auth.detectCliCreds);
+  useAutoCollapseOnAuth(auth.githubLoginEvent, uiActions.collapseCard);
 
   return {
     states: auth.states,
