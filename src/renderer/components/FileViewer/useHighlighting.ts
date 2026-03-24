@@ -1,4 +1,5 @@
 import log from 'electron-log/renderer';
+import type { MutableRefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BundledTheme } from 'shiki';
 
@@ -10,6 +11,37 @@ interface HighlightResult {
   highlightedHtml: string | null;
   highlightLang: string | null;
   shikiTheme: BundledTheme;
+}
+
+interface HighlightContext {
+  requestId: number;
+  currentRequestIdRef: MutableRefObject<number>;
+  setHighlightedHtml: (html: string | null) => void;
+  setHighlightLang: (lang: string | null) => void;
+}
+
+async function runHighlight(
+  filePath: string,
+  content: string,
+  shikiTheme: ReturnType<typeof getShikiTheme>,
+  ctx: HighlightContext,
+): Promise<void> {
+  const { requestId, currentRequestIdRef, setHighlightedHtml, setHighlightLang } = ctx;
+  const lang = getLanguage(filePath);
+  if (lang === 'text' || content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
+  try {
+    const hl = await getHighlighter();
+    try {
+      await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0]);
+    } catch {
+      /* language may already be loaded or not exist */
+    }
+    if (requestId !== currentRequestIdRef.current) return;
+    setHighlightedHtml(hl.codeToHtml(content, { lang, theme: shikiTheme }));
+    setHighlightLang(lang);
+  } catch (err) {
+    log.warn('highlight failed:', err);
+  }
 }
 
 export function useHighlighting(
@@ -30,21 +62,12 @@ export function useHighlighting(
   const highlight = useCallback(
     async (requestId: number) => {
       if (!filePath || !content) return;
-      const lang = getLanguage(filePath);
-      if (lang === 'text' || content.length > MAX_HIGHLIGHT_CONTENT_LENGTH) return;
-      try {
-        const hl = await getHighlighter();
-        try {
-          await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0]);
-        } catch {
-          /* language may already be loaded or not exist */
-        }
-        if (requestId !== currentRequestIdRef.current) return;
-        setHighlightedHtml(hl.codeToHtml(content, { lang, theme: shikiTheme }));
-        setHighlightLang(lang);
-      } catch (err) {
-        log.warn('highlight failed:', err);
-      }
+      await runHighlight(filePath, content, shikiTheme, {
+        requestId,
+        currentRequestIdRef,
+        setHighlightedHtml,
+        setHighlightLang,
+      });
     },
     [filePath, content, shikiTheme],
   );

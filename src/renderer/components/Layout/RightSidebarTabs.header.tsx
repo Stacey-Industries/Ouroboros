@@ -12,53 +12,59 @@ import { ViewSwitcherDropdown } from './RightSidebarTabs.panels';
 
 // ── Thread status badge ───────────────────────────────────────────────────────
 
+function BadgeSpinningIcon(): React.ReactElement {
+  return (
+    <svg
+      className="h-3 w-3 animate-spin shrink-0 text-interactive-accent"
+      viewBox="0 0 16 16"
+      fill="none"
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeDasharray="32"
+        strokeDashoffset="8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function BadgeCheckmarkIcon(): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M3.5 8.5L6.5 11.5L12.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function BadgeErrorIcon(): React.ReactElement {
+  return (
+    <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M5.5 5.5l5 5M10.5 5.5l-5 5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function ThreadStatusBadge({ status }: { status: string }): React.ReactElement | null {
-  if (status === 'running' || status === 'submitting') {
-    return (
-      <svg
-        className="h-3 w-3 animate-spin shrink-0 text-interactive-accent"
-        viewBox="0 0 16 16"
-        fill="none"
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeDasharray="32"
-          strokeDashoffset="8"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  if (status === 'complete') {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M3.5 8.5L6.5 11.5L12.5 4.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-  if (status === 'failed') {
-    return (
-      <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
-        <path
-          d="M5.5 5.5l5 5M10.5 5.5l-5 5"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
+  if (status === 'running' || status === 'submitting') return <BadgeSpinningIcon />;
+  if (status === 'complete') return <BadgeCheckmarkIcon />;
+  if (status === 'failed') return <BadgeErrorIcon />;
   return null;
 }
 
@@ -149,7 +155,42 @@ function ViewSwitcherButton({
   );
 }
 
+// ── New Chat Button ───────────────────────────────────────────────────────────
+
+function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-1.5 py-1 mr-0.5 rounded text-[11px] transition-colors duration-100 text-interactive-accent"
+      style={{ backgroundColor: 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)' }}
+      title="New Chat (Ctrl+L)"
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor =
+          'color-mix(in srgb, var(--interactive-accent) 18%, transparent)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor =
+          'color-mix(in srgb, var(--interactive-accent) 8%, transparent)';
+      }}
+    >
+      <PlusIcon />
+    </button>
+  );
+}
+
 // ── ChatPanelHeader ───────────────────────────────────────────────────────────
+
+type ChatPanelHeaderProps = {
+  activeThread: AgentChatThreadRecord | null;
+  threadCount: number;
+  historyOpen: boolean;
+  onToggleHistory: () => void;
+  onNewChat: () => void;
+  viewDropdownOpen: boolean;
+  onToggleViewDropdown: () => void;
+  activeView: RightSidebarView;
+  onSwitchView: (view: RightSidebarView) => void;
+};
 
 export function ChatPanelHeader({
   activeThread,
@@ -161,17 +202,7 @@ export function ChatPanelHeader({
   onToggleViewDropdown,
   activeView,
   onSwitchView,
-}: {
-  activeThread: AgentChatThreadRecord | null;
-  threadCount: number;
-  historyOpen: boolean;
-  onToggleHistory: () => void;
-  onNewChat: () => void;
-  viewDropdownOpen: boolean;
-  onToggleViewDropdown: () => void;
-  activeView: RightSidebarView;
-  onSwitchView: (view: RightSidebarView) => void;
-}): React.ReactElement {
+}: ChatPanelHeaderProps): React.ReactElement {
   return (
     <div
       className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel pl-2"
@@ -183,22 +214,7 @@ export function ChatPanelHeader({
         onToggle={onToggleHistory}
       />
       <ThreadTitle activeThread={activeThread} />
-      <button
-        onClick={onNewChat}
-        className="flex items-center gap-1 px-1.5 py-1 mr-0.5 rounded text-[11px] transition-colors duration-100 text-interactive-accent"
-        style={{ backgroundColor: 'color-mix(in srgb, var(--interactive-accent) 8%, transparent)' }}
-        title="New Chat (Ctrl+L)"
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor =
-            'color-mix(in srgb, var(--interactive-accent) 18%, transparent)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor =
-            'color-mix(in srgb, var(--interactive-accent) 8%, transparent)';
-        }}
-      >
-        <PlusIcon />
-      </button>
+      <NewChatButton onClick={onNewChat} />
       <ViewSwitcherButton viewDropdownOpen={viewDropdownOpen} onToggle={onToggleViewDropdown} />
       {viewDropdownOpen && (
         <ViewSwitcherDropdown

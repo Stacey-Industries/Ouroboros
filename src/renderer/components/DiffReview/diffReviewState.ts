@@ -2,8 +2,16 @@ import log from 'electron-log/renderer';
 import type { Dispatch } from 'react';
 import { useCallback } from 'react';
 
-import type { FileDiff } from '../../types/electron';
+import {
+  getPendingEntries,
+  getPendingEntriesForFile,
+  loadReviewFiles,
+  revertPendingEntries,
+  stagePendingEntries,
+} from './diffReviewState.ops';
 import type { DiffReviewState, HunkDecision, ReviewFile } from './types';
+
+export { toReviewFiles } from './diffReviewState.ops';
 
 export type DiffReviewAction =
   | {
@@ -37,12 +45,6 @@ export interface DiffReviewActions {
 }
 
 type ReviewDispatch = Dispatch<DiffReviewAction>;
-
-interface PendingHunkRef {
-  fileIdx: number;
-  hunkIdx: number;
-  rawPatch: string;
-}
 
 function buildOpenState(action: Extract<DiffReviewAction, { type: 'OPEN' }>): DiffReviewState {
   return {
@@ -131,170 +133,14 @@ export function diffReviewReducer(
   }
 }
 
-function buildStagedPatchSet(cachedFiles: FileDiff[]): Set<string> {
-  const set = new Set<string>();
-  for (const file of cachedFiles) {
-    for (const hunk of file.hunks) set.add(hunk.rawPatch);
-  }
-  return set;
-}
-
-export function toReviewFiles(apiFiles: FileDiff[], stagedPatches?: Set<string>): ReviewFile[] {
-  return apiFiles.map((file) => ({
-    filePath: file.filePath,
-    relativePath: file.relativePath,
-    status: file.status,
-    oldPath: file.oldPath,
-    hunks: file.hunks.map((hunk, index) => ({
-      id: `${file.relativePath}:${index}`,
-      header: hunk.header,
-      oldStart: hunk.oldStart,
-      oldCount: hunk.oldCount,
-      newStart: hunk.newStart,
-      newCount: hunk.newCount,
-      lines: hunk.lines,
-      rawPatch: hunk.rawPatch,
-      decision: (stagedPatches?.has(hunk.rawPatch) ? 'accepted' : 'pending') as HunkDecision,
-    })),
-  }));
-}
-
 function getPendingHunk(
   state: DiffReviewState | null,
   fileIdx: number,
   hunkIdx: number,
-): PendingHunkRef | null {
+): { fileIdx: number; hunkIdx: number; rawPatch: string } | null {
   const hunk = state?.files[fileIdx]?.hunks[hunkIdx];
   if (!hunk || hunk.decision !== 'pending') return null;
   return { fileIdx, hunkIdx, rawPatch: hunk.rawPatch };
-}
-
-function getPendingEntriesForFile(file: ReviewFile, fileIdx: number): PendingHunkRef[] {
-  return file.hunks.reduceRight<PendingHunkRef[]>((entries, hunk, hunkIdx) => {
-    if (hunk.decision === 'pending') entries.push({ fileIdx, hunkIdx, rawPatch: hunk.rawPatch });
-    return entries;
-  }, []);
-}
-
-function getPendingEntries(files: ReviewFile[]): PendingHunkRef[] {
-  const entries: PendingHunkRef[] = [];
-  for (let fileIdx = files.length - 1; fileIdx >= 0; fileIdx -= 1) {
-    entries.push(...getPendingEntriesForFile(files[fileIdx], fileIdx));
-  }
-  return entries;
-}
-
-async function revertPendingEntries(
-  projectRoot: string,
-  entries: PendingHunkRef[],
-  dispatch: ReviewDispatch,
-): Promise<void> {
-  for (const entry of entries) {
-    const result = await window.electronAPI.git.revertHunk(projectRoot, entry.rawPatch);
-    if (!result.success) {
-      log.warn(
-        'Failed to revert hunk (file %d, hunk %d):',
-        entry.fileIdx,
-        entry.hunkIdx,
-        result.error,
-      );
-      dispatch({
-        type: 'SET_DECISION',
-        fileIdx: entry.fileIdx,
-        hunkIdx: entry.hunkIdx,
-        decision: 'pending',
-      });
-    }
-  }
-}
-
-async function stageFileEntries(
-  projectRoot: string,
-  fileEntries: PendingHunkRef[],
-  file: ReviewFile,
-  dispatch: ReviewDispatch,
-): Promise<void> {
-  // If no hunks have been rejected, the working tree has all changes intact.
-  // git add is reliable regardless of index state (bypasses context-mismatch).
-  const hasRejectedHunks = file.hunks.some((h) => h.decision === 'rejected');
-  if (!hasRejectedHunks) {
-    const result = await window.electronAPI.git.stage(projectRoot, file.filePath);
-    if (result.success) return;
-    log.warn(
-      'git add failed for %s, falling back to per-hunk staging:',
-      file.filePath,
-      result.error,
-    );
-  }
-  // Fall back to per-hunk staging (needed when some hunks are rejected)
-  for (const entry of fileEntries) {
-    const result = await window.electronAPI.git.stageHunk(projectRoot, entry.rawPatch);
-    if (!result.success) {
-      log.warn(
-        'Failed to stage hunk (file %d, hunk %d):',
-        entry.fileIdx,
-        entry.hunkIdx,
-        result.error,
-      );
-      dispatch({
-        type: 'SET_DECISION',
-        fileIdx: entry.fileIdx,
-        hunkIdx: entry.hunkIdx,
-        decision: 'pending',
-      });
-    }
-  }
-}
-
-async function stagePendingEntries(
-  projectRoot: string,
-  entries: PendingHunkRef[],
-  files: ReviewFile[],
-  dispatch: ReviewDispatch,
-): Promise<void> {
-  // Group entries by file for optimized staging
-  const byFile = new Map<number, PendingHunkRef[]>();
-  for (const entry of entries) {
-    let group = byFile.get(entry.fileIdx);
-    if (!group) {
-      group = [];
-      byFile.set(entry.fileIdx, group);
-    }
-    group.push(entry);
-  }
-  for (const [fileIdx, fileEntries] of byFile) {
-    await stageFileEntries(projectRoot, fileEntries, files[fileIdx], dispatch);
-  }
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function loadReviewFiles(
-  dispatch: ReviewDispatch,
-  projectRoot: string,
-  snapshotHash: string,
-  filePaths?: string[],
-): void {
-  void Promise.all([
-    window.electronAPI.git.diffReview(projectRoot, snapshotHash, filePaths),
-    window.electronAPI.git.diffCached(projectRoot, snapshotHash, filePaths).catch(() => null),
-  ])
-    .then(([workingResult, cachedResult]) => {
-      if (!workingResult.success || !workingResult.files) {
-        dispatch({ type: 'ERROR', error: workingResult.error ?? 'Failed to load diff' });
-        return;
-      }
-      const stagedPatches =
-        cachedResult?.success && cachedResult.files
-          ? buildStagedPatchSet(cachedResult.files)
-          : undefined;
-      dispatch({ type: 'LOADED', files: toReviewFiles(workingResult.files, stagedPatches) });
-    })
-    .catch((error) => {
-      dispatch({ type: 'ERROR', error: getErrorMessage(error) });
-    });
 }
 
 export function useReviewLifecycleActions(
@@ -353,11 +199,11 @@ export function useSingleHunkActions(
   return { acceptHunk, rejectHunk };
 }
 
-export function useBulkReviewActions(
+function useAcceptAllFile(
   state: DiffReviewState | null,
   dispatch: ReviewDispatch,
-): Pick<DiffReviewActions, 'acceptAllFile' | 'rejectAllFile' | 'acceptAll' | 'rejectAll'> {
-  const acceptAllFile = useCallback(
+): (fileIdx: number) => void {
+  return useCallback(
     (fileIdx: number) => {
       const file = state?.files[fileIdx];
       if (!state || !file) return;
@@ -371,12 +217,16 @@ export function useBulkReviewActions(
     },
     [dispatch, state],
   );
+}
 
-  const rejectAllFile = useCallback(
+function useRejectAllFile(
+  state: DiffReviewState | null,
+  dispatch: ReviewDispatch,
+): (fileIdx: number) => void {
+  return useCallback(
     (fileIdx: number) => {
       const file = state?.files[fileIdx];
       if (!state || !file) return;
-
       dispatch({ type: 'SET_FILE_DECISION', fileIdx, decision: 'rejected' });
       void revertPendingEntries(
         state.projectRoot,
@@ -386,6 +236,14 @@ export function useBulkReviewActions(
     },
     [dispatch, state],
   );
+}
+
+export function useBulkReviewActions(
+  state: DiffReviewState | null,
+  dispatch: ReviewDispatch,
+): Pick<DiffReviewActions, 'acceptAllFile' | 'rejectAllFile' | 'acceptAll' | 'rejectAll'> {
+  const acceptAllFile = useAcceptAllFile(state, dispatch);
+  const rejectAllFile = useRejectAllFile(state, dispatch);
 
   const acceptAll = useCallback(() => {
     if (!state) return;

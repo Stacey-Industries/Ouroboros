@@ -30,6 +30,7 @@ import type { MutableRefObject } from 'react';
 
 import type { LspDiagnostic } from '../../types/electron';
 import { createLanguageExtensions, getLanguageExtension } from './InlineEditor.cm.language';
+import { getLspCompletionType, getLspSeverity } from './InlineEditor.cm.support';
 import { createHighlightExtension, editorThemeExtensions } from './InlineEditor.cm.theme';
 
 type StringRef = MutableRefObject<string>;
@@ -57,48 +58,6 @@ interface CreateUpdateListenerInput {
   didChangeTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   projectRootRef: NullableStringRef;
   filePathRef: StringRef;
-}
-
-const completionKindMap: Record<string, string> = {
-  method: 'method',
-  function: 'function',
-  constructor: 'class',
-  field: 'property',
-  variable: 'variable',
-  class: 'class',
-  interface: 'interface',
-  module: 'namespace',
-  property: 'property',
-  unit: 'constant',
-  value: 'constant',
-  enum: 'enum',
-  keyword: 'keyword',
-  snippet: 'text',
-  color: 'constant',
-  file: 'variable',
-  reference: 'variable',
-  folder: 'variable',
-  enumMember: 'enum',
-  constant: 'constant',
-  struct: 'class',
-  event: 'variable',
-  operator: 'keyword',
-  typeParameter: 'type',
-};
-
-const severityMap: Record<LspDiagnostic['severity'], 'error' | 'warning' | 'info'> = {
-  error: 'error',
-  warning: 'warning',
-  info: 'info',
-  hint: 'info',
-};
-
-function getLspCompletionType(kind: string): string {
-  return completionKindMap[kind] ?? 'text';
-}
-
-function getLspSeverity(severity: LspDiagnostic['severity']): 'error' | 'warning' | 'info' {
-  return severityMap[severity] ?? 'info';
 }
 
 function scheduleLspDidChange(

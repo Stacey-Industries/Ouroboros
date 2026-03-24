@@ -33,7 +33,6 @@ afterEach(() => {
   store.close();
 });
 
-// eslint-disable-next-line max-lines-per-function
 describe('GraphStore', () => {
   describe('node CRUD', () => {
     it('adds and retrieves a node', () => {

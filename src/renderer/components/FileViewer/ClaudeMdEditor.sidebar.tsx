@@ -16,7 +16,6 @@ const sidebarStyle: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
 };
-
 const panelStyle: React.CSSProperties = {
   width: '240px',
   flexShrink: 0,
@@ -26,7 +25,6 @@ const panelStyle: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
   fontSize: '0.6875rem',
 };
-
 const sectionTitleStyle: React.CSSProperties = {
   padding: '8px 10px 4px',
   fontWeight: 600,
@@ -34,7 +32,6 @@ const sectionTitleStyle: React.CSSProperties = {
   letterSpacing: '0.05em',
   fontSize: '0.625rem',
 };
-
 const insertButtonStyle: React.CSSProperties = {
   padding: '2px 8px',
   fontSize: '0.625rem',
@@ -44,7 +41,6 @@ const insertButtonStyle: React.CSSProperties = {
   backgroundColor: 'transparent',
   cursor: 'pointer',
 };
-
 const previewStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: '0.5625rem',
@@ -54,6 +50,41 @@ const previewStyle: React.CSSProperties = {
   maxHeight: '80px',
   overflow: 'hidden',
 };
+
+const SECTION_ICON_STYLE: React.CSSProperties = {
+  flexShrink: 0,
+  width: '14px',
+  textAlign: 'center',
+  fontSize: '0.625rem',
+  opacity: 0.7,
+};
+
+function getSectionRowStyle(level: number): React.CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    width: '100%',
+    padding: '4px 10px',
+    paddingLeft: `${10 + (level - 1) * 12}px`,
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontFamily: 'var(--font-ui)',
+    fontSize: '0.6875rem',
+    lineHeight: '1.4',
+  };
+}
+
+function getSectionLabelStyle(level: number): React.CSSProperties {
+  return {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontWeight: level <= 2 ? 600 : 400,
+  };
+}
 
 const SectionRow = memo(function SectionRow({
   onSelect,
@@ -67,21 +98,7 @@ const SectionRow = memo(function SectionRow({
       onClick={() => onSelect(section)}
       title={`Line ${section.startLine + 1}: ${section.title}`}
       className="text-text-semantic-primary"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        width: '100%',
-        padding: '4px 10px',
-        paddingLeft: `${10 + (section.level - 1) * 12}px`,
-        border: 'none',
-        backgroundColor: 'transparent',
-        cursor: 'pointer',
-        textAlign: 'left',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '0.6875rem',
-        lineHeight: '1.4',
-      }}
+      style={getSectionRowStyle(section.level)}
       onMouseEnter={(event) => {
         event.currentTarget.style.backgroundColor = 'var(--border-semantic)';
       }}
@@ -89,27 +106,8 @@ const SectionRow = memo(function SectionRow({
         event.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
-      <span
-        style={{
-          flexShrink: 0,
-          width: '14px',
-          textAlign: 'center',
-          fontSize: '0.625rem',
-          opacity: 0.7,
-        }}
-      >
-        {SECTION_ICONS[section.type]}
-      </span>
-      <span
-        style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontWeight: section.level <= 2 ? 600 : 400,
-        }}
-      >
-        {section.title}
-      </span>
+      <span style={SECTION_ICON_STYLE}>{SECTION_ICONS[section.type]}</span>
+      <span style={getSectionLabelStyle(section.level)}>{section.title}</span>
     </button>
   );
 });

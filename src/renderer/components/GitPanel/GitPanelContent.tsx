@@ -7,48 +7,14 @@ import type { GitPanelModel } from './useGitPanelModel';
 export interface GitPanelContentProps extends GitPanelModel {
   projectRoot: string | null;
 }
-type EmptyStateProps = { message: string; centered?: boolean };
-type ErrorBannerProps = { error: string; onDismiss: () => void };
-type SectionHeaderProps = {
-  count: number;
-  title: string;
-  toggleAllLabel?: string;
-  onToggleAll?: () => Promise<void>;
-};
-type ChangeSectionProps = {
-  count: number;
-  emptyLabel: string;
-  files: Array<[string, string]>;
-  isStaged: boolean;
-  title: string;
-  onDiscard?: (filePath: string) => Promise<void>;
-  onToggle: (filePath: string) => Promise<void>;
-  onToggleAll?: () => Promise<void>;
-  toggleAllLabel?: string;
-};
-type CommitSectionProps = {
-  canCommit: boolean;
-  commitMessage: string;
-  isCommitting: boolean;
-  stagedCount: number;
-  onCommit: () => Promise<void>;
-  onCommitMessageChange: (value: string) => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-};
-type CommitMessageInputProps = {
-  commitMessage: string;
-  onCommitMessageChange: (value: string) => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-};
-type CommitButtonProps = {
-  canCommit: boolean;
-  isCommitting: boolean;
-  stagedCount: number;
-  title: string;
-  onCommit: () => Promise<void>;
-};
 
-function EmptyState({ message, centered = false }: EmptyStateProps): React.ReactElement {
+function EmptyState({
+  message,
+  centered = false,
+}: {
+  message: string;
+  centered?: boolean;
+}): React.ReactElement {
   return (
     <div className={`p-4 ${centered ? 'flex h-full items-center justify-center' : ''}`}>
       <span className={`text-xs text-text-semantic-muted ${centered ? 'text-center' : ''}`}>
@@ -58,7 +24,13 @@ function EmptyState({ message, centered = false }: EmptyStateProps): React.React
   );
 }
 
-function ErrorBanner({ error, onDismiss }: ErrorBannerProps): React.ReactElement {
+function ErrorBanner({
+  error,
+  onDismiss,
+}: {
+  error: string;
+  onDismiss: () => void;
+}): React.ReactElement {
   return (
     <div
       className="flex-shrink-0 border-b border-border-semantic px-2 py-1 text-xs text-status-error"
@@ -77,7 +49,12 @@ function SectionHeader({
   title,
   toggleAllLabel,
   onToggleAll,
-}: SectionHeaderProps): React.ReactElement {
+}: {
+  count: number;
+  title: string;
+  toggleAllLabel?: string;
+  onToggleAll?: () => Promise<void>;
+}): React.ReactElement {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5">
       <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">
@@ -94,6 +71,18 @@ function SectionHeader({
       ) : null}
     </div>
   );
+}
+
+interface ChangeSectionProps {
+  count: number;
+  emptyLabel: string;
+  files: Array<[string, string]>;
+  isStaged: boolean;
+  title: string;
+  onDiscard?: (filePath: string) => Promise<void>;
+  onToggle: (filePath: string) => Promise<void>;
+  onToggleAll?: () => Promise<void>;
+  toggleAllLabel?: string;
 }
 
 function ChangeSection({
@@ -157,7 +146,11 @@ function CommitMessageInput({
   commitMessage,
   onCommitMessageChange,
   onKeyDown,
-}: CommitMessageInputProps): React.ReactElement {
+}: {
+  commitMessage: string;
+  onCommitMessageChange: (value: string) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+}): React.ReactElement {
   return (
     <textarea
       value={commitMessage}
@@ -181,7 +174,13 @@ function CommitButton({
   stagedCount,
   title,
   onCommit,
-}: CommitButtonProps): React.ReactElement {
+}: {
+  canCommit: boolean;
+  isCommitting: boolean;
+  stagedCount: number;
+  title: string;
+  onCommit: () => Promise<void>;
+}): React.ReactElement {
   return (
     <button
       onClick={() => void onCommit()}
@@ -201,7 +200,15 @@ function CommitButton({
   );
 }
 
-function CommitSection(props: CommitSectionProps): React.ReactElement {
+function CommitSection(props: {
+  canCommit: boolean;
+  commitMessage: string;
+  isCommitting: boolean;
+  stagedCount: number;
+  onCommit: () => Promise<void>;
+  onCommitMessageChange: (value: string) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+}): React.ReactElement {
   const title = getCommitTitle(props.stagedCount, props.commitMessage);
 
   return (

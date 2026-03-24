@@ -12,17 +12,26 @@ import { type CodexCliSettings, getConfigValue } from '../../config';
 import log from '../../logger';
 import type { ProviderCapabilities } from '../types';
 import { buildPrompt } from './codexContextBuilder';
-import { buildCodexEventHandler, type CodexEvent } from './codexEventHandler';
-import { type CodexExecProcessHandle, spawnCodexExecProcess } from './codexExecRunner';
+import { type CodexEvent } from './codexEventHandler';
+import { type CodexExecProcessHandle } from './codexExecRunner';
 import {
-  createProviderArtifact,
-  createProviderSessionReference,
+  buildCodexCompletionArgs,
+  buildCodexEventComponents,
+  buildCodexLaunchResult,
+  buildCodexPlaceholderHandle,
+  buildCodexSessionRef,
+  type CodexCompletionArgs,
+  spawnCodexProcess,
+} from './codexLaunch';
+import {
   type ProviderAdapter,
   type ProviderLaunchContext,
   type ProviderLaunchResult,
   type ProviderProgressSink,
   type ProviderResumeContext,
 } from './providerAdapter';
+
+export type { CodexCompletionArgs };
 
 const activeProcesses = new Map<string, CodexExecProcessHandle>();
 const cancelledTasks = new Set<string>();
@@ -93,16 +102,7 @@ function resolveSettings(context: ProviderLaunchContext | ProviderResumeContext)
   return { cliArgs: buildCodexCliArgs(settings, 'exec'), model: settings.model };
 }
 
-interface CodexCompletionArgs {
-  taskId: string;
-  sessionRef: ReturnType<typeof createProviderSessionReference>;
-  sink: ProviderProgressSink;
-  getUsage: () => { inputTokens: number; outputTokens: number } | undefined;
-  getNextBlockIndex: () => number;
-  invocationTempPaths: string[];
-}
-
-function handleLaunchSuccess(
+export function handleLaunchSuccess(
   result: { threadId: string | null; durationMs: number } | null,
   args: CodexCompletionArgs,
 ): void {
@@ -129,7 +129,7 @@ function handleLaunchSuccess(
   });
 }
 
-function handleLaunchError(error: unknown, args: CodexCompletionArgs): void {
+export function handleLaunchError(error: unknown, args: CodexCompletionArgs): void {
   const errorMessage = buildFailureMessage(error);
   const wasCancelled = cancelledTasks.delete(args.taskId);
   cleanupLaunchArtifacts(args.taskId, args.invocationTempPaths);
@@ -164,7 +164,7 @@ function handleLaunchError(error: unknown, args: CodexCompletionArgs): void {
   });
 }
 
-function scheduleCodexLaunch(args: {
+async function scheduleCodexLaunch(args: {
   context: ProviderLaunchContext | ProviderResumeContext;
   cwd: string;
   cliArgs: string[];
@@ -174,33 +174,31 @@ function scheduleCodexLaunch(args: {
   getCancelledBeforeLaunch: () => boolean;
   eventHandler: (event: CodexEvent) => void;
 }): Promise<{ threadId: string | null; durationMs: number } | null> {
-  return (async () => {
-    if (args.context.request.goalAttachments?.length) {
-      try {
-        const materialized = await materializeAttachments(args.context.request.goalAttachments);
-        args.invocationTempPaths.push(...materialized.imagePaths);
-      } catch (error) {
-        log.error('failed to materialize attachments:', error);
-      }
+  if (args.context.request.goalAttachments?.length) {
+    try {
+      const materialized = await materializeAttachments(args.context.request.goalAttachments);
+      args.invocationTempPaths.push(...materialized.imagePaths);
+    } catch (error) {
+      log.error('failed to materialize attachments:', error);
     }
-
-    if (args.getCancelledBeforeLaunch()) {
-      activeProcesses.delete(args.context.taskId);
-      return null;
-    }
-
-    const prompt = buildPrompt(args.context, args.model, Boolean(args.resumeThreadId));
-    const handle = spawnCodexExecProcess({
+  }
+  if (args.getCancelledBeforeLaunch()) {
+    activeProcesses.delete(args.context.taskId);
+    return null;
+  }
+  const prompt = buildPrompt(args.context, args.model, Boolean(args.resumeThreadId));
+  return spawnCodexProcess(
+    args.context,
+    {
       prompt,
       cwd: args.cwd,
       cliArgs: args.cliArgs,
       imagePaths: args.invocationTempPaths,
-      onEvent: args.eventHandler,
+      eventHandler: args.eventHandler,
       resumeThreadId: args.resumeThreadId,
-    });
-    activeProcesses.set(args.context.taskId, handle);
-    return handle.result;
-  })();
+    },
+    activeProcesses,
+  );
 }
 
 function launchCodex(
@@ -211,13 +209,7 @@ function launchCodex(
   const requestId = `orchestration-${context.attemptId}`;
   const cwd = context.request.workspaceRoots[0];
   const { cliArgs, model } = resolveSettings(context);
-  const sessionRef = createProviderSessionReference('codex', {
-    requestId,
-    sessionId:
-      resumeThreadId ||
-      ('providerSession' in context ? context.providerSession?.sessionId : undefined),
-    externalTaskId: context.taskId,
-  });
+  const sessionRef = buildCodexSessionRef(context, requestId, resumeThreadId);
   sink.emit({
     provider: 'codex',
     status: 'queued',
@@ -229,60 +221,35 @@ function launchCodex(
     handler: eventHandler,
     getNextBlockIndex,
     getUsage,
-  } = buildCodexEventHandler(sink, sessionRef);
-  const invocationTempPaths: string[] = [];
-  let cancelledBeforeLaunch = false;
-  const placeholder: CodexExecProcessHandle = {
-    result: null as unknown as Promise<{ threadId: string | null; durationMs: number }>,
-    kill: () => {
-      const realHandle = activeProcesses.get(context.taskId);
-      if (realHandle && realHandle !== placeholder) {
-        realHandle.kill();
-        return;
-      }
-      cancelledBeforeLaunch = true;
-    },
-    threadId: sessionRef.sessionId ?? null,
-  };
+  } = buildCodexEventComponents(sink, sessionRef);
+  const { placeholder, getCancelledBeforeLaunch } = buildCodexPlaceholderHandle(
+    context,
+    activeProcesses,
+  );
   activeProcesses.set(context.taskId, placeholder);
-  const resultPromise = scheduleCodexLaunch({
+  const invocationTempPaths: string[] = [];
+  const completionArgs = buildCodexCompletionArgs({
+    context,
+    sessionRef,
+    sink,
+    getUsage,
+    getNextBlockIndex,
+    invocationTempPaths,
+  });
+  scheduleCodexLaunch({
     context,
     cwd,
     cliArgs,
     model,
     resumeThreadId,
     invocationTempPaths,
-    getCancelledBeforeLaunch: () => cancelledBeforeLaunch,
+    getCancelledBeforeLaunch,
     eventHandler,
-  });
-  const completionArgs: CodexCompletionArgs = {
-    taskId: context.taskId,
-    sessionRef,
-    sink,
-    getUsage,
-    getNextBlockIndex,
-    invocationTempPaths,
-  };
-  resultPromise.then(
+  }).then(
     (result) => handleLaunchSuccess(result, completionArgs),
     (error) => handleLaunchError(error, completionArgs),
   );
-  sink.emit({
-    provider: 'codex',
-    status: 'queued',
-    message: 'Codex session started',
-    timestamp: Date.now(),
-    session: sessionRef,
-  });
-  return {
-    session: sessionRef,
-    artifact: createProviderArtifact({
-      provider: 'codex',
-      status: 'streaming',
-      session: sessionRef,
-      submittedAt: Date.now(),
-    }),
-  };
+  return buildCodexLaunchResult(sessionRef, sink);
 }
 
 export class CodexAdapter implements ProviderAdapter {

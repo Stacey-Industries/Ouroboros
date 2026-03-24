@@ -7,7 +7,7 @@ import {
   ExtensionActionButtons,
   ExtensionCommandsSection,
 } from './ExtensionsSectionActions';
-import { extensionsSectionRootStyle } from './extensionsSectionStyles';
+import { extensionsSectionRootStyle } from './extensionsSectionStyles2';
 import type { ExtensionsSectionModel } from './useExtensionsSection';
 import { VsxInstalledSection } from './VsxInstalledSection';
 

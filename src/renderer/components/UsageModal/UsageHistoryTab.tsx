@@ -1,15 +1,13 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { SessionUsage, UsageSummary } from '../../types/electron';
+import { DailyCostChart, HistorySessionList } from './UsageHistoryTab.parts';
 import {
   formatCost,
-  formatDate,
   formatTokens,
   getTimeSince,
   HISTORY_RANGES,
-  modelShortName,
   summarizeModels,
-  timeAgo,
   TimeRange,
 } from './UsagePanelShared';
 
@@ -65,6 +63,36 @@ function useUsageSummary(range: TimeRange): {
   };
 }
 
+function RangeButton({
+  rangeKey,
+  label,
+  isActive,
+  onClick,
+}: {
+  rangeKey: TimeRange;
+  label: string;
+  isActive: boolean;
+  onClick: (key: TimeRange) => void;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={() => onClick(rangeKey)}
+      className="rounded px-2 py-0.5 text-[10px] transition-colors"
+      style={{
+        background: isActive
+          ? 'color-mix(in srgb, var(--interactive-accent) 20%, transparent)'
+          : 'transparent',
+        color: isActive ? 'var(--interactive-accent)' : 'var(--text-faint)',
+        border: isActive ? '1px solid var(--interactive-accent)' : '1px solid transparent',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-ui)',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function HistoryToolbar({
   activeRange,
   onRangeChange,
@@ -77,26 +105,13 @@ function HistoryToolbar({
   return (
     <div className="flex flex-shrink-0 items-center gap-1.5 px-4 py-2 border-b border-border-semantic">
       {HISTORY_RANGES.map((range) => (
-        <button
+        <RangeButton
           key={range.key}
-          onClick={() => onRangeChange(range.key)}
-          className="rounded px-2 py-0.5 text-[10px] transition-colors"
-          style={{
-            background:
-              activeRange === range.key
-                ? 'color-mix(in srgb, var(--interactive-accent) 20%, transparent)'
-                : 'transparent',
-            color: activeRange === range.key ? 'var(--interactive-accent)' : 'var(--text-faint)',
-            border:
-              activeRange === range.key
-                ? '1px solid var(--interactive-accent)'
-                : '1px solid transparent',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-ui)',
-          }}
-        >
-          {range.label}
-        </button>
+          rangeKey={range.key}
+          label={range.label}
+          isActive={activeRange === range.key}
+          onClick={onRangeChange}
+        />
       ))}
       <div className="flex-1" />
       <button
@@ -153,10 +168,52 @@ function HistorySummaryCards({ summary }: { summary: UsageSummary }): React.Reac
   );
 }
 
+type ModelSummary = ReturnType<typeof summarizeModels>[number];
+
+function ModelBar({
+  model,
+  maxTokens,
+}: {
+  model: ModelSummary;
+  maxTokens: number;
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="text-[10px] font-semibold"
+        style={{ color: model.color, width: '50px', flexShrink: 0 }}
+      >
+        {model.name}
+      </span>
+      <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-surface-base">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{
+            width: `${Math.max((model.tokens / maxTokens) * 100, 2)}%`,
+            background: model.color,
+            opacity: 0.7,
+          }}
+        />
+      </div>
+      <span
+        className="text-[10px] tabular-nums text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-mono)', width: '50px', textAlign: 'right', flexShrink: 0 }}
+      >
+        {formatTokens(model.tokens)}
+      </span>
+      <span
+        className="text-[10px] tabular-nums text-text-semantic-faint"
+        style={{ fontFamily: 'var(--font-mono)', width: '44px', textAlign: 'right', flexShrink: 0 }}
+      >
+        {formatCost(model.cost)}
+      </span>
+    </div>
+  );
+}
+
 function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
   const models = useMemo(() => summarizeModels(sessions), [sessions]);
-  const maxTokens = models.length > 0 ? Math.max(...models.map((model) => model.tokens)) : 1;
-
+  const maxTokens = models.length > 0 ? Math.max(...models.map((m) => m.tokens)) : 1;
   return (
     <div className="px-4 py-3 border-b border-border-semantic">
       <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
@@ -164,46 +221,7 @@ function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.Re
       </div>
       <div className="flex flex-col gap-1.5">
         {models.map((model) => (
-          <div key={model.name} className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-semibold"
-              style={{ color: model.color, width: '50px', flexShrink: 0 }}
-            >
-              {model.name}
-            </span>
-            <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-surface-base">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.max((model.tokens / maxTokens) * 100, 2)}%`,
-                  background: model.color,
-                  opacity: 0.7,
-                }}
-              />
-            </div>
-            <span
-              className="text-[10px] tabular-nums text-text-semantic-muted"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                width: '50px',
-                textAlign: 'right',
-                flexShrink: 0,
-              }}
-            >
-              {formatTokens(model.tokens)}
-            </span>
-            <span
-              className="text-[10px] tabular-nums text-text-semantic-faint"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                width: '44px',
-                textAlign: 'right',
-                flexShrink: 0,
-              }}
-            >
-              {formatCost(model.cost)}
-            </span>
-          </div>
+          <ModelBar key={model.name} model={model} maxTokens={maxTokens} />
         ))}
         {models.length === 0 && (
           <span className="text-[10px] italic text-text-semantic-faint">No data</span>
@@ -213,254 +231,11 @@ function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.Re
   );
 }
 
-interface DailyBucket {
-  label: string;
-  cost: number;
-  tokens: number;
-}
-
-function buildDailyBuckets(sessions: SessionUsage[]): DailyBucket[] {
-  const map = new Map<string, DailyBucket>();
-  for (const s of sessions) {
-    const d = new Date(s.startedAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const bucket = map.get(key) ?? { label, cost: 0, tokens: 0 };
-    bucket.cost += s.estimatedCost;
-    bucket.tokens += s.inputTokens + s.outputTokens;
-    map.set(key, bucket);
-  }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, b]) => b);
-}
-
-function DailyBar({
-  bucket,
-  maxCost,
-  isHovered,
-  onEnter,
-  onLeave,
-}: {
-  bucket: DailyBucket;
-  maxCost: number;
-  isHovered: boolean;
-  onEnter: () => void;
-  onLeave: () => void;
-}): React.ReactElement {
-  const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
-  return (
-    <div
-      className="relative flex flex-1 flex-col items-center justify-end"
-      style={{ height: '100%' }}
-      onMouseEnter={onEnter}
-      onMouseLeave={onLeave}
-    >
-      {isHovered && (
-        <div
-          className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap bg-surface-raised text-interactive-accent"
-          style={{
-            border: '1px solid var(--border-subtle)',
-            fontFamily: 'var(--font-mono)',
-            zIndex: 1,
-          }}
-        >
-          {formatCost(bucket.cost)}
-        </div>
-      )}
-      <div
-        className="w-full rounded-t transition-opacity duration-100"
-        style={{
-          height: `${barHeight}%`,
-          backgroundColor: 'var(--interactive-accent)',
-          opacity: isHovered ? 1 : 0.6,
-          minHeight: bucket.cost > 0 ? '2px' : '0',
-        }}
-      />
-    </div>
-  );
-}
-
-function DailyCostChart({ sessions }: { sessions: SessionUsage[] }): React.ReactElement | null {
-  const buckets = useMemo(() => buildDailyBuckets(sessions), [sessions]);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-  if (buckets.length < 2) return null;
-  const maxCost = Math.max(...buckets.map((b) => b.cost));
-  if (maxCost === 0) return null;
-
-  return (
-    <div className="px-4 py-3 border-b border-border-semantic">
-      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
-        Daily Spend
-      </div>
-      <div className="flex items-end gap-[3px]" style={{ height: '80px' }}>
-        {buckets.map((bucket, i) => (
-          <DailyBar
-            key={i}
-            bucket={bucket}
-            maxCost={maxCost}
-            isHovered={hoveredIndex === i}
-            onEnter={() => setHoveredIndex(i)}
-            onLeave={() => setHoveredIndex(null)}
-          />
-        ))}
-      </div>
-      <div className="mt-1 flex justify-between">
-        <span className="text-[8px] text-text-semantic-faint">{buckets[0].label}</span>
-        <span className="text-[8px] text-text-semantic-faint">
-          {buckets[buckets.length - 1].label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.ReactElement {
-  return (
-    <div
-      className="px-2 py-1.5 text-[10px] bg-surface-raised"
-      style={{ borderBottom: '1px solid var(--border-subtle)', fontFamily: 'var(--font-mono)' }}
-    >
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
-        <span>
-          Model: <span className="text-text-semantic-primary">{session.model}</span>
-        </span>
-        <span>
-          Input:{' '}
-          <span className="text-text-semantic-primary">{formatTokens(session.inputTokens)}</span>
-        </span>
-        <span>
-          Output:{' '}
-          <span className="text-text-semantic-primary">{formatTokens(session.outputTokens)}</span>
-        </span>
-        <span>
-          Cache Read:{' '}
-          <span className="text-text-semantic-primary">
-            {formatTokens(session.cacheReadTokens)}
-          </span>
-        </span>
-        <span>
-          Cache Write:{' '}
-          <span className="text-text-semantic-primary">
-            {formatTokens(session.cacheWriteTokens)}
-          </span>
-        </span>
-        <span>
-          Messages: <span className="text-text-semantic-primary">{session.messageCount}</span>
-        </span>
-      </div>
-      <div className="mt-1 flex gap-x-4 text-text-semantic-faint">
-        <span>
-          Started:{' '}
-          <span className="text-text-semantic-primary">{formatDate(session.startedAt)}</span>
-        </span>
-        <span>
-          Last active:{' '}
-          <span className="text-text-semantic-primary">{formatDate(session.lastActiveAt)}</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function HistorySessionRow({
-  session,
-  isExpanded,
-  onToggle,
-}: {
-  session: SessionUsage;
-  isExpanded: boolean;
-  onToggle: () => void;
-}): React.ReactElement {
-  const totalTokens = session.inputTokens + session.outputTokens;
-  return (
-    <div>
-      <button
-        className="flex w-full items-center gap-2 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
-        style={{
-          fontFamily: 'var(--font-mono)',
-          background: 'transparent',
-          border: 'none',
-          borderBottom: '1px solid var(--border-subtle)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          padding: '4px 0',
-        }}
-        onClick={onToggle}
-      >
-        <span
-          className="text-text-semantic-muted"
-          style={{ width: '70px', flexShrink: 0, fontFamily: 'var(--font-ui)' }}
-        >
-          {timeAgo(session.lastActiveAt)}
-        </span>
-        <span className="min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ui)' }}>
-          {session.sessionId.slice(0, 8)}
-        </span>
-        <span
-          className="text-text-semantic-primary"
-          style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}
-        >
-          {modelShortName(session.model)}
-        </span>
-        <span
-          className="text-text-semantic-muted"
-          style={{ width: '56px', flexShrink: 0, textAlign: 'right' }}
-        >
-          {formatTokens(totalTokens)}
-        </span>
-        <span
-          className="text-interactive-accent"
-          style={{ width: '48px', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}
-        >
-          {formatCost(session.estimatedCost)}
-        </span>
-      </button>
-      {isExpanded && <HistorySessionExpandedDetails session={session} />}
-    </div>
-  );
-}
-
-function HistorySessionList({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  if (sessions.length === 0) {
-    return (
-      <div className="px-4 py-6 text-center text-[11px] italic text-text-semantic-faint">
-        No sessions found in Claude Code&apos;s local data
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-4 py-2">
-      <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
-        Sessions ({sessions.length})
-      </div>
-      <div
-        className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint"
-        style={{ borderBottom: '1px solid var(--border-subtle)' }}
-      >
-        <span style={{ width: '70px', flexShrink: 0 }}>When</span>
-        <span className="min-w-0 flex-1">Session</span>
-        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>Model</span>
-        <span style={{ width: '56px', flexShrink: 0, textAlign: 'right' }}>Tokens</span>
-        <span style={{ width: '48px', flexShrink: 0, textAlign: 'right' }}>Cost</span>
-      </div>
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 400px)' }}>
-        {sessions.map((session) => (
-          <HistorySessionRow
-            key={session.sessionId}
-            session={session}
-            isExpanded={expanded === session.sessionId}
-            onToggle={() =>
-              setExpanded((current) => (current === session.sessionId ? null : session.sessionId))
-            }
-          />
-        ))}
-      </div>
-    </div>
-  );
+interface HistoryContentProps {
+  summary: UsageSummary | null;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => Promise<void>;
 }
 
 function HistoryContent({
@@ -468,12 +243,7 @@ function HistoryContent({
   isLoading,
   error,
   onRetry,
-}: {
-  summary: UsageSummary | null;
-  isLoading: boolean;
-  error: string | null;
-  onRetry: () => Promise<void>;
-}): React.ReactElement | null {
+}: HistoryContentProps): React.ReactElement | null {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -483,7 +253,6 @@ function HistoryContent({
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-12">
@@ -498,7 +267,6 @@ function HistoryContent({
       </div>
     );
   }
-
   return summary ? (
     <>
       <HistorySummaryCards summary={summary} />

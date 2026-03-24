@@ -11,6 +11,20 @@ import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
 } from '../../hooks/appEventNames';
 import { CommandBlockActions } from './CommandBlockActions';
+import {
+  actionsContainerStyle,
+  collapsedOverlayStyle,
+  commandLabelStyle,
+  formatDuration,
+  formatRelativeTime,
+  getCellHeight,
+  gutterStyle,
+  overlayContainerStyle,
+  readTerminalLines,
+  separatorLineStyle,
+  timestampStyle,
+  truncateCommand,
+} from './CommandBlockOverlayBody.styles';
 import type { CommandBlock } from './useCommandBlocks';
 
 export interface CommandBlockOverlayProps {
@@ -24,155 +38,47 @@ export interface CommandBlockOverlayProps {
 }
 
 type VisibleBlock = { block: CommandBlock; index: number };
-function getCellHeight(term: Terminal): number {
-  try {
-    const core = (term as unknown as Record<string, unknown>)._core as
-      | Record<string, unknown>
-      | undefined;
-    const renderService = core?._renderService as Record<string, unknown> | undefined;
-    const dimensions = renderService?.dimensions as
-      | { css?: { cell?: { height?: number } } }
-      | undefined;
-    if (dimensions?.css?.cell?.height) return dimensions.css.cell.height;
-  } catch {
-    /* ignore */
-  }
-  return term.element ? term.element.clientHeight / term.rows : 17;
-}
-function formatRelativeTime(timestamp: number): string {
-  const delta = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (delta < 5) return 'just now';
-  if (delta < 60) return `${delta}s ago`;
-  if (delta < 3600) return `${Math.floor(delta / 60)}m ago`;
-  if (delta < 86400) return `${Math.floor(delta / 3600)}h ago`;
-  return `${Math.floor(delta / 86400)}d ago`;
-}
-function formatDuration(ms: number | undefined): string {
-  if (ms === undefined) return '';
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+
+// ── Gutter Icons ─────────────────────────────────────────────────────────────
+
+function SpinnerIcon(): React.ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      style={{ animation: 'agent-ide-spin 1s linear infinite' }}
+    >
+      <circle
+        cx="8"
+        cy="8"
+        r="6"
+        fill="none"
+        stroke="var(--interactive-accent)"
+        strokeWidth="2"
+        strokeDasharray="20 18"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
-function truncateCommand(cmd: string, max: number = 60): string {
-  return cmd.length <= max ? cmd : `${cmd.slice(0, max - 1)}\u2026`;
+function SuccessIcon(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="7" stroke="var(--status-success)" strokeWidth="1.5" opacity="0.8" />
+      <path
+        d="M5 8l2 2 4-4"
+        stroke="var(--status-success)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
-const overlayContainerStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  pointerEvents: 'none',
-  zIndex: 5,
-  overflow: 'hidden',
-};
-const separatorLineStyle: React.CSSProperties = {
-  position: 'absolute',
-  left: 28,
-  right: 0,
-  height: 1,
-  opacity: 0.5,
-};
-const gutterStyle: React.CSSProperties = {
-  position: 'absolute',
-  left: 4,
-  width: 20,
-  height: 20,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 7,
-};
-const commandLabelStyle: React.CSSProperties = {
-  position: 'absolute',
-  left: 32,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  fontSize: 10,
-  fontFamily: 'var(--font-mono, monospace)',
-  opacity: 0.85,
-  userSelect: 'none',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  maxWidth: '50%',
-};
-const timestampStyle: React.CSSProperties = {
-  position: 'absolute',
-  right: 6,
-  fontSize: 9,
-  fontFamily: 'var(--font-mono, monospace)',
-  opacity: 0.7,
-  userSelect: 'none',
-};
-const actionsContainerStyle: React.CSSProperties = {
-  position: 'absolute',
-  right: 80,
-  display: 'flex',
-  alignItems: 'center',
-  opacity: 0,
-  transition: 'opacity 0.15s ease',
-};
-const collapsedOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  left: 28,
-  right: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backdropFilter: 'blur(2px)',
-  fontSize: 11,
-  fontFamily: 'var(--font-mono, monospace)',
-  cursor: 'pointer',
-  pointerEvents: 'auto',
-  userSelect: 'none',
-};
-function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
-  if (!block.complete) {
-    return (
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        style={{ animation: 'agent-ide-spin 1s linear infinite' }}
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6"
-          fill="none"
-          stroke="var(--interactive-accent)"
-          strokeWidth="2"
-          strokeDasharray="20 18"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  if (block.exitCode === 0 || block.exitCode === undefined) {
-    return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <circle
-          cx="8"
-          cy="8"
-          r="7"
-          stroke="var(--status-success)"
-          strokeWidth="1.5"
-          opacity="0.8"
-        />
-        <path
-          d="M5 8l2 2 4-4"
-          stroke="var(--status-success)"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
+function ErrorIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="7" stroke="var(--status-error)" strokeWidth="1.5" opacity="0.8" />
@@ -185,6 +91,14 @@ function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
     </svg>
   );
 }
+
+function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
+  if (!block.complete) return <SpinnerIcon />;
+  if (block.exitCode === 0 || block.exitCode === undefined) return <SuccessIcon />;
+  return <ErrorIcon />;
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 const OutputBorder = ({
   color,
@@ -206,6 +120,7 @@ const OutputBorder = ({
     }}
   />
 );
+
 const CommandLabel = ({
   command,
   cellHeight,
@@ -221,6 +136,15 @@ const CommandLabel = ({
     {truncateCommand(command)}
   </div>
 );
+
+function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
+  const [text, setText] = useState(() => formatRelativeTime(timestamp));
+  useEffect(() => {
+    const id = setInterval(() => setText(formatRelativeTime(timestamp)), 5000);
+    return () => clearInterval(id);
+  }, [timestamp]);
+  return <span>{text}</span>;
+}
 
 const TimestampRow = ({
   timestamp,
@@ -312,6 +236,8 @@ const CollapsedOverlay = ({
   </div>
 );
 
+// ── Decoration View ───────────────────────────────────────────────────────────
+
 interface CommandBlockDecorationViewProps {
   block: CommandBlock;
   cellHeight: number;
@@ -326,6 +252,44 @@ interface CommandBlockDecorationViewProps {
   onCopyCommand: (block: CommandBlock) => void;
   onExplainError: (block: CommandBlock) => void;
   sessionId: string;
+}
+
+function CommandBlockDecorationHeader({
+  block,
+  cellHeight,
+  borderColor,
+  isActive,
+  hovered,
+  sessionId,
+  onToggleCollapse,
+  onCopyOutput,
+  onCopyCommand,
+  onExplainError,
+}: Omit<
+  CommandBlockDecorationViewProps,
+  'separatorY' | 'outputHeight' | 'setHovered'
+>): React.ReactElement {
+  return (
+    <>
+      <div className="bg-border-semantic" style={{ ...separatorLineStyle, top: 0 }} />
+      <OutputBorder color={borderColor} active={isActive} />
+      <div style={{ ...gutterStyle, top: (cellHeight - 20) / 2 }}>
+        <GutterIcon block={block} />
+      </div>
+      {block.command && <CommandLabel command={block.command} cellHeight={cellHeight} />}
+      <TimestampRow timestamp={block.timestamp} duration={block.duration} cellHeight={cellHeight} />
+      <ActionBar
+        hovered={hovered}
+        cellHeight={cellHeight}
+        block={block}
+        sessionId={sessionId}
+        onToggleCollapse={onToggleCollapse}
+        onCopyOutput={onCopyOutput}
+        onCopyCommand={onCopyCommand}
+        onExplainError={onExplainError}
+      />
+    </>
+  );
 }
 
 function CommandBlockDecorationView({
@@ -344,7 +308,6 @@ function CommandBlockDecorationView({
   sessionId,
 }: CommandBlockDecorationViewProps): React.ReactElement {
   const collapsedLines = block.collapsed ? block.endLine - block.outputStartLine : 0;
-
   return (
     <div
       style={{
@@ -358,17 +321,12 @@ function CommandBlockDecorationView({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="bg-border-semantic" style={{ ...separatorLineStyle, top: 0 }} />
-      <OutputBorder color={borderColor} active={isActive} />
-      <div style={{ ...gutterStyle, top: (cellHeight - 20) / 2 }}>
-        <GutterIcon block={block} />
-      </div>
-      {block.command && <CommandLabel command={block.command} cellHeight={cellHeight} />}
-      <TimestampRow timestamp={block.timestamp} duration={block.duration} cellHeight={cellHeight} />
-      <ActionBar
-        hovered={hovered}
-        cellHeight={cellHeight}
+      <CommandBlockDecorationHeader
         block={block}
+        cellHeight={cellHeight}
+        borderColor={borderColor}
+        isActive={isActive}
+        hovered={hovered}
         sessionId={sessionId}
         onToggleCollapse={onToggleCollapse}
         onCopyOutput={onCopyOutput}
@@ -388,6 +346,8 @@ function CommandBlockDecorationView({
   );
 }
 
+// ── Decoration (state container) ──────────────────────────────────────────────
+
 interface CommandBlockDecorationProps {
   block: CommandBlock;
   index: number;
@@ -399,6 +359,12 @@ interface CommandBlockDecorationProps {
   onCopyCommand: (block: CommandBlock) => void;
   onExplainError: (block: CommandBlock) => void;
   sessionId: string;
+}
+
+function resolveBorderColor(block: CommandBlock): string {
+  if (block.exitCode !== undefined && block.exitCode !== 0) return 'var(--status-error)';
+  if (!block.complete) return 'var(--interactive-accent)';
+  return 'var(--status-success)';
 }
 
 function CommandBlockDecoration({
@@ -414,26 +380,18 @@ function CommandBlockDecoration({
   sessionId,
 }: CommandBlockDecorationProps): React.ReactElement {
   const [hovered, setHovered] = useState(false);
-  const isActive = index === activeBlockIndex;
   const separatorY = (block.startLine - viewportY) * cellHeight;
   const outputHeight = block.collapsed
     ? cellHeight
     : (block.endLine - block.startLine + 1) * cellHeight;
-  const borderColor =
-    block.exitCode !== undefined && block.exitCode !== 0
-      ? 'var(--status-error)'
-      : !block.complete
-        ? 'var(--interactive-accent)'
-        : 'var(--status-success)';
-
   return (
     <CommandBlockDecorationView
       block={block}
       cellHeight={cellHeight}
       separatorY={separatorY}
       outputHeight={outputHeight}
-      borderColor={borderColor}
-      isActive={isActive}
+      borderColor={resolveBorderColor(block)}
+      isActive={index === activeBlockIndex}
       hovered={hovered}
       setHovered={setHovered}
       onToggleCollapse={onToggleCollapse}
@@ -445,14 +403,7 @@ function CommandBlockDecoration({
   );
 }
 
-function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
-  const [text, setText] = useState(() => formatRelativeTime(timestamp));
-  useEffect(() => {
-    const id = setInterval(() => setText(formatRelativeTime(timestamp)), 5000);
-    return () => clearInterval(id);
-  }, [timestamp]);
-  return <span>{text}</span>;
-}
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 function useVisibleBlocks(blocks: CommandBlock[], terminal: Terminal | null): VisibleBlock[] {
   return useMemo(() => {
@@ -473,18 +424,17 @@ function useScrollViewportY(terminal: Terminal | null): number {
     if (!terminal || !terminal.element) return;
     const core = (terminal as unknown as { _core?: { _isDisposed?: boolean } })._core;
     if (core?._isDisposed) return;
-
-    let scrollDisposable: { dispose(): void } | null = null;
-    let writeDisposable: { dispose(): void } | null = null;
+    let scrollD: { dispose(): void } | null = null;
+    let writeD: { dispose(): void } | null = null;
     try {
       setViewportY(terminal.buffer.active.viewportY);
-      scrollDisposable = terminal.onScroll(() => {
+      scrollD = terminal.onScroll(() => {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() =>
           setViewportY(terminal.buffer.active.viewportY),
         );
       });
-      writeDisposable = terminal.onWriteParsed(() => {
+      writeD = terminal.onWriteParsed(() => {
         const buf = terminal.buffer.active;
         if (buf.viewportY >= buf.baseY) {
           cancelAnimationFrame(rafRef.current);
@@ -497,29 +447,30 @@ function useScrollViewportY(terminal: Terminal | null): number {
       /* ignore */
     }
     return () => {
-      scrollDisposable?.dispose();
-      writeDisposable?.dispose();
+      scrollD?.dispose();
+      writeD?.dispose();
       cancelAnimationFrame(rafRef.current);
     };
   }, [terminal]);
 
   return viewportY;
 }
-function readTerminalLines(
-  term: Terminal,
-  startLine: number,
-  endLine: number,
-  maxLines: number = 50,
-): string {
-  const buf = term.buffer.active;
-  const from = Math.max(startLine, endLine - maxLines + 1);
-  const lines: string[] = [];
-  for (let i = from; i <= endLine; i++) {
-    const line = buf.getLine(i);
-    if (line) lines.push(line.translateToString(true));
-  }
-  return lines.join('\n').trimEnd();
+
+function useExplainErrorHandler(terminal: Terminal | null): (block: CommandBlock) => void {
+  return useCallback(
+    (block: CommandBlock) => {
+      if (!terminal) return;
+      const output = readTerminalLines(terminal, block.outputStartLine, block.endLine);
+      const cmd = block.command || '(unknown command)';
+      const prompt = `Explain this terminal error:\n\`\`\`\n$ ${cmd}\n${output}\n\`\`\`\nExit code: ${block.exitCode}`;
+      window.dispatchEvent(new CustomEvent(OPEN_AGENT_CHAT_PANEL_EVENT));
+      window.dispatchEvent(new CustomEvent(EXPLAIN_TERMINAL_ERROR_EVENT, { detail: { prompt } }));
+    },
+    [terminal],
+  );
 }
+
+// ── Main Export ───────────────────────────────────────────────────────────────
 
 export function CommandBlockOverlayBody({
   activeBlockIndex,
@@ -555,19 +506,5 @@ export function CommandBlockOverlayBody({
         />
       ))}
     </div>
-  );
-}
-
-function useExplainErrorHandler(terminal: Terminal | null): (block: CommandBlock) => void {
-  return useCallback(
-    (block: CommandBlock) => {
-      if (!terminal) return;
-      const output = readTerminalLines(terminal, block.outputStartLine, block.endLine);
-      const cmd = block.command || '(unknown command)';
-      const prompt = `Explain this terminal error:\n\`\`\`\n$ ${cmd}\n${output}\n\`\`\`\nExit code: ${block.exitCode}`;
-      window.dispatchEvent(new CustomEvent(OPEN_AGENT_CHAT_PANEL_EVENT));
-      window.dispatchEvent(new CustomEvent(EXPLAIN_TERMINAL_ERROR_EVENT, { detail: { prompt } }));
-    },
-    [terminal],
   );
 }

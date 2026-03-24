@@ -79,6 +79,29 @@ function useAccountsUiState(): {
   };
 }
 
+function useSubmitApiKey(
+  ui: ReturnType<typeof useAccountsUiState>,
+  auth: ReturnType<typeof useAuth>,
+): (provider: AuthProvider) => Promise<void> {
+  return useCallback(
+    async (provider: AuthProvider) => {
+      const key = ui.apiKeyInput.trim();
+      if (!key) {
+        ui.setApiKeyError('API key is required');
+        return;
+      }
+      const result = await auth.setApiKey(provider, key);
+      if (result.success) {
+        ui.setExpandedCard(null);
+        ui.setApiKeyInput('');
+      } else {
+        ui.setApiKeyError(result.error ?? 'Failed to save API key');
+      }
+    },
+    [ui, auth],
+  );
+}
+
 function useUiActions(
   ui: ReturnType<typeof useAccountsUiState>,
   auth: ReturnType<typeof useAuth>,
@@ -101,23 +124,7 @@ function useUiActions(
     ui.setApiKeyError(null);
   }, [ui]);
 
-  const submitApiKey = useCallback(
-    async (provider: AuthProvider) => {
-      const key = ui.apiKeyInput.trim();
-      if (!key) {
-        ui.setApiKeyError('API key is required');
-        return;
-      }
-      const result = await auth.setApiKey(provider, key);
-      if (result.success) {
-        ui.setExpandedCard(null);
-        ui.setApiKeyInput('');
-      } else {
-        ui.setApiKeyError(result.error ?? 'Failed to save API key');
-      }
-    },
-    [ui, auth],
-  );
+  const submitApiKey = useSubmitApiKey(ui, auth);
 
   const dismissBanner = useCallback(() => {
     ui.setBannerDismissed(true);

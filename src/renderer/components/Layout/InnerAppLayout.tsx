@@ -4,73 +4,26 @@
  * Extracted from InnerApp's render method to reduce component size.
  */
 
-import React, { type ErrorInfo, useCallback, useReducer } from 'react';
+import React, { useCallback } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
-import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
-import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
-import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
-import { AgentMonitorManager } from '../AgentMonitor';
+import { CommandPalette } from '../CommandPalette/CommandPalette';
+import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
 import { DiffReviewProvider } from '../DiffReview';
 import { ProjectPicker } from '../FileTree/ProjectPicker';
 import { FileViewerManager } from '../FileViewer';
 import { MultiBufferManager } from '../FileViewer/MultiBufferManager';
-import { GitPanel } from '../GitPanel';
+import { ErrorBoundary } from '../shared/ErrorBoundary';
+import { PerformanceOverlay } from '../shared/PerformanceOverlay';
+import { TerminalManager } from '../Terminal/TerminalManager';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
 import type { AppLayoutProps } from './AppLayout';
 import { AppLayoutConnected } from './AppLayoutConnected';
 import { CentrePaneConnected } from './CentrePaneConnected';
 import { FilePickerConnected } from './FilePickerConnected';
-import { RightSidebarTabs } from './RightSidebarTabs';
-const AnalyticsDashboard = React.lazy(() =>
-  import('../Analytics').then((m) => ({ default: m.AnalyticsDashboard })),
-);
-import { CommandPalette } from '../CommandPalette/CommandPalette';
-import { SymbolSearch } from '../CommandPalette/SymbolSearch';
-import { ErrorBoundary } from '../shared/ErrorBoundary';
-import { PerformanceOverlay } from '../shared/PerformanceOverlay';
-import { TerminalManager } from '../Terminal/TerminalManager';
-// Inline ChatErrorBoundary — kept inline specifically for the chat sidebar because Vite HMR
-// can fail to resolve the shared ErrorBoundary module exactly when a crash recovery is needed.
-class ChatErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ChatErrorBoundary] caught:', error, info.componentStack);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div
-          className="flex flex-col items-center justify-center gap-3 p-6 text-center text-text-semantic-muted"
-          style={{ minHeight: 120 }}
-        >
-          <span className="text-sm font-medium text-status-error">Chat crashed</span>
-          <span className="text-xs">
-            {this.state.error?.message ?? 'An unexpected error occurred.'}
-          </span>
-          <button
-            className="mt-1 rounded px-3 py-1 text-xs bg-surface-raised border border-border-semantic text-text-semantic-primary"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 import { IdeToolBridge } from './IdeToolBridge';
+import { AgentSidebarContent } from './InnerAppLayout.agent';
 import { SidebarSections } from './SidebarSections';
 
 export interface InnerAppLayoutProps {
@@ -191,68 +144,6 @@ function LayoutProviders({
         </MultiBufferManager>
       </FileViewerManager>
     </ErrorBoundary>
-  );
-}
-
-function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
-  // Force re-render counter — used to propagate model updates from AgentChatWorkspace
-  const [, forceRender] = useReducer((c: number) => c + 1, 0);
-  const modelRef = React.useRef<AgentChatWorkspaceModel | null>(null);
-
-  const handleModelReady = useCallback((model: AgentChatWorkspaceModel) => {
-    // Only trigger re-render when data the header cares about actually changes
-    const prev = modelRef.current;
-    const threadsChanged = prev?.threads !== model.threads;
-    const activeChanged = prev?.activeThreadId !== model.activeThreadId;
-    modelRef.current = model;
-    if (threadsChanged || activeChanged || !prev) {
-      forceRender();
-    }
-  }, []);
-
-  const chatModel = modelRef.current;
-
-  return (
-    <RightSidebarTabs
-      chatContent={
-        <ChatErrorBoundary>
-          <AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} />
-        </ChatErrorBoundary>
-      }
-      monitorContent={
-        <ErrorBoundary label="Agent Monitor">
-          <AgentMonitorManager />
-        </ErrorBoundary>
-      }
-      gitContent={
-        <ErrorBoundary label="Git Panel">
-          <GitPanel />
-        </ErrorBoundary>
-      }
-      analyticsContent={
-        <ErrorBoundary label="Analytics">
-          <React.Suspense
-            fallback={
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                Loading...
-              </div>
-            }
-          >
-            <AnalyticsDashboard />
-          </React.Suspense>
-        </ErrorBoundary>
-      }
-      memoryContent={
-        <ErrorBoundary label="Memory">
-          <SessionMemoryPanel workspaceRoot={projectRoot} />
-        </ErrorBoundary>
-      }
-      threads={chatModel?.threads}
-      activeThreadId={chatModel?.activeThreadId}
-      onSelectThread={chatModel?.selectThread}
-      onDeleteThread={chatModel ? (id) => void chatModel.deleteThread(id) : undefined}
-      onNewChat={chatModel?.startNewChat}
-    />
   );
 }
 

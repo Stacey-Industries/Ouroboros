@@ -9,7 +9,6 @@
 import log from 'electron-log/renderer';
 import {
   type Dispatch,
-  type MutableRefObject,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -17,74 +16,29 @@ import {
   useState,
 } from 'react';
 
-import type { AgentSession } from '../components/AgentMonitor/types';
 import { useAgentEventsContext } from '../contexts/AgentEventsContext';
 import { useProject } from '../contexts/ProjectContext';
 import type { WorkspaceSnapshot } from '../types/electron';
+import {
+  createManualSnapshotRecord,
+  createSessionSnapshot,
+  type EndedSnapshotEffectOptions,
+  type EndedSnapshotOptions,
+  filterSnapshotsForProject,
+  getChangedFileCount,
+  type RunningSnapshotEffectOptions,
+  type RunningSnapshotOptions,
+  shouldCaptureEndSnapshot,
+  shouldCaptureStartSnapshot,
+  type SnapshotMapRef,
+  syncSnapshotLookup,
+  upsertSnapshot,
+} from './useDiffSnapshots.helpers';
 
 const MAX_SNAPSHOTS = 100;
 
-type SnapshotMapRef = MutableRefObject<Map<string, string>>;
-type SessionIdSetRef = MutableRefObject<Set<string>>;
 type SnapshotSetter = Dispatch<SetStateAction<WorkspaceSnapshot[]>>;
 type PersistSnapshot = (snapshot: WorkspaceSnapshot) => Promise<void>;
-
-interface SessionSnapshotRecordOptions {
-  commitHash: string;
-  fileCount?: number;
-  projectRoot: string;
-  session: AgentSession;
-  type: 'session-start' | 'session-end';
-}
-
-interface RunningSnapshotOptions {
-  pendingRef: SessionIdSetRef;
-  persistSnapshot: PersistSnapshot;
-  projectRoot: string;
-  session: AgentSession;
-  snapshotsRef: SnapshotMapRef;
-}
-
-interface EndedSnapshotOptions {
-  endedSessionsRef: SessionIdSetRef;
-  persistSnapshot: PersistSnapshot;
-  projectRoot: string;
-  session: AgentSession;
-  snapshotsRef: SnapshotMapRef;
-}
-
-interface RunningSnapshotEffectOptions {
-  agents: AgentSession[];
-  pendingRef: SessionIdSetRef;
-  persistSnapshot: PersistSnapshot;
-  projectRoot: string | null;
-  snapshotsRef: SnapshotMapRef;
-}
-
-interface EndedSnapshotEffectOptions {
-  agents: AgentSession[];
-  endedSessionsRef: SessionIdSetRef;
-  persistSnapshot: PersistSnapshot;
-  projectRoot: string | null;
-  snapshotsRef: SnapshotMapRef;
-}
-
-function filterSnapshotsForProject(
-  stored: unknown,
-  projectRoot: string | null,
-): WorkspaceSnapshot[] {
-  if (!Array.isArray(stored)) return [];
-  const snapshots = stored as WorkspaceSnapshot[];
-  return snapshots.filter(
-    (snapshot) => !snapshot.projectRoot || snapshot.projectRoot === projectRoot,
-  );
-}
-
-function syncSnapshotLookup(snapshotsRef: SnapshotMapRef, snapshots: WorkspaceSnapshot[]): void {
-  snapshotsRef.current = new Map(
-    snapshots.map((snapshot) => [snapshot.sessionId, snapshot.commitHash]),
-  );
-}
 
 async function readProjectSnapshots(
   projectRoot: string | null,
@@ -116,89 +70,6 @@ function saveSnapshots(snapshots: WorkspaceSnapshot[]): void {
   void setConfig('workspaceSnapshots', snapshots).catch((error) => {
     log.error('Failed to persist workspace snapshots:', error);
   });
-}
-
-function upsertSnapshot(
-  previous: WorkspaceSnapshot[],
-  snapshot: WorkspaceSnapshot,
-): WorkspaceSnapshot[] {
-  return [snapshot, ...previous.filter((candidate) => candidate.id !== snapshot.id)].slice(
-    0,
-    MAX_SNAPSHOTS,
-  );
-}
-
-function createSessionSnapshot({
-  commitHash,
-  fileCount,
-  projectRoot,
-  session,
-  type,
-}: SessionSnapshotRecordOptions): WorkspaceSnapshot {
-  return {
-    id: `${session.id}-${type === 'session-start' ? 'start' : 'end'}`,
-    commitHash,
-    sessionId: session.id,
-    sessionLabel: session.taskLabel,
-    timestamp: Date.now(),
-    type,
-    fileCount,
-    projectRoot,
-  };
-}
-
-function createManualSnapshotRecord(
-  projectRoot: string,
-  commitHash: string,
-  label?: string,
-): WorkspaceSnapshot {
-  return {
-    id: `manual-${Date.now()}`,
-    commitHash,
-    sessionId: 'manual',
-    sessionLabel: label || 'Manual snapshot',
-    timestamp: Date.now(),
-    type: 'manual',
-    projectRoot,
-  };
-}
-
-function shouldCaptureStartSnapshot(
-  session: AgentSession,
-  snapshotsRef: SnapshotMapRef,
-  pendingRef: SessionIdSetRef,
-): boolean {
-  return (
-    session.status === 'running' &&
-    !snapshotsRef.current.has(session.id) &&
-    !pendingRef.current.has(session.id)
-  );
-}
-
-function shouldCaptureEndSnapshot(
-  session: AgentSession,
-  endedSessionsRef: SessionIdSetRef,
-): boolean {
-  return (
-    (session.status === 'complete' || session.status === 'error') &&
-    !endedSessionsRef.current.has(session.id)
-  );
-}
-
-async function getChangedFileCount(
-  projectRoot: string,
-  startHash: string | undefined,
-  endHash: string,
-): Promise<number | undefined> {
-  const gitApi = window.electronAPI?.git;
-  if (!gitApi?.changedFilesBetween || !startHash || startHash === endHash) return undefined;
-
-  try {
-    const changed = await gitApi.changedFilesBetween(projectRoot, startHash, endHash);
-    return changed.success && changed.files ? changed.files.length : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 async function snapshotRunningSession({
@@ -268,7 +139,7 @@ function usePersistSnapshot(setSnapshots: SnapshotSetter): PersistSnapshot {
   return useCallback(
     async (snapshot: WorkspaceSnapshot) => {
       setSnapshots((previous) => {
-        const next = upsertSnapshot(previous, snapshot);
+        const next = upsertSnapshot(previous, snapshot, MAX_SNAPSHOTS);
         saveSnapshots(next);
         return next;
       });

@@ -1,0 +1,305 @@
+import React from 'react';
+
+import { type CardView, ViewToggle } from './AgentCardControls';
+import { AgentEventLog } from './AgentEventLog';
+import { estimateCost, formatCost, formatTokenCount } from './costCalculator';
+import { ToolCallFeed } from './ToolCallFeed';
+import { ToolCallTimeline } from './ToolCallTimeline';
+import type { AgentSession, ToolCallEvent } from './types';
+
+interface SessionNotesEditorProps {
+  notesDraft: string;
+  onNotesDraftChange: (value: string) => void;
+  onSaveNotes: () => void;
+}
+
+const NOTES_TEXTAREA_STYLE: React.CSSProperties = {
+  width: '100%',
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--text-primary)',
+  fontSize: '11px',
+  fontFamily: 'var(--font-ui)',
+  outline: 'none',
+  resize: 'vertical',
+  minHeight: '36px',
+  lineHeight: 1.5,
+  boxSizing: 'border-box',
+};
+
+export function SessionNotesEditor({
+  notesDraft,
+  onNotesDraftChange,
+  onSaveNotes,
+}: SessionNotesEditorProps): React.ReactElement {
+  return (
+    <div className="mx-2.5 mb-2 p-2 rounded bg-surface-raised border border-border-semantic">
+      <textarea
+        value={notesDraft}
+        onChange={(event) => onNotesDraftChange(event.target.value)}
+        onBlur={onSaveNotes}
+        placeholder="Add notes about this session..."
+        rows={2}
+        style={NOTES_TEXTAREA_STYLE}
+      />
+    </div>
+  );
+}
+
+export function SessionNotesPreview({ notes }: { notes: string }): React.ReactElement {
+  return (
+    <div className="mx-6 mb-1.5 text-[10px] italic truncate text-text-semantic-muted" title={notes}>
+      {notes}
+    </div>
+  );
+}
+
+export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement | null {
+  if (!error) return null;
+  return (
+    <div
+      className="mx-2.5 mb-2 px-2 py-1.5 rounded text-[11px] selectable text-status-error"
+      style={{
+        background: 'color-mix(in srgb, var(--status-error) 10%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--status-error) 20%, transparent)',
+      }}
+    >
+      {error}
+    </div>
+  );
+}
+
+function buildTokenTitle(session: AgentSession): string {
+  const base = `Input: ${session.inputTokens.toLocaleString()} tokens | Output: ${session.outputTokens.toLocaleString()} tokens`;
+  const cacheRead = session.cacheReadTokens
+    ? ` | Cache read: ${session.cacheReadTokens.toLocaleString()}`
+    : '';
+  const cacheWrite = session.cacheWriteTokens
+    ? ` | Cache write: ${session.cacheWriteTokens.toLocaleString()}`
+    : '';
+  return base + cacheRead + cacheWrite;
+}
+
+function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement | null {
+  if (session.inputTokens < 1 && session.outputTokens < 1) return null;
+  const estimatedCost = estimateCost({
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+    model: session.model,
+    cacheReadTokens: session.cacheReadTokens,
+    cacheWriteTokens: session.cacheWriteTokens,
+  }).totalCost;
+  return (
+    <span
+      className="text-[10px] font-mono flex items-center gap-1.5 text-text-semantic-faint"
+      title={buildTokenTitle(session)}
+    >
+      <span className="text-text-semantic-muted">
+        {'\u2193'}
+        {formatTokenCount(session.inputTokens)}
+      </span>
+      <span className="text-text-semantic-muted">
+        {'\u2191'}
+        {formatTokenCount(session.outputTokens)}
+      </span>
+      <span className="text-text-semantic-faint">tokens</span>
+      <span className="text-text-semantic-faint">{'\u00b7'}</span>
+      <span className="text-interactive-accent">~{formatCost(estimatedCost)}</span>
+    </span>
+  );
+}
+
+function SubagentBadge({ count }: { count: number }): React.ReactElement | null {
+  if (count < 1) return null;
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 text-interactive-accent"
+      style={{
+        background: 'color-mix(in srgb, var(--interactive-accent) 12%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--interactive-accent) 25%, transparent)',
+        letterSpacing: '0.02em',
+      }}
+      title={`Spawned ${count} subagent${count !== 1 ? 's' : ''}`}
+    >
+      <svg
+        width="9"
+        height="9"
+        viewBox="0 0 10 10"
+        fill="none"
+        aria-hidden="true"
+        style={{ flexShrink: 0 }}
+      >
+        <path
+          d="M5 1V5M5 5H9M5 5H1M5 5V9"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+      </svg>
+      {count} subagent{count !== 1 ? 's' : ''}
+    </span>
+  );
+}
+
+export function AgentCardMeta({
+  session,
+  childCount,
+}: {
+  session: AgentSession;
+  childCount?: number;
+}): React.ReactElement {
+  return (
+    <div className="px-6 pb-1 flex items-center gap-2">
+      <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>
+        {session.id.slice(0, 12)}
+      </span>
+      {session.restored && (
+        <span
+          className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic"
+          style={{ letterSpacing: '0.02em' }}
+        >
+          restored
+        </span>
+      )}
+      {childCount !== undefined && childCount > 0 && <SubagentBadge count={childCount} />}
+      {session.parentSessionId && (
+        <span
+          className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic"
+          style={{ letterSpacing: '0.02em' }}
+          title={`Parent: ${session.parentSessionId}`}
+        >
+          subagent
+        </span>
+      )}
+      <TokenUsageSummary session={session} />
+    </div>
+  );
+}
+
+export function EventLogSection({
+  session,
+  showLog,
+  onToggleLog,
+}: {
+  session: AgentSession;
+  showLog: boolean;
+  onToggleLog: () => void;
+}): React.ReactElement {
+  return (
+    <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <button
+        onClick={onToggleLog}
+        className="w-full px-3 py-1 text-[10px] text-left transition-colors text-text-semantic-faint"
+        onMouseEnter={(event) => {
+          event.currentTarget.style.color = 'var(--text-muted)';
+        }}
+        onMouseLeave={(event) => {
+          event.currentTarget.style.color = 'var(--text-faint)';
+        }}
+      >
+        {showLog ? '\u25b2 Hide log' : '\u25bc Show event log'}
+      </button>
+      {showLog && <AgentEventLog toolCalls={session.toolCalls} sessionId={session.id} />}
+    </div>
+  );
+}
+
+export function ExpandedToolView({
+  session,
+  cardView,
+  showLog,
+  isRunning,
+  onToggleLog,
+}: {
+  session: AgentSession;
+  cardView: CardView;
+  showLog: boolean;
+  isRunning: boolean;
+  onToggleLog: () => void;
+}): React.ReactElement {
+  return (
+    <div>
+      {cardView === 'feed' ? (
+        <ToolCallFeed toolCalls={session.toolCalls} />
+      ) : (
+        <ToolCallTimeline
+          toolCalls={session.toolCalls}
+          sessionStartedAt={session.startedAt}
+          sessionRunning={isRunning}
+        />
+      )}
+      {session.toolCalls.length > 0 && (
+        <EventLogSection session={session} showLog={showLog} onToggleLog={onToggleLog} />
+      )}
+    </div>
+  );
+}
+
+export function CollapsedPreview({
+  latestCall,
+}: {
+  latestCall?: ToolCallEvent;
+}): React.ReactElement | null {
+  if (!latestCall) return null;
+  return (
+    <div
+      className="px-6 pb-2 text-[10px] truncate text-text-semantic-faint"
+      title={`${latestCall.toolName}: ${latestCall.input}`}
+    >
+      <span className="text-text-semantic-muted">{latestCall.toolName}</span> {latestCall.input}
+    </div>
+  );
+}
+
+export function ViewToggleBar({
+  cardView,
+  onCardViewChange,
+}: {
+  cardView: CardView;
+  onCardViewChange: (view: CardView) => void;
+}): React.ReactElement {
+  return (
+    <div
+      className="flex items-center justify-end px-3 py-1 gap-2"
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
+    >
+      <ViewToggle view={cardView} onChange={onCardViewChange} />
+    </div>
+  );
+}
+
+export function AgentCardExpandedContent({
+  session,
+  expanded,
+  cardView,
+  showLog,
+  latestCall,
+  isRunning,
+  onToggleLog,
+  onCardViewChange,
+}: {
+  session: AgentSession;
+  expanded: boolean;
+  cardView: CardView;
+  showLog: boolean;
+  latestCall?: ToolCallEvent;
+  isRunning: boolean;
+  onToggleLog: () => void;
+  onCardViewChange: (view: CardView) => void;
+}): React.ReactElement {
+  if (!expanded) return <CollapsedPreview latestCall={latestCall} />;
+  return (
+    <div>
+      {session.toolCalls.length > 0 && (
+        <ViewToggleBar cardView={cardView} onCardViewChange={onCardViewChange} />
+      )}
+      <ExpandedToolView
+        session={session}
+        cardView={cardView}
+        showLog={showLog}
+        isRunning={isRunning}
+        onToggleLog={onToggleLog}
+      />
+    </div>
+  );
+}

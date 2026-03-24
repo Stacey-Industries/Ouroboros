@@ -2,140 +2,29 @@ import React from 'react';
 
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 import { getModelProviderLogo } from '../shared/ProviderLogos';
+import {
+  buildDisplayUsage,
+  buildModelOptions,
+  type ChatControlProvider,
+  getContextLimit,
+  getContextTone,
+  getEffortOptions,
+  getPermissionModes,
+  getSelectedModelLabel,
+  getSelectedOptionLabel,
+  type ModelUsageEntry,
+  type OptionGroup,
+  type OptionItem,
+  resolveActiveModel,
+} from './ChatControlsBarSupport';
 import { SelectPill } from './SelectPill';
+
+export type { ChatControlProvider };
 
 export interface ChatOverrides {
   model: string;
   effort: string;
   permissionMode: string;
-}
-type OptionItem = { value: string; label: string };
-type OptionGroup = { label: string; options: OptionItem[] };
-type ChatControlProvider = 'claude-code' | 'codex' | 'anthropic-api';
-type ModelUsageEntry = { model: string; inputTokens: number; outputTokens: number };
-
-function formatProviderModelName(providerId: string, modelName: string): string {
-  if (providerId === 'minimax') {
-    const match = modelName.match(/m2\.(5|7)/i);
-    if (match) return `M2.${match[1]}`;
-  }
-  return modelName;
-}
-
-function modelDisplayName(modelId: string): string {
-  if (!modelId) return 'Default';
-  if (modelId.includes(':')) {
-    const modelPart = modelId.slice(modelId.indexOf(':') + 1);
-    return modelPart.length > 20 ? `${modelPart.slice(0, 18)}...` : modelPart;
-  }
-  const suffix = modelId.includes('[1m]') ? ' 1M' : '';
-  if (modelId.includes('opus')) return `Opus${suffix}`;
-  if (modelId.includes('haiku')) return 'Haiku';
-  if (modelId.includes('sonnet')) return `Sonnet${suffix}`;
-  return modelId;
-}
-
-function getDisplayModelName(modelId: string): string {
-  if (!modelId) return 'Default';
-  if (modelId.includes(':')) {
-    const providerId = modelId.slice(0, modelId.indexOf(':'));
-    const modelPart = modelId.slice(modelId.indexOf(':') + 1);
-    const display = formatProviderModelName(providerId, modelPart);
-    return display.length > 20 ? `${display.slice(0, 18)}...` : display;
-  }
-  if (modelId.includes('opus') && modelId.includes('[1m]')) return 'Opus Long';
-  if (modelId.includes('opus')) return 'Opus';
-  if (modelId.includes('haiku')) return 'Haiku';
-  if (modelId.includes('sonnet')) return 'Sonnet';
-  return modelDisplayName(modelId);
-}
-
-function extractDefaultModelName(label: string): string {
-  const match = label.match(/^Default \((.+)\)$/);
-  return match ? match[1] : label.replace(/^Default\s*/, '').trim() || 'Default';
-}
-
-const ANTHROPIC_OPTIONS: OptionItem[] = [
-  { value: 'opus[1m]', label: 'Opus 4.6 1M' },
-  { value: 'opus', label: 'Opus 4.6' },
-  { value: 'sonnet', label: 'Sonnet 4.6' },
-  { value: 'haiku', label: 'Haiku 4.5' },
-];
-
-const CLAUDE_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'max', label: 'Max' },
-];
-
-const CODEX_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'max', label: 'Extra High' },
-];
-
-const CLAUDE_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
-  { value: 'default', label: 'Ask First' },
-  { value: 'acceptEdits', label: 'Accept Edits' },
-  { value: 'plan', label: 'Plan' },
-  { value: 'auto', label: 'Auto' },
-  { value: 'bypassPermissions', label: 'Bypass' },
-];
-
-const CODEX_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
-  { value: 'default', label: 'Workspace Ask' },
-  { value: 'plan', label: 'Read Only' },
-  { value: 'auto', label: 'Workspace Auto' },
-  { value: 'bypassPermissions', label: 'Bypass' },
-];
-
-function buildProviderGroups(providers?: ModelProvider[]): OptionGroup[] {
-  return providers?.length
-    ? providers
-        .filter((provider) => provider.enabled && provider.models.length > 0)
-        .map((provider) => ({
-          label: provider.name,
-          options: provider.models.map((model) => ({
-            value: `${provider.id}:${model.id}`,
-            label: formatProviderModelName(provider.id, model.name),
-          })),
-        }))
-    : [];
-}
-
-function buildModelOptions(args: {
-  defaultProvider: ChatControlProvider;
-  settingsModel: string;
-  codexSettingsModel: string;
-  codexModels?: CodexModelOption[];
-  providers?: ModelProvider[];
-}): { defaultOption: OptionItem; groups: OptionGroup[] } {
-  const defaultModel =
-    args.defaultProvider === 'codex' ? args.codexSettingsModel : args.settingsModel;
-  return {
-    defaultOption: { value: '', label: defaultModel ? `Default (${getDisplayModelName(defaultModel)})` : 'Default' },
-    groups: [
-      { label: 'Anthropic', options: ANTHROPIC_OPTIONS },
-      ...buildProviderGroups(args.providers),
-      ...(args.codexModels?.length
-        ? [
-            {
-              label: 'Codex',
-              options: args.codexModels.map((model) => ({ value: model.id, label: model.name })),
-            },
-          ]
-        : []),
-    ],
-  };
-}
-
-function getEffortOptions(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
-  return provider === 'codex' ? CODEX_EFFORT_OPTIONS : CLAUDE_EFFORT_OPTIONS;
-}
-function getPermissionModes(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
-  return provider === 'codex' ? CODEX_PERMISSION_MODES : CLAUDE_PERMISSION_MODES;
 }
 
 export function resolveChatControlProvider(
@@ -147,68 +36,11 @@ export function resolveChatControlProvider(
     ? 'codex'
     : defaultProvider;
 }
+
 export function cyclePermissionMode(current: string, provider: ChatControlProvider): string {
   const modes = getPermissionModes(provider);
   const idx = modes.findIndex((mode) => mode.value === current);
   return idx === -1 ? (modes[0]?.value ?? current) : modes[(idx + 1) % modes.length].value;
-}
-
-function resolveActiveModel(args: {
-  activeProvider: ChatControlProvider;
-  selectedModel: string;
-  settingsModel?: string;
-  codexSettingsModel?: string;
-}): string {
-  return (
-    args.selectedModel ||
-    (args.activeProvider === 'codex' ? (args.codexSettingsModel ?? '') : (args.settingsModel ?? ''))
-  );
-}
-function getSelectedModelLabel(
-  value: string,
-  defaultOption: OptionItem,
-  groups: OptionGroup[],
-): string {
-  if (!value) return extractDefaultModelName(defaultOption.label);
-  for (const group of groups) {
-    const match = group.options.find((option) => option.value === value);
-    if (match) return match.label;
-  }
-  return getDisplayModelName(value);
-}
-function getSelectedOptionLabel(value: string, options: ReadonlyArray<OptionItem>): string {
-  const match = options.find((option) => option.value === value);
-  return match?.label ?? options[0]?.label ?? value;
-}
-function buildDisplayUsage(args: {
-  activeModel: string;
-  threadModelUsage?: ModelUsageEntry[];
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-}): ModelUsageEntry[] {
-  if (!args.activeModel) return [];
-  const persisted = (args.threadModelUsage ?? []).find((entry) => entry.model === args.activeModel);
-  const base = persisted ?? { model: args.activeModel, inputTokens: 0, outputTokens: 0 };
-  return args.streamingTokenUsage
-    ? [
-        {
-          model: args.activeModel,
-          inputTokens: base.inputTokens + args.streamingTokenUsage.inputTokens,
-          outputTokens: base.outputTokens + args.streamingTokenUsage.outputTokens,
-        },
-      ]
-    : [base];
-}
-function getContextLimit(modelId: string, codexModels?: CodexModelOption[]): number {
-  const codexModel = (codexModels ?? []).find((entry) => entry.id === modelId);
-  if (codexModel?.contextWindow) return codexModel.contextWindow;
-  return modelId.includes('[1m]') ? 1_000_000 : 200_000;
-}
-function getContextTone(pct: number): string {
-  return pct >= 90
-    ? 'var(--status-error)'
-    : pct >= 70
-      ? 'var(--status-warning)'
-      : 'var(--interactive-accent)';
 }
 
 const pillStyle: React.CSSProperties = { borderRadius: '9999px', padding: '2px 8px' };
@@ -344,7 +176,7 @@ function ModelContextUsageIndicator(props: {
   );
 }
 
-export function ChatControlsBar(props: {
+interface ChatControlsBarProps {
   overrides: ChatOverrides;
   onChange: (overrides: ChatOverrides) => void;
   settingsModel?: string;
@@ -354,7 +186,9 @@ export function ChatControlsBar(props: {
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
-}): React.ReactElement {
+}
+
+function buildControlsBarState(props: ChatControlsBarProps) {
   const activeProvider = resolveChatControlProvider(
     props.overrides.model,
     props.defaultProvider ?? 'claude-code',
@@ -372,16 +206,22 @@ export function ChatControlsBar(props: {
     streamingTokenUsage: props.streamingTokenUsage,
   });
   const effortOptions = getEffortOptions(activeProvider);
-  const effortValue = effortOptions.some((option) => option.value === props.overrides.effort)
+  const effortValue = effortOptions.some((o) => o.value === props.overrides.effort)
     ? props.overrides.effort
     : 'medium';
-  const { defaultOption, groups } = buildModelOptions({
+  const modelOptions = buildModelOptions({
     defaultProvider: props.defaultProvider ?? 'claude-code',
     settingsModel: props.settingsModel ?? '',
     codexSettingsModel: props.codexSettingsModel ?? '',
     codexModels: props.codexModels,
     providers: props.providers,
   });
+  return { activeProvider, displayUsage, effortOptions, effortValue, ...modelOptions };
+}
+
+export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement {
+  const { activeProvider, displayUsage, effortOptions, effortValue, defaultOption, groups } =
+    buildControlsBarState(props);
   return (
     <div className="flex flex-wrap items-center gap-3 px-3 py-1" data-layout="chat-controls-bar">
       <ModelSelect

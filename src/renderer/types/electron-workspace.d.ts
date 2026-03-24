@@ -8,12 +8,8 @@ import type { AgentChatAPI } from './electron-agent-chat';
 import type { AuthAPI } from './electron-auth';
 import type { ClaudeMdAPI } from './electron-claude-md';
 import type { ExtensionStoreAPI } from './electron-extension-store';
-import type {
-  ExtensionsAPI,
-  IpcResult,
-  ModelProvider,
-  ModelSlotAssignments,
-} from './electron-foundation';
+import type { ExtensionsAPI } from './electron-extensions';
+import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { McpStoreAPI } from './electron-mcp-store';
 import type {

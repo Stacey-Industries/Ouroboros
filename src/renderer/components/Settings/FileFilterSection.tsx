@@ -1,6 +1,18 @@
 import React, { useRef, useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
+import {
+  addButtonStyle,
+  emptyStateStyle,
+  getInputStyle,
+  helperTextStyle,
+  inputRowStyle,
+  inputWrapperStyle,
+  removeButtonStyle,
+  stackStyle,
+  tagListStyle,
+  tagStyle,
+} from './fileFilterSectionStyles';
 import { SectionLabel } from './settingsStyles';
 
 interface FileFilterSectionProps {
@@ -19,74 +31,6 @@ interface FileFilterInputState {
 
 const BASELINE_PATTERNS = ['.git', '__pycache__'];
 
-const stackStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
-const helperTextStyle: React.CSSProperties = {
-  fontSize: '12px',
-  marginBottom: '10px',
-};
-
-const tagListStyle: React.CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '6px',
-};
-
-const tagStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  padding: '3px 8px',
-  borderRadius: '4px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-  fontSize: '11px',
-  fontFamily: 'var(--font-mono)',
-  userSelect: 'none',
-};
-
-const inputRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '8px',
-  marginBottom: '12px',
-};
-
-const inputWrapperStyle: React.CSSProperties = {
-  flex: 1,
-  position: 'relative',
-};
-
-const removeButtonStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '13px',
-  lineHeight: 1,
-  padding: '0',
-  display: 'flex',
-  alignItems: 'center',
-};
-
-const addButtonStyle: React.CSSProperties = {
-  flexShrink: 0,
-  padding: '7px 12px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-  fontSize: '12px',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const emptyStateStyle: React.CSSProperties = {
-  fontSize: '12px',
-  fontStyle: 'italic',
-};
-
 function validatePattern(value: string, patterns: string[]): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return 'Pattern cannot be empty';
@@ -94,20 +38,6 @@ function validatePattern(value: string, patterns: string[]): string | null {
     return 'Use bare names only (e.g. vendor or *.log), not paths';
   if (patterns.includes(trimmed)) return 'Pattern already exists';
   return null;
-}
-
-function getInputStyle(hasError: boolean): React.CSSProperties {
-  return {
-    width: '100%',
-    padding: '7px 10px',
-    borderRadius: '6px',
-    border: hasError ? '1px solid var(--status-error, #e55)' : '1px solid var(--border-default)',
-    background: 'var(--surface-base)',
-    fontSize: '12px',
-    fontFamily: 'var(--font-mono)',
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
 }
 
 function useFileFilterInput(
@@ -208,6 +138,43 @@ function BaselinePatternsSection(): React.ReactElement {
   );
 }
 
+function FilterInput({
+  inputError,
+  inputRef,
+  inputValue,
+  onChange,
+  onKeyDown,
+}: {
+  inputError: string | null;
+  inputRef: React.RefObject<HTMLInputElement>;
+  inputValue: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+}): React.ReactElement {
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={inputValue}
+      placeholder="e.g. vendor or *.log"
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      className="text-text-semantic-primary"
+      style={getInputStyle(Boolean(inputError))}
+      onFocus={(event) => {
+        event.currentTarget.style.borderColor = inputError
+          ? 'var(--status-error, #e55)'
+          : 'var(--interactive-accent)';
+      }}
+      onBlur={(event) => {
+        event.currentTarget.style.borderColor = inputError
+          ? 'var(--status-error, #e55)'
+          : 'var(--border-default)';
+      }}
+    />
+  );
+}
+
 function PatternInputRow({
   inputError,
   inputRef,
@@ -226,25 +193,12 @@ function PatternInputRow({
   return (
     <div style={inputRowStyle}>
       <div style={inputWrapperStyle}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          placeholder="e.g. vendor or *.log"
+        <FilterInput
+          inputError={inputError}
+          inputRef={inputRef}
+          inputValue={inputValue}
           onChange={onChange}
           onKeyDown={onKeyDown}
-          className="text-text-semantic-primary"
-          style={getInputStyle(Boolean(inputError))}
-          onFocus={(event) => {
-            event.currentTarget.style.borderColor = inputError
-              ? 'var(--status-error, #e55)'
-              : 'var(--interactive-accent)';
-          }}
-          onBlur={(event) => {
-            event.currentTarget.style.borderColor = inputError
-              ? 'var(--status-error, #e55)'
-              : 'var(--border-default)';
-          }}
         />
         <FilterInputError message={inputError} />
       </div>

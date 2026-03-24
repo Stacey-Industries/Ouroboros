@@ -12,6 +12,65 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
+function PasswordField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}): React.ReactElement {
+  return (
+    <div style={fieldRowStyle}>
+      <label className="text-text-semantic-muted" style={labelStyle}>
+        Password
+      </label>
+      <input
+        type="password"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Set a password for mobile login"
+        className="text-text-semantic-primary"
+        style={inputStyle}
+        autoComplete="new-password"
+      />
+      <p className="text-text-semantic-faint" style={hintStyle}>
+        Leave empty to use the auto-generated access token instead.
+      </p>
+    </div>
+  );
+}
+
+function PortField({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}): React.ReactElement {
+  return (
+    <div style={fieldRowStyle}>
+      <label className="text-text-semantic-muted" style={labelStyle}>
+        Port
+      </label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => {
+          const val = parseInt(e.target.value, 10);
+          if (!Number.isNaN(val) && val >= 1024 && val <= 65535) onChange(val);
+        }}
+        min={1024}
+        max={65535}
+        className="text-text-semantic-primary"
+        style={{ ...inputStyle, width: '120px' }}
+      />
+      <p className="text-text-semantic-faint" style={hintStyle}>
+        Port for the web server (requires restart). Default: 7890.
+      </p>
+    </div>
+  );
+}
+
 export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section>
@@ -19,43 +78,14 @@ export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElem
       <p className="text-text-semantic-muted" style={descStyle}>
         Access Ouroboros from a mobile device or another browser on your network.
       </p>
-      <div style={fieldRowStyle}>
-        <label className="text-text-semantic-muted" style={labelStyle}>
-          Password
-        </label>
-        <input
-          type="password"
-          value={draft.webAccessPassword ?? ''}
-          onChange={(e) => onChange('webAccessPassword', e.target.value)}
-          placeholder="Set a password for mobile login"
-          className="text-text-semantic-primary"
-          style={inputStyle}
-          autoComplete="new-password"
-        />
-        <p className="text-text-semantic-faint" style={hintStyle}>
-          Leave empty to use the auto-generated access token instead.
-        </p>
-      </div>
-      <div style={fieldRowStyle}>
-        <label className="text-text-semantic-muted" style={labelStyle}>
-          Port
-        </label>
-        <input
-          type="number"
-          value={draft.webAccessPort ?? 7890}
-          onChange={(e) => {
-            const val = parseInt(e.target.value, 10);
-            if (!Number.isNaN(val) && val >= 1024 && val <= 65535) onChange('webAccessPort', val);
-          }}
-          min={1024}
-          max={65535}
-          className="text-text-semantic-primary"
-          style={{ ...inputStyle, width: '120px' }}
-        />
-        <p className="text-text-semantic-faint" style={hintStyle}>
-          Port for the web server (requires restart). Default: 7890.
-        </p>
-      </div>
+      <PasswordField
+        value={draft.webAccessPassword ?? ''}
+        onChange={(v) => onChange('webAccessPassword', v)}
+      />
+      <PortField
+        value={draft.webAccessPort ?? 7890}
+        onChange={(v) => onChange('webAccessPort', v)}
+      />
     </section>
   );
 }

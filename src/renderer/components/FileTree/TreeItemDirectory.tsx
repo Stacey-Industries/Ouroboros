@@ -48,22 +48,27 @@ function DirectoryName({
 }
 
 function DirectoryMeta({
-  node,
   statusColor,
   statusLbl,
   isBookmarked,
   heatDot,
   heatLevel,
   diagnosticSeverity,
-}: Pick<
-  TreeItemDirectoryProps,
-  'node' | 'statusColor' | 'statusLbl' | 'isBookmarked' | 'heatDot' | 'heatLevel' | 'diagnosticSeverity'
+}: Omit<
+  Pick<
+    TreeItemDirectoryProps,
+    | 'node'
+    | 'statusColor'
+    | 'statusLbl'
+    | 'isBookmarked'
+    | 'heatDot'
+    | 'heatLevel'
+    | 'diagnosticSeverity'
+  >,
+  'node'
 >): React.ReactElement {
   return (
     <>
-      {!node.isExpanded && node.children !== undefined && (
-        <ChildCount count={node.children.length} />
-      )}
       {diagnosticSeverity && <DirDiagnosticIndicator severity={diagnosticSeverity} />}
       {statusLbl && <StatusBadge label={statusLbl} color={statusColor} />}
       {isBookmarked && <PinDot />}
@@ -76,9 +81,13 @@ export function TreeItemDirectory({
   node,
   isEditing,
   editValue,
-  onEditConfirm, onEditCancel,
-  statusColor, statusLbl,
-  isBookmarked, heatDot, heatLevel,
+  onEditConfirm,
+  onEditCancel,
+  statusColor,
+  statusLbl,
+  isBookmarked,
+  heatDot,
+  heatLevel,
   diagnosticSeverity,
 }: TreeItemDirectoryProps): React.ReactElement {
   return (
@@ -95,7 +104,6 @@ export function TreeItemDirectory({
       />
       {!isEditing && (
         <DirectoryMeta
-          node={node}
           statusColor={statusColor}
           statusLbl={statusLbl}
           isBookmarked={isBookmarked}
@@ -111,47 +119,120 @@ export function TreeItemDirectory({
 
 function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" className="text-text-semantic-muted" style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 120ms ease' }}>
-      <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      className="text-text-semantic-muted"
+      style={{
+        flexShrink: 0,
+        transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+        transition: 'transform 120ms ease',
+      }}
+    >
+      <path
+        d="M6 4l4 4-4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function DirLabel({ name, statusColor }: { name: string; statusColor?: string }): React.ReactElement {
+function DirLabel({
+  name,
+  statusColor,
+}: {
+  name: string;
+  statusColor?: string;
+}): React.ReactElement {
   return (
-    <span className="text-text-semantic-primary" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', fontWeight: 500, color: statusColor ?? undefined, fontFamily: 'var(--font-ui)' }}>
+    <span
+      className="text-text-semantic-primary"
+      style={{
+        flex: 1,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontSize: '0.8125rem',
+        fontWeight: 500,
+        color: statusColor ?? undefined,
+        fontFamily: 'var(--font-ui)',
+      }}
+    >
       {name}
     </span>
   );
 }
 
-function ChildCount({ count }: { count: number }): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={{ flexShrink: 0, fontSize: '0.6875rem', marginLeft: '2px' }}>({count})</span>;
-}
-
 function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement {
-  return <span style={{ flexShrink: 0, fontSize: '0.625rem', fontWeight: 600, fontFamily: 'var(--font-mono)', color, marginLeft: '4px', lineHeight: 1 }}>{label}</span>;
+  return (
+    <span
+      style={{
+        flexShrink: 0,
+        fontSize: '0.625rem',
+        fontWeight: 600,
+        fontFamily: 'var(--font-mono)',
+        color,
+        marginLeft: '4px',
+        lineHeight: 1,
+      }}
+    >
+      {label}
+    </span>
+  );
 }
 
 function PinDot(): React.ReactElement {
-  return <span title="Pinned" className="text-interactive-accent" style={{ flexShrink: 0, fontSize: '0.625rem', marginLeft: '4px', lineHeight: 1 }}>&#x25CF;</span>;
+  return (
+    <span
+      title="Pinned"
+      className="text-interactive-accent"
+      style={{ flexShrink: 0, fontSize: '0.625rem', marginLeft: '4px', lineHeight: 1 }}
+    >
+      &#x25CF;
+    </span>
+  );
 }
 
 function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement {
-  return <span style={{ flexShrink: 0, width: '6px', height: '6px', borderRadius: '50%', backgroundColor: color, marginLeft: '4px', boxShadow: glow ? `0 0 4px ${color}` : undefined }} />;
+  return (
+    <span
+      style={{
+        flexShrink: 0,
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        backgroundColor: color,
+        marginLeft: '4px',
+        boxShadow: glow ? `0 0 4px ${color}` : undefined,
+      }}
+    />
+  );
 }
 
 function LoadingDots(): React.ReactElement {
-  return <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', flexShrink: 0 }}>...</span>;
+  return (
+    <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', flexShrink: 0 }}>
+      ...
+    </span>
+  );
 }
 
 // ─── Directory diagnostic indicator (4A) ─────────────────────────────────────
 
-const DIR_DIAGNOSTIC_CONFIG: Record<string, { color: string; shape: 'circle' | 'triangle'; label: string }> = {
-  error:   { color: '#ef4444', shape: 'circle',   label: 'Contains errors' },
+const DIR_DIAGNOSTIC_CONFIG: Record<
+  string,
+  { color: string; shape: 'circle' | 'triangle'; label: string }
+> = {
+  error: { color: '#ef4444', shape: 'circle', label: 'Contains errors' },
   warning: { color: '#f59e0b', shape: 'triangle', label: 'Contains warnings' },
-  info:    { color: '#3b82f6', shape: 'circle',   label: 'Contains info' },
-  hint:    { color: '#6b7280', shape: 'circle',   label: 'Contains hints' },
+  info: { color: '#3b82f6', shape: 'circle', label: 'Contains info' },
+  hint: { color: '#6b7280', shape: 'circle', label: 'Contains hints' },
 };
 
 function DirDiagnosticIndicator({ severity }: { severity: string }): React.ReactElement | null {

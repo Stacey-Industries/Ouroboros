@@ -2,7 +2,7 @@
  * ToolCallRowHeader.tsx — Clickable header for a tool call row.
  */
 
-import React, { memo, useCallback } from 'react';
+import React, { memo } from 'react';
 
 import { fileOpLabel, formatDurationShort, toolAbbr, toolColor } from './feedHelpers';
 import { ErrorIcon, RowChevron, SpinnerIcon, SuccessIcon } from './FeedIcons';
@@ -22,6 +22,45 @@ const STATUS_ICON_MAP: Record<string, React.FC> = {
   error: ErrorIcon,
 };
 
+function RowButtonStyle(isExpandable: boolean): React.CSSProperties {
+  return {
+    minHeight: '28px',
+    background: 'transparent',
+    cursor: isExpandable ? 'pointer' : 'default',
+    border: 'none',
+    outline: 'none',
+  };
+}
+
+function RowContents({
+  call,
+  expanded,
+  isExpandable,
+  color,
+  fileLabel,
+  isPending,
+  elapsedSec,
+}: {
+  call: ToolCallEvent;
+  expanded: boolean;
+  isExpandable: boolean;
+  color: string;
+  fileLabel: string | null;
+  isPending: boolean;
+  elapsedSec: number;
+}): React.ReactElement {
+  const StatusIcon = STATUS_ICON_MAP[call.status];
+  return (
+    <>
+      <ChevronSlot open={expanded} visible={isExpandable} />
+      <ToolBadge color={color} toolName={call.toolName} />
+      <ToolLabel call={call} fileLabel={fileLabel} isPending={isPending} />
+      <DurationSlot call={call} elapsedSec={elapsedSec} isPending={isPending} />
+      <span className="shrink-0 mt-0.5">{StatusIcon && <StatusIcon />}</span>
+    </>
+  );
+}
+
 export const ToolCallRowHeader = memo(function ToolCallRowHeader({
   call,
   expanded,
@@ -32,22 +71,11 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
   const isPending = call.status === 'pending';
   const elapsedSec = useElapsedSeconds(call.timestamp, isPending);
   const fileLabel = fileOpLabel(call.toolName, call.input);
-  const StatusIcon = STATUS_ICON_MAP[call.status];
-
-  const handleClick = useCallback(() => {
-    if (isExpandable) onToggle(call.id);
-  }, [isExpandable, onToggle, call.id]);
 
   return (
     <button
       className="w-full flex items-start gap-2 px-3 py-1.5 text-left transition-colors"
-      style={{
-        minHeight: '28px',
-        background: 'transparent',
-        cursor: isExpandable ? 'pointer' : 'default',
-        border: 'none',
-        outline: 'none',
-      }}
+      style={RowButtonStyle(isExpandable)}
       onMouseEnter={(e) => {
         if (isExpandable)
           (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-raised)';
@@ -55,14 +83,20 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
       }}
-      onClick={handleClick}
+      onClick={() => {
+        if (isExpandable) onToggle(call.id);
+      }}
       aria-expanded={isExpandable ? expanded : undefined}
     >
-      <ChevronSlot open={expanded} visible={isExpandable} />
-      <ToolBadge color={color} toolName={call.toolName} />
-      <ToolLabel call={call} fileLabel={fileLabel} isPending={isPending} />
-      <DurationSlot call={call} elapsedSec={elapsedSec} isPending={isPending} />
-      <span className="shrink-0 mt-0.5">{StatusIcon && <StatusIcon />}</span>
+      <RowContents
+        call={call}
+        expanded={expanded}
+        isExpandable={isExpandable}
+        color={color}
+        fileLabel={fileLabel}
+        isPending={isPending}
+        elapsedSec={elapsedSec}
+      />
     </button>
   );
 });

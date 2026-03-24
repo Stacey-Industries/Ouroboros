@@ -1,22 +1,13 @@
 import React from 'react';
 
 import type { ApprovalRequest } from '../../types/electron';
-import { ToolInputPreview } from './ToolInputPreview';
-
-const TOOL_COLORS: Record<string, string> = {
-  Write: '#e06c75',
-  write: '#e06c75',
-  Bash: '#d19a66',
-  bash: '#d19a66',
-  Edit: '#e5c07b',
-  edit: '#e5c07b',
-  Read: '#61afef',
-  read: '#61afef',
-  Grep: '#98c379',
-  grep: '#98c379',
-  Glob: '#56b6c2',
-  glob: '#56b6c2',
-};
+import {
+  ApprovalHeader,
+  ApprovalMeta,
+  DialogHint,
+  PreviewPanel,
+  RejectReasonInput,
+} from './ApprovalDialogCardParts';
 
 interface ApprovalDialogCardProps {
   request: ApprovalRequest;
@@ -30,149 +21,6 @@ interface ApprovalDialogCardProps {
   onConfirmReject: () => void;
   onShowRejectInput: () => void;
   onHideRejectInput: () => void;
-}
-
-function ToolBadge({ toolName }: { toolName: string }): React.ReactElement {
-  const color = TOOL_COLORS[toolName] ?? 'var(--interactive-accent)';
-
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold"
-      style={{
-        backgroundColor: `${color}22`,
-        color,
-        border: `1px solid ${color}44`,
-      }}
-    >
-      {toolName}
-    </span>
-  );
-}
-
-function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactElement {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--interactive-accent)"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-        <span className="font-semibold text-base text-text-semantic-primary">
-          Tool Approval Required
-        </span>
-      </div>
-      {queuedCount > 0 && (
-        <span
-          className="text-xs px-2 py-0.5 rounded text-text-semantic-on-accent"
-          style={{ backgroundColor: 'var(--interactive-accent)' }}
-        >
-          +{queuedCount} queued
-        </span>
-      )}
-    </div>
-  );
-}
-
-function ApprovalMeta({
-  request,
-  elapsedSeconds,
-}: {
-  request: ApprovalRequest;
-  elapsedSeconds: number;
-}): React.ReactElement {
-  return (
-    <div className="flex items-center gap-2">
-      <ToolBadge toolName={request.toolName} />
-      <span className="text-xs text-text-semantic-muted">
-        Session {request.sessionId.slice(0, 8)}...
-      </span>
-      <span className="text-xs text-text-semantic-muted">
-        {elapsedSeconds > 0 ? `${elapsedSeconds}s ago` : 'just now'}
-      </span>
-    </div>
-  );
-}
-
-function RejectReasonField({
-  rejectReason,
-  onRejectReasonChange,
-  onConfirmReject,
-  onHideRejectInput,
-}: {
-  rejectReason: string;
-  onRejectReasonChange: (value: string) => void;
-  onConfirmReject: () => void;
-  onHideRejectInput: () => void;
-}): React.ReactElement {
-  return (
-    <input
-      type="text"
-      value={rejectReason}
-      onChange={(event) => onRejectReasonChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          onConfirmReject();
-          return;
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          onHideRejectInput();
-        }
-      }}
-      placeholder="Rejection reason (optional)..."
-      autoFocus
-      className="flex-1 px-3 py-1.5 rounded text-sm bg-surface-base text-text-semantic-primary border border-border-semantic outline-none"
-    />
-  );
-}
-
-function ConfirmRejectButton({
-  onConfirmReject,
-}: {
-  onConfirmReject: () => void;
-}): React.ReactElement {
-  return (
-    <button
-      onClick={onConfirmReject}
-      className="px-3 py-1.5 rounded text-sm font-medium"
-      style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }}
-    >
-      Confirm
-    </button>
-  );
-}
-
-function RejectReasonInput({
-  rejectReason,
-  onRejectReasonChange,
-  onConfirmReject,
-  onHideRejectInput,
-}: {
-  rejectReason: string;
-  onRejectReasonChange: (value: string) => void;
-  onConfirmReject: () => void;
-  onHideRejectInput: () => void;
-}): React.ReactElement {
-  return (
-    <div className="flex gap-2">
-      <RejectReasonField
-        rejectReason={rejectReason}
-        onRejectReasonChange={onRejectReasonChange}
-        onConfirmReject={onConfirmReject}
-        onHideRejectInput={onHideRejectInput}
-      />
-      <ConfirmRejectButton onConfirmReject={onConfirmReject} />
-    </div>
-  );
 }
 
 function ActionButton({
@@ -195,6 +43,46 @@ function ActionButton({
   );
 }
 
+function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactElement {
+  return (
+    <ActionButton
+      title="Approve (Enter or Y)"
+      label="Approve (Y)"
+      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
+      style={{ backgroundColor: '#98c379', color: '#1e1e1e', border: 'none', cursor: 'pointer' }}
+      onClick={onApprove}
+    />
+  );
+}
+
+function RejectButton({ onReject }: { onReject: () => void }): React.ReactElement {
+  return (
+    <ActionButton
+      title="Reject (Escape or N)"
+      label="Reject (N)"
+      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
+      style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }}
+      onClick={onReject}
+    />
+  );
+}
+
+function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement {
+  return (
+    <ActionButton
+      title="Always Allow this tool for this session (A)"
+      label="Always Allow (A)"
+      className="px-4 py-2 rounded text-sm font-medium transition-colors text-interactive-accent"
+      style={{
+        backgroundColor: 'transparent',
+        border: '1px solid var(--interactive-accent)',
+        cursor: 'pointer',
+      }}
+      onClick={onAlwaysAllow}
+    />
+  );
+}
+
 function ApprovalActions({
   showRejectInput,
   onApprove,
@@ -209,109 +97,63 @@ function ApprovalActions({
   onShowRejectInput: () => void;
 }): React.ReactElement {
   const handleReject = showRejectInput ? onConfirmReject : onShowRejectInput;
-
   return (
     <div className="flex items-center gap-2 mt-1">
-      <ActionButton
-        title="Approve (Enter or Y)"
-        label="Approve (Y)"
-        className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
-        style={{ backgroundColor: '#98c379', color: '#1e1e1e', border: 'none', cursor: 'pointer' }}
-        onClick={onApprove}
-      />
-      <ActionButton
-        title="Reject (Escape or N)"
-        label="Reject (N)"
-        className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
-        style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }}
-        onClick={handleReject}
-      />
-      <ActionButton
-        title="Always Allow this tool for this session (A)"
-        label="Always Allow (A)"
-        className="px-4 py-2 rounded text-sm font-medium transition-colors text-interactive-accent"
-        style={{
-          backgroundColor: 'transparent',
-          border: '1px solid var(--interactive-accent)',
-          cursor: 'pointer',
-        }}
-        onClick={onAlwaysAllow}
-      />
+      <ApproveButton onApprove={onApprove} />
+      <RejectButton onReject={handleReject} />
+      <AlwaysAllowButton onAlwaysAllow={onAlwaysAllow} />
     </div>
   );
 }
 
-function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement {
-  return (
-    <div
-      className="rounded p-3 border border-border-semantic"
-      style={{ backgroundColor: 'var(--bg-deeper, rgba(0,0,0,0.2))' }}
-    >
-      <ToolInputPreview toolName={request.toolName} input={request.toolInput} />
-    </div>
-  );
-}
+const DIALOG_PANEL_STYLE: React.CSSProperties = {
+  backgroundColor: 'var(--bg-panel, var(--surface-base))',
+  padding: '20px',
+  width: '560px',
+  maxWidth: '90vw',
+  maxHeight: '80vh',
+  overflow: 'auto',
+};
 
-function DialogHint(): React.ReactElement {
-  return (
-    <div className="text-center text-xs text-text-semantic-muted">
-      Claude Code is waiting for your decision. The tool will not execute until you respond.
-    </div>
-  );
-}
-
-export function ApprovalDialogCard({
-  request,
-  queuedCount,
-  elapsedSeconds,
-  rejectReason,
-  showRejectInput,
-  onRejectReasonChange,
-  onApprove,
-  onAlwaysAllow,
-  onConfirmReject,
-  onShowRejectInput,
-  onHideRejectInput,
-}: ApprovalDialogCardProps): React.ReactElement {
-  const rejectInput = showRejectInput ? (
+function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement {
+  const rejectInput = props.showRejectInput ? (
     <RejectReasonInput
-      rejectReason={rejectReason}
-      onRejectReasonChange={onRejectReasonChange}
-      onConfirmReject={onConfirmReject}
-      onHideRejectInput={onHideRejectInput}
+      rejectReason={props.rejectReason}
+      onRejectReasonChange={props.onRejectReasonChange}
+      onConfirmReject={props.onConfirmReject}
+      onHideRejectInput={props.onHideRejectInput}
     />
   ) : null;
 
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-lg shadow-2xl border border-border-semantic"
+      style={DIALOG_PANEL_STYLE}
+    >
+      <ApprovalHeader queuedCount={props.queuedCount} />
+      <ApprovalMeta request={props.request} elapsedSeconds={props.elapsedSeconds} />
+      <PreviewPanel request={props.request} />
+      {rejectInput}
+      <ApprovalActions
+        showRejectInput={props.showRejectInput}
+        onApprove={props.onApprove}
+        onAlwaysAllow={props.onAlwaysAllow}
+        onConfirmReject={props.onConfirmReject}
+        onShowRejectInput={props.onShowRejectInput}
+      />
+      <DialogHint />
+    </div>
+  );
+}
+
+export function ApprovalDialogCard(props: ApprovalDialogCardProps): React.ReactElement {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 9999, backdropFilter: 'blur(2px)' }}
       onClick={(event) => event.stopPropagation()}
     >
-      <div
-        className="flex flex-col gap-3 rounded-lg shadow-2xl border border-border-semantic"
-        style={{
-          backgroundColor: 'var(--bg-panel, var(--surface-base))',
-          padding: '20px',
-          width: '560px',
-          maxWidth: '90vw',
-          maxHeight: '80vh',
-          overflow: 'auto',
-        }}
-      >
-        <ApprovalHeader queuedCount={queuedCount} />
-        <ApprovalMeta request={request} elapsedSeconds={elapsedSeconds} />
-        <PreviewPanel request={request} />
-        {rejectInput}
-        <ApprovalActions
-          showRejectInput={showRejectInput}
-          onApprove={onApprove}
-          onAlwaysAllow={onAlwaysAllow}
-          onConfirmReject={onConfirmReject}
-          onShowRejectInput={onShowRejectInput}
-        />
-        <DialogHint />
-      </div>
+      <DialogPanel {...props} />
     </div>
   );
 }

@@ -1,81 +1,15 @@
 import React from 'react';
 
+import {
+  BUTTON_BASE_STYLE,
+  MENU_STYLE,
+  RECENT_BUTTON_STYLE,
+  RECENT_PATH_STYLE,
+  SECTION_LABEL_STYLE,
+  TOGGLE_BUTTON_STYLE,
+  TRUNCATE_STYLE,
+} from './ProjectPickerMenu.styles';
 import { basename } from './useProjectPickerController';
-
-const BUTTON_BASE_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  width: '100%',
-  padding: '8px 12px',
-  background: 'transparent',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-ui)',
-  textAlign: 'left',
-};
-
-const RECENT_BUTTON_STYLE: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-start',
-  width: '100%',
-  padding: '6px 12px',
-  background: 'transparent',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-ui)',
-  textAlign: 'left',
-  overflow: 'hidden',
-};
-
-const TOGGLE_BUTTON_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  width: '100%',
-  padding: '0 4px',
-  background: 'transparent',
-  border: 'none',
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-ui)',
-  fontWeight: 500,
-  overflow: 'hidden',
-  minWidth: 0,
-};
-
-const MENU_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  top: '100%',
-  left: 0,
-  right: 0,
-  zIndex: 1000,
-  borderRadius: '6px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-  overflow: 'hidden',
-  marginTop: '4px',
-};
-
-const TRUNCATE_STYLE: React.CSSProperties = {
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  width: '100%',
-};
-
-const RECENT_PATH_STYLE: React.CSSProperties = {
-  ...TRUNCATE_STYLE,
-  fontSize: '0.6875rem',
-};
-
-const SECTION_LABEL_STYLE: React.CSSProperties = {
-  padding: '4px 12px 2px',
-  fontSize: '0.6875rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-};
 
 function setButtonBackground(target: HTMLButtonElement, color: string): void {
   target.style.backgroundColor = color;
@@ -274,29 +208,20 @@ export function ProjectPickerToggle({
   );
 }
 
-export function ProjectPickerMenu({
+function MenuActionButtons({
   canAddProject,
-  recents,
   rootCount,
   onAddFolder,
   onOpenFolder,
-  onSelectRecent,
 }: {
   canAddProject: boolean;
-  recents: string[];
   rootCount: number;
   onAddFolder: () => Promise<void>;
   onOpenFolder: () => Promise<void>;
-  onSelectRecent: (path: string) => void;
 }): React.ReactElement {
   const openFolderLabel = rootCount > 0 ? 'Open folder... (replace workspace)' : 'Open folder...';
   return (
-    <div
-      role="listbox"
-      aria-label="Project selector"
-      className="bg-surface-raised border border-border-semantic"
-      style={MENU_STYLE}
-    >
+    <>
       <ActionButton
         borderBottom="1px solid var(--border-subtle)"
         icon={<FolderIcon />}
@@ -313,6 +238,38 @@ export function ProjectPickerMenu({
           Add folder to workspace...
         </ActionButton>
       ) : null}
+    </>
+  );
+}
+
+export function ProjectPickerMenu({
+  canAddProject,
+  recents,
+  rootCount,
+  onAddFolder,
+  onOpenFolder,
+  onSelectRecent,
+}: {
+  canAddProject: boolean;
+  recents: string[];
+  rootCount: number;
+  onAddFolder: () => Promise<void>;
+  onOpenFolder: () => Promise<void>;
+  onSelectRecent: (path: string) => void;
+}): React.ReactElement {
+  return (
+    <div
+      role="listbox"
+      aria-label="Project selector"
+      className="bg-surface-raised border border-border-semantic"
+      style={MENU_STYLE}
+    >
+      <MenuActionButtons
+        canAddProject={canAddProject}
+        rootCount={rootCount}
+        onAddFolder={onAddFolder}
+        onOpenFolder={onOpenFolder}
+      />
       <RecentProjectsSection recents={recents} onSelectRecent={onSelectRecent} />
     </div>
   );

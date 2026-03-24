@@ -291,16 +291,21 @@ function persistBgGradient(value: boolean): void {
   }
 }
 
-export function useTheme(): UseThemeReturn {
+function useThemeSnapshot(): ThemeRuntimeState {
   const [snapshot, setSnapshot] = useState<ThemeRuntimeState>(() => cloneRuntimeState());
-
   useEffect(() => {
     ensureThemeRuntime();
     return subscribeToThemeRuntime((nextState) => {
       setSnapshot(nextState);
     });
   }, []);
+  return snapshot;
+}
 
+function useThemeActions(): Pick<
+  UseThemeReturn,
+  'setTheme' | 'setShowBgGradient' | 'setGlassOpacity'
+> {
   const setTheme = useCallback(async (id: string) => {
     const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
     setRuntimeState({ themeId: resolved, hydrated: true });
@@ -320,6 +325,13 @@ export function useTheme(): UseThemeReturn {
       /* ignore */
     }
   }, []);
+
+  return { setTheme, setShowBgGradient, setGlassOpacity };
+}
+
+export function useTheme(): UseThemeReturn {
+  const snapshot = useThemeSnapshot();
+  const { setTheme, setShowBgGradient, setGlassOpacity } = useThemeActions();
 
   // Build live theme list: built-ins + any registered extension themes
   const allThemes = useMemo(() => {

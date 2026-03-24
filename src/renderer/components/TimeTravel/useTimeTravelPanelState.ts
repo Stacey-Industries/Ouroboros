@@ -3,36 +3,19 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../types/electron';
+import { buildRestoreStatusMessage, ChangedFile, truncateHash } from './timeTravelUtils';
 import {
-  buildRestoreStatusMessage,
-  ChangedFile,
-  getNextSelectionState,
-  truncateHash,
-} from './timeTravelUtils';
+  ChangedFilesArgs,
+  createChangedFilesArgs,
+  findSnapshotById,
+  useSnapshotSelection,
+} from './useTimeTravelSelection';
 
 interface UseTimeTravelPanelStateArgs {
   projectRoot?: string;
   snapshots: WorkspaceSnapshot[];
   onCreateSnapshot: (label?: string) => Promise<WorkspaceSnapshot | null>;
   onRefreshSnapshots: () => Promise<void>;
-}
-
-interface ChangedFilesArgs {
-  projectRoot?: string;
-  sortedSnapshots: WorkspaceSnapshot[];
-  selectedId: string | null;
-  selectedSnapshot: WorkspaceSnapshot | null;
-  compareMode: boolean;
-  compareFromId: string | null;
-  compareToId: string | null;
-}
-
-function findSnapshotById(
-  sortedSnapshots: WorkspaceSnapshot[],
-  id: string | null,
-): WorkspaceSnapshot | null {
-  if (!id) return null;
-  return sortedSnapshots.find((snapshot) => snapshot.id === id) ?? null;
 }
 
 function useCurrentHead(
@@ -186,77 +169,6 @@ async function createSnapshotAndRefresh(
   if (!snapshot) return { message: 'Failed to create snapshot.', snapshot: null };
   await onRefreshSnapshots();
   return { message: `Snapshot created: ${truncateHash(snapshot.commitHash)}`, snapshot };
-}
-
-function createChangedFilesArgs(
-  projectRoot: string | undefined,
-  sortedSnapshots: WorkspaceSnapshot[],
-  selectionState: ReturnType<typeof useSnapshotSelection>,
-): ChangedFilesArgs {
-  return {
-    projectRoot,
-    sortedSnapshots,
-    selectedId: selectionState.selectedId,
-    selectedSnapshot: selectionState.selectedSnapshot,
-    compareMode: selectionState.compareMode,
-    compareFromId: selectionState.compareFromId,
-    compareToId: selectionState.compareToId,
-  };
-}
-
-function useSnapshotSelection(sortedSnapshots: WorkspaceSnapshot[]) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [compareFromId, setCompareFromId] = useState<string | null>(null);
-  const [compareToId, setCompareToId] = useState<string | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-
-  const selectedSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, selectedId),
-    [selectedId, sortedSnapshots],
-  );
-  const compareFromSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, compareFromId),
-    [compareFromId, sortedSnapshots],
-  );
-  const compareToSnapshot = useMemo(
-    () => findSnapshotById(sortedSnapshots, compareToId),
-    [compareToId, sortedSnapshots],
-  );
-  const comparisonReady = compareMode && Boolean(compareFromSnapshot && compareToSnapshot);
-
-  const handleSnapshotClick = useCallback(
-    (snapshot: WorkspaceSnapshot) => {
-      const next = getNextSelectionState(snapshot.id, {
-        selectedId,
-        compareFromId,
-        compareToId,
-        compareMode,
-      });
-      setSelectedId(next.selectedId);
-      setCompareFromId(next.compareFromId);
-      setCompareToId(next.compareToId);
-    },
-    [compareFromId, compareMode, compareToId, selectedId],
-  );
-
-  const toggleCompareMode = useCallback(() => {
-    setCompareMode((current) => !current);
-    setCompareFromId(null);
-    setCompareToId(null);
-  }, []);
-
-  return {
-    selectedId,
-    compareFromId,
-    compareToId,
-    compareMode,
-    selectedSnapshot,
-    compareFromSnapshot,
-    compareToSnapshot,
-    comparisonReady,
-    handleSnapshotClick,
-    toggleCompareMode,
-  };
 }
 
 function getRestoreErrorMessage(error: unknown): string {

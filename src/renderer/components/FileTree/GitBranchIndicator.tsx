@@ -1,8 +1,3 @@
-/**
- * GitBranchIndicator - shows current git branch at the top of the file tree
- * with a dropdown for switching branches and creating new ones.
- */
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
@@ -15,18 +10,16 @@ import {
   dropdownHeaderStyle,
   dropdownStyle,
   indicatorStyle,
+  performCheckout,
+  performCreateBranch,
   searchInputStyle,
   sectionLabelStyle,
 } from './GitBranchIndicator.helpers';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GitBranchIndicatorProps {
   projectRoot: string;
   isRepo: boolean;
 }
-
-// ─── Hooks ───────────────────────────────────────────────────────────────────
 
 function useBranchFetch(projectRoot: string, isRepo: boolean) {
   const [branch, setBranch] = useState<string | null>(null);
@@ -80,8 +73,7 @@ function useBranchActions(
       }
       setSwitching(true);
       try {
-        const result = await window.electronAPI.git.checkout(projectRoot, targetBranch);
-        if (result.success) setBranch(targetBranch);
+        await performCheckout(projectRoot, targetBranch, setBranch);
       } catch {
         /* ignore */
       } finally {
@@ -94,13 +86,9 @@ function useBranchActions(
 
   const handleCreateBranch = useCallback(
     async (setIsOpen: (v: boolean) => void) => {
-      const name = prompt('New branch name:');
-      if (!name || !name.trim() || !projectRoot) return;
-      const trimmed = name.trim();
       setSwitching(true);
       try {
-        const result = await window.electronAPI.git.checkout(projectRoot, trimmed);
-        if (result.success) setBranch(trimmed);
+        await performCreateBranch(projectRoot, setBranch);
       } catch {
         /* ignore */
       } finally {
@@ -161,8 +149,6 @@ function useBranchDropdown(
   return { isOpen, setIsOpen, search, setSearch, searchInputRef };
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
 function BranchSearchInput({
   searchInputRef,
   search,
@@ -188,6 +174,42 @@ function BranchSearchInput({
         e.currentTarget.style.borderColor = 'var(--border-default)';
       }}
     />
+  );
+}
+
+function BranchList({
+  filteredBranches,
+  branch,
+  search,
+  handleCheckout,
+  setIsOpen,
+}: {
+  filteredBranches: string[];
+  branch: string;
+  search: string;
+  handleCheckout: (b: string, setOpen: (v: boolean) => void) => Promise<void>;
+  setIsOpen: (v: boolean) => void;
+}): React.ReactElement {
+  const emptyMsg = search ? 'No matching branches' : 'No branches found';
+  return (
+    <div role="listbox" aria-label="Git branches">
+      {filteredBranches.length === 0 && (
+        <div
+          className="text-text-semantic-faint"
+          style={{ padding: '8px', fontSize: '0.75rem', textAlign: 'center' }}
+        >
+          {emptyMsg}
+        </div>
+      )}
+      {filteredBranches.map((b) => (
+        <BranchItem
+          key={b}
+          name={b}
+          isCurrent={b === branch}
+          onClick={() => void handleCheckout(b, setIsOpen)}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -218,24 +240,13 @@ function BranchDropdown({
       <div className="text-text-semantic-faint" style={sectionLabelStyle}>
         Local Branches
       </div>
-      <div role="listbox" aria-label="Git branches">
-        {filteredBranches.length === 0 && (
-          <div
-            className="text-text-semantic-faint"
-            style={{ padding: '8px', fontSize: '0.75rem', textAlign: 'center' }}
-          >
-            {search ? 'No matching branches' : 'No branches found'}
-          </div>
-        )}
-        {filteredBranches.map((b) => (
-          <BranchItem
-            key={b}
-            name={b}
-            isCurrent={b === branch}
-            onClick={() => void handleCheckout(b, setIsOpen)}
-          />
-        ))}
-      </div>
+      <BranchList
+        filteredBranches={filteredBranches}
+        branch={branch}
+        search={search}
+        handleCheckout={handleCheckout}
+        setIsOpen={setIsOpen}
+      />
       <CreateBranchRow onClick={() => void handleCreateBranch(setIsOpen)} />
     </div>
   );
@@ -278,8 +289,6 @@ function BranchIndicatorBar({
     </div>
   );
 }
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 export function GitBranchIndicator({
   projectRoot,

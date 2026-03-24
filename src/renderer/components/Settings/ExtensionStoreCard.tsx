@@ -14,6 +14,57 @@ interface ExtensionStoreCardProps {
   onClick: () => void;
 }
 
+function CardTopRow({
+  extension,
+  isInstalled,
+  isDisabled,
+}: Pick<ExtensionStoreCardProps, 'extension' | 'isInstalled' | 'isDisabled'>): React.ReactElement {
+  return (
+    <div style={topRowStyle}>
+      <span className="text-text-semantic-primary" style={nameStyle}>
+        {extension.displayName || extension.name}
+      </span>
+      {isInstalled ? (
+        <span
+          className={isDisabled ? 'text-text-semantic-muted' : 'text-interactive-accent'}
+          style={isDisabled ? disabledBadgeStyle : installedBadgeStyle}
+        >
+          {isDisabled ? 'Disabled' : 'Installed'}
+        </span>
+      ) : (
+        <span className="text-text-semantic-muted" style={arrowStyle}>
+          &rarr;
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CardFooterRow({
+  extension,
+}: {
+  extension: ExtensionStoreCardProps['extension'];
+}): React.ReactElement {
+  return (
+    <div style={footerStyle}>
+      <span className="text-interactive-accent" style={typeBadgeStyle}>
+        Extension
+      </span>
+      <span className="text-text-semantic-muted" style={metaStyle}>
+        {formatDownloads(extension.downloads)}
+      </span>
+      {extension.averageRating != null && (
+        <span className="text-text-semantic-muted" style={metaStyle}>
+          {'\u2605'} {extension.averageRating.toFixed(1)}
+        </span>
+      )}
+      <span className="text-text-semantic-muted" style={versionStyle}>
+        v{extension.version}
+      </span>
+    </div>
+  );
+}
+
 export function ExtensionStoreCard({
   extension,
   isInstalled,
@@ -33,46 +84,13 @@ export function ExtensionStoreCard({
       className="ext-store-card"
     >
       <div style={cardBodyStyle}>
-        <div style={topRowStyle}>
-          <span className="text-text-semantic-primary" style={nameStyle}>
-            {extension.displayName || extension.name}
-          </span>
-          {isInstalled ? (
-            <span
-              className={isDisabled ? 'text-text-semantic-muted' : 'text-interactive-accent'}
-              style={isDisabled ? disabledBadgeStyle : installedBadgeStyle}
-            >
-              {isDisabled ? 'Disabled' : 'Installed'}
-            </span>
-          ) : (
-            <span className="text-text-semantic-muted" style={arrowStyle}>
-              &rarr;
-            </span>
-          )}
-        </div>
-
+        <CardTopRow extension={extension} isInstalled={isInstalled} isDisabled={isDisabled} />
         {extension.description && (
           <div className="text-text-semantic-muted line-clamp-2" style={descriptionStyle}>
             {extension.description}
           </div>
         )}
-
-        <div style={footerStyle}>
-          <span className="text-interactive-accent" style={typeBadgeStyle}>
-            Extension
-          </span>
-          <span className="text-text-semantic-muted" style={metaStyle}>
-            {formatDownloads(extension.downloads)}
-          </span>
-          {extension.averageRating != null && (
-            <span className="text-text-semantic-muted" style={metaStyle}>
-              {'\u2605'} {extension.averageRating.toFixed(1)}
-            </span>
-          )}
-          <span className="text-text-semantic-muted" style={versionStyle}>
-            v{extension.version}
-          </span>
-        </div>
+        <CardFooterRow extension={extension} />
       </div>
     </div>
   );

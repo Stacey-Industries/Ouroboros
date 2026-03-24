@@ -49,46 +49,39 @@ function TerminalManagerShell({
   );
 }
 
-export function TerminalManager({
-  sessions,
-  activeSessionId,
-  onRestart,
-  onClose,
-  onTitleChange,
-  onSpawn,
-  recordingSessions,
-  onToggleRecording,
-  onSplit,
-  onCloseSplit,
-}: TerminalManagerProps): React.ReactElement {
-  const { activeSession, allSessionIds, syncInput, handleToggleSync } = useTerminalManagerState(
-    sessions,
-    activeSessionId,
-  );
-  const activeContent = activeSession ? (
+function buildActiveContent(
+  props: TerminalManagerProps,
+  state: ReturnType<typeof useTerminalManagerState>,
+): React.ReactNode {
+  const { activeSession, allSessionIds, syncInput, handleToggleSync } = state;
+  if (!activeSession) return null;
+  return (
     <div className="absolute inset-0">
       <ActiveTerminalContent
         session={activeSession}
         isActive
-        onTitleChange={onTitleChange}
-        onRestart={onRestart}
-        onClose={onClose}
-        onSplit={onSplit}
-        onCloseSplit={onCloseSplit ?? NOOP}
-        recordingSessions={recordingSessions}
-        onToggleRecording={onToggleRecording}
+        onTitleChange={props.onTitleChange}
+        onRestart={props.onRestart}
+        onClose={props.onClose}
+        onSplit={props.onSplit}
+        onCloseSplit={props.onCloseSplit ?? NOOP}
+        recordingSessions={props.recordingSessions}
+        onToggleRecording={props.onToggleRecording}
         syncInput={syncInput}
         allSessionIds={allSessionIds}
         onToggleSync={handleToggleSync}
       />
     </div>
-  ) : null;
+  );
+}
 
+export function TerminalManager(props: TerminalManagerProps): React.ReactElement {
+  const state = useTerminalManagerState(props.sessions, props.activeSessionId);
   return (
     <TerminalManagerShell
-      activeContent={activeContent}
-      isEmpty={sessions.length === 0}
-      onSpawn={onSpawn}
+      activeContent={buildActiveContent(props, state)}
+      isEmpty={props.sessions.length === 0}
+      onSpawn={props.onSpawn}
     />
   );
 }

@@ -2,60 +2,14 @@ import React from 'react';
 
 import type { ColorToken, ThemeEditorModel } from './ThemeEditor.model';
 import { cssColorToHex } from './ThemeEditor.model';
-
-const sectionLabelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-};
-
-const ghostButtonStyle: React.CSSProperties = {
-  padding: '5px 10px',
-  borderRadius: '5px',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  fontSize: '11px',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const accentButtonStyle: React.CSSProperties = {
-  padding: '5px 10px',
-  borderRadius: '5px',
-  border: 'none',
-  background: 'var(--interactive-accent)',
-  fontSize: '11px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const disabledButtonStyle: React.CSSProperties = {
-  ...accentButtonStyle,
-  background: 'var(--surface-raised)',
-  cursor: 'not-allowed',
-};
-
-const swatchPreviewStyle: React.CSSProperties = {
-  width: '24px',
-  height: '24px',
-  borderRadius: '5px',
-  border: '1px solid rgba(255,255,255,0.15)',
-  cursor: 'pointer',
-};
-
-const hiddenPickerStyle: React.CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  opacity: 0,
-  width: '100%',
-  height: '100%',
-  cursor: 'pointer',
-  padding: 0,
-  margin: 0,
-  border: 'none',
-};
+import {
+  accentButtonStyle,
+  disabledButtonStyle,
+  ghostButtonStyle,
+  hiddenPickerStyle,
+  sectionLabelStyle,
+  swatchPreviewStyle,
+} from './ThemeEditor.styles';
 
 function ThemeEditorHeader({
   hasOverrides,

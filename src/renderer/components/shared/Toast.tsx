@@ -66,54 +66,62 @@ function getTypeColor(type: ToastType): string {
 
 // ── Icons per toast type (inline SVGs) ───────────────────────────────────────
 
+function ToastIconSuccess({ color, size }: { color: string; size: number }): React.ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
+      <path
+        d="M5 8l2 2 4-4"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ToastIconError({ color, size }: { color: string; size: number }): React.ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
+      <path d="M6 6l4 4M10 6l-4 4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ToastIconWarning({ color, size }: { color: string; size: number }): React.ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M8 1.5l6.93 12H1.07L8 1.5z"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M8 6.5v3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="8" cy="11.5" r="0.75" fill={color} />
+    </svg>
+  );
+}
+
+function ToastIconInfo({ color, size }: { color: string; size: number }): React.ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
+      <path d="M8 7v4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="8" cy="4.75" r="0.75" fill={color} />
+    </svg>
+  );
+}
+
 function ToastIcon({ type }: { type: ToastType }): React.ReactElement {
   const color = getTypeColor(type);
   const size = 16;
-
-  switch (type) {
-    case 'success':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path
-            d="M5 8l2 2 4-4"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case 'error':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path d="M6 6l4 4M10 6l-4 4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      );
-    case 'warning':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path
-            d="M8 1.5l6.93 12H1.07L8 1.5z"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-          <path d="M8 6.5v3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="8" cy="11.5" r="0.75" fill={color} />
-        </svg>
-      );
-    case 'info':
-    default:
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path d="M8 7v4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="8" cy="4.75" r="0.75" fill={color} />
-        </svg>
-      );
-  }
+  if (type === 'success') return <ToastIconSuccess color={color} size={size} />;
+  if (type === 'error') return <ToastIconError color={color} size={size} />;
+  if (type === 'warning') return <ToastIconWarning color={color} size={size} />;
+  return <ToastIconInfo color={color} size={size} />;
 }
 
 // ── Close button ─────────────────────────────────────────────────────────────

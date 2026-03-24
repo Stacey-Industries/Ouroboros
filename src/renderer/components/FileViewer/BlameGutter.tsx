@@ -79,12 +79,7 @@ const BLAME_DATE_STYLE: React.CSSProperties = {
   flexShrink: 0,
 };
 
-const TOOLTIP_BACKDROP_STYLE: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 999,
-};
-
+const TOOLTIP_BACKDROP_STYLE: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 999 };
 const TOOLTIP_CARD_STYLE: React.CSSProperties = {
   position: 'fixed',
   zIndex: 1000,
@@ -98,28 +93,18 @@ const TOOLTIP_CARD_STYLE: React.CSSProperties = {
   boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
   lineHeight: '1.5',
 };
-
 const TOOLTIP_HEADER_STYLE: React.CSSProperties = {
   display: 'flex',
   gap: '8px',
   marginBottom: '4px',
 };
-
 const TOOLTIP_HASH_STYLE: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: '0.6875rem',
 };
-
 const TOOLTIP_AUTHOR_STYLE: React.CSSProperties = {};
-
-const TOOLTIP_DATE_STYLE: React.CSSProperties = {
-  fontSize: '0.6875rem',
-};
-
-const TOOLTIP_SUMMARY_STYLE: React.CSSProperties = {
-  marginTop: '6px',
-  fontWeight: 500,
-};
+const TOOLTIP_DATE_STYLE: React.CSSProperties = { fontSize: '0.6875rem' };
+const TOOLTIP_SUMMARY_STYLE: React.CSSProperties = { marginTop: '6px', fontWeight: 500 };
 
 function relativeDate(timestamp: number): string {
   if (!timestamp) return '';
@@ -236,47 +221,66 @@ const BlameRow = memo(function BlameRow({
   return <BlameAnnotationRow blame={blame} backgroundColor={backgroundColor} onClick={onClick} />;
 });
 
+function BlameTooltipBackdrop({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <div
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Close blame tooltip"
+      style={TOOLTIP_BACKDROP_STYLE}
+    />
+  );
+}
+
+function BlameTooltipCard({
+  blame,
+  top,
+  left,
+}: {
+  blame: BlameLine;
+  top: number;
+  left: number;
+}): React.ReactElement {
+  return (
+    <div
+      className="text-text-semantic-primary"
+      style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}
+    >
+      <div style={TOOLTIP_HEADER_STYLE}>
+        <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>
+          {blame.hash.slice(0, 8)}
+        </span>
+        <span className="text-text-semantic-muted" style={TOOLTIP_AUTHOR_STYLE}>
+          {blame.author}
+        </span>
+      </div>
+      <div className="text-text-semantic-faint" style={TOOLTIP_DATE_STYLE}>
+        {new Date(blame.date * 1000).toLocaleString()}
+      </div>
+      <div className="text-text-semantic-primary" style={TOOLTIP_SUMMARY_STYLE}>
+        {blame.summary}
+      </div>
+    </div>
+  );
+}
+
 const BlameTooltip = memo(function BlameTooltip({
   tooltipInfo,
   onClose,
 }: BlameTooltipProps): React.ReactElement | null {
   if (!tooltipInfo) return null;
-
   const { blame, top, left } = tooltipInfo;
   return (
     <>
-      <div
-        onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
-            e.preventDefault();
-            onClose();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="Close blame tooltip"
-        style={TOOLTIP_BACKDROP_STYLE}
-      />
-      <div
-        className="text-text-semantic-primary"
-        style={{ ...TOOLTIP_CARD_STYLE, top: `${top}px`, left: `${left}px` }}
-      >
-        <div style={TOOLTIP_HEADER_STYLE}>
-          <span className="text-interactive-accent" style={TOOLTIP_HASH_STYLE}>
-            {blame.hash.slice(0, 8)}
-          </span>
-          <span className="text-text-semantic-muted" style={TOOLTIP_AUTHOR_STYLE}>
-            {blame.author}
-          </span>
-        </div>
-        <div className="text-text-semantic-faint" style={TOOLTIP_DATE_STYLE}>
-          {new Date(blame.date * 1000).toLocaleString()}
-        </div>
-        <div className="text-text-semantic-primary" style={TOOLTIP_SUMMARY_STYLE}>
-          {blame.summary}
-        </div>
-      </div>
+      <BlameTooltipBackdrop onClose={onClose} />
+      <BlameTooltipCard blame={blame} top={top} left={left} />
     </>
   );
 });

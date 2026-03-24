@@ -89,18 +89,17 @@ function TerminalToolbarLayer({
   );
 }
 
-function TerminalToolbarButtons({
+function TerminalOptionalButtons({
   controller,
   isHovered,
+  showSearch,
 }: {
   controller: TerminalInstanceController;
   isHovered: boolean;
+  showSearch: boolean;
 }): React.ReactElement {
-  const terminal = controller.terminalRef.current;
-  const showSearch = controller.showSearch;
-
   return (
-    <div style={TOOLBAR_STYLE}>
+    <>
       {controller.onToggleSync && (
         <SyncButton
           syncInput={controller.syncInput}
@@ -126,14 +125,36 @@ function TerminalToolbarButtons({
           onToggleRecording={controller.onToggleRecording}
         />
       )}
+    </>
+  );
+}
+
+function TerminalToolbarButtons({
+  controller,
+  isHovered,
+}: {
+  controller: TerminalInstanceController;
+  isHovered: boolean;
+}): React.ReactElement {
+  const terminal = controller.terminalRef.current;
+  const showSearch = controller.showSearch;
+  const richInputOnClick = controller.richInputActive
+    ? controller.handleRichInputCancel
+    : controller.openRichInput;
+
+  return (
+    <div style={TOOLBAR_STYLE}>
+      <TerminalOptionalButtons
+        controller={controller}
+        isHovered={isHovered}
+        showSearch={showSearch}
+      />
       {!showSearch && <CopyButton terminal={terminal} visible={isHovered} />}
       <MultiLineButton
         isActive={controller.richInputActive}
         isHovered={isHovered}
         showSearch={showSearch}
-        onClick={
-          controller.richInputActive ? controller.handleRichInputCancel : controller.openRichInput
-        }
+        onClick={richInputOnClick}
       />
     </div>
   );

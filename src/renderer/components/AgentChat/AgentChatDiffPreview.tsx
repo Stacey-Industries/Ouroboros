@@ -1,55 +1,46 @@
 import React, { useCallback, useState } from 'react';
 
 import { useProject } from '../../contexts/ProjectContext';
+import type { DiffLine } from './AgentChatDiffPreviewSupport';
+import { loadDiffPatch, parseDiffLines } from './AgentChatDiffPreviewSupport';
 
 export interface AgentChatDiffPreviewProps {
   filePath: string;
 }
 
-interface DiffLine {
-  type: 'header' | 'hunk' | 'add' | 'del' | 'context';
-  text: string;
-  oldLineNo?: number;
-  newLineNo?: number;
+function CopyIcon(): React.ReactElement {
+  return (
+    <svg
+      className="h-3 w-3"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="5" width="8" height="8" rx="1" />
+      <path d="M3 11V3a1 1 0 011-1h8" />
+    </svg>
+  );
 }
 
-function parseDiffLines(patch: string): DiffLine[] {
-  const result: DiffLine[] = [];
-  let oldLine = 0;
-  let newLine = 0;
-
-  for (const raw of patch.split('\n')) {
-    if (
-      raw.startsWith('diff --git') ||
-      raw.startsWith('index ') ||
-      raw.startsWith('---') ||
-      raw.startsWith('+++')
-    ) {
-      result.push({ type: 'header', text: raw });
-      continue;
-    }
-    const hunkMatch = raw.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-    if (hunkMatch) {
-      oldLine = parseInt(hunkMatch[1], 10);
-      newLine = parseInt(hunkMatch[2], 10);
-      result.push({ type: 'hunk', text: raw });
-      continue;
-    }
-    if (raw.startsWith('+')) {
-      result.push({ type: 'add', text: raw.slice(1), newLineNo: newLine++ });
-    } else if (raw.startsWith('-')) {
-      result.push({ type: 'del', text: raw.slice(1), oldLineNo: oldLine++ });
-    } else if (raw.startsWith(' ')) {
-      result.push({
-        type: 'context',
-        text: raw.slice(1),
-        oldLineNo: oldLine++,
-        newLineNo: newLine++,
-      });
-    }
-  }
-
-  return result;
+function ExternalIcon(): React.ReactElement {
+  return (
+    <svg
+      className="h-3 w-3"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 3H3v10h10V9" />
+      <path d="M10 2h4v4" />
+      <path d="M14 2L7 9" />
+    </svg>
+  );
 }
 
 function renderHeaderLine(line: DiffLine, index: number): React.ReactElement {
@@ -119,6 +110,24 @@ function renderDiffLine(line: DiffLine, index: number): React.ReactElement {
   return renderChangeLine(line, index);
 }
 
+function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement {
+  return (
+    <div
+      className="mt-1.5 overflow-auto rounded border border-border-semantic bg-surface-base"
+      style={{
+        maxHeight: '300px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: '11px',
+        lineHeight: '1.5',
+      }}
+    >
+      <table className="w-full border-collapse">
+        <tbody>{diffLines.map(renderDiffLine)}</tbody>
+      </table>
+    </div>
+  );
+}
+
 function DiffControls({
   loading,
   expanded,
@@ -179,73 +188,6 @@ function DiffError({ error }: { error: string }): React.ReactElement {
   );
 }
 
-function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement {
-  return (
-    <div
-      className="mt-1.5 overflow-auto rounded border border-border-semantic bg-surface-base"
-      style={{
-        maxHeight: '300px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: '11px',
-        lineHeight: '1.5',
-      }}
-    >
-      <table className="w-full border-collapse">
-        <tbody>{diffLines.map(renderDiffLine)}</tbody>
-      </table>
-    </div>
-  );
-}
-function DiffPreviewBody({
-  loading,
-  expanded,
-  diffLines,
-  copied,
-  error,
-  onFetch,
-  onOpen,
-  onCopy,
-}: {
-  loading: boolean;
-  expanded: boolean;
-  diffLines: DiffLine[] | null;
-  copied: boolean;
-  error: string | null;
-  onFetch: () => void;
-  onOpen: () => void;
-  onCopy: () => void;
-}): React.ReactElement {
-  return (
-    <div className="mt-1.5">
-      <DiffControls
-        loading={loading}
-        expanded={expanded}
-        diffLines={diffLines}
-        copied={copied}
-        onFetch={onFetch}
-        onOpen={onOpen}
-        onCopy={onCopy}
-      />
-      {error && <DiffError error={error} />}
-      {expanded && diffLines && diffLines.length > 0 && <DiffTable diffLines={diffLines} />}
-    </div>
-  );
-}
-
-async function loadDiffPatch(
-  projectRoot: string | null,
-  projectRoots: string[],
-  filePath: string,
-): Promise<{ error?: string; patch?: string }> {
-  const resolvedProjectRoot = resolveProjectRoot(projectRoots, projectRoot, filePath);
-  if (!resolvedProjectRoot) return { error: 'Unable to resolve the project root for this file' };
-  const result = await window.electronAPI.git.diffRaw(resolvedProjectRoot, filePath);
-  if (!result.success) return { error: result.error ?? 'Failed to get diff' };
-  const patch = result.patch ?? '';
-  if (!patch.trim()) return { error: 'No changes detected (file may not be tracked by git)' };
-  return { patch };
-}
-
 function useDiffPreview(filePath: string) {
   const { projectRoot, projectRoots } = useProject();
   const [diffLines, setDiffLines] = useState<DiffLine[] | null>(null);
@@ -288,7 +230,7 @@ function useDiffPreview(filePath: string) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard write failed silently.
+      /* Clipboard write failed silently. */
     }
   }, [rawPatch]);
 
@@ -316,60 +258,18 @@ export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): R
     handleCopyDiff,
   } = useDiffPreview(filePath);
   return (
-    <DiffPreviewBody
-      loading={loading}
-      expanded={expanded}
-      diffLines={diffLines}
-      copied={copied}
-      error={error}
-      onFetch={fetchDiff}
-      onOpen={handleOpenInEditor}
-      onCopy={handleCopyDiff}
-    />
+    <div className="mt-1.5">
+      <DiffControls
+        loading={loading}
+        expanded={expanded}
+        diffLines={diffLines}
+        copied={copied}
+        onFetch={fetchDiff}
+        onOpen={handleOpenInEditor}
+        onCopy={handleCopyDiff}
+      />
+      {error && <DiffError error={error} />}
+      {expanded && diffLines && diffLines.length > 0 && <DiffTable diffLines={diffLines} />}
+    </div>
   );
-}
-
-function CopyIcon(): React.ReactElement {
-  return (
-    <svg
-      className="h-3 w-3"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="5" y="5" width="8" height="8" rx="1" />
-      <path d="M3 11V3a1 1 0 011-1h8" />
-    </svg>
-  );
-}
-
-function ExternalIcon(): React.ReactElement {
-  return (
-    <svg
-      className="h-3 w-3"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 3H3v10h10V9" />
-      <path d="M10 2h4v4" />
-      <path d="M14 2L7 9" />
-    </svg>
-  );
-}
-
-function resolveProjectRoot(
-  projectRoots: string[],
-  projectRoot: string | null,
-  filePath: string,
-): string | null {
-  if (projectRoot && filePath.startsWith(projectRoot)) return projectRoot;
-  const candidate = projectRoots.find((root) => filePath.startsWith(root));
-  return candidate ?? projectRoot ?? null;
 }

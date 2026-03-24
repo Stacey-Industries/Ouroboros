@@ -121,6 +121,15 @@ function BranchListButton({
   );
 }
 
+type BranchDropdownContentProps = {
+  currentBranch: string;
+  filteredBranches: string[];
+  checkingOut: string | null;
+  error: string | null;
+  loading: boolean;
+  onCheckout: (branch: string) => void;
+};
+
 function BranchDropdownContent({
   currentBranch,
   filteredBranches,
@@ -128,29 +137,19 @@ function BranchDropdownContent({
   error,
   loading,
   onCheckout,
-}: {
-  currentBranch: string;
-  filteredBranches: string[];
-  checkingOut: string | null;
-  error: string | null;
-  loading: boolean;
-  onCheckout: (branch: string) => void;
-}): React.ReactElement {
-  if (loading) {
+}: BranchDropdownContentProps): React.ReactElement {
+  if (loading)
     return (
       <BranchDropdownMessage color="var(--text-faint, var(--text-secondary))">
         Loading branches...
       </BranchDropdownMessage>
     );
-  }
-  if (error) {
+  if (error)
     return <BranchDropdownMessage color="var(--status-error)">{error}</BranchDropdownMessage>;
-  }
-  if (filteredBranches.length === 0) {
+  if (filteredBranches.length === 0)
     return (
       <BranchDropdownMessage color="var(--text-faint)">No branches match.</BranchDropdownMessage>
     );
-  }
   return (
     <>
       {filteredBranches.map((branch) => (
@@ -188,29 +187,29 @@ function BranchSearchInput({
   );
 }
 
+type BranchDropdownProps = {
+  projectRoot: string;
+  currentBranch: string;
+  onClose: () => void;
+  onCheckout: (branch: string) => void;
+  checkingOut: string | null;
+};
+
 function BranchDropdown({
   projectRoot,
   currentBranch,
   onClose,
   onCheckout,
   checkingOut,
-}: {
-  projectRoot: string;
-  currentBranch: string;
-  onClose: () => void;
-  onCheckout: (branch: string) => void;
-  checkingOut: string | null;
-}): React.ReactElement {
+}: BranchDropdownProps): React.ReactElement {
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { branches, loading, error } = useBranches(projectRoot);
   const filteredBranches = useMemo(
-    () => branches.filter((branch) => branch.toLowerCase().includes(search.toLowerCase())),
+    () => branches.filter((b) => b.toLowerCase().includes(search.toLowerCase())),
     [branches, search],
   );
-
   useDismissOnOutsideInteraction(dropdownRef, onClose);
-
   return (
     <div
       ref={dropdownRef}

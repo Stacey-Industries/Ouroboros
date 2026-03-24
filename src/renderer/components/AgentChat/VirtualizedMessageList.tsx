@@ -66,6 +66,37 @@ function renderCard(
   );
 }
 
+function VirtualizedItems({
+  virtualizer,
+  virtualizedMessages,
+  props,
+}: {
+  virtualizer: ReturnType<typeof useVirtualScroll>['virtualizer'];
+  virtualizedMessages: AgentChatMessageRecord[];
+  props: VirtualizedMessageListProps;
+}): React.ReactElement {
+  return (
+    <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+      {virtualizer.getVirtualItems().map((vi) => (
+        <div
+          key={vi.key}
+          data-index={vi.index}
+          ref={virtualizer.measureElement}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            transform: `translateY(${vi.start}px)`,
+          }}
+        >
+          <div className="pb-4">{renderCard(virtualizedMessages[vi.index], props)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function VirtualizedMessageList(props: VirtualizedMessageListProps): React.ReactElement {
   const { scrollRef, handleScroll, virtualizer, virtualizedMessages, streamingMessage } =
     useVirtualScroll(props.messagesWithStreaming);
@@ -87,24 +118,11 @@ export function VirtualizedMessageList(props: VirtualizedMessageListProps): Reac
             />
           </div>
         )}
-        <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-          {virtualizer.getVirtualItems().map((vi) => (
-            <div
-              key={vi.key}
-              data-index={vi.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${vi.start}px)`,
-              }}
-            >
-              <div className="pb-4">{renderCard(virtualizedMessages[vi.index], props)}</div>
-            </div>
-          ))}
-        </div>
+        <VirtualizedItems
+          virtualizer={virtualizer}
+          virtualizedMessages={virtualizedMessages}
+          props={props}
+        />
         {streamingMessage && <div className="pb-4">{renderCard(streamingMessage, props)}</div>}
         {props.pendingUserMessage && props.isSending && (
           <div className="pb-4">

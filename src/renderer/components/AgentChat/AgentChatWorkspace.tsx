@@ -97,36 +97,10 @@ function buildConversationContextProps(
   };
 }
 
-function buildConversationActionProps(
+function buildConversationHandlerProps(
   model: AgentChatWorkspaceModel,
   slashCommandContext: SlashCommandContext,
-): Pick<
-  React.ComponentProps<typeof AgentChatConversation>,
-  | 'onDraftChange'
-  | 'onEdit'
-  | 'onRetry'
-  | 'onBranch'
-  | 'onRevert'
-  | 'onOpenLinkedDetails'
-  | 'onOpenLinkedTask'
-  | 'onSend'
-  | 'onStop'
-  | 'onSelectThread'
-  | 'chatOverrides'
-  | 'onChatOverridesChange'
-  | 'settingsModel'
-  | 'codexSettingsModel'
-  | 'defaultProvider'
-  | 'modelProviders'
-  | 'codexModels'
-  | 'queuedMessages'
-  | 'onEditQueuedMessage'
-  | 'onDeleteQueuedMessage'
-  | 'onSendQueuedMessageNow'
-  | 'attachments'
-  | 'onAttachmentsChange'
-  | 'slashCommandContext'
-> {
+) {
   return {
     onDraftChange: model.setDraft,
     onEdit: model.editAndResend,
@@ -138,6 +112,12 @@ function buildConversationActionProps(
     onSend: model.sendMessage,
     onStop: model.stopTask,
     onSelectThread: model.selectThread,
+    slashCommandContext,
+  };
+}
+
+function buildConversationModelProps(model: AgentChatWorkspaceModel) {
+  return {
     chatOverrides: model.chatOverrides,
     onChatOverridesChange: model.setChatOverrides,
     settingsModel: model.settingsModel,
@@ -151,7 +131,16 @@ function buildConversationActionProps(
     onSendQueuedMessageNow: model.sendQueuedMessageNow,
     attachments: model.attachments,
     onAttachmentsChange: model.setAttachments,
-    slashCommandContext,
+  };
+}
+
+function buildConversationActionProps(
+  model: AgentChatWorkspaceModel,
+  slashCommandContext: SlashCommandContext,
+) {
+  return {
+    ...buildConversationHandlerProps(model, slashCommandContext),
+    ...buildConversationModelProps(model),
   };
 }
 
@@ -167,15 +156,11 @@ function buildConversationProps(
   };
 }
 
-export function AgentChatWorkspace({
-  projectRoot,
-  onModelReady,
-}: AgentChatWorkspaceProps): React.ReactElement {
-  const model = useAgentChatWorkspace(projectRoot);
-  const context = useAgentChatContext(projectRoot, model.activeThreadId);
-  const { toast } = useToastContext();
-
-  const onRemember = useCallback(
+function useRememberAction(
+  projectRoot: string | null,
+  toast: (msg: string, type: string) => void,
+): (content: string) => Promise<void> {
+  return useCallback(
     async (content: string) => {
       if (!content.trim()) return;
       try {
@@ -192,7 +177,17 @@ export function AgentChatWorkspace({
     },
     [projectRoot, toast],
   );
+}
 
+export function AgentChatWorkspace({
+  projectRoot,
+  onModelReady,
+}: AgentChatWorkspaceProps): React.ReactElement {
+  const model = useAgentChatWorkspace(projectRoot);
+  const context = useAgentChatContext(projectRoot, model.activeThreadId);
+  const { toast } = useToastContext();
+
+  const onRemember = useRememberAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
     window.dispatchEvent(
       new CustomEvent('agent-ide:switch-sidebar-view', { detail: { view: 'memory' } }),
@@ -203,6 +198,10 @@ export function AgentChatWorkspace({
     model.setContextFilePaths(context.filePaths);
   }, [context.filePaths, model]);
 
+  useEffect(() => {
+    onModelReady?.(model);
+  }, [model, onModelReady]);
+
   const slashCommandContext = useMemo(
     () => buildSlashCommandContext(model, onRemember, onOpenMemories),
     [model, onRemember, onOpenMemories],
@@ -211,10 +210,6 @@ export function AgentChatWorkspace({
     () => buildConversationProps(model, context, slashCommandContext),
     [model, context, slashCommandContext],
   );
-
-  useEffect(() => {
-    onModelReady?.(model);
-  }, [model, onModelReady]);
 
   return (
     <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">

@@ -110,6 +110,42 @@ async function deleteWorkspaceMemory(workspaceRoot: string, id: string): Promise
   }
 }
 
+function useMountedRef(): React.MutableRefObject<boolean> {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  return mountedRef;
+}
+
+function useMemoryActions(
+  workspaceRoot: string | null,
+  setMemories: React.Dispatch<React.SetStateAction<SessionMemoryEntry[]>>,
+  mountedRef: React.MutableRefObject<boolean>,
+) {
+  const handleUpdate = useCallback(
+    (id: string, updates: { content?: string; type?: string; relevantFiles?: string[] }) => {
+      if (!workspaceRoot) return;
+      void updateWorkspaceMemory({ workspaceRoot, id, updates, setMemories, mountedRef });
+    },
+    [workspaceRoot, setMemories, mountedRef],
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      if (!workspaceRoot) return;
+      setMemories((prev) => prev.filter((entry) => entry.id !== id));
+      void deleteWorkspaceMemory(workspaceRoot, id);
+    },
+    [workspaceRoot, setMemories],
+  );
+
+  return { handleUpdate, handleDelete };
+}
+
 function useSessionMemoryPanelModel(workspaceRoot: string | null): {
   loading: boolean;
   memories: SessionMemoryEntry[];
@@ -121,14 +157,7 @@ function useSessionMemoryPanelModel(workspaceRoot: string | null): {
 } {
   const [memories, setMemories] = useState<SessionMemoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const mountedRef = useMountedRef();
 
   useEffect(() => {
     if (!workspaceRoot) {
@@ -138,25 +167,9 @@ function useSessionMemoryPanelModel(workspaceRoot: string | null): {
     }
     setLoading(true);
     void loadWorkspaceMemories(workspaceRoot, setMemories, mountedRef, setLoading);
-  }, [workspaceRoot]);
+  }, [workspaceRoot, mountedRef]);
 
-  const handleUpdate = useCallback(
-    (id: string, updates: { content?: string; type?: string; relevantFiles?: string[] }) => {
-      if (!workspaceRoot) return;
-      void updateWorkspaceMemory({ workspaceRoot, id, updates, setMemories, mountedRef });
-    },
-    [workspaceRoot],
-  );
-
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (!workspaceRoot) return;
-      setMemories((prev) => prev.filter((entry) => entry.id !== id));
-      void deleteWorkspaceMemory(workspaceRoot, id);
-    },
-    [workspaceRoot],
-  );
-
+  const { handleUpdate, handleDelete } = useMemoryActions(workspaceRoot, setMemories, mountedRef);
   return { loading, memories, handleUpdate, handleDelete };
 }
 

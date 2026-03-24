@@ -1,6 +1,5 @@
 import React from 'react';
 
-import type { AppConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 import {
   clampFontSize,
@@ -8,6 +7,8 @@ import {
   DEFAULT_FONT_SIZE,
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
+  FontSizeResetButton,
+  type FontSizeSectionProps,
   getPlatformPresets,
   getPromptPreview,
   inlineInputStyle,
@@ -15,71 +16,16 @@ import {
   PRESET_ORDER,
   PresetButton,
   previewBoxStyle,
-  type PromptPreset,
+  type PromptSectionProps,
   resolvePromptPreset,
   SAMPLE_LINES,
   sectionHintStyle,
-  type SettingsChangeHandler,
-  type ShellPreset,
+  type ShellSectionProps,
   StepButton,
   terminalPreviewStyle,
+  type TerminalSectionContentProps,
   textInputStyle,
 } from './terminalSectionShared';
-
-interface TerminalSectionContentProps {
-  draft: AppConfig;
-  onChange: SettingsChangeHandler;
-  platform: NodeJS.Platform;
-}
-
-interface FontSizeSectionProps {
-  fontSize: number;
-  onChange: (value: number) => void;
-}
-
-interface ShellSectionProps {
-  shell: string;
-  presets: ShellPreset[];
-  onChange: (value: string) => void;
-}
-
-interface PromptSectionProps {
-  customPrompt: string;
-  preview: string;
-  promptPreset: PromptPreset;
-  onCustomPromptChange: (value: string) => void;
-  onPresetChange: (value: PromptPreset) => void;
-}
-
-function FontSizeResetButton({
-  fontSize,
-  onReset,
-}: {
-  fontSize: number;
-  onReset: () => void;
-}): React.ReactElement | null {
-  if (fontSize === DEFAULT_FONT_SIZE) {
-    return null;
-  }
-
-  return (
-    <button
-      onClick={onReset}
-      className="text-text-semantic-muted"
-      style={{
-        marginLeft: '8px',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        border: '1px solid var(--border-default)',
-        background: 'transparent',
-        fontSize: '11px',
-        cursor: 'pointer',
-      }}
-    >
-      Reset
-    </button>
-  );
-}
 
 function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement {
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>): void {

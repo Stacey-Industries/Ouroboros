@@ -1,223 +1,29 @@
 import React, { useState } from 'react';
 
 import type { AppConfig } from '../../types/electron';
+import {
+  applyButtonStyle,
+  deleteButtonStyle,
+  emptyStateStyle,
+  getSaveButtonStyle,
+  getToastStyle,
+  helperTextStyle,
+  inputRowStyle,
+  profileInputStyle,
+  profileListStyle,
+  type ProfileMap,
+  profileNameStyle,
+  stackStyle,
+  themePreviewStyle,
+  type ToastState,
+  useProfilesManager,
+  useToast,
+} from './profilesSectionHelpers';
 import { SectionLabel } from './settingsStyles';
-
-const EXCLUDED_KEYS: ReadonlySet<keyof AppConfig> = new Set<keyof AppConfig>([
-  'recentProjects',
-  'defaultProjectRoot',
-  'terminalSessions',
-  'windowBounds',
-  'panelSizes',
-  'profiles',
-]);
-
-type ProfileSnapshot = Partial<Omit<AppConfig, 'profiles'>>;
-type ProfileMap = Record<string, ProfileSnapshot>;
-type ConfigChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
-
-interface ToastState {
-  message: string;
-  kind: 'success' | 'error';
-}
-
-interface ProfilesManager {
-  profileNames: string[];
-  profiles: ProfileMap;
-  applyProfile: (name: string) => void;
-  deleteProfile: (name: string) => void;
-  saveProfile: (name: string) => boolean;
-}
 
 export interface ProfilesSectionProps {
   draft: AppConfig;
-  onChange: ConfigChangeHandler;
-}
-
-const stackStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-};
-
-const helperTextStyle: React.CSSProperties = {
-  fontSize: '12px',
-  marginBottom: '12px',
-};
-
-const inputRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '8px',
-  alignItems: 'center',
-};
-
-const profileInputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '7px 10px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-  fontSize: '13px',
-  fontFamily: 'var(--font-ui)',
-  outline: 'none',
-};
-
-const profileListStyle: React.CSSProperties = {
-  border: '1px solid var(--border-default)',
-  borderRadius: '6px',
-  overflow: 'hidden',
-};
-
-const profileNameStyle: React.CSSProperties = {
-  flex: 1,
-  fontSize: '13px',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  minWidth: 0,
-};
-
-const themePreviewStyle: React.CSSProperties = {
-  flexShrink: 0,
-  fontSize: '11px',
-  fontFamily: 'var(--font-mono)',
-  opacity: 0.7,
-};
-
-const applyButtonStyle: React.CSSProperties = {
-  flexShrink: 0,
-  padding: '4px 10px',
-  borderRadius: '5px',
-  border: '1px solid var(--interactive-accent)',
-  background: 'transparent',
-  fontSize: '11px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const deleteButtonStyle: React.CSSProperties = {
-  flexShrink: 0,
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '15px',
-  lineHeight: 1,
-  padding: '0 2px',
-};
-
-const emptyStateStyle: React.CSSProperties = {
-  fontSize: '12px',
-  fontStyle: 'italic',
-};
-
-function getProfiles(draft: AppConfig): ProfileMap {
-  return (draft.profiles as ProfileMap) ?? {};
-}
-
-function snapshotConfig(config: AppConfig): ProfileSnapshot {
-  const entries = (Object.keys(config) as Array<keyof AppConfig>)
-    .filter((key) => !EXCLUDED_KEYS.has(key))
-    .map((key) => [key, config[key]]);
-  return Object.fromEntries(entries) as ProfileSnapshot;
-}
-
-function applyProfileSnapshot(snapshot: ProfileSnapshot, onChange: ConfigChangeHandler): void {
-  for (const key of Object.keys(snapshot) as Array<keyof ProfileSnapshot>) {
-    if (EXCLUDED_KEYS.has(key as keyof AppConfig)) continue;
-    const value = snapshot[key];
-    if (value !== undefined) onChange(key as keyof AppConfig, value as AppConfig[keyof AppConfig]);
-  }
-}
-
-function buildSavedProfiles(
-  profiles: ProfileMap,
-  draft: AppConfig,
-  name: string,
-): AppConfig['profiles'] {
-  return { ...profiles, [name]: snapshotConfig(draft) } as AppConfig['profiles'];
-}
-
-function buildRemainingProfiles(profiles: ProfileMap, name: string): AppConfig['profiles'] {
-  const nextProfiles = { ...profiles };
-  delete nextProfiles[name];
-  return nextProfiles as AppConfig['profiles'];
-}
-
-function getSaveButtonStyle(enabled: boolean): React.CSSProperties {
-  return {
-    flexShrink: 0,
-    padding: '7px 14px',
-    borderRadius: '6px',
-    border: '1px solid var(--border-default)',
-    background: enabled ? 'var(--interactive-accent)' : 'var(--surface-raised)',
-    color: enabled ? 'var(--text-on-accent)' : 'var(--text-muted)',
-    fontSize: '12px',
-    fontWeight: 600,
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    whiteSpace: 'nowrap',
-    transition: 'background 120ms ease, color 120ms ease',
-  };
-}
-
-function getToastStyle(kind: ToastState['kind']): React.CSSProperties {
-  const tone = kind === 'success' ? 'var(--status-success)' : 'var(--status-error)';
-  const background =
-    kind === 'success'
-      ? 'color-mix(in srgb, var(--status-success) 10%, var(--surface-panel))'
-      : 'color-mix(in srgb, var(--status-error) 10%, var(--surface-panel))';
-
-  return {
-    padding: '10px 14px',
-    borderRadius: '6px',
-    border: `1px solid ${tone}`,
-    background,
-    fontSize: '12px',
-    color: tone,
-    fontWeight: 500,
-  };
-}
-
-function useToast(): [ToastState | null, (message: string, kind: ToastState['kind']) => void] {
-  const [toast, setToast] = useState<ToastState | null>(null);
-
-  function show(message: string, kind: ToastState['kind']): void {
-    setToast({ message, kind });
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  return [toast, show];
-}
-
-function useProfilesManager(
-  draft: AppConfig,
-  onChange: ConfigChangeHandler,
-  showToast: (message: string, kind: ToastState['kind']) => void,
-): ProfilesManager {
-  const profiles = getProfiles(draft);
-  const profileNames = Object.keys(profiles).sort();
-
-  function saveProfile(name: string): boolean {
-    const trimmed = name.trim();
-    if (!trimmed) return (showToast('Enter a profile name first.', 'error'), false);
-    onChange('profiles', buildSavedProfiles(profiles, draft, trimmed));
-    showToast(`Profile "${trimmed}" saved.`, 'success');
-    return true;
-  }
-
-  function applyProfile(name: string): void {
-    const snapshot = profiles[name];
-    if (!snapshot) return;
-    applyProfileSnapshot(snapshot, onChange);
-    showToast(`Profile "${name}" applied. Click Save to persist.`, 'success');
-  }
-
-  function deleteProfile(name: string): void {
-    onChange('profiles', buildRemainingProfiles(profiles, name));
-    showToast(`Profile "${name}" deleted.`, 'success');
-  }
-
-  return { profiles, profileNames, saveProfile, applyProfile, deleteProfile };
+  onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
 function ToastBanner({ toast }: { toast: ToastState }): React.ReactElement {
@@ -225,6 +31,35 @@ function ToastBanner({ toast }: { toast: ToastState }): React.ReactElement {
     <div role="status" aria-live="polite" style={getToastStyle(toast.kind)}>
       {toast.message}
     </div>
+  );
+}
+
+function ProfileNameInput({
+  newName,
+  onNameChange,
+  onSave,
+}: {
+  newName: string;
+  onNameChange: (value: string) => void;
+  onSave: () => void;
+}): React.ReactElement {
+  return (
+    <input
+      type="text"
+      value={newName}
+      onChange={(event) => onNameChange(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          onSave();
+        }
+      }}
+      placeholder="Profile name..."
+      className="text-text-semantic-primary"
+      style={profileInputStyle}
+      autoComplete="off"
+      spellCheck={false}
+    />
   );
 }
 
@@ -238,7 +73,6 @@ function SaveProfileSection({
   onSave: () => void;
 }): React.ReactElement {
   const canSave = newName.trim() !== '';
-
   return (
     <section>
       <SectionLabel>Save Current Settings as Profile</SectionLabel>
@@ -247,27 +81,43 @@ function SaveProfileSection({
         paths and window layout are not included.
       </p>
       <div style={inputRowStyle}>
-        <input
-          type="text"
-          value={newName}
-          onChange={(event) => onNameChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              onSave();
-            }
-          }}
-          placeholder="Profile name..."
-          className="text-text-semantic-primary"
-          style={profileInputStyle}
-          autoComplete="off"
-          spellCheck={false}
-        />
+        <ProfileNameInput newName={newName} onNameChange={onNameChange} onSave={onSave} />
         <button onClick={onSave} disabled={!canSave} style={getSaveButtonStyle(canSave)}>
           Save Profile
         </button>
       </div>
     </section>
+  );
+}
+
+function ProfileRowActions({
+  name,
+  onApply,
+  onDelete,
+}: {
+  name: string;
+  onApply: (name: string) => void;
+  onDelete: (name: string) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <button
+        aria-label={`Apply profile ${name}`}
+        onClick={() => onApply(name)}
+        className="text-interactive-accent"
+        style={applyButtonStyle}
+      >
+        Apply
+      </button>
+      <button
+        aria-label={`Delete profile ${name}`}
+        onClick={() => onDelete(name)}
+        className="text-text-semantic-muted"
+        style={deleteButtonStyle}
+      >
+        x
+      </button>
+    </>
   );
 }
 
@@ -303,22 +153,7 @@ function ProfileRow({
           {previewTheme}
         </span>
       )}
-      <button
-        aria-label={`Apply profile ${name}`}
-        onClick={() => onApply(name)}
-        className="text-interactive-accent"
-        style={applyButtonStyle}
-      >
-        Apply
-      </button>
-      <button
-        aria-label={`Delete profile ${name}`}
-        onClick={() => onDelete(name)}
-        className="text-text-semantic-muted"
-        style={deleteButtonStyle}
-      >
-        x
-      </button>
+      <ProfileRowActions name={name} onApply={onApply} onDelete={onDelete} />
     </div>
   );
 }

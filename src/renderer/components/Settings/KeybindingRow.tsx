@@ -113,6 +113,58 @@ function ShortcutDisplay({
   );
 }
 
+function CapturingButtons({
+  capturedKeys,
+  conflictId,
+  onCommit,
+  onCancel,
+}: {
+  capturedKeys: string;
+  conflictId: string | null;
+  onCommit: () => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const canSave = !!capturedKeys && !conflictId;
+  return (
+    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+      <button onClick={onCommit} disabled={!canSave} style={saveBtnStyle(canSave)}>
+        Save
+      </button>
+      <button onClick={onCancel} className="text-text-semantic-primary" style={smallBtnStyle}>
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+function EditingButtons({
+  isCustomised,
+  onStartCapture,
+  onReset,
+}: {
+  isCustomised: boolean;
+  onStartCapture: () => void;
+  onReset: () => void;
+}): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+      <button onClick={onStartCapture} className="text-text-semantic-primary" style={smallBtnStyle}>
+        Edit
+      </button>
+      {isCustomised && (
+        <button
+          onClick={onReset}
+          title="Reset to default"
+          className="text-text-semantic-muted"
+          style={resetBtnStyle}
+        >
+          ↺
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ActionButtons({
   isCapturing,
   capturedKeys,
@@ -133,34 +185,17 @@ function ActionButtons({
   onReset: () => void;
 }): React.ReactElement {
   if (isCapturing) {
-    const canSave = !!capturedKeys && !conflictId;
     return (
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <button onClick={onCommit} disabled={!canSave} style={saveBtnStyle(canSave)}>
-          Save
-        </button>
-        <button onClick={onCancel} className="text-text-semantic-primary" style={smallBtnStyle}>
-          Cancel
-        </button>
-      </div>
+      <CapturingButtons
+        capturedKeys={capturedKeys}
+        conflictId={conflictId}
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
     );
   }
   return (
-    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-      <button onClick={onStartCapture} className="text-text-semantic-primary" style={smallBtnStyle}>
-        Edit
-      </button>
-      {isCustomised && (
-        <button
-          onClick={onReset}
-          title="Reset to default"
-          className="text-text-semantic-muted"
-          style={resetBtnStyle}
-        >
-          ↺
-        </button>
-      )}
-    </div>
+    <EditingButtons isCustomised={isCustomised} onStartCapture={onStartCapture} onReset={onReset} />
   );
 }
 

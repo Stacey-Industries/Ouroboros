@@ -72,6 +72,39 @@ function VsxBody({
   );
 }
 
+function VsxRowInfo({
+  ext,
+  isDisabled,
+}: {
+  ext: InstalledVsxExtension;
+  isDisabled: boolean;
+}): React.ReactElement {
+  const contributions = summarizeContributions(ext);
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={nameRowStyle}>
+        <span className="text-text-semantic-primary" style={nameStyle}>
+          {ext.displayName || ext.name}
+        </span>
+        <span className="text-text-semantic-muted" style={versionStyle}>
+          v{ext.version}
+        </span>
+        {isDisabled && <span style={disabledBadge}>Disabled</span>}
+      </div>
+      {ext.description && (
+        <div className="text-text-semantic-muted" style={descStyle}>
+          {ext.description}
+        </div>
+      )}
+      {contributions && (
+        <div className="text-text-semantic-muted" style={contribStyle}>
+          {contributions}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VsxRow({
   ext,
   isDisabled,
@@ -85,30 +118,9 @@ function VsxRow({
   onToggle: (id: string) => void;
   onUninstall: (id: string) => void;
 }): React.ReactElement {
-  const contributions = summarizeContributions(ext);
   return (
     <div style={rowStyle(isLast)}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={nameRowStyle}>
-          <span className="text-text-semantic-primary" style={nameStyle}>
-            {ext.displayName || ext.name}
-          </span>
-          <span className="text-text-semantic-muted" style={versionStyle}>
-            v{ext.version}
-          </span>
-          {isDisabled && <span style={disabledBadge}>Disabled</span>}
-        </div>
-        {ext.description && (
-          <div className="text-text-semantic-muted" style={descStyle}>
-            {ext.description}
-          </div>
-        )}
-        {contributions && (
-          <div className="text-text-semantic-muted" style={contribStyle}>
-            {contributions}
-          </div>
-        )}
-      </div>
+      <VsxRowInfo ext={ext} isDisabled={isDisabled} />
       <div style={controlsStyle}>
         <button onClick={() => onToggle(ext.id)} style={smallButtonStyle}>
           {isDisabled ? 'Enable' : 'Disable'}

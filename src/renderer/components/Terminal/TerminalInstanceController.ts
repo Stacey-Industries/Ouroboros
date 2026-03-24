@@ -61,13 +61,10 @@ function useTerminalConfig(): {
   return { fontSize, cursorStyle, loaded };
 }
 
-export function useTerminalInstanceController(
-  props: TerminalInstanceProps,
-): TerminalInstanceController {
-  const config = useTerminalConfig();
-  const { projectRoot } = useProject();
-  const foundation = useTerminalFoundation(props);
-  const historyState = useTerminalHistoryState(foundation.sessionId, foundation.cwd);
+function useSessionRestore(
+  foundation: ReturnType<typeof useTerminalFoundation>,
+  projectRoot: string,
+): void {
   const { restoreSession } = useTerminalPersistence({
     sessionId: foundation.sessionId,
     terminalRef: foundation.terminalRef,
@@ -81,10 +78,25 @@ export function useTerminalInstanceController(
     restoreAttemptedRef.current = true;
     void restoreSession();
   }, [restoreSession]);
+}
+
+function useUiStates(foundation: ReturnType<typeof useTerminalFoundation>) {
   const pasteState = usePendingPaste(foundation.sessionId);
   const contextMenuState = useContextMenuState(foundation.terminalRef);
   const richInputState = useRichInputState(foundation.sessionId, foundation.terminalRef);
   const tooltipState = useSelectionTooltipState();
+  return { pasteState, contextMenuState, richInputState, tooltipState };
+}
+
+export function useTerminalInstanceController(
+  props: TerminalInstanceProps,
+): TerminalInstanceController {
+  const config = useTerminalConfig();
+  const { projectRoot } = useProject();
+  const foundation = useTerminalFoundation(props);
+  const historyState = useTerminalHistoryState(foundation.sessionId, foundation.cwd);
+  useSessionRestore(foundation, projectRoot);
+  const { pasteState, contextMenuState, richInputState, tooltipState } = useUiStates(foundation);
   const cmdSearchActions = useCommandSearchActions(
     foundation.sessionId,
     historyState.historyHook.cmdSearch,
@@ -99,7 +111,6 @@ export function useTerminalInstanceController(
     initialFontSize: config.fontSize,
     initialCursorStyle: config.cursorStyle,
   });
-
   return buildTerminalController({
     foundation,
     contextMenuState,

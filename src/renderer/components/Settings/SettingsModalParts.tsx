@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 import type { AppConfig } from '../../types/electron';
 import type { SettingsEntry } from './settingsEntries';
+import { ModalCard, ModalOverlay } from './SettingsModalFrame';
 import { cancelButtonStyle, KEYFRAMES, saveButtonStyle } from './settingsModalStyles';
 import { SettingsSearchInput } from './SettingsSearchInput';
 import { SettingsSearchResults } from './SettingsSearchResults';
@@ -32,12 +33,6 @@ interface SettingsModalPortalProps {
   setSearchQuery: (query: string) => void;
 }
 
-interface ModalFrameProps {
-  children: React.ReactNode;
-  isVisible: boolean;
-  onCancel: () => void;
-}
-
 interface ModalContentProps {
   activeTab: TabId;
   draft: AppConfig;
@@ -50,59 +45,28 @@ interface ModalContentProps {
   searchResults: SettingsEntry[];
 }
 
-function ModalOverlay({ children, isVisible, onCancel }: ModalFrameProps): React.ReactElement {
+function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Settings"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onCancel();
-        }
-      }}
+    <button
+      onClick={onClose}
+      aria-label="Close settings"
+      className="text-text-semantic-muted"
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10000,
+        width: '28px',
+        height: '28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(2px)',
-        padding: '24px',
-        animation: isVisible
-          ? 'settings-overlay-in 180ms ease forwards'
-          : 'settings-overlay-out 180ms ease forwards',
+        borderRadius: '6px',
+        border: 'none',
+        background: 'transparent',
+        fontSize: '18px',
+        cursor: 'pointer',
+        lineHeight: 1,
       }}
     >
-      {children}
-    </div>
-  );
-}
-
-function ModalCard({ children, isVisible }: Omit<ModalFrameProps, 'onCancel'>): React.ReactElement {
-  return (
-    <div
-      role="document"
-      style={{
-        width: '100%',
-        maxWidth: '680px',
-        maxHeight: 'calc(100vh - 48px)',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: '10px',
-        background: 'var(--surface-base)',
-        border: '1px solid var(--border-default)',
-        boxShadow: '0 32px 80px rgba(0, 0, 0, 0.7)',
-        overflow: 'hidden',
-        animation: isVisible
-          ? 'settings-card-in 180ms ease forwards'
-          : 'settings-card-out 180ms ease forwards',
-      }}
-    >
-      {children}
-    </div>
+      x
+    </button>
   );
 }
 
@@ -124,26 +88,7 @@ function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
       >
         Settings
       </h2>
-      <button
-        onClick={onClose}
-        aria-label="Close settings"
-        className="text-text-semantic-muted"
-        style={{
-          width: '28px',
-          height: '28px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '6px',
-          border: 'none',
-          background: 'transparent',
-          fontSize: '18px',
-          cursor: 'pointer',
-          lineHeight: 1,
-        }}
-      >
-        x
-      </button>
+      <CloseButton onClose={onClose} />
     </div>
   );
 }
@@ -205,6 +150,32 @@ function ModalContent(props: ModalContentProps): React.ReactElement {
   );
 }
 
+function FooterButtons({
+  isSaving,
+  onCancel,
+  onSave,
+}: {
+  isSaving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}): React.ReactElement {
+  return (
+    <>
+      <button
+        onClick={onCancel}
+        disabled={isSaving}
+        className="text-text-semantic-secondary"
+        style={cancelButtonStyle}
+      >
+        Cancel
+      </button>
+      <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>
+        {isSaving ? 'Saving...' : 'Save'}
+      </button>
+    </>
+  );
+}
+
 function ModalFooter({
   isSaving,
   onCancel,
@@ -234,60 +205,71 @@ function ModalFooter({
           {saveError}
         </span>
       )}
-      <button
-        onClick={onCancel}
-        disabled={isSaving}
-        className="text-text-semantic-secondary"
-        style={cancelButtonStyle}
-      >
-        Cancel
-      </button>
-      <button onClick={onSave} disabled={isSaving} style={saveButtonStyle(isSaving)}>
-        {isSaving ? 'Saving...' : 'Save'}
-      </button>
+      <FooterButtons isSaving={isSaving} onCancel={onCancel} onSave={onSave} />
     </div>
   );
 }
 
-function ModalMain({
+function ModalSearchAndNav({
   activeTab,
-  draft,
-  isSaving,
   isSearching,
-  onCancel,
-  onChange,
-  onImport,
-  onPreviewTheme,
-  onResultClick,
-  onSave,
-  saveError,
   searchInputRef,
   searchQuery,
-  searchResults,
   setActiveTab,
   setSearchQuery,
-}: SettingsModalPortalProps): React.ReactElement {
+}: Pick<
+  SettingsModalPortalProps,
+  'activeTab' | 'isSearching' | 'searchInputRef' | 'searchQuery' | 'setActiveTab' | 'setSearchQuery'
+>): React.ReactElement {
   return (
     <>
-      <ModalHeader onClose={onCancel} />
       <SettingsSearchInput
         inputRef={searchInputRef}
         value={searchQuery}
         onChange={setSearchQuery}
       />
       {!isSearching && <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />}
-      <ModalContent
-        activeTab={activeTab}
-        draft={draft}
-        isSearching={isSearching}
-        onChange={onChange}
-        onImport={onImport}
-        onPreviewTheme={onPreviewTheme}
-        onResultClick={onResultClick}
-        searchQuery={searchQuery}
-        searchResults={searchResults}
+    </>
+  );
+}
+
+function ModalBody(props: SettingsModalPortalProps): React.ReactElement {
+  return (
+    <>
+      <ModalSearchAndNav
+        activeTab={props.activeTab}
+        isSearching={props.isSearching}
+        searchInputRef={props.searchInputRef}
+        searchQuery={props.searchQuery}
+        setActiveTab={props.setActiveTab}
+        setSearchQuery={props.setSearchQuery}
       />
-      <ModalFooter isSaving={isSaving} onCancel={onCancel} onSave={onSave} saveError={saveError} />
+      <ModalContent
+        activeTab={props.activeTab}
+        draft={props.draft}
+        isSearching={props.isSearching}
+        onChange={props.onChange}
+        onImport={props.onImport}
+        onPreviewTheme={props.onPreviewTheme}
+        onResultClick={props.onResultClick}
+        searchQuery={props.searchQuery}
+        searchResults={props.searchResults}
+      />
+    </>
+  );
+}
+
+function ModalMain(props: SettingsModalPortalProps): React.ReactElement {
+  return (
+    <>
+      <ModalHeader onClose={props.onCancel} />
+      <ModalBody {...props} />
+      <ModalFooter
+        isSaving={props.isSaving}
+        onCancel={props.onCancel}
+        onSave={props.onSave}
+        saveError={props.saveError}
+      />
     </>
   );
 }

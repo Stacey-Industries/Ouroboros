@@ -107,6 +107,39 @@ function useAutoScrollToBottom(
   }, [itemCount, bottomRef, containerRef]);
 }
 
+function FeedBody({
+  toolCalls,
+  expandedIds,
+  onToggle,
+  containerRef,
+  bottomRef,
+}: {
+  toolCalls: ToolCallEvent[];
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
+}): React.ReactElement {
+  return (
+    <div
+      ref={containerRef}
+      className="overflow-y-auto overflow-x-hidden"
+      style={{ maxHeight: '320px' }}
+    >
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {toolCalls.map((call) => (
+        <ToolCallRow
+          key={call.id}
+          call={call}
+          expanded={expandedIds.has(call.id)}
+          onToggle={onToggle}
+        />
+      ))}
+      <div ref={bottomRef} />
+    </div>
+  );
+}
+
 export const ToolCallFeed = memo(function ToolCallFeed({
   toolCalls,
 }: ToolCallFeedProps): React.ReactElement {
@@ -133,22 +166,13 @@ export const ToolCallFeed = memo(function ToolCallFeed({
         onExpandAll={handleExpandAll}
         onCollapseAll={handleCollapseAll}
       />
-      <div
-        ref={containerRef}
-        className="overflow-y-auto overflow-x-hidden"
-        style={{ maxHeight: '320px' }}
-      >
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        {toolCalls.map((call) => (
-          <ToolCallRow
-            key={call.id}
-            call={call}
-            expanded={expandedIds.has(call.id)}
-            onToggle={handleToggle}
-          />
-        ))}
-        <div ref={bottomRef} />
-      </div>
+      <FeedBody
+        toolCalls={toolCalls}
+        expandedIds={expandedIds}
+        onToggle={handleToggle}
+        containerRef={containerRef}
+        bottomRef={bottomRef}
+      />
     </div>
   );
 });

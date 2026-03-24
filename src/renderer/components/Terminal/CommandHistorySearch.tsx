@@ -109,6 +109,80 @@ function handleKeyDown(e: React.KeyboardEvent, context: KeyDownContext): void {
   }
 }
 
+function SearchInputRow({
+  inputRef,
+  query,
+  setQuery,
+  onClose,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  query: string;
+  setQuery: (q: string) => void;
+  onClose: () => void;
+}): React.ReactElement {
+  return (
+    <div className="border-b border-border-semantic" style={inputRowStyle}>
+      <span className="text-interactive-accent" style={{ fontSize: 11, flexShrink: 0 }}>
+        bck-i-search:
+      </span>
+      <input
+        ref={inputRef}
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className="bg-surface-base text-text-semantic-primary border border-border-semantic rounded"
+        style={inputStyle}
+        placeholder="Type to filter history..."
+      />
+      <button
+        onClick={onClose}
+        className="text-text-semantic-muted"
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '2px 4px',
+          fontSize: 14,
+        }}
+        title="Close (Esc)"
+      >
+        &#x2715;
+      </button>
+    </div>
+  );
+}
+
+function SearchResultList({
+  filtered,
+  selectedIndex,
+  setSelectedIndex,
+  onSelect,
+}: {
+  filtered: string[];
+  selectedIndex: number;
+  setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
+  onSelect: (cmd: string) => void;
+}): React.ReactElement {
+  return (
+    <div style={{ overflowY: 'auto', flex: 1 }}>
+      {filtered.length === 0 && (
+        <div className="text-text-semantic-muted" style={{ padding: '8px 12px' }}>
+          No matching commands
+        </div>
+      )}
+      {filtered.slice(0, 100).map((cmd, i) => (
+        <CommandItem
+          key={i}
+          cmd={cmd}
+          isSelected={i === selectedIndex}
+          onSelect={() => onSelect(cmd)}
+          onHover={() => setSelectedIndex(i)}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function CommandSearchOverlay({
   commands,
   onSelect,
@@ -117,7 +191,6 @@ export function CommandSearchOverlay({
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-
   const filtered = useFilteredCommands(commands, query);
 
   useEffect(() => {
@@ -135,50 +208,13 @@ export function CommandSearchOverlay({
         handleKeyDown(e, { filtered, selectedIndex, setSelectedIndex, onSelect, onClose })
       }
     >
-      <div className="border-b border-border-semantic" style={inputRowStyle}>
-        <span className="text-interactive-accent" style={{ fontSize: 11, flexShrink: 0 }}>
-          bck-i-search:
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="bg-surface-base text-text-semantic-primary border border-border-semantic rounded"
-          style={inputStyle}
-          placeholder="Type to filter history..."
-        />
-        <button
-          onClick={onClose}
-          className="text-text-semantic-muted"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '2px 4px',
-            fontSize: 14,
-          }}
-          title="Close (Esc)"
-        >
-          &#x2715;
-        </button>
-      </div>
-      <div style={{ overflowY: 'auto', flex: 1 }}>
-        {filtered.length === 0 && (
-          <div className="text-text-semantic-muted" style={{ padding: '8px 12px' }}>
-            No matching commands
-          </div>
-        )}
-        {filtered.slice(0, 100).map((cmd, i) => (
-          <CommandItem
-            key={i}
-            cmd={cmd}
-            isSelected={i === selectedIndex}
-            onSelect={() => onSelect(cmd)}
-            onHover={() => setSelectedIndex(i)}
-          />
-        ))}
-      </div>
+      <SearchInputRow inputRef={inputRef} query={query} setQuery={setQuery} onClose={onClose} />
+      <SearchResultList
+        filtered={filtered}
+        selectedIndex={selectedIndex}
+        setSelectedIndex={setSelectedIndex}
+        onSelect={onSelect}
+      />
       <div
         className="text-text-semantic-muted border-t border-border-semantic"
         style={{ padding: '4px 10px', fontSize: 10, flexShrink: 0 }}

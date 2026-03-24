@@ -64,6 +64,40 @@ function SnapshotMarker({
   );
 }
 
+const BADGE_BASE_STYLE = {
+  fontSize: '9px',
+  fontWeight: 600,
+  padding: '0 4px',
+  borderRadius: '3px',
+} as const;
+
+function SnapshotBadgeHead(): React.ReactElement {
+  return (
+    <span
+      className="text-text-semantic-on-accent"
+      style={{ ...BADGE_BASE_STYLE, backgroundColor: 'var(--interactive-accent)' }}
+    >
+      HEAD
+    </span>
+  );
+}
+
+function SnapshotBadgeFrom(): React.ReactElement {
+  return (
+    <span style={{ ...BADGE_BASE_STYLE, backgroundColor: 'var(--status-warning)', color: '#000' }}>
+      FROM
+    </span>
+  );
+}
+
+function SnapshotBadgeTo(): React.ReactElement {
+  return (
+    <span style={{ ...BADGE_BASE_STYLE, backgroundColor: 'var(--palette-purple)', color: '#000' }}>
+      TO
+    </span>
+  );
+}
+
 function SnapshotBadges({
   isHead,
   isCompareFrom,
@@ -75,48 +109,9 @@ function SnapshotBadges({
 }): React.ReactElement {
   return (
     <>
-      {isHead && (
-        <span
-          className="text-text-semantic-on-accent"
-          style={{
-            fontSize: '9px',
-            fontWeight: 600,
-            padding: '0 4px',
-            borderRadius: '3px',
-            backgroundColor: 'var(--interactive-accent)',
-          }}
-        >
-          HEAD
-        </span>
-      )}
-      {isCompareFrom && (
-        <span
-          style={{
-            fontSize: '9px',
-            fontWeight: 600,
-            padding: '0 4px',
-            borderRadius: '3px',
-            backgroundColor: 'var(--status-warning)',
-            color: '#000',
-          }}
-        >
-          FROM
-        </span>
-      )}
-      {isCompareTo && (
-        <span
-          style={{
-            fontSize: '9px',
-            fontWeight: 600,
-            padding: '0 4px',
-            borderRadius: '3px',
-            backgroundColor: 'var(--palette-purple)',
-            color: '#000',
-          }}
-        >
-          TO
-        </span>
-      )}
+      {isHead && <SnapshotBadgeHead />}
+      {isCompareFrom && <SnapshotBadgeFrom />}
+      {isCompareTo && <SnapshotBadgeTo />}
     </>
   );
 }
@@ -149,6 +144,49 @@ function SnapshotMeta({ snapshot }: { snapshot: WorkspaceSnapshot }): React.Reac
   );
 }
 
+function SnapshotNodeLabel({
+  dotColor,
+  isHead,
+  isCompareFrom,
+  isCompareTo,
+  snapshot,
+}: {
+  dotColor: string;
+  isHead: boolean;
+  isCompareFrom: boolean;
+  isCompareTo: boolean;
+  snapshot: WorkspaceSnapshot;
+}): React.ReactElement {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+        <span
+          style={{
+            fontSize: '10px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: dotColor,
+          }}
+        >
+          {snapshotTypeLabel(snapshot.type)}
+        </span>
+        <SnapshotBadges isHead={isHead} isCompareFrom={isCompareFrom} isCompareTo={isCompareTo} />
+      </div>
+      <SnapshotMeta snapshot={snapshot} />
+    </div>
+  );
+}
+
+interface SnapshotNodeProps {
+  snapshot: WorkspaceSnapshot;
+  isSelected: boolean;
+  isCompareFrom: boolean;
+  isCompareTo: boolean;
+  isHead: boolean;
+  onSelect: (snapshot: WorkspaceSnapshot) => void;
+}
+
 function SnapshotNode({
   snapshot,
   isSelected,
@@ -156,17 +194,9 @@ function SnapshotNode({
   isCompareTo,
   isHead,
   onSelect,
-}: {
-  snapshot: WorkspaceSnapshot;
-  isSelected: boolean;
-  isCompareFrom: boolean;
-  isCompareTo: boolean;
-  isHead: boolean;
-  onSelect: (snapshot: WorkspaceSnapshot) => void;
-}): React.ReactElement {
+}: SnapshotNodeProps): React.ReactElement {
   const dotColor = snapshotTypeColor(snapshot.type);
   const borderColor = selectedBorderColor(isSelected, isCompareFrom, isCompareTo);
-
   return (
     <button
       onClick={() => onSelect(snapshot)}
@@ -189,23 +219,13 @@ function SnapshotNode({
       }}
     >
       <SnapshotMarker dotColor={dotColor} isHead={isHead} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-          <span
-            style={{
-              fontSize: '10px',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: dotColor,
-            }}
-          >
-            {snapshotTypeLabel(snapshot.type)}
-          </span>
-          <SnapshotBadges isHead={isHead} isCompareFrom={isCompareFrom} isCompareTo={isCompareTo} />
-        </div>
-        <SnapshotMeta snapshot={snapshot} />
-      </div>
+      <SnapshotNodeLabel
+        dotColor={dotColor}
+        isHead={isHead}
+        isCompareFrom={isCompareFrom}
+        isCompareTo={isCompareTo}
+        snapshot={snapshot}
+      />
     </button>
   );
 }

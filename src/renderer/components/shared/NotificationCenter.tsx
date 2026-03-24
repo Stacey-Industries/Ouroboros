@@ -1,6 +1,20 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 
-import type { NotificationEntry, NotificationProgress, ToastType } from '../../hooks/useToast';
+import type { NotificationEntry } from '../../hooks/useToast';
+import {
+  NotificationRowBody,
+  NotificationRowClose,
+  NotificationRowIcon,
+} from './NotificationCenter.parts';
+import {
+  emptyStateStyle,
+  headerLabelStyle,
+  NC_STYLES,
+  panelHeaderStyle,
+  panelStyle,
+  rowStyle,
+  timestampStyle,
+} from './NotificationCenter.styles';
 
 function formatRelativeTime(timestamp: number): string {
   const delta = Math.max(0, Date.now() - timestamp);
@@ -13,218 +27,6 @@ function formatRelativeTime(timestamp: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function getTypeColor(type: ToastType): string {
-  switch (type) {
-    case 'success':
-      return 'var(--status-success)';
-    case 'error':
-      return 'var(--status-error)';
-    case 'warning':
-      return 'var(--status-warning)';
-    default:
-      return 'var(--interactive-accent)';
-  }
-}
-
-function NotificationIcon({ type }: { type: ToastType }): React.ReactElement {
-  const color = getTypeColor(type);
-  const size = 14;
-  switch (type) {
-    case 'success':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path
-            d="M5 8l2 2 4-4"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case 'error':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path d="M6 6l4 4M10 6l-4 4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      );
-    case 'warning':
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path
-            d="M8 1.5l6.93 12H1.07L8 1.5z"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-          <path d="M8 6.5v3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="8" cy="11.5" r="0.75" fill={color} />
-        </svg>
-      );
-    default:
-      return (
-        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
-          <path d="M8 7v4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="8" cy="4.75" r="0.75" fill={color} />
-        </svg>
-      );
-  }
-}
-
-const NC_STYLES = `
-@keyframes nc-fade-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes nc-progress-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-`;
-
-const panelStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 'calc(var(--titlebar-height, 36px) - 2px)',
-  left: 0,
-  width: '320px',
-  maxHeight: '400px',
-  display: 'flex',
-  flexDirection: 'column',
-  borderRadius: '8px',
-  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-  zIndex: 9999,
-  overflow: 'hidden',
-  animation: 'nc-fade-in 150ms ease-out',
-};
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: '8px',
-  padding: '8px 12px',
-  borderBottom: '1px solid color-mix(in srgb, var(--border-default) 40%, transparent)',
-  fontSize: '12px',
-  lineHeight: '1.4',
-  fontFamily: 'var(--font-ui)',
-};
-const timestampStyle: React.CSSProperties = {
-  fontSize: '10px',
-  whiteSpace: 'nowrap',
-  flexShrink: 0,
-  marginTop: '1px',
-};
-const rowActionStyle: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '1px 4px',
-  marginTop: '2px',
-  border: 'none',
-  borderRadius: '3px',
-  background: 'transparent',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  fontSize: '11px',
-  fontWeight: 600,
-  textDecoration: 'underline',
-  textUnderlineOffset: '2px',
-};
-const panelHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '8px 12px',
-  borderBottom: '1px solid var(--border-default)',
-  fontFamily: 'var(--font-ui)',
-};
-const headerLabelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-};
-const emptyStateStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '32px 16px',
-  fontSize: '12px',
-  fontFamily: 'var(--font-ui)',
-  gap: '8px',
-};
-const notificationIconWrapStyle: React.CSSProperties = { flexShrink: 0, marginTop: '2px' };
-const notificationBodyStyle: React.CSSProperties = { flex: 1, minWidth: 0 };
-
-function ProgressBar({ progress }: { progress: NotificationProgress }): React.ReactElement | null {
-  if (progress.status !== 'active' || progress.total <= 0) return null;
-  const percent = Math.min(100, Math.round((progress.completed / progress.total) * 100));
-  return (
-    <div style={{ marginTop: '6px' }}>
-      <div
-        className="bg-border-semantic"
-        style={{ width: '100%', height: '3px', borderRadius: '1.5px', overflow: 'hidden' }}
-      >
-        <div
-          className="bg-interactive-accent"
-          style={{
-            width: `${percent}%`,
-            height: '100%',
-            borderRadius: '1.5px',
-            transition: 'width 300ms ease',
-          }}
-        />
-      </div>
-      <div
-        className="text-text-semantic-faint"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginTop: '3px',
-          fontSize: '10px',
-        }}
-      >
-        {progress.currentItem && (
-          <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '180px',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            {progress.currentItem}
-          </span>
-        )}
-        <span style={{ flexShrink: 0, marginLeft: 'auto' }}>
-          {progress.completed}/{progress.total}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ProgressStatusIcon({ progress }: { progress: NotificationProgress }): React.ReactElement {
-  if (progress.status === 'active') {
-    return (
-      <svg
-        width={14}
-        height={14}
-        viewBox="0 0 16 16"
-        fill="none"
-        aria-hidden="true"
-        style={{ animation: 'nc-progress-pulse 1.5s ease-in-out infinite' }}
-      >
-        <circle
-          cx="8"
-          cy="8"
-          r="6.5"
-          stroke="var(--interactive-accent)"
-          strokeWidth="1.5"
-          strokeDasharray="20 20"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  return <NotificationIcon type={progress.status === 'error' ? 'error' : 'success'} />;
-}
-
 function NotificationRow({
   entry,
   onRemove,
@@ -232,80 +34,17 @@ function NotificationRow({
   entry: NotificationEntry;
   onRemove: (id: string) => void;
 }): React.ReactElement {
-  const [closeHovered, setCloseHovered] = useState(false);
   return (
     <div
       className="text-text-semantic-primary"
       style={{ ...rowStyle, opacity: entry.read ? 0.7 : 1 }}
     >
-      <div style={notificationIconWrapStyle}>
-        {entry.progress ? (
-          <ProgressStatusIcon progress={entry.progress} />
-        ) : (
-          <NotificationIcon type={entry.type} />
-        )}
-      </div>
-      <div style={notificationBodyStyle}>
-        <div style={{ wordBreak: 'break-word' }}>
-          {entry.message}
-          {entry.progress?.status === 'active' && (
-            <span
-              className="text-interactive-accent"
-              style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 500 }}
-            >
-              Running
-            </span>
-          )}
-        </div>
-        {entry.progress?.summary && (
-          <div className="text-text-semantic-muted" style={{ fontSize: '11px', marginTop: '2px' }}>
-            {entry.progress.summary}
-          </div>
-        )}
-        {entry.progress && <ProgressBar progress={entry.progress} />}
-        {entry.action && (
-          <button
-            type="button"
-            onClick={entry.action.onClick}
-            style={{ ...rowActionStyle, color: getTypeColor(entry.type) }}
-          >
-            {entry.action.label}
-          </button>
-        )}
-      </div>
+      <NotificationRowIcon entry={entry} />
+      <NotificationRowBody entry={entry} />
       <span className="text-text-semantic-faint" style={timestampStyle}>
         {formatRelativeTime(entry.createdAt)}
       </span>
-      <button
-        type="button"
-        aria-label="Remove notification"
-        onClick={() => onRemove(entry.id)}
-        onMouseEnter={() => setCloseHovered(true)}
-        onMouseLeave={() => setCloseHovered(false)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '18px',
-          height: '18px',
-          padding: 0,
-          border: 'none',
-          borderRadius: '3px',
-          background: closeHovered ? 'rgba(128,128,128,0.2)' : 'transparent',
-          cursor: 'pointer',
-          flexShrink: 0,
-        }}
-        className="text-text-semantic-muted"
-      >
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path
-            d="M3 3l6 6M9 3l-6 6"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      <NotificationRowClose id={entry.id} onRemove={onRemove} />
     </div>
   );
 }
@@ -379,14 +118,10 @@ export interface NotificationCenterProps {
   onClose: () => void;
 }
 
-export const NotificationCenter = memo(function NotificationCenter({
-  notifications,
-  onRemove,
-  onClearAll,
-  onClose,
-}: NotificationCenterProps): React.ReactElement {
-  const panelRef = useRef<HTMLDivElement>(null);
-
+function useNotificationCenterDismiss(
+  panelRef: React.RefObject<HTMLDivElement | null>,
+  onClose: () => void,
+): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose();
@@ -406,7 +141,17 @@ export const NotificationCenter = memo(function NotificationCenter({
       clearTimeout(timer);
       window.removeEventListener('mousedown', handleClick);
     };
-  }, [onClose]);
+  }, [onClose, panelRef]);
+}
+
+export const NotificationCenter = memo(function NotificationCenter({
+  notifications,
+  onRemove,
+  onClearAll,
+  onClose,
+}: NotificationCenterProps): React.ReactElement {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useNotificationCenterDismiss(panelRef, onClose);
 
   return (
     <>

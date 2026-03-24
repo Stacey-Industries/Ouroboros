@@ -10,11 +10,12 @@ import {
   useState,
 } from 'react';
 
-import type {
-  AgentChatMessageRecord,
-  AgentChatThreadRecord,
-  AgentChatThreadStatusSnapshot,
-} from '../../types/electron';
+import type { AgentChatThreadRecord } from '../../types/electron';
+import {
+  mergeThreadCollection,
+  mergeThreadMessage,
+  mergeThreadStatus,
+} from './agentChatWorkspaceReducers';
 
 interface ThreadStateArgs {
   projectRoot: string | null;
@@ -40,107 +41,6 @@ function hasElectronAPI(): boolean {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function sortThreads(threads: AgentChatThreadRecord[]): AgentChatThreadRecord[] {
-  return [...threads].sort((left, right) => {
-    if (left.updatedAt !== right.updatedAt) return right.updatedAt - left.updatedAt;
-    if (left.createdAt !== right.createdAt) return right.createdAt - left.createdAt;
-    return left.id.localeCompare(right.id);
-  });
-}
-
-function sortMessages(messages: AgentChatMessageRecord[]): AgentChatMessageRecord[] {
-  return [...messages].sort((left, right) => {
-    if (left.createdAt !== right.createdAt) return left.createdAt - right.createdAt;
-    return left.id.localeCompare(right.id);
-  });
-}
-
-export function mergeThreadCollection(
-  threads: AgentChatThreadRecord[],
-  nextThread: AgentChatThreadRecord,
-): AgentChatThreadRecord[] {
-  const existing = threads.find((thread) => thread.id === nextThread.id);
-  const remainingThreads = threads.filter((thread) => thread.id !== nextThread.id);
-
-  // Defensive merge: if the incoming thread has fewer messages than the
-  // existing one (possible due to race conditions or stale snapshots),
-  // merge message arrays by ID to avoid losing messages.
-  // Defensive merge: if the incoming thread has fewer messages than the
-  // existing one (possible due to race conditions or stale snapshots),
-  // merge message arrays by ID to avoid losing messages.
-  let merged = nextThread;
-  if (
-    existing &&
-    existing.messages.length > 0 &&
-    nextThread.messages.length < existing.messages.length
-  ) {
-    const messageMap = new Map<string, AgentChatMessageRecord>();
-    for (const msg of existing.messages) messageMap.set(msg.id, msg);
-    // Incoming messages take priority (they may have updated fields)
-    for (const msg of nextThread.messages) messageMap.set(msg.id, msg);
-    const mergedMessages = sortMessages(Array.from(messageMap.values()));
-    merged = { ...nextThread, messages: mergedMessages };
-  }
-
-  return sortThreads([...remainingThreads, merged]);
-}
-
-function mergeThreadMessage(
-  threads: AgentChatThreadRecord[],
-  message: AgentChatMessageRecord,
-): AgentChatThreadRecord[] {
-  const targetThread = threads.find((thread) => thread.id === message.threadId);
-  if (!targetThread) return threads;
-
-  const nextMessages = sortMessages([
-    ...targetThread.messages.filter((entry) => entry.id !== message.id),
-    message,
-  ]);
-
-  return mergeThreadCollection(threads, {
-    ...targetThread,
-    messages: nextMessages,
-    updatedAt: Math.max(targetThread.updatedAt, message.createdAt),
-  });
-}
-
-function mergeOrchestrationFields(
-  incoming: AgentChatThreadRecord['latestOrchestration'],
-  existing: AgentChatThreadRecord['latestOrchestration'],
-): AgentChatThreadRecord['latestOrchestration'] {
-  if (!incoming) return existing;
-  return {
-    ...incoming,
-    provider: incoming.provider ?? existing?.provider,
-    claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
-    codexThreadId: incoming.codexThreadId ?? existing?.codexThreadId,
-    linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
-  };
-}
-
-function mergeThreadStatus(
-  threads: AgentChatThreadRecord[],
-  status: AgentChatThreadStatusSnapshot,
-): AgentChatThreadRecord[] {
-  const targetThread = threads.find((thread) => thread.id === status.threadId);
-  if (!targetThread) return threads;
-
-  // Preserve linkedTerminalId from the existing thread when the incoming
-  // status update doesn't carry one.  Early session updates fire before
-  // the adapter has populated it, so we treat it as a "sticky" field.
-  const mergedOrchestration = mergeOrchestrationFields(
-    status.latestOrchestration,
-    targetThread.latestOrchestration,
-  );
-
-  return mergeThreadCollection(threads, {
-    ...targetThread,
-    status: status.status,
-    latestOrchestration: mergedOrchestration,
-    updatedAt: status.updatedAt,
-  });
 }
 
 function pickActiveThreadId(
@@ -265,44 +165,59 @@ export function useThreadState({ projectRoot }: ThreadStateArgs) {
   };
 }
 
+function subscribeThreadUpdates(
+  args: EventSubscriptionArgs,
+): ReturnType<typeof window.electronAPI.agentChat.onThreadUpdate> {
+  const { projectRootRef, setActiveThreadId, setThreads } = args;
+  return window.electronAPI.agentChat.onThreadUpdate((thread) => {
+    if (thread.workspaceRoot !== projectRootRef.current) return;
+    log.info(
+      'onThreadUpdate:',
+      thread.id,
+      'messages:',
+      thread.messages.length,
+      'status:',
+      thread.status,
+      'ids:',
+      thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(', '),
+    );
+    setThreads((currentThreads) => {
+      const existing = currentThreads.find((t) => t.id === thread.id);
+      if (existing && existing.messages.length > thread.messages.length) {
+        log.warn(
+          'INCOMING THREAD HAS FEWER MESSAGES!',
+          'existing:',
+          existing.messages.length,
+          'incoming:',
+          thread.messages.length,
+        );
+      }
+      return mergeThreadCollection(currentThreads, thread);
+    });
+    setActiveThreadId((currentThreadId) => currentThreadId ?? thread.id);
+  });
+}
+
+function makeSnapshotHandler(
+  setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>,
+): (event: Event) => void {
+  return (event: Event) => {
+    const thread = (event as CustomEvent).detail as AgentChatThreadRecord | undefined;
+    if (!thread || !thread.id) return;
+    setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
+  };
+}
+
 export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): void {
   const { projectRootRef, setActiveThreadId, setThreads } = args;
 
   useEffect(() => {
     if (!hasElectronAPI()) return undefined;
 
-    const cleanupThread = window.electronAPI.agentChat.onThreadUpdate((thread) => {
-      if (thread.workspaceRoot !== projectRootRef.current) return;
-      log.info(
-        'onThreadUpdate:',
-        thread.id,
-        'messages:',
-        thread.messages.length,
-        'status:',
-        thread.status,
-        'ids:',
-        thread.messages.map((m) => `${m.role}:${m.id.slice(-6)}`).join(', '),
-      );
-      setThreads((currentThreads) => {
-        const existing = currentThreads.find((t) => t.id === thread.id);
-        if (existing && existing.messages.length > thread.messages.length) {
-          log.warn(
-            'INCOMING THREAD HAS FEWER MESSAGES!',
-            'existing:',
-            existing.messages.length,
-            'incoming:',
-            thread.messages.length,
-          );
-        }
-        return mergeThreadCollection(currentThreads, thread);
-      });
-      setActiveThreadId((currentThreadId) => currentThreadId ?? thread.id);
-    });
-
+    const cleanupThread = subscribeThreadUpdates(args);
     const cleanupMessage = window.electronAPI.agentChat.onMessageUpdate((message) => {
       setThreads((currentThreads) => mergeThreadMessage(currentThreads, message));
     });
-
     const cleanupStatus = window.electronAPI.agentChat.onStatusChange((status) => {
       if (status.workspaceRoot !== projectRootRef.current) return;
       setThreads((currentThreads) => mergeThreadStatus(currentThreads, status));
@@ -311,11 +226,7 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
     // Listen for thread snapshots from the streaming bridge (DOM event).
     // This fires just before 'complete' so the persisted assistant message
     // appears in the thread before the streaming UI clears.
-    const handleSnapshot = (event: Event) => {
-      const thread = (event as CustomEvent).detail as AgentChatThreadRecord | undefined;
-      if (!thread || !thread.id) return;
-      setThreads((currentThreads) => mergeThreadCollection(currentThreads, thread));
-    };
+    const handleSnapshot = makeSnapshotHandler(setThreads);
     window.addEventListener('agent-chat:thread-snapshot', handleSnapshot);
 
     return () => {
@@ -324,7 +235,7 @@ export function useAgentChatEventSubscriptions(args: EventSubscriptionArgs): voi
       cleanupStatus();
       window.removeEventListener('agent-chat:thread-snapshot', handleSnapshot);
     };
-  }, [projectRootRef, setActiveThreadId, setThreads]);
+  }, [args, projectRootRef, setActiveThreadId, setThreads]);
 }
 
 export function useThreadSelectionActions(
@@ -346,3 +257,6 @@ export function useThreadSelectionActions(
 
   return { selectThread, startNewChat };
 }
+
+/* Re-export for consumers that import mergeThreadCollection from this module */
+export { mergeThreadCollection } from './agentChatWorkspaceReducers';

@@ -97,6 +97,27 @@ export const AnalyticsSummaryGrid = memo(function AnalyticsSummaryGrid({
   );
 });
 
+function ToolDistributionBar({
+  entry,
+  maxCount,
+}: {
+  entry: ToolDistributionEntry;
+  maxCount: number;
+}): React.ReactElement {
+  return (
+    <div className="flex-1 h-[6px] rounded-full overflow-hidden bg-surface-base">
+      <div
+        className="h-full rounded-full transition-all duration-300"
+        style={{
+          width: `${Math.max((entry.count / maxCount) * 100, 2)}%`,
+          background: getToolColor(entry.toolName),
+          opacity: 0.7,
+        }}
+      />
+    </div>
+  );
+}
+
 const ToolDistributionRow = memo(function ToolDistributionRow({
   entry,
   maxCount,
@@ -110,16 +131,7 @@ const ToolDistributionRow = memo(function ToolDistributionRow({
       >
         {entry.toolName}
       </span>
-      <div className="flex-1 h-[6px] rounded-full overflow-hidden bg-surface-base">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{
-            width: `${Math.max((entry.count / maxCount) * 100, 2)}%`,
-            background: getToolColor(entry.toolName),
-            opacity: 0.7,
-          }}
-        />
-      </div>
+      <ToolDistributionBar entry={entry} maxCount={maxCount} />
       <span
         className="text-[10px] tabular-nums text-text-semantic-muted"
         style={{ fontFamily: 'var(--font-mono)', width: '32px', textAlign: 'right', flexShrink: 0 }}

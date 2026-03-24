@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FileEntry } from '../FileTree/FileListItem';
+import {
+  type AutocompleteResult,
+  buildMentionResults,
+  getMentionTypeColor,
+} from './MentionAutocompleteSupport';
 
 export type MentionType = 'file' | 'folder' | 'diff' | 'terminal';
 
@@ -21,73 +26,59 @@ export interface MentionAutocompleteProps {
   isOpen: boolean;
 }
 
-const SPECIAL_MENTIONS: Array<{
-  type: MentionType;
-  label: string;
-  description: string;
-  key: string;
-}> = [
-  { type: 'diff', label: 'diff', description: 'Include current git diff as context', key: '@diff' },
-  {
-    type: 'terminal',
-    label: 'terminal',
-    description: 'Include last terminal output as context',
-    key: '@terminal',
-  },
-];
+function FileIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  );
+}
 
-const CHARS_PER_TOKEN = 4;
-const MAX_RESULTS = 10;
+function FolderIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
 
-type AutocompleteResult = { mention: MentionItem; description?: string };
+function DiffIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3v18M3 12h18" />
+    </svg>
+  );
+}
 
-function getMentionIcon(type: MentionType): React.ReactElement {
-  if (type === 'file')
-    return (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-      </svg>
-    );
-  if (type === 'folder')
-    return (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-    );
-  if (type === 'diff')
-    return (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 3v18M3 12h18" />
-      </svg>
-    );
+function TerminalIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -105,119 +96,11 @@ function getMentionIcon(type: MentionType): React.ReactElement {
   );
 }
 
-function getMentionTypeColor(type: MentionType): string {
-  if (type === 'file') return 'var(--interactive-accent)';
-  if (type === 'folder') return '#e5c07b';
-  if (type === 'diff') return 'var(--status-success)';
-  return 'var(--palette-purple)';
-}
-
-function buildSpecialMentionResult(special: (typeof SPECIAL_MENTIONS)[number]): AutocompleteResult {
-  return {
-    mention: {
-      type: special.type,
-      key: special.key,
-      label: special.label,
-      path: special.key,
-      estimatedTokens: special.type === 'diff' ? 2000 : 1000,
-    },
-    description: special.description,
-  };
-}
-
-function buildFolderMentionResult(dir: string): AutocompleteResult {
-  return {
-    mention: {
-      type: 'folder',
-      key: `@folder:${dir}`,
-      label: dir.split('/').pop() || dir,
-      path: dir,
-      estimatedTokens: 5000,
-    },
-  };
-}
-
-function buildFileMentionResult(file: FileEntry): AutocompleteResult {
-  return {
-    mention: {
-      type: 'file',
-      key: `@file:${file.path}`,
-      label: file.name,
-      path: file.relativePath,
-      estimatedTokens: file.size > 0 ? Math.ceil(file.size / CHARS_PER_TOKEN) : 500,
-    },
-  };
-}
-
-function buildSpecialMentions(
-  query: string,
-  selectedKeys: Set<string>,
-  items: AutocompleteResult[],
-): void {
-  const lowerQuery = query.toLowerCase();
-  for (const special of SPECIAL_MENTIONS) {
-    if (
-      !selectedKeys.has(special.key) &&
-      (special.label.toLowerCase().startsWith(lowerQuery) || lowerQuery === '')
-    ) {
-      items.push(buildSpecialMentionResult(special));
-    }
-  }
-}
-
-function buildFolderMentions(
-  query: string,
-  allFiles: FileEntry[],
-  selectedKeys: Set<string>,
-  items: AutocompleteResult[],
-): void {
-  const lowerQuery = query.toLowerCase();
-  const folderSearchTerm = lowerQuery.slice(7);
-  const seenDirs = new Set<string>();
-  for (const file of allFiles) {
-    if (items.length >= MAX_RESULTS) break;
-    const dir = file.dir;
-    if (!dir || seenDirs.has(dir)) continue;
-    seenDirs.add(dir);
-    if (folderSearchTerm && !dir.toLowerCase().includes(folderSearchTerm)) continue;
-    if (!selectedKeys.has(`@folder:${dir}`)) items.push(buildFolderMentionResult(dir));
-  }
-}
-
-function buildFileMentions(
-  query: string,
-  allFiles: FileEntry[],
-  selectedKeys: Set<string>,
-  items: AutocompleteResult[],
-): void {
-  const lowerQuery = query.toLowerCase();
-  for (const file of allFiles) {
-    if (items.length >= MAX_RESULTS) break;
-    if (selectedKeys.has(`@file:${file.path}`)) continue;
-    if (
-      query &&
-      !file.relativePath.toLowerCase().includes(lowerQuery) &&
-      !file.name.toLowerCase().includes(lowerQuery)
-    )
-      continue;
-    items.push(buildFileMentionResult(file));
-  }
-}
-
-function buildMentionResults(
-  query: string,
-  allFiles: FileEntry[],
-  selectedMentions: MentionItem[],
-  isOpen: boolean,
-): AutocompleteResult[] {
-  if (!isOpen) return [];
-  const selectedKeys = new Set(selectedMentions.map((mention) => mention.key));
-  const items: AutocompleteResult[] = [];
-  const lowerQuery = query.toLowerCase();
-  buildSpecialMentions(query, selectedKeys, items);
-  if (lowerQuery.startsWith('folder:')) buildFolderMentions(query, allFiles, selectedKeys, items);
-  else buildFileMentions(query, allFiles, selectedKeys, items);
-  return items.slice(0, MAX_RESULTS);
+function getMentionIcon(type: MentionType): React.ReactElement {
+  if (type === 'file') return <FileIcon />;
+  if (type === 'folder') return <FolderIcon />;
+  if (type === 'diff') return <DiffIcon />;
+  return <TerminalIcon />;
 }
 
 function MentionResult({
@@ -256,40 +139,30 @@ function MentionResult({
   );
 }
 
-function useMentionAutocompleteKeyboard({
-  isOpen,
-  results,
-  selectedIndex,
-  setSelectedIndex,
-  onSelect,
-  onClose,
-}: {
+interface MentionKeyboardArgs {
   isOpen: boolean;
   results: AutocompleteResult[];
   selectedIndex: number;
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
   onSelect: (mention: MentionItem) => void;
   onClose: () => void;
-}): (event: KeyboardEvent) => void {
+}
+
+function useMentionAutocompleteKeyboard(args: MentionKeyboardArgs): (event: KeyboardEvent) => void {
+  const { isOpen, results, selectedIndex, setSelectedIndex, onSelect, onClose } = args;
   return useCallback(
     (event: KeyboardEvent) => {
       if (!isOpen || results.length === 0) return;
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setSelectedIndex((index) => (index + 1) % results.length);
-        return;
-      }
-      if (event.key === 'ArrowUp') {
+      } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         setSelectedIndex((index) => (index - 1 + results.length) % results.length);
-        return;
-      }
-      if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
+      } else if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
         event.preventDefault();
         onSelect(results[selectedIndex].mention);
-        return;
-      }
-      if (event.key === 'Escape') {
+      } else if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
       }
@@ -298,16 +171,12 @@ function useMentionAutocompleteKeyboard({
   );
 }
 
-export function MentionAutocomplete({
-  query,
-  allFiles,
-  selectedMentions,
-  onSelect,
-  onClose,
-  isOpen,
-}: MentionAutocompleteProps): React.ReactElement | null {
+function useMentionAutocompleteState(
+  props: MentionAutocompleteProps,
+  listRef: React.RefObject<HTMLDivElement>,
+) {
+  const { query, allFiles, selectedMentions, isOpen, onSelect, onClose } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
   const results = useMemo(
     () => buildMentionResults(query, allFiles, selectedMentions, isOpen),
     [query, allFiles, selectedMentions, isOpen],
@@ -320,20 +189,24 @@ export function MentionAutocomplete({
     onSelect,
     onClose,
   });
-
   useEffect(() => setSelectedIndex(0), [results.length, query]);
   useEffect(() => {
     if (!listRef.current) return;
     listRef.current.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
+  }, [selectedIndex, listRef]);
   useEffect(() => {
     if (!isOpen) return;
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [isOpen, handleKeyDown]);
+  return { selectedIndex, setSelectedIndex, results };
+}
 
+export function MentionAutocomplete(props: MentionAutocompleteProps): React.ReactElement | null {
+  const { isOpen, onSelect } = props;
+  const listRef = useRef<HTMLDivElement>(null);
+  const { selectedIndex, setSelectedIndex, results } = useMentionAutocompleteState(props, listRef);
   if (!isOpen || results.length === 0) return null;
-
   return (
     <div
       ref={listRef}

@@ -45,6 +45,37 @@ function getBorderLeftColor(isStreaming: boolean, isCollapsed: boolean): string 
   return 'var(--border-default)';
 }
 
+const THINKING_PULSE_CSS = `
+  .agent-chat-thinking-pulse {
+    animation: agentChatThinkingPulse 2s ease-in-out infinite;
+  }
+  @keyframes agentChatThinkingPulse {
+    0%, 100% { border-left-color: var(--interactive-accent); }
+    50% { border-left-color: var(--border-default); }
+  }
+`;
+
+function ThinkingContent({
+  content,
+  isStreaming,
+  isCollapsed,
+}: {
+  content: string;
+  isStreaming: boolean;
+  isCollapsed: boolean;
+}): React.ReactElement {
+  return (
+    <div className="agent-chat-thinking-collapse" data-collapsed={isCollapsed ? 'true' : 'false'}>
+      <div
+        className="max-h-[300px] overflow-y-auto whitespace-pre-wrap px-2.5 pb-2 text-xs leading-relaxed text-text-semantic-muted"
+        style={{ fontFamily: 'var(--font-ui)' }}
+      >
+        {content || (isStreaming ? '' : '(empty)')}
+      </div>
+    </div>
+  );
+}
+
 export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock({
   content,
   duration,
@@ -68,23 +99,8 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
         <span>{label}</span>
         {duration !== undefined && !isStreaming && <DurationBadge duration={duration} />}
       </button>
-      <div className="agent-chat-thinking-collapse" data-collapsed={isCollapsed ? 'true' : 'false'}>
-        <div
-          className="max-h-[300px] overflow-y-auto whitespace-pre-wrap px-2.5 pb-2 text-xs leading-relaxed text-text-semantic-muted"
-          style={{ fontFamily: 'var(--font-ui)' }}
-        >
-          {content || (isStreaming ? '' : '(empty)')}
-        </div>
-      </div>
-      <style>{`
-        .agent-chat-thinking-pulse {
-          animation: agentChatThinkingPulse 2s ease-in-out infinite;
-        }
-        @keyframes agentChatThinkingPulse {
-          0%, 100% { border-left-color: var(--interactive-accent); }
-          50% { border-left-color: var(--border-default); }
-        }
-      `}</style>
+      <ThinkingContent content={content} isStreaming={isStreaming} isCollapsed={isCollapsed} />
+      <style>{THINKING_PULSE_CSS}</style>
     </div>
   );
 });

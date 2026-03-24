@@ -14,21 +14,26 @@ interface ApprovalDialogProps {
   onAlwaysAllow: (requestId: string, sessionId: string, toolName: string) => void;
 }
 
-function useApprovalDialogState(
-  current: ApprovalRequest | undefined,
-  onApprove: ApprovalDialogProps['onApprove'],
-  onReject: ApprovalDialogProps['onReject'],
-  onAlwaysAllow: ApprovalDialogProps['onAlwaysAllow'],
-): {
+type ApprovalDialogState = {
   rejectReason: string;
   setRejectReason: React.Dispatch<React.SetStateAction<string>>;
   showRejectInput: boolean;
   setShowRejectInput: React.Dispatch<React.SetStateAction<boolean>>;
   confirmReject: () => void;
-} {
+};
+
+function useApprovalDialogState(
+  current: ApprovalRequest | undefined,
+  onApprove: ApprovalDialogProps['onApprove'],
+  onReject: ApprovalDialogProps['onReject'],
+  onAlwaysAllow: ApprovalDialogProps['onAlwaysAllow'],
+): ApprovalDialogState {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
-  useEffect(() => { setRejectReason(''); setShowRejectInput(false); }, [current?.requestId]);
+  useEffect(() => {
+    setRejectReason('');
+    setShowRejectInput(false);
+  }, [current?.requestId]);
   const confirmReject = useCallback(() => {
     if (!current) return;
     onReject(current.requestId, rejectReason || undefined);

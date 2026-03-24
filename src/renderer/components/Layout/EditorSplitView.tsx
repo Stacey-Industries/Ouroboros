@@ -7,6 +7,7 @@ import React, { useCallback, useRef, useState } from 'react';
 
 import type { OpenFile } from '../FileViewer';
 import { FileViewer } from '../FileViewer';
+import { SplitDivider } from './EditorSplitDivider';
 
 export type ActiveFile = {
   path: string;
@@ -66,100 +67,32 @@ export function normalizeFileView(activeFile: ActiveFile): FileViewState {
   };
 }
 
-// ── Split Divider ─────────────────────────────────────────────────────────
-
-const SPLIT_DIVIDER_STYLE: React.CSSProperties = {
-  width: '5px',
-  flexShrink: 0,
-  cursor: 'col-resize',
-  position: 'relative',
-  zIndex: 10,
-  userSelect: 'none',
-  touchAction: 'none',
-};
-
-const SPLIT_DIVIDER_LINE_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  bottom: 0,
-  left: '2px',
-  width: '1px',
-  transition: 'background-color 150ms ease, opacity 150ms ease',
-  opacity: 0,
-};
-
-function useSplitDividerDrag(onDrag: (deltaX: number) => void) {
-  const startXRef = useRef(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      startXRef.current = e.clientX;
-      setIsDragging(true);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-
-      function handlePointerMove(ev: PointerEvent): void {
-        const deltaX = ev.clientX - startXRef.current;
-        startXRef.current = ev.clientX;
-        onDrag(deltaX);
-      }
-      function handlePointerUp(): void {
-        setIsDragging(false);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        document.removeEventListener('pointermove', handlePointerMove);
-        document.removeEventListener('pointerup', handlePointerUp);
-        document.removeEventListener('pointercancel', handlePointerUp);
-      }
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerUp);
-      document.addEventListener('pointercancel', handlePointerUp);
-    },
-    [onDrag],
-  );
-
-  return { isDragging, handlePointerDown };
-}
-
-export function SplitDivider({
-  onDrag,
-  onReset,
-}: {
-  onDrag: (deltaX: number) => void;
-  onReset: () => void;
-}): React.ReactElement {
-  const [isHovered, setIsHovered] = useState(false);
-  const { isDragging, handlePointerDown } = useSplitDividerDrag(onDrag);
-  const lineStyle: React.CSSProperties = {
-    ...SPLIT_DIVIDER_LINE_STYLE,
-    opacity: isHovered || isDragging ? 1 : 0,
-    backgroundColor:
-      isHovered || isDragging ? 'var(--interactive-accent)' : 'var(--border-semantic)',
-  };
-  return (
-    <div
-      style={SPLIT_DIVIDER_STYLE}
-      onPointerDown={handlePointerDown}
-      onDoubleClick={onReset}
-      onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize split panes"
-    >
-      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '-4px', right: '-4px' }} />
-      <div style={lineStyle} />
-    </div>
-  );
-}
-
 // ── Close Split Button ─────────────────────────────────────────────────────
+
+const CLOSE_SPLIT_BUTTON_BASE: React.CSSProperties = {
+  position: 'absolute',
+  top: '4px',
+  right: '4px',
+  zIndex: 20,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '20px',
+  height: '20px',
+  borderRadius: '3px',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  transition: 'opacity 150ms ease, background-color 150ms ease',
+};
 
 export function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
+  const style: React.CSSProperties = {
+    ...CLOSE_SPLIT_BUTTON_BASE,
+    background: isHovered ? 'var(--surface-raised)' : 'transparent',
+    color: isHovered ? 'var(--text-primary)' : 'var(--text-faint)',
+  };
   return (
     <button
       onClick={onClick}
@@ -167,24 +100,7 @@ export function CloseSplitButton({ onClick }: { onClick: () => void }): React.Re
       onMouseLeave={() => setIsHovered(false)}
       title="Close split pane"
       aria-label="Close split pane"
-      style={{
-        position: 'absolute',
-        top: '4px',
-        right: '4px',
-        zIndex: 20,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '20px',
-        height: '20px',
-        borderRadius: '3px',
-        border: 'none',
-        background: isHovered ? 'var(--surface-raised)' : 'transparent',
-        color: isHovered ? 'var(--text-primary)' : 'var(--text-faint)',
-        cursor: 'pointer',
-        padding: 0,
-        transition: 'opacity 150ms ease, background-color 150ms ease',
-      }}
+      style={style}
     >
       <svg
         width="10"
@@ -281,6 +197,40 @@ export interface SplitContentViewProps {
   rightActions: SplitFileActions;
 }
 
+function SplitPane({
+  view,
+  projectRoot,
+  actions,
+  isActive,
+  onClick,
+  width,
+  children,
+}: {
+  view: FileViewState;
+  projectRoot: string | null;
+  actions: SplitFileActions;
+  isActive: boolean;
+  onClick: () => void;
+  width: string;
+  children?: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div
+      style={{ ...SPLIT_PANE_STYLE, width, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}
+      onClick={onClick}
+    >
+      {children}
+      <FilePaneView
+        view={view}
+        projectRoot={projectRoot}
+        actions={actions}
+        isActive={isActive}
+        onClick={onClick}
+      />
+    </div>
+  );
+}
+
 export function SplitContentView({
   leftFile,
   rightFile,
@@ -297,43 +247,27 @@ export function SplitContentView({
 }: SplitContentViewProps): React.ReactElement {
   const leftView = normalizeFileView(leftFile);
   const rightView = normalizeFileView(rightFile);
-
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: 0, height: '100%' }}>
-      <div
-        style={{
-          ...SPLIT_PANE_STYLE,
-          width: `${splitRatio * 100}%`,
-          ...(activeSplit === 'left' ? ACTIVE_SPLIT_BORDER : {}),
-        }}
+      <SplitPane
+        view={leftView}
+        projectRoot={projectRoot}
+        actions={leftActions}
+        isActive={activeSplit === 'left'}
         onClick={onFocusLeft}
-      >
-        <FilePaneView
-          view={leftView}
-          projectRoot={projectRoot}
-          actions={leftActions}
-          isActive={activeSplit === 'left'}
-          onClick={onFocusLeft}
-        />
-      </div>
+        width={`${splitRatio * 100}%`}
+      />
       <SplitDivider onDrag={onDrag} onReset={onResetRatio} />
-      <div
-        style={{
-          ...SPLIT_PANE_STYLE,
-          width: `${(1 - splitRatio) * 100}%`,
-          ...(activeSplit === 'right' ? ACTIVE_SPLIT_BORDER : {}),
-        }}
+      <SplitPane
+        view={rightView}
+        projectRoot={projectRoot}
+        actions={rightActions}
+        isActive={activeSplit === 'right'}
         onClick={onFocusRight}
+        width={`${(1 - splitRatio) * 100}%`}
       >
         <CloseSplitButton onClick={onCloseSplit} />
-        <FilePaneView
-          view={rightView}
-          projectRoot={projectRoot}
-          actions={rightActions}
-          isActive={activeSplit === 'right'}
-          onClick={onFocusRight}
-        />
-      </div>
+      </SplitPane>
     </div>
   );
 }

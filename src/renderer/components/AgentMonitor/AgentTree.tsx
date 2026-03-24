@@ -1,11 +1,7 @@
 /**
  * AgentTree.tsx - Tree view for parent-child agent relationships.
- *
- * Groups agents by parent-child relationship:
- * - Root agents (no parent) at top level
- * - Child agents indented under their parent with connecting lines
- * - Each node renders an AgentCard (reuse existing)
- * - Collapsible branches (click toggle to collapse/expand children)
+ * Root agents at top level; children indented with connecting lines.
+ * Each node renders an AgentCard. Branches are collapsible.
  */
 
 import React, { memo, useCallback, useState } from 'react';
@@ -25,7 +21,6 @@ const branchToggleStyle: React.CSSProperties = {
   border: 'none',
   cursor: 'pointer',
 };
-
 const guideContainerStyle: React.CSSProperties = {
   position: 'absolute',
   top: 0,
@@ -33,7 +28,6 @@ const guideContainerStyle: React.CSSProperties = {
   left: 0,
   pointerEvents: 'none',
 };
-
 const branchContainerStyle: React.CSSProperties = {
   paddingLeft: '8px',
   borderBottom: '1px solid var(--border-subtle)',

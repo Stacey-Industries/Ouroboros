@@ -6,6 +6,8 @@ import React, { useCallback, useRef, useState } from 'react';
 
 import { shortModelName } from './ClaudeModelMenu';
 import { NewTerminalMenu } from './NewTerminalMenu';
+import type { TabDragDropState } from './TerminalTabs.dnd';
+import { useTabDragDrop } from './TerminalTabs.dnd';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +91,45 @@ function getTabClasses(
   return [base, dragOver, dragging, state].filter(Boolean).join(' ');
 }
 
+// ─── Tab badges ───────────────────────────────────────────────────────────────
+
+function TabBadges({
+  session,
+  isExited,
+}: {
+  session: TerminalSession;
+  isExited: boolean;
+}): React.ReactElement {
+  return (
+    <>
+      {session.isClaude && (
+        <span
+          className="flex-shrink-0 text-interactive-accent"
+          style={{ fontSize: '10px', lineHeight: 1 }}
+          title="Claude Code session"
+        >
+          &#9670;
+        </span>
+      )}
+      {session.isCodex && (
+        <span
+          className="flex-shrink-0 text-[var(--accent-blue,var(--interactive-accent))]"
+          style={{ fontSize: '10px', lineHeight: 1 }}
+          title="Codex session"
+        >
+          &#9671;
+        </span>
+      )}
+      {isExited && (
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-text-semantic-muted flex-shrink-0"
+          aria-label="exited"
+        />
+      )}
+    </>
+  );
+}
+
 // ─── Single tab ───────────────────────────────────────────────────────────────
 
 interface TabItemProps {
@@ -149,30 +190,7 @@ function TabItem({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
     >
-      {session.isClaude && (
-        <span
-          className="flex-shrink-0 text-interactive-accent"
-          style={{ fontSize: '10px', lineHeight: 1 }}
-          title="Claude Code session"
-        >
-          &#9670;
-        </span>
-      )}
-      {session.isCodex && (
-        <span
-          className="flex-shrink-0 text-[var(--accent-blue,var(--interactive-accent))]"
-          style={{ fontSize: '10px', lineHeight: 1 }}
-          title="Codex session"
-        >
-          &#9671;
-        </span>
-      )}
-      {isExited && (
-        <span
-          className="w-1.5 h-1.5 rounded-full bg-text-semantic-muted flex-shrink-0"
-          aria-label="exited"
-        />
-      )}
+      <TabBadges session={session} isExited={isExited} />
       <span className="truncate max-w-[120px]">{label}</span>
       {(hovered || isActive) && (
         <button
@@ -192,63 +210,7 @@ function TabItem({
   );
 }
 
-// ─── Drag-and-drop hook ──────────────────────────────────────────────────────
-
-function useTabDragDrop(
-  sessions: TerminalSession[],
-  onReorder?: (reordered: TerminalSession[]) => void,
-) {
-  const draggingIdRef = useRef<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-
-  const handleDragStart = useCallback((id: string) => {
-    draggingIdRef.current = id;
-    setDraggingId(id);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggingIdRef.current !== id) setDragOverId(id);
-  }, []);
-
-  const handleDrop = useCallback(
-    (targetId: string) => {
-      const sourceId = draggingIdRef.current;
-      if (!sourceId || sourceId === targetId || !onReorder) {
-        setDragOverId(null);
-        return;
-      }
-      const reordered = [...sessions];
-      const fromIdx = reordered.findIndex((s) => s.id === sourceId);
-      const toIdx = reordered.findIndex((s) => s.id === targetId);
-      if (fromIdx === -1 || toIdx === -1) return;
-      const [item] = reordered.splice(fromIdx, 1);
-      reordered.splice(toIdx, 0, item);
-      onReorder(reordered);
-      setDragOverId(null);
-    },
-    [sessions, onReorder],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    draggingIdRef.current = null;
-    setDraggingId(null);
-    setDragOverId(null);
-  }, []);
-
-  const handleDragLeave = useCallback(() => setDragOverId(null), []);
-
-  return {
-    draggingId,
-    dragOverId,
-    handleDragStart,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleDragEnd,
-  };
-}
+// ─── Tab renderer ─────────────────────────────────────────────────────────────
 
 function renderSessionTab({
   session,
@@ -259,7 +221,7 @@ function renderSessionTab({
 }: {
   session: TerminalSession;
   activeSessionId: string | null;
-  dnd: ReturnType<typeof useTabDragDrop>;
+  dnd: TabDragDropState;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
 }): React.ReactElement {
@@ -284,6 +246,42 @@ function renderSessionTab({
   );
 }
 
+// ─── New terminal button ───────────────────────────────────────────────────────
+
+function NewTerminalButton({
+  onNew,
+  onNewClaude,
+  onNewCodex,
+}: Pick<TerminalTabsProps, 'onNew' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement {
+  const plusBtnRef = useRef<HTMLButtonElement>(null);
+  const [showNewMenu, setShowNewMenu] = useState(false);
+  const handleToggleMenu = useCallback(() => setShowNewMenu((prev) => !prev), []);
+  const handleMenuClose = useCallback(() => setShowNewMenu(false), []);
+  return (
+    <div className="relative flex items-stretch">
+      <button
+        ref={plusBtnRef}
+        onClick={handleToggleMenu}
+        aria-label="New terminal"
+        aria-haspopup="true"
+        aria-expanded={showNewMenu}
+        className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"
+      >
+        <PlusIcon />
+      </button>
+      {showNewMenu && (
+        <NewTerminalMenu
+          anchorRef={plusBtnRef}
+          onNew={onNew}
+          onNewClaude={onNewClaude}
+          onNewCodex={onNewCodex}
+          onClose={handleMenuClose}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
 export function TerminalTabs({
@@ -297,10 +295,6 @@ export function TerminalTabs({
   onReorder,
 }: TerminalTabsProps): React.ReactElement {
   const dnd = useTabDragDrop(sessions, onReorder);
-  const [showNewMenu, setShowNewMenu] = useState(false);
-  const plusBtnRef = useRef<HTMLButtonElement>(null);
-  const handleToggleMenu = useCallback(() => setShowNewMenu((prev) => !prev), []);
-  const handleMenuClose = useCallback(() => setShowNewMenu(false), []);
   return (
     <div
       className="flex items-stretch h-full overflow-x-auto overflow-y-hidden"
@@ -310,27 +304,7 @@ export function TerminalTabs({
       {sessions.map((session) =>
         renderSessionTab({ session, activeSessionId, dnd, onActivate, onClose }),
       )}
-      <div className="relative flex items-stretch">
-        <button
-          ref={plusBtnRef}
-          onClick={handleToggleMenu}
-          aria-label="New terminal"
-          aria-haspopup="true"
-          aria-expanded={showNewMenu}
-          className="flex-shrink-0 flex items-center justify-center w-7 h-full text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised transition-all duration-150 border-r border-border-semantic rounded-sm"
-        >
-          <PlusIcon />
-        </button>
-        {showNewMenu && (
-          <NewTerminalMenu
-            anchorRef={plusBtnRef}
-            onNew={onNew}
-            onNewClaude={onNewClaude}
-            onNewCodex={onNewCodex}
-            onClose={handleMenuClose}
-          />
-        )}
-      </div>
+      <NewTerminalButton onNew={onNew} onNewClaude={onNewClaude} onNewCodex={onNewCodex} />
     </div>
   );
 }

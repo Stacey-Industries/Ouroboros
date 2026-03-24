@@ -122,6 +122,39 @@ const CompareModePane = memo(function CompareModePane({
   );
 });
 
+interface NormalMonitorPaneProps {
+  dismiss: (id: string) => void;
+  filterQuery: string;
+  handleReplay: (sessionId: string) => void;
+  handleReviewChanges: (sessionId: string) => void;
+  updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
+  useTree: boolean;
+  visibleCurrentSessions: AgentSession[];
+  visibleHistoricalSessions: AgentSession[];
+}
+
+function CurrentSessionsView({
+  dismiss,
+  handleReplay,
+  handleReviewChanges,
+  updateNotes,
+  useTree,
+  visibleCurrentSessions,
+}: Omit<NormalMonitorPaneProps, 'filterQuery' | 'visibleHistoricalSessions'>): React.ReactElement {
+  if (useTree) {
+    return <AgentTree sessions={visibleCurrentSessions} onDismiss={dismiss} />;
+  }
+  return (
+    <SessionCardList
+      sessions={visibleCurrentSessions}
+      onDismiss={dismiss}
+      onUpdateNotes={updateNotes}
+      onReviewChanges={handleReviewChanges}
+      onReplay={handleReplay}
+    />
+  );
+}
+
 const NormalMonitorPane = memo(function NormalMonitorPane({
   dismiss,
   filterQuery,
@@ -131,16 +164,7 @@ const NormalMonitorPane = memo(function NormalMonitorPane({
   useTree,
   visibleCurrentSessions,
   visibleHistoricalSessions,
-}: {
-  dismiss: (id: string) => void;
-  filterQuery: string;
-  handleReplay: (sessionId: string) => void;
-  handleReviewChanges: (sessionId: string) => void;
-  updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
-  useTree: boolean;
-  visibleCurrentSessions: AgentSession[];
-  visibleHistoricalSessions: AgentSession[];
-}): React.ReactElement {
+}: NormalMonitorPaneProps): React.ReactElement {
   const hasVisibleSessions =
     visibleCurrentSessions.length > 0 || visibleHistoricalSessions.length > 0;
   if (!hasVisibleSessions)
@@ -148,17 +172,14 @@ const NormalMonitorPane = memo(function NormalMonitorPane({
 
   return (
     <>
-      {useTree ? (
-        <AgentTree sessions={visibleCurrentSessions} onDismiss={dismiss} />
-      ) : (
-        <SessionCardList
-          sessions={visibleCurrentSessions}
-          onDismiss={dismiss}
-          onUpdateNotes={updateNotes}
-          onReviewChanges={handleReviewChanges}
-          onReplay={handleReplay}
-        />
-      )}
+      <CurrentSessionsView
+        dismiss={dismiss}
+        handleReplay={handleReplay}
+        handleReviewChanges={handleReviewChanges}
+        updateNotes={updateNotes}
+        useTree={useTree}
+        visibleCurrentSessions={visibleCurrentSessions}
+      />
       <PreviousSessionsSection
         sessions={visibleHistoricalSessions}
         onDismiss={dismiss}
@@ -170,9 +191,9 @@ const NormalMonitorPane = memo(function NormalMonitorPane({
   );
 });
 
-const ResolvedModeContent = memo(function ResolvedModeContent(
+function resolveMultiSessionContent(
   props: AgentMonitorManagerContentProps,
-): React.ReactElement {
+): React.ReactElement | null {
   if (props.multiSessionMode === 'launcher') {
     return (
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -183,7 +204,6 @@ const ResolvedModeContent = memo(function ResolvedModeContent(
       </div>
     );
   }
-
   if (props.multiSessionMode === 'monitor') {
     return (
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -194,6 +214,31 @@ const ResolvedModeContent = memo(function ResolvedModeContent(
       </div>
     );
   }
+  return null;
+}
+
+function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactElement {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <NormalMonitorPane
+        dismiss={props.dismiss}
+        filterQuery={props.filterQuery}
+        handleReplay={props.handleReplay}
+        handleReviewChanges={props.handleReviewChanges}
+        updateNotes={props.updateNotes}
+        useTree={props.useTree}
+        visibleCurrentSessions={props.visibleCurrentSessions}
+        visibleHistoricalSessions={props.visibleHistoricalSessions}
+      />
+    </div>
+  );
+}
+
+const ResolvedModeContent = memo(function ResolvedModeContent(
+  props: AgentMonitorManagerContentProps,
+): React.ReactElement {
+  const multiSession = resolveMultiSessionContent(props);
+  if (multiSession) return multiSession;
 
   if (props.costMode)
     return (
@@ -212,20 +257,7 @@ const ResolvedModeContent = memo(function ResolvedModeContent(
       />
     );
 
-  return (
-    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-      <NormalMonitorPane
-        dismiss={props.dismiss}
-        filterQuery={props.filterQuery}
-        handleReplay={props.handleReplay}
-        handleReviewChanges={props.handleReviewChanges}
-        updateNotes={props.updateNotes}
-        useTree={props.useTree}
-        visibleCurrentSessions={props.visibleCurrentSessions}
-        visibleHistoricalSessions={props.visibleHistoricalSessions}
-      />
-    </div>
-  );
+  return <NormalModeWrapper {...props} />;
 });
 
 export const AgentMonitorManagerContent = memo(function AgentMonitorManagerContent(

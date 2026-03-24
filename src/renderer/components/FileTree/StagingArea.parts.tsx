@@ -1,11 +1,19 @@
 /**
- * StagingArea.parts.tsx — StagedSection and UnstagedSection sub-components.
- * Extracted from StagingArea.tsx to keep file sizes manageable.
+ * StagingArea.parts.tsx — StagedSection and UnstagedSection sub-components,
+ * plus shared icon/row primitives used by StagingArea.tsx.
  */
 
 import React, { useCallback, useState } from 'react';
 
 import { FileTypeIcon } from './FileTypeIcon';
+import {
+  actionBtnStyle,
+  fileNameStyle,
+  headerActionBtnStyle,
+  rowStyle,
+  subHeaderStyle,
+  subHeaderTitleStyle,
+} from './StagingArea.styles';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,85 +22,6 @@ export interface StagingFileEntry {
   name: string;
   status: string;
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-export const STAGING_CSS = `
-  .staging-file-row:hover { background-color: var(--surface-raised); }
-  .staging-file-row:hover .staging-action-btn { opacity: 1 !important; }
-  .staging-action-btn:hover { color: var(--interactive-accent) !important; }
-  .staging-discard-btn:hover { color: var(--status-error) !important; }
-`;
-
-const subHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '3px 8px 3px 12px',
-  gap: '4px',
-  cursor: 'pointer',
-  userSelect: 'none',
-  minHeight: '22px',
-};
-
-const subHeaderTitleStyle: React.CSSProperties = {
-  flex: 1,
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  letterSpacing: '0.04em',
-};
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-  paddingLeft: '24px',
-  paddingRight: '8px',
-  cursor: 'pointer',
-  height: '26px',
-  boxSizing: 'border-box',
-  userSelect: 'none',
-};
-
-const fileNameStyle: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-mono)',
-};
-
-const actionBtnStyle: React.CSSProperties = {
-  flexShrink: 0,
-  background: 'none',
-  border: 'none',
-  padding: '1px 3px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  borderRadius: '3px',
-  opacity: 0,
-  transition: 'opacity 150ms',
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  lineHeight: 1,
-};
-
-const headerActionBtnStyle: React.CSSProperties = {
-  flexShrink: 0,
-  background: 'none',
-  border: 'none',
-  padding: '1px 4px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  borderRadius: '3px',
-  fontSize: '0.625rem',
-  fontWeight: 600,
-  letterSpacing: '0.02em',
-  transition: 'color 150ms',
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,7 +61,7 @@ function statusLabel(status: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
+export function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       width="10"
@@ -178,7 +107,7 @@ function StatusBadge({ status }: { status: string }): React.ReactElement {
   );
 }
 
-function StagingFileRow({
+export function StagingFileRow({
   entry,
   projectRoot,
   actions,
@@ -209,7 +138,7 @@ function StagingFileRow({
   );
 }
 
-function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
       className="staging-action-btn text-text-semantic-faint"
@@ -226,7 +155,7 @@ function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
   );
 }
 
-function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
       className="staging-action-btn text-text-semantic-faint"
@@ -243,7 +172,7 @@ function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement
   );
 }
 
-function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
       className="staging-action-btn staging-discard-btn text-text-semantic-faint"
@@ -267,7 +196,7 @@ function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement
   );
 }
 
-function SubSectionHeader({
+export function SubSectionHeader({
   title,
   count,
   expanded,
@@ -297,7 +226,7 @@ function SubSectionHeader({
   );
 }
 
-function BulkActionButton({
+export function BulkActionButton({
   label,
   onClick,
 }: {
@@ -328,6 +257,47 @@ function BulkActionButton({
 
 // ─── Staged section ───────────────────────────────────────────────────────────
 
+function useStagedActions(projectRoot: string, onRefresh: () => void) {
+  const handleUnstage = useCallback(
+    async (filePath: string) => {
+      await window.electronAPI.git.unstage(projectRoot, filePath);
+      onRefresh();
+    },
+    [projectRoot, onRefresh],
+  );
+  const handleUnstageAll = useCallback(async () => {
+    await window.electronAPI.git.unstageAll(projectRoot);
+    onRefresh();
+  }, [projectRoot, onRefresh]);
+  return { handleUnstage, handleUnstageAll };
+}
+
+function StagedFileList({
+  entries,
+  projectRoot,
+  onFileSelect,
+  handleUnstage,
+}: {
+  entries: StagingFileEntry[];
+  projectRoot: string;
+  onFileSelect: (filePath: string) => void;
+  handleUnstage: (filePath: string) => Promise<void>;
+}): React.ReactElement {
+  return (
+    <div role="list" aria-label="Staged files">
+      {entries.map((entry) => (
+        <StagingFileRow
+          key={entry.path}
+          entry={entry}
+          projectRoot={projectRoot}
+          onFileSelect={onFileSelect}
+          actions={<UnstageButton onClick={() => void handleUnstage(entry.path)} />}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function StagedSection({
   entries,
   projectRoot,
@@ -340,19 +310,7 @@ export function StagedSection({
   onFileSelect: (filePath: string) => void;
 }): React.ReactElement {
   const [expanded, setExpanded] = useState(true);
-
-  const handleUnstage = useCallback(
-    async (filePath: string) => {
-      await window.electronAPI.git.unstage(projectRoot, filePath);
-      onRefresh();
-    },
-    [projectRoot, onRefresh],
-  );
-
-  const handleUnstageAll = useCallback(async () => {
-    await window.electronAPI.git.unstageAll(projectRoot);
-    onRefresh();
-  }, [projectRoot, onRefresh]);
+  const { handleUnstage, handleUnstageAll } = useStagedActions(projectRoot, onRefresh);
 
   if (entries.length === 0) return <></>;
 
@@ -366,23 +324,74 @@ export function StagedSection({
         headerAction={<BulkActionButton label="-All" onClick={() => void handleUnstageAll()} />}
       />
       {expanded && (
-        <div role="list" aria-label="Staged files">
-          {entries.map((entry) => (
-            <StagingFileRow
-              key={entry.path}
-              entry={entry}
-              projectRoot={projectRoot}
-              onFileSelect={onFileSelect}
-              actions={<UnstageButton onClick={() => void handleUnstage(entry.path)} />}
-            />
-          ))}
-        </div>
+        <StagedFileList
+          entries={entries}
+          projectRoot={projectRoot}
+          onFileSelect={onFileSelect}
+          handleUnstage={handleUnstage}
+        />
       )}
     </div>
   );
 }
 
 // ─── Unstaged section ─────────────────────────────────────────────────────────
+
+function useUnstagedActions(projectRoot: string, onRefresh: () => void) {
+  const handleStage = useCallback(
+    async (filePath: string) => {
+      await window.electronAPI.git.stage(projectRoot, filePath);
+      onRefresh();
+    },
+    [projectRoot, onRefresh],
+  );
+  const handleDiscard = useCallback(
+    async (filePath: string) => {
+      if (!confirm(`Discard changes to "${filePath}"? This cannot be undone.`)) return;
+      await window.electronAPI.git.discardFile(projectRoot, filePath);
+      onRefresh();
+    },
+    [projectRoot, onRefresh],
+  );
+  const handleStageAll = useCallback(async () => {
+    await window.electronAPI.git.stageAll(projectRoot);
+    onRefresh();
+  }, [projectRoot, onRefresh]);
+  return { handleStage, handleDiscard, handleStageAll };
+}
+
+function UnstagedFileList({
+  entries,
+  projectRoot,
+  onFileSelect,
+  handleStage,
+  handleDiscard,
+}: {
+  entries: StagingFileEntry[];
+  projectRoot: string;
+  onFileSelect: (filePath: string) => void;
+  handleStage: (filePath: string) => Promise<void>;
+  handleDiscard: (filePath: string) => Promise<void>;
+}): React.ReactElement {
+  return (
+    <div role="list" aria-label="Unstaged files">
+      {entries.map((entry) => (
+        <StagingFileRow
+          key={entry.path}
+          entry={entry}
+          projectRoot={projectRoot}
+          onFileSelect={onFileSelect}
+          actions={
+            <>
+              <StageButton onClick={() => void handleStage(entry.path)} />
+              <DiscardButton onClick={() => void handleDiscard(entry.path)} />
+            </>
+          }
+        />
+      ))}
+    </div>
+  );
+}
 
 export function UnstagedSection({
   entries,
@@ -396,28 +405,7 @@ export function UnstagedSection({
   onFileSelect: (filePath: string) => void;
 }): React.ReactElement {
   const [expanded, setExpanded] = useState(true);
-
-  const handleStage = useCallback(
-    async (filePath: string) => {
-      await window.electronAPI.git.stage(projectRoot, filePath);
-      onRefresh();
-    },
-    [projectRoot, onRefresh],
-  );
-
-  const handleDiscard = useCallback(
-    async (filePath: string) => {
-      if (!confirm(`Discard changes to "${filePath}"? This cannot be undone.`)) return;
-      await window.electronAPI.git.discardFile(projectRoot, filePath);
-      onRefresh();
-    },
-    [projectRoot, onRefresh],
-  );
-
-  const handleStageAll = useCallback(async () => {
-    await window.electronAPI.git.stageAll(projectRoot);
-    onRefresh();
-  }, [projectRoot, onRefresh]);
+  const { handleStage, handleDiscard, handleStageAll } = useUnstagedActions(projectRoot, onRefresh);
 
   if (entries.length === 0) return <></>;
 
@@ -431,22 +419,13 @@ export function UnstagedSection({
         headerAction={<BulkActionButton label="+All" onClick={() => void handleStageAll()} />}
       />
       {expanded && (
-        <div role="list" aria-label="Unstaged files">
-          {entries.map((entry) => (
-            <StagingFileRow
-              key={entry.path}
-              entry={entry}
-              projectRoot={projectRoot}
-              onFileSelect={onFileSelect}
-              actions={
-                <>
-                  <StageButton onClick={() => void handleStage(entry.path)} />
-                  <DiscardButton onClick={() => void handleDiscard(entry.path)} />
-                </>
-              }
-            />
-          ))}
-        </div>
+        <UnstagedFileList
+          entries={entries}
+          projectRoot={projectRoot}
+          onFileSelect={onFileSelect}
+          handleStage={handleStage}
+          handleDiscard={handleDiscard}
+        />
       )}
     </div>
   );

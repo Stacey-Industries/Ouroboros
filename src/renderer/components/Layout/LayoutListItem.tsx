@@ -41,6 +41,27 @@ export function LayoutListItem({
   );
 }
 
+const RADIO_BUTTON_STYLE_BASE: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+  padding: 0,
+};
+
+const BUILT_IN_BADGE_STYLE: React.CSSProperties = {
+  fontSize: '9px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  flexShrink: 0,
+};
+
 function LayoutRadioButton({
   layout,
   isActive,
@@ -57,18 +78,8 @@ function LayoutRadioButton({
       onClick={() => onSelect(layout)}
       className="text-text-semantic-primary"
       style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        textAlign: 'left',
+        ...RADIO_BUTTON_STYLE_BASE,
         color: isActive ? 'var(--interactive-accent)' : undefined,
-        fontFamily: 'var(--font-ui)',
-        fontSize: '0.8125rem',
-        padding: 0,
       }}
     >
       <RadioDot active={isActive} />
@@ -76,15 +87,7 @@ function LayoutRadioButton({
         {layout.name}
       </span>
       {layout.builtIn && (
-        <span
-          className="text-text-semantic-faint"
-          style={{
-            fontSize: '9px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            flexShrink: 0,
-          }}
-        >
+        <span className="text-text-semantic-faint" style={BUILT_IN_BADGE_STYLE}>
           built-in
         </span>
       )}
@@ -117,6 +120,41 @@ function RadioDot({ active }: { active: boolean }): React.ReactElement {
   );
 }
 
+function UpdateIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 1v6m0 0l2.5-2.5M8 7L5.5 4.5" />
+      <path d="M2 10v3a1 1 0 001 1h10a1 1 0 001-1v-3" />
+    </svg>
+  );
+}
+
+function DeleteIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
 function LayoutActions({
   name,
   onUpdate,
@@ -134,19 +172,7 @@ function LayoutActions({
         hoverColor="var(--text-primary)"
         hoverBg="rgba(128,128,128,0.15)"
       >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M8 1v6m0 0l2.5-2.5M8 7L5.5 4.5" />
-          <path d="M2 10v3a1 1 0 001 1h10a1 1 0 001-1v-3" />
-        </svg>
+        <UpdateIcon />
       </ActionButton>
       <ActionButton
         title="Delete layout"
@@ -154,22 +180,21 @@ function LayoutActions({
         hoverColor="var(--status-error, #f85149)"
         hoverBg="rgba(248,81,73,0.1)"
       >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 4l8 8M12 4l-8 8" />
-        </svg>
+        <DeleteIcon />
       </ActionButton>
     </div>
   );
 }
+
+const ACTION_BUTTON_STYLE: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '11px',
+  padding: '2px 4px',
+  borderRadius: '3px',
+  transition: 'color 100ms, background 100ms',
+};
 
 function ActionButton({
   title,
@@ -192,15 +217,7 @@ function ActionButton({
         onClick();
       }}
       className="text-text-semantic-faint"
-      style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '11px',
-        padding: '2px 4px',
-        borderRadius: '3px',
-        transition: 'color 100ms, background 100ms',
-      }}
+      style={ACTION_BUTTON_STYLE}
       onMouseEnter={(e) => {
         e.currentTarget.style.color = hoverColor;
         e.currentTarget.style.backgroundColor = hoverBg;

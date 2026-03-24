@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { WorkspaceSnapshot } from '../../types/electron';
+import { RestoreConfirmDialog } from './TimeTravelDetails.dialog';
 import {
   ChangedFile,
   formatFullDate,
@@ -85,6 +86,14 @@ function SnapshotActions({
   );
 }
 
+const COMPARISON_BADGE_STYLE = {
+  padding: '1px 4px',
+  borderRadius: '3px',
+  color: '#000',
+  fontSize: '9px',
+  fontWeight: 600,
+} as const;
+
 function ComparisonSummary({
   fromSnapshot,
   toSnapshot,
@@ -99,32 +108,14 @@ function ComparisonSummary({
         className="text-text-semantic-secondary"
         style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}
       >
-        <span
-          style={{
-            padding: '1px 4px',
-            borderRadius: '3px',
-            backgroundColor: 'var(--status-warning)',
-            color: '#000',
-            fontSize: '9px',
-            fontWeight: 600,
-          }}
-        >
+        <span style={{ ...COMPARISON_BADGE_STYLE, backgroundColor: 'var(--status-warning)' }}>
           FROM
         </span>
         <span style={{ fontFamily: 'var(--font-mono)' }}>
           {truncateHash(fromSnapshot.commitHash)}
         </span>
         <span className="text-text-semantic-muted">&rarr;</span>
-        <span
-          style={{
-            padding: '1px 4px',
-            borderRadius: '3px',
-            backgroundColor: 'var(--palette-purple)',
-            color: '#000',
-            fontSize: '9px',
-            fontWeight: 600,
-          }}
-        >
+        <span style={{ ...COMPARISON_BADGE_STYLE, backgroundColor: 'var(--palette-purple)' }}>
           TO
         </span>
         <span style={{ fontFamily: 'var(--font-mono)' }}>
@@ -134,6 +125,12 @@ function ComparisonSummary({
     </div>
   );
 }
+
+const CHANGED_FILE_DIFF_STYLE = {
+  fontSize: '10px',
+  fontFamily: 'var(--font-mono)',
+  flexShrink: 0,
+} as const;
 
 function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement {
   return (
@@ -173,24 +170,10 @@ function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement {
       >
         {file.path}
       </span>
-      <span
-        style={{
-          fontSize: '10px',
-          color: 'var(--status-success)',
-          fontFamily: 'var(--font-mono)',
-          flexShrink: 0,
-        }}
-      >
+      <span style={{ ...CHANGED_FILE_DIFF_STYLE, color: 'var(--status-success)' }}>
         {file.additions > 0 ? `+${file.additions}` : ''}
       </span>
-      <span
-        style={{
-          fontSize: '10px',
-          color: 'var(--status-error)',
-          fontFamily: 'var(--font-mono)',
-          flexShrink: 0,
-        }}
-      >
+      <span style={{ ...CHANGED_FILE_DIFF_STYLE, color: 'var(--status-error)' }}>
         {file.deletions > 0 ? `-${file.deletions}` : ''}
       </span>
     </div>
@@ -229,131 +212,7 @@ function ChangedFilesSection({
   );
 }
 
-function DirtyWarning({ dirtyCount }: { dirtyCount: number }): React.ReactElement | null {
-  if (dirtyCount <= 0) return null;
-
-  return (
-    <div
-      style={{
-        padding: '8px 12px',
-        borderRadius: '4px',
-        backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)',
-        border: '1px solid color-mix(in srgb, var(--status-warning) 30%, transparent)',
-        fontSize: '11px',
-        color: 'var(--status-warning)',
-        marginBottom: '12px',
-        lineHeight: '1.5',
-      }}
-    >
-      You have {dirtyCount} uncommitted change{dirtyCount !== 1 ? 's' : ''}. They will be stashed
-      before restoring. You can recover them later with{' '}
-      <code style={{ fontFamily: 'var(--font-mono)' }}>git stash pop</code>.
-    </div>
-  );
-}
-
-function RestoreDialogActions({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: () => Promise<void>;
-  onCancel: () => void;
-}): React.ReactElement {
-  return (
-    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-      <button
-        onClick={onCancel}
-        className="text-text-semantic-primary border border-border-semantic"
-        style={{
-          padding: '6px 16px',
-          borderRadius: '4px',
-          background: 'transparent',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontFamily: 'var(--font-ui)',
-        }}
-      >
-        Cancel
-      </button>
-      <button
-        onClick={() => void onConfirm()}
-        style={{
-          padding: '6px 16px',
-          borderRadius: '4px',
-          border: 'none',
-          background: 'var(--status-error)',
-          color: '#fff',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: 600,
-          fontFamily: 'var(--font-ui)',
-        }}
-      >
-        Restore
-      </button>
-    </div>
-  );
-}
-
-export function RestoreConfirmDialog({
-  snapshot,
-  dirtyCount,
-  onConfirm,
-  onCancel,
-}: {
-  snapshot: WorkspaceSnapshot;
-  dirtyCount: number;
-  onConfirm: () => Promise<void>;
-  onCancel: () => void;
-}): React.ReactElement {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      }}
-    >
-      <div
-        className="bg-surface-panel border border-border-semantic"
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-          padding: '20px',
-        }}
-      >
-        <h3
-          className="text-text-semantic-primary"
-          style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600 }}
-        >
-          Restore Workspace State
-        </h3>
-        <p
-          className="text-text-semantic-secondary"
-          style={{ margin: '0 0 8px', fontSize: '12px', lineHeight: '1.5' }}
-        >
-          This will restore the workspace to commit{' '}
-          <code
-            className="text-interactive-accent"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}
-          >
-            {truncateHash(snapshot.commitHash)}
-          </code>{' '}
-          ({snapshotTypeLabel(snapshot.type)}).
-        </p>
-        <DirtyWarning dirtyCount={dirtyCount} />
-        <RestoreDialogActions onConfirm={onConfirm} onCancel={onCancel} />
-      </div>
-    </div>
-  );
-}
+export { RestoreConfirmDialog };
 
 export function TimeTravelDetailsPane({ panel }: { panel: DetailsPanelState }): React.ReactElement {
   const activeSnapshot = panel.compareMode ? null : panel.selectedSnapshot;

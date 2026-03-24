@@ -60,11 +60,12 @@ function mergeEntries(sessions: AgentSession[], historicalEntries: CostEntry[]):
   return merged;
 }
 
-export const CostDashboard = memo(function CostDashboard({
-  sessions,
-}: CostDashboardProps): React.ReactElement {
+function useLoadCostHistory(): {
+  historicalEntries: CostEntry[];
+  isLoading: boolean;
+  setHistoricalEntries: React.Dispatch<React.SetStateAction<CostEntry[]>>;
+} {
   const [historicalEntries, setHistoricalEntries] = useState<CostEntry[]>([]);
-  const [range, setRange] = useState<DateRange>('30d');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -83,6 +84,20 @@ export const CostDashboard = memo(function CostDashboard({
         setIsLoading(false);
       });
   }, []);
+
+  return { historicalEntries, isLoading, setHistoricalEntries };
+}
+
+function useCostHistory(sessions: AgentSession[]): {
+  allEntries: CostEntry[];
+  filteredEntries: CostEntry[];
+  range: DateRange;
+  isLoading: boolean;
+  setRange: (r: DateRange) => void;
+  handleClearHistory: () => void;
+} {
+  const { historicalEntries, isLoading, setHistoricalEntries } = useLoadCostHistory();
+  const [range, setRange] = useState<DateRange>('30d');
 
   const allEntries = useMemo(
     () => mergeEntries(sessions, historicalEntries),
@@ -105,7 +120,16 @@ export const CostDashboard = memo(function CostDashboard({
       .catch((error) => {
         log.error('Failed to clear cost history:', error);
       });
-  }, []);
+  }, [setHistoricalEntries]);
+
+  return { allEntries, filteredEntries, range, isLoading, setRange, handleClearHistory };
+}
+
+export const CostDashboard = memo(function CostDashboard({
+  sessions,
+}: CostDashboardProps): React.ReactElement {
+  const { allEntries, filteredEntries, range, isLoading, setRange, handleClearHistory } =
+    useCostHistory(sessions);
 
   if (isLoading) {
     return (

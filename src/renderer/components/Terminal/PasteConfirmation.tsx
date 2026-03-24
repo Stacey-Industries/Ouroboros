@@ -68,22 +68,27 @@ function formatLineCount(text: string): string {
   return lines > 1 ? ` (${lines} lines)` : '';
 }
 
-export function PasteConfirmBanner({
-  text,
+function PasteSummary({ text }: { text: string }): React.ReactElement {
+  return (
+    <span className="text-text-semantic-muted" style={{ flex: 1 }}>
+      Paste {text.length.toLocaleString()} characters{formatLineCount(text)}?
+    </span>
+  );
+}
+
+function PasteActionButtons({
+  multiline,
   onConfirm,
   onConfirmSingleLine,
   onCancel,
-}: PasteConfirmBannerProps): React.ReactElement {
-  const multiline = hasNewlines(text);
-
+}: {
+  multiline: boolean;
+  onConfirm: () => void;
+  onConfirmSingleLine: () => void;
+  onCancel: () => void;
+}): React.ReactElement {
   return (
-    <div
-      className="bg-surface-panel text-text-semantic-primary border-t border-border-semantic"
-      style={bannerStyle}
-    >
-      <span className="text-text-semantic-muted" style={{ flex: 1 }}>
-        Paste {text.length.toLocaleString()} characters{formatLineCount(text)}?
-      </span>
+    <>
       <button
         onClick={onConfirm}
         autoFocus
@@ -108,6 +113,28 @@ export function PasteConfirmBanner({
       >
         Cancel
       </button>
+    </>
+  );
+}
+
+export function PasteConfirmBanner({
+  text,
+  onConfirm,
+  onConfirmSingleLine,
+  onCancel,
+}: PasteConfirmBannerProps): React.ReactElement {
+  return (
+    <div
+      className="bg-surface-panel text-text-semantic-primary border-t border-border-semantic"
+      style={bannerStyle}
+    >
+      <PasteSummary text={text} />
+      <PasteActionButtons
+        multiline={hasNewlines(text)}
+        onConfirm={onConfirm}
+        onConfirmSingleLine={onConfirmSingleLine}
+        onCancel={onCancel}
+      />
     </div>
   );
 }

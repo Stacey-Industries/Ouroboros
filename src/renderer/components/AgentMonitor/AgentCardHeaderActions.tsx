@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { ActionIconButton, DismissButton, ExportButton } from './AgentCardControls';
+import { ActionIconButton, DismissButton } from './AgentCardControls';
+import { ExportButton } from './AgentCardControlsParts';
 import type { AgentSession } from './types';
 
 interface AgentCardHeaderActionsProps {

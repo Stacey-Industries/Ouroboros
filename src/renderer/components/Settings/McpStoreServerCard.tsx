@@ -13,6 +13,50 @@ interface McpStoreServerCardProps {
   onClick: () => void;
 }
 
+function CardTopRow({
+  displayName,
+  isInstalled,
+}: {
+  displayName: string;
+  isInstalled: boolean;
+}): React.ReactElement {
+  return (
+    <div style={topRowStyle}>
+      <span className="text-text-semantic-primary" style={nameStyle}>
+        {displayName}
+      </span>
+      {isInstalled ? (
+        <span className="text-interactive-accent" style={installedBadgeStyle}>
+          Installed
+        </span>
+      ) : (
+        <span className="text-text-semantic-muted" style={arrowStyle}>
+          &rarr;
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CardFooter({
+  registryType,
+  version,
+}: {
+  registryType: string;
+  version: string | undefined;
+}): React.ReactElement {
+  return (
+    <div style={footerStyle}>
+      <span className="text-interactive-accent" style={typeBadgeStyle}>
+        {registryType}
+      </span>
+      <span className="text-text-semantic-muted" style={versionStyle}>
+        v{version}
+      </span>
+    </div>
+  );
+}
+
 export function McpStoreServerCard({
   server,
   isInstalled,
@@ -35,38 +79,13 @@ export function McpStoreServerCard({
       className="mcp-store-card"
     >
       <div style={cardBodyStyle}>
-        {/* Top row: name + installed badge */}
-        <div style={topRowStyle}>
-          <span className="text-text-semantic-primary" style={nameStyle}>
-            {displayName}
-          </span>
-          {isInstalled ? (
-            <span className="text-interactive-accent" style={installedBadgeStyle}>
-              Installed
-            </span>
-          ) : (
-            <span className="text-text-semantic-muted" style={arrowStyle}>
-              &rarr;
-            </span>
-          )}
-        </div>
-
-        {/* Description — clamped to 2 lines */}
+        <CardTopRow displayName={displayName} isInstalled={isInstalled} />
         {server.description && (
           <div className="text-text-semantic-muted line-clamp-2" style={descriptionStyle}>
             {server.description}
           </div>
         )}
-
-        {/* Footer: type badge + version */}
-        <div style={footerStyle}>
-          <span className="text-interactive-accent" style={typeBadgeStyle}>
-            {registryType}
-          </span>
-          <span className="text-text-semantic-muted" style={versionStyle}>
-            v{server.version}
-          </span>
-        </div>
+        <CardFooter registryType={registryType} version={server.version} />
       </div>
     </div>
   );

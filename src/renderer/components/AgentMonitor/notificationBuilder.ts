@@ -16,24 +16,14 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-export function buildCompletionNotification(session: AgentSession): { title: string; body: string } {
-  const isError = session.status === 'error';
-  const title = isError ? 'Agent error' : 'Agent completed';
-
+function buildNotificationParts(session: AgentSession): string[] {
   const parts: string[] = [];
-
-  // Task label (truncated for notification readability)
-  const label = session.taskLabel.length > 60
-    ? session.taskLabel.slice(0, 60) + '\u2026'
-    : session.taskLabel;
+  const label =
+    session.taskLabel.length > 60 ? session.taskLabel.slice(0, 60) + '\u2026' : session.taskLabel;
   parts.push(label);
-
-  // Duration
   if (session.completedAt && session.startedAt) {
     parts.push(formatDuration(session.completedAt - session.startedAt));
   }
-
-  // Cost
   const cost = estimateCost({
     inputTokens: session.inputTokens,
     outputTokens: session.outputTokens,
@@ -41,20 +31,19 @@ export function buildCompletionNotification(session: AgentSession): { title: str
     cacheReadTokens: session.cacheReadTokens,
     cacheWriteTokens: session.cacheWriteTokens,
   });
-  if (cost.totalCost > 0) {
-    parts.push(formatCost(cost.totalCost));
-  }
-
-  // Tool call count
+  if (cost.totalCost > 0) parts.push(formatCost(cost.totalCost));
   const toolCount = session.toolCalls.length;
-  if (toolCount > 0) {
-    parts.push(`${toolCount} tool call${toolCount !== 1 ? 's' : ''}`);
-  }
-
-  // Error message (truncated)
-  if (isError && session.error) {
+  if (toolCount > 0) parts.push(`${toolCount} tool call${toolCount !== 1 ? 's' : ''}`);
+  if (session.status === 'error' && session.error)
     parts.push(`Error: ${session.error.slice(0, 80)}`);
-  }
+  return parts;
+}
 
-  return { title, body: parts.join(' \u2022 ') };
+export function buildCompletionNotification(session: AgentSession): {
+  title: string;
+  body: string;
+} {
+  const isError = session.status === 'error';
+  const title = isError ? 'Agent error' : 'Agent completed';
+  return { title, body: buildNotificationParts(session).join(' \u2022 ') };
 }

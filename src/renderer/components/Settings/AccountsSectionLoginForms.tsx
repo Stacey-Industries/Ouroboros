@@ -104,6 +104,38 @@ function GitHubErrorState({
   );
 }
 
+function DeviceCodeButtons({
+  verificationUri,
+  model,
+}: {
+  verificationUri: string;
+  model: AccountsSectionModel;
+}): React.ReactElement {
+  return (
+    <div style={S.buttonRowStyle}>
+      <button
+        className="text-text-semantic-on-accent"
+        style={{
+          ...buttonStyle,
+          background: 'var(--interactive-accent)',
+          border: 'none',
+          fontWeight: 600,
+        }}
+        onClick={() => void model.openExternal(verificationUri)}
+      >
+        Open GitHub
+      </button>
+      <button
+        className="text-text-semantic-muted"
+        style={smallButtonStyle}
+        onClick={() => void model.cancelLogin('github')}
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 function GitHubPollingState({
   event,
   model,
@@ -112,7 +144,6 @@ function GitHubPollingState({
   model: AccountsSectionModel;
 }): React.ReactElement {
   const { userCode, verificationUri } = event.info;
-
   return (
     <div style={S.actionAreaStyle}>
       <DeviceCodeDisplay
@@ -120,27 +151,7 @@ function GitHubPollingState({
         copied={model.copied}
         onCopy={() => model.copyToClipboard(userCode)}
       />
-      <div style={S.buttonRowStyle}>
-        <button
-          className="text-text-semantic-on-accent"
-          style={{
-            ...buttonStyle,
-            background: 'var(--interactive-accent)',
-            border: 'none',
-            fontWeight: 600,
-          }}
-          onClick={() => void model.openExternal(verificationUri)}
-        >
-          Open GitHub
-        </button>
-        <button
-          className="text-text-semantic-muted"
-          style={smallButtonStyle}
-          onClick={() => void model.cancelLogin('github')}
-        >
-          Cancel
-        </button>
-      </div>
+      <DeviceCodeButtons verificationUri={verificationUri} model={model} />
       <div className="text-text-semantic-muted" style={S.pollingTextStyle}>
         Waiting for authorization...
       </div>
@@ -210,6 +221,29 @@ function ApiKeyInputArea({
   );
 }
 
+function ApiKeySaveButton({
+  provider,
+  model,
+}: {
+  provider: AuthProvider;
+  model: AccountsSectionModel;
+}): React.ReactElement {
+  return (
+    <button
+      className="text-text-semantic-on-accent"
+      style={{
+        ...buttonStyle,
+        background: 'var(--interactive-accent)',
+        border: 'none',
+        fontWeight: 600,
+      }}
+      onClick={() => void model.submitApiKey(provider)}
+    >
+      Save
+    </button>
+  );
+}
+
 function ApiKeyActions({
   provider,
   model,
@@ -221,18 +255,7 @@ function ApiKeyActions({
 }): React.ReactElement {
   return (
     <div style={S.buttonRowStyle}>
-      <button
-        className="text-text-semantic-on-accent"
-        style={{
-          ...buttonStyle,
-          background: 'var(--interactive-accent)',
-          border: 'none',
-          fontWeight: 600,
-        }}
-        onClick={() => void model.submitApiKey(provider)}
-      >
-        Save
-      </button>
+      <ApiKeySaveButton provider={provider} model={model} />
       <button
         className="text-text-semantic-muted"
         style={smallButtonStyle}

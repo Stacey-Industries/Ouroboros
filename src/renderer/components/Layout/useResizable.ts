@@ -185,15 +185,11 @@ function finishResizeDrag(
   removeDragListeners(handlePointerMove, handlePointerUp);
 }
 
-function useResizeDrag(
-  setSizes: Dispatch<SetStateAction<PanelSizes>>,
-  dragStateRef: MutableRefObject<DragState | null>,
-): UseResizableReturn['startResize'] {
-  const handlePointerMove = useCallback(
+function useDragPointerMove(dragStateRef: MutableRefObject<DragState | null>) {
+  return useCallback(
     (event: PointerEvent) => {
       const dragState = dragStateRef.current;
       if (!dragState) return;
-
       dragState.currentSize = clampPanelSize(
         dragState.panel,
         dragState.startValue +
@@ -204,11 +200,31 @@ function useResizeDrag(
     },
     [dragStateRef],
   );
+}
 
+function useDragCleanup(
+  dragStateRef: MutableRefObject<DragState | null>,
+  handlePointerMove: (e: PointerEvent) => void,
+  handlePointerUp: () => void,
+): void {
+  useEffect(() => {
+    return () => {
+      dragStateRef.current = null;
+      hidePreviewLine();
+      resetDocumentDragState();
+      removeDragListeners(handlePointerMove, handlePointerUp);
+    };
+  }, [dragStateRef, handlePointerMove, handlePointerUp]);
+}
+
+function useResizeDrag(
+  setSizes: Dispatch<SetStateAction<PanelSizes>>,
+  dragStateRef: MutableRefObject<DragState | null>,
+): UseResizableReturn['startResize'] {
+  const handlePointerMove = useDragPointerMove(dragStateRef);
   const handlePointerUp = useCallback(() => {
     finishResizeDrag(dragStateRef, setSizes, handlePointerMove, handlePointerUp);
   }, [dragStateRef, handlePointerMove, setSizes]);
-
   const startResize = useCallback(
     (panel: PanelId, direction: ResizeDirection, startValue: number, startPos: number) => {
       dragStateRef.current = { panel, direction, startValue, startPos, currentSize: startValue };
@@ -219,16 +235,7 @@ function useResizeDrag(
     },
     [dragStateRef, handlePointerMove, handlePointerUp],
   );
-
-  useEffect(() => {
-    return () => {
-      dragStateRef.current = null;
-      hidePreviewLine();
-      resetDocumentDragState();
-      removeDragListeners(handlePointerMove, handlePointerUp);
-    };
-  }, [dragStateRef, handlePointerMove, handlePointerUp]);
-
+  useDragCleanup(dragStateRef, handlePointerMove, handlePointerUp);
   return startResize;
 }
 

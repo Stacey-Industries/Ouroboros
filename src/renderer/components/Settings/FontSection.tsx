@@ -1,6 +1,18 @@
 import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
+import {
+  containerStyle,
+  descriptionStyle,
+  inputStyle,
+  previewBaseStyle,
+  previewLabelStyle,
+  rangeInputStyle,
+  resetButtonStyle,
+  saveNoticeStyle,
+  sizeValueStyle,
+  sliderRowStyle,
+} from './fontSectionStyles';
 import { SectionLabel } from './settingsStyles';
 
 interface FontSectionProps {
@@ -74,6 +86,30 @@ interface FontTextSectionProps {
   onChange: AppConfigChangeHandler;
 }
 
+function FontTextInput({
+  value,
+  configKey,
+  placeholder,
+  ariaLabel,
+  onChange,
+}: Pick<
+  FontTextSectionProps,
+  'value' | 'configKey' | 'placeholder' | 'ariaLabel' | 'onChange'
+>): React.ReactElement {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(event) => onChange(configKey, event.target.value)}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className="text-text-semantic-primary"
+      style={inputStyle}
+      spellCheck={false}
+    />
+  );
+}
+
 function FontTextSection({
   label,
   description,
@@ -93,15 +129,12 @@ function FontTextSection({
       <p className="text-text-semantic-muted" style={descriptionStyle}>
         {description}
       </p>
-      <input
-        type="text"
+      <FontTextInput
         value={value}
-        onChange={(event) => onChange(configKey, event.target.value)}
+        configKey={configKey}
         placeholder={placeholder}
-        aria-label={ariaLabel}
-        className="text-text-semantic-primary"
-        style={inputStyle}
-        spellCheck={false}
+        ariaLabel={ariaLabel}
+        onChange={onChange}
       />
       <PreviewCard
         ariaLabel={`${label} preview`}
@@ -122,6 +155,30 @@ interface FontSizeSectionProps {
   onChange: AppConfigChangeHandler;
 }
 
+function FontSizeSliderRow({
+  fontSizeUI,
+  onChange,
+}: Pick<FontSizeSectionProps, 'fontSizeUI' | 'onChange'>): React.ReactElement {
+  return (
+    <div style={sliderRowStyle}>
+      <input
+        type="range"
+        min={UI_FONT_SIZE_MIN}
+        max={UI_FONT_SIZE_MAX}
+        step={1}
+        value={fontSizeUI}
+        onChange={(event) => onChange('fontSizeUI', clampSize(parseInt(event.target.value, 10)))}
+        aria-label="UI font size slider"
+        style={rangeInputStyle}
+      />
+      <span className="text-text-semantic-primary" style={sizeValueStyle}>
+        {fontSizeUI}px
+      </span>
+      <ResetButton fontSizeUI={fontSizeUI} onChange={onChange} />
+    </div>
+  );
+}
+
 function FontSizeSection({
   fontUI,
   fontSizeUI,
@@ -134,22 +191,7 @@ function FontSizeSection({
         Base font size for the interface ({UI_FONT_SIZE_MIN}-{UI_FONT_SIZE_MAX}px). Default:{' '}
         {DEFAULT_UI_FONT_SIZE}px.
       </p>
-      <div style={sliderRowStyle}>
-        <input
-          type="range"
-          min={UI_FONT_SIZE_MIN}
-          max={UI_FONT_SIZE_MAX}
-          step={1}
-          value={fontSizeUI}
-          onChange={(event) => onChange('fontSizeUI', clampSize(parseInt(event.target.value, 10)))}
-          aria-label="UI font size slider"
-          style={rangeInputStyle}
-        />
-        <span className="text-text-semantic-primary" style={sizeValueStyle}>
-          {fontSizeUI}px
-        </span>
-        <ResetButton fontSizeUI={fontSizeUI} onChange={onChange} />
-      </div>
+      <FontSizeSliderRow fontSizeUI={fontSizeUI} onChange={onChange} />
       <PreviewCard
         previewLabel={`${fontSizeUI}px`}
         fontFamily={resolveUIFont(fontUI)}
@@ -246,57 +288,3 @@ function previewStyle(
     lineHeight,
   };
 }
-
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '28px',
-};
-const descriptionStyle: React.CSSProperties = { fontSize: '12px', marginBottom: '10px' };
-const sliderRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px' };
-const rangeInputStyle: React.CSSProperties = {
-  flex: 1,
-  accentColor: 'var(--interactive-accent)',
-  cursor: 'pointer',
-};
-const sizeValueStyle: React.CSSProperties = {
-  minWidth: '36px',
-  textAlign: 'right',
-  fontSize: '13px',
-  fontWeight: 600,
-  fontFamily: 'var(--font-mono)',
-};
-const previewBaseStyle: React.CSSProperties = {
-  marginTop: '10px',
-  padding: '10px 14px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-};
-const previewLabelStyle = (fontFamily = 'inherit'): React.CSSProperties => ({
-  fontSize: '11px',
-  marginBottom: '4px',
-  fontFamily,
-});
-const saveNoticeStyle: React.CSSProperties = { fontSize: '11px', marginTop: '6px' };
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '7px 10px',
-  borderRadius: '6px',
-  border: '1px solid var(--border-default)',
-  background: 'var(--surface-raised)',
-  fontSize: '13px',
-  outline: 'none',
-  boxSizing: 'border-box',
-};
-
-const resetButtonStyle: React.CSSProperties = {
-  flexShrink: 0,
-  padding: '4px 8px',
-  borderRadius: '4px',
-  border: '1px solid var(--border-default)',
-  background: 'transparent',
-  fontSize: '11px',
-  cursor: 'pointer',
-};

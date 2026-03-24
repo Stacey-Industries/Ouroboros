@@ -177,17 +177,54 @@ function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | 
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function StickyScrollOverlay({
-  blocks,
-  terminal,
-}: StickyScrollOverlayProps): React.ReactElement | null {
-  ensurePulseKeyframe();
+function ExitCodeBadge({ exitCode }: { exitCode: number }): React.ReactElement {
+  return (
+    <span
+      className="text-status-error"
+      style={{ fontSize: 10, padding: '0 3px', borderRadius: 2, background: 'rgba(229,57,53,0.1)' }}
+    >
+      exit {exitCode}
+    </span>
+  );
+}
+
+function StickyScrollContent({ block }: { block: CommandBlock }): React.ReactElement {
+  return (
+    <>
+      <ExitDot exitCode={block.complete ? (block.exitCode ?? 0) : undefined} />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {block.command ? truncateCommand(block.command) : '(command)'}
+      </span>
+      {block.exitCode !== undefined && block.exitCode !== 0 && (
+        <ExitCodeBadge exitCode={block.exitCode} />
+      )}
+      <LiveDuration block={block} />
+      <span className="text-text-semantic-muted" style={{ fontSize: 9, flexShrink: 0 }}>
+        {'\u2191'} scroll to prompt
+      </span>
+    </>
+  );
+}
+
+function useStickyState(
+  blocks: CommandBlock[],
+  terminal: Terminal | null,
+): { stickyBlock: CommandBlock | null; handleClick: () => void } {
   const viewportY = useStickyViewportY(terminal);
   const stickyBlock = useMemo(() => findStickyCommand(blocks, viewportY), [blocks, viewportY]);
   const handleClick = useCallback(() => {
     if (!terminal || !stickyBlock) return;
     terminal.scrollToLine(Math.max(0, stickyBlock.startLine - 1));
   }, [terminal, stickyBlock]);
+  return { stickyBlock, handleClick };
+}
+
+export function StickyScrollOverlay({
+  blocks,
+  terminal,
+}: StickyScrollOverlayProps): React.ReactElement | null {
+  ensurePulseKeyframe();
+  const { stickyBlock, handleClick } = useStickyState(blocks, terminal);
   if (!stickyBlock || !terminal) return null;
   return (
     <div
@@ -196,27 +233,7 @@ export function StickyScrollOverlay({
       onClick={handleClick}
       title="Click to scroll to command"
     >
-      <ExitDot exitCode={stickyBlock.complete ? (stickyBlock.exitCode ?? 0) : undefined} />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {stickyBlock.command ? truncateCommand(stickyBlock.command) : '(command)'}
-      </span>
-      {stickyBlock.exitCode !== undefined && stickyBlock.exitCode !== 0 && (
-        <span
-          className="text-status-error"
-          style={{
-            fontSize: 10,
-            padding: '0 3px',
-            borderRadius: 2,
-            background: 'rgba(229,57,53,0.1)',
-          }}
-        >
-          exit {stickyBlock.exitCode}
-        </span>
-      )}
-      <LiveDuration block={stickyBlock} />
-      <span className="text-text-semantic-muted" style={{ fontSize: 9, flexShrink: 0 }}>
-        {'\u2191'} scroll to prompt
-      </span>
+      <StickyScrollContent block={stickyBlock} />
     </div>
   );
 }

@@ -87,6 +87,14 @@ function ErrorBlockRenderer({
 
 /* ---------- Diff block (placeholder — Phase 2 will enhance) ---------- */
 
+function getDiffStatusStyle(status: string): React.CSSProperties {
+  if (status === 'accepted')
+    return { backgroundColor: 'rgba(63, 185, 80, 0.15)', color: 'var(--status-success)' };
+  if (status === 'rejected')
+    return { backgroundColor: 'rgba(248, 81, 73, 0.15)', color: 'var(--status-error)' };
+  return { backgroundColor: 'var(--surface-base)', color: 'var(--text-muted)' };
+}
+
 function DiffBlockRenderer({
   block,
 }: {
@@ -110,20 +118,7 @@ function DiffBlockRenderer({
         <span className="font-medium text-text-semantic-primary">{block.filePath}</span>
         <span
           className="ml-auto rounded-full px-1.5 py-0.5 text-[10px]"
-          style={{
-            backgroundColor:
-              block.status === 'accepted'
-                ? 'rgba(63, 185, 80, 0.15)'
-                : block.status === 'rejected'
-                  ? 'rgba(248, 81, 73, 0.15)'
-                  : 'var(--surface-base)',
-            color:
-              block.status === 'accepted'
-                ? 'var(--status-success)'
-                : block.status === 'rejected'
-                  ? 'var(--status-error)'
-                  : 'var(--text-muted)',
-          }}
+          style={getDiffStatusStyle(block.status)}
         >
           {block.status}
         </span>
@@ -245,6 +240,21 @@ interface DispatchBlockArgs {
   allBlocks?: AgentChatContentBlock[];
 }
 
+function ToolResultBlock({
+  block,
+}: {
+  block: AgentChatContentBlock & { kind: 'tool_result' };
+}): React.ReactElement {
+  return (
+    <div
+      className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      {block.content}
+    </div>
+  );
+}
+
 function dispatchBlockByKind({
   block,
   index,
@@ -260,14 +270,7 @@ function dispatchBlockByKind({
     case 'tool_use':
       return <ToolUseBlock block={block} index={index} allBlocks={allBlocks} />;
     case 'tool_result':
-      return (
-        <div
-          className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {block.content}
-        </div>
-      );
+      return <ToolResultBlock block={block} />;
     case 'code':
       return <CodeBlockRenderer block={block} />;
     case 'diff':

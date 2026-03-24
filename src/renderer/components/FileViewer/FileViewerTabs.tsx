@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { OpenFile } from './FileViewerManager';
 import { FileViewerTabItem } from './FileViewerTabItem';
+import { OverflowDropdown } from './FileViewerTabs.parts';
 
 export interface FileViewerTabsProps {
   files: OpenFile[];
@@ -66,45 +67,11 @@ const OVERFLOW_BUTTON_STYLE: React.CSSProperties = {
   borderLeft: '1px solid var(--border-semantic)',
 };
 
-const OVERFLOW_DROPDOWN_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  top: '100%',
-  right: 0,
-  zIndex: 10000,
-  minWidth: '180px',
-  maxWidth: '300px',
-  maxHeight: '300px',
-  overflowY: 'auto',
-  backgroundColor: 'var(--surface-base)',
-  border: '1px solid var(--border-semantic)',
-  borderRadius: '4px',
-  padding: '4px 0',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-  fontFamily: 'var(--font-ui)',
-  fontSize: '0.8125rem',
-};
-
-const OVERFLOW_ITEM_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  width: '100%',
-  padding: '4px 12px',
-  border: 'none',
-  background: 'transparent',
-  textAlign: 'left',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  fontSize: 'inherit',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
-
 interface SortedFile {
   file: OpenFile;
   originalIndex: number;
 }
+
 function sortFilesWithPinned(files: OpenFile[]): SortedFile[] {
   const pinned: SortedFile[] = [];
   const unpinned: SortedFile[] = [];
@@ -112,6 +79,7 @@ function sortFilesWithPinned(files: OpenFile[]): SortedFile[] {
     (files[i].isPinned ? pinned : unpinned).push({ file: files[i], originalIndex: i });
   return [...pinned, ...unpinned];
 }
+
 function EmptyTabs(): React.ReactElement {
   return <div style={{ flex: 1, height: '100%' }} aria-hidden="true" />;
 }
@@ -138,6 +106,7 @@ function ScrollButton({
     </button>
   );
 }
+
 function ChevronDownIcon(): React.ReactElement {
   return (
     <svg
@@ -159,121 +128,45 @@ function ChevronDownIcon(): React.ReactElement {
   );
 }
 
-function OverflowDropdown({
-  files,
-  activeIndex,
-  onActivate,
-  onDismiss,
-}: {
-  files: OpenFile[];
-  activeIndex: number;
-  onActivate: (filePath: string) => void;
-  onDismiss: () => void;
-}): React.ReactElement {
-  const menuRef = useRef<HTMLDivElement>(null);
-
+function useScrollState(scrollRef: React.RefObject<HTMLDivElement | null>, filesLength: number) {
+  const [showScrollLeft, setShowScrollLeft] = useState(false);
+  const [showScrollRight, setShowScrollRight] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowScrollLeft(el.scrollLeft > 0);
+    setShowScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setHasOverflow(el.scrollWidth > el.clientWidth + 1);
+  }, [scrollRef]);
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent): void {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onDismiss();
-      }
-    }
-    function handleEscape(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onDismiss();
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateScrollButtons);
+    const ro = new ResizeObserver(updateScrollButtons);
+    ro.observe(el);
+    updateScrollButtons();
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
+      el.removeEventListener('scroll', updateScrollButtons);
+      ro.disconnect();
     };
-  }, [onDismiss]);
-
-  return (
-    <div ref={menuRef} style={OVERFLOW_DROPDOWN_STYLE}>
-      {files.map((file, index) => (
-        <button
-          key={file.path}
-          style={{
-            ...OVERFLOW_ITEM_STYLE,
-            fontWeight: index === activeIndex ? 600 : 'normal',
-            color: index === activeIndex ? 'var(--interactive-accent)' : 'var(--text-primary)',
-            fontStyle: file.isPreview ? 'italic' : 'normal',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--surface-raised)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
-          }}
-          onClick={() => {
-            onActivate(file.path);
-            onDismiss();
-          }}
-        >
-          {file.isPinned && (
-            <svg width="8" height="8" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M10.5 2.5L13.5 5.5L10 9L11 13L8 10L5 13L6 9L2.5 5.5L5.5 2.5L8 5L10.5 2.5Z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {file.name}
-          </span>
-          {file.isDirty && (
-            <span
-              style={{
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--interactive-accent)',
-                flexShrink: 0,
-              }}
-            />
-          )}
-        </button>
-      ))}
-    </div>
-  );
+  }, [filesLength, scrollRef, updateScrollButtons]);
+  return { showScrollLeft, showScrollRight, hasOverflow, updateScrollButtons };
 }
 
 function useFileViewerTabsState(files: OpenFile[], activeIndex: number) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);
-  const [showScrollLeft, setShowScrollLeft] = useState(false);
-  const [showScrollRight, setShowScrollRight] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
-  const [hasOverflow, setHasOverflow] = useState(false);
   const sortedFiles = useMemo(() => sortFilesWithPinned(files), [files]);
-  const updateScrollButtons = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const overflowing = el.scrollWidth > el.clientWidth + 1;
-    setShowScrollLeft(el.scrollLeft > 0);
-    setShowScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-    setHasOverflow(overflowing);
-  }, []);
+  const { showScrollLeft, showScrollRight, hasOverflow, updateScrollButtons } = useScrollState(
+    scrollRef,
+    files.length,
+  );
   useEffect(() => {
     activeTabRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     requestAnimationFrame(updateScrollButtons);
   }, [activeIndex, updateScrollButtons]);
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', updateScrollButtons);
-    const resizeObserver = new ResizeObserver(updateScrollButtons);
-    resizeObserver.observe(el);
-    updateScrollButtons();
-    return () => {
-      el.removeEventListener('scroll', updateScrollButtons);
-      resizeObserver.disconnect();
-    };
-  }, [files.length, updateScrollButtons]);
   return {
     scrollRef,
     activeTabRef,
@@ -283,16 +176,63 @@ function useFileViewerTabsState(files: OpenFile[], activeIndex: number) {
     hasOverflow,
     showOverflow,
     scrollLeft: () => {
-      const el = scrollRef.current;
-      if (el) el.scrollLeft -= 150;
+      if (scrollRef.current) scrollRef.current.scrollLeft -= 150;
     },
     scrollRight: () => {
-      const el = scrollRef.current;
-      if (el) el.scrollLeft += 150;
+      if (scrollRef.current) scrollRef.current.scrollLeft += 150;
     },
     toggleOverflow: () => setShowOverflow((prev) => !prev),
     dismissOverflow: () => setShowOverflow(false),
   };
+}
+
+function TabList({
+  sortedFiles,
+  activeIndex,
+  activeTabRef,
+  scrollRef,
+  onActivate,
+  onClose,
+  onPin,
+  onUnpin,
+  onTogglePin,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
+}: {
+  sortedFiles: SortedFile[];
+  activeIndex: number;
+  activeTabRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onActivate: (filePath: string) => void;
+  onClose: (filePath: string) => void;
+  onPin?: (filePath: string) => void;
+  onUnpin?: (filePath: string) => void;
+  onTogglePin?: (filePath: string) => void;
+  onCloseOthers?: (filePath: string) => void;
+  onCloseToRight?: (filePath: string) => void;
+  onCloseAll?: () => void;
+}): React.ReactElement {
+  return (
+    <div ref={scrollRef} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
+      {sortedFiles.map(({ file, originalIndex }) => (
+        <FileViewerTabItem
+          key={file.path}
+          file={file}
+          isActive={originalIndex === activeIndex}
+          onActivate={onActivate}
+          onClose={onClose}
+          onPin={onPin}
+          onUnpin={onUnpin}
+          onTogglePin={onTogglePin}
+          onCloseOthers={onCloseOthers}
+          onCloseToRight={onCloseToRight}
+          onCloseAll={onCloseAll}
+          tabRef={originalIndex === activeIndex ? activeTabRef : undefined}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function FileViewerTabs({
@@ -324,24 +264,20 @@ export function FileViewerTabs({
   return (
     <div style={CONTAINER_STYLE}>
       <ScrollButton direction="left" onClick={scrollLeft} visible={showScrollLeft} />
-      <div ref={scrollRef} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
-        {sortedFiles.map(({ file, originalIndex }) => (
-          <FileViewerTabItem
-            key={file.path}
-            file={file}
-            isActive={originalIndex === activeIndex}
-            onActivate={onActivate}
-            onClose={onClose}
-            onPin={onPin}
-            onUnpin={onUnpin}
-            onTogglePin={onTogglePin}
-            onCloseOthers={onCloseOthers}
-            onCloseToRight={onCloseToRight}
-            onCloseAll={onCloseAll}
-            tabRef={originalIndex === activeIndex ? activeTabRef : undefined}
-          />
-        ))}
-      </div>
+      <TabList
+        sortedFiles={sortedFiles}
+        activeIndex={activeIndex}
+        activeTabRef={activeTabRef}
+        scrollRef={scrollRef}
+        onActivate={onActivate}
+        onClose={onClose}
+        onPin={onPin}
+        onUnpin={onUnpin}
+        onTogglePin={onTogglePin}
+        onCloseOthers={onCloseOthers}
+        onCloseToRight={onCloseToRight}
+        onCloseAll={onCloseAll}
+      />
       <ScrollButton direction="right" onClick={scrollRight} visible={showScrollRight} />
       {hasOverflow && (
         <button

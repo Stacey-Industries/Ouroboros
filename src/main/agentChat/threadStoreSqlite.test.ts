@@ -59,7 +59,6 @@ afterEach(() => {
   runtime.close();
 });
 
-// eslint-disable-next-line max-lines-per-function
 describe('ThreadStoreSqliteRuntime', () => {
   describe('getStorageDirectory', () => {
     it('returns the configured directory', () => {

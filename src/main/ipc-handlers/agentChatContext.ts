@@ -151,8 +151,8 @@ function handleContextWorkerMessage(msg: WorkerMessage): void {
   }
 }
 
-function attachGraphSummary(entry: CachedContext, key: string, roots: string[]): void {
-  void buildGraphSummary(roots[0])
+function attachGraphSummary(entry: CachedContext, key: string): void {
+  void buildGraphSummary()
     .catch(() => ({ hotspots: [], blastRadius: [], builtAt: 0 }) as GraphSummary)
     .then((gs) => {
       entry.graphSummary = gs;
@@ -183,7 +183,7 @@ function onContextReady(
   contextCache.set(key, entry);
   log.info('Context cache built via worker in', durationMs, 'ms for key:', key);
   persistContextCache();
-  attachGraphSummary(entry, key, roots);
+  attachGraphSummary(entry, key);
 }
 
 /** Trigger a background build of repo snapshot in a worker thread. */

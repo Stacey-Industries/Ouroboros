@@ -2,6 +2,13 @@ import React, { memo } from 'react';
 
 import type { CommitEntry } from '../../types/electron';
 import type { CommitHistoryViewModel } from './CommitHistory.model';
+import {
+  AuthorAvatar,
+  CommitSummary,
+  DiffLine,
+  PatchHeader,
+  StatusMessage,
+} from './CommitHistory.view.parts';
 
 const containerStyle: React.CSSProperties = {
   display: 'flex',
@@ -27,120 +34,33 @@ const buttonStyle: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
 };
 
-function getCommitHue(email: string): number {
-  let hue = 0;
-  for (let index = 0; index < email.length; index += 1) {
-    hue = (hue * 31 + email.charCodeAt(index)) % 360;
-  }
-  return hue;
-}
+const commitRowButtonStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '6px 12px',
+  background: 'none',
+  border: 'none',
+  borderBottom: '1px solid var(--border-subtle)',
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.8125rem',
+};
 
-function getCommitInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
+const commitHashStyle: React.CSSProperties = {
+  flexShrink: 0,
+  width: '52px',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.75rem',
+};
 
-function getPatchTone(line: string): React.CSSProperties {
-  if (line.startsWith('+') && !line.startsWith('+++')) {
-    return { backgroundColor: 'rgba(80, 200, 80, 0.12)', color: 'var(--status-success)' };
-  }
-  if (line.startsWith('-') && !line.startsWith('---')) {
-    return { backgroundColor: 'rgba(255, 80, 80, 0.12)', color: 'var(--status-error)' };
-  }
-  if (line.startsWith('@@')) {
-    return { backgroundColor: 'rgba(88, 166, 255, 0.08)', color: 'var(--interactive-accent)' };
-  }
-  if (
-    line.startsWith('diff ') ||
-    line.startsWith('index ') ||
-    line.startsWith('--- ') ||
-    line.startsWith('+++ ')
-  ) {
-    return { backgroundColor: 'transparent', color: 'var(--text-muted)' };
-  }
-  return { backgroundColor: 'transparent', color: 'var(--text-primary)' };
-}
-
-const AuthorAvatar = memo(function AuthorAvatar({
-  email,
-  name,
-}: {
-  email: string;
-  name: string;
-}): React.ReactElement {
-  return (
-    <div
-      aria-hidden="true"
-      title={name}
-      style={{
-        flexShrink: 0,
-        width: '24px',
-        height: '24px',
-        borderRadius: '50%',
-        backgroundColor: `hsl(${getCommitHue(email)}, 55%, 45%)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '0.625rem',
-        fontWeight: 700,
-        color: '#fff',
-        userSelect: 'none',
-        letterSpacing: '-0.5px',
-      }}
-    >
-      {getCommitInitials(name) || '?'}
-    </div>
-  );
-});
-
-const DiffLine = memo(function DiffLine({ line }: { line: string }): React.ReactElement {
-  return (
-    <pre
-      style={{
-        margin: 0,
-        padding: '0 16px',
-        whiteSpace: 'pre',
-        ...getPatchTone(line),
-      }}
-    >
-      {line || ' '}
-    </pre>
-  );
-});
-
-const PatchHeader = memo(function PatchHeader({
-  onBack,
-}: {
-  onBack: () => void;
-}): React.ReactElement {
-  return (
-    <div
-      className="text-text-semantic-faint"
-      style={{
-        ...headerStyle,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
-      <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>
-        Commit diff
-      </span>
-      <button
-        onClick={onBack}
-        title="Back to commit list"
-        className="text-text-semantic-muted"
-        style={{ ...buttonStyle, fontSize: '0.6875rem', padding: '2px 8px' }}
-      >
-        Back
-      </button>
-    </div>
-  );
-});
+const listTextStyle: React.CSSProperties = {
+  padding: '24px',
+  textAlign: 'center',
+  fontSize: '0.8125rem',
+};
 
 const CommitPatchPanel = memo(function CommitPatchPanel({
   onBack,
@@ -171,59 +91,6 @@ const CommitPatchPanel = memo(function CommitPatchPanel({
   );
 });
 
-const StatusMessage = memo(function StatusMessage({
-  action,
-  message,
-  tone,
-}: {
-  action?: React.ReactNode;
-  message: string;
-  tone?: string;
-}): React.ReactElement {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        height: '100%',
-        color: tone ?? 'var(--text-muted)',
-        fontSize: '0.8125rem',
-      }}
-    >
-      <span>{message}</span>
-      {action}
-    </div>
-  );
-});
-
-const CommitSummary = memo(function CommitSummary({
-  commit,
-}: {
-  commit: CommitEntry;
-}): React.ReactElement {
-  return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
-      <span
-        className="text-text-semantic-primary"
-        style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontWeight: 500,
-        }}
-      >
-        {commit.message}
-      </span>
-      <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem' }}>
-        {commit.author} &middot; {commit.date}
-      </span>
-    </div>
-  );
-});
-
 const CommitRow = memo(function CommitRow({
   commit,
   onSelect,
@@ -232,26 +99,12 @@ const CommitRow = memo(function CommitRow({
   onSelect: (hash: string) => void;
 }): React.ReactElement {
   const shortHash = commit.hash.slice(0, 7);
-
   return (
     <button
       onClick={() => onSelect(commit.hash)}
       title={`Show diff for ${shortHash}: ${commit.message}`}
       className="text-text-semantic-primary"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        width: '100%',
-        padding: '6px 12px',
-        background: 'none',
-        border: 'none',
-        borderBottom: '1px solid var(--border-subtle)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '0.8125rem',
-      }}
+      style={commitRowButtonStyle}
       onMouseEnter={(event) => {
         event.currentTarget.style.backgroundColor = 'var(--surface-panel)';
       }}
@@ -259,15 +112,7 @@ const CommitRow = memo(function CommitRow({
         event.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
-      <span
-        className="text-interactive-accent"
-        style={{
-          flexShrink: 0,
-          width: '52px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.75rem',
-        }}
-      >
+      <span className="text-interactive-accent" style={commitHashStyle}>
         {shortHash}
       </span>
       <AuthorAvatar name={commit.author} email={commit.email} />
@@ -276,65 +121,91 @@ const CommitRow = memo(function CommitRow({
   );
 });
 
-const CommitListPanel = memo(function CommitListPanel({
+type ListPanelProps = Omit<
+  CommitHistoryViewModel,
+  'onBack' | 'patch' | 'patchError' | 'patchLoading' | 'selectedHash'
+>;
+
+function CommitListBody({
   commits,
   error,
   hasMore,
   isLoading,
   loadMore,
   onSelectCommit,
-}: Omit<
-  CommitHistoryViewModel,
-  'onBack' | 'patch' | 'patchError' | 'patchLoading' | 'selectedHash'
->): React.ReactElement {
+}: ListPanelProps): React.ReactElement {
+  return (
+    <div style={{ flex: 1, overflow: 'auto' }}>
+      {commits.length === 0 && !isLoading && !error ? (
+        <div className="text-text-semantic-faint" style={listTextStyle}>
+          No commits found for this file.
+        </div>
+      ) : null}
+      {error ? (
+        <div className="text-status-error" style={listTextStyle}>
+          {error}
+        </div>
+      ) : null}
+      {commits.map((commit) => (
+        <CommitRow key={commit.hash} commit={commit} onSelect={onSelectCommit} />
+      ))}
+      {hasMore && !isLoading && commits.length > 0 ? (
+        <div style={{ padding: '8px 12px', textAlign: 'center' }}>
+          <button
+            onClick={() => void loadMore()}
+            className="text-text-semantic-muted"
+            style={{ ...buttonStyle, fontSize: '0.75rem', padding: '4px 12px' }}
+          >
+            Load more
+          </button>
+        </div>
+      ) : null}
+      {isLoading ? (
+        <div
+          className="text-text-semantic-faint"
+          style={{ padding: '16px', textAlign: 'center', fontSize: '0.8125rem' }}
+        >
+          Loading...
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const CommitListPanel = memo(function CommitListPanel(props: ListPanelProps): React.ReactElement {
   return (
     <div style={containerStyle}>
       <div className="text-text-semantic-faint" style={headerStyle}>
         File history - click a commit to view its diff
       </div>
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        {commits.length === 0 && !isLoading && !error ? (
-          <div
-            className="text-text-semantic-faint"
-            style={{ padding: '24px', textAlign: 'center', fontSize: '0.8125rem' }}
-          >
-            No commits found for this file.
-          </div>
-        ) : null}
-        {error ? (
-          <div
-            className="text-status-error"
-            style={{ padding: '24px', textAlign: 'center', fontSize: '0.8125rem' }}
-          >
-            {error}
-          </div>
-        ) : null}
-        {commits.map((commit) => (
-          <CommitRow key={commit.hash} commit={commit} onSelect={onSelectCommit} />
-        ))}
-        {hasMore && !isLoading && commits.length > 0 ? (
-          <div style={{ padding: '8px 12px', textAlign: 'center' }}>
-            <button
-              onClick={() => void loadMore()}
-              className="text-text-semantic-muted"
-              style={{ ...buttonStyle, fontSize: '0.75rem', padding: '4px 12px' }}
-            >
-              Load more
-            </button>
-          </div>
-        ) : null}
-        {isLoading ? (
-          <div
-            className="text-text-semantic-faint"
-            style={{ padding: '16px', textAlign: 'center', fontSize: '0.8125rem' }}
-          >
-            Loading...
-          </div>
-        ) : null}
-      </div>
+      <CommitListBody {...props} />
     </div>
   );
 });
+
+function PatchErrorMessage({
+  onBack,
+  patchError,
+}: {
+  onBack: () => void;
+  patchError: string;
+}): React.ReactElement {
+  return (
+    <StatusMessage
+      action={
+        <button
+          onClick={onBack}
+          className="text-text-semantic-muted"
+          style={{ ...buttonStyle, fontSize: '0.75rem', padding: '3px 10px' }}
+        >
+          Back
+        </button>
+      }
+      message={patchError}
+      tone="var(--status-error)"
+    />
+  );
+}
 
 export const CommitHistoryView = memo(function CommitHistoryView({
   commits,
@@ -349,29 +220,11 @@ export const CommitHistoryView = memo(function CommitHistoryView({
   patchLoading,
   selectedHash,
 }: CommitHistoryViewModel): React.ReactElement {
-  if (selectedHash !== null && patchLoading) {
-    return <StatusMessage message="Loading diff..." />;
-  }
-  if (selectedHash !== null && patchError) {
-    return (
-      <StatusMessage
-        action={
-          <button
-            onClick={onBack}
-            className="text-text-semantic-muted"
-            style={{ ...buttonStyle, fontSize: '0.75rem', padding: '3px 10px' }}
-          >
-            Back
-          </button>
-        }
-        message={patchError}
-        tone="var(--status-error)"
-      />
-    );
-  }
-  if (selectedHash !== null && patch !== null) {
+  if (selectedHash !== null && patchLoading) return <StatusMessage message="Loading diff..." />;
+  if (selectedHash !== null && patchError)
+    return <PatchErrorMessage onBack={onBack} patchError={patchError} />;
+  if (selectedHash !== null && patch !== null)
     return <CommitPatchPanel onBack={onBack} patch={patch} />;
-  }
   return (
     <CommitListPanel
       commits={commits}

@@ -14,6 +14,59 @@ interface ControlsPanelState {
   handleCreateSnapshot: () => Promise<void>;
 }
 
+function TimeTravelClockIcon(): React.ReactElement {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-interactive-accent"
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx="8" cy="8" r="6.5" />
+      <polyline points="8,4 8,8 11,10" />
+    </svg>
+  );
+}
+
+function TimeTravelCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <button
+      onClick={onClose}
+      title="Close"
+      className="text-text-semantic-muted"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '24px',
+        height: '24px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        borderRadius: '4px',
+      }}
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
+        <path d="M4 4l8 8M12 4l-8 8" />
+      </svg>
+    </button>
+  );
+}
+
 function TimeTravelHeader({
   snapshotCount,
   onClose,
@@ -32,54 +85,46 @@ function TimeTravelHeader({
         flexShrink: 0,
       }}
     >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="text-interactive-accent"
-        style={{ flexShrink: 0 }}
-      >
-        <circle cx="8" cy="8" r="6.5" />
-        <polyline points="8,4 8,8 11,10" />
-      </svg>
+      <TimeTravelClockIcon />
       <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>Time Travel</span>
       <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
         {snapshotCount} snapshot{snapshotCount !== 1 ? 's' : ''}
       </span>
-      <button
-        onClick={onClose}
-        title="Close"
-        className="text-text-semantic-muted"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '24px',
-          height: '24px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          borderRadius: '4px',
-        }}
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        >
-          <path d="M4 4l8 8M12 4l-8 8" />
-        </svg>
-      </button>
+      <TimeTravelCloseButton onClose={onClose} />
     </div>
+  );
+}
+
+function getCompareHint(compareFromId: string | null, compareToId: string | null): string {
+  if (!compareFromId) return 'Select FROM snapshot';
+  if (!compareToId) return 'Select TO snapshot';
+  return 'Comparing';
+}
+
+const TOOLBAR_BTN_BASE: React.CSSProperties = {
+  padding: '4px 8px',
+  borderRadius: '4px',
+  background: 'transparent',
+  cursor: 'pointer',
+  fontSize: '11px',
+  fontFamily: 'var(--font-ui)',
+};
+
+function CompareModeButton({ panel }: { panel: ControlsPanelState }): React.ReactElement {
+  return (
+    <button
+      onClick={panel.toggleCompareMode}
+      title={panel.compareMode ? 'Exit compare mode' : 'Compare two snapshots'}
+      className={`border border-border-semantic ${panel.compareMode ? 'text-interactive-accent' : 'text-text-semantic-secondary'}`}
+      style={{
+        ...TOOLBAR_BTN_BASE,
+        padding: '4px 10px',
+        background: panel.compareMode ? 'rgba(88, 166, 255, 0.12)' : 'transparent',
+        fontWeight: panel.compareMode ? 600 : 400,
+      }}
+    >
+      {panel.compareMode ? 'Exit Compare' : 'Compare'}
+    </button>
   );
 }
 
@@ -90,12 +135,7 @@ function TimeTravelToolbar({
   panel: ControlsPanelState;
   onRefreshSnapshots: () => Promise<void>;
 }): React.ReactElement {
-  const compareHint = !panel.compareFromId
-    ? 'Select FROM snapshot'
-    : !panel.compareToId
-      ? 'Select TO snapshot'
-      : 'Comparing';
-
+  const compareHint = getCompareHint(panel.compareFromId, panel.compareToId);
   return (
     <div
       className="border-b border-border-semantic"
@@ -107,34 +147,12 @@ function TimeTravelToolbar({
         flexShrink: 0,
       }}
     >
-      <button
-        onClick={panel.toggleCompareMode}
-        title={panel.compareMode ? 'Exit compare mode' : 'Compare two snapshots'}
-        className={`border border-border-semantic ${panel.compareMode ? 'text-interactive-accent' : 'text-text-semantic-secondary'}`}
-        style={{
-          padding: '4px 10px',
-          borderRadius: '4px',
-          background: panel.compareMode ? 'rgba(88, 166, 255, 0.12)' : 'transparent',
-          cursor: 'pointer',
-          fontSize: '11px',
-          fontFamily: 'var(--font-ui)',
-          fontWeight: panel.compareMode ? 600 : 400,
-        }}
-      >
-        {panel.compareMode ? 'Exit Compare' : 'Compare'}
-      </button>
+      <CompareModeButton panel={panel} />
       <button
         onClick={() => void onRefreshSnapshots()}
         title="Refresh snapshots"
         className="border border-border-semantic text-text-semantic-secondary"
-        style={{
-          padding: '4px 8px',
-          borderRadius: '4px',
-          background: 'transparent',
-          cursor: 'pointer',
-          fontSize: '11px',
-          fontFamily: 'var(--font-ui)',
-        }}
+        style={TOOLBAR_BTN_BASE}
       >
         Refresh
       </button>
@@ -144,6 +162,29 @@ function TimeTravelToolbar({
         </span>
       )}
     </div>
+  );
+}
+
+function SnapshotLabelInput({ panel }: { panel: ControlsPanelState }): React.ReactElement {
+  return (
+    <input
+      type="text"
+      placeholder="Snapshot label (optional)"
+      value={panel.snapshotLabel}
+      onChange={(event) => panel.setSnapshotLabel(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') void panel.handleCreateSnapshot();
+      }}
+      className="bg-surface-base text-text-semantic-primary border border-border-semantic"
+      style={{
+        flex: 1,
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        fontFamily: 'var(--font-ui)',
+        outline: 'none',
+      }}
+    />
   );
 }
 
@@ -159,24 +200,7 @@ function CreateSnapshotBar({ panel }: { panel: ControlsPanelState }): React.Reac
         flexShrink: 0,
       }}
     >
-      <input
-        type="text"
-        placeholder="Snapshot label (optional)"
-        value={panel.snapshotLabel}
-        onChange={(event) => panel.setSnapshotLabel(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') void panel.handleCreateSnapshot();
-        }}
-        className="bg-surface-base text-text-semantic-primary border border-border-semantic"
-        style={{
-          flex: 1,
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '11px',
-          fontFamily: 'var(--font-ui)',
-          outline: 'none',
-        }}
-      />
+      <SnapshotLabelInput panel={panel} />
       <button
         onClick={() => void panel.handleCreateSnapshot()}
         disabled={panel.creatingSnapshot}

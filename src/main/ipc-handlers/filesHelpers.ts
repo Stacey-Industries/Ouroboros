@@ -12,9 +12,9 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 import { getGraphController } from '../codebaseGraph/graphController';
-import log from '../logger';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchFileOpenEvent } from '../extensions';
+import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './agentChat';
 
@@ -94,12 +94,16 @@ export function isTempDeletionPath(tempPath: string): boolean {
   return normalizedTemp === expectedPrefix || normalizedTemp.startsWith(expectedPrefix + path.sep);
 }
 
-export async function loadTextContent(filePath: string): Promise<{ success: true; content: string }> {
+export async function loadTextContent(
+  filePath: string,
+): Promise<{ success: true; content: string }> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   return { success: true, content: await fs.readFile(filePath, 'utf-8') };
 }
 
-export async function loadBinaryContent(filePath: string): Promise<{ success: true; data: Buffer }> {
+export async function loadBinaryContent(
+  filePath: string,
+): Promise<{ success: true; data: Buffer }> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   return { success: true, data: await fs.readFile(filePath) };
 }
@@ -131,14 +135,19 @@ export async function createExclusiveFile(
   }
 }
 
-export async function writeBinaryFile(filePath: string, data: Uint8Array): Promise<{ success: true }> {
+export async function writeBinaryFile(
+  filePath: string,
+  data: Uint8Array,
+): Promise<{ success: true }> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   await fs.writeFile(filePath, data);
   return { success: true };
 }
 
 export async function writeTextFile(filePath: string, content: string): Promise<{ success: true }> {
-  log.info(`[writeTextFile] path=${filePath} contentLength=${content.length} first80=${JSON.stringify(content.slice(0, 80))}`);
+  log.info(
+    `[writeTextFile] path=${filePath} contentLength=${content.length} first80=${JSON.stringify(content.slice(0, 80))}`,
+  );
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   await fs.writeFile(filePath, content, 'utf-8');
   log.info(`[writeTextFile] write complete for ${filePath}`);
@@ -162,7 +171,10 @@ export async function readFileWithLimit<T extends object>(
   event: IpcMainInvokeEvent,
   filePath: string,
   load: () => Promise<T>,
-  assertPathAllowed: (event: IpcMainInvokeEvent, p: string) => { success: false; error: string } | null,
+  assertPathAllowed: (
+    event: IpcMainInvokeEvent,
+    p: string,
+  ) => { success: false; error: string } | null,
 ): Promise<T | { success: false; error: string }> {
   const denied = assertPathAllowed(event, filePath);
   if (denied) return denied;

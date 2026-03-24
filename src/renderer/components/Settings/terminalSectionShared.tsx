@@ -233,3 +233,57 @@ export function StepButton({
     </button>
   );
 }
+
+export interface TerminalSectionContentProps {
+  draft: AppConfig;
+  onChange: SettingsChangeHandler;
+  platform: NodeJS.Platform;
+}
+
+export interface FontSizeSectionProps {
+  fontSize: number;
+  onChange: (value: number) => void;
+}
+
+export interface ShellSectionProps {
+  shell: string;
+  presets: ShellPreset[];
+  onChange: (value: string) => void;
+}
+
+export interface PromptSectionProps {
+  customPrompt: string;
+  preview: string;
+  promptPreset: PromptPreset;
+  onCustomPromptChange: (value: string) => void;
+  onPresetChange: (value: PromptPreset) => void;
+}
+
+export function FontSizeResetButton({
+  fontSize,
+  onReset,
+}: {
+  fontSize: number;
+  onReset: () => void;
+}): React.ReactElement | null {
+  if (fontSize === DEFAULT_FONT_SIZE) {
+    return null;
+  }
+  return (
+    <button
+      onClick={onReset}
+      className="text-text-semantic-muted"
+      style={{
+        marginLeft: '8px',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        border: '1px solid var(--border-default)',
+        background: 'transparent',
+        fontSize: '11px',
+        cursor: 'pointer',
+      }}
+    >
+      Reset
+    </button>
+  );
+}

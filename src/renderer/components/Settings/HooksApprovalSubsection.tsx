@@ -85,6 +85,40 @@ function ApprovalStatus({ currentTools }: { currentTools: string[] }): React.Rea
   );
 }
 
+function CustomToolInputRow({
+  value,
+  disabled,
+  inputRef,
+  onChange,
+  onKeyDown,
+  onAdd,
+}: {
+  value: string;
+  disabled: boolean;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onAdd: () => void;
+}): React.ReactElement {
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        placeholder="Custom tool name..."
+        className="text-text-semantic-primary"
+        style={inputStyle}
+      />
+      <button onClick={onAdd} disabled={disabled} style={addBtnStyle(!value.trim())}>
+        Add
+      </button>
+    </div>
+  );
+}
+
 function CustomToolInput({
   currentTools,
   onAdd,
@@ -104,30 +138,19 @@ function CustomToolInput({
   }
 
   return (
-    <div style={{ display: 'flex', gap: '6px' }}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleAdd();
-          }
-        }}
-        placeholder="Custom tool name..."
-        className="text-text-semantic-primary"
-        style={inputStyle}
-      />
-      <button
-        onClick={handleAdd}
-        disabled={!value.trim() || currentTools.includes(value.trim())}
-        style={addBtnStyle(!value.trim())}
-      >
-        Add
-      </button>
-    </div>
+    <CustomToolInputRow
+      value={value}
+      disabled={!value.trim() || currentTools.includes(value.trim())}
+      inputRef={inputRef}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAdd();
+        }
+      }}
+      onAdd={handleAdd}
+    />
   );
 }
 

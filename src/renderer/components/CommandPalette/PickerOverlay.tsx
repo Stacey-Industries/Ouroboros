@@ -12,6 +12,33 @@ export interface PickerOverlayProps {
   children: React.ReactNode;
 }
 
+function PickerCard({
+  animPrefix,
+  maxWidth,
+  children,
+}: {
+  animPrefix: string;
+  maxWidth: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="bg-surface-panel border border-border-semantic"
+      style={{
+        width: '100%',
+        maxWidth,
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+        animation: `${animPrefix}-card-in 120ms ease`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function PickerOverlay({
   label,
   animPrefix,
@@ -37,20 +64,9 @@ export function PickerOverlay({
         animation: `${animPrefix}-overlay-in 120ms ease`,
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-surface-panel border border-border-semantic"
-        style={{
-          width: '100%',
-          maxWidth,
-          borderRadius: '8px',
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-          animation: `${animPrefix}-card-in 120ms ease`,
-        }}
-      >
+      <PickerCard animPrefix={animPrefix} maxWidth={maxWidth}>
         {children}
-      </div>
+      </PickerCard>
     </div>
   );
 }
@@ -66,6 +82,40 @@ export interface PickerInputProps {
   onChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   statusText?: string;
+}
+
+function PickerSearchInput({
+  inputRef,
+  placeholder,
+  value,
+  isOpen,
+  controlsId,
+  onChange,
+  onKeyDown,
+}: Pick<
+  PickerInputProps,
+  'inputRef' | 'placeholder' | 'value' | 'isOpen' | 'controlsId' | 'onChange' | 'onKeyDown'
+>): React.ReactElement {
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      role="combobox"
+      aria-expanded={isOpen}
+      aria-autocomplete="list"
+      aria-controls={controlsId}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
+      className="text-text-semantic-primary"
+      style={inputStyle}
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+    />
+  );
 }
 
 export function PickerInput({
@@ -84,23 +134,14 @@ export function PickerInput({
       <span className="text-text-semantic-muted" style={prefixStyle}>
         {prefix}
       </span>
-      <input
-        ref={inputRef}
-        type="text"
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-autocomplete="list"
-        aria-controls={controlsId}
+      <PickerSearchInput
+        inputRef={inputRef}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        isOpen={isOpen}
+        controlsId={controlsId}
+        onChange={onChange}
         onKeyDown={onKeyDown}
-        className="text-text-semantic-primary"
-        style={inputStyle}
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
       />
       {statusText && (
         <span className="text-text-semantic-muted" style={statusStyle}>

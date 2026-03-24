@@ -3,83 +3,17 @@
  * Offers Terminal, Claude Code, and Codex options with hover submenus for model selection.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
-import type { CodexModelOption, ModelProvider } from '../../types/electron';
-
-interface ModelOption {
-  value: string;
-  label: string;
-  group: string;
-}
-
-const ANTHROPIC_MODELS: ModelOption[] = [
-  { value: 'opus[1m]', label: 'Opus 4.6 (1M)', group: 'Anthropic' },
-  { value: 'opus', label: 'Opus 4.6 (200K)', group: 'Anthropic' },
-  { value: 'sonnet', label: 'Sonnet 4.6 (200K)', group: 'Anthropic' },
-  { value: 'haiku', label: 'Haiku 4.5 (200K)', group: 'Anthropic' },
-];
-
-function buildAllModelOptions(providers: ModelProvider[]): ModelOption[] {
-  return [
-    ...ANTHROPIC_MODELS,
-    ...providers
-      .filter((provider) => provider.enabled && provider.models.length > 0)
-      .flatMap((provider) =>
-        provider.models.map((model) => ({
-          value: `${provider.id}:${model.id}`,
-          label: `${provider.name} / ${model.name}`,
-          group: provider.name,
-        })),
-      ),
-  ];
-}
-
-function useClaudeModels(): ModelOption[] {
-  const [models, setModels] = useState<ModelOption[]>(ANTHROPIC_MODELS);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (loadedRef.current) return;
-    if (typeof window === 'undefined' || !('electronAPI' in window)) return;
-    loadedRef.current = true;
-    window.electronAPI.config
-      .get('modelProviders')
-      .then((providers: ModelProvider[]) => {
-        if (providers?.length) setModels(buildAllModelOptions(providers));
-      })
-      .catch(() => {});
-  }, []);
-
-  return models;
-}
-
-function useCodexModels(): CodexModelOption[] {
-  const [models, setModels] = useState<CodexModelOption[]>([]);
-  const loadedRef = useRef(false);
-
-  useEffect(() => {
-    if (loadedRef.current) return;
-    if (typeof window === 'undefined' || !('electronAPI' in window)) return;
-    loadedRef.current = true;
-    window.electronAPI.codex
-      .listModels()
-      .then(setModels)
-      .catch(() => {});
-  }, []);
-
-  return models;
-}
-
-function groupByName(models: ModelOption[]): Map<string, ModelOption[]> {
-  const groups = new Map<string, ModelOption[]>();
-  for (const model of models) {
-    const list = groups.get(model.group) ?? [];
-    list.push(model);
-    groups.set(model.group, list);
-  }
-  return groups;
-}
+import type { CodexModelOption } from '../../types/electron';
+import type { ModelOption } from './NewTerminalMenu.hooks';
+import {
+  groupByName,
+  useClaudeModels,
+  useCodexModels,
+  useMenuDismiss,
+  useMenuPosition,
+} from './NewTerminalMenu.hooks';
 
 function TerminalIcon(): React.ReactElement {
   return (
@@ -169,51 +103,6 @@ function CodexSubmenu({
   );
 }
 
-function useMenuPosition(
-  anchorRef: React.RefObject<HTMLButtonElement | null>,
-): { top: number; left: number } | null {
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  useEffect(() => {
-    if (!anchorRef.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 2, left: rect.left });
-  }, [anchorRef]);
-  return pos;
-}
-
-function useMenuDismiss(
-  menuRef: React.RefObject<HTMLDivElement | null>,
-  anchorRef: React.RefObject<HTMLButtonElement | null>,
-  onClose: () => void,
-): void {
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent): void {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [anchorRef, menuRef, onClose]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-}
-
-export interface NewTerminalMenuProps {
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
-  onNew: () => void;
-  onNewClaude: (providerModel?: string) => void;
-  onNewCodex: (model?: string) => void;
-  onClose: () => void;
-}
-
 const MENU_ITEM =
   'w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-text-semantic-primary hover:bg-surface-raised transition-colors duration-100 cursor-pointer';
 
@@ -283,21 +172,15 @@ function ProviderSection({
   );
 }
 
-interface NewTerminalMenuPanelProps {
-  menuRef: React.RefObject<HTMLDivElement | null>;
-  pos: { top: number; left: number };
-  submenu: 'claude' | 'codex' | null;
-  setSubmenu: React.Dispatch<React.SetStateAction<'claude' | 'codex' | null>>;
-  claudeModels: ModelOption[];
-  codexModels: CodexModelOption[];
+export interface NewTerminalMenuProps {
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
   onNew: () => void;
   onNewClaude: (providerModel?: string) => void;
   onNewCodex: (model?: string) => void;
+  onClose: () => void;
 }
 
-function NewTerminalMenuPanel({
-  menuRef,
-  pos,
+function NewTerminalMenuItems({
   submenu,
   setSubmenu,
   claudeModels,
@@ -305,14 +188,17 @@ function NewTerminalMenuPanel({
   onNew,
   onNewClaude,
   onNewCodex,
-}: NewTerminalMenuPanelProps): React.ReactElement {
+}: {
+  submenu: 'claude' | 'codex' | null;
+  setSubmenu: React.Dispatch<React.SetStateAction<'claude' | 'codex' | null>>;
+  claudeModels: ModelOption[];
+  codexModels: CodexModelOption[];
+  onNew: () => void;
+  onNewClaude: (providerModel?: string) => void;
+  onNewCodex: (model?: string) => void;
+}): React.ReactElement {
   return (
-    <div
-      ref={menuRef}
-      role="menu"
-      className="fixed z-50 min-w-[200px] rounded border border-border-semantic bg-surface-panel shadow-lg py-1"
-      style={{ fontFamily: 'var(--font-ui)', top: pos.top, left: pos.left }}
-    >
+    <>
       <MenuRow onClick={onNew}>
         <TerminalIcon />
         <span>Terminal</span>
@@ -343,7 +229,7 @@ function NewTerminalMenuPanel({
         models={codexModels}
         onSelect={onNewCodex}
       />
-    </div>
+    </>
   );
 }
 
@@ -363,16 +249,21 @@ export function NewTerminalMenu({
 
   if (!pos) return null;
   return (
-    <NewTerminalMenuPanel
-      menuRef={menuRef}
-      pos={pos}
-      submenu={submenu}
-      setSubmenu={setSubmenu}
-      claudeModels={claudeModels}
-      codexModels={codexModels}
-      onNew={onNew}
-      onNewClaude={onNewClaude}
-      onNewCodex={onNewCodex}
-    />
+    <div
+      ref={menuRef}
+      role="menu"
+      className="fixed z-50 min-w-[200px] rounded border border-border-semantic bg-surface-panel shadow-lg py-1"
+      style={{ fontFamily: 'var(--font-ui)', top: pos.top, left: pos.left }}
+    >
+      <NewTerminalMenuItems
+        submenu={submenu}
+        setSubmenu={setSubmenu}
+        claudeModels={claudeModels}
+        codexModels={codexModels}
+        onNew={onNew}
+        onNewClaude={onNewClaude}
+        onNewCodex={onNewCodex}
+      />
+    </div>
   );
 }

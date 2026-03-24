@@ -201,6 +201,27 @@ export function BranchItem({
   );
 }
 
+export async function performCheckout(
+  projectRoot: string,
+  targetBranch: string,
+  setBranch: (b: string) => void,
+): Promise<void> {
+  const result = await window.electronAPI.git.checkout(projectRoot, targetBranch);
+  if (result.success) setBranch(targetBranch);
+}
+
+export async function performCreateBranch(
+  projectRoot: string,
+  setBranch: (b: string) => void,
+): Promise<string | null> {
+  const name = prompt('New branch name:');
+  if (!name || !name.trim() || !projectRoot) return null;
+  const trimmed = name.trim();
+  const result = await window.electronAPI.git.checkout(projectRoot, trimmed);
+  if (result.success) setBranch(trimmed);
+  return trimmed;
+}
+
 export function CreateBranchRow({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <div

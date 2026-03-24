@@ -13,23 +13,52 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
+function getDefaultNotifications(): NotificationSettings {
+  return { level: 'all', alwaysNotify: false };
+}
+
+function NotificationLevelSelect({
+  level,
+  onChange,
+}: {
+  level: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+}): React.ReactElement {
+  return (
+    <div style={levelRowStyle}>
+      <label htmlFor="notif-level" className="text-text-semantic-secondary" style={levelLabelStyle}>
+        Notification level
+      </label>
+      <select
+        id="notif-level"
+        value={level}
+        onChange={onChange}
+        className="text-text-semantic-primary"
+        style={selectStyle}
+      >
+        <option value="all">All (complete + errors)</option>
+        <option value="errors-only">Errors only</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+  );
+}
+
 export function NotificationsSubsection({ draft, onChange }: Props): React.ReactElement {
-  const notifications = draft.notifications ?? { level: 'all', alwaysNotify: false };
+  const notifications = draft.notifications ?? getDefaultNotifications();
 
   function handleLevelChange(e: React.ChangeEvent<HTMLSelectElement>): void {
-    const current: NotificationSettings = draft.notifications ?? {
-      level: 'all',
-      alwaysNotify: false,
-    };
-    onChange('notifications', { ...current, level: e.target.value });
+    onChange('notifications', {
+      ...(draft.notifications ?? getDefaultNotifications()),
+      level: e.target.value,
+    });
   }
 
   function handleAlwaysNotify(val: boolean): void {
-    const current: NotificationSettings = draft.notifications ?? {
-      level: 'all',
-      alwaysNotify: false,
-    };
-    onChange('notifications', { ...current, alwaysNotify: val });
+    onChange('notifications', {
+      ...(draft.notifications ?? getDefaultNotifications()),
+      alwaysNotify: val,
+    });
   }
 
   return (
@@ -38,26 +67,7 @@ export function NotificationsSubsection({ draft, onChange }: Props): React.React
       <p className="text-text-semantic-muted" style={descStyle}>
         Desktop notifications when agent sessions complete or encounter errors.
       </p>
-      <div style={levelRowStyle}>
-        <label
-          htmlFor="notif-level"
-          className="text-text-semantic-secondary"
-          style={levelLabelStyle}
-        >
-          Notification level
-        </label>
-        <select
-          id="notif-level"
-          value={notifications.level}
-          onChange={handleLevelChange}
-          className="text-text-semantic-primary"
-          style={selectStyle}
-        >
-          <option value="all">All (complete + errors)</option>
-          <option value="errors-only">Errors only</option>
-          <option value="none">None</option>
-        </select>
-      </div>
+      <NotificationLevelSelect level={notifications.level} onChange={handleLevelChange} />
       <ToggleSwitch
         checked={notifications.alwaysNotify}
         onChange={handleAlwaysNotify}

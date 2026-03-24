@@ -119,6 +119,39 @@ function createEditorSetup({
   };
 }
 
+type MountableRuntime = Pick<
+  InlineEditorRuntime,
+  | 'containerRef'
+  | 'viewRef'
+  | 'languageCompartment'
+  | 'highlightCompartment'
+  | 'lspCompartment'
+  | 'savedContentRef'
+  | 'initialFilePathRef'
+  | 'initialThemeIdRef'
+  | 'setup'
+>;
+
+function mountEditorView(
+  runtime: MountableRuntime,
+): { view: EditorView; mountedFilePath: string } | null {
+  if (!runtime.containerRef.current) return null;
+  const mountedFilePath = runtime.initialFilePathRef.current;
+  const view = createMountedEditorView({
+    initialContentRef: runtime.savedContentRef,
+    initialThemeIdRef: runtime.initialThemeIdRef,
+    languageCompartment: runtime.languageCompartment,
+    highlightCompartment: runtime.highlightCompartment,
+    lspCompartment: runtime.lspCompartment,
+    setup: runtime.setup,
+    mountedFilePath,
+    parent: runtime.containerRef.current,
+  });
+  runtime.viewRef.current = view;
+  registerEditor(mountedFilePath, view);
+  return { view, mountedFilePath };
+}
+
 function useEditorMount(runtime: InlineEditorRuntime): void {
   const {
     containerRef,
@@ -134,23 +167,19 @@ function useEditorMount(runtime: InlineEditorRuntime): void {
   } = runtime;
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const mountedFilePath = initialFilePathRef.current;
-    const view = createMountedEditorView({
-      initialContentRef: savedContentRef,
-      initialThemeIdRef,
+    const result = mountEditorView({
+      containerRef,
+      viewRef,
       languageCompartment,
       highlightCompartment,
       lspCompartment,
+      savedContentRef,
+      initialFilePathRef,
+      initialThemeIdRef,
       setup,
-      mountedFilePath,
-      parent: containerRef.current,
     });
-
-    viewRef.current = view;
-    registerEditor(mountedFilePath, view);
-
+    if (!result) return;
+    const { view, mountedFilePath } = result;
     return () => {
       unregisterEditor(mountedFilePath);
       clearPendingDidChange(didChangeTimerRef);

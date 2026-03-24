@@ -19,22 +19,14 @@ import {
   MissingProjectState,
   PendingUserBubble,
 } from './AgentChatMessageComponents';
+import {
+  buildFilteredMessages,
+  buildSyntheticStreamingMessage,
+  dispatchDiffReviewEvent,
+} from './AgentChatStreamingHelpers';
 import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
-
-/* ---------- File-modifying tool set ---------- */
-
-const FILE_MODIFYING_TOOLS_SET = new Set([
-  'Write',
-  'Edit',
-  'MultiEdit',
-  'write_file',
-  'edit_file',
-  'multi_edit',
-  'NotebookEdit',
-  'create_file',
-]);
 
 /* ---------- Scroll hook ---------- */
 
@@ -64,39 +56,7 @@ export function useSmartAutoScroll(deps: unknown[]): {
   return { scrollRef: scrollRef as React.RefObject<HTMLDivElement>, onScroll };
 }
 
-/* ---------- Streaming helpers ---------- */
-
-function dispatchDiffReviewEvent(
-  thread: AgentChatThreadRecord,
-  streaming: AgentChatStreamingState,
-): void {
-  let lastAssistant: AgentChatMessageRecord | undefined;
-  for (let i = thread.messages.length - 1; i >= 0; i--) {
-    if (thread.messages[i].role === 'assistant') {
-      lastAssistant = thread.messages[i];
-      break;
-    }
-  }
-  const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
-  if (!snapshotHash || !thread.workspaceRoot) return;
-  const fileEditBlocks = streaming.blocks.filter(
-    (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
-  );
-  if (fileEditBlocks.length === 0) return;
-  const filePaths = [
-    ...new Set(fileEditBlocks.filter((b) => b.filePath).map((b) => b.filePath as string)),
-  ];
-  window.dispatchEvent(
-    new CustomEvent('agent-ide:open-diff-review', {
-      detail: {
-        sessionId: lastAssistant!.id,
-        snapshotHash,
-        projectRoot: thread.workspaceRoot,
-        filePaths,
-      },
-    }),
-  );
-}
+/* ---------- Streaming completion effect ---------- */
 
 export function useStreamingCompletionEffect(
   activeThread: AgentChatThreadRecord | null,
@@ -108,34 +68,8 @@ export function useStreamingCompletionEffect(
     wasStreamingRef.current = streaming.isStreaming;
     if (!wasStreaming || streaming.isStreaming || streaming.blocks.length === 0) return;
     if (!activeThread) return;
-    dispatchDiffReviewEvent(activeThread, streaming);
+    dispatchDiffReviewEvent(activeThread, streaming.blocks);
   }, [streaming, activeThread]);
-}
-
-function buildFilteredMessages(messages: AgentChatMessageRecord[]): AgentChatMessageRecord[] {
-  return messages.filter((message) => {
-    if (message.role !== 'status') return true;
-    const kind = (message as { statusKind?: string }).statusKind;
-    return kind !== 'context' && kind !== 'progress' && kind !== 'verification';
-  });
-}
-
-function buildSyntheticStreamingMessage(
-  activeThread: AgentChatThreadRecord,
-  streaming: AgentChatStreamingState,
-  threadIsActive: boolean,
-  onStop: (() => Promise<void>) | undefined,
-): AgentChatMessageRecord {
-  return {
-    id: streaming.streamingMessageId || `streaming-${Date.now()}`,
-    threadId: activeThread.id,
-    role: 'assistant',
-    content: streaming.activeTextContent || '',
-    createdAt: Date.now(),
-    blocks: streaming.blocks.length > 0 ? streaming.blocks : undefined,
-    _streaming: true,
-    _streamingState: { isStreaming: threadIsActive || streaming.isStreaming, onStop },
-  } as AgentChatMessageRecord & { _streaming: boolean; _streamingState: unknown };
 }
 
 /* ---------- Edit state hook ---------- */
@@ -289,7 +223,15 @@ function useMessagesWithStreaming(
     const filtered = buildFilteredMessages(activeThread.messages);
     if (streamingIsActive && !streamingAlreadyPersisted) {
       filtered.push(
-        buildSyntheticStreamingMessage(activeThread, streaming, threadIsActive, onStop),
+        buildSyntheticStreamingMessage({
+          activeThread,
+          streamingBlocks: streaming.blocks,
+          streamingMessageId: streaming.streamingMessageId,
+          activeTextContent: streaming.activeTextContent,
+          isStreaming: streaming.isStreaming,
+          threadIsActive,
+          onStop,
+        }),
       );
     }
     return filtered;
@@ -336,7 +278,6 @@ function PendingStreamingView({
 export function ConversationBody(props: ConversationBodyProps): React.ReactElement {
   const { onEdit, onStop, activeThread, streaming } = props;
   useStreamingCompletionEffect(activeThread, streaming);
-
   const {
     editingMessageId,
     editDraft,

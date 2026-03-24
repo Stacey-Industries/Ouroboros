@@ -144,32 +144,44 @@ function confirmDiscardChanges(isDirty?: boolean): boolean {
   return window.confirm('Discard your unsaved changes?');
 }
 
+type EditModeButtonsProps = Pick<
+  EditControlsProps,
+  'currentContent' | 'isDirty' | 'onSave' | 'onCancelEdit' | 'setEditMode'
+>;
+
+function makeSaveHandler(
+  currentContent: string | null | undefined,
+  onSave: ((content: string) => void) | undefined,
+  setEditMode: (value: boolean) => void,
+): () => void {
+  return () => {
+    if (currentContent == null) return;
+    onSave?.(currentContent);
+    setEditMode(false);
+  };
+}
+
+function makeCancelHandler(
+  isDirty: boolean | undefined,
+  onCancelEdit: (() => void) | undefined,
+  setEditMode: (value: boolean) => void,
+): () => void {
+  return () => {
+    if (!confirmDiscardChanges(isDirty)) return;
+    onCancelEdit?.();
+    setEditMode(false);
+  };
+}
+
 function EditModeButtons({
   currentContent,
   isDirty,
   onSave,
   onCancelEdit,
   setEditMode,
-}: Pick<
-  EditControlsProps,
-  'currentContent' | 'isDirty' | 'onSave' | 'onCancelEdit' | 'setEditMode'
->): React.ReactElement {
-  const handleSave = () => {
-    if (currentContent == null) {
-      return;
-    }
-    onSave?.(currentContent);
-    setEditMode(false);
-  };
-
-  const handleCancel = () => {
-    if (!confirmDiscardChanges(isDirty)) {
-      return;
-    }
-    onCancelEdit?.();
-    setEditMode(false);
-  };
-
+}: EditModeButtonsProps): React.ReactElement {
+  const handleSave = makeSaveHandler(currentContent, onSave, setEditMode);
+  const handleCancel = makeCancelHandler(isDirty, onCancelEdit, setEditMode);
   return (
     <>
       <ToolbarButton

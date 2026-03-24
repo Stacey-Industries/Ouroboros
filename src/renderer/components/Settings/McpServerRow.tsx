@@ -94,6 +94,40 @@ function ScopeBadge({ scope }: { scope: string }): React.ReactElement {
   );
 }
 
+function DeleteControls({
+  isConfirmingDelete,
+  onDelete,
+  onConfirmDelete,
+  onCancelDelete,
+}: {
+  isConfirmingDelete: boolean;
+  onDelete: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}): React.ReactElement {
+  if (isConfirmingDelete) {
+    return (
+      <>
+        <button
+          onClick={onConfirmDelete}
+          className="text-status-error"
+          style={{ ...smallBtnStyle, borderColor: '#f87171' }}
+        >
+          Confirm
+        </button>
+        <button onClick={onCancelDelete} style={smallBtnStyle}>
+          No
+        </button>
+      </>
+    );
+  }
+  return (
+    <button onClick={onDelete} title="Delete" className="text-status-error" style={smallBtnStyle}>
+      Delete
+    </button>
+  );
+}
+
 function ServerControls({
   server,
   isEditing,
@@ -127,29 +161,12 @@ function ServerControls({
       <button onClick={isEditing ? onCancelEdit : onEdit} title="Edit" style={smallBtnStyle}>
         {isEditing ? 'Cancel' : 'Edit'}
       </button>
-      {isConfirmingDelete ? (
-        <>
-          <button
-            onClick={onConfirmDelete}
-            className="text-status-error"
-            style={{ ...smallBtnStyle, borderColor: '#f87171' }}
-          >
-            Confirm
-          </button>
-          <button onClick={onCancelDelete} style={smallBtnStyle}>
-            No
-          </button>
-        </>
-      ) : (
-        <button
-          onClick={onDelete}
-          title="Delete"
-          className="text-status-error"
-          style={smallBtnStyle}
-        >
-          Delete
-        </button>
-      )}
+      <DeleteControls
+        isConfirmingDelete={isConfirmingDelete}
+        onDelete={onDelete}
+        onConfirmDelete={onConfirmDelete}
+        onCancelDelete={onCancelDelete}
+      />
     </div>
   );
 }

@@ -53,6 +53,40 @@ function rowStyle(
   };
 }
 
+function makeClickHandler(
+  isEditing: boolean,
+  node: TreeNode,
+  onClick: FileTreeItemProps['onClick'],
+) {
+  return (e: React.MouseEvent) => {
+    if (!isEditing) onClick(node, e as React.MouseEvent<HTMLDivElement>);
+  };
+}
+
+function makeDoubleClickHandler(
+  isEditing: boolean,
+  node: TreeNode,
+  onDoubleClick?: FileTreeItemProps['onDoubleClick'],
+) {
+  return () => {
+    if (!isEditing && onDoubleClick) onDoubleClick(node);
+  };
+}
+
+function makeContextMenuHandler(
+  isEditing: boolean,
+  node: TreeNode,
+  onContextMenu?: FileTreeItemProps['onContextMenu'],
+) {
+  return (e: React.MouseEvent) => {
+    if (onContextMenu && !isEditing) {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu(e as React.MouseEvent<HTMLDivElement>, node);
+    }
+  };
+}
+
 export function FileTreeItemRow({
   node,
   depth,
@@ -76,19 +110,9 @@ export function FileTreeItemRow({
       onDragOver={drag.onDragOver}
       onDragLeave={drag.onDragLeave}
       onDrop={drag.onDrop}
-      onClick={(e) => {
-        if (!isEditing) onClick(node, e);
-      }}
-      onDoubleClick={() => {
-        if (!isEditing && onDoubleClick) onDoubleClick(node);
-      }}
-      onContextMenu={(e) => {
-        if (onContextMenu && !isEditing) {
-          e.preventDefault();
-          e.stopPropagation();
-          onContextMenu(e, node);
-        }
-      }}
+      onClick={makeClickHandler(isEditing ?? false, node, onClick)}
+      onDoubleClick={makeDoubleClickHandler(isEditing, node, onDoubleClick)}
+      onContextMenu={makeContextMenuHandler(isEditing, node, onContextMenu)}
       title={heatTitle}
       style={rowStyle(depth, backgroundColor, drag.isDragOver, isActive)}
     >

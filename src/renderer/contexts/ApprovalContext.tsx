@@ -70,15 +70,21 @@ function useApprovalRequests(): [
   return [requests, setRequests];
 }
 
-function useApprovalActions(
+function useRemoveRequest(
   setRequests: React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
-): Pick<React.ComponentProps<typeof ApprovalDialog>, 'onApprove' | 'onReject' | 'onAlwaysAllow'> {
-  const removeRequest = useCallback(
+): (requestId: string) => void {
+  return useCallback(
     (requestId: string): void => {
       setRequests((prev) => prev.filter((request) => request.requestId !== requestId));
     },
     [setRequests],
   );
+}
+
+function useApprovalActions(
+  setRequests: React.Dispatch<React.SetStateAction<ApprovalRequest[]>>,
+): Pick<React.ComponentProps<typeof ApprovalDialog>, 'onApprove' | 'onReject' | 'onAlwaysAllow'> {
+  const removeRequest = useRemoveRequest(setRequests);
 
   const onApprove = useCallback(
     (requestId: string) => {

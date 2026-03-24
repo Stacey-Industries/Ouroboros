@@ -20,19 +20,13 @@ interface McpServerFormProps {
   onCancel: () => void;
 }
 
-export function McpServerForm({
+function FormFields({
   form,
   isEdit,
   onFieldChange,
-  onScopeChange,
-  onAddEnvRow,
-  onRemoveEnvRow,
-  onUpdateEnvRow,
-  onSubmit,
-  onCancel,
-}: McpServerFormProps): React.ReactElement {
+}: Pick<McpServerFormProps, 'form' | 'isEdit' | 'onFieldChange'>): React.ReactElement {
   return (
-    <div style={formContainerStyle}>
+    <>
       {!isEdit && (
         <FormField
           label="Name"
@@ -64,6 +58,24 @@ export function McpServerForm({
         onChange={onFieldChange}
         placeholder="e.g., http://localhost:3001/sse"
       />
+    </>
+  );
+}
+
+export function McpServerForm({
+  form,
+  isEdit,
+  onFieldChange,
+  onScopeChange,
+  onAddEnvRow,
+  onRemoveEnvRow,
+  onUpdateEnvRow,
+  onSubmit,
+  onCancel,
+}: McpServerFormProps): React.ReactElement {
+  return (
+    <div style={formContainerStyle}>
+      <FormFields form={form} isEdit={isEdit} onFieldChange={onFieldChange} />
       <EnvRowsEditor
         rows={form.envRows}
         onAdd={onAddEnvRow}
@@ -157,6 +169,11 @@ function EnvRowInput({
   onUpdate: (idx: number, field: 'key' | 'value', val: string) => void;
   onRemove: (idx: number) => void;
 }): React.ReactElement {
+  const monoInput: React.CSSProperties = {
+    ...inputStyle,
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
+  };
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
       <input
@@ -165,7 +182,7 @@ function EnvRowInput({
         onChange={(e) => onUpdate(idx, 'key', e.target.value)}
         placeholder="KEY"
         className="text-text-semantic-primary"
-        style={{ ...inputStyle, flex: 1, fontFamily: 'var(--font-mono)', fontSize: '11px' }}
+        style={{ ...monoInput, flex: 1 }}
       />
       <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
         =
@@ -176,7 +193,7 @@ function EnvRowInput({
         onChange={(e) => onUpdate(idx, 'value', e.target.value)}
         placeholder="value"
         className="text-text-semantic-primary"
-        style={{ ...inputStyle, flex: 2, fontFamily: 'var(--font-mono)', fontSize: '11px' }}
+        style={{ ...monoInput, flex: 2 }}
       />
       <button
         onClick={() => onRemove(idx)}

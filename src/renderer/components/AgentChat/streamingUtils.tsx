@@ -51,6 +51,38 @@ export function BlinkingCursor(): React.ReactElement {
 
 /* ---------- Slithering snake SVG ---------- */
 
+function SnakeSvg(): React.ReactElement {
+  return (
+    <svg width="26" height="14" viewBox="0 0 26 14" fill="none" style={{ overflow: 'visible' }}>
+      <path
+        d="M1 7 C4 2, 7 2, 10 7 C13 12, 16 12, 19 7"
+        stroke="var(--interactive-accent)"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        fill="none"
+        strokeDasharray="3 2"
+        style={{ animation: 'snakeFlow 1.2s linear infinite' }}
+      />
+      <ellipse cx="21" cy="6.5" rx="2.2" ry="2" fill="var(--interactive-accent)" />
+      <circle cx="21.5" cy="5.8" r="0.6" fill="var(--surface-base, #1a1a2e)" />
+      <g style={{ animation: 'snakeTongue 2s ease-in-out infinite' }}>
+        <path
+          d="M23 6.5 L24.5 5.5"
+          stroke="var(--status-error, #f85149)"
+          strokeWidth="0.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M23 6.5 L24.5 7.5"
+          stroke="var(--status-error, #f85149)"
+          strokeWidth="0.5"
+          strokeLinecap="round"
+        />
+      </g>
+    </svg>
+  );
+}
+
 export function SlitherSnake(): React.ReactElement {
   return (
     <span
@@ -64,37 +96,7 @@ export function SlitherSnake(): React.ReactElement {
           animation: 'snakeGrow 1.4s ease-out forwards',
         }}
       >
-        <svg width="26" height="14" viewBox="0 0 26 14" fill="none" style={{ overflow: 'visible' }}>
-          {/* Wavy body with flowing segments */}
-          <path
-            d="M1 7 C4 2, 7 2, 10 7 C13 12, 16 12, 19 7"
-            stroke="var(--interactive-accent)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray="3 2"
-            style={{ animation: 'snakeFlow 1.2s linear infinite' }}
-          />
-          {/* Head */}
-          <ellipse cx="21" cy="6.5" rx="2.2" ry="2" fill="var(--interactive-accent)" />
-          {/* Eye */}
-          <circle cx="21.5" cy="5.8" r="0.6" fill="var(--surface-base, #1a1a2e)" />
-          {/* Forked tongue */}
-          <g style={{ animation: 'snakeTongue 2s ease-in-out infinite' }}>
-            <path
-              d="M23 6.5 L24.5 5.5"
-              stroke="var(--status-error, #f85149)"
-              strokeWidth="0.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M23 6.5 L24.5 7.5"
-              stroke="var(--status-error, #f85149)"
-              strokeWidth="0.5"
-              strokeLinecap="round"
-            />
-          </g>
-        </svg>
+        <SnakeSvg />
       </span>
     </span>
   );

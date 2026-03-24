@@ -66,8 +66,7 @@ export function formatGraphSummary(summary: GraphSummary): string {
 }
 
 /** Build a graph summary from the native GraphController. */
-export async function buildGraphSummary(_projectRoot?: string): Promise<GraphSummary> {
-  // eslint-disable-line @typescript-eslint/no-unused-vars
+export async function buildGraphSummary(): Promise<GraphSummary> {
   const ctrl = getGraphController();
   if (!ctrl) return EMPTY_SUMMARY;
 
