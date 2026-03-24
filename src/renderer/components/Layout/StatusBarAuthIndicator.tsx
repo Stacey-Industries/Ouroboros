@@ -16,8 +16,8 @@ const PROVIDERS: AuthProvider[] = ['github', 'anthropic', 'openai'];
 
 const PROVIDER_LABELS: Record<AuthProvider, string> = {
   github: 'GitHub',
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
+  anthropic: 'Claude Code',
+  openai: 'Codex',
 };
 
 const containerStyle: React.CSSProperties = {
@@ -53,12 +53,15 @@ const dotStyle: React.CSSProperties = {
   transition: 'background 200ms ease',
 };
 
-function AuthDot({ provider, state }: { provider: AuthProvider; state: AuthState | undefined }): React.ReactElement {
+function AuthDot({
+  provider,
+  state,
+}: {
+  provider: AuthProvider;
+  state: AuthState | undefined;
+}): React.ReactElement {
   return (
-    <span
-      title={dotTitle(provider, state)}
-      style={{ ...dotStyle, background: dotColor(state) }}
-    />
+    <span title={dotTitle(provider, state)} style={{ ...dotStyle, background: dotColor(state) }} />
   );
 }
 
@@ -78,7 +81,9 @@ export function StatusBarAuthIndicator(): React.ReactElement {
       title="Auth status — click to manage accounts"
       style={containerStyle}
       onClick={handleClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') handleClick();
+      }}
     >
       {PROVIDERS.map((p) => (
         <AuthDot key={p} provider={p} state={getProviderState(p)} />

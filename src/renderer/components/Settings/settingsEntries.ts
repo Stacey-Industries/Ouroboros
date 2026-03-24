@@ -59,16 +59,22 @@ function createEntries(
 }
 
 const ACCOUNTS_ENTRIES = createEntries('accounts', 'Accounts', [
-  ['Accounts', 'Manage connected accounts and authentication for GitHub, Anthropic, and OpenAI.'],
+  [
+    'Accounts',
+    'Connect GitHub account and view CLI authentication status for Claude Code and Codex.',
+  ],
   ['GitHub', 'Sign in with GitHub via Device Flow for repository access and authentication.'],
-  ['Anthropic', 'Connect your Anthropic account with an API key for Claude access.'],
-  ['Claude', 'Connect your Claude / Anthropic account with an API key.'],
-  ['OpenAI', 'Connect your OpenAI account with an API key for Codex and GPT access.'],
-  ['Codex', 'OpenAI Codex authentication — requires an OpenAI API key.'],
-  ['Login', 'Sign in to GitHub, Anthropic, or OpenAI from the Accounts tab.'],
-  ['Authentication', 'Manage authentication credentials for all supported providers.'],
-  ['Credentials', 'Import, enter, or manage API keys and OAuth tokens for connected services.'],
-  ['API Key', 'Enter an API key to authenticate with Anthropic or OpenAI.'],
+  [
+    'Claude Code',
+    'View Claude Code CLI authentication status detected from your terminal environment.',
+  ],
+  ['Codex', 'View Codex CLI authentication status detected from your terminal environment.'],
+  ['Login', 'Sign in to GitHub from the Accounts tab.'],
+  ['Authentication', 'Manage authentication credentials for connected services.'],
+  [
+    'Credentials',
+    'Import OAuth tokens for GitHub or view CLI credentials for Claude Code and Codex.',
+  ],
 ]);
 
 const EDITOR_ENTRIES = createEntries('general', 'General', [
@@ -224,6 +230,14 @@ const PROVIDER_ENTRIES = createEntries('providers', 'Providers', [
   ],
   ['Add Provider', 'Add a new Anthropic-compatible LLM provider with API endpoint and key.'],
   ['Test Connection', 'Verify that a provider endpoint is reachable and the API key is valid.'],
+  [
+    'Anthropic API Key',
+    'Enter your Anthropic API key (sk-ant-...) to authenticate with Claude models.',
+  ],
+  [
+    'OpenAI API Key',
+    'Enter your OpenAI API key (sk-...) to authenticate with Codex and GPT models.',
+  ],
 ]);
 
 export const SETTINGS_ENTRIES: SettingsEntry[] = [

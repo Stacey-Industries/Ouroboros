@@ -174,7 +174,94 @@ function HeaderActions({
         if (provider === 'github') void model.login('github');
       }}
     >
-      {provider === 'github' ? 'Sign in with GitHub' : 'Enter API Key'}
+      Sign in with GitHub
     </button>
+  );
+}
+
+const cliHintStyle: React.CSSProperties = {
+  fontSize: '11px',
+  marginTop: '6px',
+  fontStyle: 'italic',
+};
+
+const logoSpanStyle: React.CSSProperties = {
+  marginRight: '8px',
+  opacity: 0.7,
+  display: 'inline-flex',
+  verticalAlign: 'middle',
+};
+
+function cliStatusLabel(
+  isConnected: boolean,
+  credentialType: string | undefined,
+  hasCli: boolean,
+): string {
+  if (isConnected) return `Connected${credentialType ? ` (${credentialType})` : ''}`;
+  if (hasCli) return 'CLI credentials detected';
+  return 'Not connected';
+}
+
+function CliCardInfo({
+  label,
+  Logo,
+  dotColor,
+  statusText,
+}: {
+  label: string;
+  Logo: React.ComponentType;
+  dotColor: string;
+  statusText: string;
+}): React.ReactElement {
+  return (
+    <div>
+      <div className="text-text-semantic-primary" style={S.providerNameStyle}>
+        <span style={logoSpanStyle}>
+          <Logo />
+        </span>
+        {label}
+      </div>
+      <div style={S.statusTextStyle}>
+        <span style={S.statusDotStyle(dotColor)} />
+        <span className="text-text-semantic-muted">{statusText}</span>
+      </div>
+      <div className="text-text-semantic-muted" style={cliHintStyle}>
+        For API keys → Settings &gt; Providers
+      </div>
+    </div>
+  );
+}
+
+export function CliStatusCard({
+  provider,
+  label,
+  model,
+}: {
+  provider: AuthProvider;
+  label: string;
+  model: AccountsSectionModel;
+}): React.ReactElement {
+  const state = model.getProviderState(provider);
+  const isConnected = state?.status === 'authenticated';
+  const Logo = PROVIDER_LOGOS[provider];
+  const cliDetection = model.cliDetections?.find((d) => d.provider === provider && d.available);
+  const dotColor = isConnected ? 'var(--status-success)' : 'var(--text-semantic-muted)';
+  const statusText = cliStatusLabel(isConnected, state?.credentialType, !!cliDetection);
+
+  return (
+    <div style={S.cardStyle}>
+      <div style={S.cardHeaderStyle}>
+        <CliCardInfo label={label} Logo={Logo} dotColor={dotColor} statusText={statusText} />
+        {!isConnected && cliDetection && (
+          <button
+            className="text-text-semantic-primary"
+            style={smallButtonStyle}
+            onClick={() => void model.importCliCreds(provider)}
+          >
+            Import
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

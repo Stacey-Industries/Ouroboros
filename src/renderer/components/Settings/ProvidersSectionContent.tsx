@@ -8,8 +8,9 @@ import React from 'react';
 
 import { AddProviderForm } from './AddProviderForm';
 import { ModelSlotsSection } from './ModelSlotsSection';
+import { ProviderApiKeysSection } from './ProviderApiKeysSection';
 import { ProviderList } from './ProviderList';
-import { headerDescriptionStyle,providersRootStyle } from './providersSectionStyles';
+import { headerDescriptionStyle, providersRootStyle } from './providersSectionStyles';
 import { SectionLabel } from './settingsStyles';
 import type { ProvidersSectionModel } from './useProvidersSection';
 
@@ -39,6 +40,7 @@ export function ProvidersSectionContent({
         allModels={model.allModels}
         onUpdateSlot={model.updateSlot}
       />
+      <ProviderApiKeysSection />
     </div>
   );
 }

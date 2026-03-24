@@ -1,8 +1,9 @@
 /**
  * AccountsSectionLoginForms.tsx — Inline login forms for provider cards.
  *
- * GitHub Device Flow UI and API Key input forms, extracted from
- * ProviderCard to stay under the 300-line ESLint file limit.
+ * GitHub Device Flow UI, extracted from ProviderCard to stay under
+ * the 300-line ESLint file limit. Non-GitHub providers no longer have
+ * expanded areas in Accounts — API keys belong in Settings > Providers.
  */
 
 import React from 'react';
@@ -19,10 +20,8 @@ export function ExpandedArea({
   provider: AuthProvider;
   model: AccountsSectionModel;
 }): React.ReactElement {
-  if (provider === 'github') {
-    return <GitHubLoginArea model={model} />;
-  }
-  return <ApiKeyInputArea provider={provider} model={model} />;
+  if (provider === 'github') return <GitHubLoginArea model={model} />;
+  return <></>;
 }
 
 function GitHubLoginArea({ model }: { model: AccountsSectionModel }): React.ReactElement {
@@ -213,103 +212,5 @@ function DeviceCodeDisplay({
         {copied ? 'Copied!' : 'Click code to copy'}
       </div>
     </>
-  );
-}
-
-function ApiKeyInputArea({
-  provider,
-  model,
-}: {
-  provider: AuthProvider;
-  model: AccountsSectionModel;
-}): React.ReactElement {
-  const placeholder = provider === 'anthropic' ? 'sk-ant-...' : 'sk-...';
-  const helpUrl =
-    provider === 'openai'
-      ? 'https://platform.openai.com/api-keys'
-      : provider === 'anthropic'
-        ? 'https://console.anthropic.com/settings/keys'
-        : null;
-
-  return (
-    <div style={S.actionAreaStyle}>
-      <div style={S.inputRowStyle}>
-        <input
-          type="password"
-          className="text-text-semantic-primary"
-          style={S.inputStyle}
-          placeholder={placeholder}
-          value={model.apiKeyInput}
-          onChange={(e) => model.setApiKeyInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void model.submitApiKey(provider);
-          }}
-          autoFocus
-        />
-      </div>
-      {model.apiKeyError && (
-        <div className="text-status-error" style={S.errorTextStyle}>
-          {model.apiKeyError}
-        </div>
-      )}
-      <ApiKeyActions provider={provider} model={model} helpUrl={helpUrl} />
-    </div>
-  );
-}
-
-function ApiKeySaveButton({
-  provider,
-  model,
-}: {
-  provider: AuthProvider;
-  model: AccountsSectionModel;
-}): React.ReactElement {
-  return (
-    <button
-      className="text-text-semantic-on-accent"
-      style={{
-        ...buttonStyle,
-        background: 'var(--interactive-accent)',
-        border: 'none',
-        fontWeight: 600,
-      }}
-      onClick={() => void model.submitApiKey(provider)}
-    >
-      Save
-    </button>
-  );
-}
-
-function ApiKeyActions({
-  provider,
-  model,
-  helpUrl,
-}: {
-  provider: AuthProvider;
-  model: AccountsSectionModel;
-  helpUrl: string | null;
-}): React.ReactElement {
-  return (
-    <div style={S.buttonRowStyle}>
-      <ApiKeySaveButton provider={provider} model={model} />
-      <button
-        className="text-text-semantic-muted"
-        style={smallButtonStyle}
-        onClick={model.collapseCard}
-      >
-        Cancel
-      </button>
-      {helpUrl && (
-        <button
-          className="text-interactive-accent"
-          style={S.linkTextStyle}
-          onClick={() => void model.openExternal(helpUrl)}
-        >
-          {provider === 'anthropic'
-            ? 'Get API key at console.anthropic.com'
-            : 'Get API key at platform.openai.com'}
-        </button>
-      )}
-    </div>
   );
 }

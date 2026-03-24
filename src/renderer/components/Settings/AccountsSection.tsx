@@ -8,12 +8,12 @@
 import React from 'react';
 
 import type { AuthProvider, CliCredentialDetection } from '../../types/electron';
-import { ProviderCard } from './AccountsSectionProviderCard';
+import { CliStatusCard, ProviderCard } from './AccountsSectionProviderCard';
 import * as S from './AccountsSectionStyles';
 import { SectionLabel, smallButtonStyle } from './settingsStyles';
 import { type AccountsSectionModel, useAccountsSectionModel } from './useAccountsSection';
 
-const PROVIDERS: AuthProvider[] = ['github', 'anthropic', 'openai'];
+const OAUTH_PROVIDERS: AuthProvider[] = ['github'];
 
 export function AccountsSection(): React.ReactElement {
   const model = useAccountsSectionModel();
@@ -30,9 +30,10 @@ export function AccountsSection(): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <AccountsHeader />
       <CliImportBanner model={model} />
-      {PROVIDERS.map((provider) => (
+      {OAUTH_PROVIDERS.map((provider) => (
         <ProviderCard key={provider} provider={provider} model={model} />
       ))}
+      <CliStatusSection model={model} />
     </div>
   );
 }
@@ -42,9 +43,18 @@ function AccountsHeader(): React.ReactElement {
     <div>
       <SectionLabel style={{ marginBottom: '4px' }}>Accounts</SectionLabel>
       <p className="text-text-semantic-muted" style={{ fontSize: '12px', margin: 0 }}>
-        Connect accounts for authentication with external services.
+        Connect your GitHub account and view CLI authentication status for Claude Code and Codex.
       </p>
     </div>
+  );
+}
+
+function CliStatusSection({ model }: { model: AccountsSectionModel }): React.ReactElement {
+  return (
+    <>
+      <CliStatusCard provider="anthropic" label="Claude Code" model={model} />
+      <CliStatusCard provider="openai" label="Codex" model={model} />
+    </>
   );
 }
 
@@ -102,5 +112,5 @@ function getAvailableDetections(
   detections: CliCredentialDetection[] | null,
 ): CliCredentialDetection[] {
   if (!detections) return [];
-  return detections.filter((d) => d.available);
+  return detections.filter((d) => d.available && d.provider === 'github');
 }
