@@ -203,7 +203,8 @@
     "publish": {
       "provider": "github",
       "owner": "hesnotsoharry",
-      "repo": "Ouroboros"
+      "repo": "Ouroboros",
+      "releaseType": "release"
     }
   },
   "simple-git-hooks": {

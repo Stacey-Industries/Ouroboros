@@ -1,6 +1,9 @@
 /**
  * logger.ts — Centralized structured logging via electron-log.
  *
+ * Worker-safe: detects worker_threads context and falls back to console
+ * because electron-log requires the 'electron' module (unavailable in workers).
+ *
  * Usage:
  *   import log from './logger';
  *   log.info('Server started', { port: 3000 });
@@ -12,23 +15,37 @@
  *   - Linux:   ~/.config/Ouroboros/logs/
  */
 
-import electronLog from 'electron-log/main';
+import { isMainThread } from 'worker_threads';
 
-// Configure log levels per environment
-electronLog.transports.file.level = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
-electronLog.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'warn';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let log: any;
 
-// Format: [timestamp] [level] message
-electronLog.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-
-// Rotate logs: max 5MB per file, keep 3 old files
-electronLog.transports.file.maxSize = 5 * 1024 * 1024;
-
-const log = electronLog;
+if (isMainThread) {
+  // electron-log requires 'electron' — only available in the main Electron process
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const electronLog = require('electron-log/main');
+  electronLog.transports.file.level = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
+  electronLog.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'warn';
+  electronLog.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+  electronLog.transports.file.maxSize = 5 * 1024 * 1024;
+  log = electronLog;
+} else {
+  // Worker threads: console fallback (electron module unavailable)
+  // Map all levels to console.warn/error (the only methods allowed by no-console rule)
+  log = {
+    info: console.warn.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+    debug: console.warn.bind(console),
+    verbose: console.warn.bind(console),
+    log: console.warn.bind(console),
+  };
+}
 
 export default log;
 
 /** Returns the path to the log file directory for use in "Open Logs Folder" */
 export function getLogPath(): string {
-  return electronLog.transports.file.getFile().path;
+  if (!isMainThread) return '';
+  return log.transports.file.getFile().path;
 }
