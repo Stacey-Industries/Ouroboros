@@ -9,6 +9,7 @@
 interface AutoUpdaterLike {
   autoDownload: boolean;
   autoInstallOnAppQuit: boolean;
+  requestHeaders: Record<string, string> | null;
   checkForUpdates(): Promise<unknown>;
   downloadUpdate(): Promise<unknown>;
   quitAndInstall(): void;
@@ -36,4 +37,11 @@ try {
  */
 export function getAutoUpdater(): AutoUpdaterLike | null {
   return _autoUpdater;
+}
+
+/** Set a GitHub token on the auto-updater for private repo release access. */
+export function setUpdaterGitHubToken(token: string | null): void {
+  if (!_autoUpdater) return;
+  _autoUpdater.requestHeaders = token ? { Authorization: `token ${token}` } : null;
+  log.info(`[Updater] GitHub token ${token ? 'set' : 'cleared'} for update checks`);
 }

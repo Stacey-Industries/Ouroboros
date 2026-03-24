@@ -7,8 +7,9 @@ import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
+import { getCredential } from './auth/credentialStore';
 import log from './logger';
-import { getAutoUpdater } from './updater';
+import { getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
 import { getAllActiveWindows } from './windowManager';
 
@@ -101,8 +102,18 @@ function scheduleAutoUpdateCheck(): void {
   }, 5000);
 }
 
+async function seedUpdaterToken(): Promise<void> {
+  try {
+    const cred = await getCredential('github');
+    if (cred?.type === 'oauth') setUpdaterGitHubToken(cred.accessToken);
+  } catch {
+    // Non-fatal — updater works without token for public repos
+  }
+}
+
 export function configureAutoUpdater(): void {
   if (!getAutoUpdater()) return;
   registerAutoUpdaterEvents();
+  void seedUpdaterToken();
   scheduleAutoUpdateCheck();
 }

@@ -26,6 +26,7 @@ import { logoutOpenAi, setOpenAiApiKey } from '../auth/providers/openaiAuth';
 import type { AuthProvider } from '../auth/types';
 import log from '../logger';
 import { setGithubTokenForPty } from '../ptyEnv';
+import { setUpdaterGitHubToken } from '../updater';
 import { broadcastToWebClients } from '../web/webServer';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
@@ -113,7 +114,10 @@ function handleStartLogin(
 function onGitHubAuthenticated(win: BrowserWindow): void {
   void broadcastAuthState(win);
   void getCredential('github').then((cred) => {
-    if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
+    if (cred?.type === 'oauth') {
+      setGithubTokenForPty(cred.accessToken);
+      setUpdaterGitHubToken(cred.accessToken);
+    }
   });
 }
 
@@ -174,6 +178,7 @@ async function handleLogout(
 async function callLogout(provider: AuthProvider): Promise<void> {
   if (provider === 'github') {
     setGithubTokenForPty(null);
+    setUpdaterGitHubToken(null);
     return logoutGitHub();
   }
   if (provider === 'anthropic') return logoutAnthropic();
