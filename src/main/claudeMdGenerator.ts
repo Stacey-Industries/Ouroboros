@@ -99,6 +99,21 @@ export function initClaudeMdGenerator(win: BrowserWindow): void {
   log.info('Generator initialized');
 }
 
+async function spawnClaudeWithRetry(prompt: string, model: string): Promise<string | undefined> {
+  let lastErr: string | undefined;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await spawnClaude(prompt, model);
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+      const isRateLimit = /rate|429/i.test(lastErr);
+      if (!isRateLimit || attempt === MAX_RETRIES) break;
+      await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+    }
+  }
+  throw new Error(lastErr);
+}
+
 export async function generateForDirectory(
   projectRoot: string,
   dirPath: string,
@@ -107,41 +122,29 @@ export async function generateForDirectory(
   const filePath = path.join(dirPath, 'CLAUDE.md');
 
   const settings = getConfigValue('claudeMdSettings');
-  if (!settings.enabled) {
+  if (!settings.enabled) return makeResult(relPath, filePath, 'skipped');
+  if (isExcluded(relPath, settings.excludeDirs || []))
     return makeResult(relPath, filePath, 'skipped');
-  }
-
-  if (isExcluded(relPath, settings.excludeDirs || [])) {
-    return makeResult(relPath, filePath, 'skipped');
-  }
 
   updateStatus({ currentDir: relPath });
 
-  let lastErr: string | undefined;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const generated = await spawnClaude(
-        await buildPrompt(dirPath, projectRoot),
-        settings.model || 'sonnet',
-      );
-      if (!generated || generated.length < 10) {
-        log.info(`claudeMd: ${relPath} → skipped`);
-        return makeResult(relPath, filePath, 'skipped');
-      }
-      const writeStatus = await writeClaudeMd(filePath, generated);
-      log.info(`claudeMd: ${relPath} → ${writeStatus}`);
-      return makeResult(relPath, filePath, writeStatus);
-    } catch (err) {
-      lastErr = err instanceof Error ? err.message : String(err);
-      const isRateLimit = /rate|429/i.test(lastErr);
-      if (!isRateLimit || attempt === MAX_RETRIES) break;
-      log.info(`claudeMd: ${relPath} → rate limited, retrying in ${RATE_LIMIT_DELAY_MS}ms`);
-      await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
+  try {
+    const generated = await spawnClaudeWithRetry(
+      await buildPrompt(dirPath, projectRoot),
+      settings.model || 'sonnet',
+    );
+    if (!generated || generated.length < 10) {
+      log.info(`claudeMd: ${relPath} → skipped`);
+      return makeResult(relPath, filePath, 'skipped');
     }
+    const writeStatus = await writeClaudeMd(filePath, generated);
+    log.info(`claudeMd: ${relPath} → ${writeStatus}`);
+    return makeResult(relPath, filePath, writeStatus);
+  } catch (err) {
+    const lastErr = err instanceof Error ? err.message : String(err);
+    log.info(`claudeMd: ${relPath} → error: ${lastErr}`);
+    return makeResult(relPath, filePath, 'error', lastErr);
   }
-
-  log.info(`claudeMd: ${relPath} → error: ${lastErr}`);
-  return makeResult(relPath, filePath, 'error', lastErr);
 }
 
 // ---------------------------------------------------------------------------

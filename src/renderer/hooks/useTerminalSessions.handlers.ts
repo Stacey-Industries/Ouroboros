@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useCallback } from 'react';
 
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
+import { spawnBySessionType } from './useSessionManager.spawn';
 import type { UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 import {
   generateSessionId,
@@ -76,13 +77,16 @@ function useGracefulKill(
   clearKillTimers: (id: string) => void,
   setKillTimers: (id: string, timers: ReturnType<typeof setTimeout>[]) => void,
 ): (sessionId: string) => void {
-  return useCallback((sessionId: string): void => {
-    clearKillTimers(sessionId);
-    void window.electronAPI.pty.write(sessionId, '\x03');
-    const firstTimer = setTimeout(() => void window.electronAPI.pty.kill(sessionId), 3000);
-    const secondTimer = setTimeout(() => void window.electronAPI.pty.kill(sessionId), 6000);
-    setKillTimers(sessionId, [firstTimer, secondTimer]);
-  }, [clearKillTimers, setKillTimers]);
+  return useCallback(
+    (sessionId: string): void => {
+      clearKillTimers(sessionId);
+      void window.electronAPI.pty.write(sessionId, '\x03');
+      const firstTimer = setTimeout(() => void window.electronAPI.pty.kill(sessionId), 3000);
+      const secondTimer = setTimeout(() => void window.electronAPI.pty.kill(sessionId), 6000);
+      setKillTimers(sessionId, [firstTimer, secondTimer]);
+    },
+    [clearKillTimers, setKillTimers],
+  );
 }
 
 function useCloseHandler({
@@ -92,36 +96,20 @@ function useCloseHandler({
   setActiveSessionId,
   gracefulKill,
 }: CloseHandlerDependencies): UseTerminalSessionsReturn['handleTerminalClose'] {
-  return useCallback((sessionId: string): void => {
-    const session = sessions.find((item) => item.id === sessionId);
-    if (!session) return;
-    if (session.status === 'running') gracefulKill(sessionId);
+  return useCallback(
+    (sessionId: string): void => {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) return;
+      if (session.status === 'running') gracefulKill(sessionId);
 
-    setSessions((prev) => {
-      const next = prev.filter((item) => item.id !== sessionId);
-      setActiveSessionId(nextActiveSessionId(prev, next, activeSessionId, sessionId));
-      return next;
-    });
-  }, [activeSessionId, gracefulKill, sessions, setActiveSessionId, setSessions]);
-}
-
-function spawnBySessionType(
-  session: TerminalSession,
-  cwd: string,
-): Promise<unknown> {
-  if (session.isClaude) {
-    return window.electronAPI.pty.spawnClaude(session.id, {
-      cwd,
-      resumeMode: session.claudeSessionId,
-    });
-  }
-  if (session.isCodex) {
-    return window.electronAPI.pty.spawnCodex(session.id, {
-      cwd,
-      resumeThreadId: session.codexThreadId,
-    });
-  }
-  return window.electronAPI.pty.spawn(session.id, { cwd });
+      setSessions((prev) => {
+        const next = prev.filter((item) => item.id !== sessionId);
+        setActiveSessionId(nextActiveSessionId(prev, next, activeSessionId, sessionId));
+        return next;
+      });
+    },
+    [activeSessionId, gracefulKill, sessions, setActiveSessionId, setSessions],
+  );
 }
 
 function useRestartHandler(
@@ -129,96 +117,124 @@ function useRestartHandler(
   setSessions: SessionSetter,
   clearKillTimers: (id: string) => void,
 ): UseTerminalSessionsReturn['handleTerminalRestart'] {
-  return useCallback(async (sessionId: string): Promise<void> => {
-    const session = sessions.find((item) => item.id === sessionId);
-    if (!session || session.status !== 'exited') return;
+  return useCallback(
+    async (sessionId: string): Promise<void> => {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session || session.status !== 'exited') return;
 
-    const cwd = await getDefaultCwd();
-    try {
-      await spawnBySessionType(session, cwd);
-      setSessions((prev) =>
-        prev.map((item) =>
-          item.id === sessionId ? { ...item, status: 'running', title: normalizeRestartTitle(item.title) } : item,
-        ),
-      );
-      registerExitHandler(sessionId, setSessions, clearKillTimers);
-    } catch {
-      return;
-    }
-  }, [clearKillTimers, sessions, setSessions]);
+      const cwd = await getDefaultCwd();
+      try {
+        await spawnBySessionType(session, cwd);
+        setSessions((prev) =>
+          prev.map((item) =>
+            item.id === sessionId
+              ? { ...item, status: 'running', title: normalizeRestartTitle(item.title) }
+              : item,
+          ),
+        );
+        registerExitHandler(sessionId, setSessions, clearKillTimers);
+      } catch {
+        return;
+      }
+    },
+    [clearKillTimers, sessions, setSessions],
+  );
 }
 
-function useTitleChangeHandler(setSessions: SessionSetter): UseTerminalSessionsReturn['handleTerminalTitleChange'] {
-  return useCallback((sessionId: string, title: string): void => {
-    if (!title) return;
-    setSessions((prev) => prev.map((session) => (session.id === sessionId ? { ...session, title } : session)));
-  }, [setSessions]);
+function useTitleChangeHandler(
+  setSessions: SessionSetter,
+): UseTerminalSessionsReturn['handleTerminalTitleChange'] {
+  return useCallback(
+    (sessionId: string, title: string): void => {
+      if (!title) return;
+      setSessions((prev) =>
+        prev.map((session) => (session.id === sessionId ? { ...session, title } : session)),
+      );
+    },
+    [setSessions],
+  );
 }
 
 function useToggleRecordingHandler(
   recordingSessions: Set<string>,
   setRecordingSessions: RecordingSessionSetter,
 ): UseTerminalSessionsReturn['handleToggleRecording'] {
-  return useCallback(async (sessionId: string): Promise<void> => {
-    const recording = !recordingSessions.has(sessionId);
-    if (recording) await window.electronAPI.pty.startRecording(sessionId);
-    else await window.electronAPI.pty.stopRecording(sessionId);
-    applyRecordingState(setRecordingSessions, sessionId, recording);
-  }, [recordingSessions, setRecordingSessions]);
+  return useCallback(
+    async (sessionId: string): Promise<void> => {
+      const recording = !recordingSessions.has(sessionId);
+      if (recording) await window.electronAPI.pty.startRecording(sessionId);
+      else await window.electronAPI.pty.stopRecording(sessionId);
+      applyRecordingState(setRecordingSessions, sessionId, recording);
+    },
+    [recordingSessions, setRecordingSessions],
+  );
 }
 
 function useSplitHandler(
   setSessions: SessionSetter,
   clearKillTimers: (id: string) => void,
 ): UseTerminalSessionsReturn['handleSplit'] {
-  return useCallback(async (primarySessionId: string): Promise<void> => {
-    const splitId = generateSessionId();
-    const cwd = await getDefaultCwd();
+  return useCallback(
+    async (primarySessionId: string): Promise<void> => {
+      const splitId = generateSessionId();
+      const cwd = await getDefaultCwd();
 
-    try {
-      await window.electronAPI.pty.spawn(splitId, { cwd });
-      const exitCleanup = window.electronAPI.pty.onExit(splitId, () => {
-        exitCleanup();
+      try {
+        await window.electronAPI.pty.spawn(splitId, { cwd });
+        const exitCleanup = window.electronAPI.pty.onExit(splitId, () => {
+          exitCleanup();
+          setSessions((prev) =>
+            prev.map((session) =>
+              session.id === primarySessionId ? { ...session, splitStatus: 'exited' } : session,
+            ),
+          );
+          clearKillTimers(splitId);
+        });
+
         setSessions((prev) =>
           prev.map((session) =>
-            session.id === primarySessionId ? { ...session, splitStatus: 'exited' } : session,
+            session.id === primarySessionId
+              ? { ...session, splitSessionId: splitId, splitStatus: 'running' }
+              : session,
           ),
         );
-        clearKillTimers(splitId);
-      });
-
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === primarySessionId
-            ? { ...session, splitSessionId: splitId, splitStatus: 'running' }
-            : session,
-        ),
-      );
-    } catch {
-      return;
-    }
-  }, [clearKillTimers, setSessions]);
+      } catch {
+        return;
+      }
+    },
+    [clearKillTimers, setSessions],
+  );
 }
 
 function useCloseSplitHandler(
   setSessions: SessionSetter,
   gracefulKill: (sessionId: string) => void,
 ): UseTerminalSessionsReturn['handleCloseSplit'] {
-  return useCallback((primarySessionId: string): void => {
-    setSessions((prev) => {
-      const session = prev.find((item) => item.id === primarySessionId);
-      if (session?.splitSessionId) gracefulKill(session.splitSessionId);
-      return prev.map((item) =>
-        item.id === primarySessionId ? { ...item, splitSessionId: undefined, splitStatus: undefined } : item,
-      );
-    });
-  }, [gracefulKill, setSessions]);
+  return useCallback(
+    (primarySessionId: string): void => {
+      setSessions((prev) => {
+        const session = prev.find((item) => item.id === primarySessionId);
+        if (session?.splitSessionId) gracefulKill(session.splitSessionId);
+        return prev.map((item) =>
+          item.id === primarySessionId
+            ? { ...item, splitSessionId: undefined, splitStatus: undefined }
+            : item,
+        );
+      });
+    },
+    [gracefulKill, setSessions],
+  );
 }
 
-function useReorderHandler(setSessions: SessionSetter): UseTerminalSessionsReturn['handleTerminalReorder'] {
-  return useCallback((reordered: TerminalSession[]): void => {
-    setSessions(reordered);
-  }, [setSessions]);
+function useReorderHandler(
+  setSessions: SessionSetter,
+): UseTerminalSessionsReturn['handleTerminalReorder'] {
+  return useCallback(
+    (reordered: TerminalSession[]): void => {
+      setSessions(reordered);
+    },
+    [setSessions],
+  );
 }
 
 export function useTerminalSessionHandlers({

@@ -202,6 +202,40 @@ function ResultCountRow({
   );
 }
 
+function ErrorDetailList({
+  results,
+}: {
+  results: NonNullable<ClaudeMdGenerationStatus['lastRun']>['results'];
+}): React.ReactElement {
+  const errors = results.filter((r) => r.status === 'error');
+  return (
+    <>
+      {errors.map((r) => (
+        <div
+          key={r.dirPath}
+          style={{ marginTop: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
+        >
+          <span className="text-status-error" style={{ display: 'block', fontWeight: 500 }}>
+            {r.dirPath}
+          </span>
+          <span
+            className="text-text-semantic-muted"
+            style={{
+              display: 'block',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            title={r.error}
+          >
+            {r.error}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function LastRunStatus({
   lastRun,
 }: {
@@ -235,30 +269,7 @@ function LastRunStatus({
           )}
         </div>
       )}
-      {lastRun.results
-        .filter((r) => r.status === 'error')
-        .map((r) => (
-          <div
-            key={r.dirPath}
-            style={{ marginTop: '6px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}
-          >
-            <span className="text-status-error" style={{ display: 'block', fontWeight: 500 }}>
-              {r.dirPath}
-            </span>
-            <span
-              className="text-text-semantic-muted"
-              style={{
-                display: 'block',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-              title={r.error}
-            >
-              {r.error}
-            </span>
-          </div>
-        ))}
+      <ErrorDetailList results={lastRun.results} />
     </div>
   );
 }

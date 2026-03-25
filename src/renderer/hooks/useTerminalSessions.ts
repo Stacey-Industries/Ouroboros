@@ -9,15 +9,19 @@ import {
 } from './useTerminalSessions.effects';
 import { useTerminalSessionHandlers } from './useTerminalSessions.handlers';
 import { useRestoreSessions } from './useTerminalSessions.restore';
+import type { PendingCodexCapture } from './useTerminalSessions.sync';
 import {
   useClaudeSessionCapture,
   useCodexSessionCapture,
   usePersistSessions,
   useRecordingSync,
 } from './useTerminalSessions.sync';
-import type { PendingCodexCapture } from './useTerminalSessions.sync';
 
-export type { SpawnClaudeOptions, SpawnCodexOptions, UseTerminalSessionsReturn } from './useTerminalSessions.effects';
+export type {
+  SpawnClaudeOptions,
+  SpawnCodexOptions,
+  UseTerminalSessionsReturn,
+} from './useTerminalSessions.effects';
 
 function buildAgentPtySession(id: string): TerminalSession {
   return {
@@ -34,43 +38,91 @@ function useFocusOrCreate(
   clearKillTimers: (id: string) => void,
 ): (id: string) => void {
   const sessionsRef = useRef<TerminalSession[]>([]);
-  return useCallback((id: string) => {
-    if (sessionsRef.current.some((s) => s.id === id)) {
+  return useCallback(
+    (id: string) => {
+      if (sessionsRef.current.some((s) => s.id === id)) {
+        setActiveSessionId(id);
+        return;
+      }
+      setSessions((prev) => {
+        sessionsRef.current = [...prev, buildAgentPtySession(id)];
+        return sessionsRef.current;
+      });
       setActiveSessionId(id);
-      return;
-    }
-    setSessions((prev) => {
-      sessionsRef.current = [...prev, buildAgentPtySession(id)];
-      return sessionsRef.current;
-    });
-    setActiveSessionId(id);
-    registerExitHandler(id, setSessions, clearKillTimers);
-  }, [setActiveSessionId, setSessions, clearKillTimers]);
+      registerExitHandler(id, setSessions, clearKillTimers);
+    },
+    [setActiveSessionId, setSessions, clearKillTimers],
+  );
 }
 
-export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCreateSession: (id: string) => void } {
+interface SessionState {
+  sessions: TerminalSession[];
+  setSessions: React.Dispatch<React.SetStateAction<TerminalSession[]>>;
+  activeSessionId: string | null;
+  setActiveSessionId: React.Dispatch<React.SetStateAction<string | null>>;
+  recordingSessions: Set<string>;
+  setRecordingSessions: React.Dispatch<React.SetStateAction<Set<string>>>;
+}
+
+function useSessionState(): SessionState {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [recordingSessions, setRecordingSessions] = useState<Set<string>>(new Set());
+  return {
+    sessions,
+    setSessions,
+    activeSessionId,
+    setActiveSessionId,
+    recordingSessions,
+    setRecordingSessions,
+  };
+}
+
+function useSideEffects(
+  s: SessionState,
+  restore: { hasCompletedRestore: boolean; persistedSessionsSeed: unknown },
+  pendingClaudeRef: React.MutableRefObject<string[]>,
+  pendingCodexRef: React.MutableRefObject<PendingCodexCapture[]>,
+): void {
+  usePersistSessions(s.sessions, restore.hasCompletedRestore, restore.persistedSessionsSeed);
+  useClaudeSessionCapture(pendingClaudeRef, s.setSessions);
+  useCodexSessionCapture(pendingCodexRef, s.setSessions);
+  useRecordingSync(s.sessions, s.setRecordingSessions);
+}
+
+export function useTerminalSessions(): UseTerminalSessionsReturn & {
+  focusOrCreateSession: (id: string) => void;
+} {
+  const s = useSessionState();
   const spawnCountRef = useRef(0);
   const pendingClaudeAssocRef = useRef<string[]>([]);
   const pendingCodexAssocRef = useRef<PendingCodexCapture[]>([]);
   const timerApi = useKillTimers();
-  const { spawnSession, spawnClaudeSession, spawnCodexSession } = useSessionSpawners({
-    spawnCountRef, pendingClaudeAssocRef, pendingCodexAssocRef, setSessions, setActiveSessionId, clearKillTimers: timerApi.clearKillTimers,
+  const spawners = useSessionSpawners({
+    spawnCountRef,
+    pendingClaudeAssocRef,
+    pendingCodexAssocRef,
+    setSessions: s.setSessions,
+    setActiveSessionId: s.setActiveSessionId,
+    clearKillTimers: timerApi.clearKillTimers,
   });
   const handlers = useTerminalSessionHandlers({
-    sessions, activeSessionId, recordingSessions, setSessions, setActiveSessionId,
-    setRecordingSessions, clearKillTimers: timerApi.clearKillTimers, setKillTimers: timerApi.setKillTimers,
+    ...s,
+    clearKillTimers: timerApi.clearKillTimers,
+    setKillTimers: timerApi.setKillTimers,
   });
   const restore = useRestoreSessions({
-    spawnSession, spawnClaudeSession, spawnCodexSession, setSessions, setActiveSessionId,
-    spawnCountRef, clearKillTimers: timerApi.clearKillTimers,
+    ...spawners,
+    setSessions: s.setSessions,
+    setActiveSessionId: s.setActiveSessionId,
+    spawnCountRef,
+    clearKillTimers: timerApi.clearKillTimers,
   });
-  usePersistSessions(sessions, restore.hasCompletedRestore, restore.persistedSessionsSeed);
-  useClaudeSessionCapture(pendingClaudeAssocRef, setSessions);
-  useCodexSessionCapture(pendingCodexAssocRef, setSessions);
-  useRecordingSync(sessions, setRecordingSessions);
-  const focusOrCreateSession = useFocusOrCreate(setSessions, setActiveSessionId, timerApi.clearKillTimers);
-  return { sessions, activeSessionId, setActiveSessionId, recordingSessions, spawnSession, spawnClaudeSession, spawnCodexSession, focusOrCreateSession, ...handlers };
+  useSideEffects(s, restore, pendingClaudeAssocRef, pendingCodexAssocRef);
+  const focusOrCreateSession = useFocusOrCreate(
+    s.setSessions,
+    s.setActiveSessionId,
+    timerApi.clearKillTimers,
+  );
+  return { ...s, ...spawners, focusOrCreateSession, ...handlers };
 }

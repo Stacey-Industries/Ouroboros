@@ -13,7 +13,7 @@ import { FileTreeItem } from './FileTreeItem';
 import type { DiagnosticSeverity } from './fileTreeStore';
 import { useFileTreeStore } from './fileTreeStore';
 import type { EditState } from './fileTreeUtils';
-import { basename, getNodeGitStatus,ITEM_HEIGHT, OVERSCAN } from './fileTreeUtils';
+import { basename, getNodeGitStatus, ITEM_HEIGHT, OVERSCAN } from './fileTreeUtils';
 
 /** Threshold in px/frame above which we consider the user is scrolling fast. */
 const FAST_SCROLL_DELTA = 500;
@@ -48,6 +48,51 @@ function findScrollParent(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
+interface ScrollListenerRefs {
+  containerHeight: React.MutableRefObject<number>;
+  lastScrollTopRef: React.MutableRefObject<number>;
+  fastScrollTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  setScrollTop: (v: number) => void;
+  setIsFastScrolling: (v: boolean) => void;
+}
+
+function attachScrollListeners(scrollEl: HTMLElement, refs: ScrollListenerRefs): () => void {
+  const {
+    containerHeight,
+    lastScrollTopRef,
+    fastScrollTimerRef,
+    setScrollTop,
+    setIsFastScrolling,
+  } = refs;
+  const handleScroll = () => {
+    const newScrollTop = scrollEl.scrollTop;
+    const delta = Math.abs(newScrollTop - lastScrollTopRef.current);
+    lastScrollTopRef.current = newScrollTop;
+    containerHeight.current = scrollEl.clientHeight;
+    setScrollTop(newScrollTop);
+    if (delta > FAST_SCROLL_DELTA) {
+      setIsFastScrolling(true);
+      if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
+      fastScrollTimerRef.current = setTimeout(() => {
+        setIsFastScrolling(false);
+        fastScrollTimerRef.current = null;
+      }, 150);
+    }
+  };
+  const ro = new ResizeObserver(() => {
+    containerHeight.current = scrollEl.clientHeight;
+    setScrollTop(scrollEl.scrollTop);
+  });
+  scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+  ro.observe(scrollEl);
+  containerHeight.current = scrollEl.clientHeight;
+  setScrollTop(scrollEl.scrollTop);
+  return () => {
+    scrollEl.removeEventListener('scroll', handleScroll);
+    ro.disconnect();
+  };
+}
+
 function useVirtualScroll(listRef: React.RefObject<HTMLDivElement | null>) {
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = useRef(400);
@@ -60,33 +105,15 @@ function useVirtualScroll(listRef: React.RefObject<HTMLDivElement | null>) {
     if (!listEl) return;
     const scrollEl = findScrollParent(listEl);
     if (!scrollEl) return;
-
-    const handleScroll = () => {
-      const newScrollTop = scrollEl.scrollTop;
-      const delta = Math.abs(newScrollTop - lastScrollTopRef.current);
-      lastScrollTopRef.current = newScrollTop;
-      containerHeight.current = scrollEl.clientHeight;
-      setScrollTop(newScrollTop);
-      if (delta > FAST_SCROLL_DELTA) {
-        setIsFastScrolling(true);
-        if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
-        fastScrollTimerRef.current = setTimeout(() => { setIsFastScrolling(false); fastScrollTimerRef.current = null; }, 150);
-      }
-    };
-
-    const ro = new ResizeObserver(() => {
-      containerHeight.current = scrollEl.clientHeight;
-      setScrollTop(scrollEl.scrollTop);
+    const detach = attachScrollListeners(scrollEl, {
+      containerHeight,
+      lastScrollTopRef,
+      fastScrollTimerRef,
+      setScrollTop,
+      setIsFastScrolling,
     });
-
-    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
-    ro.observe(scrollEl);
-    containerHeight.current = scrollEl.clientHeight;
-    setScrollTop(scrollEl.scrollTop);
-
     return () => {
-      scrollEl.removeEventListener('scroll', handleScroll);
-      ro.disconnect();
+      detach();
       if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
     };
   }, [listRef]);
@@ -108,31 +135,38 @@ function computeVisibleSlice(
   return isFastScrolling ? indexed.filter((_, i) => i % 2 === 0) : indexed;
 }
 
+function handleDragOver(e: React.DragEvent): void {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move';
+}
+
+function rowKey(path: string): string {
+  return path === '__new_item_placeholder__' ? '__new_item_placeholder__' : path;
+}
+
 export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
-  const { scrollTop, containerHeight, isFastScrolling } = useVirtualScroll(listRef);
-  const totalHeight = props.displayItems.length * ITEM_HEIGHT;
-  const indexedSlice = computeVisibleSlice(props.displayItems, scrollTop, containerHeight.current, isFastScrolling);
-  const visibleStart = indexedSlice[0]?.originalIndex ?? 0;
-
+  const vs = useVirtualScroll(listRef);
+  const slice = computeVisibleSlice(
+    props.displayItems,
+    vs.scrollTop,
+    vs.containerHeight.current,
+    vs.isFastScrolling,
+  );
+  const top = (slice[0]?.originalIndex ?? 0) * ITEM_HEIGHT;
   return (
     <div
       ref={listRef}
       role="listbox"
       aria-label={`Files in ${basename(props.root)}`}
-      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move'; }}
+      onDragOver={handleDragOver}
       onDrop={props.handleRootDrop}
       style={{ position: 'relative' }}
     >
-      <div style={{ height: totalHeight, position: 'relative' }}>
-        <div style={{ position: 'absolute', top: visibleStart * ITEM_HEIGHT, left: 0, right: 0 }}>
-          {indexedSlice.map(({ item, originalIndex }) => (
-            <VirtualRow
-              key={item.node.path === '__new_item_placeholder__' ? '__new_item_placeholder__' : item.node.path}
-              item={item}
-              index={originalIndex}
-              {...props}
-            />
+      <div style={{ height: props.displayItems.length * ITEM_HEIGHT, position: 'relative' }}>
+        <div style={{ position: 'absolute', top, left: 0, right: 0 }}>
+          {slice.map(({ item, originalIndex }) => (
+            <VirtualRow key={rowKey(item.node.path)} item={item} index={originalIndex} {...props} />
           ))}
         </div>
       </div>
@@ -160,7 +194,10 @@ function useDiagnosticSeverity(node: TreeNode): DiagnosticSeverity | undefined {
     for (const [fp, sev] of s.diagnostics) {
       if (fp.replace(/\\/g, '/').startsWith(prefix)) {
         const p = DIAG_PRIO[sev] ?? 0;
-        if (p > worstP) { worstP = p; worst = sev; }
+        if (p > worstP) {
+          worstP = p;
+          worst = sev;
+        }
       }
     }
     return worst;
@@ -196,7 +233,10 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       onClick={p.handleItemClick}
       onDoubleClick={p.handleDoubleClick}
       onContextMenu={p.handleContextMenu}
-      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move'; }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move';
+      }}
       onDrop={isPlaceholder ? undefined : p.handleDrop}
     />
   );

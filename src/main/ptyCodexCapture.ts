@@ -70,10 +70,17 @@ export function extractTimestampFromFilename(filename: string): number | null {
 async function readRolloutCwd(filePath: string): Promise<string | null> {
   let fileHandle: fs.promises.FileHandle | null = null;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path constructed from trusted session directory
     fileHandle = await fs.promises.open(filePath, 'r');
-    const rl = readline.createInterface({ input: fileHandle.createReadStream(), crlfDelay: Infinity });
+    const rl = readline.createInterface({
+      input: fileHandle.createReadStream(),
+      crlfDelay: Infinity,
+    });
     const firstLine = await new Promise<string | null>((resolve) => {
-      rl.once('line', (line) => { rl.close(); resolve(line); });
+      rl.once('line', (line) => {
+        rl.close();
+        resolve(line);
+      });
       rl.once('close', () => resolve(null));
     });
     if (!firstLine) return null;
@@ -81,7 +88,7 @@ async function readRolloutCwd(filePath: string): Promise<string | null> {
     if (typeof parsed !== 'object' || parsed === null) return null;
     const payload = (parsed as Record<string, unknown>).payload;
     if (typeof payload !== 'object' || payload === null) return null;
-    return (payload as Record<string, unknown>).cwd as string ?? null;
+    return ((payload as Record<string, unknown>).cwd as string) ?? null;
   } catch {
     return null;
   } finally {
@@ -104,6 +111,7 @@ async function findMatchingRollout(args: CodexThreadCaptureArgs): Promise<string
   const sessionDir = getCodexSessionDir(new Date());
   let entries: string[];
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path constructed from trusted codex sessions directory
     entries = await fs.promises.readdir(sessionDir);
   } catch {
     return null; // directory doesn't exist yet — no sessions today

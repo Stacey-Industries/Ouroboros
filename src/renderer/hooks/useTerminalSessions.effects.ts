@@ -1,9 +1,8 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useCallback, useRef } from 'react';
 
-import type { PendingCodexCapture } from './useTerminalSessions.sync';
-
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
+import type { PendingCodexCapture } from './useTerminalSessions.sync';
 
 export interface UseTerminalSessionsReturn {
   sessions: TerminalSession[];
@@ -62,7 +61,6 @@ interface SpawnDependencies extends BaseSpawnDependencies {
   pendingCodexAssocRef: MutableRefObject<PendingCodexCapture[]>;
 }
 
-
 interface SpawnLifecycleArgs {
   session: TerminalSession;
   start: () => Promise<unknown>;
@@ -81,7 +79,6 @@ export interface SavedSessionSnapshot {
   claudeSessionId?: string;
   codexThreadId?: string;
 }
-
 
 export function serializeSavedSessionSnapshots(snapshots: SavedSessionSnapshot[]): string {
   return JSON.stringify(
@@ -108,7 +105,10 @@ function buildSessionLabel(index: number): string {
   return `Terminal ${index + 1}`;
 }
 
-function nextSessionIdentity(spawnCountRef: MutableRefObject<number>): { id: string; index: number } {
+function nextSessionIdentity(spawnCountRef: MutableRefObject<number>): {
+  id: string;
+  index: number;
+} {
   const id = generateSessionId();
   const index = spawnCountRef.current;
   spawnCountRef.current += 1;
@@ -130,7 +130,9 @@ export function registerExitHandler(
 ): void {
   const exitCleanup = window.electronAPI.pty.onExit(id, () => {
     exitCleanup();
-    setSessions((prev) => prev.map((session) => (session.id === id ? { ...session, status: 'exited' } : session)));
+    setSessions((prev) =>
+      prev.map((session) => (session.id === id ? { ...session, status: 'exited' } : session)),
+    );
     clearKillTimers(id);
   });
 }
@@ -138,7 +140,9 @@ export function registerExitHandler(
 function markSessionError(id: string, setSessions: SessionSetter): void {
   setSessions((prev) =>
     prev.map((session) =>
-      session.id === id ? { ...session, status: 'exited', title: `${session.title} [error]` } : session,
+      session.id === id
+        ? { ...session, status: 'exited', title: `${session.title} [error]` }
+        : session,
     ),
   );
 }
@@ -157,7 +161,11 @@ async function spawnSessionWithLifecycle({
 
   try {
     const result = await start();
-    const failed = result && typeof result === 'object' && 'success' in result && !(result as { success: boolean }).success;
+    const failed =
+      result &&
+      typeof result === 'object' &&
+      'success' in result &&
+      !(result as { success: boolean }).success;
     if (failed) {
       markSessionError(session.id, setSessions);
       return;
@@ -178,9 +186,12 @@ export function useKillTimers(): KillTimerApi {
     killTimersRef.current.delete(sessionId);
   }, []);
 
-  const setKillTimers = useCallback((sessionId: string, timers: ReturnType<typeof setTimeout>[]): void => {
-    killTimersRef.current.set(sessionId, timers);
-  }, []);
+  const setKillTimers = useCallback(
+    (sessionId: string, timers: ReturnType<typeof setTimeout>[]): void => {
+      killTimersRef.current.set(sessionId, timers);
+    },
+    [],
+  );
 
   return { clearKillTimers, setKillTimers };
 }
@@ -191,18 +202,21 @@ function useSpawnSession({
   setActiveSessionId,
   clearKillTimers,
 }: BaseSpawnDependencies): SpawnSession {
-  return useCallback(async (optionalCwd?: string): Promise<void> => {
-    const { id, index } = nextSessionIdentity(spawnCountRef);
-    const cwd = optionalCwd ?? await getDefaultCwd();
-    const session: TerminalSession = { id, title: buildSessionLabel(index), status: 'running' };
-    await spawnSessionWithLifecycle({
-      session,
-      setSessions,
-      setActiveSessionId,
-      clearKillTimers,
-      start: () => window.electronAPI.pty.spawn(id, { cwd }),
-    });
-  }, [clearKillTimers, setActiveSessionId, setSessions, spawnCountRef]);
+  return useCallback(
+    async (optionalCwd?: string): Promise<void> => {
+      const { id, index } = nextSessionIdentity(spawnCountRef);
+      const cwd = optionalCwd ?? (await getDefaultCwd());
+      const session: TerminalSession = { id, title: buildSessionLabel(index), status: 'running' };
+      await spawnSessionWithLifecycle({
+        session,
+        setSessions,
+        setActiveSessionId,
+        clearKillTimers,
+        start: () => window.electronAPI.pty.spawn(id, { cwd }),
+      });
+    },
+    [clearKillTimers, setActiveSessionId, setSessions, spawnCountRef],
+  );
 }
 
 function useSpawnClaudeSession({
@@ -212,36 +226,51 @@ function useSpawnClaudeSession({
   setActiveSessionId,
   clearKillTimers,
 }: SpawnDependencies): SpawnClaudeSession {
-  return useCallback(async (
-    optionalCwd?: string,
-    options?: SpawnClaudeOptions,
-  ): Promise<void> => {
-    const { id, index } = nextSessionIdentity(spawnCountRef);
-    const cwd = optionalCwd ?? await getDefaultCwd();
-    const session: TerminalSession = {
-      id,
-      title: options?.label ?? `Claude ${index + 1}`,
-      status: 'running',
-      isClaude: true,
-      model: options?.providerModel,
-    };
+  return useCallback(
+    async (optionalCwd?: string, options?: SpawnClaudeOptions): Promise<void> => {
+      const { id, index } = nextSessionIdentity(spawnCountRef);
+      const cwd = optionalCwd ?? (await getDefaultCwd());
+      const session: TerminalSession = {
+        id,
+        title: options?.label ?? `Claude ${index + 1}`,
+        status: 'running',
+        isClaude: true,
+        model: options?.providerModel,
+      };
 
-    await spawnSessionWithLifecycle({
-      session,
-      setSessions,
-      setActiveSessionId,
-      clearKillTimers,
-      onQueued: () => pendingClaudeAssocRef.current.push(id),
-      start: () =>
-        window.electronAPI.pty.spawnClaude(id, {
-          cwd,
-          initialPrompt: options?.initialPrompt,
-          cliOverrides: options?.cliOverrides,
-          resumeMode: options?.resumeMode,
-          providerModel: options?.providerModel,
-        }),
-    });
-  }, [clearKillTimers, pendingClaudeAssocRef, setActiveSessionId, setSessions, spawnCountRef]);
+      await spawnSessionWithLifecycle({
+        session,
+        setSessions,
+        setActiveSessionId,
+        clearKillTimers,
+        onQueued: () => pendingClaudeAssocRef.current.push(id),
+        start: () =>
+          window.electronAPI.pty.spawnClaude(id, {
+            cwd,
+            initialPrompt: options?.initialPrompt,
+            cliOverrides: options?.cliOverrides,
+            resumeMode: options?.resumeMode,
+            providerModel: options?.providerModel,
+          }),
+      });
+    },
+    [clearKillTimers, pendingClaudeAssocRef, setActiveSessionId, setSessions, spawnCountRef],
+  );
+}
+
+function buildCodexSession(
+  id: string,
+  index: number,
+  options?: SpawnCodexOptions,
+): TerminalSession {
+  return {
+    id,
+    title: options?.label ?? `Codex ${index + 1}`,
+    status: 'running',
+    isCodex: true,
+    codexThreadId: options?.resumeThreadId,
+    model: options?.model,
+  };
 }
 
 function useSpawnCodexSession({
@@ -251,40 +280,36 @@ function useSpawnCodexSession({
   setActiveSessionId,
   clearKillTimers,
 }: SpawnDependencies): SpawnCodexSession {
-  return useCallback(async (
-    optionalCwd?: string,
-    options?: SpawnCodexOptions,
-  ): Promise<void> => {
-    const { id, index } = nextSessionIdentity(spawnCountRef);
-    const cwd = optionalCwd ?? await getDefaultCwd();
-    const session: TerminalSession = {
-      id,
-      title: options?.label ?? `Codex ${index + 1}`,
-      status: 'running',
-      isCodex: true,
-      codexThreadId: options?.resumeThreadId,
-      model: options?.model,
-    };
-
-    await spawnSessionWithLifecycle({
-      session,
-      setSessions,
-      setActiveSessionId,
-      clearKillTimers,
-      onQueued: () => {
-        if (!options?.resumeThreadId) {
-          pendingCodexAssocRef.current.push({ ptyId: id, cwd, spawnedAt: Date.now(), retries: 0 });
-        }
-      },
-      start: () =>
-        window.electronAPI.pty.spawnCodex(id, {
-          cwd,
-          initialPrompt: options?.initialPrompt,
-          cliOverrides: options?.cliOverrides,
-          resumeThreadId: options?.resumeThreadId,
-        }),
-    });
-  }, [clearKillTimers, pendingCodexAssocRef, setActiveSessionId, setSessions, spawnCountRef]);
+  return useCallback(
+    async (optionalCwd?: string, options?: SpawnCodexOptions): Promise<void> => {
+      const { id, index } = nextSessionIdentity(spawnCountRef);
+      const cwd = optionalCwd ?? (await getDefaultCwd());
+      await spawnSessionWithLifecycle({
+        session: buildCodexSession(id, index, options),
+        setSessions,
+        setActiveSessionId,
+        clearKillTimers,
+        onQueued: () => {
+          if (!options?.resumeThreadId) {
+            pendingCodexAssocRef.current.push({
+              ptyId: id,
+              cwd,
+              spawnedAt: Date.now(),
+              retries: 0,
+            });
+          }
+        },
+        start: () =>
+          window.electronAPI.pty.spawnCodex(id, {
+            cwd,
+            initialPrompt: options?.initialPrompt,
+            cliOverrides: options?.cliOverrides,
+            resumeThreadId: options?.resumeThreadId,
+          }),
+      });
+    },
+    [clearKillTimers, pendingCodexAssocRef, setActiveSessionId, setSessions, spawnCountRef],
+  );
 }
 
 export function useSessionSpawners(dependencies: SpawnDependencies): {
