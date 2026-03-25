@@ -4,7 +4,7 @@
  * Extracted from RootSection to reduce complexity.
  */
 
-import React, { useCallback, useEffect,useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
 import type { GitFileStatus } from '../../types/electron';
@@ -37,31 +37,61 @@ export interface VirtualTreeListProps {
   handleRootDrop: (e: React.DragEvent) => void;
 }
 
-function useVirtualScroll() {
+/** Walk up the DOM to find the nearest ancestor with overflow scrolling. */
+function findScrollParent(el: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const style = window.getComputedStyle(node);
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll') return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+function useVirtualScroll(listRef: React.RefObject<HTMLDivElement | null>) {
   const [scrollTop, setScrollTop] = useState(0);
   const containerHeight = useRef(400);
   const lastScrollTopRef = useRef(0);
   const [isFastScrolling, setIsFastScrolling] = useState(false);
   const fastScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const newScrollTop = e.currentTarget.scrollTop;
-    const delta = Math.abs(newScrollTop - lastScrollTopRef.current);
-    lastScrollTopRef.current = newScrollTop;
-    containerHeight.current = e.currentTarget.clientHeight;
-    setScrollTop(newScrollTop);
-    if (delta > FAST_SCROLL_DELTA) {
-      setIsFastScrolling(true);
+  useEffect(() => {
+    const listEl = listRef.current;
+    if (!listEl) return;
+    const scrollEl = findScrollParent(listEl);
+    if (!scrollEl) return;
+
+    const handleScroll = () => {
+      const newScrollTop = scrollEl.scrollTop;
+      const delta = Math.abs(newScrollTop - lastScrollTopRef.current);
+      lastScrollTopRef.current = newScrollTop;
+      containerHeight.current = scrollEl.clientHeight;
+      setScrollTop(newScrollTop);
+      if (delta > FAST_SCROLL_DELTA) {
+        setIsFastScrolling(true);
+        if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
+        fastScrollTimerRef.current = setTimeout(() => { setIsFastScrolling(false); fastScrollTimerRef.current = null; }, 150);
+      }
+    };
+
+    const ro = new ResizeObserver(() => {
+      containerHeight.current = scrollEl.clientHeight;
+      setScrollTop(scrollEl.scrollTop);
+    });
+
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+    ro.observe(scrollEl);
+    containerHeight.current = scrollEl.clientHeight;
+    setScrollTop(scrollEl.scrollTop);
+
+    return () => {
+      scrollEl.removeEventListener('scroll', handleScroll);
+      ro.disconnect();
       if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
-      fastScrollTimerRef.current = setTimeout(() => { setIsFastScrolling(false); fastScrollTimerRef.current = null; }, 150);
-    }
-  }, []);
+    };
+  }, [listRef]);
 
-  useEffect(() => () => {
-    if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
-  }, []);
-
-  return { scrollTop, containerHeight, isFastScrolling, handleScroll };
+  return { scrollTop, containerHeight, isFastScrolling };
 }
 
 function computeVisibleSlice(
@@ -80,7 +110,7 @@ function computeVisibleSlice(
 
 export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
-  const { scrollTop, containerHeight, isFastScrolling, handleScroll } = useVirtualScroll();
+  const { scrollTop, containerHeight, isFastScrolling } = useVirtualScroll(listRef);
   const totalHeight = props.displayItems.length * ITEM_HEIGHT;
   const indexedSlice = computeVisibleSlice(props.displayItems, scrollTop, containerHeight.current, isFastScrolling);
   const visibleStart = indexedSlice[0]?.originalIndex ?? 0;
@@ -90,10 +120,9 @@ export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement
       ref={listRef}
       role="listbox"
       aria-label={`Files in ${basename(props.root)}`}
-      onScroll={handleScroll}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move'; }}
       onDrop={props.handleRootDrop}
-      style={{ overflowY: 'auto', overflowX: 'hidden', position: 'relative', maxHeight: '60vh' }}
+      style={{ position: 'relative' }}
     >
       <div style={{ height: totalHeight, position: 'relative' }}>
         <div style={{ position: 'absolute', top: visibleStart * ITEM_HEIGHT, left: 0, right: 0 }}>

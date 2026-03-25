@@ -11,9 +11,11 @@ import { useTerminalSessionHandlers } from './useTerminalSessions.handlers';
 import { useRestoreSessions } from './useTerminalSessions.restore';
 import {
   useClaudeSessionCapture,
+  useCodexSessionCapture,
   usePersistSessions,
   useRecordingSync,
 } from './useTerminalSessions.sync';
+import type { PendingCodexCapture } from './useTerminalSessions.sync';
 
 export type { SpawnClaudeOptions, SpawnCodexOptions, UseTerminalSessionsReturn } from './useTerminalSessions.effects';
 
@@ -52,9 +54,10 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
   const [recordingSessions, setRecordingSessions] = useState<Set<string>>(new Set());
   const spawnCountRef = useRef(0);
   const pendingClaudeAssocRef = useRef<string[]>([]);
+  const pendingCodexAssocRef = useRef<PendingCodexCapture[]>([]);
   const timerApi = useKillTimers();
   const { spawnSession, spawnClaudeSession, spawnCodexSession } = useSessionSpawners({
-    spawnCountRef, pendingClaudeAssocRef, setSessions, setActiveSessionId, clearKillTimers: timerApi.clearKillTimers,
+    spawnCountRef, pendingClaudeAssocRef, pendingCodexAssocRef, setSessions, setActiveSessionId, clearKillTimers: timerApi.clearKillTimers,
   });
   const handlers = useTerminalSessionHandlers({
     sessions, activeSessionId, recordingSessions, setSessions, setActiveSessionId,
@@ -66,6 +69,7 @@ export function useTerminalSessions(): UseTerminalSessionsReturn & { focusOrCrea
   });
   usePersistSessions(sessions, restore.hasCompletedRestore, restore.persistedSessionsSeed);
   useClaudeSessionCapture(pendingClaudeAssocRef, setSessions);
+  useCodexSessionCapture(pendingCodexAssocRef, setSessions);
   useRecordingSync(sessions, setRecordingSessions);
   const focusOrCreateSession = useFocusOrCreate(setSessions, setActiveSessionId, timerApi.clearKillTimers);
   return { sessions, activeSessionId, setActiveSessionId, recordingSessions, spawnSession, spawnClaudeSession, spawnCodexSession, focusOrCreateSession, ...handlers };

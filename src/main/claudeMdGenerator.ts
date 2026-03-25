@@ -22,6 +22,9 @@ export type { ClaudeMdGenerationResult, ClaudeMdGenerationStatus };
 // ---------------------------------------------------------------------------
 
 const COOLDOWN_MS = 180_000; // Ignore triggers for 3min after generation completes
+const SPAWN_DELAY_MS = 2000;
+const RATE_LIMIT_DELAY_MS = 5000;
+const MAX_RETRIES = 2;
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -114,19 +117,31 @@ export async function generateForDirectory(
 
   updateStatus({ currentDir: relPath });
 
-  try {
-    const generated = await spawnClaude(
-      await buildPrompt(dirPath, projectRoot),
-      settings.model || 'sonnet',
-    );
-    if (!generated || generated.length < 10) {
-      return makeResult(relPath, filePath, 'skipped');
+  let lastErr: string | undefined;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const generated = await spawnClaude(
+        await buildPrompt(dirPath, projectRoot),
+        settings.model || 'sonnet',
+      );
+      if (!generated || generated.length < 10) {
+        log.info(`claudeMd: ${relPath} → skipped`);
+        return makeResult(relPath, filePath, 'skipped');
+      }
+      const writeStatus = await writeClaudeMd(filePath, generated);
+      log.info(`claudeMd: ${relPath} → ${writeStatus}`);
+      return makeResult(relPath, filePath, writeStatus);
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+      const isRateLimit = /rate|429/i.test(lastErr);
+      if (!isRateLimit || attempt === MAX_RETRIES) break;
+      log.info(`claudeMd: ${relPath} → rate limited, retrying in ${RATE_LIMIT_DELAY_MS}ms`);
+      await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
     }
-    const writeStatus = await writeClaudeMd(filePath, generated);
-    return makeResult(relPath, filePath, writeStatus);
-  } catch (err) {
-    return makeResult(relPath, filePath, 'error', err instanceof Error ? err.message : String(err));
   }
+
+  log.info(`claudeMd: ${relPath} → error: ${lastErr}`);
+  return makeResult(relPath, filePath, 'error', lastErr);
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +204,9 @@ async function processDirectories(
   for (const [i, dir] of targetDirs.entries()) {
     results.push(await generateForDirectory(projectRoot, dir));
     updateStatus({ progress: { completed: i + 1, total: targetDirs.length } });
+    if (i < targetDirs.length - 1) {
+      await new Promise((r) => setTimeout(r, SPAWN_DELAY_MS));
+    }
   }
 
   return results;

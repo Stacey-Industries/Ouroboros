@@ -61,6 +61,7 @@ const ptyAPI: ElectronAPI['pty'] = {
 
 const codexAPI: ElectronAPI['codex'] = {
   listModels: () => ipcRenderer.invoke('codex:listModels'),
+  resolveThreadId: (args) => ipcRenderer.invoke('codex:resolveThreadId', args),
 };
 
 // â”€â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

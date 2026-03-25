@@ -122,6 +122,25 @@ function useCloseAction(args: {
   }, [activeSessionIdRef, gracefulKill, sessionsRef, setActiveSessionId, setSessions]);
 }
 
+function spawnBySessionType(
+  session: TerminalSession,
+  cwd: string,
+): Promise<unknown> {
+  if (session.isClaude) {
+    return window.electronAPI.pty.spawnClaude(session.id, {
+      cwd,
+      resumeMode: session.claudeSessionId,
+    });
+  }
+  if (session.isCodex) {
+    return window.electronAPI.pty.spawnCodex(session.id, {
+      cwd,
+      resumeThreadId: session.codexThreadId,
+    });
+  }
+  return window.electronAPI.pty.spawn(session.id, { cwd });
+}
+
 function useRestartAction(args: {
   sessionsRef: MutableRefObject<TerminalSession[]>;
   setSessions: SessionManagerActionArgs['setSessions'];
@@ -136,7 +155,7 @@ function useRestartAction(args: {
 
     const cwd = await resolveSessionCwd();
     try {
-      await window.electronAPI.pty.spawn(sessionId, { cwd });
+      await spawnBySessionType(session, cwd);
       updateSessionStatus(setSessions, sessionId, (item) => ({
         ...item,
         status: 'running',

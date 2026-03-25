@@ -7,6 +7,7 @@ import { BrowserWindow } from 'electron'
 import * as pty from 'node-pty'
 
 import { type ClaudeCliSettings, type CodexCliSettings } from './config'
+import log from './logger'
 import {
   cleanupSession,
   escapePowerShellArg,
@@ -49,6 +50,7 @@ export function spawnClaudePty(
 
   const { cwd, cols, rows } = resolveSpawnOptions(options)
   const launch = buildClaudeLaunchArgs(buildClaudeArgs(settings), options.resumeMode)
+  log.debug(`[pty] spawnClaude id=${id} shell=${launch.shell} args=${JSON.stringify(launch.args)} cwd=${cwd}`)
   try {
     const proc = pty.spawn(launch.shell, launch.args, {
       name: 'xterm-256color', cols, rows, cwd,
@@ -59,8 +61,10 @@ export function spawnClaudePty(
     notifyTerminalCreated(id, cwd)
     return { success: true }
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    log.error(`[pty] spawnClaude failed id=${id}: ${msg}`)
     cleanupSession(id)
-    return { success: false, error: error instanceof Error ? error.message : String(error) }
+    return { success: false, error: msg }
   }
 }
 

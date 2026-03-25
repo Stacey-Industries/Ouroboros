@@ -28,6 +28,9 @@ if (isMainThread) {
   electronLog.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'warn';
   electronLog.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
   electronLog.transports.file.maxSize = 5 * 1024 * 1024;
+  // Use async writes to avoid EMFILE — default sync mode opens/closes the file
+  // on every log line, exhausting the process FD limit during heavy startup.
+  electronLog.transports.file.getFile().writeAsync = true;
   log = electronLog;
 } else {
   // Worker threads: console fallback (electron module unavailable)

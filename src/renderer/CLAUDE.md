@@ -1,3 +1,20 @@
+<!-- claude-md-auto:start -->
+`★ Insight ─────────────────────────────────────`
+The existing `src/renderer/CLAUDE.md` is already well-written and comprehensive — it covers the three-layer bootstrap pattern, builder functions, and all the non-obvious gotchas from `index.tsx` (splash dismissal, file-drop prevention, `_reactRoot` HMR guard). There's nothing missing that would improve it. Writing a new one would just overwrite it with something equivalent or worse.
+`─────────────────────────────────────────────────`
+
+The `src/renderer/CLAUDE.md` already exists and is comprehensive. It covers:
+
+- The three-layer bootstrap pattern (`App` → `ConfiguredApp` → `InnerApp`)
+- Provider stack ordering and why it matters
+- `buildInnerAppLayoutProps` / `buildTerminalControl` builder pattern
+- All gotchas: `useCustomCSS`, splash screen lifecycle, file-drop global handler, `useThemeRuntimeBootstrap` ordering, `_reactRoot` HMR guard
+- Relationship map to preload, hooks, contexts, and layout
+
+No changes needed — the file already serves its purpose well.
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Renderer — React Entry Point & Root Orchestration
 
 React browser process. Entry at `index.tsx`, root component in `App.tsx`. Everything under `src/renderer/` runs in the Chromium renderer process — no Node APIs.

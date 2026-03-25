@@ -1,7 +1,6 @@
 <!-- claude-md-auto:start -->
-
 `★ Insight ─────────────────────────────────────`
-This root directory has **three separate Vite build pipelines** for the same React app: `electron.vite.config.ts` (Electron), `vite.web.config.ts` (browser), and `vite.webpreload.config.ts` (IIFE shim). The IIFE format for `webPreload.ts` is intentional — it needs to execute synchronously before React bootstraps, so it can't be an ES module. The `emptyOutDir: false` in the webpreload config is a critical ordering constraint: the renderer must build first, then the preload is injected into the same `out/web/` directory.
+The existing root CLAUDE.md already covers the build pipeline extensively. The tailwind.config.ts excerpt reveals that the design token system has been upgraded since the docs were written — it now uses a richer semantic layer (`surface-base/panel/raised/overlay/inset`, `text-semantic/*`, `border-semantic/*`, `interactive/*`, `status/*`) alongside the static tokens. The CLAUDE.md docs reference the older `surface-*`/`ink-*`/`accent-*` naming which appears to be outdated.
 `─────────────────────────────────────────────────`
 
 # Root — Build Configuration & Tooling
@@ -15,9 +14,10 @@ Build pipeline and tooling config for an Electron desktop IDE. Three build targe
 | `electron.vite.config.ts`   | Primary build — three targets: `main` (Node), `preload` (Node), `renderer` (React + Monaco). Run with `npm run build`.                                                                                               |
 | `vite.web.config.ts`        | Web deployment build — same React renderer served over HTTP. Outputs to `out/web/`. Injects `webPreload.js` via `transformIndexHtml` and moves `index.html` from `out/web/src/web/` to `out/web/` via `closeBundle`. |
 | `vite.webpreload.config.ts` | Builds `src/web/webPreload.ts` as IIFE — provides `window.electronAPI` over WebSocket for web mode. Must run **after** `vite.web.config.ts`. Uses `emptyOutDir: false` to preserve the renderer build.               |
-| `tailwind.config.ts`        | Design token system — `surface/*` (backgrounds), `accent/*` (semantic), `ink/*` (text hierarchy). Only scans `src/renderer/`.                                                                                        |
+| `tailwind.config.ts`        | Design token system — semantic CSS-var-backed tokens + static tokens. Only scans `src/renderer/`.                                                                                                                    |
 | `knip.config.ts`            | Dead code detection. Entry points: `main.ts`, `preload.ts`, `preloadSupplementalApis.ts`, `index.tsx`. `src/renderer/types/**` excluded (declaration files only).                                                    |
 | `vitest.config.ts`          | Unit tests — Node env, `src/**/*.test.ts`, V8 coverage. Thresholds at 5% (intentionally low — ratchet up over time).                                                                                                 |
+| `playwright.config.ts`      | E2E test config.                                                                                                                                                                                                     |
 | `postcss.config.js`         | Tailwind + Autoprefixer only. No custom transforms.                                                                                                                                                                  |
 
 ## Build Targets
@@ -28,14 +28,14 @@ electron.vite.config.ts
   ├── preload  → src/preload/preload.ts    (Node.js, isolated renderer context)
   └── renderer → src/renderer/index.html  (Browser, React, Monaco workers, Tailwind)
 
-vite.web.config.ts      → out/web/           (browser deployment)
-vite.webpreload.config.ts → out/web/webPreload.js (IIFE shim, builds last)
+vite.web.config.ts        → out/web/              (browser deployment)
+vite.webpreload.config.ts → out/web/webPreload.js  (IIFE shim, builds last)
 ```
 
 ## Path Aliases
 
 | Alias         | Resolves to      | Available in  |
-| ------------- | ---------------- | ------------- |
+|---------------|------------------|---------------|
 | `@main/*`     | `src/main/*`     | main, preload |
 | `@preload/*`  | `src/preload/*`  | preload       |
 | `@renderer/*` | `src/renderer/*` | renderer, web |
@@ -43,13 +43,19 @@ vite.webpreload.config.ts → out/web/webPreload.js (IIFE shim, builds last)
 
 ## Design Token System
 
-Three-tier color naming — use Tailwind utilities, never raw hex:
+Two layers — always use Tailwind utilities, never raw hex:
 
-- **`surface-*`**: `DEFAULT` (#0d1117) → `raised` → `overlay` → `border`
-- **`accent-*`**: `blue`, `green`, `orange`, `red`, `purple` + `-muted` variants
-- **`ink-*`**: `DEFAULT` → `muted` → `faint` → `inverse`
+**Semantic (CSS custom properties, resolve at runtime — theme-aware):**
+- `surface-base/panel/raised/overlay/inset` — background hierarchy
+- `text-semantic-primary/secondary/muted/faint/on-accent` — text hierarchy
+- `border-semantic-DEFAULT/subtle/accent` — borders
+- `interactive-accent/hover/muted/selection/focus` — interactive states
+- `status-success/warning/error/info` — status colors
 
-Runtime theming uses CSS custom properties (`var(--bg)`, `var(--accent)`, etc.) — see `src/renderer/themes/`.
+**Static (hardcoded GitHub dark / Monokai — theme-invariant):**
+- `surface-static-DEFAULT/raised/overlay/border`
+- `accent-static-blue/green/orange/red/purple` + `-muted` variants
+- `ink-static-DEFAULT/muted/faint/inverse`
 
 ## Monaco Workers
 
@@ -58,11 +64,12 @@ The renderer bundles 5 Monaco language workers: `editorWorkerService`, `typescri
 ## Gotchas
 
 - **Monaco plugin CJS/ESM interop**: `vite-plugin-monaco-editor` exports a CJS default — the config wraps it with `.default ?? module`. Do not simplify this.
-- **`optimizeDeps.force: true` in dev**: Forces Vite dep re-scan on cold starts. Prevents stale hash mismatches after `npm install` while dev server is down. Set to `false` in production.
+- **`optimizeDeps.force: true` in dev**: Forces Vite dep re-scan on cold starts. Prevents stale hash mismatches after `npm install`. Set to `false` in production.
 - **Web build ordering matters**: Run `vite.web.config.ts` first, then `vite.webpreload.config.ts`. The preload uses `emptyOutDir: false` to preserve the renderer output.
-- **`index.html` relocation**: Vite places the web build's HTML at `out/web/src/web/index.html` due to project-relative path resolution. The `moveHtmlToRoot` plugin fixes this in `closeBundle`.
+- **`index.html` relocation**: The `moveHtmlToRoot` plugin in `vite.web.config.ts` fixes Vite's project-relative path resolution in `closeBundle`.
 - **Tailwind only scans `src/renderer/`**: Classes used in main or preload code won't appear in the CSS bundle.
-- **`src/renderer/types/**`excluded from knip**: These are`.d.ts` declaration files — knip can't analyze them as entry consumers.
+- **`src/renderer/types/**` excluded from knip**: These are `.d.ts` declaration files — knip can't analyze them as entry consumers.
+- **File watcher exclusions**: `electron.vite.config.ts` ignores `docs/`, `plan/`, `ai/`, `stats/`, `*.md` etc. to prevent agent file changes from triggering hot-reload restarts.
 
 ## Bundle Analysis
 
@@ -71,7 +78,6 @@ ANALYZE=true npm run build
 ```
 
 Outputs `stats/main.html`, `stats/preload.html`, `stats/renderer.html` via `rollup-plugin-visualizer`.
-
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

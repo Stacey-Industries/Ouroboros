@@ -10,6 +10,8 @@ import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager';
 import { listCodexModels } from './codex';
+import { resolveCodexThreadId } from './ptyCodexCapture';
+import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
 import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
@@ -155,8 +157,11 @@ function registerProviderHandlers(channels: string[]): void {
   });
 
   ipcMain.handle('codex:listModels', () => listCodexModels());
+  ipcMain.handle('codex:resolveThreadId', (_event, args: CodexThreadCaptureArgs) =>
+    resolveCodexThreadId(args),
+  );
 
-  channels.push('providers:list', 'providers:getSlots', 'codex:listModels');
+  channels.push('providers:list', 'providers:getSlots', 'codex:listModels', 'codex:resolveThreadId');
 }
 
 let handlersRegistered = false;

@@ -1,6 +1,8 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useCallback, useRef } from 'react';
 
+import type { PendingCodexCapture } from './useTerminalSessions.sync';
+
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 
 export interface UseTerminalSessionsReturn {
@@ -57,6 +59,7 @@ interface BaseSpawnDependencies {
 
 interface SpawnDependencies extends BaseSpawnDependencies {
   pendingClaudeAssocRef: MutableRefObject<string[]>;
+  pendingCodexAssocRef: MutableRefObject<PendingCodexCapture[]>;
 }
 
 
@@ -153,7 +156,12 @@ async function spawnSessionWithLifecycle({
   onQueued?.();
 
   try {
-    await start();
+    const result = await start();
+    const failed = result && typeof result === 'object' && 'success' in result && !(result as { success: boolean }).success;
+    if (failed) {
+      markSessionError(session.id, setSessions);
+      return;
+    }
     registerExitHandler(session.id, setSessions, clearKillTimers);
   } catch {
     markSessionError(session.id, setSessions);
@@ -238,10 +246,11 @@ function useSpawnClaudeSession({
 
 function useSpawnCodexSession({
   spawnCountRef,
+  pendingCodexAssocRef,
   setSessions,
   setActiveSessionId,
   clearKillTimers,
-}: BaseSpawnDependencies): SpawnCodexSession {
+}: SpawnDependencies): SpawnCodexSession {
   return useCallback(async (
     optionalCwd?: string,
     options?: SpawnCodexOptions,
@@ -262,6 +271,11 @@ function useSpawnCodexSession({
       setSessions,
       setActiveSessionId,
       clearKillTimers,
+      onQueued: () => {
+        if (!options?.resumeThreadId) {
+          pendingCodexAssocRef.current.push({ ptyId: id, cwd, spawnedAt: Date.now(), retries: 0 });
+        }
+      },
       start: () =>
         window.electronAPI.pty.spawnCodex(id, {
           cwd,
@@ -270,7 +284,7 @@ function useSpawnCodexSession({
           resumeThreadId: options?.resumeThreadId,
         }),
     });
-  }, [clearKillTimers, setActiveSessionId, setSessions, spawnCountRef]);
+  }, [clearKillTimers, pendingCodexAssocRef, setActiveSessionId, setSessions, spawnCountRef]);
 }
 
 export function useSessionSpawners(dependencies: SpawnDependencies): {

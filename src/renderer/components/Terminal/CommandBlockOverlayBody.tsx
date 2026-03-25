@@ -166,13 +166,16 @@ function useVisibleBlocks(blocks: CommandBlock[], terminal: Terminal | null): Vi
   }, [blocks, terminal]);
 }
 
+function isTerminalDisposed(terminal: Terminal): boolean {
+  const t = terminal as unknown as { _isDisposed?: boolean; _core?: { _isDisposed?: boolean } };
+  return Boolean(t._isDisposed || t._core?._isDisposed);
+}
+
 function useScrollViewportY(terminal: Terminal | null): number {
   const [viewportY, setViewportY] = useState(0);
   const rafRef = useRef(0);
   useEffect(() => {
-    if (!terminal || !terminal.element) return;
-    const core = (terminal as unknown as { _core?: { _isDisposed?: boolean } })._core;
-    if (core?._isDisposed) return;
+    if (!terminal || !terminal.element || isTerminalDisposed(terminal)) return;
     let scrollD: { dispose(): void } | null = null;
     let writeD: { dispose(): void } | null = null;
     try {

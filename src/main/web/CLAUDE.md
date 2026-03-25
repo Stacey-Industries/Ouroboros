@@ -1,3 +1,65 @@
+<!-- claude-md-auto:start -->
+# src/main/web/ — HTTP + WebSocket server for browser-based IDE access
+
+Serves the renderer UI over HTTP/WS instead of Electron's BrowserWindow, reusing all existing IPC handlers via a JSON-RPC 2.0 bridge. Zero handler-file changes required.
+
+## Key Files
+
+| File                 | Role                                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webServer.ts`       | Express HTTP server + WebSocket server. Static renderer assets, token auth middleware, SPA fallback with `window.__WEB_TOKEN__` injection. Default port 7890.                                            |
+| `webAuth.ts`         | Token generation (32-byte random hex, persisted to electron-store), constant-time `timingSafeEqual` validation, per-IP rate limiting (10 attempts / 15 min window), inline login page HTML.              |
+| `webSocketBridge.ts` | JSON-RPC 2.0 ↔ IPC bridge. Parses incoming WS messages, looks up handlers in `ipcHandlerRegistry`, calls them with a mock `IpcMainInvokeEvent`, recursively encodes Buffer/Uint8Array → base64 for JSON. |
+| `handlerRegistry.ts` | Captures IPC handlers via `installHandlerCapture()`, which monkey-patches `ipcMain.handle` once at startup. Every subsequent `handle()` call anywhere in the codebase auto-populates the registry.      |
+| `ptyBatcher.ts`      | Batches high-frequency PTY data per session, flushes every 16ms (~60fps). Singleton `ptyBatcher`. Prevents per-byte WebSocket frames during active terminal output.                                     |
+| `broadcast.ts`       | Unified event dispatch — sends to all Electron `BrowserWindow`s **and** all WebSocket clients in one call. All main-process event push should go through `broadcast()`.                                 |
+| `index.ts`           | Barrel export for the module.                                                                                                                                                                            |
+
+## Architecture
+
+```
+Browser  →  HTTP GET /     →  Express static (renderer assets) + auth middleware
+Browser  →  POST /api/login →  credential validation → sets auth cookies
+Browser  →  WS /ws         →  JSON-RPC 2.0 → handlerRegistry → IPC handlers
+```
+
+The handler capture is the key mechanism: wrapping `ipcMain.handle` once means WebSocket clients can call any IPC channel by name, with no awareness of which transport they're on.
+
+## Auth Flow
+
+1. Token auto-generated on first use, stored in electron-store under `webAccessToken`.
+2. Three auth methods checked in order: cookie (`webAccessToken`), query param (`?token=`), `Authorization: Bearer`.
+3. Query param auth upgrades to cookie — sets `webAccessToken` (HttpOnly) + `wsToken` (non-HttpOnly), then redirects to clean URL.
+4. WebSocket connections authenticate via `?token=` query param or `wsToken` cookie. `wsToken` must be **non-HttpOnly** so the JS renderer can read it for WebSocket auth (the browser WebSocket API cannot send custom headers).
+5. Unauthenticated browser requests receive the inline login page; API clients get `401 JSON`.
+6. If `webAccessPassword` is configured, `validateCredential` uses it; otherwise falls back to the token.
+
+## Gotchas
+
+- **`installHandlerCapture()` call order is critical** — must run in `main.ts` before any `ipcMain.handle` registration (i.e. before `registerIpcHandlers`). Handlers registered before the patch are invisible to web clients.
+- **Two cookies, two purposes** — `webAccessToken` is HttpOnly (HTTP middleware), `wsToken` is non-HttpOnly (read by JS to authenticate WebSocket). Don't collapse them into one.
+- **SPA fallback injects `window.__WEB_TOKEN__`** — injected into `<head>` of cached `index.html` so `src/web/webPreload.ts` can bootstrap the WebSocket connection. Cross-directory coupling.
+- **Mock IPC event uses `windows[0]`** — `createMockIpcEvent()` picks the first active BrowserWindow as the sender. Handlers relying on specific window identity may behave differently for web clients.
+- **Binary encoding is recursive** — `encodeForTransport` walks the entire response object. Large nested Buffers are fully traversed before the response is sent.
+- **Rate limiter is in-memory** — resets on app restart. Stale entries are lazily evicted on each `isRateLimited()` call, not proactively.
+- **`/api/health` is exempt from auth** — intentionally public, used for uptime checks.
+
+## Dependencies
+
+| Uses                    | For                                                                |
+| ----------------------- | ------------------------------------------------------------------ |
+| `../config`             | Token persistence (`getConfigValue` / `setConfigValue`)            |
+| `../windowManager`      | `getAllActiveWindows()` — mock IPC event sender + broadcast targets |
+| `express`, `ws`         | HTTP and WebSocket server (npm)                                    |
+
+| Used by                 | For                                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `../main.ts`            | `installHandlerCapture()` at boot; `startWebServer()` / `stopWebServer()` lifecycle      |
+| `src/web/webPreload.ts` | Client-side WS transport that speaks this server's JSON-RPC protocol                    |
+| PTY / hooks modules     | `broadcast()` for event push; `ptyBatcher.append()` for batched terminal data delivery  |
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Web Remote Access — HTTP + WebSocket server for browser-based IDE access
 
 Serves the same renderer UI over HTTP/WS instead of Electron's BrowserWindow, reusing all existing IPC handlers via a JSON-RPC 2.0 bridge.

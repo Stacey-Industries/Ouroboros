@@ -25,7 +25,7 @@ export function buildFilteredMessages(
   return messages.filter((message) => {
     if (message.role !== 'status') return true;
     const kind = (message as { statusKind?: string }).statusKind;
-    return kind !== 'context' && kind !== 'progress' && kind !== 'verification';
+    return kind !== 'progress' && kind !== 'verification';
   });
 }
 

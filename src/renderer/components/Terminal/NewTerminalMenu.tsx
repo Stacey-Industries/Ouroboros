@@ -208,7 +208,7 @@ function NewTerminalMenuItems(p: NewTerminalMenuItemsProps): React.ReactElement 
         label="Claude Code"
         iconClassName="text-interactive-accent"
         showChevron
-        onClick={p.onNewClaude}
+        onClick={() => p.onNewClaude()}
         models={p.claudeModels}
         onSelect={p.onNewClaude}
       />
@@ -219,7 +219,7 @@ function NewTerminalMenuItems(p: NewTerminalMenuItemsProps): React.ReactElement 
         label="Codex"
         iconClassName="text-[var(--accent-blue,var(--interactive-accent))]"
         showChevron={p.codexModels.length > 0}
-        onClick={p.onNewCodex}
+        onClick={() => p.onNewCodex()}
         models={p.codexModels}
         onSelect={p.onNewCodex}
       />

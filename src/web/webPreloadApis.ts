@@ -45,7 +45,10 @@ export function buildPtyApis(t: WebSocketTransport) {
     onRecordingState: (id: string, cb: (state: { recording: boolean }) => void) =>
       t.on(`pty:recordingState:${id}`, cb as (v: unknown) => void),
   };
-  const codexAPI = { listModels: () => t.invoke('codex:listModels') };
+  const codexAPI = {
+    listModels: () => t.invoke('codex:listModels'),
+    resolveThreadId: (args: { cwd: string; spawnedAfter: number }) => t.invoke('codex:resolveThreadId', args),
+  };
   return { ptyAPI, codexAPI };
 }
 

@@ -172,9 +172,29 @@ export const AssistantMessage = React.memo(function AssistantMessage(props: { me
   return <div className="group flex justify-start"><div className="w-full max-w-[95%]"><AssistantMessageHeader message={props.message} hidden={msg._streaming} onBranch={props.onBranch} onRevert={props.onRevert} /><AssistantMessageContent message={props.message} isStreaming={isStreaming} onStop={onStop} workspaceRoot={props.workspaceRoot} snapshotHash={snapshotHash} onOpenLinkedDetails={props.onOpenLinkedDetails} showChangeSummary={showChangeSummary} /></div></div>;
 });
 
+function extractContextFileCount(content: string): number | null {
+  const match = /Prepared context from (\d+) file/.exec(content);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 export function StatusMessage(props: { message: AgentChatMessageRecord }): React.ReactElement {
   const [pulsing, setPulsing] = React.useState(true);
   React.useEffect(() => { const timer = setTimeout(() => setPulsing(false), 300); return () => clearTimeout(timer); }, []);
+  const isContext = (props.message as { statusKind?: string }).statusKind === 'context';
+  if (isContext) {
+    const fileCount = extractContextFileCount(props.message.content || '');
+    const label = fileCount !== null ? `Context injected — ${fileCount} file${fileCount === 1 ? '' : 's'}` : 'Context injected';
+    return (
+      <div className="flex justify-center my-1">
+        <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-text-semantic-muted bg-surface-raised">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="var(--status-success, #3fb950)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>{label}</span>
+        </div>
+      </div>
+    );
+  }
   return <div className="flex justify-center"><div className={`rounded-full px-3 py-1 text-[11px] text-text-semantic-muted bg-surface-raised ${pulsing ? 'agent-chat-status-pulse' : ''}`}>{props.message.content || 'Status update'}</div></div>;
 }
 

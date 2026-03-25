@@ -164,6 +164,64 @@ export function useClaudeSessionCapture(
   }, [pendingClaudeAssocRef, setSessions]);
 }
 
+export interface PendingCodexCapture {
+  ptyId: string;
+  cwd: string;
+  spawnedAt: number;
+  retries: number;
+}
+
+const CODEX_CAPTURE_INTERVAL_MS = 3000;
+const CODEX_CAPTURE_MAX_RETRIES = 3;
+
+export function useCodexSessionCapture(
+  pendingCodexAssocRef: MutableRefObject<PendingCodexCapture[]>,
+  setSessions: SessionSetter,
+): void {
+  useEffect(() => {
+    if (!hasElectronAPI()) return;
+
+    const intervalId = setInterval(() => {
+      const pending = pendingCodexAssocRef.current;
+      if (pending.length === 0) return;
+      for (const entry of [...pending]) {
+        void attemptCodexCapture(entry, pendingCodexAssocRef, setSessions);
+      }
+    }, CODEX_CAPTURE_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [pendingCodexAssocRef, setSessions]);
+}
+
+async function attemptCodexCapture(
+  entry: PendingCodexCapture,
+  pendingRef: MutableRefObject<PendingCodexCapture[]>,
+  setSessions: SessionSetter,
+): Promise<void> {
+  try {
+    const result = await window.electronAPI.codex.resolveThreadId({
+      cwd: entry.cwd,
+      spawnedAfter: entry.spawnedAt,
+    });
+    if (result.success && result.threadId) {
+      pendingRef.current = pendingRef.current.filter((e) => e.ptyId !== entry.ptyId);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === entry.ptyId ? { ...s, codexThreadId: result.threadId } : s)),
+      );
+      return;
+    }
+  } catch {
+    // IPC error — treat as retry
+  }
+  const retries = entry.retries + 1;
+  if (retries >= CODEX_CAPTURE_MAX_RETRIES) {
+    pendingRef.current = pendingRef.current.filter((e) => e.ptyId !== entry.ptyId);
+    return;
+  }
+  const idx = pendingRef.current.findIndex((e) => e.ptyId === entry.ptyId);
+  if (idx >= 0) pendingRef.current[idx] = { ...entry, retries };
+}
+
 function applyRecordingState(
   setRecordingSessions: RecordingSessionSetter,
   sessionId: string,

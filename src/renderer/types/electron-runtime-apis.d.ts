@@ -77,6 +77,11 @@ export interface PtyAPI {
 
 export interface CodexAPI {
   listModels: () => Promise<CodexModelOption[]>;
+  resolveThreadId: (args: { cwd: string; spawnedAfter: number }) => Promise<{
+    success: boolean;
+    threadId?: string;
+    error?: string;
+  }>;
 }
 
 export interface ConfigExportResult extends IpcResult {

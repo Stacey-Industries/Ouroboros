@@ -202,6 +202,7 @@ export function resolveActiveModel(args: {
 }): string {
   return (
     args.selectedModel ||
-    (args.activeProvider === 'codex' ? (args.codexSettingsModel ?? '') : (args.settingsModel ?? ''))
+    (args.activeProvider === 'codex' ? (args.codexSettingsModel ?? '') : (args.settingsModel ?? '')) ||
+    'sonnet'
   );
 }
