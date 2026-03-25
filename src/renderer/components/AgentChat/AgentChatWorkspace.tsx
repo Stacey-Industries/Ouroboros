@@ -23,6 +23,7 @@ function buildSlashCommandContext(
     onNewThread: model.startNewChat,
     onRemember,
     onOpenMemories,
+    skills: model.skills,
   };
 }
 

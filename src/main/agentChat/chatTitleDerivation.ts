@@ -165,25 +165,15 @@ async function callHaikuForTitle(args: {
   responseText: string;
   toolsUsed: Array<{ name: string; filePath?: string }>;
 }): Promise<string | null> {
-  const { createAnthropicClient } = await import('../orchestration/providers/anthropicAuth');
-  const client = await createAnthropicClient();
+  const { spawnClaude } = await import('../claudeMdGeneratorSupport');
 
   const toolSummary = buildToolSummaryForTitle(args.toolsUsed);
   const responsePreview =
     args.responseText.length > 600 ? args.responseText.slice(0, 600) + '...' : args.responseText;
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 30,
-    messages: [
-      {
-        role: 'user',
-        content: `Generate a concise title (4-8 words, no quotes, no period) for this coding conversation.\n\nUser request: ${args.userPrompt.slice(0, 300)}\n\n${toolSummary}\n\nAssistant response (excerpt): ${responsePreview}\n\nTitle:`,
-      },
-    ],
-  });
+  const prompt = `Generate a concise title (4-8 words, no quotes, no period) for this coding conversation.\n\nUser request: ${args.userPrompt.slice(0, 300)}\n\n${toolSummary}\n\nAssistant response (excerpt): ${responsePreview}\n\nTitle:`;
 
-  const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : null;
+  const text = (await spawnClaude(prompt, 'haiku')).trim();
   if (!text || text.length < 3 || text.length > TITLE_MAX_LENGTH) return null;
   return text.replace(/^["']+|["'.]+$/g, '').trim() || null;
 }

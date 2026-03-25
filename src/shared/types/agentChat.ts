@@ -257,6 +257,8 @@ export interface AgentChatSendMessageRequest {
   contextSelection?: Partial<TaskRequestContextSelection>;
   overrides?: AgentChatSendMessageOverrides;
   metadata?: AgentChatSendMessageMetadata;
+  /** Expanded skill body — injected into agent context, not shown in chat */
+  skillExpansion?: string;
 }
 
 export interface AgentChatThreadStatusSnapshot {

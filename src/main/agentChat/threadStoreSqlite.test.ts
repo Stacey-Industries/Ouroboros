@@ -208,6 +208,7 @@ describe('ThreadStoreSqliteRuntime', () => {
         orchestration: { taskId: 'task-1', sessionId: 'sess-1' },
         contextSummary: { selectedFileCount: 5, omittedFileCount: 2, usedAdvancedControls: true },
         tokenUsage: { inputTokens: 100, outputTokens: 50 },
+        model: 'claude-opus-4-6',
         toolsSummary: '3 tools used',
         costSummary: '$0.05',
         durationSummary: '12s',
@@ -219,6 +220,7 @@ describe('ThreadStoreSqliteRuntime', () => {
       expect(m.orchestration).toEqual({ taskId: 'task-1', sessionId: 'sess-1' });
       expect(m.contextSummary?.selectedFileCount).toBe(5);
       expect(m.tokenUsage).toEqual({ inputTokens: 100, outputTokens: 50 });
+      expect(m.model).toBe('claude-opus-4-6');
       expect(m.toolsSummary).toBe('3 tools used');
     });
   });

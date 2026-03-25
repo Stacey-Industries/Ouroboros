@@ -25,7 +25,7 @@ import { isDraftThreadId } from '../AgentChat/useAgentChatDraftPersistence';
 import { ChatPanelHeader } from './RightSidebarTabs.header';
 import { RecentThreadTabs, SecondaryViewHeader } from './RightSidebarTabs.panels';
 
-export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics' | 'memory';
+export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics' | 'memory' | 'rules';
 
 export interface RightSidebarTabsProps {
   chatContent: React.ReactNode;
@@ -33,6 +33,7 @@ export interface RightSidebarTabsProps {
   gitContent: React.ReactNode;
   analyticsContent?: React.ReactNode;
   memoryContent?: React.ReactNode;
+  rulesContent?: React.ReactNode;
   threads?: AgentChatThreadRecord[];
   activeThreadId?: string | null;
   onSelectThread?: (threadId: string | null) => void;
@@ -101,7 +102,7 @@ function resolveNextThread({ id, activeThreadId, threads, draftTabs, dismissedTa
 // ── RightSidebarTabs ──────────────────────────────────────────────────────────
 
 const VIEW_LABELS: Record<RightSidebarView, string> = {
-  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory',
+  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory', rules: 'Rules & Skills',
 };
 
 function useSidebarPanelState() {
@@ -115,7 +116,7 @@ function useSidebarPanelState() {
   return { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView };
 }
 
-const ALL_VIEWS = ['chat', 'monitor', 'git', 'analytics', 'memory'] as const;
+const ALL_VIEWS = ['chat', 'monitor', 'git', 'analytics', 'memory', 'rules'] as const;
 
 function SidebarContentArea({ activeView, historyOpen, viewContent, threads, activeThreadId, setHistoryOpen, onSelectThread, onDeleteThread }: {
   activeView: RightSidebarView; historyOpen: boolean;
@@ -141,7 +142,7 @@ function SidebarContentArea({ activeView, historyOpen, viewContent, threads, act
 }
 
 export const RightSidebarTabs = memo(function RightSidebarTabs({
-  chatContent, monitorContent, gitContent, analyticsContent, memoryContent,
+  chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent,
   threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
 }: RightSidebarTabsProps): React.ReactElement {
   const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
@@ -159,6 +160,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
   const viewContent: Record<RightSidebarView, React.ReactNode> = {
     chat: chatContent, monitor: monitorContent, git: gitContent,
     analytics: analyticsContent ?? null, memory: memoryContent ?? null,
+    rules: rulesContent ?? null,
   };
 
   return (

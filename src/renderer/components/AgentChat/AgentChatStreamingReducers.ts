@@ -239,10 +239,10 @@ export function applyChunk(
       const blocks = prev.blocks.map((b) =>
         b.kind === 'tool_use' && b.status === 'running' ? { ...b, status: 'complete' as const } : b,
       );
-      return { ...prev, isStreaming: false, blocks };
+      return { ...prev, isStreaming: false, blocks, streamingTokenUsage: undefined };
     }
     case 'error':
-      return INITIAL_STATE;
+      return { ...INITIAL_STATE, streamingTokenUsage: undefined };
     default:
       return null;
   }

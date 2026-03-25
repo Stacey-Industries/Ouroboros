@@ -40,19 +40,13 @@ async function callAiForSummary(
   mod: DetectedModule,
   existing: ModuleContextSummary,
 ): Promise<ModuleContextSummary | null> {
-  const { createAnthropicClient } = await import('../orchestration/providers/anthropicAuth');
-  const client = await createAnthropicClient();
+  const { spawnClaude } = await import('../claudeMdGeneratorSupport');
 
   const snippets = await readRepresentativeSnippets(mod);
   const prompt = buildAiPrompt(mod, snippets);
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  return parseAiResponse(state, response, existing);
+  const text = await spawnClaude(prompt, 'haiku');
+  return parseAiTextResponse(state, text, existing);
 }
 
 async function readRepresentativeSnippets(mod: DetectedModule): Promise<string[]> {
@@ -84,16 +78,12 @@ function buildAiPrompt(mod: DetectedModule, snippets: string[]): string {
   ].join('\n');
 }
 
-function parseAiResponse(
+function parseAiTextResponse(
   state: AiSummarizerState,
-  response: { content: Array<{ type: string; text?: string }> },
+  rawText: string,
   existing: ModuleContextSummary,
 ): ModuleContextSummary | null {
-  const textBlock = response.content[0];
-  const text =
-    textBlock?.type === 'text' && 'text' in textBlock
-      ? (textBlock as { type: 'text'; text: string }).text.trim()
-      : null;
+  const text = rawText.trim();
   if (!text) return null;
 
   const jsonMatch = text.match(/\{[\s\S]*\}/);

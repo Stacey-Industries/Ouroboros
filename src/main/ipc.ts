@@ -10,8 +10,6 @@ import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager';
 import { listCodexModels } from './codex';
-import { resolveCodexThreadId } from './ptyCodexCapture';
-import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
 import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
@@ -32,10 +30,13 @@ import {
   registerMcpStoreHandlers,
   registerMiscHandlers,
   registerPtyHandlers,
+  registerRulesAndSkillsHandlers,
   registerSessionHandlers,
 } from './ipc-handlers';
 import log from './logger';
 import { getAllProviders } from './providers';
+import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
+import { resolveCodexThreadId } from './ptyCodexCapture';
 import { clearRegistry } from './web/handlerRegistry';
 
 /** Resolve the BrowserWindow that sent an IPC event. */
@@ -61,6 +62,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...registerContextHandlers(senderWindow),
     ...registerIdeToolsHandlers(senderWindow),
     ...registerClaudeMdHandlers(senderWindow),
+    ...registerRulesAndSkillsHandlers(senderWindow),
     ...registerAuthHandlers(senderWindow, win),
   ];
 }

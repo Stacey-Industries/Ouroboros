@@ -54,6 +54,7 @@ export type AgentChatComposerProps = {
   codexModels?: CodexModelOption[];
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  isStreaming?: boolean;
   slashCommandContext?: SlashCommandContext;
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
@@ -71,6 +72,7 @@ type ComposerFooterProps = {
   settingsModel?: string;
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
+  isStreaming?: boolean;
 };
 
 function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
@@ -85,6 +87,7 @@ function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
       codexModels={props.codexModels}
       threadModelUsage={props.threadModelUsage}
       streamingTokenUsage={props.streamingTokenUsage}
+      isStreaming={props.isStreaming}
     />
   ) : null;
 }
@@ -290,6 +293,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
     codexModels,
     threadModelUsage,
     streamingTokenUsage,
+    isStreaming,
   } = composerProps;
   const state = useComposerState(composerProps);
   const { attachmentHandlers } = state;
@@ -311,6 +315,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
         settingsModel={settingsModel}
         streamingTokenUsage={streamingTokenUsage}
         threadModelUsage={threadModelUsage}
+        isStreaming={isStreaming}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import {
   GitIcon,
   MemoryIcon,
   MonitorIcon,
+  RulesIcon,
 } from './RightSidebarTabs.icons';
 export { RecentThreadTabs, ThreadStatusIcon } from './RightSidebarTabs.tabs';
 
@@ -27,6 +28,7 @@ const SECONDARY_VIEWS: Array<{
   { id: 'git', label: 'Git Status', Icon: GitIcon },
   { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon },
   { id: 'memory', label: 'Memory', Icon: MemoryIcon },
+  { id: 'rules' as RightSidebarView, label: 'Rules & Skills', Icon: RulesIcon },
 ];
 
 function viewSwitcherItemStyle(isActive: boolean): React.CSSProperties {

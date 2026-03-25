@@ -168,9 +168,17 @@ export class ThreadStoreSqliteRuntime {
   private getDb(): Database {
     if (!this.db) {
       this.db = openDatabase(path.join(this.options.threadsDir, 'threads.db'));
-      if (getSchemaVersion(this.db) < SCHEMA_VERSION) {
+      const currentVersion = getSchemaVersion(this.db);
+      if (currentVersion < SCHEMA_VERSION) {
         runTransaction(this.db, () => {
           this.db!.exec(SCHEMA_SQL);
+          if (currentVersion >= 1) {
+            // v1→v2: add model column to existing messages table
+            const cols = this.db!.pragma('table_info(messages)') as { name: string }[];
+            if (!cols.some((c) => c.name === 'model')) {
+              this.db!.exec('ALTER TABLE messages ADD COLUMN model TEXT');
+            }
+          }
           setSchemaVersion(this.db!, SCHEMA_VERSION);
         });
       }
@@ -230,8 +238,8 @@ export class ThreadStoreSqliteRuntime {
   private prepareInsertMessage(db: Database): BetterSqlite3.Statement {
     return db.prepare(
       `INSERT OR REPLACE INTO messages (id, threadId, role, content, createdAt, statusKind, orchestration,
-        contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage, blocks)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage, blocks, model)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
   }
 
@@ -257,6 +265,7 @@ export class ThreadStoreSqliteRuntime {
       msg.durationSummary ?? null,
       s(msg.tokenUsage),
       s(msg.blocks),
+      msg.model ?? null,
     );
   }
 

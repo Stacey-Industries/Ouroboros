@@ -60,10 +60,9 @@ export function stopIncrementalFlush(ctx: ActiveStreamContext): void {
 function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: number): void {
   if (ctx.monitorStartEmitted) return;
   ctx.monitorStartEmitted = true;
-  const sessionId = ctx.providerSessionId ?? ctx.sessionId;
   dispatchSyntheticHookEvent({
     type: 'agent_start',
-    sessionId,
+    sessionId: ctx.threadId,
     taskLabel: ctx.userPrompt ?? `Chat ${ctx.threadId.slice(0, 8)}`,
     prompt: ctx.userPrompt,
     timestamp: now,
@@ -76,14 +75,13 @@ export function emitMonitorToolStart(
   toolActivity: { name: string; filePath?: string; inputSummary?: string },
   now: number,
 ): void {
-  const sessionId = ctx.providerSessionId ?? ctx.sessionId;
   ensureMonitorSessionStarted(ctx, now);
   const input: Record<string, unknown> = {};
   if (toolActivity.filePath) input.file_path = toolActivity.filePath;
   if (toolActivity.inputSummary) input.description = toolActivity.inputSummary;
   dispatchSyntheticHookEvent({
     type: 'pre_tool_use',
-    sessionId,
+    sessionId: ctx.threadId,
     toolName: toolActivity.name,
     toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
     input,
@@ -97,10 +95,9 @@ export function emitMonitorToolEnd(
   toolName: string,
   now: number,
 ): void {
-  const sessionId = ctx.providerSessionId ?? ctx.sessionId;
   dispatchSyntheticHookEvent({
     type: 'post_tool_use',
-    sessionId,
+    sessionId: ctx.threadId,
     toolName,
     toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
     timestamp: now,
@@ -108,9 +105,8 @@ export function emitMonitorToolEnd(
 }
 
 export function emitMonitorSessionEnd(ctx: ActiveStreamContext, now: number, error?: string): void {
-  const sessionId = ctx.providerSessionId ?? ctx.sessionId;
   if (!ctx.monitorStartEmitted) return;
-  const payload: HookPayload = { type: 'agent_end', sessionId, timestamp: now };
+  const payload: HookPayload = { type: 'agent_end', sessionId: ctx.threadId, timestamp: now };
   if (error) (payload as unknown as Record<string, unknown>).error = error;
   if (ctx.tokenUsage) {
     payload.usage = {

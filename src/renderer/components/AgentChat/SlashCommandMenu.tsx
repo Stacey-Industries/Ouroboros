@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { SkillDefinition } from '../../../shared/types/rulesAndSkills';
+
 export interface SlashCommand {
   id: string;
   label: string;
@@ -139,10 +141,22 @@ export interface SlashCommandContext {
   onNewThread?: () => void;
   onRemember?: (content: string) => void;
   onOpenMemories?: () => void;
+  skills?: SkillDefinition[];
+}
+
+function buildSkillSlashCommands(skills: SkillDefinition[]): SlashCommand[] {
+  return skills.map((skill) => ({
+    id: `skill:${skill.id}`,
+    label: skill.name,
+    description: skill.description,
+    icon: '⚡',
+    action: () => {},
+    clearDraft: false,
+  }));
 }
 
 export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[] {
-  return [
+  const builtIn: SlashCommand[] = [
     { id: 'clear', label: 'Clear', description: 'Clear the conversation', icon: '⌫', action: () => ctx.onClearChat?.() },
     { id: 'compact', label: 'Compact', description: 'Summarize conversation to save context', icon: '◇', action: () => ctx.onCompactChat?.() },
     { id: 'new', label: 'New Thread', description: 'Start a new conversation thread', icon: '+', action: () => ctx.onNewThread?.() },
@@ -156,4 +170,6 @@ export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[]
     { id: 'remember', label: 'Remember', description: 'Save a memory for future sessions', icon: '◆', action: () => {}, clearDraft: true },
     { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
   ];
+  const skillCommands = buildSkillSlashCommands(ctx.skills ?? []);
+  return [...builtIn, ...skillCommands];
 }

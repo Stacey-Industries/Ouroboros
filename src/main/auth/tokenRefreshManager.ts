@@ -27,11 +27,19 @@ const CHECK_INTERVAL_MS = 60_000;
 /** Refresh tokens that expire within this window (ms). */
 const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
+/** Stop retrying after this many consecutive failures per provider. */
+const MAX_CONSECUTIVE_FAILURES = 5;
+
+/** Maximum backoff between retries (30 minutes). */
+const MAX_BACKOFF_MS = 30 * 60_000;
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
+const failureCounts = new Map<AuthProvider, number>();
+const skipUntil = new Map<AuthProvider, number>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,6 +58,11 @@ function isTokenExpiringSoon(expiresAt: number | undefined): boolean {
 async function needsRefresh(provider: AuthProvider): Promise<boolean> {
   const credential = await getCredential(provider);
   if (!credential || credential.type !== 'oauth') return false;
+
+  // CLI-managed OAuth tokens (e.g. Claude CLI / Max subscription) are refreshed
+  // by the CLI itself. The IDE has no client_id to refresh them — skip silently.
+  if (provider === 'anthropic') return false;
+
   return isTokenExpiringSoon(credential.expiresAt);
 }
 
@@ -57,18 +70,34 @@ async function needsRefresh(provider: AuthProvider): Promise<boolean> {
 // Provider-specific refresh
 // ---------------------------------------------------------------------------
 
-async function refreshProvider(provider: AuthProvider): Promise<void> {
-  if (provider !== 'anthropic') return;
+async function refreshProvider(provider: AuthProvider): Promise<boolean> {
+  if (provider !== 'anthropic') return true;
+
+  const failures = failureCounts.get(provider) ?? 0;
+  if (failures >= MAX_CONSECUTIVE_FAILURES) return false;
+
+  const until = skipUntil.get(provider) ?? 0;
+  if (Date.now() < until) return false;
 
   log.info(`${TAG} Refreshing ${provider} OAuth token`);
 
   const result = await refreshAnthropicToken();
   if (!result.success) {
-    log.warn(`${TAG} Failed to refresh ${provider}: ${result.error}`);
-    return;
+    const newCount = failures + 1;
+    failureCounts.set(provider, newCount);
+    const backoffMs = Math.min(CHECK_INTERVAL_MS * 2 ** failures, MAX_BACKOFF_MS);
+    skipUntil.set(provider, Date.now() + backoffMs);
+    log.warn(
+      `${TAG} Failed to refresh ${provider}: ${result.error} ` +
+        `(attempt ${newCount}/${MAX_CONSECUTIVE_FAILURES}, next retry in ${Math.round(backoffMs / 1000)}s)`,
+    );
+    return false;
   }
 
+  failureCounts.delete(provider);
+  skipUntil.delete(provider);
   log.info(`${TAG} Successfully refreshed ${provider} token`);
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,12 +113,21 @@ async function refreshExpiring(states: AuthState[]): Promise<void> {
     if (!shouldRefresh) continue;
 
     try {
-      await refreshProvider(state.provider);
-      emitAuthStateChange({
-        provider: state.provider,
-        status: 'authenticated',
-        credentialType: 'oauth',
-      });
+      const ok = await refreshProvider(state.provider);
+      if (ok) {
+        emitAuthStateChange({
+          provider: state.provider,
+          status: 'authenticated',
+          credentialType: 'oauth',
+        });
+      } else if ((failureCounts.get(state.provider) ?? 0) >= MAX_CONSECUTIVE_FAILURES) {
+        log.warn(`${TAG} Giving up on ${state.provider} — re-authentication required`);
+        emitAuthStateChange({
+          provider: state.provider,
+          status: 'expired',
+          credentialType: 'oauth',
+        });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.warn(`${TAG} Refresh error for ${state.provider}: ${msg}`);
@@ -138,5 +176,13 @@ export function stopTokenRefreshManager(): void {
 
   clearInterval(intervalId);
   intervalId = null;
+  failureCounts.clear();
+  skipUntil.clear();
   log.info(`${TAG} Stopped`);
+}
+
+/** Reset failure tracking for a provider (call after successful re-authentication). */
+export function resetRefreshFailures(provider: AuthProvider): void {
+  failureCounts.delete(provider);
+  skipUntil.delete(provider);
 }

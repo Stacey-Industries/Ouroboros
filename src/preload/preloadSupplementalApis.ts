@@ -45,7 +45,8 @@ type SupplementalApiKey =
   | 'agentChat'
   | 'orchestration'
   | 'contextLayer'
-  | 'claudeMd';
+  | 'claudeMd'
+  | 'rulesAndSkills';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -282,5 +283,28 @@ export const supplementalApis: SupplementalApis = {
     getStatus: () => ipcRenderer.invoke('claudeMd:getStatus'),
     onStatusChange: (callback) =>
       onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
+  },
+
+  rulesAndSkills: {
+    listRules: (projectRoot: string) =>
+      ipcRenderer.invoke('rules:list', projectRoot),
+    readRule: (projectRoot: string, type: string) =>
+      ipcRenderer.invoke('rules:read', projectRoot, type),
+    createRule: (projectRoot: string, type: string) =>
+      ipcRenderer.invoke('rules:create', projectRoot, type),
+    listSkills: (projectRoot: string) =>
+      ipcRenderer.invoke('skills:list', projectRoot),
+    expandSkill: (projectRoot: string, skillId: string, params: Record<string, string>, provider?: string) =>
+      ipcRenderer.invoke('skills:expand', projectRoot, skillId, params, provider),
+    createSkill: (projectRoot: string, name: string) =>
+      ipcRenderer.invoke('skills:create', projectRoot, name),
+    getHooksConfig: (scope: string, projectRoot?: string) =>
+      ipcRenderer.invoke('hooks:getConfig', scope, projectRoot),
+    addHook: (args: { scope: string; eventType: string; command: string; matcher?: string; projectRoot?: string }) =>
+      ipcRenderer.invoke('hooks:addHook', args),
+    removeHook: (args: { scope: string; eventType: string; index: number; projectRoot?: string }) =>
+      ipcRenderer.invoke('hooks:removeHook', args),
+    onChanged: (callback: () => void) =>
+      onChannel<void>('rulesAndSkills:changed', callback),
   },
 };

@@ -140,6 +140,8 @@ export function buildXmlContextBlock(context: ProviderLaunchContext | ProviderRe
   let output = sections.join('\n\n')
   if (packet.graphSummary) output += `\n\n${packet.graphSummary}`
   if (packet.sessionMemories) output += `\n\n${packet.sessionMemories}`
+  if (packet.skillInstructions) output += `\n\n<skill_instructions>\n${packet.skillInstructions}\n</skill_instructions>`
+  if (packet.systemInstructions) output += `\n\n<system_instructions>\n${packet.systemInstructions}\n</system_instructions>`
   return output
 }
 

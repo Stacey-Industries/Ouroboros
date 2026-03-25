@@ -99,12 +99,17 @@ function startSession(
   state: AgentState,
   action: Extract<AgentAction, { type: 'AGENT_START' }>,
 ): AgentState {
-  // If the session already exists (created as a placeholder by ensureSession),
-  // update it with the real metadata instead of dropping it.
+  // If the session already exists (placeholder from ensureSession, or a
+  // completed chat-thread session receiving a new turn), update it.
+  // Reset status to 'running' so the monitor card reflects the new turn.
   if (hasSession(state.sessions, action.sessionId)) {
     return updateSession(state, action.sessionId, (session) => ({
       ...session,
       taskLabel: action.taskLabel !== `Session ${action.sessionId.slice(0, 8)}` ? action.taskLabel : session.taskLabel,
+      status: 'running',
+      startedAt: action.timestamp,
+      completedAt: undefined,
+      error: undefined,
       model: action.model ?? session.model,
       parentSessionId: action.parentSessionId ?? session.parentSessionId,
     }));

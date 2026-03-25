@@ -14,6 +14,7 @@ import { ComposerSection, ConversationBody } from './AgentChatConversationBody';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
 import { QueuedMessageBanner } from './AgentChatMessageComponents';
 import type { ChatOverrides } from './ChatControlsBar';
+import { buildThreadModelUsage } from './ChatControlsBarSupport';
 import type { MentionItem } from './MentionAutocomplete';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import type { PinnedFile } from './useAgentChatContext';
@@ -81,19 +82,7 @@ export interface ModelContextUsage {
 }
 
 function useThreadModelUsage(thread: AgentChatThreadRecord | null | undefined): ModelContextUsage[] | undefined {
-  return useMemo(() => {
-    if (!thread?.messages) return undefined;
-    const perModel = new Map<string, { inputTokens: number; outputTokens: number }>();
-    for (const msg of thread.messages) {
-      if (!msg.tokenUsage) continue;
-      const key = msg.model || '';
-      const ex = perModel.get(key);
-      if (ex) { ex.inputTokens += msg.tokenUsage.inputTokens; ex.outputTokens += msg.tokenUsage.outputTokens; }
-      else { perModel.set(key, { inputTokens: msg.tokenUsage.inputTokens, outputTokens: msg.tokenUsage.outputTokens }); }
-    }
-    if (perModel.size === 0) return undefined;
-    return Array.from(perModel.entries()).map(([model, usage]) => ({ model, ...usage }));
-  }, [thread?.messages]);
+  return useMemo(() => buildThreadModelUsage(thread?.messages), [thread?.messages]);
 }
 
 function buildConversationBodyProps(props: AgentChatConversationProps, streaming: ReturnType<typeof useAgentChatStreaming>): React.ComponentProps<typeof ConversationBody> {
@@ -151,6 +140,7 @@ function buildComposerSectionProps(
     codexModels: props.codexModels,
     threadModelUsage,
     streamingTokenUsage: streaming.streamingTokenUsage,
+    isStreaming: streaming.isStreaming,
     slashCommandContext: props.slashCommandContext,
     attachments: props.attachments,
     onAttachmentsChange: props.onAttachmentsChange,

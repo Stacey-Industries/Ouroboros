@@ -533,6 +533,17 @@
   }
 }
 
+/* Context ring pulse — used during streaming to indicate activity (Option A) */
+@keyframes contextRingPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
 /* Spin keyframe — used by CommandBlockOverlayBody spinner icon */
 @keyframes agent-ide-spin {
   from {

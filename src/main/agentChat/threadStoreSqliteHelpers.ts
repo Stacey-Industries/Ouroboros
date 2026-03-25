@@ -8,7 +8,7 @@ import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 const TITLE_MAX_LENGTH = 60;
 
 // ── Schema SQL ───────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ export const SCHEMA_SQL = `
     statusKind TEXT, orchestration TEXT, contextSummary TEXT,
     verificationPreview TEXT, error TEXT, toolsSummary TEXT,
     costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
+    model TEXT,
     PRIMARY KEY (id, threadId)
   );
   CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
@@ -62,6 +63,7 @@ export interface RawMessageRow {
   durationSummary: string | null;
   tokenUsage: string | null;
   blocks: string | null;
+  model: string | null;
 }
 
 // ── Parse / convert helpers ──────────────────────────────────────────
@@ -90,6 +92,7 @@ function applyOptionalStringFields(base: AgentChatMessageRecord, row: RawMessage
   if (row.toolsSummary) base.toolsSummary = row.toolsSummary;
   if (row.costSummary) base.costSummary = row.costSummary;
   if (row.durationSummary) base.durationSummary = row.durationSummary;
+  if (row.model) base.model = row.model;
 }
 
 export function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {

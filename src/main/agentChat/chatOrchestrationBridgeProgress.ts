@@ -97,7 +97,6 @@ function handleTextBlock(args: BlockHandlerArgs, textDelta: string): void {
       blockIndex,
       textDelta,
       timestamp: now,
-      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -122,7 +121,6 @@ function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
       blockIndex,
       thinkingDelta: textDelta,
       timestamp: now,
-      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -168,7 +166,6 @@ function handleToolBlock(args: BlockHandlerArgs, toolActivity: ToolActivity): vo
         editSummary: toolActivity.editSummary,
       },
       timestamp: now,
-      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -214,7 +211,6 @@ function handleLegacyMessage(
       type: 'text_delta',
       textDelta: message,
       timestamp: now,
-      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );

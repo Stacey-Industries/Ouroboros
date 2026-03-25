@@ -4,7 +4,6 @@ import os from 'os';
 import path from 'path';
 
 import { getCredential } from '../../auth/credentialStore';
-import { refreshAnthropicToken } from '../../auth/providers/anthropicAuth';
 import type { Credential } from '../../auth/types';
 import log from '../../logger';
 
@@ -157,15 +156,10 @@ function isStoreTokenExpired(credential: Credential): boolean {
 async function tryRefreshStoreToken(credential: Credential): Promise<string | null> {
   if (credential.type !== 'oauth' || !credential.refreshToken) return null;
 
-  log.debug('[credentialStore] OAuth token expired, attempting refresh...');
-  const result = await refreshAnthropicToken();
-  if (!result.success) {
-    log.warn(`[credentialStore] OAuth refresh failed: ${result.error ?? 'unknown'}`);
-    return null;
-  }
-
-  const refreshed = await getCredential('anthropic');
-  return refreshed?.type === 'oauth' ? refreshed.accessToken : null;
+  // CLI-managed OAuth tokens (Claude CLI / Max subscription) are refreshed by
+  // the CLI itself — the IDE has no client_id to refresh them. Fall through to
+  // the legacy ~/.claude/.credentials.json path which the CLI keeps fresh.
+  return null;
 }
 
 async function getCredentialStoreToken(): Promise<CredentialStoreToken | null> {
@@ -215,7 +209,7 @@ export async function createAnthropicClient(): Promise<Anthropic> {
   }
 
   // 2. Fallback: environment variable
-  log.info('No credential store token — falling back to legacy auth');
+  log.debug('No credential store token — falling back to legacy auth');
   if (process.env.ANTHROPIC_API_KEY) {
     return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }

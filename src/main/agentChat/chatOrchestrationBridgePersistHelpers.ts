@@ -85,6 +85,7 @@ export function emitTurnComplete(
     messageId: ctx.assistantMessageId,
     type: 'complete',
     timestamp: Date.now(),
+    tokenUsage: ctx.tokenUsage,
   });
   emitMonitorSessionEnd(ctx, Date.now(), monitorLabel);
   runtime.activeSends.delete(ctx.taskId);

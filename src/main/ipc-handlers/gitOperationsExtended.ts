@@ -17,7 +17,8 @@ import {
   MB,
   respond,
 } from './gitOperations';
-import { normalizeGitPath, parseDiffOutput } from './gitParsers';
+import { normalizeGitPath } from './gitParsers';
+import { parseDiffOutput } from './gitDiffParser';
 
 export function gitSnapshot(root: string) {
   return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) }));

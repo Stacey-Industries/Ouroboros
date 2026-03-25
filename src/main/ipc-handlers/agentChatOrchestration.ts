@@ -99,6 +99,7 @@ async function createTask(
 
   const contextPacket = resolveContextPacket(request);
   await injectMemories(contextPacket ?? ({} as ContextPacket), request.workspaceRoots);
+  if (request.skillExpansion && contextPacket) contextPacket.skillInstructions = request.skillExpansion;
 
   const session: TaskSessionRecord = {
     version: 1,

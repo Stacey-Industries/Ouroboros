@@ -9,7 +9,9 @@
 
 import React, { type ErrorInfo, useCallback, useReducer } from 'react';
 
+import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
+import { RulesSkillsPanel } from '../AgentChat/RulesSkillsPanel';
 import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
 import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
 import { AgentMonitorManager } from '../AgentMonitor';
@@ -97,35 +99,29 @@ function AnalyticsSuspense(): React.ReactElement {
 
 // ── AgentSidebarContent ───────────────────────────────────────────────────────
 
-export function AgentSidebarContent({
-  projectRoot,
-}: {
-  projectRoot: string | null;
-}): React.ReactElement {
+function openFileInEditor(filePath: string): void {
+  window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { filePath } }));
+}
+function openSettings(tab?: string): void {
+  window.dispatchEvent(new CustomEvent('agent-ide:open-settings', tab ? { detail: tab } : undefined));
+}
+
+export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
   const { chatModel, handleModelReady } = useAgentSidebarModel();
+  const { rules, skills, isLoading, createRule, createSkill } = useRulesAndSkills(projectRoot);
+  const handleOpenFile = useCallback((f: string) => openFileInEditor(f), []);
+  const handleOpenHooks = useCallback(() => openSettings('hooks'), []);
+  const handleCreateRule = useCallback(async (type: 'claude-md' | 'agents-md') => { const fp = await createRule(type); if (fp) openFileInEditor(fp); }, [createRule]);
+  const handleCreateSkill = useCallback(async (name: string) => { const fp = await createSkill(name); if (fp) openFileInEditor(fp); }, [createSkill]);
+
   return (
     <RightSidebarTabs
-      chatContent={
-        <ChatErrorBoundary>
-          <AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} />
-        </ChatErrorBoundary>
-      }
-      monitorContent={
-        <ErrorBoundary label="Agent Monitor">
-          <AgentMonitorManager />
-        </ErrorBoundary>
-      }
-      gitContent={
-        <ErrorBoundary label="Git Panel">
-          <GitPanel />
-        </ErrorBoundary>
-      }
+      chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
+      monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
+      gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
       analyticsContent={<AnalyticsSuspense />}
-      memoryContent={
-        <ErrorBoundary label="Memory">
-          <SessionMemoryPanel workspaceRoot={projectRoot} />
-        </ErrorBoundary>
-      }
+      memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
+      rulesContent={<ErrorBoundary label="Rules & Skills"><RulesSkillsPanel rules={rules} skills={skills} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onCreateSkill={handleCreateSkill} onOpenHooksSettings={handleOpenHooks} /></ErrorBoundary>}
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}

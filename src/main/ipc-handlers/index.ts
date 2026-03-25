@@ -17,4 +17,5 @@ export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';
 export { registerPtyHandlers } from './pty';
+export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSessionHandlers } from './sessions';

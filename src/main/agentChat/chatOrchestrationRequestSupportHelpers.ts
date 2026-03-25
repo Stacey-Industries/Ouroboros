@@ -158,6 +158,7 @@ export function buildBaseTaskRequest(args: {
       : buildConversationHistory(args.thread.messages, args.currentModel, args.thread),
     resumeFromSessionId: args.canResume ? args.resumeSessionId : undefined,
     goalAttachments: args.request.attachments?.length ? args.request.attachments : undefined,
+    skillExpansion: args.request.skillExpansion || undefined,
     metadata: {
       origin: mapSourceToOrigin(args.request.metadata?.source),
       label: args.thread.title,

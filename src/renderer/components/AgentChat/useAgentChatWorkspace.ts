@@ -1,7 +1,9 @@
 /* @refresh reset */
 import log from 'electron-log/renderer';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 
+import type { SkillDefinition } from '../../../shared/types/rulesAndSkills';
+import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
@@ -32,6 +34,7 @@ export interface AgentChatWorkspaceModel {
   activeThreadId: string | null;
   attachments: ImageAttachment[];
   setAttachments: (attachments: ImageAttachment[]) => void;
+  skills: SkillDefinition[];
   branchFromMessage: (message: AgentChatMessageRecord) => Promise<void>;
   canSend: boolean;
   chatOverrides: ChatOverrides;
@@ -183,32 +186,49 @@ function usePerThreadOverrides(activeThreadId: string | null) {
 
 /* ---------- Queue actions ---------- */
 
-function useQueueActions(setDraft: (v: string) => void) {
+function useQueueActions(activeThreadId: string | null, setDraft: (v: string) => void) {
   const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
+  const queueMapRef = useRef<Map<string | null, QueuedMessage[]>>(new Map());
+
+  useEffect(() => {
+    const saved = queueMapRef.current.get(activeThreadId);
+    setQueuedMessages(saved ?? []);
+  }, [activeThreadId]);
+
+  const setQueuedMessagesForThread = useCallback(
+    (action: SetStateAction<QueuedMessage[]>) => {
+      setQueuedMessages((prev) => {
+        const next = typeof action === 'function' ? action(prev) : action;
+        queueMapRef.current.set(activeThreadId, next);
+        return next;
+      });
+    },
+    [activeThreadId],
+  );
 
   const addToQueue = useCallback((content: string) => {
-    setQueuedMessages((prev) => [
+    setQueuedMessagesForThread((prev) => [
       ...prev,
       { id: `queued-${++queueIdCounter}`, content, queuedAt: Date.now() },
     ]);
-  }, []);
+  }, [setQueuedMessagesForThread]);
 
   const editQueuedMessage = useCallback(
     (id: string) => {
-      setQueuedMessages((prev) => {
+      setQueuedMessagesForThread((prev) => {
         const item = prev.find((m) => m.id === id);
         if (item) setDraft(item.content);
         return prev.filter((m) => m.id !== id);
       });
     },
-    [setDraft],
+    [setDraft, setQueuedMessagesForThread],
   );
 
   const deleteQueuedMessage = useCallback((id: string) => {
-    setQueuedMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+    setQueuedMessagesForThread((prev) => prev.filter((m) => m.id !== id));
+  }, [setQueuedMessagesForThread]);
 
-  return { queuedMessages, setQueuedMessages, addToQueue, editQueuedMessage, deleteQueuedMessage };
+  return { queuedMessages, setQueuedMessages: setQueuedMessagesForThread, addToQueue, editQueuedMessage, deleteQueuedMessage };
 }
 
 /* ---------- Controller ---------- */
@@ -222,7 +242,7 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
   const threadState = useThreadState({ projectRoot });
   const modelSettings = useModelSettings();
   const overrides = usePerThreadOverrides(threadState.activeThreadId);
-  const queue = useQueueActions(setDraft);
+  const queue = useQueueActions(threadState.activeThreadId, setDraft);
   const activeThread = useActiveThread(threadState.threads, threadState.activeThreadId);
 
   useAgentChatEventSubscriptions({
@@ -254,42 +274,21 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
 
 /* ---------- Public hook ---------- */
 
+function buildActionArgs(controller: ReturnType<typeof useAgentChatWorkspaceController>, projectRoot: string | null, skills: SkillDefinition[]) {
+  return { ...controller, projectRoot, activeThread: controller.activeThread, activeThreadId: controller.threadState.activeThreadId, setActiveThreadId: controller.threadState.setActiveThreadId, setError: controller.threadState.setError, setThreads: controller.threadState.setThreads, skills };
+}
+
+interface BuildModelArgs { controller: ReturnType<typeof useAgentChatWorkspaceController>; actions: ReturnType<typeof useAgentChatActions>; hooks: ReturnType<typeof useWorkspaceHooks>; projectRoot: string | null; skills: SkillDefinition[]; }
+function buildModel(args: BuildModelArgs) {
+  const { controller, actions, hooks, projectRoot, skills } = args;
+  const ds = hooks.detailsState;
+  return buildAgentChatWorkspaceModel({ ...controller, ...actions, ...ds, activeThreadId: controller.threadState.activeThreadId, closeDetails: ds.closeDetails, details: ds.details, detailsError: ds.error, detailsIsLoading: ds.isLoading, error: controller.threadState.error, isDetailsOpen: ds.isOpen, isLoading: controller.threadState.isLoading, openConversationDetails: ds.openDetails, openDetailsInOrchestration: ds.openOrchestration, openLinkedDetails: ds.openDetails, projectRoot, reloadThreads: controller.threadState.reloadThreads, sendMessage: hooks.sendMessage, startNewChat: hooks.startNewChat, threads: controller.threadState.threads, sendQueuedMessageNow: hooks.sendQueuedMessageNow, skills });
+}
+
 export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWorkspaceModel {
   const controller = useAgentChatWorkspaceController(projectRoot);
-  const actions = useAgentChatActions({
-    ...controller,
-    projectRoot,
-    activeThread: controller.activeThread,
-    activeThreadId: controller.threadState.activeThreadId,
-    setActiveThreadId: controller.threadState.setActiveThreadId,
-    setError: controller.threadState.setError,
-    setThreads: controller.threadState.setThreads,
-  });
-  const { sendMessage, sendQueuedMessageNow, detailsState, startNewChat } = useWorkspaceHooks(
-    controller,
-    actions,
-  );
-
-  return buildAgentChatWorkspaceModel({
-    ...controller,
-    ...actions,
-    ...detailsState,
-    activeThreadId: controller.threadState.activeThreadId,
-    closeDetails: detailsState.closeDetails,
-    details: detailsState.details,
-    detailsError: detailsState.error,
-    detailsIsLoading: detailsState.isLoading,
-    error: controller.threadState.error,
-    isDetailsOpen: detailsState.isOpen,
-    isLoading: controller.threadState.isLoading,
-    openConversationDetails: detailsState.openDetails,
-    openDetailsInOrchestration: detailsState.openOrchestration,
-    openLinkedDetails: detailsState.openDetails,
-    projectRoot,
-    reloadThreads: controller.threadState.reloadThreads,
-    sendMessage,
-    startNewChat,
-    threads: controller.threadState.threads,
-    sendQueuedMessageNow,
-  });
+  const { skills } = useRulesAndSkills(projectRoot);
+  const actions = useAgentChatActions(buildActionArgs(controller, projectRoot, skills));
+  const hooks = useWorkspaceHooks(controller, actions);
+  return buildModel({ controller, actions, hooks, projectRoot, skills });
 }

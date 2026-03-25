@@ -11,5 +11,9 @@ export {
   hasCredential,
   setCredential,
 } from './credentialStore';
-export { startTokenRefreshManager, stopTokenRefreshManager } from './tokenRefreshManager';
+export {
+  resetRefreshFailures,
+  startTokenRefreshManager,
+  stopTokenRefreshManager,
+} from './tokenRefreshManager';
 export * from './types';

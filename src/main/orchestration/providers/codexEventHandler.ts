@@ -2,6 +2,7 @@
  * codexEventHandler.ts — Event handler factory for CodexAdapter.
  * Converts Codex exec events into ProviderProgressEvents for the sink.
  */
+import log from '../../logger'
 import type {
   CodexAgentMessageItem,
   CodexCommandExecutionItem,
@@ -108,14 +109,17 @@ export function buildCodexEventHandler(
   const handler = (event: CodexExecEvent): void => {
     if (event.type === 'thread.started') {
       const e = event as CodexThreadStartedEvent
-      if (e.thread_id) sessionRef.sessionId = e.thread_id
+      if (e.thread_id) {
+        sessionRef.sessionId = e.thread_id
+        log.info(`[codex-diag] thread.started → captured thread_id=${e.thread_id}`)
+      }
       return
     }
     if (event.type === 'item.started') return handleItemStarted(event as CodexItemStartedEvent, ctx)
     if (event.type === 'item.completed') return handleItemCompleted(event as CodexItemCompletedEvent, ctx)
     if (event.type === 'turn.completed') {
       const usage = (event as CodexTurnCompletedEvent).usage
-      if (usage) lastUsage = { inputTokens: (usage.input_tokens ?? 0) + (usage.cached_input_tokens ?? 0), outputTokens: usage.output_tokens ?? 0 }
+      if (usage) lastUsage = { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 }
     }
   }
 

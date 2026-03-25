@@ -60,3 +60,80 @@ Items intentionally excluded from v1 to reduce scope. Revisit after v1 ships.
 5. Split terminal (horizontal/vertical)
 6. Plugin system for custom panels
 7. Remote session support
+
+---
+
+## Deferred from v1.2 — Rules, Skills & Hooks Roadmap
+
+Features discussed during v1.2 development (rules/skills/hooks system). Scoped out for future releases. Ordered by impact.
+
+### Rules Enhancements
+
+**Windsurf-style trigger modes**
+Currently rules (CLAUDE.md/AGENTS.md) are always injected from repo root. Windsurf supports 4 trigger modes: `always_on`, `glob`, `model_decision`, `manual`. Cursor uses a `fetch_rules()` tool the LLM calls on demand.
+
+- Support `.ouroboros/rules/*.md` with YAML frontmatter trigger modes
+- `glob` — only inject when matched files are in context (e.g., `globs: ["src/api/**"]`)
+- `manual` — only inject when user @mentions the rule by name
+- `model_decision` — LLM sees rule name/description, decides whether to fetch full content
+- **Why deferred**: Always-inject covers 90% of cases. Trigger modes matter at 10+ rule files.
+- **Recommended for v1.3**: Start with `always_on` + `manual` only. Skip `glob` and `model_decision`.
+
+**Cursor-style fetch_rules() tool**
+Register a tool the model calls on demand to fetch rules by name. Most token-efficient — only relevant rules consume context.
+- **Why deferred**: Requires tool registration in the provider layer. Claude Code CLI and Codex CLI manage their own tool sets.
+
+**Subdirectory rules**
+Support CLAUDE.md in subdirectories (e.g., `src/api/CLAUDE.md`) that auto-scope to that directory. Windsurf does this with AGENTS.md.
+- **Why deferred**: Token budget concern. Each additional file eats context. Root-only keeps it predictable.
+
+**`.ouroboros/rules/` directory support**
+Concat multiple rule files from `.ouroboros/rules/*.md` alongside root CLAUDE.md/AGENTS.md. Always-on, no trigger modes. Lets users split rules into focused files (`rules/testing.md`, `rules/api.md`).
+- **Why deferred**: Low effort but decided to ship root-only first and validate the pattern.
+
+### Skills / Workflows Enhancements
+
+**Dynamic context injection (`` !`command` `` syntax)**
+Claude Code skills support shell command execution in SKILL.md — runs at expansion time, inlines output. Example: `` !`gh pr diff` `` injects current PR diff.
+- Parse `` !`...` `` blocks, execute via `child_process.exec` (5s timeout), replace with stdout
+- **Why deferred**: Security implications — shell execution during skill expansion needs sandboxing.
+
+**Skill subagent isolation (`context: fork`)**
+Run skill in an isolated subagent with its own context window. Prevents skill execution from polluting main conversation.
+- **Why deferred**: Orchestration layer doesn't support mid-conversation forking.
+
+**Skill argument UI (mini-form)**
+For skills with required parameters, show labeled input fields instead of requiring inline `/skill-name arg1 arg2`. Windsurf workflows have this.
+- **Why deferred**: UI complexity. Positional arg parsing works for simple cases.
+
+**Workflow chaining**
+Skills can invoke other skills mid-execution. `/deploy-staging` could call `/run-tests` as a step.
+- **Why deferred**: Requires execution-time skill resolution, not just expansion-time.
+
+### Hooks & Policies
+
+**Codex exec policy management**
+Codex uses `~/.codex/config.toml` + CLI flags (`--sandbox`, `--ask-for-approval`) — completely different from Claude Code hooks.
+- Read/write `~/.codex/config.toml` permissions section
+- Map approval policies (`untrusted`, `on-request`, `never`) to UI toggles
+- Map sandbox modes (`read-only`, `workspace-write`, `danger-full-access`) to UI
+- **Why deferred**: Requires TOML parser + understanding Codex permission model. Claude-only hooks cover primary use case.
+
+**Hook type expansion (http, prompt, agent)**
+Our UI only manages `command` hooks. Claude Code supports `http` (webhook), `prompt` (single-turn LLM evaluation), and `agent` (multi-turn verification).
+- **Why deferred**: Command hooks cover the vast majority of use cases.
+
+**Per-skill hooks**
+Skills can define hooks in YAML frontmatter that only fire while the skill is active. Scopes PreToolUse validation to a specific workflow.
+- **Why deferred**: Requires skill lifecycle tracking in the hooks pipeline.
+
+### UI Enhancements
+
+**Rules activity indicator**
+Show badge/icon in composer or header indicating which rules and skills are active for the current message.
+
+**Inline rule preview**
+Hover tooltip in Rules & Skills panel showing first few lines without opening the full editor.
+
+**Skill execution history**
+Track which skills were invoked, when, and what they expanded to. Show in thread details drawer alongside token usage.

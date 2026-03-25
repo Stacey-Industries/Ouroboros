@@ -114,6 +114,25 @@ function checkContextPacketCache(
   return { selection: cached.result.selection, packet: updatedPacket };
 }
 
+async function enrichPacketWithSystemInstructions(
+  packet: ContextPacket,
+  request: TaskRequest,
+): Promise<ContextPacket> {
+  const enriched = { ...packet };
+  try {
+    const { readRulesForProvider } = await import('../rulesAndSkills/rulesReader');
+    const workspaceRoot = request.workspaceRoots[0];
+    if (workspaceRoot) {
+      const content = await readRulesForProvider(workspaceRoot, request.provider);
+      if (content) enriched.systemInstructions = content;
+    }
+  } catch {
+    // Rules injection is optional — non-fatal
+  }
+  if (request.skillExpansion) enriched.skillInstructions = request.skillExpansion;
+  return enriched;
+}
+
 async function enrichPacketWithContextLayer(
   packet: ContextPacket,
   goal: string,
@@ -225,6 +244,7 @@ async function buildFullContextPacket(options: {
     budget,
   };
   packet = await enrichPacketWithContextLayer(packet, options.request.goal, options.repoSnapshot);
+  packet = await enrichPacketWithSystemInstructions(packet, options.request);
   return { selection, packet };
 }
 

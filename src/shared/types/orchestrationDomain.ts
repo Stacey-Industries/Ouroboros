@@ -125,4 +125,6 @@ export interface TaskRequest {
   metadata?: TaskRequestMetadata;
   conversationHistory?: ConversationMessage[];
   goalAttachments?: ImageAttachment[];
+  /** Expanded skill body — injected into context, not shown as user message */
+  skillExpansion?: string;
 }

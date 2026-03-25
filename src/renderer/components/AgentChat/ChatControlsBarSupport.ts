@@ -2,6 +2,7 @@
  * ChatControlsBarSupport.ts — Pure helpers and constants for ChatControlsBar.
  * Extracted to keep ChatControlsBar.tsx under the 300-line limit.
  */
+import type { AgentChatMessageRecord } from '../../../shared/types/agentChat';
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 
 export type OptionItem = { value: string; label: string };
@@ -161,23 +162,74 @@ export function getSelectedOptionLabel(value: string, options: ReadonlyArray<Opt
   return match?.label ?? options[0]?.label ?? value;
 }
 
+/** Extract canonical model family keyword for cross-convention comparison. */
+function modelFamilyKey(id: string): string {
+  const lower = stripProviderPrefix(id).toLowerCase().replace(/\[1m]/, '');
+  if (lower.includes('opus')) return 'opus';
+  if (lower.includes('sonnet')) return 'sonnet';
+  if (lower.includes('haiku')) return 'haiku';
+  return lower;
+}
+
+function stripProviderPrefix(id: string): string {
+  const colonIndex = id.indexOf(':');
+  return colonIndex === -1 ? id : id.slice(colonIndex + 1);
+}
+
+function modelsMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  const aUnprefixed = stripProviderPrefix(a);
+  const bUnprefixed = stripProviderPrefix(b);
+  if (aUnprefixed === bUnprefixed) return true;
+  const hasLongCtx = a.includes('[1m]') || b.includes('[1m]');
+  const aKey = modelFamilyKey(a);
+  const bKey = modelFamilyKey(b);
+  if (aKey !== bKey) return false;
+  const aLong = a.includes('[1m]');
+  const bLong = b.includes('[1m]');
+  return hasLongCtx ? aLong === bLong : true;
+}
+
 export function buildDisplayUsage(args: {
   activeModel: string;
   threadModelUsage?: ModelUsageEntry[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
 }): ModelUsageEntry[] {
   if (!args.activeModel) return [];
-  const persisted = (args.threadModelUsage ?? []).find((entry) => entry.model === args.activeModel);
-  const base = persisted ?? { model: args.activeModel, inputTokens: 0, outputTokens: 0 };
-  return args.streamingTokenUsage
-    ? [
-        {
-          model: args.activeModel,
-          inputTokens: base.inputTokens + args.streamingTokenUsage.inputTokens,
-          outputTokens: base.outputTokens + args.streamingTokenUsage.outputTokens,
-        },
-      ]
-    : [base];
+  if (args.streamingTokenUsage) {
+    return [
+      {
+        model: args.activeModel,
+        inputTokens: args.streamingTokenUsage.inputTokens,
+        outputTokens: args.streamingTokenUsage.outputTokens,
+      },
+    ];
+  }
+  const persisted = (args.threadModelUsage ?? []).find((entry) => modelsMatch(entry.model, args.activeModel));
+  return persisted ? [persisted] : [];
+}
+
+export function buildThreadModelUsage(
+  messages: AgentChatMessageRecord[] | null | undefined,
+): ModelUsageEntry[] | undefined {
+  if (!messages?.length) return undefined;
+
+  const maxByModel = new Map<string, ModelUsageEntry>();
+  for (const message of messages) {
+    if (!message.tokenUsage) continue;
+    const key = message.model || '';
+    const existing = maxByModel.get(key);
+    if (!existing || message.tokenUsage.inputTokens > existing.inputTokens) {
+      maxByModel.set(key, {
+        model: key,
+        inputTokens: message.tokenUsage.inputTokens,
+        outputTokens: message.tokenUsage.outputTokens,
+      });
+    }
+  }
+
+  if (maxByModel.size === 0) return undefined;
+  return Array.from(maxByModel.values());
 }
 
 export function getContextLimit(modelId: string, codexModels?: CodexModelOption[]): number {

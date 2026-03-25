@@ -12,6 +12,7 @@ import type { ExtensionsAPI } from './electron-extensions';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { McpStoreAPI } from './electron-mcp-store';
+import type { RulesAndSkillsAPI } from './electron-rules-skills';
 import type {
   ContextLayerAPI,
   CostAPI,
@@ -215,4 +216,5 @@ export interface ElectronAPI {
   claudeMd: ClaudeMdAPI;
   providers: ProvidersAPI;
   codex: CodexAPI;
+  rulesAndSkills: RulesAndSkillsAPI;
 }

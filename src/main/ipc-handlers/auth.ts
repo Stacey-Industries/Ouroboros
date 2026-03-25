@@ -23,6 +23,7 @@ import {
   startGitHubPkceLogin,
 } from '../auth/providers/githubAuth';
 import { logoutOpenAi, setOpenAiApiKey } from '../auth/providers/openaiAuth';
+import { resetRefreshFailures } from '../auth/tokenRefreshManager';
 import type { AuthProvider } from '../auth/types';
 import log from '../logger';
 import { setGithubTokenForPty } from '../ptyEnv';
@@ -207,7 +208,10 @@ async function handleSetApiKey(
   }
   try {
     const result = await callSetApiKey(provider, apiKey);
-    if (result.success) await broadcastAuthState(win);
+    if (result.success) {
+      resetRefreshFailures(provider);
+      await broadcastAuthState(win);
+    }
     return result;
   } catch (err: unknown) {
     return { success: false, error: toError(err) };
@@ -244,6 +248,7 @@ async function handleImportCliCreds(
       return { success: false, error: `No CLI credentials found for ${provider}` };
     }
     await setCredential(provider, credential);
+    resetRefreshFailures(provider);
     await broadcastAuthState(win);
     log.info(`[Auth IPC] Imported CLI credentials for ${provider}`);
     return { success: true };

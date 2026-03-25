@@ -11,6 +11,7 @@ import { useAgentChatLinkedDetails } from './useAgentChatLinkedDetails';
 import type { QueuedMessage } from './useAgentChatWorkspace';
 
 export function useQueueAutoSend(args: {
+  activeThreadId: string | null;
   threadIsBusy: boolean;
   isSending: boolean;
   queuedMessages: QueuedMessage[];
@@ -18,22 +19,26 @@ export function useQueueAutoSend(args: {
   setDraft: (v: string) => void;
   sendMessage: () => Promise<void>;
 }): void {
-  const { threadIsBusy, isSending, queuedMessages, setQueuedMessages, setDraft, sendMessage } = args;
+  const { activeThreadId, threadIsBusy, isSending, queuedMessages, setQueuedMessages, setDraft, sendMessage } = args;
   const queueRef = useRef(queuedMessages);
   queueRef.current = queuedMessages;
   const prevThreadBusyRef = useRef(threadIsBusy);
+  const prevThreadIdRef = useRef(activeThreadId);
   const pendingAutoSendRef = useRef<string | null>(null);
 
   useEffect(() => {
     const wasBusy = prevThreadBusyRef.current;
+    const threadChanged = prevThreadIdRef.current !== activeThreadId;
     prevThreadBusyRef.current = threadIsBusy;
+    prevThreadIdRef.current = activeThreadId;
+    if (threadChanged) return;
     if (wasBusy && !threadIsBusy && !isSending && queueRef.current.length > 0) {
       const next = queueRef.current[0];
       setQueuedMessages((prev) => prev.slice(1));
       pendingAutoSendRef.current = next.content;
       setDraft(next.content);
     }
-  }, [threadIsBusy, isSending, setQueuedMessages, setDraft]);
+  }, [activeThreadId, threadIsBusy, isSending, setQueuedMessages, setDraft]);
 
   useEffect(() => {
     if (pendingAutoSendRef.current !== null) {
@@ -103,6 +108,7 @@ interface WorkspaceControllerSlice {
   setQueuedMessages: React.Dispatch<React.SetStateAction<QueuedMessage[]>>;
   activeThread: AgentChatThreadRecord | null;
   threadState: {
+    activeThreadId: string | null;
     setActiveThreadId: (id: string) => void;
     setError: (e: string | null) => void;
   };
@@ -132,8 +138,9 @@ export function useWorkspaceHooks(
   });
 
   useQueueAutoSend({
-    threadIsBusy, isSending: controller.isSending, queuedMessages: controller.queuedMessages,
-    setQueuedMessages: controller.setQueuedMessages, setDraft: controller.setDraft, sendMessage: actions.sendMessage,
+    activeThreadId: controller.threadState.activeThreadId, threadIsBusy, isSending: controller.isSending,
+    queuedMessages: controller.queuedMessages, setQueuedMessages: controller.setQueuedMessages,
+    setDraft: controller.setDraft, sendMessage: actions.sendMessage,
   });
 
   const sendQueuedMessageNow = useSendQueuedNow(controller.setQueuedMessages, actions.stopTask);

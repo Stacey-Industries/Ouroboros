@@ -205,4 +205,7 @@ export interface ContextPacket {
   moduleSummaries?: ModuleContextSummary[];
   graphSummary?: string;
   sessionMemories?: string;
+  systemInstructions?: string;
+  /** Expanded skill body — injected as hidden context alongside system instructions */
+  skillInstructions?: string;
 }

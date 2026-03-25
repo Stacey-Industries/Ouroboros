@@ -49,6 +49,7 @@ export interface ComposerSectionProps {
   codexModels?: CodexModelOption[];
   threadModelUsage: ModelContextUsage[] | undefined;
   streamingTokenUsage: AgentChatStreamingState['streamingTokenUsage'];
+  isStreaming?: boolean;
   slashCommandContext?: SlashCommandContext;
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
@@ -88,6 +89,7 @@ export function ComposerSection(props: ComposerSectionProps): React.ReactElement
       codexModels={props.codexModels}
       threadModelUsage={props.threadModelUsage}
       streamingTokenUsage={props.streamingTokenUsage}
+      isStreaming={props.isStreaming}
       slashCommandContext={props.slashCommandContext}
       attachments={props.attachments}
       onAttachmentsChange={props.onAttachmentsChange}

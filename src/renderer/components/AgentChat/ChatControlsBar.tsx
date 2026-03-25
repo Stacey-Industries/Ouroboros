@@ -108,6 +108,7 @@ type ContextRingProps = {
   label: string;
   size?: number;
   stroke?: number;
+  isStreaming?: boolean;
 };
 
 type ArcProps = {
@@ -155,8 +156,11 @@ function ContextRing(props: ContextRingProps): React.ReactElement {
   const offset = circumference - (props.pct / 100) * circumference;
   const cx = size / 2;
   const cy = size / 2;
+  const pulseStyle: React.CSSProperties = props.isStreaming
+    ? { animation: 'contextRingPulse 1.5s ease-in-out infinite' }
+    : {};
   return (
-    <svg width={size} height={size} style={{ pointerEvents: 'none' }}>
+    <svg width={size} height={size} style={{ pointerEvents: 'none', ...pulseStyle }}>
       <ContextRingArcs
         cx={cx}
         cy={cy}
@@ -183,6 +187,7 @@ function ContextRing(props: ContextRingProps): React.ReactElement {
 function ModelContextUsageIndicator(props: {
   usage: ModelUsageEntry[];
   codexModels?: CodexModelOption[];
+  isStreaming?: boolean;
 }): React.ReactElement | null {
   if (props.usage.length === 0) return null;
   return (
@@ -196,7 +201,7 @@ function ModelContextUsageIndicator(props: {
             title={`${entry.inputTokens.toLocaleString()} / ${limit.toLocaleString()} Tokens`}
             style={{ cursor: 'default' }}
           >
-            <ContextRing pct={pct} tone={getContextTone(pct)} label={String(pct)} />
+            <ContextRing pct={pct} tone={getContextTone(pct)} label={String(pct)} isStreaming={props.isStreaming} />
           </div>
         );
       })}
@@ -212,6 +217,7 @@ interface ChatControlsBarProps {
   defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
   threadModelUsage?: ModelUsageEntry[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  isStreaming?: boolean;
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
 }
@@ -273,7 +279,7 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
       {displayUsage.length > 0 && (
         <>
           <div className="mx-0.5 h-3 w-px bg-border-semantic" />
-          <ModelContextUsageIndicator usage={displayUsage} codexModels={props.codexModels} />
+          <ModelContextUsageIndicator usage={displayUsage} codexModels={props.codexModels} isStreaming={props.isStreaming} />
         </>
       )}
     </div>
