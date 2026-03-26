@@ -39,7 +39,8 @@ export { buildCrossModuleDependencies, buildModuleStructuralSummaries }
 // Public API
 // ---------------------------------------------------------------------------
 
-export function detectModules(files: IndexedRepoFile[], workspaceRoot: string): ModuleIdentity[] {
+export function detectModules(rawFiles: IndexedRepoFile[], workspaceRoot: string): ModuleIdentity[] {
+  const files = rawFiles.map((f) => ({ ...f, relativePath: normalizeSeparators(f.relativePath) }))
   const assigned = new Set<string>()
   const modules: ModuleIdentity[] = []
 

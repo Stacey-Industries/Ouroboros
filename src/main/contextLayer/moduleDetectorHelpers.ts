@@ -30,7 +30,8 @@ export function buildModuleStructuralSummaries(options: {
   workspaceRoot: string
   gitDiffFiles?: Set<string>
 }): ModuleStructuralSummary[] {
-  const { modules, files, gitDiffFiles } = options
+  const { modules, gitDiffFiles } = options
+  const files = options.files.map((f) => ({ ...f, relativePath: normalizeSeparators(f.relativePath) }))
   const filesByModule = buildFilesByModuleMap(modules, files)
   return modules.map((mod) => {
     const moduleFiles = filesByModule.get(mod.id) ?? []
@@ -75,7 +76,8 @@ export function buildCrossModuleDependencies(options: {
   files: IndexedRepoFile[]
   workspaceRoot: string
 }): Array<{ from: string; to: string; weight: number }> {
-  const { modules, files } = options
+  const { modules } = options
+  const files = options.files.map((f) => ({ ...f, relativePath: normalizeSeparators(f.relativePath) }))
   const filesByModule = buildFilesByModuleMap(modules, files)
   const fileToModule = buildFileToModuleMap(modules, files)
 
