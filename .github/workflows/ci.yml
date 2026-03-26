@@ -18,6 +18,13 @@ jobs:
 
       - run: npm ci
 
+      - name: Install better-sqlite3 for system Node (vitest needs Node ABI, not Electron ABI)
+        run: |
+          mkdir -p /tmp/Temp/sqlite-fresh
+          cd /tmp/Temp/sqlite-fresh
+          npm init -y
+          npm install better-sqlite3
+
       - name: Typecheck
         run: npm run typecheck
 

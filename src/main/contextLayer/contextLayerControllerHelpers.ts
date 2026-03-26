@@ -93,7 +93,7 @@ export function buildExportsFromFiles(files: IndexedRepoFile[]): string[] {
 export function buildDirTree(files: IndexedRepoFile[], rootPath: string): DirNode {
   const root: DirNode = { path: rootPath, name: path.basename(rootPath), children: new Map(), directFiles: [] }
   for (const file of files) {
-    const relDir = path.dirname(file.relativePath).replace(/\\/g, '/')
+    const relDir = path.dirname(file.relativePath.replace(/\\/g, '/')).replace(/\\/g, '/')
     if (relDir === '.' || relDir === '') {
       root.directFiles.push(file)
       continue

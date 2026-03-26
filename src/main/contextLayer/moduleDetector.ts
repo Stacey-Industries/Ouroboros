@@ -27,6 +27,7 @@ import {
   MIN_FILES_FOR_FOLDER_MODULE,
   MIN_FLAT_GROUP_PREFIX_LENGTH,
   MIN_SIGNIFICANT_FILE_SIZE,
+  normalizedDirname,
   normalizeSeparators,
   toKebabCase,
   toLabel,
@@ -66,7 +67,7 @@ function buildDirMap(files: IndexedRepoFile[]): { dirMap: Map<string, IndexedRep
   const allDirs = new Set<string>()
 
   for (const file of files) {
-    const relDir = normalizeSeparators(path.dirname(file.relativePath))
+    const relDir = normalizedDirname(file.relativePath)
     if (relDir && relDir !== '.') allDirs.add(relDir)
     if (isTestFile(file.relativePath) || !isSourceFile(file.extension) || !relDir || relDir === '.') continue
     const existing = dirMap.get(relDir) ?? []
@@ -113,7 +114,7 @@ function claimFeatureFolder(ctx: FeatureFolderClaimCtx): void {
   claimedDirs.add(candidate.dirPath)
 
   for (const file of files) {
-    const fileRelDir = normalizeSeparators(path.dirname(file.relativePath))
+    const fileRelDir = normalizedDirname(file.relativePath)
     if (fileRelDir === candidate.dirPath || fileRelDir.startsWith(candidate.dirPath + '/')) {
       assigned.add(file.relativePath)
     }
@@ -152,7 +153,7 @@ function detectConfigGroup(files: IndexedRepoFile[], _workspaceRoot: string, ass
   for (const file of files) {
     if (assigned.has(file.relativePath)) continue
     const basename = path.basename(file.relativePath)
-    const relDir = normalizeSeparators(path.dirname(file.relativePath))
+    const relDir = normalizedDirname(file.relativePath)
     if (relDir !== '.' && relDir !== '') continue
     if (isConfigFile(basename)) configFiles.push(file)
   }
@@ -175,7 +176,7 @@ function assignFlatGroupFiles(
   const groupBasenames = new Set(groupFiles.map((f) => basenameWithoutExtension(f.relativePath)))
   for (const file of files) {
     if (assigned.has(file.relativePath)) continue
-    if (normalizeSeparators(path.dirname(file.relativePath)) !== dirPath) continue
+    if (normalizedDirname(file.relativePath) !== dirPath) continue
     const fileBase = basenameWithoutExtension(file.relativePath)
     const fileBaseWithoutTest = fileBase.replace(/\.(test|spec)$/, '')
     if (groupBasenames.has(fileBase) || groupBasenames.has(fileBaseWithoutTest)) {
@@ -188,7 +189,7 @@ function groupUnassignedByDir(files: IndexedRepoFile[], assigned: Set<string>): 
   const dirGroups = new Map<string, IndexedRepoFile[]>()
   for (const file of files) {
     if (assigned.has(file.relativePath) || isTestFile(file.relativePath) || !isSourceFile(file.extension)) continue
-    const relDir = normalizeSeparators(path.dirname(file.relativePath))
+    const relDir = normalizedDirname(file.relativePath)
     const existing = dirGroups.get(relDir) ?? []
     existing.push(file)
     dirGroups.set(relDir, existing)
@@ -303,7 +304,7 @@ function assignCompanionTestFile(files: IndexedRepoFile[], basename: string, rel
     if (assigned.has(otherFile.relativePath)) continue
     const otherBase = basenameWithoutExtension(otherFile.relativePath)
     const otherBaseWithoutTest = otherBase.replace(/\.(test|spec)$/, '')
-    const otherDir = normalizeSeparators(path.dirname(otherFile.relativePath))
+    const otherDir = normalizedDirname(otherFile.relativePath)
     if (otherDir === relDir && otherBaseWithoutTest === basename) assigned.add(otherFile.relativePath)
   }
 }
@@ -317,7 +318,7 @@ function detectSingleFileModules(files: IndexedRepoFile[], _workspaceRoot: strin
     if (file.size < MIN_SIGNIFICANT_FILE_SIZE) continue
 
     const basename = basenameWithoutExtension(file.relativePath)
-    const relDir = normalizeSeparators(path.dirname(file.relativePath))
+    const relDir = normalizedDirname(file.relativePath)
     modules.push({ id: toKebabCase(basename), label: toLabel(basename), rootPath: relDir === '.' || relDir === '' ? file.relativePath : relDir, pattern: 'single-file' })
     assigned.add(file.relativePath)
     assignCompanionTestFile(files, basename, relDir, assigned)

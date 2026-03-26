@@ -13,6 +13,7 @@ import {
   isConfigFile,
   isSourceFile,
   kebabToCamel,
+  normalizedDirname,
   normalizeSeparators,
 } from './moduleDetectorUtils'
 
@@ -263,7 +264,7 @@ function checkPatternMatch(mod: ModuleIdentity, file: IndexedRepoFile, fileRelDi
 const PATTERN_ORDER: Record<string, number> = { 'feature-folder': 0, config: 1, 'flat-group': 2, 'single-file': 3 }
 
 function findModuleForFile(modules: ModuleIdentity[], file: IndexedRepoFile): string | null {
-  const fileRelDir = normalizeSeparators(path.dirname(file.relativePath))
+  const fileRelDir = normalizedDirname(file.relativePath)
   const sorted = [...modules].sort((a, b) => {
     const ap = PATTERN_ORDER[a.pattern] ?? 99
     const bp = PATTERN_ORDER[b.pattern] ?? 99

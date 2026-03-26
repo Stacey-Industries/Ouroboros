@@ -70,6 +70,11 @@ export function normalizeSeparators(filePath: string): string {
   return filePath.replace(/\\/g, '/')
 }
 
+/** Normalize separators before dirname so backslashes work on all platforms. */
+export function normalizedDirname(filePath: string): string {
+  return normalizeSeparators(path.dirname(normalizeSeparators(filePath)))
+}
+
 export function basenameWithoutExtension(relativePath: string): string {
   const basename = path.basename(relativePath)
   if (basename.endsWith('.d.ts')) return basename.slice(0, -5)

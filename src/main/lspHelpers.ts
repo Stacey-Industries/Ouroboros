@@ -115,6 +115,8 @@ export function uriToFilePath(uri: string): string {
   filePath = decodeURIComponent(filePath);
   if (process.platform === 'win32') {
     filePath = filePath.replace(/\//g, '\\');
+  } else if (filePath.length > 0 && !filePath.startsWith('/')) {
+    filePath = '/' + filePath;
   }
   return filePath;
 }
