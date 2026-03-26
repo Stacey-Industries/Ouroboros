@@ -1,8 +1,3 @@
-import {
-  OPEN_ORCHESTRATION_PANEL_EVENT,
-  OPEN_ORCHESTRATION_SESSION_EVENT,
-  ORCHESTRATION_PROVIDER_SESSION_EVENT,
-} from './appEventNames';
 import type {
   OrchestrationState,
   OrchestrationStatus,
@@ -10,6 +5,11 @@ import type {
   TaskResult,
   VerificationSummary,
 } from '../types/electron';
+import {
+  OPEN_ORCHESTRATION_PANEL_EVENT,
+  OPEN_ORCHESTRATION_SESSION_EVENT,
+  ORCHESTRATION_PROVIDER_SESSION_EVENT,
+} from './appEventNames';
 import type { ToastOptions, ToastType } from './useToast';
 
 const STATE_MESSAGE_BUILDERS: Partial<Record<OrchestrationStatus, (state: OrchestrationState) => string>> = {
@@ -29,7 +29,7 @@ const STATE_TOAST_TYPES: Partial<Record<OrchestrationStatus, ToastType>> = {
 };
 
 const RESULT_MESSAGE_BUILDERS: Partial<Record<OrchestrationStatus, (result: TaskResult) => string>> = {
-  // 'complete' omitted — the agent chat system already surfaces a completion toast.
+  complete: (result) => result.message?.trim() || 'Orchestration task completed.',
   needs_review: (result) => result.message?.trim() || 'Orchestration task needs review.',
   failed: (result) => result.message?.trim() ? `Orchestration failed: ${result.message.trim()}` : 'Orchestration task failed.',
   cancelled: (result) => result.message?.trim() ? `Orchestration cancelled: ${result.message.trim()}` : 'Orchestration task cancelled.',
@@ -37,6 +37,7 @@ const RESULT_MESSAGE_BUILDERS: Partial<Record<OrchestrationStatus, (result: Task
 };
 
 const RESULT_TOAST_TYPES: Partial<Record<OrchestrationStatus, ToastType>> = {
+  complete: 'success',
   needs_review: 'warning',
   paused: 'warning',
   cancelled: 'warning',
@@ -146,7 +147,7 @@ export function getResultToastPayload(result: TaskResult): {
   return {
     duration: 7000,
     message: builder(result),
-    notify: result.status === 'needs_review' || result.status === 'failed',
+    notify: result.status === 'needs_review' || result.status === 'failed' || result.status === 'complete',
     type: RESULT_TOAST_TYPES[result.status] ?? 'info',
   };
 }

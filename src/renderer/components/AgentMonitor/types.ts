@@ -28,6 +28,8 @@ export interface AgentSession {
   bookmarked?: boolean;
   /** Git HEAD hash captured at session start — used for diff review */
   snapshotHash?: string;
+  /** True when the session was spawned internally by the IDE (summarizer, CLAUDE.md generator) */
+  internal?: boolean;
 }
 
 export interface ToolCallEvent {

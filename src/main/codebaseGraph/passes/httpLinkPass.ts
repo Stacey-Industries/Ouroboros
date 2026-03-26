@@ -8,7 +8,7 @@
  */
 
 import type { GraphDatabase } from '../graphDatabase'
-import type { GraphEdge } from '../graphDatabaseTypes'
+import type { GraphEdge, GraphNode } from '../graphDatabaseTypes'
 import type { IndexedFile } from './passTypes'
 
 // ─── HTTP call-site patterns ─────────────────────────────────────────────────
@@ -47,104 +47,77 @@ const HTTP_CALL_PATTERNS: Record<string, string[]> = {
   'http.NewRequest': ['*'],
 }
 
-// ─── Pass implementation ─────────────────────────────────────────────────────
+// ─── Helper: look up HTTP methods for a call site ────────────────────────────
 
-export function httpLinkPass(
-  db: GraphDatabase,
+function resolveHttpMethods(calleeName: string, receiverName?: string): string[] | null {
+  const fullCallName = receiverName ? `${receiverName}.${calleeName}` : calleeName
+  // eslint-disable-next-line security/detect-object-injection -- keys are Cypher-extracted call names matched against a static allowlist
+  return HTTP_CALL_PATTERNS[fullCallName] ?? HTTP_CALL_PATTERNS[calleeName] ?? null
+}
+
+// ─── Helper: score a route match ─────────────────────────────────────────────
+
+function scoreRouteMatch(callerName: string, routeMethod: string, routePath: string, methods: string[]): number {
+  if (!methods.includes('*') && !methods.includes(routeMethod)) return 0
+
+  let confidence = 0.3
+  const callerLower = callerName.toLowerCase()
+  for (const part of routePath.split('/').filter(Boolean)) {
+    if (!part.startsWith(':') && callerLower.includes(part.toLowerCase())) confidence += 0.2
+  }
+  return Math.min(confidence, 1.0)
+}
+
+// ─── Helper: process one file's calls ────────────────────────────────────────
+
+function processFileHttpCalls(
+  file: IndexedFile,
+  fileQn: string,
   projectName: string,
-  indexedFiles: IndexedFile[],
-): void {
-  // Get all Route nodes — if there are none, nothing to match against.
-  const routes = db.getNodesByLabel(projectName, 'Route')
-  if (routes.length === 0) return
-
+  routes: GraphNode[],
+): Omit<GraphEdge, 'id'>[] {
+  if (!file.parsed) return []
   const edges: Omit<GraphEdge, 'id'>[] = []
+  const enclosingDefs = file.parsed.definitions.filter((d) => d.kind === 'Function' || d.kind === 'Method')
 
-  for (const file of indexedFiles) {
-    if (!file.parsed) continue
+  for (const call of file.parsed.calls) {
+    const methods = resolveHttpMethods(call.calleeName, call.receiverName ?? undefined)
+    if (!methods) continue
 
-    const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
+    const enclosingDef = enclosingDefs.find((d) => call.startLine >= d.startLine && call.startLine <= d.endLine)
+    if (!enclosingDef) continue
+    const callerQn = `${fileQn}.${enclosingDef.name}`
 
-    // Pre-filter definitions that can enclose a call (functions and methods).
-    const enclosingDefs = file.parsed.definitions.filter(
-      (d) => d.kind === 'Function' || d.kind === 'Method',
-    )
-
-    for (const call of file.parsed.calls) {
-      // Build the fully-qualified call name (receiver.method or just callee).
-      const fullCallName = call.receiverName
-        ? `${call.receiverName}.${call.calleeName}`
-        : call.calleeName
-
-      // Check if this matches a known HTTP client pattern.
-      const methods =
-        HTTP_CALL_PATTERNS[fullCallName] ?? HTTP_CALL_PATTERNS[call.calleeName]
-      if (!methods) continue
-
-      // Find the enclosing function/method for this call site.
-      const enclosingDef = enclosingDefs.find(
-        (d) => call.startLine >= d.startLine && call.startLine <= d.endLine,
-      )
-      if (!enclosingDef) continue
-
-      const callerQn = `${fileQn}.${enclosingDef.name}`
-
-      // Match against every Route node.
-      for (const route of routes) {
-        const routeProps = route.props as Record<string, unknown>
-        const routeMethod = routeProps.method as string
-        const routePath = routeProps.path as string
-
-        // Method must match (or the pattern is a wildcard '*').
-        const methodMatch =
-          methods.includes('*') || methods.includes(routeMethod)
-        if (!methodMatch) continue
-
-        // ── Confidence scoring ─────────────────────────────────────────
-        // Base: 0.3 (method match only).
-        // Boosted by +0.2 for each non-parameter route-path segment that
-        // appears in the caller function name.
-        let confidence = 0.3
-
-        const callerLower = enclosingDef.name.toLowerCase()
-        const routePathParts = routePath.split('/').filter(Boolean)
-        for (const part of routePathParts) {
-          if (part.startsWith(':')) continue // Skip path parameters
-          if (callerLower.includes(part.toLowerCase())) {
-            confidence += 0.2
-          }
-        }
-
-        confidence = Math.min(confidence, 1.0)
-
-        // Only create an edge when confidence is meaningful.
-        if (confidence >= 0.3) {
-          edges.push({
-            project: projectName,
-            source_id: callerQn,
-            target_id: route.id,
-            type: 'HTTP_CALLS',
-            props: {
-              confidence,
-              url_path: routePath,
-              http_method: routeMethod,
-            },
-          })
-        }
+    for (const route of routes) {
+      const routeProps = route.props as Record<string, string>
+      const confidence = scoreRouteMatch(enclosingDef.name, routeProps.method, routeProps.path, methods)
+      if (confidence >= 0.3) {
+        edges.push({ project: projectName, source_id: callerQn, target_id: route.id, type: 'HTTP_CALLS',
+          props: { confidence, url_path: routeProps.path, http_method: routeProps.method } })
       }
     }
   }
+  return edges
+}
 
-  // ── Deduplicate by source|target pair ────────────────────────────────────
+// ─── Pass implementation ─────────────────────────────────────────────────────
+
+export function httpLinkPass(db: GraphDatabase, projectName: string, indexedFiles: IndexedFile[]): void {
+  const routes = db.getNodesByLabel(projectName, 'Route')
+  if (routes.length === 0) return
+
+  const allEdges: Omit<GraphEdge, 'id'>[] = []
+  for (const file of indexedFiles) {
+    const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
+    allEdges.push(...processFileHttpCalls(file, fileQn, projectName, routes))
+  }
+
   const seen = new Set<string>()
-  const unique = edges.filter((e) => {
+  const unique = allEdges.filter((e) => {
     const key = `${e.source_id}|${e.target_id}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
   })
-
-  if (unique.length > 0) {
-    db.insertEdges(unique)
-  }
+  if (unique.length > 0) db.insertEdges(unique)
 }

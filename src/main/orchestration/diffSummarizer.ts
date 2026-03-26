@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import path from 'path'
+
 import type { DiffFileSummary, DiffSummary } from './types'
 
 const GIT_TIMEOUT_MS = 30_000
@@ -170,7 +171,8 @@ function buildGroups(files: DiffFileSummary[]): DiffModuleSummary[] {
 }
 
 function highestRisk(left: 'low' | 'medium' | 'high', right: 'low' | 'medium' | 'high'): 'low' | 'medium' | 'high' {
-  const order = { low: 0, medium: 1, high: 2 }
+  const order: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 }
+  // eslint-disable-next-line security/detect-object-injection -- keys are a closed union: 'low' | 'medium' | 'high'
   return order[left] >= order[right] ? left : right
 }
 

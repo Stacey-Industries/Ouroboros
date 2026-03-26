@@ -277,6 +277,8 @@ export interface HookPayload {
   requestId?: string;
   /** Working directory of the Claude Code session — set by hook scripts */
   cwd?: string;
+  /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
+  internal?: boolean;
 }
 
 export interface ToolCallPayload {

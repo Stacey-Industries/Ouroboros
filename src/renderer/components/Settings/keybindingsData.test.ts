@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { findConflict, getEffectiveShortcut, keyEventToString } from './keybindingsData';
 
 describe('keyEventToString', () => {

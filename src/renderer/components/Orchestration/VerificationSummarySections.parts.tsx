@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ProviderProgressEvent, VerificationSummary } from '../../types/electron';
 import { badgeStyle, formatDateTime, panelStyle, resolveStatusTone } from './orchestrationUi';
 

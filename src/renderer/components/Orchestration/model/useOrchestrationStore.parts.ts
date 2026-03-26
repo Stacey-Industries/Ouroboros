@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import type { OrchestrationStore, OrchestrationStoreState } from './useOrchestrationStore';
 import type { OrchestrationStateStore } from '../useOrchestrationModel.helpers';
+import type { OrchestrationStore, OrchestrationStoreState } from './useOrchestrationStore';
 
 export function buildOrchestrationSetters(setters: OrchestrationStateStore): OrchestrationStateStore {
   return {

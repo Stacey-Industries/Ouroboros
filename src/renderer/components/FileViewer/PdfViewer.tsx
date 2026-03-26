@@ -90,7 +90,7 @@ function PdfScrollArea({
   containerWidthRef,
 }: PdfScrollAreaProps): React.ReactElement {
   return (
-    <div ref={scrollRef} style={scrollContainerStyle}>
+    <div ref={scrollRef as React.RefObject<HTMLDivElement>} style={scrollContainerStyle}>
       {pdfDoc &&
         visiblePages.map((pageNum) => (
           <PdfPage
@@ -99,7 +99,7 @@ function PdfScrollArea({
             pageNum={pageNum}
             zoomMode={zoom.zoomMode}
             customScale={zoom.customScale}
-            containerWidth={containerWidthRef.current}
+            containerWidth={containerWidthRef.current ?? 800}
           />
         ))}
     </div>

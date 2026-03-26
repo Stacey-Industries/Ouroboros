@@ -6,8 +6,9 @@ import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_ORCHESTRATION_SESSION_EVENT,
 } from './appEventNames';
+import type { ToastType } from './useToast';
 
-export type ToastFn = (message: string, level?: string) => void
+export type ToastFn = (message: string, type?: ToastType, options?: Record<string, unknown>) => unknown
 
 interface AgentChatHandlerArgs {
   projectRoot: string | null

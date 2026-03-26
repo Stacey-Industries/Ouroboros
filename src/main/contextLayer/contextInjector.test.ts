@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import type { ContextPacket, RankedContextFile } from '../orchestration/types'
-import type { ModuleAISummary, ModuleContextEntry, ModuleStructuralSummary, ModuleIdentity, RepoMap, RepoMapSummary } from './contextLayerTypes'
+import type { ModuleAISummary, ModuleContextEntry, ModuleIdentity, ModuleStructuralSummary, RepoMap, RepoMapSummary } from './contextLayerTypes'
 
 vi.mock('./contextLayerStore', () => ({
   readRepoMap: vi.fn(),
@@ -10,9 +11,9 @@ vi.mock('./repoMapGenerator', () => ({
   compressRepoMap: vi.fn(),
 }))
 
+import type { InjectionContext } from './contextInjector'
 import { injectContextLayer } from './contextInjector'
-import type { InjectionContext, InjectionResult } from './contextInjector'
-import { readRepoMap, readModuleEntry } from './contextLayerStore'
+import { readModuleEntry,readRepoMap } from './contextLayerStore'
 import { compressRepoMap } from './repoMapGenerator'
 
 const mockedReadRepoMap = vi.mocked(readRepoMap)
@@ -335,15 +336,15 @@ describe('injectContextLayer', () => {
     mockedReadRepoMap.mockResolvedValue(repoMap)
     mockedCompressRepoMap.mockReturnValue(summary)
     mockedReadModuleEntry.mockImplementation(async (_root, moduleId) => {
-      const entries: Record<string, ModuleContextEntry> = {
-        'main': mainEntry,
-        'dep-1': dep1,
-        'dep-2': dep2,
-        'dep-3': dep3,
-        'dep-4': dep4,
-        'dep-5': dep5,
-      }
-      return entries[moduleId] ?? null
+      const entryMap = new Map<string, ModuleContextEntry>([
+        ['main', mainEntry],
+        ['dep-1', dep1],
+        ['dep-2', dep2],
+        ['dep-3', dep3],
+        ['dep-4', dep4],
+        ['dep-5', dep5],
+      ])
+      return entryMap.get(moduleId) ?? null
     })
 
     const context = createMockInjectionContext({ goalKeywords: ['main'] })
@@ -372,13 +373,13 @@ describe('injectContextLayer', () => {
     mockedReadRepoMap.mockResolvedValue(repoMap)
     mockedCompressRepoMap.mockReturnValue(summary)
     mockedReadModuleEntry.mockImplementation(async (_root, moduleId) => {
-      const entries: Record<string, ModuleContextEntry> = {
-        'terminal': selectedEntry,
-        'layout': recentEntry1,
-        'settings': recentEntry2,
-        'old-module': staleEntry,
-      }
-      return entries[moduleId] ?? null
+      const entryMap = new Map<string, ModuleContextEntry>([
+        ['terminal', selectedEntry],
+        ['layout', recentEntry1],
+        ['settings', recentEntry2],
+        ['old-module', staleEntry],
+      ])
+      return entryMap.get(moduleId) ?? null
     })
 
     const context = createMockInjectionContext({ goalKeywords: ['terminal'] })

@@ -125,7 +125,8 @@ async function startDirectoryWatcher(options: DirectoryWatchStartOptions): Promi
       return noop;
     }
 
-    return subscribeToDirectoryChanges(options.dirPath, (change: FileChangeEvent) => {
+    return subscribeToDirectoryChanges(options.dirPath, (rawChange: unknown) => {
+      const change = rawChange as FileChangeEvent;
       if (!options.isActive() || !isRelevantFileChange(change, options.dirPath)) {
         return;
       }

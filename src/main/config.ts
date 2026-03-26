@@ -270,7 +270,7 @@ export interface AppConfig {
   glassOpacity: number;
 }
 
-export const store = new Store<AppConfig>({ schema });
+export const store = new Store<AppConfig>({ schema: schema as import('electron-store').Schema<AppConfig> });
 
 // In-memory cache to avoid re-reading config.json from disk on every call.
 // electron-store's underlying conf library reads the file on every .get().

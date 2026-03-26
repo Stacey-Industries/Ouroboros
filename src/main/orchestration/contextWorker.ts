@@ -30,12 +30,13 @@ async function handleBuildContext(id: string, roots: string[]): Promise<void> {
 
   let packet: ContextPacket | undefined;
   try {
+     
     const dummyRequest = {
       workspaceRoots: roots,
       goal: '',
       mode: 'chat',
       provider: 'claude-code',
-    } as TaskRequest;
+    } as unknown as TaskRequest;
     const result = await buildContextPacket({
       request: dummyRequest,
       repoFacts: snapshot.repoFacts,

@@ -1,9 +1,11 @@
+import { readFileSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
-import type { RepoFacts } from '../orchestration/types'
+
 import type { IndexedRepoFile, RepoIndexSnapshot } from '../orchestration/repoIndexer'
-import type { ModuleContextEntry, ModuleIdentity, ModuleStructuralSummary, RepoMap, RepoMapSummary } from './contextLayerTypes'
-import { detectModules, buildModuleStructuralSummaries, buildCrossModuleDependencies } from './moduleDetector'
+import type { RepoFacts } from '../orchestration/types'
+import type { ModuleContextEntry, ModuleIdentity, RepoMap, RepoMapSummary } from './contextLayerTypes'
+import { buildCrossModuleDependencies,buildModuleStructuralSummaries, detectModules } from './moduleDetector'
 
 const REPO_MAP_SIZE_CAP_BYTES = 8192
 const TRUNCATED_EXPORTS_LIMIT = 5
@@ -17,53 +19,48 @@ export interface GenerateRepoMapOptions {
   workspaceRoot: string
 }
 
-export function generateRepoMap(options: GenerateRepoMapOptions): RepoMap {
-  const { repoFacts, repoIndex, workspaceRoot } = options
-
-  const allFiles = collectAllFiles(repoIndex)
-  if (allFiles.length === 0) {
-    return buildEmptyRepoMap(workspaceRoot, repoIndex)
-  }
-
-  const isMultiRoot = repoIndex.roots.length > 1
-  const modules = detectModulesFromRoots(repoIndex, isMultiRoot)
-  const changedFilePaths = repoFacts.gitDiff.changedFiles.map((entry) => entry.filePath)
-  const gitDiffFiles = new Set(changedFilePaths)
-  const structuralSummaries = buildModuleStructuralSummaries({
-    modules,
-    files: allFiles,
-    workspaceRoot,
-    gitDiffFiles,
-  })
-  const crossModuleDeps = buildCrossModuleDependencies({
-    modules,
-    summaries: structuralSummaries,
-    files: allFiles,
-    workspaceRoot,
-  })
-
-  const projectName = detectProjectName(workspaceRoot, repoIndex)
-  const frameworks = detectFrameworks(repoIndex, workspaceRoot)
-  const languages = aggregateLanguages(repoIndex)
-
-  const moduleEntries: ModuleContextEntry[] = structuralSummaries.map((summary) => ({
-    structural: summary,
-  }))
-
-  const repoMap: RepoMap = {
+function buildRepoMapFromSummaries(options: {
+  workspaceRoot: string
+  repoIndex: RepoIndexSnapshot
+  allFiles: IndexedRepoFile[]
+  moduleEntries: ModuleContextEntry[]
+  crossModuleDeps: Array<{ from: string; to: string; weight: number }>
+}): RepoMap {
+  const { workspaceRoot, repoIndex, allFiles, moduleEntries, crossModuleDeps } = options
+  return {
     version: 1,
     generatedAt: Date.now(),
     workspaceRoot,
-    projectName,
-    languages,
-    frameworks,
+    projectName: detectProjectName(workspaceRoot, repoIndex),
+    languages: aggregateLanguages(repoIndex),
+    frameworks: detectFrameworks(repoIndex),
     moduleCount: moduleEntries.length,
     totalFileCount: allFiles.length,
     modules: moduleEntries,
     crossModuleDependencies: crossModuleDeps,
   }
+}
 
-  return enforceSizeCap(repoMap)
+export function generateRepoMap(options: GenerateRepoMapOptions): RepoMap {
+  const { repoFacts, repoIndex, workspaceRoot } = options
+
+  const allFiles = collectAllFiles(repoIndex)
+  if (allFiles.length === 0) {
+    return buildEmptyRepoMap(workspaceRoot)
+  }
+
+  const isMultiRoot = repoIndex.roots.length > 1
+  const modules = detectModulesFromRoots(repoIndex, isMultiRoot)
+  const gitDiffFiles = new Set(repoFacts.gitDiff.changedFiles.map((entry) => entry.filePath))
+  const structuralSummaries = buildModuleStructuralSummaries({
+    modules, files: allFiles, workspaceRoot, gitDiffFiles,
+  })
+  const crossModuleDeps = buildCrossModuleDependencies({
+    modules, summaries: structuralSummaries, files: allFiles, workspaceRoot,
+  })
+  const moduleEntries: ModuleContextEntry[] = structuralSummaries.map((summary) => ({ structural: summary }))
+
+  return enforceSizeCap(buildRepoMapFromSummaries({ workspaceRoot, repoIndex, allFiles, moduleEntries, crossModuleDeps }))
 }
 
 export function compressRepoMap(repoMap: RepoMap): RepoMapSummary {
@@ -83,55 +80,53 @@ export function compressRepoMap(repoMap: RepoMap): RepoMapSummary {
   }
 }
 
-export function detectFrameworks(repoIndex: RepoIndexSnapshot, workspaceRoot: string): string[] {
-  const frameworks: string[] = []
+function detectElectronFramework(allFiles: IndexedRepoFile[], relativePaths: Set<string>): boolean {
+  const hasElectronStructure =
+    allFiles.some((f) => f.relativePath.startsWith('src/main/')) &&
+    allFiles.some((f) => f.relativePath.startsWith('src/renderer/')) &&
+    allFiles.some((f) => f.relativePath.startsWith('src/preload/'))
+  return hasElectronStructure || Array.from(relativePaths).some((p) => p.startsWith('electron.vite.config'))
+}
+
+function detectReactFramework(
+  allFiles: IndexedRepoFile[],
+  detected: string[],
+): boolean {
+  const tsxCount = allFiles.filter((f) => f.extension === '.tsx').length
+  return tsxCount >= 3 &&
+    !detected.includes('Next.js') &&
+    !detected.includes('Vue') &&
+    !detected.includes('Angular')
+}
+
+function buildFrameworkChecks(
+  allFiles: IndexedRepoFile[],
+  relativePaths: Set<string>,
+): Array<{ name: string; check: (detected: string[]) => boolean }> {
+  const hasExtension = (ext: string): boolean => allFiles.some((file) => file.extension === ext)
+  return [
+    { name: 'Next.js', check: () => matchesAnyPattern(relativePaths, ['next.config.js', 'next.config.ts', 'next.config.mjs']) },
+    { name: 'Vue', check: () => matchesAnyPattern(relativePaths, ['vue.config.js']) || hasExtension('.vue') },
+    { name: 'Angular', check: () => matchesAnyPattern(relativePaths, ['angular.json']) },
+    { name: 'Electron', check: () => detectElectronFramework(allFiles, relativePaths) },
+    { name: 'Vite', check: (d) => matchesAnyGlob(relativePaths, 'vite.config') && !d.includes('Electron') },
+    { name: 'React', check: (d) => detectReactFramework(allFiles, d) },
+    { name: 'Tailwind CSS', check: () => matchesAnyGlob(relativePaths, 'tailwind.config') },
+    { name: 'Svelte', check: () => matchesAnyPattern(relativePaths, ['svelte.config.js', 'svelte.config.ts']) || hasExtension('.svelte') },
+    { name: 'Astro', check: () => matchesAnyPattern(relativePaths, ['astro.config.mjs', 'astro.config.ts']) || hasExtension('.astro') },
+  ]
+}
+
+export function detectFrameworks(repoIndex: RepoIndexSnapshot): string[] {
   const allFiles = collectAllFiles(repoIndex)
   const relativePaths = new Set(allFiles.map((file) => file.relativePath.toLowerCase()))
-  const hasExtension = (ext: string): boolean => allFiles.some((file) => file.extension === ext)
+  const checks = buildFrameworkChecks(allFiles, relativePaths)
 
-  if (matchesAnyPattern(relativePaths, ['next.config.js', 'next.config.ts', 'next.config.mjs'])) {
-    frameworks.push('Next.js')
+  const detected: string[] = []
+  for (const { name, check } of checks) {
+    if (check(detected)) detected.push(name)
   }
-
-  if (matchesAnyPattern(relativePaths, ['vue.config.js']) || hasExtension('.vue')) {
-    frameworks.push('Vue')
-  }
-
-  if (matchesAnyPattern(relativePaths, ['angular.json'])) {
-    frameworks.push('Angular')
-  }
-
-  const hasElectronStructure =
-    allFiles.some((file) => file.relativePath.startsWith('src/main/')) &&
-    allFiles.some((file) => file.relativePath.startsWith('src/renderer/')) &&
-    allFiles.some((file) => file.relativePath.startsWith('src/preload/'))
-  const hasElectronConfig = Array.from(relativePaths).some((p) => p.startsWith('electron.vite.config'))
-  if (hasElectronStructure || hasElectronConfig) {
-    frameworks.push('Electron')
-  }
-
-  if (matchesAnyGlob(relativePaths, 'vite.config') && !frameworks.includes('Electron')) {
-    frameworks.push('Vite')
-  }
-
-  const tsxCount = allFiles.filter((file) => file.extension === '.tsx').length
-  if (tsxCount >= 3 && !frameworks.includes('Next.js') && !frameworks.includes('Vue') && !frameworks.includes('Angular')) {
-    frameworks.push('React')
-  }
-
-  if (matchesAnyGlob(relativePaths, 'tailwind.config')) {
-    frameworks.push('Tailwind CSS')
-  }
-
-  if (matchesAnyPattern(relativePaths, ['svelte.config.js', 'svelte.config.ts']) || hasExtension('.svelte')) {
-    frameworks.push('Svelte')
-  }
-
-  if (matchesAnyPattern(relativePaths, ['astro.config.mjs', 'astro.config.ts']) || hasExtension('.astro')) {
-    frameworks.push('Astro')
-  }
-
-  return frameworks.sort((left, right) => left.localeCompare(right))
+  return detected.sort((left, right) => left.localeCompare(right))
 }
 
 export function detectProjectName(workspaceRoot: string, repoIndex: RepoIndexSnapshot): string {
@@ -150,30 +145,35 @@ export function detectProjectName(workspaceRoot: string, repoIndex: RepoIndexSna
   return path.basename(workspaceRoot)
 }
 
+async function readPackageJsonNameAsync(filePath: string): Promise<string | null> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from repoIndexer's trusted file listing
+    const content = await fs.readFile(filePath, 'utf-8')
+    const parsed = JSON.parse(content) as Record<string, unknown>
+    if (typeof parsed.name === 'string' && parsed.name.trim() !== '') {
+      return parsed.name.trim()
+    }
+  } catch {
+    // Fall through to null
+  }
+  return null
+}
+
 export async function detectProjectNameAsync(workspaceRoot: string, repoIndex: RepoIndexSnapshot): Promise<string> {
   for (const root of repoIndex.roots) {
-    const packageJsonFile = root.files.find(
-      (file) => file.relativePath === 'package.json'
-    )
+    const packageJsonFile = root.files.find((file) => file.relativePath === 'package.json')
     if (packageJsonFile) {
-      try {
-        const content = await fs.readFile(packageJsonFile.path, 'utf-8')
-        const parsed = JSON.parse(content) as Record<string, unknown>
-        if (typeof parsed.name === 'string' && parsed.name.trim() !== '') {
-          return parsed.name.trim()
-        }
-      } catch {
-        // Fall through to basename
-      }
+      const name = await readPackageJsonNameAsync(packageJsonFile.path)
+      if (name) return name
     }
   }
-
   return path.basename(workspaceRoot)
 }
 
 function readPackageJsonNameSync(filePath: string): string | null {
   try {
-    const content = require('fs').readFileSync(filePath, 'utf-8') as string
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path comes from repoIndexer's trusted file listing
+    const content = readFileSync(filePath, 'utf-8')
     const parsed = JSON.parse(content) as Record<string, unknown>
     if (typeof parsed.name === 'string' && parsed.name.trim() !== '') {
       return parsed.name.trim()
@@ -222,7 +222,7 @@ function aggregateLanguages(repoIndex: RepoIndexSnapshot): string[] {
     .map(([language]) => language)
 }
 
-function buildEmptyRepoMap(workspaceRoot: string, repoIndex: RepoIndexSnapshot): RepoMap {
+function buildEmptyRepoMap(workspaceRoot: string): RepoMap {
   return {
     version: 1,
     generatedAt: Date.now(),

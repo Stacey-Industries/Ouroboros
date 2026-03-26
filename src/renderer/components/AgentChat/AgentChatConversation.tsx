@@ -105,6 +105,20 @@ function buildConversationBodyProps(props: AgentChatConversationProps, streaming
   };
 }
 
+function buildComposerFileProps(props: AgentChatConversationProps): Pick<React.ComponentProps<typeof ComposerSection>,
+  'pinnedFiles' | 'onRemoveFile' | 'contextSummary' | 'autocompleteResults' |
+  'isAutocompleteOpen' | 'onAutocompleteQuery' | 'onSelectFile' | 'onCloseAutocomplete' |
+  'onOpenAutocomplete' | 'mentions' | 'onAddMention' | 'onRemoveMention' | 'allFiles'> {
+  return {
+    pinnedFiles: props.pinnedFiles, onRemoveFile: props.onRemoveFile, contextSummary: props.contextSummary,
+    autocompleteResults: props.autocompleteResults, isAutocompleteOpen: props.isAutocompleteOpen,
+    onAutocompleteQuery: props.onAutocompleteQuery, onSelectFile: props.onSelectFile,
+    onCloseAutocomplete: props.onCloseAutocomplete, onOpenAutocomplete: props.onOpenAutocomplete,
+    mentions: props.mentions, onAddMention: props.onAddMention, onRemoveMention: props.onRemoveMention,
+    allFiles: props.allFiles,
+  };
+}
+
 function buildComposerSectionProps(
   props: AgentChatConversationProps,
   threadModelUsage: ModelContextUsage[] | undefined,
@@ -118,19 +132,7 @@ function buildComposerSectionProps(
     isSending: props.isSending,
     onDraftChange: props.onDraftChange,
     onSend: props.onSend,
-    pinnedFiles: props.pinnedFiles,
-    onRemoveFile: props.onRemoveFile,
-    contextSummary: props.contextSummary,
-    autocompleteResults: props.autocompleteResults,
-    isAutocompleteOpen: props.isAutocompleteOpen,
-    onAutocompleteQuery: props.onAutocompleteQuery,
-    onSelectFile: props.onSelectFile,
-    onCloseAutocomplete: props.onCloseAutocomplete,
-    onOpenAutocomplete: props.onOpenAutocomplete,
-    mentions: props.mentions,
-    onAddMention: props.onAddMention,
-    onRemoveMention: props.onRemoveMention,
-    allFiles: props.allFiles,
+    ...buildComposerFileProps(props),
     chatOverrides: props.chatOverrides,
     onChatOverridesChange: props.onChatOverridesChange,
     settingsModel: props.settingsModel,

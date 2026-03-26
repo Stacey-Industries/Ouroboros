@@ -82,7 +82,7 @@ function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow):
   })
 
   proc.onExit(({ exitCode, signal }) => {
-    handleSessionExit(id, win, exitCode, signal)
+    handleSessionExit(id, win, exitCode ?? 0, signal ?? 0)
   })
 }
 

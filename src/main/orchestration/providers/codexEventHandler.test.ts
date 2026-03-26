@@ -5,7 +5,7 @@ import { buildCodexEventHandler } from './codexEventHandler'
 describe('buildCodexEventHandler', () => {
   it('uses non-cached input tokens for Codex context usage', () => {
     const emit = vi.fn()
-    const { getUsage, handler } = buildCodexEventHandler(emit ? { emit } : { emit }, {
+    const { getUsage, handler } = buildCodexEventHandler({ emit }, {
       provider: 'codex',
       sessionId: 'session-1',
     })

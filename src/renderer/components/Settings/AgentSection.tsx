@@ -35,21 +35,21 @@ function AgentChatSettingsGroup({
           Configure agent chat behavior, providers, and verification.
         </p>
       </div>
-      <SelectSection description="Choose the default provider for agent chat requests." label="Default provider" title="Default Provider" value={settings.defaultProvider ?? 'claude-code'} onChange={(value) => updateSetting('defaultProvider', value)}>
+      <SelectSection description="Choose the default provider for agent chat requests." label="Default provider" title="Default Provider" value={settings.defaultProvider ?? 'claude-code'} onChange={(value) => updateSetting('defaultProvider', value as AgentChatSettings['defaultProvider'])}>
         <option value="claude-code">Claude Code CLI</option>
         <option value="anthropic-api">Anthropic API (direct)</option>
         <option value="codex">Codex</option>
       </SelectSection>
-      <SelectSection description="Controls how thoroughly the agent verifies its changes." label="Verification profile" title="Verification Profile" value={settings.defaultVerificationProfile ?? 'default'} onChange={(value) => updateSetting('defaultVerificationProfile', value)}>
+      <SelectSection description="Controls how thoroughly the agent verifies its changes." label="Verification profile" title="Verification Profile" value={settings.defaultVerificationProfile ?? 'default'} onChange={(value) => updateSetting('defaultVerificationProfile', value as AgentChatSettings['defaultVerificationProfile'])}>
         <option value="fast">fast</option>
         <option value="default">default</option>
         <option value="full">full</option>
       </SelectSection>
-      <SelectSection description="Whether the agent gathers context automatically or waits for manual selection." label="Context behavior" title="Context Behavior" value={settings.contextBehavior ?? 'auto'} onChange={(value) => updateSetting('contextBehavior', value)}>
+      <SelectSection description="Whether the agent gathers context automatically or waits for manual selection." label="Context behavior" title="Context Behavior" value={settings.contextBehavior ?? 'auto'} onChange={(value) => updateSetting('contextBehavior', value as AgentChatSettings['contextBehavior'])}>
         <option value="auto">Automatic</option>
         <option value="manual">Manual</option>
       </SelectSection>
-      <SelectSection description="Initial view when opening the agent panel." label="Default view" title="Default View" value={settings.defaultView ?? 'chat'} onChange={(value) => updateSetting('defaultView', value)}>
+      <SelectSection description="Initial view when opening the agent panel." label="Default view" title="Default View" value={settings.defaultView ?? 'chat'} onChange={(value) => updateSetting('defaultView', value as AgentChatSettings['defaultView'])}>
         <option value="chat">Chat</option>
         <option value="monitor">Monitor</option>
       </SelectSection>

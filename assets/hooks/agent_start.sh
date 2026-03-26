@@ -105,6 +105,7 @@ payload="{\"type\":\"agent_start\",\"sessionId\":${j_session},\"taskLabel\":${j_
 if [ -n "$j_parent" ]; then payload="${payload},\"parentSessionId\":${j_parent}"; fi
 if [ -n "$j_prompt" ]; then payload="${payload},\"prompt\":${j_prompt}"; fi
 if [ -n "$j_model" ]; then payload="${payload},\"model\":${j_model}"; fi
+if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then payload="${payload},\"internal\":true"; fi
 payload="${payload}}"
 ndjson_line="${payload}"$'\n'
 

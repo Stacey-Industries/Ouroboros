@@ -1,4 +1,6 @@
 import path from 'path'
+
+import log from '../logger'
 import type { ContextInvalidationEvent } from './contextLayerTypes'
 
 // ---------------------------------------------------------------------------
@@ -44,8 +46,9 @@ export interface ContextLayerWatcherOptions {
 export interface ContextLayerWatcher {
   /** Called when a file changes (from broadcastFileChange in files.ts) */
   onFileChange: (type: string, filePath: string) => void
-  /** Called when a git commit / agent session ends */
-  onGitCommit: () => void
+  /** Called when a git commit / agent session ends. If changedPaths are provided,
+   *  only modules containing those files are invalidated. Otherwise falls back to full invalidation. */
+  onGitCommit: (changedPaths?: string[]) => void
   /** Called when a new Claude Code session starts */
   onSessionStart: () => void
   /** Force a full rebuild */
@@ -54,6 +57,19 @@ export interface ContextLayerWatcher {
   setModuleMap: (moduleMap: Map<string, string>) => void
   /** Clean up timers */
   dispose: () => void
+}
+
+// ---------------------------------------------------------------------------
+// Internal state shape
+// ---------------------------------------------------------------------------
+
+interface WatcherState {
+  disposed: boolean
+  debounceTimer: ReturnType<typeof setTimeout> | null
+  moduleMap: Map<string, string> | null
+  lastInvalidationTimestamp: number
+  pendingModules: Set<string>
+  pendingNewFiles: Set<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -77,200 +93,193 @@ function hasIgnoredSegment(filePath: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Invalidation helpers
+// ---------------------------------------------------------------------------
+
+function emitInvalidation(
+  state: WatcherState,
+  type: ContextInvalidationEvent['type'],
+  modules: string[],
+  onInvalidation: (e: ContextInvalidationEvent) => void,
+): void {
+  if (state.disposed || modules.length === 0) return
+  const event: ContextInvalidationEvent = { type, affectedModules: modules, timestamp: Date.now() }
+  state.lastInvalidationTimestamp = event.timestamp
+  log.info('[context-layer] Invalidation:', type, 'modules:', modules.join(', '))
+  onInvalidation(event)
+}
+
+function collectPendingModules(state: WatcherState): string[] {
+  const modules = [...state.pendingModules]
+  state.pendingModules.clear()
+  if (state.pendingNewFiles.size > 0) {
+    modules.push(NEW_FILES_MARKER)
+    state.pendingNewFiles.clear()
+  }
+  return modules
+}
+
+function getAllModuleIds(state: WatcherState): string[] {
+  if (!state.moduleMap || state.moduleMap.size === 0) return [ALL_SENTINEL]
+  return [...new Set(state.moduleMap.values())]
+}
+
+function clearDebounceTimer(state: WatcherState): void {
+  if (state.debounceTimer !== null) {
+    clearTimeout(state.debounceTimer)
+    state.debounceTimer = null
+  }
+}
+
+function fireImmediateFullInvalidation(
+  state: WatcherState,
+  type: ContextInvalidationEvent['type'],
+  onInvalidation: (e: ContextInvalidationEvent) => void,
+): void {
+  clearDebounceTimer(state)
+  state.pendingModules.clear()
+  state.pendingNewFiles.clear()
+  emitInvalidation(state, type, getAllModuleIds(state), onInvalidation)
+}
+
+// ---------------------------------------------------------------------------
+// Public method implementations (module-level, accept state explicitly)
+// ---------------------------------------------------------------------------
+
+interface FileChangeCtx { state: WatcherState; normalizedRoot: string; debounceMs: number; onFire: () => void }
+
+function routeFileToModule(state: WatcherState, normalized: string): void {
+  if (!state.moduleMap) {
+    state.pendingModules.add(ALL_SENTINEL)
+    return
+  }
+  const moduleId = state.moduleMap.get(normalized)
+  if (moduleId) {
+    state.pendingModules.add(moduleId)
+  } else {
+    state.pendingNewFiles.add(normalized)
+  }
+}
+
+function handleFileChange(ctx: FileChangeCtx, filePath: string): void {
+  const { state, normalizedRoot, debounceMs, onFire } = ctx
+  if (state.disposed) return
+  const normalized = normalizePath(filePath)
+  if (!isInsideWorkspace(normalized, normalizedRoot) || hasIgnoredSegment(normalized)) return
+
+  routeFileToModule(state, normalized)
+  clearDebounceTimer(state)
+  state.debounceTimer = setTimeout(onFire, debounceMs)
+}
+
+function handleTargetedGitCommit(
+  state: WatcherState,
+  changedPaths: string[],
+  normalizedRoot: string,
+  onInvalidation: (e: ContextInvalidationEvent) => void,
+): void {
+  if (state.disposed) return
+  if (!state.moduleMap || state.moduleMap.size === 0) {
+    fireImmediateFullInvalidation(state, 'git_commit', onInvalidation)
+    return
+  }
+
+  const affectedModules = new Set<string>()
+  for (const filePath of changedPaths) {
+    const normalized = normalizePath(filePath)
+    if (!isInsideWorkspace(normalized, normalizedRoot) || hasIgnoredSegment(normalized)) continue
+    const moduleId = state.moduleMap.get(normalized)
+    if (moduleId) affectedModules.add(moduleId)
+  }
+
+  if (affectedModules.size === 0) {
+    log.info('[context-layer] Git commit — no modules affected, skipping invalidation')
+    return
+  }
+
+  clearDebounceTimer(state)
+  state.pendingModules.clear()
+  state.pendingNewFiles.clear()
+  emitInvalidation(state, 'git_commit', [...affectedModules], onInvalidation)
+}
+
+function handleSetModuleMap(
+  state: WatcherState,
+  newModuleMap: Map<string, string>,
+  onInvalidation: (e: ContextInvalidationEvent) => void,
+): void {
+  if (state.disposed) return
+  state.moduleMap = newModuleMap
+  if (state.pendingModules.has(ALL_SENTINEL)) {
+    state.pendingModules.clear()
+    state.pendingNewFiles.clear()
+    clearDebounceTimer(state)
+    fireImmediateFullInvalidation(state, 'manual', onInvalidation)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
+
+function buildInitialState(): WatcherState {
+  return {
+    disposed: false,
+    debounceTimer: null,
+    moduleMap: null,
+    lastInvalidationTimestamp: 0,
+    pendingModules: new Set<string>(),
+    pendingNewFiles: new Set<string>(),
+  }
+}
+
+function makeDisposeMethod(state: WatcherState): () => void {
+  return () => {
+    if (state.disposed) return
+    state.disposed = true
+    clearDebounceTimer(state)
+    state.pendingModules.clear()
+    state.pendingNewFiles.clear()
+    state.moduleMap = null
+    log.info('[context-layer] Watcher disposed')
+  }
+}
 
 export function createContextLayerWatcher(options: ContextLayerWatcherOptions): ContextLayerWatcher {
   const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS
   const normalizedRoot = normalizePath(options.workspaceRoot)
-
-  let disposed = false
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null
-  let moduleMap: Map<string, string> | null = null
-  let lastInvalidationTimestamp = 0
-
-  // Pending invalidation state
-  const pendingModules = new Set<string>()
-  const pendingNewFiles = new Set<string>()
-
-  // --------------------------------------------------
-  // Timer management
-  // --------------------------------------------------
-
-  function clearDebounceTimer(): void {
-    if (debounceTimer !== null) {
-      clearTimeout(debounceTimer)
-      debounceTimer = null
-    }
-  }
-
-  function resetDebounceTimer(): void {
-    clearDebounceTimer()
-    debounceTimer = setTimeout(fireDebounced, debounceMs)
-  }
-
-  // --------------------------------------------------
-  // Invalidation dispatch
-  // --------------------------------------------------
-
-  function emitInvalidation(type: ContextInvalidationEvent['type'], modules: string[]): void {
-    if (disposed || modules.length === 0) {
-      return
-    }
-    const event: ContextInvalidationEvent = {
-      type,
-      affectedModules: modules,
-      timestamp: Date.now(),
-    }
-    lastInvalidationTimestamp = event.timestamp
-    console.log('[context-layer] Invalidation:', type, 'modules:', modules.join(', '))
-    options.onInvalidation(event)
-  }
+  const state = buildInitialState()
+  const emit = options.onInvalidation
 
   function fireDebounced(): void {
-    debounceTimer = null
-    if (disposed) {
-      return
-    }
-
-    const modules = collectPendingModules()
-    if (modules.length === 0) {
-      return
-    }
-
-    emitInvalidation('file_changed', modules)
-  }
-
-  function collectPendingModules(): string[] {
-    const modules = [...pendingModules]
-    pendingModules.clear()
-
-    if (pendingNewFiles.size > 0) {
-      modules.push(NEW_FILES_MARKER)
-      pendingNewFiles.clear()
-    }
-
-    return modules
-  }
-
-  function getAllModuleIds(): string[] {
-    if (!moduleMap || moduleMap.size === 0) {
-      return [ALL_SENTINEL]
-    }
-    const ids = new Set(moduleMap.values())
-    return [...ids]
-  }
-
-  function fireImmediateFullInvalidation(type: ContextInvalidationEvent['type']): void {
-    // Absorb any pending debounced changes — they are included in the full rebuild
-    clearDebounceTimer()
-    pendingModules.clear()
-    pendingNewFiles.clear()
-
-    emitInvalidation(type, getAllModuleIds())
-  }
-
-  // --------------------------------------------------
-  // Public methods
-  // --------------------------------------------------
-
-  function onFileChange(type: string, filePath: string): void {
-    if (disposed) {
-      return
-    }
-
-    const normalized = normalizePath(filePath)
-
-    // Ignore files outside workspace root
-    if (!isInsideWorkspace(normalized, normalizedRoot)) {
-      return
-    }
-
-    // Ignore files in excluded directories
-    if (hasIgnoredSegment(normalized)) {
-      return
-    }
-
-    // Module map not yet populated — accumulate as __all__
-    if (!moduleMap) {
-      pendingModules.add(ALL_SENTINEL)
-      resetDebounceTimer()
-      return
-    }
-
-    // Look up the file in the module map
-    const moduleId = moduleMap.get(normalized)
-    if (moduleId) {
-      pendingModules.add(moduleId)
-    } else {
-      // Unknown file — might be newly created, trigger re-detection
-      pendingNewFiles.add(normalized)
-    }
-
-    resetDebounceTimer()
-  }
-
-  function onGitCommit(): void {
-    if (disposed) {
-      return
-    }
-    fireImmediateFullInvalidation('git_commit')
-  }
-
-  function onSessionStart(): void {
-    if (disposed) {
-      return
-    }
-
-    const now = Date.now()
-    const elapsed = now - lastInvalidationTimestamp
-    if (lastInvalidationTimestamp === 0 || elapsed > SESSION_STALE_THRESHOLD_MS) {
-      fireImmediateFullInvalidation('session_start')
+    state.debounceTimer = null
+    if (!state.disposed) {
+      const modules = collectPendingModules(state)
+      if (modules.length > 0) emitInvalidation(state, 'file_changed', modules, emit)
     }
   }
 
-  function forceRebuild(): void {
-    if (disposed) {
-      return
-    }
-    fireImmediateFullInvalidation('manual')
-  }
-
-  function setModuleMap(newModuleMap: Map<string, string>): void {
-    if (disposed) {
-      return
-    }
-
-    moduleMap = newModuleMap
-
-    // If there are pending __all__ invalidations from before the module map
-    // was available, trigger a full rebuild now
-    if (pendingModules.has(ALL_SENTINEL)) {
-      pendingModules.clear()
-      pendingNewFiles.clear()
-      clearDebounceTimer()
-      fireImmediateFullInvalidation('manual')
-    }
-  }
-
-  function dispose(): void {
-    if (disposed) {
-      return
-    }
-    disposed = true
-    clearDebounceTimer()
-    pendingModules.clear()
-    pendingNewFiles.clear()
-    moduleMap = null
-    console.log('[context-layer] Watcher disposed')
-  }
+  const fileChangeCtx: FileChangeCtx = { state, normalizedRoot, debounceMs, onFire: fireDebounced }
 
   return {
-    onFileChange,
-    onGitCommit,
-    onSessionStart,
-    forceRebuild,
-    setModuleMap,
-    dispose,
+    onFileChange: (_type, filePath) => handleFileChange(fileChangeCtx, filePath),
+    onGitCommit: (changedPaths?: string[]) => {
+      if (state.disposed) return
+      if (changedPaths && changedPaths.length > 0) {
+        handleTargetedGitCommit(state, changedPaths, normalizedRoot, emit)
+      } else {
+        fireImmediateFullInvalidation(state, 'git_commit', emit)
+      }
+    },
+    onSessionStart: () => {
+      if (state.disposed) return
+      const elapsed = Date.now() - state.lastInvalidationTimestamp
+      if (state.lastInvalidationTimestamp === 0 || elapsed > SESSION_STALE_THRESHOLD_MS) {
+        fireImmediateFullInvalidation(state, 'session_start', emit)
+      }
+    },
+    forceRebuild: () => { if (!state.disposed) fireImmediateFullInvalidation(state, 'manual', emit) },
+    setModuleMap: (newMap) => handleSetModuleMap(state, newMap, emit),
+    dispose: makeDisposeMethod(state),
   }
 }

@@ -120,7 +120,7 @@ function IconButton(props: {
 function SearchInput({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <input
-      ref={controller.inputRef}
+      ref={controller.inputRef as React.RefObject<HTMLInputElement>}
       type="text"
       value={controller.query}
       onChange={(event) => controller.setQuery(event.target.value)}

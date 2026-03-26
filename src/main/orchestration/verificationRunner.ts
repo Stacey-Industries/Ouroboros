@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import path from 'path'
+
 import type {
   VerificationCommandResult,
   VerificationIssue,
@@ -255,6 +256,7 @@ export class VerificationRunner {
   constructor(private readonly deps: VerificationRunnerDeps = {}) { }
 
   getProfile(name: VerificationProfileName): VerificationProfile {
+    // eslint-disable-next-line security/detect-object-injection -- name is a closed union: 'fast' | 'default' | 'full'
     return this.profiles[name]
   }
 

@@ -130,11 +130,12 @@ function useGitInitialization(
       return;
     }
 
+    const root = projectRoot;
     let cancelled = false;
 
     async function initializeRepoState(): Promise<void> {
       try {
-        const res = await window.electronAPI.git.isRepo(projectRoot);
+        const res = await window.electronAPI.git.isRepo(root);
         if (cancelled) {
           return;
         }

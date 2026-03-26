@@ -11,7 +11,7 @@ import React, { type ErrorInfo, useCallback, useReducer } from 'react';
 
 import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
-import { RulesSkillsPanel } from '../AgentChat/RulesSkillsPanel';
+import { ClaudeConfigPanel } from '../AgentChat/ClaudeConfigPanel';
 import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
 import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
 import { AgentMonitorManager } from '../AgentMonitor';
@@ -108,12 +108,10 @@ function openSettings(tab?: string): void {
 
 export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
   const { chatModel, handleModelReady } = useAgentSidebarModel();
-  const { rules, skills, isLoading, createRule, createSkill } = useRulesAndSkills(projectRoot);
+  const { rules, commands, isLoading, createRule } = useRulesAndSkills(projectRoot);
   const handleOpenFile = useCallback((f: string) => openFileInEditor(f), []);
   const handleOpenHooks = useCallback(() => openSettings('hooks'), []);
   const handleCreateRule = useCallback(async (type: 'claude-md' | 'agents-md') => { const fp = await createRule(type); if (fp) openFileInEditor(fp); }, [createRule]);
-  const handleCreateSkill = useCallback(async (name: string) => { const fp = await createSkill(name); if (fp) openFileInEditor(fp); }, [createSkill]);
-
   return (
     <RightSidebarTabs
       chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
@@ -121,7 +119,7 @@ export function AgentSidebarContent({ projectRoot }: { projectRoot: string | nul
       gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
       analyticsContent={<AnalyticsSuspense />}
       memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
-      rulesContent={<ErrorBoundary label="Rules & Skills"><RulesSkillsPanel rules={rules} skills={skills} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onCreateSkill={handleCreateSkill} onOpenHooksSettings={handleOpenHooks} /></ErrorBoundary>}
+      rulesContent={<ErrorBoundary label="Claude Config"><ClaudeConfigPanel rules={rules} commands={commands} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onOpenHooksSettings={handleOpenHooks} projectRoot={projectRoot} /></ErrorBoundary>}
       threads={chatModel?.threads}
       activeThreadId={chatModel?.activeThreadId}
       onSelectThread={chatModel?.selectThread}

@@ -122,7 +122,7 @@ function useRestartHandler(
       const session = sessions.find((item) => item.id === sessionId);
       if (!session || session.status !== 'exited') return;
 
-      const cwd = await getDefaultCwd();
+      const cwd = await getDefaultCwd() ?? '';
       try {
         await spawnBySessionType(session, cwd);
         setSessions((prev) =>

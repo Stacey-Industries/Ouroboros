@@ -96,9 +96,10 @@ function useFileSuggestions(query: string, projectRoot: string | null | undefine
   useEffect(() => {
     if (!projectRoot || loadedRef.current) return;
     loadedRef.current = true;
+    const resolvedRoot = projectRoot;
     void (async () => {
       try {
-        const root = await window.electronAPI.files.readDir(projectRoot);
+        const root = await window.electronAPI.files.readDir(resolvedRoot);
         if (!root.success || !root.items) return;
         const suggestions: FileSuggestion[] = [];
         const visited = new Set<string>();
@@ -109,7 +110,7 @@ function useFileSuggestions(query: string, projectRoot: string | null | undefine
             const res = await window.electronAPI.files.readDir(dir);
             if (!res.success || !res.items) return;
             for (const item of res.items) {
-              await processSuggestionItem({ item, depth, projectRoot, suggestions, walk });
+              await processSuggestionItem({ item, depth, projectRoot: resolvedRoot, suggestions, walk });
               if (suggestions.length >= 2000) return;
             }
           } catch { return; }
@@ -152,35 +153,56 @@ function ExcerptField({ label, value, onChange, placeholder, type = 'text', auto
   return <div><div className="text-text-semantic-muted" style={FIELD_LABEL_STYLE}>{label}</div><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="text-text-semantic-primary" style={error ? INPUT_ERROR_STYLE : INPUT_STYLE} autoFocus={autoFocus} min={min} />{error ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{error}</div> : null}</div>;
 }
 
+type DialogAPI = { showOpenDialog: (opts: Record<string, unknown>) => Promise<{ canceled: boolean; filePaths: string[] }> };
+
+function resolveDialogApi(): DialogAPI | null {
+  if (typeof window === 'undefined' || !window.electronAPI || !('dialog' in window.electronAPI)) return null;
+  return (window.electronAPI as unknown as { dialog: DialogAPI }).dialog;
+}
+
+interface FilePathKeyDownOptions {
+  showSuggestions: boolean;
+  suggestions: { path: string }[];
+  activeIndex: number;
+  setActiveIndex: React.Dispatch<React.SetStateAction<number>>;
+  onChange: (v: string) => void;
+  setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function useFilePathKeyDown(opts: FilePathKeyDownOptions) {
+  const { showSuggestions, suggestions, activeIndex, setActiveIndex, onChange, setShowSuggestions } = opts;
+  return useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((p) => Math.min(p + 1, suggestions.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex((p) => Math.max(p - 1, 0)); }
+    else if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < suggestions.length) {
+      e.preventDefault(); onChange(suggestions[activeIndex].path); setShowSuggestions(false); setActiveIndex(-1);
+    } else if (e.key === 'Escape') { setShowSuggestions(false); setActiveIndex(-1); }
+  }, [activeIndex, onChange, showSuggestions, suggestions, setActiveIndex, setShowSuggestions]);
+}
+
 function FilePathField({ value, onChange, error, projectRoot }: { value: string; onChange: (value: string) => void; error: string | null; projectRoot: string | null | undefined; }): React.ReactElement {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const suggestions = useFileSuggestions(value, projectRoot);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dialogApi = resolveDialogApi();
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent): void => { if (containerRef.current && !containerRef.current.contains(e.target as Node)) setShowSuggestions(false); };
+    const handleClick = (e: MouseEvent): void => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const hasBrowse = typeof window !== 'undefined' && window.electronAPI && 'dialog' in window.electronAPI;
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!showSuggestions || suggestions.length === 0) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex((prev) => Math.max(prev - 1, 0)); }
-    else if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < suggestions.length) { e.preventDefault(); onChange(suggestions[activeIndex].path); setShowSuggestions(false); setActiveIndex(-1); }
-    else if (e.key === 'Escape') { setShowSuggestions(false); setActiveIndex(-1); }
-  }, [activeIndex, onChange, showSuggestions, suggestions]);
-
+  const handleKeyDown = useFilePathKeyDown({ showSuggestions, suggestions, activeIndex, setActiveIndex, onChange, setShowSuggestions });
   const handleBrowse = useCallback(() => {
-    if (!window.electronAPI?.dialog) return;
-    void (async () => {
-      try {
-        const result = await (window.electronAPI.dialog as { showOpenDialog: (opts: Record<string, unknown>) => Promise<{ canceled: boolean; filePaths: string[] }> }).showOpenDialog({ properties: ['openFile'], title: 'Select file for excerpt' });
-        if (!result.canceled && result.filePaths.length > 0) onChange(result.filePaths[0]);
-      } catch { return; }
-    })();
+    if (!dialogApi) return;
+    void dialogApi.showOpenDialog({ properties: ['openFile'], title: 'Select file for excerpt' })
+      .then((result) => { if (!result.canceled && result.filePaths.length > 0) onChange(result.filePaths[0]); })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dialogApi is resolved once at render; stable reference
   }, [onChange]);
 
   return <div ref={containerRef} style={{ position: 'relative' }}>
@@ -190,7 +212,7 @@ function FilePathField({ value, onChange, error, projectRoot }: { value: string;
         <input type="text" value={value} onChange={(e) => { onChange(e.target.value); setShowSuggestions(true); setActiveIndex(-1); }} onFocus={() => setShowSuggestions(true)} onKeyDown={handleKeyDown} placeholder="Type a filename to search..." className="text-text-semantic-primary" style={error ? INPUT_ERROR_STYLE : INPUT_STYLE} autoFocus />
         {showSuggestions && suggestions.length > 0 ? <div style={SUGGESTION_LIST_STYLE}>{suggestions.map((s, i) => <div key={s.path} className={i === activeIndex ? 'text-text-semantic-on-accent' : 'text-text-semantic-primary'} style={i === activeIndex ? SUGGESTION_ITEM_ACTIVE_STYLE : SUGGESTION_ITEM_STYLE} onMouseEnter={() => setActiveIndex(i)} onMouseDown={(e) => { e.preventDefault(); onChange(s.path); setShowSuggestions(false); setActiveIndex(-1); }} title={s.path}>{s.relativePath}</div>)}</div> : null}
       </div>
-      {hasBrowse ? <button type="button" onClick={handleBrowse} className="text-text-semantic-muted" style={CANCEL_BUTTON_STYLE} title="Browse for file">Browse...</button> : null}
+      {dialogApi != null ? <button type="button" onClick={handleBrowse} className="text-text-semantic-muted" style={CANCEL_BUTTON_STYLE} title="Browse for file">Browse...</button> : null}
     </div>
     {error ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{error}</div> : null}
   </div>;

@@ -1,16 +1,20 @@
 /**
- * ipc-handlers/rulesAndSkills.ts — Rules, Skills, and Hooks management IPC handlers
+ * ipc-handlers/rulesAndSkills.ts — Rules, Commands, and Hooks management IPC handlers
  */
 
-import type { OrchestrationProvider } from '@shared/types/orchestrationDomain';
-import { type BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import type { ClaudeConfigScope } from '@shared/types/claudeConfig';
+import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import fs from 'fs';
 import path from 'path';
 
+import { discoverCommands } from '../rulesAndSkills/commandsDiscovery';
+import { createCommand, deleteCommand, readCommand, updateCommand } from '../rulesAndSkills/commandsManager';
 import { addHook, readHooksConfig, removeHook } from '../rulesAndSkills/hooksManager';
+import { createRuleFile, deleteRuleFile, discoverRuleFiles, readRuleFile, updateRuleFile } from '../rulesAndSkills/rulesDirectoryManager';
 import { listRulesFiles, readRulesFile } from '../rulesAndSkills/rulesReader';
-import { expandSkill } from '../rulesAndSkills/skillExpander';
-import { discoverSkills } from '../rulesAndSkills/skillsDiscovery';
+import { startRulesWatcher } from '../rulesAndSkills/rulesWatcher';
+import { readClaudeSettings, readClaudeSettingsKey, writeClaudeSettingsKey } from '../rulesAndSkills/settingsManager';
+import { broadcastToWebClients } from '../web/webServer';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 
@@ -56,59 +60,6 @@ function registerRulesHandlers(channels: string[]): void {
   channels.push('rules:create');
 }
 
-async function expandSkillForProvider(
-  projectRoot: string,
-  skillId: string,
-  params: Record<string, string>,
-  provider: OrchestrationProvider,
-): Promise<ReturnType<typeof expandSkill> | null> {
-  const skills = await discoverSkills(projectRoot);
-  const skill = skills.find((s) => s.id === skillId);
-  if (!skill) return null;
-  return expandSkill(skill, params, provider);
-}
-
-function registerSkillsHandlers(channels: string[]): void {
-  ipcMain.handle('skills:list', async (_event, projectRoot: string) => {
-    try {
-      const skills = await discoverSkills(projectRoot);
-      return { success: true, skills };
-    } catch (error: unknown) {
-      return fail(error);
-    }
-  });
-  channels.push('skills:list');
-
-  ipcMain.handle('skills:expand', async (_event, ...args: [string, string, Record<string, string>, string?]) => {
-    try {
-      const [projectRoot, skillId, params, provider] = args;
-      const prov = (provider ?? 'claude-code') as OrchestrationProvider;
-      const expansion = await expandSkillForProvider(projectRoot, skillId, params, prov);
-      if (!expansion) return { success: false, error: `Skill not found: ${skillId}` };
-      return { success: true, expansion };
-    } catch (error: unknown) {
-      return fail(error);
-    }
-  });
-  channels.push('skills:expand');
-
-  ipcMain.handle('skills:create', async (_event, projectRoot: string, name: string) => {
-    try {
-      const skillDir = path.join(projectRoot, '.ouroboros', 'skills', name);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path composed from trusted projectRoot + known skills dir + user-supplied name (sanitised by path.join)
-      fs.mkdirSync(skillDir, { recursive: true });
-      const filePath = path.join(skillDir, 'SKILL.md');
-      const scaffold = `---\nname: ${name}\ndescription: Describe what this skill does\n---\n\nYour skill instructions here.\n`;
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path composed from trusted projectRoot + known skills dir
-      fs.writeFileSync(filePath, scaffold, 'utf8');
-      return { success: true, filePath };
-    } catch (error: unknown) {
-      return fail(error);
-    }
-  });
-  channels.push('skills:create');
-}
-
 function registerHooksHandlers(channels: string[]): void {
   ipcMain.handle('hooks:getConfig', async (_event, scope: string, projectRoot?: string) => {
     try {
@@ -143,11 +94,182 @@ function registerHooksHandlers(channels: string[]): void {
   channels.push('hooks:removeHook');
 }
 
+function registerCommandsListAndCreate(channels: string[]): void {
+  ipcMain.handle('commands:list', async (_event, projectRoot?: string) => {
+    try {
+      const commands = await discoverCommands(projectRoot);
+      return { success: true, commands };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('commands:list');
+
+  ipcMain.handle('commands:create', async (_event, args: { scope: string; name: string; content: string; projectRoot?: string }) => {
+    try {
+      const filePath = await createCommand(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
+      return { success: true, filePath };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('commands:create');
+}
+
+function registerCommandsCrud(channels: string[]): void {
+  ipcMain.handle('commands:read', async (_event, args: { scope: string; name: string; projectRoot?: string }) => {
+    try {
+      const content = await readCommand(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
+      return { success: true, content };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('commands:read');
+
+  ipcMain.handle('commands:update', async (_event, args: { scope: string; name: string; content: string; projectRoot?: string }) => {
+    try {
+      await updateCommand(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
+      return { success: true };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('commands:update');
+
+  ipcMain.handle('commands:delete', async (_event, args: { scope: string; name: string; projectRoot?: string }) => {
+    try {
+      await deleteCommand(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
+      return { success: true };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('commands:delete');
+}
+
+function registerCommandsHandlers(channels: string[]): void {
+  registerCommandsListAndCreate(channels);
+  registerCommandsCrud(channels);
+}
+
+function registerRulesDirListAndCreate(channels: string[]): void {
+  ipcMain.handle('rulesDir:list', async (_event, projectRoot?: string) => {
+    try {
+      const ruleFiles = await discoverRuleFiles(projectRoot);
+      return { success: true, ruleFiles };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('rulesDir:list');
+
+  ipcMain.handle('rulesDir:create', async (_event, args: { scope: string; name: string; content: string; projectRoot?: string }) => {
+    try {
+      const filePath = await createRuleFile(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
+      return { success: true, filePath };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('rulesDir:create');
+}
+
+function registerRulesDirCrud(channels: string[]): void {
+  ipcMain.handle('rulesDir:read', async (_event, args: { scope: string; name: string; projectRoot?: string }) => {
+    try {
+      const content = await readRuleFile(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
+      return { success: true, content };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('rulesDir:read');
+
+  ipcMain.handle('rulesDir:update', async (_event, args: { scope: string; name: string; content: string; projectRoot?: string }) => {
+    try {
+      await updateRuleFile(args.scope as ClaudeConfigScope, args.name, args.content, args.projectRoot);
+      return { success: true };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('rulesDir:update');
+
+  ipcMain.handle('rulesDir:delete', async (_event, args: { scope: string; name: string; projectRoot?: string }) => {
+    try {
+      await deleteRuleFile(args.scope as ClaudeConfigScope, args.name, args.projectRoot);
+      return { success: true };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('rulesDir:delete');
+}
+
+function registerRulesDirHandlers(channels: string[]): void {
+  registerRulesDirListAndCreate(channels);
+  registerRulesDirCrud(channels);
+}
+
+function registerClaudeSettingsHandlers(channels: string[]): void {
+  ipcMain.handle('claudeSettings:read', async (_event, scope: string, projectRoot?: string) => {
+    try {
+      const settings = await readClaudeSettings(scope as ClaudeConfigScope, projectRoot);
+      return { success: true, settings };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('claudeSettings:read');
+
+  ipcMain.handle('claudeSettings:readKey', async (_event, scope: string, key: string, projectRoot?: string) => {
+    try {
+      const value = await readClaudeSettingsKey(scope as ClaudeConfigScope, key, projectRoot);
+      return { success: true, value };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('claudeSettings:readKey');
+
+  ipcMain.handle('claudeSettings:writeKey', async (_event, args: { scope: string; key: string; value: unknown; projectRoot?: string }) => {
+    try {
+      await writeClaudeSettingsKey(args.scope as ClaudeConfigScope, args.key, args.value, args.projectRoot);
+      return { success: true };
+    } catch (error: unknown) {
+      return fail(error);
+    }
+  });
+  channels.push('claudeSettings:writeKey');
+}
+
+function broadcastChanged(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('rulesAndSkills:changed');
+  }
+  broadcastToWebClients('rulesAndSkills:changed', {});
+}
+
+let stopWatcher: (() => void) | null = null;
+
+function activateWatcher(channels: string[]): void {
+  ipcMain.handle('rulesAndSkills:startWatcher', (_event, projectRoot: string) => {
+    if (stopWatcher) stopWatcher();
+    stopWatcher = startRulesWatcher(projectRoot, broadcastChanged);
+    return { success: true };
+  });
+  channels.push('rulesAndSkills:startWatcher');
+}
+
 export function registerRulesAndSkillsHandlers(_senderWindow: SenderWindow): string[] {
   void _senderWindow;
   const channels: string[] = [];
   registerRulesHandlers(channels);
-  registerSkillsHandlers(channels);
+  registerCommandsHandlers(channels);
+  registerRulesDirHandlers(channels);
   registerHooksHandlers(channels);
+  registerClaudeSettingsHandlers(channels);
+  activateWatcher(channels);
   return channels;
 }

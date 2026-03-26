@@ -10,7 +10,7 @@ export interface UndoItem {
   name: string;
 }
 
-type ToastFn = (message: string, level?: string) => void;
+type ToastFn = ReturnType<typeof import('../../hooks/useToast').useToast>['toast'];
 
 interface FileTreeUndoResult {
   undo: () => void;

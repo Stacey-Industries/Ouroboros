@@ -37,7 +37,7 @@ export function useMessagesWithStreaming(
         buildSyntheticStreamingMessage({
           activeThread,
           streamingBlocks: streaming.blocks,
-          streamingMessageId: streaming.streamingMessageId,
+          streamingMessageId: streaming.streamingMessageId ?? undefined,
           activeTextContent: streaming.activeTextContent,
           isStreaming: streaming.isStreaming,
           threadIsActive,

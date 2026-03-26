@@ -1,5 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
+
+import log from '../logger'
 import type { ContextLayerManifest, ModuleContextEntry, RepoMap } from './contextLayerTypes'
 
 // ---------------------------------------------------------------------------
@@ -59,16 +61,19 @@ async function withWriteLock(key: string, fn: () => Promise<void>): Promise<void
 async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
   const tmpPath = `${filePath}.tmp`
   const content = JSON.stringify(data, null, 2)
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated workspace root + sanitized IDs
   await fs.writeFile(tmpPath, content, 'utf-8')
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated workspace root + sanitized IDs
     await fs.rename(tmpPath, filePath)
   } catch (renameError) {
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- cleanup of tmp file built from the same validated path
       await fs.unlink(tmpPath)
     } catch {
       // Best effort cleanup — ignore if .tmp is already gone
     }
-    console.warn('[context-layer] Atomic rename failed, .tmp cleaned up:', filePath, renameError)
+    log.warn('[context-layer] Atomic rename failed, .tmp cleaned up:', filePath, renameError)
     throw renameError
   }
 }
@@ -80,20 +85,22 @@ async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
 async function readJsonSafe<T>(filePath: string): Promise<T | null> {
   let raw: string
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated workspace root + sanitized IDs
     raw = await fs.readFile(filePath, 'utf-8')
   } catch (error: unknown) {
     if (isFileNotFoundError(error)) {
       return null
     }
-    console.warn('[context-layer] Failed to read file:', filePath, error)
+    log.warn('[context-layer] Failed to read file:', filePath, error)
     return null
   }
 
   try {
     return JSON.parse(raw) as T
   } catch {
-    console.warn('[context-layer] Corrupt JSON — deleting:', filePath)
+    log.warn('[context-layer] Corrupt JSON — deleting:', filePath)
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- deleting a corrupt file at a known store path
       await fs.unlink(filePath)
     } catch {
       // Ignore if delete also fails
@@ -127,7 +134,9 @@ function createEmptyManifest(): ContextLayerManifest {
 
 /** Initialize store — create .context/ if missing, load manifest */
 export async function initContextLayerStore(workspaceRoot: string): Promise<ContextLayerManifest> {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
   await fs.mkdir(contextDir(workspaceRoot), { recursive: true })
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
   await fs.mkdir(modulesDir(workspaceRoot), { recursive: true })
 
   const existing = await readManifest(workspaceRoot)
@@ -153,6 +162,7 @@ export async function readRepoMap(workspaceRoot: string): Promise<RepoMap | null
 
 /** Write a single module entry atomically */
 export async function writeModuleEntry(workspaceRoot: string, moduleId: string, entry: ModuleContextEntry): Promise<void> {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
   await fs.mkdir(modulesDir(workspaceRoot), { recursive: true })
   const filePath = moduleEntryPath(workspaceRoot, moduleId)
   await withWriteLock(filePath, () => atomicWriteJson(filePath, entry))
@@ -168,6 +178,7 @@ export async function readAllModuleEntries(workspaceRoot: string): Promise<Modul
   const dir = modulesDir(workspaceRoot)
   let entries: string[]
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
     entries = await fs.readdir(dir)
   } catch {
     return []
@@ -191,10 +202,11 @@ export async function readAllModuleEntries(workspaceRoot: string): Promise<Modul
 export async function deleteModuleEntry(workspaceRoot: string, moduleId: string): Promise<void> {
   const filePath = moduleEntryPath(workspaceRoot, moduleId)
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root + sanitized moduleId
     await fs.unlink(filePath)
   } catch (error: unknown) {
     if (!isFileNotFoundError(error)) {
-      console.warn('[context-layer] Failed to delete module entry:', filePath, error)
+      log.warn('[context-layer] Failed to delete module entry:', filePath, error)
     }
   }
 }
@@ -210,134 +222,143 @@ export async function readManifest(workspaceRoot: string): Promise<ContextLayerM
   return readJsonSafe<ContextLayerManifest>(manifestPath(workspaceRoot))
 }
 
+// ---------------------------------------------------------------------------
+// enforceSizeCap helpers
+// ---------------------------------------------------------------------------
+
+interface FileEntry {
+  filePath: string
+  size: number
+  isModule: boolean
+  moduleId: string | null
+  lastModified: number
+}
+
+async function statFileSafe(filePath: string): Promise<{ size: number; isFile: boolean; mtimeMs: number } | null> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is always built from a validated context/modules dir
+    const stat = await fs.stat(filePath)
+    return { size: stat.size, isFile: stat.isFile(), mtimeMs: stat.mtimeMs }
+  } catch {
+    return null
+  }
+}
+
+async function readTopLevelEntries(ctxDir: string): Promise<FileEntry[] | null> {
+  const entries: FileEntry[] = []
+  let names: string[]
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
+    names = await fs.readdir(ctxDir)
+  } catch {
+    return null // .context/ doesn't exist
+  }
+  for (const name of names) {
+    if (name === 'modules') continue
+    const filePath = path.join(ctxDir, name)
+    const stat = await statFileSafe(filePath)
+    if (stat?.isFile) {
+      entries.push({ filePath, size: stat.size, isModule: false, moduleId: null, lastModified: stat.mtimeMs })
+    }
+  }
+  return entries
+}
+
+async function readModuleFileEntry(filePath: string, name: string): Promise<FileEntry | null> {
+  const stat = await statFileSafe(filePath)
+  if (!stat?.isFile) return null
+  const entry = await readJsonSafe<ModuleContextEntry>(filePath)
+  const structuralLastModified = entry?.structural?.lastModified ?? 0
+  return {
+    filePath,
+    size: stat.size,
+    isModule: true,
+    moduleId: name.replace(/\.json$/, ''),
+    lastModified: structuralLastModified || stat.mtimeMs,
+  }
+}
+
+async function readModuleDirEntries(modDir: string): Promise<FileEntry[]> {
+  const entries: FileEntry[] = []
+  let names: string[]
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
+    names = await fs.readdir(modDir)
+  } catch {
+    return entries
+  }
+  for (const name of names) {
+    if (!name.endsWith('.json') || name.endsWith('.tmp')) continue
+    const fileEntry = await readModuleFileEntry(path.join(modDir, name), name)
+    if (fileEntry) entries.push(fileEntry)
+  }
+  return entries
+}
+
+async function evictOldestModules(fileEntries: FileEntry[], maxBytes: number): Promise<number> {
+  let totalSize = fileEntries.reduce((sum, e) => sum + e.size, 0)
+  if (totalSize <= maxBytes) return totalSize
+
+  const moduleEntries = fileEntries
+    .filter((e) => e.isModule)
+    .sort((a, b) => a.lastModified - b.lastModified)
+
+  const targetSize = maxBytes * 0.8
+  for (const entry of moduleEntries) {
+    if (totalSize <= targetSize) break
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- deleting oldest module files to enforce size cap
+      await fs.unlink(entry.filePath)
+      totalSize -= entry.size
+    } catch {
+      // Skip if delete fails
+    }
+  }
+  return totalSize
+}
+
+async function updateManifestAfterEviction(workspaceRoot: string, totalSize: number): Promise<void> {
+  const modDir = modulesDir(workspaceRoot)
+  const manifest = await readManifest(workspaceRoot)
+  if (!manifest) return
+
+  const survivingIds = new Set<string>()
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
+    const remaining = await fs.readdir(modDir)
+    for (const name of remaining) {
+      if (name.endsWith('.json') && !name.endsWith('.tmp')) {
+        survivingIds.add(name.replace(/\.json$/, ''))
+      }
+    }
+  } catch {
+    // modules dir gone — clear all hashes
+  }
+
+  const updatedHashes: Record<string, string> = {}
+  for (const [id, hash] of Object.entries(manifest.moduleHashes)) {
+    // eslint-disable-next-line security/detect-object-injection -- iterating over Object.entries, hash values are safe strings
+    if (survivingIds.has(sanitizeModuleId(id))) { updatedHashes[id] = hash }
+  }
+  manifest.moduleHashes = updatedHashes
+  manifest.totalSizeBytes = totalSize
+  await writeManifest(workspaceRoot, manifest)
+}
+
 /** Enforce total size cap — deletes oldest module entries if over limit */
 export async function enforceSizeCap(workspaceRoot: string, maxBytes: number): Promise<void> {
   const ctxDir = contextDir(workspaceRoot)
   const modDir = modulesDir(workspaceRoot)
 
-  // Gather all file sizes in .context/ (top-level files)
-  interface FileEntry {
-    filePath: string
-    size: number
-    isModule: boolean
-    moduleId: string | null
-    lastModified: number
-  }
+  const topEntries = await readTopLevelEntries(ctxDir)
+  if (!topEntries) return // .context/ doesn't exist yet
 
-  const fileEntries: FileEntry[] = []
+  const modEntries = await readModuleDirEntries(modDir)
+  const allEntries = [...topEntries, ...modEntries]
 
-  // Read top-level .context/ files
-  try {
-    const topEntries = await fs.readdir(ctxDir)
-    for (const name of topEntries) {
-      if (name === 'modules') continue
-      const filePath = path.join(ctxDir, name)
-      try {
-        const stat = await fs.stat(filePath)
-        if (stat.isFile()) {
-          fileEntries.push({
-            filePath,
-            size: stat.size,
-            isModule: false,
-            moduleId: null,
-            lastModified: stat.mtimeMs,
-          })
-        }
-      } catch {
-        // Skip files we can't stat
-      }
-    }
-  } catch {
-    // .context/ doesn't exist yet — nothing to enforce
-    return
-  }
-
-  // Read modules/ files
-  try {
-    const modEntries = await fs.readdir(modDir)
-    for (const name of modEntries) {
-      if (!name.endsWith('.json') || name.endsWith('.tmp')) continue
-      const filePath = path.join(modDir, name)
-      try {
-        const stat = await fs.stat(filePath)
-        if (stat.isFile()) {
-          // Try to read the module entry to get structural lastModified
-          const entry = await readJsonSafe<ModuleContextEntry>(filePath)
-          const structuralLastModified = entry?.structural?.lastModified ?? 0
-          fileEntries.push({
-            filePath,
-            size: stat.size,
-            isModule: true,
-            moduleId: name.replace(/\.json$/, ''),
-            lastModified: structuralLastModified || stat.mtimeMs,
-          })
-        }
-      } catch {
-        // Skip files we can't stat
-      }
-    }
-  } catch {
-    // modules/ doesn't exist — nothing to evict
-  }
-
-  let totalSize = fileEntries.reduce((sum, entry) => sum + entry.size, 0)
-  if (totalSize <= maxBytes) {
-    return
-  }
-
-  // Sort module entries by lastModified ascending (oldest first)
-  const moduleEntries = fileEntries
-    .filter((entry) => entry.isModule)
-    .sort((left, right) => left.lastModified - right.lastModified)
-
-  const targetSize = maxBytes * 0.8
-
-  for (const entry of moduleEntries) {
-    if (totalSize <= targetSize) {
-      break
-    }
-    try {
-      await fs.unlink(entry.filePath)
-      totalSize -= entry.size
-    } catch {
-      // Skip if we can't delete
-    }
-  }
-
-  // Update manifest — remove deleted module hashes
-  const manifest = await readManifest(workspaceRoot)
-  if (manifest) {
-    const remainingModules = moduleEntries.filter((entry) => {
-      try {
-        // Check if file still exists (was not deleted)
-        return fileEntries.some(
-          (fe) => fe.filePath === entry.filePath && totalSize <= targetSize
-        )
-      } catch {
-        return false
-      }
-    })
-    // Rebuild moduleHashes from surviving modules
-    const survivingIds = new Set<string>()
-    try {
-      const remaining = await fs.readdir(modDir)
-      for (const name of remaining) {
-        if (name.endsWith('.json') && !name.endsWith('.tmp')) {
-          survivingIds.add(name.replace(/\.json$/, ''))
-        }
-      }
-    } catch {
-      // modules dir gone — clear all hashes
-    }
-    const updatedHashes: Record<string, string> = {}
-    for (const [id, hash] of Object.entries(manifest.moduleHashes)) {
-      if (survivingIds.has(sanitizeModuleId(id))) {
-        updatedHashes[id] = hash
-      }
-    }
-    manifest.moduleHashes = updatedHashes
-    manifest.totalSizeBytes = totalSize
-    await writeManifest(workspaceRoot, manifest)
+  const totalSize = await evictOldestModules(allEntries, maxBytes)
+  if (totalSize < allEntries.reduce((sum, e) => sum + e.size, 0)) {
+    await updateManifestAfterEviction(workspaceRoot, totalSize)
   }
 }
 
@@ -346,14 +367,16 @@ export async function ensureGitignore(workspaceRoot: string): Promise<void> {
   const gitignorePath = path.join(workspaceRoot, '.gitignore')
   let content: string
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated workspace root
     content = await fs.readFile(gitignorePath, 'utf-8')
   } catch (error: unknown) {
     if (isFileNotFoundError(error)) {
       // Create .gitignore with the context entry
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- creating .gitignore at workspace root
       await fs.writeFile(gitignorePath, '# AI context layer (auto-generated)\n.context/\n', 'utf-8')
       return
     }
-    console.warn('[context-layer] Failed to read .gitignore:', error)
+    log.warn('[context-layer] Failed to read .gitignore:', error)
     return
   }
 
@@ -368,6 +391,7 @@ export async function ensureGitignore(workspaceRoot: string): Promise<void> {
 
   // Append the entry
   const suffix = content.endsWith('\n') ? '' : '\n'
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- appending to .gitignore at workspace root
   await fs.writeFile(
     gitignorePath,
     `${content}${suffix}\n# AI context layer (auto-generated)\n.context/\n`,
@@ -379,4 +403,4 @@ export async function ensureGitignore(workspaceRoot: string): Promise<void> {
 // Exported helpers for testing
 // ---------------------------------------------------------------------------
 
-export { sanitizeModuleId, contextDir, modulesDir, repoMapPath, manifestPath, moduleEntryPath }
+export { contextDir, manifestPath, moduleEntryPath,modulesDir, repoMapPath, sanitizeModuleId }

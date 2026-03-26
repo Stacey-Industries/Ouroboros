@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+
 import type { TaskResult, TaskSessionRecord } from '../../types/electron';
 import { ContextPreview } from './ContextPreview';
 

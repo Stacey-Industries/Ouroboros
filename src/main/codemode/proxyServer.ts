@@ -255,7 +255,7 @@ async function connectConfiguredUpstreams(
 }
 
 function registerMessageHandler(typeDefs: string, toolDispatchMap: ToolDispatchMap): void {
-  let readBuffer = Buffer.alloc(0);
+  let readBuffer: Buffer = Buffer.alloc(0);
 
   process.stdin.on('data', (chunk: Buffer) => {
     const { messages, remaining } = parseMessages(chunk, readBuffer);

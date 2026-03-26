@@ -10,10 +10,18 @@ import path from 'path'
 import type { WindowBounds } from './config'
 import { getConfigValue, setConfigValue } from './config'
 
-// mica-electron: native Windows DWM acrylic/mica effects
-export const MicaBrowserWindow =
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  process.platform === 'win32' ? require('mica-electron').MicaBrowserWindow : null
+// mica-electron: native Windows DWM acrylic/mica effects.
+// Wrapped in try/catch because mica-electron calls app.commandLine at module
+// load time, which throws outside a real Electron process (e.g. in tests).
+export const MicaBrowserWindow = (() => {
+  if (process.platform !== 'win32') return null
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require('mica-electron') as { MicaBrowserWindow: typeof BrowserWindow }).MicaBrowserWindow
+  } catch {
+    return null
+  }
+})()
 
 /** Resolve the `out/main/` directory. electron-vite may code-split into `out/main/chunks/`. */
 export const outMainDir = __dirname.endsWith('chunks') ? path.dirname(__dirname) : __dirname
@@ -114,16 +122,19 @@ export function applyMicaEffect(win: BrowserWindow): void {
   if (!(process.platform === 'win32' && MicaBrowserWindow && win instanceof MicaBrowserWindow)) {
     return
   }
-  win.setDarkTheme()
-  win.setMicaAcrylicEffect()
-  win.setRoundedCorner()
+  // MicaBrowserWindow adds extra methods not present in Electron's BrowserWindow typedefs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const micaWin = win as any
+  micaWin.setDarkTheme()
+  micaWin.setMicaAcrylicEffect()
+  micaWin.setRoundedCorner()
   // Toggle alwaysFocused per-window so the active window keeps vibrant
   // acrylic while inactive windows dim naturally. This avoids the DWM
   // focus-fight flashing that occurs when multiple windows all claim
   // alwaysFocused(true) simultaneously.
-  win.alwaysFocused(true)
-  win.on('focus', () => { win.alwaysFocused(true) })
-  win.on('blur', () => { win.alwaysFocused(false) })
+  micaWin.alwaysFocused(true)
+  win.on('focus', () => { micaWin.alwaysFocused(true) })
+  win.on('blur', () => { micaWin.alwaysFocused(false) })
 }
 
 // ─── CSP ─────────────────────────────────────────────────────────────────────

@@ -1,6 +1,4 @@
-/** Shared types for the Rules, Skills/Workflows, and Hooks management system. */
-
-import type { OrchestrationProvider } from './orchestrationDomain';
+/** Shared types for the Rules, Commands, and Hooks management system. */
 
 // ─── Rules ──────────────────────────────────────────────────────────────────
 
@@ -11,31 +9,6 @@ export interface RulesFile {
   content?: string;
   sizeBytes?: number;
   lastModified?: number;
-}
-
-// ─── Skills ─────────────────────────────────────────────────────────────────
-
-export interface SkillParameter {
-  name: string;
-  description: string;
-  required: boolean;
-  default?: string;
-}
-
-export interface SkillDefinition {
-  id: string;
-  name: string;
-  description: string;
-  parameters: SkillParameter[];
-  tags: string[];
-  filePath: string;
-  body: string;
-}
-
-export interface SkillExpansionResult {
-  expandedBody: string;
-  provider: OrchestrationProvider;
-  skillId: string;
 }
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
@@ -60,9 +33,3 @@ export type HookEventType =
 
 export type HooksConfig = Record<string, ClaudeHookMatcher[]>;
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
-
-export interface RulesAndSkillsSummary {
-  rules: RulesFile[];
-  skills: SkillDefinition[];
-}

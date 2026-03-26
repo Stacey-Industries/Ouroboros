@@ -271,7 +271,7 @@ export function SemanticScrollbarOverlay({
 }: SemanticScrollbarOverlayProps): React.ReactElement {
   return (
     <div
-      ref={barRef}
+      ref={barRef as React.RefObject<HTMLDivElement>}
       aria-hidden="true"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}

@@ -51,7 +51,7 @@ export interface UseTerminalSetupParams {
   handleTabCompletionRef: HandleTabCompletionRef
   syncInputRef: MutableRefObject<boolean>
   allSessionIdsRef: MutableRefObject<string[]>
-  projectRootRef: MutableRefObject<string>
+  projectRootRef: MutableRefObject<string | null>
   commandBlocksRef: MutableRefObject<{
     handleOsc133: (seq: string, param: string | undefined, term: Terminal) => void
     handleData: (data: string, term: Terminal) => void

@@ -41,7 +41,7 @@ let lastCompletedAt = 0;
 function loadCooldownTimestamp(): number {
   try {
     const settings = getConfigValue('claudeMdSettings');
-    return ((settings as Record<string, unknown>)._lastCompletedAt as number) ?? 0;
+    return ((settings as unknown as Record<string, unknown>)._lastCompletedAt as number) ?? 0;
   } catch {
     return 0;
   }

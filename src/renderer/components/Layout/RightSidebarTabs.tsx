@@ -49,7 +49,7 @@ function useDraftTabs(activeThreadId: string | null, threads: AgentChatThreadRec
   draftTabsRef.current = draftTabs;
 
   useEffect(() => {
-    if (isDraftThreadId(activeThreadId) && !draftTabsRef.current.includes(activeThreadId)) {
+    if (isDraftThreadId(activeThreadId) && activeThreadId !== null && !draftTabsRef.current.includes(activeThreadId)) {
       setDraftTabs((prev) => [...prev, activeThreadId]);
     }
   }, [activeThreadId]);
@@ -102,7 +102,7 @@ function resolveNextThread({ id, activeThreadId, threads, draftTabs, dismissedTa
 // ── RightSidebarTabs ──────────────────────────────────────────────────────────
 
 const VIEW_LABELS: Record<RightSidebarView, string> = {
-  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory', rules: 'Rules & Skills',
+  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory', rules: 'Claude Config',
 };
 
 function useSidebarPanelState() {

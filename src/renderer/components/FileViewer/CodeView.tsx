@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import React, { memo, useCallback } from 'react';
 
-import type { DiffLineInfo } from '../../types/electron';
+import type { BlameLine, DiffLineInfo } from '../../types/electron';
 import { BlameGutter } from './BlameGutter';
 import { CodeContent } from './CodeContent';
 import type { CodeRow } from './codeViewTypes';
@@ -37,7 +37,7 @@ export interface CodeViewProps {
   foldableLines: Map<number, FoldRange>;
   toggleFold: (startLine: number) => void;
   showBlame: boolean;
-  blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
+  blameLines: BlameLine[];
   gutterWidth: number;
   foldGutterWidth: number;
   diffGutterWidth: number;
@@ -63,7 +63,7 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
   );
 
   return (
-    <div ref={props.scrollRef} style={scrollContainerStyle}>
+    <div ref={props.scrollRef as React.RefObject<HTMLDivElement>} style={scrollContainerStyle}>
       {renderSearchAndNavigation(props)}
       {renderMapOverlays(props, lineHeight, handleScrollToLine)}
       {renderViewport(props)}
@@ -94,8 +94,8 @@ function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement {
 
 function renderMapOverlays(
   props: CodeViewProps,
-  lineHeight,
-  onScrollToLine,
+  lineHeight: number,
+  onScrollToLine: (line: number) => void,
 ): React.ReactElement {
   return (
     <>

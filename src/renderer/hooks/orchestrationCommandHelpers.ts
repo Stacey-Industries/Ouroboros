@@ -1,10 +1,10 @@
 import type { TaskSessionRecord } from '../types/electron';
-import type { ToastOptions, ToastType } from './useToast';
 import {
   createOrchestrationActionOptions,
   emitOrchestrationOpen,
   hasElectronAPI,
 } from './orchestrationUiHelpers';
+import type { ToastOptions, ToastType } from './useToast';
 
 export interface OrchestrationCommandDetail {
   workspaceRoot?: string;

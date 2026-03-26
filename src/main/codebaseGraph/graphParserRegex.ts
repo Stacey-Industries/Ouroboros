@@ -91,7 +91,7 @@ function visitClassHeaders(
     braceIndex: number,
   ) => void,
 ): void {
-  forEachLine(ctx.content, (line, lineNumber, lineStart) => {
+  forEachLine(ctx.content, (_line, lineNumber, lineStart) => {
     const braceIndex = ctx.content.indexOf('{', lineStart);
     if (braceIndex < 0) return;
     const parsed = parseClassHeader(ctx.content.slice(lineStart, braceIndex));

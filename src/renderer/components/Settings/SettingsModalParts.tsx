@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 
 import type { AppConfig } from '../../types/electron';
+import type { SearchMatch } from './searchHelpers';
 import type { SettingsEntry } from './settingsEntries';
 import { ModalCard, ModalOverlay } from './SettingsModalFrame';
 import { cancelButtonStyle, KEYFRAMES, saveButtonStyle } from './settingsModalStyles';
@@ -28,7 +29,7 @@ interface SettingsModalPortalProps {
   saveError: string | null;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
-  searchResults: SettingsEntry[];
+  searchResults: SearchMatch[];
   setActiveTab: (tab: TabId) => void;
   setSearchQuery: (query: string) => void;
 }
@@ -42,7 +43,7 @@ interface ModalContentProps {
   onPreviewTheme: (themeId: string) => void;
   onResultClick: (entry: SettingsEntry) => void;
   searchQuery: string;
-  searchResults: SettingsEntry[];
+  searchResults: SearchMatch[];
 }
 
 function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { TaskSessionRecord } from '../../types/electron';
 import { TaskSessionHistoryContent } from './TaskSessionHistoryContent';
 

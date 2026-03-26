@@ -1,4 +1,4 @@
-import type { DiffLineInfo } from '../../types/electron';
+import type { BlameLine, DiffLineInfo } from '../../types/electron';
 import type { ConflictBlock } from './ConflictResolver';
 import type { FoldRange } from './useFoldRanges';
 import type { ScrollMetrics } from './useScrollMetrics';
@@ -107,7 +107,7 @@ interface CreateFileViewerStateArgs<TOutlineSymbols> {
     highlightLang: string | null;
     diffLines: DiffLineInfo[];
     diffMap: Map<number, DiffLineInfo['kind']>;
-    blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
+    blameLines: BlameLine[];
     foldableLines: Map<number, FoldRange>;
     scrollMetrics: ScrollMetrics;
     outlineSymbols: TOutlineSymbols;

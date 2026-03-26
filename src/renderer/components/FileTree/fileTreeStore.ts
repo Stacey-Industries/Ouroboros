@@ -172,9 +172,12 @@ const INITIAL_STATE = {
  * The persist middleware needs JSON-serializable state. Sets and Maps are
  * converted to/from arrays during serialization.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const fileTreeStateCreator = immer((set: any) => ({ ...INITIAL_STATE, ...createFileTreeActions(set) })) as any;
+
 export const useFileTreeStore = create<FileTreeState>()(
   persist(
-    immer((set) => ({ ...INITIAL_STATE, ...createFileTreeActions(set) })),
+    fileTreeStateCreator,
     {
       name: 'file-tree-store',
       /**
@@ -209,7 +212,7 @@ export const useFileTreeStore = create<FileTreeState>()(
           if (serializable.state?.expandedPaths instanceof Set) {
             serializable.state = {
               ...serializable.state,
-              expandedPaths: Array.from(serializable.state.expandedPaths),
+              expandedPaths: Array.from(serializable.state.expandedPaths) as unknown as Set<string>,
             };
           }
           localStorage.setItem(name, JSON.stringify(serializable));

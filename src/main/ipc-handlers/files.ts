@@ -228,7 +228,8 @@ function createSelectFolderHandler(senderWindow: SenderWindow): FileHandler {
 }
 
 async function handleShowImageDialog(event: IpcMainInvokeEvent) {
-  const win = (event.sender.getOwnerBrowserWindow() ?? BrowserWindow.getFocusedWindow())!;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime even if not in typedefs
+  const win = ((event.sender as any).getOwnerBrowserWindow?.() ?? BrowserWindow.getFocusedWindow())!;
   const result = await dialog.showOpenDialog(win, {
     title: 'Attach Image',
     properties: ['openFile', 'multiSelections'],
@@ -263,7 +264,8 @@ export function registerFileHandlers(senderWindow: SenderWindow): string[] {
     ['files:restoreDeleted', handleRestoreDeleted],
     ['files:selectFolder', createSelectFolderHandler(senderWindow)],
     ['files:showImageDialog', handleShowImageDialog],
-  ].forEach(([channel, handler]) => register(channel, handler as IpcHandler));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ].forEach(([channel, handler]) => register(channel as string, handler as FileHandler<any>));
   return channels;
 }
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type {
   OrchestrationState,
   ProviderProgressEvent,
@@ -6,8 +7,8 @@ import type {
   TaskSessionRecord,
   VerificationSummary,
 } from '../types/electron';
-import { subscribeToOrchestrationUiEvents } from './orchestrationEventSubscriptions';
 import { ORCHESTRATION_PROVIDER_SESSION_EVENT } from './appEventNames';
+import { subscribeToOrchestrationUiEvents } from './orchestrationEventSubscriptions';
 
 const CustomEventImpl = globalThis.CustomEvent ?? class<T = unknown> extends Event {
   detail: T;

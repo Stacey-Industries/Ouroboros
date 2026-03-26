@@ -122,7 +122,7 @@ function FeedBody({
 }): React.ReactElement {
   return (
     <div
-      ref={containerRef}
+      ref={containerRef as React.RefObject<HTMLDivElement>}
       className="overflow-y-auto overflow-x-hidden"
       style={{ maxHeight: '320px' }}
     >
@@ -135,7 +135,7 @@ function FeedBody({
           onToggle={onToggle}
         />
       ))}
-      <div ref={bottomRef} />
+      <div ref={bottomRef as React.RefObject<HTMLDivElement>} />
     </div>
   );
 }

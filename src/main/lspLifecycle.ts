@@ -15,6 +15,14 @@ import {
   ShutdownRequest,
 } from 'vscode-languageserver-protocol';
 
+// vscode-languageserver-protocol ProtocolXxxType has extra generic params incompatible
+// with vscode-jsonrpc's overloads. Use method strings to bypass overload resolution.
+const LSP_INITIALIZE = InitializeRequest.type.method;
+const LSP_INITIALIZED = InitializedNotification.type.method;
+const LSP_PUBLISH_DIAGNOSTICS = PublishDiagnosticsNotification.type.method;
+const LSP_SHUTDOWN = ShutdownRequest.type.method;
+const LSP_EXIT = ExitNotification.type.method;
+
 import log from './logger';
 import {
   convertDiagnostics,
@@ -198,7 +206,8 @@ function pushDiagnostics(filePath: string, diagnostics: LspDiagnostic[]): void {
 }
 
 function registerDiagnosticsListener(instance: LspServerInstance): void {
-  instance.connection.onNotification(PublishDiagnosticsNotification.type, (params) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  instance.connection.onNotification(LSP_PUBLISH_DIAGNOSTICS, (params: any) => {
     const filePath = uriToFilePath(params.uri);
     const diagnostics = convertDiagnostics(params.diagnostics);
     instance.diagnosticsCache.set(params.uri, diagnostics);
@@ -209,10 +218,10 @@ function registerDiagnosticsListener(instance: LspServerInstance): void {
 async function initializeConnection(instance: LspServerInstance): Promise<void> {
   instance.connection.listen();
   await instance.connection.sendRequest(
-    InitializeRequest.type,
+    LSP_INITIALIZE,
     createInitializeParams(instance.root),
   );
-  instance.connection.sendNotification(InitializedNotification.type, {});
+  instance.connection.sendNotification(LSP_INITIALIZED, {});
   registerDiagnosticsListener(instance);
 }
 
@@ -223,12 +232,12 @@ async function attemptGracefulShutdown(instance: LspServerInstance): Promise<voi
 
   try {
     await Promise.race([
-      instance.connection.sendRequest(ShutdownRequest.type),
+      instance.connection.sendRequest(LSP_SHUTDOWN),
       new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Shutdown timeout')), 5000);
       }),
     ]);
-    instance.connection.sendNotification(ExitNotification.type);
+    instance.connection.sendNotification(LSP_EXIT);
   } catch {
     // Ignore and fall through to forced cleanup.
   }

@@ -215,7 +215,7 @@ function TabList({
   onCloseAll,
 }: TabListProps): React.ReactElement {
   return (
-    <div ref={scrollRef} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
+    <div ref={scrollRef as React.RefObject<HTMLDivElement>} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
       {sortedFiles.map(({ file, originalIndex }) => (
         <FileViewerTabItem
           key={file.path}
@@ -229,7 +229,7 @@ function TabList({
           onCloseOthers={onCloseOthers}
           onCloseToRight={onCloseToRight}
           onCloseAll={onCloseAll}
-          tabRef={originalIndex === activeIndex ? activeTabRef : undefined}
+          tabRef={originalIndex === activeIndex ? (activeTabRef as React.RefObject<HTMLDivElement>) : undefined}
         />
       ))}
     </div>

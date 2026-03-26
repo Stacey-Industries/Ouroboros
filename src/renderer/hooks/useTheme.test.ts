@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { customTheme } from '../themes';
 import { applyCustomThemeColors, applyFontConfig } from './useTheme';
 

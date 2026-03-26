@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { TaskSessionRecord, VerificationSummary } from '../types/electron';
+import {
+  OPEN_ORCHESTRATION_PANEL_EVENT,
+  OPEN_ORCHESTRATION_SESSION_EVENT,
+} from './appEventNames';
 import {
   rerunLatestOrchestrationVerification,
   resolveOrchestrationWorkspaceRoot,
   resumeLatestOrchestrationTask,
 } from './orchestrationCommandHelpers';
-import {
-  OPEN_ORCHESTRATION_PANEL_EVENT,
-  OPEN_ORCHESTRATION_SESSION_EVENT,
-} from './appEventNames';
 
 const CustomEventImpl = globalThis.CustomEvent ?? class<T = unknown> extends Event {
   detail: T;

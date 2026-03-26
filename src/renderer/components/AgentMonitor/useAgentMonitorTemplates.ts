@@ -42,5 +42,5 @@ export function useAgentMonitorTemplates(
 
 function buildTemplateContext(projectRoot?: string | null) {
   const projectName = projectRoot?.replace(/\\/g, '/').split('/').pop() ?? '';
-  return { projectRoot, projectName, openFile: null, openFileName: null };
+  return { projectRoot: projectRoot ?? null, projectName, openFile: null, openFileName: null };
 }

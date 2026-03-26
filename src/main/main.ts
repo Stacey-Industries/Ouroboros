@@ -145,7 +145,8 @@ function startContextLayerAsync(defaultRoot: string | undefined): void {
   };
   initContextLayer({
     workspaceRoot: getConfigValue('defaultProjectRoot'),
-    buildRepoIndex: buildRepoIndexSnapshot,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    buildRepoIndex: buildRepoIndexSnapshot as any,
     config: contextLayerConfig,
   })
     .then(() => {

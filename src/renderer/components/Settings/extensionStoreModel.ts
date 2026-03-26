@@ -69,7 +69,7 @@ async function runExtensionSearch(args: SearchArgs): Promise<void> {
   try {
     const result = await fetchExtensionSearchResult(api, { source, query, category, offset });
     if (result.success && result.extensions) {
-      setExtensions((prev) => (append ? [...prev, ...result.extensions!] : result.extensions));
+      setExtensions((prev) => (append ? [...prev, ...result.extensions!] : result.extensions ?? []));
       setTotalSize(result.totalSize ?? 0);
       setOffset(offset);
     } else {

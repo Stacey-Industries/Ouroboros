@@ -84,7 +84,7 @@ function useSideEffects(
   pendingClaudeRef: React.MutableRefObject<string[]>,
   pendingCodexRef: React.MutableRefObject<PendingCodexCapture[]>,
 ): void {
-  usePersistSessions(s.sessions, restore.hasCompletedRestore, restore.persistedSessionsSeed);
+  usePersistSessions(s.sessions, restore.hasCompletedRestore, typeof restore.persistedSessionsSeed === 'string' ? restore.persistedSessionsSeed : null);
   useClaudeSessionCapture(pendingClaudeRef, s.setSessions);
   useCodexSessionCapture(pendingCodexRef, s.setSessions);
   useRecordingSync(s.sessions, s.setRecordingSessions);

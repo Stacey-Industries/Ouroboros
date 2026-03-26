@@ -80,16 +80,25 @@ export function stopPerfMetrics(): void {
 
 export function subscribeToPerfMetrics(event: IpcMainInvokeEvent): { success: true } {
   subscriberIds.add(event.sender.id)
+  if (subscriberIds.size === 1) {
+    startPerfMetrics()
+  }
   return { success: true }
 }
 
 export function unsubscribeFromPerfMetrics(event: IpcMainInvokeEvent): { success: true } {
   subscriberIds.delete(event.sender.id)
+  if (subscriberIds.size === 0) {
+    stopPerfMetrics()
+  }
   return { success: true }
 }
 
 export function cleanupPerfSubscriber(webContentsId: number): void {
   subscriberIds.delete(webContentsId)
+  if (subscriberIds.size === 0) {
+    stopPerfMetrics()
+  }
 }
 
 export function clearPerfSubscribers(): void {

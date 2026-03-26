@@ -63,7 +63,7 @@ function useTerminalConfig(): {
 
 function useSessionRestore(
   foundation: ReturnType<typeof useTerminalFoundation>,
-  projectRoot: string,
+  projectRoot: string | null,
 ): void {
   const { restoreSession } = useTerminalPersistence({
     sessionId: foundation.sessionId,

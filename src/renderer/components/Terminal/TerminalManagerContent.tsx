@@ -129,7 +129,7 @@ function getSharedTerminalProps({
   | 'syncInput'
   | 'allSessionIds'
   | 'onToggleSync'
->): SharedTerminalProps {
+>): Omit<SharedTerminalProps, 'sessionId'> {
   return {
     isActive,
     onTitleChange,
@@ -156,7 +156,7 @@ interface TerminalPaneContentProps extends SharedTerminalProps {
 }
 
 function createPaneContentProps(args: {
-  sharedProps: SharedTerminalProps;
+  sharedProps: Omit<SharedTerminalProps, 'sessionId'>;
   status: TerminalStatus;
   sessionId: string;
   onRestart: (id: string) => void;

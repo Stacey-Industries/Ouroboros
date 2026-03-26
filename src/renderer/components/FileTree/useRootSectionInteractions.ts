@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { useToastContext } from '../../contexts/ToastContext';
 import type { ContextMenuState } from './ContextMenu';
 import { INITIAL_CONTEXT_MENU } from './ContextMenu';
 import type { TreeNode } from './FileTreeItem';
@@ -22,7 +23,7 @@ import {
 import { handleTreeKeyDown } from './rootSectionKeys';
 import type { RefreshDir, SetRootNodes } from './useRootTreeState';
 
-type ToastFn = (message: string, type: 'success' | 'error') => void;
+type ToastFn = ReturnType<typeof useToastContext>['toast'];
 type SetFocusIndex = Dispatch<SetStateAction<number>>;
 
 interface EditConfirmArgs {
@@ -48,7 +49,9 @@ interface KeyboardDeps {
   handleItemClick: (node: TreeNode, event?: React.MouseEvent) => void;
   toggleFolder: (node: TreeNode) => Promise<void>;
   handleRename: (node: TreeNode) => void;
-  handleDeleteFocused: (node: TreeNode) => Promise<void>;
+  handleDeleteFocused: (node: TreeNode, selectedPaths: Set<string>) => Promise<void>;
+  selectedPaths: Set<string>;
+  handleUndo: () => void | Promise<void>;
   handleNewFile: (dir: string) => void;
   handleNewFolder: (dir: string) => void;
   editState: EditState | null;

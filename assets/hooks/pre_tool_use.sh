@@ -74,6 +74,9 @@ else
 fi
 
 payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"input\":${safe_input},\"requestId\":${j_reqid},\"timestamp\":${timestamp_ms}}"
+if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
+    payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"input\":${safe_input},\"requestId\":${j_reqid},\"timestamp\":${timestamp_ms},\"internal\":true}"
+fi
 ndjson_line="${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────

@@ -98,7 +98,7 @@ function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
         getHeatLevel={p.getHeatLevel}
       />
       {p.query.trim().length > 0 && (
-        <SearchOverlay roots={p.roots} query={p.query} activeFilePath={p.activeFilePath} onFileSelect={p.onSearchSelect} />
+        <SearchOverlay roots={p.roots} extraIgnorePatterns={p.extraIgnorePatterns} query={p.query} activeFilePath={p.activeFilePath} onFileSelect={p.onSearchSelect} />
       )}
     </>
   );

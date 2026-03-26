@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { detectModules, buildModuleStructuralSummaries, buildCrossModuleDependencies } from './moduleDetector'
+import { describe, expect,it } from 'vitest'
+
 import type { IndexedRepoFile } from '../orchestration/repoIndexer'
+import { buildCrossModuleDependencies,buildModuleStructuralSummaries, detectModules } from './moduleDetector'
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -13,7 +14,6 @@ function makeFile(overrides: Partial<IndexedRepoFile> & { relativePath: string }
   return {
     rootPath,
     path: `${rootPath}/${relativePath}`.replace(/\\/g, '/'),
-    relativePath,
     extension: overrides.extension ?? ext,
     language: overrides.language ?? extensionToLanguage(ext),
     size: overrides.size ?? 1000,
@@ -47,6 +47,7 @@ function extensionToLanguage(ext: string): string {
     '.css': 'css',
     '.md': 'markdown',
   }
+  // eslint-disable-next-line security/detect-object-injection -- ext is a controlled string from getExtension()
   return map[ext] ?? 'unknown'
 }
 

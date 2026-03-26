@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron'
+
 import { createAgentLoopController } from '../orchestration/agentLoopController'
 import { buildContextPacket } from '../orchestration/contextPacketBuilder'
 import {
@@ -185,6 +186,7 @@ function ensureOrchestrationSubscriptions(): void {
 function findUpdatedAttempt(previous: TaskSessionRecord, next: TaskSessionRecord): TaskAttemptRecord | undefined {
   const previousAttempts = new Map(previous.attempts.map((attempt) => [attempt.id, JSON.stringify(attempt)]))
   for (let index = next.attempts.length - 1; index >= 0; index -= 1) {
+    // eslint-disable-next-line security/detect-object-injection -- index is a numeric loop counter; safe array access
     const attempt = next.attempts[index]
     if (previousAttempts.get(attempt.id) !== JSON.stringify(attempt)) {
       return attempt
@@ -275,7 +277,7 @@ export function registerOrchestrationHandlers(): string[] {
   registerHandler(channels, ORCHESTRATION_INVOKE_CHANNELS.updateSession, (sessionId, patch) => orchestrationApi.updateSession(sessionId as string, patch as TaskSessionPatch))
   registerHandler(channels, ORCHESTRATION_INVOKE_CHANNELS.resumeTask, (sessionId) => orchestrationApi.resumeTask(sessionId as string))
   registerHandler(channels, ORCHESTRATION_INVOKE_CHANNELS.rerunVerification, (sessionId, profile) => orchestrationApi.rerunVerification(sessionId as string, profile as VerificationProfileName | undefined))
-  registerHandler(channels, ORCHESTRATION_INVOKE_CHANNELS.cancelTask, (taskId) => orchestrationApi.cancelTask(taskId as string))
+  // cancelTask removed from ORCHESTRATION_INVOKE_CHANNELS — cancel routes through agentChat:cancelTask
   registerHandler(channels, ORCHESTRATION_INVOKE_CHANNELS.pauseTask, (taskId) => orchestrationApi.pauseTask(taskId as string))
 
   return channels

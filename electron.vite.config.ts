@@ -4,7 +4,8 @@ import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
 import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
 
-const monacoEditorPlugin = (monacoEditorPluginModule as { default: typeof monacoEditorPluginModule }).default ?? monacoEditorPluginModule
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CJS/ESM interop: vite-plugin-monaco-editor may export default or module directly
+const monacoEditorPlugin = ((monacoEditorPluginModule as unknown as { default: typeof monacoEditorPluginModule }).default ?? monacoEditorPluginModule) as unknown as (opts: Record<string, unknown>) => import('vite').Plugin
 
 // Enable bundle analysis with ANALYZE=true npm run build
 const analyze = process.env.ANALYZE === 'true'
@@ -80,7 +81,7 @@ export default defineConfig({
     publicDir: resolve(__dirname, 'public'),
     plugins: [
       react(),
-      (monacoEditorPlugin as (opts: Record<string, unknown>) => unknown)({
+      monacoEditorPlugin({
         languageWorkers: ['editorWorkerService', 'typescript', 'json', 'css', 'html'],
         globalAPI: false,
         customDistPath: (_root: string, _buildOutDir: string, _base: string) =>

@@ -75,8 +75,9 @@ function buildSearchResults(fuse: Fuse<TreeNode>, query: string): SearchResult[]
   }));
 }
 
-function useSearchResults(roots: string[], extraIgnorePatterns: string[], query: string): { isLoading: boolean; searchResults: SearchResult[] } {
-  const { allFiles, isLoading } = useProjectFileIndex({ roots, extraIgnorePatterns, enabled: query.trim().length > 0 });
+function useSearchResults(roots: string[], _extraIgnorePatterns: string[], query: string): { isLoading: boolean; searchResults: SearchResult[] } {
+  const { allFiles, isIndexing } = useProjectFileIndex({ roots, enabled: query.trim().length > 0 });
+  const isLoading = isIndexing;
   const searchNodes = useMemo(() => allFiles.map((file) => toSearchNode(file)), [allFiles]);
   const fuse = useMemo(() => new Fuse(searchNodes, {
     keys: ['relativePath', 'name'],

@@ -134,7 +134,7 @@ function SearchInputRow({
         bck-i-search:
       </span>
       <input
-        ref={inputRef}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

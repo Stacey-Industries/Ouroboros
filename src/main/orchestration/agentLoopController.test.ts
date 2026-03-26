@@ -50,10 +50,10 @@ vi.mock('./providers/codexAdapter', () => ({
 
 import { createAgentLoopController } from './agentLoopController'
 import {
-  StaticProviderAdapterRegistry,
   createProviderArtifact,
   createProviderSessionReference,
   type ProviderAdapter,
+  StaticProviderAdapterRegistry,
 } from './providers/providerAdapter'
 import type { ContextPacket, DiffSummary, ProviderProgressEvent, VerificationSummary } from './types'
 

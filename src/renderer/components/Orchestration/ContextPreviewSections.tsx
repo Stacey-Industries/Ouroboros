@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ContextSnippet, RankedContextFile, TaskResult, TaskSessionRecord } from '../../types/electron';
 import { ContextMetricsGrid } from './ContextMetricsGrid';
 import { badgeStyle, formatPath, panelStyle } from './orchestrationUi';

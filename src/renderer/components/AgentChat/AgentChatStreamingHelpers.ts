@@ -46,7 +46,8 @@ export function dispatchDiffReviewEvent(
   const snapshotHash = lastAssistant?.orchestration?.preSnapshotHash;
   if (!snapshotHash || !thread.workspaceRoot) return;
   const fileEditBlocks = blocks.filter(
-    (b) => b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
+    (b): b is AgentChatContentBlock & { kind: 'tool_use' } =>
+      b.kind === 'tool_use' && FILE_MODIFYING_TOOLS_SET.has(b.tool),
   );
   if (fileEditBlocks.length === 0) return;
   const filePaths = [

@@ -151,7 +151,7 @@ export function ContextMenuPanel({
 
   return (
     <div
-      ref={menuRef}
+      ref={menuRef as React.RefObject<HTMLDivElement>}
       role="menu"
       className="bg-surface-panel border border-border-semantic"
       style={{ ...MENU_PANEL_STYLE, left: x, top: y }}

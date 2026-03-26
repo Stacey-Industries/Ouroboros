@@ -86,7 +86,7 @@ function ResultsContainer({
   listRef: React.RefObject<HTMLDivElement | null>;
 }): React.ReactElement {
   return (
-    <div id="cp-listbox" role="listbox" aria-label="Commands" ref={listRef} style={listStyle}>
+    <div id="cp-listbox" role="listbox" aria-label="Commands" ref={listRef as React.RefObject<HTMLDivElement>} style={listStyle}>
       {children}
     </div>
   );

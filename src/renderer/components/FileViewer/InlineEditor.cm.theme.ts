@@ -236,7 +236,7 @@ export const editorThemeExtensions: Extension[] = [
 ];
 
 export function getHighlightStyle(themeId: string): HighlightStyle {
-  return HIGHLIGHT_STYLES[themeId] ?? HIGHLIGHT_STYLES.modern;
+  return HIGHLIGHT_STYLES[themeId as keyof typeof HIGHLIGHT_STYLES] ?? HIGHLIGHT_STYLES.modern;
 }
 
 export function createHighlightExtension(themeId: string): Extension {

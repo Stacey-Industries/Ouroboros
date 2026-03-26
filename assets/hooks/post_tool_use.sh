@@ -61,10 +61,13 @@ else
     j_tool="\"${tool_name}\""
 fi
 
+internal_field=""
+if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then internal_field=",\"internal\":true"; fi
+
 if [ -n "$duration_ms" ]; then
-    payload="{\"type\":\"post_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"output\":${safe_output},\"durationMs\":${duration_ms},\"timestamp\":${timestamp_ms}}"
+    payload="{\"type\":\"post_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"output\":${safe_output},\"durationMs\":${duration_ms},\"timestamp\":${timestamp_ms}${internal_field}}"
 else
-    payload="{\"type\":\"post_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"output\":${safe_output},\"timestamp\":${timestamp_ms}}"
+    payload="{\"type\":\"post_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"output\":${safe_output},\"timestamp\":${timestamp_ms}${internal_field}}"
 fi
 
 ndjson_line="${payload}"$'\n'

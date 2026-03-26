@@ -1,337 +1,291 @@
 /**
- * contextLayerController.ts — Builds the three context layers (repo map,
- * module summaries, dependency graph) from the repo indexer's data and
- * attaches them to context packets before they reach the provider.
+ * contextLayerController.ts — Thin orchestration layer over the context layer
+ * subsystem. Delegates all real work to injected collaborators:
+ *   - buildRepoIndex     → repo index snapshot
+ *   - generateRepoMap    → module detection + structural summaries
+ *   - contextLayerStore  → persistence (repo map, module entries, manifest)
+ *   - contextLayerWatcher → file/git/session event routing
+ *   - contextInjector    → packet enrichment
+ *   - contextLayerGC     → storage garbage collection
+ *   - summarizationQueue → background AI summarization
  */
 
-import log from '../logger';
-import { buildLspDiagnosticsSummary } from '../orchestration/lspDiagnosticsProvider';
-import { buildRepoIndexSnapshot, type RepoIndexSnapshot } from '../orchestration/repoIndexer';
-import type { ContextPacket } from '../orchestration/types';
+import log from '../logger'
+import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
+import type { ContextPacket, RepoFacts } from '../orchestration/types'
+import { injectContextLayer } from './contextInjector'
 import {
-  type AiSummarizerState,
-  createAiSummarizerState,
-  loadPersistedSummaries,
-} from './contextLayerAiSummarizer';
+  createQueueForRepoMap,
+  runGC,
+  setupGcTimer,
+  setupWatcher,
+} from './contextLayerControllerHelpers'
 import {
-  clearModuleCache,
-  enrichUnenrichedModules,
-  fireAndForgetEnrichment,
-  loadPathAliases,
-  logInitResults,
-} from './contextLayerControllerHelpers';
+  type ContextLayerController,
+  type ContextLayerControllerStatus,
+  getGitChangedFiles,
+  type InitContextLayerOptions,
+  type SymbolIndex,
+} from './contextLayerControllerTypes'
 import {
-  applyGraphAnalysis,
-  applyImportAnalysis,
-  type CachedModuleData,
-  DEFAULT_MODULE_DEPTH_LIMIT,
-  type DetectedModule,
-  detectModules,
-  normalizePath,
-  selectModuleSummariesForGoal,
-} from './contextLayerControllerSupport';
-import {
-  countRefreshedModules,
-  fireAndForgetRefreshEnrichment,
-  maybeRunGraphAnalysis,
-  type ModuleCacheState,
-  refreshDirtyModuleCache,
-  updateModuleCache,
-} from './contextLayerRefresher';
-import type { ContextLayerConfig } from './contextLayerTypes';
+  ensureGitignore,
+  initContextLayerStore,
+  readManifest,
+  readRepoMap,
+  writeManifest,
+  writeRepoMap,
+} from './contextLayerStore'
+import type { ContextLayerConfig, ContextLayerManifest, RepoMap } from './contextLayerTypes'
+import type { ContextLayerWatcher } from './contextLayerWatcher'
+import { generateRepoMap } from './repoMapGenerator'
+import type { SummarizationQueue } from './summarizationQueue'
 
 // ---------------------------------------------------------------------------
-// Public interface
+// Constants
 // ---------------------------------------------------------------------------
 
-export interface ContextLayerController {
-  enrichPacket(
-    packet: ContextPacket,
-    goalKeywords: string[],
-    existingSnapshot?: RepoIndexSnapshot,
-  ): Promise<{ packet: ContextPacket }>;
-  onConfigChange(config: ContextLayerConfig): Promise<void>;
-  onSessionStart(): void;
-  onGitCommit(): void;
-  onFileChange(type: string, filePath: string): void;
-}
+/** Manifests older than this trigger a full rebuild. */
+const MANIFEST_STALE_THRESHOLD_MS = 60_000
 
-interface InitContextLayerOptions {
-  workspaceRoot: string;
-  buildRepoIndex: (...args: unknown[]) => unknown;
-  config: ContextLayerConfig;
-}
+// Re-export types for consumers who import from this module
+export type { ContextLayerController, ContextLayerControllerStatus, InitContextLayerOptions, SymbolIndex, SymbolIndexEntry } from './contextLayerControllerTypes'
+export { getGitChangedFiles } from './contextLayerControllerTypes'
+
+// ---------------------------------------------------------------------------
+// Module-level singleton
+// ---------------------------------------------------------------------------
+
+let controller: ContextLayerController | null = null
 
 // ---------------------------------------------------------------------------
 // Controller implementation
 // ---------------------------------------------------------------------------
 
-let controller: ContextLayerController | null = null;
-
 class ContextLayerControllerImpl implements ContextLayerController {
-  private config: ContextLayerConfig;
-  private workspaceRoots: string[];
-  private readonly moduleCache: ModuleCacheState = {
-    cachedModules: new Map<string, CachedModuleData>(),
-    cachedRepoMap: null,
-    lastSnapshotCacheKey: null,
-    dirtyModuleIds: new Set<string>(),
-  };
-  initPromise: Promise<void> | null = null;
+  private config: ContextLayerConfig
+  private workspaceRoot: string
+  private buildRepoIndex: (roots: string[]) => Promise<RepoIndexSnapshot>
 
-  private fileChangeBuffer: string[] = [];
-  private fileChangeTimer: ReturnType<typeof setTimeout> | null = null;
-  private static readonly FILE_CHANGE_DEBOUNCE_MS = 2_000;
+  private repoMap: RepoMap | null = null
+  private repoMapGeneratedAt: number | null = null
+  private health: 'healthy' | 'degraded' | 'disabled' = 'disabled'
 
-  private lastInitCompletedAt = 0;
-  private static readonly INIT_COOLDOWN_MS = 5 * 60 * 1000;
+  private watcher: ContextLayerWatcher | null = null
+  private queue: SummarizationQueue | null = null
+  private gcTimer: ReturnType<typeof setInterval> | null = null
+  private disposed = false
 
-  private static readonly MAX_AI_FAILURES = 3;
-  private readonly aiState: AiSummarizerState;
-
-  constructor(config: ContextLayerConfig, workspaceRoot: string) {
-    this.config = config;
-    this.workspaceRoots = workspaceRoot ? [workspaceRoot] : [];
-    this.aiState = createAiSummarizerState(ContextLayerControllerImpl.MAX_AI_FAILURES);
-  }
-
-  private async loadPathAliases(): Promise<void> {
-    await loadPathAliases(this.workspaceRoots);
+  constructor(options: InitContextLayerOptions) {
+    this.config = options.config
+    this.workspaceRoot = options.workspaceRoot
+    this.buildRepoIndex = options.buildRepoIndex
   }
 
   async initialize(): Promise<void> {
-    if (!this.config.enabled || this.workspaceRoots.length === 0) {
-      log.info('Skipping init — disabled or no workspace root');
-      return;
+    if (!this.config.enabled) {
+      this.health = 'disabled'
+      return
     }
 
-    const startMs = Date.now();
-    await this.loadPathAliases();
+    await initContextLayerStore(this.workspaceRoot)
+    await ensureGitignore(this.workspaceRoot)
 
-    const snapshot = await buildRepoIndexSnapshot(this.workspaceRoots, {
-      diagnosticsProvider: buildLspDiagnosticsSummary,
-    });
+    const loaded = await this.tryLoadFromDisk()
+    if (!loaded) {
+      await this.runFullRebuild()
+    }
 
-    const changedFiles = new Set<string>();
-    const depthLimit = this.config.moduleDepthLimit ?? DEFAULT_MODULE_DEPTH_LIMIT;
-    const modules = detectModules(snapshot.roots, changedFiles, depthLimit);
-    applyImportAnalysis(modules, snapshot.roots);
-
-    const allFiles = snapshot.roots.flatMap((r) => r.files);
-    applyGraphAnalysis(modules, snapshot.roots, allFiles);
-
-    this.updateCacheFromModules(modules, snapshot);
-    this.logInitResults(modules, startMs);
-
-    await loadPersistedSummaries(this.moduleCache.cachedModules, this.workspaceRoots);
-    this.fireAndForgetEnrichment(modules);
+    this.setupWatcher()
+    this.setupGcTimer()
+    this.health = 'healthy'
   }
 
-  private updateCacheFromModules(modules: DetectedModule[], snapshot: RepoIndexSnapshot): void {
-    updateModuleCache(this.moduleCache, modules, snapshot);
-    this.lastInitCompletedAt = Date.now();
+  private async tryLoadFromDisk(): Promise<boolean> {
+    const manifest = await readManifest(this.workspaceRoot)
+    if (!manifest) return false
+
+    const age = Date.now() - manifest.lastFullRebuild
+    if (age > MANIFEST_STALE_THRESHOLD_MS) return false
+
+    const repoMap = await readRepoMap(this.workspaceRoot)
+    if (!repoMap) return false
+
+    this.repoMap = repoMap
+    this.repoMapGeneratedAt = Date.now()
+    log.info('[context-layer] Loaded from disk (manifest fresh)')
+    return true
   }
 
-  private logInitResults(modules: DetectedModule[], startMs: number): void {
-    logInitResults(modules, this.moduleCache.cachedModules, startMs);
+  private async runFullRebuild(): Promise<void> {
+    const snapshot = await this.buildRepoIndex([this.workspaceRoot])
+    const repoFacts = snapshot.repoFacts
+
+    const newRepoMap = generateRepoMap({
+      repoFacts,
+      repoIndex: snapshot,
+      workspaceRoot: this.workspaceRoot,
+    })
+
+    await writeRepoMap(this.workspaceRoot, newRepoMap)
+
+    const manifest: ContextLayerManifest = {
+      version: 1,
+      lastFullRebuild: Date.now(),
+      lastIncrementalUpdate: Date.now(),
+      repoMapHash: newRepoMap.projectName,
+      moduleHashes: {},
+      totalSizeBytes: 0,
+    }
+    await writeManifest(this.workspaceRoot, manifest)
+
+    this.repoMap = newRepoMap
+    this.repoMapGeneratedAt = Date.now()
+
+    await this.doRunGC(newRepoMap)
+    this.enqueueForSummarization(newRepoMap)
   }
 
-  private fireAndForgetEnrichment(modules: DetectedModule[]): void {
-    fireAndForgetEnrichment({
-      modules,
-      autoSummarize: this.config.autoSummarize,
-      moduleCache: this.moduleCache,
-      aiState: this.aiState,
-      workspaceRoots: this.workspaceRoots,
-    });
+  private setupWatcher(): void {
+    this.watcher = setupWatcher(this.workspaceRoot, this.config, () => this.forceRebuild())
+  }
+
+  private setupGcTimer(): void {
+    this.gcTimer = setupGcTimer(() => this.repoMap, (rm) => runGC(this.workspaceRoot, rm, this.config))
+  }
+
+  private async doRunGC(repoMap: RepoMap): Promise<void> {
+    await runGC(this.workspaceRoot, repoMap, this.config)
+  }
+
+  private enqueueForSummarization(repoMap: RepoMap): void {
+    if (!this.config.autoSummarize) return
+    if (!this.queue) this.queue = createQueueForRepoMap(this.workspaceRoot, repoMap)
+    this.queue.enqueue(repoMap.modules.map((e) => e.structural.module.id))
   }
 
   async enrichPacket(
     packet: ContextPacket,
     goalKeywords: string[],
-    existingSnapshot?: RepoIndexSnapshot,
-  ): Promise<{ packet: ContextPacket }> {
-    if (this.initPromise) await this.initPromise;
-
-    if (this.moduleCache.cachedModules.size === 0) {
-      if (this.workspaceRoots.length === 0) {
-        this.workspaceRoots = packet.repoFacts.workspaceRoots;
-      }
-      await this.initialize();
+  ): Promise<{ packet: ContextPacket; injectedModules: string[]; injectedTokens: number }> {
+    if (!this.config.enabled) {
+      return { packet, injectedModules: [], injectedTokens: 0 }
     }
 
-    if (this.moduleCache.dirtyModuleIds.size > 0) {
-      await this.refreshDirtyModules(packet, existingSnapshot);
-    }
-
-    const maxModules = Math.min(this.config.maxModules, 12);
-    const moduleSummaries = selectModuleSummariesForGoal(
-      this.moduleCache.cachedModules,
-      goalKeywords,
-      maxModules,
-    );
-
-    return {
-      packet: {
-        ...packet,
-        repoMap: this.moduleCache.cachedRepoMap ?? undefined,
-        moduleSummaries,
-      },
-    };
-  }
-
-  async onConfigChange(config: ContextLayerConfig): Promise<void> {
-    const wasEnabled = this.config.enabled;
-    const wasAutoSummarize = this.config.autoSummarize;
-    this.config = config;
-
-    if (config.enabled && !wasEnabled) {
-      log.info('Enabled — running initial index');
-      await this.initialize();
-    } else if (!config.enabled) {
-      this.clearCache();
-    } else if (config.autoSummarize && !wasAutoSummarize) {
-      this.enrichUnenrichedModules();
+    try {
+      const result = await injectContextLayer({
+        packet,
+        workspaceRoot: this.workspaceRoot,
+        goalKeywords,
+      })
+      return result
+    } catch (err) {
+      log.warn('[context-layer] enrichPacket failed:', err)
+      this.health = 'degraded'
+      return { packet, injectedModules: [], injectedTokens: 0 }
     }
   }
 
-  private clearCache(): void {
-    clearModuleCache(this.moduleCache);
-  }
-
-  private enrichUnenrichedModules(): void {
-    enrichUnenrichedModules(this.moduleCache, this.aiState, this.workspaceRoots);
-  }
-
-  onSessionStart(): void {
-    const msSinceLastInit = Date.now() - this.lastInitCompletedAt;
-    if (
-      this.lastInitCompletedAt > 0 &&
-      msSinceLastInit < ContextLayerControllerImpl.INIT_COOLDOWN_MS
-    ) {
-      log.info(
-        `Skipping session-start re-index — last init was ${(msSinceLastInit / 1000).toFixed(1)}s ago`,
-      );
-      return;
-    }
-
-    this.initPromise = this.initialize().catch((err) => {
-      log.warn('Re-index on session start failed:', err);
-    });
+  onFileChange(type: string, filePath: string): void {
+    this.watcher?.onFileChange(type, filePath)
   }
 
   onGitCommit(): void {
-    for (const id of this.moduleCache.cachedModules.keys()) {
-      this.moduleCache.dirtyModuleIds.add(id);
-    }
-
-    import('../orchestration/contextPacketBuilder')
-      .then(({ clearContextPacketCache }) => {
-        clearContextPacketCache();
+    if (!this.watcher) return
+    // Get changed files from git to do targeted invalidation instead of full-dirty
+    getGitChangedFiles(this.workspaceRoot)
+      .then((changedPaths) => {
+        this.watcher?.onGitCommit(changedPaths.length > 0 ? changedPaths : undefined)
       })
-      .catch((error) => {
-        log.error('Failed to clear context packet cache on git commit:', error);
-      });
-
-    log.info('Git commit detected — all modules marked dirty');
-  }
-
-  onFileChange(_type: string, filePath: string): void {
-    this.fileChangeBuffer.push(filePath);
-    if (this.fileChangeTimer !== null) clearTimeout(this.fileChangeTimer);
-
-    this.fileChangeTimer = setTimeout(() => {
-      this.fileChangeTimer = null;
-      this.processBufferedFileChanges();
-    }, ContextLayerControllerImpl.FILE_CHANGE_DEBOUNCE_MS);
-  }
-
-  private processBufferedFileChanges(): void {
-    const paths = this.fileChangeBuffer.splice(0);
-    if (paths.length === 0) return;
-
-    this.invalidateCachesForChangedFiles(paths);
-    this.markDirtyModulesFromPaths(paths);
-
-    if (this.moduleCache.dirtyModuleIds.size > 0) {
-      log.info(
-        `${paths.length} file change(s) debounced — ${this.moduleCache.dirtyModuleIds.size} module(s) marked dirty`,
-      );
-    }
-  }
-
-  private invalidateCachesForChangedFiles(paths: string[]): void {
-    import('../orchestration/contextPacketBuilder')
-      .then(({ clearContextPacketCache }) => {
-        clearContextPacketCache();
+      .catch(() => {
+        // Git not available or not a repo — fall back to full invalidation
+        this.watcher?.onGitCommit()
       })
-      .catch((error) => {
-        log.error('Failed to clear context packet cache on file change:', error);
-      });
-    import('../orchestration/contextSelectionSupport')
-      .then(({ invalidateSnapshotCache }) => {
-        invalidateSnapshotCache(paths);
-      })
-      .catch((error) => {
-        log.error('Failed to invalidate snapshot cache on file change:', error);
-      });
   }
 
-  private markDirtyModulesFromPaths(paths: string[]): void {
-    const normalizedPaths = new Set(paths.map(normalizePath));
-    for (const [id, cached] of this.moduleCache.cachedModules) {
-      const hasChanged = cached.module.files.some((f) =>
-        normalizedPaths.has(normalizePath(f.path)),
-      );
-      if (hasChanged) this.moduleCache.dirtyModuleIds.add(id);
+  onSessionStart(): void {
+    this.watcher?.onSessionStart()
+  }
+
+  async onConfigChange(config: ContextLayerConfig): Promise<void> {
+    this.config = config
+    if (!config.enabled) {
+      this.health = 'disabled'
+      return
+    }
+    await this.runFullRebuild()
+  }
+
+  async forceRebuild(): Promise<void> {
+    await this.runFullRebuild()
+  }
+
+  getStatus(): ContextLayerControllerStatus {
+    const summaryCount = this.repoMap
+      ? this.repoMap.modules.filter((e) => e.ai != null).length
+      : 0
+
+    const effectiveHealth = this.disposed ? 'disabled' : this.health
+
+    return {
+      enabled: this.config.enabled,
+      health: effectiveHealth,
+      workspaceRoot: this.workspaceRoot,
+      moduleCount: this.repoMap?.moduleCount ?? 0,
+      summaryCount,
+      repoMapAge: this.repoMapGeneratedAt != null
+        ? Date.now() - this.repoMapGeneratedAt
+        : null,
     }
   }
 
-  private async refreshDirtyModules(
-    packet: ContextPacket,
-    existingSnapshot?: RepoIndexSnapshot,
-  ): Promise<void> {
-    if (this.moduleCache.dirtyModuleIds.size === 0) return;
-    const startMs = Date.now();
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    this.disposed = true
+    this.health = 'disabled'
 
-    const snapshot =
-      existingSnapshot ??
-      (await buildRepoIndexSnapshot(packet.repoFacts.workspaceRoots, {
-        diagnosticsProvider: buildLspDiagnosticsSummary,
-      }));
-
-    if (snapshot.cache.key === this.moduleCache.lastSnapshotCacheKey) {
-      this.moduleCache.dirtyModuleIds.clear();
-      return;
+    if (this.gcTimer !== null) {
+      clearInterval(this.gcTimer)
+      this.gcTimer = null
     }
 
-    const changedFiles = new Set<string>();
-    for (const file of packet.repoFacts.gitDiff.changedFiles) {
-      changedFiles.add(normalizePath(file.filePath));
+    this.watcher?.dispose()
+    this.watcher = null
+
+    this.queue?.dispose()
+    this.queue = null
+
+    controller = null
+  }
+
+  async switchWorkspace(newRoot: string): Promise<void> {
+    if (this.gcTimer !== null) {
+      clearInterval(this.gcTimer)
+      this.gcTimer = null
     }
+    this.watcher?.dispose()
+    this.watcher = null
+    this.queue?.dispose()
+    this.queue = null
 
-    const depthLimit = this.config.moduleDepthLimit ?? DEFAULT_MODULE_DEPTH_LIMIT;
-    const modules = detectModules(snapshot.roots, changedFiles, depthLimit);
-    applyImportAnalysis(modules, snapshot.roots);
-    maybeRunGraphAnalysis(
-      modules,
-      snapshot.roots,
-      this.moduleCache.dirtyModuleIds.size,
-      snapshot.roots.flatMap((r) => r.files),
-    );
-    refreshDirtyModuleCache(this.moduleCache, modules, snapshot);
+    this.workspaceRoot = newRoot
+    this.repoMap = null
+    this.repoMapGeneratedAt = null
+    this.health = 'disabled'
+    this.disposed = false
 
-    const elapsedMs = Date.now() - startMs;
-    const refreshed = countRefreshedModules(modules, this.moduleCache.cachedModules);
-    log.info(`Refreshed ${refreshed} dirty modules in ${elapsedMs}ms`);
+    await this.initialize()
+  }
 
-    fireAndForgetRefreshEnrichment({
-      modules,
-      autoSummarize: this.config.autoSummarize,
-      cachedModules: this.moduleCache.cachedModules,
-      aiState: this.aiState,
-      workspaceRoots: this.workspaceRoots,
-    });
+  getRepoMap(): RepoMap | null {
+    return this.repoMap
+  }
+
+  getLastRepoFacts(): RepoFacts | null {
+    return null
+  }
+
+  getSymbolIndex(): SymbolIndex {
+    return { size: 0, searchByName: () => [] }
   }
 }
 
@@ -340,12 +294,16 @@ class ContextLayerControllerImpl implements ContextLayerController {
 // ---------------------------------------------------------------------------
 
 export async function initContextLayer(options: InitContextLayerOptions): Promise<void> {
-  const impl = new ContextLayerControllerImpl(options.config, options.workspaceRoot);
-  controller = impl;
-  impl.initPromise = impl.initialize();
-  await impl.initPromise;
+  // Dispose any existing controller first
+  if (controller) {
+    await controller.dispose()
+  }
+
+  const impl = new ContextLayerControllerImpl(options)
+  controller = impl
+  await impl.initialize()
 }
 
 export function getContextLayerController(): ContextLayerController | null {
-  return controller;
+  return controller
 }

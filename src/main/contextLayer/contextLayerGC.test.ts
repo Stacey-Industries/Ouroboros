@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { ModuleContextEntry, ModuleAISummary } from './contextLayerTypes'
-import { runContextLayerGC } from './contextLayerGC'
+import { beforeEach,describe, expect, it, vi } from 'vitest'
+
 import type { GCOptions } from './contextLayerGC'
+import { runContextLayerGC } from './contextLayerGC'
+import type { ModuleAISummary,ModuleContextEntry } from './contextLayerTypes'
 
 // ---------------------------------------------------------------------------
 // Mock the store module
@@ -14,9 +15,9 @@ vi.mock('./contextLayerStore', () => ({
 }))
 
 import {
-  readAllModuleEntries,
   deleteModuleEntry,
   enforceSizeCap,
+  readAllModuleEntries,
 } from './contextLayerStore'
 
 const mockReadAll = vi.mocked(readAllModuleEntries)

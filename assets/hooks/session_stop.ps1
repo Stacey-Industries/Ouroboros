@@ -47,6 +47,8 @@ $payload = [ordered]@{
     cwd       = (Get-Location).Path
 }
 
+if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
+
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 

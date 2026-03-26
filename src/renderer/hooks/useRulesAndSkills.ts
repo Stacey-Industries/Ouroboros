@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { RulesFile, SkillDefinition } from '../../shared/types/rulesAndSkills';
+import type { CommandDefinition } from '../../shared/types/claudeConfig';
+import type { RulesFile } from '../../shared/types/rulesAndSkills';
 
 export interface UseRulesAndSkillsResult {
   rules: RulesFile[];
-  skills: SkillDefinition[];
+  commands: CommandDefinition[];
   isLoading: boolean;
   refresh: () => Promise<void>;
   createRule: (type: 'claude-md' | 'agents-md') => Promise<string | null>;
-  createSkill: (name: string) => Promise<string | null>;
 }
 
 function hasRulesAndSkillsAPI(): boolean {
@@ -21,30 +21,33 @@ function hasRulesAndSkillsAPI(): boolean {
 
 const EMPTY: UseRulesAndSkillsResult = {
   rules: [],
-  skills: [],
+  commands: [],
   isLoading: false,
   refresh: () => Promise.resolve(),
   createRule: () => Promise.resolve(null),
-  createSkill: () => Promise.resolve(null),
 };
+
+interface FetchSetters {
+  setRules: (r: RulesFile[]) => void;
+  setCommands: (c: CommandDefinition[]) => void;
+  setIsLoading: (v: boolean) => void;
+}
 
 async function fetchRulesAndSkills(
   root: string,
-  setRules: (r: RulesFile[]) => void,
-  setSkills: (s: SkillDefinition[]) => void,
-  setIsLoading: (v: boolean) => void,
+  setters: FetchSetters,
 ): Promise<void> {
   if (!hasRulesAndSkillsAPI()) return;
-  setIsLoading(true);
+  setters.setIsLoading(true);
   try {
-    const [rulesResult, skillsResult] = await Promise.all([
+    const [rulesResult, commandsResult] = await Promise.all([
       window.electronAPI.rulesAndSkills.listRules(root),
-      window.electronAPI.rulesAndSkills.listSkills(root),
+      window.electronAPI.rulesAndSkills.listCommands(root),
     ]);
-    if (rulesResult.success && rulesResult.rules) setRules(rulesResult.rules);
-    if (skillsResult.success && skillsResult.skills) setSkills(skillsResult.skills);
+    if (rulesResult.success && rulesResult.rules) setters.setRules(rulesResult.rules);
+    if (commandsResult.success && commandsResult.commands) setters.setCommands(commandsResult.commands);
   } finally {
-    setIsLoading(false);
+    setters.setIsLoading(false);
   }
 }
 
@@ -59,47 +62,36 @@ async function createRuleFn(
   return null;
 }
 
-async function createSkillFn(
-  root: string | null,
-  name: string,
-  refresh: () => Promise<void>,
-): Promise<string | null> {
-  if (!root || !hasRulesAndSkillsAPI()) return null;
-  const result = await window.electronAPI.rulesAndSkills.createSkill(root, name);
-  if (result.success && result.filePath) { await refresh(); return result.filePath; }
-  return null;
-}
-
 export function useRulesAndSkills(projectRoot: string | null): UseRulesAndSkillsResult {
   const [rules, setRules] = useState<RulesFile[]>([]);
-  const [skills, setSkills] = useState<SkillDefinition[]>([]);
+  const [commands, setCommands] = useState<CommandDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const projectRootRef = useRef(projectRoot);
 
   useEffect(() => { projectRootRef.current = projectRoot; }, [projectRoot]);
 
+  const setters: FetchSetters = { setRules, setCommands, setIsLoading };
+
   const refresh = useCallback(async (): Promise<void> => {
     const root = projectRootRef.current;
-    if (root) await fetchRulesAndSkills(root, setRules, setSkills, setIsLoading);
-  }, []);
+    if (root) await fetchRulesAndSkills(root, setters);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- setters are stable setState refs
 
   const createRule = useCallback(
     (type: 'claude-md' | 'agents-md') => createRuleFn(projectRootRef.current, type, refresh),
     [refresh],
   );
 
-  const createSkill = useCallback(
-    (name: string) => createSkillFn(projectRootRef.current, name, refresh),
-    [refresh],
-  );
-
   useEffect(() => {
     if (!projectRoot || !hasRulesAndSkillsAPI()) return;
+    if (typeof window.electronAPI.rulesAndSkills.startWatcher === 'function') {
+      void window.electronAPI.rulesAndSkills.startWatcher(projectRoot);
+    }
     void refresh();
     return window.electronAPI.rulesAndSkills.onChanged(() => { void refresh(); });
   }, [projectRoot, refresh]);
 
   if (!projectRoot) return EMPTY;
 
-  return { rules, skills, isLoading, refresh, createRule, createSkill };
+  return { rules, commands, isLoading, refresh, createRule };
 }

@@ -15,12 +15,24 @@ export default defineConfig({
   resolve: {
     alias: {
       'better-sqlite3': sqliteFreshDir,
+      '@shared': path.resolve('src/shared'),
+      '@main': path.resolve('src/main'),
+      '@renderer': path.resolve('src/renderer'),
+      'mica-electron': path.resolve('src/_test_mocks/mica-electron.ts'),
     },
   },
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
     globals: false,
+    server: {
+      deps: {
+        // Force mica-electron through Vite's transform pipeline so the
+        // resolve.alias above redirects it to our stub before it can call
+        // electron.app.commandLine.appendSwitch() at module load time.
+        inline: ['mica-electron'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov', 'html'],

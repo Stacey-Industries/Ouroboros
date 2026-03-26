@@ -20,7 +20,7 @@ const TOOL_CATEGORIES = [
 ] as const;
 
 function summarizeToolTypes(blocks: Array<AgentChatContentBlock & { kind: 'tool_use' }>): string {
-  const counts = new Map<string, number>(TOOL_CATEGORIES.map((entry) => [entry.category, 0]).concat([['other', 0]]));
+  const counts = new Map<string, number>([...TOOL_CATEGORIES.map((entry): [string, number] => [entry.category, 0]), ['other', 0]]);
   for (const block of blocks) {
     const category = TOOL_CATEGORIES.find((entry) => entry.matches.has(block.tool))?.category ?? 'other';
     counts.set(category, (counts.get(category) ?? 0) + 1);

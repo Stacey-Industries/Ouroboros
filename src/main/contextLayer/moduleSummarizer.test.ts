@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach,describe, expect, it, vi } from 'vitest'
+
 import type { ModuleStructuralSummary } from './contextLayerTypes'
-import {
-  summarizeModule,
-  shouldSummarize,
-  selectSourceSnippets,
-  estimateTokens,
-} from './moduleSummarizer'
 import type { SummarizationContext } from './moduleSummarizer'
+import {
+  estimateTokens,
+  selectSourceSnippets,
+  shouldSummarize,
+  summarizeModule,
+} from './moduleSummarizer'
 
 // ---------------------------------------------------------------------------
 // Mock the CLI spawner

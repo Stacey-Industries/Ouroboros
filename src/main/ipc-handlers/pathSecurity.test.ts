@@ -42,7 +42,7 @@ function makeEvent(windowId: number | undefined): Parameters<typeof assertPathAl
       getOwnerBrowserWindow: () =>
         windowId !== undefined ? { id: windowId } : null,
     },
-  } as Parameters<typeof assertPathAllowed>[0];
+  } as unknown as Parameters<typeof assertPathAllowed>[0];
 }
 
 /** Platform-aware workspace root for tests (avoids hard-coding OS separators). */

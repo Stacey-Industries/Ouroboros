@@ -33,7 +33,7 @@ export const CodeContent = memo(function CodeContent({
 }: CodeContentProps): React.ReactElement {
   return (
     <div
-      ref={codeRef}
+      ref={codeRef as React.RefObject<HTMLDivElement>}
       className="selectable"
       style={getCodeContentStyle(showMinimap, lineCount)}
     >
@@ -78,7 +78,7 @@ function renderCodeRow({
   shikiLines,
   textLayout,
   toggleFold,
-}: CodeRowsProps & { row: CodeRow }): React.ReactElement {
+}: Omit<CodeRowsProps, 'rows'> & { row: CodeRow }): React.ReactElement {
   if (row.type === 'fold-placeholder') {
     return (
       <FoldPlaceholder

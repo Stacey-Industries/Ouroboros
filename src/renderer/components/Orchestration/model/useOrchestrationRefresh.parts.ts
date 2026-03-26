@@ -2,9 +2,9 @@ import type { TaskSessionRecord } from '../../../types/electron';
 import {
   deriveStateFromSession,
   mergeSession,
+  type OrchestrationStateStore,
   sessionMatchesProjectRoot,
   sortSessions,
-  type OrchestrationStateStore,
 } from '../useOrchestrationModel.helpers';
 
 export function resetOrchestrationStore(setters: OrchestrationStateStore): void {

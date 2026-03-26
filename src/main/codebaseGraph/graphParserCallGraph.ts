@@ -54,18 +54,18 @@ function buildLocalSymbolMap(symbolNodes: GraphNode[], relPath: string): Map<str
 // ─── Function Body Collection ────────────────────────────────────────────────
 
 function collectFunctionBodies(
-  rootNode: TreeSitterModule.Node,
+  rootNode: TreeSitterModule.SyntaxNode,
   relPath: string,
-): Map<string, TreeSitterModule.Node> {
-  const functionBodies = new Map<string, TreeSitterModule.Node>();
+): Map<string, TreeSitterModule.SyntaxNode> {
+  const functionBodies = new Map<string, TreeSitterModule.SyntaxNode>();
   collectBodiesRecursive(rootNode, relPath, functionBodies);
   return functionBodies;
 }
 
 function collectBodiesRecursive(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   relPath: string,
-  functionBodies: Map<string, TreeSitterModule.Node>,
+  functionBodies: Map<string, TreeSitterModule.SyntaxNode>,
 ): void {
   collectNamedFunctionBody(node, relPath, functionBodies);
   collectArrowFunctionBody(node, relPath, functionBodies);
@@ -83,9 +83,9 @@ const NAMED_FUNC_TYPES = new Set([
 ]);
 
 function collectNamedFunctionBody(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   relPath: string,
-  functionBodies: Map<string, TreeSitterModule.Node>,
+  functionBodies: Map<string, TreeSitterModule.SyntaxNode>,
 ): void {
   if (!NAMED_FUNC_TYPES.has(node.type)) return;
   const nameNode = node.childForFieldName('name');
@@ -99,9 +99,9 @@ function collectNamedFunctionBody(
 const ARROW_FUNC_TYPES = new Set(['arrow_function', 'function_expression', 'function']);
 
 function collectArrowFunctionBody(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   relPath: string,
-  functionBodies: Map<string, TreeSitterModule.Node>,
+  functionBodies: Map<string, TreeSitterModule.SyntaxNode>,
 ): void {
   if (node.type !== 'variable_declarator') return;
   const nameNode = node.childForFieldName('name');
@@ -119,7 +119,7 @@ function collectArrowFunctionBody(
 // ─── Call Extraction ─────────────────────────────────────────────────────────
 
 function extractCallsFromBody(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   sourceId: string,
   callCtx: CallEdgeContext,
 ): void {
@@ -133,7 +133,7 @@ function extractCallsFromBody(
 }
 
 function processCallExpression(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   sourceId: string,
   callCtx: CallEdgeContext,
 ): void {
@@ -150,7 +150,7 @@ function processCallExpression(
   }
 }
 
-function resolveCalleeName(funcNode: TreeSitterModule.Node): string | null {
+function resolveCalleeName(funcNode: TreeSitterModule.SyntaxNode): string | null {
   if (funcNode.type === 'identifier') return funcNode.text;
   if (funcNode.type === 'member_expression') {
     const prop = funcNode.childForFieldName('property');

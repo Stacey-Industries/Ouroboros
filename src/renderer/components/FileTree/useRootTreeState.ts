@@ -135,7 +135,7 @@ function loadRootWithCancellation({
   setRootNodes,
   setIsLoading,
   setError,
-}: RootLoaderArgs): () => void {
+}: Omit<RootLoaderArgs, 'enabled'>): () => void {
   let cancelled = false;
   setIsLoading(true);
   setError(null);
@@ -236,7 +236,8 @@ function useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir }: Watche
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
     if (active) {
-      cleanupWatcher = subscribeToDirectoryChanges(root, (change: FileChangeEvent) => {
+      cleanupWatcher = subscribeToDirectoryChanges(root, (rawChange: unknown) => {
+        const change = rawChange as FileChangeEvent;
         const dirToRefresh = findDirToRefresh(change.path, root, loadedDirsRef.current);
         if (active && dirToRefresh) {
           scheduleRefresh({ key: dirToRefresh, timers, root, refreshDirRef });

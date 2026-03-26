@@ -5,7 +5,8 @@
 export type DirtyCloseChoice = 'save' | 'discard' | 'cancel';
 
 interface DirtyCloseResolution {
-  outcome: 'close' | 'keep-open';
+  /** 'close' — proceed to close the tab; 'abort' — keep the tab open */
+  outcome: 'close' | 'abort';
   choice: DirtyCloseChoice;
   error?: string;
 }
@@ -21,7 +22,7 @@ export async function finalizeDirtyCloseChoice(args: FinalizeDirtyCloseArgs): Pr
   const { choice, discardDraft, filePath, saveFile } = args;
 
   if (choice === 'cancel') {
-    return { outcome: 'keep-open', choice };
+    return { outcome: 'abort', choice };
   }
 
   if (choice === 'discard') {
@@ -35,10 +36,10 @@ export async function finalizeDirtyCloseChoice(args: FinalizeDirtyCloseArgs): Pr
     if (result.success) {
       return { outcome: 'close', choice };
     }
-    return { outcome: 'keep-open', choice, error: result.error ?? 'Failed to save file' };
+    return { outcome: 'abort', choice, error: result.error ?? 'Failed to save file' };
   } catch (err) {
     return {
-      outcome: 'keep-open',
+      outcome: 'abort',
       choice,
       error: err instanceof Error ? err.message : String(err),
     };

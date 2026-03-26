@@ -25,6 +25,7 @@ export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
           Enable LSP
         </label>
         <ToggleSwitch
+          label="Enable LSP"
           checked={draft.lspEnabled ?? false}
           onChange={(v) => onChange('lspEnabled', v)}
         />

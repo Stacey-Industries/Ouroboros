@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { SkillDefinition } from '../../../shared/types/rulesAndSkills';
+import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 
 export interface SlashCommand {
   id: string;
@@ -41,7 +41,7 @@ function useSlashCommandMoveSelection(
   };
 }
 
-function handleSlashCommandKeyDown(args: {
+interface SlashCommandKeyArgs {
   event: KeyboardEvent;
   isOpen: boolean;
   filtered: SlashCommand[];
@@ -50,33 +50,22 @@ function handleSlashCommandKeyDown(args: {
   moveUp: () => void;
   onSelect: (cmd: SlashCommand) => void;
   onClose: () => void;
-}): void {
+}
+
+function stopAndRun(event: KeyboardEvent, fn: () => void): void {
+  event.preventDefault();
+  event.stopPropagation();
+  fn();
+}
+
+function handleSlashCommandKeyDown(args: SlashCommandKeyArgs): void {
   const { event, isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose } = args;
   if (!isOpen || filtered.length === 0) return;
-  switch (event.key) {
-    case 'ArrowDown':
-      event.preventDefault();
-      event.stopPropagation();
-      moveDown();
-      break;
-    case 'ArrowUp':
-      event.preventDefault();
-      event.stopPropagation();
-      moveUp();
-      break;
-    case 'Enter':
-      if (event.shiftKey) break; /* falls through */
-    case 'Tab':
-      event.preventDefault();
-      event.stopPropagation();
-      onSelect(filtered[selectedIndex]);
-      break;
-    case 'Escape':
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-      break;
-  }
+  if (event.key === 'ArrowDown') { stopAndRun(event, moveDown); return; }
+  if (event.key === 'ArrowUp') { stopAndRun(event, moveUp); return; }
+  if (event.key === 'Enter' && !event.shiftKey) { stopAndRun(event, () => onSelect(filtered[selectedIndex])); return; }
+  if (event.key === 'Tab') { stopAndRun(event, () => onSelect(filtered[selectedIndex])); return; }
+  if (event.key === 'Escape') { stopAndRun(event, onClose); }
 }
 
 function useSlashCommandKeyboard({
@@ -141,15 +130,15 @@ export interface SlashCommandContext {
   onNewThread?: () => void;
   onRemember?: (content: string) => void;
   onOpenMemories?: () => void;
-  skills?: SkillDefinition[];
+  commands?: CommandDefinition[];
 }
 
-function buildSkillSlashCommands(skills: SkillDefinition[]): SlashCommand[] {
-  return skills.map((skill) => ({
-    id: `skill:${skill.id}`,
-    label: skill.name,
-    description: skill.description,
-    icon: '⚡',
+function buildCommandSlashCommands(commands: CommandDefinition[]): SlashCommand[] {
+  return commands.map((cmd) => ({
+    id: `${cmd.scope}:${cmd.id}`,
+    label: cmd.name,
+    description: cmd.description,
+    icon: cmd.scope === 'user' ? '◈' : '▣',
     action: () => {},
     clearDraft: false,
   }));
@@ -170,6 +159,6 @@ export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[]
     { id: 'remember', label: 'Remember', description: 'Save a memory for future sessions', icon: '◆', action: () => {}, clearDraft: true },
     { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
   ];
-  const skillCommands = buildSkillSlashCommands(ctx.skills ?? []);
-  return [...builtIn, ...skillCommands];
+  const commandEntries = buildCommandSlashCommands(ctx.commands ?? []);
+  return [...builtIn, ...commandEntries];
 }

@@ -181,36 +181,12 @@ Only load docs relevant to your task. Saves tokens and avoids confusion.
 
 ## Key Conventions
 
-### IPC Contract
-
-- Channel naming: `domain:action` (e.g. `pty:spawn`, `files:readDir`, `config:set`)
-- Handlers return `{ success: boolean; error?: string }` pattern
-- Event listeners return cleanup functions (not disposables)
-- Full channel reference: `docs/api-contract.md`
-
 ### Two Event Systems — Don't Confuse Them
 
 1. **Electron IPC** — `ipcRenderer.on` / `ipcMain.handle` via preload bridge (`menu:new-terminal`, `pty:data:${id}`)
 2. **DOM CustomEvents** — `window.dispatchEvent` / `window.addEventListener` (`agent-ide:new-terminal`, `agent-ide:set-theme`, `agent-ide:open-settings`)
 
 Never mix these. IPC events flow through preload. DOM events are renderer-only.
-
-### Styling
-
-- Tailwind utilities + CSS custom properties — never hardcode colors
-- Theme vars: `var(--bg)`, `var(--text)`, `var(--accent)`, `var(--border)`, `var(--font-ui)`, `var(--font-mono)`
-- Terminal vars: `var(--term-bg)`, `var(--term-fg)`, `var(--term-cursor)`, `var(--term-selection)`
-
-## Terminal Gotchas
-
-Hard-won lessons — not documented elsewhere:
-
-- Package: `@xterm/xterm` (NOT legacy `xterm` — they are incompatible)
-- Addons: `@xterm/addon-fit`, `@xterm/addon-search`, `@xterm/addon-web-links`
-- **No WebGL addon** — `@xterm/addon-webgl` causes ghost cursor artifacts during rapid output. Canvas renderer is used instead.
-- xterm needs **double-rAF** after `term.open()` before calling `fit()` — viewport isn't ready until then
-- Use `isReadyRef` guard pattern to prevent premature fit calls
-- OSC 10/11/12 blocked via `term.parser.registerOscHandler` to prevent programs from overriding theme colors
 
 ## Known Issues / Tech Debt
 
@@ -225,15 +201,8 @@ Hard-won lessons — not documented elsewhere:
 - `docs/api-contract.md` — Complete IPC channel reference, file operations, PTY API
 - `docs/data-model.md` — Config schema, state types, event types
 
-## Key Files
+## Rules, Hooks, and Commands
 
-| File           | Role        |
-| -------------- | ----------- |
-| `src/main.ts`  | Entry point |
-| `src/index.ts` | Public API  |
+Context-specific rules are in `.claude/rules/` (injected automatically by glob match). Hooks enforce constraints deterministically via `.claude/settings.json`. Slash commands are in `.claude/commands/` (project) and `~/.claude/commands/` (global).
 
-## Commands
-
-- `npm run dev` — start dev server
-- `npm run build` — production build
-- `npm test` — run tests
+See `claudeimprovements.md` for the full inventory.

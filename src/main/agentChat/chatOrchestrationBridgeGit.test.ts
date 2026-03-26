@@ -43,7 +43,8 @@ const unlinkMock = vi.mocked(unlink);
 
 /** Simulate execFile calling its callback with success. */
 function mockExecFileSuccess(stdout: string): void {
-  execFileMock.mockImplementation((_cmd, _args, _opts, cb: (...args: unknown[]) => void) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
     cb(null, stdout, '');
     return {} as ReturnType<typeof execFile>;
   });
@@ -51,7 +52,8 @@ function mockExecFileSuccess(stdout: string): void {
 
 /** Simulate execFile calling its callback with an error. */
 function mockExecFileError(message: string): void {
-  execFileMock.mockImplementation((_cmd, _args, _opts, cb: (...args: unknown[]) => void) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
     cb(new Error(message), '', message);
     return {} as ReturnType<typeof execFile>;
   });
@@ -228,7 +230,8 @@ describe('revertToSnapshotWithBridge — guard conditions', () => {
       ['send-1', { threadId: 'thread-OTHER' } as ActiveStreamContext],
     ]);
     // No diff output → no files changed, so it completes without needing unlink
-    execFileMock.mockImplementation((_cmd, _args, _opts, cb: (...args: unknown[]) => void) => {
+    execFileMock.mockImplementation(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, _args: any, _opts: any, cb: any) => {
       cb(null, '', ''); // empty diff output
       return {} as ReturnType<typeof execFile>;
     });
@@ -263,7 +266,8 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
 
   it('returns success with empty revertedFiles when diff output is empty', async () => {
     const { store, activeSends } = setupThread();
-    execFileMock.mockImplementation((_cmd, _args, _opts, cb: (...args: unknown[]) => void) => {
+    execFileMock.mockImplementation(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, _args: any, _opts: any, cb: any) => {
       cb(null, '', '');
       return {} as ReturnType<typeof execFile>;
     });
@@ -276,7 +280,8 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
     const { store, activeSends } = setupThread();
     const callSequence: Array<{ args: string[] }> = [];
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         callSequence.push({ args });
         // First call is diff, second is checkout
         if (args[0] === 'diff') {
@@ -303,7 +308,8 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
   it('includes modified file in revertedFiles', async () => {
     const { store, activeSends } = setupThread();
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') cb(null, 'M\tsrc/file.ts\n', '');
         else cb(null, '', '');
         return {} as ReturnType<typeof execFile>;
@@ -320,7 +326,8 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
     const { store, activeSends } = setupThread();
     unlinkMock.mockResolvedValue(undefined);
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') cb(null, 'A\tsrc/new-file.ts\n', '');
         else cb(null, '', '');
         return {} as ReturnType<typeof execFile>;
@@ -339,7 +346,8 @@ describe('revertToSnapshotWithBridge — reverting file changes', () => {
     unlinkMock.mockResolvedValue(undefined);
     const checkoutArgs: string[][] = [];
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') cb(null, 'A\tsrc/new-file.ts\n', '');
         else {
           if (args[0] === 'checkout') checkoutArgs.push(args);
@@ -373,7 +381,8 @@ describe('revertToSnapshotWithBridge — multiple file changes', () => {
     unlinkMock.mockResolvedValue(undefined);
 
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') {
           cb(null, ['M\tsrc/a.ts', 'D\tsrc/b.ts', 'A\tsrc/c.ts'].join('\n') + '\n', '');
         } else {
@@ -397,7 +406,8 @@ describe('revertToSnapshotWithBridge — multiple file changes', () => {
     unlinkMock.mockResolvedValue(undefined);
 
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') {
           // R100<TAB>old-name.ts<TAB>new-name.ts
           cb(null, 'R100\told-name.ts\tnew-name.ts\n', '');
@@ -426,7 +436,8 @@ describe('revertToSnapshotWithBridge — multiple file changes', () => {
 
     const checkoutCalls: string[][] = [];
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') {
           cb(null, diffLines + '\n', '');
         } else {
@@ -463,7 +474,8 @@ describe('revertToSnapshotWithBridge — error handling', () => {
   it('returns failure result when git diff command fails', async () => {
     const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
     const store = makeMockThreadStore(thread);
-    execFileMock.mockImplementation((_cmd, _args, _opts, cb: (...a: unknown[]) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
       cb(new Error('git: command not found'), '', '');
       return {} as ReturnType<typeof execFile>;
     });
@@ -479,7 +491,8 @@ describe('revertToSnapshotWithBridge — error handling', () => {
 
     let callCount = 0;
     execFileMock.mockImplementation(
-      (_cmd, _args, _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, _args: any, _opts: any, cb: any) => {
         callCount++;
         if (callCount === 1) {
           // diff call succeeds
@@ -504,7 +517,8 @@ describe('revertToSnapshotWithBridge — error handling', () => {
     unlinkMock.mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
     execFileMock.mockImplementation(
-      (_cmd, args: string[], _opts, cb: (...a: unknown[]) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
         if (args[0] === 'diff') cb(null, 'A\tsrc/phantom.ts\n', '');
         else cb(null, '', '');
         return {} as ReturnType<typeof execFile>;

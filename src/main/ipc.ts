@@ -96,7 +96,8 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
       const repoFacts = await buildRepoFacts(req.workspaceRoots, {
         diagnosticsProvider: buildLspDiagnosticsSummary,
       });
-      return buildContextPacket({ request: req, repoFacts });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return buildContextPacket({ request: req as any, repoFacts });
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
@@ -111,7 +112,8 @@ function registerOrchestrationStubHandlers(channels: string[]): void {
       const repoFacts = await buildRepoFacts(req.workspaceRoots, {
         diagnosticsProvider: buildLspDiagnosticsSummary,
       });
-      return buildContextPacket({ request: req, repoFacts });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return buildContextPacket({ request: req as any, repoFacts });
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }

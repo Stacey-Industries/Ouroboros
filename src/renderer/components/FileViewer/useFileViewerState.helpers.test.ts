@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseConflictBlocks, hasConflictMarkers } from './ConflictResolver.model';
+
+import { hasConflictMarkers,parseConflictBlocks } from './ConflictResolver.model';
 import { createDiffMap, createFileViewerState, createKeyboardInput, parseConflictContent, toggleCollapsedFold } from './useFileViewerState.helpers';
 import type { FoldRange } from './useFoldRanges';
 
@@ -77,6 +78,8 @@ describe('useFileViewerState helpers', () => {
         setShowBlame: vi.fn(),
         showOutline: true,
         setShowOutline: vi.fn(),
+        formatOnSave: false,
+        setFormatOnSave: vi.fn(),
       },
       ui: {
         showSearch: false,
@@ -98,6 +101,7 @@ describe('useFileViewerState helpers', () => {
         isClaudeMd: false,
         isMarkdown: true,
         hasDiff: true,
+        diffBaseContent: null,
       },
       data: {
         highlightedHtml: '<span>hi</span>',

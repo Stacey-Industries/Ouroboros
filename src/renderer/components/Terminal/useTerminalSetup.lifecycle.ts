@@ -67,7 +67,7 @@ function createTerminal(
 }
 
 function loadCoreAddons(
-  context: TerminalSetupLifecycleContext,
+  _context: TerminalSetupLifecycleContext,
   term: Terminal,
   container: HTMLDivElement,
 ): { fitAddon: FitAddon; searchAddon: SearchAddon } {

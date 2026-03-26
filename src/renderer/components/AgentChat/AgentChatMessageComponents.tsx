@@ -169,7 +169,7 @@ export const AssistantMessage = React.memo(function AssistantMessage(props: { me
   const hasBlocks = Boolean(props.message.blocks?.length);
   const snapshotHash = props.message.orchestration?.preSnapshotHash;
   const showChangeSummary = shouldShowChangeSummary({ isStreaming, snapshotHash, workspaceRoot: props.workspaceRoot, hasBlocks, blocks: props.message.blocks });
-  return <div className="group flex justify-start"><div className="w-full max-w-[95%]"><AssistantMessageHeader message={props.message} hidden={msg._streaming} onBranch={props.onBranch} onRevert={props.onRevert} /><AssistantMessageContent message={props.message} isStreaming={isStreaming} onStop={onStop} workspaceRoot={props.workspaceRoot} snapshotHash={snapshotHash} onOpenLinkedDetails={props.onOpenLinkedDetails} showChangeSummary={showChangeSummary} /></div></div>;
+  return <div className="group flex justify-start"><div className="w-full max-w-[95%]"><AssistantMessageHeader message={props.message} hidden={msg._streaming === true} onBranch={props.onBranch} onRevert={props.onRevert} /><AssistantMessageContent message={props.message} isStreaming={isStreaming} onStop={onStop} workspaceRoot={props.workspaceRoot} snapshotHash={snapshotHash} onOpenLinkedDetails={props.onOpenLinkedDetails} showChangeSummary={showChangeSummary} /></div></div>;
 });
 
 function extractContextFileCount(content: string): number | null {
@@ -221,7 +221,7 @@ export function MessageCard(props: MessageCardProps): React.ReactElement {
 }
 
 function findLastAssistantError(messages: AgentChatMessageRecord[]): string | undefined {
-  for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'assistant' && messages[i].error) return messages[i].error.message;
+  for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === 'assistant' && messages[i].error) return messages[i].error?.message;
   return undefined;
 }
 

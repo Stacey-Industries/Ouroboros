@@ -10,7 +10,8 @@ import { useGitBlame } from '../../hooks/useGitBlame';
 import { useGitDiff } from '../../hooks/useGitDiff';
 import { useSymbolOutline } from '../../hooks/useSymbolOutline';
 import { useTheme } from '../../hooks/useTheme';
-import type { DiffLineInfo } from '../../types/electron';
+import type { BlameLine, DiffLineInfo } from '../../types/electron';
+import type { ConflictBlock } from './ConflictResolver';
 import { hasConflictMarkers, parseConflictBlocks } from './ConflictResolver.model';
 import { getLanguage } from './fileViewerUtils';
 import { attachLinkClickHandler,ensureLinkStyles } from './linkDetector';
@@ -81,7 +82,7 @@ export interface FileViewerState {
   diffBaseContent: string | null;
   diffLines: DiffLineInfo[];
   diffMap: Map<number, DiffLineInfo['kind']>;
-  blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
+  blameLines: BlameLine[];
   foldableLines: Map<number, FoldRange>;
   scrollMetrics: ScrollMetrics;
   outlineSymbols: ReturnType<typeof useSymbolOutline>;
@@ -97,7 +98,7 @@ interface ViewerData {
   diffBaseContent: string | null;
   diffLines: DiffLineInfo[];
   diffMap: Map<number, DiffLineInfo['kind']>;
-  blameLines: Array<{ line: number; hash: string; author: string; date: string; summary: string }>;
+  blameLines: BlameLine[];
   foldableLines: Map<number, FoldRange>;
   scrollMetrics: ScrollMetrics;
   outlineSymbols: ReturnType<typeof useSymbolOutline>;
@@ -197,7 +198,7 @@ function useViewerData(
   const effectiveDiffLines = useMemo(() => {
     if (diffLines.length > 0) return diffLines;
     if (diffBaseContent !== '' || input.content == null || input.content.length === 0) return diffLines;
-    return input.content.split('\n').map((_, index) => ({ line: index + 1, kind: 'added' }));
+    return input.content.split('\n').map((_, index) => ({ line: index + 1, kind: 'added' as const }));
   }, [diffBaseContent, diffLines, input.content]);
   const { blameLines } = useGitBlame(input.projectRoot ?? null, input.filePath, showBlame);
   const { foldableLines } = useFoldRanges(input.content);

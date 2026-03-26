@@ -38,7 +38,7 @@ function getImageAreaStyle(zoomMode: ZoomMode, isPanning: boolean): React.CSSPro
   };
 }
 
-function ImageTransformLayer({ fileUrl, filePath, imgRef, onLoad, onError, imgStyle, panOffset }: Pick<ImageViewportProps, 'fileUrl' | 'filePath' | 'imgRef' | 'onLoad' | 'onError' | 'imgStyle' | 'panOffset'>): React.ReactElement { return <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, background: checkerboardBg, display: 'inline-block', lineHeight: 0 }}><img ref={imgRef} src={fileUrl} alt={filePath} onLoad={onLoad} onError={onError} style={imgStyle} draggable={false} /></div>; }
+function ImageTransformLayer({ fileUrl, filePath, imgRef, onLoad, onError, imgStyle, panOffset }: Pick<ImageViewportProps, 'fileUrl' | 'filePath' | 'imgRef' | 'onLoad' | 'onError' | 'imgStyle' | 'panOffset'>): React.ReactElement { return <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, background: checkerboardBg, display: 'inline-block', lineHeight: 0 }}><img ref={imgRef as React.RefObject<HTMLImageElement>} src={fileUrl} alt={filePath} onLoad={onLoad} onError={onError} style={imgStyle} draggable={false} /></div>; }
 
 function ImageLoadError({ fileUrl }: { fileUrl: string }): React.ReactElement { return <div className="text-status-error" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontSize: '0.875rem', textAlign: 'center' }}><span style={{ fontSize: '1.5rem' }}>!</span><span>Failed to load image</span><span className="text-text-semantic-faint" style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>{fileUrl}</span></div>; }
 
@@ -60,5 +60,5 @@ export function ImageViewport({
   isPanning,
   containerRef,
 }: ImageViewportProps): React.ReactElement {
-  return <div ref={containerRef} style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerLeave} onWheel={onWheel}>{loadError ? <ImageLoadError fileUrl={fileUrl} /> : <ImageTransformLayer fileUrl={fileUrl} filePath={filePath} imgRef={imgRef} onLoad={onLoad} onError={onError} imgStyle={imgStyle} panOffset={panOffset} />}</div>;
+  return <div ref={containerRef as React.RefObject<HTMLDivElement>} style={{ ...getImageAreaStyle(zoomMode, isPanning), touchAction: 'none' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerLeave} onWheel={onWheel}>{loadError ? <ImageLoadError fileUrl={fileUrl} /> : <ImageTransformLayer fileUrl={fileUrl} filePath={filePath} imgRef={imgRef} onLoad={onLoad} onError={onError} imgStyle={imgStyle} panOffset={panOffset} />}</div>;
 }

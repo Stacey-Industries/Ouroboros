@@ -190,7 +190,7 @@ function ReplayTimelineTrack({
   playheadPct: number;
 }): React.ReactElement {
   return (
-    <div ref={trackRef} onClick={handleClick} className="bg-surface-raised" style={TRACK_STYLE}>
+    <div ref={trackRef as React.RefObject<HTMLDivElement>} onClick={handleClick} className="bg-surface-raised" style={TRACK_STYLE}>
       <ReplayTimelineSegments
         steps={steps}
         currentStep={currentStep}

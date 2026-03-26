@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createVerificationRunner } from './verificationRunner'
 import type { VerificationStep } from './types'
+import { createVerificationRunner } from './verificationRunner'
 
 function createRunCommand(durationMs: number) {
   return vi.fn(async (_workspaceRoot: string, step: VerificationStep) => ({

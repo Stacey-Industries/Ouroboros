@@ -137,3 +137,55 @@ Hover tooltip in Rules & Skills panel showing first few lines without opening th
 
 **Skill execution history**
 Track which skills were invoked, when, and what they expanded to. Show in thread details drawer alongside token usage.
+
+---
+
+## Deferred from v1.0 (Consolidated)
+
+Items originally tracked in `ai/deferred.md`. Virtualization (H6) was implemented via `@tanstack/react-virtual` in `useVirtualScroll.ts` and is no longer deferred.
+
+### Code Signing — macOS & Windows (H8)
+- **What**: Sign and notarize Electron builds for distribution
+- **Status**: Not started. `package.json` has `sign: null`, `forceCodeSigning: false`, no certs configured.
+- **Why deferred**: Requires certificate procurement (Apple Developer Program, Windows EV cert)
+- **Revisit when**: Preparing for public distribution or auto-update
+
+### Structured Logging Migration (H2)
+- **What**: Migrate remaining `console.log/error/warn` calls to `electron-log` structured logger
+- **Status**: ~87% complete. Logger infrastructure in `src/main/logger.ts` is solid (electron-log with file transport, async writes). ~36 direct console calls remain across the codebase.
+- **Revisit when**: Next cleanup pass
+
+### CSS Variable Unification (Remaining)
+- **What**: Replace remaining hardcoded rgba values with CSS custom properties
+- **Status**: ~95% complete. Three-tier design token system (primitives → semantic → component) is fully built in `tokens.css` + `tailwind.config.ts`. ~36 hardcoded `rgba()` values remain in AgentChat diff/plan/tool-card components (success green, error red backgrounds). Should migrate to `--status-success-bg` and `--status-error-bg` tokens.
+- **Revisit when**: Next AgentChat component cleanup
+
+---
+
+## Deferred from Orchestration Layer
+
+### XML Formatting in `buildSystemPrompt`
+- **File**: `src/main/orchestration/providers/anthropicApiAdapter.ts`
+- **What**: Switch system prompt context sections from markdown-style `--- Header ---` delimiters to XML tags (`<codebase_structure>`, `<module_context>`, `<context_files>`). Anthropic's prompting research recommends XML for structured data — Claude's attention mechanism responds more reliably to `<tag>` boundaries.
+- **Status**: Not started. `appendInstructionBlock()` still uses `--- Header ---` format.
+- **Note**: `claudeCodeAdapter.ts` formats context differently and should NOT be changed — each adapter is intentionally independent.
+- **Revisit when**: Next context quality improvement pass
+
+---
+
+## Deferred — Chat Queue Steering
+
+### Claude Code: Cancel + Resume Steering
+- **What**: Cursor-style mid-execution message injection. When user queues a message while the agent is working, inject it at the next tool-call boundary via cancel + `--resume <sessionId>` instead of waiting for full completion.
+- **Why**: Claude Code CLI doesn't expose a structured protocol for mid-turn injection (unlike Codex's `turn/steer`). Cancel+resume is the only workaround.
+- **Expected latency**: 2-5 seconds per steer (process kill + re-spawn + context reload)
+- **Approach**: New `steerThread` IPC channel. Main process sets `pendingSteer` on `ActiveStreamContext`, detects tool boundary in `handleToolBlock`, cancels process, suppresses idle flash in `handleCancelledProgress`, resumes via existing `sendMessageWithBridge` + `resolveResumeInfo` flow.
+- **Key files**: `chatOrchestrationBridgeSteering.ts` (new), `chatOrchestrationBridgeProgress.ts`, `chatOrchestrationBridge.ts`, `useAgentChatWorkspaceHooks.ts`
+- **Full spec**: `.claude/plans/adaptive-mixing-umbrella.md`
+
+### Codex: App Server Mode (`turn/steer`)
+- **What**: Switch from `codex exec` (one-shot) to `codex --app-server` (persistent JSON-RPC session). Use `turn/steer` for zero-latency mid-execution injection, `turn/interrupt` for cancellation.
+- **Why**: `--app-server` is the officially supported IDE integration mode. OpenAI's own VS Code extension uses it. Much higher quality than cancel+resume — native protocol, no process restart, no context reload.
+- **Approach**: Rewrite `codexAdapter.ts` + `codexExecRunner.ts` to maintain a persistent JSON-RPC process over stdio. Map `turn/start`, `turn/steer`, `turn/interrupt` to the existing chat queue system.
+- **Prerequisite**: Ship Claude Code steering first (Path A), then Codex app-server (Path B)
+- **Not rule-breaking**: `codex --app-server` is a CLI mode, not a direct API call. Same auth, same rate limits, same sandbox as `codex exec`.

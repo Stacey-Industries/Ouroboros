@@ -2,6 +2,7 @@ import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
+import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { useAgentChatContext } from './useAgentChatContext';
@@ -23,7 +24,7 @@ function buildSlashCommandContext(
     onNewThread: model.startNewChat,
     onRemember,
     onOpenMemories,
-    skills: model.skills,
+    commands: model.commands,
   };
 }
 
@@ -63,7 +64,7 @@ function buildConversationThreadProps(
 }
 
 function buildConversationContextProps(
-  model: AgentChatWorkspaceModel,
+  _model: AgentChatWorkspaceModel,
   context: ReturnType<typeof useAgentChatContext>,
 ): Pick<
   React.ComponentProps<typeof AgentChatConversation>,
@@ -159,7 +160,7 @@ function buildConversationProps(
 
 function useRememberAction(
   projectRoot: string | null,
-  toast: (msg: string, type: string) => void,
+  toast: (msg: string, type?: ToastType) => void,
 ): (content: string) => Promise<void> {
   return useCallback(
     async (content: string) => {

@@ -43,7 +43,7 @@ export async function applyPatch(
       ? ['apply', '-R', '--whitespace=nowarn', tmpFile]
       : ['apply', '--whitespace=nowarn', tmpFile];
     await gitExec(applyArgs, { cwd: root });
-    return { success: true };
+    return { success: true as const } as GitResponse<Record<string, never>>;
   } catch (err: unknown) {
     // Check if already applied/reverted
     try {
@@ -51,7 +51,7 @@ export async function applyPatch(
         ? ['apply', '--check', '--whitespace=nowarn', tmpFile]
         : ['apply', '-R', '--check', '--whitespace=nowarn', tmpFile];
       await gitExec(checkArgs, { cwd: root });
-      return { success: true };
+      return { success: true as const } as GitResponse<Record<string, never>>;
     } catch {
       return { success: false, error: gitErrorMessage(err) };
     }
@@ -69,14 +69,14 @@ export async function stagePatch(
   try {
     await writeTempPatch(tmpFile, patchContent);
     await gitExec(['apply', '--cached', '--whitespace=nowarn', tmpFile], { cwd: root });
-    return { success: true };
+    return { success: true as const } as GitResponse<Record<string, never>>;
   } catch (err: unknown) {
     // Check if already staged
     try {
       await gitExec(['apply', '--cached', '--reverse', '--check', '--whitespace=nowarn', tmpFile], {
         cwd: root,
       });
-      return { success: true };
+      return { success: true as const } as GitResponse<Record<string, never>>;
     } catch {
       return { success: false, error: gitErrorMessage(err) };
     }

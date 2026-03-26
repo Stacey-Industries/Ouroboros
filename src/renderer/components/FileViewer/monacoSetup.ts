@@ -21,8 +21,8 @@ export function initMonaco(): void {
   // The vite-plugin-monaco-editor handles MonacoEnvironment.getWorkerUrl
   // configuration at build time. If it hasn't set it up (e.g. in test env),
   // provide a safe fallback that uses the editor worker for everything.
-  if (typeof self !== 'undefined' && !(self as Record<string, unknown>).MonacoEnvironment) {
-    (self as Record<string, unknown>).MonacoEnvironment = {
+  if (typeof self !== 'undefined' && !(self as unknown as Record<string, unknown>).MonacoEnvironment) {
+    (self as unknown as Record<string, unknown>).MonacoEnvironment = {
       getWorker() {
         // Fallback: return a basic worker. In production the plugin sets the
         // correct worker URLs, so this path should rarely be hit.

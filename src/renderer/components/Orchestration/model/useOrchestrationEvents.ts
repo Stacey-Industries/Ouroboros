@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
+
 import {
   deriveStateFromSession,
   hasElectronAPI,
   mergeSession,
-  sessionMatchesProjectRoot,
   type OrchestrationStateStore,
+  sessionMatchesProjectRoot,
   updateSessionsWithResult,
   updateSessionsWithVerification,
 } from '../useOrchestrationModel.helpers';

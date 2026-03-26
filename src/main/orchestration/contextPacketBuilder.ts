@@ -136,7 +136,6 @@ async function enrichPacketWithSystemInstructions(
 async function enrichPacketWithContextLayer(
   packet: ContextPacket,
   goal: string,
-  repoSnapshot?: RepoIndexSnapshot,
 ): Promise<ContextPacket> {
   try {
     const { getContextLayerController } = await import('../contextLayer/contextLayerController');
@@ -145,7 +144,6 @@ async function enrichPacketWithContextLayer(
       const enriched = await layerController.enrichPacket(
         packet,
         extractGoalKeywords(goal),
-        repoSnapshot,
       );
       return enriched.packet;
     }
@@ -243,7 +241,7 @@ async function buildFullContextPacket(options: {
     omittedCandidates,
     budget,
   };
-  packet = await enrichPacketWithContextLayer(packet, options.request.goal, options.repoSnapshot);
+  packet = await enrichPacketWithContextLayer(packet, options.request.goal);
   packet = await enrichPacketWithSystemInstructions(packet, options.request);
   return { selection, packet };
 }

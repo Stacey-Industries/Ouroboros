@@ -1,8 +1,9 @@
 import React from 'react';
+
 import {
   Badge,
-  CodeLine,
   cardStyle,
+  CodeLine,
   configListStyle,
 } from './ContextBuilderPrimitives';
 import type {

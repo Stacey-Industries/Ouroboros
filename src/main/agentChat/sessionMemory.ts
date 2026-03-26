@@ -1,3 +1,4 @@
+import type { SessionMemoryEntry } from '@shared/types/agentChat';
 import { createHash, randomUUID } from 'crypto';
 import { app } from 'electron';
 import * as fs from 'fs/promises';
@@ -5,16 +6,7 @@ import * as path from 'path';
 
 import log from '../logger';
 
-export interface SessionMemoryEntry {
-  id: string;
-  timestamp: string;
-  sessionId: string;
-  type: 'decision' | 'pattern' | 'fact' | 'preference' | 'error_resolution';
-  content: string;
-  relevantFiles: string[];
-  confidence: number;
-  supersededBy?: string;
-}
+export type { SessionMemoryEntry };
 
 const MAX_ENTRIES = 200;
 const MIN_CONFIDENCE = 0.2;

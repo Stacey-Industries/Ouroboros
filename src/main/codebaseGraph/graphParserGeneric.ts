@@ -21,8 +21,8 @@ export interface LanguageExtractorConfig {
   classTypes: Set<string>;
   interfaceTypes: Set<string>;
   importTypes: Set<string>;
-  getNameField: (node: TreeSitterModule.Node) => string | null;
-  getImportSource: (node: TreeSitterModule.Node) => string | null;
+  getNameField: (node: TreeSitterModule.SyntaxNode) => string | null;
+  getImportSource: (node: TreeSitterModule.SyntaxNode) => string | null;
 }
 
 // ─── Language Configs ────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ function addGenericSymbol(ctx: GenericWalkContext, opts: SymbolAddOpts): void {
   ctx.edges.push({ source: ctx.fileNodeId, target: nodeId, type: 'contains' });
 }
 
-function walkGenericNode(node: TreeSitterModule.Node, ctx: GenericWalkContext): void {
+function walkGenericNode(node: TreeSitterModule.SyntaxNode, ctx: GenericWalkContext): void {
   const line = node.startPosition.row + 1;
   const endLine = node.endPosition.row + 1;
 
@@ -172,7 +172,7 @@ function walkGenericNode(node: TreeSitterModule.Node, ctx: GenericWalkContext): 
 }
 
 function handleGenericSymbol(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   ctx: GenericWalkContext,
   line: number,
   endLine: number,
@@ -192,7 +192,7 @@ function handleGenericSymbol(
   }
 }
 
-function handleGenericImport(node: TreeSitterModule.Node, ctx: GenericWalkContext): void {
+function handleGenericImport(node: TreeSitterModule.SyntaxNode, ctx: GenericWalkContext): void {
   if (!ctx.config.importTypes.has(node.type)) return;
   const source = ctx.config.getImportSource(node);
   if (!source) return;

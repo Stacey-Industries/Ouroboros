@@ -76,8 +76,10 @@ export async function buildGraphSummary(): Promise<GraphSummary> {
       ctrl.detectChanges().catch(() => null),
     ]);
 
-    const hotspots = extractHotspots(architecture);
-    const blastRadius = changes ? extractBlastRadius(changes) : [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hotspots = extractHotspots(architecture as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blastRadius = changes ? extractBlastRadius(changes as any) : [];
 
     return { hotspots, blastRadius, builtAt: Date.now() };
   } catch (err) {

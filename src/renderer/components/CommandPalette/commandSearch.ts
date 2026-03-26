@@ -1,4 +1,4 @@
-import Fuse from 'fuse.js';
+import Fuse, { type IFuseOptions, type RangeTuple } from 'fuse.js';
 
 import type { Command, CommandMatch } from './types';
 
@@ -9,7 +9,7 @@ const MAX_RECENT_SHOWN = 5;
 
 // ─── Fuse.js config ──────────────────────────────────────────────────────────
 
-export const FUSE_OPTIONS: Fuse.IFuseOptions<Command> = {
+export const FUSE_OPTIONS: IFuseOptions<Command> = {
   keys: [
     { name: 'label', weight: 0.7 },
     { name: 'category', weight: 0.3 },
@@ -90,7 +90,7 @@ export function buildFuseMatches(fuse: Fuse<Command>, query: string): CommandMat
     });
 }
 
-function expandIndices(indices: readonly Fuse.RangeTuple[] | undefined): number[] {
+function expandIndices(indices: readonly RangeTuple[] | undefined): number[] {
   if (!indices) return [];
   const result: number[] = [];
   for (const [start, end] of indices) {

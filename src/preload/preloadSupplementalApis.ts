@@ -22,6 +22,7 @@ import type {
   PerfMetrics,
   UpdaterEvent,
 } from '../renderer/types/electron';
+import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 
 type SupplementalApiKey =
   | 'approval'
@@ -260,16 +261,18 @@ export const supplementalApis: SupplementalApis = {
     onEvent: (callback) => onChannel<AgentChatEvent>(AGENT_CHAT_EVENT_CHANNELS.event, callback),
   },
 
+   
   orchestration: {
-    previewContext: (request) =>
+    previewContext: (request: unknown) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
-    buildContextPacket: (request) =>
+    buildContextPacket: (request: unknown) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.buildContextPacket, request),
     // Routes to agentChat:cancelTask (singleton orchestration) — the old
     // orchestration:cancelTask handler was removed because it created a fresh
     // adapter with empty process Maps and could never kill the running process.
-    cancelTask: (taskId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
-  },
+    cancelTask: (taskId: string) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- orchestration API surface is intentionally partial; full ElectronAPI.orchestration type includes routes handled elsewhere
+  } as any,
 
   contextLayer: {
     onProgress: (callback) => onChannel<ContextLayerProgress>('contextLayer:progress', callback),
@@ -285,26 +288,5 @@ export const supplementalApis: SupplementalApis = {
       onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
   },
 
-  rulesAndSkills: {
-    listRules: (projectRoot: string) =>
-      ipcRenderer.invoke('rules:list', projectRoot),
-    readRule: (projectRoot: string, type: string) =>
-      ipcRenderer.invoke('rules:read', projectRoot, type),
-    createRule: (projectRoot: string, type: string) =>
-      ipcRenderer.invoke('rules:create', projectRoot, type),
-    listSkills: (projectRoot: string) =>
-      ipcRenderer.invoke('skills:list', projectRoot),
-    expandSkill: (projectRoot: string, skillId: string, params: Record<string, string>, provider?: string) =>
-      ipcRenderer.invoke('skills:expand', projectRoot, skillId, params, provider),
-    createSkill: (projectRoot: string, name: string) =>
-      ipcRenderer.invoke('skills:create', projectRoot, name),
-    getHooksConfig: (scope: string, projectRoot?: string) =>
-      ipcRenderer.invoke('hooks:getConfig', scope, projectRoot),
-    addHook: (args: { scope: string; eventType: string; command: string; matcher?: string; projectRoot?: string }) =>
-      ipcRenderer.invoke('hooks:addHook', args),
-    removeHook: (args: { scope: string; eventType: string; index: number; projectRoot?: string }) =>
-      ipcRenderer.invoke('hooks:removeHook', args),
-    onChanged: (callback: () => void) =>
-      onChannel<void>('rulesAndSkills:changed', callback),
-  },
+  rulesAndSkills: rulesAndSkillsApi,
 };

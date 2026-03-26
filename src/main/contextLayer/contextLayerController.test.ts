@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
-import type {
-  ContextLayerConfig,
-  ContextLayerManifest,
-  ModuleContextEntry,
-  RepoMap,
-} from './contextLayerTypes'
 import type { ContextPacket } from '../orchestration/types'
 import type { InjectionResult } from './contextInjector'
 import type { GCResult } from './contextLayerGC'
+import type {
+  ContextLayerConfig,
+  ContextLayerManifest,
+  RepoMap,
+} from './contextLayerTypes'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -23,28 +23,25 @@ vi.mock('./contextInjector')
 vi.mock('./contextLayerGC')
 
 // Import mocked modules
+import { injectContextLayer } from './contextInjector'
+// Import the module under test AFTER mocks are set up
+import * as controllerModule from './contextLayerController'
+
+const { getContextLayerController, initContextLayer } = controllerModule
+import { runContextLayerGC } from './contextLayerGC'
 import {
-  initContextLayerStore,
   ensureGitignore,
+  initContextLayerStore,
   readManifest,
   readRepoMap,
-  writeRepoMap,
-  writeModuleEntry,
   writeManifest,
+  writeModuleEntry,
+  writeRepoMap,
 } from './contextLayerStore'
 import { createContextLayerWatcher } from './contextLayerWatcher'
+import { buildCrossModuleDependencies,buildModuleStructuralSummaries, detectModules } from './moduleDetector'
 import { generateRepoMap } from './repoMapGenerator'
-import { detectModules, buildModuleStructuralSummaries, buildCrossModuleDependencies } from './moduleDetector'
 import { createSummarizationQueue } from './summarizationQueue'
-import { injectContextLayer } from './contextInjector'
-import { runContextLayerGC } from './contextLayerGC'
-
-// Import the module under test AFTER mocks are set up
-import {
-  getContextLayerController,
-  initContextLayer,
-  ContextLayerController,
-} from './contextLayerController'
 
 // ---------------------------------------------------------------------------
 // Test data factories
@@ -180,6 +177,7 @@ function createMockRepoIndex(): RepoIndexSnapshot {
         totalHints: 0,
         generatedAt: Date.now(),
       },
+      recentCommits: [],
       files: [
         {
           rootPath: '/workspace',
@@ -544,6 +542,8 @@ describe('contextLayerController', () => {
 
   it('onGitCommit delegates to watcher', async () => {
     mockedReadManifest.mockResolvedValue(null)
+    // Mock getGitChangedFiles so it doesn't spawn a real git process
+    vi.spyOn(controllerModule, 'getGitChangedFiles').mockResolvedValue([])
 
     await initContextLayer({
       workspaceRoot: '/workspace',
@@ -554,7 +554,10 @@ describe('contextLayerController', () => {
     const ctrl = getContextLayerController()!
     ctrl.onGitCommit()
 
-    expect(mockWatcher.onGitCommit).toHaveBeenCalled()
+    // onGitCommit now runs git-diff async; wait for the promise to settle
+    await vi.waitFor(() => {
+      expect(mockWatcher.onGitCommit).toHaveBeenCalled()
+    })
   })
 
   // -----------------------------------------------------------------------

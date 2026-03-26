@@ -263,7 +263,7 @@ export function TerminalInstanceView({
       <TerminalToolbarLayer controller={controller} isHovered={isHovered} />
 
       <div
-        ref={controller.containerRef}
+        ref={controller.containerRef as React.RefObject<HTMLDivElement>}
         style={CONTAINER_STYLE}
         aria-label="Terminal"
         data-session-id={controller.sessionId}

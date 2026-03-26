@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { ProviderProgressEvent, VerificationSummary as VerificationSummaryType } from '../../types/electron';
 import {
   ProviderActivityCard,

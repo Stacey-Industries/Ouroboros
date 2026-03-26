@@ -25,6 +25,10 @@
     "src/renderer/**/*",
     "src/shared/**/*",
     "src/renderer/types/**/*",
-    "src/web/**/*"
+    "src/web/**/*",
+    "src/main/orchestration/types.ts",
+    "src/main/orchestration/typesContext.ts",
+    "src/main/orchestration/typesDomain.ts",
+    "src/main/orchestration/typesProvider.ts"
   ]
 }

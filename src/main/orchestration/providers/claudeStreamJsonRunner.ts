@@ -92,10 +92,10 @@ function tryParseEvent(line: string): StreamJsonEvent | null {
     if (parsed && typeof parsed === 'object' && typeof parsed.type === 'string') {
       return parsed as StreamJsonEvent;
     }
-    log.warn('parsed JSON lacks "type" field:', trimmed.slice(0, 120));
+    console.warn('[claudeStreamJson] parsed JSON lacks "type" field:', trimmed.slice(0, 120));
     return null;
   } catch {
-    log.warn('malformed line:', trimmed.slice(0, 120));
+    console.warn('[claudeStreamJson] malformed line:', trimmed.slice(0, 120));
     return null;
   }
 }

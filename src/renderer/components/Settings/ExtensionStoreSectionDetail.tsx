@@ -116,7 +116,7 @@ function ExtensionMetadata({
             style={Styles.linkStyle}
             onClick={(e) => {
               e.preventDefault();
-              window.electronAPI?.openExternalLink?.(ext.repository!);
+              void window.electronAPI?.app?.openExternal(ext.repository!);
             }}
           >
             {ext.repository}

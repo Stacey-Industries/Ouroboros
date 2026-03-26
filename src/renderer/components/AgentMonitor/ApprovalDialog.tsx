@@ -42,17 +42,18 @@ function useApprovalDialogState(
   }, [current, onReject, rejectReason]);
   useEffect(() => {
     if (!current || showRejectInput) return;
+    const req = current;
 
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Enter' || event.key === 'y' || event.key === 'Y') {
         event.preventDefault();
-        onApprove(current.requestId);
+        onApprove(req.requestId);
       } else if (event.key === 'Escape' || event.key === 'n' || event.key === 'N') {
         event.preventDefault();
-        onReject(current.requestId);
+        onReject(req.requestId);
       } else if (event.key === 'a' || event.key === 'A') {
         event.preventDefault();
-        onAlwaysAllow(current.requestId, current.sessionId, current.toolName);
+        onAlwaysAllow(req.requestId, req.sessionId, req.toolName);
       }
     }
 

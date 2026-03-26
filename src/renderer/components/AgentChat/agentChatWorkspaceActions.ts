@@ -1,6 +1,6 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef } from 'react';
 
-import type { SkillDefinition } from '../../../shared/types/rulesAndSkills';
+import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatLinkedDetailsResult, AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord, CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
@@ -15,45 +15,15 @@ export interface SendMessageArgs {
   setActiveThreadId: Dispatch<SetStateAction<string | null>>; setDraft: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string | null>>; setIsSending: Dispatch<SetStateAction<boolean>>; setPendingUserMessage: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
-  skills?: SkillDefinition[];
 }
 
 type AgentChatActionArgs = SendMessageArgs & { activeThread: AgentChatThreadRecord | null; setError: Dispatch<SetStateAction<string | null>> };
 type AgentChatActionState = { branchFromMessage: (message: AgentChatMessageRecord) => Promise<void>; deleteThread: (threadId: string) => Promise<void>; editAndResend: (message: AgentChatMessageRecord) => Promise<void>; openLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; retryMessage: (message: AgentChatMessageRecord) => Promise<void>; revertMessage: (message: AgentChatMessageRecord) => Promise<void>; selectThread: (threadId: string | null) => void; sendMessage: () => Promise<void>; startNewChat: () => void; stopTask: () => Promise<void>; };
-type BuildWorkspaceModelArgs = AgentChatActionState & { activeThread: AgentChatThreadRecord | null; activeThreadId: string | null; attachments: ImageAttachment[]; setAttachments: (attachments: ImageAttachment[]) => void; chatOverrides: ChatOverrides; setChatOverrides: (overrides: ChatOverrides) => void; settingsModel: string; codexSettingsModel: string; defaultProvider: 'claude-code' | 'codex' | 'anthropic-api'; modelProviders: ModelProvider[]; codexModels: CodexModelOption[]; closeDetails: () => void; details: AgentChatLinkedDetailsResult | null; detailsError: string | null; detailsIsLoading: boolean; draft: string; error: string | null; isLoading: boolean; isDetailsOpen: boolean; isSending: boolean; pendingUserMessage: string | null; openConversationDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; openDetailsInOrchestration: () => void; projectRoot: string | null; reloadThreads: () => Promise<void>; setContextFilePaths: (paths: string[]) => void; setDraft: (value: string) => void; threads: AgentChatThreadRecord[]; queuedMessages: QueuedMessage[]; editQueuedMessage: (id: string) => void; deleteQueuedMessage: (id: string) => void; sendQueuedMessageNow: (id: string) => Promise<void>; skills?: SkillDefinition[]; };
+type BuildWorkspaceModelArgs = AgentChatActionState & { activeThread: AgentChatThreadRecord | null; activeThreadId: string | null; attachments: ImageAttachment[]; setAttachments: (attachments: ImageAttachment[]) => void; chatOverrides: ChatOverrides; setChatOverrides: (overrides: ChatOverrides) => void; settingsModel: string; codexSettingsModel: string; defaultProvider: 'claude-code' | 'codex' | 'anthropic-api'; modelProviders: ModelProvider[]; codexModels: CodexModelOption[]; closeDetails: () => void; details: AgentChatLinkedDetailsResult | null; detailsError: string | null; detailsIsLoading: boolean; draft: string; error: string | null; isLoading: boolean; isDetailsOpen: boolean; isSending: boolean; pendingUserMessage: string | null; openConversationDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; openDetailsInOrchestration: () => void; projectRoot: string | null; reloadThreads: () => Promise<void>; setContextFilePaths: (paths: string[]) => void; setDraft: (value: string) => void; threads: AgentChatThreadRecord[]; queuedMessages: QueuedMessage[]; editQueuedMessage: (id: string) => void; deleteQueuedMessage: (id: string) => void; sendQueuedMessageNow: (id: string) => Promise<void>; commands?: CommandDefinition[]; };
 
 function hasElectronAPI(): boolean { return typeof window !== 'undefined' && 'electronAPI' in window; }
 function getErrorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
-function parseSkillArgs(argsStr: string, skill: SkillDefinition): Record<string, string> {
-  const argParts = argsStr ? argsStr.split(/\s+/) : [];
-  const params: Record<string, string> = {};
-  skill.parameters.forEach((p, i) => { if (argParts[i]) params[p.name] = argParts[i]; });
-  return params;
-}
-
-function findMatchingSkill(cmdName: string, skills: SkillDefinition[]): SkillDefinition | undefined {
-  return skills.find((s) => s.id === cmdName || s.name === cmdName || `skill:${s.id}` === cmdName);
-}
-
-export async function handleSkillExpansion(
-  content: string,
-  projectRoot: string,
-  skills: SkillDefinition[],
-  provider?: string,
-): Promise<{ handled: boolean; expandedContent?: string }> {
-  if (!content.startsWith('/')) return { handled: false };
-  const spaceIdx = content.indexOf(' ');
-  const cmdName = spaceIdx > 0 ? content.slice(1, spaceIdx) : content.slice(1);
-  const argsStr = spaceIdx > 0 ? content.slice(spaceIdx + 1).trim() : '';
-  const skill = findMatchingSkill(cmdName, skills);
-  if (!skill) return { handled: false };
-  if (!hasElectronAPI() || !window.electronAPI.rulesAndSkills) return { handled: false };
-  const params = parseSkillArgs(argsStr, skill);
-  const result = await window.electronAPI.rulesAndSkills.expandSkill(projectRoot, skill.id, params, provider);
-  if (!result.success || !result.expansion) return { handled: false };
-  return { handled: true, expandedContent: result.expansion.expandedBody };
-}
 async function saveAllDirtyBuffers(): Promise<void> { const promises: Promise<void>[] = []; window.dispatchEvent(new CustomEvent(SAVE_ALL_DIRTY_EVENT, { detail: { addPromise: (promise: Promise<void>) => promises.push(promise) } })); if (promises.length > 0) await Promise.all(promises); }
 function isCodexModel(model: string | undefined, codexModels: CodexModelOption[] | undefined): boolean { return Boolean(model) && (codexModels ?? []).some((entry) => entry.id === model); }
 function getThreadIdForSend(threadId: string | null): string | undefined { return isDraftThreadId(threadId) ? undefined : threadId ?? undefined; }
@@ -67,24 +37,15 @@ function applyComposerSuccess(args: SendMessageArgs, result: Awaited<ReturnType<
 function applyComposerFailure(args: SendMessageArgs, content: string, error: unknown): void { args.setError(getErrorMessage(error)); args.setDraft(content); args.setPendingUserMessage(null); }
 function applyResendSuccess(args: AgentChatActionArgs, result: Awaited<ReturnType<typeof sendAgentChatRequest>>, source: 'edit' | 'retry'): void { mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId); if (source === 'edit') { args.setDraft(''); clearPersistedDraft(result.thread?.id ?? args.activeThreadId); } }
 function applyResendFailure(args: AgentChatActionArgs, error: unknown): void { args.setError(getErrorMessage(error)); }
-function resolveProvider(args: SendMessageArgs): string {
-  const model = args.chatOverrides?.model;
-  if (model && isCodexModel(model, args.codexModels)) return 'codex';
-  return 'claude-code';
-}
 interface SkillResolution { displayContent: string; skillExpansion?: string; }
-async function resolveSkill(content: string, args: SendMessageArgs): Promise<SkillResolution> {
-  if (!content.startsWith('/') || !args.projectRoot) return { displayContent: content };
-  const result = await handleSkillExpansion(content, args.projectRoot, args.skills ?? [], resolveProvider(args));
-  if (!result.handled || !result.expandedContent) return { displayContent: content };
-  const cmdName = content.slice(1).split(/\s/)[0];
-  return { displayContent: `⚡ ${cmdName}`, skillExpansion: result.expandedContent };
+async function resolveSkill(content: string): Promise<SkillResolution> {
+  return { displayContent: content };
 }
 async function sendComposerMessage(args: SendMessageArgs): Promise<void> {
   if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.');
   const rawContent = args.draft.trim();
   if ((!rawContent && !args.attachments?.length) || args.isSending) return;
-  const { displayContent, skillExpansion } = await resolveSkill(rawContent, args);
+  const { displayContent, skillExpansion } = await resolveSkill(rawContent);
   args.setIsSending(true);
   args.setError(null);
   args.setDraft('');
@@ -112,4 +73,4 @@ export function useStopTaskAction(activeThread: AgentChatThreadRecord | null, se
 export function useRevertMessageAction(setError: Dispatch<SetStateAction<string | null>>, setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>): (message: AgentChatMessageRecord) => Promise<void> { return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { if (!hasElectronAPI()) return; if (!message.orchestration?.preSnapshotHash) return void setError('No snapshot was captured before this agent turn. Revert is unavailable.'); try { const result = await window.electronAPI.agentChat.revertToSnapshot(message.threadId, message.id); if (!result.success) return void setError(result.error ?? 'Revert failed.'); const threadsResult = await window.electronAPI.agentChat.listThreads(); if (threadsResult.success && threadsResult.threads) setThreads(threadsResult.threads); } catch (revertError) { setError(getErrorMessage(revertError)); } }, [setError, setThreads]); }
 
 export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionState { const selectionActions = useThreadSelectionActions(args.setActiveThreadId, args.setError); const sendMessage = useSendMessageAction(args); const openLinkedDetails = useOpenLinkedDetailsAction(args.setError); const deleteThread = useDeleteThreadAction(args.setThreads, args.setActiveThreadId, args.setError); const editAndResend = useEditAndResendAction(args); const retryMessage = useRetryMessageAction(args); const revertMessage = useRevertMessageAction(args.setError, args.setThreads); const branchFromMessage = useBranchFromMessageAction(args.setThreads, args.setActiveThreadId, args.setError); const stopTask = useStopTaskAction(args.activeThread, args.setError); return { branchFromMessage, deleteThread, editAndResend, openLinkedDetails, retryMessage, revertMessage, selectThread: selectionActions.selectThread, sendMessage, startNewChat: selectionActions.startNewChat, stopTask }; }
-export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): AgentChatWorkspaceModel { return { ...args, skills: args.skills ?? [], canSend: Boolean(args.projectRoot && (args.draft.trim() || args.attachments.length > 0)) && !args.isSending, hasProject: Boolean(args.projectRoot) }; }
+export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): AgentChatWorkspaceModel { return { ...args, commands: args.commands ?? [], canSend: Boolean(args.projectRoot && (args.draft.trim() || args.attachments.length > 0)) && !args.isSending, hasProject: Boolean(args.projectRoot) }; }

@@ -121,7 +121,7 @@ function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projec
   const noop = useCallback(() => {}, []);
   switch (view) {
     case 'settings': return <SettingsPanel onClose={noop} />;
-    case 'usage': return <UsagePanel onClose={noop} />;
+    case 'usage': return <UsagePanel />;
     case 'context-builder': return projectRoot ? <ContextBuilder projectRoot={projectRoot} onClose={noop} /> : null;
     case 'time-travel': return <TimeTravelPanelConnected onClose={noop} />;
     case 'extensions': return <div className="bg-surface-base" style={panelStyle}><div style={scrollStyle}><ExtensionStoreSection /></div></div>;

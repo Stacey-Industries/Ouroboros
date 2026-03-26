@@ -277,7 +277,9 @@ export async function forceActivateExtension(name: string): Promise<ExtensionAct
 
   appendLog(ext, 'Manually activated via extensions:activate');
   await activateExtension(ext);
-  return { success: ext.status === 'active', error: ext.errorMessage };
+  // Re-fetch ext from map to bypass narrowing applied before activateExtension
+  const refreshed = extensions.get(name);
+  return { success: refreshed?.status === 'active', error: refreshed?.errorMessage };
 }
 
 export function getExtensionLog(name: string): ExtensionLogResult {

@@ -51,6 +51,8 @@ export interface HookPayload {
   };
   /** Working directory of the Claude Code session — set by hook scripts */
   cwd?: string;
+  /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
+  internal?: boolean;
 }
 
 export interface AgentEvent {
@@ -208,34 +210,47 @@ function triggerClaudeMdGeneration(
   }
 }
 
-function dispatchLifecycleEvent(payload: HookPayload): void {
-  if (payload.type === 'session_start') {
-    dispatchActivationEvent('onSessionStart', { sessionId: payload.sessionId }).catch(() => {});
+function handleSessionStart(payload: HookPayload): void {
+  dispatchActivationEvent('onSessionStart', { sessionId: payload.sessionId }).catch(() => {});
+  // Internal sessions (Haiku summarizer, CLAUDE.md generator) should not
+  // trigger re-indexing — they never change the codebase.
+  if (!payload.internal) {
     getContextLayerController()?.onSessionStart();
     getGraphController()?.onSessionStart();
-    return;
   }
+}
 
-  if (
-    payload.type === 'session_stop' ||
-    payload.type === 'agent_stop' ||
-    payload.type === 'agent_end'
-  ) {
-    dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {});
-  }
+function handleSessionEnd(payload: HookPayload): void {
+  dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {});
+}
 
-  // Only treat a session_stop as a potential git commit — a PTY Claude Code
-  // session may have committed files.  agent_end fires for every sub-agent
-  // completion (including internal chat API agents) and does not imply a git
-  // state change, so calling onGitCommit() there marks all modules dirty
-  // unnecessarily and causes a full re-index on every subsequent message.
-  if (payload.type === 'session_stop') {
+function handleSessionStop(payload: HookPayload): void {
+  // Only treat a session_stop as a potential git commit when it came from a
+  // real user PTY session.  Internal sessions (Haiku summarizer, CLAUDE.md
+  // generator) never commit files and must not mark modules dirty — doing so
+  // caused a feedback loop where each summarizer completion re-dirtied every
+  // module, triggering another round of summarization.
+  if (!payload.internal) {
     getContextLayerController()?.onGitCommit();
     getGraphController()?.onGitCommit();
     invalidateAgentChatCache();
-    // Trigger CLAUDE.md generation if configured for post-session
     triggerClaudeMdGeneration('post-session', payload);
   }
+}
+
+function dispatchLifecycleEvent(payload: HookPayload): void {
+  if (payload.type === 'session_start') {
+    handleSessionStart(payload);
+    return;
+  }
+
+  const isEndEvent =
+    payload.type === 'session_stop' ||
+    payload.type === 'agent_stop' ||
+    payload.type === 'agent_end';
+
+  if (isEndEvent) handleSessionEnd(payload);
+  if (payload.type === 'session_stop') handleSessionStop(payload);
 }
 
 function handleApprovalRequest(payload: HookPayload): void {
@@ -243,7 +258,8 @@ function handleApprovalRequest(payload: HookPayload): void {
     return;
   }
 
-  if (!toolRequiresApproval(payload.toolName, payload.sessionId)) {
+  // Internal sessions (Haiku summarizer, CLAUDE.md generator) auto-approve
+  if (payload.internal || !toolRequiresApproval(payload.toolName, payload.sessionId)) {
     void respondToApproval(payload.requestId, { decision: 'approve' });
     return;
   }

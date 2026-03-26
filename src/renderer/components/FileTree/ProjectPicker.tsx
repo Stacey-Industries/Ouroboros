@@ -27,7 +27,7 @@ export function ProjectPicker({
   });
 
   return (
-    <div ref={controller.containerRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={controller.containerRef as React.RefObject<HTMLDivElement>} style={{ position: 'relative', width: '100%' }}>
       <ProjectPickerToggle
         busy={controller.busy}
         currentPath={currentPath}

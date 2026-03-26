@@ -150,7 +150,7 @@ function insertThreadMessages(
 ): void {
   const s = (v: unknown) => (v ? JSON.stringify(v) : null);
   for (const m of msgs) {
-    insertMsg.run(
+    const msgArgs = [
       m.id,
       threadId,
       m.role,
@@ -166,7 +166,9 @@ function insertThreadMessages(
       (m.durationSummary as string) ?? null,
       s(m.tokenUsage),
       s(m.blocks),
-    );
+    ];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (insertMsg as any).run(...msgArgs);
   }
 }
 
@@ -183,7 +185,7 @@ function migrateOneThreadFile(
 
   const msgs = (thread.messages ?? []) as Array<Record<string, unknown>>;
   runTransaction(db, () => {
-    insertThread.run(
+    const threadArgs = [
       thread.id,
       thread.workspaceRoot ?? '',
       thread.createdAt ?? 0,
@@ -192,7 +194,9 @@ function migrateOneThreadFile(
       thread.status ?? 'idle',
       thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
       thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
-    );
+    ];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (insertThread as any).run(...threadArgs);
     insertThreadMessages(insertMsg, thread.id, msgs);
   });
   // eslint-disable-next-line security/detect-non-literal-fs-filename

@@ -104,34 +104,37 @@ async function refreshProvider(provider: AuthProvider): Promise<boolean> {
 // Refresh cycle
 // ---------------------------------------------------------------------------
 
+function isRefreshableState(state: AuthState): boolean {
+  return (state.status === 'authenticated' || state.status === 'expired') && state.credentialType === 'oauth';
+}
+
+async function handleRefreshOutcome(provider: AuthProvider, ok: boolean): Promise<void> {
+  if (ok) {
+    emitAuthStateChange({ provider, status: 'authenticated', credentialType: 'oauth' });
+    return;
+  }
+  if ((failureCounts.get(provider) ?? 0) >= MAX_CONSECUTIVE_FAILURES) {
+    log.warn(`${TAG} Giving up on ${provider} — re-authentication required`);
+    emitAuthStateChange({ provider, status: 'expired', credentialType: 'oauth' });
+  }
+}
+
+async function tryRefreshState(state: AuthState): Promise<void> {
+  const shouldRefresh = await needsRefresh(state.provider);
+  if (!shouldRefresh) return;
+  try {
+    const ok = await refreshProvider(state.provider);
+    await handleRefreshOutcome(state.provider, ok);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn(`${TAG} Refresh error for ${state.provider}: ${msg}`);
+  }
+}
+
 async function refreshExpiring(states: AuthState[]): Promise<void> {
   for (const state of states) {
-    if (state.status !== 'authenticated' && state.status !== 'expired') continue;
-    if (state.credentialType !== 'oauth') continue;
-
-    const shouldRefresh = await needsRefresh(state.provider);
-    if (!shouldRefresh) continue;
-
-    try {
-      const ok = await refreshProvider(state.provider);
-      if (ok) {
-        emitAuthStateChange({
-          provider: state.provider,
-          status: 'authenticated',
-          credentialType: 'oauth',
-        });
-      } else if ((failureCounts.get(state.provider) ?? 0) >= MAX_CONSECUTIVE_FAILURES) {
-        log.warn(`${TAG} Giving up on ${state.provider} — re-authentication required`);
-        emitAuthStateChange({
-          provider: state.provider,
-          status: 'expired',
-          credentialType: 'oauth',
-        });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.warn(`${TAG} Refresh error for ${state.provider}: ${msg}`);
-    }
+    if (!isRefreshableState(state)) continue;
+    await tryRefreshState(state);
   }
 }
 

@@ -2,7 +2,7 @@
 import log from 'electron-log/renderer';
 import { type SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 
-import type { SkillDefinition } from '../../../shared/types/rulesAndSkills';
+import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import type {
   AgentChatLinkedDetailsResult,
@@ -34,7 +34,7 @@ export interface AgentChatWorkspaceModel {
   activeThreadId: string | null;
   attachments: ImageAttachment[];
   setAttachments: (attachments: ImageAttachment[]) => void;
-  skills: SkillDefinition[];
+  commands: CommandDefinition[];
   branchFromMessage: (message: AgentChatMessageRecord) => Promise<void>;
   canSend: boolean;
   chatOverrides: ChatOverrides;
@@ -274,21 +274,21 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
 
 /* ---------- Public hook ---------- */
 
-function buildActionArgs(controller: ReturnType<typeof useAgentChatWorkspaceController>, projectRoot: string | null, skills: SkillDefinition[]) {
-  return { ...controller, projectRoot, activeThread: controller.activeThread, activeThreadId: controller.threadState.activeThreadId, setActiveThreadId: controller.threadState.setActiveThreadId, setError: controller.threadState.setError, setThreads: controller.threadState.setThreads, skills };
+function buildActionArgs(controller: ReturnType<typeof useAgentChatWorkspaceController>, projectRoot: string | null) {
+  return { ...controller, projectRoot, activeThread: controller.activeThread, activeThreadId: controller.threadState.activeThreadId, setActiveThreadId: controller.threadState.setActiveThreadId, setError: controller.threadState.setError, setThreads: controller.threadState.setThreads };
 }
 
-interface BuildModelArgs { controller: ReturnType<typeof useAgentChatWorkspaceController>; actions: ReturnType<typeof useAgentChatActions>; hooks: ReturnType<typeof useWorkspaceHooks>; projectRoot: string | null; skills: SkillDefinition[]; }
+interface BuildModelArgs { controller: ReturnType<typeof useAgentChatWorkspaceController>; actions: ReturnType<typeof useAgentChatActions>; hooks: ReturnType<typeof useWorkspaceHooks>; projectRoot: string | null; commands: CommandDefinition[]; }
 function buildModel(args: BuildModelArgs) {
-  const { controller, actions, hooks, projectRoot, skills } = args;
+  const { controller, actions, hooks, projectRoot, commands } = args;
   const ds = hooks.detailsState;
-  return buildAgentChatWorkspaceModel({ ...controller, ...actions, ...ds, activeThreadId: controller.threadState.activeThreadId, closeDetails: ds.closeDetails, details: ds.details, detailsError: ds.error, detailsIsLoading: ds.isLoading, error: controller.threadState.error, isDetailsOpen: ds.isOpen, isLoading: controller.threadState.isLoading, openConversationDetails: ds.openDetails, openDetailsInOrchestration: ds.openOrchestration, openLinkedDetails: ds.openDetails, projectRoot, reloadThreads: controller.threadState.reloadThreads, sendMessage: hooks.sendMessage, startNewChat: hooks.startNewChat, threads: controller.threadState.threads, sendQueuedMessageNow: hooks.sendQueuedMessageNow, skills });
+  return buildAgentChatWorkspaceModel({ ...controller, ...actions, ...ds, activeThreadId: controller.threadState.activeThreadId, closeDetails: ds.closeDetails, details: ds.details, detailsError: ds.error, detailsIsLoading: ds.isLoading, error: controller.threadState.error, isDetailsOpen: ds.isOpen, isLoading: controller.threadState.isLoading, openConversationDetails: ds.openDetails, openDetailsInOrchestration: ds.openOrchestration, openLinkedDetails: ds.openDetails, projectRoot, reloadThreads: controller.threadState.reloadThreads, sendMessage: hooks.sendMessage, startNewChat: hooks.startNewChat, threads: controller.threadState.threads, sendQueuedMessageNow: hooks.sendQueuedMessageNow, commands });
 }
 
 export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWorkspaceModel {
   const controller = useAgentChatWorkspaceController(projectRoot);
-  const { skills } = useRulesAndSkills(projectRoot);
-  const actions = useAgentChatActions(buildActionArgs(controller, projectRoot, skills));
+  const { commands } = useRulesAndSkills(projectRoot);
+  const actions = useAgentChatActions(buildActionArgs(controller, projectRoot));
   const hooks = useWorkspaceHooks(controller, actions);
-  return buildModel({ controller, actions, hooks, projectRoot, skills });
+  return buildModel({ controller, actions, hooks, projectRoot, commands });
 }

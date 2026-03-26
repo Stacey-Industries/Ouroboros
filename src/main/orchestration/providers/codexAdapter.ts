@@ -1,7 +1,3 @@
-import { readFile, readdir } from 'fs/promises';
-import os from 'os';
-import path from 'path';
-
 import log from '../../logger';
 import type { ProviderCapabilities } from '../types';
 import {
@@ -12,7 +8,7 @@ import {
   resolveCodexSettings,
 } from './codexAdapterHelpers';
 import { buildPrompt } from './codexContextBuilder';
-import { type CodexEvent } from './codexEventHandler';
+import type { CodexExecEvent } from './codexExecRunner';
 import { type CodexExecProcessHandle } from './codexExecRunner';
 import {
   buildCodexCompletionArgs,
@@ -23,6 +19,7 @@ import {
   type CodexCompletionArgs,
   spawnCodexProcess,
 } from './codexLaunch';
+import { verifyCodexThreadId } from './codexThreadDiag';
 import {
   type ProviderAdapter,
   type ProviderLaunchContext,
@@ -36,42 +33,6 @@ export type { CodexCompletionArgs };
 const activeProcesses = new Map<string, CodexExecProcessHandle>();
 const cancelledTasks = new Set<string>();
 
-// ---------------------------------------------------------------------------
-// Diagnostic: cross-check captured thread_id against Codex session file
-// ---------------------------------------------------------------------------
-
-const UUID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/;
-
-async function verifyCodexThreadId(capturedThreadId: string): Promise<void> {
-  try {
-    const now = new Date();
-    const yyyy = now.getFullYear().toString();
-    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-    const dd = now.getDate().toString().padStart(2, '0');
-    const dir = path.join(os.homedir(), '.codex', 'sessions', yyyy, mm, dd);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from os.homedir() + fixed suffix
-    const entries = await readdir(dir);
-    const latest = entries
-      .filter((f) => f.startsWith('rollout-') && f.endsWith('.jsonl'))
-      .sort()
-      .pop();
-    if (!latest) return;
-    const filenameUuid = UUID_RE.exec(latest)?.[1] ?? null;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from os.homedir() + fixed suffix
-    const raw = await readFile(path.join(dir, latest), 'utf-8');
-    const firstLine = raw.slice(0, raw.indexOf('\n'));
-    const meta = JSON.parse(firstLine) as { payload?: { id?: string } };
-    const payloadId = meta.payload?.id ?? null;
-    log.info('[codex-diag] THREAD ID COMPARISON:');
-    log.info(`[codex-diag]   stream thread_id:         ${capturedThreadId}`);
-    log.info(`[codex-diag]   session_meta.payload.id:  ${payloadId ?? 'N/A'}`);
-    log.info(`[codex-diag]   rollout filename UUID:    ${filenameUuid ?? 'N/A'}`);
-    log.info(`[codex-diag]   match stream↔payload:     ${capturedThreadId === payloadId}`);
-    log.info(`[codex-diag]   match stream↔filename:    ${capturedThreadId === filenameUuid}`);
-  } catch {
-    log.info('[codex-diag] session file cross-check skipped (no session files found)');
-  }
-}
 
 function cleanupLaunchArtifacts(taskId: string, invocationTempPaths: string[]): void {
   activeProcesses.delete(taskId);
@@ -152,7 +113,7 @@ async function scheduleCodexLaunch(args: {
   resumeThreadId?: string;
   invocationTempPaths: string[];
   getCancelledBeforeLaunch: () => boolean;
-  eventHandler: (event: CodexEvent) => void;
+  eventHandler: (event: CodexExecEvent) => void;
 }): Promise<{ threadId: string | null; durationMs: number } | null> {
   if (args.context.request.goalAttachments?.length) {
     try {
@@ -222,7 +183,7 @@ interface CodexLaunchScheduleArgs {
   resumeThreadId: string | undefined;
   invocationTempPaths: string[];
   getCancelledBeforeLaunch: () => boolean;
-  eventHandler: (event: CodexEvent) => void;
+  eventHandler: (event: CodexExecEvent) => void;
   completionArgs: CodexCompletionArgs;
 }
 

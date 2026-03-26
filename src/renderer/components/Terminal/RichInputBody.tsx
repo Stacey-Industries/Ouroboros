@@ -125,7 +125,7 @@ function RichInputPanel({
         onToggleLineNumbers={onToggleLineNumbers}
         showLineNumbers={showLineNumbers}
       />
-      <div ref={containerRef} style={editorHostStyle} />
+      <div ref={containerRef as React.RefObject<HTMLDivElement>} style={editorHostStyle} />
       <style>{richInputAnimationCss}</style>
     </div>
   );

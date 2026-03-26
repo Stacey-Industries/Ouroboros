@@ -1,9 +1,3 @@
-import type {
-  ContextPacketResult,
-  TaskMutationResult,
-  TaskRequest,
-} from '@shared/types/orchestration';
-
 import type { AgentChatAPI } from './electron-agent-chat';
 import type { AuthAPI } from './electron-auth';
 import type { ClaudeMdAPI } from './electron-claude-md';
@@ -12,7 +6,6 @@ import type { ExtensionsAPI } from './electron-extensions';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { McpStoreAPI } from './electron-mcp-store';
-import type { RulesAndSkillsAPI } from './electron-rules-skills';
 import type {
   ContextLayerAPI,
   CostAPI,
@@ -23,6 +16,8 @@ import type {
   SymbolAPI,
   UsageAPI,
 } from './electron-observability';
+import type { OrchestrationAPI } from './electron-orchestration';
+import type { RulesAndSkillsAPI } from './electron-rules-skills';
 import type {
   AppAPI,
   ApprovalAPI,
@@ -167,15 +162,7 @@ export interface WindowAPI {
   close: (windowId: number) => Promise<IpcResult>;
 }
 
-/**
- * Minimal orchestration API — only methods still backed by ipcMain handlers.
- * The full task management UI was removed; task CRUD now lives in agentChat.
- */
-export interface OrchestrationAPI {
-  previewContext: (request: TaskRequest) => Promise<ContextPacketResult>;
-  buildContextPacket: (request: TaskRequest) => Promise<ContextPacketResult>;
-  cancelTask: (taskId: string) => Promise<TaskMutationResult>;
-}
+export type { OrchestrationAPI };
 
 export interface ProvidersAPI {
   list: () => Promise<ModelProvider[]>;

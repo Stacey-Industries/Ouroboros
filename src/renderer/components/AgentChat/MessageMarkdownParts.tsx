@@ -280,18 +280,18 @@ export function MarkdownListItem({ children }: { children: React.ReactNode }): R
 }
 
 export const markdownComponents: Components = {
-  code: MarkdownCode,
-  table: MarkdownTable,
-  th: MarkdownTh,
-  td: MarkdownTd,
-  a: MarkdownLink,
-  p: MarkdownParagraph,
-  blockquote: MarkdownBlockquote,
-  hr: MarkdownHr,
+  code: MarkdownCode as Components['code'],
+  table: MarkdownTable as Components['table'],
+  th: MarkdownTh as Components['th'],
+  td: MarkdownTd as Components['td'],
+  a: MarkdownLink as Components['a'],
+  p: MarkdownParagraph as Components['p'],
+  blockquote: MarkdownBlockquote as Components['blockquote'],
+  hr: MarkdownHr as Components['hr'],
   h1: ({ children }) => MarkdownHeading(1, children),
   h2: ({ children }) => MarkdownHeading(2, children),
   h3: ({ children }) => MarkdownHeading(3, children),
   ul: ({ children }) => MarkdownList({ ordered: false, children }),
   ol: ({ children }) => MarkdownList({ ordered: true, children }),
-  li: MarkdownListItem,
+  li: MarkdownListItem as Components['li'],
 };

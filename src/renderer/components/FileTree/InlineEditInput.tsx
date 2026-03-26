@@ -160,7 +160,7 @@ function InlineEditField({
   return (
     <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
       <input
-        ref={inputRef}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
         type="text"
         value={value}
         onChange={onChange}

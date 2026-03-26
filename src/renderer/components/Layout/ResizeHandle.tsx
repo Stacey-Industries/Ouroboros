@@ -88,7 +88,7 @@ function ResizeHandleFrame({
 
   return (
     <div
-      ref={handleRef}
+      ref={handleRef as React.RefObject<HTMLDivElement>}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
       role="separator"

@@ -52,6 +52,9 @@ else
 fi
 
 payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms}}"
+if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
+    payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms},\"internal\":true}"
+fi
 ndjson_line="${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────

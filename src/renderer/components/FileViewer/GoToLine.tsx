@@ -124,7 +124,7 @@ function GoToLinePanel({
   return (
     <div style={getPopupStyle(hasError)} onKeyDown={onKeyDown}>
       <GoToLineInput
-        ref={inputRef}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
         value={value}
         hasError={hasError}
         onChange={onChange}

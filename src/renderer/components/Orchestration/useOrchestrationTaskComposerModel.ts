@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+
 import type {
   ContextPacket,
   ContextPacketResult,
@@ -8,7 +9,7 @@ import type {
   TaskRequest,
   VerificationProfileName,
 } from '../../types/electron';
-import { useContextSelectionModel, type ContextSelectionModel } from '../ContextBuilder/useContextSelectionModel';
+import { type ContextSelectionModel,useContextSelectionModel } from '../ContextBuilder/useContextSelectionModel';
 
 function hasElectronAPI(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window && 'orchestration' in window.electronAPI;

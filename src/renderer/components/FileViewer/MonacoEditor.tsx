@@ -1,5 +1,5 @@
 import * as monaco from 'monaco-editor';
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, type MutableRefObject,useEffect, useRef, useState } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
 import { registerMonacoEditor, unregisterMonacoEditor } from './editorRegistry';
@@ -28,7 +28,7 @@ const shellStyle: React.CSSProperties = { flex: 1, overflow: 'hidden', position:
 const canvasStyle: React.CSSProperties = { width: '100%', height: '100%', overflow: 'hidden' };
 const vimStatusStyle: React.CSSProperties = { height: '22px', lineHeight: '22px', padding: '0 8px', fontSize: '11px', fontFamily: 'var(--font-mono)', background: 'var(--surface-panel)', borderTop: '1px solid var(--border-semantic)', flexShrink: 0 };
 
-interface MonacoEditorProps {
+export interface MonacoEditorProps {
   filePath: string; content: string; language?: string; readOnly?: boolean;
   onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void; onContentChange?: (content: string) => void;
   keybindingMode?: KeybindingMode; className?: string; wordWrap?: boolean; showMinimap?: boolean; formatOnSave?: boolean; diffLines?: DiffLineInfo[];
@@ -38,18 +38,18 @@ interface RuntimeInput {
   filePath: string; content: string; language: string; readOnly: boolean;
   onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void; onContentChange?: (content: string) => void;
   keybindingMode: KeybindingMode; wordWrap?: boolean; showMinimap?: boolean; formatOnSave: boolean; diffLines: DiffLineInfo[];
-  containerRef: React.RefObject<HTMLDivElement | null>; editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>;
-  vimStatusRef: React.RefObject<HTMLDivElement | null>; vimDisposeRef: React.RefObject<(() => void) | null>; isDirtyRef: React.RefObject<boolean>;
-  contentChangeDisposableRef: React.RefObject<monaco.IDisposable | null>; saveActionDisposableRef: React.RefObject<monaco.IDisposable | null>;
-  diffDecorationIdsRef: React.RefObject<string[]>;
+  containerRef: MutableRefObject<HTMLDivElement | null>; editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
+  vimStatusRef: MutableRefObject<HTMLDivElement | null>; vimDisposeRef: MutableRefObject<(() => void) | null>; isDirtyRef: MutableRefObject<boolean>;
+  contentChangeDisposableRef: MutableRefObject<monaco.IDisposable | null>; saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>;
+  diffDecorationIdsRef: MutableRefObject<string[]>;
   /** Stable refs that track the latest callback props across re-renders */
-  callbackRefs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean>; formatOnSaveRef: React.RefObject<boolean>; filePathRef: React.RefObject<string> };
+  callbackRefs: EditorCallbackRefs & { readOnlyRef: MutableRefObject<boolean>; formatOnSaveRef: MutableRefObject<boolean>; filePathRef: MutableRefObject<string> };
 }
 
 interface EditorCallbackRefs {
-  onSaveRef: React.RefObject<((content: string) => void) | undefined>;
-  onDirtyChangeRef: React.RefObject<((dirty: boolean) => void) | undefined>;
-  onContentChangeRef: React.RefObject<((content: string) => void) | undefined>;
+  onSaveRef: MutableRefObject<((content: string) => void) | undefined>;
+  onDirtyChangeRef: MutableRefObject<((dirty: boolean) => void) | undefined>;
+  onContentChangeRef: MutableRefObject<((content: string) => void) | undefined>;
 }
 
 function updateScrollMetrics(editor: monaco.editor.IStandaloneCodeEditor, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>): void {
@@ -73,7 +73,7 @@ function bindScrollTracking(
   editor: monaco.editor.IStandaloneCodeEditor,
   setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>,
   setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>,
-  scrollTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>,
+  scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
 ): () => void {
   const onScroll = (): void => {
     updateScrollMetrics(editor, setScrollMetrics);
@@ -94,8 +94,8 @@ function bindScrollTracking(
 function bindSaveAction(
   editor: monaco.editor.IStandaloneCodeEditor,
   refs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean>; formatOnSaveRef: React.RefObject<boolean> },
-  isDirtyRef: React.RefObject<boolean>,
-  saveActionDisposableRef: React.RefObject<monaco.IDisposable | null>,
+  isDirtyRef: MutableRefObject<boolean>,
+  saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>,
 ): void {
   const save = (): void => {
     const currentModel = editor.getModel();
@@ -128,8 +128,8 @@ function bindSaveAction(
 function bindContentChange(
   model: monaco.editor.ITextModel,
   refs: EditorCallbackRefs,
-  isDirtyRef: React.RefObject<boolean>,
-  contentChangeDisposableRef: React.RefObject<monaco.IDisposable | null>,
+  isDirtyRef: MutableRefObject<boolean>,
+  contentChangeDisposableRef: MutableRefObject<monaco.IDisposable | null>,
 ): void {
   contentChangeDisposableRef.current = model.onDidChangeContent(() => {
     setHostDirtyState(model, isDirtyRef, refs.onDirtyChangeRef);
@@ -151,7 +151,7 @@ function bindSearchShortcuts(editor: monaco.editor.IStandaloneCodeEditor): () =>
   };
 }
 
-function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>): () => void {
+function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): () => void {
   const { filePath, content, language, readOnly, wordWrap, showMinimap, containerRef, editorRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef } = input;
   const model = getOrCreateModel(filePath, content, language);
   if (model.getValue() !== content) model.setValue(content);
@@ -188,7 +188,7 @@ function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch
   };
 }
 
-function useMonacoEditorMount(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>): void {
+function useMonacoEditorMount(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): void {
   const inputRef = useRef(input);
   inputRef.current = input;
   useEffect(() => {
@@ -198,9 +198,9 @@ function useMonacoEditorMount(input: RuntimeInput, setScrollMetrics: React.Dispa
 }
 
 function useMonacoEditorContentSync(
-  editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>,
+  editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>,
   content: string,
-  isDirtyRef: React.RefObject<boolean>,
+  isDirtyRef: MutableRefObject<boolean>,
   onDirtyChange?: (dirty: boolean) => void,
 ): void {
   useEffect(() => {
@@ -270,6 +270,8 @@ function useMonacoEditorRuntime(input: RuntimeInput): { scrollMetrics: { scrollT
   useMonacoEditorDiffs(input);
   return { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling };
 }
+
+export type { MonacoEditorProps as MonacoEditorHostProps };
 
 export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement {
   const {

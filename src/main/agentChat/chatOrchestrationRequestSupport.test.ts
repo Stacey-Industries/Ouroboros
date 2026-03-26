@@ -47,7 +47,8 @@ describe('resolveSendOptions', () => {
 
   beforeEach(() => {
     getConfigValueMock.mockReset();
-    getConfigValueMock.mockReturnValue(undefined);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getConfigValueMock.mockReturnValue(undefined as any);
   });
 
   it('uses Codex CLI defaults when the provider resolves to codex', () => {

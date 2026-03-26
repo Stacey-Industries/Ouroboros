@@ -4,11 +4,12 @@
  * Reduces complexity of the main component by isolating async operations.
  */
 
+import type { useToastContext } from '../../contexts/ToastContext';
 import type { TreeNode } from './FileTreeItem';
 import type { EditState } from './fileTreeUtils';
 import { normPath,parentDir, pathJoin } from './fileTreeUtils';
 
-type ToastFn = (msg: string, type: 'success' | 'error') => void;
+type ToastFn = ReturnType<typeof useToastContext>['toast'];
 
 interface EditConfirmDeps {
   editState: EditState | null;

@@ -1,15 +1,27 @@
-import fs from 'fs/promises'
+import log from '../logger'
 import type {
   ContextLayerManifest,
   ModuleContextEntry,
   ModuleStructuralSummary,
 } from './contextLayerTypes'
-import {
-  summarizeModule,
-  shouldSummarize,
-  selectSourceSnippets,
-} from './moduleSummarizer'
 import type { SummarizationContext, SummarizationResult } from './moduleSummarizer'
+import {
+  selectSourceSnippets,
+  shouldSummarize,
+  summarizeModule,
+} from './moduleSummarizer'
+import {
+  applyRateLimitBackoff,
+  broadcastProgress,
+  makeEnqueue,
+  makeRunLoop,
+  makeStatus,
+  type ProcessCtx,
+  type QueueState,
+  readSnippetContents,
+  resetBackoff,
+  type SchedulerConfig,
+} from './summarizationQueueHelpers'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +52,16 @@ export interface SummarizationQueueOptions {
   maxQueueSize?: number       // Default: 20
   maxRetries?: number         // Default: 2
   enabled?: boolean           // Default: true
+  /** Called when progress changes — used to broadcast to the renderer */
+  onProgress?: (progress: SummarizationQueueProgress) => void
+}
+
+export interface SummarizationQueueProgress {
+  type: 'summarizing' | 'idle'
+  total: number
+  processed: number
+  failed: number
+  currentModule: string | null
 }
 
 export interface SummarizationQueueStatus {
@@ -61,35 +83,169 @@ export interface SummarizationQueue {
   dispose: () => void
 }
 
-// ---------------------------------------------------------------------------
-// Rate limit backoff constants
-// ---------------------------------------------------------------------------
-
-const INITIAL_BACKOFF_MS = 10_000    // 10 seconds
-const MAX_BACKOFF_MS = 300_000       // 5 minutes
-const BACKOFF_MULTIPLIER = 2
 
 // ---------------------------------------------------------------------------
-// Snippet reader
+// Persist summarization result
 // ---------------------------------------------------------------------------
 
-async function readSnippetContents(
-  snippets: Array<{ relativePath: string; absolutePath: string }>,
-  maxChars: number,
-): Promise<Array<{ relativePath: string; content: string }>> {
-  const results: Array<{ relativePath: string; content: string }> = []
-  for (const snippet of snippets) {
-    try {
-      const content = await fs.readFile(snippet.absolutePath, 'utf-8')
-      results.push({
-        relativePath: snippet.relativePath,
-        content: content.length > maxChars ? content.slice(0, maxChars) : content,
-      })
-    } catch {
-      // File unreadable — skip it
-    }
+async function persistSummaryResult(
+  moduleId: string,
+  structural: ModuleStructuralSummary,
+  result: SummarizationResult,
+  ctx: ProcessCtx,
+): Promise<void> {
+  const { options, state } = ctx
+  if (!result.success || !result.summary) {
+    state.lastError = result.error ?? 'unknown'
+    state.totalFailed++
+    log.info('[context-layer] Failed to summarize module:', moduleId, 'error:', state.lastError)
+    return
   }
-  return results
+
+  const enrichedStructural = buildEnrichedStructural(structural, result)
+  const entry: ModuleContextEntry = { structural: enrichedStructural, ai: result.summary }
+  await options.writeModuleEntry(options.workspaceRoot, moduleId, entry)
+
+  const manifest = await options.readManifest(options.workspaceRoot)
+  if (manifest) {
+    manifest.lastIncrementalUpdate = Date.now()
+    // eslint-disable-next-line security/detect-object-injection -- moduleId is a validated string from the module registry; not user input
+    manifest.moduleHashes[moduleId] = structural.contentHash
+    await options.writeManifest(options.workspaceRoot, manifest)
+  }
+
+  state.lastCompleted = moduleId
+  state.totalProcessed++
+  resetBackoff(state)
+  log.info('[context-layer] Summarized module:', moduleId)
+}
+
+function buildEnrichedStructural(
+  structural: ModuleStructuralSummary,
+  result: SummarizationResult,
+): ModuleStructuralSummary {
+  if (!result.extractedSymbols || result.extractedSymbols.length === 0) {
+    return structural
+  }
+  return {
+    ...structural,
+    exports: result.extractedSymbols.map((s) => s.name).slice(0, 20),
+    extractedSymbols: result.extractedSymbols.map((s) => ({
+      name: s.name,
+      kind: (s.kind === 'const' || s.kind === 'enum') ? 'variable' as const : s.kind as 'function' | 'class' | 'interface' | 'type' | 'other',
+      signature: s.signature ?? undefined,
+    })),
+  } as ModuleStructuralSummary
+}
+
+// ---------------------------------------------------------------------------
+// Module processing
+// ---------------------------------------------------------------------------
+
+async function runSummarizationLoop(
+  moduleId: string,
+  context: SummarizationContext,
+  maxRetries: number,
+  ctx: ProcessCtx,
+): Promise<void> {
+  const { state } = ctx
+  let retriesLeft = maxRetries
+  let result: SummarizationResult | undefined
+
+  while (true) {
+    if (state.disposed) return
+
+    state.activeAbortController = new AbortController()
+    result = await summarizeModule(context)
+    state.activeAbortController = null
+
+    if (state.disposed) return
+    if (result.success) break
+
+    if (result.error === 'rate_limited') {
+      applyRateLimitBackoff(state)
+      state.queue.set(moduleId, Date.now())
+      log.info('[context-layer] Rate limited — re-enqueuing', moduleId, 'backoff:', state.backoffMs, 'ms')
+      return
+    }
+
+    if (result.error === 'no_auth') {
+      state.paused = true
+      state.lastError = 'no_auth'
+      log.info('[context-layer] No auth — pausing summarization queue')
+      return
+    }
+
+    if (result.error === 'parse_failure') break
+    if (retriesLeft <= 0) break
+    retriesLeft--
+  }
+
+  await persistSummaryResult(moduleId, context.module, result ?? { success: false, error: 'unknown' }, ctx)
+}
+
+async function processModule(moduleId: string, ctx: ProcessCtx, maxRetries: number): Promise<void> {
+  const { options } = ctx
+  const structural = options.getModuleStructural(moduleId)
+  if (!structural || !shouldSummarize(structural)) return
+
+  const existing = await options.readModuleEntry(options.workspaceRoot, moduleId)
+  if (existing?.ai?.generatedFrom === structural.contentHash) return
+
+  const moduleFiles = options.getModuleFiles(moduleId)
+  const snippetPaths = selectSourceSnippets({
+    files: moduleFiles,
+    workspaceRoot: options.workspaceRoot,
+    moduleRootPath: structural.module.rootPath,
+  })
+  const sourceSnippets = await readSnippetContents(snippetPaths, 2000)
+
+  const context: SummarizationContext = {
+    module: structural,
+    sourceSnippets,
+    dependencyContext: options.getDependencyContext(moduleId),
+    projectContext: options.projectContext,
+  }
+
+  await runSummarizationLoop(moduleId, context, maxRetries, ctx)
+}
+
+// ---------------------------------------------------------------------------
+// Queue scheduler
+// ---------------------------------------------------------------------------
+
+function makeScheduler(ctx: ProcessCtx, cfg: SchedulerConfig): SummarizationQueue {
+  const { state } = ctx
+  const { cooldownMs } = cfg
+
+  function scheduleNext(): void {
+    if (state.disposed || state.paused || state.queue.size === 0 || state.processing) {
+      if (!state.processing && state.queue.size === 0) broadcastProgress(ctx)
+      return
+    }
+    state.nextJobTimer = setTimeout(runNext, state.isRateLimited ? state.backoffMs : cooldownMs)
+  }
+
+  const runNext = makeRunLoop(ctx, cfg, scheduleNext, processModule)
+  const enqueue = makeEnqueue(ctx, cfg, scheduleNext)
+  const status = makeStatus(ctx, cfg)
+
+  function pause(): void {
+    if (state.disposed) return
+    state.paused = true
+    if (state.nextJobTimer) { clearTimeout(state.nextJobTimer); state.nextJobTimer = null }
+  }
+
+  function dispose(): void {
+    state.disposed = true; state.paused = true
+    if (state.nextJobTimer) { clearTimeout(state.nextJobTimer); state.nextJobTimer = null }
+    state.activeAbortController?.abort(); state.activeAbortController = null
+    state.queue.clear(); state.processing = null
+  }
+
+  function resume(): void { if (!state.disposed) { state.paused = false; scheduleNext() } }
+
+  return { enqueue, status, pause, resume, dispose }
 }
 
 // ---------------------------------------------------------------------------
@@ -102,250 +258,20 @@ export function createSummarizationQueue(options: SummarizationQueueOptions): Su
   const maxRetries = options.maxRetries ?? 2
   const enabled = options.enabled ?? true
 
-  // Internal state
-  const queue = new Map<string, number>()
-  let processing: string | null = null
-  let paused = false
-  let disposed = false
-  let lastCompleted: string | null = null
-  let lastError: string | null = null
-  let totalProcessed = 0
-  let totalFailed = 0
-  let isRateLimited = false
-  let backoffMs = 0
-  let nextJobTimer: ReturnType<typeof setTimeout> | null = null
-  let activeAbortController: AbortController | null = null
-
-  // -------------------------------------------------------------------------
-  // Rate limit backoff
-  // -------------------------------------------------------------------------
-
-  function applyRateLimitBackoff(): void {
-    isRateLimited = true
-    backoffMs = backoffMs === 0
-      ? INITIAL_BACKOFF_MS
-      : Math.min(backoffMs * BACKOFF_MULTIPLIER, MAX_BACKOFF_MS)
+  const state: QueueState = {
+    queue: new Map<string, number>(),
+    processing: null,
+    paused: false,
+    disposed: false,
+    lastCompleted: null,
+    lastError: null,
+    totalProcessed: 0,
+    totalFailed: 0,
+    isRateLimited: false,
+    backoffMs: 0,
+    nextJobTimer: null,
+    activeAbortController: null,
   }
 
-  function resetBackoff(): void {
-    isRateLimited = false
-    backoffMs = 0
-  }
-
-  // -------------------------------------------------------------------------
-  // Scheduling
-  // -------------------------------------------------------------------------
-
-  function scheduleNext(): void {
-    if (disposed || paused || queue.size === 0 || processing) return
-
-    const delay = isRateLimited ? backoffMs : cooldownMs
-    nextJobTimer = setTimeout(processNext, delay)
-  }
-
-  // -------------------------------------------------------------------------
-  // Core processing loop
-  // -------------------------------------------------------------------------
-
-  async function processNext(): Promise<void> {
-    nextJobTimer = null
-
-    if (disposed || paused || queue.size === 0) return
-
-    // Dequeue the oldest entry (FIFO by enqueue timestamp)
-    const sorted = [...queue.entries()].sort((a, b) => a[1] - b[1])
-    const [moduleId] = sorted[0]
-    queue.delete(moduleId)
-    processing = moduleId
-
-    try {
-      await processModule(moduleId)
-    } catch (err) {
-      console.log('[context-layer] Unexpected error processing module:', moduleId, err)
-      lastError = err instanceof Error ? err.message : 'unknown'
-      totalFailed++
-    }
-
-    processing = null
-    scheduleNext()
-  }
-
-  async function processModule(moduleId: string): Promise<void> {
-    // Get structural summary
-    const structural = options.getModuleStructural(moduleId)
-    if (!structural) {
-      return
-    }
-
-    // Check if module meets summarization threshold
-    if (!shouldSummarize(structural)) {
-      return
-    }
-
-    // Stale summary detection — skip if content hash matches existing summary
-    const existing = await options.readModuleEntry(options.workspaceRoot, moduleId)
-    if (existing?.ai?.generatedFrom === structural.contentHash) {
-      return
-    }
-
-    // Read source files
-    const moduleFiles = options.getModuleFiles(moduleId)
-    const snippetPaths = selectSourceSnippets({
-      files: moduleFiles,
-      workspaceRoot: options.workspaceRoot,
-      moduleRootPath: structural.module.rootPath,
-    })
-
-    // Read file contents (with truncation to 2000 chars each)
-    const sourceSnippets = await readSnippetContents(snippetPaths, 2000)
-
-    // Build summarization context
-    const context: SummarizationContext = {
-      module: structural,
-      sourceSnippets,
-      dependencyContext: options.getDependencyContext(moduleId),
-      projectContext: options.projectContext,
-    }
-
-    // Call summarizer with retry logic
-    let retriesLeft = maxRetries
-    let result: SummarizationResult | undefined
-
-    while (true) {
-      if (disposed) return
-
-      activeAbortController = new AbortController()
-      result = await summarizeModule(context)
-      activeAbortController = null
-
-      if (disposed) return
-
-      if (result.success) break
-
-      if (result.error === 'rate_limited') {
-        applyRateLimitBackoff()
-        // Re-enqueue this module and wait
-        queue.set(moduleId, Date.now())
-        console.log('[context-layer] Rate limited — re-enqueuing', moduleId, 'backoff:', backoffMs, 'ms')
-        return
-      }
-
-      if (result.error === 'no_auth') {
-        // Pause the queue — no point continuing without auth
-        paused = true
-        lastError = 'no_auth'
-        console.log('[context-layer] No auth — pausing summarization queue')
-        return
-      }
-
-      // parse_failure already retried inside summarizeModule — don't retry again here
-      if (result.error === 'parse_failure') break
-
-      if (retriesLeft <= 0) break
-      retriesLeft--
-    }
-
-    if (result?.success && result.summary) {
-      // Enrich structural summary with extracted symbols (from symbol extractor)
-      const enrichedStructural = result.extractedSymbols && result.extractedSymbols.length > 0
-        ? {
-            ...structural,
-            exports: result.extractedSymbols.map(s => s.name).slice(0, 20),
-            extractedSymbols: result.extractedSymbols,
-          }
-        : structural
-
-      // Write the updated module entry
-      const entry: ModuleContextEntry = {
-        structural: enrichedStructural,
-        ai: result.summary,
-      }
-      await options.writeModuleEntry(options.workspaceRoot, moduleId, entry)
-
-      // Update manifest
-      const manifest = await options.readManifest(options.workspaceRoot)
-      if (manifest) {
-        manifest.lastIncrementalUpdate = Date.now()
-        manifest.moduleHashes[moduleId] = structural.contentHash
-        await options.writeManifest(options.workspaceRoot, manifest)
-      }
-
-      lastCompleted = moduleId
-      totalProcessed++
-      resetBackoff()
-      console.log('[context-layer] Summarized module:', moduleId)
-    } else {
-      lastError = result?.error ?? 'unknown'
-      totalFailed++
-      console.log('[context-layer] Failed to summarize module:', moduleId, 'error:', lastError)
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-
-  function enqueue(moduleIds: string[]): void {
-    if (disposed || !enabled) return
-
-    const now = Date.now()
-    for (const moduleId of moduleIds) {
-      // Skip sentinel values
-      if (moduleId === '__all__' || moduleId === '__new_files__') continue
-      queue.set(moduleId, now) // Overwrites existing entry — deduplication
-    }
-
-    // Enforce max queue size — drop oldest if over
-    while (queue.size > maxQueueSize) {
-      const oldest = [...queue.entries()].sort((a, b) => a[1] - b[1])[0]
-      if (oldest) queue.delete(oldest[0])
-    }
-
-    scheduleNext()
-  }
-
-  function status(): SummarizationQueueStatus {
-    return {
-      queueLength: queue.size,
-      processing,
-      lastCompleted,
-      lastError,
-      totalProcessed,
-      totalFailed,
-      isRateLimited,
-      nextJobAt: nextJobTimer
-        ? Date.now() + (isRateLimited ? backoffMs : cooldownMs)
-        : null,
-    }
-  }
-
-  function pause(): void {
-    if (disposed) return
-    paused = true
-    if (nextJobTimer) {
-      clearTimeout(nextJobTimer)
-      nextJobTimer = null
-    }
-  }
-
-  function resume(): void {
-    if (disposed) return
-    paused = false
-    scheduleNext()
-  }
-
-  function dispose(): void {
-    disposed = true
-    paused = true
-    if (nextJobTimer) {
-      clearTimeout(nextJobTimer)
-      nextJobTimer = null
-    }
-    activeAbortController?.abort()
-    activeAbortController = null
-    queue.clear()
-    processing = null
-  }
-
-  return { enqueue, status, pause, resume, dispose }
+  return makeScheduler({ options, state }, { cooldownMs, maxRetries, maxQueueSize, enabled })
 }

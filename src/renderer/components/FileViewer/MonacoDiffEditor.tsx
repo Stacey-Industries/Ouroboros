@@ -2,7 +2,7 @@
  * MonacoDiffEditor - standalone Monaco Diff Editor React wrapper.
  */
 import * as monaco from 'monaco-editor';
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, type MutableRefObject,useCallback, useEffect, useRef, useState } from 'react';
 
 import { detectLanguage, initMonaco } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
@@ -61,10 +61,10 @@ function getTargetChange(
 }
 
 interface DiffLifecycleDeps {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  editorRef: React.RefObject<monaco.editor.IStandaloneDiffEditor | null>;
-  originalModelRef: React.RefObject<monaco.editor.ITextModel | null>;
-  modifiedModelRef: React.RefObject<monaco.editor.ITextModel | null>;
+  containerRef: MutableRefObject<HTMLDivElement | null>;
+  editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>;
+  originalModelRef: MutableRefObject<monaco.editor.ITextModel | null>;
+  modifiedModelRef: MutableRefObject<monaco.editor.ITextModel | null>;
   originalContent: string;
   modifiedContent: string;
   language: string;
@@ -111,8 +111,8 @@ function useDiffLifecycle({
 function useDiffContentSync(
   originalContent: string,
   modifiedContent: string,
-  originalModelRef: React.RefObject<monaco.editor.ITextModel | null>,
-  modifiedModelRef: React.RefObject<monaco.editor.ITextModel | null>,
+  originalModelRef: MutableRefObject<monaco.editor.ITextModel | null>,
+  modifiedModelRef: MutableRefObject<monaco.editor.ITextModel | null>,
 ): void {
   useEffect(() => {
     const originalModel = originalModelRef.current;
@@ -123,7 +123,7 @@ function useDiffContentSync(
 }
 
 function useDiffSideBySideSync(
-  editorRef: React.RefObject<monaco.editor.IStandaloneDiffEditor | null>,
+  editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>,
   sideBySide: boolean,
 ): void {
   useEffect(() => {
@@ -131,7 +131,7 @@ function useDiffSideBySideSync(
   }, [editorRef, sideBySide]);
 }
 
-function useChangeNavigation(editorRef: React.RefObject<monaco.editor.IStandaloneDiffEditor | null>) {
+function useChangeNavigation(editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>) {
   return useCallback((direction: 'next' | 'prev') => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -150,7 +150,7 @@ function useChangeNavigation(editorRef: React.RefObject<monaco.editor.IStandalon
 }
 
 function useChangeCount(
-  editorRef: React.RefObject<monaco.editor.IStandaloneDiffEditor | null>,
+  editorRef: MutableRefObject<monaco.editor.IStandaloneDiffEditor | null>,
   originalContent: string,
   modifiedContent: string,
 ): number {

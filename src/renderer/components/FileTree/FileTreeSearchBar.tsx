@@ -196,7 +196,7 @@ export function FileTreeSearchBar({
     <div style={searchBarStyle}>
       <div style={searchRowStyle}>
         <input
-          ref={inputRef}
+          ref={inputRef as React.RefObject<HTMLInputElement>}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

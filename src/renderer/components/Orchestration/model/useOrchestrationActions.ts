@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+
 import type {
   TaskMutationResult,
   TaskSessionRecord,
@@ -11,13 +12,13 @@ import {
   hasElectronAPI,
   mergeSession,
   normalizeError,
-  sessionMatchesProjectRoot,
   type OrchestrationStateStore,
+  sessionMatchesProjectRoot,
 } from '../useOrchestrationModel.helpers';
 import {
   resolveTaskId,
-  useResumeLatestAction,
   useRerunVerificationAction,
+  useResumeLatestAction,
   useTaskMutationAction,
 } from './useOrchestrationActions.parts';
 

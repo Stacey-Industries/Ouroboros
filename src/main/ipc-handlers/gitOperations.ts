@@ -113,11 +113,12 @@ export async function discardFile(
   root: string,
   filePath: string,
 ): Promise<GitResponse<Record<string, never>>> {
+  const empty: Record<string, never> = {};
   if (await isTracked(root, filePath)) {
     return respond(
       async () => {
         await gitExec(['checkout', 'HEAD', '--', filePath], { cwd: root });
-        return {};
+        return empty;
       },
       { gitError: true },
     );
@@ -125,7 +126,7 @@ export async function discardFile(
   return respond(async () => {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is validated by assertPathAllowed in registerSecure before reaching discardFile
     await fs.unlink(path.resolve(root, filePath));
-    return {};
+    return empty;
   });
 }
 

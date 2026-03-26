@@ -60,7 +60,7 @@ export type AgentChatContextBehavior = 'auto' | 'manual';
 
 export type AgentChatDefaultView = 'chat' | 'monitor';
 
-export type AgentChatMessageSource = 'composer' | 'retry' | 'resume' | 'api';
+export type AgentChatMessageSource = 'composer' | 'edit' | 'retry' | 'resume' | 'api';
 
 export type AgentChatErrorCode =
   | 'send_failed'
@@ -270,6 +270,31 @@ export interface AgentChatThreadStatusSnapshot {
   updatedAt: number;
 }
 
+// ─── Streaming chunk ─────────────────────────────────────────────────────────
+
+export interface AgentChatStreamChunkToolActivity {
+  name: string;
+  status: 'running' | 'complete' | 'error';
+  filePath?: string;
+  inputSummary?: string;
+  editSummary?: { oldLines: number; newLines: number } | string;
+}
+
+export interface AgentChatStreamChunk {
+  type: 'text_delta' | 'thinking_delta' | 'tool_activity' | 'complete' | 'error' | 'thread_snapshot';
+  messageId: string;
+  /** Present on all chunk types for cross-thread routing in multi-thread UIs. */
+  threadId?: string;
+  timestamp?: number;
+  textDelta?: string;
+  thinkingDelta?: string;
+  blockIndex?: number;
+  toolActivity?: AgentChatStreamChunkToolActivity;
+  tokenUsage?: { inputTokens: number; outputTokens: number };
+  /** Present only on thread_snapshot chunks — full updated thread state. */
+  thread?: AgentChatThreadRecord;
+}
+
 // ─── Re-exports from split file ──────────────────────────────────────────────
 
 export type {
@@ -283,7 +308,6 @@ export type {
   AgentChatRevertResult,
   AgentChatSendResult,
   AgentChatStatusChangedEvent,
-  AgentChatStreamChunk,
   AgentChatStreamChunkEvent,
   AgentChatThreadResult,
   AgentChatThreadsResult,

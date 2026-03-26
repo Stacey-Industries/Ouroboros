@@ -28,7 +28,7 @@ const SECONDARY_VIEWS: Array<{
   { id: 'git', label: 'Git Status', Icon: GitIcon },
   { id: 'analytics', label: 'Analytics', Icon: AnalyticsIcon },
   { id: 'memory', label: 'Memory', Icon: MemoryIcon },
-  { id: 'rules' as RightSidebarView, label: 'Rules & Skills', Icon: RulesIcon },
+  { id: 'rules' as RightSidebarView, label: 'Claude Config', Icon: RulesIcon },
 ];
 
 function viewSwitcherItemStyle(isActive: boolean): React.CSSProperties {

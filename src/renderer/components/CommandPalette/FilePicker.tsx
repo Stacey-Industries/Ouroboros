@@ -133,7 +133,7 @@ function useFilePickerState(props: FilePickerProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { allFiles, isLoading: isScanning } = useProjectFileIndex({
+  const { allFiles, isIndexing: isScanning } = useProjectFileIndex({
     roots: projectRoot ? [projectRoot] : [],
     enabled: isOpen && !!projectRoot,
   });

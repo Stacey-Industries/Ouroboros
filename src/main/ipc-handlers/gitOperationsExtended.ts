@@ -8,6 +8,7 @@
 import path from 'path';
 
 import { parseBlameOutput, restoreSnapshot } from './gitBlameSnapshot';
+import { parseDiffOutput } from './gitDiffParser';
 import {
   errorMessage,
   getDirtyCount,
@@ -18,7 +19,6 @@ import {
   respond,
 } from './gitOperations';
 import { normalizeGitPath } from './gitParsers';
-import { parseDiffOutput } from './gitDiffParser';
 
 export function gitSnapshot(root: string) {
   return respond(async () => ({ commitHash: await gitTrimmed(root, ['rev-parse', 'HEAD']) }));

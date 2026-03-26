@@ -218,8 +218,8 @@ function DiagnosticIndicator({ severity }: { severity: string }): React.ReactEle
         viewBox="0 0 8 8"
         style={{ flexShrink: 0, marginLeft: '4px' }}
         aria-hidden="true"
-        title={config.label}
       >
+        <title>{config.label}</title>
         <polygon points="4,1 7,7 1,7" fill={config.color} />
       </svg>
     );

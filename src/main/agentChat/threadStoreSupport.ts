@@ -45,7 +45,7 @@ export function normalizeLink(
   const normalized: AgentChatOrchestrationLink = {};
   for (const field of LINK_STRING_FIELDS) {
     // eslint-disable-next-line security/detect-object-injection -- field from static LINK_STRING_FIELDS array
-    copyNonEmptyString(normalized, field, link[field]);
+    copyNonEmptyString(normalized as Record<string, unknown>, field, link[field]);
   }
 
   return normalized.taskId || normalized.sessionId || normalized.attemptId ? normalized : undefined;

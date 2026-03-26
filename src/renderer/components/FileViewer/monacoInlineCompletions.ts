@@ -36,7 +36,7 @@ const inlineCompletionsProvider: monaco.languages.InlineCompletionsProvider = {
     return { items: [] };
   },
 
-  freeInlineCompletions(): void {
+  disposeInlineCompletions(): void {
     // TODO: Clean up any resources associated with the completions
     // (e.g., cancel pending API requests, release memory)
   },

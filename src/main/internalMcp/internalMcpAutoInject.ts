@@ -1,6 +1,8 @@
 import fs from 'fs/promises'
 import path from 'path'
 
+import log from '../logger'
+
 // ---------------------------------------------------------------------------
 // Path helper
 // ---------------------------------------------------------------------------
@@ -16,11 +18,14 @@ function settingsPath(projectRoot: string): string {
 async function atomicWriteJson(filePath: string, data: unknown): Promise<void> {
   const tmpPath = `${filePath}.tmp`
   const content = JSON.stringify(data, null, 2)
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
   await fs.writeFile(tmpPath, content, 'utf-8')
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
     await fs.rename(tmpPath, filePath)
   } catch (renameErr) {
     // Best effort: clean up .tmp file
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- cleanup of tmp file at the same validated path
     try { await fs.unlink(tmpPath) } catch { /* ignore */ }
     throw renameErr
   }
@@ -36,6 +41,7 @@ type ServerMap = Record<string, { url?: string; command?: string; args?: string[
 async function readSettings(filePath: string): Promise<SettingsRecord | null> {
   let raw: string
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from validated projectRoot + known filename
     raw = await fs.readFile(filePath, 'utf-8')
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code
@@ -50,7 +56,7 @@ async function readSettings(filePath: string): Promise<SettingsRecord | null> {
   try {
     return JSON.parse(raw) as SettingsRecord
   } catch {
-    console.warn('[internal-mcp] .claude/settings.json exists but is not valid JSON — not overwriting')
+    log.warn('[internal-mcp] .claude/settings.json exists but is not valid JSON — not overwriting')
     throw new Error('.claude/settings.json exists but contains invalid JSON')
   }
 }
@@ -66,6 +72,7 @@ export async function injectIntoProjectSettings(
   const filePath = settingsPath(projectRoot)
 
   // Ensure the .claude/ directory exists
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from validated projectRoot
   await fs.mkdir(path.dirname(filePath), { recursive: true })
 
   const settings = await readSettings(filePath)
@@ -114,7 +121,7 @@ export async function removeFromProjectSettings(projectRoot: string): Promise<vo
     if (code === 'ENOENT') return  // File doesn't exist — nothing to do
     // If the file is invalid JSON, readSettings throws without ENOENT code
     // Log the warning but don't fail the caller
-    console.warn('[internal-mcp] removeFromProjectSettings: could not read settings file:', err)
+    log.warn('[internal-mcp] removeFromProjectSettings: could not read settings file:', err)
     return
   }
 

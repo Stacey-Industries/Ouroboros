@@ -130,7 +130,7 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
   toggles: ReturnType<typeof useSectionToggles>;
 }): React.ReactElement {
   return (
-    <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
+    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="flex flex-col h-full overflow-hidden">
       <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer}
         style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
         <SidebarFileTree />

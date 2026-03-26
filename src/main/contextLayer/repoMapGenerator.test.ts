@@ -1,8 +1,9 @@
-import path from 'path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GitDiffSummary, RepoFacts } from '../orchestration/types'
+import { readFileSync } from 'fs'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import type { IndexedRepoFile, RepoIndexSnapshot, RootRepoIndexSnapshot } from '../orchestration/repoIndexer'
-import type { ModuleContextEntry, ModuleIdentity, ModuleStructuralSummary, RepoMap } from './contextLayerTypes'
+import type { GitDiffSummary, RepoFacts } from '../orchestration/types'
+import type { ModuleIdentity, ModuleStructuralSummary, RepoMap } from './contextLayerTypes'
 
 vi.mock('./moduleDetector', () => ({
   detectModules: vi.fn(),
@@ -15,8 +16,8 @@ vi.mock('fs', () => ({
   readFileSync: vi.fn(),
 }))
 
-import { generateRepoMap, compressRepoMap, detectFrameworks, detectProjectName } from './repoMapGenerator'
-import { detectModules, buildModuleStructuralSummaries, buildCrossModuleDependencies } from './moduleDetector'
+import { buildCrossModuleDependencies,buildModuleStructuralSummaries, detectModules } from './moduleDetector'
+import { compressRepoMap, detectFrameworks, detectProjectName,generateRepoMap } from './repoMapGenerator'
 
 const mockedDetectModules = vi.mocked(detectModules)
 const mockedBuildSummaries = vi.mocked(buildModuleStructuralSummaries)
@@ -102,6 +103,7 @@ function createMockRootSnapshot(rootPath: string, files: IndexedRepoFile[]): Roo
     },
     files,
     directories: [],
+    recentCommits: [],
   }
 }
 
@@ -351,7 +353,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('Electron')
   })
@@ -367,7 +369,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('Next.js')
     expect(result).toContain('Tailwind CSS')
@@ -384,7 +386,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('React')
     expect(result).toContain('Vite')
@@ -398,7 +400,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('Vue')
   })
@@ -411,7 +413,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('Angular')
   })
@@ -424,7 +426,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toContain('Svelte')
   })
@@ -437,7 +439,7 @@ describe('detectFrameworks', () => {
     ]
 
     const repoIndex = createMockRepoIndex(rootPath, files)
-    const result = detectFrameworks(repoIndex, rootPath)
+    const result = detectFrameworks(repoIndex)
 
     expect(result).toEqual([])
   })
@@ -461,8 +463,7 @@ describe('detectProjectName', () => {
       createMockFile({ relativePath: 'package.json', path: `${rootPath}/package.json`, extension: '.json', language: 'json' }),
     ])
 
-    const fsModule = require('fs')
-    fsModule.readFileSync = vi.fn().mockImplementation(() => {
+    vi.mocked(readFileSync).mockImplementation(() => {
       throw new Error('ENOENT')
     })
 
@@ -477,8 +478,7 @@ describe('detectProjectName', () => {
       createMockFile({ relativePath: 'package.json', path: `${rootPath}/package.json`, extension: '.json', language: 'json' }),
     ])
 
-    const fsModule = require('fs')
-    fsModule.readFileSync = vi.fn().mockReturnValue(JSON.stringify({ name: 'ouroboros-ide' }))
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ name: 'ouroboros-ide' }) as unknown as string & Buffer<ArrayBufferLike>)
 
     const result = detectProjectName(rootPath, repoIndex)
 
@@ -491,8 +491,7 @@ describe('detectProjectName', () => {
       createMockFile({ relativePath: 'package.json', path: `${rootPath}/package.json`, extension: '.json', language: 'json' }),
     ])
 
-    const fsModule = require('fs')
-    fsModule.readFileSync = vi.fn().mockReturnValue(JSON.stringify({ name: '' }))
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ name: '' }) as unknown as string & Buffer<ArrayBufferLike>)
 
     const result = detectProjectName(rootPath, repoIndex)
 
@@ -630,7 +629,7 @@ describe('multi-root workspace', () => {
     const frontendMod = createMockModuleIdentity('app', 'src')
     const backendMod = createMockModuleIdentity('server', 'src')
 
-    mockedDetectModules.mockImplementation((files, root) => {
+    mockedDetectModules.mockImplementation((_files, root) => {
       if (root === rootPath1) return [frontendMod]
       if (root === rootPath2) return [backendMod]
       return []

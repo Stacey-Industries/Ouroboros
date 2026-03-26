@@ -28,11 +28,12 @@ export const AgentMonitorManager = memo(function AgentMonitorManager(): React.Re
   const { toast } = useToastContext();
   const { projectRoot } = useProject();
   const { getSnapshotHash } = useDiffSnapshots();
+  const getSnapshotHashForEnrich = useCallback((sessionId: string) => getSnapshotHash(sessionId) ?? undefined, [getSnapshotHash]);
   const modes = useAgentMonitorModes();
   const { executeTemplate, templates } = useAgentMonitorTemplates(projectRoot);
-  const visibleCurrentSessions = useMemo(() => enrichSessions(filterSessions(currentSessions, modes.filterQuery), getSnapshotHash), [currentSessions, getSnapshotHash, modes.filterQuery]);
-  const visibleHistoricalSessions = useMemo(() => enrichSessions(filterSessions(historicalSessions, modes.filterQuery), getSnapshotHash), [getSnapshotHash, historicalSessions, modes.filterQuery]);
-  const enrichedAgents = useMemo(() => enrichSessions(agents, getSnapshotHash), [agents, getSnapshotHash]);
+  const visibleCurrentSessions = useMemo(() => enrichSessions(filterSessions(currentSessions, modes.filterQuery), getSnapshotHashForEnrich), [currentSessions, getSnapshotHashForEnrich, modes.filterQuery]);
+  const visibleHistoricalSessions = useMemo(() => enrichSessions(filterSessions(historicalSessions, modes.filterQuery), getSnapshotHashForEnrich), [getSnapshotHashForEnrich, historicalSessions, modes.filterQuery]);
+  const enrichedAgents = useMemo(() => enrichSessions(agents, getSnapshotHashForEnrich), [agents, getSnapshotHashForEnrich]);
   const useTree = visibleCurrentSessions.length > 0 && !modes.filterQuery && hasTreeStructure(visibleCurrentSessions);
   const handleReplay = useCallback((sessionId: string) => openReplay(enrichedAgents.find((session) => session.id === sessionId)), [enrichedAgents]);
   const handleReviewChanges = useCallback((sessionId: string) => reviewChanges(enrichedAgents.find((session) => session.id === sessionId), projectRoot, sessionId, toast), [enrichedAgents, projectRoot, toast]);

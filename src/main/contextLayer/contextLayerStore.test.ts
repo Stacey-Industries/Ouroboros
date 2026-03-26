@@ -1,25 +1,27 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile, mkdir } from 'fs/promises'
+/* eslint-disable security/detect-non-literal-fs-filename -- test file uses temp dirs whose paths are constructed at runtime */
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import path from 'path'
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { ContextLayerManifest, ModuleContextEntry, RepoMap } from './contextLayerTypes'
+import { afterEach,beforeEach, describe, expect, it } from 'vitest'
+
 import {
-  initContextLayerStore,
-  writeRepoMap,
-  readRepoMap,
-  writeModuleEntry,
-  readModuleEntry,
-  readAllModuleEntries,
+  contextDir,
   deleteModuleEntry,
-  writeManifest,
-  readManifest,
   enforceSizeCap,
   ensureGitignore,
-  sanitizeModuleId,
-  contextDir,
-  modulesDir,
+  initContextLayerStore,
   moduleEntryPath,
+  modulesDir,
+  readAllModuleEntries,
+  readManifest,
+  readModuleEntry,
+  readRepoMap,
+  sanitizeModuleId,
+  writeManifest,
+  writeModuleEntry,
+  writeRepoMap,
 } from './contextLayerStore'
+import type { ContextLayerManifest, ModuleContextEntry, RepoMap } from './contextLayerTypes'
 
 let testRoot: string
 

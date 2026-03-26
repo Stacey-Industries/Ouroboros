@@ -6,7 +6,7 @@ import log from 'electron-log/renderer';
  * status bar. Emacs is stubbed for future `monaco-emacs` integration.
  */
 import * as monaco from 'monaco-editor';
-import type { RefObject } from 'react';
+import type { MutableRefObject } from 'react';
 import { useRef } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
@@ -25,15 +25,22 @@ interface VimModeHandle {
 let importAttempted = false;
 let importFailed = false;
 
+type VimInitFn = (editor: monaco.editor.IStandaloneCodeEditor, statusBarNode: HTMLElement) => VimModeHandle;
+
+function resolveVimInitFn(rawMod: unknown): VimInitFn | null {
+  const mod = rawMod as { initVimMode?: VimInitFn; default?: { initVimMode?: VimInitFn } | VimInitFn };
+  const defaultFn = typeof mod.default === 'function' ? (mod.default as VimInitFn) : null;
+  const defaultObj = mod.default && typeof mod.default === 'object' ? mod.default : null;
+  return mod.initVimMode ?? defaultObj?.initVimMode ?? defaultFn ?? null;
+}
+
 async function ensureVimImported(): Promise<boolean> {
   if (initVimMode) return true;
-  if (importFailed) return false;
-  if (importAttempted) return false;
-
+  if (importFailed || importAttempted) return false;
   importAttempted = true;
   try {
-    const mod = await import('monaco-vim');
-    initVimMode = mod.initVimMode ?? mod.default?.initVimMode ?? mod.default;
+    const rawMod = await import('monaco-vim');
+    initVimMode = resolveVimInitFn(rawMod);
     if (typeof initVimMode !== 'function') {
       log.warn('monaco-vim loaded but initVimMode not found');
       importFailed = true;
@@ -265,8 +272,8 @@ export function flushHostViewStatesToStorage(): void {
 
 export function setHostDirtyState(
   model: monaco.editor.ITextModel,
-  isDirtyRef: RefObject<boolean>,
-  onDirtyChangeRef: RefObject<((dirty: boolean) => void) | undefined>,
+  isDirtyRef: MutableRefObject<boolean>,
+  onDirtyChangeRef: MutableRefObject<((dirty: boolean) => void) | undefined>,
 ): void {
   const savedVersion = getHostSavedVersion(model.uri.toString());
   const nowDirty =
@@ -288,10 +295,10 @@ interface StableCallbackProps {
 }
 
 export interface StableCallbackRefs {
-  onSaveRef: RefObject<((content: string) => void) | undefined>;
-  onDirtyChangeRef: RefObject<((dirty: boolean) => void) | undefined>;
-  onContentChangeRef: RefObject<((content: string) => void) | undefined>;
-  readOnlyRef: RefObject<boolean>; formatOnSaveRef: RefObject<boolean>; filePathRef: RefObject<string>;
+  onSaveRef: MutableRefObject<((content: string) => void) | undefined>;
+  onDirtyChangeRef: MutableRefObject<((dirty: boolean) => void) | undefined>;
+  onContentChangeRef: MutableRefObject<((content: string) => void) | undefined>;
+  readOnlyRef: MutableRefObject<boolean>; formatOnSaveRef: MutableRefObject<boolean>; filePathRef: MutableRefObject<string>;
 }
 
 export function useStableCallbackRefs(p: StableCallbackProps): StableCallbackRefs {

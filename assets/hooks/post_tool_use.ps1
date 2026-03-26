@@ -73,9 +73,8 @@ $payload = [ordered]@{
     timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 }
 
-if ($null -ne $durationMs) {
-    $payload['durationMs'] = $durationMs
-}
+if ($null -ne $durationMs)               { $payload['durationMs'] = $durationMs }
+if ($env:OUROBOROS_INTERNAL -eq '1')     { $payload['internal'] = $true }
 
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)

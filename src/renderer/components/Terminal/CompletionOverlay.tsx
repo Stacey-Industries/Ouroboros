@@ -95,7 +95,7 @@ function CompletionOverlayBody({
 }): React.ReactElement {
   return (
     <div
-      ref={listRef}
+      ref={listRef as React.RefObject<HTMLDivElement>}
       onMouseDown={(e) => e.preventDefault()}
       className="bg-surface-panel border border-border-semantic"
       style={getOverlayStyle(position)}

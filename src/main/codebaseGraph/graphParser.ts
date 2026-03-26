@@ -75,12 +75,12 @@ export async function parseFileWithTree(
 interface TreeSitterParseOpts {
   filePath: string;
   projectRoot: string;
-  parser: TreeSitterModule.Parser;
+  parser: TreeSitterModule;
   grammarName: string;
   oldTree?: TreeSitterModule.Tree;
 }
 
-async function tryCreateParser(filePath: string): Promise<TreeSitterModule.Parser | null> {
+async function tryCreateParser(filePath: string): Promise<TreeSitterModule | null> {
   try {
     return await createParserForFile(filePath);
   } catch {

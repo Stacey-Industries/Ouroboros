@@ -25,7 +25,7 @@ const PREVIEW_SHELL_STYLE = {
 
 function useSanitizedMarkdown(content: string): string {
   return useMemo(
-    () => DOMPurify.sanitize(renderMarkdown(content), PURIFY_CONFIG) as string,
+    () => DOMPurify.sanitize(renderMarkdown(content), PURIFY_CONFIG as Parameters<typeof DOMPurify.sanitize>[1]),
     [content],
   );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react';
-import { deriveStateFromSession } from '../useOrchestrationModel.helpers';
+
 import type { UseOrchestrationModelReturn } from '../useOrchestrationModel';
+import { deriveStateFromSession } from '../useOrchestrationModel.helpers';
+import { useSessionSelection, useTaskControlActions } from './useOrchestrationActions';
 import { useOrchestrationEvents } from './useOrchestrationEvents';
 import { useRefreshSessions } from './useOrchestrationRefresh';
-import { useSessionSelection, useTaskControlActions } from './useOrchestrationActions';
 import { useOrchestrationStore } from './useOrchestrationStore';
 
 export function useOrchestrationModelCore(projectRoot: string | null): UseOrchestrationModelReturn {

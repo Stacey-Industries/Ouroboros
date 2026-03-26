@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach,beforeEach, describe, expect, it, vi } from 'vitest'
+
 import type { ModuleAISummary, ModuleStructuralSummary } from './contextLayerTypes'
-import {
-  createSummarizationQueue,
-} from './summarizationQueue'
 import type {
   SummarizationQueue,
   SummarizationQueueOptions,
+} from './summarizationQueue'
+import {
+  createSummarizationQueue,
 } from './summarizationQueue'
 
 // ---------------------------------------------------------------------------
@@ -24,8 +25,8 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(async () => 'mock file content'),
 }))
 
-import { summarizeModule, shouldSummarize } from './moduleSummarizer'
 import type { SummarizationResult } from './moduleSummarizer'
+import { shouldSummarize,summarizeModule } from './moduleSummarizer'
 
 const mockSummarizeModule = vi.mocked(summarizeModule)
 const mockShouldSummarize = vi.mocked(shouldSummarize)
@@ -102,14 +103,6 @@ function createTestQueue(overrides?: Partial<SummarizationQueueOptions>): Summar
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Flush all pending microtasks + run pending timers, repeat `rounds` times. */
-async function drainQueue(rounds = 1): Promise<void> {
-  for (let i = 0; i < rounds; i++) {
-    await vi.advanceTimersByTimeAsync(0)
-    await vi.runAllTimersAsync()
-  }
-}
 
 /** Advance by a specific number of ms, flushing microtasks at each tick. */
 async function advanceBy(ms: number): Promise<void> {
@@ -455,12 +448,13 @@ describe('summarizationQueue', () => {
       await advanceBy(100)
 
       expect(writeModuleEntry).toHaveBeenCalledTimes(1)
-      const [wsRoot, modId, entry] = writeModuleEntry.mock.calls[0]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [wsRoot, modId, entry] = writeModuleEntry.mock.calls[0] as any[]
       expect(wsRoot).toBe('/test/project')
       expect(modId).toBe('write-mod')
-      expect(entry.structural).toEqual(structural)
-      expect(entry.ai).toBeDefined()
-      expect(entry.ai!.description).toContain('write-mod')
+      expect(entry?.structural).toEqual(structural)
+      expect(entry?.ai).toBeDefined()
+      expect(entry?.ai!.description).toContain('write-mod')
 
       q.dispose()
     })
@@ -498,10 +492,11 @@ describe('summarizationQueue', () => {
       await advanceBy(100)
 
       expect(writeManifest).toHaveBeenCalledTimes(1)
-      const [wsRoot, writtenManifest] = writeManifest.mock.calls[0]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [wsRoot, writtenManifest] = writeManifest.mock.calls[0] as any[]
       expect(wsRoot).toBe('/test/project')
-      expect(writtenManifest.lastIncrementalUpdate).toBeGreaterThan(0)
-      expect(writtenManifest.moduleHashes['manifest-mod']).toBe(structural.contentHash)
+      expect(writtenManifest?.lastIncrementalUpdate).toBeGreaterThan(0)
+      expect(writtenManifest?.moduleHashes['manifest-mod']).toBe(structural.contentHash)
 
       q.dispose()
     })

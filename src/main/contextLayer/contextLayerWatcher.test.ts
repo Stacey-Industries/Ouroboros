@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import path from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createContextLayerWatcher } from './contextLayerWatcher'
 import type { ContextInvalidationEvent } from './contextLayerTypes'
+import { createContextLayerWatcher } from './contextLayerWatcher'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -11,8 +11,6 @@ import type { ContextInvalidationEvent } from './contextLayerTypes'
 const WORKSPACE = process.platform === 'win32'
   ? 'C:\\project'
   : '/project'
-
-const SEP = path.sep
 
 function wp(...segments: string[]): string {
   return path.join(WORKSPACE, ...segments)
@@ -36,11 +34,11 @@ function createModuleMap(entries: Record<string, string[]>): Map<string, string>
 // ---------------------------------------------------------------------------
 
 describe('contextLayerWatcher', () => {
-  let onInvalidation: ReturnType<typeof vi.fn<[ContextInvalidationEvent], void>>
+  let onInvalidation: ReturnType<typeof vi.fn<(event: ContextInvalidationEvent) => void>>
 
   beforeEach(() => {
     vi.useFakeTimers()
-    onInvalidation = vi.fn<[ContextInvalidationEvent], void>()
+    onInvalidation = vi.fn<(event: ContextInvalidationEvent) => void>()
   })
 
   afterEach(() => {

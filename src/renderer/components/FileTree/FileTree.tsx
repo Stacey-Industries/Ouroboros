@@ -187,7 +187,7 @@ interface FileTreeContentProps {
   heatMapEnabled: boolean;
   heatMapCount: number;
   onToggleHeatMap: () => void;
-  bodyProps: React.ComponentProps<typeof FileTreeBody>;
+  bodyProps: Omit<React.ComponentProps<typeof FileTreeBody>, 'query' | 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'>;
   /** Primary project root for git operations */
   primaryRoot: string;
 }
@@ -219,8 +219,8 @@ function FileTreeContent({
       />
       <GitStatusFilterBar counts={counts} isRepo={isRepo} />
       <FileTreeBody
-        query={query}
         {...bodyProps}
+        query={query}
         projectRoot={primaryRoot}
         gitDetailedStatus={status}
         gitIsRepo={isRepo}

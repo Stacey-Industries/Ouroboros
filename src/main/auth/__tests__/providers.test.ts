@@ -46,10 +46,7 @@ const mockDeleteCredential = vi.mocked(deleteCredential);
 
 const savedEnv: Record<string, string | undefined> = {};
 
-function clearEnv(key: string): void {
-  savedEnv[key] = process.env[key]; // eslint-disable-line security/detect-object-injection
-  delete process.env[key]; // eslint-disable-line security/detect-object-injection
-}
+
 
 function restoreEnv(): void {
   for (const [key, value] of Object.entries(savedEnv)) {
@@ -81,10 +78,12 @@ afterEach(() => {
 
 describe('githubAuth', () => {
   describe('startGitHubLogin', () => {
-    it('errors when GITHUB_CLIENT_ID is not set', () => {
-      clearEnv('GITHUB_CLIENT_ID');
-      const callback = vi.fn();
+    it('reports an error when the device code fetch fails', () => {
+      // GITHUB_CLIENT_ID is not required — a bundled default is used.
+      // Simulate a network failure by returning a rejected promise from fetch.
+      vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error('network error'));
 
+      const callback = vi.fn();
       startGitHubLogin(callback);
 
       // The callback is invoked asynchronously after the
@@ -93,7 +92,7 @@ describe('githubAuth', () => {
         expect(callback).toHaveBeenCalledWith(
           expect.objectContaining({
             type: 'error',
-            message: expect.stringContaining('GITHUB_CLIENT_ID'),
+            message: expect.stringContaining('network error'),
           }),
         );
       });

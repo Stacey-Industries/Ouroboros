@@ -173,7 +173,7 @@ function runBuildCommand(cwd: string): Promise<string> {
 }
 
 function getProjectRoot(): string {
-  return app.isPackaged ? path.dirname(app.getAppPath('exe')) : app.getAppPath();
+  return app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath();
 }
 
 async function handleRebuildAndRestart(): Promise<HandlerResult> {

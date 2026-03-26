@@ -52,7 +52,7 @@ export function extractSymbolsFromTree(opts: ExtractSymbolsOpts): ParseResult {
 
 // ─── Top-Level Node Walk ─────────────────────────────────────────────────────
 
-function walkTopLevelNode(node: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function walkTopLevelNode(node: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   const type = node.type;
 
   if (type === 'export_statement') {
@@ -75,7 +75,7 @@ function walkTopLevelNode(node: TreeSitterModule.Node, ctx: SymbolExtractionCont
 
 // ─── Export Statement ────────────────────────────────────────────────────────
 
-function handleExportStatement(node: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function handleExportStatement(node: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   const declaration = node.childForFieldName('declaration');
   if (declaration) {
     handleDeclaration(declaration, true, ctx);
@@ -86,7 +86,7 @@ function handleExportStatement(node: TreeSitterModule.Node, ctx: SymbolExtractio
   handleExportDefault(node, ctx);
 }
 
-function handleExportFrom(node: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function handleExportFrom(node: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   const source = node.childForFieldName('source');
   if (!source) return;
   const importSpec = source.text.replace(/['"]/g, '');
@@ -96,7 +96,7 @@ function handleExportFrom(node: TreeSitterModule.Node, ctx: SymbolExtractionCont
   }
 }
 
-function handleExportDefault(node: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function handleExportDefault(node: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   const defaultExpr = node.namedChildren.find((c) => c.type === 'identifier');
   if (!defaultExpr) return;
   const existing = ctx.nodes.find((n) => n.name === defaultExpr.text && n.filePath === ctx.relPath);
@@ -111,7 +111,7 @@ function handleExportDefault(node: TreeSitterModule.Node, ctx: SymbolExtractionC
 
 // ─── Import Statement ────────────────────────────────────────────────────────
 
-function handleImportStatement(node: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function handleImportStatement(node: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   const source = node.childForFieldName('source');
   if (!source) return;
   const importSpec = source.text.replace(/['"]/g, '');
@@ -124,7 +124,7 @@ function handleImportStatement(node: TreeSitterModule.Node, ctx: SymbolExtractio
 // ─── Declaration Handling ────────────────────────────────────────────────────
 
 function handleDeclaration(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   isExported: boolean,
   ctx: SymbolExtractionContext,
 ): void {
@@ -149,7 +149,7 @@ function handleDeclaration(
 }
 
 function handleVariableDeclaration(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   line: number,
   isExported: boolean,
   ctx: SymbolExtractionContext,
@@ -180,7 +180,7 @@ const SIMPLE_DECL_MAP = new Map<string, GraphNode['type']>([
 ]);
 
 function handleSimpleDeclaration(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   isExported: boolean,
   ctx: SymbolExtractionContext,
 ): void {
@@ -197,7 +197,7 @@ function handleSimpleDeclaration(
 // ─── Class Declaration ───────────────────────────────────────────────────────
 
 function handleClassDeclaration(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   isExported: boolean,
   ctx: SymbolExtractionContext,
 ): void {
@@ -220,7 +220,7 @@ function handleClassDeclaration(
 }
 
 function addInheritanceEdges(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   classNodeId: string,
   ctx: SymbolExtractionContext,
 ): void {
@@ -229,7 +229,7 @@ function addInheritanceEdges(
 }
 
 function addExtendsEdge(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   classNodeId: string,
   ctx: SymbolExtractionContext,
 ): void {
@@ -249,7 +249,7 @@ function addExtendsEdge(
 }
 
 function addImplementsEdges(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   classNodeId: string,
   ctx: SymbolExtractionContext,
 ): void {
@@ -281,7 +281,7 @@ const SKIP_METHOD_NAMES = new Set([
   'throw',
 ]);
 
-function extractClassMembers(body: TreeSitterModule.Node, ctx: SymbolExtractionContext): void {
+function extractClassMembers(body: TreeSitterModule.SyntaxNode, ctx: SymbolExtractionContext): void {
   for (let i = 0; i < body.namedChildCount; i++) {
     const member = body.namedChild(i);
     if (!member) continue;

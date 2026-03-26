@@ -1,8 +1,9 @@
 import React from 'react';
+
 import type { OrchestrationMode, OrchestrationProvider, VerificationProfileName } from '../../types/electron';
 import { ActionButton, cardStyle } from '../ContextBuilder/ContextBuilderPrimitives';
-import type { OrchestrationTaskComposerModel } from './useOrchestrationTaskComposerModel';
 import { panelStyle } from './orchestrationUi';
+import type { OrchestrationTaskComposerModel } from './useOrchestrationTaskComposerModel';
 
 const FIELD_GRID_STYLE: React.CSSProperties = {
   display: 'grid',

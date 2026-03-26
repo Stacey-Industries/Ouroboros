@@ -62,10 +62,10 @@ export function toForwardSlash(p: string): string {
 export async function discoverDirectories(srcRoot: string, depth: number = 0): Promise<string[]> {
   if (depth > MAX_DEPTH) return [];
 
-  let entries: Awaited<ReturnType<typeof fs.readdir>>;
+  let entries: import('fs').Dirent<string>[];
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- srcRoot from project directory discovery
-    entries = await fs.readdir(srcRoot, { withFileTypes: true });
+    entries = (await fs.readdir(srcRoot, { withFileTypes: true })) as import('fs').Dirent<string>[];
   } catch {
     return [];
   }
@@ -237,6 +237,7 @@ export function spawnClaude(prompt: string, model: string): Promise<string> {
     const child = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: CLAUDE_TIMEOUT_MS,
+      env: { ...process.env, OUROBOROS_INTERNAL: '1' },
     });
 
     let stdout = '';

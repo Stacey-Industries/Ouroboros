@@ -1,18 +1,19 @@
 import React from 'react';
+
+import { ContextPreview } from './ContextPreview';
 import {
   ErrorBanner,
   LoadingState,
   NoProjectState,
   OrchestrationHeader,
+  type OrchestrationTab,
   OrchestrationTabBar,
   OverviewTabContent,
-  type OrchestrationTab,
 } from './OrchestrationPanelSections';
-import { ContextPreview } from './ContextPreview';
-import { TaskSessionHistory } from './TaskSessionHistory';
 import { OrchestrationTaskComposer } from './OrchestrationTaskComposer';
-import { VerificationSummary } from './VerificationSummary';
+import { TaskSessionHistory } from './TaskSessionHistory';
 import type { UseOrchestrationModelReturn } from './useOrchestrationModel';
+import { VerificationSummary } from './VerificationSummary';
 
 function pickString(fallback: string, ...values: Array<string | null | undefined>): string {
   return values.find((value) => typeof value === 'string' && value.length > 0) ?? fallback;

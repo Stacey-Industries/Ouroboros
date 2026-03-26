@@ -21,7 +21,7 @@ export function TimeTravelPanel({
   onClose,
 }: TimeTravelPanelProps): React.ReactElement {
   const { projectRoot } = useProject();
-  const panel = useTimeTravelPanelState({ projectRoot, snapshots, onCreateSnapshot, onRefreshSnapshots });
+  const panel = useTimeTravelPanelState({ projectRoot: projectRoot ?? undefined, snapshots, onCreateSnapshot, onRefreshSnapshots });
   const hasDetailPane = Boolean(panel.selectedSnapshot || panel.comparisonReady);
 
   return (

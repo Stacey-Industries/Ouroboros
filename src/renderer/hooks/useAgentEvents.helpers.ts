@@ -40,7 +40,7 @@ export const initialAgentState: AgentState = {
 };
 
 export type AgentAction =
-  | { type: 'AGENT_START'; sessionId: string; taskLabel: string; timestamp: number; parentSessionId?: string; model?: string }
+  | { type: 'AGENT_START'; sessionId: string; taskLabel: string; timestamp: number; parentSessionId?: string; model?: string; internal?: boolean }
   | { type: 'TOOL_START'; sessionId: string; toolCall: ToolCallEvent }
   | { type: 'TOOL_END'; sessionId: string; toolCallId?: string; toolName?: string; duration: number; status: 'success' | 'error'; output?: string }
   | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string }
@@ -95,39 +95,43 @@ function reduceUtilityAction(state: AgentState, action: AgentAction): AgentState
   }
 }
 
-function startSession(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'AGENT_START' }>,
-): AgentState {
-  // If the session already exists (placeholder from ensureSession, or a
-  // completed chat-thread session receiving a new turn), update it.
-  // Reset status to 'running' so the monitor card reflects the new turn.
-  if (hasSession(state.sessions, action.sessionId)) {
-    return updateSession(state, action.sessionId, (session) => ({
-      ...session,
-      taskLabel: action.taskLabel !== `Session ${action.sessionId.slice(0, 8)}` ? action.taskLabel : session.taskLabel,
-      status: 'running',
-      startedAt: action.timestamp,
-      completedAt: undefined,
-      error: undefined,
-      model: action.model ?? session.model,
-      parentSessionId: action.parentSessionId ?? session.parentSessionId,
-    }));
-  }
+type AgentStartAction = Extract<AgentAction, { type: 'AGENT_START' }>;
 
-  // Resolve parent: explicit > pending link > temporal heuristic
+function updateExistingSession(state: AgentState, action: AgentStartAction): AgentState {
+  return updateSession(state, action.sessionId, (session) => ({
+    ...session,
+    taskLabel: action.taskLabel !== `Session ${action.sessionId.slice(0, 8)}` ? action.taskLabel : session.taskLabel,
+    status: 'running',
+    startedAt: action.timestamp,
+    completedAt: undefined,
+    error: undefined,
+    model: action.model ?? session.model,
+    parentSessionId: action.parentSessionId ?? session.parentSessionId,
+  }));
+}
+
+function resolveParentAndTimestamps(
+  state: AgentState,
+  action: AgentStartAction,
+): { resolvedParent: string | undefined; updatedTimestamps: PendingSubagentStamp[] } {
   let resolvedParent = action.parentSessionId ?? state.pendingSubagentLinks[action.sessionId];
   let updatedTimestamps = state.pendingSubagentTimestamps;
-
   if (!resolvedParent) {
     const temporalMatch = findTemporalParent(state.pendingSubagentTimestamps, action.timestamp);
     if (temporalMatch) {
       resolvedParent = temporalMatch.parentSessionId;
-      // Consume the matched stamp so it isn't reused
       updatedTimestamps = state.pendingSubagentTimestamps.filter((stamp) => stamp !== temporalMatch);
     }
   }
+  return { resolvedParent, updatedTimestamps };
+}
 
+function startSession(state: AgentState, action: AgentStartAction): AgentState {
+  // If the session already exists (placeholder or completed chat-thread session
+  // receiving a new turn), update it and reset status to 'running'.
+  if (hasSession(state.sessions, action.sessionId)) return updateExistingSession(state, action);
+
+  const { resolvedParent, updatedTimestamps } = resolveParentAndTimestamps(state, action);
   const newSession: AgentSession = {
     id: action.sessionId,
     taskLabel: action.taskLabel,
@@ -138,8 +142,8 @@ function startSession(
     inputTokens: 0,
     outputTokens: 0,
     model: action.model,
+    internal: action.internal,
   };
-
   return {
     sessions: [newSession, ...state.sessions],
     pendingSubagentLinks: omitPendingLink(state.pendingSubagentLinks, action.sessionId),

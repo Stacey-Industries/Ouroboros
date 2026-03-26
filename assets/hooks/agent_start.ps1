@@ -86,9 +86,10 @@ $payload = [ordered]@{
 }
 
 # Add optional fields only if present (avoid null values in JSON)
-if ($parentSessionId) { $payload['parentSessionId'] = $parentSessionId }
-if ($prompt)          { $payload['prompt'] = $prompt }
-if ($model)           { $payload['model'] = $model }
+if ($parentSessionId)                  { $payload['parentSessionId'] = $parentSessionId }
+if ($prompt)                           { $payload['prompt'] = $prompt }
+if ($model)                            { $payload['model'] = $model }
+if ($env:OUROBOROS_INTERNAL -eq '1')   { $payload['internal'] = $true }
 
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)

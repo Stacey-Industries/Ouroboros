@@ -3,87 +3,86 @@
  */
 
 // ---- Controller (Phase 8) ---------------------------------------------------
-export { GraphController, getGraphController } from './graphController'
-export type { GraphControllerStatus } from './graphController'
+export { getGraphController,GraphController } from './graphController'
 
 // ---- Database (Phase 1) -----------------------------------------------------
 export { GraphDatabase } from './graphDatabase'
 export type {
-  NodeLabel,
-  EdgeType,
-  GraphNode,
-  GraphEdge,
-  NodeFilter,
-  NodeSearchResult,
-  FileHashRecord,
-  ProjectRecord,
   ADRRecord,
   ADRSection,
   BaseNodeProps,
-  ProjectProps,
+  ClassProps,
+  EdgeType,
+  EnumProps,
+  FileHashRecord,
   FileProps,
   FolderProps,
   FunctionProps,
-  MethodProps,
-  ClassProps,
+  GraphEdge,
+  GraphNode,
   InterfaceProps,
-  TypeProps,
-  EnumProps,
-  RouteProps,
+  MethodProps,
   ModuleProps,
+  NodeFilter,
+  NodeLabel,
+  NodeSearchResult,
   PackageProps,
+  ProjectProps,
+  ProjectRecord,
+  RouteProps,
+  TypeProps,
 } from './graphDatabaseTypes'
 
 // ---- Tree-sitter parser (Phase 2) ------------------------------------------
+export { getLanguageConfig, getSupportedExtensions } from './treeSitterLanguageConfigs'
 export { TreeSitterParser } from './treeSitterParser'
 export type {
-  LanguageId,
-  LanguageConfig,
-  RoutePattern,
+  ExtractedCall,
   ExtractedDefinition,
   ExtractedImport,
-  ImportSpecifier,
-  ExtractedCall,
   ExtractedRoute,
+  ImportSpecifier,
+  LanguageConfig,
+  LanguageId,
   ParsedFileResult,
+  RoutePattern,
 } from './treeSitterTypes'
-export { getLanguageConfig, getSupportedExtensions } from './treeSitterLanguageConfigs'
 
 // ---- Indexing pipeline (Phase 3) --------------------------------------------
 export { IndexingPipeline } from './indexingPipeline'
 export type {
+  DiscoveredFile,
+  IndexedFile,
   IndexingOptions,
   IndexingProgress,
   IndexingResult,
-  DiscoveredFile,
-  IndexedFile,
 } from './indexingPipelineTypes'
 
 // ---- Query engines (Phase 5) ------------------------------------------------
-export { QueryEngine } from './queryEngine'
 export { CypherEngine } from './cypherEngine'
+export { QueryEngine } from './queryEngine'
 export type {
-  RiskLevel,
-  TraceCallPathOptions,
-  TraceNode,
-  TraceEdge,
-  TraceResult,
-  ChangeScope,
-  DetectChangesOptions,
-  ChangedSymbol,
-  ImpactedCaller,
-  ChangedFileInfo,
-  DetectChangesResult,
   ArchitectureAspect,
   ArchitectureResult,
-  GraphSchemaResult,
-  CodeSearchResult,
+  ChangedFileInfo,
+  ChangedSymbol,
+  ChangeScope,
   CodeSearchOptions,
+  CodeSearchResult,
+  DetectChangesOptions,
+  DetectChangesResult,
+  GraphSchemaResult,
+  ImpactedCaller,
+  RiskLevel,
+  TraceCallPathOptions,
+  TraceEdge,
+  TraceNode,
+  TraceResult,
 } from './queryEngineTypes'
 
 // ---- MCP tool handlers (Phase 6) --------------------------------------------
-export { createGraphMcpTools } from './mcpToolHandlers'
 export type { GraphToolContext } from './mcpToolHandlers'
+export { createGraphMcpTools } from './mcpToolHandlers'
 
 // ---- Auto-sync watcher (Phase 7) --------------------------------------------
 export { AutoSyncWatcher } from './autoSync'

@@ -8,8 +8,9 @@ export * from './electron-extensions';
 export * from './electron-foundation';
 export * from './electron-git';
 export * from './electron-mcp-store';
-export * from './electron-rules-skills';
 export * from './electron-observability';
+export * from './electron-orchestration';
+export * from './electron-rules-skills';
 export * from './electron-runtime-apis';
 export * from './electron-workspace';
 

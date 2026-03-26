@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useEffect, useRef } from 'react';
+import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useRef } from 'react';
 
 const DRAFT_KEY_PREFIX = 'agentChat:draft:';
 const DEBOUNCE_MS = 500;
@@ -53,8 +53,8 @@ function restoreDraftFromStorage(key: string, setDraft: Dispatch<SetStateAction<
 function useThreadSwitchPersistence(
   activeThreadId: string | null,
   setDraft: Dispatch<SetStateAction<string>>,
-  timerRef: ReturnType<typeof useRef<ReturnType<typeof setTimeout> | null>>,
-  draftRef: ReturnType<typeof useRef<string>>,
+  timerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  draftRef: MutableRefObject<string>,
 ): void {
   const previousThreadIdRef = useRef<string | null>(activeThreadId);
 

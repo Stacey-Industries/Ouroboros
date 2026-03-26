@@ -1,331 +1,225 @@
 /**
- * contextLayerControllerHelpers.ts — Low-level helpers for module detection
- * and controller lifecycle extracted from contextLayerController.ts.
+ * contextLayerControllerHelpers.ts — Private method helpers for ContextLayerControllerImpl.
+ * Extracted from contextLayerController.ts to stay under the 300-line limit.
+ *
+ * Also contains low-level helpers shared by contextLayerControllerSupport.ts:
+ * buildDirTree, makeModule, isCodeFile, selectRepresentativeFiles,
+ * computeModuleHash, normalizePath, DirNode, DetectedModule, CachedModuleData.
  */
 
-import { createHash } from 'crypto';
-import { readFile } from 'fs/promises';
-import path from 'path';
+import { createHash } from 'crypto'
+import path from 'path'
 
-import log from '../logger';
-import type { IndexedRepoFile } from '../orchestration/repoIndexer';
-import { aiEnrichModules, type AiSummarizerState } from './contextLayerAiSummarizer';
-import type { ModuleCacheState } from './contextLayerRefresher';
-import { configureTypeScriptAliases, getStrategyForExtension } from './languageStrategies';
+import log from '../logger'
+import type { IndexedRepoFile } from '../orchestration/repoIndexer'
+import type { ModuleContextSummary } from '../orchestration/types'
+import { runContextLayerGC } from './contextLayerGC'
+import type { ContextLayerConfig, RepoMap } from './contextLayerTypes'
+import { type ContextLayerWatcher, createContextLayerWatcher } from './contextLayerWatcher'
+import { createSummarizationQueue, type SummarizationQueue } from './summarizationQueue'
 
 // ---------------------------------------------------------------------------
 // Shared types
 // ---------------------------------------------------------------------------
 
 export interface ModuleBoundarySignals {
-  hasBarrel: boolean;
-  fileTypeMix: string[];
-  barrelImportCount: number;
-  directImportCount: number;
-  boundaryStrength: 'strong' | 'moderate' | 'weak';
+  hasBarrel: boolean
+  boundaryStrength: 'strong' | 'moderate' | 'weak'
+  barrelImportCount: number
+  directImportCount: number
 }
 
 export interface DetectedModule {
-  id: string;
-  label: string;
-  rootPath: string;
-  files: IndexedRepoFile[];
-  exports: string[];
-  recentlyChanged: boolean;
-  boundarySignals: ModuleBoundarySignals;
-  cohesion: number;
+  id: string
+  label: string
+  rootPath: string
+  files: IndexedRepoFile[]
+  exports: string[]
+  recentlyChanged: boolean
+  boundarySignals: ModuleBoundarySignals
+  cohesion: number
 }
 
 export interface CachedModuleData {
-  module: DetectedModule;
-  summary: import('../orchestration/types').ModuleContextSummary;
-  stateHash: string;
-  aiEnriched?: boolean;
+  module: DetectedModule
+  summary: ModuleContextSummary
+  stateHash: string
+  aiEnriched: boolean
 }
 
 export interface DirNode {
-  name: string;
-  relPath: string;
-  absPath: string;
-  directFiles: IndexedRepoFile[];
-  children: Map<string, DirNode>;
+  path: string
+  name: string
+  children: Map<string, DirNode>
+  directFiles: IndexedRepoFile[]
 }
 
 // ---------------------------------------------------------------------------
-// Utilities
+// Low-level helpers
 // ---------------------------------------------------------------------------
 
-export function isCodeFile(ext: string): boolean {
-  return [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.mjs',
-    '.cjs',
-    '.py',
-    '.pyi',
-    '.java',
-    '.kt',
-    '.kts',
-    '.go',
-    '.rs',
-    '.c',
-    '.cpp',
-    '.cc',
-    '.cxx',
-    '.h',
-    '.hpp',
-    '.hxx',
-    '.rb',
-    '.php',
-    '.cs',
-  ].includes(ext);
+const CODE_EXTENSIONS = [
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
+  '.py', '.pyi', '.java', '.kt', '.kts',
+  '.go', '.rs', '.c', '.cpp', '.cc', '.cxx',
+  '.h', '.hpp', '.hxx', '.rb', '.php', '.cs',
+]
+
+export function isCodeFile(extension: string): boolean {
+  return CODE_EXTENSIONS.includes(extension)
 }
 
 export function normalizePath(filePath: string): string {
-  return filePath.replace(/\\/g, '/').toLowerCase();
-}
-
-export function computeModuleHash(mod: DetectedModule): string {
-  const hash = createHash('sha1');
-  for (const file of mod.files) {
-    hash.update(`${file.relativePath}|${file.size}|${file.modifiedAt}`);
-  }
-  return hash.digest('hex');
-}
-
-// ---------------------------------------------------------------------------
-// Directory tree building
-// ---------------------------------------------------------------------------
-
-function insertFileIntoDirTree(file: IndexedRepoFile, root: DirNode, rootPath: string): void {
-  const segments = file.relativePath.split('/');
-  const dirSegments = segments.slice(0, -1);
-
-  let current = root;
-  for (let i = 0; i < dirSegments.length; i++) {
-    // eslint-disable-next-line security/detect-object-injection -- dirSegments is from splitting a file's relativePath (trusted repo index data, not user input)
-    const seg = dirSegments[i];
-    let child = current.children.get(seg);
-    if (!child) {
-      const childRelPath = dirSegments.slice(0, i + 1).join('/');
-      child = {
-        name: seg,
-        relPath: childRelPath,
-        absPath: path.join(rootPath, childRelPath),
-        directFiles: [],
-        children: new Map(),
-      };
-      current.children.set(seg, child);
-    }
-    current = child;
-  }
-  current.directFiles.push(file);
-}
-
-export function buildDirTree(files: IndexedRepoFile[], rootPath: string): DirNode {
-  const root: DirNode = {
-    name: '',
-    relPath: '',
-    absPath: rootPath,
-    directFiles: [],
-    children: new Map(),
-  };
-  for (const file of files) {
-    insertFileIntoDirTree(file, root, rootPath);
-  }
-  return root;
+  return filePath.replace(/\\/g, '/').toLowerCase()
 }
 
 export function collectAllFiles(node: DirNode): IndexedRepoFile[] {
-  const files = [...node.directFiles];
+  const files: IndexedRepoFile[] = [...node.directFiles]
   for (const child of node.children.values()) {
-    files.push(...collectAllFiles(child));
+    files.push(...collectAllFiles(child))
   }
-  return files;
-}
-
-// ---------------------------------------------------------------------------
-// Module creation
-// ---------------------------------------------------------------------------
-
-function detectModuleBarrel(files: IndexedRepoFile[]): boolean {
-  return files.some((f) => {
-    const strategy = getStrategyForExtension(f.extension);
-    if (strategy) return strategy.isModuleEntryPoint(f.relativePath);
-    const base = path.basename(f.relativePath, f.extension);
-    return base === 'index' && isCodeFile(f.extension);
-  });
+  return files
 }
 
 export function buildExportsFromFiles(files: IndexedRepoFile[]): string[] {
-  return files
-    .filter((f) => {
-      const base = path.basename(f.relativePath, f.extension);
-      return base !== 'index' && isCodeFile(f.extension);
-    })
-    .map((f) => path.basename(f.relativePath, f.extension));
+  const exports = new Set<string>()
+  for (const file of files) {
+    const base = path.basename(file.relativePath, path.extname(file.relativePath))
+    if (base && base !== 'index') exports.add(base)
+  }
+  return Array.from(exports).sort().slice(0, 20)
 }
 
-export function makeModule(
-  node: DirNode,
-  files: IndexedRepoFile[],
-  changedFiles: Set<string>,
-): DetectedModule {
-  const extSet = new Set<string>();
-  for (const f of files) {
-    if (f.extension) extSet.add(f.extension.replace(/^\./, ''));
+export function buildDirTree(files: IndexedRepoFile[], rootPath: string): DirNode {
+  const root: DirNode = { path: rootPath, name: path.basename(rootPath), children: new Map(), directFiles: [] }
+  for (const file of files) {
+    const relDir = path.dirname(file.relativePath).replace(/\\/g, '/')
+    if (relDir === '.' || relDir === '') {
+      root.directFiles.push(file)
+      continue
+    }
+    const parts = relDir.split('/')
+    let current = root
+    for (const part of parts) {
+      if (!current.children.has(part)) {
+        current.children.set(part, { path: path.join(rootPath, part), name: part, children: new Map(), directFiles: [] })
+      }
+      current = current.children.get(part)!
+    }
+    current.directFiles.push(file)
   }
+  return root
+}
 
+export function makeModule(node: DirNode, files: IndexedRepoFile[], changedFiles: Set<string>): DetectedModule {
+  const recentlyChanged = files.some((f) => changedFiles.has(f.relativePath) || changedFiles.has(f.path))
+  const label = node.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   return {
-    id: node.relPath.replace(/[\\/]/g, '/') || '.',
-    label: node.name || path.basename(node.absPath),
-    rootPath: node.absPath,
+    id: node.path,
+    label,
+    rootPath: node.path,
     files,
     exports: buildExportsFromFiles(files),
-    recentlyChanged: files.some((f) => changedFiles.has(normalizePath(f.path))),
-    boundarySignals: {
-      hasBarrel: detectModuleBarrel(files),
-      fileTypeMix: Array.from(extSet).sort(),
-      barrelImportCount: 0,
-      directImportCount: 0,
-      boundaryStrength: 'weak',
-    },
+    recentlyChanged,
+    boundarySignals: { hasBarrel: files.some((f) => path.basename(f.relativePath).startsWith('index.')), boundaryStrength: 'weak', barrelImportCount: 0, directImportCount: 0 },
     cohesion: 0,
-  };
+  }
 }
 
-/** Select the 1-3 most representative files from a module for AI analysis. */
+export function computeModuleHash(mod: DetectedModule): string {
+  const entries = mod.files.map((f) => `${normalizePath(f.relativePath)}|${f.size}|${f.modifiedAt}`).sort()
+  const hash = createHash('sha1')
+  for (const entry of entries) hash.update(entry)
+  return hash.digest('hex')
+}
+
 export function selectRepresentativeFiles(mod: DetectedModule): IndexedRepoFile[] {
-  const codeFiles = mod.files.filter((f) => isCodeFile(f.extension));
-  const selected: IndexedRepoFile[] = [];
-
-  const barrel = codeFiles.find((f) => {
-    return path.basename(f.relativePath, f.extension) === 'index';
-  });
-  if (barrel) selected.push(barrel);
-
-  const types = codeFiles.find((f) => {
-    const base = path.basename(f.relativePath, f.extension).toLowerCase();
-    return (base === 'types' || base === 'interfaces') && !selected.includes(f);
-  });
-  if (types) selected.push(types);
-
-  const remaining = codeFiles.filter((f) => !selected.includes(f));
-  remaining.sort((a, b) => b.size - a.size);
-  if (remaining[0]) selected.push(remaining[0]);
-
-  return selected.slice(0, 3);
+  const codeFiles = mod.files.filter((f) => isCodeFile(f.extension))
+  const entryPoints = codeFiles.filter((f) => path.basename(f.relativePath).startsWith('index.'))
+  const sorted = [...codeFiles].sort((a, b) => b.size - a.size)
+  const selected = new Set<string>()
+  const result: IndexedRepoFile[] = []
+  for (const f of [...entryPoints, ...sorted]) {
+    if (selected.has(f.relativePath)) continue
+    selected.add(f.relativePath)
+    result.push(f)
+    if (result.length >= 5) break
+  }
+  return result
 }
 
 // ---------------------------------------------------------------------------
-// Controller lifecycle helpers
+// GC interval (shared constant)
 // ---------------------------------------------------------------------------
 
-export async function loadPathAliases(workspaceRoots: string[]): Promise<void> {
-  if (workspaceRoots.length === 0) return;
-  const root = workspaceRoots[0];
-  const candidates = ['tsconfig.node.json', 'tsconfig.web.json', 'tsconfig.json'];
-  const mergedPaths: Record<string, string[]> = {};
-  for (const name of candidates) {
-    try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from known config file names within workspace root
-      const raw = await readFile(path.join(root, name), 'utf-8');
-      const parsed = JSON.parse(raw) as { compilerOptions?: { paths?: Record<string, string[]> } };
-      const paths = parsed?.compilerOptions?.paths;
-      if (paths && typeof paths === 'object') Object.assign(mergedPaths, paths);
-    } catch {
-      // File doesn't exist or isn't valid JSON — skip
+export const GC_INTERVAL_MS = 60 * 60 * 1_000
+
+// ---------------------------------------------------------------------------
+// Setup helpers
+// ---------------------------------------------------------------------------
+
+export function setupWatcher(
+  workspaceRoot: string,
+  config: ContextLayerConfig,
+  forceRebuild: () => Promise<void>,
+): ContextLayerWatcher {
+  return createContextLayerWatcher({
+    workspaceRoot,
+    debounceMs: config.debounceMs,
+    onInvalidation: () => {
+      forceRebuild().catch((err) => {
+        log.warn('[context-layer] Rebuild on invalidation failed:', err)
+      })
+    },
+  })
+}
+
+export function setupGcTimer(
+  getRepoMap: () => RepoMap | null,
+  runGcFn: (repoMap: RepoMap) => Promise<void>,
+): ReturnType<typeof setInterval> {
+  return setInterval(() => {
+    const repoMap = getRepoMap()
+    if (repoMap) {
+      runGcFn(repoMap).catch((err) => {
+        log.warn('[context-layer] GC timer failed:', err)
+      })
     }
-  }
-  if (Object.keys(mergedPaths).length > 0) configureTypeScriptAliases(mergedPaths);
+  }, GC_INTERVAL_MS)
 }
 
-export function logInitResults(
-  modules: DetectedModule[],
-  cachedModules: Map<string, CachedModuleData>,
-  startMs: number,
-): void {
-  const elapsedMs = Date.now() - startMs;
-  const updated = modules.filter((m) => {
-    const cached = cachedModules.get(m.id);
-    return cached && !cached.aiEnriched;
-  }).length;
-  const skipped = modules.length - updated;
-  log.info(
-    `Indexed ${modules.length} modules in ${elapsedMs}ms` +
-      ` (${updated} updated, ${skipped} unchanged)`,
-  );
-  if (updated > 0 && modules.length < 80) logModuleDetails(modules);
+// ---------------------------------------------------------------------------
+// GC runner
+// ---------------------------------------------------------------------------
+
+export async function runGC(workspaceRoot: string, repoMap: RepoMap, config: ContextLayerConfig): Promise<void> {
+  const currentModuleIds = new Set(repoMap.modules.map((e) => e.structural.module.id))
+  await runContextLayerGC({
+    workspaceRoot,
+    currentModuleIds,
+    maxModules: config.maxModules,
+    maxSizeBytes: config.maxSizeBytes,
+    maxStalenessMs: 7 * 24 * 60 * 60 * 1000,
+  })
 }
 
-function logModuleDetails(modules: DetectedModule[]): void {
-  const sorted = modules.slice().sort((a, b) => b.files.length - a.files.length);
-  for (const m of sorted) {
-    const s = m.boundarySignals;
-    const importInfo =
-      s.barrelImportCount + s.directImportCount > 0
-        ? `, imports: ${s.barrelImportCount}barrel/${s.directImportCount}direct`
-        : '';
-    log.info(
-      `  ${m.id} (${m.files.length} files, ${s.boundaryStrength}${s.hasBarrel ? ', barrel' : ''}, cohesion: ${(m.cohesion * 100).toFixed(0)}%${importInfo})`,
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Summarization queue creation
+// ---------------------------------------------------------------------------
 
-interface FireEnrichmentOpts {
-  modules: DetectedModule[];
-  autoSummarize: boolean;
-  moduleCache: ModuleCacheState;
-  aiState: AiSummarizerState;
-  workspaceRoots: string[];
-}
-
-export function fireAndForgetEnrichment(opts: FireEnrichmentOpts): void {
-  const { modules, autoSummarize, moduleCache, aiState, workspaceRoots } = opts;
-  if (!autoSummarize) return;
-  const toEnrich = modules
-    .filter((m) => {
-      const cached = moduleCache.cachedModules.get(m.id);
-      return cached && !cached.aiEnriched;
-    })
-    .map((m) => m.id);
-  if (toEnrich.length === 0) return;
-  log.info(`Queuing AI enrichment for ${toEnrich.length} module(s)`);
-  aiEnrichModules({
-    moduleIds: toEnrich,
-    cachedModules: moduleCache.cachedModules,
-    aiState,
-    workspaceRoots,
-  }).catch((err: unknown) => {
-    log.warn('AI enrichment failed:', err);
-  });
-}
-
-export function enrichUnenrichedModules(
-  moduleCache: ModuleCacheState,
-  aiState: AiSummarizerState,
-  workspaceRoots: string[],
-): void {
-  const unenriched = Array.from(moduleCache.cachedModules.entries())
-    .filter(([, v]) => !v.aiEnriched)
-    .map(([id]) => id);
-  if (unenriched.length === 0) return;
-  log.info(`AutoSummarize enabled — enriching ${unenriched.length} cached modules`);
-  aiEnrichModules({
-    moduleIds: unenriched,
-    cachedModules: moduleCache.cachedModules,
-    aiState,
-    workspaceRoots,
-  }).catch((err: unknown) => {
-    log.warn('AI enrichment on autoSummarize enable failed:', err);
-  });
-}
-
-export function clearModuleCache(moduleCache: ModuleCacheState): void {
-  log.info('Disabled — clearing cache');
-  moduleCache.cachedModules.clear();
-  moduleCache.cachedRepoMap = null;
-  moduleCache.lastSnapshotCacheKey = null;
+export function createQueueForRepoMap(workspaceRoot: string, repoMap: RepoMap): SummarizationQueue {
+  return createSummarizationQueue({
+    workspaceRoot,
+    readModuleEntry: async () => null,
+    writeModuleEntry: async () => undefined,
+    readManifest: async () => null,
+    writeManifest: async () => undefined,
+    getModuleFiles: () => [],
+    getModuleStructural: () => null,
+    projectContext: {
+      languages: repoMap.languages,
+      frameworks: repoMap.frameworks,
+    },
+    getDependencyContext: () => [],
+  })
 }

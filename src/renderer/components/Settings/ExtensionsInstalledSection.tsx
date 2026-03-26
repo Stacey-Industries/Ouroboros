@@ -78,7 +78,7 @@ export function InstalledExtensionsSection({
           extLog={model.extLog}
           logLoading={model.logLoading}
           onRefresh={() =>
-            void model.fetchLog(model.selectedExtensionName ?? model.selectedExtension.name)
+            void model.fetchLog(model.selectedExtensionName ?? model.selectedExtension!.name)
           }
         />
       )}

@@ -1,8 +1,9 @@
 import { Terminal } from '@xterm/xterm'
 
+import type { Completion } from './CompletionOverlay'
 import type { TerminalSetupLifecycleContext } from './useTerminalSetup.shared'
 
-type CompletionKind = 'cmd' | 'dir' | 'file'
+type CompletionKind = Completion['type']
 
 export function setupKeyHandler(
   context: TerminalSetupLifecycleContext,

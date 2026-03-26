@@ -23,7 +23,8 @@ export function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
   const roots: string[] = []
 
   // Per-window project root (from windowManager)
-  const winId = event.sender.getOwnerBrowserWindow()?.id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow available at runtime but missing from typedefs
+  const winId = (event.sender as any).getOwnerBrowserWindow?.()?.id as number | undefined
   if (winId !== undefined) {
     const managed = getWindow(winId)
     if (managed?.projectRoot) {

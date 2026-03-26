@@ -1,6 +1,7 @@
+import log from '../logger'
 import type { ContextPacket } from '../orchestration/types'
+import { readModuleEntry,readRepoMap } from './contextLayerStore'
 import type { ModuleContextEntry, ModuleContextSummary, RepoMap, RepoMapSummary } from './contextLayerTypes'
-import { readRepoMap, readModuleEntry } from './contextLayerStore'
 import { compressRepoMap } from './repoMapGenerator'
 
 // ---------------------------------------------------------------------------
@@ -30,8 +31,6 @@ interface EnrichedContextPacket extends ContextPacket {
 // Token budget constants
 // ---------------------------------------------------------------------------
 
-const MAX_REPO_MAP_TOKENS = 800
-const MAX_MODULE_SUMMARY_TOKENS = 200
 const MAX_TOTAL_INJECTION_TOKENS = 2000
 
 // ---------------------------------------------------------------------------
@@ -55,55 +54,61 @@ interface SelectedModule {
   rank: number
 }
 
-function selectRelevantModules(
-  repoMap: RepoMap,
+function selectByFileOverlap(
+  moduleEntries: RepoMap['modules'],
   packet: ContextPacket,
-  goalKeywords: string[],
-): SelectedModule[] {
-  const selected = new Map<string, SelectedModule>()
-  let nextRank = 0
-
-  const moduleEntries = repoMap.modules
-
-  // a. File overlap — modules whose rootPath appears in any packet.files[].filePath
+  selected: Map<string, SelectedModule>,
+  nextRank: number,
+): number {
+  let rank = nextRank
   for (const entry of moduleEntries) {
     const rootPath = entry.structural.module.rootPath
     const moduleId = entry.structural.module.id
     if (selected.has(moduleId)) continue
 
-    const hasFileOverlap = packet.files.some(
-      (file) => file.filePath.includes(rootPath)
-    )
+    const hasFileOverlap = packet.files.some((file) => file.filePath.includes(rootPath))
     if (hasFileOverlap) {
-      selected.set(moduleId, { id: moduleId, priority: 'file_overlap', rank: nextRank++ })
+      selected.set(moduleId, { id: moduleId, priority: 'file_overlap', rank: rank++ })
     }
   }
+  return rank
+}
 
-  // b. Keyword overlap — modules whose id, label, or exports match any goalKeywords
-  if (goalKeywords.length > 0) {
-    const lowerKeywords = goalKeywords.map((kw) => kw.toLowerCase())
+function selectByKeyword(
+  moduleEntries: RepoMap['modules'],
+  goalKeywords: string[],
+  selected: Map<string, SelectedModule>,
+  nextRank: number,
+): number {
+  if (goalKeywords.length === 0) return nextRank
+  let rank = nextRank
+  const lowerKeywords = goalKeywords.map((kw) => kw.toLowerCase())
 
-    for (const entry of moduleEntries) {
-      const moduleId = entry.structural.module.id
-      if (selected.has(moduleId)) continue
+  for (const entry of moduleEntries) {
+    const moduleId = entry.structural.module.id
+    if (selected.has(moduleId)) continue
 
-      const idLower = moduleId.toLowerCase()
-      const labelLower = entry.structural.module.label.toLowerCase()
-      const exportsLower = entry.structural.exports.map((exp) => exp.toLowerCase())
+    const idLower = moduleId.toLowerCase()
+    const labelLower = entry.structural.module.label.toLowerCase()
+    const exportsLower = entry.structural.exports.map((exp) => exp.toLowerCase())
 
-      const hasKeywordMatch = lowerKeywords.some((kw) =>
-        idLower.includes(kw) ||
-        labelLower.includes(kw) ||
-        exportsLower.some((exp) => exp.includes(kw))
-      )
-
-      if (hasKeywordMatch) {
-        selected.set(moduleId, { id: moduleId, priority: 'keyword', rank: nextRank++ })
-      }
+    const hasMatch = lowerKeywords.some(
+      (kw) => idLower.includes(kw) || labelLower.includes(kw) || exportsLower.some((exp) => exp.includes(kw))
+    )
+    if (hasMatch) {
+      selected.set(moduleId, { id: moduleId, priority: 'keyword', rank: rank++ })
     }
   }
+  return rank
+}
 
-  // c. Dependency adjacency — modules that are dependencies of already-selected modules
+function selectByDependencyAdjacency(
+  moduleEntries: RepoMap['modules'],
+  repoMap: RepoMap,
+  selected: Map<string, SelectedModule>,
+  nextRank: number,
+): number {
+  let rank = nextRank
   const alreadySelectedIds = new Set(selected.keys())
   let adjacencyAdded = 0
   const maxAdjacency = 3
@@ -111,29 +116,47 @@ function selectRelevantModules(
   for (const dep of repoMap.crossModuleDependencies) {
     if (adjacencyAdded >= maxAdjacency) break
     if (alreadySelectedIds.has(dep.from) && !selected.has(dep.to)) {
-      // Verify the dependency target actually exists in the repo map
-      const exists = moduleEntries.some(
-        (entry) => entry.structural.module.id === dep.to
-      )
+      const exists = moduleEntries.some((entry) => entry.structural.module.id === dep.to)
       if (exists) {
-        selected.set(dep.to, { id: dep.to, priority: 'dependency', rank: nextRank++ })
+        selected.set(dep.to, { id: dep.to, priority: 'dependency', rank: rank++ })
         adjacencyAdded++
       }
     }
   }
+  return rank
+}
 
-  // d. Recently changed backfill — if fewer than 3 modules selected
-  if (selected.size < 3) {
-    for (const entry of moduleEntries) {
-      if (selected.size >= 3) break
-      const moduleId = entry.structural.module.id
-      if (selected.has(moduleId)) continue
-
-      if (entry.structural.recentlyChanged) {
-        selected.set(moduleId, { id: moduleId, priority: 'recently_changed', rank: nextRank++ })
-      }
+function backfillRecentlyChanged(
+  moduleEntries: RepoMap['modules'],
+  selected: Map<string, SelectedModule>,
+  nextRank: number,
+): number {
+  let rank = nextRank
+  if (selected.size >= 3) return rank
+  for (const entry of moduleEntries) {
+    if (selected.size >= 3) break
+    const moduleId = entry.structural.module.id
+    if (selected.has(moduleId)) continue
+    if (entry.structural.recentlyChanged) {
+      selected.set(moduleId, { id: moduleId, priority: 'recently_changed', rank: rank++ })
     }
   }
+  return rank
+}
+
+function selectRelevantModules(
+  repoMap: RepoMap,
+  packet: ContextPacket,
+  goalKeywords: string[],
+): SelectedModule[] {
+  const selected = new Map<string, SelectedModule>()
+  let nextRank = 0
+  const moduleEntries = repoMap.modules
+
+  nextRank = selectByFileOverlap(moduleEntries, packet, selected, nextRank)
+  nextRank = selectByKeyword(moduleEntries, goalKeywords, selected, nextRank)
+  nextRank = selectByDependencyAdjacency(moduleEntries, repoMap, selected, nextRank)
+  backfillRecentlyChanged(moduleEntries, selected, nextRank)
 
   return Array.from(selected.values())
 }
@@ -197,6 +220,35 @@ function enforceTokenBudget(
 // Main export
 // ---------------------------------------------------------------------------
 
+async function readModuleSummaries(
+  workspaceRoot: string,
+  selectedModules: SelectedModule[],
+): Promise<ModuleContextSummary[]> {
+  const summaries: ModuleContextSummary[] = []
+  for (const mod of selectedModules) {
+    let entry: ModuleContextEntry | null
+    try {
+      entry = await readModuleEntry(workspaceRoot, mod.id)
+    } catch (error) {
+      log.warn(`[context-layer] Failed to read module entry for ${mod.id}:`, error)
+      continue
+    }
+    if (entry) {
+      summaries.push(buildModuleSummary(entry))
+    }
+  }
+  return summaries
+}
+
+function buildRepoMapOnlyResult(
+  packet: ContextPacket,
+  repoMapSummary: RepoMapSummary,
+): InjectionResult {
+  const enrichedPacket = { ...packet } as EnrichedContextPacket
+  enrichedPacket.repoMap = repoMapSummary
+  return { packet: enrichedPacket as ContextPacket, injectedModules: [], injectedTokens: estimateTokens(repoMapSummary) }
+}
+
 export async function injectContextLayer(context: InjectionContext): Promise<InjectionResult> {
   const { packet, workspaceRoot, goalKeywords } = context
 
@@ -205,7 +257,7 @@ export async function injectContextLayer(context: InjectionContext): Promise<Inj
   try {
     repoMap = await readRepoMap(workspaceRoot)
   } catch (error) {
-    console.warn('[context-layer] Failed to read repo map:', error)
+    log.warn('[context-layer] Failed to read repo map:', error)
     return { packet, injectedModules: [], injectedTokens: 0 }
   }
 
@@ -218,41 +270,18 @@ export async function injectContextLayer(context: InjectionContext): Promise<Inj
 
   // 3. If no goal keywords, inject repo map only
   if (goalKeywords.length === 0) {
-    const enrichedPacket = { ...packet } as EnrichedContextPacket
-    enrichedPacket.repoMap = repoMapSummary
-    const injectedTokens = estimateTokens(repoMapSummary)
-    return { packet: enrichedPacket as ContextPacket, injectedModules: [], injectedTokens }
+    return buildRepoMapOnlyResult(packet, repoMapSummary)
   }
 
   // 4. Select relevant modules
   const selectedModules = selectRelevantModules(repoMap, packet, goalKeywords)
 
   if (selectedModules.length === 0) {
-    const enrichedPacket = { ...packet } as EnrichedContextPacket
-    enrichedPacket.repoMap = repoMapSummary
-    const injectedTokens = estimateTokens(repoMapSummary)
-    return { packet: enrichedPacket as ContextPacket, injectedModules: [], injectedTokens }
+    return buildRepoMapOnlyResult(packet, repoMapSummary)
   }
 
   // 5. Read module entries from store
-  const moduleSummaries: ModuleContextSummary[] = []
-
-  for (const mod of selectedModules) {
-    let entry: ModuleContextEntry | null
-    try {
-      entry = await readModuleEntry(workspaceRoot, mod.id)
-    } catch (error) {
-      console.warn(`[context-layer] Failed to read module entry for ${mod.id}:`, error)
-      continue
-    }
-
-    if (!entry) {
-      // Module in repo map but no store entry — skip
-      continue
-    }
-
-    moduleSummaries.push(buildModuleSummary(entry))
-  }
+  const moduleSummaries = await readModuleSummaries(workspaceRoot, selectedModules)
 
   // 6. Enforce token budget
   const budgeted = enforceTokenBudget(repoMapSummary, moduleSummaries, selectedModules)

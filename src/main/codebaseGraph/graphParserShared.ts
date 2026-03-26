@@ -112,10 +112,10 @@ export function resolveImportPath(
  * Replaces the non-existent `node.descendantsOfType()` in web-tree-sitter.
  */
 export function findDescendantsOfType(
-  node: TreeSitterModule.Node,
+  node: TreeSitterModule.SyntaxNode,
   type: string,
-): TreeSitterModule.Node[] {
-  const results: TreeSitterModule.Node[] = [];
+): TreeSitterModule.SyntaxNode[] {
+  const results: TreeSitterModule.SyntaxNode[] = [];
   const cursor = node.walk();
   let reachedRoot = false;
   while (!reachedRoot) {

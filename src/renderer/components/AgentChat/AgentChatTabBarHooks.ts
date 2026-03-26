@@ -81,10 +81,12 @@ export function useLinkedSessionId(thread: AgentChatThreadRecord | null): Linked
       setState({ provider: 'claude-code', sessionId: orchestration.claudeSessionId });
       return;
     }
-    setState((previous) => ({
-      provider: orchestration?.provider ?? previous.provider,
-      sessionId: previous.sessionId,
-    }));
+    setState((previous) => {
+      const rawProvider = orchestration?.provider;
+      const provider: LinkedSession['provider'] =
+        rawProvider === 'claude-code' || rawProvider === 'codex' ? rawProvider : previous.provider;
+      return { provider, sessionId: previous.sessionId };
+    });
   }, [orchestration?.claudeSessionId, orchestration?.codexThreadId, orchestration?.provider]);
   useLinkedTerminalPoll(thread, setState);
   return state;

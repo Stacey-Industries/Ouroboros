@@ -50,7 +50,7 @@ export function CommandPaletteSearchInput({
         &gt;
       </span>
       <input
-        ref={inputRef}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
         type="text"
         role="combobox"
         aria-expanded={isOpen}

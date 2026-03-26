@@ -118,5 +118,8 @@ export function buildShellIntegrationEnv(
           `. '${scriptPath.replace(/'/g, "''")}'`,
         ],
       }
+
+    default:
+      return { env: existingEnv, shellArgs: null }
   }
 }

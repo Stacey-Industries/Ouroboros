@@ -72,7 +72,7 @@ const FileViewerInner = memo(function FileViewerInner(
   const shikiLines = s.highlightedHtml
     ? parseShikiLines(injectLinks(s.highlightedHtml))
     : null;
-  const lines = content.split('\n');
+  const lines = (content ?? '').split('\n');
   const lineCount = lines.length;
   const { visible, foldedCounts } = computeVisibleLines(
     lineCount, s.collapsedFolds, s.foldableLines

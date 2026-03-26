@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import type { TerminalSession } from '../components/Terminal/TerminalTabs';
 import {
@@ -150,7 +150,7 @@ function useRestartAction(args: {
         return;
       }
 
-      const cwd = await resolveSessionCwd();
+      const cwd = await resolveSessionCwd() ?? '';
       try {
         await spawnBySessionType(session, cwd);
         updateSessionStatus(setSessions, sessionId, (item) => ({

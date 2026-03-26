@@ -3,7 +3,7 @@ import type { ProgressAddon } from '@xterm/addon-progress'
 import type { SearchAddon } from '@xterm/addon-search'
 import type { SerializeAddon } from '@xterm/addon-serialize'
 import type { Terminal } from '@xterm/xterm'
-import type { Dispatch, SetStateAction } from 'react'
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useProject } from '../../contexts/ProjectContext'
@@ -193,7 +193,7 @@ function createSetupRefs(
     shellIntegrationAddonRef: foundation.shellIntegrationAddonRef ?? { current: null },
     progressAddonRef: foundation.progressAddonRef ?? { current: null },
     serializeAddonRef: foundation.serializeAddonRef ?? { current: null },
-    isReadyRef: foundation.isReadyRef,
+    isReadyRef: foundation.isReadyRef as MutableRefObject<boolean>,
   }
 }
 

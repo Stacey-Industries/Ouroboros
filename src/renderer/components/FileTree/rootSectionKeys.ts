@@ -22,7 +22,7 @@ interface KeyHandlerDeps {
   handleRename: (node: TreeNode) => void;
   handleDeleteFocused: (node: TreeNode, selectedPaths: Set<string>) => Promise<void>;
   selectedPaths: Set<string>;
-  handleUndo: () => Promise<void>;
+  handleUndo: () => void | Promise<void>;
   handleNewFile: (dir: string) => void;
   handleNewFolder: (dir: string) => void;
   root: string;

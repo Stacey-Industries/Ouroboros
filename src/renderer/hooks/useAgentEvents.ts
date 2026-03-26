@@ -218,6 +218,7 @@ function dispatchAgentStart(
     timestamp: payload.timestamp,
     parentSessionId: payload.parentSessionId,
     model: payload.model,
+    internal: payload.internal,
   });
 }
 

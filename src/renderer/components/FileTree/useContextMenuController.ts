@@ -95,7 +95,7 @@ export function useContextMenuController({ state, projectRoot, ...options }: Use
 
   useDismissMenu(menuRef, options.onClose, state.visible);
 
-  const handlers = useContextMenuHandlers({ ...options, confirmingDelete, node: state.node, setConfirmingDelete, state, toast });
+  const handlers = useContextMenuHandlers({ ...options, confirmingDelete, node: state.node, setConfirmingDelete, toast });
   const bulkHandlerArgs = buildBulkHandlerArgs({ options, projectRoot, toast, confirmingDelete, setConfirmingDelete });
   const bulkHandlers = useBulkHandlers(bulkHandlerArgs);
 

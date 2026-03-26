@@ -135,7 +135,7 @@ export function SplitPaneLayoutFrame({
   rightPane,
 }: SplitPaneLayoutFrameProps): React.ReactElement {
   return (
-    <div ref={containerRef} style={SPLIT_LAYOUT_STYLE}>
+    <div ref={containerRef as React.RefObject<HTMLDivElement>} style={SPLIT_LAYOUT_STYLE}>
       <div style={getLeftPaneStyle(splitRatio)}>{leftPane}</div>
       <SplitDivider onPointerDown={handleDividerPointerDown} />
       <div style={SPLIT_RIGHT_PANE_STYLE}>

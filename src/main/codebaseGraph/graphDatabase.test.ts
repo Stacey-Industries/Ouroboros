@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
 import { GraphDatabase } from './graphDatabase'
-import type { GraphNode, GraphEdge, ProjectRecord } from './graphDatabaseTypes'
+import type { GraphEdge, GraphNode, ProjectRecord } from './graphDatabaseTypes'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

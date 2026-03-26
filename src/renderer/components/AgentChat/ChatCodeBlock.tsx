@@ -183,7 +183,7 @@ function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React
         apply={props.apply}
         revert={props.revert}
         status={props.status}
-        errorMessage={props.errorMessage}
+        errorMessage={props.errorMessage ?? undefined}
         handleOpenInEditor={props.handleOpenInEditor}
         copied={props.copied}
         handleCopy={props.handleCopy}

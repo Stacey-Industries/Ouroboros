@@ -11,7 +11,7 @@ import log from '../logger';
 import { parseFileWithTree, resolveEdgeReferences, walkDirectory } from './graphParser';
 import type { GraphQueryEngine } from './graphQuery';
 import type { GraphStore } from './graphStore';
-import type { GraphNode } from './graphTypes';
+import type { GraphEdge, GraphNode } from './graphTypes';
 
 const TREE_CACHE_MAX = 200;
 
@@ -85,7 +85,7 @@ async function parseSingleFile(
   ctx: IndexContext,
   filePath: string,
   projectRoot: string,
-): Promise<{ nodes: GraphNode[]; edges: Array<{ source: string; target: string; type: string }> }> {
+): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
   const result = await parseFileWithTree(filePath, projectRoot);
   if (result.tree) {
     const relPath = path.relative(projectRoot, filePath).replace(/\\/g, '/');
@@ -106,7 +106,7 @@ export async function indexAllFiles(
   log.info(`Found ${files.length} files to index`);
 
   const allNodes: GraphNode[] = [];
-  const allEdges: Array<{ source: string; target: string; type: string }> = [];
+  const allEdges: GraphEdge[] = [];
 
   for (let i = 0; i < files.length; i++) {
     // eslint-disable-next-line security/detect-object-injection -- i is a numeric loop index

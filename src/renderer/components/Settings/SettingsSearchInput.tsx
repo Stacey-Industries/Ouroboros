@@ -22,7 +22,7 @@ export function SettingsSearchInput({
           ⌕
         </span>
         <input
-          ref={inputRef}
+          ref={inputRef as React.RefObject<HTMLInputElement>}
           type="search"
           placeholder="Search settings..."
           value={value}

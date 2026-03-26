@@ -48,7 +48,7 @@ export function deriveTaskLabel(payload: HookPayload): string {
     return promptLabel;
   }
 
-  return getStringValue(payload as Record<string, unknown>, 'taskLabel')
+  return getStringValue(payload as unknown as Record<string, unknown>, 'taskLabel')
     ?? formatModelLabel(payload.model)
     ?? `Session ${payload.sessionId.slice(0, 8)}`;
 }

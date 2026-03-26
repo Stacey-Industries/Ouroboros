@@ -1,11 +1,12 @@
 import React from 'react';
+
 import type { TaskSessionRecord } from '../../types/electron';
-import { badgeStyle, panelStyle, resolveStatusTone } from './orchestrationUi';
 import {
   SessionMemoryLists,
   SessionMemorySummary,
   TaskStateBody,
 } from './OrchestrationPanelSections.parts';
+import { badgeStyle, panelStyle, resolveStatusTone } from './orchestrationUi';
 
 export type OrchestrationTab = 'overview' | 'context' | 'verification' | 'history';
 

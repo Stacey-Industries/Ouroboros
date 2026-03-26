@@ -53,7 +53,7 @@ export function SessionReplayLayout({
 }): React.ReactElement {
   return (
     <div
-      ref={replay.panelRef}
+      ref={replay.panelRef as React.RefObject<HTMLDivElement>}
       tabIndex={-1}
       className="bg-surface-base"
       style={{

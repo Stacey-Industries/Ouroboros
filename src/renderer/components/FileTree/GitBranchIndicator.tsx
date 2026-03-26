@@ -145,7 +145,7 @@ function BranchSearchInput({
 }: SearchInputProps): React.ReactElement {
   return (
     <input
-      ref={searchInputRef}
+      ref={searchInputRef as React.RefObject<HTMLInputElement>}
       type="text"
       value={search}
       onChange={(e) => setSearch(e.target.value)}

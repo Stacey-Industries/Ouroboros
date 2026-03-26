@@ -70,7 +70,7 @@ async function injectMemories(
 ): Promise<void> {
   if (!contextPacket || workspaceRoots.length === 0) return;
   try {
-    const contextFiles = contextPacket.files.map((f) => f.path);
+    const contextFiles = contextPacket.files.map((f) => f.filePath);
     const memories = await sessionMemoryStore.getRelevantMemories(workspaceRoots[0], contextFiles);
     if (memories.length > 0) {
       contextPacket.sessionMemories = formatMemoriesForContext(memories);

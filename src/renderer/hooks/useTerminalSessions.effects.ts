@@ -293,7 +293,7 @@ function useSpawnCodexSession({
           if (!options?.resumeThreadId) {
             pendingCodexAssocRef.current.push({
               ptyId: id,
-              cwd,
+              cwd: cwd ?? '',
               spawnedAt: Date.now(),
               retries: 0,
             });

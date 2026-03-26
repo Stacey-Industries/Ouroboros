@@ -1,8 +1,9 @@
-import http from 'http'
 import type { IncomingMessage, ServerResponse } from 'http'
+import http from 'http'
 import type { AddressInfo } from 'net'
-import { getActiveTools, findTool } from './internalMcpTools'
-import type { InternalMcpServerOptions, InternalMcpServerHandle } from './internalMcpTypes'
+
+import { findTool,getActiveTools } from './internalMcpTools'
+import type { InternalMcpServerHandle,InternalMcpServerOptions } from './internalMcpTypes'
 
 // ---------------------------------------------------------------------------
 // JSON-RPC helpers
@@ -69,91 +70,90 @@ function handleSse(req: IncomingMessage, res: ServerResponse): void {
 // JSON-RPC handler
 // ---------------------------------------------------------------------------
 
-async function handleJsonRpc(req: IncomingMessage, res: ServerResponse, workspaceRoot: string): Promise<void> {
+async function parseRpcRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<{ rpc: JsonRpcRequest; id: string | number | null } | null> {
   let body: string
   try {
     body = await readBody(req)
-  } catch (err) {
+  } catch {
     res.writeHead(400, { 'Content-Type': 'application/json' })
     res.end(rpcError(null, -32700, 'Parse error: could not read request body'))
-    return
+    return null
   }
 
-  let rpc: JsonRpcRequest
   try {
-    rpc = JSON.parse(body) as JsonRpcRequest
+    const rpc = JSON.parse(body) as JsonRpcRequest
+    return { rpc, id: rpc.id ?? null }
   } catch {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(rpcError(null, -32700, 'Parse error: invalid JSON'))
-    return
+    return null
   }
+}
 
-  const id = rpc.id ?? null
+async function dispatchRpcMethod(
+  rpc: JsonRpcRequest,
+  id: string | number | null,
+  workspaceRoot: string,
+): Promise<string> {
+  switch (rpc.method) {
+    case 'initialize':
+      return rpcSuccess(id, {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'ouroboros', version: '1.0.0' },
+      })
 
-  try {
-    let responseBody: string
-
-    switch (rpc.method) {
-      case 'initialize': {
-        responseBody = rpcSuccess(id, {
-          protocolVersion: '2024-11-05',
-          capabilities: { tools: {} },
-          serverInfo: { name: 'ouroboros', version: '1.0.0' },
-        })
-        break
-      }
-
-      case 'tools/list': {
-        const tools = getActiveTools().map((t) => ({
-          name: t.name,
-          description: t.description,
-          inputSchema: t.inputSchema,
-        }))
-        responseBody = rpcSuccess(id, { tools })
-        break
-      }
-
-      case 'tools/call': {
-        const params = (rpc.params ?? {}) as { name?: string; arguments?: Record<string, unknown> }
-        const toolName = params.name
-        const toolArgs = params.arguments ?? {}
-
-        if (!toolName) {
-          responseBody = rpcError(id, -32602, 'Invalid params: missing tool name')
-          break
-        }
-
-        const tool = findTool(toolName)
-        if (!tool) {
-          responseBody = rpcSuccess(id, {
-            content: [{ type: 'text', text: `Unknown tool: ${toolName}` }],
-            isError: true,
-          })
-          break
-        }
-
-        try {
-          const text = await tool.handler(toolArgs, workspaceRoot)
-          responseBody = rpcSuccess(id, {
-            content: [{ type: 'text', text }],
-            isError: false,
-          })
-        } catch (toolErr) {
-          const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr)
-          responseBody = rpcSuccess(id, {
-            content: [{ type: 'text', text: `Error: ${errMsg}` }],
-            isError: true,
-          })
-        }
-        break
-      }
-
-      default: {
-        responseBody = rpcError(id, -32601, `Method not found: ${rpc.method}`)
-        break
-      }
+    case 'tools/list': {
+      const tools = getActiveTools().map((t) => ({
+        name: t.name, description: t.description, inputSchema: t.inputSchema,
+      }))
+      return rpcSuccess(id, { tools })
     }
 
+    case 'tools/call':
+      return handleToolCall(rpc, id, workspaceRoot)
+
+    default:
+      return rpcError(id, -32601, `Method not found: ${rpc.method}`)
+  }
+}
+
+async function handleToolCall(
+  rpc: JsonRpcRequest,
+  id: string | number | null,
+  workspaceRoot: string,
+): Promise<string> {
+  const params = (rpc.params ?? {}) as { name?: string; arguments?: Record<string, unknown> }
+  const toolName = params.name
+  const toolArgs = params.arguments ?? {}
+
+  if (!toolName) return rpcError(id, -32602, 'Invalid params: missing tool name')
+
+  const tool = findTool(toolName)
+  if (!tool) {
+    return rpcSuccess(id, { content: [{ type: 'text', text: `Unknown tool: ${toolName}` }], isError: true })
+  }
+
+  try {
+    const text = await tool.handler(toolArgs, workspaceRoot)
+    return rpcSuccess(id, { content: [{ type: 'text', text }], isError: false })
+  } catch (toolErr) {
+    const errMsg = toolErr instanceof Error ? toolErr.message : String(toolErr)
+    return rpcSuccess(id, { content: [{ type: 'text', text: `Error: ${errMsg}` }], isError: true })
+  }
+}
+
+async function handleJsonRpc(req: IncomingMessage, res: ServerResponse, workspaceRoot: string): Promise<void> {
+  const parsed = await parseRpcRequest(req, res)
+  if (!parsed) return
+
+  const { rpc, id } = parsed
+
+  try {
+    const responseBody = await dispatchRpcMethod(rpc, id, workspaceRoot)
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(responseBody)
   } catch (err) {
@@ -167,43 +167,48 @@ async function handleJsonRpc(req: IncomingMessage, res: ServerResponse, workspac
 // Public API
 // ---------------------------------------------------------------------------
 
+function createRequestHandler(
+  workspaceRoot: string,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204)
+      res.end()
+      return
+    }
+
+    if (req.method === 'GET' && req.url === '/sse') {
+      handleSse(req, res)
+      return
+    }
+
+    if (req.method === 'POST' && req.url === '/message') {
+      await handleJsonRpc(req, res, workspaceRoot)
+      return
+    }
+
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }))
+      return
+    }
+
+    res.writeHead(404)
+    res.end()
+  }
+}
+
 export async function startInternalMcpServer(
   options: InternalMcpServerOptions,
 ): Promise<InternalMcpServerHandle> {
   const { workspaceRoot, port = 0 } = options
 
   return new Promise((resolve, reject) => {
-    const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      // CORS headers
-      res.setHeader('Access-Control-Allow-Origin', '*')
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204)
-        res.end()
-        return
-      }
-
-      if (req.method === 'GET' && req.url === '/sse') {
-        handleSse(req, res)
-        return
-      }
-
-      if (req.method === 'POST' && req.url === '/message') {
-        await handleJsonRpc(req, res, workspaceRoot)
-        return
-      }
-
-      if (req.method === 'GET' && req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ status: 'ok', server: 'ouroboros', workspaceRoot }))
-        return
-      }
-
-      res.writeHead(404)
-      res.end()
-    })
+    const server = http.createServer(createRequestHandler(workspaceRoot))
 
     server.on('error', (err) => {
       reject(err)

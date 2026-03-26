@@ -74,7 +74,7 @@ function applyRegistrySearchResult({
     setError(result.error ?? 'Failed to search MCP servers');
     return;
   }
-  setServers((prev) => (append ? [...prev, ...result.servers!] : result.servers));
+  setServers((prev) => (append ? [...prev, ...result.servers!] : result.servers ?? []));
   setNextCursor(result.nextCursor ?? null);
 }
 
@@ -99,7 +99,7 @@ function applyNpmSearchResult({
     setError(result.error ?? 'Failed to search npm');
     return;
   }
-  setServers((prev) => (append ? [...prev, ...result.servers!] : result.servers));
+  setServers((prev) => (append ? [...prev, ...result.servers!] : result.servers ?? []));
   setNpmTotal(result.total ?? 0);
   setNpmOffset(offset + result.servers.length);
 }

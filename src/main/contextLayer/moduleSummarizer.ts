@@ -1,8 +1,10 @@
 import path from 'path'
-import type { ModuleAISummary, ModuleStructuralSummary } from './contextLayerTypes'
+
 import { spawnClaude } from '../claudeMdGeneratorSupport'
+import log from '../logger'
 import { extractSymbols } from '../symbolExtractor/symbolExtractor'
 import type { ExtractedSymbol } from '../symbolExtractor/symbolExtractorTypes'
+import type { ModuleAISummary, ModuleStructuralSummary } from './contextLayerTypes'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,34 +85,31 @@ export function shouldSummarize(structural: ModuleStructuralSummary): boolean {
   return structural.fileCount >= 3 || structural.totalLines >= 50
 }
 
-/**
- * Select the most informative source files from a module for the API call.
- * Priority: entry points > largest files > type definitions.
- */
-export function selectSourceSnippets(options: {
-  files: Array<{ relativePath: string; size: number; language: string; imports: string[] }>
-  workspaceRoot: string
-  moduleRootPath: string
-  maxSnippets?: number
-  maxCharsPerSnippet?: number
-}): Array<{ relativePath: string; absolutePath: string }> {
-  const { files, workspaceRoot, moduleRootPath, maxSnippets = 5 } = options
-  if (files.length === 0) return []
+// ---------------------------------------------------------------------------
+// selectSourceSnippets helpers
+// ---------------------------------------------------------------------------
 
-  const selected: Array<{ relativePath: string; absolutePath: string }> = []
-  const seen = new Set<string>()
+type SnippetFile = { relativePath: string; size: number; language: string; imports: string[] }
+type SnippetResult = { relativePath: string; absolutePath: string }
 
-  const add = (rel: string) => {
-    if (seen.has(rel)) return
+function makeAdder(
+  workspaceRoot: string,
+  seen: Set<string>,
+  selected: SnippetResult[],
+  maxSnippets: number,
+) {
+  return (rel: string) => {
+    if (seen.has(rel) || selected.length >= maxSnippets) return
     seen.add(rel)
-    selected.push({
-      relativePath: rel,
-      absolutePath: path.join(workspaceRoot, rel),
-    })
+    selected.push({ relativePath: rel, absolutePath: path.join(workspaceRoot, rel) })
   }
+}
 
-  // 1. Entry points first: index.ts, index.tsx, or file matching module root basename
-  const moduleBasename = path.basename(moduleRootPath).toLowerCase()
+function addEntryPoints(
+  files: SnippetFile[],
+  moduleBasename: string,
+  add: (rel: string) => void,
+): void {
   const entryPointPatterns = ['index.ts', 'index.tsx', 'index.js', 'index.jsx']
   for (const file of files) {
     const basename = path.basename(file.relativePath).toLowerCase()
@@ -120,15 +119,17 @@ export function selectSourceSnippets(options: {
       add(file.relativePath)
     }
   }
+}
 
-  // 2. Largest source files by size
+function addBySize(files: SnippetFile[], add: (rel: string) => void, maxSnippets: number, selected: SnippetResult[]): void {
   const bySize = [...files].sort((a, b) => b.size - a.size)
   for (const file of bySize) {
     if (selected.length >= maxSnippets) break
     add(file.relativePath)
   }
+}
 
-  // 3. Type definition files (*.d.ts, *types.ts, *Types.ts)
+function addTypeDefinitions(files: SnippetFile[], add: (rel: string) => void, maxSnippets: number, selected: SnippetResult[]): void {
   for (const file of files) {
     if (selected.length >= maxSnippets) break
     const basename = path.basename(file.relativePath)
@@ -140,6 +141,29 @@ export function selectSourceSnippets(options: {
       add(file.relativePath)
     }
   }
+}
+
+/**
+ * Select the most informative source files from a module for the API call.
+ * Priority: entry points > largest files > type definitions.
+ */
+export function selectSourceSnippets(options: {
+  files: SnippetFile[]
+  workspaceRoot: string
+  moduleRootPath: string
+  maxSnippets?: number
+  maxCharsPerSnippet?: number
+}): SnippetResult[] {
+  const { files, workspaceRoot, moduleRootPath, maxSnippets = 5 } = options
+  if (files.length === 0) return []
+
+  const selected: SnippetResult[] = []
+  const seen = new Set<string>()
+  const add = makeAdder(workspaceRoot, seen, selected, maxSnippets)
+
+  addEntryPoints(files, path.basename(moduleRootPath).toLowerCase(), add)
+  addBySize(files, add, maxSnippets, selected)
+  addTypeDefinitions(files, add, maxSnippets, selected)
 
   return selected.slice(0, maxSnippets)
 }
@@ -147,6 +171,20 @@ export function selectSourceSnippets(options: {
 // ---------------------------------------------------------------------------
 // Prompt construction
 // ---------------------------------------------------------------------------
+
+function appendSymbolsSection(lines: string[], extractedSymbols: ExtractedSymbol[]): void {
+  const sorted = [...extractedSymbols].sort((a, b) => {
+    if (a.kind === 'unknown' && b.kind !== 'unknown') return 1
+    if (a.kind !== 'unknown' && b.kind === 'unknown') return -1
+    return a.name.localeCompare(b.name)
+  })
+  const top = sorted.slice(0, 30)
+  lines.push('')
+  lines.push(`## Exported Symbols (${extractedSymbols.length})`)
+  for (const s of top) {
+    lines.push(s.signature ? `- ${s.kind} ${s.name}${s.signature}` : `- ${s.kind} ${s.name}`)
+  }
+}
 
 function buildUserMessage(context: SummarizationContext, extractedSymbols?: ExtractedSymbol[]): string {
   const { module: mod, sourceSnippets, dependencyContext, projectContext } = context
@@ -164,24 +202,8 @@ function buildUserMessage(context: SummarizationContext, extractedSymbols?: Extr
     `Project: ${projectContext.languages.join(', ')} / ${projectContext.frameworks.join(', ')}`,
   ]
 
-  // Add extracted symbols section if available
   if (extractedSymbols && extractedSymbols.length > 0) {
-    // Prioritise non-unknown kinds first, then sort alphabetically
-    const sorted = [...extractedSymbols].sort((a, b) => {
-      if (a.kind === 'unknown' && b.kind !== 'unknown') return 1
-      if (a.kind !== 'unknown' && b.kind === 'unknown') return -1
-      return a.name.localeCompare(b.name)
-    })
-    const top = sorted.slice(0, 30)
-    lines.push('')
-    lines.push(`## Exported Symbols (${extractedSymbols.length})`)
-    for (const s of top) {
-      if (s.signature) {
-        lines.push(`- ${s.kind} ${s.name}${s.signature}`)
-      } else {
-        lines.push(`- ${s.kind} ${s.name}`)
-      }
-    }
+    appendSymbolsSection(lines, extractedSymbols)
   }
 
   if (sourceSnippets.length > 0) {
@@ -217,52 +239,50 @@ function stripMarkdownFences(text: string): string {
   return cleaned
 }
 
+function extractParsedJson(cleaned: string): unknown {
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      try { return JSON.parse(jsonMatch[0]) } catch { /* fall through */ }
+    }
+    return null
+  }
+}
+
+function truncateStrings(arr: unknown[], max: number, maxLen: number): string[] {
+  return (arr as unknown[])
+    .filter((item): item is string => typeof item === 'string')
+    .slice(0, max)
+    .map((s) => s.length > maxLen ? s.slice(0, maxLen) : s)
+}
+
+function extractDescription(obj: Record<string, unknown>): string | null {
+  if (typeof obj.description !== 'string' || obj.description.length === 0) return null
+  return obj.description.length > 500 ? obj.description.slice(0, 500) : obj.description
+}
+
+function extractResponsibilities(obj: Record<string, unknown>): string[] | null {
+  if (!Array.isArray(obj.keyResponsibilities)) return null
+  const items = truncateStrings(obj.keyResponsibilities, 5, 200)
+  return items.length === 0 ? null : items
+}
+
 function parseAndValidateResponse(text: string): RawSummaryResponse | null {
   if (!text || text.trim().length === 0) return null
 
-  const cleaned = stripMarkdownFences(text)
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch {
-    // Try to extract a JSON object from the text (model may have added preamble/suffix)
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      try {
-        parsed = JSON.parse(jsonMatch[0])
-      } catch {
-        return null
-      }
-    } else {
-      return null
-    }
-  }
-
+  const parsed = extractParsedJson(stripMarkdownFences(text))
   if (!parsed || typeof parsed !== 'object') return null
 
   const obj = parsed as Record<string, unknown>
+  const description = extractDescription(obj)
+  if (!description) return null
 
-  // Validate description
-  if (typeof obj.description !== 'string' || obj.description.length === 0) return null
-  const description = obj.description.length > 500
-    ? obj.description.slice(0, 500)
-    : obj.description
+  const responsibilities = extractResponsibilities(obj)
+  if (!responsibilities) return null
 
-  // Validate keyResponsibilities
-  if (!Array.isArray(obj.keyResponsibilities)) return null
-  const responsibilities = obj.keyResponsibilities
-    .filter((item): item is string => typeof item === 'string')
-    .slice(0, 5)
-    .map((s) => s.length > 200 ? s.slice(0, 200) : s)
-  if (responsibilities.length === 0) return null
-
-  // Validate gotchas
-  const rawGotchas = Array.isArray(obj.gotchas) ? obj.gotchas : []
-  const gotchas = rawGotchas
-    .filter((item): item is string => typeof item === 'string')
-    .slice(0, 3)
-    .map((s) => s.length > 200 ? s.slice(0, 200) : s)
+  const gotchas = truncateStrings(Array.isArray(obj.gotchas) ? obj.gotchas : [], 3, 200)
 
   return { description, keyResponsibilities: responsibilities, gotchas }
 }
@@ -271,27 +291,34 @@ function parseAndValidateResponse(text: string): RawSummaryResponse | null {
 // Error classification
 // ---------------------------------------------------------------------------
 
+function classifyByStatusCode(status: number | undefined): string | null {
+  if (status === 401 || status === 403) return 'no_auth'
+  if (status === 429) return 'rate_limited'
+  return null
+}
+
+function isNetworkError(msg: string): boolean {
+  return msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('fetch failed')
+}
+
+function isAuthError(msg: string): boolean {
+  return msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('authentication')
+}
+
+function classifyByMessage(message: string): string {
+  if (isNetworkError(message)) return 'network_error'
+  if (isAuthError(message)) return 'no_auth'
+  if (message.includes('429') || message.includes('rate')) return 'rate_limited'
+  return message || 'unknown_error'
+}
+
 function classifyError(error: unknown): string {
-  if (error && typeof error === 'object') {
-    const statusCode = (error as { status?: number }).status
-    if (statusCode === 401 || statusCode === 403) return 'no_auth'
-    if (statusCode === 429) return 'rate_limited'
+  if (!error || typeof error !== 'object') return String(error)
 
-    const message = (error as { message?: string }).message ?? ''
-    if (message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT') || message.includes('fetch failed')) {
-      return 'network_error'
-    }
-    if (message.includes('401') || message.includes('403') || message.includes('Unauthorized') || message.includes('authentication')) {
-      return 'no_auth'
-    }
-    if (message.includes('429') || message.includes('rate')) {
-      return 'rate_limited'
-    }
+  const byStatus = classifyByStatusCode((error as { status?: number }).status)
+  if (byStatus) return byStatus
 
-    return message || 'unknown_error'
-  }
-
-  return String(error)
+  return classifyByMessage((error as { message?: string }).message ?? '')
 }
 
 // ---------------------------------------------------------------------------
@@ -309,72 +336,64 @@ async function callCli(
   return { text, inputTokens, outputTokens }
 }
 
+interface CliCallResult { inputTokens: number; outputTokens: number; startTime: number }
+
+function buildSuccessResult(
+  parsed: RawSummaryResponse,
+  context: SummarizationContext,
+  cli: CliCallResult,
+  extractedSymbols: ExtractedSymbol[],
+): SummarizationResult {
+  const { inputTokens, outputTokens, startTime } = cli
+  const summaryText = JSON.stringify(parsed)
+  const summary: ModuleAISummary = {
+    description: parsed.description,
+    keyResponsibilities: parsed.keyResponsibilities,
+    gotchas: parsed.gotchas,
+    generatedAt: Date.now(),
+    generatedFrom: context.module.contentHash,
+    tokenCount: estimateTokens(summaryText),
+  }
+  log.info(`[context-layer] Summarized module "${context.module.module.label}" (~${inputTokens} in, ~${outputTokens} out)`)
+  return { success: true, summary, inputTokens, outputTokens, durationMs: Date.now() - startTime, extractedSymbols }
+}
+
 export async function summarizeModule(context: SummarizationContext): Promise<SummarizationResult> {
   const startTime = Date.now()
 
-  // Extract symbols from the already-read source snippets (before building the prompt)
   const extractedSymbols = extractModuleSymbols(context.sourceSnippets)
-
   const userMessage = buildUserMessage(context, extractedSymbols)
   let lastError: string | undefined
 
-  // Attempt up to 2 tries (initial + 1 retry for parse failures)
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { text, inputTokens, outputTokens } = await callCli(userMessage)
       const parsed = parseAndValidateResponse(text)
 
       if (parsed) {
-        const summaryText = JSON.stringify(parsed)
-        const summary: ModuleAISummary = {
-          description: parsed.description,
-          keyResponsibilities: parsed.keyResponsibilities,
-          gotchas: parsed.gotchas,
-          generatedAt: Date.now(),
-          generatedFrom: context.module.contentHash,
-          tokenCount: estimateTokens(summaryText),
-        }
-
-        console.log(`[context-layer] Summarized module "${context.module.module.label}" (~${inputTokens} in, ~${outputTokens} out)`)
-
-        return {
-          success: true,
-          summary,
-          inputTokens,
-          outputTokens,
-          durationMs: Date.now() - startTime,
-          extractedSymbols,
-        }
+        return buildSuccessResult(parsed, context, { inputTokens, outputTokens, startTime }, extractedSymbols)
       }
 
-      // Parse failed — retry if this was the first attempt
       lastError = 'invalid_response'
       if (attempt === 0) {
-        console.log(`[context-layer] Parse failed for module "${context.module.module.label}", retrying... Raw response (first 300 chars): ${text.slice(0, 300)}`)
+        log.info(`[context-layer] Parse failed for module "${context.module.module.label}", retrying... Raw response (first 300 chars): ${text.slice(0, 300)}`)
       }
     } catch (error) {
       const classified = classifyError(error)
 
-      // Do NOT retry auth errors or rate limits — let the queue handle those
       if (classified === 'no_auth' || classified === 'rate_limited' || classified === 'network_error') {
-        console.log(`[context-layer] CLI error for module "${context.module.module.label}": ${classified}`)
-        return {
-          success: false,
-          error: classified,
-          durationMs: Date.now() - startTime,
-          extractedSymbols,
-        }
+        log.info(`[context-layer] CLI error for module "${context.module.module.label}": ${classified}`)
+        return { success: false, error: classified, durationMs: Date.now() - startTime, extractedSymbols }
       }
 
       lastError = classified
       if (attempt === 0) {
-        console.log(`[context-layer] Error for module "${context.module.module.label}": ${classified}, retrying...`)
+        log.info(`[context-layer] Error for module "${context.module.module.label}": ${classified}, retrying...`)
       }
     }
   }
 
-  // Both attempts failed
-  console.log(`[context-layer] Failed to summarize module "${context.module.module.label}" after 2 attempts`)
+  log.info(`[context-layer] Failed to summarize module "${context.module.module.label}" after 2 attempts`)
   return {
     success: false,
     error: lastError === 'invalid_response' ? 'parse_failure' : lastError,

@@ -91,6 +91,7 @@ function registerPersistenceTest(): void {
     const store = createTaskSessionStore({ sessionsDir, createId: () => `generated-${++tick}`, now: () => ++tick })
     const created = await store.createSession(createRequest(), { status: 'needs_review', latestResult: createLatestResult() })
     const loaded = await store.loadSession(created.id)
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- sessionsDir is a temp dir created by createTempRoot(); not user-controlled
     const persistedFiles = await fs.readdir(sessionsDir)
 
     expect(persistedFiles).toHaveLength(1)

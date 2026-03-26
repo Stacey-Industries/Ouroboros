@@ -98,7 +98,7 @@ function PickerSearchInput({
 >): React.ReactElement {
   return (
     <input
-      ref={inputRef}
+      ref={inputRef as React.RefObject<HTMLInputElement>}
       type="text"
       role="combobox"
       aria-expanded={isOpen}

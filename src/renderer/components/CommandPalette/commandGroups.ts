@@ -34,7 +34,7 @@ function createWindowCommand(): Command {
     category: 'app',
     shortcut: 'Ctrl+Shift+N',
     icon: '+',
-    action: async () => window.electronAPI.window.create(),
+    action: () => { void window.electronAPI.window.create(); },
   };
 }
 

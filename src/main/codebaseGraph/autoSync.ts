@@ -8,6 +8,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+
 import type { GraphDatabase } from './graphDatabase'
 import type { IndexingPipeline } from './indexingPipeline'
 
@@ -47,18 +48,17 @@ export class AutoSyncWatcher {
 
   constructor(opts: AutoSyncOptions) {
     this.opts = opts
+    this.pollIntervalMs = AutoSyncWatcher.adaptivePollInterval(
+      opts.db.getNodeCount(opts.projectName),
+    )
+  }
 
-    // Adaptive poll interval based on current node count in the graph
-    const fileCount = opts.db.getNodeCount(opts.projectName)
-    if (fileCount < 500) {
-      this.pollIntervalMs = 2_000      // 2s for small repos
-    } else if (fileCount < 2_000) {
-      this.pollIntervalMs = 5_000      // 5s for medium repos
-    } else if (fileCount < 5_000) {
-      this.pollIntervalMs = 15_000     // 15s for large repos
-    } else {
-      this.pollIntervalMs = 30_000     // 30s for very large repos
-    }
+  /** Compute adaptive poll interval from node count. */
+  private static adaptivePollInterval(nodeCount: number): number {
+    if (nodeCount < 500) return 2_000      // 2s for small repos
+    if (nodeCount < 2_000) return 5_000    // 5s for medium repos
+    if (nodeCount < 5_000) return 15_000   // 15s for large repos
+    return 30_000                           // 30s for very large repos
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -115,6 +115,14 @@ export class AutoSyncWatcher {
   async pollForChanges(): Promise<void> {
     if (this.disposed || this.reindexing) return
 
+    const changed = await this.collectChangedFiles()
+    if (changed.length > 0) {
+      await this.triggerReindex()
+    }
+  }
+
+  /** Collect files that have changed based on stat comparison. */
+  private async collectChangedFiles(): Promise<string[]> {
     const changed: string[] = []
     let existingHashes: ReturnType<GraphDatabase['getAllFileHashes']>
 
@@ -122,31 +130,36 @@ export class AutoSyncWatcher {
       existingHashes = this.opts.db.getAllFileHashes(this.opts.projectName)
     } catch (err) {
       this.opts.onError?.(err instanceof Error ? err : new Error(String(err)))
-      return
+      return changed
     }
 
     for (const record of existingHashes) {
       if (changed.length >= MAX_FILES_PER_POLL) break
-
       const absolutePath = path.join(this.opts.projectRoot, record.rel_path)
-
-      try {
-        const stat = await fs.stat(absolutePath)
-        const currentMtimeNs = Math.floor(stat.mtimeMs * 1e6)
-        const currentSize = stat.size
-
-        // Fast stat check: if mtime_ns OR size differ, mark as changed
-        if (currentMtimeNs !== record.mtime_ns || currentSize !== record.size) {
-          changed.push(record.rel_path)
-        }
-      } catch {
-        // File deleted or inaccessible -- mark as changed so reindex handles removal
-        changed.push(record.rel_path)
-      }
+       
+      await this.checkFileChanged(absolutePath, record, changed)
     }
 
-    if (changed.length > 0) {
-      await this.triggerReindex()
+    return changed
+  }
+
+  /** Check a single file's stat against the stored hash record. */
+  private async checkFileChanged(
+    absolutePath: string,
+    record: ReturnType<GraphDatabase['getAllFileHashes']>[number],
+    changed: string[],
+  ): Promise<void> {
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- absolutePath from trusted graph record
+      const stat = await fs.stat(absolutePath)
+      const currentMtimeNs = Math.floor(stat.mtimeMs * 1e6)
+      const currentSize = stat.size
+      if (currentMtimeNs !== record.mtime_ns || currentSize !== record.size) {
+        changed.push(record.rel_path)
+      }
+    } catch {
+      // File deleted or inaccessible -- mark as changed so reindex handles removal
+      changed.push(record.rel_path)
     }
   }
 
@@ -248,16 +261,9 @@ export class AutoSyncWatcher {
     this.opts.projectName = newProjectName
 
     // Recalculate adaptive poll interval for the new project
-    const fileCount = this.opts.db.getNodeCount(newProjectName)
-    if (fileCount < 500) {
-      this.pollIntervalMs = 2_000
-    } else if (fileCount < 2_000) {
-      this.pollIntervalMs = 5_000
-    } else if (fileCount < 5_000) {
-      this.pollIntervalMs = 15_000
-    } else {
-      this.pollIntervalMs = 30_000
-    }
+    this.pollIntervalMs = AutoSyncWatcher.adaptivePollInterval(
+      this.opts.db.getNodeCount(newProjectName),
+    )
 
     this.start()
   }

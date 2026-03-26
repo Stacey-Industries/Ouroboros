@@ -1,4 +1,4 @@
-import Fuse from 'fuse.js';
+import Fuse, { type FuseResult, type FuseResultMatch, type IFuseOptions } from 'fuse.js';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { SymbolEntry } from '../../types/electron';
@@ -6,7 +6,7 @@ import type { MatchResult } from './useSymbolSearchModel';
 
 const MAX_RESULTS = 30;
 
-const FUSE_OPTIONS: Fuse.IFuseOptions<SymbolEntry> = {
+const FUSE_OPTIONS: IFuseOptions<SymbolEntry> = {
   keys: [
     { name: 'name', weight: 0.7 },
     { name: 'relativePath', weight: 0.3 },
@@ -82,7 +82,7 @@ export function useSymbolMatches(query: string, allSymbols: SymbolEntry[]): Matc
   }, [allSymbols, query]);
 }
 
-function buildMatchResult(result: Fuse.FuseResult<SymbolEntry>): MatchResult {
+function buildMatchResult(result: FuseResult<SymbolEntry>): MatchResult {
   return {
     entry: result.item,
     nameIndices: getMatchIndices(result.matches, 'name'),
@@ -91,7 +91,7 @@ function buildMatchResult(result: Fuse.FuseResult<SymbolEntry>): MatchResult {
 }
 
 function getMatchIndices(
-  matches: ReadonlyArray<Fuse.FuseResultMatch> | undefined,
+  matches: ReadonlyArray<FuseResultMatch> | undefined,
   key: 'name' | 'relativePath',
 ): ReadonlyArray<readonly [number, number]> {
   return (matches?.find((match) => match.key === key)?.indices ?? []) as ReadonlyArray<

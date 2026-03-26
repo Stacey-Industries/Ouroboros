@@ -55,15 +55,18 @@ export interface ComposerSectionProps {
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
 }
 
+function isThreadBusy(status: string | undefined): boolean {
+  return status === 'submitting' || status === 'running';
+}
+
 export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
-  const threadIsBusy = props.activeThread?.status === 'submitting' || props.activeThread?.status === 'running';
   return (
     <AgentChatComposer
       canSend={props.canSend}
       disabled={!props.hasProject}
       draft={props.draft}
       isSending={props.isSending}
-      threadIsBusy={threadIsBusy}
+      threadIsBusy={isThreadBusy(props.activeThread?.status)}
       messages={props.activeThread?.messages}
       onChange={props.onDraftChange}
       onSubmit={props.onSend}

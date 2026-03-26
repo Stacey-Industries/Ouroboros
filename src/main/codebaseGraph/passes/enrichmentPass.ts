@@ -14,8 +14,6 @@
  */
 
 import type { GraphDatabase } from '../graphDatabase'
-import type { GraphEdge } from '../graphDatabaseTypes'
-import type { IndexedFile } from './passTypes'
 
 // ─── Decorator names that mark entry points ──────────────────────────────────
 
@@ -47,67 +45,32 @@ const ENTRY_DECORATORS = new Set([
   'command',
 ])
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function isEntryPoint(props: Record<string, unknown>, filePath: string | null): boolean {
+  const decorators = (props.decorators as string[] | undefined) ?? []
+  if (decorators.some((d) => ENTRY_DECORATORS.has(d))) return true
+  if (filePath && /\/index\.[^.]+$/.test(filePath) && props.is_exported) return true
+  return false
+}
+
 // ─── Pass implementation ─────────────────────────────────────────────────────
 
 export function enrichmentPass(
   db: GraphDatabase,
   projectName: string,
-  indexedFiles: IndexedFile[],
+  // _files (IndexedFile[]) reserved for future enrichment heuristics
 ): void {
-  const edges: Omit<GraphEdge, 'id'>[] = []
-
-  // ── IMPLEMENTS edges (placeholder) ─────────────────────────────────────
-  // For TypeScript `class Foo implements IBar`, the tree-sitter extraction
-  // would need to expose implements/extends info. Currently the parser does
-  // not extract this, so we build the interface lookup but skip edge creation.
-
-  const interfacesByName = new Map<string, string>()
-  const allInterfaces = db.getNodesByLabel(projectName, 'Interface')
-  for (const iface of allInterfaces) {
-    interfacesByName.set(iface.name, iface.id)
-  }
-
-  for (const file of indexedFiles) {
-    if (!file.parsed) continue
-
-    for (const def of file.parsed.definitions) {
-      if (def.kind !== 'Class') continue
-      // TODO: Enhance TreeSitterParser to extract implements/extends from
-      // class_heritage nodes. Once available, create IMPLEMENTS edges here.
-    }
-  }
-
-  // ── Entry point refinement ─────────────────────────────────────────────
+  // IMPLEMENTS edges are a placeholder — tree-sitter extraction would need to
+  // expose implements/extends info from class_heritage nodes first.
 
   const allFunctions = db.getNodesByLabel(projectName, 'Function')
 
   for (const fn of allFunctions) {
     const props = fn.props as Record<string, unknown>
-
-    // Already marked — nothing to do.
     if (props.is_entry_point === true) continue
-
-    let shouldMark = false
-
-    // Check decorator-based entry points.
-    const decorators = (props.decorators as string[] | undefined) ?? []
-    if (decorators.some((d) => ENTRY_DECORATORS.has(d))) {
-      shouldMark = true
-    }
-
-    // Check if exported from an index/barrel file.
-    if (!shouldMark && fn.file_path) {
-      if (/\/index\.[^.]+$/.test(fn.file_path) && props.is_exported) {
-        shouldMark = true
-      }
-    }
-
-    if (shouldMark) {
+    if (isEntryPoint(props, fn.file_path)) {
       db.updateNodeProps(fn.id, { ...props, is_entry_point: true })
     }
-  }
-
-  if (edges.length > 0) {
-    db.insertEdges(edges)
   }
 }

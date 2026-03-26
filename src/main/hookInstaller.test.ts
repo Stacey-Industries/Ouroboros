@@ -26,13 +26,13 @@ vi.mock('electron', () => ({
 // ── Mock 'fs' ─────────────────────────────────────────────────────────────────
 const { mockFs } = vi.hoisted(() => ({
   mockFs: {
-    existsSync: vi.fn<[string], boolean>(),
-    mkdirSync: vi.fn<[string, { recursive?: boolean }], void>(),
-    copyFileSync: vi.fn<[string, string], void>(),
-    chmodSync: vi.fn<[string, number], void>(),
-    writeFileSync: vi.fn<[string, string, string], void>(),
-    readFileSync: vi.fn<[string, string], string>(),
-    rmSync: vi.fn<[string, { force?: boolean }], void>(),
+    existsSync: vi.fn<(path: string) => boolean>(),
+    mkdirSync: vi.fn<(path: string, opts: { recursive?: boolean }) => void>(),
+    copyFileSync: vi.fn<(src: string, dest: string) => void>(),
+    chmodSync: vi.fn<(path: string, mode: number) => void>(),
+    writeFileSync: vi.fn<(path: string, data: string, enc: string) => void>(),
+    readFileSync: vi.fn<(path: string, enc: string) => string>(),
+    rmSync: vi.fn<(path: string, opts: { force?: boolean }) => void>(),
   },
 }));
 
@@ -216,7 +216,8 @@ describe('uninstallHooks()', () => {
 
     // Should have called rmSync for each hook file + the marker
     expect(mockFs.rmSync).toHaveBeenCalled();
-    const removedPaths = vi.mocked(mockFs.rmSync).mock.calls.map(([p]) => p as string);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const removedPaths = vi.mocked(mockFs.rmSync).mock.calls.map((args: any) => args[0] as string);
     expect(removedPaths.some((p) => p.endsWith('.agent-ide-version'))).toBe(true);
   });
 

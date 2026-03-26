@@ -111,8 +111,8 @@ export function FileTreeItemRow({
       onDragLeave={drag.onDragLeave}
       onDrop={drag.onDrop}
       onClick={makeClickHandler(isEditing ?? false, node, onClick)}
-      onDoubleClick={makeDoubleClickHandler(isEditing, node, onDoubleClick)}
-      onContextMenu={makeContextMenuHandler(isEditing, node, onContextMenu)}
+      onDoubleClick={makeDoubleClickHandler(isEditing ?? false, node, onDoubleClick)}
+      onContextMenu={makeContextMenuHandler(isEditing ?? false, node, onContextMenu)}
       title={heatTitle}
       style={rowStyle(depth, backgroundColor, drag.isDragOver, isActive)}
     >

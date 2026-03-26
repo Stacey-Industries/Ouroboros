@@ -26,7 +26,7 @@ const PROVIDER = 'github' as const;
 const DEVICE_CODE_URL = 'https://github.com/login/device/code';
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const USER_URL = 'https://api.github.com/user';
-const DEFAULT_SCOPES = 'read:user user:email';
+const DEFAULT_SCOPES = 'read:user user:email repo';
 const SLOW_DOWN_PENALTY_MS = 5_000;
 const JSON_HEADERS = { Accept: 'application/json', 'Content-Type': 'application/json' };
 

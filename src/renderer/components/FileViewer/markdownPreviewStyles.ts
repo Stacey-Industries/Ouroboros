@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import type { Config as DOMPurifyConfig } from 'dompurify';
 
 const MARKDOWN_PREVIEW_STYLE_ID = '__md-preview-styles__';
 
@@ -70,7 +70,7 @@ const MARKDOWN_PREVIEW_STYLES = `
   .md-preview del { text-decoration: line-through; color: var(--text-muted); }
 `;
 
-export const PURIFY_CONFIG: DOMPurify.Config = {
+export const PURIFY_CONFIG: DOMPurifyConfig = {
   ALLOWED_TAGS: [
     'h1',
     'h2',

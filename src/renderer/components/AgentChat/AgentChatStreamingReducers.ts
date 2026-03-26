@@ -152,7 +152,8 @@ function applyToolActivityStructured(
   sealed: AgentChatContentBlock[],
   chunk: AgentChatStreamChunk,
 ): AgentChatContentBlock[] {
-  const { name, status, filePath, inputSummary, editSummary } = chunk.toolActivity!;
+  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
+  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
   const blocks = [...sealed];
   ensureBlockCapacity(blocks, chunk.blockIndex!);
   if (status === 'running') {
@@ -178,7 +179,8 @@ function applyToolActivityLegacy(
   sealed: AgentChatContentBlock[],
   chunk: AgentChatStreamChunk,
 ): { blocks: AgentChatContentBlock[]; textContent: string } {
-  const { name, status, filePath, inputSummary, editSummary } = chunk.toolActivity!;
+  const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
+  const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
   if (status === 'running') {
     return {
       blocks: [

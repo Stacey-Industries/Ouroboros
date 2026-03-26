@@ -1,5 +1,5 @@
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-import React from 'react';
+import React, { type MutableRefObject } from 'react';
 
 export type ZoomMode = 'fitWidth' | 'fitPage' | 'custom';
 
@@ -116,7 +116,7 @@ export interface RenderPdfPageArgs {
   zoomMode: ZoomMode;
   customScale: number;
   containerWidth: number;
-  renderTaskRef: React.RefObject<ReturnType<PDFPageProxy['render']> | null>;
+  renderTaskRef: MutableRefObject<ReturnType<PDFPageProxy['render']> | null>;
   cancelledRef: () => boolean;
 }
 export async function renderPdfPageCanvas({
@@ -144,7 +144,7 @@ export async function renderPdfPageCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const task = page.render({ canvasContext: ctx, viewport });
+    const task = page.render({ canvas, viewport });
     renderTaskRef.current = task;
     await task.promise;
   } catch (err) {

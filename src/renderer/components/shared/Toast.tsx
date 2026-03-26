@@ -280,7 +280,7 @@ const ToastItemView = memo(function ToastItemView({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       className="bg-surface-panel border border-border-semantic text-text-semantic-primary"
-      style={buildToastItemStyle(typeColor, item.dismissing)}
+      style={buildToastItemStyle(typeColor, item.dismissing ?? false)}
     >
       <div style={{ flexShrink: 0, marginTop: '1px' }}>
         <ToastIcon type={item.type} />

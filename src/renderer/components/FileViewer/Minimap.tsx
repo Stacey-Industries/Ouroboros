@@ -152,11 +152,11 @@ function MinimapPanel({
 }: MinimapPanelProps): React.ReactElement {
   return (
     <div
-      ref={containerRef}
+      ref={containerRef as React.RefObject<HTMLDivElement>}
       onPointerDown={onPointerDown}
       style={{ ...minimapContainerStyle, touchAction: 'none' }}
     >
-      <canvas ref={canvasRef} />
+      <canvas ref={canvasRef as React.RefObject<HTMLCanvasElement>} />
       <div style={getViewportIndicatorStyle(viewportRect)} />
     </div>
   );

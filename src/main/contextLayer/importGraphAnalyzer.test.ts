@@ -19,7 +19,7 @@ function makeFile(
 ): RootRepoIndexSnapshot['files'][0] {
   const dotIndex = relativePath.lastIndexOf('.');
   const extension = dotIndex >= 0 ? relativePath.slice(dotIndex) : '';
-  return { relativePath, extension, imports, size: 100, modifiedAt: 0 };
+  return { relativePath, extension, imports, size: 100, modifiedAt: 0, rootPath: '/repo', path: `/repo/${relativePath}`, language: 'typescript' };
 }
 
 function makeRoot(files: RootRepoIndexSnapshot['files']): RootRepoIndexSnapshot {
