@@ -5,7 +5,7 @@
  * Handles task creation, linking, context building, and start flow.
  */
 
-import { beginChatSessionLaunch, endChatSessionLaunch } from '../hooks';
+import { beginChatSessionLaunch } from '../hooks';
 import log from '../logger';
 import { captureHeadHash } from './chatOrchestrationBridgeGit';
 import { startIncrementalFlush, stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
