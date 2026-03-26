@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    PostToolUse hook — runs ESLint on edited TypeScript files.
+    PostToolUse hook -- runs ESLint on edited TypeScript files.
 .DESCRIPTION
     After Edit or Write tools, lints the changed file and surfaces
     violations so Claude can fix them in the same turn.
@@ -27,7 +27,7 @@ if ($data.tool_input -and $data.tool_input.file_path) {
 }
 if ([string]::IsNullOrWhiteSpace($filePath)) { exit 0 }
 
-# ── Extension guard — only .ts / .tsx ─────────────────────────────────────────
+# ── Extension guard -- only .ts / .tsx ────────────────────────────────────────
 if ($filePath -notmatch '\.(tsx?)$') { exit 0 }
 
 # ── Skip test files ──────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ if ($filePath -match '\.d\.ts$') { exit 0 }
 $filename = [System.IO.Path]::GetFileName($filePath)
 
 try {
-    $output = & npx eslint --no-warn-ignored $filePath 2>&1 | Out-String
+    $output = & npx eslint --no-warn-ignored "`"$filePath`"" 2>&1 | Out-String
     $exitCode = $LASTEXITCODE
 } catch {
     exit 0

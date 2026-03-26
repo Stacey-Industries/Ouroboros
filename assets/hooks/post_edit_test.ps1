@@ -63,7 +63,7 @@ if (-not $testFile) {
 
 # ── Run vitest ───────────────────────────────────────────────────────────────
 try {
-    $output = & npx vitest run $testFile --reporter=verbose 2>&1 | Out-String
+    $output = & npx vitest run "`"$testFile`"" --reporter=verbose 2>&1 | Out-String
     $exitCode = $LASTEXITCODE
 } catch {
     exit 0

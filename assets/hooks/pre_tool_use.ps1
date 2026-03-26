@@ -44,12 +44,19 @@ try {
 $requestId = [System.Guid]::NewGuid().ToString('N').Substring(0, 16)
 
 # ── Build payload ─────────────────────────────────────────────────────────────
-# Session ID: try stdin JSON first (most reliable), then env var
+# Session ID: for chat sessions, use 'unknown' so hooks.ts inferSessionId()
+# maps the event to the synthetic session created by the chat bridge. The CLI
+# session ID ($CLAUDE_SESSION_ID) differs from the stream-json session_id that
+# the bridge uses, so we can't hardcode either one here.
 $sessionId = $null
-if ($toolInput.session_id) { $sessionId = $toolInput.session_id }
-elseif ($toolInput.sessionId) { $sessionId = $toolInput.sessionId }
-if (-not $sessionId) {
-    $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+if ($env:OUROBOROS_CHAT_SESSION -eq '1') {
+    $sessionId = 'unknown'
+} else {
+    if ($toolInput.session_id) { $sessionId = $toolInput.session_id }
+    elseif ($toolInput.sessionId) { $sessionId = $toolInput.sessionId }
+    if (-not $sessionId) {
+        $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+    }
 }
 $toolName  = if ($toolInput.tool_name) { $toolInput.tool_name } `
              elseif ($toolInput.toolName) { $toolInput.toolName } `

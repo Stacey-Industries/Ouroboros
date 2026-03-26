@@ -11,6 +11,7 @@ import {
   emitMonitorToolEnd,
   emitMonitorToolStart,
   emitStreamChunk,
+  ensureMonitorSessionStarted,
   stopIncrementalFlush,
 } from './chatOrchestrationBridgeMonitor';
 import {
@@ -307,6 +308,10 @@ export function handleProviderProgress(
   if (ctx.streamEnded && progress.status !== 'cancelled') return;
 
   syncProviderSessionId(ctx, progress);
+  // Emit the synthetic agent_start as soon as providerSessionId is known —
+  // before tool events arrive. This registers the session in activeSessions
+  // so that inferSessionId can remap Claude Code hook tool events to it.
+  ensureMonitorSessionStarted(ctx, runtime.now());
   const now = runtime.now();
 
   if (progress.status === 'streaming') {

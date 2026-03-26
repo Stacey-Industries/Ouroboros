@@ -37,12 +37,17 @@ try {
 }
 
 # ── Build payload ─────────────────────────────────────────────────────────────
-# Session ID: try stdin JSON first (most reliable), then env var
+# Session ID: for chat sessions, use 'unknown' so hooks.ts inferSessionId()
+# maps the event to the synthetic session created by the chat bridge.
 $sessionId = $null
-if ($toolData.session_id) { $sessionId = $toolData.session_id }
-elseif ($toolData.sessionId) { $sessionId = $toolData.sessionId }
-if (-not $sessionId) {
-    $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+if ($env:OUROBOROS_CHAT_SESSION -eq '1') {
+    $sessionId = 'unknown'
+} else {
+    if ($toolData.session_id) { $sessionId = $toolData.session_id }
+    elseif ($toolData.sessionId) { $sessionId = $toolData.sessionId }
+    if (-not $sessionId) {
+        $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+    }
 }
 $toolName   = if ($toolData.tool_name)     { $toolData.tool_name }     `
               elseif ($toolData.toolName)  { $toolData.toolName }      `

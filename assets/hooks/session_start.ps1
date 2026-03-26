@@ -14,6 +14,10 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
+# ── Chat sessions are tracked by the agent monitor via agent_start hooks ──────
+# Suppress session_start for chat-spawned processes to avoid duplicate sessions.
+if ($env:OUROBOROS_CHAT_SESSION -eq '1') { exit 0 }
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'

@@ -31,6 +31,8 @@ if (isMainThread) {
   // Use async writes to avoid EMFILE — default sync mode opens/closes the file
   // on every log line, exhausting the process FD limit during heavy startup.
   electronLog.transports.file.getFile().writeAsync = true;
+  // Register IPC listener so electron-log/renderer can forward logs to main.
+  electronLog.initialize();
   log = electronLog;
 } else {
   // Worker threads: console fallback (electron module unavailable)

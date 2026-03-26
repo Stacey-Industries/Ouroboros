@@ -165,10 +165,12 @@ export function buildEventHandler(
   }
 
   const handler = (event: StreamJsonEvent): void => {
+    // Capture session ID BEFORE processing so that sink.emit() inside
+    // handleAssistantEvent carries the ID to syncProviderSessionId.
+    if (!sessionRef.sessionId && event.session_id) sessionRef.sessionId = event.session_id
     if (event.type === 'assistant') {
       handleAssistantEvent(state, event as StreamJsonEvent & { type: 'assistant' }, { now: Date.now(), sink, sessionRef })
     }
-    if (!sessionRef.sessionId && event.session_id) sessionRef.sessionId = event.session_id
   }
 
   return {

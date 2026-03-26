@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    PreToolUse hook — blocks git commit if staged files have lint/format violations.
+    PreToolUse hook -- blocks git commit if staged files have lint/format violations.
 .DESCRIPTION
     When the Bash tool runs a git commit command, checks staged .ts/.tsx files
-    with prettier (formatting) and eslint (lint rules). This replaces lint-staged
-    so that violations are surfaced to the agent for proper fixing.
-    Exits 2 (BLOCK) if violations are found, 0 otherwise.
+    with prettier (formatting), eslint (lint rules), and tsc --noEmit (type errors).
+    This replaces lint-staged so that violations are surfaced to the agent for
+    proper fixing. Exits 2 (BLOCK) if violations are found, 0 otherwise.
 #>
 
 param()
@@ -43,7 +43,8 @@ $violations = @()
 
 # ── Check prettier formatting ────────────────────────────────────────────────
 try {
-    $prettierOut = & npx prettier --check $fileList 2>&1 | Out-String
+    $quoted = $fileList | ForEach-Object { "`"$_`"" }
+    $prettierOut = & npx prettier --check $quoted 2>&1 | Out-String
     $prettierExit = $LASTEXITCODE
 } catch {
     $prettierExit = 0
@@ -53,13 +54,14 @@ if ($prettierExit -ne 0) {
     $unformatted = $prettierOut -split "`n" |
         Where-Object { $_ -match '\.(tsx?)$' -and $_ -notmatch 'Checking' -and $_.Trim() -ne '' }
     foreach ($f in $unformatted) {
-        $violations += "  [prettier] $($f.Trim()) — needs formatting (run: npx prettier --write)"
+        $violations += "  [prettier] $($f.Trim()) -- needs formatting (run: npx prettier --write)"
     }
 }
 
 # ── Check eslint ─────────────────────────────────────────────────────────────
 try {
-    $eslintOut = & npx eslint --no-warn-ignored $fileList 2>&1 | Out-String
+    $quoted = $fileList | ForEach-Object { "`"$_`"" }
+    $eslintOut = & npx eslint --no-warn-ignored $quoted 2>&1 | Out-String
     $eslintExit = $LASTEXITCODE
 } catch {
     $eslintExit = 0
@@ -69,6 +71,21 @@ if ($eslintExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($eslintOut)) {
     $eslintLines = $eslintOut -split "`n" | Where-Object { $_.Trim() -ne '' }
     foreach ($line in $eslintLines) {
         $violations += "  $line"
+    }
+}
+
+# ── Check TypeScript types ────────────────────────────────────────────────────
+try {
+    $tscOut = & npx tsc --noEmit 2>&1 | Out-String
+    $tscExit = $LASTEXITCODE
+} catch {
+    $tscExit = 0
+}
+
+if ($tscExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($tscOut)) {
+    $tscLines = $tscOut -split "`n" | Where-Object { $_.Trim() -ne '' }
+    foreach ($line in $tscLines) {
+        $violations += "  [tsc] $line"
     }
 }
 

@@ -93,7 +93,7 @@ export function launchHeadless(args: {
     resumeSessionId: args.resumeSessionId || undefined,
     continueSession: args.continueSession || undefined,
     effort: args.effort || undefined,
-    env: args.providerEnv,
+    env: { ...args.providerEnv, OUROBOROS_CHAT_SESSION: '1' },
     onEvent: handler,
   });
   activeProcesses.set(args.context.taskId, handle);

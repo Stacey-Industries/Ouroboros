@@ -82,6 +82,20 @@ const pendingQueue: HookPayload[] = [];
 const activeSessions = new Map<string, number>();
 const sessionCwdMap = new Map<string, string>();
 
+// Tracks session IDs created by synthetic events (chat bridge). While any
+// synthetic session is active, lifecycle events from Claude Code hook scripts
+// are suppressed to prevent phantom sessions in the Agent Monitor.
+const syntheticSessionIds = new Set<string>();
+
+// Counter for chat sessions being launched. Set BEFORE Claude Code spawns
+// (via beginChatSessionLaunch), cleared when the synthetic agent_start fires
+// (via endChatSessionLaunch). Bridges the race between Claude Code hook
+// scripts firing and the chat bridge emitting its synthetic session.
+let chatLaunchesInFlight = 0;
+
+export function beginChatSessionLaunch(): void { chatLaunchesInFlight++; }
+export function endChatSessionLaunch(): void { if (chatLaunchesInFlight > 0) chatLaunchesInFlight--; }
+
 function trackSessionStart(payload: HookPayload): void {
   activeSessions.set(payload.sessionId, payload.timestamp);
   if (payload.cwd) {
@@ -113,15 +127,22 @@ function trackSessionLifecycle(payload: HookPayload): void {
 }
 
 function inferSessionId(payload: HookPayload): HookPayload {
-  // Only infer for tool events with unknown/missing session IDs
-  if (payload.sessionId !== 'unknown' && payload.sessionId !== '') {
-    return payload;
-  }
+  // Only infer for tool events
   if (payload.type !== 'pre_tool_use' && payload.type !== 'post_tool_use') {
     return payload;
   }
 
-  // Find the most recently active session
+  // If the session ID is already tracked (registered via session_start or
+  // agent_start), keep it — the event belongs to a known session.
+  const isTracked =
+    payload.sessionId &&
+    payload.sessionId !== 'unknown' &&
+    activeSessions.has(payload.sessionId);
+  if (isTracked) return payload;
+
+  // Session ID is unknown or untracked (e.g. chat-spawned Claude Code uses a
+  // different session ID domain than the synthetic agent_start). Map the tool
+  // event to the most recently active tracked session.
   let bestId: string | null = null;
   let bestTime = -1;
   for (const [id, lastSeen] of activeSessions) {
@@ -280,6 +301,16 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 }
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
+  // While a chat session is launching or streaming, suppress ALL Claude Code
+  // hook events from reaching the renderer. The chat bridge's synthetic events
+  // are the sole source for the agent monitor during chat sessions. Approval
+  // handling still runs so pre_tool_use response-file polling works.
+  if (chatLaunchesInFlight > 0 || syntheticSessionIds.size > 0) {
+    log.info(`suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`);
+    handleApprovalRequest(rawPayload);
+    return;
+  }
+
   // Track sessions from lifecycle events, then infer session for tool events
   trackSessionLifecycle(rawPayload);
   const payload = inferSessionId(rawPayload);
@@ -312,6 +343,17 @@ export function stopHooksServer(): Promise<void> {
 /** Dispatch a synthetic hook event (from chat orchestration). Skips approval — chat sessions manage permissions. */
 export function dispatchSyntheticHookEvent(payload: HookPayload): void {
   trackSessionLifecycle(payload);
+
+  // Track synthetic session lifecycle so dispatchToRenderer can suppress
+  // competing lifecycle events from Claude Code hook scripts.
+  if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
+  if (payload.type === 'agent_end') {
+    // Delay removal to suppress trailing hook events from the Claude Code
+    // process that arrive after stream-json completion but before the process
+    // fully exits (session_stop, agent_end hooks fire asynchronously).
+    const id = payload.sessionId;
+    setTimeout(() => syntheticSessionIds.delete(id), 10_000);
+  }
 
   const windows = getDispatchWindows();
   if (windows.length === 0) {

@@ -13,6 +13,9 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
+# ── Chat sessions are tracked by the chat bridge's synthetic monitor events ───
+if ($env:OUROBOROS_CHAT_SESSION -eq '1') { exit 0 }
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'

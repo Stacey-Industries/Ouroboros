@@ -5,6 +5,7 @@
  * Handles task creation, linking, context building, and start flow.
  */
 
+import { beginChatSessionLaunch, endChatSessionLaunch } from '../hooks';
 import log from '../logger';
 import { captureHeadHash } from './chatOrchestrationBridgeGit';
 import { startIncrementalFlush, stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
@@ -287,6 +288,10 @@ export async function executePendingSend(args: {
   );
   const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId);
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
+
+  // Signal hooks.ts to suppress lifecycle events from Claude Code hook scripts
+  // until the synthetic agent_start fires (covers the spawn → first-tool-event race).
+  beginChatSessionLaunch();
 
   return executePendingSendCore({
     orchestration: args.orchestration,

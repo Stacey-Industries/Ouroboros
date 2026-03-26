@@ -316,6 +316,10 @@ export function cleanupAgentChatHandlers(): void {
   registeredChannels = [];
   stopContextRefreshTimer();
   terminateContextWorker();
-  service = null;
-  orchestration = null;
+  // NOTE: service and orchestration are intentionally preserved across window
+  // close/reopen. The chat bridge's activeSends map holds buffered stream chunks
+  // for running agents, and the orchestration's onProviderEvent subscription
+  // (set inside the bridge) keeps accumulating chunks during the gap. On reopen,
+  // registerAgentChatHandlers re-attaches IPC forwarders to the surviving bridge,
+  // and the renderer replays buffered chunks via getBufferedChunks().
 }
