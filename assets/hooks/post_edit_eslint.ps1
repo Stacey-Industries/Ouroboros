@@ -51,6 +51,7 @@ if ($exitCode -ne 0 -and -not [string]::IsNullOrWhiteSpace($output)) {
     $tail = $lines | Select-Object -Last 20
     Write-Output "ESLint violations in ${filename}:"
     Write-Output ($tail -join "`n")
+    exit 1
 }
 
 exit 0

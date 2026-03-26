@@ -73,6 +73,7 @@ if ($exitCode -ne 0 -and -not [string]::IsNullOrWhiteSpace($output)) {
     $lines = $output -split "`n" | Where-Object { $_.Trim() -ne '' }
     $tail = $lines | Select-Object -Last 20
     Write-Output ($tail -join "`n")
+    exit 1
 }
 
 exit 0

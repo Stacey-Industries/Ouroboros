@@ -8,6 +8,7 @@ import type {
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import {
+  pickMenuFields,
   useComposerAutocompleteReset,
   useComposerDraftHandlers,
   useComposerDraftSync,
@@ -162,7 +163,11 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   const lastSyncedDraft = useRef(props.draft);
   const menuState = useComposerMenuState();
   const useMentionSystem = Boolean(props.onAddMention);
-  const attachmentHandlers = useImageAttachmentHandlers(attachments ?? [], onAttachmentsChange);
+  const attachmentHandlers = useImageAttachmentHandlers(
+    attachments ?? [],
+    onAttachmentsChange,
+    props.onAddMention,
+  );
   const slashCommands = useMemo(
     () => buildChatSlashCommands(slashCommandContext ?? {}),
     [slashCommandContext],
@@ -182,18 +187,12 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   return {
     textareaRef,
     lastSyncedDraft,
-    selectedIndex: menuState.selectedIndex,
-    mentionQuery: menuState.mentionQuery,
-    isMentionAutocompleteOpen: menuState.isMentionAutocompleteOpen,
-    slashQuery: menuState.slashQuery,
-    isSlashMenuOpen: menuState.isSlashMenuOpen,
     useMentionSystem,
     attachmentHandlers,
     slashCommands,
     closeAutocomplete,
-    closeMentionAutocomplete: menuState.closeMentionAutocomplete,
-    closeSlashMenu: menuState.closeSlashMenu,
     handlers,
+    ...pickMenuFields(menuState),
   };
 }
 

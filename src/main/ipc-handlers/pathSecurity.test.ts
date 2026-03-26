@@ -7,6 +7,7 @@
  * Run with: npx vitest run src/main/ipc-handlers/pathSecurity.test.ts
  */
 
+import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,7 +32,12 @@ vi.mock('../config', () => ({
 }));
 
 // ── Import after mocks ────────────────────────────────────────────────────────
-import { assertPathAllowed,getAllowedRoots, validatePathInWorkspace } from './pathSecurity';
+import {
+  assertPathAllowed,
+  getAllowedRoots,
+  isTrustedConfigPath,
+  validatePathInWorkspace,
+} from './pathSecurity';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,8 +45,7 @@ import { assertPathAllowed,getAllowedRoots, validatePathInWorkspace } from './pa
 function makeEvent(windowId: number | undefined): Parameters<typeof assertPathAllowed>[0] {
   return {
     sender: {
-      getOwnerBrowserWindow: () =>
-        windowId !== undefined ? { id: windowId } : null,
+      getOwnerBrowserWindow: () => (windowId !== undefined ? { id: windowId } : null),
     },
   } as unknown as Parameters<typeof assertPathAllowed>[0];
 }
@@ -142,9 +147,8 @@ describe('validatePathInWorkspace()', () => {
   describe('prefix-match false positive prevention', () => {
     it('rejects a sibling directory that starts with the workspace name', () => {
       // e.g. workspace root is /workspace, path is /workspace-evil/file.txt
-      const sibling = process.platform === 'win32'
-        ? 'C:\\workspace-evil\\file.txt'
-        : '/workspace-evil/file.txt';
+      const sibling =
+        process.platform === 'win32' ? 'C:\\workspace-evil\\file.txt' : '/workspace-evil/file.txt';
       const root = process.platform === 'win32' ? 'C:\\workspace' : '/workspace';
       const result = validatePathInWorkspace(sibling, [path.resolve(root)]);
       expect(result).not.toBeNull();
@@ -153,7 +157,8 @@ describe('validatePathInWorkspace()', () => {
 
     it('rejects a path whose prefix matches the root string but not as a sub-directory', () => {
       const root = process.platform === 'win32' ? 'C:\\proj' : '/proj';
-      const sneaky = process.platform === 'win32' ? 'C:\\projection\\file.ts' : '/projection/file.ts';
+      const sneaky =
+        process.platform === 'win32' ? 'C:\\projection\\file.ts' : '/projection/file.ts';
       const result = validatePathInWorkspace(sneaky, [path.resolve(root)]);
       expect(result).not.toBeNull();
     });
@@ -164,9 +169,10 @@ describe('validatePathInWorkspace()', () => {
       // path.resolve('') === process.cwd(), which is almost certainly not the workspace
       // — but if cwd happens to be workspace, this could pass.  We test the real behaviour.
       const resolved = path.resolve('');
-      const expected = resolved === WORKSPACE_RESOLVED || resolved.startsWith(WORKSPACE_RESOLVED + path.sep)
-        ? null
-        : 'outside';
+      const expected =
+        resolved === WORKSPACE_RESOLVED || resolved.startsWith(WORKSPACE_RESOLVED + path.sep)
+          ? null
+          : 'outside';
       const result = validatePathInWorkspace('', [WORKSPACE_RESOLVED]);
       if (expected === null) {
         expect(result).toBeNull();
@@ -304,5 +310,54 @@ describe('assertPathAllowed()', () => {
     const bad = process.platform === 'win32' ? 'C:\\Windows\\evil.bat' : '/tmp/evil.sh';
     const result = assertPathAllowed(makeEvent(1), bad);
     expect(result?.error).toContain(bad);
+  });
+});
+
+// ─── isTrustedConfigPath ─────────────────────────────────────────────────────
+
+describe('isTrustedConfigPath()', () => {
+  const MOCK_HOME = process.platform === 'win32' ? 'C:\\Users\\someone' : '/home/user';
+
+  beforeEach(() => {
+    vi.spyOn(os, 'homedir').mockReturnValue(MOCK_HOME);
+  });
+
+  it('allows .md file in ~/.claude/commands/', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'commands', 'foo.md');
+    expect(isTrustedConfigPath(p)).toBe(true);
+  });
+
+  it('allows .md file in ~/.claude/rules/', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'rules', 'my-rule.md');
+    expect(isTrustedConfigPath(p)).toBe(true);
+  });
+
+  it('allows nested .md file in subdirectory of commands/', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'commands', 'sub', 'deep.md');
+    expect(isTrustedConfigPath(p)).toBe(true);
+  });
+
+  it('rejects non-.md file in commands/', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'commands', 'foo.js');
+    expect(isTrustedConfigPath(p)).toBe(false);
+  });
+
+  it('rejects .json file in .claude/ root', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'settings.json');
+    expect(isTrustedConfigPath(p)).toBe(false);
+  });
+
+  it('rejects path traversal escaping commands/', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'commands', '..', '..', 'etc', 'passwd');
+    expect(isTrustedConfigPath(p)).toBe(false);
+  });
+
+  it('rejects workspace file unrelated to .claude/', () => {
+    expect(isTrustedConfigPath('/workspace/src/main.ts')).toBe(false);
+  });
+
+  it('rejects .md file directly in .claude/ (not in commands or rules)', () => {
+    const p = path.join(MOCK_HOME, '.claude', 'notes.md');
+    expect(isTrustedConfigPath(p)).toBe(false);
   });
 });

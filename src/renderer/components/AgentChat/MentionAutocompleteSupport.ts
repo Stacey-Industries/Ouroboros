@@ -94,14 +94,13 @@ export function buildFolderMentions(
   items: AutocompleteResult[],
 ): void {
   const lowerQuery = query.toLowerCase();
-  const folderSearchTerm = lowerQuery.slice(7);
   const seenDirs = new Set<string>();
   for (const file of allFiles) {
     if (items.length >= MAX_RESULTS) break;
     const dir = file.dir;
     if (!dir || seenDirs.has(dir)) continue;
     seenDirs.add(dir);
-    if (folderSearchTerm && !dir.toLowerCase().includes(folderSearchTerm)) continue;
+    if (lowerQuery && !dir.toLowerCase().includes(lowerQuery)) continue;
     if (!selectedKeys.has(`@folder:${dir}`)) items.push(buildFolderMentionResult(dir));
   }
 }
@@ -135,9 +134,8 @@ export function buildMentionResults(
   if (!isOpen) return [];
   const selectedKeys = new Set(selectedMentions.map((mention) => mention.key));
   const items: AutocompleteResult[] = [];
-  const lowerQuery = query.toLowerCase();
   buildSpecialMentions(query, selectedKeys, items);
-  if (lowerQuery.startsWith('folder:')) buildFolderMentions(query, allFiles, selectedKeys, items);
-  else buildFileMentions(query, allFiles, selectedKeys, items);
+  buildFileMentions(query, allFiles, selectedKeys, items);
+  if (items.length < MAX_RESULTS) buildFolderMentions(query, allFiles, selectedKeys, items);
   return items.slice(0, MAX_RESULTS);
 }

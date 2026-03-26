@@ -29,6 +29,15 @@
             "command": "powershell -ExecutionPolicy Bypass -NonInteractive -File \"assets\\hooks\\post_edit_test.ps1\""
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -NonInteractive -File \"assets\\hooks\\post_write_test_required.ps1\""
+          }
+        ]
       }
     ]
   }

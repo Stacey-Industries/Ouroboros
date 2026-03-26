@@ -24,11 +24,39 @@ import type { ChatOverrides } from './ChatControlsBar';
 import type { MentionItem } from './MentionAutocomplete';
 import type { SlashCommand, SlashCommandContext } from './SlashCommandMenu';
 
-function useAttachmentDragHandlers(handleFiles: (files: File[]) => Promise<void>) {
+function hasImageItems(event: React.DragEvent): boolean {
+  return Array.from(event.dataTransfer.items).some((i) => i.type.startsWith('image/'));
+}
+
+function hasFileTreeData(event: React.DragEvent): boolean {
+  return event.dataTransfer.types.includes('application/json');
+}
+
+function buildMentionFromDrop(jsonData: string): MentionItem | null {
+  try {
+    const parsed = JSON.parse(jsonData);
+    if (!parsed.path || typeof parsed.path !== 'string') return null;
+    const isDir = Boolean(parsed.isDirectory);
+    const name = parsed.name || parsed.path.split(/[\\/]/).pop() || parsed.path;
+    return {
+      type: isDir ? 'folder' : 'file',
+      key: `@${isDir ? 'folder' : 'file'}:${parsed.path}`,
+      label: name,
+      path: parsed.path,
+      estimatedTokens: isDir ? 5000 : 500,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function useAttachmentDragHandlers(
+  handleFiles: (files: File[]) => Promise<void>,
+  onAddMention?: (mention: MentionItem) => void,
+) {
   const [isDragging, setIsDragging] = useState(false);
   const handleDragOver = useCallback((event: React.DragEvent) => {
-    if (!Array.from(event.dataTransfer.items).some((item) => item.type.startsWith('image/')))
-      return;
+    if (!hasImageItems(event) && !hasFileTreeData(event)) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     setIsDragging(true);
@@ -41,22 +69,43 @@ function useAttachmentDragHandlers(handleFiles: (files: File[]) => Promise<void>
       void handleFiles(
         Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')),
       );
+      const jsonData = event.dataTransfer.getData('application/json');
+      if (!jsonData || !onAddMention) return;
+      const mention = buildMentionFromDrop(jsonData);
+      if (mention) onAddMention(mention);
     },
-    [handleFiles],
+    [handleFiles, onAddMention],
   );
   return { isDragging, handleDragOver, handleDragLeave, handleDrop };
+}
+
+function useRemoveAttachment(
+  attachments: ImageAttachment[],
+  onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
+) {
+  return useCallback(
+    (name: string) => {
+      const index = attachments.findIndex((a) => a.name === name);
+      if (index === -1) return;
+      const next = [...attachments];
+      next.splice(index, 1);
+      onAttachmentsChange?.(next);
+    },
+    [attachments, onAttachmentsChange],
+  );
 }
 
 export function useImageAttachmentHandlers(
   attachments: ImageAttachment[],
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
+  onAddMention?: (mention: MentionItem) => void,
 ) {
   const handleFiles = useCallback(
     async (files: File[]) =>
       appendAttachments(attachments, await readAttachmentFiles(files), onAttachmentsChange),
     [attachments, onAttachmentsChange],
   );
-  const drag = useAttachmentDragHandlers(handleFiles);
+  const drag = useAttachmentDragHandlers(handleFiles, onAddMention);
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const files = Array.from(event.clipboardData.items)
@@ -75,16 +124,7 @@ export function useImageAttachmentHandlers(
     if (result.success && !result.cancelled && result.attachments?.length)
       onAttachmentsChange([...attachments, ...(result.attachments as ImageAttachment[])]);
   }, [attachments, onAttachmentsChange]);
-  const handleRemoveAttachment = useCallback(
-    (name: string) => {
-      const index = attachments.findIndex((a) => a.name === name);
-      if (index === -1) return;
-      const next = [...attachments];
-      next.splice(index, 1);
-      onAttachmentsChange?.(next);
-    },
-    [attachments, onAttachmentsChange],
-  );
+  const handleRemoveAttachment = useRemoveAttachment(attachments, onAttachmentsChange);
   return { ...drag, handlePaste, handlePickImage, handleRemoveAttachment };
 }
 
@@ -195,6 +235,21 @@ export function useComposerMenuState() {
     setSlashQuery,
     isSlashMenuOpen,
     setIsSlashMenuOpen,
+    closeMentionAutocomplete,
+    closeSlashMenu,
+  };
+}
+
+/** Pick only the fields needed for ComposerState from useComposerMenuState. */
+export function pickMenuFields(m: ReturnType<typeof useComposerMenuState>) {
+  const { selectedIndex, mentionQuery, isMentionAutocompleteOpen } = m;
+  const { slashQuery, isSlashMenuOpen, closeMentionAutocomplete, closeSlashMenu } = m;
+  return {
+    selectedIndex,
+    mentionQuery,
+    isMentionAutocompleteOpen,
+    slashQuery,
+    isSlashMenuOpen,
     closeMentionAutocomplete,
     closeSlashMenu,
   };

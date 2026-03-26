@@ -25,7 +25,7 @@ import {
   writeBinaryFile,
   writeTextFile,
 } from './filesHelpers';
-import { assertPathAllowed } from './pathSecurity';
+import { assertPathAllowed, isTrustedConfigPath } from './pathSecurity';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 type FileHandler<TArgs extends unknown[] = unknown[]> = (
@@ -66,6 +66,13 @@ function createRegistrar(channels: string[]): RegisterHandler {
 
 function checkPath(event: IpcMainInvokeEvent, p: string) {
   return assertPathAllowed(event, p);
+}
+
+/** Like checkPath but allows trusted `~/.claude/commands|rules/*.md` files. */
+function checkPathOrTrusted(event: IpcMainInvokeEvent, p: string) {
+  const denied = assertPathAllowed(event, p);
+  if (denied && !isTrustedConfigPath(p)) return denied;
+  return null;
 }
 
 async function runPathOperation<T extends object>(
@@ -127,7 +134,12 @@ function watchDirectory(dirPath: string): { success: boolean; already?: true; er
 }
 
 async function handleReadFile(event: IpcMainInvokeEvent, filePath: string) {
-  return readFileWithLimit(event, filePath, async () => loadTextContent(filePath), checkPath);
+  return readFileWithLimit(
+    event,
+    filePath,
+    async () => loadTextContent(filePath),
+    checkPathOrTrusted,
+  );
 }
 
 async function handleReadBinaryFile(event: IpcMainInvokeEvent, filePath: string) {
@@ -173,11 +185,23 @@ async function handleRename(event: IpcMainInvokeEvent, oldPath: string, newPath:
 }
 
 async function handleWriteFile(event: IpcMainInvokeEvent, filePath: string, data: Uint8Array) {
-  return runPathOperation(event, filePath, async () => writeBinaryFile(filePath, data));
+  const denied = checkPathOrTrusted(event, filePath);
+  if (denied) return denied;
+  try {
+    return await writeBinaryFile(filePath, data);
+  } catch (err) {
+    return toErrorResult(err);
+  }
 }
 
 async function handleSaveFile(event: IpcMainInvokeEvent, filePath: string, content: string) {
-  return runPathOperation(event, filePath, async () => writeTextFile(filePath, content));
+  const denied = checkPathOrTrusted(event, filePath);
+  if (denied) return denied;
+  try {
+    return await writeTextFile(filePath, content);
+  } catch (err) {
+    return toErrorResult(err);
+  }
 }
 
 async function handleCopyFile(event: IpcMainInvokeEvent, sourcePath: string, destPath: string) {
@@ -229,7 +253,8 @@ function createSelectFolderHandler(senderWindow: SenderWindow): FileHandler {
 
 async function handleShowImageDialog(event: IpcMainInvokeEvent) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime even if not in typedefs
-  const win = ((event.sender as any).getOwnerBrowserWindow?.() ?? BrowserWindow.getFocusedWindow())!;
+  const win = ((event.sender as any).getOwnerBrowserWindow?.() ??
+    BrowserWindow.getFocusedWindow())!;
   const result = await dialog.showOpenDialog(win, {
     title: 'Attach Image',
     properties: ['openFile', 'multiSelections'],
@@ -264,7 +289,7 @@ export function registerFileHandlers(senderWindow: SenderWindow): string[] {
     ['files:restoreDeleted', handleRestoreDeleted],
     ['files:selectFolder', createSelectFolderHandler(senderWindow)],
     ['files:showImageDialog', handleShowImageDialog],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ].forEach(([channel, handler]) => register(channel as string, handler as FileHandler<any>));
   return channels;
 }

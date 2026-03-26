@@ -8,11 +8,12 @@
  * paths outside the active workspace root(s).
  */
 
-import { IpcMainInvokeEvent } from 'electron'
-import path from 'path'
+import { IpcMainInvokeEvent } from 'electron';
+import os from 'os';
+import path from 'path';
 
-import { getConfigValue } from '../config'
-import { getWindow } from '../windowManager'
+import { getConfigValue } from '../config';
+import { getWindow } from '../windowManager';
 
 /**
  * Return the set of allowed root directories for the calling window.
@@ -20,31 +21,31 @@ import { getWindow } from '../windowManager'
  * and the default project root from config.
  */
 export function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
-  const roots: string[] = []
+  const roots: string[] = [];
 
   // Per-window project root (from windowManager)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow available at runtime but missing from typedefs
-  const winId = (event.sender as any).getOwnerBrowserWindow?.()?.id as number | undefined
+  const winId = (event.sender as any).getOwnerBrowserWindow?.()?.id as number | undefined;
   if (winId !== undefined) {
-    const managed = getWindow(winId)
+    const managed = getWindow(winId);
     if (managed?.projectRoot) {
-      roots.push(path.resolve(managed.projectRoot))
+      roots.push(path.resolve(managed.projectRoot));
     }
   }
 
   // Multi-root workspace entries
-  const multiRoots = getConfigValue('multiRoots') ?? []
+  const multiRoots = getConfigValue('multiRoots') ?? [];
   for (const r of multiRoots) {
-    if (r) roots.push(path.resolve(r))
+    if (r) roots.push(path.resolve(r));
   }
 
   // Fallback default project root
-  const defaultRoot = getConfigValue('defaultProjectRoot')
+  const defaultRoot = getConfigValue('defaultProjectRoot');
   if (defaultRoot) {
-    roots.push(path.resolve(defaultRoot))
+    roots.push(path.resolve(defaultRoot));
   }
 
-  return roots
+  return roots;
 }
 
 /**
@@ -55,22 +56,25 @@ export function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
 export function validatePathInWorkspace(targetPath: string, allowedRoots: string[]): string | null {
   if (allowedRoots.length === 0) {
     // No workspace configured — cannot validate, deny by default.
-    return 'No workspace root configured; file operation denied for security.'
+    return 'No workspace root configured; file operation denied for security.';
   }
 
-  const resolved = path.resolve(targetPath)
+  const resolved = path.resolve(targetPath);
 
   for (const root of allowedRoots) {
     // On Windows path comparison must be case-insensitive
-    const normalizedResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved
-    const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root
+    const normalizedResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    const normalizedRoot = process.platform === 'win32' ? root.toLowerCase() : root;
 
-    if (normalizedResolved === normalizedRoot || normalizedResolved.startsWith(normalizedRoot + path.sep)) {
-      return null // Path is within this root — allowed.
+    if (
+      normalizedResolved === normalizedRoot ||
+      normalizedResolved.startsWith(normalizedRoot + path.sep)
+    ) {
+      return null; // Path is within this root — allowed.
     }
   }
 
-  return `Path "${targetPath}" is outside the workspace and cannot be accessed.`
+  return `Path "${targetPath}" is outside the workspace and cannot be accessed.`;
 }
 
 /**
@@ -81,6 +85,29 @@ export function assertPathAllowed(
   event: IpcMainInvokeEvent,
   targetPath: string,
 ): { success: false; error: string } | null {
-  const error = validatePathInWorkspace(targetPath, getAllowedRoots(event))
-  return error ? { success: false, error } : null
+  const error = validatePathInWorkspace(targetPath, getAllowedRoots(event));
+  return error ? { success: false, error } : null;
+}
+
+/**
+ * Check whether `targetPath` is a trusted `.md` file inside the user's
+ * `~/.claude/commands/` or `~/.claude/rules/` directories.
+ *
+ * Resolves the path first to defend against traversal attacks.
+ * On Windows, comparison is case-insensitive (mirrors `validatePathInWorkspace`).
+ */
+export function isTrustedConfigPath(targetPath: string): boolean {
+  const resolved = path.resolve(targetPath);
+  if (path.extname(resolved).toLowerCase() !== '.md') return false;
+
+  const home = os.homedir();
+  const trustedDirs = [path.join(home, '.claude', 'commands'), path.join(home, '.claude', 'rules')];
+
+  for (const dir of trustedDirs) {
+    const normResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    const normDir = process.platform === 'win32' ? dir.toLowerCase() : dir;
+    if (normResolved.startsWith(normDir + path.sep)) return true;
+  }
+
+  return false;
 }
