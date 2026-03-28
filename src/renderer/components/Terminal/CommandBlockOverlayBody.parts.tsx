@@ -72,8 +72,27 @@ export function ErrorIcon(): React.ReactElement {
   );
 }
 
+/** Steady dot for long-running commands — replaces spinner after SETTLE_MS. */
+function RunningDot(): React.ReactElement {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="4" fill="var(--interactive-accent)" opacity="0.5" />
+    </svg>
+  );
+}
+
+const SETTLE_MS = 3000;
+
 export function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
-  if (!block.complete) return <SpinnerIcon />;
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    if (block.complete) return;
+    const elapsed = Date.now() - block.timestamp;
+    if (elapsed >= SETTLE_MS) { setSettled(true); return; }
+    const id = setTimeout(() => setSettled(true), SETTLE_MS - elapsed);
+    return () => clearTimeout(id);
+  }, [block.complete, block.timestamp]);
+  if (!block.complete) return settled ? <RunningDot /> : <SpinnerIcon />;
   if (block.exitCode === 0 || block.exitCode === undefined) return <SuccessIcon />;
   return <ErrorIcon />;
 }
