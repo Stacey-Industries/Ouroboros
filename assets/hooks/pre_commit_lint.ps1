@@ -74,18 +74,20 @@ if ($eslintExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($eslintOut)) {
     }
 }
 
-# ── Check TypeScript types ────────────────────────────────────────────────────
-try {
-    $tscOut = & npx tsc --noEmit 2>&1 | Out-String
-    $tscExit = $LASTEXITCODE
-} catch {
-    $tscExit = 0
-}
+# ── Check TypeScript types (both tsconfig projects) ──────────────────────────
+foreach ($proj in @('tsconfig.web.json', 'tsconfig.node.json')) {
+    try {
+        $tscOut = & npx tsc --noEmit -p $proj 2>&1 | Out-String
+        $tscExit = $LASTEXITCODE
+    } catch {
+        $tscExit = 0
+    }
 
-if ($tscExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($tscOut)) {
-    $tscLines = $tscOut -split "`n" | Where-Object { $_.Trim() -ne '' }
-    foreach ($line in $tscLines) {
-        $violations += "  [tsc] $line"
+    if ($tscExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($tscOut)) {
+        $tscLines = $tscOut -split "`n" | Where-Object { $_.Trim() -ne '' }
+        foreach ($line in $tscLines) {
+            $violations += "  [tsc] $line"
+        }
     }
 }
 
