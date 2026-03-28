@@ -194,13 +194,15 @@ export function hasToolDetailsContent(args: {
   editSummary?: { oldLines: number; newLines: number };
   showDiffPreview?: boolean;
   errorOutput?: string;
+  toolOutput?: string;
 }): boolean {
   return Boolean(
     args.filePath ||
     args.displaySummary ||
     args.editSummary ||
     args.showDiffPreview ||
-    args.errorOutput,
+    args.errorOutput ||
+    args.toolOutput,
   );
 }
 
@@ -210,10 +212,23 @@ interface ToolDetailsProps {
   editSummary?: { oldLines: number; newLines: number };
   showDiffPreview: boolean;
   errorOutput?: string;
+  /** General tool result output (from stream-json tool_result). */
+  toolOutput?: string;
   status: 'running' | 'complete' | 'error';
   errorExpanded: boolean;
   onToggleErrorExpanded: () => void;
   ChevronIconComponent: React.ComponentType<{ collapsed: boolean }>;
+}
+
+function ToolOutputPreview({ output }: { output: string }): React.ReactElement {
+  return (
+    <pre
+      className="max-h-[200px] overflow-auto whitespace-pre-wrap rounded p-1.5 bg-surface-base text-text-semantic-muted"
+      style={{ fontSize: '10px' }}
+    >
+      {output}
+    </pre>
+  );
 }
 
 function ToolDetailsContent(props: ToolDetailsProps): React.ReactElement {
@@ -238,6 +253,7 @@ function ToolDetailsContent(props: ToolDetailsProps): React.ReactElement {
       {props.showDiffPreview && props.filePath && (
         <AgentChatDiffPreview filePath={props.filePath} />
       )}
+      {props.toolOutput && <ToolOutputPreview output={props.toolOutput} />}
       {!hasContent && <ToolEmptyState status={props.status} />}
       {props.errorOutput && (
         <ToolErrorOutput

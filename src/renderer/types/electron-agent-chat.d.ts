@@ -32,6 +32,7 @@ export type {
   AgentChatStatusChangedEvent,
   AgentChatStreamChunk,
   AgentChatStreamChunkEvent,
+  AgentChatSubToolActivity,
   AgentChatThreadRecord,
   AgentChatThreadResult,
   AgentChatThreadsResult,

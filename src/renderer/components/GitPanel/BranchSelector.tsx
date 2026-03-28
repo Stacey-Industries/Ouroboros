@@ -105,7 +105,7 @@ function BranchDropdown({
   return (
     <div
       className="
-        absolute z-50 left-0 right-0 mt-1
+        frosted-panel absolute z-50 left-0 right-0 mt-1
         bg-surface-panel border border-border-semantic
         rounded shadow-lg overflow-y-auto
       "

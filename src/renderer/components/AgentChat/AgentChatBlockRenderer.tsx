@@ -207,6 +207,8 @@ function ToolUseBlock({
       inputSummary={block.inputSummary}
       editSummary={block.editSummary}
       errorOutput={block.status === 'error' ? block.output : undefined}
+      toolOutput={block.status !== 'error' ? block.output : undefined}
+      subTools={block.subTools}
     />
   );
 }

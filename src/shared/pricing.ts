@@ -24,13 +24,13 @@ export interface ModelPricing {
 // ─── Pricing table (USD per 1M tokens) ──────────────────────────────────────
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  'opus-4':    { inputPer1M: 15,  outputPer1M: 75, cacheReadPer1M: 1.5,  cacheWritePer1M: 18.75 },
-  'sonnet-4':  { inputPer1M: 3,   outputPer1M: 15, cacheReadPer1M: 0.3,  cacheWritePer1M: 3.75  },
-  'haiku-3.5': { inputPer1M: 0.8, outputPer1M: 4,  cacheReadPer1M: 0.08, cacheWritePer1M: 1     },
+  'opus-4.6':   { inputPer1M: 5,   outputPer1M: 25, cacheReadPer1M: 0.50, cacheWritePer1M: 6.25  },
+  'sonnet-4.6': { inputPer1M: 3,   outputPer1M: 15, cacheReadPer1M: 0.30, cacheWritePer1M: 3.75  },
+  'haiku-4.5':  { inputPer1M: 1,   outputPer1M: 5,  cacheReadPer1M: 0.10, cacheWritePer1M: 1.25  },
 }
 
-/** Default pricing when model is unknown — uses Sonnet 4 as most common. */
-export const DEFAULT_PRICING: ModelPricing = MODEL_PRICING['sonnet-4']
+/** Default pricing when model is unknown — uses Sonnet 4.6 as most common. */
+export const DEFAULT_PRICING: ModelPricing = MODEL_PRICING['sonnet-4.6']
 
 // ─── Model detection ────────────────────────────────────────────────────────
 
@@ -45,9 +45,9 @@ export function detectPricingKey(model?: string): string | null {
   if (!model) return null
   const m = model.toLowerCase()
 
-  if (m.includes('opus-4') || m.includes('opus4')) return 'opus-4'
-  if (m.includes('sonnet-4') || m.includes('sonnet4')) return 'sonnet-4'
-  if (m.includes('haiku-3') || m.includes('haiku3')) return 'haiku-3.5'
+  if (m.includes('opus')) return 'opus-4.6'
+  if (m.includes('sonnet')) return 'sonnet-4.6'
+  if (m.includes('haiku')) return 'haiku-4.5'
 
   return null
 }

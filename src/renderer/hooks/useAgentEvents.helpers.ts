@@ -1,5 +1,7 @@
-import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
-import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
+import type { Dispatch } from 'react';
+
+import type { AgentSession, SubToolCallEvent, ToolCallEvent } from '../components/AgentMonitor/types';
+import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
 import {
   ensureSession,
   findToolCallIndex,
@@ -43,10 +45,11 @@ export type AgentAction =
   | { type: 'AGENT_START'; sessionId: string; taskLabel: string; timestamp: number; parentSessionId?: string; model?: string; internal?: boolean }
   | { type: 'TOOL_START'; sessionId: string; toolCall: ToolCallEvent }
   | { type: 'TOOL_END'; sessionId: string; toolCallId?: string; toolName?: string; duration: number; status: 'success' | 'error'; output?: string }
-  | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string }
+  | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string; costUsd?: number }
   | { type: 'TOKEN_UPDATE'; sessionId: string; usage: TokenUsage; model?: string }
   | { type: 'LINK_SUBAGENT'; parentSessionId: string; childSessionId: string }
   | { type: 'RECORD_SUBAGENT_TOOL'; parentSessionId: string; timestamp: number }
+  | { type: 'SUBTOOL_UPDATE'; sessionId: string; parentToolCallId: string; subTool: SubToolCallEvent }
   | { type: 'DISMISS'; sessionId: string }
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
@@ -64,6 +67,8 @@ export function reducer(state: AgentState, action: AgentAction): AgentState {
       return endSession(state, action);
     case 'TOKEN_UPDATE':
       return updateTokenUsage(state, action);
+    case 'SUBTOOL_UPDATE':
+      return updateSubTool(state, action);
     default:
       return reduceUtilityAction(state, action);
   }
@@ -203,6 +208,7 @@ function endSession(
     status: sessionError ? 'error' : 'complete',
     completedAt: action.timestamp,
     error: sessionError,
+    costUsd: action.costUsd ?? session.costUsd,
     // If the session ended normally, pending tools likely completed but their
     // post_tool_use wasn't matched — mark them as success, not error.
     toolCalls: resolvePendingToolCalls(session.toolCalls, sessionError),
@@ -214,14 +220,42 @@ function updateTokenUsage(
   action: Extract<AgentAction, { type: 'TOKEN_UPDATE' }>,
 ): AgentState {
   const usageDeltas = getUsageDeltas(action.usage);
-  return updateSession(state, action.sessionId, (session) => ({
-    ...session,
-    inputTokens: session.inputTokens + usageDeltas.input,
-    outputTokens: session.outputTokens + usageDeltas.output,
-    cacheReadTokens: mergeOptionalTokenCount(session.cacheReadTokens, usageDeltas.cacheRead),
-    cacheWriteTokens: mergeOptionalTokenCount(session.cacheWriteTokens, usageDeltas.cacheWrite),
-    model: action.model ?? session.model,
-  }));
+  return updateSession(state, action.sessionId, (session) => {
+    const updated = {
+      ...session,
+      inputTokens: session.inputTokens + usageDeltas.input,
+      outputTokens: session.outputTokens + usageDeltas.output,
+      cacheReadTokens: mergeOptionalTokenCount(session.cacheReadTokens, usageDeltas.cacheRead),
+      cacheWriteTokens: mergeOptionalTokenCount(session.cacheWriteTokens, usageDeltas.cacheWrite),
+      model: action.model ?? session.model,
+    };
+    console.warn(
+      '[cost-debug] TOKEN_UPDATE processing',
+      'sessionId:', action.sessionId,
+      'deltas:', usageDeltas,
+      'totals:', { input: updated.inputTokens, output: updated.outputTokens,
+        cacheRead: updated.cacheReadTokens, cacheWrite: updated.cacheWriteTokens },
+    );
+    return updated;
+  });
+}
+
+function updateSubTool(
+  state: AgentState,
+  action: Extract<AgentAction, { type: 'SUBTOOL_UPDATE' }>,
+): AgentState {
+  return updateSession(state, action.sessionId, (session) => {
+    const toolCalls = session.toolCalls.map((tc) => {
+      if (tc.id !== action.parentToolCallId) return tc;
+      const existing = tc.subTools ?? [];
+      const idx = existing.findIndex((s) => s.id === action.subTool.id);
+      const subTools = idx >= 0
+        ? existing.map((s, i) => i === idx ? { ...s, ...action.subTool } : s)
+        : [...existing, action.subTool];
+      return { ...tc, subTools };
+    });
+    return { ...session, toolCalls };
+  });
 }
 
 function linkSubagent(
@@ -275,4 +309,34 @@ function findTemporalParent(
 
   return best;
 }
+
+/* ---------- Pure helpers extracted from useAgentEvents.ts ---------- */
+
+export function dispatchAgentEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+  dispatch({
+    type: 'AGENT_END',
+    sessionId: payload.sessionId,
+    timestamp: payload.timestamp,
+    error: payload.error,
+    costUsd: payload.costUsd,
+  });
+}
+
+export function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+  console.warn(
+    '[cost-debug] dispatchTokenUpdate called',
+    'sessionId:', payload.sessionId,
+    'model:', payload.model,
+    'usage:', payload.usage,
+    'hasUsage:', Boolean(payload.usage),
+  );
+  if (!payload.usage) return;
+  dispatch({
+    type: 'TOKEN_UPDATE',
+    sessionId: payload.sessionId,
+    usage: payload.usage,
+    model: payload.model,
+  });
+}
+
 

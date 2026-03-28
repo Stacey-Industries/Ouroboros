@@ -56,33 +56,27 @@ export function stopIncrementalFlush(ctx: ActiveStreamContext): void {
 // ---------------------------------------------------------------------------
 // Agent Monitor bridge
 //
-// Claude Code emits its own hook events (session_start, pre_tool_use, etc.)
-// via installed hook scripts. The synthetic events here only annotate the
-// existing Claude Code session — they never create a separate session.
+// All synthetic events use the chat THREAD ID as the monitor session ID.
+// This ensures all prompts within the same thread appear as a single session
+// in the Agent Monitor — the reducer's updateExistingSession path resets
+// status to 'running' while preserving accumulated tokens and tool calls.
 //
-// - ensureMonitorSessionStarted: emits agent_start with the PROVIDER session
-//   ID (same as Claude Code's session_start) so the reducer updates the
-//   existing session's label to the user prompt instead of "Session <prefix>".
-// - Tool events: NOT emitted — Claude Code hook scripts handle these.
-// - emitMonitorSessionEnd: emits agent_end with provider session ID to
-//   deliver token/usage data to the correct session.
+// Claude Code hook events are suppressed during streaming (via syntheticSessionIds).
 // ---------------------------------------------------------------------------
 
 export function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: number): void {
   if (ctx.monitorStartEmitted) return;
-  // Wait until we know the Claude Code session ID so we annotate the
-  // existing session rather than creating a duplicate.
+  // Wait until the provider has connected before showing the session.
   if (!ctx.providerSessionId) return;
   ctx.monitorStartEmitted = true;
-  // The synthetic agent_start is about to fire — clear the launch flag so
-  // syntheticSessionIds takes over suppression from here.
   endChatSessionLaunch();
   dispatchSyntheticHookEvent({
     type: 'agent_start',
-    sessionId: ctx.providerSessionId,
+    sessionId: ctx.threadId,
     taskLabel: ctx.userPrompt ?? `Chat ${ctx.threadId.slice(0, 8)}`,
     prompt: ctx.userPrompt,
     timestamp: now,
+    model: ctx.model,
   });
 }
 
@@ -93,13 +87,13 @@ export function emitMonitorToolStart(
   now: number,
 ): void {
   ensureMonitorSessionStarted(ctx, now);
-  if (!ctx.providerSessionId) return;
+  if (!ctx.monitorStartEmitted) return;
   const input: Record<string, unknown> = {};
   if (toolActivity.filePath) input.file_path = toolActivity.filePath;
   if (toolActivity.inputSummary) input.description = toolActivity.inputSummary;
   dispatchSyntheticHookEvent({
     type: 'pre_tool_use',
-    sessionId: ctx.providerSessionId,
+    sessionId: ctx.threadId,
     toolName: toolActivity.name,
     toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
     input,
@@ -110,33 +104,57 @@ export function emitMonitorToolStart(
 export function emitMonitorToolEnd(
   ctx: ActiveStreamContext,
   blockIndex: number,
-  toolName: string,
-  now: number,
+  opts: { toolName: string; now: number; output?: string },
 ): void {
-  if (!ctx.providerSessionId) return;
+  if (!ctx.monitorStartEmitted) return;
   dispatchSyntheticHookEvent({
     type: 'post_tool_use',
-    sessionId: ctx.providerSessionId,
-    toolName,
+    sessionId: ctx.threadId,
+    toolName: opts.toolName,
     toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
+    timestamp: opts.now,
+    output: opts.output ? { content: opts.output } : undefined,
+  } as HookPayload);
+}
+
+export function emitMonitorSubTool(
+  ctx: ActiveStreamContext,
+  blockIndex: number,
+  sub: { name: string; status: 'running' | 'complete'; subToolId: string; filePath?: string; inputSummary?: string; output?: string },
+  now: number,
+): void {
+  if (!ctx.monitorStartEmitted) return;
+  const parentToolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+  const toolCallId = `${parentToolCallId}-sub-${sub.subToolId}`;
+  const type = sub.status === 'running' ? 'pre_tool_use' : 'post_tool_use';
+  const input: Record<string, unknown> = {};
+  if (sub.filePath) input.file_path = sub.filePath;
+  if (sub.inputSummary) input.description = sub.inputSummary;
+  dispatchSyntheticHookEvent({
+    type,
+    sessionId: ctx.threadId,
+    toolName: sub.name || 'Tool',
+    toolCallId,
+    input: type === 'pre_tool_use' ? input : undefined,
+    output: sub.output ? { content: sub.output } : undefined,
     timestamp: now,
+    parentToolCallId,
   } as HookPayload);
 }
 
 export function emitMonitorSessionEnd(ctx: ActiveStreamContext, now: number, error?: string): void {
-  // If the synthetic agent_start never fired (no tools, or providerSessionId
-  // was never captured), clean up the launch flag so it doesn't leak.
   if (!ctx.monitorStartEmitted) {
     endChatSessionLaunch();
     return;
   }
-  if (!ctx.providerSessionId) return;
   const payload: HookPayload = {
     type: 'agent_end',
-    sessionId: ctx.providerSessionId,
+    sessionId: ctx.threadId,
     timestamp: now,
+    model: ctx.model,
   };
   if (error) (payload as unknown as Record<string, unknown>).error = error;
+  if (ctx.costUsd != null) payload.costUsd = ctx.costUsd;
   if (ctx.tokenUsage) {
     payload.usage = {
       input_tokens: ctx.tokenUsage.inputTokens,

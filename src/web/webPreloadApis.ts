@@ -4,6 +4,7 @@
  * Second half of APIs lives in webPreloadApisSupplemental.ts.
  */
 
+import { requestFolderSelection } from '../renderer/components/FileBrowser/WebFolderBrowserSupport';
 import type { WebSocketTransport } from './webPreloadTransport';
 
 // ─── Desktop-Only Stubs ──────────────────────────────────────────────────────
@@ -54,13 +55,41 @@ export function buildPtyApis(t: WebSocketTransport) {
 
 // ─── Config API ──────────────────────────────────────────────────────────────
 
+async function configExport(t: WebSocketTransport): Promise<{ success: boolean; error?: string }> {
+  const data = await t.invoke('config:getAll');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ouroboros-config.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  return { success: true };
+}
+
+async function configImport(t: WebSocketTransport): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) { resolve({ success: false, error: 'No file selected' }); return; }
+      const text = await file.text();
+      const result = await t.invoke('config:import', JSON.parse(text) as unknown);
+      resolve(result as { success: boolean; error?: string });
+    };
+    input.click();
+  });
+}
+
 export function buildConfigApi(t: WebSocketTransport) {
   return {
     getAll: () => t.invoke('config:getAll'),
     get: (key: string) => t.invoke('config:get', key),
     set: (key: string, value: unknown) => t.invoke('config:set', key, value),
-    export: desktopOnlyStub('config:export'),
-    import: desktopOnlyStub('config:import'),
+    export: () => configExport(t),
+    import: () => configImport(t),
     openSettingsFile: desktopOnlyStub('config:openSettingsFile'),
     onExternalChange: (cb: (config: unknown) => void) => t.on('config:externalChange', cb),
   };
@@ -77,7 +106,10 @@ export function buildFilesApi(t: WebSocketTransport) {
     readDir: (dirPath: string) => t.invoke('files:readDir', dirPath),
     watchDir: (dirPath: string) => t.invoke('files:watchDir', dirPath),
     unwatchDir: (dirPath: string) => t.invoke('files:unwatchDir', dirPath),
-    selectFolder: desktopOnlyStub('files:selectFolder'),
+    selectFolder: async () => {
+      const result = await requestFolderSelection();
+      return { success: true, cancelled: result.cancelled, path: result.path };
+    },
     createFile: (filePath: string, content?: string) =>
       t.invoke('files:createFile', filePath, content),
     mkdir: (dirPath: string) => t.invoke('files:mkdir', dirPath),

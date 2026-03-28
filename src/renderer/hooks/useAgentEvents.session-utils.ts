@@ -3,6 +3,8 @@
  * state management. Split from useAgentEvents.helpers.ts to stay under line limits.
  */
 
+import type { MutableRefObject } from 'react';
+
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
 import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
 import type { AgentState } from './useAgentEvents.helpers';
@@ -119,4 +121,25 @@ export function findToolCallIndex(
     if (toolCalls[i].status === 'pending') return i;
   }
   return -1;
+}
+
+export function shouldPersistSession(
+  session: AgentSession,
+  liveSessionIdsRef: MutableRefObject<Set<string>>,
+  savedSessionIdsRef: MutableRefObject<Set<string>>,
+): boolean {
+  return (
+    (session.status === 'complete' || session.status === 'error') &&
+    !savedSessionIdsRef.current.has(session.id) &&
+    liveSessionIdsRef.current.has(session.id)
+  );
+}
+
+export function markSessionsAsSaved(
+  sessions: AgentSession[],
+  savedSessionIdsRef: MutableRefObject<Set<string>>,
+): void {
+  for (const session of sessions) {
+    savedSessionIdsRef.current.add(session.id);
+  }
 }

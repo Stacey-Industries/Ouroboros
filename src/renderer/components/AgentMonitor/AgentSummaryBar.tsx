@@ -32,6 +32,23 @@ interface AgentSessionSummary {
   tokenTotals: TokenTotals;
 }
 
+interface SessionCostDebug {
+  sessionId: string;
+  model: string | undefined;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+}
+
+function logCostDebug(sessions: AgentSession[], perSession: SessionCostDebug[], totalCost: number): void {
+  console.warn(
+    '[cost-debug] AgentSummaryBar recompute',
+    'numSessions:', sessions.length,
+    'perSession:', perSession,
+    'totalCost:', totalCost,
+  );
+}
+
 function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
   return useMemo(() => {
     let running = 0;
@@ -41,19 +58,23 @@ function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
     let outputTokens = 0;
     let totalCost = 0;
 
-    for (const session of sessions) {
+    const perSession = sessions.map((session) => {
       running += Number(session.status === 'running');
       complete += Number(session.status === 'complete');
       errors += Number(session.status === 'error');
       inputTokens += session.inputTokens;
       outputTokens += session.outputTokens;
-      totalCost += estimateCost(session).totalCost;
-    }
+      const sessionCost = session.costUsd ?? estimateCost(session).totalCost;
+      totalCost += sessionCost;
+      return { sessionId: session.id, model: session.model,
+        inputTokens: session.inputTokens, outputTokens: session.outputTokens,
+        estimatedCost: sessionCost };
+    });
+
+    logCostDebug(sessions, perSession, totalCost);
 
     return {
-      running,
-      complete,
-      errors,
+      running, complete, errors,
       total: sessions.length,
       hasFinished: complete > 0 || errors > 0,
       hasTokens: inputTokens > 0 || outputTokens > 0,

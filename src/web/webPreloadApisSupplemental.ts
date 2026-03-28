@@ -218,6 +218,14 @@ export function buildAgentChatApi(t: WebSocketTransport) {
     revertToSnapshot: (threadId: string, messageId: string) =>
       t.invoke('agentChat:revertToSnapshot', threadId, messageId),
     cancelTask: (taskId: string) => t.invoke('agentChat:cancelTask', taskId),
+    listMemories: (workspaceRoot: string) =>
+      t.invoke('agentChat:listMemories', workspaceRoot),
+    createMemory: (workspaceRoot: string, entry: unknown) =>
+      t.invoke('agentChat:createMemory', workspaceRoot, entry),
+    updateMemory: (workspaceRoot: string, memoryId: string, updates: unknown) =>
+      t.invoke('agentChat:updateMemory', workspaceRoot, memoryId, updates),
+    deleteMemory: (workspaceRoot: string, memoryId: string) =>
+      t.invoke('agentChat:deleteMemory', workspaceRoot, memoryId),
     onThreadUpdate: (cb: (thread: unknown) => void) => t.on('agentChat:thread', cb),
     onMessageUpdate: (cb: (message: unknown) => void) => t.on('agentChat:message', cb),
     onStatusChange: (cb: (status: unknown) => void) => t.on('agentChat:status', cb),

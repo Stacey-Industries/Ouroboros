@@ -89,7 +89,10 @@ export function setDraftValue(
 ): void {
   lastSyncedDraft.current = value;
   onChange(value);
-  if (textareaRef.current) autoResizeTextarea(textareaRef.current);
+  if (textareaRef.current) {
+    textareaRef.current.value = value;
+    autoResizeTextarea(textareaRef.current);
+  }
 }
 
 export function resetDraftTextarea(
@@ -111,6 +114,25 @@ export function removeTriggerBeforeCursor(
   if (lastAt === -1) return;
   const nextDraft = textarea.value.slice(0, lastAt) + textarea.value.slice(textarea.selectionStart);
   setDraftValue(textareaRef, lastSyncedDraft, onChange, nextDraft);
+}
+
+/** Replace the @trigger text with `@path ` inline in the textarea. */
+export function replaceTriggerWithPath(
+  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  lastSyncedDraft: React.MutableRefObject<string>,
+  onChange: (value: string) => void,
+  path: string,
+): void {
+  const textarea = textareaRef.current;
+  if (!textarea) return;
+  const cursor = textarea.selectionStart;
+  const lastAt = textarea.value.slice(0, cursor).lastIndexOf('@');
+  if (lastAt === -1) return;
+  const insertion = `@${path} `;
+  const nextDraft = textarea.value.slice(0, lastAt) + insertion + textarea.value.slice(cursor);
+  setDraftValue(textareaRef, lastSyncedDraft, onChange, nextDraft);
+  const newCursor = lastAt + insertion.length;
+  textarea.setSelectionRange(newCursor, newCursor);
 }
 
 /* ---------- Mention/file selection helpers ---------- */
@@ -139,13 +161,13 @@ export function selectComposerFile(
   },
   file: FileEntry,
 ): void {
-  removeTriggerBeforeCursor(args.textareaRef, args.lastSyncedDraft, args.onChange);
-  if (args.useMentionSystem && args.onAddMention) {
-    args.onAddMention(createFileMention(file));
+  if (args.useMentionSystem) {
+    replaceTriggerWithPath(args.textareaRef, args.lastSyncedDraft, args.onChange, file.relativePath);
     args.setIsMentionAutocompleteOpen?.(false);
     args.setMentionQuery?.(null);
     return;
   }
+  removeTriggerBeforeCursor(args.textareaRef, args.lastSyncedDraft, args.onChange);
   args.onSelectFile?.(file);
   args.onCloseAutocomplete?.();
 }
@@ -161,8 +183,7 @@ export function selectComposerMention(
   },
   mention: MentionItem,
 ): void {
-  removeTriggerBeforeCursor(args.textareaRef, args.lastSyncedDraft, args.onChange);
-  args.onAddMention?.(mention);
+  replaceTriggerWithPath(args.textareaRef, args.lastSyncedDraft, args.onChange, mention.path);
   args.setIsMentionAutocompleteOpen?.(false);
   args.setMentionQuery?.(null);
   args.textareaRef.current?.focus();

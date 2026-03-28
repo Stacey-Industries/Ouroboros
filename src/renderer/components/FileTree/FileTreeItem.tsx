@@ -108,9 +108,9 @@ function startDrag(e: React.DragEvent, node: TreeNode): void {
   e.dataTransfer.setData('text/plain', node.path);
   e.dataTransfer.setData(
     'application/json',
-    JSON.stringify({ path: node.path, isDirectory: node.isDirectory, name: node.name }),
+    JSON.stringify({ path: node.path, relativePath: node.relativePath, isDirectory: node.isDirectory, name: node.name }),
   );
-  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.effectAllowed = 'copyMove';
 }
 
 function enterDrag(e: React.DragEvent, setIsDragOver: DragSetter): void {

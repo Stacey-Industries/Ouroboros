@@ -166,7 +166,7 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   const attachmentHandlers = useImageAttachmentHandlers(
     attachments ?? [],
     onAttachmentsChange,
-    props.onAddMention,
+    { textareaRef, lastSyncedDraft, onChange: props.onChange },
   );
   const slashCommands = useMemo(
     () => buildChatSlashCommands(slashCommandContext ?? {}),

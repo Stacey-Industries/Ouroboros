@@ -211,7 +211,7 @@ type BranchDropdownProps = {
 };
 function BranchDropdown(p: BranchDropdownProps): React.ReactElement {
   return (
-    <div className="bg-surface-panel border border-border-semantic" style={dropdownStyle}>
+    <div className="frosted-panel bg-surface-panel border border-border-semantic" style={dropdownStyle}>
       <div style={dropdownHeaderStyle}>
         <BranchSearchInput
           searchInputRef={p.searchInputRef}

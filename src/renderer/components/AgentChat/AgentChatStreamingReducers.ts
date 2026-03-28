@@ -2,7 +2,11 @@
  * AgentChatStreamingReducers.ts — Pure chunk reducer logic for useAgentChatStreaming.
  * Extracted to keep useAgentChatStreaming.ts under the 300-line limit.
  */
-import type { AgentChatContentBlock, AgentChatStreamChunk } from '../../types/electron-agent-chat';
+import type {
+  AgentChatContentBlock,
+  AgentChatStreamChunk,
+  AgentChatSubToolActivity,
+} from '../../types/electron-agent-chat';
 
 export interface AgentChatStreamingState {
   isStreaming: boolean;
@@ -148,10 +152,33 @@ function applyThinkingChunk(
   return buildStreamingResult(prev, chunk, blocks, prev.activeTextContent);
 }
 
+function applySubToolDelta(
+  blocks: AgentChatContentBlock[],
+  blockIndex: number,
+  subTool: AgentChatSubToolActivity,
+): AgentChatContentBlock[] {
+  const next = [...blocks];
+  const parent = next[blockIndex];
+  if (!parent || parent.kind !== 'tool_use') return next;
+  const existing = parent.subTools ?? [];
+  if (subTool.status === 'running') {
+    next[blockIndex] = { ...parent, subTools: [...existing, subTool] };
+  } else {
+    const updated = existing.map((s) =>
+      s.subToolId === subTool.subToolId ? { ...s, ...subTool } : s,
+    );
+    next[blockIndex] = { ...parent, subTools: updated };
+  }
+  return next;
+}
+
 function applyToolActivityStructured(
   sealed: AgentChatContentBlock[],
   chunk: AgentChatStreamChunk,
 ): AgentChatContentBlock[] {
+  if (chunk.toolActivity!.subTool) {
+    return applySubToolDelta(sealed, chunk.blockIndex!, chunk.toolActivity!.subTool);
+  }
   const { name, status, filePath, inputSummary, editSummary: rawEditSummary } = chunk.toolActivity!;
   const editSummary = typeof rawEditSummary === 'object' ? rawEditSummary : undefined;
   const blocks = [...sealed];
@@ -169,7 +196,10 @@ function applyToolActivityStructured(
   } else {
     const existing = blocks[chunk.blockIndex!];
     if (existing.kind === 'tool_use') {
-      blocks[chunk.blockIndex!] = { ...existing, status, filePath: filePath ?? existing.filePath };
+      blocks[chunk.blockIndex!] = {
+        ...existing, status, filePath: filePath ?? existing.filePath,
+        output: chunk.toolActivity!.output ?? existing.output,
+      };
     }
   }
   return blocks;
@@ -202,7 +232,7 @@ function applyToolActivityLegacy(
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i];
     if (block.kind === 'tool_use' && block.tool === name && block.status === 'running') {
-      blocks[i] = { ...block, status, filePath: filePath ?? block.filePath };
+      blocks[i] = { ...block, status, filePath: filePath ?? block.filePath, output: chunk.toolActivity!.output };
       break;
     }
   }
@@ -240,8 +270,17 @@ export function applyChunk(
     case 'complete': {
       const blocks = prev.blocks.map((b) =>
         b.kind === 'tool_use' && b.status === 'running' ? { ...b, status: 'complete' as const } : b,
+      ).map((b) =>
+        b.kind === 'tool_use' && b.subTools
+          ? { ...b, subTools: b.subTools.map((s) => s.status === 'running' ? { ...s, status: 'complete' as const } : s) }
+          : b,
       );
-      return { ...prev, isStreaming: false, blocks, streamingTokenUsage: undefined };
+      return {
+        ...prev,
+        isStreaming: false,
+        blocks,
+        streamingTokenUsage: chunk.tokenUsage ?? undefined,
+      };
     }
     case 'error':
       return { ...INITIAL_STATE, streamingTokenUsage: undefined };

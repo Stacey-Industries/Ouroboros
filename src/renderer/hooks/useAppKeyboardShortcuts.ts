@@ -5,6 +5,7 @@
 import { useCallback,useEffect } from 'react';
 
 import type { WorkspaceLayout } from '../types/electron';
+import { OPEN_USAGE_PANEL_EVENT } from './appEventNames';
 
 interface KeyboardShortcutsDeps {
   keybindings: Record<string, string>
@@ -56,9 +57,19 @@ function matchAndApplyLayout(action: string, layouts: WorkspaceLayout[], apply: 
   if (matched) apply(matched);
 }
 
+function handleUsagePanelShortcut(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT));
+    return true;
+  }
+  return false;
+}
+
 export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (handleUsagePanelShortcut(e)) return;
       const reverseMap = buildReverseMap(deps.keybindings);
       const combo = buildComboFromEvent(e);
       const action = reverseMap.get(combo);

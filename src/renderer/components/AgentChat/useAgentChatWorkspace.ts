@@ -84,7 +84,7 @@ export interface AgentChatWorkspaceModel {
 }
 
 const DEFAULT_CHAT_OVERRIDES: ChatOverrides = {
-  model: '',
+  model: 'opus[1m]',
   effort: 'medium',
   permissionMode: 'default',
 };

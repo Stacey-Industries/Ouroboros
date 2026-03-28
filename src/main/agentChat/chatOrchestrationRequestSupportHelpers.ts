@@ -256,7 +256,7 @@ function resolveModelWithSlot(
 ): string {
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined;
   const slotDefault = slots?.agentChat || '';
-  return override || slotDefault || resolveProviderModel(settings, provider);
+  return override || slotDefault || resolveProviderModel(settings, provider) || 'sonnet';
 }
 
 export function buildResolvedOptions(

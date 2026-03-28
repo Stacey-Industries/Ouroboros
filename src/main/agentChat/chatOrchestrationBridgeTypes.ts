@@ -33,6 +33,8 @@ export interface ActiveStreamContext {
   accumulatedText: string;
   firstChunkEmitted: boolean;
   tokenUsage?: { inputTokens: number; outputTokens: number };
+  /** Provider-reported cost in USD (set on completion). */
+  costUsd?: number;
   /** Resolved model ID (e.g. 'claude-opus-4-6') for this send. */
   model?: string;
   /** Buffered chunks for replay on renderer reconnect (e.g. after HMR/refresh). */

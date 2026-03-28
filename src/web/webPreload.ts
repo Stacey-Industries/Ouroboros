@@ -18,6 +18,9 @@ import {
   buildPtyApis,
   buildShellThemeApis,
 } from './webPreloadApis';
+import { buildAuthApi, buildProvidersApi } from './webPreloadApisAuth';
+import { buildClaudeMdApi } from './webPreloadApisClaudeMd';
+import { buildRulesAndSkillsApi } from './webPreloadApisRulesSkills';
 import {
   buildAgentChatApi,
   buildLspApi,
@@ -74,6 +77,10 @@ const { mcpAPI, mcpStoreAPI } = buildMcpApis(transport);
 const { extensionStoreAPI, contextAPI, ideToolsAPI } = buildStoreContextApis(transport);
 const agentChatAPI = buildAgentChatApi(transport);
 const { codemodeAPI, orchestrationAPI, contextLayerAPI } = buildOrchestrationApis(transport);
+const authAPI = buildAuthApi(transport);
+const providersAPI = buildProvidersApi(transport);
+const claudeMdAPI = buildClaudeMdApi(transport);
+const rulesAndSkillsAPI = buildRulesAndSkillsApi(transport);
 
 const electronAPI = {
   pty: ptyAPI,
@@ -106,6 +113,10 @@ const electronAPI = {
   agentChat: agentChatAPI,
   orchestration: orchestrationAPI,
   contextLayer: contextLayerAPI,
+  auth: authAPI,
+  providers: providersAPI,
+  claudeMd: claudeMdAPI,
+  rulesAndSkills: rulesAndSkillsAPI,
 };
 
 // ─── Expose Globally ─────────────────────────────────────────────────────────

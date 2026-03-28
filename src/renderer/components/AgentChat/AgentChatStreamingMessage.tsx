@@ -72,6 +72,8 @@ function ToolGroup({ tools, defaultExpanded }: ToolGroupProps): React.ReactEleme
               filePath={tool.filePath}
               inputSummary={tool.inputSummary}
               editSummary={tool.editSummary}
+              toolOutput={tool.status !== 'error' ? tool.output : undefined}
+              subTools={tool.subTools}
             />
           ))}
         </div>
@@ -208,7 +210,7 @@ export function AgentChatStreamingMessage({
             if (item.type === 'tool-group') {
               return <ToolGroup key={`tool-group-${item.startIndex}`} tools={item.tools} defaultExpanded={item.tools.some((tool) => tool.status === 'running')} />;
             }
-            return <AgentChatToolCard key={item.block.blockId} name={item.block.tool} status={item.block.status} filePath={item.block.filePath} inputSummary={item.block.inputSummary} editSummary={item.block.editSummary} />;
+            return <AgentChatToolCard key={item.block.blockId} name={item.block.tool} status={item.block.status} filePath={item.block.filePath} inputSummary={item.block.inputSummary} editSummary={item.block.editSummary} toolOutput={item.block.status !== 'error' ? item.block.output : undefined} subTools={item.block.subTools} />;
           })}
           {isStreaming && <StreamingStatusMessage onStop={onStop} />}
           <StreamingChangeSummaryBar blocks={blocks} isStreaming={isStreaming} />

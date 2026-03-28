@@ -191,6 +191,10 @@ export interface ComposerKeyDownArgs {
 }
 
 export function handleComposerKeyDown(args: ComposerKeyDownArgs): void {
+  // If a capture-phase listener (e.g. MentionAutocomplete) already handled this
+  // event, bail out — otherwise we'd send the message on Enter even though the
+  // listener already selected a mention.
+  if (args.event.nativeEvent?.defaultPrevented) return;
   if (
     (args.isSlashMenuOpen || (args.useMentionSystem && args.isMentionAutocompleteOpen)) &&
     MENU_KEYS.has(args.event.key)

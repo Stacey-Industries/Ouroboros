@@ -49,6 +49,8 @@ export interface HookPayload {
     cache_read_input_tokens?: number;
     cache_creation_input_tokens?: number;
   };
+  /** Provider-reported cost in USD (set on agent_end for chat bridge sessions). */
+  costUsd?: number;
   /** Working directory of the Claude Code session — set by hook scripts */
   cwd?: string;
   /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */

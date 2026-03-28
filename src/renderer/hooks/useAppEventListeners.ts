@@ -19,6 +19,7 @@ import {
 import {
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
+  OPEN_USAGE_PANEL_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
 } from './appEventNames';
 
@@ -60,7 +61,7 @@ interface DiffReviewDetail {
 }
 
 function emitUsagePanel(): void {
-  window.dispatchEvent(new CustomEvent('agent-ide:open-usage-panel'));
+  window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT));
 }
 
 function emitSettingsPanel(): void {

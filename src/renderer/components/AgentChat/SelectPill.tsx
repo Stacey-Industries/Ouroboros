@@ -23,7 +23,7 @@ export interface SelectPillProps {
 function getDisplayLabel(value: string, options?: ReadonlyArray<OptionItem>, groups?: OptionGroup[], defaultOption?: OptionItem): string {
   if (defaultOption && value === defaultOption.value) return defaultOption.label;
   const match = options?.find((option) => option.value === value) ?? groups?.flatMap((group) => group.options).find((option) => option.value === value);
-  return match?.label ?? (value || 'Default');
+  return match?.label ?? (value || 'Select');
 }
 
 function ChevronUp(): React.ReactElement {

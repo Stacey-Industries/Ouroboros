@@ -121,6 +121,21 @@ export interface AgentChatErrorPayload {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sub-tool activity (nested subagent tool calls)                    */
+/* ------------------------------------------------------------------ */
+
+export interface AgentChatSubToolActivity {
+  name: string;
+  status: 'running' | 'complete' | 'error';
+  filePath?: string;
+  inputSummary?: string;
+  editSummary?: { oldLines: number; newLines: number };
+  output?: string;
+  /** Stable ID for React keying — deterministic from parent + counter. */
+  subToolId: string;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Structured Content Blocks                                         */
 /* ------------------------------------------------------------------ */
 
@@ -147,6 +162,8 @@ export type AgentChatContentBlock =
       inputSummary?: string;
       /** Streaming-only: edit change summary (line counts). */
       editSummary?: { oldLines: number; newLines: number };
+      /** Nested subagent tool calls (populated when this is an Agent/Task tool). */
+      subTools?: AgentChatSubToolActivity[];
     }
   | { kind: 'tool_result'; toolUseId: string; content: string }
   | { kind: 'code'; language: string; content: string; filePath?: string; applied?: boolean }
@@ -278,6 +295,10 @@ export interface AgentChatStreamChunkToolActivity {
   filePath?: string;
   inputSummary?: string;
   editSummary?: { oldLines: number; newLines: number } | string;
+  /** Tool result content (populated on 'complete' status). */
+  output?: string;
+  /** When present, this is a subagent tool activity targeting the parent Agent tool. */
+  subTool?: AgentChatSubToolActivity;
 }
 
 export interface AgentChatStreamChunk {

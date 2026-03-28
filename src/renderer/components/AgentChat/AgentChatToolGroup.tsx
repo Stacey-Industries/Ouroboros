@@ -65,6 +65,8 @@ export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ block
               inputSummary={block.inputSummary}
               editSummary={block.editSummary}
               errorOutput={block.status === 'error' ? block.output : undefined}
+              toolOutput={block.status !== 'error' ? block.output : undefined}
+              subTools={block.subTools}
             />
           ))}
         </div>

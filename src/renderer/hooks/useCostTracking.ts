@@ -46,7 +46,7 @@ function buildCostEntry(session: AgentSession): CostEntry {
     outputTokens: session.outputTokens,
     cacheReadTokens: session.cacheReadTokens ?? 0,
     cacheWriteTokens: session.cacheWriteTokens ?? 0,
-    estimatedCost: cost.totalCost,
+    estimatedCost: session.costUsd ?? cost.totalCost,
     timestamp: session.completedAt ?? Date.now(),
   };
 }

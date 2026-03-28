@@ -9,15 +9,15 @@ import path from 'path';
 import { getErrorMessage } from '../agentChat/utils';
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager';
 import { clearCostHistory, type CostEntry, getCostHistory, saveCostEntry } from '../costHistory';
+import {
+  aggregateUsageSummary,
+  aggregateWindowedUsage,
+  findSessionDetailById,
+  getRecentSessionsFromEntries,
+} from '../costHistoryAggregation';
 import log from '../logger';
 import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
 import { getAutoUpdater } from '../updater';
-import {
-  getRecentSessionDetails,
-  getSessionDetail,
-  getUsageSummary,
-  getWindowedUsage,
-} from '../usageReader';
 import { registerExtensionHandlers, registerWindowHandlers } from './miscRegistrarsHelpers';
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
@@ -183,16 +183,24 @@ export function registerUsageHandlers(channels: ChannelList): void {
     channels,
     'usage:getSummary',
     async (_event, options?: { projectFilter?: string; since?: number; maxSessions?: number }) =>
-      runQuery(async () => ({ summary: await getUsageSummary(options) })),
+      runQuery(async () => ({
+        summary: aggregateUsageSummary(await getCostHistory(), options),
+      })),
   );
   registerChannel(channels, 'usage:getSessionDetail', async (_event, sessionId: string) =>
-    runQuery(async () => ({ detail: await getSessionDetail(sessionId) })),
+    runQuery(async () => ({
+      detail: findSessionDetailById(await getCostHistory(), sessionId),
+    })),
   );
   registerChannel(channels, 'usage:getRecentSessions', async (_event, count?: number) =>
-    runQuery(async () => ({ sessions: await getRecentSessionDetails(count ?? 3) })),
+    runQuery(async () => ({
+      sessions: getRecentSessionsFromEntries(await getCostHistory(), count ?? 3),
+    })),
   );
   registerChannel(channels, 'usage:getWindowedUsage', async () =>
-    runQuery(async () => ({ windowed: await getWindowedUsage() })),
+    runQuery(async () => ({
+      windowed: aggregateWindowedUsage(await getCostHistory()),
+    })),
   );
 }
 

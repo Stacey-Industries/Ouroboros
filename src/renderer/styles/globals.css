@@ -853,6 +853,7 @@ body {
 [role='menu'],
 [role='dialog'],
 [role='alert'],
+.frosted-panel,
 [role='listbox'][aria-label='Switch branch'],
 [role='listbox'][aria-label='Workspace layouts'],
 [role='listbox'][aria-label='Project selector'],

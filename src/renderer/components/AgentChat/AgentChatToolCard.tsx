@@ -1,5 +1,7 @@
+import type { AgentChatSubToolActivity } from '@shared/types/agentChat';
 import React, { useState } from 'react';
 
+import { AgentChatSubToolList } from './AgentChatSubToolList';
 import { ToolDetails, ToolHeader } from './AgentChatToolCardSupport';
 
 const FILE_MODIFYING_TOOLS = new Set([
@@ -32,10 +34,14 @@ export interface AgentChatToolCardProps {
   duration?: number;
   /** Error output when tool failed (optional) */
   errorOutput?: string;
+  /** General tool result output (from stream-json tool_result) */
+  toolOutput?: string;
   /** Short summary of the tool input (command, pattern, etc.) from streaming */
   inputSummary?: string;
   /** Edit change summary from streaming (line counts) */
   editSummary?: { oldLines: number; newLines: number };
+  /** Nested subagent tool calls (for Agent/Task tools). */
+  subTools?: AgentChatSubToolActivity[];
 }
 
 export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
@@ -162,11 +168,15 @@ function ToolCardBody(
           editSummary={props.editSummary}
           showDiffPreview={props.showDiffPreview}
           errorOutput={props.errorOutput}
+          toolOutput={props.toolOutput}
           status={props.status}
           errorExpanded={props.errorExpanded}
           onToggleErrorExpanded={() => props.setErrorExpanded((prev) => !prev)}
           ChevronIconComponent={ChevronIcon}
         />
+      )}
+      {!props.collapsed && props.subTools && props.subTools.length > 0 && (
+        <AgentChatSubToolList subTools={props.subTools} />
       )}
     </div>
   );

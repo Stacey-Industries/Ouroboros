@@ -22,12 +22,29 @@ describe('buildDisplayUsage', () => {
     expect(usage).toEqual([{ model: 'openai:gpt-5.4', inputTokens: 5000, outputTokens: 150 }]);
   });
 
-  it('returns empty when no persisted usage and not streaming', () => {
+  it('returns zero-value entry when no persisted usage and not streaming', () => {
     const usage = buildDisplayUsage({
       activeModel: 'openai:gpt-5.4',
     });
 
+    expect(usage).toEqual([{ model: 'openai:gpt-5.4', inputTokens: 0, outputTokens: 0 }]);
+  });
+
+  it('returns empty when activeModel is empty', () => {
+    const usage = buildDisplayUsage({
+      activeModel: '',
+    });
+
     expect(usage).toEqual([]);
+  });
+
+  it('returns zero-value entry when threadModelUsage has no matching model', () => {
+    const usage = buildDisplayUsage({
+      activeModel: 'sonnet',
+      threadModelUsage: [{ model: 'claude-opus-4-6', inputTokens: 5000, outputTokens: 100 }],
+    });
+
+    expect(usage).toEqual([{ model: 'sonnet', inputTokens: 0, outputTokens: 0 }]);
   });
 });
 

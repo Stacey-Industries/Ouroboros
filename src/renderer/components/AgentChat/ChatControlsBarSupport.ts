@@ -113,27 +113,20 @@ export function buildModelOptions(args: {
   codexSettingsModel: string;
   codexModels?: CodexModelOption[];
   providers?: ModelProvider[];
-}): { defaultOption: OptionItem; groups: OptionGroup[] } {
-  const defaultModel =
-    args.defaultProvider === 'codex' ? args.codexSettingsModel : args.settingsModel;
-  return {
-    defaultOption: {
-      value: '',
-      label: defaultModel ? `Default (${getDisplayModelName(defaultModel)})` : 'Default',
-    },
-    groups: [
-      { label: 'Anthropic', options: ANTHROPIC_OPTIONS },
-      ...buildProviderGroups(args.providers),
-      ...(args.codexModels?.length
-        ? [
-            {
-              label: 'Codex',
-              options: args.codexModels.map((m) => ({ value: m.id, label: m.name })),
-            },
-          ]
-        : []),
-    ],
-  };
+}): { defaultOption: OptionItem | undefined; groups: OptionGroup[] } {
+  const groups = [
+    { label: 'Anthropic', options: ANTHROPIC_OPTIONS },
+    ...buildProviderGroups(args.providers),
+    ...(args.codexModels?.length
+      ? [
+          {
+            label: 'Codex',
+            options: args.codexModels.map((m) => ({ value: m.id, label: m.name })),
+          },
+        ]
+      : []),
+  ];
+  return { defaultOption: undefined, groups };
 }
 
 export function getEffortOptions(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
@@ -146,14 +139,14 @@ export function getPermissionModes(provider: ChatControlProvider): ReadonlyArray
 
 export function getSelectedModelLabel(
   value: string,
-  defaultOption: OptionItem,
+  _defaultOption: OptionItem | undefined,
   groups: OptionGroup[],
 ): string {
-  if (!value) return extractDefaultModelName(defaultOption.label);
   for (const group of groups) {
     const match = group.options.find((option) => option.value === value);
     if (match) return match.label;
   }
+  if (!value) return groups[0]?.options[0]?.label ?? 'Model';
   return getDisplayModelName(value);
 }
 
@@ -205,8 +198,11 @@ export function buildDisplayUsage(args: {
       },
     ];
   }
-  const persisted = (args.threadModelUsage ?? []).find((entry) => modelsMatch(entry.model, args.activeModel));
-  return persisted ? [persisted] : [];
+  const persisted = (args.threadModelUsage ?? []).find(
+    (entry) => modelsMatch(entry.model, args.activeModel) || !entry.model,
+  );
+  if (persisted) return [{ ...persisted, model: persisted.model || args.activeModel }];
+  return [{ model: args.activeModel, inputTokens: 0, outputTokens: 0 }];
 }
 
 export function buildThreadModelUsage(

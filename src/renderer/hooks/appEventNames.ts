@@ -16,6 +16,7 @@ export const OPEN_ORCHESTRATION_SESSION_EVENT = 'agent-ide:open-orchestration-se
 export const ORCHESTRATION_PROVIDER_SESSION_EVENT = 'agent-ide:orchestration-provider-session'
 export const OPEN_EXTENSION_STORE_EVENT = 'agent-ide:open-extension-store'
 export const OPEN_MCP_STORE_EVENT = 'agent-ide:open-mcp-store'
+export const OPEN_USAGE_PANEL_EVENT = 'agent-ide:open-usage-panel'
 export const CLOSE_ALL_STORE_PANELS_EVENT = 'agent-ide:close-all-store-panels'
 export const EXPLAIN_TERMINAL_ERROR_EVENT = 'agent-ide:explain-terminal-error'
 export const MCP_SERVERS_CHANGED_EVENT = 'agent-ide:mcp-servers-changed'

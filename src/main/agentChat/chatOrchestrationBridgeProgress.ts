@@ -8,6 +8,7 @@
 import type { ProviderProgressEvent } from '../orchestration/types';
 import {
   emitMonitorSessionEnd,
+  emitMonitorSubTool,
   emitMonitorToolEnd,
   emitMonitorToolStart,
   emitStreamChunk,
@@ -20,9 +21,10 @@ import {
   persistFailedTurnNoContent,
   persistFailedTurnWithContent,
 } from './chatOrchestrationBridgePersist';
+import { applySubToolToAccumulatedBlock, buildSubToolStreamChunk } from './chatOrchestrationBridgeSubTools';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tokenCalibrationStore } from './tokenCalibration';
-import type { AgentChatContentBlock } from './types';
+import type { AgentChatContentBlock, AgentChatSubToolActivity } from './types';
 
 // ---------------------------------------------------------------------------
 // Context lookup
@@ -98,6 +100,7 @@ function handleTextBlock(args: BlockHandlerArgs, textDelta: string): void {
       blockIndex,
       textDelta,
       timestamp: now,
+      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -122,6 +125,7 @@ function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
       blockIndex,
       thinkingDelta: textDelta,
       timestamp: now,
+      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -129,29 +133,45 @@ function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
 
 type ToolActivity = NonNullable<NonNullable<ProviderProgressEvent['contentBlock']>['toolActivity']>;
 
+function applyToolStart(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {
+  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
+  ctx.accumulatedBlocks[blockIndex] = {
+    kind: 'tool_use',
+    tool: toolActivity.name,
+    status: 'running',
+    filePath: toolActivity.filePath,
+    inputSummary: toolActivity.inputSummary,
+    editSummary: toolActivity.editSummary,
+    blockId: `tool-${blockIndex}`,
+  };
+  ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
+  emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
+}
+
+function applyToolComplete(ctx: ActiveStreamContext, blockIndex: number, toolActivity: ToolActivity, now: number): void {
+  // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
+  const block = ctx.accumulatedBlocks[blockIndex];
+  if (block.kind === 'tool_use')
+    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
+    ctx.accumulatedBlocks[blockIndex] = { ...block, status: 'complete', output: toolActivity.output } as AgentChatContentBlock;
+  emitMonitorToolEnd(ctx, blockIndex, { toolName: toolActivity.name, now, output: toolActivity.output });
+}
+
 function handleToolBlock(args: BlockHandlerArgs, toolActivity: ToolActivity): void {
   const { ctx, listeners, blockIndex, now } = args;
-  if (toolActivity.status === 'running') {
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-    ctx.accumulatedBlocks[blockIndex] = {
-      kind: 'tool_use',
-      tool: toolActivity.name,
-      status: 'running',
-      filePath: toolActivity.filePath,
-      inputSummary: toolActivity.inputSummary,
-      editSummary: toolActivity.editSummary,
-      blockId: `tool-${blockIndex}`,
+  if (toolActivity.subToolActivity) {
+    const subTool: AgentChatSubToolActivity = {
+      ...toolActivity.subToolActivity,
+      status: toolActivity.subToolActivity.status === 'complete' ? 'complete' : 'running',
     };
-    ctx.toolsUsed.push({ name: toolActivity.name, filePath: toolActivity.filePath });
-    emitMonitorToolStart(ctx, blockIndex, toolActivity, now);
-  } else if (toolActivity.status === 'complete') {
-    // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-    const block = ctx.accumulatedBlocks[blockIndex];
-    if (block.kind === 'tool_use')
-      // eslint-disable-next-line security/detect-object-injection -- numeric index into a local array
-      ctx.accumulatedBlocks[blockIndex] = { ...block, status: 'complete' } as AgentChatContentBlock;
-    emitMonitorToolEnd(ctx, blockIndex, toolActivity.name, now);
+    applySubToolToAccumulatedBlock(ctx, blockIndex, subTool);
+    const subChunk = buildSubToolStreamChunk(ctx, blockIndex, subTool, now);
+    emitStreamChunk(listeners, subChunk, ctx);
+    emitMonitorSubTool(ctx, blockIndex, toolActivity.subToolActivity, now);
+    return;
   }
+  if (toolActivity.status === 'running') applyToolStart(ctx, blockIndex, toolActivity, now);
+  else if (toolActivity.status === 'complete') applyToolComplete(ctx, blockIndex, toolActivity, now);
   emitStreamChunk(
     listeners,
     {
@@ -165,8 +185,10 @@ function handleToolBlock(args: BlockHandlerArgs, toolActivity: ToolActivity): vo
         filePath: toolActivity.filePath,
         inputSummary: toolActivity.inputSummary,
         editSummary: toolActivity.editSummary,
+        output: toolActivity.output,
       },
       timestamp: now,
+      tokenUsage: ctx.tokenUsage,
     },
     ctx,
   );
@@ -251,6 +273,7 @@ function handleCompletedProgress(
       );
     }
   }
+  if (progress.costUsd != null) ctx.costUsd = progress.costUsd;
   void persistCompletedTurn(ctx, runtime, progress);
 }
 

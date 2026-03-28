@@ -1,11 +1,13 @@
 import React from 'react';
 
 import { type CardView, ViewToggle } from './AgentCardControls';
+import { AgentCardMeta } from './AgentCardSectionsViews';
 import { AgentEventLog } from './AgentEventLog';
-import { estimateCost, formatCost, formatTokenCount } from './costCalculator';
 import { ToolCallFeed } from './ToolCallFeed';
 import { ToolCallTimeline } from './ToolCallTimeline';
 import type { AgentSession, ToolCallEvent } from './types';
+
+export { AgentCardMeta };
 
 interface SessionNotesEditorProps {
   notesDraft: string;
@@ -65,113 +67,6 @@ export function SessionErrorBanner({ error }: { error?: string }): React.ReactEl
       }}
     >
       {error}
-    </div>
-  );
-}
-
-function buildTokenTitle(session: AgentSession): string {
-  const base = `Input: ${session.inputTokens.toLocaleString()} tokens | Output: ${session.outputTokens.toLocaleString()} tokens`;
-  const cacheRead = session.cacheReadTokens
-    ? ` | Cache read: ${session.cacheReadTokens.toLocaleString()}`
-    : '';
-  const cacheWrite = session.cacheWriteTokens
-    ? ` | Cache write: ${session.cacheWriteTokens.toLocaleString()}`
-    : '';
-  return base + cacheRead + cacheWrite;
-}
-
-function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement | null {
-  if (session.inputTokens < 1 && session.outputTokens < 1) return null;
-  const estimatedCost = estimateCost({
-    inputTokens: session.inputTokens,
-    outputTokens: session.outputTokens,
-    model: session.model,
-    cacheReadTokens: session.cacheReadTokens,
-    cacheWriteTokens: session.cacheWriteTokens,
-  }).totalCost;
-  return (
-    <span
-      className="text-[10px] font-mono flex items-center gap-1.5 text-text-semantic-faint"
-      title={buildTokenTitle(session)}
-    >
-      <span className="text-text-semantic-muted">
-        {'\u2193'}
-        {formatTokenCount(session.inputTokens)}
-      </span>
-      <span className="text-text-semantic-muted">
-        {'\u2191'}
-        {formatTokenCount(session.outputTokens)}
-      </span>
-      <span className="text-text-semantic-faint">tokens</span>
-      <span className="text-text-semantic-faint">{'\u00b7'}</span>
-      <span className="text-interactive-accent">~{formatCost(estimatedCost)}</span>
-    </span>
-  );
-}
-
-function SubagentBadge({ count }: { count: number }): React.ReactElement | null {
-  if (count < 1) return null;
-  return (
-    <span
-      className="text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 text-interactive-accent"
-      style={{
-        background: 'color-mix(in srgb, var(--interactive-accent) 12%, transparent)',
-        border: '1px solid color-mix(in srgb, var(--interactive-accent) 25%, transparent)',
-        letterSpacing: '0.02em',
-      }}
-      title={`Spawned ${count} subagent${count !== 1 ? 's' : ''}`}
-    >
-      <svg
-        width="9"
-        height="9"
-        viewBox="0 0 10 10"
-        fill="none"
-        aria-hidden="true"
-        style={{ flexShrink: 0 }}
-      >
-        <path
-          d="M5 1V5M5 5H9M5 5H1M5 5V9"
-          stroke="currentColor"
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        />
-      </svg>
-      {count} subagent{count !== 1 ? 's' : ''}
-    </span>
-  );
-}
-
-export function AgentCardMeta({
-  session,
-  childCount,
-}: {
-  session: AgentSession;
-  childCount?: number;
-}): React.ReactElement {
-  return (
-    <div className="px-6 pb-1 flex items-center gap-2">
-      <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>
-        {session.id.slice(0, 12)}
-      </span>
-      {session.restored && (
-        <span
-          className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic"
-          style={{ letterSpacing: '0.02em' }}
-        >
-          restored
-        </span>
-      )}
-      {childCount !== undefined && childCount > 0 && <SubagentBadge count={childCount} />}
-      {session.parentSessionId && (
-        <span
-          className="text-[9px] px-1 py-0.5 rounded bg-surface-raised text-text-semantic-faint border border-border-semantic"
-          style={{ letterSpacing: '0.02em' }}
-          title={`Parent: ${session.parentSessionId}`}
-        >
-          subagent
-        </span>
-      )}
-      <TokenUsageSummary session={session} />
     </div>
   );
 }

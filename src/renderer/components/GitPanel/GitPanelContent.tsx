@@ -2,6 +2,7 @@ import React from 'react';
 
 import { BranchSelector } from './BranchSelector';
 import { GitFileRow } from './GitFileRow';
+import { CommitSection, ReviewChangesBar } from './GitPanelContentParts';
 import type { GitPanelModel } from './useGitPanelModel';
 
 export interface GitPanelContentProps extends GitPanelModel {
@@ -56,7 +57,13 @@ function SectionHeader({
   onToggleAll?: () => Promise<void>;
 }): React.ReactElement {
   return (
-    <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5">
+    <div
+      className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5"
+      style={{
+        backdropFilter: 'blur(16px) saturate(130%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(130%)',
+      }}
+    >
       <span className="text-xs font-semibold uppercase tracking-wider text-text-semantic-muted">
         {title} ({count})
       </span>
@@ -78,6 +85,7 @@ interface ChangeSectionProps {
   emptyLabel: string;
   files: Array<[string, string]>;
   isStaged: boolean;
+  projectRoot?: string | null;
   title: string;
   onDiscard?: (filePath: string) => Promise<void>;
   onToggle: (filePath: string) => Promise<void>;
@@ -90,6 +98,7 @@ function ChangeSection({
   emptyLabel,
   files,
   isStaged,
+  projectRoot,
   title,
   onDiscard,
   onToggle,
@@ -114,108 +123,11 @@ function ChangeSection({
             isStaged={isStaged}
             onDiscard={onDiscard}
             onToggle={onToggle}
+            projectRoot={projectRoot}
             status={status}
           />
         ))
       )}
-    </div>
-  );
-}
-
-function getCommitTitle(stagedCount: number, commitMessage: string): string {
-  if (stagedCount === 0) return 'No staged changes';
-  return commitMessage.trim() ? 'Commit (Ctrl+Enter)' : 'Enter a commit message';
-}
-
-function getCommitButtonLabel(isCommitting: boolean, stagedCount: number): string {
-  if (isCommitting) return 'Committing...';
-  if (stagedCount === 0) return 'Commit';
-  return `Commit (${stagedCount} file${stagedCount !== 1 ? 's' : ''})`;
-}
-
-function CommitMessageInput({
-  commitMessage,
-  onCommitMessageChange,
-  onKeyDown,
-}: {
-  commitMessage: string;
-  onCommitMessageChange: (value: string) => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-}): React.ReactElement {
-  return (
-    <textarea
-      value={commitMessage}
-      onChange={(event) => onCommitMessageChange(event.target.value)}
-      onKeyDown={onKeyDown}
-      placeholder="Commit message..."
-      rows={3}
-      className="
-        w-full resize-none rounded border border-border-semantic bg-surface-base px-2 py-1.5 text-xs
-        text-text-semantic-primary placeholder:text-text-semantic-muted
-        transition-colors duration-100 focus:border-interactive-accent focus:outline-none
-      "
-      style={{ fontFamily: 'var(--font-mono, monospace)' }}
-    />
-  );
-}
-
-function CommitButton({
-  canCommit,
-  isCommitting,
-  stagedCount,
-  title,
-  onCommit,
-}: {
-  canCommit: boolean;
-  isCommitting: boolean;
-  stagedCount: number;
-  title: string;
-  onCommit: () => Promise<void>;
-}): React.ReactElement {
-  return (
-    <button
-      onClick={() => void onCommit()}
-      disabled={!canCommit}
-      className="
-        mt-1.5 w-full rounded px-3 py-1.5 text-xs font-medium transition-colors duration-100
-        disabled:cursor-not-allowed disabled:opacity-40
-      "
-      style={{
-        backgroundColor: canCommit ? 'var(--interactive-accent)' : 'var(--surface-raised)',
-        color: canCommit ? 'var(--text-on-accent)' : 'var(--text-muted)',
-      }}
-      title={title}
-    >
-      {getCommitButtonLabel(isCommitting, stagedCount)}
-    </button>
-  );
-}
-
-function CommitSection(props: {
-  canCommit: boolean;
-  commitMessage: string;
-  isCommitting: boolean;
-  stagedCount: number;
-  onCommit: () => Promise<void>;
-  onCommitMessageChange: (value: string) => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-}): React.ReactElement {
-  const title = getCommitTitle(props.stagedCount, props.commitMessage);
-
-  return (
-    <div className="flex-shrink-0 border-t border-border-semantic p-2">
-      <CommitMessageInput
-        commitMessage={props.commitMessage}
-        onCommitMessageChange={props.onCommitMessageChange}
-        onKeyDown={props.onKeyDown}
-      />
-      <CommitButton
-        canCommit={props.canCommit}
-        isCommitting={props.isCommitting}
-        stagedCount={props.stagedCount}
-        title={title}
-        onCommit={props.onCommit}
-      />
     </div>
   );
 }
@@ -227,28 +139,6 @@ function getEmptyStateMessage(projectRoot: string | null, isRepo: boolean | null
   return null;
 }
 
-function ReviewChangesBar({ hasChanges }: { hasChanges: boolean }): React.ReactElement | null {
-  if (!hasChanges) return null;
-  return (
-    <div className="flex-shrink-0 border-b border-border-semantic px-2 py-1.5 flex items-center gap-1.5">
-      <button
-        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:review-all-changes'))}
-        className="flex-1 rounded px-2 py-1 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted border border-border-semantic"
-        title="Review all uncommitted changes (staged + unstaged) with hunk-level accept/reject"
-      >
-        Review All
-      </button>
-      <button
-        onClick={() => window.dispatchEvent(new CustomEvent('agent-ide:review-unstaged-changes'))}
-        className="flex-1 rounded px-2 py-1 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted border border-border-semantic"
-        title="Review only unstaged changes with hunk-level accept/reject"
-      >
-        Review Unstaged
-      </button>
-    </div>
-  );
-}
-
 function ChangeSections(props: GitPanelContentProps): React.ReactElement {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -257,6 +147,7 @@ function ChangeSections(props: GitPanelContentProps): React.ReactElement {
         emptyLabel="No staged changes"
         files={props.stagedFiles}
         isStaged={true}
+        projectRoot={props.projectRoot}
         title="Staged"
         onToggle={props.handleUnstageFile}
         onToggleAll={props.handleUnstageAll}
@@ -267,6 +158,7 @@ function ChangeSections(props: GitPanelContentProps): React.ReactElement {
         emptyLabel="No changes"
         files={props.unstagedFiles}
         isStaged={false}
+        projectRoot={props.projectRoot}
         title="Changes"
         onDiscard={props.handleDiscardFile}
         onToggle={props.handleStageFile}

@@ -13,6 +13,8 @@ export interface GitFileRowProps {
   isStaged: boolean;
   onToggle: (filePath: string) => void;
   onDiscard?: (filePath: string) => void;
+  /** Project root for constructing absolute paths — enables click-to-open */
+  projectRoot?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -128,7 +130,7 @@ interface ToggleButtonProps {
 function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): React.ReactElement {
   return (
     <button
-      onClick={() => onToggle(filePath)}
+      onClick={(e) => { e.stopPropagation(); onToggle(filePath); }}
       title={isStaged ? `Unstage ${filePath}` : `Stage ${filePath}`}
       className="rounded p-0.5 text-text-semantic-muted transition-colors duration-75 hover:bg-surface-panel hover:text-text-semantic-primary"
     >
@@ -186,7 +188,7 @@ function DiscardButton({
 
   return (
     <button
-      onClick={onDiscard}
+      onClick={(e) => { e.stopPropagation(); onDiscard(); }}
       title={title}
       className={confirmDiscard ? `${className} text-status-error` : className}
     >
@@ -201,13 +203,22 @@ export const GitFileRow = memo(function GitFileRow({
   isStaged,
   onToggle,
   onDiscard,
+  projectRoot,
 }: GitFileRowProps): React.ReactElement {
   const { confirmDiscard, handleDiscard } = useDiscardConfirmation(filePath, onDiscard);
+
+  const handleRowClick = useCallback(() => {
+    if (!projectRoot) return;
+    const sep = projectRoot.includes('/') ? '/' : '\\';
+    const absPath = `${projectRoot}${sep}${filePath.replace(/\//g, sep)}`;
+    window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: { filePath: absPath } }));
+  }, [projectRoot, filePath]);
 
   return (
     <div
       className="group flex items-center gap-1.5 px-2 py-0.5 transition-colors duration-75 hover:bg-surface-raised"
-      style={{ minHeight: '24px' }}
+      style={{ minHeight: '24px', cursor: projectRoot ? 'pointer' : undefined }}
+      onClick={handleRowClick}
     >
       <StatusBadge status={status} />
       <FilePathLabel filePath={filePath} />

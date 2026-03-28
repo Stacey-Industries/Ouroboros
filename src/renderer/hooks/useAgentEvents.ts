@@ -10,7 +10,13 @@ import {
 
 import type { AgentSession } from '../components/AgentMonitor/types';
 import type { HookPayload } from '../types/electron';
-import { type AgentAction, initialAgentState, reducer } from './useAgentEvents.helpers';
+import {
+  type AgentAction,
+  dispatchAgentEnd,
+  dispatchTokenUpdate,
+  initialAgentState,
+  reducer,
+} from './useAgentEvents.helpers';
 import {
   createToolCall,
   deriveTaskLabel,
@@ -20,6 +26,7 @@ import {
   parsePersistedSessions,
   toHookPayload,
 } from './useAgentEvents.payload';
+import { markSessionsAsSaved, shouldPersistSession } from './useAgentEvents.session-utils';
 
 export interface UseAgentEventsReturn {
   agents: AgentSession[];
@@ -190,9 +197,11 @@ function dispatchLifecycleEvent(
       dispatchAgentStart(payload, dispatch, liveSessionIdsRef);
       return;
     case 'pre_tool_use':
+      if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
       dispatchToolStart(payload, dispatch);
       return;
     case 'post_tool_use':
+      if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
       dispatchToolEnd(payload, dispatch);
       return;
     case 'agent_end':
@@ -260,45 +269,32 @@ function dispatchToolEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>):
   });
 }
 
-function dispatchAgentEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+function dispatchSubToolUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
+  if (!payload.parentToolCallId || !payload.toolCallId) return;
+  const isComplete = payload.type === 'post_tool_use';
+  const details = isComplete ? getToolEndDetails(payload) : undefined;
+  const input = summarizeSubToolInput(payload);
   dispatch({
-    type: 'AGENT_END',
+    type: 'SUBTOOL_UPDATE',
     sessionId: payload.sessionId,
-    timestamp: payload.timestamp,
-    error: payload.error,
+    parentToolCallId: payload.parentToolCallId,
+    subTool: {
+      id: payload.toolCallId,
+      toolName: payload.toolName ?? 'Tool',
+      input,
+      timestamp: payload.timestamp,
+      status: isComplete ? (details?.status ?? 'success') : 'pending',
+      output: details?.output,
+    },
   });
 }
 
-function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  if (!payload.usage) {
-    return;
-  }
-
-  dispatch({
-    type: 'TOKEN_UPDATE',
-    sessionId: payload.sessionId,
-    usage: payload.usage,
-    model: payload.model,
-  });
+function summarizeSubToolInput(payload: HookPayload): string {
+  if (!payload.input) return '';
+  const filePath = payload.input.file_path ?? payload.input.path;
+  if (typeof filePath === 'string') return filePath;
+  const desc = payload.input.description;
+  if (typeof desc === 'string') return desc;
+  return '';
 }
 
-function shouldPersistSession(
-  session: AgentSession,
-  liveSessionIdsRef: MutableRefObject<Set<string>>,
-  savedSessionIdsRef: MutableRefObject<Set<string>>,
-): boolean {
-  return (
-    (session.status === 'complete' || session.status === 'error') &&
-    !savedSessionIdsRef.current.has(session.id) &&
-    liveSessionIdsRef.current.has(session.id)
-  );
-}
-
-function markSessionsAsSaved(
-  sessions: AgentSession[],
-  savedSessionIdsRef: MutableRefObject<Set<string>>,
-): void {
-  for (const session of sessions) {
-    savedSessionIdsRef.current.add(session.id);
-  }
-}

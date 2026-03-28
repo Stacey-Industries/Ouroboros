@@ -78,6 +78,18 @@ export interface ProviderContentBlockDelta {
     filePath?: string;
     inputSummary?: string;
     editSummary?: { oldLines: number; newLines: number };
+    /** Tool result content — extracted from stream-json tool_result blocks. */
+    output?: string;
+    /** Nested subagent tool activity — emitted when processing subagent events. */
+    subToolActivity?: {
+      name: string;
+      status: 'running' | 'complete';
+      filePath?: string;
+      inputSummary?: string;
+      editSummary?: { oldLines: number; newLines: number };
+      output?: string;
+      subToolId: string;
+    };
   };
 }
 

@@ -7,7 +7,6 @@ import { GitFilteredView } from './GitStatusFilter';
 import { PinnedSection } from './PinnedSection';
 import { RootSection } from './RootSection';
 import { SearchOverlay } from './SearchOverlay';
-import { StagingArea } from './StagingArea';
 
 export interface FileTreeBodyProps {
   roots: string[];
@@ -104,23 +103,11 @@ function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
   );
 }
 
-function GitStagingArea({ projectRoot, gitDetailedStatus, gitIsRepo, gitRefresh, onFileSelect }: Pick<FileTreeBodyProps, 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'onFileSelect'>): React.ReactElement | null {
-  if (!gitIsRepo || !projectRoot || !gitDetailedStatus || !gitRefresh) return null;
-  return <StagingArea projectRoot={projectRoot} status={gitDetailedStatus} onRefresh={gitRefresh} onFileSelect={onFileSelect} />;
-}
-
 export function FileTreeBody(p: FileTreeBodyProps): React.ReactElement {
   const isFiltered = p.gitFilter != null && p.gitFilter !== 'all';
 
   return (
     <div style={treeBodyStyle}>
-      <GitStagingArea
-        projectRoot={p.projectRoot}
-        gitDetailedStatus={p.gitDetailedStatus}
-        gitIsRepo={p.gitIsRepo}
-        gitRefresh={p.gitRefresh}
-        onFileSelect={p.onFileSelect}
-      />
       {isFiltered && p.projectRoot && p.gitDetailedStatus ? (
         <GitFilteredView status={p.gitDetailedStatus} projectRoot={p.projectRoot} onFileSelect={p.onFileSelect} />
       ) : (

@@ -21,6 +21,7 @@ export interface AgentSession {
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
   model?: string;          // e.g. "claude-sonnet-4-20250514"
+  costUsd?: number;        // provider-reported cost (preferred over estimate)
   restored?: boolean;      // true when loaded from disk (not from a live event)
   /** User notes / bookmarks for this session */
   notes?: string;
@@ -32,6 +33,15 @@ export interface AgentSession {
   internal?: boolean;
 }
 
+export interface SubToolCallEvent {
+  id: string;
+  toolName: string;
+  input: string;
+  timestamp: number;
+  status: 'pending' | 'success' | 'error';
+  output?: string;
+}
+
 export interface ToolCallEvent {
   id: string;
   toolName: string;        // Read, Bash, Edit, Grep, Write, etc.
@@ -40,6 +50,8 @@ export interface ToolCallEvent {
   duration?: number;       // ms
   status: 'pending' | 'success' | 'error';
   output?: string;         // full tool output/result text (populated on TOOL_END)
+  /** Nested subagent tool calls (populated when this is an Agent/Task tool). */
+  subTools?: SubToolCallEvent[];
 }
 
 /**
@@ -77,4 +89,6 @@ export interface HookPayload {
   requestId?: string;      // unique ID for pre_tool_use approval flow
   usage?: TokenUsage;     // token usage data (may appear on agent_end or any event)
   model?: string;         // model identifier (e.g. "claude-sonnet-4-20250514")
+  /** Links a sub-tool event to its parent Agent/Task tool call. */
+  parentToolCallId?: string;
 }
