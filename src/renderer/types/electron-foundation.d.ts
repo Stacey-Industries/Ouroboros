@@ -279,6 +279,10 @@ export interface HookPayload {
   cwd?: string;
   /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
   internal?: boolean;
+  /** Provider-reported cost in USD (set on agent_end for chat bridge sessions). */
+  costUsd?: number;
+  /** Links a sub-tool event to its parent Agent/Task tool call. */
+  parentToolCallId?: string;
 }
 
 export interface ToolCallPayload {

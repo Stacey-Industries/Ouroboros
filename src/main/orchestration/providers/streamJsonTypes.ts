@@ -60,6 +60,15 @@ export interface StreamJsonAssistantEvent {
   parent_tool_use_id?: string | null
 }
 
+export interface StreamJsonUserEvent {
+  type: 'user'
+  message: {
+    role: 'user'
+    content: unknown
+  }
+  session_id?: string
+}
+
 export interface StreamJsonResultEvent {
   type: 'result'
   subtype: 'success' | 'error'
@@ -75,6 +84,7 @@ export interface StreamJsonResultEvent {
 export type StreamJsonEvent =
   | StreamJsonSystemEvent
   | StreamJsonAssistantEvent
+  | StreamJsonUserEvent
   | StreamJsonResultEvent
 
 // --- Process handle & spawn options ---

@@ -260,7 +260,7 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
     <div className="flex flex-wrap items-center gap-3 px-3 py-1" data-layout="chat-controls-bar">
       <ModelSelect
         value={props.overrides.model}
-        defaultOption={defaultOption}
+        defaultOption={defaultOption ?? { label: 'Default', value: '' }}
         groups={groups}
         onChange={(model) => props.onChange({ ...props.overrides, model })}
         codexModelIds={props.codexModels?.map((m) => m.id)}
