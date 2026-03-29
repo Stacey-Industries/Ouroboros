@@ -19,7 +19,7 @@ export function CommitMessageInput({
   commitMessage: string;
   onCommitMessageChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <textarea
       value={commitMessage}
@@ -30,7 +30,7 @@ export function CommitMessageInput({
       className="
         w-full resize-none rounded border border-border-semantic bg-surface-base px-2 py-1.5 text-xs
         text-text-semantic-primary placeholder:text-text-semantic-muted
-        transition-colors duration-100 focus:border-interactive-accent focus:outline-none
+        transition-colors duration-100 focus:border-interactive-accent focus:outline-hidden
       "
       style={{ fontFamily: 'var(--font-mono, monospace)' }}
     />
@@ -49,7 +49,7 @@ export function CommitButton({
   stagedCount: number;
   title: string;
   onCommit: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={() => void onCommit()}
@@ -77,7 +77,7 @@ export function CommitSection(props: {
   onCommit: () => Promise<void>;
   onCommitMessageChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const title = getCommitTitle(props.stagedCount, props.commitMessage);
 
   return (
@@ -98,7 +98,7 @@ export function CommitSection(props: {
   );
 }
 
-export function ReviewChangesBar({ hasChanges }: { hasChanges: boolean }): React.ReactElement<any> | null {
+export function ReviewChangesBar({ hasChanges }: { hasChanges: boolean }): React.ReactElement | null {
   if (!hasChanges) return null;
   return (
     <div className="flex-shrink-0 border-b border-border-semantic px-2 py-1.5 flex items-center gap-1.5">

@@ -33,7 +33,7 @@ export function McpServerRow({
   onConfirmDelete,
   onCancelDelete,
   editForm,
-}: McpServerRowProps): React.ReactElement<any> {
+}: McpServerRowProps): React.ReactElement {
   return (
     <div>
       <div style={rowStyle(isEditing, isLast)}>
@@ -55,7 +55,7 @@ export function McpServerRow({
   );
 }
 
-function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement<any> {
+function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement {
   return (
     <div style={infoStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -70,7 +70,7 @@ function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement<
   );
 }
 
-function ScopeBadge({ scope }: { scope: string }): React.ReactElement<any> {
+function ScopeBadge({ scope }: { scope: string }): React.ReactElement {
   const isGlobal = scope === 'global';
   return (
     <span
@@ -104,14 +104,14 @@ function DeleteControls({
   onDelete: () => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (isConfirmingDelete) {
     return (
       <>
         <button
           onClick={onConfirmDelete}
           className="text-status-error"
-          style={{ ...smallBtnStyle, borderColor: '#f87171' }}
+          style={{ ...smallBtnStyle, borderColor: 'var(--status-error)' }}
         >
           Confirm
         </button>
@@ -150,7 +150,7 @@ function ServerControls({
   onDelete,
   onConfirmDelete,
   onCancelDelete,
-}: ServerControlsProps): React.ReactElement<any> {
+}: ServerControlsProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
       <button
@@ -201,7 +201,7 @@ function dotStyle(enabled: boolean): React.CSSProperties {
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    background: enabled ? '#4ade80' : 'var(--text-muted)',
+    background: enabled ? 'var(--status-success)' : 'var(--text-muted)',
     flexShrink: 0,
   };
 }

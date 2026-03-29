@@ -11,32 +11,32 @@ function getChipColor(type: MentionType): { bg: string; border: string; text: st
   switch (type) {
     case 'file':
       return {
-        bg: 'rgba(100, 100, 255, 0.08)',
-        border: 'rgba(100, 100, 255, 0.25)',
+        bg: 'var(--interactive-accent-subtle)',
+        border: 'var(--interactive-accent)',
         text: 'var(--interactive-accent)',
       };
     case 'folder':
       return {
-        bg: 'rgba(229, 192, 123, 0.08)',
-        border: 'rgba(229, 192, 123, 0.25)',
-        text: '#e5c07b',
+        bg: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--status-warning) 25%, transparent)',
+        text: 'var(--status-warning)',
       };
     case 'diff':
       return {
-        bg: 'rgba(63, 185, 80, 0.08)',
-        border: 'rgba(63, 185, 80, 0.25)',
+        bg: 'var(--status-success-subtle)',
+        border: 'color-mix(in srgb, var(--status-success) 25%, transparent)',
         text: 'var(--status-success)',
       };
     case 'terminal':
       return {
-        bg: 'rgba(179, 146, 240, 0.08)',
-        border: 'rgba(179, 146, 240, 0.25)',
-        text: '#b392f0',
+        bg: 'color-mix(in srgb, var(--palette-purple) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--palette-purple) 25%, transparent)',
+        text: 'var(--palette-purple)',
       };
   }
 }
 
-function FileChipIcon(): React.ReactElement<any> {
+function FileChipIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -54,7 +54,7 @@ function FileChipIcon(): React.ReactElement<any> {
   );
 }
 
-function FolderChipIcon(): React.ReactElement<any> {
+function FolderChipIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -71,7 +71,7 @@ function FolderChipIcon(): React.ReactElement<any> {
   );
 }
 
-function DiffChipIcon(): React.ReactElement<any> {
+function DiffChipIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -88,7 +88,7 @@ function DiffChipIcon(): React.ReactElement<any> {
   );
 }
 
-function TerminalChipIcon(): React.ReactElement<any> {
+function TerminalChipIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -106,7 +106,7 @@ function TerminalChipIcon(): React.ReactElement<any> {
   );
 }
 
-function ChipIcon({ type }: { type: MentionType }): React.ReactElement<any> {
+function ChipIcon({ type }: { type: MentionType }): React.ReactElement {
   if (type === 'file') return <FileChipIcon />;
   if (type === 'folder') return <FolderChipIcon />;
   if (type === 'diff') return <DiffChipIcon />;
@@ -128,7 +128,7 @@ function formatTokenCount(tokens: number): string {
   return `~${tokens}`;
 }
 
-export function MentionChip({ mention, onRemove }: MentionChipProps): React.ReactElement<any> {
+export function MentionChip({ mention, onRemove }: MentionChipProps): React.ReactElement {
   const colors = getChipColor(mention.type);
 
   return (
@@ -171,7 +171,7 @@ export function MentionChipsBar({
   mentions,
   onRemove,
   totalTokens,
-}: MentionChipsBarProps): React.ReactElement<any> | null {
+}: MentionChipsBarProps): React.ReactElement | null {
   if (mentions.length === 0) return null;
 
   return (

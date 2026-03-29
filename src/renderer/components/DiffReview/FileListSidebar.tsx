@@ -90,10 +90,10 @@ const actionRowStyle: CSSProperties = {
 
 function statusBadge(status: ReviewFile['status']): { label: string; color: string } {
   switch (status) {
-    case 'added': return { label: 'A', color: 'var(--status-success, #4CAF50)' };
-    case 'deleted': return { label: 'D', color: 'var(--status-error, #f85149)' };
-    case 'renamed': return { label: 'R', color: 'var(--interactive-accent, #58a6ff)' };
-    default: return { label: 'M', color: 'var(--status-warning, #d29922)' };
+    case 'added': return { label: 'A', color: 'var(--status-success)' };
+    case 'deleted': return { label: 'D', color: 'var(--status-error)' };
+    case 'renamed': return { label: 'R', color: 'var(--interactive-accent)' };
+    default: return { label: 'M', color: 'var(--status-warning)' };
   }
 }
 
@@ -110,7 +110,7 @@ function fileItemStyle(isSelected: boolean, hovered: boolean): CSSProperties {
     gap: '2px',
     padding: '6px 8px',
     cursor: 'pointer',
-    backgroundColor: isSelected ? 'rgba(88, 166, 255, 0.1)' : hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
+    backgroundColor: isSelected ? 'var(--interactive-accent-subtle)' : hovered ? 'rgba(255,255,255,0.03)' : 'transparent',
     borderLeft: isSelected ? '2px solid var(--interactive-accent)' : '2px solid transparent',
     borderBottom: '1px solid var(--border-subtle)',
     transition: 'background-color 0.1s',
@@ -137,7 +137,7 @@ function progressStyle(allDecided: boolean): CSSProperties {
   return {
     flexShrink: 0,
     fontSize: '0.625rem',
-    color: allDecided ? 'var(--status-success, #4CAF50)' : 'var(--text-faint)',
+    color: allDecided ? 'var(--status-success)' : 'var(--text-faint)',
     fontWeight: 500,
   };
 }
@@ -155,11 +155,11 @@ function actionButtonStyle(color: string): CSSProperties {
   };
 }
 
-function FileListSidebarHeader({ count }: FileListSidebarHeaderProps): React.ReactElement<any> {
+function FileListSidebarHeader({ count }: FileListSidebarHeaderProps): React.ReactElement {
   return <div style={headerStyle}>Changed Files ({count})</div>;
 }
 
-function FileListItemSummary({ allDecided, file, progress }: FileListItemSummaryProps): React.ReactElement<any> {
+function FileListItemSummary({ allDecided, file, progress }: FileListItemSummaryProps): React.ReactElement {
   const badge = statusBadge(file.status);
 
   return (
@@ -171,7 +171,7 @@ function FileListItemSummary({ allDecided, file, progress }: FileListItemSummary
   );
 }
 
-function QuickActionButton({ color, label, onClick }: QuickActionButtonProps): React.ReactElement<any> {
+function QuickActionButton({ color, label, onClick }: QuickActionButtonProps): React.ReactElement {
   return (
     <button onClick={(event) => { event.stopPropagation(); onClick(); }} style={actionButtonStyle(color)}>
       {label}
@@ -183,11 +183,11 @@ function FileListItemActions({
   index,
   onAcceptAll,
   onRejectAll,
-}: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement<any> {
+}: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
   return (
     <div style={actionRowStyle}>
-      <QuickActionButton color="var(--status-success, #4CAF50)" label="Accept All" onClick={() => onAcceptAll(index)} />
-      <QuickActionButton color="var(--status-error, #f85149)" label="Reject All" onClick={() => onRejectAll(index)} />
+      <QuickActionButton color="var(--status-success)" label="Accept All" onClick={() => onAcceptAll(index)} />
+      <QuickActionButton color="var(--status-error)" label="Reject All" onClick={() => onRejectAll(index)} />
     </div>
   );
 }
@@ -199,7 +199,7 @@ function FileListItem({
   onAcceptAll,
   onRejectAll,
   onSelect,
-}: FileListItemProps): React.ReactElement<any> {
+}: FileListItemProps): React.ReactElement {
   const [hovered, setHovered] = useState(false);
   const progress = hunkProgress(file);
   const allDecided = progress.decided === progress.total;
@@ -223,7 +223,7 @@ export const FileListSidebar = memo(function FileListSidebar({
   onSelect,
   onAcceptAll,
   onRejectAll,
-}: FileListSidebarProps): React.ReactElement<any> {
+}: FileListSidebarProps): React.ReactElement {
   return (
     <div style={sidebarStyle}>
       <FileListSidebarHeader count={files.length} />

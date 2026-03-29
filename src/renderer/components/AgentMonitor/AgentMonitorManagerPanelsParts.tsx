@@ -6,7 +6,7 @@ export { ComparePanel } from './ComparePanelSupport';
 
 // ─── Toolbar SVG icons ────────────────────────────────────────────────────────
 
-export function CostIcon(): React.ReactElement<any> {
+export function CostIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -26,7 +26,7 @@ export function CostIcon(): React.ReactElement<any> {
   );
 }
 
-export function MultiSessionIcon(): React.ReactElement<any> {
+export function MultiSessionIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -45,7 +45,7 @@ export function MultiSessionIcon(): React.ReactElement<any> {
   );
 }
 
-export function CompareIcon(): React.ReactElement<any> {
+export function CompareIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -68,7 +68,7 @@ export function PreviousSessionsHeaderChevron({
   collapsed,
 }: {
   collapsed: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <svg
       width="10"
@@ -100,7 +100,7 @@ const ClearFilterButton = memo(function ClearFilterButton({
   onClear,
 }: {
   onClear: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={onClear}
@@ -133,7 +133,7 @@ export const SearchInput = memo(function SearchInput({
 }: {
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value),
     [onChange],
@@ -158,7 +158,7 @@ export const SearchInput = memo(function SearchInput({
         value={value}
         onChange={handleChange}
         placeholder="Filter sessions and tools..."
-        className="flex-1 bg-transparent text-[11px] outline-none text-text-semantic-primary"
+        className="flex-1 bg-transparent text-[11px] outline-hidden text-text-semantic-primary"
         style={{ caretColor: 'var(--interactive-accent)', fontFamily: 'var(--font-ui)' }}
         aria-label="Filter agent sessions"
       />
@@ -175,7 +175,7 @@ const QuickActionButton = memo(function QuickActionButton({
 }: {
   onClick: () => void;
   template: AgentTemplate;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={onClick}
@@ -213,7 +213,7 @@ export const QuickActionBar = memo(function QuickActionBar({
 }: {
   onExecuteTemplate: (template: AgentTemplate) => void;
   templates: AgentTemplate[];
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (templates.length === 0) return null;
 
   return (

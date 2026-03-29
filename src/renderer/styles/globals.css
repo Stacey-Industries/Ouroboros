@@ -1,33 +1,326 @@
-@import './tokens.css';
-@import './fonts.css';
-@import './mobile.css';
+@import './tokens.css' layer(base);
+@import './fonts.css' layer(base);
+@import './mobile.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* ─── Layout sizing tokens (static — not theme-driven) ──────────────────────── */
+@custom-variant dark (&:is(.dark *));
 
-:root {
-  --titlebar-height: 36px;
-  --sidebar-left-default: 260px;
-  --sidebar-right-default: 340px;
-  --terminal-default: 220px;
-  --resize-handle-size: 4px;
-  --panel-radius: 6px;
-  --header-height: 36px;
-  --tab-height: 34px;
+@theme {
+  --color-surface-base: var(--surface-base);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-inset: var(--surface-inset);
 
-  /* Glass surface variables are forced transparent in useTheme.ts applyThemeToDom().
-     No CSS overrides needed — the source sets them directly. */
+  --color-text-semantic-primary: var(--text-primary);
+  --color-text-semantic-secondary: var(--text-secondary);
+  --color-text-semantic-muted: var(--text-muted);
+  --color-text-semantic-faint: var(--text-faint);
+  --color-text-semantic-on-accent: var(--text-on-accent);
 
-  /* Map shadcn/ui CSS vars (used by Streamdown) to our theme vars */
-  --background: transparent;
-  --foreground: var(--text-primary);
-  --sidebar: transparent;
+  --color-border-semantic: var(--border-default);
+  --color-border-semantic-subtle: var(--border-subtle);
+  --color-border-semantic-accent: var(--border-accent);
+
+  --color-interactive-accent: var(--interactive-accent);
+  --color-interactive-hover: var(--interactive-hover);
+  --color-interactive-muted: var(--interactive-muted);
+  --color-interactive-selection: var(--interactive-selection);
+  --color-interactive-focus: var(--interactive-focus);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
+  --color-status-success-subtle: var(--status-success-subtle);
+  --color-status-error-subtle: var(--status-error-subtle);
+  --color-status-warning-subtle: var(--status-warning-subtle);
+
+  --color-interactive-accent-subtle: var(--interactive-accent-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-scroll-thumb: var(--surface-scroll-thumb);
+  --color-surface-scroll-track: var(--surface-scroll-track);
+
+  --color-diff-add-bg: var(--diff-add-bg);
+  --color-diff-del-bg: var(--diff-del-bg);
+  --color-diff-add-border: var(--diff-add-border);
+  --color-diff-del-border: var(--diff-del-border);
+
+  --color-search-match-bg: var(--search-match-bg);
+
+  --color-surface-static: #0d1117;
+  --color-surface-static-raised: #161b22;
+  --color-surface-static-overlay: #1c2128;
+  --color-surface-static-border: #30363d;
+
+  --color-accent-blue: #58a6ff;
+  --color-accent-blue-muted: #1f6feb;
+  --color-accent-green: #3fb950;
+  --color-accent-green-muted: #238636;
+  --color-accent-orange: #d29922;
+  --color-accent-orange-muted: #9e6a03;
+  --color-accent-red: #f85149;
+  --color-accent-red-muted: #da3633;
+  --color-accent-purple: #bc8cff;
+  --color-accent-purple-muted: #8957e5;
+
+  --color-ink: #e6edf3;
+  --color-ink-muted: #8b949e;
+  --color-ink-faint: #484f58;
+  --color-ink-inverse: #0d1117;
+
+  --font-mono:
+    JetBrains Mono, Geist Mono, Hack, IBM Plex Mono, Cascadia Code,
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono,
+    Courier New, monospace;
+  --font-sans:
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+    Helvetica Neue, Arial, sans-serif;
+
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.75rem;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-slide-up: slide-up 200ms ease-out;
+  --animate-slide-down: slide-down 200ms ease-out;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
 }
 
-/* ─── Base resets ───────────────────────────────────────────────────────────── */
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/* ─── Layout utilities ──────────────────────────────────────────────────────── */
+
+@utility app-fill {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+@utility panel-bg {
+  background-color: var(--surface-base);
+}
+
+@utility panel-bg-raised {
+  background-color: var(--surface-panel);
+}
+
+@utility panel-bg-overlay {
+  background-color: var(--surface-raised);
+}
+
+@utility border-surface {
+  border-color: var(--border-default);
+}
+
+@utility border-surface-muted {
+  border-color: var(--border-subtle);
+}
+
+@utility text-ink {
+  color: var(--text-primary);
+}
+
+@utility text-ink-muted {
+  color: var(--text-muted);
+}
+
+@utility text-ink-faint {
+  color: var(--text-faint);
+}
+
+@utility resize-handle-x {
+  /* Resize handles */
+  width: var(--resize-handle-size);
+  cursor: ew-resize;
+  background: transparent;
+  transition: background 150ms ease;
+  &:hover {
+    background: var(--interactive-muted);
+  }
+  &.dragging {
+    background: var(--interactive-muted);
+  }
+}
+
+@utility dragging {
+  & .resize-handle-x {
+    background: var(--interactive-muted);
+  }
+  & .resize-handle-y {
+    background: var(--interactive-muted);
+  }
+}
+
+@utility resize-handle-y {
+  height: var(--resize-handle-size);
+  cursor: ns-resize;
+  background: transparent;
+  transition: background 150ms ease;
+  &:hover {
+    background: var(--interactive-muted);
+  }
+  &.dragging {
+    background: var(--interactive-muted);
+  }
+}
+
+/* ─── Component base styles ─────────────────────────────────────────────────── */
+
+@utility sidebar {
+  /* Sidebar panel */
+  @apply flex flex-col overflow-hidden;
+  background: var(--surface-panel);
+  border-color: var(--border-default);
+}
+
+@utility panel-header {
+  /* Toolbar / header within a panel */
+  @apply flex items-center gap-2 px-3 shrink-0;
+  height: 36px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border-default);
+}
+
+@utility btn {
+  /* Generic button */
+  @apply inline-flex items-center justify-center gap-1.5 rounded text-sm font-medium transition-colors;
+  @apply focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2;
+  @apply disabled:opacity-40 disabled:pointer-events-none;
+  padding: 4px 10px;
+}
+
+@utility btn-ghost {
+  @apply btn;
+  color: var(--text-muted);
+  background: transparent;
+  &:hover {
+    background: var(--interactive-muted);
+    color: var(--text-primary);
+  }
+}
+
+@utility btn-primary {
+  @apply btn;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  &:hover {
+    background: var(--interactive-hover);
+    color: var(--text-on-accent);
+  }
+}
+
+@utility tab-item {
+  /* Tab bar item */
+  @apply flex items-center gap-1.5 px-3 py-1 text-sm cursor-pointer shrink-0;
+  @apply border-r border-surface-static-border transition-colors;
+  color: var(--text-muted);
+  background: var(--surface-panel);
+  min-width: 80px;
+  max-width: 180px;
+  &:hover {
+    color: var(--text-primary);
+    background: var(--surface-raised);
+  }
+  &.active {
+    color: var(--text-primary);
+    background: var(--surface-base);
+    border-bottom: 2px solid var(--interactive-accent);
+  }
+}
+
+@utility active {
+  &.tab-item {
+    color: var(--text-primary);
+    background: var(--surface-base);
+    border-bottom: 2px solid var(--interactive-accent);
+  }
+}
+
+@layer utilities {
+  /* ─── Layout sizing tokens (static — not theme-driven) ──────────────────────── */
+
+  :root {
+    --titlebar-height: 36px;
+    --sidebar-left-default: 260px;
+    --sidebar-right-default: 340px;
+    --terminal-default: 220px;
+    --resize-handle-size: 4px;
+    --panel-radius: 6px;
+    --header-height: 36px;
+    --tab-height: 34px;
+
+    /* Glass surface variables are forced transparent in useTheme.ts applyThemeToDom().
+     No CSS overrides needed — the source sets them directly. */
+
+    /* Map shadcn/ui CSS vars (used by Streamdown) to our theme vars */
+    --background: transparent;
+    --foreground: var(--text-primary);
+    --sidebar: transparent;
+  }
+
+  /* ─── Base resets ───────────────────────────────────────────────────────────── */
+}
 
 @layer base {
   *,
@@ -80,7 +373,7 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--surface-scroll-thumb);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
@@ -108,137 +401,6 @@
   pre,
   .font-mono {
     font-family: var(--font-mono);
-  }
-}
-
-/* ─── Layout utilities ──────────────────────────────────────────────────────── */
-
-@layer utilities {
-  .app-fill {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-  }
-
-  .panel-bg {
-    background-color: var(--surface-base);
-  }
-
-  .panel-bg-raised {
-    background-color: var(--surface-panel);
-  }
-
-  .panel-bg-overlay {
-    background-color: var(--surface-raised);
-  }
-
-  .border-surface {
-    border-color: var(--border-default);
-  }
-
-  .border-surface-muted {
-    border-color: var(--border-subtle);
-  }
-
-  .text-ink {
-    color: var(--text-primary);
-  }
-
-  .text-ink-muted {
-    color: var(--text-muted);
-  }
-
-  .text-ink-faint {
-    color: var(--text-faint);
-  }
-
-  /* Resize handles */
-  .resize-handle-x {
-    width: var(--resize-handle-size);
-    cursor: ew-resize;
-    background: transparent;
-    transition: background 150ms ease;
-  }
-  .resize-handle-x:hover,
-  .resize-handle-x.dragging {
-    background: var(--interactive-muted);
-  }
-
-  .resize-handle-y {
-    height: var(--resize-handle-size);
-    cursor: ns-resize;
-    background: transparent;
-    transition: background 150ms ease;
-  }
-  .resize-handle-y:hover,
-  .resize-handle-y.dragging {
-    background: var(--interactive-muted);
-  }
-}
-
-/* ─── Component base styles ─────────────────────────────────────────────────── */
-
-@layer components {
-  /* Sidebar panel */
-  .sidebar {
-    @apply flex flex-col overflow-hidden;
-    background: var(--surface-panel);
-    border-color: var(--border-default);
-  }
-
-  /* Toolbar / header within a panel */
-  .panel-header {
-    @apply flex items-center gap-2 px-3 shrink-0;
-    height: 36px;
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--border-default);
-  }
-
-  /* Generic button */
-  .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded text-sm font-medium transition-colors;
-    @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
-    @apply disabled:opacity-40 disabled:pointer-events-none;
-    padding: 4px 10px;
-  }
-
-  .btn-ghost {
-    @apply btn;
-    color: var(--text-muted);
-    background: transparent;
-  }
-  .btn-ghost:hover {
-    background: var(--interactive-muted);
-    color: var(--text-primary);
-  }
-
-  .btn-primary {
-    @apply btn;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-  }
-  .btn-primary:hover {
-    background: var(--interactive-hover);
-    color: var(--text-on-accent);
-  }
-
-  /* Tab bar item */
-  .tab-item {
-    @apply flex items-center gap-1.5 px-3 py-1 text-sm cursor-pointer shrink-0;
-    @apply border-r border-surface-border transition-colors;
-    color: var(--text-muted);
-    background: var(--surface-panel);
-    min-width: 80px;
-    max-width: 180px;
-  }
-  .tab-item:hover {
-    color: var(--text-primary);
-    background: var(--surface-raised);
-  }
-  .tab-item.active {
-    color: var(--text-primary);
-    background: var(--surface-base);
-    border-bottom: 2px solid var(--interactive-accent);
   }
 }
 
@@ -843,7 +1005,7 @@ body {
 
 /* Glass card utility — very subtle lift for tool cards */
 .glass-card {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-color: var(--surface-scroll-track) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
   border-radius: 10px;
 }
@@ -859,30 +1021,30 @@ body {
 [role='listbox'][aria-label='Project selector'],
 [data-layout='title-bar'] [style*='position: absolute'],
 [data-layout='title-bar'] [style*='position:absolute'] {
-  background-color: rgba(10, 10, 14, 0.92) !important;
+  background-color: var(--surface-overlay) !important;
   backdrop-filter: blur(24px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--surface-hover) !important;
   border-radius: 10px !important;
   overflow: hidden;
 }
 
 /* Tooltips: frosted glass background */
 .agent-ide-tooltip__body {
-  background: rgba(10, 10, 14, 0.92) !important;
+  background: var(--surface-overlay) !important;
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--surface-hover) !important;
 }
 .agent-ide-tooltip__arrow {
-  background: rgba(10, 10, 14, 0.92) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: var(--surface-overlay) !important;
+  border-color: var(--surface-hover) !important;
 }
 
 /* Native <select> elements and options */
 select,
 select option {
-  background-color: rgba(10, 10, 14, 0.95) !important;
+  background-color: var(--surface-overlay) !important;
   color: var(--text-primary) !important;
   color-scheme: dark !important;
 }
@@ -894,7 +1056,7 @@ select option {
 
 /* Scrollbar */
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--surface-scroll-thumb) !important;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.14) !important;

@@ -10,7 +10,7 @@ import { getTextareaStyle } from './AgentChatComposerSupport';
 
 /* ---------- SendButton ---------- */
 
-function QueueIcon(): React.ReactElement<any> {
+function QueueIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -35,7 +35,7 @@ export function SendButton(props: {
   isSending: boolean;
   willQueue: boolean;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const label = props.willQueue ? 'Queue message' : 'Send message';
   return (
     <button
@@ -98,7 +98,7 @@ function ensureHighlightStyles(): void {
   document.head.appendChild(style);
 }
 
-function ComposerHighlightOverlay({ text, style }: { text: string; style: React.CSSProperties }): React.ReactElement<any> {
+function ComposerHighlightOverlay({ text, style }: { text: string; style: React.CSSProperties }): React.ReactElement {
   React.useEffect(ensureHighlightStyles, []);
   const parts = text.split(MENTION_SPLIT_RE);
   return (
@@ -114,7 +114,7 @@ function ComposerHighlightOverlay({ text, style }: { text: string; style: React.
   );
 }
 
-function ComposerTextarea(props: ComposerInputProps): React.ReactElement<any> {
+function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   const overlayText = props.textareaRef.current?.value ?? props.draft;
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
   return (
@@ -135,7 +135,7 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement<any> {
         placeholder="Ask the agent... (/ for commands, @ to mention files)"
         disabled={props.disabled}
         rows={1}
-        className="relative z-20 w-full resize-none border bg-surface-base text-sm placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        className="relative z-20 w-full resize-none border bg-surface-base text-sm placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
         style={{
           ...baseStyle,
           WebkitTextFillColor: 'transparent',
@@ -155,7 +155,7 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement<any> {
   );
 }
 
-export function ComposerInput(props: ComposerInputProps): React.ReactElement<any> {
+export function ComposerInput(props: ComposerInputProps): React.ReactElement {
   return (
     <div className="relative">
       <ComposerTextarea {...props} />

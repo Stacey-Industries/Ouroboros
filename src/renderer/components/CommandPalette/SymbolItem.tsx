@@ -7,16 +7,16 @@ const ITEM_HEIGHT = 40;
 const EMPTY_INDICES: ReadonlyArray<readonly [number, number]> = [];
 
 const BADGE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  function: { bg: 'rgba(88, 166, 255, 0.18)', text: 'var(--interactive-accent)', label: 'fn' },
-  fn: { bg: 'rgba(88, 166, 255, 0.18)', text: 'var(--interactive-accent)', label: 'fn' },
-  class: { bg: 'rgba(188, 140, 255, 0.18)', text: 'var(--palette-purple)', label: 'cls' },
-  interface: { bg: 'rgba(56, 201, 187, 0.18)', text: '#38c9bb', label: 'if' },
-  type: { bg: 'rgba(255, 166, 77, 0.18)', text: '#ffa64d', label: 'ty' },
-  const: { bg: 'rgba(63, 185, 80, 0.18)', text: 'var(--status-success)', label: 'co' },
-  def: { bg: 'rgba(255, 197, 61, 0.18)', text: '#ffc53d', label: 'def' },
+  function: { bg: 'var(--interactive-accent-subtle)', text: 'var(--interactive-accent)', label: 'fn' },
+  fn: { bg: 'var(--interactive-accent-subtle)', text: 'var(--interactive-accent)', label: 'fn' },
+  class: { bg: 'color-mix(in srgb, var(--palette-purple) 18%, transparent)', text: 'var(--palette-purple)', label: 'cls' },
+  interface: { bg: 'color-mix(in srgb, var(--status-info) 18%, transparent)', text: 'var(--status-info)', label: 'if' },
+  type: { bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)', text: 'var(--status-warning)', label: 'ty' },
+  const: { bg: 'var(--status-success-subtle)', text: 'var(--status-success)', label: 'co' },
+  def: { bg: 'color-mix(in srgb, var(--status-warning) 18%, transparent)', text: 'var(--status-warning)', label: 'def' },
 };
 
-const DEFAULT_BADGE = { bg: 'rgba(140, 140, 140, 0.18)', text: '#8c8c8c' };
+const DEFAULT_BADGE = { bg: 'color-mix(in srgb, var(--text-muted) 18%, transparent)', text: 'var(--text-muted)' };
 
 export interface SymbolItemProps {
   entry: SymbolEntry;
@@ -61,7 +61,7 @@ export const SymbolItem = memo(function SymbolItem({
   pathIndices,
   onClick,
   onMouseEnter,
-}: SymbolItemProps): React.ReactElement<any> {
+}: SymbolItemProps): React.ReactElement {
   const badge = getBadge(entry.type);
   const dirPart = getDirectoryPart(entry.relativePath);
   const highlightedNameIndices = isSelected ? EMPTY_INDICES : nameIndices;
@@ -94,7 +94,7 @@ function TypeBadge({
 }: {
   badge: { bg: string; text: string; label: string };
   isSelected: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       style={{
@@ -104,8 +104,8 @@ function TypeBadge({
         fontWeight: 600,
         padding: '1px 5px',
         borderRadius: '3px',
-        backgroundColor: isSelected ? 'rgba(0,0,0,0.2)' : badge.bg,
-        color: isSelected ? 'rgba(255,255,255,0.85)' : badge.text,
+        backgroundColor: isSelected ? 'var(--surface-hover)' : badge.bg,
+        color: isSelected ? 'var(--text-on-accent)' : badge.text,
         letterSpacing: '0.02em',
         minWidth: '26px',
         textAlign: 'center',
@@ -122,7 +122,7 @@ function SymbolName({
 }: {
   name: string;
   indices: ReadonlyArray<readonly [number, number]>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       style={{
@@ -146,14 +146,14 @@ function SymbolPath({
   path: string;
   indices: ReadonlyArray<readonly [number, number]>;
   isSelected: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       style={{
         flex: 1,
         minWidth: 0,
         fontSize: '11px',
-        color: isSelected ? 'rgba(255,255,255,0.6)' : 'var(--text-faint)',
+        color: isSelected ? 'color-mix(in srgb, var(--text-on-accent) 60%, transparent)' : 'var(--text-faint)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -171,13 +171,13 @@ function LineNumber({
 }: {
   line: number;
   isSelected: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       style={{
         flexShrink: 0,
         fontSize: '11px',
-        color: isSelected ? 'rgba(255,255,255,0.5)' : 'var(--text-faint)',
+        color: isSelected ? 'color-mix(in srgb, var(--text-on-accent) 50%, transparent)' : 'var(--text-faint)',
         fontFamily: 'var(--font-mono)',
       }}
     >

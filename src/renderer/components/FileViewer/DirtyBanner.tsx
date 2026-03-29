@@ -9,8 +9,8 @@ const bannerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '8px',
   padding: '6px 12px',
-  backgroundColor: 'rgba(210, 153, 34, 0.12)',
-  borderBottom: '1px solid rgba(210, 153, 34, 0.3)',
+  backgroundColor: 'var(--status-warning-subtle)',
+  borderBottom: '1px solid var(--status-warning)',
   fontSize: '0.8125rem',
   flexShrink: 0,
 };
@@ -29,7 +29,7 @@ const reloadButtonStyle: React.CSSProperties = {
  */
 export const DirtyBanner = memo(function DirtyBanner({
   onReload,
-}: DirtyBannerProps): React.ReactElement<any> {
+}: DirtyBannerProps): React.ReactElement {
   return (
     <div className="text-status-warning" style={bannerStyle}>
       <span>File has been modified on disk.</span>

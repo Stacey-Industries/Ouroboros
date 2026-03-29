@@ -33,7 +33,7 @@ export function DiffReviewLayout({
   onAcceptHunk,
   onRejectHunk,
   setFileRef,
-}: DiffReviewLayoutProps): React.ReactElement<any> {
+}: DiffReviewLayoutProps): React.ReactElement {
   return (
     <div style={panelStyle}>
       <DiffReviewHeader
@@ -66,7 +66,7 @@ function DiffReviewBody({
   onAcceptHunk,
   onRejectHunk,
   setFileRef,
-}: Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement<any> {
+}: Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       <FileListSidebar
@@ -107,7 +107,7 @@ function DiffReviewHeader({
   onAcceptAll: () => void;
   onRejectAll: () => void;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={headerStyle}>
       <DiffReviewHeaderStats stats={stats} />
@@ -121,17 +121,17 @@ function DiffReviewHeader({
   );
 }
 
-function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.ReactElement<any> {
+function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Diff Review</span>
-      <span style={{ color: 'var(--status-success, #4CAF50)' }}>+{stats.added}</span>
-      <span style={{ color: 'var(--status-error, #f85149)' }}>-{stats.removed}</span>
+      <span style={{ color: 'var(--status-success)' }}>+{stats.added}</span>
+      <span style={{ color: 'var(--status-error)' }}>-{stats.removed}</span>
       <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
         {stats.decidedHunks}/{stats.totalHunks} hunks decided
       </span>
-      <ReviewStat count={stats.acceptedHunks} color="var(--status-success, #4CAF50)" label="accepted" />
-      <ReviewStat count={stats.rejectedHunks} color="var(--status-error, #f85149)" label="rejected" />
+      <ReviewStat count={stats.acceptedHunks} color="var(--status-success)" label="accepted" />
+      <ReviewStat count={stats.rejectedHunks} color="var(--status-error)" label="rejected" />
     </div>
   );
 }
@@ -146,16 +146,16 @@ function DiffReviewHeaderActions({
   onAcceptAll: () => void;
   onRejectAll: () => void;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       {!allDecided && (
         <>
-          <HeaderBtn label="Accept All" color="var(--status-success, #4CAF50)" onClick={onAcceptAll} />
-          <HeaderBtn label="Reject All" color="var(--status-error, #f85149)" onClick={onRejectAll} />
+          <HeaderBtn label="Accept All" color="var(--status-success)" onClick={onAcceptAll} />
+          <HeaderBtn label="Reject All" color="var(--status-error)" onClick={onRejectAll} />
         </>
       )}
-      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--interactive-accent, #58a6ff)" onClick={onClose} />
+      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--interactive-accent)" onClick={onClose} />
     </div>
   );
 }
@@ -168,7 +168,7 @@ function ReviewStat({
   count: number;
   color: string;
   label: string;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (count === 0) return null;
   return <span style={{ color, fontSize: '0.75rem' }}>{count} {label}</span>;
 }
@@ -184,7 +184,7 @@ interface FileSectionProps {
 
 function FileSection(
   { file, fileIdx, isSelected, onAcceptHunk, onRejectHunk, ref }: FileSectionProps,
-): React.ReactElement<any> {
+): React.ReactElement {
   return (
     <div ref={ref} style={{ borderBottom: '2px solid var(--border-default)' }}>
       <FileSectionHeader file={file} isSelected={isSelected} />
@@ -206,7 +206,7 @@ function FileSectionHeader({
 }: {
   file: ReviewFile;
   isSelected: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       style={{
@@ -217,7 +217,7 @@ function FileSectionHeader({
         alignItems: 'center',
         gap: '8px',
         padding: '4px 12px',
-        backgroundColor: isSelected ? 'rgba(88, 166, 255, 0.06)' : 'var(--surface-panel)',
+        backgroundColor: isSelected ? 'var(--interactive-accent-subtle)' : 'var(--surface-panel)',
         borderBottom: '1px solid var(--border-default)',
         fontSize: '0.8125rem',
         fontFamily: 'var(--font-mono)',
@@ -235,7 +235,7 @@ function FileSectionHeader({
   );
 }
 
-function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactElement<any> {
+function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactElement {
   const { color, label } = getStatusMeta(status);
   return (
     <span
@@ -259,10 +259,10 @@ function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactEl
 }
 
 function getStatusMeta(status: ReviewFile['status']): { color: string; label: string } {
-  if (status === 'added') return { color: 'var(--status-success, #4CAF50)', label: 'A' };
-  if (status === 'deleted') return { color: 'var(--status-error, #f85149)', label: 'D' };
-  if (status === 'renamed') return { color: 'var(--interactive-accent, #58a6ff)', label: 'R' };
-  return { color: 'var(--status-warning, #d29922)', label: 'M' };
+  if (status === 'added') return { color: 'var(--status-success)', label: 'A' };
+  if (status === 'deleted') return { color: 'var(--status-error)', label: 'D' };
+  if (status === 'renamed') return { color: 'var(--interactive-accent)', label: 'R' };
+  return { color: 'var(--status-warning)', label: 'M' };
 }
 
 function HeaderBtn({
@@ -273,7 +273,7 @@ function HeaderBtn({
   label: string;
   color: string;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [hovered, setHovered] = useState(false);
   return (
     <button

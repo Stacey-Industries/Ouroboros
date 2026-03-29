@@ -109,7 +109,7 @@ const buttonStyle: React.CSSProperties = {
 const primaryButtonStyle: React.CSSProperties = {
   ...buttonStyle,
   background: 'var(--interactive-accent)',
-  color: '#fff',
+  color: 'var(--text-on-accent)',
   borderColor: 'var(--interactive-accent)',
 };
 
@@ -125,7 +125,7 @@ export function Section({
 }: {
   children: React.ReactNode;
   title: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <div className="text-text-semantic-muted" style={sectionHeaderStyle}>
@@ -136,7 +136,7 @@ export function Section({
   );
 }
 
-export function Badge({ color, label }: { color?: string; label: string }): React.ReactElement<any> {
+export function Badge({ color, label }: { color?: string; label: string }): React.ReactElement {
   return (
     <span
       style={{
@@ -146,7 +146,7 @@ export function Badge({ color, label }: { color?: string; label: string }): Reac
         fontSize: '11px',
         fontWeight: 500,
         background: color ?? 'var(--interactive-accent)',
-        color: '#fff',
+        color: 'var(--text-on-accent)',
         marginRight: '4px',
         marginBottom: '4px',
       }}
@@ -162,7 +162,7 @@ export function CodeLine({
 }: {
   accent?: boolean;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       className={accent ? 'text-interactive-accent' : 'text-text-semantic-primary'}
@@ -178,7 +178,7 @@ export function CodeLine({
   );
 }
 
-export function ConfigPill({ label }: { label: string }): React.ReactElement<any> {
+export function ConfigPill({ label }: { label: string }): React.ReactElement {
   return (
     <span
       className="bg-surface-base border border-border-semantic text-text-semantic-muted"
@@ -204,7 +204,7 @@ export function ActionButton({
   label: string;
   onClick: () => void;
   primary?: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       disabled={disabled}
@@ -217,7 +217,7 @@ export function ActionButton({
   );
 }
 
-export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={emptyStateStyle}>
       {children}
@@ -225,7 +225,7 @@ export function EmptyState({ children }: { children: React.ReactNode }): React.R
   );
 }
 
-export function LoadingState(): React.ReactElement<any> {
+export function LoadingState(): React.ReactElement {
   return (
     <EmptyState>
       <div style={{ marginBottom: '8px' }}>
@@ -251,14 +251,14 @@ export function LoadingState(): React.ReactElement<any> {
   );
 }
 
-export function ErrorBanner({ error }: { error: string }): React.ReactElement<any> {
+export function ErrorBanner({ error }: { error: string }): React.ReactElement {
   return (
     <div
       style={{
         ...cardStyle,
-        borderColor: 'rgba(239, 68, 68, 0.3)',
-        background: 'rgba(239, 68, 68, 0.05)',
-        color: '#ef4444',
+        borderColor: 'color-mix(in srgb, var(--status-error) 30%, transparent)',
+        background: 'var(--status-error-subtle)',
+        color: 'var(--status-error)',
         fontSize: '13px',
       }}
     >
@@ -272,9 +272,9 @@ export function buildProjectBadges(
 ): Array<{ color?: string; label: string }> {
   return [
     { label: context.language },
-    ...(context.framework ? [{ label: context.framework, color: '#8b5cf6' }] : []),
-    ...(context.packageManager ? [{ label: context.packageManager, color: '#6366f1' }] : []),
-    ...(context.testFramework ? [{ label: context.testFramework, color: '#06b6d4' }] : []),
-    ...context.detectedPatterns.map((pattern) => ({ label: pattern, color: '#64748b' })),
+    ...(context.framework ? [{ label: context.framework, color: 'var(--palette-purple)' }] : []),
+    ...(context.packageManager ? [{ label: context.packageManager, color: 'var(--interactive-accent)' }] : []),
+    ...(context.testFramework ? [{ label: context.testFramework, color: 'var(--status-info)' }] : []),
+    ...context.detectedPatterns.map((pattern) => ({ label: pattern, color: 'var(--text-muted)' })),
   ];
 }

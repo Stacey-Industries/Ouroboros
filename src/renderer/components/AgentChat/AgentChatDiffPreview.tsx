@@ -8,7 +8,7 @@ export interface AgentChatDiffPreviewProps {
   filePath: string;
 }
 
-function CopyIcon(): React.ReactElement<any> {
+function CopyIcon(): React.ReactElement {
   return (
     <svg
       className="h-3 w-3"
@@ -25,7 +25,7 @@ function CopyIcon(): React.ReactElement<any> {
   );
 }
 
-function ExternalIcon(): React.ReactElement<any> {
+function ExternalIcon(): React.ReactElement {
   return (
     <svg
       className="h-3 w-3"
@@ -43,7 +43,7 @@ function ExternalIcon(): React.ReactElement<any> {
   );
 }
 
-function renderHeaderLine(line: DiffLine, index: number): React.ReactElement<any> {
+function renderHeaderLine(line: DiffLine, index: number): React.ReactElement {
   return (
     <tr key={index}>
       <td
@@ -56,13 +56,13 @@ function renderHeaderLine(line: DiffLine, index: number): React.ReactElement<any
   );
 }
 
-function renderHunkLine(line: DiffLine, index: number): React.ReactElement<any> {
+function renderHunkLine(line: DiffLine, index: number): React.ReactElement {
   return (
     <tr key={index}>
       <td
         colSpan={3}
         className="select-text px-2 py-0.5 text-interactive-accent"
-        style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
+        style={{ backgroundColor: 'var(--interactive-accent-subtle)' }}
       >
         {line.text}
       </td>
@@ -70,12 +70,12 @@ function renderHunkLine(line: DiffLine, index: number): React.ReactElement<any> 
   );
 }
 
-function renderChangeLine(line: DiffLine, index: number): React.ReactElement<any> {
+function renderChangeLine(line: DiffLine, index: number): React.ReactElement {
   const bgColor =
     line.type === 'add'
-      ? 'var(--diff-add-bg, rgba(46, 160, 67, 0.15))'
-      : 'var(--diff-del-bg, rgba(248, 81, 73, 0.15))';
-  const textColor = line.type === 'add' ? 'var(--diff-add, #2ea043)' : 'var(--diff-del, #f85149)';
+      ? 'var(--diff-add-bg)'
+      : 'var(--diff-del-bg)';
+  const textColor = line.type === 'add' ? 'var(--status-success)' : 'var(--status-error)';
   const prefix = line.type === 'add' ? '+' : '-';
   return (
     <tr key={index} style={{ backgroundColor: bgColor }}>
@@ -104,13 +104,13 @@ function renderChangeLine(line: DiffLine, index: number): React.ReactElement<any
   );
 }
 
-function renderDiffLine(line: DiffLine, index: number): React.ReactElement<any> {
+function renderDiffLine(line: DiffLine, index: number): React.ReactElement {
   if (line.type === 'header') return renderHeaderLine(line, index);
   if (line.type === 'hunk') return renderHunkLine(line, index);
   return renderChangeLine(line, index);
 }
 
-function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement<any> {
+function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement {
   return (
     <div
       className="mt-1.5 overflow-auto rounded border border-border-semantic bg-surface-base"
@@ -141,14 +141,14 @@ type DiffControlsProps = {
   onCopy: () => void;
 };
 
-function DiffControls(props: DiffControlsProps): React.ReactElement<any> {
+function DiffControls(props: DiffControlsProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5">
       <button
         onClick={props.onFetch}
         disabled={props.loading}
         className={`${DIFF_CTRL_BTN} text-interactive-accent`}
-        style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
+        style={{ backgroundColor: 'var(--interactive-accent-subtle)' }}
       >
         {props.loading ? 'Loading...' : props.expanded ? 'Hide Changes' : 'View Changes'}
       </button>
@@ -174,11 +174,11 @@ function DiffControls(props: DiffControlsProps): React.ReactElement<any> {
   );
 }
 
-function DiffError({ error }: { error: string }): React.ReactElement<any> {
+function DiffError({ error }: { error: string }): React.ReactElement {
   return (
     <div
       className="mt-1 rounded px-2 py-1 text-[10px] text-status-error"
-      style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}
+      style={{ backgroundColor: 'var(--status-error-subtle)' }}
     >
       {error}
     </div>
@@ -244,7 +244,7 @@ function useDiffPreview(filePath: string) {
   };
 }
 
-export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): React.ReactElement<any> {
+export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): React.ReactElement {
   const {
     loading,
     expanded,

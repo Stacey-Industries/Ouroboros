@@ -41,11 +41,11 @@ export function badgeStyle(background: string, color: string): React.CSSProperti
 
 export function resolveStatusTone(status: string | undefined): { background: string; color: string } {
   if (status && SUCCESS_STATUSES.has(status)) {
-    return { background: 'color-mix(in srgb, #10b981 14%, transparent)', color: '#10b981' };
+    return { background: 'var(--status-success-subtle)', color: 'var(--status-success)' };
   }
 
   if (status && ERROR_STATUSES.has(status)) {
-    return { background: 'color-mix(in srgb, #ef4444 14%, transparent)', color: '#ef4444' };
+    return { background: 'var(--status-error-subtle)', color: 'var(--status-error)' };
   }
 
   if (status && ACTIVE_STATUSES.has(status)) {

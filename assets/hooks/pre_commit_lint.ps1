@@ -91,6 +91,38 @@ foreach ($proj in @('tsconfig.web.json', 'tsconfig.node.json')) {
     }
 }
 
+# ── Check for new hardcoded colors in renderer files ────────────────────────
+$rendererFiles = $fileList | Where-Object { $_ -match '^src/renderer/' -and $_ -match '\.(tsx?)$' }
+if ($rendererFiles.Count -gt 0) {
+    # Get only the added/changed lines (+ lines) in staged diff for renderer files
+    $colorHits = @()
+    foreach ($rf in $rendererFiles) {
+        $diffLines = & git diff --cached -U0 -- $rf 2>&1 | Out-String
+        # Match added lines containing hardcoded hex or rgb/rgba (skip var() references and token definitions)
+        $addedLines = $diffLines -split "`n" | Where-Object { $_ -match '^\+[^+]' }
+        foreach ($line in $addedLines) {
+            # Skip lines that are token definitions, var() references, comments, or imports
+            if ($line -match 'var\(--' -or $line -match '^\+\s*//' -or $line -match '^\+\s*\*' -or $line -match 'tokens\.css' -or $line -match '@theme') { continue }
+            # Detect hardcoded hex colors (#xxx, #xxxxxx, #xxxxxxxx) but not in comments or anchors
+            if ($line -match '#[0-9a-fA-F]{3,8}\b' -and $line -notmatch 'eslint-disable' -and $line -notmatch '// hardcoded:') {
+                $colorHits += "  [color] $rf -- hardcoded hex: $($line.Trim().Substring(1))"
+            }
+            # Detect rgb()/rgba() but not inside var() or as token definition
+            if ($line -match 'rgba?\(' -and $line -notmatch 'var\(' -and $line -notmatch 'eslint-disable' -and $line -notmatch '// hardcoded:') {
+                $colorHits += "  [color] $rf -- hardcoded rgba: $($line.Trim().Substring(1))"
+            }
+        }
+    }
+    if ($colorHits.Count -gt 0) {
+        $violations += ""
+        $violations += "  [color] New hardcoded colors in renderer files. Use design tokens instead."
+        $violations += "  [color] See: src/renderer/styles/tokens.css and .claude/rules/renderer.md"
+        $violations += "  [color] Add '// hardcoded: <reason>' comment to suppress for intentional exceptions."
+        $violations += ""
+        $violations += $colorHits
+    }
+}
+
 # ── Report ───────────────────────────────────────────────────────────────────
 if ($violations.Count -eq 0) { exit 0 }
 

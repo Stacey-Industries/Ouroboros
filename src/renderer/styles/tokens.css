@@ -74,6 +74,28 @@
   --status-error:   var(--palette-error);
   --status-info:    var(--palette-accent);
 
+  /* Status — subtle (low-opacity tints for backgrounds/badges) */
+  --status-success-subtle: rgba(63, 185, 80, 0.08);
+  --status-error-subtle:   rgba(248, 81, 73, 0.08);
+  --status-warning-subtle: rgba(210, 153, 34, 0.12);
+
+  /* Interactive — subtle */
+  --interactive-accent-subtle: rgba(88, 166, 255, 0.08);
+  --surface-hover: rgba(128, 128, 128, 0.15);
+
+  /* Diff */
+  --diff-add-bg:     rgba(63, 185, 80, 0.15);
+  --diff-del-bg:     rgba(248, 81, 73, 0.15);
+  --diff-add-border: rgba(63, 185, 80, 0.3);
+  --diff-del-border: rgba(248, 81, 73, 0.3);
+
+  /* Search */
+  --search-match-bg: rgba(255, 200, 0, 0.3);
+
+  /* Scrollbar */
+  --surface-scroll-thumb: rgba(255, 255, 255, 0.12);
+  --surface-scroll-track: rgba(255, 255, 255, 0.03);
+
   /* ─── Tier 3: Component tokens ────────────────────────────────────────────
    * Scoped to specific complex components. Optional — only add when a
    * component needs a value that doesn't map cleanly to a Tier 2 token.

@@ -61,7 +61,7 @@ const hunkHeaderStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   padding: '2px 8px',
-  backgroundColor: 'rgba(88, 166, 255, 0.08)',
+  backgroundColor: 'var(--interactive-accent-subtle)',
   borderBottom: '1px solid var(--border-subtle)',
   color: 'var(--interactive-accent)',
   fontSize: '0.75rem',
@@ -96,13 +96,13 @@ const actionBarStyle: CSSProperties = {
 };
 
 const acceptedBadgeStyle: CSSProperties = {
-  color: 'var(--status-success, #4CAF50)',
+  color: 'var(--status-success)',
   fontWeight: 600,
   fontSize: '0.75rem',
 };
 
 const rejectedBadgeStyle: CSSProperties = {
-  color: 'var(--status-error, #f85149)',
+  color: 'var(--status-error)',
   fontWeight: 600,
   fontSize: '0.75rem',
 };
@@ -115,32 +115,32 @@ function lineTypeFromPrefix(line: string): 'added' | 'removed' | 'context' {
 
 function lineBg(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'rgba(80, 200, 80, 0.12)';
-    case 'removed': return 'rgba(255, 80, 80, 0.12)';
+    case 'added': return 'var(--diff-add-bg)';
+    case 'removed': return 'var(--diff-del-bg)';
     default: return 'transparent';
   }
 }
 
 function gutterBg(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'rgba(80, 200, 80, 0.18)';
-    case 'removed': return 'rgba(255, 80, 80, 0.18)';
+    case 'added': return 'var(--diff-add-bg)';
+    case 'removed': return 'var(--diff-del-bg)';
     default: return 'var(--surface-base)';
   }
 }
 
 function markerColor(type: DiffLineType): string {
   switch (type) {
-    case 'added': return 'var(--status-success, #4CAF50)';
-    case 'removed': return 'var(--status-error, #f85149)';
+    case 'added': return 'var(--status-success)';
+    case 'removed': return 'var(--status-error)';
     default: return 'var(--text-faint)';
   }
 }
 
 function decisionBorder(decision: HunkDecision): string {
   switch (decision) {
-    case 'accepted': return '3px solid var(--status-success, #4CAF50)';
-    case 'rejected': return '3px solid var(--status-error, #f85149)';
+    case 'accepted': return '3px solid var(--status-success)';
+    case 'rejected': return '3px solid var(--status-error)';
     default: return '3px solid transparent';
   }
 }
@@ -221,7 +221,7 @@ function buildDisplayLines(hunk: ReviewHunk): DisplayLine[] {
   });
 }
 
-function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement<any> | null {
+function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement | null {
   if (decision === 'pending') return null;
   return (
     <span style={decision === 'accepted' ? acceptedBadgeStyle : rejectedBadgeStyle}>
@@ -230,7 +230,7 @@ function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement<any
   );
 }
 
-function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement<any> {
+function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement {
   return (
     <div style={hunkHeaderStyle}>
       <span>{header}</span>
@@ -239,7 +239,7 @@ function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement<a
   );
 }
 
-function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement<any> {
+function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement {
   return (
     <div style={lineRowStyle(line.type)}>
       <div style={lineNumberStyle(line.type, line.leftNo !== null)}>{line.leftNo ?? ''}</div>
@@ -250,7 +250,7 @@ function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement<any> {
   );
 }
 
-function HunkLines({ lines }: HunkLinesProps): React.ReactElement<any> {
+function HunkLines({ lines }: HunkLinesProps): React.ReactElement {
   return (
     <div style={diffLinesStyle}>
       {lines.map((line) => <HunkLineRow key={line.id} line={line} />)}
@@ -258,7 +258,7 @@ function HunkLines({ lines }: HunkLinesProps): React.ReactElement<any> {
   );
 }
 
-function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.ReactElement<any> {
+function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.ReactElement {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -274,20 +274,20 @@ function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.R
   );
 }
 
-function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.ReactElement<any> {
+function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.ReactElement {
   const decided = decision !== 'pending';
 
   return (
     <div style={actionBarStyle}>
       <ActionBtn
         label={decision === 'accepted' ? 'Accepted' : 'Accept'}
-        color="var(--status-success, #4CAF50)"
+        color="var(--status-success)"
         disabled={decided}
         onClick={onAccept}
       />
       <ActionBtn
         label={decision === 'rejected' ? 'Rejected' : 'Reject'}
-        color="var(--status-error, #f85149)"
+        color="var(--status-error)"
         disabled={decided}
         onClick={onReject}
       />
@@ -295,7 +295,7 @@ function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.
   );
 }
 
-export const HunkView = memo(function HunkView({ hunk, onAccept, onReject }: HunkViewProps): React.ReactElement<any> {
+export const HunkView = memo(function HunkView({ hunk, onAccept, onReject }: HunkViewProps): React.ReactElement {
   const lines = buildDisplayLines(hunk);
 
   return (

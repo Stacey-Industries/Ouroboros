@@ -18,7 +18,7 @@ export const TOOL_COLORS: Record<string, string> = {
   glob: 'var(--interactive-accent)',
 };
 
-export function ToolBadge({ toolName }: { toolName: string }): React.ReactElement<any> {
+export function ToolBadge({ toolName }: { toolName: string }): React.ReactElement {
   const color = TOOL_COLORS[toolName] ?? 'var(--interactive-accent)';
   return (
     <span
@@ -30,7 +30,7 @@ export function ToolBadge({ toolName }: { toolName: string }): React.ReactElemen
   );
 }
 
-export function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactElement<any> {
+export function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactElement {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export function ApprovalMeta({
 }: {
   request: ApprovalRequest;
   elapsedSeconds: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
       <ToolBadge toolName={request.toolName} />
@@ -82,7 +82,7 @@ export function ApprovalMeta({
   );
 }
 
-export function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement<any> {
+export function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement {
   return (
     <div
       className="rounded p-3 border border-border-semantic"
@@ -93,7 +93,7 @@ export function PreviewPanel({ request }: { request: ApprovalRequest }): React.R
   );
 }
 
-export function DialogHint(): React.ReactElement<any> {
+export function DialogHint(): React.ReactElement {
   return (
     <div className="text-center text-xs text-text-semantic-muted">
       Claude Code is waiting for your decision. The tool will not execute until you respond.
@@ -111,7 +111,7 @@ export function RejectReasonField({
   onRejectReasonChange: (value: string) => void;
   onConfirmReject: () => void;
   onHideRejectInput: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <input
       type="text"
@@ -130,7 +130,7 @@ export function RejectReasonField({
       }}
       placeholder="Rejection reason (optional)..."
       autoFocus
-      className="flex-1 px-3 py-1.5 rounded text-sm bg-surface-base text-text-semantic-primary border border-border-semantic outline-none"
+      className="flex-1 px-3 py-1.5 rounded text-sm bg-surface-base text-text-semantic-primary border border-border-semantic outline-hidden"
     />
   );
 }
@@ -145,7 +145,7 @@ export function RejectReasonInput({
   onRejectReasonChange: (value: string) => void;
   onConfirmReject: () => void;
   onHideRejectInput: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex gap-2">
       <RejectReasonField

@@ -132,7 +132,7 @@ function buildRenderItems(lines: string[], blocks: ConflictBlock[]): ConflictRen
 function ConflictActions(props: {
   blockIndex: number;
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={actionsStyle}>
       <ActionButton
@@ -158,16 +158,16 @@ function ConflictCard(props: {
   block: ConflictBlock;
   blockIndex: number;
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={cardStyle}>
       <ConflictSection
         title="Ours"
         label={props.block.oursLabel}
         color="var(--git-deleted, var(--status-error))"
-        headerBackground="rgba(255,100,100,0.15)"
-        headerBorder="rgba(255,100,100,0.2)"
-        bodyBackground="rgba(255,100,100,0.06)"
+        headerBackground="var(--diff-del-bg)"
+        headerBorder="var(--diff-del-border)"
+        bodyBackground="var(--status-error-subtle)"
         lines={props.block.oursLines}
       />
       <div style={{ height: '1px', background: 'var(--border-semantic)' }} />
@@ -175,9 +175,9 @@ function ConflictCard(props: {
         title="Theirs"
         label={props.block.theirsLabel}
         color="var(--git-added, var(--status-success))"
-        headerBackground="rgba(100,200,100,0.15)"
-        headerBorder="rgba(100,200,100,0.2)"
-        bodyBackground="rgba(100,200,100,0.06)"
+        headerBackground="var(--diff-add-bg)"
+        headerBorder="var(--diff-add-border)"
+        bodyBackground="var(--status-success-subtle)"
         lines={props.block.theirsLines}
       />
       <ConflictActions blockIndex={props.blockIndex} onResolve={props.onResolve} />
@@ -189,7 +189,7 @@ function ConflictStatus(props: {
   conflictCount: number;
   isSaving: boolean;
   saveError: string | null;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const hasConflicts = props.conflictCount > 0;
   return (
     <div
@@ -199,8 +199,8 @@ function ConflictStatus(props: {
         alignItems: 'center',
         gap: '8px',
         padding: '6px 12px',
-        backgroundColor: hasConflicts ? 'rgba(255,100,100,0.12)' : 'rgba(63,185,80,0.12)',
-        borderBottom: `1px solid ${hasConflicts ? 'rgba(255,100,100,0.3)' : 'rgba(63,185,80,0.3)'}`,
+        backgroundColor: hasConflicts ? 'var(--diff-del-bg)' : 'var(--diff-add-bg)',
+        borderBottom: `1px solid ${hasConflicts ? 'var(--diff-del-border)' : 'var(--diff-add-border)'}`,
         fontSize: '0.8125rem',
         color: hasConflicts
           ? 'var(--git-deleted, var(--status-error))'
@@ -226,7 +226,7 @@ function ConflictStatus(props: {
   );
 }
 
-function NormalLine({ line }: { line: string }): React.ReactElement<any> {
+function NormalLine({ line }: { line: string }): React.ReactElement {
   return (
     <div className="text-text-semantic-primary" style={lineStyle}>
       {line}
@@ -237,7 +237,7 @@ function NormalLine({ line }: { line: string }): React.ReactElement<any> {
 function ConflictContent(props: {
   items: ConflictRenderItem[];
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={scrollBodyStyle}>
       {props.items.map((item) =>
@@ -260,7 +260,7 @@ export function ConflictResolver({
   content,
   filePath,
   onResolved,
-}: ConflictResolverProps): React.ReactElement<any> {
+}: ConflictResolverProps): React.ReactElement {
   const lines = useMemo(() => content.split('\n'), [content]);
   const blocks = useMemo(() => parseConflictBlocks(lines), [lines]);
   const items = useMemo(() => buildRenderItems(lines, blocks), [blocks, lines]);

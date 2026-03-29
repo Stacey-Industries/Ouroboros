@@ -73,7 +73,7 @@ const snippetListStyle: React.CSSProperties = {
   gap: '6px',
 };
 
-export function SelectionSummary({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
+export function SelectionSummary({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
   const { budget, summary } = contextSelection;
 
   return (
@@ -82,10 +82,10 @@ export function SelectionSummary({ contextSelection }: { contextSelection: Conte
         title="Manual controls"
         body={(
           <div style={configListStyle}>
-            <Badge color="#0ea5e9" label={`${summary.userSelectedCount} selected`} />
-            <Badge color="#8b5cf6" label={`${summary.pinnedCount} pinned`} />
-            <Badge color="#22c55e" label={`${summary.includedCount} included`} />
-            <Badge color="#f97316" label={`${summary.excludedCount} excluded`} />
+            <Badge color="var(--interactive-accent)" label={`${summary.userSelectedCount} selected`} />
+            <Badge color="var(--palette-purple)" label={`${summary.pinnedCount} pinned`} />
+            <Badge color="var(--status-success)" label={`${summary.includedCount} included`} />
+            <Badge color="var(--status-warning)" label={`${summary.excludedCount} excluded`} />
           </div>
         )}
       />
@@ -94,7 +94,7 @@ export function SelectionSummary({ contextSelection }: { contextSelection: Conte
         body={(
           <div style={configListStyle}>
             <Badge label={`${summary.previewCount} previewed`} />
-            <Badge color="#64748b" label={`${summary.omittedCount} omitted`} />
+            <Badge color="var(--text-muted)" label={`${summary.omittedCount} omitted`} />
           </div>
         )}
       />
@@ -115,7 +115,7 @@ export function SelectionSummary({ contextSelection }: { contextSelection: Conte
   );
 }
 
-export function SelectionGroups({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
+export function SelectionGroups({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
   const populatedGroups = contextSelection.selectionGroups.filter((group) => group.files.length > 0);
 
   if (populatedGroups.length === 0) {
@@ -144,7 +144,7 @@ export function SelectionGroups({ contextSelection }: { contextSelection: Contex
   );
 }
 
-export function PreviewFiles({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
+export function PreviewFiles({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
   if (contextSelection.previewFiles.length === 0) {
     return <div style={metaTextStyle}>Preview a context packet to inspect why files and snippets were selected.</div>;
   }
@@ -159,9 +159,9 @@ export function PreviewFiles({ contextSelection }: { contextSelection: ContextSe
               <div style={configListStyle}>
                 <Badge label={`${Math.round(file.score)} score`} />
                 <Badge color={getConfidenceColor(file.confidence)} label={file.confidence} />
-                {contextSelection.isPinned(file.filePath) && <Badge color="#8b5cf6" label="Pinned" />}
-                {contextSelection.isIncluded(file.filePath) && <Badge color="#22c55e" label="Included" />}
-                {contextSelection.isExcluded(file.filePath) && <Badge color="#f97316" label="Excluded" />}
+                {contextSelection.isPinned(file.filePath) && <Badge color="var(--palette-purple)" label="Pinned" />}
+                {contextSelection.isIncluded(file.filePath) && <Badge color="var(--status-success)" label="Included" />}
+                {contextSelection.isExcluded(file.filePath) && <Badge color="var(--status-warning)" label="Excluded" />}
               </div>
             </div>
             <div style={miniActionRowStyle}>
@@ -180,7 +180,7 @@ export function PreviewFiles({ contextSelection }: { contextSelection: ContextSe
   );
 }
 
-export function OmittedCandidates({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
+export function OmittedCandidates({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
   if (contextSelection.omittedCandidates.length === 0) {
     return <div style={metaTextStyle}>No omitted candidates for this preview.</div>;
   }
@@ -231,7 +231,7 @@ export function getPickerCopy(intent: ContextSelectionIntent | null): {
   };
 }
 
-function SummaryCard({ body, title }: { body: React.ReactNode; title: string }): React.ReactElement<any> {
+function SummaryCard({ body, title }: { body: React.ReactNode; title: string }): React.ReactElement {
   return (
     <div style={{ ...cardStyle, marginBottom: 0 }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{title}</div>
@@ -240,7 +240,7 @@ function SummaryCard({ body, title }: { body: React.ReactNode; title: string }):
   );
 }
 
-function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { detailTitle: string; details: string[]; emptyLabel?: string }): React.ReactElement<any> {
+function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { detailTitle: string; details: string[]; emptyLabel?: string }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{detailTitle}</div>
@@ -257,14 +257,14 @@ function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { deta
   );
 }
 
-function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement<any> {
+function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>Selected snippets</div>
       {labels.length > 0 ? (
         <div style={snippetListStyle}>
           {labels.map((label) => (
-            <Badge key={label} color="#334155" label={label} />
+            <Badge key={label} color="var(--surface-hover)" label={label} />
           ))}
         </div>
       ) : (
@@ -274,7 +274,7 @@ function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement<an
   );
 }
 
-function MiniActionButton({ label, onClick }: { label: string; onClick: () => void }): React.ReactElement<any> {
+function MiniActionButton({ label, onClick }: { label: string; onClick: () => void }): React.ReactElement {
   return (
     <button onClick={onClick} style={miniButtonStyle}>
       {label}
@@ -284,12 +284,12 @@ function MiniActionButton({ label, onClick }: { label: string; onClick: () => vo
 
 function getConfidenceColor(confidence: string): string {
   if (confidence === 'high') {
-    return '#22c55e';
+    return 'var(--status-success)';
   }
   if (confidence === 'medium') {
-    return '#f59e0b';
+    return 'var(--status-warning)';
   }
-  return '#64748b';
+  return 'var(--text-muted)';
 }
 
 function formatBudgetRow(label: string, value: number | undefined): string {

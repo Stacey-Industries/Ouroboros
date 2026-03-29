@@ -11,7 +11,7 @@ export interface ChatHistoryPanelProps {
   onClose: () => void;
 }
 
-function SearchIcon(): React.ReactElement<any> {
+function SearchIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -98,7 +98,7 @@ function HistoryPanelSearch({
   searchRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex flex-shrink-0 items-center gap-2 border-b border-border-semantic px-3 py-2">
       <span className="text-text-semantic-muted">
@@ -110,7 +110,7 @@ function HistoryPanelSearch({
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Search conversations..."
-        className="flex-1 bg-transparent text-xs text-text-semantic-primary outline-none"
+        className="flex-1 bg-transparent text-xs text-text-semantic-primary outline-hidden"
       />
       {searchQuery && (
         <button
@@ -124,7 +124,7 @@ function HistoryPanelSearch({
   );
 }
 
-function HistoryPanelFooter({ count }: { count: number }): React.ReactElement<any> | null {
+function HistoryPanelFooter({ count }: { count: number }): React.ReactElement | null {
   if (count === 0) return null;
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-t border-border-semantic px-3 py-1.5">
@@ -144,7 +144,7 @@ type PanelBodyProps = {
   onDelete: (id: string) => void;
 };
 
-function HistoryPanelBody(p: PanelBodyProps): React.ReactElement<any> {
+function HistoryPanelBody(p: PanelBodyProps): React.ReactElement {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
       {p.filteredThreads.length === 0 && (
@@ -183,7 +183,7 @@ export function ChatHistoryPanel({
   onSelect,
   onDelete,
   onClose,
-}: ChatHistoryPanelProps): React.ReactElement<any> {
+}: ChatHistoryPanelProps): React.ReactElement {
   const panelRef = useRef<HTMLDivElement>(null);
   const { searchRef, searchQuery, setSearchQuery, filteredThreads, sections, handleSelect } =
     useHistoryPanelState(panelRef, threads, onClose, onSelect);
