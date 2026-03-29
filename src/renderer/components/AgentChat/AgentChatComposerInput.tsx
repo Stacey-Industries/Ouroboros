@@ -10,7 +10,7 @@ import { getTextareaStyle } from './AgentChatComposerSupport';
 
 /* ---------- SendButton ---------- */
 
-function QueueIcon(): React.ReactElement {
+function QueueIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -35,7 +35,7 @@ export function SendButton(props: {
   isSending: boolean;
   willQueue: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const label = props.willQueue ? 'Queue message' : 'Send message';
   return (
     <button
@@ -72,7 +72,7 @@ export type ComposerInputProps = {
   onPickImage?: () => Promise<void>;
   onSubmit: () => Promise<void>;
   threadIsBusy: boolean;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   useMentionSystem: boolean;
   onCloseAutocomplete?: () => void;
   onCloseMentionAutocomplete?: () => void;
@@ -98,7 +98,7 @@ function ensureHighlightStyles(): void {
   document.head.appendChild(style);
 }
 
-function ComposerHighlightOverlay({ text, style }: { text: string; style: React.CSSProperties }): React.ReactElement {
+function ComposerHighlightOverlay({ text, style }: { text: string; style: React.CSSProperties }): React.ReactElement<any> {
   React.useEffect(ensureHighlightStyles, []);
   const parts = text.split(MENTION_SPLIT_RE);
   return (
@@ -114,7 +114,7 @@ function ComposerHighlightOverlay({ text, style }: { text: string; style: React.
   );
 }
 
-function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
+function ComposerTextarea(props: ComposerInputProps): React.ReactElement<any> {
   const overlayText = props.textareaRef.current?.value ?? props.draft;
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
   return (
@@ -155,7 +155,7 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   );
 }
 
-export function ComposerInput(props: ComposerInputProps): React.ReactElement {
+export function ComposerInput(props: ComposerInputProps): React.ReactElement<any> {
   return (
     <div className="relative">
       <ComposerTextarea {...props} />

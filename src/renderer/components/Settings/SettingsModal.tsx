@@ -14,7 +14,7 @@ export interface SettingsModalProps {
   initialTab?: TabId | string;
 }
 
-export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: SettingsModalProps): React.ReactElement | null {
+export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: SettingsModalProps): React.ReactElement<any> | null {
   const { config } = useConfig();
   const api = useSettingsDraft();
   const [activeTab, setActiveTab] = useState<TabId>(resolveTab(initialTab));

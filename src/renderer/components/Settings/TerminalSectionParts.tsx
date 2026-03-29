@@ -27,7 +27,7 @@ import {
   textInputStyle,
 } from './terminalSectionShared';
 
-function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement {
+function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement<any> {
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
     const parsed = Number.parseInt(event.target.value, 10);
     if (!Number.isNaN(parsed)) {
@@ -69,7 +69,7 @@ function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.R
   );
 }
 
-function FontSizeSection({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement {
+function FontSizeSection({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Terminal Font Size</SectionLabel>
@@ -81,7 +81,7 @@ function FontSizeSection({ fontSize, onChange }: FontSizeSectionProps): React.Re
   );
 }
 
-function ShellPresetButtons({ presets, shell, onChange }: ShellSectionProps): React.ReactElement {
+function ShellPresetButtons({ presets, shell, onChange }: ShellSectionProps): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
       {presets.map((preset) => (
@@ -98,7 +98,7 @@ function ShellPresetButtons({ presets, shell, onChange }: ShellSectionProps): Re
   );
 }
 
-function ShellSection({ shell, presets, onChange }: ShellSectionProps): React.ReactElement {
+function ShellSection({ shell, presets, onChange }: ShellSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Default Shell</SectionLabel>
@@ -125,7 +125,7 @@ function ShellSection({ shell, presets, onChange }: ShellSectionProps): React.Re
 function PromptPresetButtons({
   onPresetChange,
   promptPreset,
-}: Pick<PromptSectionProps, 'onPresetChange' | 'promptPreset'>): React.ReactElement {
+}: Pick<PromptSectionProps, 'onPresetChange' | 'promptPreset'>): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
       {PRESET_ORDER.map((preset) => (
@@ -144,7 +144,7 @@ function PromptPresetButtons({
 function PromptCustomInput({
   customPrompt,
   onCustomPromptChange,
-}: Pick<PromptSectionProps, 'customPrompt' | 'onCustomPromptChange'>): React.ReactElement {
+}: Pick<PromptSectionProps, 'customPrompt' | 'onCustomPromptChange'>): React.ReactElement<any> {
   return (
     <div style={{ marginBottom: '12px' }}>
       <input
@@ -166,7 +166,7 @@ function PromptSection({
   promptPreset,
   onCustomPromptChange,
   onPresetChange,
-}: PromptSectionProps): React.ReactElement {
+}: PromptSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Shell Prompt</SectionLabel>
@@ -194,7 +194,7 @@ function PromptSection({
   );
 }
 
-function PreviewSection({ fontSize }: { fontSize: number }): React.ReactElement {
+function PreviewSection({ fontSize }: { fontSize: number }): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Preview</SectionLabel>
@@ -221,7 +221,7 @@ export function TerminalSectionContent({
   draft,
   onChange,
   platform,
-}: TerminalSectionContentProps): React.ReactElement {
+}: TerminalSectionContentProps): React.ReactElement<any> {
   const fontSize = draft.terminalFontSize ?? DEFAULT_FONT_SIZE;
   const promptPreset = resolvePromptPreset(draft.promptPreset);
 

@@ -31,7 +31,7 @@ const PROVIDER_META: Record<AuthProvider, { label: string }> = {
   openai: { label: 'Codex' },
 };
 
-export function ProviderCard({ provider, model }: ProviderCardProps): React.ReactElement {
+export function ProviderCard({ provider, model }: ProviderCardProps): React.ReactElement<any> {
   const state = model.getProviderState(provider);
   const isExpanded = model.expandedCard === provider;
 
@@ -53,7 +53,7 @@ function CardHeader({
   provider: AuthProvider;
   isExpanded: boolean;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const isConnected = state?.status === 'authenticated';
   const isExpired = state?.status === 'expired';
   const meta = PROVIDER_META[provider];
@@ -88,7 +88,7 @@ function ProviderLabel({
 }: {
   label: string;
   Logo: React.ComponentType;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-primary" style={S.providerNameStyle}>
       <span
@@ -106,7 +106,7 @@ function ProviderLabel({
   );
 }
 
-function StatusIndicator({ state }: { state: AuthState | undefined }): React.ReactElement {
+function StatusIndicator({ state }: { state: AuthState | undefined }): React.ReactElement<any> {
   const status = state?.status ?? 'unauthenticated';
   const { color, label } = getStatusDisplay(status);
 
@@ -145,7 +145,7 @@ function HeaderActions({
   isExpired,
   isExpanded,
   model,
-}: HeaderActionsProps): React.ReactElement {
+}: HeaderActionsProps): React.ReactElement<any> {
   if (isConnected || isExpired) {
     return (
       <button
@@ -212,7 +212,7 @@ function CliCardInfo({
   Logo: React.ComponentType;
   dotColor: string;
   statusText: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div>
       <div className="text-text-semantic-primary" style={S.providerNameStyle}>
@@ -240,7 +240,7 @@ export function CliStatusCard({
   provider: AuthProvider;
   label: string;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const state = model.getProviderState(provider);
   const isConnected = state?.status === 'authenticated';
   const Logo = PROVIDER_LOGOS[provider];

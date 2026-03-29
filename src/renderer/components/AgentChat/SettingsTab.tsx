@@ -26,7 +26,7 @@ interface PermissionsData {
   deny?: string[];
 }
 
-function PermissionList({ label, items }: { label: string; items: string[] }): React.ReactElement {
+function PermissionList({ label, items }: { label: string; items: string[] }): React.ReactElement<any> {
   return (
     <div className="mb-1.5">
       <span className="text-[10px] font-semibold text-text-semantic-primary uppercase tracking-wider">
@@ -47,7 +47,7 @@ function PermissionList({ label, items }: { label: string; items: string[] }): R
   );
 }
 
-function PermissionsSection({ permissions }: { permissions: PermissionsData }): React.ReactElement {
+function PermissionsSection({ permissions }: { permissions: PermissionsData }): React.ReactElement<any> {
   const allow = Array.isArray(permissions.allow) ? permissions.allow : [];
   const deny = Array.isArray(permissions.deny) ? permissions.deny : [];
   return (
@@ -63,7 +63,7 @@ function PermissionsSection({ permissions }: { permissions: PermissionsData }): 
 
 // ── SettingsJsonView ─────────────────────────────────────────────────────────
 
-function SettingsJsonView({ settings }: { settings: Record<string, unknown> }): React.ReactElement {
+function SettingsJsonView({ settings }: { settings: Record<string, unknown> }): React.ReactElement<any> {
   const keys = Object.keys(settings);
   if (keys.length === 0) {
     return (
@@ -123,7 +123,7 @@ function useSettingsData(scope: ScopeValue, projectRoot: string | null) {
   return { settings, loading, error };
 }
 
-export function SettingsTab({ projectRoot }: SettingsTabProps): React.ReactElement {
+export function SettingsTab({ projectRoot }: SettingsTabProps): React.ReactElement<any> {
   const [scope, setScope] = useState<ScopeValue>('global');
   const { settings, loading, error } = useSettingsData(scope, projectRoot);
   const scopeLabel = scope === 'global' ? '~/.claude/settings.json' : '.claude/settings.local.json';

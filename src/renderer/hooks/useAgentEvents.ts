@@ -26,6 +26,11 @@ import {
   parsePersistedSessions,
   toHookPayload,
 } from './useAgentEvents.payload';
+import {
+  dispatchRuleLoaded,
+  dispatchSkillEnd,
+  dispatchSkillStart,
+} from './useAgentEvents.ruleSkillDispatchers';
 import { markSessionsAsSaved, shouldPersistSession } from './useAgentEvents.session-utils';
 
 export interface UseAgentEventsReturn {
@@ -182,6 +187,10 @@ function handleAgentEvent(
     return;
   }
 
+  if (payload.type === 'instructions_loaded') {
+    dispatchRuleLoaded(payload, dispatch);
+    return;
+  }
   dispatchLifecycleEvent(payload, dispatch, liveSessionIdsRef);
   dispatchTokenUpdate(payload, dispatch);
 }
@@ -208,6 +217,7 @@ function dispatchLifecycleEvent(
     case 'agent_stop':
     case 'session_stop':
       dispatchAgentEnd(payload, dispatch);
+      dispatchSkillEnd(payload, dispatch);
       return;
     default:
       return;
@@ -229,6 +239,7 @@ function dispatchAgentStart(
     model: payload.model,
     internal: payload.internal,
   });
+  dispatchSkillStart(payload, dispatch);
 }
 
 function dispatchToolStart(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
@@ -297,4 +308,5 @@ function summarizeSubToolInput(payload: HookPayload): string {
   if (typeof desc === 'string') return desc;
   return '';
 }
+
 

@@ -37,7 +37,7 @@ export const BranchSelector = memo(function BranchSelector({
   branches,
   onCheckout,
   isLoading,
-}: BranchSelectorProps): React.ReactElement {
+}: BranchSelectorProps): React.ReactElement<any> {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -68,7 +68,7 @@ function BranchSelectorTrigger({
   currentBranch: string | null
   isLoading?: boolean
   onToggle: () => void
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onToggle}
@@ -101,7 +101,7 @@ function BranchDropdown({
   branches: string[]
   currentBranch: string | null
   onSelect: (branch: string) => void
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="
@@ -131,7 +131,7 @@ function BranchOption({
   branch: string
   isCurrent: boolean
   onSelect: () => void
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onSelect}
@@ -153,7 +153,7 @@ function BranchOption({
   )
 }
 
-function BranchIcon(): React.ReactElement {
+function BranchIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-interactive-accent">
       <path d="M6 3v8" />
@@ -166,7 +166,7 @@ function BranchIcon(): React.ReactElement {
   )
 }
 
-function ChevronIcon(): React.ReactElement {
+function ChevronIcon(): React.ReactElement<any> {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-text-semantic-muted">
       <path d="M2.5 4L5 6.5L7.5 4" />

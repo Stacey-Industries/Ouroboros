@@ -24,7 +24,7 @@ export const ClaudeMdEditor = memo(function ClaudeMdEditor({
   projectRoot,
   onSave,
   onContentChange,
-}: ClaudeMdEditorProps): React.ReactElement {
+}: ClaudeMdEditorProps): React.ReactElement<any> {
   const model = useClaudeMdEditorModel({ content, savedContent, filePath, onContentChange, onSave });
   return <ClaudeMdEditorChrome content={content} filePath={filePath} model={model} projectRoot={projectRoot} themeId={themeId} />;
 });

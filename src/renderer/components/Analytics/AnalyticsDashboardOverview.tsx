@@ -44,7 +44,7 @@ const SummaryCard = memo(function SummaryCard({
   label,
   value,
   sub,
-}: SummaryCardProps): React.ReactElement {
+}: SummaryCardProps): React.ReactElement<any> {
   return (
     <div
       className="flex flex-col items-center rounded-md px-2 py-2 min-w-0 bg-surface-raised"
@@ -66,7 +66,7 @@ const SummaryCard = memo(function SummaryCard({
 
 export const AnalyticsSummaryGrid = memo(function AnalyticsSummaryGrid({
   aggregate,
-}: AnalyticsSummaryGridProps): React.ReactElement {
+}: AnalyticsSummaryGridProps): React.ReactElement<any> {
   return (
     <div className="grid grid-cols-2 gap-2 px-4 py-3 border-b border-border-semantic">
       <SummaryCard
@@ -103,7 +103,7 @@ function ToolDistributionBar({
 }: {
   entry: ToolDistributionEntry;
   maxCount: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex-1 h-[6px] rounded-full overflow-hidden bg-surface-base">
       <div
@@ -128,7 +128,7 @@ const MONO_FIXED = (width: string): React.CSSProperties => ({
 const ToolDistributionRow = memo(function ToolDistributionRow({
   entry,
   maxCount,
-}: ToolDistributionRowProps): React.ReactElement {
+}: ToolDistributionRowProps): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -166,7 +166,7 @@ const ToolDistributionRow = memo(function ToolDistributionRow({
 
 export const ToolDistributionChart = memo(function ToolDistributionChart({
   distribution,
-}: ToolDistributionChartProps): React.ReactElement {
+}: ToolDistributionChartProps): React.ReactElement<any> {
   if (distribution.length === 0) {
     return (
       <div className="px-4 py-3 border-b border-border-semantic">
@@ -198,7 +198,7 @@ export const ToolDistributionChart = memo(function ToolDistributionChart({
 
 const SparklineDots = memo(function SparklineDots({
   points,
-}: SparklineDotsProps): React.ReactElement {
+}: SparklineDotsProps): React.ReactElement<any> {
   return (
     <>
       {points.map((point, index) => (
@@ -217,7 +217,7 @@ const SparklineDots = memo(function SparklineDots({
 
 export const EfficiencySparkline = memo(function EfficiencySparkline({
   sessions,
-}: EfficiencySparklineProps): React.ReactElement | null {
+}: EfficiencySparklineProps): React.ReactElement<any> | null {
   const dataPoints = useMemo(() => getEfficiencyTrend(sessions), [sessions]);
   const points = useMemo(() => getSparklinePoints(dataPoints, 200, 40, 2), [dataPoints]);
 
@@ -251,7 +251,7 @@ export const EfficiencySparkline = memo(function EfficiencySparkline({
   );
 });
 
-export const AnalyticsEmptyState = memo(function AnalyticsEmptyState(): React.ReactElement {
+export const AnalyticsEmptyState = memo(function AnalyticsEmptyState(): React.ReactElement<any> {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <svg

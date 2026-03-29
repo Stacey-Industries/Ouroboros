@@ -13,7 +13,7 @@ export interface TaskSessionHistoryContentProps {
   onSelectSession: (sessionId: string) => void;
 }
 
-export function TaskSessionHistoryContent({ sessions, selectedSessionId, onSelectSession }: TaskSessionHistoryContentProps): React.ReactElement {
+export function TaskSessionHistoryContent({ sessions, selectedSessionId, onSelectSession }: TaskSessionHistoryContentProps): React.ReactElement<any> {
   return (
     <div className="space-y-3">
       <SessionHistoryIntro />

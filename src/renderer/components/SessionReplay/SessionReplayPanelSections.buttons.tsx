@@ -12,7 +12,7 @@ export function TransportBtn({
   disabled?: boolean;
   title: string;
   children: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -42,7 +42,7 @@ export function TransportBtn({
   );
 }
 
-function PlayPauseIcon({ playing }: { playing: boolean }): React.ReactElement {
+function PlayPauseIcon({ playing }: { playing: boolean }): React.ReactElement<any> {
   if (playing) {
     return (
       <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -63,7 +63,7 @@ export function ReplayTransportButtons({
   replay,
 }: {
   replay: SessionReplayController;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <TransportBtn
@@ -99,7 +99,7 @@ export function ReplaySpeedButton({
 }: {
   speed: number;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -127,7 +127,7 @@ export function ReplayStepCounter({
 }: {
   currentStep: number;
   totalSteps: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       className="text-text-semantic-faint"
@@ -142,7 +142,7 @@ export function ReplayStepCounter({
   );
 }
 
-function ExportBtnIcon(): React.ReactElement {
+function ExportBtnIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -160,7 +160,7 @@ function ExportBtnIcon(): React.ReactElement {
   );
 }
 
-export function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElement {
+export function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -201,7 +201,7 @@ export function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElem
   );
 }
 
-export function CloseBtn({ onClick }: { onClick: () => void }): React.ReactElement {
+export function CloseBtn({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
 
   return (

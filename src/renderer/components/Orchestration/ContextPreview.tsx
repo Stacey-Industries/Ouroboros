@@ -12,7 +12,7 @@ export interface ContextPreviewProps {
   latestResult: TaskResult | null;
 }
 
-export function ContextPreview({ session, latestResult }: ContextPreviewProps): React.ReactElement {
+export function ContextPreview({ session, latestResult }: ContextPreviewProps): React.ReactElement<any> {
   return (
     <div className="space-y-4">
       <ContextMetricsSection session={session} />

@@ -8,7 +8,7 @@ export interface AgentChatContextBarProps {
   contextSummary: string | null;
 }
 
-function PinnedFileChip(props: { file: PinnedFile; onRemove: () => void }): React.ReactElement {
+function PinnedFileChip(props: { file: PinnedFile; onRemove: () => void }): React.ReactElement<any> {
   return (
     <span
       className="inline-flex items-center gap-1 rounded-md border border-border-semantic px-1.5 py-0.5 text-[11px] leading-tight bg-surface-base text-text-semantic-primary"
@@ -30,7 +30,7 @@ export function AgentChatContextBar({
   pinnedFiles,
   onRemoveFile,
   contextSummary,
-}: AgentChatContextBarProps): React.ReactElement | null {
+}: AgentChatContextBarProps): React.ReactElement<any> | null {
   if (pinnedFiles.length === 0) return null;
 
   return (

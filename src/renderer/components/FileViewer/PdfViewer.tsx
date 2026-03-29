@@ -21,7 +21,7 @@ export interface PdfViewerProps {
   content?: Uint8Array;
 }
 
-function PdfLoadingView(): React.ReactElement {
+function PdfLoadingView(): React.ReactElement<any> {
   return (
     <div style={rootStyle}>
       <div
@@ -48,7 +48,7 @@ function PdfPage({
   zoomMode,
   customScale,
   containerWidth,
-}: PdfPageProps): React.ReactElement {
+}: PdfPageProps): React.ReactElement<any> {
   const { canvasRef, containerRef } = usePdfPageRenderer({
     pageNum,
     doc,
@@ -61,7 +61,7 @@ function PdfPage({
       ref={containerRef}
       data-page-num={pageNum}
       style={{
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--surface-base)',
         boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
         borderRadius: '2px',
         minHeight: '200px',
@@ -80,7 +80,7 @@ type PdfScrollAreaProps = {
   pdfDoc: PDFDocumentProxy | null;
   visiblePages: number[];
   zoom: ReturnType<typeof usePdfZoom>;
-  containerWidthRef: React.RefObject<number>;
+  containerWidthRef: React.RefObject<number | null>;
 };
 function PdfScrollArea({
   scrollRef,
@@ -88,9 +88,9 @@ function PdfScrollArea({
   visiblePages,
   zoom,
   containerWidthRef,
-}: PdfScrollAreaProps): React.ReactElement {
+}: PdfScrollAreaProps): React.ReactElement<any> {
   return (
-    <div ref={scrollRef as React.RefObject<HTMLDivElement>} style={scrollContainerStyle}>
+    <div ref={scrollRef as React.RefObject<HTMLDivElement | null>} style={scrollContainerStyle}>
       {pdfDoc &&
         visiblePages.map((pageNum) => (
           <PdfPage
@@ -106,7 +106,7 @@ function PdfScrollArea({
   );
 }
 
-export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactElement {
+export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactElement<any> {
   const {
     pdfDoc,
     error,

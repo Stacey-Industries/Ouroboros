@@ -23,7 +23,7 @@ function PlanProgressBar({
   total: number;
   completed: number;
   isStreaming: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ function PlanStepDetail({
 }: {
   step: PlanStep;
   expanded: boolean;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (!step.detail || !expanded) return null;
   return (
     <div
@@ -84,7 +84,7 @@ function PlanStepDetail({
   );
 }
 
-function PlanStepItem({ step }: { step: PlanStep }): React.ReactElement {
+function PlanStepItem({ step }: { step: PlanStep }): React.ReactElement<any> {
   const [expanded, setExpanded] = useState(false);
   const hasDetail = Boolean(step.detail);
   const toggle = useCallback(() => {
@@ -119,7 +119,7 @@ function PlanStepItem({ step }: { step: PlanStep }): React.ReactElement {
   );
 }
 
-function PlanBlockIcon(): React.ReactElement {
+function PlanBlockIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -152,7 +152,7 @@ function PlanBlockHeader({
   steps: PlanStep[];
   completedCount: number;
   isStreaming: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="px-3 pb-1.5 pt-2.5">
       <div className="mb-2 flex items-center gap-2">
@@ -184,7 +184,7 @@ export function AgentChatPlanBlock({
   steps,
   completedCount,
   isStreaming,
-}: AgentChatPlanBlockProps): React.ReactElement {
+}: AgentChatPlanBlockProps): React.ReactElement<any> {
   const hasFailures = steps.some((step) => step.status === 'failed');
   const allDone = completedCount === steps.length && steps.length > 0 && !isStreaming;
   const borderColor = hasFailures

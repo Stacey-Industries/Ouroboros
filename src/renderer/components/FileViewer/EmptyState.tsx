@@ -4,7 +4,7 @@ import { EmptyState as SharedEmptyState } from '../shared';
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
-export function EmptyState(): React.ReactElement {
+export function EmptyState(): React.ReactElement<any> {
   return (
     <SharedEmptyState
       icon="document"

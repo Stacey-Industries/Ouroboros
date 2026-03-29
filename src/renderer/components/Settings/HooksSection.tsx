@@ -11,7 +11,7 @@ interface HooksSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function HooksSection({ draft, onChange }: HooksSectionProps): React.ReactElement {
+export function HooksSection({ draft, onChange }: HooksSectionProps): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <HooksStatusSubsection draft={draft} onChange={onChange} />
@@ -23,7 +23,7 @@ export function HooksSection({ draft, onChange }: HooksSectionProps): React.Reac
   );
 }
 
-function TcpPortSection({ draft, onChange }: HooksSectionProps): React.ReactElement {
+function TcpPortSection({ draft, onChange }: HooksSectionProps): React.ReactElement<any> {
   function handlePortChange(e: React.ChangeEvent<HTMLInputElement>): void {
     const parsed = parseInt(e.target.value, 10);
     if (!isNaN(parsed) && parsed >= 1024 && parsed <= 65535) {
@@ -65,7 +65,7 @@ function TcpPortSection({ draft, onChange }: HooksSectionProps): React.ReactElem
   );
 }
 
-function HookScriptsLocation(): React.ReactElement {
+function HookScriptsLocation(): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Hook Scripts Location</SectionLabel>

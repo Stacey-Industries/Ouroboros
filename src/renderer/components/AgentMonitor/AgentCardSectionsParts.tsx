@@ -33,7 +33,7 @@ export function SessionNotesEditor({
   notesDraft,
   onNotesDraftChange,
   onSaveNotes,
-}: SessionNotesEditorProps): React.ReactElement {
+}: SessionNotesEditorProps): React.ReactElement<any> {
   return (
     <div className="mx-2.5 mb-2 p-2 rounded bg-surface-raised border border-border-semantic">
       <textarea
@@ -48,7 +48,7 @@ export function SessionNotesEditor({
   );
 }
 
-export function SessionNotesPreview({ notes }: { notes: string }): React.ReactElement {
+export function SessionNotesPreview({ notes }: { notes: string }): React.ReactElement<any> {
   return (
     <div className="mx-6 mb-1.5 text-[10px] italic truncate text-text-semantic-muted" title={notes}>
       {notes}
@@ -56,7 +56,7 @@ export function SessionNotesPreview({ notes }: { notes: string }): React.ReactEl
   );
 }
 
-export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement | null {
+export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement<any> | null {
   if (!error) return null;
   return (
     <div
@@ -79,7 +79,7 @@ export function EventLogSection({
   session: AgentSession;
   showLog: boolean;
   onToggleLog: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
       <button
@@ -111,7 +111,7 @@ export function ExpandedToolView({
   showLog: boolean;
   isRunning: boolean;
   onToggleLog: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div>
       {cardView === 'feed' ? (
@@ -134,7 +134,7 @@ export function CollapsedPreview({
   latestCall,
 }: {
   latestCall?: ToolCallEvent;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (!latestCall) return null;
   return (
     <div
@@ -152,7 +152,7 @@ export function ViewToggleBar({
 }: {
   cardView: CardView;
   onCardViewChange: (view: CardView) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex items-center justify-end px-3 py-1 gap-2"
@@ -181,7 +181,7 @@ export function AgentCardExpandedContent({
   isRunning: boolean;
   onToggleLog: () => void;
   onCardViewChange: (view: CardView) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (!expanded) return <CollapsedPreview latestCall={latestCall} />;
   return (
     <div>

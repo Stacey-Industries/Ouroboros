@@ -3,7 +3,7 @@ import React from 'react';
 import { SectionLabel } from './CodeModeSection.shared';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
-function CollapseChevron({ isOpen }: { isOpen: boolean }): React.ReactElement {
+function CollapseChevron({ isOpen }: { isOpen: boolean }): React.ReactElement<any> {
   return (
     <span
       aria-hidden="true"
@@ -30,7 +30,7 @@ export function CollapsibleSection({
   isOpen: boolean;
   onToggle: () => void;
   title: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <button
@@ -58,7 +58,7 @@ export function CollapsibleSection({
 export function GeneratedTypesContent({
   generatedTypes,
   isEnabled,
-}: Pick<CodeModeSectionModel, 'generatedTypes' | 'isEnabled'>): React.ReactElement {
+}: Pick<CodeModeSectionModel, 'generatedTypes' | 'isEnabled'>): React.ReactElement<any> {
   if (!generatedTypes) {
     return (
       <p
@@ -95,7 +95,7 @@ export function GeneratedTypesContent({
   );
 }
 
-export function HowItWorksContent(): React.ReactElement {
+export function HowItWorksContent(): React.ReactElement<any> {
   return (
     <ol
       className="text-text-semantic-muted"

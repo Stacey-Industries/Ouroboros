@@ -6,7 +6,7 @@ import { useSymbolSearchModel } from './useSymbolSearchModel';
 
 export type { SymbolSearchProps } from './useSymbolSearchModel';
 
-export function SymbolSearchContent(props: SymbolSearchProps): React.ReactElement | null {
+export function SymbolSearchContent(props: SymbolSearchProps): React.ReactElement<any> | null {
   const model = useSymbolSearchModel(props);
 
   if (!props.isOpen) {

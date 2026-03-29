@@ -60,7 +60,7 @@ function ExportMenuItem({
   label: string;
   format: 'json' | 'markdown';
   onExport: (format: 'json' | 'markdown') => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       className="w-full text-left px-3 py-1.5 text-[11px] transition-colors text-text-semantic-primary"
@@ -81,7 +81,7 @@ function ExportMenu({
   onExport,
 }: {
   onExport: (format: 'json' | 'markdown') => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="absolute right-0 z-50 rounded shadow-lg py-0.5 bg-surface-panel border border-border-semantic"
@@ -99,7 +99,7 @@ interface ExportButtonProps {
   session: AgentSession;
 }
 
-export function ExportButton({ session }: ExportButtonProps): React.ReactElement {
+export function ExportButton({ session }: ExportButtonProps): React.ReactElement<any> {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const closeMenu = useCallback(() => setOpen(false), []);

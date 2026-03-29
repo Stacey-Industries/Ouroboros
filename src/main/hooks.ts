@@ -26,7 +26,8 @@ export type HookEventType =
   | 'agent_stop'
   | 'agent_end'
   | 'session_start'
-  | 'session_stop';
+  | 'session_stop'
+  | 'instructions_loaded';
 
 export interface HookPayload {
   type: HookEventType;

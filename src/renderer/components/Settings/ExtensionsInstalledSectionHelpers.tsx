@@ -26,7 +26,7 @@ export function ExtensionLogPanel({
   extLog,
   logLoading,
   onRefresh,
-}: ExtensionLogPanelProps): React.ReactElement {
+}: ExtensionLogPanelProps): React.ReactElement<any> {
   return (
     <>
       <div style={extensionsSectionLogHeaderStyle}>
@@ -54,7 +54,7 @@ export function ExtensionLogPanel({
   );
 }
 
-function LogContent({ extLog }: { extLog: string[] }): React.ReactElement {
+function LogContent({ extLog }: { extLog: string[] }): React.ReactElement<any> {
   if (extLog.length === 0) {
     return (
       <span className="text-text-semantic-muted" style={extensionsSectionItalicMutedTextStyle}>
@@ -74,7 +74,7 @@ function LogContent({ extLog }: { extLog: string[] }): React.ReactElement {
   );
 }
 
-export function EmptyExtensionsState(): React.ReactElement {
+export function EmptyExtensionsState(): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={extensionsSectionEmptyStateStyle}>
       No extensions installed. Place extension folders in the extensions directory or use
@@ -83,7 +83,7 @@ export function EmptyExtensionsState(): React.ReactElement {
   );
 }
 
-export function ErrorPanel({ message }: { message: string }): React.ReactElement {
+export function ErrorPanel({ message }: { message: string }): React.ReactElement<any> {
   return (
     <div className="text-status-error" style={extensionsSectionErrorPanelStyle}>
       {message}

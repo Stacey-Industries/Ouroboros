@@ -22,7 +22,7 @@ export function AttachmentChip({
 }: {
   attachment: ImageAttachment;
   onRemove: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
   return (
     <span
@@ -56,7 +56,7 @@ export function AttachmentChipsBar({
 }: {
   attachments: ImageAttachment[];
   onRemove: (name: string) => void;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (attachments.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-1 pb-1.5 pt-1">
@@ -81,7 +81,7 @@ export function AutocompleteDropdown(props: {
   results: FileEntry[];
   selectedIndex: number;
   onSelect: (file: FileEntry) => void;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (props.results.length === 0) return null;
 
   return (
@@ -164,7 +164,7 @@ export type ComposerMenusProps = {
   useMentionSystem: boolean;
 };
 
-export function ComposerMenus(props: ComposerMenusProps): React.ReactElement {
+export function ComposerMenus(props: ComposerMenusProps): React.ReactElement<any> {
   return (
     <div className="relative">
       {props.isSlashMenuOpen && props.slashQuery !== null && (

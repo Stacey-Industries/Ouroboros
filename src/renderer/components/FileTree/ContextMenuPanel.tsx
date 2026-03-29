@@ -51,7 +51,7 @@ interface ContextMenuPanelProps {
   y: number;
 }
 
-function MenuSeparator(): React.ReactElement {
+function MenuSeparator(): React.ReactElement<any> {
   return <div style={MENU_SEPARATOR_STYLE} />;
 }
 
@@ -71,7 +71,7 @@ function clearMenuHoverColor(target: HTMLButtonElement): void {
   target.style.backgroundColor = 'transparent';
 }
 
-function MenuShortcut({ shortcut }: { shortcut?: string }): React.ReactElement | null {
+function MenuShortcut({ shortcut }: { shortcut?: string }): React.ReactElement<any> | null {
   if (!shortcut) {
     return null;
   }
@@ -110,7 +110,7 @@ function useConstrainedMenuPosition({
   }, [itemCount, menuRef, visible, x, y]);
 }
 
-function MenuButton({ item }: MenuButtonProps): React.ReactElement {
+function MenuButton({ item }: MenuButtonProps): React.ReactElement<any> {
   return (
     <button
       type="button"
@@ -127,7 +127,7 @@ function MenuButton({ item }: MenuButtonProps): React.ReactElement {
   );
 }
 
-function MenuItems({ items }: { items: MenuItem[] }): React.ReactElement {
+function MenuItems({ items }: { items: MenuItem[] }): React.ReactElement<any> {
   return (
     <>
       {items.map((item) => (
@@ -146,12 +146,12 @@ export function ContextMenuPanel({
   visible,
   x,
   y,
-}: ContextMenuPanelProps): React.ReactElement {
+}: ContextMenuPanelProps): React.ReactElement<any> {
   useConstrainedMenuPosition({ itemCount: items.length, menuRef, visible, x, y });
 
   return (
     <div
-      ref={menuRef as React.RefObject<HTMLDivElement>}
+      ref={menuRef as React.RefObject<HTMLDivElement | null>}
       role="menu"
       className="bg-surface-panel border border-border-semantic"
       style={{ ...MENU_PANEL_STYLE, left: x, top: y }}

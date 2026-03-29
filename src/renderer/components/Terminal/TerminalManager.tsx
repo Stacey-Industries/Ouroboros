@@ -28,7 +28,7 @@ function TerminalManagerShell({
   activeContent: React.ReactNode;
   isEmpty: boolean;
   onSpawn: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
@@ -75,7 +75,7 @@ function buildActiveContent(
   );
 }
 
-export function TerminalManager(props: TerminalManagerProps): React.ReactElement {
+export function TerminalManager(props: TerminalManagerProps): React.ReactElement<any> {
   const state = useTerminalManagerState(props.sessions, props.activeSessionId);
   return (
     <TerminalManagerShell

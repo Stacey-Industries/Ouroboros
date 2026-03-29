@@ -73,7 +73,7 @@ function RangeButton({
   label: string;
   isActive: boolean;
   onClick: (key: TimeRange) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={() => onClick(rangeKey)}
@@ -101,7 +101,7 @@ function HistoryToolbar({
   activeRange: TimeRange;
   onRangeChange: (nextRange: TimeRange) => void;
   onRefresh: () => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex flex-shrink-0 items-center gap-1.5 px-4 py-2 border-b border-border-semantic">
       {HISTORY_RANGES.map((range) => (
@@ -130,7 +130,7 @@ function HistoryToolbar({
   );
 }
 
-function HistorySummaryCards({ summary }: { summary: UsageSummary }): React.ReactElement {
+function HistorySummaryCards({ summary }: { summary: UsageSummary }): React.ReactElement<any> {
   const { totals } = summary;
   const cards = [
     {
@@ -176,7 +176,7 @@ function ModelBar({
 }: {
   model: ModelSummary;
   maxTokens: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -211,7 +211,7 @@ function ModelBar({
   );
 }
 
-function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.ReactElement {
+function ModelDistribution({ sessions }: { sessions: SessionUsage[] }): React.ReactElement<any> {
   const models = useMemo(() => summarizeModels(sessions), [sessions]);
   const maxTokens = models.length > 0 ? Math.max(...models.map((m) => m.tokens)) : 1;
   return (
@@ -243,7 +243,7 @@ function HistoryContent({
   isLoading,
   error,
   onRetry,
-}: HistoryContentProps): React.ReactElement | null {
+}: HistoryContentProps): React.ReactElement<any> | null {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -277,7 +277,7 @@ function HistoryContent({
   ) : null;
 }
 
-export const UsageHistoryTab = memo(function UsageHistoryTab(): React.ReactElement {
+export const UsageHistoryTab = memo(function UsageHistoryTab(): React.ReactElement<any> {
   const [activeRange, setActiveRange] = useState<TimeRange>('30d');
   const { summary, isLoading, error, reload, setRange } = useUsageSummary(activeRange);
   const handleRangeChange = useCallback(

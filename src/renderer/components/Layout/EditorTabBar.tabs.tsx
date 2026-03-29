@@ -85,9 +85,9 @@ function useMultiBufferTabRename(buffer: MultiBufferTab, onRename: (id: string, 
 
 function MultiBufferTabContent({ buffer, isRenaming, renameValue, setRenameValue, inputRef, commitRename, handleRenameKeyDown }: {
   buffer: MultiBufferTab; isRenaming: boolean; renameValue: string;
-  setRenameValue: (v: string) => void; inputRef: React.RefObject<HTMLInputElement>;
+  setRenameValue: (v: string) => void; inputRef: React.RefObject<HTMLInputElement | null>;
   commitRename: () => void; handleRenameKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (isRenaming) {
     return (
       <input ref={inputRef} value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
@@ -104,7 +104,7 @@ function MultiBufferTabContent({ buffer, isRenaming, renameValue, setRenameValue
   );
 }
 
-function MultiBufferTabCloseIcon(): React.ReactElement {
+function MultiBufferTabCloseIcon(): React.ReactElement<any> {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -115,7 +115,7 @@ function MultiBufferTabCloseIcon(): React.ReactElement {
 export function MultiBufferTabItem({ buffer, isActive, onActivate, onClose, onRename }: {
   buffer: MultiBufferTab; isActive: boolean; onActivate: (id: string) => void;
   onClose: (id: string) => void; onRename: (id: string, name: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const rename = useMultiBufferTabRename(buffer, onRename);
   const handleAuxClick = useCallback((event: React.MouseEvent) => {
     if (event.button !== 1) return; event.preventDefault(); onClose(buffer.id);
@@ -150,7 +150,7 @@ export function MultiBufferTabItem({ buffer, isActive, onActivate, onClose, onRe
 export function MultiBufferTabs({ buffers, activeId, onActivate, onClose, onRename }: {
   buffers: MultiBufferTab[]; activeId: string | null;
   onActivate: (id: string) => void; onClose: (id: string) => void; onRename: (id: string, name: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       {buffers.map((buffer) => (
@@ -163,7 +163,7 @@ export function MultiBufferTabs({ buffers, activeId, onActivate, onClose, onRena
 
 // ── NewMultiBufferButton ──────────────────────────────────────────────────────
 
-export function NewMultiBufferButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function NewMultiBufferButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button onClick={onClick}
       title="New Snippet Collection &#10;View code excerpts from multiple files side by side"
@@ -185,7 +185,7 @@ export function FileTabsRow({ openFiles, activeIndex, onActivate, onClose, onPin
   onCloseOthers: ReturnType<typeof useFileViewerManager>['closeOthers'];
   onCloseToRight: ReturnType<typeof useFileViewerManager>['closeToRight'];
   onCloseAll: ReturnType<typeof useFileViewerManager>['closeAll'];
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (openFiles.length === 0) return null;
   return (
     <FileViewerTabs files={openFiles} activeIndex={activeIndex} onActivate={onActivate}

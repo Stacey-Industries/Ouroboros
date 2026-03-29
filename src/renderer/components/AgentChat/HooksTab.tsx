@@ -32,7 +32,7 @@ function hasAPI(): boolean {
 
 // ── AddHookForm ──────────────────────────────────────────────────────────────
 
-function AddHookToggle({ onClick }: { onClick: () => void }): React.ReactElement {
+function AddHookToggle({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       className="text-[10px] text-text-semantic-muted mt-1 transition-colors duration-75"
@@ -51,7 +51,7 @@ function AddHookFormFields(props: {
   command: string; matcher: string;
   setCommand: (v: string) => void; setMatcher: (v: string) => void;
   onSubmit: () => void; onCancel: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const handleKey = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter') { e.preventDefault(); props.onSubmit(); }
     if (e.key === 'Escape') props.onCancel();
@@ -68,7 +68,7 @@ function AddHookFormFields(props: {
   );
 }
 
-function AddHookForm({ onAdd }: { onAdd: (command: string, matcher?: string) => void }): React.ReactElement {
+function AddHookForm({ onAdd }: { onAdd: (command: string, matcher?: string) => void }): React.ReactElement<any> {
   const [command, setCommand] = useState('');
   const [matcher, setMatcher] = useState('');
   const [open, setOpen] = useState(false);
@@ -103,7 +103,7 @@ function HookEntryRow({
   command: string;
   matcherLabel?: string;
   onRemove: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="group flex items-center gap-2 py-0.5">
       <span className="flex-1 text-[11px] font-mono text-text-semantic-secondary truncate">
@@ -133,7 +133,7 @@ function EventTypeSectionBody({
   entries: HooksConfig[string]; hookCount: number; eventType: string;
   onAdd: (eventType: string, command: string, matcher?: string) => void;
   onRemove: (eventType: string, index: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="px-2 py-1 bg-surface-base border-t border-border-semantic">
       {hookCount === 0 ? (
@@ -157,7 +157,7 @@ function EventTypeSection({
   matchers: HooksConfig[string] | undefined;
   onAdd: (eventType: string, command: string, matcher?: string) => void;
   onRemove: (eventType: string, index: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [isOpen, setIsOpen] = useState(false);
   const entries = matchers ?? [];
   const hookCount = entries.reduce((sum, m) => sum + (m.hooks?.length ?? 0), 0);
@@ -224,7 +224,7 @@ function useHooksData(scope: ScopeValue, projectRoot: string | null) {
 
 function HooksTabBody({ hooks, handleAdd, handleRemove }: {
   hooks: HooksConfig; handleAdd: (et: string, cmd: string, m?: string) => void; handleRemove: (et: string, i: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <p className="text-[10px] text-text-semantic-muted mb-1.5">
@@ -237,7 +237,7 @@ function HooksTabBody({ hooks, handleAdd, handleRemove }: {
   );
 }
 
-export function HooksTab({ projectRoot }: HooksTabProps): React.ReactElement {
+export function HooksTab({ projectRoot }: HooksTabProps): React.ReactElement<any> {
   const [scope, setScope] = useState<ScopeValue>('global');
   const { hooks, loading, handleAdd, handleRemove } = useHooksData(scope, projectRoot);
 

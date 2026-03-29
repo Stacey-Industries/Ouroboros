@@ -68,7 +68,7 @@ function CommandItem({
   isSelected: boolean;
   onSelect: () => void;
   onHover: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       onClick={onSelect}
@@ -127,14 +127,14 @@ function SearchInputRow({
   query: string;
   setQuery: (q: string) => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic" style={inputRowStyle}>
       <span className="text-interactive-accent" style={{ fontSize: 11, flexShrink: 0 }}>
         bck-i-search:
       </span>
       <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
+        ref={inputRef as React.RefObject<HTMLInputElement | null>}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -164,7 +164,7 @@ function SearchResultList({
   selectedIndex: number;
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
   onSelect: (cmd: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ overflowY: 'auto', flex: 1 }}>
       {filtered.length === 0 && (
@@ -189,7 +189,7 @@ export function CommandSearchOverlay({
   commands,
   onSelect,
   onClose,
-}: CommandSearchProps): React.ReactElement {
+}: CommandSearchProps): React.ReactElement<any> {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);

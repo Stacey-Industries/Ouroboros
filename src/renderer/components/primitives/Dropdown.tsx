@@ -14,7 +14,7 @@ export function Dropdown({
   className,
   children,
   ...rest
-}: DropdownProps): React.ReactElement | null {
+}: DropdownProps): React.ReactElement<any> | null {
   if (!open) return null;
   const alignClass = align === 'end' ? 'right-0' : 'left-0';
   const classes = `${BASE} ${alignClass} ${className ?? ''}`;

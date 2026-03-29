@@ -14,7 +14,7 @@ export function SettingsSearchInput({
   inputRef,
   value,
   onChange,
-}: SettingsSearchInputProps): React.ReactElement {
+}: SettingsSearchInputProps): React.ReactElement<any> {
   return (
     <div style={wrapperStyle}>
       <div style={{ position: 'relative' }}>
@@ -22,7 +22,7 @@ export function SettingsSearchInput({
           ⌕
         </span>
         <input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
+          ref={inputRef as React.RefObject<HTMLInputElement | null>}
           type="search"
           placeholder="Search settings..."
           value={value}

@@ -52,7 +52,7 @@ function buildMentionFromDrop(jsonData: string): MentionItem | null {
 }
 
 function insertDroppedPath(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
   path: string,
@@ -70,7 +70,7 @@ function insertDroppedPath(
 
 function useAttachmentDragHandlers(
   handleFiles: (files: File[]) => Promise<void>,
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
 ) {
@@ -118,7 +118,7 @@ function useRemoveAttachment(
 export function useImageAttachmentHandlers(
   attachments: ImageAttachment[],
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void,
-  opts?: { textareaRef?: React.RefObject<HTMLTextAreaElement>; lastSyncedDraft?: React.MutableRefObject<string>; onChange?: (value: string) => void },
+  opts?: { textareaRef?: React.RefObject<HTMLTextAreaElement | null>; lastSyncedDraft?: React.MutableRefObject<string>; onChange?: (value: string) => void },
 ) {
   const handleFiles = useCallback(
     async (files: File[]) =>
@@ -156,7 +156,7 @@ export function useImageAttachmentHandlers(
 }
 
 export interface ComposerDraftHandlersArgs {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   draft: string;
   messages?: AgentChatMessageRecord[];
@@ -215,7 +215,7 @@ export function useComposerDraftHandlers(args: ComposerDraftHandlersArgs) {
 }
 
 export function useComposerDraftSync(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   draft: string,
 ): void {

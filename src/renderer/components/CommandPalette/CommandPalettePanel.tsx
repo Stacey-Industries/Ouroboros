@@ -14,7 +14,7 @@ interface CommandPalettePanelProps {
 export function CommandPalettePanel({
   isOpen,
   model,
-}: CommandPalettePanelProps): React.ReactElement {
+}: CommandPalettePanelProps): React.ReactElement<any> {
   return (
     <>
       {model.navStack.length > 0 && (

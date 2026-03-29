@@ -57,7 +57,7 @@ function updateScrollMetrics(editor: monaco.editor.IStandaloneCodeEditor, setScr
   setScrollMetrics({ scrollTop: editor.getScrollTop(), scrollHeight: editor.getScrollHeight(), clientHeight: layoutInfo.height });
 }
 
-function bindGotoLineHandler(editor: monaco.editor.IStandaloneCodeEditor, filePathRef: React.RefObject<string>): () => void {
+function bindGotoLineHandler(editor: monaco.editor.IStandaloneCodeEditor, filePathRef: React.RefObject<string | null>): () => void {
   const handleGotoLine = (event: Event): void => {
     const detail = (event as CustomEvent<{ line: number; filePath?: string }>).detail;
     if (!detail || (detail.filePath && detail.filePath !== filePathRef.current)) return;
@@ -93,7 +93,7 @@ function bindScrollTracking(
 
 function bindSaveAction(
   editor: monaco.editor.IStandaloneCodeEditor,
-  refs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean>; formatOnSaveRef: React.RefObject<boolean> },
+  refs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean | null>; formatOnSaveRef: React.RefObject<boolean | null> },
   isDirtyRef: MutableRefObject<boolean>,
   saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>,
 ): void {
@@ -273,7 +273,7 @@ function useMonacoEditorRuntime(input: RuntimeInput): { scrollMetrics: { scrollT
 
 export type { MonacoEditorProps as MonacoEditorHostProps };
 
-export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement {
+export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement<any> {
   const {
     filePath,
     content,

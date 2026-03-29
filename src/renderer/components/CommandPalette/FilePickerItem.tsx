@@ -47,7 +47,7 @@ export const FilePickerItem = memo(function FilePickerItem({
   pathIndices,
   onClick,
   onMouseEnter,
-}: FilePickerItemProps): React.ReactElement {
+}: FilePickerItemProps): React.ReactElement<any> {
   const icon = getFileIcon(name);
   const dirPart = getDirectoryPart(relativePath);
   const highlightedNameIndices = isSelected ? EMPTY_INDICES : nameIndices;
@@ -70,7 +70,7 @@ export const FilePickerItem = memo(function FilePickerItem({
   );
 });
 
-function ColorDot({ color, dimmed }: { color: string; dimmed: boolean }): React.ReactElement {
+function ColorDot({ color, dimmed }: { color: string; dimmed: boolean }): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -91,7 +91,7 @@ function FileName({
 }: {
   name: string;
   indices: ReadonlyArray<readonly [number, number]>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span style={{ flexShrink: 0, fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap' }}>
       <RangeHighlight text={name} indices={indices} />
@@ -107,7 +107,7 @@ function DirPath({
   dir: string;
   indices: ReadonlyArray<readonly [number, number]>;
   isSelected: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{

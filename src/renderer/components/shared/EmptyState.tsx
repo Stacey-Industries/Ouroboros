@@ -49,7 +49,7 @@ const AGENT_ANTENNA_PATHS = ['M20 14V10', 'M28 14V10'] as const;
 const AGENT_SIDE_PORT_PATHS = ['M8 22H12', 'M36 22H40', 'M8 28H12', 'M36 28H40'] as const;
 
 /** Folder icon for "no project open" state */
-function FolderIcon(): React.ReactElement {
+function FolderIcon(): React.ReactElement<any> {
   return (
     <svg
       width="48"
@@ -71,7 +71,7 @@ function FolderIcon(): React.ReactElement {
 }
 
 /** Document icon for "no file selected" state */
-function DocumentIcon(): React.ReactElement {
+function DocumentIcon(): React.ReactElement<any> {
   return (
     <svg
       width="48"
@@ -99,7 +99,7 @@ function DocumentIcon(): React.ReactElement {
 }
 
 /** Agent/robot icon for "no agents running" state */
-function AgentIcon(): React.ReactElement {
+function AgentIcon(): React.ReactElement<any> {
   return (
     <svg
       width="48"
@@ -136,7 +136,7 @@ function AgentIcon(): React.ReactElement {
 }
 
 /** Terminal icon for "no terminals open" state */
-function TerminalIcon(): React.ReactElement {
+function TerminalIcon(): React.ReactElement<any> {
   return (
     <svg
       width="48"
@@ -187,7 +187,7 @@ function EmptyStateDescription({
   description,
 }: {
   description?: string;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   return description ? (
     <span className="text-text-semantic-faint" style={descriptionStyle}>
       {description}
@@ -205,7 +205,7 @@ function EmptyStateAction({
   action,
 }: {
   action: NonNullable<EmptyStateProps['action']>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={action.onClick}
@@ -231,7 +231,7 @@ export const EmptyState = memo(function EmptyState({
   title,
   description,
   action,
-}: EmptyStateProps): React.ReactElement {
+}: EmptyStateProps): React.ReactElement<any> {
   const IconComponent = ICONS[icon];
 
   return (

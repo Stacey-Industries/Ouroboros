@@ -36,7 +36,7 @@ function toEntries(map: Map<string, string>): StagingFileEntry[] {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function GitIcon(): React.ReactElement {
+function GitIcon(): React.ReactElement<any> {
   return (
     <svg
       width="13"
@@ -100,7 +100,7 @@ function StagingAreaHeader({
   isExpanded: boolean;
   totalCount: number;
   onToggle: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="bg-surface-raised"
@@ -142,7 +142,7 @@ interface FilesSectionProps {
 }
 function FileRowActions(
   p: Pick<FilesSectionProps, 'kind' | 'onAction' | 'onDiscard'> & { path: string },
-): React.ReactElement {
+): React.ReactElement<any> {
   if (p.kind === 'staged') return <UnstageButton onClick={() => void p.onAction(p.path)} />;
   return (
     <>
@@ -152,7 +152,7 @@ function FileRowActions(
   );
 }
 
-function FilesSection(p: FilesSectionProps): React.ReactElement | null {
+function FilesSection(p: FilesSectionProps): React.ReactElement<any> | null {
   const [expanded, setExpanded] = useState(true);
   if (p.entries.length === 0) return null;
   const ariaLabel = p.kind === 'staged' ? 'Staged files' : 'Unstaged files';
@@ -202,7 +202,7 @@ function StagingBody({
   projectRoot,
   onFileSelect,
   actions,
-}: StagingBodyProps): React.ReactElement {
+}: StagingBodyProps): React.ReactElement<any> {
   return (
     <>
       <FilesSection
@@ -235,7 +235,7 @@ export function StagingArea({
   status,
   onRefresh,
   onFileSelect,
-}: StagingAreaProps): React.ReactElement | null {
+}: StagingAreaProps): React.ReactElement<any> | null {
   const [isExpanded, setIsExpanded] = useState(false);
   const stagedEntries = toEntries(status.staged);
   const unstagedEntries = toEntries(status.unstaged);

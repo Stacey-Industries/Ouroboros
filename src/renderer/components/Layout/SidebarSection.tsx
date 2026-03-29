@@ -17,7 +17,7 @@ export interface SidebarSectionProps {
   style?: React.CSSProperties;
 }
 
-function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
+function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="8"
@@ -43,7 +43,7 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement 
   );
 }
 
-function SectionBadge({ value }: { value: string | number }): React.ReactElement {
+function SectionBadge({ value }: { value: string | number }): React.ReactElement<any> {
   return (
     <span
       className="flex-shrink-0 rounded-full text-center select-none bg-surface-raised text-text-semantic-muted"
@@ -69,7 +69,7 @@ const SECTION_TITLE_STYLE: React.CSSProperties = {
 
 function SectionHeader({ title, collapsed, onToggle, badge }: {
   title: string; collapsed: boolean; onToggle: () => void; badge?: string | number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-none bg-surface-panel border-b border-border-semantic"
@@ -85,7 +85,7 @@ function SectionHeader({ title, collapsed, onToggle, badge }: {
   );
 }
 
-export function SidebarSection({ title, collapsed, onToggle, badge, children, style }: SidebarSectionProps): React.ReactElement {
+export function SidebarSection({ title, collapsed, onToggle, badge, children, style }: SidebarSectionProps): React.ReactElement<any> {
   return (
     <div className="flex flex-col overflow-hidden"
       style={{ ...style, ...(collapsed ? { flex: 'none', minHeight: 0 } : {}) }}>

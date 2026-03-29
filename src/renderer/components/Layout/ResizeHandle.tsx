@@ -61,7 +61,7 @@ const HANDLE_LAYOUTS: Record<ResizeDirection, HandleLayout> = {
   },
 };
 
-function DragGripDots({ direction }: { direction: ResizeDirection }): React.ReactElement {
+function DragGripDots({ direction }: { direction: ResizeDirection }): React.ReactElement<any> {
   return (
     <div className={HANDLE_LAYOUTS[direction].gripClassName}>
       {GRIP_DOTS.map((dot) => (
@@ -83,12 +83,12 @@ function ResizeHandleFrame({
   handleRef,
   onPointerDown,
   onDoubleClick,
-}: ResizeHandleFrameProps): React.ReactElement {
+}: ResizeHandleFrameProps): React.ReactElement<any> {
   const layout = HANDLE_LAYOUTS[direction];
 
   return (
     <div
-      ref={handleRef as React.RefObject<HTMLDivElement>}
+      ref={handleRef as React.RefObject<HTMLDivElement | null>}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
       role="separator"
@@ -110,7 +110,7 @@ export function ResizeHandle({
   currentSize,
   onResizeStart,
   onDoubleClick,
-}: ResizeHandleProps): React.ReactElement {
+}: ResizeHandleProps): React.ReactElement<any> {
   const handleRef = useRef<HTMLDivElement>(null);
 
   const handlePointerDown = useCallback(

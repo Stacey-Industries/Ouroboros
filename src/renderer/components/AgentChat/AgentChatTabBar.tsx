@@ -21,7 +21,7 @@ function truncateTitle(title: string, maxLength = 20): string {
   return title.length <= maxLength ? title : `${title.slice(0, maxLength - 1).trimEnd()}\u2026`;
 }
 
-function PlusIcon(): React.ReactElement {
+function PlusIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -37,7 +37,7 @@ function PlusIcon(): React.ReactElement {
   );
 }
 
-function ChevronDownIcon(): React.ReactElement {
+function ChevronDownIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -54,7 +54,7 @@ function ChevronDownIcon(): React.ReactElement {
   );
 }
 
-function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
+function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement<any> {
   return (
     <span
       role="button"
@@ -80,7 +80,7 @@ type TabProps = {
   title: string;
 };
 
-function Tab(props: TabProps): React.ReactElement {
+function Tab(props: TabProps): React.ReactElement<any> {
   return (
     <button
       onClick={props.onSelect}
@@ -104,7 +104,7 @@ function Tab(props: TabProps): React.ReactElement {
 }
 
 function useScrollActiveThreadIntoView(
-  scrollRef: React.RefObject<HTMLDivElement>,
+  scrollRef: React.RefObject<HTMLDivElement | null>,
   activeThreadId: string | null,
 ): void {
   useEffect(() => {
@@ -124,7 +124,7 @@ function ThreadTabs({
   onDeleteThread: (threadId: string) => void;
   onSelectThread: (threadId: string) => void;
   threads: AgentChatThreadRecord[];
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto"
@@ -149,7 +149,7 @@ function ThreadTabs({
 
 interface TabBarContentProps {
   activeThreadId: string | null;
-  barRef: React.RefObject<HTMLDivElement>;
+  barRef: React.RefObject<HTMLDivElement | null>;
   dropdownOpen: boolean;
   dropdownRect: DOMRect | null;
   linkedSession: LinkedSession;
@@ -158,7 +158,7 @@ interface TabBarContentProps {
   onNewChat: () => void;
   onSelectThread: (threadId: string) => void;
   onToggleDropdown: () => void;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   threads: AgentChatThreadRecord[];
 }
 
@@ -168,7 +168,7 @@ function DropdownToggleButton({
 }: {
   show: boolean;
   onClick: () => void;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (!show) return null;
   return (
     <button
@@ -197,7 +197,7 @@ function TabBarDropdown({
   onCloseDropdown: () => void;
   onDeleteThread: (id: string) => void;
   onSelectThread: (id: string) => void;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (!dropdownOpen || !dropdownRect) return null;
   return (
     <ThreadDropdown
@@ -211,7 +211,7 @@ function TabBarDropdown({
   );
 }
 
-function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement {
+function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement<any> {
   const activeThreadModel =
     props.threads.find((t) => t.id === props.activeThreadId)?.latestOrchestration?.model ?? null;
   return (
@@ -256,7 +256,7 @@ export function AgentChatTabBar({
   onNewChat,
   onSelectThread,
   threads,
-}: AgentChatTabBarProps): React.ReactElement | null {
+}: AgentChatTabBarProps): React.ReactElement<any> | null {
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);

@@ -7,7 +7,7 @@ function pickString(fallback: string, ...values: Array<string | null | undefined
   return values.find((value) => typeof value === 'string' && value.length > 0) ?? fallback;
 }
 
-export function ProviderStatusHeader({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement {
+export function ProviderStatusHeader({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement<any> {
   const tone = resolveStatusTone(providerEvent?.status ?? 'queued');
   return (
     <div className="flex items-start justify-between gap-3">
@@ -17,7 +17,7 @@ export function ProviderStatusHeader({ providerEvent }: { providerEvent: Provide
   );
 }
 
-export function ProviderDetails({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement {
+export function ProviderDetails({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement<any> {
   return (
     <div className="mt-4 space-y-3 text-[12px]">
       <KeyValue label="Message" value={providerEvent?.message ?? 'No provider progress has been emitted yet.'} multiline />
@@ -30,7 +30,7 @@ export function ProviderDetails({ providerEvent }: { providerEvent: ProviderProg
   );
 }
 
-function ProviderSessionGrid({ providerEvent }: { providerEvent: ProviderProgressEvent }): React.ReactElement {
+function ProviderSessionGrid({ providerEvent }: { providerEvent: ProviderProgressEvent }): React.ReactElement<any> {
   return (
     <div className="grid gap-3 md:grid-cols-3">
       <KeyValue label="Provider session" value={providerEvent.session?.sessionId ?? '—'} breakAll />
@@ -40,7 +40,7 @@ function ProviderSessionGrid({ providerEvent }: { providerEvent: ProviderProgres
   );
 }
 
-export function VerificationStatusHeader({ summary }: { summary: VerificationSummary | null }): React.ReactElement {
+export function VerificationStatusHeader({ summary }: { summary: VerificationSummary | null }): React.ReactElement<any> {
   const tone = resolveStatusTone(summary?.status ?? 'pending');
   return (
     <div className="flex items-start justify-between gap-3">
@@ -66,7 +66,7 @@ function buildVerificationResultItems(summary: VerificationSummary | null): Arra
   ];
 }
 
-export function VerificationOverviewGrid({ summary }: { summary: VerificationSummary | null }): React.ReactElement {
+export function VerificationOverviewGrid({ summary }: { summary: VerificationSummary | null }): React.ReactElement<any> {
   const items = [
     ...buildVerificationTimingItems(summary),
     ...buildVerificationResultItems(summary),
@@ -84,7 +84,7 @@ export function VerificationOverviewGrid({ summary }: { summary: VerificationSum
   );
 }
 
-function SectionIntro({ title, description }: { title: string; description: string }): React.ReactElement {
+function SectionIntro({ title, description }: { title: string; description: string }): React.ReactElement<any> {
   return (
     <div>
       <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>{title}</div>
@@ -93,7 +93,7 @@ function SectionIntro({ title, description }: { title: string; description: stri
   );
 }
 
-function KeyValue({ label, value, breakAll = false, multiline = false }: { label: string; value: string; breakAll?: boolean; multiline?: boolean }): React.ReactElement {
+function KeyValue({ label, value, breakAll = false, multiline = false }: { label: string; value: string; breakAll?: boolean; multiline?: boolean }): React.ReactElement<any> {
   return (
     <div>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>

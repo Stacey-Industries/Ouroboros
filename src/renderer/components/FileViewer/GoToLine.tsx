@@ -49,7 +49,7 @@ const lineRangeStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
-export function GoToLine(props: GoToLineProps): React.ReactElement | null {
+export function GoToLine(props: GoToLineProps): React.ReactElement<any> | null {
   const controller = useGoToLineController(props);
   if (!props.visible) return null;
 
@@ -120,11 +120,11 @@ function GoToLinePanel({
   inputRef,
   onChange,
   onKeyDown,
-}: GoToLinePanelProps): React.ReactElement {
+}: GoToLinePanelProps): React.ReactElement<any> {
   return (
     <div style={getPopupStyle(hasError)} onKeyDown={onKeyDown}>
       <GoToLineInput
-        ref={inputRef as React.RefObject<HTMLInputElement>}
+        ref={inputRef}
         value={value}
         hasError={hasError}
         onChange={onChange}
@@ -134,11 +134,12 @@ function GoToLinePanel({
   );
 }
 
-const GoToLineInput = React.forwardRef<HTMLInputElement, {
+function GoToLineInput({ value, hasError, onChange, ref }: {
   value: string;
   hasError: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-}>(function GoToLineInput({ value, hasError, onChange }, ref): React.ReactElement {
+  ref?: React.Ref<HTMLInputElement>;
+}): React.ReactElement<any> {
   return (
     <input
       ref={ref}
@@ -153,7 +154,7 @@ const GoToLineInput = React.forwardRef<HTMLInputElement, {
       onBlur={(event) => updateInputBorderColor(event.currentTarget, hasError, 'var(--border-semantic)')}
     />
   );
-});
+}
 
 function parseTargetLine(value: string, lineCount: number): number | null {
   const lineNum = Number.parseInt(value, 10);

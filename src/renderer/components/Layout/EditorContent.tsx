@@ -43,7 +43,7 @@ function getFileLabel(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').pop() ?? filePath;
 }
 
-function MultiBufferActionBar({ name, showAddExcerpt, onToggleAdd }: MultiBufferActionBarProps): React.ReactElement {
+function MultiBufferActionBar({ name, showAddExcerpt, onToggleAdd }: MultiBufferActionBarProps): React.ReactElement<any> {
   return (
     <div className="bg-surface-panel border-b border-border-semantic" style={ACTION_BAR_STYLE}>
       <span className="text-text-semantic-muted" style={{ fontStyle: 'italic' }}>Snippet Collection:</span>
@@ -62,7 +62,7 @@ function MultiBufferContentView({ activeMB, showAddExcerpt, setShowAddExcerpt, o
   setShowAddExcerpt: (value: boolean) => void; onAddExcerpt: (excerpt: BufferExcerpt) => void;
   onRemoveExcerpt: (index: number) => void; onOpenFile: (path: string) => void;
   onDeactivate: () => void; projectRoot: string | null;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape' && !showAddExcerpt) onDeactivate();
@@ -85,7 +85,7 @@ function MultiBufferContentView({ activeMB, showAddExcerpt, setShowAddExcerpt, o
 function FileContentView({ activeFile, projectRoot, onReload, onSave, onContentChange, onCancelEdit }: {
   activeFile: ActiveFile; projectRoot: string | null; onReload: () => Promise<void>;
   onSave: (content: string) => Promise<void>; onContentChange: (content: string) => void; onCancelEdit: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const fileView = normalizeFileView(activeFile);
   return (
     <FileViewer filePath={fileView.path} content={fileView.content} isLoading={fileView.isLoading}
@@ -216,7 +216,7 @@ function useEditorContentActions(
   return { handleFocusLeft, handleFocusRight, handleDeactivateMultiBuffer };
 }
 
-export function EditorContent(): React.ReactElement {
+export function EditorContent(): React.ReactElement<any> {
   const { activeFile, openFile, saveFile, reloadFile, updateDraft, discardDraft, split, setActiveSplit, setSplitRatio, closeSplit, rightFile } = useFileViewerManager();
   const { multiBuffers, addExcerpt, removeExcerpt } = useMultiBufferManager();
   const { projectRoot } = useProject();

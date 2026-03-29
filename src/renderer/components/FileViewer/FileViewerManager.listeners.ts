@@ -66,7 +66,7 @@ export function useOpenFileListener(openFile: (filePath: string) => Promise<void
 }
 
 export function useSaveAllDirtyListener(
-  openFilesRef: RefObject<OpenFile[]>,
+  openFilesRef: RefObject<OpenFile[] | null>,
   saveFile: (filePath: string, content?: string) => Promise<SaveFileResult>,
 ): void {
   useEffect(() => {
@@ -90,8 +90,8 @@ export function useSaveAllDirtyListener(
 }
 
 export function useSaveActiveFileListener(
-  openFilesRef: RefObject<OpenFile[]>,
-  activeIndexRef: RefObject<number>,
+  openFilesRef: RefObject<OpenFile[] | null>,
+  activeIndexRef: RefObject<number | null>,
   saveFile: (filePath: string, content?: string) => Promise<SaveFileResult>,
 ): void {
   useEffect(() => {
@@ -107,8 +107,8 @@ export function useSaveActiveFileListener(
 }
 
 export function useCloseActiveTabListener(
-  openFilesRef: RefObject<OpenFile[]>,
-  activeIndexRef: RefObject<number>,
+  openFilesRef: RefObject<OpenFile[] | null>,
+  activeIndexRef: RefObject<number | null>,
   closeFile: (filePath: string) => void,
 ): void {
   useEffect(() => {

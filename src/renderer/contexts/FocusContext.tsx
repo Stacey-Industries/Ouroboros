@@ -34,7 +34,7 @@ const FocusContext = createContext<FocusContextValue>({
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export function FocusProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function FocusProvider({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   const [focusedPanel, setFocusedPanel] = useState<FocusPanel>('editor');
 
   // Keyboard shortcuts: Ctrl+1=sidebar, Ctrl+2=editor, Ctrl+3=terminal, Ctrl+4=agentMonitor

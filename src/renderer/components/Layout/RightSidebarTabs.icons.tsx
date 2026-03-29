@@ -4,7 +4,7 @@
 
 import React from 'react';
 
-export function HistoryIcon(): React.ReactElement {
+export function HistoryIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 4v5h5" />
@@ -14,7 +14,7 @@ export function HistoryIcon(): React.ReactElement {
   );
 }
 
-export function PlusIcon(): React.ReactElement {
+export function PlusIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <path d="M6 2v8M2 6h8" />
@@ -22,7 +22,7 @@ export function PlusIcon(): React.ReactElement {
   );
 }
 
-export function GearIcon(): React.ReactElement {
+export function GearIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="2" />
@@ -31,7 +31,7 @@ export function GearIcon(): React.ReactElement {
   );
 }
 
-export function BackArrowIcon(): React.ReactElement {
+export function BackArrowIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path d="M9 3L5 7L9 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -39,7 +39,7 @@ export function BackArrowIcon(): React.ReactElement {
   );
 }
 
-export function MonitorIcon(): React.ReactElement {
+export function MonitorIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="2" width="14" height="10" rx="1.5" />
@@ -48,7 +48,7 @@ export function MonitorIcon(): React.ReactElement {
   );
 }
 
-export function GitIcon(): React.ReactElement {
+export function GitIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <line x1="6" y1="3" x2="6" y2="13" />
@@ -60,7 +60,7 @@ export function GitIcon(): React.ReactElement {
   );
 }
 
-export function AnalyticsIcon(): React.ReactElement {
+export function AnalyticsIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="9" width="3" height="5" rx="0.5" />
@@ -70,7 +70,7 @@ export function AnalyticsIcon(): React.ReactElement {
   );
 }
 
-export function MemoryIcon(): React.ReactElement {
+export function MemoryIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 1a5 5 0 0 1 5 5c0 1.8-1 3.2-2.1 4.3S9 12.5 9 14H7c0-1.5-.4-2.5-1.9-3.7A5 5 0 0 1 8 1z" />
@@ -80,7 +80,7 @@ export function MemoryIcon(): React.ReactElement {
   );
 }
 
-export function RulesIcon(): React.ReactElement {
+export function RulesIcon(): React.ReactElement<any> {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />

@@ -21,7 +21,7 @@ function truncate(text: string, max: number): string {
 
 /* ---------- Sub-components ---------- */
 
-function SubToolStatusIcon({ status }: { status: AgentChatSubToolActivity['status'] }): React.ReactElement {
+function SubToolStatusIcon({ status }: { status: AgentChatSubToolActivity['status'] }): React.ReactElement<any> {
   if (status === 'running') {
     return (
       <svg
@@ -61,7 +61,7 @@ function SubToolStatusIcon({ status }: { status: AgentChatSubToolActivity['statu
   );
 }
 
-function SubToolIcon({ name }: { name: string }): React.ReactElement {
+function SubToolIcon({ name }: { name: string }): React.ReactElement<any> {
   return (
     TOOL_ICON_BUILDERS.find((entry) => entry.names.has(name))?.render() ?? (
       <svg
@@ -79,7 +79,7 @@ function SubToolIcon({ name }: { name: string }): React.ReactElement {
   );
 }
 
-function SubToolDetail({ subTool }: { subTool: AgentChatSubToolActivity }): React.ReactElement | null {
+function SubToolDetail({ subTool }: { subTool: AgentChatSubToolActivity }): React.ReactElement<any> | null {
   const detail = subTool.filePath
     ? shortenPath(subTool.filePath)
     : subTool.inputSummary
@@ -104,7 +104,7 @@ function SubToolDetail({ subTool }: { subTool: AgentChatSubToolActivity }): Reac
   );
 }
 
-function SubToolItem({ subTool }: { subTool: AgentChatSubToolActivity }): React.ReactElement {
+function SubToolItem({ subTool }: { subTool: AgentChatSubToolActivity }): React.ReactElement<any> {
   return (
     <div className="ml-1 flex items-center gap-1.5 text-[10px] leading-tight">
       <SubToolIcon name={subTool.name} />
@@ -123,7 +123,7 @@ export const AgentChatSubToolList = React.memo(function AgentChatSubToolList({
   subTools,
 }: {
   subTools: AgentChatSubToolActivity[];
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (subTools.length === 0) return null;
 
   return (

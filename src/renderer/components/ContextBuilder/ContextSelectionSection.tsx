@@ -76,7 +76,7 @@ function SummaryBar({
   summary: ContextSelectionModel['summary'];
   selectAll: () => void;
   clearAll: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="bg-surface-raised border border-border-semantic text-text-semantic-muted"
@@ -117,7 +117,7 @@ function GroupItemRow({
   item: { label: string; type: string };
   checked: boolean;
   toggleItem: (g: string, i: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <label
       className="text-text-semantic-primary"
@@ -145,7 +145,7 @@ function GroupItemRow({
 
 export function ContextSelectionSection({
   contextSelection,
-}: ContextSelectionSectionProps): React.ReactElement {
+}: ContextSelectionSectionProps): React.ReactElement<any> {
   const { groups, summary, isSelected, toggleItem, selectAll, clearAll } = contextSelection;
 
   if (groups.length === 0) {

@@ -10,7 +10,7 @@ const SOURCE_OPTIONS: Array<{ id: McpStoreSource; label: string; desc: string }>
   { id: 'npm', label: 'npm', desc: 'npm packages' },
 ];
 
-export function McpStoreSection(): React.ReactElement {
+export function McpStoreSection(): React.ReactElement<any> {
   const model = useMcpStoreModel();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -27,7 +27,7 @@ export function McpStoreSection(): React.ReactElement {
   );
 }
 
-function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactElement {
+function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
@@ -51,7 +51,7 @@ function SourceToggle({
 }: {
   source: McpStoreSource;
   onSelect: (s: McpStoreSource) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '6px' }}>
       {SOURCE_OPTIONS.map((opt) => {
@@ -90,7 +90,7 @@ function SearchInput({
 }: {
   query: string;
   onChange: (q: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={searchWrapperStyle}>
       <span className="text-text-semantic-muted" style={searchIconStyle}>
@@ -108,7 +108,7 @@ function SearchInput({
   );
 }
 
-function ServerCards({ model }: { model: McpStoreModel }): React.ReactElement {
+function ServerCards({ model }: { model: McpStoreModel }): React.ReactElement<any> {
   return (
     <div style={listContainerStyle}>
       {model.servers.map((server, idx) => (
@@ -124,7 +124,7 @@ function ServerCards({ model }: { model: McpStoreModel }): React.ReactElement {
   );
 }
 
-function ServerList({ model }: { model: McpStoreModel }): React.ReactElement {
+function ServerList({ model }: { model: McpStoreModel }): React.ReactElement<any> {
   if (model.loading && model.servers.length === 0)
     return (
       <p className="text-text-semantic-muted" style={loadingStyle}>

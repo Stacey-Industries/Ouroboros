@@ -2,6 +2,7 @@ import type { FitAddon } from '@xterm/addon-fit'
 import type { ProgressAddon } from '@xterm/addon-progress'
 import type { SearchAddon } from '@xterm/addon-search'
 import type { SerializeAddon } from '@xterm/addon-serialize'
+import type { WebglAddon } from '@xterm/addon-webgl'
 import type { Terminal } from '@xterm/xterm'
 import type {
   Dispatch,
@@ -92,7 +93,8 @@ export interface TerminalFoundation {
   shellIntegrationAddonRef: MutableRefObject<ShellIntegrationAddon | null>
   progressAddonRef: RefObject<ProgressAddon | null>
   serializeAddonRef: RefObject<SerializeAddon | null>
-  isReadyRef: RefObject<boolean>
+  isReadyRef: RefObject<boolean | null>
+  webglAddonRef: MutableRefObject<WebglAddon | null>
   projectRootRef: MutableRefObject<string | null>
   syncInputRef: MutableRefObject<boolean>
   allSessionIdsRef: MutableRefObject<string[]>

@@ -104,7 +104,7 @@ export function StatRow({
   label: string;
   value: string;
   color?: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex items-center justify-between py-1"

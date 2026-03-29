@@ -55,7 +55,7 @@ const scrollContainerStyle: React.CSSProperties = {
 /**
  * The main code view area with gutters, overlays, and syntax-highlighted content.
  */
-export const CodeView = memo(function CodeView(props: CodeViewProps): React.ReactElement {
+export const CodeView = memo(function CodeView(props: CodeViewProps): React.ReactElement<any> {
   const lineHeight = getEditorLineHeight();
   const handleScrollToLine = useCallback(
     (line: number) => scrollToLine(props.scrollRef, line, lineHeight),
@@ -63,7 +63,7 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
   );
 
   return (
-    <div ref={props.scrollRef as React.RefObject<HTMLDivElement>} style={scrollContainerStyle}>
+    <div ref={props.scrollRef as React.RefObject<HTMLDivElement | null>} style={scrollContainerStyle}>
       {renderSearchAndNavigation(props)}
       {renderMapOverlays(props, lineHeight, handleScrollToLine)}
       {renderViewport(props)}
@@ -71,7 +71,7 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
   );
 });
 
-function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement {
+function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement<any> {
   return (
     <>
       <SearchBar
@@ -96,7 +96,7 @@ function renderMapOverlays(
   props: CodeViewProps,
   lineHeight: number,
   onScrollToLine: (line: number) => void,
-): React.ReactElement {
+): React.ReactElement<any> {
   return (
     <>
       {props.lineCount >= 50 && (
@@ -121,7 +121,7 @@ function renderMapOverlays(
   );
 }
 
-function renderViewport(props: CodeViewProps): React.ReactElement {
+function renderViewport(props: CodeViewProps): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', minWidth: props.wordWrap ? undefined : 'max-content' }}>
       {renderGutters(props)}
@@ -130,7 +130,7 @@ function renderViewport(props: CodeViewProps): React.ReactElement {
   );
 }
 
-function renderGutters(props: CodeViewProps): React.ReactElement {
+function renderGutters(props: CodeViewProps): React.ReactElement<any> {
   return (
     <>
       <LineNumberGutter rows={props.rows} gutterWidth={props.gutterWidth} />
@@ -156,7 +156,7 @@ function renderGutters(props: CodeViewProps): React.ReactElement {
   );
 }
 
-function renderCodeBody(props: CodeViewProps): React.ReactElement {
+function renderCodeBody(props: CodeViewProps): React.ReactElement<any> {
   return (
     <CodeContent
       rows={props.rows}

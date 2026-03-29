@@ -117,7 +117,7 @@ const scrollStyle: React.CSSProperties = {
   flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px',
 };
 
-function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement | null {
+function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement<any> | null {
   const noop = useCallback(() => {}, []);
   switch (view) {
     case 'settings': return <SettingsPanel onClose={noop} />;
@@ -202,7 +202,7 @@ function EditorViewContent({
   projectRoot: string | null;
   openAndActivate: (view: SpecialViewType) => void;
   closeView: (view: SpecialViewType) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const activeSpecialView = activeView === 'editor' ? null : activeView;
   return (
     <CentrePane
@@ -228,7 +228,7 @@ function EditorViewContent({
   );
 }
 
-export function CentrePaneConnected(): React.ReactElement {
+export function CentrePaneConnected(): React.ReactElement<any> {
   const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
   const { projectRoot } = useProject();
   const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);

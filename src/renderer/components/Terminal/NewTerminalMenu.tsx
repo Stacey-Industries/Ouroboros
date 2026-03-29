@@ -15,7 +15,7 @@ import {
   useMenuPosition,
 } from './NewTerminalMenu.hooks';
 
-function TerminalIcon(): React.ReactElement {
+function TerminalIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -32,7 +32,7 @@ function TerminalIcon(): React.ReactElement {
   );
 }
 
-function ChevronRightIcon(): React.ReactElement {
+function ChevronRightIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -54,7 +54,7 @@ function ClaudeSubmenu({
 }: {
   models: ModelOption[];
   onSelect: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const groups = groupByName(models);
   return (
     <div className="absolute left-full top-0 -mt-1 ml-0.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto rounded border border-border-semantic bg-surface-panel shadow-lg py-1">
@@ -85,7 +85,7 @@ function CodexSubmenu({
 }: {
   models: CodexModelOption[];
   onSelect: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="absolute left-full top-0 -mt-1 ml-0.5 z-50 min-w-[200px] max-h-[280px] overflow-y-auto rounded border border-border-semantic bg-surface-panel shadow-lg py-1">
       {models.map((model) => (
@@ -112,7 +112,7 @@ function MenuRow({
 }: {
   onClick: () => void;
   children: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button role="menuitem" className={MENU_ITEM} onClick={onClick}>
       {children}
@@ -142,7 +142,7 @@ function ProviderSection({
   onClick,
   models,
   onSelect,
-}: ProviderSectionProps): React.ReactElement {
+}: ProviderSectionProps): React.ReactElement<any> {
   const submenu =
     submenuKey === 'claude' ? (
       <ClaudeSubmenu models={models as ModelOption[]} onSelect={onSelect} />
@@ -190,7 +190,7 @@ interface NewTerminalMenuItemsProps {
   onNewCodex: (model?: string) => void;
 }
 
-function NewTerminalMenuItems(p: NewTerminalMenuItemsProps): React.ReactElement {
+function NewTerminalMenuItems(p: NewTerminalMenuItemsProps): React.ReactElement<any> {
   return (
     <>
       <MenuRow onClick={p.onNew}>
@@ -233,7 +233,7 @@ export function NewTerminalMenu({
   onNewClaude,
   onNewCodex,
   onClose,
-}: NewTerminalMenuProps): React.ReactElement | null {
+}: NewTerminalMenuProps): React.ReactElement<any> | null {
   const menuRef = useRef<HTMLDivElement>(null);
   const [submenu, setSubmenu] = useState<'claude' | 'codex' | null>(null);
   const pos = useMenuPosition(anchorRef);

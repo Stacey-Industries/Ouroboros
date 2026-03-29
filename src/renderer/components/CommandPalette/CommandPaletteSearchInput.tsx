@@ -43,14 +43,14 @@ export function CommandPaletteSearchInput({
   placeholder,
   query,
   selectedId,
-}: CommandPaletteSearchInputProps): React.ReactElement {
+}: CommandPaletteSearchInputProps): React.ReactElement<any> {
   return (
     <div style={inputContainerStyle}>
       <span className="text-text-semantic-muted" style={inputPrefixStyle}>
         &gt;
       </span>
       <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
+        ref={inputRef as React.RefObject<HTMLInputElement | null>}
         type="text"
         role="combobox"
         aria-expanded={isOpen}

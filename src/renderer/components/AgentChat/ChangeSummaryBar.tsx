@@ -51,7 +51,7 @@ export interface StreamingChangeSummaryBarProps {
 export function StreamingChangeSummaryBar({
   blocks,
   isStreaming,
-}: StreamingChangeSummaryBarProps): React.ReactElement | null {
+}: StreamingChangeSummaryBarProps): React.ReactElement<any> | null {
   const tally = useMemo(() => tallyFromBlocks(blocks), [blocks]);
   if (tally.filesChanged.length === 0) return null;
   return (
@@ -90,7 +90,7 @@ export function CompletedChangeSummaryBar({
   projectRoot,
   sessionId,
   tally,
-}: CompletedChangeSummaryBarProps): React.ReactElement {
+}: CompletedChangeSummaryBarProps): React.ReactElement<any> {
   const [expanded, setExpanded] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const fileCount = tally?.filesChanged.length ?? 0;

@@ -8,7 +8,7 @@ export interface AgentChatDiffPreviewProps {
   filePath: string;
 }
 
-function CopyIcon(): React.ReactElement {
+function CopyIcon(): React.ReactElement<any> {
   return (
     <svg
       className="h-3 w-3"
@@ -25,7 +25,7 @@ function CopyIcon(): React.ReactElement {
   );
 }
 
-function ExternalIcon(): React.ReactElement {
+function ExternalIcon(): React.ReactElement<any> {
   return (
     <svg
       className="h-3 w-3"
@@ -43,7 +43,7 @@ function ExternalIcon(): React.ReactElement {
   );
 }
 
-function renderHeaderLine(line: DiffLine, index: number): React.ReactElement {
+function renderHeaderLine(line: DiffLine, index: number): React.ReactElement<any> {
   return (
     <tr key={index}>
       <td
@@ -56,7 +56,7 @@ function renderHeaderLine(line: DiffLine, index: number): React.ReactElement {
   );
 }
 
-function renderHunkLine(line: DiffLine, index: number): React.ReactElement {
+function renderHunkLine(line: DiffLine, index: number): React.ReactElement<any> {
   return (
     <tr key={index}>
       <td
@@ -70,7 +70,7 @@ function renderHunkLine(line: DiffLine, index: number): React.ReactElement {
   );
 }
 
-function renderChangeLine(line: DiffLine, index: number): React.ReactElement {
+function renderChangeLine(line: DiffLine, index: number): React.ReactElement<any> {
   const bgColor =
     line.type === 'add'
       ? 'var(--diff-add-bg, rgba(46, 160, 67, 0.15))'
@@ -104,13 +104,13 @@ function renderChangeLine(line: DiffLine, index: number): React.ReactElement {
   );
 }
 
-function renderDiffLine(line: DiffLine, index: number): React.ReactElement {
+function renderDiffLine(line: DiffLine, index: number): React.ReactElement<any> {
   if (line.type === 'header') return renderHeaderLine(line, index);
   if (line.type === 'hunk') return renderHunkLine(line, index);
   return renderChangeLine(line, index);
 }
 
-function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement {
+function DiffTable({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement<any> {
   return (
     <div
       className="mt-1.5 overflow-auto rounded border border-border-semantic bg-surface-base"
@@ -141,7 +141,7 @@ type DiffControlsProps = {
   onCopy: () => void;
 };
 
-function DiffControls(props: DiffControlsProps): React.ReactElement {
+function DiffControls(props: DiffControlsProps): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-1.5">
       <button
@@ -174,7 +174,7 @@ function DiffControls(props: DiffControlsProps): React.ReactElement {
   );
 }
 
-function DiffError({ error }: { error: string }): React.ReactElement {
+function DiffError({ error }: { error: string }): React.ReactElement<any> {
   return (
     <div
       className="mt-1 rounded px-2 py-1 text-[10px] text-status-error"
@@ -244,7 +244,7 @@ function useDiffPreview(filePath: string) {
   };
 }
 
-export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): React.ReactElement {
+export function AgentChatDiffPreview({ filePath }: AgentChatDiffPreviewProps): React.ReactElement<any> {
   const {
     loading,
     expanded,

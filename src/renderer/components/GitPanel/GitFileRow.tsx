@@ -71,7 +71,7 @@ function useDiscardConfirmation(
   return { confirmDiscard, handleDiscard };
 }
 
-function StatusBadge({ status }: { status: string }): React.ReactElement {
+function StatusBadge({ status }: { status: string }): React.ReactElement<any> {
   return (
     <span
       className="flex-shrink-0 w-4 text-center text-xs font-bold"
@@ -82,7 +82,7 @@ function StatusBadge({ status }: { status: string }): React.ReactElement {
   );
 }
 
-function FilePathLabel({ filePath }: { filePath: string }): React.ReactElement {
+function FilePathLabel({ filePath }: { filePath: string }): React.ReactElement<any> {
   const { dirPath, fileName } = splitFilePath(filePath);
 
   return (
@@ -97,7 +97,7 @@ function FilePathLabel({ filePath }: { filePath: string }): React.ReactElement {
   );
 }
 
-function ToggleIcon({ isStaged }: { isStaged: boolean }): React.ReactElement {
+function ToggleIcon({ isStaged }: { isStaged: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -127,7 +127,7 @@ interface ToggleButtonProps {
   onToggle: (filePath: string) => void;
 }
 
-function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): React.ReactElement {
+function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(filePath); }}
@@ -139,7 +139,7 @@ function ToggleButton({ filePath, isStaged, onToggle }: ToggleButtonProps): Reac
   );
 }
 
-function DiscardIcon({ confirmDiscard }: { confirmDiscard: boolean }): React.ReactElement {
+function DiscardIcon({ confirmDiscard }: { confirmDiscard: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -178,7 +178,7 @@ function DiscardButton({
   confirmDiscard,
   filePath,
   onDiscard,
-}: DiscardButtonProps): React.ReactElement {
+}: DiscardButtonProps): React.ReactElement<any> {
   const title = confirmDiscard
     ? 'Click again to confirm discard'
     : `Discard changes to ${filePath}`;
@@ -204,7 +204,7 @@ export const GitFileRow = memo(function GitFileRow({
   onToggle,
   onDiscard,
   projectRoot,
-}: GitFileRowProps): React.ReactElement {
+}: GitFileRowProps): React.ReactElement<any> {
   const { confirmDiscard, handleDiscard } = useDiscardConfirmation(filePath, onDiscard);
 
   const handleRowClick = useCallback(() => {

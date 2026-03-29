@@ -19,7 +19,7 @@ function CardTopRow({
 }: {
   displayName: string;
   isInstalled: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={topRowStyle}>
       <span className="text-text-semantic-primary" style={nameStyle}>
@@ -44,7 +44,7 @@ function CardFooter({
 }: {
   registryType: string;
   version: string | undefined;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={footerStyle}>
       <span className="text-interactive-accent" style={typeBadgeStyle}>
@@ -62,7 +62,7 @@ export function McpStoreServerCard({
   isInstalled,
   isLast,
   onClick,
-}: McpStoreServerCardProps): React.ReactElement {
+}: McpStoreServerCardProps): React.ReactElement<any> {
   const displayName = server.title || extractShortName(server.name);
   const pkg = server.packages?.[0];
   const registryType = pkg?.registry_type ?? 'npm';

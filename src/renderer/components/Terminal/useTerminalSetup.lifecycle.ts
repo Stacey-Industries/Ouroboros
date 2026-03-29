@@ -6,6 +6,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { SerializeAddon } from '@xterm/addon-serialize'
 import { UnicodeGraphemesAddon } from '@xterm/addon-unicode-graphemes'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 
 import {
@@ -79,6 +80,12 @@ function loadCoreAddons(
   term.loadAddon(fitAddon)
   term.loadAddon(searchAddon)
   term.loadAddon(webLinksAddon)
+  try {
+    const webgl = new WebglAddon()
+    webgl.onContextLoss(() => { webgl.dispose() })
+    term.loadAddon(webgl)
+    _context.refs.webglAddonRef.current = webgl
+  } catch { /* WebGL not available — DOM renderer fallback */ }
   term.open(container)
   return { fitAddon, searchAddon }
 }
@@ -135,7 +142,7 @@ function attachAllHandlers(
   const selD = term.onSelectionChange(() => {
     if (!term.getSelection()) context.callbacks.setSelectionTooltip(INITIAL_SELECTION_TOOLTIP)
   })
-  const ro = createReadyObserver(context, container)
+  const ro = createReadyObserver(context, container, term)
 
   return { ...terminalDisposables, ...containerHandlers, selD, ro }
 }
@@ -172,6 +179,7 @@ function attachContainerHandlers(
 function createReadyObserver(
   context: TerminalSetupLifecycleContext,
   container: HTMLDivElement,
+  _term: Terminal,
 ): ResizeObserver {
   const ro = new ResizeObserver(() => context.fit())
   requestAnimationFrame(() => {
@@ -183,3 +191,4 @@ function createReadyObserver(
   })
   return ro
 }
+

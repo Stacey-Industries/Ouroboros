@@ -23,7 +23,7 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function HooksStatusSubsection({ draft, onChange }: Props): React.ReactElement {
+export function HooksStatusSubsection({ draft, onChange }: Props): React.ReactElement<any> {
   const { info, isReinstalling, reinstall } = useHooksStatusState(draft.hooksServerPort, () =>
     onChange('autoInstallHooks', true),
   );
@@ -95,7 +95,7 @@ async function reinstallHooks(
   }
 }
 
-function MissingHooksNote({ status }: { status: HookStatus }): React.ReactElement | null {
+function MissingHooksNote({ status }: { status: HookStatus }): React.ReactElement<any> | null {
   if (status !== 'not-installed') {
     return null;
   }
@@ -115,7 +115,7 @@ function StatusCard({
   info: HooksInfo;
   isReinstalling: boolean;
   onReinstall: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={cardStyle}>
       <StatusDot status={info.status} />
@@ -145,7 +145,7 @@ function StatusCard({
   );
 }
 
-function TransportSection({ transport }: { transport: string }): React.ReactElement {
+function TransportSection({ transport }: { transport: string }): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Server Transport</SectionLabel>
@@ -159,7 +159,7 @@ function TransportSection({ transport }: { transport: string }): React.ReactElem
   );
 }
 
-function StatusDot({ status }: { status: HookStatus }): React.ReactElement {
+function StatusDot({ status }: { status: HookStatus }): React.ReactElement<any> {
   const color =
     status === 'installed'
       ? 'var(--status-success)'

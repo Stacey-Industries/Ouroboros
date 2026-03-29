@@ -127,7 +127,7 @@ export const StepList = memo(function StepList({
   steps,
   currentStep,
   onSelect,
-}: StepListProps): React.ReactElement {
+}: StepListProps): React.ReactElement<any> {
   const activeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export const StepList = memo(function StepList({
   );
 });
 
-function StepListHeader({ count }: { count: number }): React.ReactElement {
+function StepListHeader({ count }: { count: number }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-faint" style={HEADER_STYLE}>
       Steps ({count})
@@ -161,7 +161,7 @@ function StepListHeader({ count }: { count: number }): React.ReactElement {
   );
 }
 
-function StepRow({ step, index, isActive, onSelect, rowRef }: StepRowProps): React.ReactElement {
+function StepRow({ step, index, isActive, onSelect, rowRef }: StepRowProps): React.ReactElement<any> {
   const duration = step.toolCall?.duration;
 
   return (
@@ -180,7 +180,7 @@ function StepRow({ step, index, isActive, onSelect, rowRef }: StepRowProps): Rea
   );
 }
 
-function StepIndex({ index }: { index: number }): React.ReactElement {
+function StepIndex({ index }: { index: number }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-faint" style={STEP_INDEX_STYLE}>
       {index}
@@ -188,7 +188,7 @@ function StepIndex({ index }: { index: number }): React.ReactElement {
   );
 }
 
-function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | null {
+function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement<any> | null {
   if (step.type === 'session_start') {
     return (
       <span className="text-interactive-accent" style={START_BADGE_STYLE}>
@@ -208,7 +208,7 @@ function StepToolBadge({ step }: { step: ReplayStep }): React.ReactElement | nul
   );
 }
 
-function StepLabel({ label }: { label: string }): React.ReactElement {
+function StepLabel({ label }: { label: string }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-muted" style={STEP_LABEL_STYLE} title={label}>
       {label}
@@ -216,7 +216,7 @@ function StepLabel({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function StepDuration({ duration }: { duration: number }): React.ReactElement {
+function StepDuration({ duration }: { duration: number }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-faint" style={STEP_DURATION_STYLE}>
       {formatDurationShort(duration)}

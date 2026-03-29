@@ -3,7 +3,7 @@ import React from 'react';
 import type { TaskSessionRecord } from '../../types/electron';
 import { badgeStyle, formatDateTime, panelStyle, resolveStatusTone } from './orchestrationUi';
 
-export function SessionHistoryIntro(): React.ReactElement {
+export function SessionHistoryIntro(): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>Session history</div>
@@ -14,7 +14,7 @@ export function SessionHistoryIntro(): React.ReactElement {
   );
 }
 
-export function SessionHistoryEmptyState(): React.ReactElement {
+export function SessionHistoryEmptyState(): React.ReactElement<any> {
   return (
     <div className="rounded-lg border px-4 py-5 text-[13px]" style={{ ...panelStyle(), color: 'var(--text-muted)' }}>
       No orchestration sessions have been saved for the active project root yet.
@@ -22,7 +22,7 @@ export function SessionHistoryEmptyState(): React.ReactElement {
   );
 }
 
-export function SessionHistoryItem({ session, selected, onSelect }: { session: TaskSessionRecord; selected: boolean; onSelect: (sessionId: string) => void; }): React.ReactElement {
+export function SessionHistoryItem({ session, selected, onSelect }: { session: TaskSessionRecord; selected: boolean; onSelect: (sessionId: string) => void; }): React.ReactElement<any> {
   const tone = resolveStatusTone(session.status);
   return (
     <button type="button" onClick={() => onSelect(session.id)} className="w-full rounded-lg border p-4 text-left transition-colors" style={{ borderColor: selected ? 'var(--accent)' : 'var(--border)', background: selected ? 'color-mix(in srgb, var(--accent) 7%, var(--bg-secondary))' : 'var(--bg-secondary)' }}>
@@ -48,7 +48,7 @@ export function SessionHistoryItem({ session, selected, onSelect }: { session: T
   );
 }
 
-function HistoryMeta({ label, value, breakAll = false }: { label: string; value: string; breakAll?: boolean }): React.ReactElement {
+function HistoryMeta({ label, value, breakAll = false }: { label: string; value: string; breakAll?: boolean }): React.ReactElement<any> {
   return (
     <div>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>

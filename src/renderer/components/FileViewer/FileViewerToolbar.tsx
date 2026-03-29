@@ -42,7 +42,7 @@ const containerStyle: React.CSSProperties = {
  */
 export const FileViewerToolbar = memo(function FileViewerToolbar(
   props: FileViewerToolbarProps,
-): React.ReactElement {
+): React.ReactElement<any> {
   return (
     <div style={containerStyle}>
       <ViewerToggleButtons props={props} />
@@ -69,7 +69,7 @@ interface ToolbarToggleDefinition {
   title: string;
 }
 
-function ViewerToggleButtons({ props }: { props: FileViewerToolbarProps }): React.ReactElement {
+function ViewerToggleButtons({ props }: { props: FileViewerToolbarProps }): React.ReactElement<any> {
   const buttons = getToolbarToggleButtons(props);
 
   return (
@@ -179,7 +179,7 @@ function EditModeButtons({
   onSave,
   onCancelEdit,
   setEditMode,
-}: EditModeButtonsProps): React.ReactElement {
+}: EditModeButtonsProps): React.ReactElement<any> {
   const handleSave = makeSaveHandler(currentContent, onSave, setEditMode);
   const handleCancel = makeCancelHandler(isDirty, onCancelEdit, setEditMode);
   return (
@@ -203,7 +203,7 @@ function EditModeButtons({
 function ClaudeMdToggle({
   claudeMdEnhanced,
   setClaudeMdEnhanced,
-}: Pick<EditControlsProps, 'claudeMdEnhanced' | 'setClaudeMdEnhanced'>): React.ReactElement {
+}: Pick<EditControlsProps, 'claudeMdEnhanced' | 'setClaudeMdEnhanced'>): React.ReactElement<any> {
   return (
     <ToolbarButton
       label={claudeMdEnhanced ? 'Enhanced' : 'Plain'}
@@ -214,7 +214,7 @@ function ClaudeMdToggle({
   );
 }
 
-function EditControls(props: EditControlsProps): React.ReactElement | null {
+function EditControls(props: EditControlsProps): React.ReactElement<any> | null {
   if (!props.onSave) return null;
 
   return (
@@ -245,7 +245,7 @@ function EditControls(props: EditControlsProps): React.ReactElement | null {
   );
 }
 
-function DirtyIndicator(): React.ReactElement {
+function DirtyIndicator(): React.ReactElement<any> {
   return (
     <span
       title="Unsaved changes"

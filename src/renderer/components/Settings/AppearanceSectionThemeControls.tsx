@@ -22,7 +22,7 @@ interface ThemeEditorSectionProps {
   setEditorOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
+function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={sectionLabelStyle}>
       {children}
@@ -34,7 +34,7 @@ export function ThemeGrid({
   displayedThemes,
   activeTheme,
   onThemeClick,
-}: ThemeGridProps): React.ReactElement {
+}: ThemeGridProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Theme</SectionLabel>
@@ -67,7 +67,7 @@ export function BackgroundGradientSection({
 }: {
   checked: boolean;
   onChange: (value: boolean) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Background Gradient</SectionLabel>
@@ -89,7 +89,7 @@ function GlassSlider({
 }: {
   value: number;
   onChange: (value: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -126,7 +126,7 @@ export function GlassOpacitySection({
 }: {
   value: number;
   onChange: (value: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Glass Tint</SectionLabel>
@@ -143,7 +143,7 @@ function ThemeEditorHeader({
 }: {
   editorOpen: boolean;
   setEditorOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button onClick={() => setEditorOpen((value) => !value)} style={toggleButtonStyle}>
       <div>
@@ -177,7 +177,7 @@ export function ThemeEditorSection({
   onChange,
   onSaveAsCustom,
   setEditorOpen,
-}: ThemeEditorSectionProps): React.ReactElement {
+}: ThemeEditorSectionProps): React.ReactElement<any> {
   return (
     <section>
       <ThemeEditorHeader editorOpen={editorOpen} setEditorOpen={setEditorOpen} />

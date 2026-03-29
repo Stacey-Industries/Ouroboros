@@ -21,6 +21,7 @@ export interface AgentChatSummaryData {
   contextTokens?: number;
   issues: number;
   nextAction: string | null;
+  skillCount: number;
   verificationLabel: string | null;
   verificationSummary: string | null;
 }
@@ -156,7 +157,10 @@ function getSummaryVerificationSummary(verification: VerificationSummary | null)
   return verification?.summary?.trim() || null;
 }
 
-export function buildSummaryData(details: AgentChatLinkedDetailsResult | null): AgentChatSummaryData {
+export function buildSummaryData(
+  details: AgentChatLinkedDetailsResult | null,
+  overrides?: { skillCount?: number },
+): AgentChatSummaryData {
   const session = getSession(details);
   const result = getResult(details, session);
   const verification = getVerification(session, result);
@@ -170,6 +174,7 @@ export function buildSummaryData(details: AgentChatLinkedDetailsResult | null): 
     contextTokens: getSummaryContextTokens(contextPacket),
     issues: issues.length,
     nextAction: getSummaryNextAction(session, result),
+    skillCount: overrides?.skillCount ?? 0,
     verificationLabel: getVerificationLabel(verification),
     verificationSummary: getSummaryVerificationSummary(verification),
   };
@@ -203,6 +208,9 @@ export function buildSummaryPills(args: {
   }
   if (summary.changedFiles != null) {
     pills.push({ label: 'Changes', value: `${formatCount(summary.changedFiles)} files touched` });
+  }
+  if (summary.skillCount > 0) {
+    pills.push({ label: 'Skills', value: formatCount(summary.skillCount) });
   }
   if (summary.issues > 0) {
     pills.push({ label: 'Issues', value: `${formatCount(summary.issues)} unresolved` });

@@ -59,7 +59,7 @@ export function CompletionOverlay({
   position,
   onSelect,
   onNavigate,
-}: CompletionOverlayProps): React.ReactElement | null {
+}: CompletionOverlayProps): React.ReactElement<any> | null {
   const listRef = useRef<HTMLDivElement>(null);
 
   useSelectedItemScroll(listRef, selectedIndex);
@@ -92,10 +92,10 @@ function CompletionOverlayBody({
   selectedIndex: number;
   onSelect: (value: string) => void;
   onNavigate: (delta: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
-      ref={listRef as React.RefObject<HTMLDivElement>}
+      ref={listRef as React.RefObject<HTMLDivElement | null>}
       onMouseDown={(e) => e.preventDefault()}
       className="bg-surface-panel border border-border-semantic"
       style={getOverlayStyle(position)}
@@ -142,7 +142,7 @@ function CompletionItem({
   isSelected: boolean;
   onClick: () => void;
   onHover: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const color = TYPE_COLORS[completion.type];
 
   return (
@@ -181,7 +181,7 @@ function CompletionTypeBadge({
 }: {
   type: Completion['type'];
   color: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -203,7 +203,7 @@ function CompletionTypeBadge({
   );
 }
 
-function CompletionHint(): React.ReactElement {
+function CompletionHint(): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-muted border-t border-border-semantic"

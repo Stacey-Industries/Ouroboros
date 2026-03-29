@@ -33,7 +33,7 @@ function getTextToCopy(terminal: Terminal): string {
   return terminal.getSelection() || extractRecentOutput(terminal)
 }
 
-function CopyIcon(): React.ReactElement {
+function CopyIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="5" width="9" height="9" rx="1.5" />
@@ -42,7 +42,7 @@ function CopyIcon(): React.ReactElement {
   )
 }
 
-function CheckIcon(): React.ReactElement {
+function CheckIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 8 7 12 13 4" />
@@ -50,7 +50,7 @@ function CheckIcon(): React.ReactElement {
   )
 }
 
-export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactElement {
+export function CopyButton({ terminal, visible }: CopyButtonProps): React.ReactElement<any> {
   const [copied, setCopied] = useState(false)
 
   function handleCopy(): void {

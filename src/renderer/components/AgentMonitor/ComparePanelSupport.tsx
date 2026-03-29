@@ -11,7 +11,7 @@ interface ComparePanelProps {
   sessions: AgentSession[];
 }
 
-const ComparePanelEmptyState = memo(function ComparePanelEmptyState(): React.ReactElement {
+const ComparePanelEmptyState = memo(function ComparePanelEmptyState(): React.ReactElement<any> {
   return (
     <div
       className="flex flex-col items-center justify-center h-full px-4 py-8 text-center"
@@ -56,7 +56,7 @@ const ComparePanelHeader = memo(function ComparePanelHeader({
   onSelect,
   selectedId,
   sessions,
-}: Omit<ComparePanelProps, 'onDismiss'>): React.ReactElement {
+}: Omit<ComparePanelProps, 'onDismiss'>): React.ReactElement<any> {
   return (
     <div
       className="flex items-center gap-2 px-2 py-1.5 flex-shrink-0"
@@ -87,7 +87,7 @@ export const ComparePanel = memo(function ComparePanel({
   onSelect,
   selectedId,
   sessions,
-}: ComparePanelProps): React.ReactElement {
+}: ComparePanelProps): React.ReactElement<any> {
   const selectedSession = selectedId
     ? sessions.find((session) => session.id === selectedId)
     : undefined;

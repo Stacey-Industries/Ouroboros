@@ -84,7 +84,7 @@ export interface ProjectProviderProps {
 export function ProjectProvider({
   initialRoot = null,
   children,
-}: ProjectProviderProps): React.ReactElement {
+}: ProjectProviderProps): React.ReactElement<any> {
   const [projectRoots, setProjectRoots] = useProjectRootState(initialRoot);
   const projectActions = useProjectRootActions(setProjectRoots);
   const projectRoot = projectRoots[0] ?? null;

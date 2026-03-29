@@ -1,7 +1,13 @@
-import type { Dispatch } from 'react';
-
 import type { AgentSession, SubToolCallEvent, ToolCallEvent } from '../components/AgentMonitor/types';
-import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
+import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
+import {
+  reduceRuleLoaded,
+  reduceSkillEnd,
+  reduceSkillStart,
+  type RuleLoadedAction,
+  type SkillEndAction,
+  type SkillStartAction,
+} from './useAgentEvents.ruleSkillReducers';
 import {
   ensureSession,
   findToolCallIndex,
@@ -53,7 +59,10 @@ export type AgentAction =
   | { type: 'DISMISS'; sessionId: string }
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
-  | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean };
+  | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean }
+  | RuleLoadedAction
+  | SkillStartAction
+  | SkillEndAction;
 
 export function reducer(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
@@ -95,6 +104,12 @@ function reduceUtilityAction(state: AgentState, action: AgentAction): AgentState
         notes: action.notes,
         bookmarked: action.bookmarked ?? session.bookmarked,
       }));
+    case 'RULE_LOADED':
+      return reduceRuleLoaded(state, action);
+    case 'SKILL_START':
+      return reduceSkillStart(state, action);
+    case 'SKILL_END':
+      return reduceSkillEnd(state, action);
     default:
       return state;
   }
@@ -310,33 +325,5 @@ function findTemporalParent(
   return best;
 }
 
-/* ---------- Pure helpers extracted from useAgentEvents.ts ---------- */
-
-export function dispatchAgentEnd(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  dispatch({
-    type: 'AGENT_END',
-    sessionId: payload.sessionId,
-    timestamp: payload.timestamp,
-    error: payload.error,
-    costUsd: payload.costUsd,
-  });
-}
-
-export function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  console.warn(
-    '[cost-debug] dispatchTokenUpdate called',
-    'sessionId:', payload.sessionId,
-    'model:', payload.model,
-    'usage:', payload.usage,
-    'hasUsage:', Boolean(payload.usage),
-  );
-  if (!payload.usage) return;
-  dispatch({
-    type: 'TOKEN_UPDATE',
-    sessionId: payload.sessionId,
-    usage: payload.usage,
-    model: payload.model,
-  });
-}
-
-
+/* Re-export dispatchers that were moved to ruleSkillDispatchers.ts for line-count budget. */
+export { dispatchAgentEnd, dispatchTokenUpdate } from './useAgentEvents.ruleSkillDispatchers';

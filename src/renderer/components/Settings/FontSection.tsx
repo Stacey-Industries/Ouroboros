@@ -35,7 +35,7 @@ const MONO_PREVIEW_LINES = [
   '}',
 ];
 
-export function FontSection({ draft, onChange }: FontSectionProps): React.ReactElement {
+export function FontSection({ draft, onChange }: FontSectionProps): React.ReactElement<any> {
   const fontUI = draft.fontUI ?? '';
   const fontMono = draft.fontMono ?? '';
   const fontSizeUI = draft.fontSizeUI ?? DEFAULT_UI_FONT_SIZE;
@@ -95,7 +95,7 @@ function FontTextInput({
 }: Pick<
   FontTextSectionProps,
   'value' | 'configKey' | 'placeholder' | 'ariaLabel' | 'onChange'
->): React.ReactElement {
+>): React.ReactElement<any> {
   return (
     <input
       type="text"
@@ -122,7 +122,7 @@ function FontTextSection({
   previewLabelFontFamily,
   ariaLabel,
   onChange,
-}: FontTextSectionProps): React.ReactElement {
+}: FontTextSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>{label}</SectionLabel>
@@ -158,7 +158,7 @@ interface FontSizeSectionProps {
 function FontSizeSliderRow({
   fontSizeUI,
   onChange,
-}: Pick<FontSizeSectionProps, 'fontSizeUI' | 'onChange'>): React.ReactElement {
+}: Pick<FontSizeSectionProps, 'fontSizeUI' | 'onChange'>): React.ReactElement<any> {
   return (
     <div style={sliderRowStyle}>
       <input
@@ -183,7 +183,7 @@ function FontSizeSection({
   fontUI,
   fontSizeUI,
   onChange,
-}: FontSizeSectionProps): React.ReactElement {
+}: FontSizeSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>UI Font Size</SectionLabel>
@@ -224,7 +224,7 @@ function PreviewCard({
   lines,
   ariaLabel,
   labelFontFamily,
-}: PreviewCardProps): React.ReactElement {
+}: PreviewCardProps): React.ReactElement<any> {
   return (
     <div
       aria-label={ariaLabel}
@@ -248,7 +248,7 @@ function ResetButton({
 }: {
   fontSizeUI: number;
   onChange: AppConfigChangeHandler;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (fontSizeUI === DEFAULT_UI_FONT_SIZE) {
     return null;
   }

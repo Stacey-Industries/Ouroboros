@@ -27,7 +27,7 @@ const MOBILE_ITEM_STYLE: React.CSSProperties = {
   margin: '0 4px', width: 'calc(100% - 8px)',
 };
 
-function MobileMenuItem({ label, onClick, disabled }: { label: string; onClick?: () => void; disabled?: boolean }): React.ReactElement {
+function MobileMenuItem({ label, onClick, disabled }: { label: string; onClick?: () => void; disabled?: boolean }): React.ReactElement<any> {
   return (
     <button onClick={onClick} disabled={disabled} className="titlebar-no-drag text-text-semantic-primary"
       style={{ ...MOBILE_ITEM_STYLE, opacity: disabled ? 0.4 : 1 }}
@@ -38,7 +38,7 @@ function MobileMenuItem({ label, onClick, disabled }: { label: string; onClick?:
   );
 }
 
-export function MobileHamburgerMenu({ titleButtonStyle, hoverStyle }: { titleButtonStyle: React.CSSProperties; hoverStyle: object }): React.ReactElement {
+export function MobileHamburgerMenu({ titleButtonStyle, hoverStyle }: { titleButtonStyle: React.CSSProperties; hoverStyle: object }): React.ReactElement<any> {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const menus = getMenuDefinitions();
@@ -72,7 +72,7 @@ export function MobileHamburgerMenu({ titleButtonStyle, hoverStyle }: { titleBut
 
 export function MobileOverflowMenu({ titleBarActions, titleButtonStyle, hoverStyle }: {
   titleBarActions: TitleBarAction[]; titleButtonStyle: React.CSSProperties; hoverStyle: object;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
@@ -102,7 +102,7 @@ function MobileOverflowDropdown({ titleBarActions, notifications, unreadCount, o
   notifications: ReturnType<typeof useToastContext>['notifications'];
   unreadCount: number; onClose: () => void;
   onRemove: (id: string) => void; onClearAll: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div role="menu" style={{ ...dropdownStyle, right: 0, left: 'auto', padding: '6px 0' }}>
       {titleBarActions.map((action) => (

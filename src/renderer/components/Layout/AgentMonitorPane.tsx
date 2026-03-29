@@ -17,7 +17,7 @@ export function AgentMonitorPane({
   children,
   focusStyle,
   onFocus,
-}: AgentMonitorPaneProps): React.ReactElement {
+}: AgentMonitorPaneProps): React.ReactElement<any> {
   // Detect mobile viewport — applied as a CSS class to override the inline width
   // (CSS !important cannot override inline styles, so we need a class instead).
   const [isMobile, setIsMobile] = useState(false);

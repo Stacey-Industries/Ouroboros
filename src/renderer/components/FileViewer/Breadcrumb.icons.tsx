@@ -2,7 +2,7 @@ import React from 'react';
 
 type IconColor = string;
 
-function TsIcon({ color }: { color: IconColor }): React.ReactElement {
+function TsIcon({ color }: { color: IconColor }): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill={color} />
@@ -11,7 +11,7 @@ function TsIcon({ color }: { color: IconColor }): React.ReactElement {
   );
 }
 
-function JsIcon({ color }: { color: IconColor }): React.ReactElement {
+function JsIcon({ color }: { color: IconColor }): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill={color} />
@@ -20,7 +20,7 @@ function JsIcon({ color }: { color: IconColor }): React.ReactElement {
   );
 }
 
-function CssIcon(): React.ReactElement {
+function CssIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill="#8b5cf6" />
@@ -29,7 +29,7 @@ function CssIcon(): React.ReactElement {
   );
 }
 
-function JsonIcon(): React.ReactElement {
+function JsonIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill="#eab308" />
@@ -38,7 +38,7 @@ function JsonIcon(): React.ReactElement {
   );
 }
 
-function MdIcon(): React.ReactElement {
+function MdIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill="#6b7280" />
@@ -47,7 +47,7 @@ function MdIcon(): React.ReactElement {
   );
 }
 
-function HtmlIcon(): React.ReactElement {
+function HtmlIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <rect x="1" y="1" width="12" height="12" rx="2" fill="#e44d26" />
@@ -56,7 +56,7 @@ function HtmlIcon(): React.ReactElement {
   );
 }
 
-function GenericFileIcon(): React.ReactElement {
+function GenericFileIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
       <path d="M3 1.5h5.5L12 5v7.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.1" fill="none" />
@@ -65,7 +65,7 @@ function GenericFileIcon(): React.ReactElement {
   );
 }
 
-const fileIconFactories: Record<string, () => React.ReactElement> = {
+const fileIconFactories: Record<string, () => React.ReactElement<any>> = {
   '.ts': () => <TsIcon color="#3178c6" />,
   '.tsx': () => <TsIcon color="#3178c6" />,
   '.js': () => <JsIcon color="#f0db4f" />,
@@ -88,7 +88,7 @@ function getExtension(filename: string): string {
   return dotIndex > 0 ? filename.slice(dotIndex).toLowerCase() : '';
 }
 
-export function FileTypeIcon({ filename }: { filename: string }): React.ReactElement {
+export function FileTypeIcon({ filename }: { filename: string }): React.ReactElement<any> {
   const createIcon = fileIconFactories[getExtension(filename)];
   return createIcon ? createIcon() : <GenericFileIcon />;
 }

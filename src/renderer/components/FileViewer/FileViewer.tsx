@@ -36,11 +36,11 @@ export interface FileViewerProps {
  */
 export const FileViewer = memo(function FileViewer(
   props: FileViewerProps
-): React.ReactElement {
+): React.ReactElement<any> {
   return <FileViewerInner {...props} />;
 });
 
-function renderInitialViewerState(props: FileViewerProps): React.ReactElement | null {
+function renderInitialViewerState(props: FileViewerProps): React.ReactElement<any> | null {
   if (!props.filePath && !props.isLoading) return <EmptyState />;
   if (props.isLoading) return <LoadingState />;
   if (props.error) return <ErrorDisplay error={props.error} />;
@@ -48,7 +48,7 @@ function renderInitialViewerState(props: FileViewerProps): React.ReactElement | 
   return null;
 }
 
-function renderFileTypeViewer(props: FileViewerProps): React.ReactElement | null {
+function renderFileTypeViewer(props: FileViewerProps): React.ReactElement<any> | null {
   const { filePath, isImage, isPdf, isBinary, binaryContent } = props;
   if (isImage && filePath) return <ImageViewer filePath={filePath} />;
   if (isPdf && filePath) return <PdfViewer filePath={filePath} />;
@@ -57,13 +57,13 @@ function renderFileTypeViewer(props: FileViewerProps): React.ReactElement | null
   return null;
 }
 
-function renderSpecialViewer(props: FileViewerProps): React.ReactElement | null {
+function renderSpecialViewer(props: FileViewerProps): React.ReactElement<any> | null {
   return renderInitialViewerState(props) ?? renderFileTypeViewer(props);
 }
 
 const FileViewerInner = memo(function FileViewerInner(
   props: FileViewerProps
-): React.ReactElement {
+): React.ReactElement<any> {
   const s = useFileViewerState(props);
   const specialViewer = renderSpecialViewer(props);
   if (specialViewer) return specialViewer;

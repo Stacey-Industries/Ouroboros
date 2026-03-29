@@ -12,7 +12,7 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function DefaultProjectFolder({ draft, onChange }: Props): React.ReactElement {
+export function DefaultProjectFolder({ draft, onChange }: Props): React.ReactElement<any> {
   async function handlePickFolder(): Promise<void> {
     const result = await window.electronAPI.files.selectFolder();
     if (!result.cancelled && result.path) {
@@ -44,7 +44,7 @@ export function DefaultProjectFolder({ draft, onChange }: Props): React.ReactEle
   );
 }
 
-export function RecentProjects({ draft, onChange }: Props): React.ReactElement {
+export function RecentProjects({ draft, onChange }: Props): React.ReactElement<any> {
   const recentProjects = draft.recentProjects ?? [];
 
   return (
@@ -78,7 +78,7 @@ function RecentProjectList({
 }: {
   projects: string[];
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={listBorderStyle}>
       {projects.map((project, idx) => (
@@ -109,7 +109,7 @@ function RecentProjectRow({
   index: number;
   isLast: boolean;
   onRemove: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ ...rowStyle, borderBottom: isLast ? 'none' : '1px solid var(--border-default)' }}>
       <span className="text-text-semantic-muted" style={indexStyle}>

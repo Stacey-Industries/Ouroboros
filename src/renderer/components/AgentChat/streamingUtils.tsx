@@ -38,7 +38,7 @@ export function pickNextIndex(prev: number, visited: Set<number>): number {
 
 /* ---------- Blinking cursor ---------- */
 
-export function BlinkingCursor(): React.ReactElement {
+export function BlinkingCursor(): React.ReactElement<any> {
   return (
     <span
       className="ml-0.5 inline-block h-[1.1em] w-[2px] align-text-bottom bg-interactive-accent"
@@ -51,7 +51,7 @@ export function BlinkingCursor(): React.ReactElement {
 
 /* ---------- Slithering snake SVG ---------- */
 
-function SnakeSvg(): React.ReactElement {
+function SnakeSvg(): React.ReactElement<any> {
   return (
     <svg width="26" height="14" viewBox="0 0 26 14" fill="none" style={{ overflow: 'visible' }}>
       <path
@@ -83,7 +83,7 @@ function SnakeSvg(): React.ReactElement {
   );
 }
 
-export function SlitherSnake(): React.ReactElement {
+export function SlitherSnake(): React.ReactElement<any> {
   return (
     <span
       className="inline-flex items-center ml-1.5"
@@ -143,7 +143,7 @@ export function StreamingStatusMessage({
   onStop,
 }: {
   onStop?: () => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { msgIndex, displayChars, showSnake } = useStatusMessageCycle();
   const message = OUROBOROS_MESSAGES[msgIndex];
 

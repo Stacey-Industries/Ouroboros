@@ -21,7 +21,7 @@ export function MenuItemRow({
   isHighlighted: boolean;
   onMouseEnterItem: () => void;
   itemRef: React.Ref<HTMLButtonElement>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (item.divider) return <div style={separatorStyle} />;
   return (
     <button
@@ -53,7 +53,7 @@ function DropdownMenu({
   highlightedIndex: number;
   onHighlight: (idx: number) => void;
   itemRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return <div className="titlebar-no-drag bg-surface-panel border border-border-semantic" style={dropdownStyle}>{menu.items.map((item, i) => <MenuItemRow key={item.divider ? `sep-${i}` : item.label} item={item} onClose={onClose} isHighlighted={i === highlightedIndex} onMouseEnterItem={() => onHighlight(i)} itemRef={(el) => { itemRefs.current[i] = el; }} />)}</div>;
 }
 
@@ -67,7 +67,7 @@ function NavbarMenuButton({
   isOpen: boolean;
   onClick: () => void;
   onHover: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return <button className="titlebar-no-drag" style={{ ...menuButtonStyle, background: isOpen ? 'var(--surface-raised)' : 'transparent', color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} onClick={onClick} onMouseEnter={(e) => { onHover(); if (!isOpen) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'rgba(128,128,128,0.1)'; } }} onMouseLeave={(e) => { if (!isOpen) { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = 'transparent'; } }}>{label}</button>;
 }
 
@@ -177,7 +177,7 @@ function useNavbarKeyboard(args: NavbarKeyboardArgs): void {
   }, [args]);
 }
 
-export function NavbarMenus(): React.ReactElement {
+export function NavbarMenus(): React.ReactElement<any> {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const [highlightedItem, setHighlightedItem] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);

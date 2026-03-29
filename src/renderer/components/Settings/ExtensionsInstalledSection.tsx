@@ -67,7 +67,7 @@ interface SelectedExtensionPanelProps {
 
 export function InstalledExtensionsSection({
   model,
-}: InstalledExtensionsSectionProps): React.ReactElement {
+}: InstalledExtensionsSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Installed Extensions</SectionLabel>
@@ -86,7 +86,7 @@ export function InstalledExtensionsSection({
   );
 }
 
-function InstalledExtensionsBody({ model }: InstalledExtensionsSectionProps): React.ReactElement {
+function InstalledExtensionsBody({ model }: InstalledExtensionsSectionProps): React.ReactElement<any> {
   if (model.loading)
     return (
       <p className="text-text-semantic-muted" style={extensionsSectionMutedTextStyle}>
@@ -98,7 +98,7 @@ function InstalledExtensionsBody({ model }: InstalledExtensionsSectionProps): Re
   return <ExtensionsList model={model} />;
 }
 
-function ExtensionsList({ model }: InstalledExtensionsSectionProps): React.ReactElement {
+function ExtensionsList({ model }: InstalledExtensionsSectionProps): React.ReactElement<any> {
   return (
     <div style={extensionsSectionListContainerStyle}>
       {model.extensionsList.map((extension, index) => (
@@ -125,7 +125,7 @@ function ExtensionRow({
   onSelect,
   onToggle,
   onUninstall,
-}: ExtensionRowProps): React.ReactElement {
+}: ExtensionRowProps): React.ReactElement<any> {
   return (
     <div
       style={extensionsSectionRowStyle(isSelected, isLast)}
@@ -142,7 +142,7 @@ function ExtensionRow({
   );
 }
 
-function ExtensionSummary({ extension }: { extension: ExtensionInfo }): React.ReactElement {
+function ExtensionSummary({ extension }: { extension: ExtensionInfo }): React.ReactElement<any> {
   return (
     <div style={extensionsSectionSummaryColumnStyle}>
       <div style={extensionsSectionSummaryHeaderStyle}>
@@ -176,7 +176,7 @@ function ExtensionControls({
   onForceActivate,
   onToggle,
   onUninstall,
-}: Omit<ExtensionRowProps, 'isLast' | 'isSelected' | 'onSelect'>): React.ReactElement {
+}: Omit<ExtensionRowProps, 'isLast' | 'isSelected' | 'onSelect'>): React.ReactElement<any> {
   return (
     <div style={extensionsSectionControlRowStyle}>
       {extension.status === 'pending' && (
@@ -213,7 +213,7 @@ function SelectedExtensionPanel({
   extLog,
   logLoading,
   onRefresh,
-}: SelectedExtensionPanelProps): React.ReactElement {
+}: SelectedExtensionPanelProps): React.ReactElement<any> {
   return (
     <div style={extensionsSectionDetailPanelStyle}>
       <ExtensionDetailsHeader extension={extension} />
@@ -222,7 +222,7 @@ function SelectedExtensionPanel({
   );
 }
 
-function ExtensionDetailsHeader({ extension }: { extension: ExtensionInfo }): React.ReactElement {
+function ExtensionDetailsHeader({ extension }: { extension: ExtensionInfo }): React.ReactElement<any> {
   return (
     <div style={extensionsSectionDetailHeaderStyle}>
       <div className="text-text-semantic-primary" style={extensionsSectionDetailTitleStyle}>
@@ -242,7 +242,7 @@ function ExtensionDetailsHeader({ extension }: { extension: ExtensionInfo }): Re
   );
 }
 
-function BadgeStrip({ values }: { values: string[] }): React.ReactElement {
+function BadgeStrip({ values }: { values: string[] }): React.ReactElement<any> {
   return (
     <div style={extensionsSectionBadgeStripStyle}>
       {values.map((value) => (
@@ -258,7 +258,7 @@ function BadgeStrip({ values }: { values: string[] }): React.ReactElement {
   );
 }
 
-function ActivationEvents({ events }: { events: string[] }): React.ReactElement {
+function ActivationEvents({ events }: { events: string[] }): React.ReactElement<any> {
   return (
     <div style={extensionsSectionActivationRowStyle}>
       <span className="text-text-semantic-muted" style={extensionsSectionActivationLabelStyle}>

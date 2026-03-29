@@ -35,7 +35,7 @@ function ActionButton({
   className: string;
   style: React.CSSProperties;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button onClick={onClick} className={className} style={style} title={title}>
       {label}
@@ -43,31 +43,31 @@ function ActionButton({
   );
 }
 
-function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactElement {
+function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactElement<any> {
   return (
     <ActionButton
       title="Approve (Enter or Y)"
       label="Approve (Y)"
-      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
-      style={{ backgroundColor: '#98c379', color: '#1e1e1e', border: 'none', cursor: 'pointer' }}
+      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors text-text-semantic-on-accent"
+      style={{ backgroundColor: 'var(--status-success)', border: 'none', cursor: 'pointer' }}
       onClick={onApprove}
     />
   );
 }
 
-function RejectButton({ onReject }: { onReject: () => void }): React.ReactElement {
+function RejectButton({ onReject }: { onReject: () => void }): React.ReactElement<any> {
   return (
     <ActionButton
       title="Reject (Escape or N)"
       label="Reject (N)"
-      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors"
-      style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }}
+      className="flex-1 px-4 py-2 rounded text-sm font-medium transition-colors text-text-semantic-on-accent"
+      style={{ backgroundColor: 'var(--status-error)', border: 'none', cursor: 'pointer' }}
       onClick={onReject}
     />
   );
 }
 
-function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement {
+function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement<any> {
   return (
     <ActionButton
       title="Always Allow this tool for this session (A)"
@@ -95,7 +95,7 @@ function ApprovalActions({
   onAlwaysAllow: () => void;
   onConfirmReject: () => void;
   onShowRejectInput: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const handleReject = showRejectInput ? onConfirmReject : onShowRejectInput;
   return (
     <div className="flex items-center gap-2 mt-1">
@@ -115,7 +115,7 @@ const DIALOG_PANEL_STYLE: React.CSSProperties = {
   overflow: 'auto',
 };
 
-function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement {
+function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<any> {
   const rejectInput = props.showRejectInput ? (
     <RejectReasonInput
       rejectReason={props.rejectReason}
@@ -146,7 +146,7 @@ function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement {
   );
 }
 
-export function ApprovalDialogCard(props: ApprovalDialogCardProps): React.ReactElement {
+export function ApprovalDialogCard(props: ApprovalDialogCardProps): React.ReactElement<any> {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"

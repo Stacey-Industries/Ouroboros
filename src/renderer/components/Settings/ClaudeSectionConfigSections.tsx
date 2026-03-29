@@ -34,7 +34,7 @@ interface ClaudeSectionConfigProps {
 
 export function PermissionModeSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <SelectSection
       description="Controls how Claude handles tool permission requests."
@@ -54,7 +54,7 @@ export function PermissionModeSection({
 
 export function ModelSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section>
       <SelectSection
@@ -86,7 +86,7 @@ export function ModelSection({
 
 export function EffortSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Effort Level</SectionLabel>
@@ -110,7 +110,7 @@ export function EffortSection({
 
 export function BudgetSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Max Budget (USD)</SectionLabel>
@@ -133,7 +133,7 @@ export function BudgetSection({
 
 export function SystemPromptSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>System Prompt (Append)</SectionLabel>
@@ -155,7 +155,7 @@ export function SystemPromptSection({
 
 export function AdditionalDirectoriesSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Additional Directories</SectionLabel>
@@ -172,7 +172,7 @@ export function AdditionalDirectoriesSection({
 
 export function DangerZoneSection({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <section style={claudeSectionDangerSectionStyle}>
       <SectionLabel className="text-status-error">Danger Zone</SectionLabel>
@@ -201,7 +201,7 @@ function DirectoryList({
 }: {
   directories: string[];
   onRemove: (index: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={claudeSectionDirectoryListStyle}>
       {directories.map((directory, index) => (
@@ -223,7 +223,7 @@ function DirectoryList({
 
 function AddDirectoryRow({
   model,
-}: ClaudeSectionConfigProps): React.ReactElement {
+}: ClaudeSectionConfigProps): React.ReactElement<any> {
   return (
     <div style={claudeSectionAddDirectoryRowStyle}>
       <input

@@ -27,6 +27,10 @@ export function cleanupTerminalSetup(
   context.refs.fitAddonRef.current = null
   context.refs.progressAddonRef.current = null
   context.refs.serializeAddonRef.current = null
+  if (context.refs.webglAddonRef.current) {
+    try { context.refs.webglAddonRef.current.dispose() } catch { /* ignore */ }
+    context.refs.webglAddonRef.current = null
+  }
   unregisterTerminal(context.sessionId)
   term.dispose()
   context.refs.terminalRef.current = null

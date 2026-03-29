@@ -8,7 +8,7 @@ export function SectionLabel({
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className={`text-text-semantic-muted${className ? ` ${className}` : ''}`}

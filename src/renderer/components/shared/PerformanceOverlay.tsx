@@ -49,7 +49,7 @@ function PerformanceMetrics({
   snap,
 }: {
   snap: ReturnType<typeof usePerformance>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const fps = snap.frameTimeMs > 0 ? Math.round(1000 / snap.frameTimeMs) : 0;
 
   return (
@@ -70,7 +70,7 @@ function PerformanceMetrics({
   );
 }
 
-export function PerformanceOverlay({ visible }: PerformanceOverlayProps): React.ReactElement | null {
+export function PerformanceOverlay({ visible }: PerformanceOverlayProps): React.ReactElement<any> | null {
   const snap = usePerformance(visible);
 
   if (!visible) return null;
@@ -95,7 +95,7 @@ function MetricRow({
   label: string;
   value: string;
   warn?: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
       <span style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>

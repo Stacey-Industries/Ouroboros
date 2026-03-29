@@ -6,7 +6,7 @@ export { ComparePanel } from './ComparePanelSupport';
 
 // ─── Toolbar SVG icons ────────────────────────────────────────────────────────
 
-export function CostIcon(): React.ReactElement {
+export function CostIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -26,7 +26,7 @@ export function CostIcon(): React.ReactElement {
   );
 }
 
-export function MultiSessionIcon(): React.ReactElement {
+export function MultiSessionIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -45,7 +45,7 @@ export function MultiSessionIcon(): React.ReactElement {
   );
 }
 
-export function CompareIcon(): React.ReactElement {
+export function CompareIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -68,7 +68,7 @@ export function PreviousSessionsHeaderChevron({
   collapsed,
 }: {
   collapsed: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -100,7 +100,7 @@ const ClearFilterButton = memo(function ClearFilterButton({
   onClear,
 }: {
   onClear: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onClear}
@@ -133,7 +133,7 @@ export const SearchInput = memo(function SearchInput({
 }: {
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value),
     [onChange],
@@ -175,7 +175,7 @@ const QuickActionButton = memo(function QuickActionButton({
 }: {
   onClick: () => void;
   template: AgentTemplate;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -213,7 +213,7 @@ export const QuickActionBar = memo(function QuickActionBar({
 }: {
   onExecuteTemplate: (template: AgentTemplate) => void;
   templates: AgentTemplate[];
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (templates.length === 0) return null;
 
   return (

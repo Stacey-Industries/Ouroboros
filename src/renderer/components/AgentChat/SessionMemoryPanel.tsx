@@ -11,7 +11,7 @@ function sortMemories(memories: SessionMemoryEntry[]): SessionMemoryEntry[] {
   );
 }
 
-function MemoryEmptyState(): React.ReactElement {
+function MemoryEmptyState(): React.ReactElement<any> {
   return (
     <div
       className="flex flex-col items-center justify-center gap-2 p-8 text-center text-text-semantic-muted"
@@ -40,7 +40,7 @@ function MemoryEmptyState(): React.ReactElement {
   );
 }
 
-function MemoryPanelHeader({ count }: { count: number }): React.ReactElement {
+function MemoryPanelHeader({ count }: { count: number }): React.ReactElement<any> {
   return (
     <div
       className="flex items-center justify-between border-b px-3 py-2"
@@ -179,7 +179,7 @@ export interface SessionMemoryPanelProps {
 
 export const SessionMemoryPanel = memo(function SessionMemoryPanel({
   workspaceRoot,
-}: SessionMemoryPanelProps): React.ReactElement {
+}: SessionMemoryPanelProps): React.ReactElement<any> {
   const { loading, memories, handleUpdate, handleDelete } =
     useSessionMemoryPanelModel(workspaceRoot);
 

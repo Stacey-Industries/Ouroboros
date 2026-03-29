@@ -26,7 +26,7 @@ export function Badge({
   className,
   children,
   ...rest
-}: BadgeProps): React.ReactElement {
+}: BadgeProps): React.ReactElement<any> {
   const classes = `${BASE} ${variantClass[variant]} ${sizeClass[size]} ${className ?? ''}`;
   return (
     <span className={classes} {...rest}>

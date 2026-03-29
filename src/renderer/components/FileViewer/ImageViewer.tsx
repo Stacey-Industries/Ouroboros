@@ -18,7 +18,7 @@ export interface ImageViewerProps {
 export function ImageViewer({
   filePath,
   fileSize,
-}: ImageViewerProps): React.ReactElement {
+}: ImageViewerProps): React.ReactElement<any> {
   const viewer = useImageViewerState(filePath);
   const isSvg = filePath.toLowerCase().endsWith('.svg');
   const [showSource, setShowSource] = useState(false);

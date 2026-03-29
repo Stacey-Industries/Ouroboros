@@ -59,7 +59,7 @@ function isThreadBusy(status: string | undefined): boolean {
   return status === 'submitting' || status === 'running';
 }
 
-export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
+export function ComposerSection(props: ComposerSectionProps): React.ReactElement<any> {
   return (
     <AgentChatComposer
       canSend={props.canSend}

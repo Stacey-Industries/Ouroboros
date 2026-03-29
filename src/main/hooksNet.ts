@@ -24,6 +24,7 @@ const VALID_TYPES = new Set<string>([
   'agent_end',
   'session_start',
   'session_stop',
+  'instructions_loaded',
 ]);
 
 let connectionCounter = 0;

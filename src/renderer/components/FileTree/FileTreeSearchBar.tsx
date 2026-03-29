@@ -65,7 +65,7 @@ function heatMapStyle(enabled: boolean): React.CSSProperties {
   };
 }
 
-function HeatMapIcon({ enabled }: { enabled: boolean }): React.ReactElement {
+function HeatMapIcon({ enabled }: { enabled: boolean }): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
@@ -89,7 +89,7 @@ function HeatMapToggle({
   enabled: boolean;
   count: number;
   onToggle: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onToggle}
@@ -123,7 +123,7 @@ function nestingButtonStyle(enabled: boolean): React.CSSProperties {
   };
 }
 
-function NestingIcon(): React.ReactElement {
+function NestingIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
@@ -143,7 +143,7 @@ function NestingIcon(): React.ReactElement {
   );
 }
 
-function NestingToggle(): React.ReactElement {
+function NestingToggle(): React.ReactElement<any> {
   const nestingEnabled = useFileTreeStore((s) => s.nestingEnabled);
   const toggleNesting = useFileTreeStore((s) => s.toggleNesting);
 
@@ -162,7 +162,7 @@ function NestingToggle(): React.ReactElement {
 
 // ─── Dirty file count (4C) ───────────────────────────────────────────────────
 
-function DirtyFileCount(): React.ReactElement | null {
+function DirtyFileCount(): React.ReactElement<any> | null {
   const count = useDirtyFileCount();
   if (count === 0) return null;
 
@@ -191,12 +191,12 @@ export function FileTreeSearchBar({
   heatMapEnabled,
   heatMapCount,
   onToggleHeatMap,
-}: FileTreeSearchBarProps): React.ReactElement {
+}: FileTreeSearchBarProps): React.ReactElement<any> {
   return (
     <div style={searchBarStyle}>
       <div style={searchRowStyle}>
         <input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
+          ref={inputRef as React.RefObject<HTMLInputElement | null>}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

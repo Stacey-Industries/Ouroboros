@@ -4,21 +4,21 @@ import type { ApprovalRequest } from '../../types/electron';
 import { ToolInputPreview } from './ToolInputPreview';
 
 export const TOOL_COLORS: Record<string, string> = {
-  Write: '#e06c75',
-  write: '#e06c75',
-  Bash: '#d19a66',
-  bash: '#d19a66',
-  Edit: '#e5c07b',
-  edit: '#e5c07b',
-  Read: '#61afef',
-  read: '#61afef',
-  Grep: '#98c379',
-  grep: '#98c379',
-  Glob: '#56b6c2',
-  glob: '#56b6c2',
+  Write: 'var(--status-error)',
+  write: 'var(--status-error)',
+  Bash: 'var(--status-warning)',
+  bash: 'var(--status-warning)',
+  Edit: 'var(--status-warning)',
+  edit: 'var(--status-warning)',
+  Read: 'var(--status-info)',
+  read: 'var(--status-info)',
+  Grep: 'var(--status-success)',
+  grep: 'var(--status-success)',
+  Glob: 'var(--interactive-accent)',
+  glob: 'var(--interactive-accent)',
 };
 
-export function ToolBadge({ toolName }: { toolName: string }): React.ReactElement {
+export function ToolBadge({ toolName }: { toolName: string }): React.ReactElement<any> {
   const color = TOOL_COLORS[toolName] ?? 'var(--interactive-accent)';
   return (
     <span
@@ -30,7 +30,7 @@ export function ToolBadge({ toolName }: { toolName: string }): React.ReactElemen
   );
 }
 
-export function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactElement {
+export function ApprovalHeader({ queuedCount }: { queuedCount: number }): React.ReactElement<any> {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export function ApprovalMeta({
 }: {
   request: ApprovalRequest;
   elapsedSeconds: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-2">
       <ToolBadge toolName={request.toolName} />
@@ -82,7 +82,7 @@ export function ApprovalMeta({
   );
 }
 
-export function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement {
+export function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement<any> {
   return (
     <div
       className="rounded p-3 border border-border-semantic"
@@ -93,7 +93,7 @@ export function PreviewPanel({ request }: { request: ApprovalRequest }): React.R
   );
 }
 
-export function DialogHint(): React.ReactElement {
+export function DialogHint(): React.ReactElement<any> {
   return (
     <div className="text-center text-xs text-text-semantic-muted">
       Claude Code is waiting for your decision. The tool will not execute until you respond.
@@ -111,7 +111,7 @@ export function RejectReasonField({
   onRejectReasonChange: (value: string) => void;
   onConfirmReject: () => void;
   onHideRejectInput: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <input
       type="text"
@@ -145,7 +145,7 @@ export function RejectReasonInput({
   onRejectReasonChange: (value: string) => void;
   onConfirmReject: () => void;
   onHideRejectInput: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex gap-2">
       <RejectReasonField
@@ -156,8 +156,8 @@ export function RejectReasonInput({
       />
       <button
         onClick={onConfirmReject}
-        className="px-3 py-1.5 rounded text-sm font-medium"
-        style={{ backgroundColor: '#e06c75', color: '#fff', border: 'none', cursor: 'pointer' }}
+        className="px-3 py-1.5 rounded text-sm font-medium text-text-semantic-on-accent"
+        style={{ backgroundColor: 'var(--status-error)', border: 'none', cursor: 'pointer' }}
       >
         Confirm
       </button>

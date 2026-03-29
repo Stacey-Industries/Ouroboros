@@ -31,7 +31,7 @@ import { VirtualizedMessageList } from './VirtualizedMessageList';
 /* ---------- Scroll hook ---------- */
 
 export function useSmartAutoScroll(deps: unknown[]): {
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: () => void;
 } {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export function useSmartAutoScroll(deps: unknown[]): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return { scrollRef: scrollRef as React.RefObject<HTMLDivElement>, onScroll };
+  return { scrollRef: scrollRef as React.RefObject<HTMLDivElement | null>, onScroll };
 }
 
 /* ---------- Streaming completion effect ---------- */
@@ -130,11 +130,11 @@ interface MessageListProps {
   pendingUserMessage?: string | null;
   isSending: boolean;
   error: string | null;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: () => void;
 }
 
-function MessageCards(props: MessageListProps): React.ReactElement {
+function MessageCards(props: MessageListProps): React.ReactElement<any> {
   return (
     <>
       {props.messagesWithStreaming.map((message) => (
@@ -160,7 +160,7 @@ function MessageCards(props: MessageListProps): React.ReactElement {
   );
 }
 
-export function MessageList(props: MessageListProps): React.ReactElement {
+export function MessageList(props: MessageListProps): React.ReactElement<any> {
   return (
     <div
       ref={props.scrollRef}
@@ -226,7 +226,7 @@ type BodyState = ReturnType<typeof useConversationBodyState>;
 function ConversationBodyWithThread(
   props: ConversationBodyProps &
     BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
-): React.ReactElement {
+): React.ReactElement<any> {
   return (
     <VirtualizedMessageList
       activeThread={props.activeThread}
@@ -250,7 +250,7 @@ function ConversationBodyWithThread(
   );
 }
 
-export function ConversationBody(props: ConversationBodyProps): React.ReactElement {
+export function ConversationBody(props: ConversationBodyProps): React.ReactElement<any> {
   const state = useConversationBodyState(props);
   const { scrollRef, onScroll } = state;
   const { onStop, activeThread } = props;

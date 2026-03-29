@@ -28,7 +28,7 @@ const KEYFRAMES = `
   }
 `;
 
-export function McpStorePanel(): React.ReactElement | null {
+export function McpStorePanel(): React.ReactElement<any> | null {
   const [isMounted, setIsMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -79,7 +79,7 @@ export function McpStorePanel(): React.ReactElement | null {
   );
 }
 
-function McpStoreHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+function McpStoreHeader({ onClose }: { onClose: () => void }): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexShrink: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -91,7 +91,7 @@ function McpStoreHeader({ onClose }: { onClose: () => void }): React.ReactElemen
   );
 }
 
-function McpStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }): React.ReactElement {
+function McpStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }): React.ReactElement<any> {
   return (
     <>
       <style>{KEYFRAMES}</style>
@@ -117,7 +117,7 @@ function McpStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: 
   );
 }
 
-function McpIcon(): React.ReactElement {
+function McpIcon(): React.ReactElement<any> {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-interactive-accent">
       <rect x="4" y="1" width="8" height="5" rx="1" />

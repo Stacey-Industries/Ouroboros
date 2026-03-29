@@ -19,7 +19,7 @@ export function Menu({
   className,
   children,
   ...rest
-}: MenuProps): React.ReactElement {
+}: MenuProps): React.ReactElement<any> {
   return (
     <div role={role} className={`${MENU_BASE} ${className ?? ''}`} {...rest}>
       {children}
@@ -33,7 +33,7 @@ export function MenuItem({
   className,
   children,
   ...rest
-}: MenuItemProps): React.ReactElement {
+}: MenuItemProps): React.ReactElement<any> {
   const stateClass = selected
     ? 'bg-interactive-accent text-text-semantic-on-accent'
     : 'hover:bg-interactive-muted text-text-semantic-primary';

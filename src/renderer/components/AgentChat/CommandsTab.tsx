@@ -79,7 +79,7 @@ function CommandList({
   commands: CommandDefinition[];
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (commands.length === 0) {
     return (
       <div className="px-3 py-1.5 text-[10px] text-text-semantic-muted">No commands found</div>
@@ -100,7 +100,7 @@ export function CommandsTab({
   commands,
   onOpenFile,
   projectRoot,
-}: CommandsTabProps): React.ReactElement {
+}: CommandsTabProps): React.ReactElement<any> {
   const [scope, setScope] = useState<ScopeValue>('global');
 
   const filtered = filterByScope(commands, scope);

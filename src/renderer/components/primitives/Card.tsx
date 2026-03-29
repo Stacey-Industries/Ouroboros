@@ -15,7 +15,7 @@ export function Card({
   className,
   children,
   ...rest
-}: CardProps): React.ReactElement {
+}: CardProps): React.ReactElement<any> {
   const glassClass = glass ? 'glass-card' : '';
   const classes = `${BASE} ${paddingClass[padding]} ${glassClass} ${className ?? ''}`;
   return (

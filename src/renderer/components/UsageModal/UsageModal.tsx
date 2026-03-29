@@ -9,7 +9,7 @@ interface UsageModalProps {
   onClose: () => void;
 }
 
-export const UsageModal = memo(function UsageModal({ isOpen, onClose }: UsageModalProps): React.ReactElement | null {
+export const UsageModal = memo(function UsageModal({ isOpen, onClose }: UsageModalProps): React.ReactElement<any> | null {
   const [range, setRange] = useState<TimeRange>('30d');
   const { error, isLoading, loadUsage, summary } = useUsageSummary(isOpen, range);
 

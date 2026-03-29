@@ -36,7 +36,7 @@ function getChipColor(type: MentionType): { bg: string; border: string; text: st
   }
 }
 
-function FileChipIcon(): React.ReactElement {
+function FileChipIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -54,7 +54,7 @@ function FileChipIcon(): React.ReactElement {
   );
 }
 
-function FolderChipIcon(): React.ReactElement {
+function FolderChipIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -71,7 +71,7 @@ function FolderChipIcon(): React.ReactElement {
   );
 }
 
-function DiffChipIcon(): React.ReactElement {
+function DiffChipIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -88,7 +88,7 @@ function DiffChipIcon(): React.ReactElement {
   );
 }
 
-function TerminalChipIcon(): React.ReactElement {
+function TerminalChipIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -106,7 +106,7 @@ function TerminalChipIcon(): React.ReactElement {
   );
 }
 
-function ChipIcon({ type }: { type: MentionType }): React.ReactElement {
+function ChipIcon({ type }: { type: MentionType }): React.ReactElement<any> {
   if (type === 'file') return <FileChipIcon />;
   if (type === 'folder') return <FolderChipIcon />;
   if (type === 'diff') return <DiffChipIcon />;
@@ -128,7 +128,7 @@ function formatTokenCount(tokens: number): string {
   return `~${tokens}`;
 }
 
-export function MentionChip({ mention, onRemove }: MentionChipProps): React.ReactElement {
+export function MentionChip({ mention, onRemove }: MentionChipProps): React.ReactElement<any> {
   const colors = getChipColor(mention.type);
 
   return (
@@ -171,7 +171,7 @@ export function MentionChipsBar({
   mentions,
   onRemove,
   totalTokens,
-}: MentionChipsBarProps): React.ReactElement | null {
+}: MentionChipsBarProps): React.ReactElement<any> | null {
   if (mentions.length === 0) return null;
 
   return (

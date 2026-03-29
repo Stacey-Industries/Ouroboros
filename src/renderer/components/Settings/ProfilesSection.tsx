@@ -26,7 +26,7 @@ export interface ProfilesSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-function ToastBanner({ toast }: { toast: ToastState }): React.ReactElement {
+function ToastBanner({ toast }: { toast: ToastState }): React.ReactElement<any> {
   return (
     <div role="status" aria-live="polite" style={getToastStyle(toast.kind)}>
       {toast.message}
@@ -42,7 +42,7 @@ function ProfileNameInput({
   newName: string;
   onNameChange: (value: string) => void;
   onSave: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <input
       type="text"
@@ -71,7 +71,7 @@ function SaveProfileSection({
   newName: string;
   onNameChange: (value: string) => void;
   onSave: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const canSave = newName.trim() !== '';
   return (
     <section>
@@ -98,7 +98,7 @@ function ProfileRowActions({
   name: string;
   onApply: (name: string) => void;
   onDelete: (name: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <button
@@ -133,7 +133,7 @@ function ProfileRow({
   isLast: boolean;
   onApply: (name: string) => void;
   onDelete: (name: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -168,7 +168,7 @@ function ProfilesList({
   profileNames: string[];
   onApply: (name: string) => void;
   onDelete: (name: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Saved Profiles</SectionLabel>
@@ -194,7 +194,7 @@ function ProfilesList({
   );
 }
 
-export function ProfilesSection({ draft, onChange }: ProfilesSectionProps): React.ReactElement {
+export function ProfilesSection({ draft, onChange }: ProfilesSectionProps): React.ReactElement<any> {
   const [toast, showToast] = useToast();
   const [newName, setNewName] = useState('');
   const manager = useProfilesManager(draft, onChange, showToast);

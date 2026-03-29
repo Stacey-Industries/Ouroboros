@@ -21,7 +21,7 @@ export function RootSectionHeader({
   onToggle,
   onRemove,
   onContextMenu,
-}: RootSectionHeaderProps): React.ReactElement {
+}: RootSectionHeaderProps): React.ReactElement<any> {
   return (
     <div
       className="bg-surface-raised"
@@ -55,7 +55,7 @@ export function RootSectionHeader({
   );
 }
 
-function CollapseChevron({ expanded }: { expanded: boolean }): React.ReactElement {
+function CollapseChevron({ expanded }: { expanded: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -81,7 +81,7 @@ function CollapseChevron({ expanded }: { expanded: boolean }): React.ReactElemen
   );
 }
 
-function RootLabel({ root }: { root: string }): React.ReactElement {
+function RootLabel({ root }: { root: string }): React.ReactElement<any> {
   return (
     <span
       className="text-text-semantic-muted"
@@ -108,7 +108,7 @@ function RemoveButton({
 }: {
   root: string;
   onRemove: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={(e) => {

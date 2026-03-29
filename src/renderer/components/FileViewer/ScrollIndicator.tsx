@@ -47,7 +47,7 @@ export const ScrollIndicator = memo(function ScrollIndicator({
   clientHeight,
   isHovered = false,
   isScrolling = false,
-}: ScrollIndicatorProps): React.ReactElement | null {
+}: ScrollIndicatorProps): React.ReactElement<any> | null {
   // Don't render if the content fits entirely within the viewport
   const overflows = scrollHeight > clientHeight && clientHeight > 0;
 

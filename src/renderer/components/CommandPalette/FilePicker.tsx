@@ -53,7 +53,7 @@ type PickerKeyboardConfig = {
   onClose: () => void;
 };
 
-export function FilePicker(props: FilePickerProps): React.ReactElement | null {
+export function FilePicker(props: FilePickerProps): React.ReactElement<any> | null {
   const { isOpen, onClose } = props;
   const picker = useFilePickerState(props);
 
@@ -95,7 +95,7 @@ function FileList({ listRef, matches, selectedIndex, emptyLabel, onSelect, onHov
   emptyLabel: string;
   onSelect: (entry: FileEntry) => void;
   onHover: (idx: number) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       id="fp-listbox"

@@ -73,7 +73,7 @@ const snippetListStyle: React.CSSProperties = {
   gap: '6px',
 };
 
-export function SelectionSummary({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
+export function SelectionSummary({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
   const { budget, summary } = contextSelection;
 
   return (
@@ -115,7 +115,7 @@ export function SelectionSummary({ contextSelection }: { contextSelection: Conte
   );
 }
 
-export function SelectionGroups({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
+export function SelectionGroups({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
   const populatedGroups = contextSelection.selectionGroups.filter((group) => group.files.length > 0);
 
   if (populatedGroups.length === 0) {
@@ -144,7 +144,7 @@ export function SelectionGroups({ contextSelection }: { contextSelection: Contex
   );
 }
 
-export function PreviewFiles({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
+export function PreviewFiles({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
   if (contextSelection.previewFiles.length === 0) {
     return <div style={metaTextStyle}>Preview a context packet to inspect why files and snippets were selected.</div>;
   }
@@ -180,7 +180,7 @@ export function PreviewFiles({ contextSelection }: { contextSelection: ContextSe
   );
 }
 
-export function OmittedCandidates({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement {
+export function OmittedCandidates({ contextSelection }: { contextSelection: ContextSelectionModel }): React.ReactElement<any> {
   if (contextSelection.omittedCandidates.length === 0) {
     return <div style={metaTextStyle}>No omitted candidates for this preview.</div>;
   }
@@ -231,7 +231,7 @@ export function getPickerCopy(intent: ContextSelectionIntent | null): {
   };
 }
 
-function SummaryCard({ body, title }: { body: React.ReactNode; title: string }): React.ReactElement {
+function SummaryCard({ body, title }: { body: React.ReactNode; title: string }): React.ReactElement<any> {
   return (
     <div style={{ ...cardStyle, marginBottom: 0 }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>{title}</div>
@@ -240,7 +240,7 @@ function SummaryCard({ body, title }: { body: React.ReactNode; title: string }):
   );
 }
 
-function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { detailTitle: string; details: string[]; emptyLabel?: string }): React.ReactElement {
+function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { detailTitle: string; details: string[]; emptyLabel?: string }): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{detailTitle}</div>
@@ -257,7 +257,7 @@ function ReasonList({ detailTitle, details, emptyLabel = 'No details.' }: { deta
   );
 }
 
-function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement {
+function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>Selected snippets</div>
@@ -274,7 +274,7 @@ function SnippetSummary({ labels }: { labels: string[] }): React.ReactElement {
   );
 }
 
-function MiniActionButton({ label, onClick }: { label: string; onClick: () => void }): React.ReactElement {
+function MiniActionButton({ label, onClick }: { label: string; onClick: () => void }): React.ReactElement<any> {
   return (
     <button onClick={onClick} style={miniButtonStyle}>
       {label}

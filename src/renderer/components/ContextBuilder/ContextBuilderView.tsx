@@ -14,7 +14,7 @@ const containerStyle: React.CSSProperties = {
 export function ContextBuilderView({
   onClose,
   ...model
-}: ContextBuilderModel & { onClose: () => void }): React.ReactElement {
+}: ContextBuilderModel & { onClose: () => void }): React.ReactElement<any> {
   return (
     <div className="bg-surface-base" style={containerStyle}>
       <ContextBuilderHeader

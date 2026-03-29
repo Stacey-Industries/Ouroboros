@@ -15,7 +15,7 @@ function ActionButton(props: {
   title: string;
   onClick: () => void;
   children: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       title={props.title}
@@ -27,7 +27,7 @@ function ActionButton(props: {
   );
 }
 
-function EditIcon(): React.ReactElement {
+function EditIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -36,7 +36,7 @@ function EditIcon(): React.ReactElement {
   );
 }
 
-function RetryIcon(): React.ReactElement {
+function RetryIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 4 23 10 17 10" />
@@ -45,7 +45,7 @@ function RetryIcon(): React.ReactElement {
   );
 }
 
-function BranchIcon(): React.ReactElement {
+function BranchIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="6" y1="3" x2="6" y2="15" />
@@ -56,7 +56,7 @@ function BranchIcon(): React.ReactElement {
   );
 }
 
-function CopyIcon(): React.ReactElement {
+function CopyIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -65,7 +65,7 @@ function CopyIcon(): React.ReactElement {
   );
 }
 
-function CheckIcon(): React.ReactElement {
+function CheckIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
@@ -73,7 +73,7 @@ function CheckIcon(): React.ReactElement {
   );
 }
 
-function RevertIcon(): React.ReactElement {
+function RevertIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="1 4 1 10 7 10" />
@@ -89,7 +89,7 @@ export function UserMessageActions({
   onEdit,
   onRetry,
   onBranch,
-}: MessageActionsProps): React.ReactElement {
+}: MessageActionsProps): React.ReactElement<any> {
   const isThreadBusy = threadStatus === 'submitting' || threadStatus === 'running';
   const { copied, copy } = useCopyMessage(message.content);
 
@@ -134,7 +134,7 @@ export function AssistantMessageActions({
   message,
   onBranch,
   onRevert,
-}: AssistantMessageActionsProps): React.ReactElement {
+}: AssistantMessageActionsProps): React.ReactElement<any> {
   const { copied, copy } = useCopyMessage(message.content);
   const hasSnapshot = !!message.orchestration?.preSnapshotHash;
   return (

@@ -111,7 +111,7 @@ function BreadcrumbSegmentItem(props: {
   totalSegments: number;
   data: BreadcrumbData;
   onNavigateToDir?: (dirPath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { segment, originalIndex, totalSegments, data, onNavigateToDir } = props;
   const isLast = originalIndex === totalSegments - 1;
   return (
@@ -135,7 +135,7 @@ function BreadcrumbSegmentItem(props: {
 function BreadcrumbSegments(props: {
   data: BreadcrumbData;
   onNavigateToDir?: (dirPath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { data, onNavigateToDir } = props;
   const { visibleSegments, startOffset, isTruncated } = useMemo(
     () => truncateSegments(data),
@@ -166,7 +166,7 @@ function BreadcrumbSegments(props: {
   );
 }
 
-function EmptyBreadcrumb(): React.ReactElement {
+function EmptyBreadcrumb(): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-faint" style={emptyStateStyle}>
       No file open
@@ -179,7 +179,7 @@ function BreadcrumbLayout(props: {
   copied: boolean;
   onCopy: () => Promise<void>;
   onNavigateToDir?: (dirPath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { data, copied, onCopy, onNavigateToDir } = props;
   return (
     <div className="text-text-semantic-muted" style={containerStyle}>
@@ -193,7 +193,7 @@ export function Breadcrumb({
   filePath,
   projectRoot,
   onNavigateToDir,
-}: BreadcrumbProps): React.ReactElement {
+}: BreadcrumbProps): React.ReactElement<any> {
   const { copied, handleCopy } = useCopyFeedback(filePath);
   if (!filePath) return <EmptyBreadcrumb />;
   return (

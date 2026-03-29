@@ -145,7 +145,7 @@ function ReplayTimelineSegments({
   currentStep,
   totalDurationMs,
   onSeek,
-}: ReplayTimelineProps): React.ReactElement {
+}: ReplayTimelineProps): React.ReactElement<any> {
   return (
     <>
       {steps.map((step, idx) => {
@@ -188,9 +188,9 @@ function ReplayTimelineTrack({
   trackRef: React.RefObject<HTMLDivElement | null>;
   handleClick: (event: React.MouseEvent) => void;
   playheadPct: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
-    <div ref={trackRef as React.RefObject<HTMLDivElement>} onClick={handleClick} className="bg-surface-raised" style={TRACK_STYLE}>
+    <div ref={trackRef as React.RefObject<HTMLDivElement | null>} onClick={handleClick} className="bg-surface-raised" style={TRACK_STYLE}>
       <ReplayTimelineSegments
         steps={steps}
         currentStep={currentStep}
@@ -208,7 +208,7 @@ function ReplayTimelineLabels({
 }: {
   currentElapsedMs: number;
   totalDurationMs: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-faint" style={LABELS_STYLE}>
       <span>{formatElapsed(currentElapsedMs)}</span>
@@ -222,7 +222,7 @@ export const ReplayTimeline = memo(function ReplayTimeline({
   currentStep,
   totalDurationMs,
   onSeek,
-}: ReplayTimelineProps): React.ReactElement {
+}: ReplayTimelineProps): React.ReactElement<any> {
   const trackRef = useRef<HTMLDivElement>(null);
   const handleClick = useTimelineSeekHandler(trackRef, steps, totalDurationMs, onSeek);
   const currentElapsedMs = steps[currentStep]?.elapsedMs ?? 0;

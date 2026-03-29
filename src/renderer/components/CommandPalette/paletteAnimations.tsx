@@ -1,7 +1,7 @@
 import React from 'react';
 
 /** Inject keyframe animations for the command palette family of overlays. */
-export function PaletteAnimations({ prefix }: { prefix: string }): React.ReactElement {
+export function PaletteAnimations({ prefix }: { prefix: string }): React.ReactElement<any> {
   return (
     <style>{`
       @keyframes ${prefix}-overlay-in {

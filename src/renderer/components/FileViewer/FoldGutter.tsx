@@ -66,7 +66,7 @@ interface FoldGutterRowContext {
   toggleFold: (startLine: number) => void;
 }
 
-function renderFoldGutterRow(row: CodeRow, context: FoldGutterRowContext): React.ReactElement {
+function renderFoldGutterRow(row: CodeRow, context: FoldGutterRowContext): React.ReactElement<any> {
   if (row.type === 'fold-placeholder') {
     return <div key={`fg-fp-${row.startLine}`} style={FOLD_PLACEHOLDER_STYLE} />;
   }
@@ -90,7 +90,7 @@ export const FoldGutter = memo(function FoldGutter({
   foldableLines,
   collapsedFolds,
   toggleFold,
-}: FoldGutterProps): React.ReactElement {
+}: FoldGutterProps): React.ReactElement<any> {
   const [hover, setHover] = useState(false);
   const rowContext = {
     collapsedFolds,
@@ -129,7 +129,7 @@ function FoldToggleButton({
   index,
   isCollapsed,
   toggleFold,
-}: FoldToggleButtonProps): React.ReactElement {
+}: FoldToggleButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={() => toggleFold(index)}
@@ -152,7 +152,7 @@ function FoldGutterLine({
   collapsedFolds,
   gutterHover,
   toggleFold,
-}: FoldGutterLineProps): React.ReactElement {
+}: FoldGutterLineProps): React.ReactElement<any> {
   const isCollapsed = collapsedFolds.has(index);
   const showIndicator = foldableLines.has(index) && (isCollapsed || gutterHover);
 

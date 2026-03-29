@@ -29,7 +29,7 @@ const reloadButtonStyle: React.CSSProperties = {
  */
 export const DirtyBanner = memo(function DirtyBanner({
   onReload,
-}: DirtyBannerProps): React.ReactElement {
+}: DirtyBannerProps): React.ReactElement<any> {
   return (
     <div className="text-status-warning" style={bannerStyle}>
       <span>File has been modified on disk.</span>

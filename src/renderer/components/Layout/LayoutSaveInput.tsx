@@ -13,7 +13,7 @@ export interface LayoutSaveInputProps {
   onCancel: () => void;
 }
 
-export function LayoutSaveInput({ layouts, onSave, onCancel }: LayoutSaveInputProps): React.ReactElement {
+export function LayoutSaveInput({ layouts, onSave, onCancel }: LayoutSaveInputProps): React.ReactElement<any> {
   const [saveName, setSaveName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 

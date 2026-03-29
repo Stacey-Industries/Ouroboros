@@ -26,7 +26,7 @@ export const ToolbarButton = memo(function ToolbarButton({
   active,
   onClick,
   title,
-}: ToolbarButtonProps): React.ReactElement {
+}: ToolbarButtonProps): React.ReactElement<any> {
   const style: React.CSSProperties = {
     ...baseStyle,
     border: '1px solid',

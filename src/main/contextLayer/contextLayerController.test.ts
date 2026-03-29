@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from 'vitest'
 
 import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
 import type { ContextPacket } from '../orchestration/types'
@@ -292,12 +292,12 @@ const mockedRunContextLayerGC = vi.mocked(runContextLayerGC)
 
 let mockWatcher: ReturnType<typeof createMockWatcher>
 let mockQueue: ReturnType<typeof createMockQueue>
-let mockBuildRepoIndex: ReturnType<typeof vi.fn>
+let mockBuildRepoIndex: MockedFunction<(roots: string[]) => Promise<RepoIndexSnapshot>>
 
 function setupDefaultMocks(): void {
   mockWatcher = createMockWatcher()
   mockQueue = createMockQueue()
-  mockBuildRepoIndex = vi.fn().mockResolvedValue(createMockRepoIndex())
+  mockBuildRepoIndex = vi.fn<(roots: string[]) => Promise<RepoIndexSnapshot>>().mockResolvedValue(createMockRepoIndex())
 
   mockedInitContextLayerStore.mockResolvedValue(createMockManifest())
   mockedEnsureGitignore.mockResolvedValue(undefined)

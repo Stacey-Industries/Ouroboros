@@ -1,5 +1,7 @@
+import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
 import React, { useMemo } from 'react';
 
+import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import type {
   AgentChatLinkedDetailsResult,
   AgentChatMessageRecord,
@@ -153,12 +155,25 @@ function hasQueuedMessages(props: AgentChatConversationProps): boolean {
   return Boolean(props.queuedMessages?.length && props.onEditQueuedMessage && props.onDeleteQueuedMessage && props.onSendQueuedMessageNow);
 }
 
-export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement {
+function resolveLinkedSessionId(props: AgentChatConversationProps): string | undefined {
+  return props.details?.link?.sessionId ?? props.activeThread?.latestOrchestration?.sessionId;
+}
+
+function useActiveSkillExecutions(sessionId?: string): SkillExecutionRecord[] {
+  const { agents } = useAgentEventsContext();
+  return useMemo(() => {
+    if (!sessionId) return [];
+    return agents.find((s) => s.id === sessionId)?.skillExecutions ?? [];
+  }, [agents, sessionId]);
+}
+
+export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement<any> {
   const streaming = useAgentChatStreaming(props.activeThread?.id ?? null);
   const threadModelUsage = useThreadModelUsage(props.activeThread);
   const hasQueue = hasQueuedMessages(props);
   const bodyProps = buildConversationBodyProps(props, streaming);
   const composerProps = buildComposerSectionProps(props, threadModelUsage, streaming);
+  const skillExecutions = useActiveSkillExecutions(resolveLinkedSessionId(props));
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface-panel">
@@ -180,6 +195,7 @@ export function AgentChatConversation(props: AgentChatConversationProps): React.
         isOpen={props.isDetailsOpen}
         onClose={props.closeDetails}
         onOpenOrchestration={props.onOpenLinkedTask}
+        skillExecutions={skillExecutions}
       />
     </div>
   );

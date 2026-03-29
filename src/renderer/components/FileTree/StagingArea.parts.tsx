@@ -60,7 +60,7 @@ function statusLabel(status: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-export function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
+export function Chevron({ expanded }: { expanded: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -86,7 +86,7 @@ export function Chevron({ expanded }: { expanded: boolean }): React.ReactElement
   );
 }
 
-function StatusBadge({ status }: { status: string }): React.ReactElement {
+function StatusBadge({ status }: { status: string }): React.ReactElement<any> {
   return (
     <span
       title={statusLabel(status)}
@@ -116,7 +116,7 @@ export function StagingFileRow({
   projectRoot: string;
   actions: React.ReactNode;
   onFileSelect: (filePath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const sep = projectRoot.includes('/') ? '/' : '\\';
   const absolutePath = `${projectRoot}${sep}${entry.path.replace(/\//g, sep)}`;
   return (
@@ -137,7 +137,7 @@ export function StagingFileRow({
   );
 }
 
-export function StageButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function StageButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       className="staging-action-btn text-text-semantic-faint"
@@ -154,7 +154,7 @@ export function StageButton({ onClick }: { onClick: () => void }): React.ReactEl
   );
 }
 
-export function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function UnstageButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       className="staging-action-btn text-text-semantic-faint"
@@ -171,7 +171,7 @@ export function UnstageButton({ onClick }: { onClick: () => void }): React.React
   );
 }
 
-export function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function DiscardButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       className="staging-action-btn staging-discard-btn text-text-semantic-faint"
@@ -207,7 +207,7 @@ export function SubSectionHeader({
   expanded: boolean;
   onToggle: () => void;
   headerAction?: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={subHeaderStyle}
@@ -231,7 +231,7 @@ export function BulkActionButton({
 }: {
   label: string;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       style={headerActionBtnStyle}

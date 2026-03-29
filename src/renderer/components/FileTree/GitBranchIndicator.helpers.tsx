@@ -108,7 +108,7 @@ const chevronStyle: React.CSSProperties = {
 
 // ─── Icon components ───────────────────────────────────────────────────────────
 
-export function BranchIcon(): React.ReactElement {
+export function BranchIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -131,7 +131,7 @@ export function BranchIcon(): React.ReactElement {
   );
 }
 
-export function DropdownChevron({ open }: { open: boolean }): React.ReactElement {
+export function DropdownChevron({ open }: { open: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -153,7 +153,7 @@ export function DropdownChevron({ open }: { open: boolean }): React.ReactElement
   );
 }
 
-function CheckMark(): React.ReactElement {
+function CheckMark(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -183,7 +183,7 @@ export function BranchItem({
   name: string;
   isCurrent: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className={`branch-item ${isCurrent ? 'text-interactive-accent' : 'text-text-semantic-muted'}`}
@@ -222,7 +222,7 @@ export async function performCreateBranch(
   return trimmed;
 }
 
-export function CreateBranchRow({ onClick }: { onClick: () => void }): React.ReactElement {
+export function CreateBranchRow({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <div
       className="branch-create-btn text-interactive-accent"

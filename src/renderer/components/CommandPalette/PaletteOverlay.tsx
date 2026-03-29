@@ -12,7 +12,7 @@ export function PaletteOverlay({
   isVisible,
   onClose,
   children,
-}: PaletteOverlayProps): React.ReactElement | null {
+}: PaletteOverlayProps): React.ReactElement<any> | null {
   if (!isVisible) return null;
 
   return (
@@ -57,7 +57,7 @@ const cardStyle: React.CSSProperties = {
 
 // ─── CategoryHeader ───────────────────────────────────────────────────────────
 
-export function CategoryHeader({ label }: { label: string }): React.ReactElement {
+export function CategoryHeader({ label }: { label: string }): React.ReactElement<any> {
   return (
     <div aria-hidden="true" className="text-text-semantic-faint" style={headerStyle}>
       {label}
@@ -81,7 +81,7 @@ export interface PaletteFooterProps {
   hints: string[];
 }
 
-export function PaletteFooter({ hints }: PaletteFooterProps): React.ReactElement {
+export function PaletteFooter({ hints }: PaletteFooterProps): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={footerStyle}>
       {hints.map((hint) => (

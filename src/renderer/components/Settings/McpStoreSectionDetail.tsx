@@ -44,7 +44,7 @@ function EnvVarRow({
   ev: McpRegistryEnvVar;
   value: string;
   onChange: (name: string, val: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={envVarRowStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -82,7 +82,7 @@ export function ServerEnvironmentVariablesSection({
   envVars: McpRegistryEnvVar[];
   envValues: Record<string, string>;
   onEnvChange: (name: string, value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ marginTop: '12px' }}>
       <SectionLabel style={{ marginBottom: '6px' }}>Environment Variables</SectionLabel>
@@ -106,7 +106,7 @@ function ServerDetailHeader({
 }: {
   displayName: string;
   server: McpRegistryServer;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ marginTop: '12px' }}>
       <div style={detailTitleRowStyle}>
@@ -139,7 +139,7 @@ function ServerInstallSection({
   isInstalled: boolean;
   isInstalling: boolean;
   onInstall: (scope: 'global' | 'project') => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={installAreaStyle}>
       {isInstalled ? (
@@ -179,7 +179,7 @@ interface ServerDetailBodyProps {
   onInstall: (scope: 'global' | 'project') => void;
 }
 
-function ServerDetailBody(props: ServerDetailBodyProps): React.ReactElement {
+function ServerDetailBody(props: ServerDetailBodyProps): React.ReactElement<any> {
   const { server, pkg, isInstalled, isInstalling, envVars, envValues, onEnvChange, onInstall } =
     props;
   return (
@@ -211,7 +211,7 @@ function ServerDetailBody(props: ServerDetailBodyProps): React.ReactElement {
   );
 }
 
-export function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElement {
+export function ServerDetailPanel({ model }: { model: McpStoreModel }): React.ReactElement<any> {
   const server = model.selectedServer!;
   const isInstalled = model.installedNames.has(mcpExtractShortName(server.name));
   const isInstalling = model.installInProgress === server.name;

@@ -21,7 +21,7 @@ export function LayoutListItem({
   onSelect,
   onUpdate,
   onDelete,
-}: LayoutListItemProps): React.ReactElement {
+}: LayoutListItemProps): React.ReactElement<any> {
   return (
     <div
       className="flex items-center"
@@ -70,7 +70,7 @@ function LayoutRadioButton({
   layout: WorkspaceLayout;
   isActive: boolean;
   onSelect: (l: WorkspaceLayout) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       role="option"
@@ -95,7 +95,7 @@ function LayoutRadioButton({
   );
 }
 
-function RadioDot({ active }: { active: boolean }): React.ReactElement {
+function RadioDot({ active }: { active: boolean }): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -120,7 +120,7 @@ function RadioDot({ active }: { active: boolean }): React.ReactElement {
   );
 }
 
-function UpdateIcon(): React.ReactElement {
+function UpdateIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -138,7 +138,7 @@ function UpdateIcon(): React.ReactElement {
   );
 }
 
-function DeleteIcon(): React.ReactElement {
+function DeleteIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -163,7 +163,7 @@ function LayoutActions({
   name: string;
   onUpdate: (n: string) => void;
   onDelete: (n: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
       <ActionButton
@@ -208,7 +208,7 @@ function ActionButton({
   hoverColor: string;
   hoverBg: string;
   children: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       title={title}

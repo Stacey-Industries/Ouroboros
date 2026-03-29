@@ -130,13 +130,15 @@ Skills can define hooks in YAML frontmatter that only fire while the skill is ac
 ### UI Enhancements
 
 **Rules activity indicator**
-Show badge/icon in composer or header indicating which rules and skills are active for the current message.
+~~Show badge/icon in composer or header indicating which rules and skills are active for the current message.~~
+- **Status**: Implemented. `RulesActivityBadge` pill in `ChatControlsBar` shows loaded rule count with expandable popover (name, source type, path). Fed by `InstructionsLoaded` hook events via new hook scripts in `assets/hooks/`.
 
 **Inline rule preview**
 Hover tooltip in Rules & Skills panel showing first few lines without opening the full editor.
 
 **Skill execution history**
-Track which skills were invoked, when, and what they expanded to. Show in thread details drawer alongside token usage.
+~~Track which skills were invoked, when, and what they expanded to. Show in thread details drawer alongside token usage.~~
+- **Status**: Implemented. `SkillHistorySection` in `AgentChatDetailsDrawer` shows skill invocations with name, agent type, duration, and status. Fed by `agent_start`/`agent_end` hook events with `/`-prefixed `taskLabel` skill detection. Persistence to `AgentChatMessageRecord.skillExecutions` is typed but main-process population is deferred pending runtime validation of the skill identification heuristic.
 
 ---
 

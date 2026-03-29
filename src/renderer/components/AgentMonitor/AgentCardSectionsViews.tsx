@@ -28,7 +28,7 @@ function buildTokenTitle(session: AgentSession): string {
   return base + cacheRead + cacheWrite;
 }
 
-function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement | null {
+function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement<any> | null {
   if (session.inputTokens < 1 && session.outputTokens < 1) return null;
   const estimatedCost = estimateCost({
     inputTokens: session.inputTokens,
@@ -64,7 +64,7 @@ function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactE
   );
 }
 
-function SubagentBadge({ count }: { count: number }): React.ReactElement | null {
+function SubagentBadge({ count }: { count: number }): React.ReactElement<any> | null {
   if (count < 1) return null;
   return (
     <span
@@ -102,7 +102,7 @@ export function AgentCardMeta({
 }: {
   session: AgentSession;
   childCount?: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="px-6 pb-1 flex items-center gap-2">
       <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>

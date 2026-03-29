@@ -97,7 +97,7 @@ function dangerBtn(disabled: boolean): React.CSSProperties {
   };
 }
 
-export function UpdatesSection({ showToast }: { showToast: ToastFn }): React.ReactElement {
+export function UpdatesSection({ showToast }: { showToast: ToastFn }): React.ReactElement<any> {
   const [isChecking, setIsChecking] = useState(false);
 
   const handleCheck = useCallback(async (): Promise<void> => {
@@ -156,7 +156,7 @@ function crashLogsSummary(count: number): string {
     : `${count} crash log${count !== 1 ? 's' : ''} recorded.`;
 }
 
-export function CrashLogsSection({ showToast }: { showToast: ToastFn }): React.ReactElement {
+export function CrashLogsSection({ showToast }: { showToast: ToastFn }): React.ReactElement<any> {
   const [count, setCount] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
 

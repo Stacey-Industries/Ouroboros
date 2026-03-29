@@ -63,6 +63,7 @@ const WINDOWS_HOOKS: HookEntry[] = [
   { src: 'agent_end.ps1', dest: 'agent_end.ps1', executable: false },
   { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false },
   { src: 'session_stop.ps1', dest: 'session_stop.ps1', executable: false },
+  { src: 'instructions_loaded.ps1', dest: 'instructions_loaded.ps1', executable: false },
 ];
 
 const UNIX_HOOKS: HookEntry[] = [
@@ -70,6 +71,7 @@ const UNIX_HOOKS: HookEntry[] = [
   { src: 'post_tool_use.sh', dest: 'post_tool_use.sh', executable: true },
   { src: 'agent_start.sh', dest: 'agent_start.sh', executable: true },
   { src: 'session_start.sh', dest: 'session_start.sh', executable: true },
+  { src: 'instructions_loaded.sh', dest: 'instructions_loaded.sh', executable: true },
 ];
 
 // â”€â”€â”€ Claude Code hook event types to register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -118,6 +120,7 @@ function buildHookCommands(hooksDir: string): Record<string, string> {
       SubagentStop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_end.ps1')}"`,
       SessionStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
       Stop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_stop.ps1')}"`,
+      InstructionsLoaded: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'instructions_loaded.ps1')}"`,
     };
   }
 
@@ -126,6 +129,7 @@ function buildHookCommands(hooksDir: string): Record<string, string> {
     PostToolUse: path.join(hooksDir, 'post_tool_use.sh'),
     SubagentStart: path.join(hooksDir, 'agent_start.sh'),
     SessionStart: path.join(hooksDir, 'session_start.sh'),
+    InstructionsLoaded: path.join(hooksDir, 'instructions_loaded.sh'),
   };
 }
 

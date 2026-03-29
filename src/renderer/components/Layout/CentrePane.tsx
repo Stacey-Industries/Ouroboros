@@ -11,7 +11,7 @@ export interface CentrePaneProps {
   onFocus?: () => void;
 }
 
-export function CentrePane({ tabBar, children, focusStyle, rootStyle, onFocus }: CentrePaneProps): React.ReactElement {
+export function CentrePane({ tabBar, children, focusStyle, rootStyle, onFocus }: CentrePaneProps): React.ReactElement<any> {
   return (
     <div
       className="flex flex-col flex-1 min-h-0 min-w-0 bg-surface-base"

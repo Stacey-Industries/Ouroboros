@@ -15,7 +15,7 @@ interface KeybindingsSectionProps {
 export function KeybindingsSection({
   draft,
   onChange,
-}: KeybindingsSectionProps): React.ReactElement {
+}: KeybindingsSectionProps): React.ReactElement<any> {
   const keybindings = draft.keybindings ?? {};
   const capture = useKeybindingCapture(keybindings, onChange);
   return <KeybindingsLayout capture={capture} keybindings={keybindings} />;
@@ -27,7 +27,7 @@ function KeybindingsLayout({
 }: {
   capture: CaptureModel;
   keybindings: Record<string, string>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={rootStyle}>
       <KeybindingInstructions />
@@ -55,7 +55,7 @@ function KeybindingCategory({
   capture: CaptureModel;
   category: string;
   keybindings: Record<string, string>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const actions = KEYBINDING_ACTIONS.filter((action) => action.category === category);
   return (
     <section>
@@ -84,7 +84,7 @@ function KeybindingCategory({
   );
 }
 
-function KeybindingInstructions(): React.ReactElement {
+function KeybindingInstructions(): React.ReactElement<any> {
   return (
     <p className="text-text-semantic-muted" style={instructionsStyle}>
       Click <strong className="text-text-semantic-primary">Edit</strong> on an action, then press

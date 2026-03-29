@@ -33,7 +33,7 @@ export function KeybindingRow({
   onCommit,
   onCancel,
   onReset,
-}: KeybindingRowProps): React.ReactElement {
+}: KeybindingRowProps): React.ReactElement<any> {
   return (
     <div style={rowStyle(isCapturing, isLast)}>
       <ActionLabel label={action.label} isCustomised={isCustomised} />
@@ -64,7 +64,7 @@ function ActionLabel({
 }: {
   label: string;
   isCustomised: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-primary"
@@ -92,7 +92,7 @@ function ShortcutDisplay({
   conflictId: string | null;
   effectiveShortcut: string;
   isCustomised: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (isCapturing) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -123,7 +123,7 @@ function CapturingButtons({
   conflictId: string | null;
   onCommit: () => void;
   onCancel: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const canSave = !!capturedKeys && !conflictId;
   return (
     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -145,7 +145,7 @@ function EditingButtons({
   isCustomised: boolean;
   onStartCapture: () => void;
   onReset: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
       <button onClick={onStartCapture} className="text-text-semantic-primary" style={smallBtnStyle}>
@@ -183,7 +183,7 @@ function ActionButtons({
   onCommit: () => void;
   onCancel: () => void;
   onReset: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (isCapturing) {
     return (
       <CapturingButtons

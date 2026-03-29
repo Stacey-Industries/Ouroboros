@@ -6,6 +6,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: boolean;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 const BASE =
@@ -27,17 +28,14 @@ const sizeClass: Record<ButtonSize, string> = {
   md: 'px-2.5 py-1 text-sm',
 };
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  function Button(
-    { variant = 'ghost', size = 'md', icon = false, className, children, ...rest },
-    ref,
-  ) {
-    const padding = icon ? 'p-1.5 aspect-square' : sizeClass[size];
-    const classes = `${BASE} ${variantClass[variant]} ${padding} ${className ?? ''}`;
-    return (
-      <button ref={ref} className={classes} {...rest}>
-        {children}
-      </button>
-    );
-  },
-);
+export function Button(
+  { variant = 'ghost', size = 'md', icon = false, className, children, ref, ...rest }: ButtonProps,
+): React.ReactElement<any> {
+  const padding = icon ? 'p-1.5 aspect-square' : sizeClass[size];
+  const classes = `${BASE} ${variantClass[variant]} ${padding} ${className ?? ''}`;
+  return (
+    <button ref={ref} className={classes} {...rest}>
+      {children}
+    </button>
+  );
+}

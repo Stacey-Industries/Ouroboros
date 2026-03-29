@@ -9,7 +9,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import { GitPanelContent } from './GitPanelContent';
 import { useGitPanelModel } from './useGitPanelModel';
 
-export const GitPanel = memo(function GitPanel(): React.ReactElement {
+export const GitPanel = memo(function GitPanel(): React.ReactElement<any> {
   const { projectRoot } = useProject();
   const model = useGitPanelModel(projectRoot);
 

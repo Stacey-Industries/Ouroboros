@@ -14,7 +14,7 @@ import { useAgentEvents } from '../hooks/useAgentEvents';
 
 const AgentEventsContext = createContext<UseAgentEventsReturn | null>(null);
 
-export function AgentEventsProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function AgentEventsProvider({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   const { agents, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions } = useAgentEvents();
   const value = useMemo<UseAgentEventsReturn>(
     () => ({ agents, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions }),

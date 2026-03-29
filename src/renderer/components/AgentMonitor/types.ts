@@ -5,6 +5,8 @@
  * hook payloads delivered via the named-pipe → IPC bridge.
  */
 
+import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
+
 export type AgentStatus = 'idle' | 'running' | 'complete' | 'error';
 
 export interface AgentSession {
@@ -31,6 +33,10 @@ export interface AgentSession {
   snapshotHash?: string;
   /** True when the session was spawned internally by the IDE (summarizer, CLAUDE.md generator) */
   internal?: boolean;
+  /** Rules/instructions loaded during this session (populated by InstructionsLoaded hook events). */
+  loadedRules?: LoadedRule[];
+  /** Skill invocations during this session (populated by agent_start/agent_end with skill signatures). */
+  skillExecutions?: SkillExecutionRecord[];
 }
 
 export interface SubToolCallEvent {

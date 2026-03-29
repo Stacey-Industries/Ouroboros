@@ -22,7 +22,7 @@ export { RecentThreadTabs, ThreadStatusIcon } from './RightSidebarTabs.tabs';
 const SECONDARY_VIEWS: Array<{
   id: RightSidebarView;
   label: string;
-  Icon: () => React.ReactElement;
+  Icon: () => React.ReactElement<any>;
 }> = [
   { id: 'monitor', label: 'Monitor', Icon: MonitorIcon },
   { id: 'git', label: 'Git Status', Icon: GitIcon },
@@ -50,11 +50,11 @@ function ViewSwitcherItem({
 }: {
   id: RightSidebarView;
   label: string;
-  Icon: () => React.ReactElement;
+  Icon: () => React.ReactElement<any>;
   isActive: boolean;
   onSwitchView: (view: RightSidebarView) => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const handleClick = () => {
     onSwitchView(id);
     onClose();
@@ -115,7 +115,7 @@ function BackToChatButton({
 }: {
   onSwitchView: (v: RightSidebarView) => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={() => {
@@ -144,7 +144,7 @@ export function ViewSwitcherDropdown({
   activeView: RightSidebarView;
   onSwitchView: (view: RightSidebarView) => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const ref = useRef<HTMLDivElement>(null);
   useDropdownDismiss(ref, onClose);
   return (
@@ -178,7 +178,7 @@ export function SecondaryViewHeader({
 }: {
   label: string;
   onBackToChat: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex-shrink-0 flex items-center h-8 border-b bg-surface-panel pl-2"

@@ -3,7 +3,7 @@ import React from 'react';
 import type { TaskSessionRecord } from '../../types/electron';
 import { badgeStyle, formatNumber, panelStyle } from './orchestrationUi';
 
-export function ContextMetricsHeader({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function ContextMetricsHeader({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   const packet = session?.contextPacket;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -18,7 +18,7 @@ export function ContextMetricsHeader({ session }: { session: TaskSessionRecord |
   );
 }
 
-export function ContextMetricsCards({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function ContextMetricsCards({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   const packet = session?.contextPacket;
   return (
     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -30,7 +30,7 @@ export function ContextMetricsCards({ session }: { session: TaskSessionRecord | 
   );
 }
 
-export function ContextBudgetNotes({ session }: { session: TaskSessionRecord | null }): React.ReactElement | null {
+export function ContextBudgetNotes({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> | null {
   const notes = session?.contextPacket?.budget.droppedContentNotes ?? [];
   if (notes.length === 0) {
     return null;
@@ -46,7 +46,7 @@ export function ContextBudgetNotes({ session }: { session: TaskSessionRecord | n
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }): React.ReactElement {
+function MetricCard({ label, value }: { label: string; value: string }): React.ReactElement<any> {
   return (
     <div className="rounded-md border p-3" style={panelStyle('var(--bg)')}>
       <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</div>

@@ -75,7 +75,7 @@ function buildCodeViewProps(input: CodeViewInput): Omit<CodeViewProps, 'scrollRe
   };
 }
 
-function OutlinePanel({ s }: { s: FileViewerState }): React.ReactElement | null {
+function OutlinePanel({ s }: { s: FileViewerState }): React.ReactElement<any> | null {
   return (
     <SymbolOutline
       symbols={s.outlineSymbols}
@@ -129,7 +129,7 @@ function ChromeHeader({
   onSave,
   onCancelEdit,
   s,
-}: ChromeHeaderProps): React.ReactElement {
+}: ChromeHeaderProps): React.ReactElement<any> {
   const toolbarProps = buildToolbarProps({ projectRoot, currentContent: currentContent ?? null, isDirty, onSave, onCancelEdit, s });
   return (
     <>
@@ -171,7 +171,7 @@ function ChromeBody({
   onDirtyChange,
   codeViewProps,
   s,
-}: ChromeBodyProps): React.ReactElement {
+}: ChromeBodyProps): React.ReactElement<any> {
   return (
     <div style={bodyStyle}>
       <ContentRouter viewMode={s.viewMode} editMode={s.editMode} isClaudeMd={s.isClaudeMd} claudeMdEnhanced={s.claudeMdEnhanced} filePath={filePath} content={content} ideThemeId={s.ideThemeId} projectRoot={projectRoot} onSave={onSave} onContentChange={onContentChange} onDirtyChange={onDirtyChange} showHistory={s.showHistory} isMarkdown={s.isMarkdown} hasDiff={s.hasDiff} originalContent={originalContent} diffBaseContent={diffBaseContent} conflictBlocks={s.conflictBlocks} handleConflictResolved={s.handleConflictResolved} codeViewProps={codeViewProps} scrollRef={s.scrollRef} codeRef={s.codeRef} wordWrap={s.wordWrap} showMinimap={s.showMinimap} formatOnSave={s.formatOnSave} />
@@ -188,7 +188,7 @@ function StatusFooter({
   filePath: string;
   lineCount: number;
   s: FileViewerState;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <StatusBar
       filePath={filePath}
@@ -216,7 +216,7 @@ export const FileViewerChrome = memo(function FileViewerChrome({
   gutterWidth,
   shikiLines,
   rows,
-}: FileViewerChromeProps): React.ReactElement {
+}: FileViewerChromeProps): React.ReactElement<any> {
   const codeViewProps = buildCodeViewProps({ s, lines, lineCount, gutterWidth, shikiLines, rows });
   // Wrap onSave so that Ctrl+S from Monaco also exits edit mode
   const { setEditMode } = s;

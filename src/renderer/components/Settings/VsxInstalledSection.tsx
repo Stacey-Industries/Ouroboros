@@ -5,7 +5,7 @@ import { EXTENSION_THEMES_CHANGED_EVENT } from '../../hooks/useExtensionThemes';
 import type { InstalledVsxExtension } from '../../types/electron';
 import { SectionLabel, smallButtonStyle } from './settingsStyles';
 
-export function VsxInstalledSection(): React.ReactElement {
+export function VsxInstalledSection(): React.ReactElement<any> {
   const { extensions, disabledIds, loading, refresh, toggleEnabled, uninstall } = useVsxInstalled();
   return (
     <section>
@@ -38,7 +38,7 @@ function VsxBody({
   onToggle,
   onUninstall,
   onRefresh,
-}: VsxBodyProps): React.ReactElement {
+}: VsxBodyProps): React.ReactElement<any> {
   if (loading)
     return (
       <p className="text-text-semantic-muted" style={mutedStyle}>
@@ -78,7 +78,7 @@ function VsxRowInfo({
 }: {
   ext: InstalledVsxExtension;
   isDisabled: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const contributions = summarizeContributions(ext);
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -117,7 +117,7 @@ function VsxRow({
   isLast: boolean;
   onToggle: (id: string) => void;
   onUninstall: (id: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={rowStyle(isLast)}>
       <VsxRowInfo ext={ext} isDisabled={isDisabled} />

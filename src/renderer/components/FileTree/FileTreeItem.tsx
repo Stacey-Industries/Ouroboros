@@ -82,7 +82,7 @@ function IndentGuides({
 }: {
   depth: number;
   searchMode?: boolean;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (depth <= 0 || searchMode) return null;
   return (
     <>
@@ -168,7 +168,7 @@ function renderDirectoryItem(
   statusColor: string | undefined,
   statusLbl: string | undefined,
   heatDot: string | undefined,
-): React.ReactElement {
+): React.ReactElement<any> {
   return (
     <TreeItemDirectory
       node={props.node}
@@ -191,7 +191,7 @@ function renderTreeItemContent(
   statusColor: string | undefined,
   statusLbl: string | undefined,
   heatDot: string | undefined,
-): React.ReactElement {
+): React.ReactElement<any> {
   if (props.node.isDirectory) {
     return renderDirectoryItem(props, statusColor, statusLbl, heatDot);
   }
@@ -217,7 +217,7 @@ function renderTreeItemContent(
 
 export const FileTreeItem = React.memo(function FileTreeItem(
   props: FileTreeItemProps,
-): React.ReactElement {
+): React.ReactElement<any> {
   const { node, depth, isActive, isFocused, isEditing, isSelected, heatData } = props;
   const drag = useDragHandlers(node, isEditing, props.onDragOver, props.onDrop);
   const statusColor = gitStatusColor(props.gitStatus);

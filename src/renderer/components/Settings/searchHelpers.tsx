@@ -44,7 +44,7 @@ export function HighlightedText({
 }: {
   text: string;
   ranges: Array<[number, number]>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (ranges.length === 0) {
     return <span>{text}</span>;
   }

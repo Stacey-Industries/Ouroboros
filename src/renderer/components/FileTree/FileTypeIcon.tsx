@@ -57,7 +57,7 @@ const FILE_ICONS: Partial<Record<IconSpec['kind'], ColorIcon>> = {
   lock: LockIcon,
 };
 
-function renderFileIcon(spec: IconSpec): React.ReactElement {
+function renderFileIcon(spec: IconSpec): React.ReactElement<any> {
   const Icon = FILE_ICONS[spec.kind] ?? DocIcon;
   return <Icon color={spec.color} />;
 }
@@ -68,7 +68,7 @@ export interface FileTypeIconProps {
 
 export function FileTypeIcon({
   filename,
-}: FileTypeIconProps): React.ReactElement {
+}: FileTypeIconProps): React.ReactElement<any> {
   return renderFileIcon(resolveSpec(filename));
 }
 
@@ -80,7 +80,7 @@ export interface FolderTypeIconProps {
 export function FolderTypeIcon({
   name,
   open,
-}: FolderTypeIconProps): React.ReactElement {
+}: FolderTypeIconProps): React.ReactElement<any> {
   const color = folderColor(name, open);
   if (open) return <FolderOpenSvg color={color} />;
   return <FolderClosedSvg color={color} />;

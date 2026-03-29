@@ -13,7 +13,7 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
+export function LspSubsection({ draft, onChange }: Props): React.ReactElement<any> {
   return (
     <section style={{ marginTop: '24px' }}>
       <SectionLabel>Language Server Protocol (LSP)</SectionLabel>
@@ -35,7 +35,7 @@ export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
   );
 }
 
-function LspServersInput({ draft, onChange }: Props): React.ReactElement {
+function LspServersInput({ draft, onChange }: Props): React.ReactElement<any> {
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>): void {
     const lines = e.target.value.split('\n').filter((l) => l.includes('='));
     const parsed: Record<string, string> = {};

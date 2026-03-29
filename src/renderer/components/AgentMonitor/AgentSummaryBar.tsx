@@ -83,11 +83,11 @@ function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
   }, [sessions]);
 }
 
-function SummarySeparator(): React.ReactElement {
+function SummarySeparator(): React.ReactElement<any> {
   return <span className="text-text-semantic-faint">·</span>;
 }
 
-function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement {
+function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement<any> {
   const items = [
     { count: summary.running, color: 'var(--interactive-accent)', label: 'running' },
     { count: summary.complete, color: 'var(--status-success)', label: 'done' },
@@ -111,7 +111,7 @@ function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.Rea
   );
 }
 
-function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.ReactElement {
+function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.ReactElement<any> {
   return (
     <>
       <SummarySeparator />
@@ -132,7 +132,7 @@ function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.Rea
   );
 }
 
-function ClearCompletedButton({ onClick }: { onClick: () => void }): React.ReactElement {
+function ClearCompletedButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -152,7 +152,7 @@ function ClearCompletedButton({ onClick }: { onClick: () => void }): React.React
   );
 }
 
-function RunningDot(): React.ReactElement {
+function RunningDot(): React.ReactElement<any> {
   return (
     <span
       className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -167,7 +167,7 @@ function RunningDot(): React.ReactElement {
 export const AgentSummaryBar = memo(function AgentSummaryBar({
   sessions,
   onClearCompleted,
-}: AgentSummaryBarProps): React.ReactElement {
+}: AgentSummaryBarProps): React.ReactElement<any> {
   const summary = useAgentSummary(sessions);
 
   return (

@@ -34,7 +34,7 @@ function CodeBlockRenderer({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'code' };
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <ChatCodeBlock
       code={block.content}
@@ -51,7 +51,7 @@ function ErrorBlockRenderer({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'error' };
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="my-1.5 rounded-md border px-3 py-2 text-xs text-status-error"
@@ -99,7 +99,7 @@ function DiffBlockRenderer({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'diff' };
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs">
       <div className="flex items-center gap-1.5 text-text-semantic-muted">
@@ -138,7 +138,7 @@ function DiffBlockRenderer({
 
 /* ---------- Unknown block (debug fallback) ---------- */
 
-function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): React.ReactElement {
+function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): React.ReactElement<any> {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -190,7 +190,7 @@ function ToolUseBlock({
   block: AgentChatContentBlock & { kind: 'tool_use' };
   index: number;
   allBlocks?: AgentChatContentBlock[];
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (allBlocks) {
     const run = collectToolRun(allBlocks, index);
     if (run.length >= 2) {
@@ -221,7 +221,7 @@ function ThinkingBlock({
   block: AgentChatContentBlock & { kind: 'thinking' };
   isStreaming: boolean;
   isLastBlock: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [thinkingCollapsed, setThinkingCollapsed] = useState(!isStreaming);
   return (
     <AgentChatThinkingBlock
@@ -246,7 +246,7 @@ function ToolResultBlock({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'tool_result' };
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted"
@@ -263,7 +263,7 @@ function dispatchBlockByKind({
   isStreaming,
   isLastBlock,
   allBlocks,
-}: DispatchBlockArgs): React.ReactElement {
+}: DispatchBlockArgs): React.ReactElement<any> {
   switch (block.kind) {
     case 'text':
       return <MessageMarkdown content={block.content} />;
@@ -309,7 +309,7 @@ export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer
   isLastBlock,
   allBlocks,
   skipRender,
-}: AgentChatBlockRendererProps): React.ReactElement {
+}: AgentChatBlockRendererProps): React.ReactElement<any> {
   if (skipRender) {
     return <></>;
   }

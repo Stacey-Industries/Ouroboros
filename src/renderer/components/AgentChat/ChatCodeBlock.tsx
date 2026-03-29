@@ -16,7 +16,7 @@ export interface ChatCodeBlockProps {
   showApply?: boolean;
 }
 
-function LineNumbers({ count }: { count: number }): React.ReactElement {
+function LineNumbers({ count }: { count: number }): React.ReactElement<any> {
   const lines = useMemo(() => Array.from({ length: count }, (_, index) => index + 1), [count]);
   return (
     <div
@@ -56,7 +56,7 @@ type CodeHeaderProps = {
   handleCopy: () => void;
 };
 
-function CodeHeader(props: CodeHeaderProps): React.ReactElement {
+function CodeHeader(props: CodeHeaderProps): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-1.5 border-b border-border-semantic px-2.5 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -108,7 +108,7 @@ function CodeBody({
   wordWrap: boolean;
   showLineNumbers: boolean;
   lineCount: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex overflow-x-auto p-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
       {showLineNumbers && <LineNumbers count={lineCount} />}
@@ -166,7 +166,7 @@ function useChatCodeBlockState(
 
 type ChatCodeBlockState = ReturnType<typeof useChatCodeBlockState>;
 
-function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React.ReactElement {
+function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React.ReactElement<any> {
   const isApplied = props.status === 'applied';
   return (
     <div className="group/code my-2 rounded-md border border-border-semantic bg-surface-raised">
@@ -208,7 +208,7 @@ function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React
 
 export const ChatCodeBlock = React.memo(function ChatCodeBlock(
   props: ChatCodeBlockProps,
-): React.ReactElement {
+): React.ReactElement<any> {
   const state = useChatCodeBlockState(props.code, props.language, props.filePath);
   return <CodeBlockContent {...props} {...state} />;
 });

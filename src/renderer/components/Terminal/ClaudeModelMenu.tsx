@@ -110,7 +110,7 @@ function ModelMenuGroup({
   group: string;
   items: ModelOption[];
   onSelect: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div>
       <div className="px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-semantic-muted opacity-60">
@@ -138,7 +138,7 @@ export function ClaudeModelMenu({
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   onSelect: (value: string) => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const menuRef = useRef<HTMLDivElement>(null);
   const models = useModelMenuData();
   const groups = groupByName(models);

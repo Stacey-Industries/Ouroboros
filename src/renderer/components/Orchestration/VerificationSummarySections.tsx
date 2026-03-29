@@ -9,7 +9,7 @@ import {
   VerificationStatusHeader,
 } from './VerificationSummarySections.parts';
 
-export function ProviderActivityCard({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement {
+export function ProviderActivityCard({ providerEvent }: { providerEvent: ProviderProgressEvent | null }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <ProviderStatusHeader providerEvent={providerEvent} />
@@ -18,7 +18,7 @@ export function ProviderActivityCard({ providerEvent }: { providerEvent: Provide
   );
 }
 
-export function VerificationOverviewCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement {
+export function VerificationOverviewCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <VerificationStatusHeader summary={summary} />
@@ -27,7 +27,7 @@ export function VerificationOverviewCard({ summary }: { summary: VerificationSum
   );
 }
 
-export function VerificationStepsCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement {
+export function VerificationStepsCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[13px] font-semibold" style={{ color: 'var(--text)' }}>Verification steps</div>
@@ -36,7 +36,7 @@ export function VerificationStepsCard({ summary }: { summary: VerificationSummar
   );
 }
 
-function StepResultCard({ result }: { result: NonNullable<VerificationSummary['commandResults']>[number] }): React.ReactElement {
+function StepResultCard({ result }: { result: NonNullable<VerificationSummary['commandResults']>[number] }): React.ReactElement<any> {
   const tone = resolveStatusTone(result.status);
   return (
     <div className="rounded-md border p-3 text-[12px]" style={panelStyle('var(--bg)')}>
@@ -54,7 +54,7 @@ function StepResultCard({ result }: { result: NonNullable<VerificationSummary['c
   );
 }
 
-function CollapsibleOutput({ title, content }: { title: string; content: string }): React.ReactElement {
+function CollapsibleOutput({ title, content }: { title: string; content: string }): React.ReactElement<any> {
   return (
     <details className="mt-3">
       <summary className="cursor-pointer select-none" style={{ color: 'var(--text)' }}>{title}</summary>
@@ -63,7 +63,7 @@ function CollapsibleOutput({ title, content }: { title: string; content: string 
   );
 }
 
-export function VerificationIssuesCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement {
+export function VerificationIssuesCard({ summary }: { summary: VerificationSummary | null }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[13px] font-semibold" style={{ color: 'var(--text)' }}>Issues</div>
@@ -72,7 +72,7 @@ export function VerificationIssuesCard({ summary }: { summary: VerificationSumma
   );
 }
 
-function IssueCard({ issue }: { issue: NonNullable<VerificationSummary['issues']>[number] }): React.ReactElement {
+function IssueCard({ issue }: { issue: NonNullable<VerificationSummary['issues']>[number] }): React.ReactElement<any> {
   const tone = resolveStatusTone(issue.severity === 'error' ? 'failed' : issue.severity === 'warning' ? 'running' : 'pending');
   return (
     <div className="rounded-md border px-3 py-2 text-[12px]" style={panelStyle('var(--bg)')}>
@@ -85,7 +85,7 @@ function IssueCard({ issue }: { issue: NonNullable<VerificationSummary['issues']
   );
 }
 
-function KeyValue({ label, value, breakAll = false, multiline = false }: { label: string; value: string; breakAll?: boolean; multiline?: boolean }): React.ReactElement {
+function KeyValue({ label, value, breakAll = false, multiline = false }: { label: string; value: string; breakAll?: boolean; multiline?: boolean }): React.ReactElement<any> {
   return (
     <div>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>
@@ -94,6 +94,6 @@ function KeyValue({ label, value, breakAll = false, multiline = false }: { label
   );
 }
 
-function EmptyMessage({ message }: { message: string }): React.ReactElement {
+function EmptyMessage({ message }: { message: string }): React.ReactElement<any> {
   return <div className="rounded-md border px-3 py-4 text-[12px]" style={{ ...panelStyle('var(--bg)'), color: 'var(--text-muted)' }}>{message}</div>;
 }

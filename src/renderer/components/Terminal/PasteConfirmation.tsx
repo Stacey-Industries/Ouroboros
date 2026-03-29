@@ -68,7 +68,7 @@ function formatLineCount(text: string): string {
   return lines > 1 ? ` (${lines} lines)` : '';
 }
 
-function PasteSummary({ text }: { text: string }): React.ReactElement {
+function PasteSummary({ text }: { text: string }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-muted" style={{ flex: 1 }}>
       Paste {text.length.toLocaleString()} characters{formatLineCount(text)}?
@@ -86,7 +86,7 @@ function PasteActionButtons({
   onConfirm: () => void;
   onConfirmSingleLine: () => void;
   onCancel: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <button
@@ -122,7 +122,7 @@ export function PasteConfirmBanner({
   onConfirm,
   onConfirmSingleLine,
   onCancel,
-}: PasteConfirmBannerProps): React.ReactElement {
+}: PasteConfirmBannerProps): React.ReactElement<any> {
   return (
     <div
       className="bg-surface-panel text-text-semantic-primary border-t border-border-semantic"

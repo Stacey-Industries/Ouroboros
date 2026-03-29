@@ -54,7 +54,7 @@ interface ExtensionsBuildGuideProps {
 export function ExtensionsBuildGuide({
   isOpen,
   onToggle,
-}: ExtensionsBuildGuideProps): React.ReactElement {
+}: ExtensionsBuildGuideProps): React.ReactElement<any> {
   return (
     <section>
       <button onClick={onToggle} aria-expanded={isOpen} style={guideToggleStyle(isOpen)}>
@@ -68,7 +68,7 @@ export function ExtensionsBuildGuide({
   );
 }
 
-function BuildGuideContent(): React.ReactElement {
+function BuildGuideContent(): React.ReactElement<any> {
   return (
     <>
       <GuideDescription />
@@ -85,7 +85,7 @@ function BuildGuideContent(): React.ReactElement {
   );
 }
 
-function GuideDescription(): React.ReactElement {
+function GuideDescription(): React.ReactElement<any> {
   return (
     <p className="text-text-semantic-muted" style={guideTextStyle}>
       Create a folder with a{' '}
@@ -98,7 +98,7 @@ function GuideDescription(): React.ReactElement {
   );
 }
 
-function EventBadgeList(): React.ReactElement {
+function EventBadgeList(): React.ReactElement<any> {
   return (
     <div style={badgeListStyle}>
       {ACTIVATION_EVENTS.map(({ event, description }) => (
@@ -115,7 +115,7 @@ function EventBadgeList(): React.ReactElement {
   );
 }
 
-function ActivationHelp(): React.ReactElement {
+function ActivationHelp(): React.ReactElement<any> {
   return (
     <p className="text-text-semantic-muted" style={guideTextStyle}>
       Extensions without{' '}
@@ -128,7 +128,7 @@ function ActivationHelp(): React.ReactElement {
   );
 }
 
-function PermissionsList(): React.ReactElement {
+function PermissionsList(): React.ReactElement<any> {
   return (
     <>
       <p className="text-text-semantic-muted" style={{ ...guideTextStyle, marginBottom: '6px' }}>
@@ -149,7 +149,7 @@ function PermissionsList(): React.ReactElement {
   );
 }
 
-function SandboxNote(): React.ReactElement {
+function SandboxNote(): React.ReactElement<any> {
   return (
     <p
       className="text-text-semantic-muted"
@@ -169,7 +169,7 @@ function SandboxNote(): React.ReactElement {
   );
 }
 
-function CodeBlock({ code }: { code: string }): React.ReactElement {
+function CodeBlock({ code }: { code: string }): React.ReactElement<any> {
   return (
     <pre className="text-text-semantic-secondary" style={codeBlockStyle}>
       {code}

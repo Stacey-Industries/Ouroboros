@@ -25,7 +25,7 @@ export interface ClaudeConfigPanelProps {
 function renderTabContent(
   activeTab: ConfigTabId,
   props: ClaudeConfigPanelProps,
-): React.ReactElement {
+): React.ReactElement<any> {
   switch (activeTab) {
     case 'commands':
       return <CommandsTab commands={props.commands} onOpenFile={props.onOpenFile} projectRoot={props.projectRoot} />;
@@ -40,7 +40,7 @@ function renderTabContent(
 
 // ── Panel ───────────────────────────────────────────────────────────────────
 
-export function ClaudeConfigPanel(props: ClaudeConfigPanelProps): React.ReactElement {
+export function ClaudeConfigPanel(props: ClaudeConfigPanelProps): React.ReactElement<any> {
   const [activeTab, setActiveTab] = useState<ConfigTabId>('commands');
 
   return (

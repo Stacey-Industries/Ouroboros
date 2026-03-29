@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
+import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 import { getModelProviderLogo } from '../shared/ProviderLogos';
 import {
@@ -17,6 +18,7 @@ import {
   type OptionItem,
   resolveActiveModel,
 } from './ChatControlsBarSupport';
+import { RulesActivityBadge } from './RulesActivityBadge';
 import { SelectPill } from './SelectPill';
 
 export type { ChatControlProvider };
@@ -51,7 +53,7 @@ function ModelSelect(props: {
   groups: OptionGroup[];
   onChange: (value: string) => void;
   codexModelIds?: string[];
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <SelectPill
       label="Model"
@@ -70,7 +72,7 @@ function ControlSelect(props: {
   value: string;
   options: ReadonlyArray<OptionItem>;
   onChange: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <SelectPill
       label={props.label}
@@ -86,7 +88,7 @@ function PermissionModeIndicator(props: {
   provider: ChatControlProvider;
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const modes = getPermissionModes(props.provider);
   const current = modes.find((mode) => mode.value === props.value) ?? modes[0];
   return (
@@ -121,7 +123,7 @@ type ArcProps = {
   offset: number;
 };
 
-function ContextRingArcs(p: ArcProps): React.ReactElement {
+function ContextRingArcs(p: ArcProps): React.ReactElement<any> {
   return (
     <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
       <circle
@@ -148,7 +150,7 @@ function ContextRingArcs(p: ArcProps): React.ReactElement {
   );
 }
 
-function ContextRing(props: ContextRingProps): React.ReactElement {
+function ContextRing(props: ContextRingProps): React.ReactElement<any> {
   const size = props.size ?? 26;
   const stroke = props.stroke ?? 2.5;
   const radius = (size - stroke) / 2;
@@ -188,7 +190,7 @@ function ModelContextUsageIndicator(props: {
   usage: ModelUsageEntry[];
   codexModels?: CodexModelOption[];
   isStreaming?: boolean;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (props.usage.length === 0) return null;
   return (
     <div className="flex items-center gap-2">
@@ -253,9 +255,24 @@ function buildControlsBarState(props: ChatControlsBarProps) {
   return { activeProvider, displayUsage, effortOptions, effortValue, ...modelOptions };
 }
 
-export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement {
+function useActiveSessionRules() {
+  const { agents } = useAgentEventsContext();
+  return useMemo(() => {
+    const running = agents.filter((s) => s.status === 'running');
+    const target = running.length > 0
+      ? running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b))
+      : agents.reduce<(typeof agents)[number] | undefined>((a, b) => {
+          if (!a) return b;
+          return (b.startedAt > a.startedAt) ? b : a;
+        }, undefined);
+    return target?.loadedRules ?? [];
+  }, [agents]);
+}
+
+export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement<any> {
   const { activeProvider, displayUsage, effortOptions, effortValue, defaultOption, groups } =
     buildControlsBarState(props);
+  const loadedRules = useActiveSessionRules();
   return (
     <div className="flex flex-wrap items-center gap-3 px-3 py-1" data-layout="chat-controls-bar">
       <ModelSelect
@@ -276,6 +293,7 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
         value={props.overrides.permissionMode}
         onChange={(permissionMode) => props.onChange({ ...props.overrides, permissionMode })}
       />
+      <RulesActivityBadge rules={loadedRules} />
       {displayUsage.length > 0 && (
         <>
           <div className="mx-0.5 h-3 w-px bg-border-semantic" />

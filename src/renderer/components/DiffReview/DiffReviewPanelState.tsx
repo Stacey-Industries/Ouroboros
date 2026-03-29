@@ -44,7 +44,7 @@ export function getDiffReviewStats(files: ReviewFile[]): DiffReviewStats {
 export function getDiffReviewStateView(
   state: DiffReviewState,
   onClose: () => void,
-): React.ReactElement | null {
+): React.ReactElement<any> | null {
   if (state.loading) return <CenteredMessage color="var(--text-muted)">Loading diff…</CenteredMessage>;
   if (state.error) return <DiffReviewError error={state.error} />;
   if (state.files.length === 0) return <DiffReviewEmptyState onClose={onClose} />;
@@ -72,11 +72,11 @@ function CenteredMessage({
   children: React.ReactNode;
   color: string;
   extraStyle?: React.CSSProperties;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return <div style={{ ...centerStyle, color, ...extraStyle }}>{children}</div>;
 }
 
-function DiffReviewError({ error }: { error: string }): React.ReactElement {
+function DiffReviewError({ error }: { error: string }): React.ReactElement<any> {
   return (
     <CenteredMessage
       color="var(--status-error, #f85149)"
@@ -90,7 +90,7 @@ function DiffReviewError({ error }: { error: string }): React.ReactElement {
   );
 }
 
-function DiffReviewEmptyState({ onClose }: { onClose: () => void }): React.ReactElement {
+function DiffReviewEmptyState({ onClose }: { onClose: () => void }): React.ReactElement<any> {
   return (
     <CenteredMessage
       color="var(--text-muted)"

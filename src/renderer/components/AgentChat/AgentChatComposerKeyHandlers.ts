@@ -87,7 +87,7 @@ function handlePermissionModeShortcut(args: {
 
 function handleEscapeShortcut(args: {
   event: React.KeyboardEvent<HTMLTextAreaElement>;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   onChange: (value: string) => void;
 }): boolean {
@@ -100,7 +100,7 @@ function handleEscapeShortcut(args: {
 function handleArrowUpShortcut(args: {
   event: React.KeyboardEvent<HTMLTextAreaElement>;
   messages?: AgentChatMessageRecord[];
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   onChange: (value: string) => void;
 }): boolean {
@@ -124,7 +124,7 @@ function handleEnterShortcut(args: {
   event: React.KeyboardEvent<HTMLTextAreaElement>;
   draft: string;
   slashCommandContext?: SlashCommandContext;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   onChange: (value: string) => void;
   canSend: boolean;
@@ -152,7 +152,7 @@ export function handleComposerShortcutKeyDown(args: {
   messages?: AgentChatMessageRecord[];
   onChange: (value: string) => void;
   slashCommandContext?: SlashCommandContext;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   canSend: boolean;
   onSubmit: () => Promise<void>;
@@ -184,7 +184,7 @@ export interface ComposerKeyDownArgs {
   draft: string;
   onChange: (value: string) => void;
   slashCommandContext?: SlashCommandContext;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   canSend: boolean;
   onSubmit: () => Promise<void>;
@@ -217,7 +217,7 @@ export function handleComposerKeyDown(args: ComposerKeyDownArgs): void {
 }
 
 export interface ComposerChangeArgs {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   onChange: (value: string) => void;
   onAutocompleteQuery?: (query: string) => void;

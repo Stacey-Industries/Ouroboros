@@ -161,7 +161,7 @@ type PdfNavProps = {
   setPageInputValue: (v: string) => void;
   handlePageInput: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
-function PdfPageNavButtons(p: PdfNavProps): React.ReactElement {
+function PdfPageNavButtons(p: PdfNavProps): React.ReactElement<any> {
   return (
     <>
       <button
@@ -209,7 +209,7 @@ function PdfZoomButtons({
   zoomIn,
   zoomOut,
   zoomLabel,
-}: PdfZoomProps): React.ReactElement {
+}: PdfZoomProps): React.ReactElement<any> {
   return (
     <>
       <div
@@ -245,7 +245,7 @@ function PdfZoomButtons({
 }
 
 export type PdfToolbarProps = PdfNavProps & PdfZoomProps & { openExternal: () => void };
-export function PdfToolbar(p: PdfToolbarProps): React.ReactElement {
+export function PdfToolbar(p: PdfToolbarProps): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={toolbarStyle}>
       <PdfPageNavButtons
@@ -277,7 +277,7 @@ export function PdfToolbar(p: PdfToolbarProps): React.ReactElement {
 }
 
 type PdfErrorViewProps = { error: string; openExternal: () => void };
-export function PdfErrorView({ error, openExternal }: PdfErrorViewProps): React.ReactElement {
+export function PdfErrorView({ error, openExternal }: PdfErrorViewProps): React.ReactElement<any> {
   return (
     <div style={rootStyle}>
       <div

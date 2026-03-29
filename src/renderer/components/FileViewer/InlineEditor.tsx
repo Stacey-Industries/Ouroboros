@@ -1,5 +1,5 @@
 import { EditorSelection } from '@codemirror/state';
-import React, { forwardRef, memo, useImperativeHandle } from 'react';
+import React, { memo, useImperativeHandle } from 'react';
 
 import { useInlineEditorController } from './useInlineEditorController';
 
@@ -13,6 +13,7 @@ export interface InlineEditorProps {
   onSave: (content: string) => void;
   onContentChange: (content: string) => void;
   onDirtyChange: (dirty: boolean) => void;
+  ref?: React.Ref<InlineEditorHandle>;
 }
 
 export interface InlineEditorHandle {
@@ -26,8 +27,9 @@ const editorContainerStyle: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-const InlineEditorComponent = forwardRef<InlineEditorHandle, InlineEditorProps>(function InlineEditor(props, ref): React.ReactElement {
-  const { containerRef, viewRef } = useInlineEditorController(props);
+function InlineEditorComponent(props: InlineEditorProps): React.ReactElement<any> {
+  const { ref, ...rest } = props;
+  const { containerRef, viewRef } = useInlineEditorController(rest);
   useImperativeHandle(ref, () => ({
     getContent: () => viewRef.current?.state.doc.toString() ?? '',
     setContent: (content: string) => {
@@ -42,7 +44,7 @@ const InlineEditorComponent = forwardRef<InlineEditorHandle, InlineEditorProps>(
     },
   }), [viewRef]);
   return <div ref={containerRef} style={editorContainerStyle} />;
-});
+}
 
 InlineEditorComponent.displayName = 'InlineEditor';
 

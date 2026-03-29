@@ -125,7 +125,7 @@ export function Section({
 }: {
   children: React.ReactNode;
   title: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <div className="text-text-semantic-muted" style={sectionHeaderStyle}>
@@ -136,7 +136,7 @@ export function Section({
   );
 }
 
-export function Badge({ color, label }: { color?: string; label: string }): React.ReactElement {
+export function Badge({ color, label }: { color?: string; label: string }): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -162,7 +162,7 @@ export function CodeLine({
 }: {
   accent?: boolean;
   children: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       className={accent ? 'text-interactive-accent' : 'text-text-semantic-primary'}
@@ -178,7 +178,7 @@ export function CodeLine({
   );
 }
 
-export function ConfigPill({ label }: { label: string }): React.ReactElement {
+export function ConfigPill({ label }: { label: string }): React.ReactElement<any> {
   return (
     <span
       className="bg-surface-base border border-border-semantic text-text-semantic-muted"
@@ -204,7 +204,7 @@ export function ActionButton({
   label: string;
   onClick: () => void;
   primary?: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       disabled={disabled}
@@ -217,7 +217,7 @@ export function ActionButton({
   );
 }
 
-export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement {
+export function EmptyState({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={emptyStateStyle}>
       {children}
@@ -225,7 +225,7 @@ export function EmptyState({ children }: { children: React.ReactNode }): React.R
   );
 }
 
-export function LoadingState(): React.ReactElement {
+export function LoadingState(): React.ReactElement<any> {
   return (
     <EmptyState>
       <div style={{ marginBottom: '8px' }}>
@@ -251,7 +251,7 @@ export function LoadingState(): React.ReactElement {
   );
 }
 
-export function ErrorBanner({ error }: { error: string }): React.ReactElement {
+export function ErrorBanner({ error }: { error: string }): React.ReactElement<any> {
   return (
     <div
       style={{

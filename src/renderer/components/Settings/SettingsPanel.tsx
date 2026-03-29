@@ -45,7 +45,7 @@ function useSettingsPanelState(onClose: () => void) {
   };
 }
 
-export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactElement | null {
+export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactElement<any> | null {
   const s = useSettingsPanelState(onClose);
   const isSearching = s.searchQuery.trim().length > 0;
 
@@ -65,7 +65,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   );
 }
 
-function SettingsPanelSearchView({ query, onResultClick }: { query: string; onResultClick: (e: SettingsEntry) => void }): React.ReactElement {
+function SettingsPanelSearchView({ query, onResultClick }: { query: string; onResultClick: (e: SettingsEntry) => void }): React.ReactElement<any> {
   return (
     <div style={contentScrollStyle}>
       <SettingsSearchResults searchQuery={query} searchResults={searchEntries(query)} onResultClick={onResultClick} />
@@ -73,7 +73,7 @@ function SettingsPanelSearchView({ query, onResultClick }: { query: string; onRe
   );
 }
 
-function SettingsPanelTabView({ activeTab, api }: { activeTab: TabId; api: ReturnType<typeof useSettingsDraft> }): React.ReactElement {
+function SettingsPanelTabView({ activeTab, api }: { activeTab: TabId; api: ReturnType<typeof useSettingsDraft> }): React.ReactElement<any> {
   return (
     <div style={tabContentStyle}>
       <SettingsTabContent activeTab={activeTab} draft={api.draft!} onChange={api.handleChange} onImport={api.handleImport} onPreviewTheme={api.handlePreviewTheme} />
@@ -93,7 +93,7 @@ function PanelFooter({
   saveError: string | null;
   onCancel: () => void;
   onSave: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={footerStyle}>
       {saveError && (

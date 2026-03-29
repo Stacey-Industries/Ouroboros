@@ -139,6 +139,7 @@ function createMockStructuralSummary(module: ModuleIdentity, overrides: Partial<
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.clearAllMocks()
 })
 
 describe('generateRepoMap', () => {

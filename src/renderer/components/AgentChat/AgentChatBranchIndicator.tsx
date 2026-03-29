@@ -7,7 +7,7 @@ export interface AgentChatBranchIndicatorProps {
   onSwitchToParent: (parentThreadId: string) => void;
 }
 
-function ForkIcon(): React.ReactElement {
+function ForkIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="6" y1="3" x2="6" y2="15" />
@@ -27,7 +27,7 @@ function truncatePreview(text: string, maxLen = 60): string {
 export function AgentChatBranchIndicator({
   branchInfo,
   onSwitchToParent,
-}: AgentChatBranchIndicatorProps): React.ReactElement {
+}: AgentChatBranchIndicatorProps): React.ReactElement<any> {
   return (
     <div
       className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-[11px] text-text-semantic-muted"

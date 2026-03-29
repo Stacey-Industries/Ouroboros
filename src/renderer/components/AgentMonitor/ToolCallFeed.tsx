@@ -21,7 +21,7 @@ const FeedHeader = memo(function FeedHeader({
   allExpanded,
   onExpandAll,
   onCollapseAll,
-}: FeedHeaderProps): React.ReactElement {
+}: FeedHeaderProps): React.ReactElement<any> {
   return (
     <div
       className="flex items-center justify-between px-3 py-1"
@@ -119,10 +119,10 @@ function FeedBody({
   onToggle: (id: string) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   bottomRef: React.RefObject<HTMLDivElement | null>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
-      ref={containerRef as React.RefObject<HTMLDivElement>}
+      ref={containerRef as React.RefObject<HTMLDivElement | null>}
       className="overflow-y-auto overflow-x-hidden"
       style={{ maxHeight: '320px' }}
     >
@@ -135,14 +135,14 @@ function FeedBody({
           onToggle={onToggle}
         />
       ))}
-      <div ref={bottomRef as React.RefObject<HTMLDivElement>} />
+      <div ref={bottomRef as React.RefObject<HTMLDivElement | null>} />
     </div>
   );
 }
 
 export const ToolCallFeed = memo(function ToolCallFeed({
   toolCalls,
-}: ToolCallFeedProps): React.ReactElement {
+}: ToolCallFeedProps): React.ReactElement<any> {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { expandedIds, allExpanded, handleToggle, handleExpandAll, handleCollapseAll } =

@@ -7,7 +7,7 @@ function pickString(fallback: string, ...values: Array<string | null | undefined
   return values.find((value) => typeof value === 'string' && value.length > 0) ?? fallback;
 }
 
-export function TaskStateBody(props: { session: TaskSessionRecord | null; actionMessage: string | null; actionError: string | null; latestResultMessage: string | null; }): React.ReactElement {
+export function TaskStateBody(props: { session: TaskSessionRecord | null; actionMessage: string | null; actionError: string | null; latestResultMessage: string | null; }): React.ReactElement<any> {
   return (
     <div className="mt-3 space-y-3 text-[12px]">
       <SelectedContextCard session={props.session} />
@@ -17,15 +17,15 @@ export function TaskStateBody(props: { session: TaskSessionRecord | null; action
   );
 }
 
-function SelectedContextCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+function SelectedContextCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   return <KeyedBlock label="Selected context" value={`${session?.contextPacket?.files.length ?? 0} file(s) in packet ${session?.contextPacket?.id ?? '—'}`} />;
 }
 
-function LatestMessageCard({ session, actionMessage, latestResultMessage }: { session: TaskSessionRecord | null; actionMessage: string | null; latestResultMessage: string | null; }): React.ReactElement {
+function LatestMessageCard({ session, actionMessage, latestResultMessage }: { session: TaskSessionRecord | null; actionMessage: string | null; latestResultMessage: string | null; }): React.ReactElement<any> {
   return <KeyedBlock label="Latest message" value={actionMessage ?? latestResultMessage ?? session?.latestResult?.message ?? 'No status message has been recorded.'} multiline />;
 }
 
-function TaskActionErrorCard({ actionError }: { actionError: string | null }): React.ReactElement | null {
+function TaskActionErrorCard({ actionError }: { actionError: string | null }): React.ReactElement<any> | null {
   if (!actionError) {
     return null;
   }
@@ -52,7 +52,7 @@ function buildSessionRuntimeItems(
   ];
 }
 
-export function SessionMemorySummary({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function SessionMemorySummary({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   const latestAttempt = session?.attempts.at(-1);
   const items = [
     ...buildSessionIdentityItems(session),
@@ -65,7 +65,7 @@ export function SessionMemorySummary({ session }: { session: TaskSessionRecord |
   );
 }
 
-export function SessionMemoryLists({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function SessionMemoryLists({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   return (
     <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <IssueListCard issues={session?.unresolvedIssues ?? []} />
@@ -74,7 +74,7 @@ export function SessionMemoryLists({ session }: { session: TaskSessionRecord | n
   );
 }
 
-function IssueListCard({ issues }: { issues: string[] }): React.ReactElement {
+function IssueListCard({ issues }: { issues: string[] }): React.ReactElement<any> {
   return (
     <div className="rounded-md border p-3" style={panelStyle('var(--bg)')}>
       <div className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>Unresolved issues</div>
@@ -83,7 +83,7 @@ function IssueListCard({ issues }: { issues: string[] }): React.ReactElement {
   );
 }
 
-function AttemptListCard({ attempts }: { attempts: TaskSessionRecord['attempts'] }): React.ReactElement {
+function AttemptListCard({ attempts }: { attempts: TaskSessionRecord['attempts'] }): React.ReactElement<any> {
   return (
     <div className="rounded-md border p-3" style={panelStyle('var(--bg)')}>
       <div className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>Attempt timeline</div>
@@ -92,7 +92,7 @@ function AttemptListCard({ attempts }: { attempts: TaskSessionRecord['attempts']
   );
 }
 
-function AttemptCard({ attempt }: { attempt: TaskSessionRecord['attempts'][number] }): React.ReactElement {
+function AttemptCard({ attempt }: { attempt: TaskSessionRecord['attempts'][number] }): React.ReactElement<any> {
   const tone = resolveStatusTone(attempt.status);
   return (
     <div className="rounded-md border px-3 py-2 text-[12px]" style={panelStyle()}>
@@ -109,7 +109,7 @@ function AttemptCard({ attempt }: { attempt: TaskSessionRecord['attempts'][numbe
   );
 }
 
-function KeyedBlock({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }): React.ReactElement {
+function KeyedBlock({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }): React.ReactElement<any> {
   return (
     <div className="rounded-md border px-3 py-2" style={panelStyle('var(--bg)')}>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>
@@ -118,7 +118,7 @@ function KeyedBlock({ label, value, multiline = false }: { label: string; value:
   );
 }
 
-function KeyValue({ label, value, breakAll = false }: { label: string; value: string; breakAll?: boolean }): React.ReactElement {
+function KeyValue({ label, value, breakAll = false }: { label: string; value: string; breakAll?: boolean }): React.ReactElement<any> {
   return (
     <div>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>

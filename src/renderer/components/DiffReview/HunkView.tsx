@@ -221,7 +221,7 @@ function buildDisplayLines(hunk: ReviewHunk): DisplayLine[] {
   });
 }
 
-function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement | null {
+function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement<any> | null {
   if (decision === 'pending') return null;
   return (
     <span style={decision === 'accepted' ? acceptedBadgeStyle : rejectedBadgeStyle}>
@@ -230,7 +230,7 @@ function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement | n
   );
 }
 
-function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement {
+function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement<any> {
   return (
     <div style={hunkHeaderStyle}>
       <span>{header}</span>
@@ -239,7 +239,7 @@ function HunkHeader({ decision, header }: HunkHeaderProps): React.ReactElement {
   );
 }
 
-function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement {
+function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement<any> {
   return (
     <div style={lineRowStyle(line.type)}>
       <div style={lineNumberStyle(line.type, line.leftNo !== null)}>{line.leftNo ?? ''}</div>
@@ -250,7 +250,7 @@ function HunkLineRow({ line }: HunkLineRowProps): React.ReactElement {
   );
 }
 
-function HunkLines({ lines }: HunkLinesProps): React.ReactElement {
+function HunkLines({ lines }: HunkLinesProps): React.ReactElement<any> {
   return (
     <div style={diffLinesStyle}>
       {lines.map((line) => <HunkLineRow key={line.id} line={line} />)}
@@ -258,7 +258,7 @@ function HunkLines({ lines }: HunkLinesProps): React.ReactElement {
   );
 }
 
-function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.ReactElement {
+function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -274,7 +274,7 @@ function ActionBtn({ color, disabled, label, onClick }: ActionBtnProps): React.R
   );
 }
 
-function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.ReactElement {
+function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.ReactElement<any> {
   const decided = decision !== 'pending';
 
   return (
@@ -295,7 +295,7 @@ function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.
   );
 }
 
-export const HunkView = memo(function HunkView({ hunk, onAccept, onReject }: HunkViewProps): React.ReactElement {
+export const HunkView = memo(function HunkView({ hunk, onAccept, onReject }: HunkViewProps): React.ReactElement<any> {
   const lines = buildDisplayLines(hunk);
 
   return (

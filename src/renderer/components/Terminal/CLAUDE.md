@@ -86,7 +86,7 @@ Other modules (e.g. `useIdeToolResponder`) call `getTerminalLines(sessionId)` to
 
 - **Package**: `@xterm/xterm` only — never `xterm`. All addons must be `@xterm/*` at the same version. Mixing causes duplicate class instance crashes.
 - **Fit timing**: call `fit()` only after a **double-rAF** following `term.open()`. Use `isReadyRef` guard in ResizeObserver to prevent premature calls.
-- **No WebGL addon**: `@xterm/addon-webgl` causes ghost cursor artifacts during rapid output. Canvas renderer is used instead.
+- **WebGL renderer**: `@xterm/addon-webgl` is loaded synchronously BEFORE `term.open()` in `loadCoreAddons()`. Loading it after `open()` causes a double cursor (DOM + WebGL overlap). This is the VS Code pattern.
 - **OSC 10/11/12 blocked**: registered via `term.parser.registerOscHandler` to prevent programs from overriding theme colors.
 - **Session key for `useTerminalSetup`**: the `useEffect` depends only on `sessionId`. Changing any other prop does not re-bootstrap — update the effect deps deliberately.
 - **Command block limits**: hard cap at 500 blocks, 1000 lines per block (`MAX_BLOCKS`, `MAX_BLOCK_LINES` in `useCommandBlocksController.ts`) to prevent memory growth in long-lived sessions.

@@ -20,7 +20,7 @@ export interface LayoutSwitcherProps {
   onClose: () => void;
 }
 
-export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, onUpdate, onDelete, onClose }: LayoutSwitcherProps): React.ReactElement {
+export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, onUpdate, onDelete, onClose }: LayoutSwitcherProps): React.ReactElement<any> {
   const [showSaveInput, setShowSaveInput] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +61,7 @@ const dropdownStyle: React.CSSProperties = {
   fontFamily: 'var(--font-ui)', fontSize: '0.8125rem',
 };
 
-function LayoutHeader({ onToggleSave }: { onToggleSave: () => void }): React.ReactElement {
+function LayoutHeader({ onToggleSave }: { onToggleSave: () => void }): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
       <span className="text-text-semantic-primary" style={{ fontWeight: 600, fontSize: '12px' }}>Workspace Layouts</span>

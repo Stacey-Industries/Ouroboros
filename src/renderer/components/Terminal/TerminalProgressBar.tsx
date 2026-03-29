@@ -90,7 +90,7 @@ function handleProgressDotState(
   }
 }
 
-export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): React.ReactElement | null {
+export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): React.ReactElement<any> | null {
   const [display, setDisplay] = useState<ProgressDisplay>({ visualState: 'hidden', value: 0 })
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -123,7 +123,7 @@ export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): Re
 }
 
 /** Tiny dot indicator for terminal tabs when progress is active */
-export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): React.ReactElement | null {
+export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): React.ReactElement<any> | null {
   const [active, setActive] = useState(false)
   const [isError, setIsError] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -147,7 +147,7 @@ export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): Re
         width: '6px',
         height: '6px',
         borderRadius: '50%',
-        backgroundColor: isError ? '#ff5555' : 'var(--accent, #55aaff)',
+        backgroundColor: isError ? 'var(--status-error)' : 'var(--interactive-accent)',
         flexShrink: 0,
         animation: 'terminal-progress-pulse 1.5s ease-in-out infinite',
       }}
@@ -172,11 +172,11 @@ const containerStyle: React.CSSProperties = {
 
 function getBarColor(visualState: VisualState): string {
   switch (visualState) {
-    case 'normal': return 'var(--accent, #55aaff)'
-    case 'complete': return '#55aa55'
-    case 'error': return '#ff5555'
-    case 'warning': return '#aaaa55'
-    case 'indeterminate': return 'var(--accent, #55aaff)'
+    case 'normal': return 'var(--interactive-accent)'
+    case 'complete': return 'var(--status-success)'
+    case 'error': return 'var(--status-error)'
+    case 'warning': return 'var(--status-warning)'
+    case 'indeterminate': return 'var(--interactive-accent)'
     default: return 'transparent'
   }
 }

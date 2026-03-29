@@ -9,7 +9,7 @@ export interface CharHighlightProps {
 export const CharHighlight = memo(function CharHighlight({
   text,
   matchIndices,
-}: CharHighlightProps): React.ReactElement {
+}: CharHighlightProps): React.ReactElement<any> {
   if (matchIndices.length === 0) return <span>{text}</span>;
 
   const indexSet = new Set(matchIndices);
@@ -22,7 +22,7 @@ export interface RangeHighlightProps {
   indices: ReadonlyArray<readonly [number, number]>;
 }
 
-export function RangeHighlight({ text, indices }: RangeHighlightProps): React.ReactElement {
+export function RangeHighlight({ text, indices }: RangeHighlightProps): React.ReactElement<any> {
   if (indices.length === 0) return <>{text}</>;
 
   const indexSet = new Set<number>();
@@ -40,8 +40,8 @@ const markStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-function buildSpans(text: string, isHighlighted: (i: number) => boolean): React.ReactElement[] {
-  const parts: React.ReactElement[] = [];
+function buildSpans(text: string, isHighlighted: (i: number) => boolean): React.ReactElement<any>[] {
+  const parts: React.ReactElement<any>[] = [];
   let i = 0;
 
   while (i < text.length) {

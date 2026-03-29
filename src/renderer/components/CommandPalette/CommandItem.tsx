@@ -19,7 +19,7 @@ export const CommandItem = memo(function CommandItem({
   matchIndices,
   onSelect,
   onMouseEnter,
-}: CommandItemProps): React.ReactElement {
+}: CommandItemProps): React.ReactElement<any> {
   const hasChildren = Array.isArray(command.children) && command.children.length > 0;
 
   return (
@@ -40,7 +40,7 @@ export const CommandItem = memo(function CommandItem({
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function ItemIcon({ icon, isSelected }: { icon: string; isSelected: boolean }): React.ReactElement {
+function ItemIcon({ icon, isSelected }: { icon: string; isSelected: boolean }): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -65,7 +65,7 @@ function ItemLabel({
   command: Command;
   isSelected: boolean;
   matchIndices: number[];
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
       {command.category !== undefined && (
@@ -103,7 +103,7 @@ function RightIndicator({
   command: Command;
   isSelected: boolean;
   hasChildren: boolean;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (hasChildren) {
     return (
       <span

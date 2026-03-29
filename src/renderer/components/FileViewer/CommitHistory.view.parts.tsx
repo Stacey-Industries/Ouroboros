@@ -42,7 +42,7 @@ export const AuthorAvatar = memo(function AuthorAvatar({
 }: {
   email: string;
   name: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       aria-hidden="true"
@@ -68,7 +68,7 @@ export const AuthorAvatar = memo(function AuthorAvatar({
   );
 });
 
-export const DiffLine = memo(function DiffLine({ line }: { line: string }): React.ReactElement {
+export const DiffLine = memo(function DiffLine({ line }: { line: string }): React.ReactElement<any> {
   return (
     <pre style={{ margin: 0, padding: '0 16px', whiteSpace: 'pre', ...getPatchTone(line) }}>
       {line || ' '}
@@ -102,7 +102,7 @@ export const PatchHeader = memo(function PatchHeader({
   onBack,
 }: {
   onBack: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-faint" style={patchHeaderStyle}>
       <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>
@@ -124,7 +124,7 @@ export const CommitSummary = memo(function CommitSummary({
   commit,
 }: {
   commit: CommitEntry;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
       <span
@@ -153,7 +153,7 @@ export const StatusMessage = memo(function StatusMessage({
   action?: React.ReactNode;
   message: string;
   tone?: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{

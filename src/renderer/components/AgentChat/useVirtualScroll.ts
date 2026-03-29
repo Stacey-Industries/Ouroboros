@@ -20,7 +20,7 @@ function isStreamingMessage(msg: AgentChatMessageRecord): boolean {
 }
 
 interface VirtualScrollResult {
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   handleScroll: () => void;
   virtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualizedMessages: AgentChatMessageRecord[];
@@ -65,7 +65,7 @@ export function useVirtualScroll(messages: AgentChatMessageRecord[]): VirtualScr
   }, []);
 
   return {
-    scrollRef: scrollRef as React.RefObject<HTMLDivElement>,
+    scrollRef: scrollRef as React.RefObject<HTMLDivElement | null>,
     handleScroll,
     virtualizer,
     virtualizedMessages,

@@ -18,7 +18,7 @@ export function SettingsSearchResults({
   searchQuery,
   searchResults,
   onResultClick,
-}: SettingsSearchResultsProps): React.ReactElement {
+}: SettingsSearchResultsProps): React.ReactElement<any> {
   if (searchResults.length === 0) {
     return (
       <p className="text-text-semantic-muted" style={emptyStyle}>
@@ -42,7 +42,7 @@ function SearchResultItem({
 }: {
   match: SearchMatch;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button onClick={onClick} style={itemStyle}>
       <div style={itemHeaderStyle}>

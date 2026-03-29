@@ -62,7 +62,7 @@ interface SidebarResizeDividerProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProps): React.ReactElement {
+function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProps): React.ReactElement<any> {
   const startYRef = useRef(0);
 
   const handlePointerDown = useCallback(
@@ -128,9 +128,9 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
   handleDrag: (dr: number) => void; containerRef: React.RefObject<HTMLDivElement | null>;
   symbolCount: number; bookmarkCount: number;
   toggles: ReturnType<typeof useSectionToggles>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
-    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="flex flex-col h-full overflow-hidden">
+    <div ref={containerRef as React.RefObject<HTMLDivElement | null>} className="flex flex-col h-full overflow-hidden">
       <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer}
         style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
         <SidebarFileTree />
@@ -152,7 +152,7 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function SidebarSections(): React.ReactElement {
+export function SidebarSections(): React.ReactElement<any> {
   const [collapsed, setCollapsed] = usePersistedState<CollapseState>('agent-ide:sidebar-sections', DEFAULT_COLLAPSE);
   const [explorerRatio, setExplorerRatio] = usePersistedState<number>('agent-ide:sidebar-explorer-ratio', 0.6);
   const containerRef = useRef<HTMLDivElement | null>(null);

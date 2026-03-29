@@ -51,7 +51,7 @@ export function ContextBuilderHeader({
   onClose,
   scanning,
   statusMessage,
-}: ContextBuilderHeaderProps): React.ReactElement {
+}: ContextBuilderHeaderProps): React.ReactElement<any> {
   return (
     <div style={headerStyle}>
       <HeaderTitle scanning={scanning} statusMessage={statusMessage} />
@@ -70,7 +70,7 @@ export function ContextBuilderHeader({
 function HeaderTitle({
   scanning,
   statusMessage,
-}: Pick<ContextBuilderHeaderProps, 'scanning' | 'statusMessage'>): React.ReactElement {
+}: Pick<ContextBuilderHeaderProps, 'scanning' | 'statusMessage'>): React.ReactElement<any> {
   return (
     <div style={titleRowStyle}>
       <ContextBuilderIcon />
@@ -85,7 +85,7 @@ function HeaderTitle({
 function HeaderStatus({
   scanning,
   statusMessage,
-}: Pick<ContextBuilderHeaderProps, 'scanning' | 'statusMessage'>): React.ReactElement | null {
+}: Pick<ContextBuilderHeaderProps, 'scanning' | 'statusMessage'>): React.ReactElement<any> | null {
   if (!scanning && !statusMessage) {
     return null;
   }
@@ -106,7 +106,7 @@ function HeaderStatus({
   );
 }
 
-function ContextBuilderIcon(): React.ReactElement {
+function ContextBuilderIcon(): React.ReactElement<any> {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path

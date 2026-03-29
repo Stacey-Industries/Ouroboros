@@ -9,7 +9,7 @@ export interface OrchestrationTaskComposerProps {
   onTaskReady: (sessionId: string) => Promise<void> | void;
 }
 
-export function OrchestrationTaskComposer({ projectRoot, onTaskReady }: OrchestrationTaskComposerProps): React.ReactElement {
+export function OrchestrationTaskComposer({ projectRoot, onTaskReady }: OrchestrationTaskComposerProps): React.ReactElement<any> {
   const model = useOrchestrationTaskComposerModel({ onTaskReady, projectRoot });
 
   return (

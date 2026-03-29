@@ -55,7 +55,7 @@ function ExcerptStatus({
 }: {
   className: string;
   message: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return <div className={className} style={STATUS_STYLE}>{message}</div>;
 }
 
@@ -69,7 +69,7 @@ function ExcerptLineRow({
   highlightedHtml?: string;
   line: string;
   lineNo: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const lineNumberStyle = { ...LINE_NO_STYLE, width: `${gutterWidth + 2}ch` };
 
   return (
@@ -94,7 +94,7 @@ function ExcerptLineTable({
   excerpt: BufferExcerpt;
   content: string;
   highlightedLines: string[] | null;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { end, lines, start } = getExcerptSlice(content, excerpt);
   const gutterWidth = String(end).length;
 
@@ -126,7 +126,7 @@ const ExcerptContent = memo(function ExcerptContent({
   isLoading,
   error,
   shikiTheme,
-}: ExcerptContentProps): React.ReactElement {
+}: ExcerptContentProps): React.ReactElement<any> {
   const highlightedLines = useHighlightedExcerptLines(excerpt, content, shikiTheme);
 
   if (isLoading) {
@@ -159,7 +159,7 @@ export const ExcerptSection = memo(function ExcerptSection({
   shikiTheme,
   onRemove,
   onOpenFile,
-}: ExcerptSectionProps): React.ReactElement {
+}: ExcerptSectionProps): React.ReactElement<any> {
   const [collapsed, setCollapsed] = useState(false);
   const handleToggle = useCallback(() => setCollapsed((prev) => !prev), []);
   const handleRemove = useCallback(() => onRemove(index), [index, onRemove]);

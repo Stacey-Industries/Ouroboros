@@ -28,7 +28,7 @@ export function ImageViewerFrame({
   isSvg,
   showSource,
   onToggleSource,
-}: ImageViewerFrameProps): React.ReactElement {
+}: ImageViewerFrameProps): React.ReactElement<any> {
   const zoomLabel = getZoomLabel(viewer.zoomMode, viewer.customZoom);
   return <div style={rootStyle}><ImageViewerToolbar zoomMode={viewer.zoomMode} zoomLabel={zoomLabel} onFit={viewer.setFit} onActualSize={viewer.setActualSize} onZoomOut={viewer.zoomOut} onZoomIn={viewer.zoomIn} isSvg={isSvg} showSource={showSource} onToggleSource={onToggleSource} /><ImageViewport fileUrl={viewer.fileUrl} filePath={filePath} loadError={viewer.loadError} imgRef={viewer.imgRef} onLoad={viewer.handleLoad} onError={viewer.handleError} zoomMode={viewer.zoomMode} imgStyle={getImageStyle(viewer.zoomMode, viewer.naturalWidth, viewer.naturalHeight, viewer.customZoom)} panOffset={viewer.panOffset} onPointerDown={viewer.handlePointerDown} onPointerMove={viewer.handlePointerMove} onPointerUp={viewer.handlePointerUp} onPointerLeave={viewer.handlePointerUp} onWheel={viewer.handleWheel} isPanning={viewer.isPanning} containerRef={viewer.containerRef} /><ImageStatusBar naturalWidth={viewer.naturalWidth} naturalHeight={viewer.naturalHeight} fileSize={fileSize} zoomLabel={zoomLabel} /></div>;
 }

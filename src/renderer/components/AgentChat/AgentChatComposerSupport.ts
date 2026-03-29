@@ -82,7 +82,7 @@ export function appendAttachments(
 /* ---------- Draft helpers ---------- */
 
 export function setDraftValue(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
   value: string,
@@ -96,7 +96,7 @@ export function setDraftValue(
 }
 
 export function resetDraftTextarea(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
 ): void {
@@ -104,7 +104,7 @@ export function resetDraftTextarea(
 }
 
 export function removeTriggerBeforeCursor(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
 ): void {
@@ -118,7 +118,7 @@ export function removeTriggerBeforeCursor(
 
 /** Replace the @trigger text with `@path ` inline in the textarea. */
 export function replaceTriggerWithPath(
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   lastSyncedDraft: React.MutableRefObject<string>,
   onChange: (value: string) => void,
   path: string,
@@ -149,7 +149,7 @@ export function createFileMention(file: FileEntry): MentionItem {
 
 export function selectComposerFile(
   args: {
-    textareaRef: React.RefObject<HTMLTextAreaElement>;
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
     lastSyncedDraft: React.MutableRefObject<string>;
     onChange: (value: string) => void;
     useMentionSystem: boolean;
@@ -174,7 +174,7 @@ export function selectComposerFile(
 
 export function selectComposerMention(
   args: {
-    textareaRef: React.RefObject<HTMLTextAreaElement>;
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
     lastSyncedDraft: React.MutableRefObject<string>;
     onChange: (value: string) => void;
     onAddMention?: (mention: MentionItem) => void;
@@ -214,7 +214,7 @@ function runComposerSlashCommand(
 export function selectComposerSlash(
   args: {
     draft: string;
-    textareaRef: React.RefObject<HTMLTextAreaElement>;
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
     lastSyncedDraft: React.MutableRefObject<string>;
     onChange: (value: string) => void;
     onAddMention?: (mention: MentionItem) => void;

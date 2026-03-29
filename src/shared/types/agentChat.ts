@@ -8,6 +8,8 @@
  * so existing main-process imports are unaffected.
  */
 
+import type { SkillExecutionRecord } from './ruleActivity';
+
 // ─── Re-exported from sessionMemory (type only) ───────────────────────────────
 
 export interface SessionMemoryEntry {
@@ -200,6 +202,8 @@ export interface AgentChatMessageRecord {
   model?: string;
   /** Structured content blocks — when present, renderers should prefer these over `content`. */
   blocks?: AgentChatContentBlock[];
+  /** Skill invocations that occurred during this message's processing. */
+  skillExecutions?: SkillExecutionRecord[];
 }
 
 export interface AgentChatBranchInfo {

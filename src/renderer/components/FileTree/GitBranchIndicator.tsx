@@ -142,10 +142,10 @@ function BranchSearchInput({
   searchInputRef,
   search,
   setSearch,
-}: SearchInputProps): React.ReactElement {
+}: SearchInputProps): React.ReactElement<any> {
   return (
     <input
-      ref={searchInputRef as React.RefObject<HTMLInputElement>}
+      ref={searchInputRef as React.RefObject<HTMLInputElement | null>}
       type="text"
       value={search}
       onChange={(e) => setSearch(e.target.value)}
@@ -175,7 +175,7 @@ function BranchList({
   search,
   handleCheckout,
   setIsOpen,
-}: BranchListProps): React.ReactElement {
+}: BranchListProps): React.ReactElement<any> {
   const emptyMsg = search ? 'No matching branches' : 'No branches found';
   return (
     <div role="listbox" aria-label="Git branches">
@@ -209,7 +209,7 @@ type BranchDropdownProps = {
   handleCreateBranch: (setOpen: (v: boolean) => void) => Promise<void>;
   setIsOpen: (v: boolean) => void;
 };
-function BranchDropdown(p: BranchDropdownProps): React.ReactElement {
+function BranchDropdown(p: BranchDropdownProps): React.ReactElement<any> {
   return (
     <div className="frosted-panel bg-surface-panel border border-border-semantic" style={dropdownStyle}>
       <div style={dropdownHeaderStyle}>
@@ -245,7 +245,7 @@ function BranchIndicatorBar({
   switching,
   isOpen,
   setIsOpen,
-}: BarProps): React.ReactElement {
+}: BarProps): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -276,7 +276,7 @@ function BranchIndicatorBar({
 export function GitBranchIndicator({
   projectRoot,
   isRepo,
-}: GitBranchIndicatorProps): React.ReactElement | null {
+}: GitBranchIndicatorProps): React.ReactElement<any> | null {
   const containerRef = useRef<HTMLDivElement>(null);
   const { branch, branches, switching, fetchBranches, handleCheckout, handleCreateBranch } =
     useBranchState(projectRoot, isRepo);

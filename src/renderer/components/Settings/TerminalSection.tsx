@@ -11,7 +11,7 @@ interface TerminalSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function TerminalSection({ draft, onChange }: TerminalSectionProps): React.ReactElement {
+export function TerminalSection({ draft, onChange }: TerminalSectionProps): React.ReactElement<any> {
   const [platform, setPlatform] = useState<NodeJS.Platform>('win32');
 
   useEffect(() => {

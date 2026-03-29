@@ -59,7 +59,7 @@ const getSaveButtonStyle = (saved: boolean): React.CSSProperties => ({
   transition: 'background 200ms ease',
 });
 
-function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement {
+function SectionLabel({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={sectionLabelStyle}>
       {children}
@@ -116,7 +116,7 @@ function useCustomCSSController({
   return { handleReset, handleSave, localCSS, ruleCount, saved, setLocalCSS };
 }
 
-function CustomCSSStatus({ ruleCount }: { ruleCount: number }): React.ReactElement {
+function CustomCSSStatus({ ruleCount }: { ruleCount: number }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
       {ruleCount > 0
@@ -136,7 +136,7 @@ function CustomCSSActions({
   onSave: () => void;
   ruleCount: number;
   saved: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <CustomCSSStatus ruleCount={ruleCount} />
@@ -170,7 +170,7 @@ function CustomCSSBody({
   ruleCount: number;
   saved: boolean;
   setLocalCSS: React.Dispatch<React.SetStateAction<string>>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={panelStyle}>
       <div className="text-text-semantic-muted" style={{ fontSize: '11px' }}>
@@ -190,7 +190,7 @@ function CustomCSSBody({
   );
 }
 
-export function CustomCSSSection({ draft, onChange }: CustomCSSSectionProps): React.ReactElement {
+export function CustomCSSSection({ draft, onChange }: CustomCSSSectionProps): React.ReactElement<any> {
   const { handleReset, handleSave, localCSS, ruleCount, saved, setLocalCSS } =
     useCustomCSSController({
       customCSS: draft.customCSS,

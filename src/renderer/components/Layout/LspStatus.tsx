@@ -99,7 +99,7 @@ function getDotColor(servers: LspServerStatus[]): string {
   return STATUS_COLORS.running
 }
 
-function LspTooltipRow({ server }: { server: LspServerStatus }): React.ReactElement {
+function LspTooltipRow({ server }: { server: LspServerStatus }): React.ReactElement<any> {
   return (
     <div style={tooltipRowStyle}>
       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: STATUS_COLORS[server.status], flexShrink: 0 }} />
@@ -111,7 +111,7 @@ function LspTooltipRow({ server }: { server: LspServerStatus }): React.ReactElem
   )
 }
 
-function LspTooltip({ servers }: { servers: LspServerStatus[] }): React.ReactElement {
+function LspTooltip({ servers }: { servers: LspServerStatus[] }): React.ReactElement<any> {
   return (
     <div className="bg-surface-panel border border-border-semantic" style={tooltipStyle}>
       <div className="text-text-semantic-muted border-b border-border-semantic" style={tooltipHeaderStyle}>Language Servers</div>
@@ -134,7 +134,7 @@ function LspStatusTrigger({
   runningCount,
   totalCount,
   onClick,
-}: LspStatusTriggerProps): React.ReactElement {
+}: LspStatusTriggerProps): React.ReactElement<any> {
   const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.currentTarget.style.background = hoverBackground
   }, [])
@@ -151,7 +151,7 @@ function LspStatusTrigger({
   )
 }
 
-export function LspStatus(): React.ReactElement | null {
+export function LspStatus(): React.ReactElement<any> | null {
   const servers = useLspServers()
   const [showTooltip, setShowTooltip] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)

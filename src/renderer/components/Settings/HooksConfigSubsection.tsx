@@ -25,7 +25,7 @@ async function fetchHooks(scope: HookScope, projectRoot: string | undefined): Pr
   return result.success && result.hooks ? result.hooks : {};
 }
 
-function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange: (s: HookScope) => void }): React.ReactElement {
+function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange: (s: HookScope) => void }): React.ReactElement<any> {
   return (
     <div style={scopeToggleStyle}>
       {(['global', 'project'] as const).map((s) => (
@@ -37,7 +37,7 @@ function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange
   );
 }
 
-function AddHookRow({ onAdd }: { onAdd: (command: string) => Promise<void> }): React.ReactElement {
+function AddHookRow({ onAdd }: { onAdd: (command: string) => Promise<void> }): React.ReactElement<any> {
   const [value, setValue] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -69,7 +69,7 @@ interface HookEntriesListProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEntriesList({ eventType, matchers, onRemove }: HookEntriesListProps): React.ReactElement {
+function HookEntriesList({ eventType, matchers, onRemove }: HookEntriesListProps): React.ReactElement<any> {
   if (!matchers.length) {
     return <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: '4px 0' }}>No hooks registered.</p>;
   }
@@ -98,7 +98,7 @@ interface HookEventSectionProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectionProps): React.ReactElement {
+function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectionProps): React.ReactElement<any> {
   const [isOpen, setIsOpen] = useState(false);
   const matchers = hooks[eventType] ?? [];
   const hookCount = matchers.reduce((sum, m) => sum + (m.hooks?.length ?? 0), 0);
@@ -119,7 +119,7 @@ function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectio
   );
 }
 
-export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksConfigSubsectionProps): React.ReactElement {
+export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksConfigSubsectionProps): React.ReactElement<any> {
   const { projectRoot: contextRoot } = useProject();
   const projectRoot = projectRootProp ?? contextRoot ?? undefined;
   const [scope, setScope] = useState<HookScope>('global');

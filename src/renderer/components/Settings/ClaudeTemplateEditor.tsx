@@ -48,7 +48,7 @@ interface IconButtonProps {
 export function ClaudeTemplateEditor({
   templates,
   onChange,
-}: ClaudeTemplateEditorProps): React.ReactElement {
+}: ClaudeTemplateEditorProps): React.ReactElement<any> {
   const model = useTemplateEditorModel(templates, onChange);
   return (
     <section>
@@ -69,7 +69,7 @@ export function ClaudeTemplateEditor({
 function TemplateListItem({
   model,
   template,
-}: TemplateListItemProps): React.ReactElement {
+}: TemplateListItemProps): React.ReactElement<any> {
   if (model.editingId === template.id) {
     return <EditableTemplateCard model={model} />;
   }
@@ -81,7 +81,7 @@ function EditableTemplateCard({
   model,
 }: {
   model: TemplateEditorModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={claudeTemplateEditCardStyle}>
       <EditableTemplateFields model={model} />
@@ -94,7 +94,7 @@ function EditableTemplateFields({
   model,
 }: {
   model: TemplateEditorModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <div style={claudeTemplateHeaderRowStyle}>
@@ -134,7 +134,7 @@ function EditableTemplateActions({
   model,
 }: {
   model: TemplateEditorModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={claudeTemplateButtonRowStyle}>
       <button onClick={model.cancelEdit} className="text-text-semantic-primary" style={claudeTemplateCancelButtonStyle}>
@@ -150,7 +150,7 @@ function EditableTemplateActions({
 function TemplateRow({
   model,
   template,
-}: TemplateListItemProps): React.ReactElement {
+}: TemplateListItemProps): React.ReactElement<any> {
   return (
     <div style={claudeTemplateTemplateRowStyle}>
       {template.icon && <span style={claudeTemplateIconPreviewStyle}>{template.icon}</span>}
@@ -185,7 +185,7 @@ function IconButton({
   color,
   onClick,
   title,
-}: IconButtonProps): React.ReactElement {
+}: IconButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -199,7 +199,7 @@ function IconButton({
   );
 }
 
-function TemplateHelpText(): React.ReactElement {
+function TemplateHelpText(): React.ReactElement<any> {
   return (
     <p className="text-text-semantic-muted" style={claudeTemplateHelpTextStyle}>
       Quick-launch profiles for common tasks. Use{' '}
@@ -211,7 +211,7 @@ function TemplateHelpText(): React.ReactElement {
   );
 }
 
-function EditIcon(): React.ReactElement {
+function EditIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path
@@ -224,7 +224,7 @@ function EditIcon(): React.ReactElement {
   );
 }
 
-function DeleteIcon(): React.ReactElement {
+function DeleteIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path

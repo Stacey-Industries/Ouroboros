@@ -26,7 +26,7 @@ function CodeBlock({
   text: string;
   bg: string;
   borderColor: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <pre
       className="mt-1 p-2 rounded text-xs font-mono whitespace-pre-wrap text-text-semantic-primary"
@@ -48,7 +48,7 @@ interface ToolInputPreviewProps {
   input: Record<string, unknown>;
 }
 
-export function ToolInputPreview({ toolName, input }: ToolInputPreviewProps): React.ReactElement {
+export function ToolInputPreview({ toolName, input }: ToolInputPreviewProps): React.ReactElement<any> {
   const filePath = extractString(input, ['file_path', 'filePath', 'path']);
   const command = extractString(input, ['command']);
   const content = extractString(input, ['content', 'new_string', 'newString']);
@@ -66,7 +66,7 @@ export function ToolInputPreview({ toolName, input }: ToolInputPreviewProps): Re
   );
 }
 
-function FilePathRow({ filePath }: { filePath: string }): React.ReactElement {
+function FilePathRow({ filePath }: { filePath: string }): React.ReactElement<any> {
   return (
     <div>
       <span className="font-semibold text-text-semantic-muted">File: </span>
@@ -75,7 +75,7 @@ function FilePathRow({ filePath }: { filePath: string }): React.ReactElement {
   );
 }
 
-function CommandRow({ command }: { command: string }): React.ReactElement {
+function CommandRow({ command }: { command: string }): React.ReactElement<any> {
   return (
     <div>
       <span className="font-semibold text-text-semantic-muted">Command: </span>
@@ -88,7 +88,7 @@ function CommandRow({ command }: { command: string }): React.ReactElement {
   );
 }
 
-function OldStringRow({ oldString }: { oldString: string }): React.ReactElement {
+function OldStringRow({ oldString }: { oldString: string }): React.ReactElement<any> {
   return (
     <div>
       <span className="font-semibold text-text-semantic-muted">Replacing: </span>
@@ -101,7 +101,7 @@ function OldStringRow({ oldString }: { oldString: string }): React.ReactElement 
   );
 }
 
-function ContentRow({ content, isEdit }: { content: string; isEdit: boolean }): React.ReactElement {
+function ContentRow({ content, isEdit }: { content: string; isEdit: boolean }): React.ReactElement<any> {
   return (
     <div>
       <span className="font-semibold text-text-semantic-muted">
@@ -116,7 +116,7 @@ function ContentRow({ content, isEdit }: { content: string; isEdit: boolean }): 
   );
 }
 
-function FallbackRow({ input }: { input: Record<string, unknown> }): React.ReactElement {
+function FallbackRow({ input }: { input: Record<string, unknown> }): React.ReactElement<any> {
   return (
     <CodeBlock
       text={JSON.stringify(input, null, 2)}

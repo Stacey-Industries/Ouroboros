@@ -16,7 +16,7 @@ export interface MultiSessionLauncherProps {
 export const MultiSessionLauncher = memo(function MultiSessionLauncher({
   onClose,
   onLaunched,
-}: MultiSessionLauncherProps): React.ReactElement {
+}: MultiSessionLauncherProps): React.ReactElement<any> {
   const { projectRoot } = useProject();
   const model = useMultiSessionLauncherModel(onLaunched, projectRoot);
 

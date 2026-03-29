@@ -22,7 +22,7 @@ const rootStyle: React.CSSProperties = {
   backgroundColor: 'var(--surface-base)',
 };
 
-function SourceLoader({ content, filePath }: { content: string; filePath: string }): React.ReactElement {
+function SourceLoader({ content, filePath }: { content: string; filePath: string }): React.ReactElement<any> {
   return (
     <Suspense fallback={<div className="text-text-semantic-faint" style={{ padding: 16, fontFamily: 'var(--font-mono)', fontSize: '0.8125rem' }}>Loading editor...</div>}>
       <LazyMonacoEditor filePath={filePath} content={content} readOnly={true} />
@@ -37,7 +37,7 @@ export function ImageViewerSourceFrame({
   showSource,
   onToggleSource,
   children,
-}: ImageViewerSourceFrameProps): React.ReactElement {
+}: ImageViewerSourceFrameProps): React.ReactElement<any> {
   return (
     <div style={rootStyle}>
       <ImageViewerToolbar zoomMode={viewer.zoomMode} zoomLabel={getZoomLabel(viewer.zoomMode, viewer.customZoom)} onFit={viewer.setFit} onActualSize={viewer.setActualSize} onZoomOut={viewer.zoomOut} onZoomIn={viewer.zoomIn} isSvg={isSvg} showSource={showSource} onToggleSource={onToggleSource} />
@@ -47,6 +47,6 @@ export function ImageViewerSourceFrame({
   );
 }
 
-export function SvgSourceView({ content, filePath }: { content: string; filePath: string }): React.ReactElement {
+export function SvgSourceView({ content, filePath }: { content: string; filePath: string }): React.ReactElement<any> {
   return <SourceLoader content={content} filePath={filePath} />;
 }

@@ -19,12 +19,12 @@ export function ExpandedArea({
 }: {
   provider: AuthProvider;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (provider === 'github') return <GitHubLoginArea model={model} />;
   return <></>;
 }
 
-function GitHubLoginArea({ model }: { model: AccountsSectionModel }): React.ReactElement {
+function GitHubLoginArea({ model }: { model: AccountsSectionModel }): React.ReactElement<any> {
   const event = model.githubLoginEvent;
 
   if (event?.type === 'error') {
@@ -39,7 +39,7 @@ function GitHubLoginArea({ model }: { model: AccountsSectionModel }): React.Reac
   return <GitHubStartPrompt model={model} />;
 }
 
-function GitHubStartPrompt({ model }: { model: AccountsSectionModel }): React.ReactElement {
+function GitHubStartPrompt({ model }: { model: AccountsSectionModel }): React.ReactElement<any> {
   return (
     <div style={S.actionAreaStyle}>
       <div className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
@@ -76,7 +76,7 @@ function GitHubBrowserWaitState({
 }: {
   authUrl: string;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={S.actionAreaStyle}>
       <div className="text-text-semantic-muted" style={S.pollingTextStyle}>
@@ -108,7 +108,7 @@ function GitHubErrorState({
 }: {
   message: string;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={S.actionAreaStyle}>
       <div className="text-status-error" style={S.errorTextStyle}>
@@ -140,7 +140,7 @@ function DeviceCodeButtons({
 }: {
   verificationUri: string;
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={S.buttonRowStyle}>
       <button
@@ -172,7 +172,7 @@ function GitHubPollingState({
 }: {
   event: GitHubLoginEvent & { type: 'device_code' };
   model: AccountsSectionModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const { userCode, verificationUri } = event.info;
   return (
     <div style={S.actionAreaStyle}>
@@ -197,7 +197,7 @@ function DeviceCodeDisplay({
   userCode: string;
   copied: boolean;
   onCopy: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <div

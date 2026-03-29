@@ -33,7 +33,7 @@ function NotificationRow({
 }: {
   entry: NotificationEntry;
   onRemove: (id: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-primary"
@@ -49,7 +49,7 @@ function NotificationRow({
   );
 }
 
-function EmptyState(): React.ReactElement {
+function EmptyState(): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={emptyStateStyle}>
       <svg
@@ -79,7 +79,7 @@ function PanelHeader({
 }: {
   count: number;
   onClearAll: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [clearHovered, setClearHovered] = useState(false);
   return (
     <div style={panelHeaderStyle}>
@@ -149,7 +149,7 @@ export const NotificationCenter = memo(function NotificationCenter({
   onRemove,
   onClearAll,
   onClose,
-}: NotificationCenterProps): React.ReactElement {
+}: NotificationCenterProps): React.ReactElement<any> {
   const panelRef = useRef<HTMLDivElement>(null);
   useNotificationCenterDismiss(panelRef, onClose);
 
@@ -178,7 +178,7 @@ export const NotificationCenter = memo(function NotificationCenter({
   );
 });
 
-export function BellIcon(): React.ReactElement {
+export function BellIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -200,7 +200,7 @@ export interface NotificationBadgeProps {
   count: number;
 }
 
-export function NotificationBadge({ count }: NotificationBadgeProps): React.ReactElement | null {
+export function NotificationBadge({ count }: NotificationBadgeProps): React.ReactElement<any> | null {
   if (count <= 0) return null;
   const display = count > 99 ? '99+' : String(count);
   return (

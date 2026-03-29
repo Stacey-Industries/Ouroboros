@@ -31,7 +31,7 @@ function deriveCurrentStep(model: ReturnType<typeof useOrchestrationModel>): str
     ?? 'idle';
 }
 
-export function OrchestrationPanelContent({ projectRoot, initialSessionId = null, onClose }: OrchestrationPanelContentProps): React.ReactElement {
+export function OrchestrationPanelContent({ projectRoot, initialSessionId = null, onClose }: OrchestrationPanelContentProps): React.ReactElement<any> {
   const [activeTab, setActiveTab] = useState<OrchestrationTab>('overview');
   const model = useOrchestrationModel(projectRoot);
   useInitialSessionSelection(initialSessionId, model.selectSession);

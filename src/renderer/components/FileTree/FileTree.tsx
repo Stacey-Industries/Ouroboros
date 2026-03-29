@@ -168,7 +168,7 @@ function useSearchQuery(
   return { query, setQuery, handleSearchSelect };
 }
 
-function EmptyFileTree(): React.ReactElement {
+function EmptyFileTree(): React.ReactElement<any> {
   return (
     <div style={treeContainerStyle}>
       <EmptyState
@@ -201,7 +201,7 @@ function FileTreeContent({
   onToggleHeatMap,
   bodyProps,
   primaryRoot,
-}: FileTreeContentProps): React.ReactElement {
+}: FileTreeContentProps): React.ReactElement<any> {
   const { status, isRepo, refresh } = useGitStatusDetailed(primaryRoot);
   const counts = useMemo(() => computeStatusCounts(status), [status]);
   const filter = useFileTreeStore((s) => s.filter);
@@ -231,7 +231,7 @@ function FileTreeContent({
   );
 }
 
-export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
+export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement<any> {
   const roots = useResolvedRoots(projectRoots, singleRootProp);
   const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
   const { bookmarks, setBookmarks, extraIgnorePatterns } = useFileTreeConfig();

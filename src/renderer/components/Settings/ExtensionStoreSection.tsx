@@ -43,7 +43,7 @@ const CATEGORY_FILTERS: Array<{ label: string; value: string | null }> = [
 ];
 const PAGE_SIZE = 20;
 
-export function ExtensionStoreSection(): React.ReactElement {
+export function ExtensionStoreSection(): React.ReactElement<any> {
   const model = useExtensionStoreModel();
   return (
     <div style={rootStyle}>
@@ -62,7 +62,7 @@ export function ExtensionStoreSection(): React.ReactElement {
   );
 }
 
-function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactElement {
+function StoreHeader({ onRefresh }: { onRefresh: () => void }): React.ReactElement<any> {
   return (
     <div style={headerStyle}>
       <div>
@@ -84,7 +84,7 @@ function SourceToggle({
 }: {
   source: ExtensionStoreSource;
   onSelect: (s: ExtensionStoreSource) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={rowStyle}>
       {SOURCE_OPTIONS.map((opt) => (
@@ -101,7 +101,7 @@ function SourceToggle({
   );
 }
 
-function InstalledBanner({ model }: { model: ExtensionStoreModel }): React.ReactElement | null {
+function InstalledBanner({ model }: { model: ExtensionStoreModel }): React.ReactElement<any> | null {
   const installed = Array.from(model.installedMap.values());
   if (installed.length === 0) return null;
   return (
@@ -143,7 +143,7 @@ function SearchInput({
 }: {
   query: string;
   onChange: (q: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={searchWrapperStyle}>
       <span className="text-text-semantic-muted" style={searchIconStyle}>
@@ -167,7 +167,7 @@ function CategoryFilter({
 }: {
   activeFilter: string | null;
   onSelect: (cat: string | null) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={categoryRowStyle}>
       {CATEGORY_FILTERS.map((cat) => (
@@ -183,7 +183,7 @@ function CategoryFilter({
   );
 }
 
-function ExtensionCards({ model }: { model: ExtensionStoreModel }): React.ReactElement {
+function ExtensionCards({ model }: { model: ExtensionStoreModel }): React.ReactElement<any> {
   return (
     <div style={listContainerStyle}>
       {model.extensions.map((ext, idx) => {
@@ -203,7 +203,7 @@ function ExtensionCards({ model }: { model: ExtensionStoreModel }): React.ReactE
   );
 }
 
-function ExtensionList({ model }: { model: ExtensionStoreModel }): React.ReactElement {
+function ExtensionList({ model }: { model: ExtensionStoreModel }): React.ReactElement<any> {
   if (model.loading && model.extensions.length === 0)
     return (
       <p className="text-text-semantic-muted" style={loadingStyle}>

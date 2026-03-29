@@ -38,7 +38,7 @@ function SnapshotMarker({
 }: {
   dotColor: string;
   isHead: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -71,7 +71,7 @@ const BADGE_BASE_STYLE = {
   borderRadius: '3px',
 } as const;
 
-function SnapshotBadgeHead(): React.ReactElement {
+function SnapshotBadgeHead(): React.ReactElement<any> {
   return (
     <span
       className="text-text-semantic-on-accent"
@@ -82,7 +82,7 @@ function SnapshotBadgeHead(): React.ReactElement {
   );
 }
 
-function SnapshotBadgeFrom(): React.ReactElement {
+function SnapshotBadgeFrom(): React.ReactElement<any> {
   return (
     <span style={{ ...BADGE_BASE_STYLE, backgroundColor: 'var(--status-warning)', color: '#000' }}>
       FROM
@@ -90,7 +90,7 @@ function SnapshotBadgeFrom(): React.ReactElement {
   );
 }
 
-function SnapshotBadgeTo(): React.ReactElement {
+function SnapshotBadgeTo(): React.ReactElement<any> {
   return (
     <span style={{ ...BADGE_BASE_STYLE, backgroundColor: 'var(--palette-purple)', color: '#000' }}>
       TO
@@ -106,7 +106,7 @@ function SnapshotBadges({
   isHead: boolean;
   isCompareFrom: boolean;
   isCompareTo: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       {isHead && <SnapshotBadgeHead />}
@@ -116,7 +116,7 @@ function SnapshotBadges({
   );
 }
 
-function SnapshotMeta({ snapshot }: { snapshot: WorkspaceSnapshot }): React.ReactElement {
+function SnapshotMeta({ snapshot }: { snapshot: WorkspaceSnapshot }): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-secondary"
@@ -156,7 +156,7 @@ function SnapshotNodeLabel({
   isCompareFrom: boolean;
   isCompareTo: boolean;
   snapshot: WorkspaceSnapshot;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
@@ -212,7 +212,7 @@ function SnapshotNode({
   isCompareTo,
   isHead,
   onSelect,
-}: SnapshotNodeProps): React.ReactElement {
+}: SnapshotNodeProps): React.ReactElement<any> {
   const dotColor = snapshotTypeColor(snapshot.type);
   const borderColor = selectedBorderColor(isSelected, isCompareFrom, isCompareTo);
   return (
@@ -234,7 +234,7 @@ function SnapshotNode({
   );
 }
 
-function EmptyTimelineState(): React.ReactElement {
+function EmptyTimelineState(): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-muted"
@@ -279,7 +279,7 @@ export function TimeTravelTimelinePane({
   snapshots: WorkspaceSnapshot[];
   hasDetailPane: boolean;
   panel: TimelinePanelState;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className={hasDetailPane ? 'border-r border-border-semantic' : ''}

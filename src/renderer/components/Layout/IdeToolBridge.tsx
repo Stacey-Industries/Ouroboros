@@ -12,7 +12,7 @@ import { useFileViewerManager } from '../FileViewer';
 import { getEditorContent, getEditorSelection } from '../FileViewer/editorRegistry';
 import { getTerminalLines } from '../Terminal/terminalRegistry';
 
-export function IdeToolBridge(): React.ReactElement | null {
+export function IdeToolBridge(): React.ReactElement<any> | null {
   const { openFiles, activeFile } = useFileViewerManager();
 
   useIdeToolResponder({

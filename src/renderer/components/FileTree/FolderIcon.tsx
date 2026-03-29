@@ -4,7 +4,7 @@
 
 import React from 'react';
 
-export function FolderIcon(): React.ReactElement {
+export function FolderIcon(): React.ReactElement<any> {
   return (
     <svg
       width="13"

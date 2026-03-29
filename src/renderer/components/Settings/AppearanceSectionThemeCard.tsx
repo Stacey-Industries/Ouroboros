@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 
 import type { Theme } from '../../themes';
 
-function ThemeCardSwatches({ theme }: { theme: Theme }): React.ReactElement {
+function ThemeCardSwatches({ theme }: { theme: Theme }): React.ReactElement<any> {
   const swatchColors = [
     theme.colors.bg,
     theme.colors.bgSecondary,
@@ -38,7 +38,7 @@ function ThemeCardName({
 }: {
   isActive: boolean;
   name: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -53,7 +53,7 @@ function ThemeCardName({
   );
 }
 
-function ThemeCardStatus(): React.ReactElement {
+function ThemeCardStatus(): React.ReactElement<any> {
   return (
     <div
       className="text-interactive-accent"
@@ -114,7 +114,7 @@ export function ThemeCard({
   theme: Theme;
   isActive: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [isFocused, setIsFocused] = useState(false);
   return (
     <button

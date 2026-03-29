@@ -19,7 +19,7 @@ export interface AgentChatDiffReviewProps {
 
 type FileStatus = 'pending' | 'accepted' | 'rejected';
 
-function StatusBadge({ status }: { status: FileStatus }): React.ReactElement {
+function StatusBadge({ status }: { status: FileStatus }): React.ReactElement<any> {
   if (status === 'pending')
     return (
       <span className="rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-surface-base text-text-semantic-muted">
@@ -56,7 +56,7 @@ function FileRowExpandedActions({
 }: {
   onAccept: () => void;
   onReject: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="mt-2 flex items-center gap-1.5">
       <button
@@ -101,7 +101,7 @@ function FileRowExpanded({
   status: FileStatus;
   onAccept: () => void;
   onReject: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="border-t border-border-semantic px-2.5 py-2">
       {file.diff ? (
@@ -129,7 +129,7 @@ function FileRow({
   status: FileStatus;
   onAccept: () => void;
   onReject: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="rounded-md border border-border-semantic bg-surface-raised">
@@ -155,7 +155,7 @@ function FileRow({
   );
 }
 
-function DiffReviewHeader({ files }: { files: DiffFile[] }): React.ReactElement {
+function DiffReviewHeader({ files }: { files: DiffFile[] }): React.ReactElement<any> {
   const totalAdditions = files.reduce((sum, f) => sum + f.additions, 0);
   const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0);
   return (
@@ -182,7 +182,7 @@ function DiffReviewFooter({
   pendingCount: number;
   onAcceptAll: () => void;
   onRejectAll: () => void;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (pendingCount === 0) return null;
   return (
     <div className="flex items-center justify-end gap-2 border-t border-border-semantic px-3 py-2">
@@ -241,7 +241,7 @@ export function AgentChatDiffReview({
   onRejectAll,
   onAcceptFile,
   onRejectFile,
-}: AgentChatDiffReviewProps): React.ReactElement {
+}: AgentChatDiffReviewProps): React.ReactElement<any> {
   const { fileStatuses, setStatus, handleAcceptAll, handleRejectAll, pendingCount } =
     useDiffReviewState(files, onAcceptAll, onRejectAll);
   return (

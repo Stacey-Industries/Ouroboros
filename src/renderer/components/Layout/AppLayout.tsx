@@ -166,7 +166,7 @@ const MOBILE_NAV_ITEMS: { id: MobilePanel; label: string }[] = [
   { id: 'chat', label: 'Chat' },
 ];
 
-function MobileNavIcon({ id }: { id: MobilePanel }): React.ReactElement {
+function MobileNavIcon({ id }: { id: MobilePanel }): React.ReactElement<any> {
   if (id === 'files') {
     return (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
@@ -222,7 +222,7 @@ const ACTIVE_INDICATOR_STYLE: React.CSSProperties = {
   height: '2px', borderRadius: '1px', backgroundColor: 'var(--interactive-accent)',
 };
 
-function MobileNavButton({ item, isActive, onSwitch }: { item: { id: MobilePanel; label: string }; isActive: boolean; onSwitch: (p: MobilePanel) => void }): React.ReactElement {
+function MobileNavButton({ item, isActive, onSwitch }: { item: { id: MobilePanel; label: string }; isActive: boolean; onSwitch: (p: MobilePanel) => void }): React.ReactElement<any> {
   return (
     <button key={item.id} onClick={() => onSwitch(item.id)} style={mobileNavButtonStyle(isActive)}>
       <MobileNavIcon id={item.id} />
@@ -232,7 +232,7 @@ function MobileNavButton({ item, isActive, onSwitch }: { item: { id: MobilePanel
   );
 }
 
-function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p: MobilePanel) => void }): React.ReactElement {
+function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p: MobilePanel) => void }): React.ReactElement<any> {
   return (
     <nav data-layout="mobile-nav" className="web-mobile-only" style={MOBILE_NAV_STYLE}>
       {MOBILE_NAV_ITEMS.map((item) => (
@@ -279,7 +279,7 @@ function useAppLayoutState(props: AppLayoutProps) {
   return { sizes, resetSize, collapsed, toggle, setFocusedPanel, mobileActivePanel, handleMobilePanelSwitch, pfs, mkResize };
 }
 
-export function AppLayout(props: AppLayoutProps): React.ReactElement {
+export function AppLayout(props: AppLayoutProps): React.ReactElement<any> {
   const s = useAppLayoutState(props);
   const { terminalControl: tc, layoutProps } = props;
   const statusLayout = layoutProps

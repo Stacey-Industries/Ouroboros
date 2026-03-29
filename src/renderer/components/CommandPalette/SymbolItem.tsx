@@ -61,7 +61,7 @@ export const SymbolItem = memo(function SymbolItem({
   pathIndices,
   onClick,
   onMouseEnter,
-}: SymbolItemProps): React.ReactElement {
+}: SymbolItemProps): React.ReactElement<any> {
   const badge = getBadge(entry.type);
   const dirPart = getDirectoryPart(entry.relativePath);
   const highlightedNameIndices = isSelected ? EMPTY_INDICES : nameIndices;
@@ -94,7 +94,7 @@ function TypeBadge({
 }: {
   badge: { bg: string; text: string; label: string };
   isSelected: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -122,7 +122,7 @@ function SymbolName({
 }: {
   name: string;
   indices: ReadonlyArray<readonly [number, number]>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -146,7 +146,7 @@ function SymbolPath({
   path: string;
   indices: ReadonlyArray<readonly [number, number]>;
   isSelected: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -171,7 +171,7 @@ function LineNumber({
 }: {
   line: number;
   isSelected: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       style={{

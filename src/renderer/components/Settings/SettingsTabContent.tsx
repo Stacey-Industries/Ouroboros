@@ -33,7 +33,7 @@ interface SettingsTabContentProps {
 }
 
 type SharedTabProps = Omit<SettingsTabContentProps, 'activeTab'>;
-type TabRenderer = (props: SharedTabProps) => React.ReactElement;
+type TabRenderer = (props: SharedTabProps) => React.ReactElement<any>;
 
 const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   accounts: () => <AccountsSection />,
@@ -62,6 +62,6 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
 export function SettingsTabContent({
   activeTab,
   ...sharedProps
-}: SettingsTabContentProps): React.ReactElement {
+}: SettingsTabContentProps): React.ReactElement<any> {
   return TAB_RENDERERS[activeTab](sharedProps);
 }

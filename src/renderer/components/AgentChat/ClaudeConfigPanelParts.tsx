@@ -27,7 +27,7 @@ function TabButton({
   tab: { id: ConfigTabId; label: string };
   isActive: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       role="tab"
@@ -52,7 +52,7 @@ export function ConfigTabBar({
 }: {
   activeTab: ConfigTabId;
   onTabChange: (tab: ConfigTabId) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic bg-surface-panel flex-shrink-0 flex">
       {CONFIG_TABS.map((tab) => (
@@ -77,7 +77,7 @@ function ScopeButton({
   label: string;
   isActive: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       className={
@@ -99,7 +99,7 @@ export function ScopeToggle({
 }: {
   scope: ScopeValue;
   onScopeChange: (s: ScopeValue) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex gap-1 px-3 py-1.5">
       <ScopeButton label="Global" isActive={scope === 'global'} onClick={() => onScopeChange('global')} />
@@ -124,7 +124,7 @@ function CommandActionButtons({
   scope: string;
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span className="flex items-center gap-1 ml-auto flex-shrink-0">
       <button
@@ -153,7 +153,7 @@ export function CommandItem({
   command: CommandDefinition;
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="group flex items-center gap-2 w-full px-3 py-1.5 transition-colors duration-75"
@@ -193,7 +193,7 @@ function validateName(name: string): string | null {
   return null;
 }
 
-function CreateTrigger({ onOpen, placeholder }: { onOpen: () => void; placeholder?: string }): React.ReactElement {
+function CreateTrigger({ onOpen, placeholder }: { onOpen: () => void; placeholder?: string }): React.ReactElement<any> {
   return (
     <button
       className="text-[10px] text-text-semantic-muted transition-colors duration-75"
@@ -207,7 +207,7 @@ function CreateTrigger({ onOpen, placeholder }: { onOpen: () => void; placeholde
 }
 
 interface CreateFormProps {
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   name: string;
   error: string | null;
   onNameChange: (value: string) => void;
@@ -216,7 +216,7 @@ interface CreateFormProps {
   onCancel: () => void;
 }
 
-function CreateForm({ inputRef, name, error, onNameChange, onSubmit, onKeyDown, onCancel }: CreateFormProps): React.ReactElement {
+function CreateForm({ inputRef, name, error, onNameChange, onSubmit, onKeyDown, onCancel }: CreateFormProps): React.ReactElement<any> {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
@@ -243,7 +243,7 @@ function CreateForm({ inputRef, name, error, onNameChange, onSubmit, onKeyDown, 
 
 function useCreateFormHandlers(onCreate: (name: string) => void): {
   open: boolean; name: string; error: string | null;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   handleOpen: () => void; handleClose: () => void;
   handleNameChange: (v: string) => void;
   handleSubmit: (e: React.FormEvent) => void;
@@ -275,7 +275,7 @@ export function InlineCreateForm({
 }: {
   onCreate: (name: string) => void;
   placeholder?: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const h = useCreateFormHandlers(onCreate);
   return (
     <div className="px-3 py-1.5">

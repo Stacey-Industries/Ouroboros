@@ -11,7 +11,7 @@ function updateCloseButtonColor(button: HTMLButtonElement, hover: boolean): void
   button.style.color = hover ? 'var(--text-primary)' : 'var(--text-faint)';
 }
 
-function PanelGridIcon(): React.ReactElement {
+function PanelGridIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -32,7 +32,7 @@ function PanelGridIcon(): React.ReactElement {
   );
 }
 
-function CloseIcon(): React.ReactElement {
+function CloseIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
       <path
@@ -45,7 +45,7 @@ function CloseIcon(): React.ReactElement {
   );
 }
 
-function HeaderCloseButton({ onClick }: { onClick: () => void }): React.ReactElement {
+function HeaderCloseButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -69,7 +69,7 @@ export function MonitorHeader({
   completed: number;
   onClose: () => void;
   total: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex flex-shrink-0 items-center gap-2 px-3 py-2 border-b border-border-semantic">
       <PanelGridIcon />
@@ -94,7 +94,7 @@ export function SessionGrid({
   batchSessions: Array<AgentSession | null>;
   gridLayout: GridLayout;
   onViewFull: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="min-h-0 flex-1 p-2"
@@ -125,7 +125,7 @@ function FooterMetric({
   label: string;
   value: React.ReactNode;
   valueColor: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-1">
       <span className="text-[10px] text-text-semantic-faint">{label}</span>
@@ -136,7 +136,7 @@ function FooterMetric({
   );
 }
 
-function TokenMetric({ stats }: { stats: BatchStats }): React.ReactElement {
+function TokenMetric({ stats }: { stats: BatchStats }): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-1">
       <span className="text-[10px] text-text-semantic-faint">Tokens:</span>
@@ -151,7 +151,7 @@ function TokenMetric({ stats }: { stats: BatchStats }): React.ReactElement {
   );
 }
 
-export function MonitorFooter({ stats }: { stats: BatchStats }): React.ReactElement {
+export function MonitorFooter({ stats }: { stats: BatchStats }): React.ReactElement<any> {
   return (
     <div className="flex flex-shrink-0 items-center gap-4 px-3 py-2 border-t border-border-semantic bg-surface-panel">
       <FooterMetric

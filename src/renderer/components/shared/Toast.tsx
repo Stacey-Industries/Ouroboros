@@ -66,7 +66,7 @@ function getTypeColor(type: ToastType): string {
 
 // ── Icons per toast type (inline SVGs) ───────────────────────────────────────
 
-function ToastIconSuccess({ color, size }: { color: string; size: number }): React.ReactElement {
+function ToastIconSuccess({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -81,7 +81,7 @@ function ToastIconSuccess({ color, size }: { color: string; size: number }): Rea
   );
 }
 
-function ToastIconError({ color, size }: { color: string; size: number }): React.ReactElement {
+function ToastIconError({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -90,7 +90,7 @@ function ToastIconError({ color, size }: { color: string; size: number }): React
   );
 }
 
-function ToastIconWarning({ color, size }: { color: string; size: number }): React.ReactElement {
+function ToastIconWarning({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
@@ -105,7 +105,7 @@ function ToastIconWarning({ color, size }: { color: string; size: number }): Rea
   );
 }
 
-function ToastIconInfo({ color, size }: { color: string; size: number }): React.ReactElement {
+function ToastIconInfo({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -115,7 +115,7 @@ function ToastIconInfo({ color, size }: { color: string; size: number }): React.
   );
 }
 
-function ToastIcon({ type }: { type: ToastType }): React.ReactElement {
+function ToastIcon({ type }: { type: ToastType }): React.ReactElement<any> {
   const color = getTypeColor(type);
   const size = 16;
   if (type === 'success') return <ToastIconSuccess color={color} size={size} />;
@@ -126,7 +126,7 @@ function ToastIcon({ type }: { type: ToastType }): React.ReactElement {
 
 // ── Close button ─────────────────────────────────────────────────────────────
 
-function CloseButton({ onClick }: { onClick: () => void }): React.ReactElement {
+function CloseButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -222,7 +222,7 @@ function ToastMessage({
 }: {
   item: ToastItem;
   typeColor: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <span style={{ wordBreak: 'break-word' }}>{item.message}</span>
@@ -245,7 +245,7 @@ function ToastProgressBar({
 }: {
   item: ToastItem;
   typeColor: string;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (item.duration <= 0 || item.dismissing) return null;
 
   return (
@@ -267,7 +267,7 @@ function ToastProgressBar({
 const ToastItemView = memo(function ToastItemView({
   item,
   onDismiss,
-}: ToastItemViewProps): React.ReactElement {
+}: ToastItemViewProps): React.ReactElement<any> {
   const typeColor = getTypeColor(item.type);
   const elRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
@@ -302,7 +302,7 @@ export interface ToastContainerProps {
 export const ToastContainer = memo(function ToastContainer({
   toasts,
   onDismiss,
-}: ToastContainerProps): React.ReactElement | null {
+}: ToastContainerProps): React.ReactElement<any> | null {
   if (toasts.length === 0) return null;
 
   return (

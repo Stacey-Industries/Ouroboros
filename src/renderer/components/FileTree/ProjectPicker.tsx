@@ -17,7 +17,7 @@ export function ProjectPicker({
   onSelectProject,
   onAddProject,
   rootCount = 0,
-}: ProjectPickerProps): React.ReactElement {
+}: ProjectPickerProps): React.ReactElement<any> {
   const controller = useProjectPickerController({
     currentPath,
     recentProjects,
@@ -27,7 +27,7 @@ export function ProjectPicker({
   });
 
   return (
-    <div ref={controller.containerRef as React.RefObject<HTMLDivElement>} style={{ position: 'relative', width: '100%' }}>
+    <div ref={controller.containerRef as React.RefObject<HTMLDivElement | null>} style={{ position: 'relative', width: '100%' }}>
       <ProjectPickerToggle
         busy={controller.busy}
         currentPath={currentPath}

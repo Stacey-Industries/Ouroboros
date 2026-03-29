@@ -14,7 +14,7 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function ApprovalSubsection({ draft, onChange }: Props): React.ReactElement {
+export function ApprovalSubsection({ draft, onChange }: Props): React.ReactElement<any> {
   const currentTools = draft.approvalRequired ?? [];
 
   function toggleTool(tool: string): void {
@@ -55,7 +55,7 @@ function ToolToggleGrid({
   tools: string[];
   currentTools: string[];
   onToggle: (tool: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
       {tools.map((tool) => {
@@ -70,7 +70,7 @@ function ToolToggleGrid({
   );
 }
 
-function ApprovalStatus({ currentTools }: { currentTools: string[] }): React.ReactElement {
+function ApprovalStatus({ currentTools }: { currentTools: string[] }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-primary" style={statusBoxStyle}>
       {currentTools.length === 0 ? (
@@ -95,11 +95,11 @@ function CustomToolInputRow({
 }: {
   value: string;
   disabled: boolean;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onAdd: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '6px' }}>
       <input
@@ -125,7 +125,7 @@ function CustomToolInput({
 }: {
   currentTools: string[];
   onAdd: (tool: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -154,7 +154,7 @@ function CustomToolInput({
   );
 }
 
-function TimeoutSection({ draft, onChange }: Props): React.ReactElement {
+function TimeoutSection({ draft, onChange }: Props): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Auto-Approve Timeout</SectionLabel>

@@ -119,7 +119,7 @@ function HexMatchNavButtons({
 }: Pick<
   HexSearchProps,
   'matchOffsets' | 'activeMatchIndex' | 'goToMatch'
->): React.ReactElement | null {
+>): React.ReactElement<any> | null {
   if (matchOffsets.length === 0) return null;
   return (
     <>
@@ -152,7 +152,7 @@ function HexToolbarSearch({
   matchOffsets,
   activeMatchIndex,
   goToMatch,
-}: HexSearchProps): React.ReactElement {
+}: HexSearchProps): React.ReactElement<any> {
   return (
     <>
       <input
@@ -192,7 +192,7 @@ export function HexViewerToolbar({
   goToMatch,
   openExternal,
   contentLength,
-}: HexToolbarProps): React.ReactElement {
+}: HexToolbarProps): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={toolbarStyle}>
       <span style={{ fontWeight: 600 }}>Hex</span>
@@ -228,7 +228,7 @@ type HexRowsProps = {
 };
 
 type HexRowProps = { row: number; offset: number; hex: string; ascii: string; isMatch: boolean };
-function HexRow({ row, offset, hex, ascii, isMatch }: HexRowProps): React.ReactElement {
+function HexRow({ row, offset, hex, ascii, isMatch }: HexRowProps): React.ReactElement<any> {
   return (
     <div
       key={row}
@@ -268,8 +268,8 @@ export function HexViewerRows({
   startRow,
   endRow,
   matchedRows,
-}: HexRowsProps): React.ReactElement {
-  const rows: React.ReactElement[] = [];
+}: HexRowsProps): React.ReactElement<any> {
+  const rows: React.ReactElement<any>[] = [];
   for (let row = startRow; row < endRow; row++) {
     const offset = row * BYTES_PER_ROW;
     const { hex, ascii } = buildHexRow(content, offset);

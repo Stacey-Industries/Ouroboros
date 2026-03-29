@@ -155,11 +155,11 @@ function actionButtonStyle(color: string): CSSProperties {
   };
 }
 
-function FileListSidebarHeader({ count }: FileListSidebarHeaderProps): React.ReactElement {
+function FileListSidebarHeader({ count }: FileListSidebarHeaderProps): React.ReactElement<any> {
   return <div style={headerStyle}>Changed Files ({count})</div>;
 }
 
-function FileListItemSummary({ allDecided, file, progress }: FileListItemSummaryProps): React.ReactElement {
+function FileListItemSummary({ allDecided, file, progress }: FileListItemSummaryProps): React.ReactElement<any> {
   const badge = statusBadge(file.status);
 
   return (
@@ -171,7 +171,7 @@ function FileListItemSummary({ allDecided, file, progress }: FileListItemSummary
   );
 }
 
-function QuickActionButton({ color, label, onClick }: QuickActionButtonProps): React.ReactElement {
+function QuickActionButton({ color, label, onClick }: QuickActionButtonProps): React.ReactElement<any> {
   return (
     <button onClick={(event) => { event.stopPropagation(); onClick(); }} style={actionButtonStyle(color)}>
       {label}
@@ -183,7 +183,7 @@ function FileListItemActions({
   index,
   onAcceptAll,
   onRejectAll,
-}: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
+}: Pick<FileListItemProps, 'index' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement<any> {
   return (
     <div style={actionRowStyle}>
       <QuickActionButton color="var(--status-success, #4CAF50)" label="Accept All" onClick={() => onAcceptAll(index)} />
@@ -199,7 +199,7 @@ function FileListItem({
   onAcceptAll,
   onRejectAll,
   onSelect,
-}: FileListItemProps): React.ReactElement {
+}: FileListItemProps): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
   const progress = hunkProgress(file);
   const allDecided = progress.decided === progress.total;
@@ -223,7 +223,7 @@ export const FileListSidebar = memo(function FileListSidebar({
   onSelect,
   onAcceptAll,
   onRejectAll,
-}: FileListSidebarProps): React.ReactElement {
+}: FileListSidebarProps): React.ReactElement<any> {
   return (
     <div style={sidebarStyle}>
       <FileListSidebarHeader count={files.length} />

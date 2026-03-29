@@ -18,7 +18,7 @@ export interface CommandPaletteProps {
   onExecute: (command: Command) => Promise<void>;
 }
 
-export function CommandPalette(props: CommandPaletteProps): React.ReactElement | null {
+export function CommandPalette(props: CommandPaletteProps): React.ReactElement<any> | null {
   const model = useCommandPaletteModel(props);
 
   return (

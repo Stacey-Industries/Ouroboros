@@ -20,7 +20,7 @@ function SessionReplayBody({
 }: {
   session: AgentSession;
   replay: SessionReplayController;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       <StepList
@@ -50,10 +50,10 @@ export function SessionReplayLayout({
   session: AgentSession;
   onClose: () => void;
   replay: SessionReplayController;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
-      ref={replay.panelRef as React.RefObject<HTMLDivElement>}
+      ref={replay.panelRef as React.RefObject<HTMLDivElement | null>}
       tabIndex={-1}
       className="bg-surface-base"
       style={{
@@ -71,7 +71,7 @@ export function SessionReplayLayout({
   );
 }
 
-function ReplayHeaderTitle({ taskLabel }: { taskLabel: string }): React.ReactElement {
+function ReplayHeaderTitle({ taskLabel }: { taskLabel: string }): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <span className="text-text-semantic-primary" style={{ fontWeight: 600 }}>
@@ -93,7 +93,7 @@ function ReplayHeader({
 }: {
   session: AgentSession;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const handleExport = useCallback(() => {
     const report = exportSessionReport(session);
     void navigator.clipboard.writeText(report);
@@ -126,7 +126,7 @@ function ReplayTransportControls({
   replay,
 }: {
   replay: SessionReplayController;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}>
       <ReplayTransportButtons replay={replay} />
@@ -136,7 +136,7 @@ function ReplayTransportControls({
   );
 }
 
-function ReplayTransportBar({ replay }: { replay: SessionReplayController }): React.ReactElement {
+function ReplayTransportBar({ replay }: { replay: SessionReplayController }): React.ReactElement<any> {
   return (
     <div className="bg-surface-panel border-b border-border-semantic" style={{ flexShrink: 0 }}>
       <ReplayTransportControls replay={replay} />

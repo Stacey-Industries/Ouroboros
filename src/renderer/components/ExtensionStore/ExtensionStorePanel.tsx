@@ -28,7 +28,7 @@ const KEYFRAMES = `
   }
 `;
 
-export function ExtensionStorePanel(): React.ReactElement | null {
+export function ExtensionStorePanel(): React.ReactElement<any> | null {
   const [isMounted, setIsMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -79,7 +79,7 @@ export function ExtensionStorePanel(): React.ReactElement | null {
   );
 }
 
-function ExtensionStoreHeader({ onClose }: { onClose: () => void }): React.ReactElement {
+function ExtensionStoreHeader({ onClose }: { onClose: () => void }): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexShrink: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -91,7 +91,7 @@ function ExtensionStoreHeader({ onClose }: { onClose: () => void }): React.React
   );
 }
 
-function ExtensionStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }): React.ReactElement {
+function ExtensionStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }): React.ReactElement<any> {
   return (
     <>
       <style>{KEYFRAMES}</style>
@@ -117,7 +117,7 @@ function ExtensionStoreOverlay({ isVisible, onClose }: { isVisible: boolean; onC
   );
 }
 
-function ExtensionIcon(): React.ReactElement {
+function ExtensionIcon(): React.ReactElement<any> {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-interactive-accent">
       <path d="M9 2v3a1 1 0 001 1h3" />

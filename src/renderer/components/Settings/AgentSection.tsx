@@ -26,7 +26,7 @@ function AgentChatSettingsGroup({
 }: {
   settings: AgentChatSettings;
   updateSetting: <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <div>
@@ -65,7 +65,7 @@ function ContextLayerSettingsGroup({
 }: {
   settings: ContextLayerSettings;
   updateSetting: <K extends keyof ContextLayerSettings>(field: K, value: ContextLayerSettings[K]) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <SectionLabel style={{ marginTop: '8px' }}>Context Layer</SectionLabel>
@@ -78,7 +78,7 @@ function ContextLayerSettingsGroup({
 export function AgentSection({
   draft,
   onChange,
-}: AgentSectionProps): React.ReactElement {
+}: AgentSectionProps): React.ReactElement<any> {
   const agentChatSettings = draft.agentChatSettings ?? {};
   const contextLayerSettings = draft.contextLayer ?? {};
   const updateAgentChat = <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => {

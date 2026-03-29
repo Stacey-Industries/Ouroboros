@@ -54,7 +54,7 @@ function RootSections({
   bookmarks,
   extraIgnorePatterns,
   getHeatLevel,
-}: Omit<FileTreeBodyProps, 'query' | 'onSearchSelect' | 'onUnpin'>): React.ReactElement {
+}: Omit<FileTreeBodyProps, 'query' | 'onSearchSelect' | 'onUnpin'>): React.ReactElement<any> {
   return (
     <>
       {roots.map((root) => (
@@ -80,7 +80,7 @@ function RootSections({
 
 type NormalTreeViewProps = Omit<FileTreeBodyProps, 'projectRoot' | 'gitDetailedStatus' | 'gitIsRepo' | 'gitRefresh' | 'gitFilter'>;
 
-function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
+function NormalTreeView(p: NormalTreeViewProps): React.ReactElement<any> {
   return (
     <>
       <PinnedSection bookmarks={p.bookmarks} activeFilePath={p.activeFilePath} onFileSelect={p.onFileSelect} onUnpin={p.onUnpin} />
@@ -103,7 +103,7 @@ function NormalTreeView(p: NormalTreeViewProps): React.ReactElement {
   );
 }
 
-export function FileTreeBody(p: FileTreeBodyProps): React.ReactElement {
+export function FileTreeBody(p: FileTreeBodyProps): React.ReactElement<any> {
   const isFiltered = p.gitFilter != null && p.gitFilter !== 'all';
 
   return (

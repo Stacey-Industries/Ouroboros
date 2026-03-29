@@ -32,7 +32,7 @@ export function Surface({
   className,
   children,
   ...rest
-}: SurfaceProps): React.ReactElement {
+}: SurfaceProps): React.ReactElement<any> {
   const base = `${levelClass[level]} ${radiusClass[radius]}`;
   const border = bordered ? 'border border-border-semantic' : '';
   return (

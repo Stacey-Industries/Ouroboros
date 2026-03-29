@@ -44,7 +44,7 @@ export interface AgentChatToolCardProps {
   subTools?: AgentChatSubToolActivity[];
 }
 
-export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
+export function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement<any> {
   return (
     <svg
       className={`h-3 w-3 text-text-semantic-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
@@ -145,7 +145,7 @@ function useToolCardState(props: AgentChatToolCardProps): ToolCardState {
 
 function ToolCardBody(
   props: AgentChatToolCardProps & ReturnType<typeof useToolCardState>,
-): React.ReactElement {
+): React.ReactElement<any> {
   return (
     <div
       className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${props.errorOutput ? '' : 'border-border-semantic'}`}
@@ -184,7 +184,7 @@ function ToolCardBody(
 
 export const AgentChatToolCard = React.memo(function AgentChatToolCard(
   props: AgentChatToolCardProps,
-): React.ReactElement {
+): React.ReactElement<any> {
   const state = useToolCardState(props);
   return <ToolCardBody {...props} {...state} />;
 });

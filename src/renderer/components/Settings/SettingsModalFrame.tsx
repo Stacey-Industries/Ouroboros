@@ -15,7 +15,7 @@ export function ModalOverlay({
   children,
   isVisible,
   onCancel,
-}: ModalFrameProps): React.ReactElement {
+}: ModalFrameProps): React.ReactElement<any> {
   return (
     <div
       role="dialog"
@@ -47,7 +47,7 @@ export function ModalOverlay({
 export function ModalCard({
   children,
   isVisible,
-}: Omit<ModalFrameProps, 'onCancel'>): React.ReactElement {
+}: Omit<ModalFrameProps, 'onCancel'>): React.ReactElement<any> {
   return (
     <div
       role="document"

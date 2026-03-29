@@ -132,7 +132,7 @@ function buildRenderItems(lines: string[], blocks: ConflictBlock[]): ConflictRen
 function ConflictActions(props: {
   blockIndex: number;
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={actionsStyle}>
       <ActionButton
@@ -158,7 +158,7 @@ function ConflictCard(props: {
   block: ConflictBlock;
   blockIndex: number;
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={cardStyle}>
       <ConflictSection
@@ -189,7 +189,7 @@ function ConflictStatus(props: {
   conflictCount: number;
   isSaving: boolean;
   saveError: string | null;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const hasConflicts = props.conflictCount > 0;
   return (
     <div
@@ -226,7 +226,7 @@ function ConflictStatus(props: {
   );
 }
 
-function NormalLine({ line }: { line: string }): React.ReactElement {
+function NormalLine({ line }: { line: string }): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-primary" style={lineStyle}>
       {line}
@@ -237,7 +237,7 @@ function NormalLine({ line }: { line: string }): React.ReactElement {
 function ConflictContent(props: {
   items: ConflictRenderItem[];
   onResolve: (blockIndex: number, choice: ConflictChoice) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={scrollBodyStyle}>
       {props.items.map((item) =>
@@ -260,7 +260,7 @@ export function ConflictResolver({
   content,
   filePath,
   onResolved,
-}: ConflictResolverProps): React.ReactElement {
+}: ConflictResolverProps): React.ReactElement<any> {
   const lines = useMemo(() => content.split('\n'), [content]);
   const blocks = useMemo(() => parseConflictBlocks(lines), [lines]);
   const items = useMemo(() => buildRenderItems(lines, blocks), [blocks, lines]);

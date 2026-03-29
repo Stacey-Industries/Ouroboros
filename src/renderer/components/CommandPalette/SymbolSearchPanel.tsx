@@ -28,7 +28,7 @@ const emptyStateStyle: React.CSSProperties = {
 
 type SymbolSearchPanelProps = SymbolSearchModel & Pick<SymbolSearchProps, 'isOpen' | 'onClose'>;
 
-export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactElement {
+export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactElement<any> {
   return (
     <>
       <PaletteAnimations prefix="ss" />
@@ -77,17 +77,17 @@ function SymbolResultsList({
   onHover: (index: number) => void;
   onSelect: SymbolSearchModel['handleSelect'];
   selectedIndex: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (matches.length === 0) {
     return (
-      <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement>} style={listStyle}>
+      <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
         <div className="text-text-semantic-muted" style={emptyStateStyle}>{emptyLabel}</div>
       </div>
     );
   }
 
   return (
-    <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement>} style={listStyle}>
+    <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
       {matches.map((match, index) => (
         <SymbolItem
           key={`${match.entry.filePath}:${match.entry.line}:${match.entry.name}`}

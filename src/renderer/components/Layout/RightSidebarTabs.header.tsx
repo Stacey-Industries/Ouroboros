@@ -12,7 +12,7 @@ import { ViewSwitcherDropdown } from './RightSidebarTabs.panels';
 
 // ── Thread status badge ───────────────────────────────────────────────────────
 
-function BadgeSpinningIcon(): React.ReactElement {
+function BadgeSpinningIcon(): React.ReactElement<any> {
   return (
     <svg
       className="h-3 w-3 animate-spin shrink-0 text-interactive-accent"
@@ -33,7 +33,7 @@ function BadgeSpinningIcon(): React.ReactElement {
   );
 }
 
-function BadgeCheckmarkIcon(): React.ReactElement {
+function BadgeCheckmarkIcon(): React.ReactElement<any> {
   return (
     <svg className="h-3 w-3 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
       <path
@@ -47,7 +47,7 @@ function BadgeCheckmarkIcon(): React.ReactElement {
   );
 }
 
-function BadgeErrorIcon(): React.ReactElement {
+function BadgeErrorIcon(): React.ReactElement<any> {
   return (
     <svg className="h-3 w-3 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
@@ -61,7 +61,7 @@ function BadgeErrorIcon(): React.ReactElement {
   );
 }
 
-function ThreadStatusBadge({ status }: { status: string }): React.ReactElement | null {
+function ThreadStatusBadge({ status }: { status: string }): React.ReactElement<any> | null {
   if (status === 'running' || status === 'submitting') return <BadgeSpinningIcon />;
   if (status === 'complete') return <BadgeCheckmarkIcon />;
   if (status === 'failed') return <BadgeErrorIcon />;
@@ -78,7 +78,7 @@ function HistoryToggleButton({
   historyOpen: boolean;
   threadCount: number;
   onToggle: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       data-history-toggle
@@ -116,7 +116,7 @@ function ThreadTitle({
   activeThread,
 }: {
   activeThread: AgentChatThreadRecord | null;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span
       className="flex-1 flex items-center justify-center gap-1.5 truncate text-[11px] px-1.5 select-none text-text-semantic-muted"
@@ -136,7 +136,7 @@ function ViewSwitcherButton({
 }: {
   viewDropdownOpen: boolean;
   onToggle: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onToggle}
@@ -157,7 +157,7 @@ function ViewSwitcherButton({
 
 // ── New Chat Button ───────────────────────────────────────────────────────────
 
-function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement {
+function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -202,7 +202,7 @@ export function ChatPanelHeader({
   onToggleViewDropdown,
   activeView,
   onSwitchView,
-}: ChatPanelHeaderProps): React.ReactElement {
+}: ChatPanelHeaderProps): React.ReactElement<any> {
   return (
     <div
       className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel pl-2"

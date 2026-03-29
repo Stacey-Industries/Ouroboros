@@ -4,7 +4,7 @@ import type { RulesFile } from '../../../shared/types/rulesAndSkills';
 
 // ── SectionHeader ─────────────────────────────────────────────────────────────
 
-export function SectionHeader({ label }: { label: string }): React.ReactElement {
+export function SectionHeader({ label }: { label: string }): React.ReactElement<any> {
   return (
     <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted select-none">
       {label}
@@ -19,7 +19,7 @@ const RULE_LABELS: Record<'claude-md' | 'agents-md', string> = {
   'agents-md': 'AGENTS.md',
 };
 
-function RuleOpenButton({ filePath, onOpen }: { filePath: string; onOpen: (path: string) => void }): React.ReactElement {
+function RuleOpenButton({ filePath, onOpen }: { filePath: string; onOpen: (path: string) => void }): React.ReactElement<any> {
   return (
     <button
       className="text-[10px] text-interactive-accent px-1.5 py-0.5 rounded transition-colors duration-75"
@@ -38,7 +38,7 @@ function RuleCreateButton({
 }: {
   type: 'claude-md' | 'agents-md';
   onCreate: (type: 'claude-md' | 'agents-md') => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       className="text-[10px] text-text-semantic-muted px-1.5 py-0.5 rounded transition-colors duration-75"
@@ -59,7 +59,7 @@ export function RuleItem({
   rule: RulesFile;
   onOpen: (path: string) => void;
   onCreate: (type: 'claude-md' | 'agents-md') => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex items-center gap-2 w-full px-3 py-1.5 transition-colors duration-75"

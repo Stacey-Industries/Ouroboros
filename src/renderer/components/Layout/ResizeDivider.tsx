@@ -12,7 +12,7 @@ export interface ResizeDividerProps {
   label: string;
 }
 
-export function ResizeDivider({ direction, onPointerDown, onDoubleClick, label }: ResizeDividerProps): React.ReactElement {
+export function ResizeDivider({ direction, onPointerDown, onDoubleClick, label }: ResizeDividerProps): React.ReactElement<any> {
   const isVertical = direction === 'vertical';
   return (
     <div

@@ -19,7 +19,7 @@ function ThemeEditorHeader({
   hasOverrides: boolean;
   onResetAll: () => void;
   onSaveAsCustom: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div className="text-text-semantic-muted" style={sectionLabelStyle}>
@@ -58,7 +58,7 @@ function ColorSwatchInput({
   effectiveColor: string;
   label: string;
   onChange: (newHex: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}>
       <div style={{ ...swatchPreviewStyle, background: effectiveColor }} />
@@ -81,7 +81,7 @@ function TokenLabel({
   cssVar: string;
   isOverridden: boolean;
   label: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div
@@ -115,7 +115,7 @@ function ResetTokenButton({
 }: {
   label: string;
   onReset: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [isHovered, setIsHovered] = React.useState(false);
 
   return (
@@ -175,7 +175,7 @@ function ColorTokenRow({
   onColorChange: ThemeEditorModel['onColorChange'];
   onResetToken: ThemeEditorModel['onResetToken'];
   token: ColorToken;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const overridden = isOverridden(token);
   const effectiveColor = getEffectiveColor(token);
 
@@ -203,7 +203,7 @@ function ColorTokenGrid({
 }: Pick<
   ThemeEditorModel,
   'getEffectiveColor' | 'isOverridden' | 'onColorChange' | 'onResetToken' | 'tokens'
->): React.ReactElement {
+>): React.ReactElement<any> {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
       {tokens.map((token) => (
@@ -220,7 +220,7 @@ function ColorTokenGrid({
   );
 }
 
-function ThemeEditorHelpText({ hasOverrides }: { hasOverrides: boolean }): React.ReactElement {
+function ThemeEditorHelpText({ hasOverrides }: { hasOverrides: boolean }): React.ReactElement<any> {
   return (
     <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: 0 }}>
       Click a swatch to pick a color. Changes preview instantly.
@@ -240,7 +240,7 @@ export function ThemeEditorView({
   onResetToken,
   onSaveAsCustom,
   tokens,
-}: ThemeEditorModel): React.ReactElement {
+}: ThemeEditorModel): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <ThemeEditorHeader

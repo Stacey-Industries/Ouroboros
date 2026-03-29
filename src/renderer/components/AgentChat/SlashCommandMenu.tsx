@@ -87,7 +87,7 @@ function useSlashCommandKeyboard({
   return useCallback((event: KeyboardEvent) => handleSlashCommandKeyDown({ event, isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose }), [isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose]);
 }
 
-function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: SlashCommand; selected: boolean; onMouseDown: () => void; onMouseEnter: () => void; }): React.ReactElement {
+function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: SlashCommand; selected: boolean; onMouseDown: () => void; onMouseEnter: () => void; }): React.ReactElement<any> {
   return (
     <button data-slash-item onMouseDown={(event) => { event.preventDefault(); onMouseDown(); }} onMouseEnter={onMouseEnter} className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}>
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-raised text-[11px] text-text-semantic-muted">{cmd.icon}</span>
@@ -97,7 +97,7 @@ function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: S
   );
 }
 
-export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }: SlashCommandMenuProps): React.ReactElement | null {
+export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }: SlashCommandMenuProps): React.ReactElement<any> | null {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const filtered = useMemo(() => filterCommands(query, commands), [query, commands]);

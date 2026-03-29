@@ -55,7 +55,7 @@ const DECORATION_WRAPPER: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
-function DecorationHeader(p: CommandBlockDecorationViewProps): React.ReactElement {
+function DecorationHeader(p: CommandBlockDecorationViewProps): React.ReactElement<any> {
   return (
     <CommandBlockDecorationHeader
       block={p.block}
@@ -72,7 +72,7 @@ function DecorationHeader(p: CommandBlockDecorationViewProps): React.ReactElemen
   );
 }
 
-function CommandBlockDecorationView(props: CommandBlockDecorationViewProps): React.ReactElement {
+function CommandBlockDecorationView(props: CommandBlockDecorationViewProps): React.ReactElement<any> {
   const { block, cellHeight, separatorY, outputHeight, borderColor, setHovered, onToggleCollapse } =
     props;
   const collapsedLines = block.collapsed ? block.endLine - block.outputStartLine : 0;
@@ -128,7 +128,7 @@ function CommandBlockDecoration({
   onCopyCommand,
   onExplainError,
   sessionId,
-}: CommandBlockDecorationProps): React.ReactElement {
+}: CommandBlockDecorationProps): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
   const separatorY = (block.startLine - viewportY) * cellHeight;
   const outputHeight = block.collapsed
@@ -231,7 +231,7 @@ export function CommandBlockOverlayBody({
   onToggleCollapse,
   terminal,
   sessionId,
-}: CommandBlockOverlayProps): React.ReactElement | null {
+}: CommandBlockOverlayProps): React.ReactElement<any> | null {
   const visibleBlocks = useVisibleBlocks(blocks, terminal);
   const viewportY = useScrollViewportY(terminal);
   const handleExplainError = useExplainErrorHandler(terminal);

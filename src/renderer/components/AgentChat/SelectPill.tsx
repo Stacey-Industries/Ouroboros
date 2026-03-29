@@ -26,11 +26,11 @@ function getDisplayLabel(value: string, options?: ReadonlyArray<OptionItem>, gro
   return match?.label ?? (value || 'Select');
 }
 
-function ChevronUp(): React.ReactElement {
+function ChevronUp(): React.ReactElement<any> {
   return <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="ml-0.5 opacity-50"><path d="M2 5l2-2 2 2" /></svg>;
 }
 
-function SelectPillItem({ item, selected, onSelect }: { item: OptionItem; selected: boolean; onSelect: (value: string) => void }): React.ReactElement {
+function SelectPillItem({ item, selected, onSelect }: { item: OptionItem; selected: boolean; onSelect: (value: string) => void }): React.ReactElement<any> {
   return (
     <button type="button" onClick={() => onSelect(item.value)} className={`block truncate px-3 py-1.5 text-left text-[11px] transition-colors duration-75 ${selected ? 'bg-interactive-accent text-text-semantic-on-accent' : 'text-text-semantic-primary hover:bg-interactive-muted'}`}>
       {item.label}
@@ -42,8 +42,8 @@ function useSelectPillWindowListeners(args: {
   open: boolean;
   close: () => void;
   updateMenuPos: () => void;
-  buttonRef: React.RefObject<HTMLButtonElement>;
-  menuRef: React.RefObject<HTMLDivElement>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
 }): void {
   const { open, close, updateMenuPos, buttonRef, menuRef } = args;
   useEffect(() => {
@@ -74,6 +74,7 @@ function SelectPillMenu({
   value,
   onSelect,
   style,
+  ref,
 }: {
   options?: ReadonlyArray<OptionItem>;
   groups?: OptionGroup[];
@@ -81,7 +82,8 @@ function SelectPillMenu({
   value: string;
   onSelect: (value: string) => void;
   style?: React.CSSProperties;
-}, ref: React.ForwardedRef<HTMLDivElement>): React.ReactElement {
+  ref?: React.Ref<HTMLDivElement>;
+}): React.ReactElement<any> {
   return (
     <div ref={ref} role="listbox" className="z-[9999] max-h-[280px] overflow-x-hidden overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay py-1 shadow-xl" style={{ backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)', ...style }}>
       {defaultOption && <SelectPillItem item={defaultOption} selected={value === defaultOption.value} onSelect={onSelect} />}
@@ -96,16 +98,7 @@ function SelectPillMenu({
   );
 }
 
-const ForwardedSelectPillMenu = React.forwardRef<HTMLDivElement, {
-  options?: ReadonlyArray<OptionItem>;
-  groups?: OptionGroup[];
-  defaultOption?: OptionItem;
-  value: string;
-  onSelect: (value: string) => void;
-  style?: React.CSSProperties;
-}>(SelectPillMenu);
-
-export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title, icon: Icon }: SelectPillProps): React.ReactElement {
+export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title, icon: Icon }: SelectPillProps): React.ReactElement<any> {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -130,7 +123,7 @@ export function SelectPill({ label: _label, value, options, groups, defaultOptio
         <span className="text-text-semantic-primary">{displayLabel}</span>
         <ChevronUp />
       </button>
-      {open && menuPos && createPortal(<ForwardedSelectPillMenu ref={menuRef} options={options} groups={groups} defaultOption={defaultOption} value={value} onSelect={handleSelect} style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }} />, document.body)}
+      {open && menuPos && createPortal(<SelectPillMenu ref={menuRef} options={options} groups={groups} defaultOption={defaultOption} value={value} onSelect={handleSelect} style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }} />, document.body)}
     </>
   );
 }

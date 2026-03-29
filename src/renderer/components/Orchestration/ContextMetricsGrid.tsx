@@ -7,7 +7,7 @@ import {
   ContextMetricsHeader,
 } from './ContextMetricsGrid.parts';
 
-export function ContextMetricsGrid({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function ContextMetricsGrid({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   return (
     <>
       <ContextMetricsHeader session={session} />

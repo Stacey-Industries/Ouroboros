@@ -26,7 +26,7 @@ export interface MentionAutocompleteProps {
   isOpen: boolean;
 }
 
-function FileIcon(): React.ReactElement {
+function FileIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -44,7 +44,7 @@ function FileIcon(): React.ReactElement {
   );
 }
 
-function FolderIcon(): React.ReactElement {
+function FolderIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -61,7 +61,7 @@ function FolderIcon(): React.ReactElement {
   );
 }
 
-function DiffIcon(): React.ReactElement {
+function DiffIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -78,7 +78,7 @@ function DiffIcon(): React.ReactElement {
   );
 }
 
-function TerminalIcon(): React.ReactElement {
+function TerminalIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -96,7 +96,7 @@ function TerminalIcon(): React.ReactElement {
   );
 }
 
-function getMentionIcon(type: MentionType): React.ReactElement {
+function getMentionIcon(type: MentionType): React.ReactElement<any> {
   if (type === 'file') return <FileIcon />;
   if (type === 'folder') return <FolderIcon />;
   if (type === 'diff') return <DiffIcon />;
@@ -113,7 +113,7 @@ function MentionResult({
   selected: boolean;
   onMouseDown: () => void;
   onMouseEnter: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       data-active={selected}
@@ -173,7 +173,7 @@ function useMentionAutocompleteKeyboard(args: MentionKeyboardArgs): (event: Keyb
 
 function useMentionAutocompleteState(
   props: MentionAutocompleteProps,
-  listRef: React.RefObject<HTMLDivElement>,
+  listRef: React.RefObject<HTMLDivElement | null>,
 ) {
   const { query, allFiles, selectedMentions, isOpen, onSelect, onClose } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -202,7 +202,7 @@ function useMentionAutocompleteState(
   return { selectedIndex, setSelectedIndex, results };
 }
 
-export function MentionAutocomplete(props: MentionAutocompleteProps): React.ReactElement | null {
+export function MentionAutocomplete(props: MentionAutocompleteProps): React.ReactElement<any> | null {
   const { isOpen, onSelect } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const { selectedIndex, setSelectedIndex, results } = useMentionAutocompleteState(props, listRef);

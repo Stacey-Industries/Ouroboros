@@ -122,7 +122,7 @@ function useApprovalActions(
   return { onApprove, onReject, onAlwaysAllow };
 }
 
-export function ApprovalProvider({ children }: { children: React.ReactNode }): React.ReactElement {
+export function ApprovalProvider({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   const [requests, setRequests] = useApprovalRequests();
   const approvalHandlers = useApprovalActions(setRequests);
 

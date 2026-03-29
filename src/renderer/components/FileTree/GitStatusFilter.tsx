@@ -84,7 +84,7 @@ export function getFilteredFiles(
  * Filter bar with icon buttons for All / Modified / Staged / Untracked.
  * Reads/writes the filter state from the Zustand store.
  */
-export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps): React.ReactElement | null {
+export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps): React.ReactElement<any> | null {
   const filter = useFileTreeStore((s) => s.filter);
   const setFilter = useFileTreeStore((s) => s.setFilter);
 
@@ -116,7 +116,7 @@ export function GitStatusFilterBar({ counts, isRepo }: GitStatusFilterBarProps):
  * When a filter other than 'all' is active, this replaces the normal tree view
  * with a flat list of matching files.
  */
-export function GitFilteredView({ status, projectRoot, onFileSelect }: GitFilteredViewProps): React.ReactElement | null {
+export function GitFilteredView({ status, projectRoot, onFileSelect }: GitFilteredViewProps): React.ReactElement<any> | null {
   const filter = useFileTreeStore((s) => s.filter);
 
   const entries = useMemo(

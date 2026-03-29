@@ -67,7 +67,7 @@ function useBookmarkItemHover() {
   return { handlePointerEnter, handlePointerLeave };
 }
 
-function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React.ReactElement {
+function BookmarkItem({ filePath, onClick, onRemove }: BookmarkItemProps): React.ReactElement<any> {
   const filename = getFilename(filePath);
   const { handlePointerEnter, handlePointerLeave } = useBookmarkItemHover();
 
@@ -120,7 +120,7 @@ function useBookmarksState() {
   return { bookmarks, handleOpen, handleRemove };
 }
 
-export function BookmarksSection(): React.ReactElement {
+export function BookmarksSection(): React.ReactElement<any> {
   const { bookmarks, handleOpen, handleRemove } = useBookmarksState();
   if (bookmarks.length === 0) {
     return (

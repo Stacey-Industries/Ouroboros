@@ -149,7 +149,7 @@ function useExcerptFormState(onAdd: (excerpt: BufferExcerpt) => void) {
   return { filePath, startLine, endLine, label, setFilePath, setStartLine, setEndLine, setLabel, handleSubmit, hasSubmitted, submitError, errors, hasErrors };
 }
 
-function ExcerptField({ label, value, onChange, placeholder, type = 'text', autoFocus = false, min, error }: ExcerptFieldProps): React.ReactElement {
+function ExcerptField({ label, value, onChange, placeholder, type = 'text', autoFocus = false, min, error }: ExcerptFieldProps): React.ReactElement<any> {
   return <div><div className="text-text-semantic-muted" style={FIELD_LABEL_STYLE}>{label}</div><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="text-text-semantic-primary" style={error ? INPUT_ERROR_STYLE : INPUT_STYLE} autoFocus={autoFocus} min={min} />{error ? <div className="text-status-error" style={ERROR_TEXT_STYLE}>{error}</div> : null}</div>;
 }
 
@@ -181,7 +181,7 @@ function useFilePathKeyDown(opts: FilePathKeyDownOptions) {
   }, [activeIndex, onChange, showSuggestions, suggestions, setActiveIndex, setShowSuggestions]);
 }
 
-function FilePathField({ value, onChange, error, projectRoot }: { value: string; onChange: (value: string) => void; error: string | null; projectRoot: string | null | undefined; }): React.ReactElement {
+function FilePathField({ value, onChange, error, projectRoot }: { value: string; onChange: (value: string) => void; error: string | null; projectRoot: string | null | undefined; }): React.ReactElement<any> {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const suggestions = useFileSuggestions(value, projectRoot);
@@ -218,15 +218,15 @@ function FilePathField({ value, onChange, error, projectRoot }: { value: string;
   </div>;
 }
 
-function RangeFields({ startLine, endLine, setStartLine, setEndLine, startError, endError }: RangeFieldsProps): React.ReactElement {
+function RangeFields({ startLine, endLine, setStartLine, setEndLine, startError, endError }: RangeFieldsProps): React.ReactElement<any> {
   return <div style={RANGE_FIELDS_STYLE}><div style={{ flex: 1 }}><ExcerptField label="Start line" type="number" value={startLine} onChange={setStartLine} min="1" error={startError} /></div><div style={{ flex: 1 }}><ExcerptField label="End line" type="number" value={endLine} onChange={setEndLine} min="1" error={endError} /></div></div>;
 }
 
-function ExcerptActions({ onCancel, disabled }: { onCancel: () => void; disabled: boolean; }): React.ReactElement {
+function ExcerptActions({ onCancel, disabled }: { onCancel: () => void; disabled: boolean; }): React.ReactElement<any> {
   return <div style={ACTIONS_STYLE}><button type="button" onClick={onCancel} className="text-text-semantic-muted" style={CANCEL_BUTTON_STYLE}>Cancel</button><button type="submit" className="text-text-semantic-on-accent" style={disabled ? SUBMIT_BUTTON_DISABLED_STYLE : SUBMIT_BUTTON_STYLE}>Add Excerpt</button></div>;
 }
 
-export const AddExcerptForm = memo(function AddExcerptForm({ onAdd, onCancel, projectRoot }: AddExcerptFormProps): React.ReactElement {
+export const AddExcerptForm = memo(function AddExcerptForm({ onAdd, onCancel, projectRoot }: AddExcerptFormProps): React.ReactElement<any> {
   const form = useExcerptFormState(onAdd);
   const showErrors = form.hasSubmitted;
   return <form onSubmit={form.handleSubmit} style={FORM_STYLE}>

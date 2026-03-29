@@ -8,7 +8,7 @@ import {
   rowActionStyle,
 } from './NotificationCenter.styles';
 
-function NcIconSuccess({ color, size }: { color: string; size: number }): React.ReactElement {
+function NcIconSuccess({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -23,7 +23,7 @@ function NcIconSuccess({ color, size }: { color: string; size: number }): React.
   );
 }
 
-function NcIconError({ color, size }: { color: string; size: number }): React.ReactElement {
+function NcIconError({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -32,7 +32,7 @@ function NcIconError({ color, size }: { color: string; size: number }): React.Re
   );
 }
 
-function NcIconWarning({ color, size }: { color: string; size: number }): React.ReactElement {
+function NcIconWarning({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
@@ -47,7 +47,7 @@ function NcIconWarning({ color, size }: { color: string; size: number }): React.
   );
 }
 
-function NcIconInfo({ color, size }: { color: string; size: number }): React.ReactElement {
+function NcIconInfo({ color, size }: { color: string; size: number }): React.ReactElement<any> {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="8" r="7" stroke={color} strokeWidth="1.5" />
@@ -57,7 +57,7 @@ function NcIconInfo({ color, size }: { color: string; size: number }): React.Rea
   );
 }
 
-export function NotificationIcon({ type }: { type: ToastType }): React.ReactElement {
+export function NotificationIcon({ type }: { type: ToastType }): React.ReactElement<any> {
   const color = getTypeColor(type);
   const size = 14;
   if (type === 'success') return <NcIconSuccess color={color} size={size} />;
@@ -66,7 +66,7 @@ export function NotificationIcon({ type }: { type: ToastType }): React.ReactElem
   return <NcIconInfo color={color} size={size} />;
 }
 
-function ProgressBarTrack({ percent }: { percent: number }): React.ReactElement {
+function ProgressBarTrack({ percent }: { percent: number }): React.ReactElement<any> {
   return (
     <div
       className="bg-border-semantic"
@@ -85,7 +85,7 @@ function ProgressBarTrack({ percent }: { percent: number }): React.ReactElement 
   );
 }
 
-function ProgressBarLabel({ progress }: { progress: NotificationProgress }): React.ReactElement {
+function ProgressBarLabel({ progress }: { progress: NotificationProgress }): React.ReactElement<any> {
   return (
     <div
       className="text-text-semantic-faint"
@@ -120,7 +120,7 @@ export function ProgressBar({
   progress,
 }: {
   progress: NotificationProgress;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (progress.status !== 'active' || progress.total <= 0) return null;
   const percent = Math.min(100, Math.round((progress.completed / progress.total) * 100));
   return (
@@ -135,7 +135,7 @@ export function ProgressStatusIcon({
   progress,
 }: {
   progress: NotificationProgress;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (progress.status === 'active') {
     return (
       <svg
@@ -180,7 +180,7 @@ export function NotificationRowClose({
 }: {
   id: string;
   onRemove: (id: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [closeHovered, setCloseHovered] = useState(false);
   return (
     <button
@@ -202,7 +202,7 @@ export function NotificationRowClose({
   );
 }
 
-export function NotificationRowIcon({ entry }: { entry: NotificationEntry }): React.ReactElement {
+export function NotificationRowIcon({ entry }: { entry: NotificationEntry }): React.ReactElement<any> {
   return (
     <div style={notificationIconWrapStyle}>
       {entry.progress ? (
@@ -214,7 +214,7 @@ export function NotificationRowIcon({ entry }: { entry: NotificationEntry }): Re
   );
 }
 
-export function NotificationRowBody({ entry }: { entry: NotificationEntry }): React.ReactElement {
+export function NotificationRowBody({ entry }: { entry: NotificationEntry }): React.ReactElement<any> {
   return (
     <div style={notificationBodyStyle}>
       <div style={{ wordBreak: 'break-word' }}>

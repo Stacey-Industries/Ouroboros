@@ -91,7 +91,7 @@ function useSearchResults(roots: string[], _extraIgnorePatterns: string[], query
   return { isLoading, searchResults };
 }
 
-function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement {
+function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement<any> {
   return <div className="bg-surface-panel text-text-semantic-faint" style={EMPTY_STATE_STYLE}>{label}</div>;
 }
 
@@ -103,7 +103,7 @@ function SearchOverlayResults({
   searchResults: SearchResult[];
   activeFilePath: string | null;
   onFileSelect: (path: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="bg-surface-panel" style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
       {searchResults.map(({ node, ranges }) => (
@@ -131,7 +131,7 @@ export function SearchOverlay({
   query,
   activeFilePath,
   onFileSelect,
-}: SearchOverlayProps): React.ReactElement {
+}: SearchOverlayProps): React.ReactElement<any> {
   const { isLoading, searchResults } = useSearchResults(roots, extraIgnorePatterns, query);
   if (searchResults.length === 0) {
     return <SearchOverlayEmptyState label={isLoading ? 'Indexing project files...' : `No files match "${query}"`} />;

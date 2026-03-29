@@ -22,7 +22,7 @@ interface McpServerFormProps {
 
 type FormFieldsProps = Pick<McpServerFormProps, 'form' | 'isEdit' | 'onFieldChange'>;
 
-function FormFields({ form, isEdit, onFieldChange }: FormFieldsProps): React.ReactElement {
+function FormFields({ form, isEdit, onFieldChange }: FormFieldsProps): React.ReactElement<any> {
   return (
     <>
       {!isEdit && (
@@ -70,7 +70,7 @@ export function McpServerForm({
   onUpdateEnvRow,
   onSubmit,
   onCancel,
-}: McpServerFormProps): React.ReactElement {
+}: McpServerFormProps): React.ReactElement<any> {
   return (
     <div style={formContainerStyle}>
       <FormFields form={form} isEdit={isEdit} onFieldChange={onFieldChange} />
@@ -100,7 +100,7 @@ function FormField({
   onChange: (field: keyof ServerFormState, value: string) => void;
   placeholder: string;
   autoFocus?: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <label className="text-text-semantic-secondary" style={labelStyle}>
@@ -129,7 +129,7 @@ function EnvRowsEditor({
   onAdd: () => void;
   onRemove: (idx: number) => void;
   onUpdate: (idx: number, field: 'key' | 'value', val: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -169,7 +169,7 @@ interface EnvRowInputProps {
   onRemove: (idx: number) => void;
 }
 
-function EnvRowInput({ row, idx, onUpdate, onRemove }: EnvRowInputProps): React.ReactElement {
+function EnvRowInput({ row, idx, onUpdate, onRemove }: EnvRowInputProps): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
       <input
@@ -209,7 +209,7 @@ function ScopeSelector({
 }: {
   scope: 'global' | 'project';
   onChange: (s: 'global' | 'project') => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <label className="text-text-semantic-secondary" style={labelStyle}>
@@ -239,7 +239,7 @@ function ScopeRadio({
   label: string;
   checked: boolean;
   onChange: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <label style={radioLabelStyle}>
       <input
@@ -262,7 +262,7 @@ function FormActions({
   isEdit: boolean;
   onSubmit: () => void;
   onCancel: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
       <button

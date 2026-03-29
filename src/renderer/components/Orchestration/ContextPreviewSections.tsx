@@ -4,7 +4,7 @@ import type { ContextSnippet, RankedContextFile, TaskResult, TaskSessionRecord }
 import { ContextMetricsGrid } from './ContextMetricsGrid';
 import { badgeStyle, formatPath, panelStyle } from './orchestrationUi';
 
-export function ContextMetricsSection({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function ContextMetricsSection({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <ContextMetricsGrid session={session} />
@@ -12,7 +12,7 @@ export function ContextMetricsSection({ session }: { session: TaskSessionRecord 
   );
 }
 
-export function ContextFileList({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+export function ContextFileList({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   const files = session?.contextPacket?.files ?? [];
   if (files.length === 0) {
     return <EmptyCard message="No context packet has been stored for this session yet." />;
@@ -21,7 +21,7 @@ export function ContextFileList({ session }: { session: TaskSessionRecord | null
   return <div className="space-y-4">{files.map((file) => <ContextFileCard key={file.filePath} file={file} />)}</div>;
 }
 
-function ContextFileCard({ file }: { file: RankedContextFile }): React.ReactElement {
+function ContextFileCard({ file }: { file: RankedContextFile }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <ContextFileHeader file={file} />
@@ -34,7 +34,7 @@ function ContextFileCard({ file }: { file: RankedContextFile }): React.ReactElem
   );
 }
 
-function ContextFileHeader({ file }: { file: RankedContextFile }): React.ReactElement {
+function ContextFileHeader({ file }: { file: RankedContextFile }): React.ReactElement<any> {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
@@ -50,7 +50,7 @@ function ContextFileHeader({ file }: { file: RankedContextFile }): React.ReactEl
   );
 }
 
-function ReasonList({ reasons }: { reasons: RankedContextFile['reasons'] }): React.ReactElement {
+function ReasonList({ reasons }: { reasons: RankedContextFile['reasons'] }): React.ReactElement<any> {
   return (
     <div>
       <div className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>Why it was selected</div>
@@ -59,7 +59,7 @@ function ReasonList({ reasons }: { reasons: RankedContextFile['reasons'] }): Rea
   );
 }
 
-function ReasonCard({ kind, weight, detail }: { kind: string; weight: number; detail: string }): React.ReactElement {
+function ReasonCard({ kind, weight, detail }: { kind: string; weight: number; detail: string }): React.ReactElement<any> {
   return (
     <div className="rounded-md border px-3 py-2 text-[12px]" style={panelStyle('var(--bg)')}>
       <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +71,7 @@ function ReasonCard({ kind, weight, detail }: { kind: string; weight: number; de
   );
 }
 
-function SnippetList({ snippets }: { snippets: ContextSnippet[] }): React.ReactElement {
+function SnippetList({ snippets }: { snippets: ContextSnippet[] }): React.ReactElement<any> {
   return (
     <div>
       <div className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>Selected snippets</div>
@@ -80,7 +80,7 @@ function SnippetList({ snippets }: { snippets: ContextSnippet[] }): React.ReactE
   );
 }
 
-function SnippetCard({ snippet }: { snippet: ContextSnippet }): React.ReactElement {
+function SnippetCard({ snippet }: { snippet: ContextSnippet }): React.ReactElement<any> {
   return (
     <div className="rounded-md border px-3 py-2" style={panelStyle()}>
       <div className="flex flex-wrap items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
@@ -93,7 +93,7 @@ function SnippetCard({ snippet }: { snippet: ContextSnippet }): React.ReactEleme
   );
 }
 
-function TruncationNotes({ file }: { file: RankedContextFile }): React.ReactElement {
+function TruncationNotes({ file }: { file: RankedContextFile }): React.ReactElement<any> {
   return (
     <div className="mt-4">
       <div className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>Truncation notes</div>
@@ -109,7 +109,7 @@ function TruncationNotes({ file }: { file: RankedContextFile }): React.ReactElem
   );
 }
 
-export function ContextSidebar({ session, latestResult }: { session: TaskSessionRecord | null; latestResult: TaskResult | null }): React.ReactElement {
+export function ContextSidebar({ session, latestResult }: { session: TaskSessionRecord | null; latestResult: TaskResult | null }): React.ReactElement<any> {
   const packet = session?.contextPacket;
   return (
     <div className="space-y-4">
@@ -120,7 +120,7 @@ export function ContextSidebar({ session, latestResult }: { session: TaskSession
   );
 }
 
-function FileSummaryCard<T extends { filePath: string }>({ title, items, emptyMessage, renderMeta, renderSummary }: { title: string; items: T[]; emptyMessage: string; renderMeta: (item: T) => React.ReactNode; renderSummary?: (item: T) => React.ReactNode; }): React.ReactElement {
+function FileSummaryCard<T extends { filePath: string }>({ title, items, emptyMessage, renderMeta, renderSummary }: { title: string; items: T[]; emptyMessage: string; renderMeta: (item: T) => React.ReactNode; renderSummary?: (item: T) => React.ReactNode; }): React.ReactElement<any> {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[13px] font-semibold" style={{ color: 'var(--text)' }}>{title}</div>
@@ -131,7 +131,7 @@ function FileSummaryCard<T extends { filePath: string }>({ title, items, emptyMe
   );
 }
 
-function FileSummaryItem<T extends { filePath: string }>({ item, renderMeta, renderSummary }: { item: T; renderMeta: (item: T) => React.ReactNode; renderSummary?: (item: T) => React.ReactNode; }): React.ReactElement {
+function FileSummaryItem<T extends { filePath: string }>({ item, renderMeta, renderSummary }: { item: T; renderMeta: (item: T) => React.ReactNode; renderSummary?: (item: T) => React.ReactNode; }): React.ReactElement<any> {
   return (
     <div className="rounded-md border px-3 py-2 text-[12px]" style={panelStyle('var(--bg)')}>
       <div className="truncate font-medium" style={{ color: 'var(--text)' }} title={item.filePath}>{formatPath(item.filePath)}</div>
@@ -141,7 +141,7 @@ function FileSummaryItem<T extends { filePath: string }>({ item, renderMeta, ren
   );
 }
 
-function OmittedFilesCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
+function OmittedFilesCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
   const items = session?.contextPacket?.omittedCandidates ?? [];
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
@@ -158,6 +158,6 @@ function OmittedFilesCard({ session }: { session: TaskSessionRecord | null }): R
   );
 }
 
-function EmptyCard({ message }: { message: string }): React.ReactElement {
+function EmptyCard({ message }: { message: string }): React.ReactElement<any> {
   return <div className="rounded-lg border p-4 text-[13px]" style={{ ...panelStyle(), color: 'var(--text-muted)' }}>{message}</div>;
 }

@@ -19,6 +19,7 @@ export interface AgentChatDetailsSummaryProps {
   details: AgentChatLinkedDetailsResult | null;
   isLoading: boolean;
   onOpenDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
+  skillCount?: number;
 }
 
 interface SummaryPillProps {
@@ -30,7 +31,7 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement {
+function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement<any> {
   return (
     <div className="rounded border border-border-semantic bg-surface-base px-2.5 py-2">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{label}</div>
@@ -42,7 +43,7 @@ function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement {
 function SummaryHeadline(props: {
   activeThread: AgentChatThreadRecord;
   onOpenDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const latestLink = getLatestLink(props.activeThread);
 
   return (
@@ -63,7 +64,7 @@ function SummaryHeadline(props: {
   );
 }
 
-function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElement | null {
+function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElement<any> | null {
   if (pills.length === 0) {
     return null;
   }
@@ -75,7 +76,7 @@ function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElemen
   );
 }
 
-function SummaryVerificationNote({ summary }: { summary: string | null }): React.ReactElement | null {
+function SummaryVerificationNote({ summary }: { summary: string | null }): React.ReactElement<any> | null {
   if (!summary) {
     return null;
   }
@@ -92,8 +93,9 @@ export function AgentChatDetailsSummary({
   details,
   isLoading,
   onOpenDetails,
-}: AgentChatDetailsSummaryProps): React.ReactElement {
-  const summary = useMemo(() => buildSummaryData(details), [details]);
+  skillCount,
+}: AgentChatDetailsSummaryProps): React.ReactElement<any> {
+  const summary = useMemo(() => buildSummaryData(details, { skillCount: skillCount ?? 0 }), [details, skillCount]);
   const pills = useMemo(
     () => buildSummaryPills({ formatCount, hasDetails: Boolean(details), isLoading, summary }),
     [details, isLoading, summary],

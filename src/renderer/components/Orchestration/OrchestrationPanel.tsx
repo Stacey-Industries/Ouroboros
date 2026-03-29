@@ -8,7 +8,7 @@ export interface OrchestrationPanelProps {
   onClose: () => void;
 }
 
-export function OrchestrationPanel({ projectRoot, initialSessionId = null, onClose }: OrchestrationPanelProps): React.ReactElement {
+export function OrchestrationPanel({ projectRoot, initialSessionId = null, onClose }: OrchestrationPanelProps): React.ReactElement<any> {
   return (
     <OrchestrationPanelContent
       projectRoot={projectRoot}

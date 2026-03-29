@@ -168,7 +168,7 @@ function useHexViewerState(content: Uint8Array, filePath: string) {
   };
 }
 
-export function HexViewer({ content, filePath }: HexViewerProps): React.ReactElement {
+export function HexViewer({ content, filePath }: HexViewerProps): React.ReactElement<any> {
   const state = useHexViewerState(content, filePath);
   return (
     <div style={rootStyle}>

@@ -4,6 +4,8 @@
  * These types are used across the bridge and its extracted support files.
  */
 
+import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
+
 import type { OrchestrationAPI } from '../orchestration/types';
 import type { ResolvedAgentChatSettings } from './settingsResolver';
 import type { AgentChatThreadStore } from './threadStore';
@@ -55,6 +57,8 @@ export interface ActiveStreamContext {
   streamEnded: boolean;
   /** Estimated history tokens at send time — used for calibration feedback. */
   estimatedHistoryTokens?: number;
+  /** Skill execution records accumulated from hook events during this send. */
+  skillExecutions?: SkillExecutionRecord[];
 }
 
 export interface AgentChatBridgeRuntime {

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 
-type IconBuilder = { names: Set<string>; render: () => React.ReactElement };
+type IconBuilder = { names: Set<string>; render: () => React.ReactElement<any> };
 
 const S = 'h-3.5 w-3.5 shrink-0 text-text-semantic-muted';
 const svgProps = { className: S, viewBox: '0 0 14 14', fill: 'none' } as const;

@@ -5,7 +5,7 @@ import { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE } from './FileViewerT
 
 export { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE };
 
-export function CloseIcon(): React.ReactElement {
+export function CloseIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -44,7 +44,7 @@ function DirtyDotButton({
   handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={handleClick}
@@ -97,7 +97,7 @@ function CloseXButton({
   handleClick,
   onMouseEnter,
   onMouseLeave,
-}: CloseXButtonProps): React.ReactElement {
+}: CloseXButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={handleClick}
@@ -130,7 +130,7 @@ export function CloseTabButton({
   isDirty,
   isTabHovered,
   onRequestClose,
-}: CloseTabButtonProps): React.ReactElement {
+}: CloseTabButtonProps): React.ReactElement<any> {
   const [isHovered, setIsHovered] = useState(false);
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -215,7 +215,7 @@ function buildContextMenuItems(file: OpenFile, cbs: ContextMenuCallbacks): MenuI
 }
 
 function useDismissMenuEffect(
-  menuRef: React.RefObject<HTMLDivElement>,
+  menuRef: React.RefObject<HTMLDivElement | null>,
   visible: boolean,
   onDismiss: () => void,
 ): void {
@@ -247,7 +247,7 @@ interface TabContextMenuProps {
   onDismiss: () => void;
 }
 
-function ContextMenuItem({ item }: { item: MenuItem }): React.ReactElement {
+function ContextMenuItem({ item }: { item: MenuItem }): React.ReactElement<any> {
   if (item === 'separator') return <div style={MENU_SEPARATOR_STYLE} />;
   return (
     <button
@@ -275,7 +275,7 @@ export function TabContextMenu({
   onCloseAll,
   onTogglePin,
   onDismiss,
-}: TabContextMenuProps): React.ReactElement | null {
+}: TabContextMenuProps): React.ReactElement<any> | null {
   const menuRef = useRef<HTMLDivElement>(null);
   useDismissMenuEffect(menuRef, menu.visible, onDismiss);
   if (!menu.visible) return null;

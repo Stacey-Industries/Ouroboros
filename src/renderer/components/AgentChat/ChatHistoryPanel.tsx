@@ -11,7 +11,7 @@ export interface ChatHistoryPanelProps {
   onClose: () => void;
 }
 
-function SearchIcon(): React.ReactElement {
+function SearchIcon(): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -31,7 +31,7 @@ function SearchIcon(): React.ReactElement {
 
 type HistorySections = Record<'active' | 'recent' | 'older', AgentChatThreadRecord[]>;
 
-function usePanelDismiss(panelRef: React.RefObject<HTMLDivElement>, onClose: () => void) {
+function usePanelDismiss(panelRef: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -54,7 +54,7 @@ function usePanelDismiss(panelRef: React.RefObject<HTMLDivElement>, onClose: () 
 }
 
 function useHistoryPanelState(
-  panelRef: React.RefObject<HTMLDivElement>,
+  panelRef: React.RefObject<HTMLDivElement | null>,
   threads: AgentChatThreadRecord[],
   onClose: () => void,
   onSelect: (id: string) => void,
@@ -95,10 +95,10 @@ function HistoryPanelSearch({
   searchQuery,
   setSearchQuery,
 }: {
-  searchRef: React.RefObject<HTMLInputElement>;
+  searchRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex flex-shrink-0 items-center gap-2 border-b border-border-semantic px-3 py-2">
       <span className="text-text-semantic-muted">
@@ -124,7 +124,7 @@ function HistoryPanelSearch({
   );
 }
 
-function HistoryPanelFooter({ count }: { count: number }): React.ReactElement | null {
+function HistoryPanelFooter({ count }: { count: number }): React.ReactElement<any> | null {
   if (count === 0) return null;
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-t border-border-semantic px-3 py-1.5">
@@ -144,7 +144,7 @@ type PanelBodyProps = {
   onDelete: (id: string) => void;
 };
 
-function HistoryPanelBody(p: PanelBodyProps): React.ReactElement {
+function HistoryPanelBody(p: PanelBodyProps): React.ReactElement<any> {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
       {p.filteredThreads.length === 0 && (
@@ -183,7 +183,7 @@ export function ChatHistoryPanel({
   onSelect,
   onDelete,
   onClose,
-}: ChatHistoryPanelProps): React.ReactElement {
+}: ChatHistoryPanelProps): React.ReactElement<any> {
   const panelRef = useRef<HTMLDivElement>(null);
   const { searchRef, searchQuery, setSearchQuery, filteredThreads, sections, handleSelect } =
     useHistoryPanelState(panelRef, threads, onClose, onSelect);

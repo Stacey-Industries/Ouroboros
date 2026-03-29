@@ -33,7 +33,7 @@ export function DiffReviewLayout({
   onAcceptHunk,
   onRejectHunk,
   setFileRef,
-}: DiffReviewLayoutProps): React.ReactElement {
+}: DiffReviewLayoutProps): React.ReactElement<any> {
   return (
     <div style={panelStyle}>
       <DiffReviewHeader
@@ -66,7 +66,7 @@ function DiffReviewBody({
   onAcceptHunk,
   onRejectHunk,
   setFileRef,
-}: Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
+}: Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement<any> {
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       <FileListSidebar
@@ -80,7 +80,9 @@ function DiffReviewBody({
         {files.map((file, fileIdx) => (
           <FileSection
             key={file.filePath}
-            ref={(element) => setFileRef(fileIdx, element)}
+            ref={element => {
+              setFileRef(fileIdx, element);
+            }}
             file={file}
             fileIdx={fileIdx}
             isSelected={fileIdx === selectedFileIdx}
@@ -105,7 +107,7 @@ function DiffReviewHeader({
   onAcceptAll: () => void;
   onRejectAll: () => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={headerStyle}>
       <DiffReviewHeaderStats stats={stats} />
@@ -119,7 +121,7 @@ function DiffReviewHeader({
   );
 }
 
-function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.ReactElement {
+function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Diff Review</span>
@@ -144,7 +146,7 @@ function DiffReviewHeaderActions({
   onAcceptAll: () => void;
   onRejectAll: () => void;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       {!allDecided && (
@@ -166,7 +168,7 @@ function ReviewStat({
   count: number;
   color: string;
   label: string;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (count === 0) return null;
   return <span style={{ color, fontSize: '0.75rem' }}>{count} {label}</span>;
 }
@@ -177,12 +179,12 @@ interface FileSectionProps {
   isSelected: boolean;
   onAcceptHunk: (fileIdx: number, hunkIdx: number) => void;
   onRejectHunk: (fileIdx: number, hunkIdx: number) => void;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
-const FileSection = React.forwardRef<HTMLDivElement, FileSectionProps>(function FileSection(
-  { file, fileIdx, isSelected, onAcceptHunk, onRejectHunk },
-  ref,
-) {
+function FileSection(
+  { file, fileIdx, isSelected, onAcceptHunk, onRejectHunk, ref }: FileSectionProps,
+): React.ReactElement<any> {
   return (
     <div ref={ref} style={{ borderBottom: '2px solid var(--border-default)' }}>
       <FileSectionHeader file={file} isSelected={isSelected} />
@@ -196,7 +198,7 @@ const FileSection = React.forwardRef<HTMLDivElement, FileSectionProps>(function 
       ))}
     </div>
   );
-});
+}
 
 function FileSectionHeader({
   file,
@@ -204,7 +206,7 @@ function FileSectionHeader({
 }: {
   file: ReviewFile;
   isSelected: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -233,7 +235,7 @@ function FileSectionHeader({
   );
 }
 
-function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactElement {
+function StatusIcon({ status }: { status: ReviewFile['status'] }): React.ReactElement<any> {
   const { color, label } = getStatusMeta(status);
   return (
     <span
@@ -271,7 +273,7 @@ function HeaderBtn({
   label: string;
   color: string;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
   return (
     <button

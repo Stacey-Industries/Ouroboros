@@ -86,7 +86,7 @@ const CLOSE_SPLIT_BUTTON_BASE: React.CSSProperties = {
   transition: 'opacity 150ms ease, background-color 150ms ease',
 };
 
-export function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElement {
+export function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
   const [isHovered, setIsHovered] = useState(false);
   const style: React.CSSProperties = {
     ...CLOSE_SPLIT_BUTTON_BASE,
@@ -152,7 +152,7 @@ function FilePaneView({
   actions: SplitFileActions;
   isActive: boolean;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{ ...SPLIT_PANE_STYLE, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}
@@ -213,7 +213,7 @@ function SplitPane({
   onClick: () => void;
   width: string;
   children?: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{ ...SPLIT_PANE_STYLE, width, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}
@@ -244,7 +244,7 @@ export function SplitContentView({
   onCloseSplit,
   leftActions,
   rightActions,
-}: SplitContentViewProps): React.ReactElement {
+}: SplitContentViewProps): React.ReactElement<any> {
   const leftView = normalizeFileView(leftFile);
   const rightView = normalizeFileView(rightFile);
   return (

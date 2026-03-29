@@ -17,7 +17,7 @@ interface ExtensionsSectionContentProps {
 
 export function ExtensionsSectionContent({
   model,
-}: ExtensionsSectionContentProps): React.ReactElement {
+}: ExtensionsSectionContentProps): React.ReactElement<any> {
   return (
     <div style={extensionsSectionRootStyle}>
       {model.actionError && <ActionErrorBanner message={model.actionError} />}

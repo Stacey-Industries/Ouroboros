@@ -76,7 +76,7 @@ type ComposerFooterProps = {
   isStreaming?: boolean;
 };
 
-function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
+function ComposerFooter(props: ComposerFooterProps): React.ReactElement<any> | null {
   return props.chatOverrides && props.onChatOverridesChange ? (
     <ChatControlsBar
       overrides={props.chatOverrides}
@@ -96,7 +96,7 @@ function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
 /* ---------- useComposerState ---------- */
 
 type ComposerState = {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
   selectedIndex: number;
   mentionQuery: string | null;
@@ -113,7 +113,7 @@ type ComposerState = {
 };
 
 type ComposerRefs = {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   lastSyncedDraft: React.MutableRefObject<string>;
 };
 
@@ -200,7 +200,7 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
 
 type ComposerSubProps = { state: ComposerState; composerProps: AgentChatComposerProps };
 
-function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
+function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
   const { allFiles = [], autocompleteResults = [], isAutocompleteOpen = false, mentions = [] } = cp;
   const { handlers, slashCommands } = state;
   return (
@@ -227,7 +227,7 @@ function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): R
 
 /* ---------- ComposerBody ---------- */
 
-function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
+function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
   const { attachmentHandlers, handlers } = state;
   return (
     <ComposerInput
@@ -252,7 +252,7 @@ function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): R
   );
 }
 
-function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
+function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
   const mentions = cp.mentions ?? [];
   const totalMentionTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
   return (
@@ -281,7 +281,7 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
 
 /* ---------- AgentChatComposer ---------- */
 
-export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
+export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement<any> {
   const {
     chatOverrides,
     onChatOverridesChange,

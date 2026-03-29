@@ -33,7 +33,7 @@ interface MonitorToolbarProps {
 
 // ─── EmptyState ───────────────────────────────────────────────────────────────
 
-const EmptyState = memo(function EmptyState(): React.ReactElement {
+const EmptyState = memo(function EmptyState(): React.ReactElement<any> {
   return (
     <SharedEmptyState
       icon="agent"
@@ -53,7 +53,7 @@ const PreviousSessionsHeader = memo(function PreviousSessionsHeader({
   collapsed: boolean;
   count: number;
   onToggle: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       className="w-full flex items-center gap-1.5 px-3 py-2 text-left transition-colors"
@@ -82,7 +82,7 @@ export const PreviousSessionsSection = memo(function PreviousSessionsSection({
   onReviewChanges,
   onUpdateNotes,
   sessions,
-}: PreviousSessionsSectionProps): React.ReactElement | null {
+}: PreviousSessionsSectionProps): React.ReactElement<any> | null {
   const [collapsed, setCollapsed] = useState(true);
   const handleToggle = useCallback(() => setCollapsed((value) => !value), []);
 
@@ -144,7 +144,7 @@ const ToolbarButton = memo(function ToolbarButton({
   children: React.ReactNode;
   onClick: () => void;
   title: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -177,7 +177,7 @@ function ToolbarButtons({
   onToggleCompare,
   onToggleCost,
   onToggleMultiSession,
-}: ToolbarButtonsProps): React.ReactElement {
+}: ToolbarButtonsProps): React.ReactElement<any> {
   const multiActive = multiSessionMode !== 'off';
   return (
     <>
@@ -221,7 +221,7 @@ export const MonitorToolbar = memo(function MonitorToolbar({
   onToggleCompare,
   onToggleCost,
   onToggleMultiSession,
-}: MonitorToolbarProps): React.ReactElement | null {
+}: MonitorToolbarProps): React.ReactElement<any> | null {
   if (!hasAnySessions) return null;
   return (
     <div

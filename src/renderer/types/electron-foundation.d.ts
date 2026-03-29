@@ -244,7 +244,8 @@ export type AgentEventType =
   | 'agent_end'
   | 'agent_stop'
   | 'session_start'
-  | 'session_stop';
+  | 'session_stop'
+  | 'instructions_loaded';
 
 export interface AgentEvent {
   type: AgentEventType;
@@ -283,6 +284,8 @@ export interface HookPayload {
   costUsd?: number;
   /** Links a sub-tool event to its parent Agent/Task tool call. */
   parentToolCallId?: string;
+  /** Human-readable task label derived from prompt or model — used for session display and skill detection. */
+  taskLabel?: string;
 }
 
 export interface ToolCallPayload {

@@ -20,7 +20,7 @@ const PROVIDER_META: Record<ApiKeyProvider, { label: string; placeholder: string
   openai: { label: 'OpenAI', placeholder: 'sk-...' },
 };
 
-export function ProviderApiKeysSection(): React.ReactElement {
+export function ProviderApiKeysSection(): React.ReactElement<any> {
   const model = useProviderApiKeysModel();
 
   return (
@@ -45,7 +45,7 @@ function ApiKeyCard({
 }: {
   provider: ApiKeyProvider;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const state = model.getProviderState(provider);
   const isExpanded = model.expandedKey === provider;
 
@@ -67,7 +67,7 @@ function ApiKeyCardHeader({
   state: AuthState | undefined;
   isExpanded: boolean;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const isConnected = state?.status === 'authenticated';
   const meta = PROVIDER_META[provider];
 
@@ -89,7 +89,7 @@ function ApiKeyCardHeader({
   );
 }
 
-function ApiKeyStatusIndicator({ state }: { state: AuthState | undefined }): React.ReactElement {
+function ApiKeyStatusIndicator({ state }: { state: AuthState | undefined }): React.ReactElement<any> {
   const isConnected = state?.status === 'authenticated';
   const isApiKey = state?.credentialType === 'apikey';
   const dotColor = isConnected ? 'var(--status-success)' : 'var(--text-semantic-muted)';
@@ -110,7 +110,7 @@ function ConnectedActions({
 }: {
   provider: ApiKeyProvider;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={S.buttonRowStyle}>
       <button
@@ -141,7 +141,7 @@ function ApiKeyCardActions({
   isConnected: boolean;
   isExpanded: boolean;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (isConnected) return <ConnectedActions provider={provider} model={model} />;
   if (isExpanded) return <React.Fragment />;
 
@@ -162,7 +162,7 @@ function FormButtons({
 }: {
   provider: ApiKeyProvider;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={S.buttonRowStyle}>
       <button
@@ -194,7 +194,7 @@ function ApiKeyInputForm({
 }: {
   provider: ApiKeyProvider;
   model: ProviderApiKeysModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const meta = PROVIDER_META[provider];
 
   return (

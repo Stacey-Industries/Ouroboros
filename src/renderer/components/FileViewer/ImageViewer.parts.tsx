@@ -46,7 +46,7 @@ function ZoomModeButtons({
 }: Pick<
   ImageViewerToolbarProps,
   'zoomMode' | 'onFit' | 'onActualSize' | 'onZoomOut' | 'onZoomIn'
->): React.ReactElement {
+>): React.ReactElement<any> {
   return (
     <>
       <button onClick={onFit} title="Fit to window" style={getZoomButtonStyle(zoomMode === 'fit')}>
@@ -72,7 +72,7 @@ function ZoomModeButtons({
 function SvgSourceToggle({
   showSource,
   onToggleSource,
-}: Pick<ImageViewerToolbarProps, 'showSource' | 'onToggleSource'>): React.ReactElement | null {
+}: Pick<ImageViewerToolbarProps, 'showSource' | 'onToggleSource'>): React.ReactElement<any> | null {
   if (!onToggleSource) {
     return null;
   }
@@ -98,7 +98,7 @@ export function ImageViewerToolbar({
   isSvg,
   showSource,
   onToggleSource,
-}: ImageViewerToolbarProps): React.ReactElement {
+}: ImageViewerToolbarProps): React.ReactElement<any> {
   return (
     <div style={toolbarStyle}>
       <ZoomModeButtons
@@ -140,7 +140,7 @@ export function ImageStatusBar({
   naturalHeight,
   fileSize,
   zoomLabel,
-}: ImageStatusBarProps): React.ReactElement {
+}: ImageStatusBarProps): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-faint" style={statusBarStyle}>
       {naturalWidth != null && naturalHeight != null && (

@@ -46,7 +46,7 @@ function TerminalPaneHeader({
   onNewClaude,
   onNewCodex,
   onReorder,
-}: TerminalPaneHeaderProps): React.ReactElement {
+}: TerminalPaneHeaderProps): React.ReactElement<any> {
   return (
     <div
       data-layout="terminal-header"
@@ -83,7 +83,7 @@ function getTerminalPaneHeaderProps(props: TerminalPaneProps): TerminalPaneHeade
   };
 }
 
-export function TerminalPane(props: TerminalPaneProps): React.ReactElement {
+export function TerminalPane(props: TerminalPaneProps): React.ReactElement<any> {
   const { height, collapsed, fillContainer, children, focusStyle, onFocus } = props;
   const clampedHeight = Math.max(MIN_HEIGHT, height);
 

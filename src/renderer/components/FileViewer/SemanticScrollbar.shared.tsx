@@ -164,7 +164,7 @@ export function updateTooltipPosition(
 function ViewportIndicator({
   top,
   height,
-}: Omit<ViewportMetrics, 'trackHeight'>): React.ReactElement {
+}: Omit<ViewportMetrics, 'trackHeight'>): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -187,7 +187,7 @@ function ScrollbarMark({
   onScrollToLine,
   setTooltip,
   trackHeight,
-}: ScrollbarMarkProps): React.ReactElement {
+}: ScrollbarMarkProps): React.ReactElement<any> {
   const top = EDGE_PADDING + mark.position * trackHeight - MARK_HEIGHT / 2;
   return (
     <div
@@ -217,7 +217,7 @@ function ScrollbarMarkList({
   onScrollToLine,
   setTooltip,
   trackHeight,
-}: ScrollbarMarkListProps): React.ReactElement {
+}: ScrollbarMarkListProps): React.ReactElement<any> {
   return (
     <>
       {marks.map((mark, index) => (
@@ -233,7 +233,7 @@ function ScrollbarMarkList({
   );
 }
 
-function ScrollbarTooltip({ tooltip }: { tooltip: Tooltip }): React.ReactElement | null {
+function ScrollbarTooltip({ tooltip }: { tooltip: Tooltip }): React.ReactElement<any> | null {
   if (!tooltip.visible) return null;
   return (
     <div
@@ -268,10 +268,10 @@ export function SemanticScrollbarOverlay({
   onScrollToLine,
   setTooltip,
   tooltip,
-}: SemanticScrollbarOverlayProps): React.ReactElement {
+}: SemanticScrollbarOverlayProps): React.ReactElement<any> {
   return (
     <div
-      ref={barRef as React.RefObject<HTMLDivElement>}
+      ref={barRef as React.RefObject<HTMLDivElement | null>}
       aria-hidden="true"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}

@@ -51,7 +51,7 @@ interface BreadcrumbsProps {
   onNavigate: (path: string) => void;
 }
 
-function Breadcrumbs({ path, onNavigate }: BreadcrumbsProps): React.ReactElement {
+function Breadcrumbs({ path, onNavigate }: BreadcrumbsProps): React.ReactElement<any> {
   const crumbs = buildBreadcrumbs(path);
   return (
     <div
@@ -80,7 +80,7 @@ interface DirListProps {
   onEnter: (path: string) => void;
 }
 
-function DirList({ entries, onEnter }: DirListProps): React.ReactElement {
+function DirList({ entries, onEnter }: DirListProps): React.ReactElement<any> {
   const dirs = entries.filter((e) => e.isDirectory);
   if (dirs.length === 0) {
     return (
@@ -117,7 +117,7 @@ interface ConfirmButtonsProps {
   onCancel: () => void;
 }
 
-function ConfirmButtons({ loading, onSelect, onCancel }: ConfirmButtonsProps): React.ReactElement {
+function ConfirmButtons({ loading, onSelect, onCancel }: ConfirmButtonsProps): React.ReactElement<any> {
   return (
     <div className="flex gap-2">
       <button
@@ -147,7 +147,7 @@ interface ModalActionsProps {
   onUp: () => void;
 }
 
-function ModalActions({ currentPath, loading, onSelect, onCancel, onUp }: ModalActionsProps): React.ReactElement {
+function ModalActions({ currentPath, loading, onSelect, onCancel, onUp }: ModalActionsProps): React.ReactElement<any> {
   const isRoot = currentPath === '/';
   return (
     <div
@@ -209,7 +209,7 @@ function useWebFolderBrowser() {
 
 // ─── Modal Header + Body ───────────────────────────────────────────────────
 
-function ModalHeader({ currentPath, onNavigate }: { currentPath: string; onNavigate: (p: string) => void }): React.ReactElement {
+function ModalHeader({ currentPath, onNavigate }: { currentPath: string; onNavigate: (p: string) => void }): React.ReactElement<any> {
   return (
     <div className="border-b border-border-semantic" style={{ padding: '12px 14px 8px' }}>
       <div className="text-text-semantic-primary" style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
@@ -220,7 +220,7 @@ function ModalHeader({ currentPath, onNavigate }: { currentPath: string; onNavig
   );
 }
 
-function ModalBody({ state, onEnter }: { state: BrowserState; onEnter: (p: string) => void }): React.ReactElement {
+function ModalBody({ state, onEnter }: { state: BrowserState; onEnter: (p: string) => void }): React.ReactElement<any> {
   if (state.loading) {
     return (
       <div className="text-text-semantic-muted flex items-center justify-center flex-1" style={{ height: '120px', fontSize: '13px' }}>
@@ -251,7 +251,7 @@ interface ModalPanelProps {
   onCancel: () => void;
 }
 
-function ModalPanel({ state, onNavigate, onSelect, onCancel }: ModalPanelProps): React.ReactElement {
+function ModalPanel({ state, onNavigate, onSelect, onCancel }: ModalPanelProps): React.ReactElement<any> {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -282,7 +282,7 @@ function ModalPanel({ state, onNavigate, onSelect, onCancel }: ModalPanelProps):
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export function WebFolderBrowser(): React.ReactElement | null {
+export function WebFolderBrowser(): React.ReactElement<any> | null {
   const { state, open, cancel, select, navigate } = useWebFolderBrowser();
 
   useEffect(() => {

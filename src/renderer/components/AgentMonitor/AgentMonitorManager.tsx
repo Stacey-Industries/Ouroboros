@@ -23,7 +23,7 @@ import { useCompletionNotifications } from './useCompletionNotifications';
  * flowing through the hooks pipeline.
  */
 
-export const AgentMonitorManager = memo(function AgentMonitorManager(): React.ReactElement {
+export const AgentMonitorManager = memo(function AgentMonitorManager(): React.ReactElement<any> {
   const { agents, clearCompleted, currentSessions, dismiss, historicalSessions, updateNotes } = useAgentEventsContext();
   const { toast } = useToastContext();
   const { projectRoot } = useProject();

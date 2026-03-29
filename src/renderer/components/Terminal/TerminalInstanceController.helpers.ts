@@ -2,6 +2,7 @@ import type { FitAddon } from '@xterm/addon-fit'
 import type { ProgressAddon } from '@xterm/addon-progress'
 import type { SearchAddon } from '@xterm/addon-search'
 import type { SerializeAddon } from '@xterm/addon-serialize'
+import type { WebglAddon } from '@xterm/addon-webgl'
 import type { Terminal } from '@xterm/xterm'
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -92,7 +93,8 @@ function useTerminalCoreRefs() {
   const progressAddonRef = useRef<ProgressAddon | null>(null)
   const serializeAddonRef = useRef<SerializeAddon | null>(null)
   const isReadyRef = useRef(false)
-  return { containerRef, terminalRef, fitAddonRef, searchAddonRef, shellIntegrationAddonRef, progressAddonRef, serializeAddonRef, isReadyRef }
+  const webglAddonRef = useRef<WebglAddon | null>(null)
+  return { containerRef, terminalRef, fitAddonRef, searchAddonRef, shellIntegrationAddonRef, progressAddonRef, serializeAddonRef, isReadyRef, webglAddonRef }
 }
 
 function useTerminalSearchState(): Pick<
@@ -194,6 +196,7 @@ function createSetupRefs(
     progressAddonRef: foundation.progressAddonRef ?? { current: null },
     serializeAddonRef: foundation.serializeAddonRef ?? { current: null },
     isReadyRef: foundation.isReadyRef as MutableRefObject<boolean>,
+    webglAddonRef: foundation.webglAddonRef,
   }
 }
 

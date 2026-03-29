@@ -48,7 +48,7 @@ function ModelAndTriggerControls({
 }: {
   settings: ClaudeMdSettings;
   updateSetting: UpdateSettingFn;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <SelectSection
@@ -88,7 +88,7 @@ function ExcludeDirsInput({
 }: {
   settings: ClaudeMdSettings;
   updateSetting: UpdateSettingFn;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <TextInputSection
       description="Comma-separated directory names or glob patterns to skip during generation."
@@ -113,7 +113,7 @@ function FileControls({
 }: {
   settings: ClaudeMdSettings;
   updateSetting: UpdateSettingFn;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <ToggleSection
@@ -156,7 +156,7 @@ function ClaudeMdSettingsControls({
   lastRun: ClaudeMdGenerationStatus['lastRun'] | undefined;
   onGenerate: (fullSweep: boolean) => void;
   updateSetting: UpdateSettingFn;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <ModelAndTriggerControls settings={settings} updateSetting={updateSetting} />
@@ -205,7 +205,7 @@ function useGenerationState(defaultProjectRoot: string | undefined): {
   return { generating, status, handleGenerate };
 }
 
-function ContextDocsSectionHeader(): React.ReactElement {
+function ContextDocsSectionHeader(): React.ReactElement<any> {
   return (
     <div>
       <SectionLabel>CLAUDE.md Automation</SectionLabel>
@@ -220,7 +220,7 @@ function ContextDocsSectionHeader(): React.ReactElement {
 export function ContextDocsSection({
   draft,
   onChange,
-}: ContextDocsSectionProps): React.ReactElement {
+}: ContextDocsSectionProps): React.ReactElement<any> {
   const settings: ClaudeMdSettings = draft.claudeMdSettings ?? DEFAULT_SETTINGS;
   const updateSetting = useCallback(
     <K extends keyof ClaudeMdSettings>(field: K, value: ClaudeMdSettings[K]) => {

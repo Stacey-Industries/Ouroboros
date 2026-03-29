@@ -48,7 +48,7 @@ function RowContents({
   fileLabel: string | null;
   isPending: boolean;
   elapsedSec: number;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const StatusIcon = STATUS_ICON_MAP[call.status];
   return (
     <>
@@ -66,7 +66,7 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
   expanded,
   isExpandable,
   onToggle,
-}: ToolCallRowHeaderProps): React.ReactElement {
+}: ToolCallRowHeaderProps): React.ReactElement<any> {
   const color = toolColor(call.toolName);
   const isPending = call.status === 'pending';
   const elapsedSec = useElapsedSeconds(call.timestamp, isPending);
@@ -103,7 +103,7 @@ export const ToolCallRowHeader = memo(function ToolCallRowHeader({
 
 // ─── Tiny sub-slots ───────────────────────────────────────────────────────────
 
-function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): React.ReactElement {
+function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): React.ReactElement<any> {
   return (
     <span
       className="shrink-0 mt-0.5 text-text-semantic-faint"
@@ -114,7 +114,7 @@ function ChevronSlot({ open, visible }: { open: boolean; visible: boolean }): Re
   );
 }
 
-function ToolBadge({ color, toolName }: { color: string; toolName: string }): React.ReactElement {
+function ToolBadge({ color, toolName }: { color: string; toolName: string }): React.ReactElement<any> {
   return (
     <span
       className="shrink-0 mt-0.5 inline-flex items-center justify-center rounded text-[10px] font-bold leading-none"
@@ -140,7 +140,7 @@ function ToolLabel({
   call: ToolCallEvent;
   fileLabel: string | null;
   isPending: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
       <span className="text-[11px] font-medium leading-none text-text-semantic-muted">
@@ -168,7 +168,7 @@ function DurationSlot({
   call: ToolCallEvent;
   elapsedSec: number;
   isPending: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       {call.duration !== undefined && (

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, type MockedFunction, vi } from 'vitest'
 
 vi.mock('./providers/claudeCodeAdapter', () => ({
   createClaudeCodeAdapter: () => ({
@@ -49,6 +49,7 @@ vi.mock('./providers/codexAdapter', () => ({
 }))
 
 import { createAgentLoopController } from './agentLoopController'
+import type { DiffSummarizerRequest, DiffSummarizerResult } from './diffSummarizer'
 import {
   createProviderArtifact,
   createProviderSessionReference,
@@ -107,7 +108,7 @@ function createBaseAdapter(overrides: Partial<ProviderAdapter> = {}): ProviderAd
 
 function createController(options: {
   adapter: ProviderAdapter
-  diffSummarizer?: { summarize: ReturnType<typeof vi.fn> }
+  diffSummarizer?: { summarize: MockedFunction<(request: DiffSummarizerRequest) => Promise<DiffSummarizerResult>> }
   nowSeed: number
   verificationRunner?: { run: ReturnType<typeof vi.fn> }
 }) {

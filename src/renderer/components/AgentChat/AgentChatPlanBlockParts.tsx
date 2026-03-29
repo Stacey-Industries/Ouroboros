@@ -6,7 +6,7 @@ import React from 'react';
 
 import type { PlanStep } from './AgentChatPlanBlock';
 
-function PendingIcon(): React.ReactElement {
+function PendingIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -23,7 +23,7 @@ function PendingIcon(): React.ReactElement {
   );
 }
 
-function RunningSpinner(): React.ReactElement {
+function RunningSpinner(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -41,7 +41,7 @@ function RunningSpinner(): React.ReactElement {
   );
 }
 
-function CompleteIcon(): React.ReactElement {
+function CompleteIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -59,7 +59,7 @@ function CompleteIcon(): React.ReactElement {
   );
 }
 
-function FailedIcon(): React.ReactElement {
+function FailedIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -78,7 +78,7 @@ function FailedIcon(): React.ReactElement {
   );
 }
 
-export function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
+export function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -97,7 +97,7 @@ export function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactEle
   );
 }
 
-export function StatusIcon({ status }: { status: PlanStep['status'] }): React.ReactElement {
+export function StatusIcon({ status }: { status: PlanStep['status'] }): React.ReactElement<any> {
   if (status === 'pending')
     return (
       <span className="text-text-semantic-muted">

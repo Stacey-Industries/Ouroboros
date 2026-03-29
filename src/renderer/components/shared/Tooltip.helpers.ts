@@ -121,11 +121,11 @@ function wrapFocusHandler(
 }
 
 export function cloneTooltipChild(args: {
-  children: React.ReactElement;
+  children: React.ReactElement<any>;
   triggerRef: React.MutableRefObject<HTMLElement | null>;
   show: () => void;
   hide: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const child = args.children as TooltipChildElement;
   return React.cloneElement(child, {
     ref: (node: HTMLElement | null) => {

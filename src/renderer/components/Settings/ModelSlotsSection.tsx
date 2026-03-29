@@ -49,7 +49,7 @@ export function ModelSlotsSection({
   slots,
   allModels,
   onUpdateSlot,
-}: ModelSlotsSectionProps): React.ReactElement {
+}: ModelSlotsSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel style={{ marginTop: '8px' }}>Model Slot Assignments</SectionLabel>
@@ -80,7 +80,7 @@ function SlotDropdown({
   value,
   options,
   onChange,
-}: SlotDropdownProps): React.ReactElement {
+}: SlotDropdownProps): React.ReactElement<any> {
   return (
     <div>
       <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>

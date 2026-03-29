@@ -274,6 +274,16 @@ function handleCompletedProgress(
     }
   }
   if (progress.costUsd != null) ctx.costUsd = progress.costUsd;
+  // TODO: Persist skillExecutions on the assistant message.
+  // Skill execution records live in the renderer's AgentEventsContext reducer
+  // (populated by SKILL_START/SKILL_END actions from hook events). To include
+  // them on the persisted AgentChatMessageRecord:
+  //   1. Add `skillExecutions?: SkillExecutionRecord[]` to ActiveStreamContext
+  //   2. Populate it from main-process hook events (hooks.ts already dispatches
+  //      agent_start/agent_end — detect skill signatures and accumulate records)
+  //   3. Pass ctx.skillExecutions into projectProviderResultToAssistantMessage
+  //      and set it on the AgentChatMessageRecord before persistence
+  // This bridges the gap between the renderer-side reducer and main-side persistence.
   void persistCompletedTurn(ctx, runtime, progress);
 }
 

@@ -60,7 +60,7 @@ export function SelectionTooltip({
   onOpenUrl,
   onOpenFile,
   onDismiss,
-}: SelectionTooltipProps): React.ReactElement | null {
+}: SelectionTooltipProps): React.ReactElement<any> | null {
   if (!state.visible || !state.action) return null;
 
   const label = state.action === 'url' ? 'Open link' : 'Open file';

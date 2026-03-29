@@ -53,7 +53,7 @@ const ActionButton = memo(function ActionButton({
   children: React.ReactNode;
   onClick: () => void;
   title: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const activeStyle = active ? { borderColor: 'var(--interactive-accent)', backgroundColor: 'var(--interactive-accent)', color: 'var(--text-on-accent)' } : null;
   return (
     <button onClick={onClick} title={title} className="text-text-semantic-muted" style={activeStyle ? { ...buttonStyle, ...activeStyle } : buttonStyle}>
@@ -62,7 +62,7 @@ const ActionButton = memo(function ActionButton({
   );
 });
 
-const TokenSummary = memo(function TokenSummary({ stats }: { stats: ClaudeMdStats }): React.ReactElement {
+const TokenSummary = memo(function TokenSummary({ stats }: { stats: ClaudeMdStats }): React.ReactElement<any> {
   return (
     <span title="Estimated token count (~4 chars/token)">
       <span
@@ -80,7 +80,7 @@ const TokenSummary = memo(function TokenSummary({ stats }: { stats: ClaudeMdStat
   );
 });
 
-const BudgetBadge = memo(function BudgetBadge({ stats }: { stats: ClaudeMdStats }): React.ReactElement {
+const BudgetBadge = memo(function BudgetBadge({ stats }: { stats: ClaudeMdStats }): React.ReactElement<any> {
   return (
     <span
       title="Token budget: CLAUDE.md typically uses 1-5K of ~200K context"
@@ -101,7 +101,7 @@ const ClaudeMdTopBar = memo(function ClaudeMdTopBar({
   onToggleTemplates: () => void;
   showTemplates: boolean;
   stats: ClaudeMdStats;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="text-text-semantic-muted" style={topBarStyle}>
       <span className="text-interactive-accent" style={{ fontWeight: 600 }}>CLAUDE.md Editor</span>
@@ -121,7 +121,7 @@ export const ClaudeMdEditorChrome = memo(function ClaudeMdEditorChrome({
   model,
   projectRoot,
   themeId,
-}: ClaudeMdEditorChromeProps): React.ReactElement {
+}: ClaudeMdEditorChromeProps): React.ReactElement<any> {
   return (
     <div style={frameStyle}>
       <ClaudeMdTopBar onFormat={model.handleFormat} onToggleTemplates={model.toggleTemplates} showTemplates={model.showTemplates} stats={model.stats} />

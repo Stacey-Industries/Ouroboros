@@ -14,7 +14,7 @@ export interface SidebarProps {
 
 function SidebarHeader({
   header,
-}: Pick<SidebarProps, 'header'>): React.ReactElement {
+}: Pick<SidebarProps, 'header'>): React.ReactElement<any> {
   return (
     <div className="flex-shrink-0 flex items-center justify-between h-9 px-3 border-b border-border-semantic">
       <div className="flex-1 min-w-0">
@@ -31,7 +31,7 @@ export function Sidebar({
   children,
   focusStyle,
   onFocus,
-}: SidebarProps): React.ReactElement {
+}: SidebarProps): React.ReactElement<any> {
   return (
     <div
       data-layout="sidebar"

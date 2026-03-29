@@ -68,7 +68,7 @@ export const OVERFLOW_ITEM_STYLE: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-function OverflowPinIcon(): React.ReactElement {
+function OverflowPinIcon(): React.ReactElement<any> {
   return (
     <svg width="8" height="8" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
@@ -82,7 +82,7 @@ function OverflowPinIcon(): React.ReactElement {
   );
 }
 
-function OverflowDirtyDot(): React.ReactElement {
+function OverflowDirtyDot(): React.ReactElement<any> {
   return (
     <span
       style={{
@@ -109,7 +109,7 @@ function OverflowItem({
   activeIndex,
   onActivate,
   onDismiss,
-}: OverflowItemProps): React.ReactElement {
+}: OverflowItemProps): React.ReactElement<any> {
   const isActive = index === activeIndex;
   return (
     <button
@@ -148,7 +148,7 @@ interface OverflowDropdownProps {
 }
 
 function useOverflowDropdownDismiss(
-  menuRef: React.RefObject<HTMLDivElement>,
+  menuRef: React.RefObject<HTMLDivElement | null>,
   onDismiss: () => void,
 ): void {
   useEffect(() => {
@@ -172,7 +172,7 @@ export function OverflowDropdown({
   activeIndex,
   onActivate,
   onDismiss,
-}: OverflowDropdownProps): React.ReactElement {
+}: OverflowDropdownProps): React.ReactElement<any> {
   const menuRef = useRef<HTMLDivElement>(null);
   useOverflowDropdownDismiss(menuRef, onDismiss);
 

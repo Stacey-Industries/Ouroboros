@@ -36,7 +36,7 @@ function tickTransform(pct: number): string {
   return 'none';
 }
 
-export const XAxis = memo(function XAxis({ totalDurationMs }: XAxisProps): React.ReactElement {
+export const XAxis = memo(function XAxis({ totalDurationMs }: XAxisProps): React.ReactElement<any> {
   const ticks = buildTicks(totalDurationMs);
 
   return (

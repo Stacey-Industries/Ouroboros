@@ -197,7 +197,7 @@ function useMultiBufferState(): MultiBufferState {
   return { multiBuffers, openMultiBuffer, closeMultiBuffer, addExcerpt, removeExcerpt, renameMultiBuffer };
 }
 
-export function MultiBufferManager({ children }: MultiBufferManagerProps): React.ReactElement {
+export function MultiBufferManager({ children }: MultiBufferManagerProps): React.ReactElement<any> {
   const value = useMultiBufferState();
   return <MultiBufferContext.Provider value={value}>{children}</MultiBufferContext.Provider>;
 }

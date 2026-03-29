@@ -38,7 +38,7 @@ export interface TerminalTabsProps {
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-function CloseIcon(): React.ReactElement {
+function CloseIcon(): React.ReactElement<any> {
   return (
     <svg
       width="8"
@@ -53,7 +53,7 @@ function CloseIcon(): React.ReactElement {
   );
 }
 
-function PlusIcon(): React.ReactElement {
+function PlusIcon(): React.ReactElement<any> {
   return (
     <svg
       width="10"
@@ -99,7 +99,7 @@ function TabBadges({
 }: {
   session: TerminalSession;
   isExited: boolean;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       {session.isClaude && (
@@ -152,7 +152,7 @@ function TabCloseButton({
 }: {
   title: string;
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={(e) => {
@@ -176,7 +176,7 @@ interface TabItemContentProps extends TabItemProps {
   label: string;
 }
 
-function TabItemContent(p: TabItemContentProps): React.ReactElement {
+function TabItemContent(p: TabItemContentProps): React.ReactElement<any> {
   return (
     <div
       draggable
@@ -208,7 +208,7 @@ function TabItemContent(p: TabItemContentProps): React.ReactElement {
   );
 }
 
-function TabItem(props: TabItemProps): React.ReactElement {
+function TabItem(props: TabItemProps): React.ReactElement<any> {
   const [hovered, setHovered] = useState(false);
   const isExited = props.session.status === 'exited';
   const modelSuffix = props.session.model ? ` (${shortModelName(props.session.model)})` : '';
@@ -240,7 +240,7 @@ function renderSessionTab({
   dnd: TabDragDropState;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <TabItem
       key={session.id}
@@ -268,7 +268,7 @@ function NewTerminalButton({
   onNew,
   onNewClaude,
   onNewCodex,
-}: Pick<TerminalTabsProps, 'onNew' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement {
+}: Pick<TerminalTabsProps, 'onNew' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement<any> {
   const plusBtnRef = useRef<HTMLButtonElement>(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const handleToggleMenu = useCallback(() => setShowNewMenu((prev) => !prev), []);
@@ -309,7 +309,7 @@ export function TerminalTabs({
   onNewClaude,
   onNewCodex,
   onReorder,
-}: TerminalTabsProps): React.ReactElement {
+}: TerminalTabsProps): React.ReactElement<any> {
   const dnd = useTabDragDrop(sessions, onReorder);
   return (
     <div

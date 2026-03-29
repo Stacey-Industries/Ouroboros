@@ -16,7 +16,7 @@ export function DirtyCloseDialog({
   fileName,
   isOpen,
   onAction,
-}: DirtyCloseDialogProps): React.ReactElement | null {
+}: DirtyCloseDialogProps): React.ReactElement<any> | null {
   if (!isOpen) return null;
 
   return (

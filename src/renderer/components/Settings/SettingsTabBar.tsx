@@ -14,7 +14,7 @@ interface SettingsTabBarProps {
 export function SettingsTabBar({
   activeTab,
   onTabChange,
-}: SettingsTabBarProps): React.ReactElement {
+}: SettingsTabBarProps): React.ReactElement<any> {
   return (
     <div role="tablist" style={barStyle}>
       {TABS.map((tab) => (

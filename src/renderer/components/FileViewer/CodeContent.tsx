@@ -30,10 +30,10 @@ export const CodeContent = memo(function CodeContent({
   lineCount,
   toggleFold,
   codeRef,
-}: CodeContentProps): React.ReactElement {
+}: CodeContentProps): React.ReactElement<any> {
   return (
     <div
-      ref={codeRef as React.RefObject<HTMLDivElement>}
+      ref={codeRef as React.RefObject<HTMLDivElement | null>}
       className="selectable"
       style={getCodeContentStyle(showMinimap, lineCount)}
     >
@@ -62,7 +62,7 @@ function CodeRows({
   shikiLines,
   textLayout,
   toggleFold,
-}: CodeRowsProps): React.ReactElement {
+}: CodeRowsProps): React.ReactElement<any> {
   return (
     <>
       {rows.map((row) =>
@@ -78,7 +78,7 @@ function renderCodeRow({
   shikiLines,
   textLayout,
   toggleFold,
-}: Omit<CodeRowsProps, 'rows'> & { row: CodeRow }): React.ReactElement {
+}: Omit<CodeRowsProps, 'rows'> & { row: CodeRow }): React.ReactElement<any> {
   if (row.type === 'fold-placeholder') {
     return (
       <FoldPlaceholder
@@ -131,7 +131,7 @@ function FoldPlaceholder({
   startLine,
   count,
   toggleFold,
-}: FoldPlaceholderProps): React.ReactElement {
+}: FoldPlaceholderProps): React.ReactElement<any> {
   return (
     <div style={{ height: '1.6em', lineHeight: '1.6em', userSelect: 'none' }}>
       <span
@@ -168,7 +168,7 @@ function CodeLine({
   plainText,
   whiteSpace,
   wordBreak,
-}: CodeLineProps): React.ReactElement {
+}: CodeLineProps): React.ReactElement<any> {
   const style: React.CSSProperties = {
     minHeight: '1.6em',
     whiteSpace: whiteSpace as React.CSSProperties['whiteSpace'],

@@ -106,7 +106,7 @@ function RuleFileActionButtons({
   scope: string;
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <span className="flex items-center gap-1 ml-auto flex-shrink-0">
       <button
@@ -137,7 +137,7 @@ function RuleFileItem({
   rule: RuleDefinition;
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="group flex items-center gap-2 w-full px-3 py-1.5 transition-colors duration-75"
@@ -177,7 +177,7 @@ function RuleFileList({
   ruleFiles: RuleDefinition[];
   onOpen: (filePath: string) => void;
   onDelete: (id: string, scope: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (ruleFiles.length === 0) {
     return (
       <div className="px-3 py-1.5 text-[10px] text-text-semantic-muted">No rule files found</div>
@@ -199,7 +199,7 @@ export function RulesTab({
   onOpenFile,
   onCreateRule,
   projectRoot,
-}: RulesTabProps): React.ReactElement {
+}: RulesTabProps): React.ReactElement<any> {
   const [scope, setScope] = useState<ScopeValue>('global');
   const { ruleFiles } = useRuleFiles(scope, projectRoot);
 

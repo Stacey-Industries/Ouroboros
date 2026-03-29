@@ -21,7 +21,7 @@ const containerStyle: React.CSSProperties = {
  */
 export const ErrorDisplay = memo(function ErrorDisplay({
   error,
-}: ErrorDisplayProps): React.ReactElement {
+}: ErrorDisplayProps): React.ReactElement<any> {
   return (
     <div className="text-status-error" style={containerStyle}>
       <span style={{ fontSize: '1.5rem' }}>{'\u26A0'}</span>

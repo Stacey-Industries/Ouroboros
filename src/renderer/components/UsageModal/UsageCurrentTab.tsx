@@ -92,7 +92,7 @@ function useRecentSessions(): {
   return { sessions, isLoading, reload: loadRecent };
 }
 
-function CurrentSessionLoading(): React.ReactElement {
+function CurrentSessionLoading(): React.ReactElement<any> {
   return (
     <div className="flex items-center justify-center py-12">
       <span className="text-[11px] italic text-text-semantic-faint">
@@ -102,7 +102,7 @@ function CurrentSessionLoading(): React.ReactElement {
   );
 }
 
-function CurrentSessionEmpty(): React.ReactElement {
+function CurrentSessionEmpty(): React.ReactElement<any> {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <svg
@@ -138,7 +138,7 @@ function WindowBucket({
   tokens: number;
   cost: number;
   sub: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       className="flex flex-1 min-w-0 flex-col gap-0.5 rounded-md px-3 py-2 bg-surface-raised"
@@ -166,7 +166,7 @@ function WindowBucket({
   );
 }
 
-function WindowSummaryBanner(): React.ReactElement | null {
+function WindowSummaryBanner(): React.ReactElement<any> | null {
   const windowed = useWindowedUsage();
   if (!windowed) return null;
 
@@ -194,7 +194,7 @@ function CurrentSessionFooter({
   onRefresh,
 }: {
   onRefresh: () => Promise<void>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center justify-between px-4 py-2">
       <span className="text-[9px] text-text-semantic-faint">Auto-refreshes every 10s</span>
@@ -209,7 +209,7 @@ function CurrentSessionFooter({
   );
 }
 
-export const UsageCurrentTab = memo(function UsageCurrentTab(): React.ReactElement {
+export const UsageCurrentTab = memo(function UsageCurrentTab(): React.ReactElement<any> {
   const { sessions, isLoading, reload } = useRecentSessions();
   if (isLoading && sessions.length === 0) return <CurrentSessionLoading />;
   if (sessions.length === 0) return <CurrentSessionEmpty />;

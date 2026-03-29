@@ -13,7 +13,7 @@ interface ToolCallRowProps {
   onToggle: (id: string) => void;
 }
 
-function ExpandedSection({ call }: { call: ToolCallEvent }): React.ReactElement | null {
+function ExpandedSection({ call }: { call: ToolCallEvent }): React.ReactElement<any> | null {
   const hasOutput = call.output !== undefined && call.output.length > 0;
   const hasSubTools = call.subTools !== undefined && call.subTools.length > 0;
   if (hasOutput) return <ExpandedOutput call={call} />;
@@ -26,7 +26,7 @@ export const ToolCallRow = memo(function ToolCallRow({
   call,
   expanded,
   onToggle,
-}: ToolCallRowProps): React.ReactElement {
+}: ToolCallRowProps): React.ReactElement<any> {
   const hasOutput = call.output !== undefined && call.output.length > 0;
   const isExpandable = hasOutput || call.subTools?.length || call.status !== 'pending';
   return (
@@ -39,7 +39,7 @@ export const ToolCallRow = memo(function ToolCallRow({
 
 // ─── Output panels ────────────────────────────────────────────────────────────
 
-function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement {
+function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement<any> {
   return (
     <div
       className="mx-3 mb-2 ml-8 rounded overflow-hidden"
@@ -62,7 +62,7 @@ function ExpandedOutput({ call }: { call: ToolCallEvent }): React.ReactElement {
   );
 }
 
-function SubToolRow({ sub }: { sub: SubToolCallEvent }): React.ReactElement {
+function SubToolRow({ sub }: { sub: SubToolCallEvent }): React.ReactElement<any> {
   const icon = sub.status === 'pending' ? '◌' : sub.status === 'success' ? '✓' : '✗';
   const color = sub.status === 'success' ? 'var(--status-success)' : sub.status === 'error' ? 'var(--status-error)' : 'var(--text-faint)';
   return (
@@ -74,7 +74,7 @@ function SubToolRow({ sub }: { sub: SubToolCallEvent }): React.ReactElement {
   );
 }
 
-function SubToolList({ subTools }: { subTools: SubToolCallEvent[] }): React.ReactElement {
+function SubToolList({ subTools }: { subTools: SubToolCallEvent[] }): React.ReactElement<any> {
   return (
     <div
       className="mx-3 mb-2 ml-8 rounded px-2 py-1.5 space-y-0.5"
@@ -85,7 +85,7 @@ function SubToolList({ subTools }: { subTools: SubToolCallEvent[] }): React.Reac
   );
 }
 
-function EmptyOutput(): React.ReactElement {
+function EmptyOutput(): React.ReactElement<any> {
   return (
     <div
       className="mx-3 mb-2 ml-8 px-2 py-1.5 rounded text-[10px] italic"

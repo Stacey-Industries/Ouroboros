@@ -10,7 +10,7 @@ import type { ExtensionStoreModel } from './extensionStoreModel';
 import * as Styles from './extensionStoreSectionStyles';
 import { buttonStyle, SectionLabel } from './settingsStyles';
 
-export function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElement {
+export function DetailPanel({ model }: { model: ExtensionStoreModel }): React.ReactElement<any> {
   const ext = model.selectedExtension!;
   const extId = `${ext.namespace}.${ext.name}`;
   const installedData = model.installedMap.get(extId);
@@ -47,7 +47,7 @@ function ExtensionDetailHeader({
   ext,
 }: {
   ext: NonNullable<ExtensionStoreModel['selectedExtension']>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.headerRowStyle}>
       {ext.icon ? (
@@ -81,7 +81,7 @@ function ExtensionStats({
   ext,
 }: {
   ext: NonNullable<ExtensionStoreModel['selectedExtension']>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.statsRowStyle}>
       <span className="text-text-semantic-muted" style={Styles.statStyle}>
@@ -100,7 +100,7 @@ function ExtensionMetadata({
   ext,
 }: {
   ext: NonNullable<ExtensionStoreModel['selectedExtension']>;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.metadataContainerStyle}>
       {ext.categories && ext.categories.length > 0 && (
@@ -135,7 +135,7 @@ function InstalledExtensionButtons({
   extId: string;
   isDisabled: boolean;
   model: ExtensionStoreModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.actionButtonRowStyle}>
       <button
@@ -170,7 +170,7 @@ function ExtensionActions({
   isDisabled: boolean;
   isInstalling: boolean;
   model: ExtensionStoreModel;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.installAreaStyle}>
       {!isInstalled ? (
@@ -196,7 +196,7 @@ function MetadataRow({
   label: string;
   value?: string;
   children?: React.ReactNode;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={Styles.metadataRowStyle}>
       <span className="text-text-semantic-muted" style={Styles.metadataLabelStyle}>
@@ -215,7 +215,7 @@ function ContributionsSummary({
   installed,
 }: {
   installed: InstalledVsxExtension;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   const items = summarizeContributions(installed);
   if (items.length === 0) return null;
   return (
@@ -236,7 +236,7 @@ function ContributionsSummary({
   );
 }
 
-function ReadmeSection({ readme }: { readme: string }): React.ReactElement {
+function ReadmeSection({ readme }: { readme: string }): React.ReactElement<any> {
   return (
     <div style={Styles.readmeContainerStyle}>
       <SectionLabel style={{ marginBottom: '8px' }}>README</SectionLabel>

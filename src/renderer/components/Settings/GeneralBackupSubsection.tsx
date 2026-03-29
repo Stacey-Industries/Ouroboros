@@ -25,7 +25,7 @@ interface Props {
 type ToastFn = (msg: string, kind: 'success' | 'error') => void;
 type BusySetter = (busy: boolean) => void;
 
-export function BackupSubsection({ onImport }: Props): React.ReactElement {
+export function BackupSubsection({ onImport }: Props): React.ReactElement<any> {
   const [toast, showToast] = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -67,7 +67,7 @@ function ExportImportButtons({
   setIsImporting: (v: boolean) => void;
   showToast: ToastFn;
   onImport?: (imported: AppConfig) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       <button
@@ -104,7 +104,7 @@ function ExportImportSection({
   setIsImporting: (v: boolean) => void;
   showToast: ToastFn;
   onImport?: (imported: AppConfig) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Settings Backup</SectionLabel>
@@ -147,7 +147,7 @@ function OpenSettingsFileSection({
   isOpeningFile: boolean;
   setIsOpeningFile: (v: boolean) => void;
   showToast: ToastFn;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Power User</SectionLabel>

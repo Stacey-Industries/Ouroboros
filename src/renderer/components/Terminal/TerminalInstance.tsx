@@ -8,7 +8,7 @@ import { TerminalInstanceView } from './TerminalInstanceView'
 
 export type { TerminalInstanceProps } from './TerminalInstanceController'
 
-export function TerminalInstance(props: TerminalInstanceProps): React.ReactElement {
+export function TerminalInstance(props: TerminalInstanceProps): React.ReactElement<any> {
   const controller = useTerminalInstanceController(props)
   return <TerminalInstanceView controller={controller} />
 }

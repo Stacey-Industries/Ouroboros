@@ -24,7 +24,7 @@ import type { CollapseState, CollapseTarget } from './usePanelCollapse';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
-function SettingsGearIcon(): React.ReactElement {
+function SettingsGearIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="2.5" />
@@ -33,7 +33,7 @@ function SettingsGearIcon(): React.ReactElement {
   );
 }
 
-function UsageBarIcon(): React.ReactElement {
+function UsageBarIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="8" width="3" height="7" rx="0.5" />
@@ -43,7 +43,7 @@ function UsageBarIcon(): React.ReactElement {
   );
 }
 
-function ExtensionStoreIcon(): React.ReactElement {
+function ExtensionStoreIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
@@ -51,7 +51,7 @@ function ExtensionStoreIcon(): React.ReactElement {
   );
 }
 
-function McpStoreIcon(): React.ReactElement {
+function McpStoreIcon(): React.ReactElement<any> {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="1" width="10" height="5" rx="1" />
@@ -67,19 +67,19 @@ function McpStoreIcon(): React.ReactElement {
 
 // ── Panel toggle icons ────────────────────────────────────────────────────────
 
-function PanelLeftIcon(): React.ReactElement {
+function PanelLeftIcon(): React.ReactElement<any> {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="5.5" y1="2.5" x2="5.5" y2="13.5" /></svg>;
 }
 
-function PanelCentreIcon(): React.ReactElement {
+function PanelCentreIcon(): React.ReactElement<any> {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="5,4 3,8 5,12" /><polyline points="11,4 13,8 11,12" /><line x1="9" y1="3" x2="7" y2="13" /></svg>;
 }
 
-function PanelBottomIcon(): React.ReactElement {
+function PanelBottomIcon(): React.ReactElement<any> {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="1.5" y1="10" x2="14.5" y2="10" /></svg>;
 }
 
-function PanelRightIcon(): React.ReactElement {
+function PanelRightIcon(): React.ReactElement<any> {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="10.5" y1="2.5" x2="10.5" y2="13.5" /></svg>;
 }
 
@@ -107,7 +107,7 @@ export const titleButtonStyle: React.CSSProperties = {
 export interface TitleBarAction {
   eventName: string;
   title: string;
-  Icon: () => React.ReactElement;
+  Icon: () => React.ReactElement<any>;
 }
 
 export const TITLE_BAR_ACTIONS: TitleBarAction[] = [
@@ -119,7 +119,7 @@ export const TITLE_BAR_ACTIONS: TitleBarAction[] = [
 
 // ── WindowControls ────────────────────────────────────────────────────────────
 
-function WindowControls(): React.ReactElement | null {
+function WindowControls(): React.ReactElement<any> | null {
   const [platform, setPlatform] = useState<string>('');
   useEffect(() => { window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {}); }, []);
   if (platform !== 'win32') return null;
@@ -142,14 +142,14 @@ function WindowControls(): React.ReactElement | null {
 
 // ── Panel toggle bar ──────────────────────────────────────────────────────────
 
-const PANEL_TOGGLES: Array<{ panel: CollapseTarget; title: string; shortcut?: string; Icon: () => React.ReactElement }> = [
+const PANEL_TOGGLES: Array<{ panel: CollapseTarget; title: string; shortcut?: string; Icon: () => React.ReactElement<any> }> = [
   { panel: 'leftSidebar', title: 'File Tree', shortcut: 'Ctrl+B', Icon: PanelLeftIcon },
   { panel: 'editor', title: 'Editor', Icon: PanelCentreIcon },
   { panel: 'terminal', title: 'Terminal', shortcut: 'Ctrl+J', Icon: PanelBottomIcon },
   { panel: 'rightSidebar', title: 'Chat', shortcut: 'Ctrl+\\', Icon: PanelRightIcon },
 ];
 
-function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL_TOGGLES[number]; isActive: boolean; onClick: () => void }): React.ReactElement {
+function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL_TOGGLES[number]; isActive: boolean; onClick: () => void }): React.ReactElement<any> {
   const label = `${isActive ? 'Hide' : 'Show'} ${config.title}${config.shortcut ? ` (${config.shortcut})` : ''}`;
   return (
     <button className="titlebar-no-drag" title={label} aria-label={label} onClick={onClick}
@@ -161,7 +161,7 @@ function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL
   );
 }
 
-function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement | null {
+function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement<any> | null {
   if (!collapsed || !onToggle) return null;
   return (
     <>{PANEL_TOGGLES.map((config) => (
@@ -172,7 +172,7 @@ function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; on
 
 // ── Notification bell ─────────────────────────────────────────────────────────
 
-function NotificationBell(): React.ReactElement {
+function NotificationBell(): React.ReactElement<any> {
   const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => { setOpen((prev) => !prev); }, []);
@@ -196,7 +196,7 @@ export interface TitleBarProps {
   onTogglePanel?: (panel: CollapseTarget) => void;
 }
 
-export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement {
+export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement<any> {
   useProgressSubscriptions();
   return (
     <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center bg-surface-panel"

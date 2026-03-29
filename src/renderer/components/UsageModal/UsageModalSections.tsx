@@ -20,7 +20,7 @@ export const UsageModalHeader = memo(function UsageModalHeader({
   onClose,
 }: {
   onClose: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 border-b border-border-semantic">
       <div className="flex items-center gap-2">
@@ -51,7 +51,7 @@ export const UsageModalHeader = memo(function UsageModalHeader({
   );
 });
 
-function UsageIcon(): React.ReactElement {
+function UsageIcon(): React.ReactElement<any> {
   return (
     <svg
       width="16"
@@ -70,7 +70,7 @@ function UsageIcon(): React.ReactElement {
   );
 }
 
-function CloseIcon(): React.ReactElement {
+function CloseIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -96,7 +96,7 @@ export const UsageRangeControls = memo(function UsageRangeControls({
   range,
   onRangeChange,
   onRefresh,
-}: UsageRangeControlsProps): React.ReactElement {
+}: UsageRangeControlsProps): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-1.5 px-4 py-2 flex-shrink-0 border-b border-border-semantic">
       {TIME_RANGE_OPTIONS.map((option) => (
@@ -131,7 +131,7 @@ const RangeButton = memo(function RangeButton({
   isActive,
   onClick,
   option,
-}: RangeButtonProps): React.ReactElement {
+}: RangeButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={() => onClick(option.key)}
@@ -163,7 +163,7 @@ export const UsageModalContent = memo(function UsageModalContent({
   isLoading,
   onRetry,
   summary,
-}: UsageModalContentProps): React.ReactElement {
+}: UsageModalContentProps): React.ReactElement<any> {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {getUsageContent(summary, isLoading, error, onRetry)}
@@ -189,7 +189,7 @@ function getUsageContent(
   );
 }
 
-function LoadingState(): React.ReactElement {
+function LoadingState(): React.ReactElement<any> {
   return (
     <div className="flex items-center justify-center py-12">
       <span className="text-[11px] italic text-text-semantic-faint">
@@ -205,7 +205,7 @@ function ErrorState({
 }: {
   error: string;
   onRetry: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-2">
       <span className="text-[11px] text-status-error">{error}</span>
@@ -224,7 +224,7 @@ const SummaryCards = memo(function SummaryCards({
   summary,
 }: {
   summary: UsageSummary;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="grid grid-cols-3 gap-2 px-4 py-3 border-b border-border-semantic">
       {getSummaryCards(summary.totals).map((card) => (
@@ -234,7 +234,7 @@ const SummaryCards = memo(function SummaryCards({
   );
 });
 
-function SummaryCard({ card }: { card: SummaryCardData }): React.ReactElement {
+function SummaryCard({ card }: { card: SummaryCardData }): React.ReactElement<any> {
   return (
     <div className="flex flex-col items-center rounded-md px-2 py-2 bg-surface-raised">
       <span className="text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint">

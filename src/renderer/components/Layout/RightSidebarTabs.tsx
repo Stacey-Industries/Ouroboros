@@ -124,7 +124,7 @@ function SidebarContentArea({ activeView, historyOpen, viewContent, threads, act
   threads: AgentChatThreadRecord[]; activeThreadId: string | null;
   setHistoryOpen: (v: boolean) => void;
   onSelectThread?: (id: string | null) => void; onDeleteThread?: (id: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex-1 min-h-0 overflow-hidden relative">
       {activeView === 'chat' && historyOpen && (
@@ -144,7 +144,7 @@ function SidebarContentArea({ activeView, historyOpen, viewContent, threads, act
 export const RightSidebarTabs = memo(function RightSidebarTabs({
   chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent,
   threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
-}: RightSidebarTabsProps): React.ReactElement {
+}: RightSidebarTabsProps): React.ReactElement<any> {
   const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
   const { draftTabs, setDraftTabs } = useDraftTabs(activeThreadId, threads);
   useAgentChatViewFocus(setActiveView);

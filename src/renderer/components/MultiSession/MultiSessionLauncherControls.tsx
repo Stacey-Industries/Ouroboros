@@ -27,7 +27,7 @@ export function IconButton({
   hoverColor,
   onClick,
   title,
-}: IconButtonProps): React.ReactElement {
+}: IconButtonProps): React.ReactElement<any> {
   return (
     <button
       onClick={onClick}
@@ -47,7 +47,7 @@ export function IconButton({
   );
 }
 
-export function MultiSessionGridIcon(): React.ReactElement {
+export function MultiSessionGridIcon(): React.ReactElement<any> {
   return (
     <svg
       width="14"
@@ -68,7 +68,7 @@ export function MultiSessionGridIcon(): React.ReactElement {
   );
 }
 
-export function CloseIcon(): React.ReactElement {
+export function CloseIcon(): React.ReactElement<any> {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
       <path
@@ -91,7 +91,7 @@ function SessionTemplateSelect({
   slot: SessionSlot;
   templates: AgentTemplate[];
   onUpdate: (id: string, updates: Partial<SessionSlot>) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <select
       value={slot.templateId}
@@ -121,7 +121,7 @@ function OverrideSelect({
   options: Array<{ label: string; value: string }>;
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <select
       value={value}
@@ -153,7 +153,7 @@ export function SlotEditorHeader({
   onUpdate: (id: string, updates: Partial<SessionSlot>) => void;
   slot: SessionSlot;
   templates: AgentTemplate[];
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-2">
       <span className="shrink-0 text-[11px] font-semibold text-interactive-accent">
@@ -183,7 +183,7 @@ export function SlotPromptField({
   index: number;
   onUpdate: (id: string, updates: Partial<SessionSlot>) => void;
   slot: SessionSlot;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <textarea
       value={slot.customPrompt}
@@ -205,7 +205,7 @@ export function SlotOverrides({
   index: number;
   onUpdate: (id: string, updates: Partial<SessionSlot>) => void;
   slot: SessionSlot;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center gap-2">
       <span className="shrink-0 text-[10px] text-text-semantic-faint">Overrides:</span>
@@ -246,7 +246,7 @@ export function AddSessionButton({
 }: {
   canAddSlot: boolean;
   onAddSlot: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onAddSlot}
@@ -272,7 +272,7 @@ export function AddSessionButton({
   );
 }
 
-export function SlotCounter({ slotsLength }: { slotsLength: number }): React.ReactElement {
+export function SlotCounter({ slotsLength }: { slotsLength: number }): React.ReactElement<any> {
   return (
     <span className="text-[10px] tabular-nums text-text-semantic-faint">
       {slotsLength} / {MAX_SLOTS}
@@ -286,7 +286,7 @@ export function LaunchAllButton({
 }: {
   canLaunch: boolean;
   onLaunchAll: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       onClick={onLaunchAll}

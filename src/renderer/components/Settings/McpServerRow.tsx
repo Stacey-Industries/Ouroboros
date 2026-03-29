@@ -33,7 +33,7 @@ export function McpServerRow({
   onConfirmDelete,
   onCancelDelete,
   editForm,
-}: McpServerRowProps): React.ReactElement {
+}: McpServerRowProps): React.ReactElement<any> {
   return (
     <div>
       <div style={rowStyle(isEditing, isLast)}>
@@ -55,7 +55,7 @@ export function McpServerRow({
   );
 }
 
-function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement {
+function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement<any> {
   return (
     <div style={infoStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -70,7 +70,7 @@ function ServerInfo({ server }: { server: McpServerEntry }): React.ReactElement 
   );
 }
 
-function ScopeBadge({ scope }: { scope: string }): React.ReactElement {
+function ScopeBadge({ scope }: { scope: string }): React.ReactElement<any> {
   const isGlobal = scope === 'global';
   return (
     <span
@@ -104,7 +104,7 @@ function DeleteControls({
   onDelete: () => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (isConfirmingDelete) {
     return (
       <>
@@ -150,7 +150,7 @@ function ServerControls({
   onDelete,
   onConfirmDelete,
   onCancelDelete,
-}: ServerControlsProps): React.ReactElement {
+}: ServerControlsProps): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
       <button

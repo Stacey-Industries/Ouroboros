@@ -14,7 +14,7 @@ interface SessionReplayPanelProps {
 export function SessionReplayPanel({
   session,
   onClose,
-}: SessionReplayPanelProps): React.ReactElement {
+}: SessionReplayPanelProps): React.ReactElement<any> {
   const replay = useSessionReplayController(session);
   return <SessionReplayLayout session={session} onClose={onClose} replay={replay} />;
 }

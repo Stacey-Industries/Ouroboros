@@ -35,7 +35,7 @@ const ROW_BUTTON_STYLE: React.CSSProperties = {
   padding: '4px 0',
 };
 
-function SessionRowCells({ entry }: { entry: CostEntry }): React.ReactElement {
+function SessionRowCells({ entry }: { entry: CostEntry }): React.ReactElement<any> {
   return (
     <>
       <span style={{ width: '52px', flexShrink: 0, color: 'var(--text-muted)' }}>
@@ -68,7 +68,7 @@ export const SessionTableRow = memo(function SessionTableRow({
   entry,
   isExpanded,
   onToggle,
-}: SessionTableRowProps): React.ReactElement {
+}: SessionTableRowProps): React.ReactElement<any> {
   const handleClick = useCallback(() => onToggle(entry.sessionId), [onToggle, entry.sessionId]);
 
   return (
@@ -92,7 +92,7 @@ export const SessionTableRow = memo(function SessionTableRow({
   );
 });
 
-function DetailPair({ label, value }: { label: string; value: string }): React.ReactElement {
+function DetailPair({ label, value }: { label: string; value: string }): React.ReactElement<any> {
   return (
     <span>
       {label}: <span className="text-text-semantic-primary">{value}</span>
@@ -100,7 +100,7 @@ function DetailPair({ label, value }: { label: string; value: string }): React.R
   );
 }
 
-function ExpandedDetailsFields({ entry }: { entry: CostEntry }): React.ReactElement {
+function ExpandedDetailsFields({ entry }: { entry: CostEntry }): React.ReactElement<any> {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
       <DetailPair label="Model" value={entry.model} />
@@ -118,7 +118,7 @@ function ExpandedDetailsFields({ entry }: { entry: CostEntry }): React.ReactElem
   );
 }
 
-function ExpandedDetails({ entry }: { entry: CostEntry }): React.ReactElement {
+function ExpandedDetails({ entry }: { entry: CostEntry }): React.ReactElement<any> {
   return (
     <div
       className="py-1.5 px-2 text-[10px] bg-surface-raised"

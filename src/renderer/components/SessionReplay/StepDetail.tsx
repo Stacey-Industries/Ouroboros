@@ -137,7 +137,7 @@ export const StepDetail = memo(function StepDetail({
   session,
   stepNumber,
   totalSteps,
-}: StepDetailProps): React.ReactElement {
+}: StepDetailProps): React.ReactElement<any> {
   if (step.type === 'session_start') {
     return <SessionStartDetail session={session} stepNumber={stepNumber} totalSteps={totalSteps} />;
   }
@@ -151,7 +151,7 @@ function SessionStartDetail({
   session,
   stepNumber,
   totalSteps,
-}: SessionStartDetailProps): React.ReactElement {
+}: SessionStartDetailProps): React.ReactElement<any> {
   const metadata = getSessionMetadata(session);
 
   return (
@@ -167,7 +167,7 @@ function SessionStartDetail({
   );
 }
 
-function SessionHeading({ taskLabel }: { taskLabel: string }): React.ReactElement {
+function SessionHeading({ taskLabel }: { taskLabel: string }): React.ReactElement<any> {
   return (
     <>
       <h3 className="text-text-semantic-primary" style={SESSION_TITLE_STYLE}>
@@ -184,7 +184,7 @@ function ToolCallDetail({
   toolCall,
   stepNumber,
   totalSteps,
-}: ToolCallDetailProps): React.ReactElement {
+}: ToolCallDetailProps): React.ReactElement<any> {
   return (
     <div style={TOOL_DETAIL_STYLE}>
       <div style={TOOL_HEADER_STYLE}>
@@ -197,7 +197,7 @@ function ToolCallDetail({
   );
 }
 
-function ToolCallMetaHeader({ toolCall }: { toolCall: ReplayToolCall }): React.ReactElement {
+function ToolCallMetaHeader({ toolCall }: { toolCall: ReplayToolCall }): React.ReactElement<any> {
   return (
     <div style={TOOL_META_STYLE}>
       <ToolBadge name={toolCall.toolName} />
@@ -208,7 +208,7 @@ function ToolCallMetaHeader({ toolCall }: { toolCall: ReplayToolCall }): React.R
   );
 }
 
-function ToolBadge({ name }: { name: string }): React.ReactElement {
+function ToolBadge({ name }: { name: string }): React.ReactElement<any> {
   const color = toolColor(name);
 
   return (
@@ -225,13 +225,13 @@ function ToolBadge({ name }: { name: string }): React.ReactElement {
   );
 }
 
-function ToolStatus({ status }: { status: ReplayToolCall['status'] }): React.ReactElement {
+function ToolStatus({ status }: { status: ReplayToolCall['status'] }): React.ReactElement<any> {
   return (
     <span style={{ ...STATUS_TEXT_STYLE, color: statusColor(status) }}>{status.toUpperCase()}</span>
   );
 }
 
-function ToolDuration({ duration }: { duration: number }): React.ReactElement {
+function ToolDuration({ duration }: { duration: number }): React.ReactElement<any> {
   return (
     <span
       className="text-text-semantic-faint"
@@ -242,7 +242,7 @@ function ToolDuration({ duration }: { duration: number }): React.ReactElement {
   );
 }
 
-function ToolTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
+function ToolTimestamp({ timestamp }: { timestamp: number }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-faint" style={{ ...META_TEXT_STYLE, marginLeft: 'auto' }}>
       {formatTime(timestamp)}
@@ -250,7 +250,7 @@ function ToolTimestamp({ timestamp }: { timestamp: number }): React.ReactElement
   );
 }
 
-function ToolInputSummary({ input }: { input?: string }): React.ReactElement {
+function ToolInputSummary({ input }: { input?: string }): React.ReactElement<any> {
   return (
     <div className="bg-surface-panel text-text-semantic-muted" style={TOOL_INPUT_STYLE}>
       {input || '(no input)'}
@@ -258,7 +258,7 @@ function ToolInputSummary({ input }: { input?: string }): React.ReactElement {
   );
 }
 
-function OutputPanel({ output }: { output?: string }): React.ReactElement {
+function OutputPanel({ output }: { output?: string }): React.ReactElement<any> {
   return (
     <div style={OUTPUT_CONTAINER_STYLE}>
       <div className="text-text-semantic-faint" style={OUTPUT_LABEL_STYLE}>
@@ -275,7 +275,7 @@ function OutputPanel({ output }: { output?: string }): React.ReactElement {
   );
 }
 
-function StepCounter({ step, total }: { step: number; total: number }): React.ReactElement {
+function StepCounter({ step, total }: { step: number; total: number }): React.ReactElement<any> {
   return (
     <span className="text-text-semantic-faint" style={STEP_COUNTER_STYLE}>
       Step {step} of {total}
@@ -283,7 +283,7 @@ function StepCounter({ step, total }: { step: number; total: number }): React.Re
   );
 }
 
-function MetadataGrid({ children }: { children: React.ReactNode }): React.ReactElement {
+function MetadataGrid({ children }: { children: React.ReactNode }): React.ReactElement<any> {
   return <div style={METADATA_GRID_STYLE}>{children}</div>;
 }
 
@@ -295,7 +295,7 @@ function MetadataRow({
   label: string;
   value: string;
   color?: string;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <>
       <span className="text-text-semantic-faint" style={METADATA_LABEL_STYLE}>

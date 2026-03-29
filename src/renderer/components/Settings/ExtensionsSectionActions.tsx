@@ -35,7 +35,7 @@ interface CommandRowProps {
 
 export function ActionErrorBanner({
   message,
-}: ActionErrorBannerProps): React.ReactElement {
+}: ActionErrorBannerProps): React.ReactElement<any> {
   return (
     <div role="alert" className="text-status-error" style={extensionsSectionErrorBannerStyle}>
       {message}
@@ -45,7 +45,7 @@ export function ActionErrorBanner({
 
 export function ExtensionActionButtons({
   model,
-}: ExtensionActionButtonsProps): React.ReactElement {
+}: ExtensionActionButtonsProps): React.ReactElement<any> {
   return (
     <section style={extensionsSectionActionRowStyle}>
       <button
@@ -71,7 +71,7 @@ export function ExtensionActionButtons({
 
 export function ExtensionCommandsSection({
   commands,
-}: ExtensionCommandsSectionProps): React.ReactElement {
+}: ExtensionCommandsSectionProps): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>Extension Commands</SectionLabel>
@@ -96,7 +96,7 @@ export function ExtensionCommandsSection({
 function CommandRow({
   command,
   isLast,
-}: CommandRowProps): React.ReactElement {
+}: CommandRowProps): React.ReactElement<any> {
   return (
     <div style={extensionsSectionCommandRowStyle(isLast)}>
       <div style={extensionsSectionCommandTextStyle}>

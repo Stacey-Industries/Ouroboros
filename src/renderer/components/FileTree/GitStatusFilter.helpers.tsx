@@ -206,7 +206,7 @@ export function FilterButton({
   isActive: boolean;
   count: number;
   onClick: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <button
       style={isActive ? filterBtnActive : filterBtnBase}
@@ -232,7 +232,7 @@ export function FilterButton({
   );
 }
 
-function StatusBadge({ status }: { status: string }): React.ReactElement {
+function StatusBadge({ status }: { status: string }): React.ReactElement<any> {
   return (
     <span
       title={statusLabel(status)}
@@ -260,7 +260,7 @@ function FilteredFileRow({
   entry: FilteredFileEntry;
   projectRoot: string;
   onFileSelect: (filePath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const sep = projectRoot.includes('/') ? '/' : '\\';
   const absolutePath = `${projectRoot}${sep}${entry.path.replace(/\//g, sep)}`;
 
@@ -291,7 +291,7 @@ export function FilteredFileList({
   projectRoot: string;
   filter: TreeFilter;
   onFileSelect: (filePath: string) => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   const filterLabel = FILTERS.find((f) => f.key === filter)?.label ?? filter;
 
   return (

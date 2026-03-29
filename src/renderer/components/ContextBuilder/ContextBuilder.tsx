@@ -17,7 +17,7 @@ export function ContextBuilder({
   contextSelection,
   projectRoot,
   onClose,
-}: ContextBuilderProps): React.ReactElement {
+}: ContextBuilderProps): React.ReactElement<any> {
   const model = useContextBuilderModel(projectRoot, { contextSelection });
 
   return <ContextBuilderView {...model} onClose={onClose} />;

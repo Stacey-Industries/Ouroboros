@@ -98,7 +98,7 @@ export function ActionIconButton({
   hoverColor,
   onClick,
   children,
-}: ActionIconButtonProps): React.ReactElement {
+}: ActionIconButtonProps): React.ReactElement<any> {
   return (
     <button
       title={title}
@@ -120,7 +120,7 @@ export function ActionIconButton({
 
 export const StatusBadge = memo(function StatusBadge({
   status,
-}: StatusBadgeProps): React.ReactElement {
+}: StatusBadgeProps): React.ReactElement<any> {
   const config = STATUS_CONFIG[status];
 
   return (
@@ -145,7 +145,7 @@ function formatElapsedLabel(elapsedSeconds: number): string {
   return minutes > 0 ? `${minutes}m ${seconds.toString().padStart(2, '0')}s` : `${seconds}s`;
 }
 
-function SpinnerIcon(): React.ReactElement {
+function SpinnerIcon(): React.ReactElement<any> {
   return (
     <>
       <style>{SPIN_KEYFRAMES}</style>
@@ -172,7 +172,7 @@ function SpinnerIcon(): React.ReactElement {
   );
 }
 
-function RunningCallCount({ count }: { count: number }): React.ReactElement | null {
+function RunningCallCount({ count }: { count: number }): React.ReactElement<any> | null {
   if (count < 1) return null;
 
   return (
@@ -185,7 +185,7 @@ function RunningCallCount({ count }: { count: number }): React.ReactElement | nu
 export const RunningProgress = memo(function RunningProgress({
   startedAt,
   completedToolCallCount,
-}: RunningProgressProps): React.ReactElement {
+}: RunningProgressProps): React.ReactElement<any> {
   const elapsedLabel = formatElapsedLabel(useElapsedSeconds(startedAt, true));
 
   return (
@@ -208,7 +208,7 @@ export const RunningProgress = memo(function RunningProgress({
 export const ViewToggle = memo(function ViewToggle({
   view,
   onChange,
-}: ViewToggleProps): React.ReactElement {
+}: ViewToggleProps): React.ReactElement<any> {
   return (
     <div
       className="inline-flex items-center rounded overflow-hidden shrink-0"
@@ -244,7 +244,7 @@ export const ViewToggle = memo(function ViewToggle({
 
 export const ChevronIcon = memo(function ChevronIcon({
   open,
-}: ChevronIconProps): React.ReactElement {
+}: ChevronIconProps): React.ReactElement<any> {
   return (
     <svg
       width="12"
@@ -269,7 +269,7 @@ export const ChevronIcon = memo(function ChevronIcon({
 export const DismissButton = memo(function DismissButton({
   sessionId,
   onDismiss,
-}: DismissButtonProps): React.ReactElement {
+}: DismissButtonProps): React.ReactElement<any> {
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();

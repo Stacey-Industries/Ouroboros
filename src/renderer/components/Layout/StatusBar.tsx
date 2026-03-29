@@ -106,7 +106,7 @@ function GitSection({
 }: {
   gitBranch?: string | null;
   projectRoot?: string | null;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (!gitBranch) {
     return null;
   }
@@ -139,7 +139,7 @@ function FileSection({
   displayLanguage: string | null;
   lineCount?: number;
   relPath: string | null;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   if (!relPath) {
     return <StatusItem>No file open</StatusItem>;
   }
@@ -167,7 +167,7 @@ function RightSection({
   layout,
 }: {
   layout?: StatusBarLayoutProps;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div className="flex items-center flex-shrink-0">
       {layout && (
@@ -194,7 +194,7 @@ export function StatusBar({
   language,
   gitBranch,
   layout,
-}: StatusBarProps): React.ReactElement {
+}: StatusBarProps): React.ReactElement<any> {
   const relPath = useMemo(
     () => (activeFilePath ? relativePath(activeFilePath, projectRoot) : null),
     [activeFilePath, projectRoot],

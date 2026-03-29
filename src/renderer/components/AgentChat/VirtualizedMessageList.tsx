@@ -74,7 +74,7 @@ function VirtualizedItems({
   virtualizer: ReturnType<typeof useVirtualScroll>['virtualizer'];
   virtualizedMessages: AgentChatMessageRecord[];
   props: VirtualizedMessageListProps;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
       {virtualizer.getVirtualItems().map((vi) => (
@@ -97,7 +97,7 @@ function VirtualizedItems({
   );
 }
 
-export function VirtualizedMessageList(props: VirtualizedMessageListProps): React.ReactElement {
+export function VirtualizedMessageList(props: VirtualizedMessageListProps): React.ReactElement<any> {
   const { scrollRef, handleScroll, virtualizer, virtualizedMessages, streamingMessage } =
     useVirtualScroll(props.messagesWithStreaming);
 

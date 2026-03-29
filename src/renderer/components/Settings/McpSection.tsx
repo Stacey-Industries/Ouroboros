@@ -11,7 +11,7 @@ import { McpServerForm } from './McpServerForm';
 import { McpServerRow } from './McpServerRow';
 import { buttonStyle, SectionLabel } from './settingsStyles';
 
-export function McpSection(): React.ReactElement {
+export function McpSection(): React.ReactElement<any> {
   const model = useMcpSectionModel();
 
   return (
@@ -35,7 +35,7 @@ function McpHeader({
 }: {
   onRefresh: () => void;
   onAdd: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
@@ -75,7 +75,7 @@ function AddFormWrapper({
   formHandlers: FormHandlers;
   onSubmit: () => void;
   onCancel: () => void;
-}): React.ReactElement {
+}): React.ReactElement<any> {
   return (
     <div
       style={{
@@ -122,7 +122,7 @@ interface McpBodyProps {
   onUpdate: () => void;
 }
 
-function McpBody(props: McpBodyProps): React.ReactElement | null {
+function McpBody(props: McpBodyProps): React.ReactElement<any> | null {
   if (props.loading)
     return (
       <p className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
@@ -158,7 +158,7 @@ function ServerGroupList({
   title: string;
   servers: McpServerEntry[];
   bodyProps: McpBodyProps;
-}): React.ReactElement | null {
+}): React.ReactElement<any> | null {
   if (servers.length === 0) return null;
 
   return (
@@ -197,7 +197,7 @@ function buildEditForm({
   formHandlers,
   onUpdate,
   onCancelEdit,
-}: Pick<McpBodyProps, 'form' | 'formHandlers' | 'onUpdate' | 'onCancelEdit'>): React.ReactElement {
+}: Pick<McpBodyProps, 'form' | 'formHandlers' | 'onUpdate' | 'onCancelEdit'>): React.ReactElement<any> {
   return (
     <McpServerForm
       form={form}
@@ -213,7 +213,7 @@ function buildEditForm({
   );
 }
 
-function McpHelpText(): React.ReactElement {
+function McpHelpText(): React.ReactElement<any> {
   return (
     <section>
       <SectionLabel>About MCP Servers</SectionLabel>

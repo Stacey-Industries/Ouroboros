@@ -4,6 +4,6 @@ import { CodeSkeleton } from '../shared';
 
 // ─── Loading state ────────────────────────────────────────────────────────────
 
-export function LoadingState(): React.ReactElement {
+export function LoadingState(): React.ReactElement<any> {
   return <CodeSkeleton />;
 }

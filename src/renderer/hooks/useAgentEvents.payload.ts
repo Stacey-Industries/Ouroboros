@@ -276,3 +276,14 @@ function truncateText(value: string, maxLength: number): string {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** Detect whether an agent_start payload represents a skill invocation.
+ *  Heuristic: taskLabel starting with "/" indicates a slash-command skill. */
+export function extractSkillInfo(payload: HookPayload): { isSkill: boolean; skillName?: string } {
+  const label = payload.taskLabel ?? '';
+  if (label.startsWith('/')) {
+    const name = label.split(/\s/)[0].slice(1);
+    if (name.length > 0) return { isSkill: true, skillName: name };
+  }
+  return { isSkill: false };
+}

@@ -62,7 +62,7 @@ function usePdfDocument(args: UsePdfDocumentArgs): void {
 
 function usePdfContainerWidth(
   scrollRef: React.RefObject<HTMLDivElement | null>,
-): React.RefObject<number> {
+): React.RefObject<number | null> {
   const containerWidthRef = useRef(800);
   useEffect(() => {
     const el = scrollRef.current;

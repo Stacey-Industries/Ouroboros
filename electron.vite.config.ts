@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
 import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
@@ -32,7 +32,6 @@ const watchIgnored = [
 export default defineConfig({
   main: {
     plugins: [
-      externalizeDepsPlugin(),
       ...(analyze ? [visualizer({ filename: 'stats/main.html', gzipSize: true, brotliSize: true })] : []),
     ],
     resolve: {
@@ -44,6 +43,7 @@ export default defineConfig({
     server: {
       watch: { ignored: watchIgnored }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- electron-vite v5 types omit rollupOptions (vite 6 BuildEnvironmentOptions); runtime supports it
     build: {
       rollupOptions: {
         input: {
@@ -52,11 +52,10 @@ export default defineConfig({
           contextWorker: resolve(__dirname, 'src/main/orchestration/contextWorker.ts'),
         }
       }
-    }
+    } as any,
   },
   preload: {
     plugins: [
-      externalizeDepsPlugin(),
       ...(analyze ? [visualizer({ filename: 'stats/preload.html', gzipSize: true, brotliSize: true })] : []),
     ],
     resolve: {
@@ -68,13 +67,14 @@ export default defineConfig({
     server: {
       watch: { ignored: watchIgnored }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- electron-vite v5 types omit rollupOptions (vite 6 BuildEnvironmentOptions); runtime supports it
     build: {
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/preload/preload.ts')
         }
       }
-    }
+    } as any,
   },
   renderer: {
     root: 'src/renderer',
@@ -108,12 +108,13 @@ export default defineConfig({
     css: {
       postcss: resolve(__dirname, 'postcss.config.js')
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- electron-vite v5 types omit rollupOptions (vite 6 BuildEnvironmentOptions); runtime supports it
     build: {
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html')
         }
       }
-    }
+    } as any,
   }
 })
