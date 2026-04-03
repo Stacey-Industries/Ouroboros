@@ -1,11 +1,33 @@
 /**
- * ToolCallFeed.tsx — Scrollable list of tool calls for an agent session.
+ * ToolCallFeed.tsx — Scrollable merged feed of tool calls and conversation turns.
  */
 
-import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ConversationTurnRow } from './ConversationTurnRow';
 import { ToolCallRow } from './ToolCallRow';
-import type { ToolCallEvent } from './types';
+import type { ConversationTurn, ToolCallEvent } from './types';
+
+// ─── Merged feed item type ────────────────────────────────────────────────────
+
+type FeedItem =
+  | { kind: 'tool'; item: ToolCallEvent }
+  | { kind: 'turn'; item: ConversationTurn };
+
+export function buildFeedItems(
+  toolCalls: ToolCallEvent[],
+  conversationTurns: ConversationTurn[] | undefined,
+): FeedItem[] {
+  const toolItems: FeedItem[] = toolCalls.map((item) => ({ kind: 'tool', item }));
+  if (!conversationTurns || conversationTurns.length === 0) return toolItems;
+  const turnItems: FeedItem[] = conversationTurns.map((item) => ({ kind: 'turn', item }));
+  return [...toolItems, ...turnItems].sort((a, b) => a.item.timestamp - b.item.timestamp);
+}
+
+function feedItemKey(fi: FeedItem, idx: number): string {
+  if (fi.kind === 'tool') return `tool-${fi.item.id}`;
+  return `turn-${fi.item.timestamp}-${idx}`;
+}
 
 // ─── Feed header ──────────────────────────────────────────────────────────────
 
@@ -21,7 +43,7 @@ const FeedHeader = memo(function FeedHeader({
   allExpanded,
   onExpandAll,
   onCollapseAll,
-}: FeedHeaderProps): React.ReactElement<any> {
+}: FeedHeaderProps): React.ReactElement<unknown> {
   return (
     <div
       className="flex items-center justify-between px-3 py-1"
@@ -59,6 +81,7 @@ const FeedHeader = memo(function FeedHeader({
 
 interface ToolCallFeedProps {
   toolCalls: ToolCallEvent[];
+  conversationTurns?: ConversationTurn[];
 }
 
 function useExpandedToolCalls(toolCalls: ToolCallEvent[]): {
@@ -80,7 +103,7 @@ function useExpandedToolCalls(toolCalls: ToolCallEvent[]): {
   }, []);
 
   const handleExpandAll = useCallback(() => {
-    setExpandedIds(new Set(toolCalls.map((toolCall) => toolCall.id)));
+    setExpandedIds(new Set(toolCalls.map((tc) => tc.id)));
   }, [toolCalls]);
 
   const handleCollapseAll = useCallback(() => setExpandedIds(new Set()), []);
@@ -108,33 +131,36 @@ function useAutoScrollToBottom(
 }
 
 function FeedBody({
-  toolCalls,
+  feedItems,
   expandedIds,
   onToggle,
   containerRef,
   bottomRef,
 }: {
-  toolCalls: ToolCallEvent[];
+  feedItems: FeedItem[];
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   bottomRef: React.RefObject<HTMLDivElement | null>;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div
       ref={containerRef as React.RefObject<HTMLDivElement | null>}
       className="overflow-y-auto overflow-x-hidden"
       style={{ maxHeight: '320px' }}
     >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      {toolCalls.map((call) => (
-        <ToolCallRow
-          key={call.id}
-          call={call}
-          expanded={expandedIds.has(call.id)}
-          onToggle={onToggle}
-        />
-      ))}
+      {feedItems.map((fi, idx) =>
+        fi.kind === 'tool' ? (
+          <ToolCallRow
+            key={feedItemKey(fi, idx)}
+            call={fi.item}
+            expanded={expandedIds.has(fi.item.id)}
+            onToggle={onToggle}
+          />
+        ) : (
+          <ConversationTurnRow key={feedItemKey(fi, idx)} turn={fi.item} />
+        ),
+      )}
       <div ref={bottomRef as React.RefObject<HTMLDivElement | null>} />
     </div>
   );
@@ -142,15 +168,20 @@ function FeedBody({
 
 export const ToolCallFeed = memo(function ToolCallFeed({
   toolCalls,
-}: ToolCallFeedProps): React.ReactElement<any> {
+  conversationTurns,
+}: ToolCallFeedProps): React.ReactElement<unknown> {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const feedItems = useMemo(
+    () => buildFeedItems(toolCalls, conversationTurns),
+    [toolCalls, conversationTurns],
+  );
   const { expandedIds, allExpanded, handleToggle, handleExpandAll, handleCollapseAll } =
     useExpandedToolCalls(toolCalls);
 
-  useAutoScrollToBottom(toolCalls.length, containerRef, bottomRef);
+  useAutoScrollToBottom(feedItems.length, containerRef, bottomRef);
 
-  if (toolCalls.length === 0) {
+  if (toolCalls.length === 0 && (!conversationTurns || conversationTurns.length === 0)) {
     return (
       <div className="px-3 py-3 text-[11px] italic text-text-semantic-faint">
         No tool calls yet.
@@ -167,7 +198,7 @@ export const ToolCallFeed = memo(function ToolCallFeed({
         onCollapseAll={handleCollapseAll}
       />
       <FeedBody
-        toolCalls={toolCalls}
+        feedItems={feedItems}
         expandedIds={expandedIds}
         onToggle={handleToggle}
         containerRef={containerRef}
