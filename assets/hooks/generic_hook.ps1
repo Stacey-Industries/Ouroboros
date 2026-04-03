@@ -1,23 +1,26 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook - fires when a Claude Code sub-agent completes.
+    Ouroboros generic hook — forwards any Claude Code hook event to the IDE.
 .DESCRIPTION
-    Reads the agent end data from stdin (JSON), extracts the session ID,
-    and sends an agent_end event to Ouroboros so the Agent Monitor can
-    mark the session as complete. Exits silently if Ouroboros is not running.
+    Reads event data from stdin (JSON), wraps it as an NDJSON payload
+    with the given --type, and sends to the Ouroboros named pipe.
+    Used for events that don't need custom main-process handling
+    (TaskCreated, Elicitation, CwdChanged, etc.).
+    Exits silently if Ouroboros is not running.
+.PARAMETER type
+    The wire-format event type name (e.g. task_created, elicitation).
 #>
 
-param()
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$type
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# -- Chat sessions are tracked by the chat bridge's synthetic monitor events ---
-if ($env:OUROBOROS_CHAT_SESSION -eq '1') { exit 0 }
-
 # -- Configuration -------------------------------------------------------------
-$PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'
 $TcpPort   = 3333
 $TimeoutMs = 800
@@ -30,45 +33,28 @@ try {
     # stdin unavailable
 }
 
-$agentData = $null
+# -- Parse stdin JSON ----------------------------------------------------------
+$parsed = $null
+$sessionId = 'unknown'
 if (-not [string]::IsNullOrWhiteSpace($stdinData)) {
     try {
-        $agentData = $stdinData | ConvertFrom-Json -ErrorAction Stop
-    } catch {
-        # stdin not valid JSON - use defaults
-    }
+        $parsed = $stdinData | ConvertFrom-Json -ErrorAction Stop
+        if ($parsed.session_id) { $sessionId = $parsed.session_id }
+    } catch { }
 }
-
-# -- Extract session ID -------------------------------------------------------
-# Try stdin JSON first, then env var
-$sessionId = $null
-if ($agentData) {
-    $sessionId = if ($agentData.session_id) { $agentData.session_id } `
-                 elseif ($agentData.sessionId) { $agentData.sessionId } `
-                 else { $null }
-}
-if (-not $sessionId) {
-    $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
+if ($sessionId -eq 'unknown' -and $env:CLAUDE_SESSION_ID) {
+    $sessionId = $env:CLAUDE_SESSION_ID
 }
 
 # -- Build payload -------------------------------------------------------------
 $payload = [ordered]@{
-    type      = 'agent_end'
+    type      = $type
     sessionId = $sessionId
     timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    cwd       = (Get-Location).Path
 }
 
-# Add optional fields present in the .sh counterpart
-if ($agentData) {
-    if ($agentData.error)    { $payload['error']   = $agentData.error }
-    if ($agentData.cost_usd) { $payload['costUsd'] = $agentData.cost_usd }
-    elseif ($agentData.cost) { $payload['costUsd'] = $agentData.cost }
-}
-
-# parentSessionId — the session that spawned this subagent (same as agent_start.ps1)
-if ($env:CLAUDE_SESSION_ID) { $payload['parentSessionId'] = $env:CLAUDE_SESSION_ID }
-
+# Forward all stdin fields as event-specific data
+if ($parsed) { $payload['data'] = $parsed }
 if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
 
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
@@ -92,6 +78,7 @@ try {
     # Named pipe unavailable - try TCP
 }
 
+# -- Fallback: TCP -------------------------------------------------------------
 if (-not $sent) {
     try {
         $tcp    = New-Object System.Net.Sockets.TcpClient

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires before Claude Code executes a tool.
+    Ouroboros hook - fires before Claude Code executes a tool.
 .DESCRIPTION
     Reads tool call data from stdin (JSON), connects to the Ouroboros
     named pipe, and sends a pre_tool_use event with a unique requestId.
@@ -14,7 +14,7 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# -- Configuration -------------------------------------------------------------
 $PipeName   = '\\.\pipe\agent-ide-hooks'
 $TcpHost    = '127.0.0.1'
 $TcpPort    = 3333
@@ -23,7 +23,7 @@ $ApprovalsDir = Join-Path $env:USERPROFILE '.ouroboros\approvals'
 $PollIntervalMs = 500
 $MaxPollSeconds = 120  # max time to wait for approval
 
-# ── Read stdin ────────────────────────────────────────────────────────────────
+# -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
@@ -40,10 +40,10 @@ try {
     exit 0
 }
 
-# ── Generate unique request ID ───────────────────────────────────────────────
+# -- Generate unique request ID -----------------------------------------------
 $requestId = [System.Guid]::NewGuid().ToString('N').Substring(0, 16)
 
-# ── Build payload ─────────────────────────────────────────────────────────────
+# -- Build payload -------------------------------------------------------------
 # Session ID: for chat sessions, use 'unknown' so hooks.ts inferSessionId()
 # maps the event to the synthetic session created by the chat bridge. The CLI
 # session ID ($CLAUDE_SESSION_ID) differs from the stream-json session_id that
@@ -76,7 +76,7 @@ if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
 $line = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
-# ── Send via named pipe ───────────────────────────────────────────────────────
+# -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
 try {
@@ -91,7 +91,7 @@ try {
     $pipe.Dispose()
     $sent = $true
 } catch {
-    # Named pipe unavailable — try TCP
+    # Named pipe unavailable - try TCP
 }
 
 if (-not $sent) {
@@ -108,14 +108,14 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Ouroboros not running — exit silently
+        # Ouroboros not running - exit silently
     }
 }
 
 # If we couldn't reach Ouroboros, approve by default
 if (-not $sent) { exit 0 }
 
-# ── Poll for approval response ────────────────────────────────────────────────
+# -- Poll for approval response ------------------------------------------------
 $responsePath = Join-Path $ApprovalsDir "$requestId.response"
 $elapsed = 0
 
@@ -138,7 +138,7 @@ while ($elapsed -lt ($MaxPollSeconds * 1000)) {
             # Approved
             exit 0
         } catch {
-            # File might be partially written — wait and retry
+            # File might be partially written - wait and retry
             Start-Sleep -Milliseconds $PollIntervalMs
             $elapsed += $PollIntervalMs
             continue
@@ -149,5 +149,5 @@ while ($elapsed -lt ($MaxPollSeconds * 1000)) {
     $elapsed += $PollIntervalMs
 }
 
-# Timeout — approve by default to avoid blocking Claude Code indefinitely
+# Timeout - approve by default to avoid blocking Claude Code indefinitely
 exit 0

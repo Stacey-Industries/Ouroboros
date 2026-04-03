@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires when a Claude Code session starts.
+    Ouroboros hook - fires when a Claude Code session starts.
 .DESCRIPTION
     Reads session data from stdin (JSON), extracts the session ID,
     and sends a session_start event to Ouroboros so it can track the
@@ -14,22 +14,22 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# ── Chat sessions are tracked by the agent monitor via agent_start hooks ──────
+# -- Chat sessions are tracked by the agent monitor via agent_start hooks ------
 # Suppress session_start for chat-spawned processes to avoid duplicate sessions.
 if ($env:OUROBOROS_CHAT_SESSION -eq '1') { exit 0 }
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# -- Configuration -------------------------------------------------------------
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'
 $TcpPort   = 3333
 $TimeoutMs = 800
 
-# ── Read stdin ────────────────────────────────────────────────────────────────
+# -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
 } catch {
-    # stdin unavailable — fall back to env var
+    # stdin unavailable - fall back to env var
 }
 
 # Try to get session_id from stdin JSON first, then env var
@@ -44,7 +44,7 @@ if (-not $sessionId) {
     $sessionId = if ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } else { 'unknown' }
 }
 
-# ── Build payload ─────────────────────────────────────────────────────────────
+# -- Build payload -------------------------------------------------------------
 $payload = [ordered]@{
     type      = 'session_start'
     sessionId = $sessionId
@@ -56,7 +56,7 @@ if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
-# ── Send via named pipe ───────────────────────────────────────────────────────
+# -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
 try {
@@ -71,7 +71,7 @@ try {
     $pipe.Dispose()
     $sent = $true
 } catch {
-    # Named pipe unavailable — try TCP
+    # Named pipe unavailable - try TCP
 }
 
 if (-not $sent) {
@@ -87,7 +87,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Ouroboros not running — exit silently
+        # Ouroboros not running - exit silently
     }
 }
 

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires when Claude Code loads an instruction/rule file.
+    Ouroboros hook - fires when Claude Code loads an instruction/rule file.
 .DESCRIPTION
     Reads the InstructionsLoaded event data from stdin (JSON), transforms
     it to the IDE wire format, and sends an instructions_loaded event to
@@ -13,13 +13,13 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# -- Configuration -------------------------------------------------------------
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'
 $TcpPort   = 3333
 $TimeoutMs = 800
 
-# ── Read stdin ────────────────────────────────────────────────────────────────
+# -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
@@ -32,14 +32,14 @@ if (-not [string]::IsNullOrWhiteSpace($stdinData)) {
     try {
         $parsed = $stdinData | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        # stdin not valid JSON — exit
+        # stdin not valid JSON - exit
         exit 0
     }
 }
 
 if (-not $parsed) { exit 0 }
 
-# ── Extract fields ───────────────────────────────────────────────────────────
+# -- Extract fields -----------------------------------------------------------
 $sessionId = if ($parsed.session_id) { $parsed.session_id } `
              elseif ($env:CLAUDE_SESSION_ID) { $env:CLAUDE_SESSION_ID } `
              else { 'unknown' }
@@ -54,7 +54,7 @@ if ($parsed.globs -and ($parsed.globs -is [array])) {
     $globs = $parsed.globs
 }
 
-# ── Build payload ─────────────────────────────────────────────────────────────
+# -- Build payload -------------------------------------------------------------
 $inputObj = [ordered]@{
     file_path   = $filePath
     memory_type = $memoryType
@@ -77,7 +77,7 @@ if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
-# ── Send via named pipe ───────────────────────────────────────────────────────
+# -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
 try {
@@ -92,7 +92,7 @@ try {
     $pipe.Dispose()
     $sent = $true
 } catch {
-    # Named pipe unavailable — try TCP
+    # Named pipe unavailable - try TCP
 }
 
 if (-not $sent) {
@@ -108,7 +108,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Ouroboros not running — exit silently
+        # Ouroboros not running - exit silently
     }
 }
 

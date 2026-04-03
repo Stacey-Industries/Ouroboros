@@ -89,6 +89,7 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "rich-textarea": "^0.27.0",
     "shiki": "^3.0.0",
     "tree-sitter-wasms": "^0.1.13",
     "vscode-jsonrpc": "^8.2.1",

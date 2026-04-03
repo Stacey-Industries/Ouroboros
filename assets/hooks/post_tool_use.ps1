@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires after Claude Code executes a tool.
+    Ouroboros hook - fires after Claude Code executes a tool.
 .DESCRIPTION
     Reads tool result data from stdin (JSON), connects to the Ouroboros
     named pipe, and sends a post_tool_use event including output and duration.
@@ -13,13 +13,13 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# -- Configuration -------------------------------------------------------------
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'
 $TcpPort   = 3333
 $TimeoutMs = 800
 
-# ── Read stdin ────────────────────────────────────────────────────────────────
+# -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
@@ -36,7 +36,7 @@ try {
     exit 0
 }
 
-# ── Build payload ─────────────────────────────────────────────────────────────
+# -- Build payload -------------------------------------------------------------
 # Session ID: for chat sessions, use 'unknown' so hooks.ts inferSessionId()
 # maps the event to the synthetic session created by the chat bridge.
 $sessionId = $null
@@ -64,7 +64,7 @@ if ($env:CLAUDE_TOOL_DURATION_MS) {
     $durationMs = $toolData.duration_ms
 }
 
-# Output/result field — Claude Code may use different key names
+# Output/result field - Claude Code may use different key names
 $output = if ($toolData.output)       { $toolData.output }       `
           elseif ($toolData.result)   { $toolData.result }       `
           elseif ($toolData.response) { $toolData.response }     `
@@ -84,7 +84,7 @@ if ($env:OUROBOROS_INTERNAL -eq '1')     { $payload['internal'] = $true }
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
-# ── Send via named pipe ───────────────────────────────────────────────────────
+# -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
 try {
@@ -99,7 +99,7 @@ try {
     $pipe.Dispose()
     $sent = $true
 } catch {
-    # Named pipe unavailable — try TCP
+    # Named pipe unavailable - try TCP
 }
 
 if (-not $sent) {
@@ -115,7 +115,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Ouroboros not running — exit silently
+        # Ouroboros not running - exit silently
     }
 }
 

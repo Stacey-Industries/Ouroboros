@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Ouroboros hook — fires when Claude Code spawns a sub-agent.
+    Ouroboros hook - fires when Claude Code spawns a sub-agent.
 .DESCRIPTION
     Reads the agent start data from stdin (JSON), extracts a task label
     from the prompt field, and sends an agent_start event to Ouroboros.
@@ -13,16 +13,16 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
-# ── Chat sessions are tracked by the chat bridge's synthetic monitor events ───
+# -- Chat sessions are tracked by the chat bridge's synthetic monitor events ---
 if ($env:OUROBOROS_CHAT_SESSION -eq '1') { exit 0 }
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# -- Configuration -------------------------------------------------------------
 $PipeName  = '\\.\pipe\agent-ide-hooks'
 $TcpHost   = '127.0.0.1'
 $TcpPort   = 3333
 $TimeoutMs = 800
 
-# ── Read stdin ────────────────────────────────────────────────────────────────
+# -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
     $stdinData = [Console]::In.ReadToEnd()
@@ -35,11 +35,11 @@ if (-not [string]::IsNullOrWhiteSpace($stdinData)) {
     try {
         $agentData = $stdinData | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        # stdin not valid JSON — use defaults
+        # stdin not valid JSON - use defaults
     }
 }
 
-# ── Extract subagent session ID and prompt from stdin ────────────────────────
+# -- Extract subagent session ID and prompt from stdin ------------------------
 # CLAUDE_SESSION_ID env var = the PARENT session's ID.
 # stdin JSON contains the SUBAGENT's data, including its own session_id.
 $subagentSessionId = $null
@@ -79,7 +79,7 @@ $taskLabel = if ($prompt) {
     'Sub-agent'
 }
 
-# ── Build payload ─────────────────────────────────────────────────────────────
+# -- Build payload -------------------------------------------------------------
 $payload = [ordered]@{
     type            = 'agent_start'
     sessionId       = $sessionId
@@ -97,7 +97,7 @@ if ($env:OUROBOROS_INTERNAL -eq '1')   { $payload['internal'] = $true }
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
-# ── Send via named pipe ───────────────────────────────────────────────────────
+# -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
 try {
@@ -112,7 +112,7 @@ try {
     $pipe.Dispose()
     $sent = $true
 } catch {
-    # Named pipe unavailable — try TCP
+    # Named pipe unavailable - try TCP
 }
 
 if (-not $sent) {
@@ -128,7 +128,7 @@ if (-not $sent) {
         }
         $tcp.Dispose()
     } catch {
-        # Ouroboros not running — exit silently
+        # Ouroboros not running - exit silently
     }
 }
 
