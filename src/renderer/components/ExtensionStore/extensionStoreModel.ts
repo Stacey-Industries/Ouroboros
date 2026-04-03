@@ -9,7 +9,11 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { VSX_EXTENSIONS_CHANGED_EVENT } from '../../hooks/appEventNames';
+import {
+  FILE_ICON_THEMES_CHANGED_EVENT,
+  PRODUCT_ICON_THEMES_CHANGED_EVENT,
+  VSX_EXTENSIONS_CHANGED_EVENT,
+} from '../../hooks/appEventNames';
 import { EXTENSION_THEMES_CHANGED_EVENT } from '../../hooks/useExtensionThemes';
 import type { InstalledVsxExtension, VsxExtensionDetail, VsxExtensionSummary } from '../../types/electron';
 
@@ -57,7 +61,12 @@ export interface ExtensionStoreModel {
 }
 
 function getExtensionStoreApi(): ExtensionStoreApi | undefined { return window.electronAPI?.extensionStore; }
-function notifyExtensionChange(): void { window.dispatchEvent(new CustomEvent(EXTENSION_THEMES_CHANGED_EVENT)); window.dispatchEvent(new CustomEvent(VSX_EXTENSIONS_CHANGED_EVENT)); }
+function notifyExtensionChange(): void {
+  window.dispatchEvent(new CustomEvent(EXTENSION_THEMES_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(FILE_ICON_THEMES_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(PRODUCT_ICON_THEMES_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(VSX_EXTENSIONS_CHANGED_EVENT));
+}
 function buildSearchQuery(query: string, category: string | null): string { const trimmed = query.trim(); return [trimmed, category].filter(Boolean).join(' '); }
 function fetchExtensionSearchResult(api: ExtensionStoreApi, { source, query, category, offset }: { source: ExtensionStoreSource; query: string; category: string | null; offset: number }) { return source === 'marketplace' ? api.searchMarketplace(query.trim(), offset, category ?? undefined) : api.search(buildSearchQuery(query, category), offset); }
 

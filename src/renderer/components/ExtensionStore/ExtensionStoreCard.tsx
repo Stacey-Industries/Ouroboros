@@ -18,7 +18,7 @@ function CardTopRow({
   extension,
   isInstalled,
   isDisabled,
-}: Pick<ExtensionStoreCardProps, 'extension' | 'isInstalled' | 'isDisabled'>): React.ReactElement<any> {
+}: Pick<ExtensionStoreCardProps, 'extension' | 'isInstalled' | 'isDisabled'>): React.ReactElement {
   return (
     <div style={topRowStyle}>
       <span className="text-text-semantic-primary" style={nameStyle}>
@@ -44,7 +44,7 @@ function CardFooterRow({
   extension,
 }: {
   extension: ExtensionStoreCardProps['extension'];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={footerStyle}>
       <span className="text-interactive-accent" style={typeBadgeStyle}>
@@ -71,7 +71,7 @@ export function ExtensionStoreCard({
   isDisabled,
   isLast,
   onClick,
-}: ExtensionStoreCardProps): React.ReactElement<any> {
+}: ExtensionStoreCardProps): React.ReactElement {
   return (
     <div
       role="button"

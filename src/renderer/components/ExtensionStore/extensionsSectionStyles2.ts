@@ -5,7 +5,7 @@
 
 import type { CSSProperties } from 'react';
 
-import { smallButtonStyle } from './settingsStyles';
+import { smallButtonStyle } from '../Settings/settingsStyles';
 
 const STATUS_COLORS = {
   active: '#4ade80',

@@ -16,7 +16,7 @@ import {
   runtimeLabelStyle,
 } from './mcpStoreSectionDetailStyles';
 
-function MetadataRow({ label, value }: { label: string; value: string }): React.ReactElement<any> {
+function MetadataRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div style={metadataRowStyle}>
       <span className="text-text-semantic-muted" style={metadataLabelStyle}>
@@ -35,7 +35,7 @@ export function ServerMetadataSection({
 }: {
   server: McpRegistryServer;
   pkg?: NonNullable<McpRegistryServer['packages'][0]>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={metadataContainerStyle}>
       {pkg && <MetadataRow label="Package" value={`${pkg.registry_type} ${pkg.name}`} />}
@@ -52,7 +52,7 @@ export function RuntimeInfo({
   pkg,
 }: {
   pkg: NonNullable<McpRegistryServer['packages'][0]>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const runtime = pkg.runtime;
   const command = buildCommand(pkg);
   return (

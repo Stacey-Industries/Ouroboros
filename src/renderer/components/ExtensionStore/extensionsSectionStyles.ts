@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import { buttonStyle } from './settingsStyles';
+import { buttonStyle } from '../Settings/settingsStyles';
 
 export function extensionsSectionActionButtonStyle(disabled: boolean): CSSProperties {
   return {
