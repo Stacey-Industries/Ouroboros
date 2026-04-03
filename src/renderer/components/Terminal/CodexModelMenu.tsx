@@ -38,7 +38,7 @@ export function CodexModelMenu({ anchorRef, onSelect, onClose }: {
   anchorRef: React.RefObject<HTMLButtonElement | null>
   onSelect: (value: string) => void
   onClose: () => void
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const menuRef = useRef<HTMLDivElement>(null)
   const models = useCodexModels()
 

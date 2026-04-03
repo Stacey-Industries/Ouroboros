@@ -43,13 +43,18 @@ const SLOT_CONFIGS: SlotConfig[] = [
     title: 'CLAUDE.md Generation Model',
     description: 'Model used for automated CLAUDE.md generation.',
   },
+  {
+    key: 'inlineCompletion',
+    title: 'Inline Completion Model',
+    description: 'Model used for AI-powered ghost text suggestions.',
+  },
 ];
 
 export function ModelSlotsSection({
   slots,
   allModels,
   onUpdateSlot,
-}: ModelSlotsSectionProps): React.ReactElement<any> {
+}: ModelSlotsSectionProps): React.ReactElement {
   return (
     <section>
       <SectionLabel style={{ marginTop: '8px' }}>Model Slot Assignments</SectionLabel>
@@ -80,7 +85,7 @@ function SlotDropdown({
   value,
   options,
   onChange,
-}: SlotDropdownProps): React.ReactElement<any> {
+}: SlotDropdownProps): React.ReactElement {
   return (
     <div>
       <div className="text-text-semantic-primary" style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>

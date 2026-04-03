@@ -137,11 +137,13 @@ export const tailSchema = {
       terminal: { type: 'string', default: '' },
       agentChat: { type: 'string', default: '' },
       claudeMdGeneration: { type: 'string', default: '' },
+      inlineCompletion: { type: 'string', default: '' },
     },
     default: {
       terminal: '',
       agentChat: '',
       claudeMdGeneration: '',
+      inlineCompletion: '',
     },
   },
   authOnboardingDismissed: {
@@ -168,6 +170,26 @@ export const tailSchema = {
       generateRoot: true,
       generateSubdirs: true,
       excludeDirs: [],
+    },
+  },
+  routerSettings: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      enabled: { type: 'boolean', default: true },
+      layer1Enabled: { type: 'boolean', default: true },
+      layer2Enabled: { type: 'boolean', default: true },
+      layer3Enabled: { type: 'boolean', default: true },
+      layer2ConfidenceThreshold: { type: 'number', default: 0.6 },
+      paranoidMode: { type: 'boolean', default: false },
+    },
+    default: {
+      enabled: true,
+      layer1Enabled: true,
+      layer2Enabled: true,
+      layer3Enabled: true,
+      layer2ConfidenceThreshold: 0.6,
+      paranoidMode: false,
     },
   },
 }

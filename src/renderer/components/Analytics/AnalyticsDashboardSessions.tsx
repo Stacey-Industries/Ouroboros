@@ -32,7 +32,7 @@ const SessionTableHeader = memo(function SessionTableHeader({
   onSort: (key: SortKey) => void;
   sortAsc: boolean;
   sortKey: SortKey;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="flex items-center gap-1 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint"
@@ -65,7 +65,7 @@ const SessionTableHeader = memo(function SessionTableHeader({
   );
 });
 
-function SessionRowMetrics({ session }: { session: SessionMetrics }): React.ReactElement<any> {
+function SessionRowMetrics({ session }: { session: SessionMetrics }): React.ReactElement {
   return (
     <>
       <span
@@ -97,7 +97,7 @@ function SessionRowMetrics({ session }: { session: SessionMetrics }): React.Reac
   );
 }
 
-function SessionRowCells({ session }: { session: SessionMetrics }): React.ReactElement<any> {
+function SessionRowCells({ session }: { session: SessionMetrics }): React.ReactElement {
   return (
     <>
       <span className="flex items-center gap-1" style={{ width: '52px', flexShrink: 0 }}>
@@ -139,7 +139,7 @@ const SessionHistoryRow = memo(function SessionHistoryRow({
   session,
   isSelected,
   onToggle,
-}: SessionHistoryRowProps): React.ReactElement<any> {
+}: SessionHistoryRowProps): React.ReactElement {
   return (
     <button
       className="w-full flex items-center gap-1 py-1 text-[10px] tabular-nums transition-colors text-text-semantic-primary"
@@ -183,7 +183,7 @@ export const SessionHistoryTable = memo(function SessionHistoryTable({
   sessions,
   onSelectSession,
   selectedSessionId,
-}: SessionHistoryTableProps): React.ReactElement<any> | null {
+}: SessionHistoryTableProps): React.ReactElement | null {
   const { sortKey, sortAsc, handleSort } = useSortState('startedAt');
   const sorted = useMemo(
     () => sortSessionMetrics(sessions, sortKey, sortAsc),

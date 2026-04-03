@@ -12,7 +12,7 @@ export function TransportBtn({
   disabled?: boolean;
   title: string;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -42,7 +42,7 @@ export function TransportBtn({
   );
 }
 
-function PlayPauseIcon({ playing }: { playing: boolean }): React.ReactElement<any> {
+function PlayPauseIcon({ playing }: { playing: boolean }): React.JSX.Element {
   if (playing) {
     return (
       <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -63,7 +63,7 @@ export function ReplayTransportButtons({
   replay,
 }: {
   replay: SessionReplayController;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <>
       <TransportBtn
@@ -99,7 +99,7 @@ export function ReplaySpeedButton({
 }: {
   speed: number;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -127,7 +127,7 @@ export function ReplayStepCounter({
 }: {
   currentStep: number;
   totalSteps: number;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <span
       className="text-text-semantic-faint"
@@ -142,7 +142,7 @@ export function ReplayStepCounter({
   );
 }
 
-function ExportBtnIcon(): React.ReactElement<any> {
+function ExportBtnIcon(): React.JSX.Element {
   return (
     <svg
       width="10"
@@ -160,7 +160,7 @@ function ExportBtnIcon(): React.ReactElement<any> {
   );
 }
 
-export function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElement<any> {
+export function ExportBtn({ onClick }: { onClick: () => void }): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -201,7 +201,7 @@ export function ExportBtn({ onClick }: { onClick: () => void }): React.ReactElem
   );
 }
 
-export function CloseBtn({ onClick }: { onClick: () => void }): React.ReactElement<any> {
+export function CloseBtn({ onClick }: { onClick: () => void }): React.JSX.Element {
   const [hovered, setHovered] = useState(false);
 
   return (

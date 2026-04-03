@@ -21,7 +21,7 @@ export function useDiffReview(): DiffReviewContextValue {
   return ctx;
 }
 
-export function DiffReviewProvider({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function DiffReviewProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [state, dispatch] = useReducer(diffReviewReducer, null);
   const { openReview, closeReview } = useReviewLifecycleActions(dispatch);
   const { acceptHunk, rejectHunk } = useSingleHunkActions(state, dispatch);

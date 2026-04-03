@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
+import { SPIN_KEYFRAMES } from './spinKeyframes';
 import type { AgentSession } from './types';
 import { useElapsedSeconds } from './useElapsedSeconds';
 
@@ -13,7 +14,6 @@ const STATUS_CONFIG = {
 } as const;
 
 const VIEW_OPTIONS: CardView[] = ['feed', 'timeline'];
-const SPIN_KEYFRAMES = '@keyframes spin { to { transform: rotate(360deg); } }';
 
 interface ActionIconButtonProps {
   title: string;
@@ -98,7 +98,7 @@ export function ActionIconButton({
   hoverColor,
   onClick,
   children,
-}: ActionIconButtonProps): React.ReactElement<any> {
+}: ActionIconButtonProps): React.ReactElement<unknown> {
   return (
     <button
       title={title}
@@ -120,7 +120,7 @@ export function ActionIconButton({
 
 export const StatusBadge = memo(function StatusBadge({
   status,
-}: StatusBadgeProps): React.ReactElement<any> {
+}: StatusBadgeProps): React.ReactElement<unknown> {
   const config = STATUS_CONFIG[status];
 
   return (
@@ -145,7 +145,7 @@ function formatElapsedLabel(elapsedSeconds: number): string {
   return minutes > 0 ? `${minutes}m ${seconds.toString().padStart(2, '0')}s` : `${seconds}s`;
 }
 
-function SpinnerIcon(): React.ReactElement<any> {
+function SpinnerIcon(): React.ReactElement<unknown> {
   return (
     <>
       <style>{SPIN_KEYFRAMES}</style>
@@ -172,7 +172,7 @@ function SpinnerIcon(): React.ReactElement<any> {
   );
 }
 
-function RunningCallCount({ count }: { count: number }): React.ReactElement<any> | null {
+function RunningCallCount({ count }: { count: number }): React.ReactElement<unknown> | null {
   if (count < 1) return null;
 
   return (
@@ -185,7 +185,7 @@ function RunningCallCount({ count }: { count: number }): React.ReactElement<any>
 export const RunningProgress = memo(function RunningProgress({
   startedAt,
   completedToolCallCount,
-}: RunningProgressProps): React.ReactElement<any> {
+}: RunningProgressProps): React.ReactElement<unknown> {
   const elapsedLabel = formatElapsedLabel(useElapsedSeconds(startedAt, true));
 
   return (
@@ -208,7 +208,7 @@ export const RunningProgress = memo(function RunningProgress({
 export const ViewToggle = memo(function ViewToggle({
   view,
   onChange,
-}: ViewToggleProps): React.ReactElement<any> {
+}: ViewToggleProps): React.ReactElement<unknown> {
   return (
     <div
       className="inline-flex items-center rounded overflow-hidden shrink-0"
@@ -244,7 +244,7 @@ export const ViewToggle = memo(function ViewToggle({
 
 export const ChevronIcon = memo(function ChevronIcon({
   open,
-}: ChevronIconProps): React.ReactElement<any> {
+}: ChevronIconProps): React.ReactElement<unknown> {
   return (
     <svg
       width="12"
@@ -269,7 +269,7 @@ export const ChevronIcon = memo(function ChevronIcon({
 export const DismissButton = memo(function DismissButton({
   sessionId,
   onDismiss,
-}: DismissButtonProps): React.ReactElement<any> {
+}: DismissButtonProps): React.ReactElement<unknown> {
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();

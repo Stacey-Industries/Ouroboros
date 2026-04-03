@@ -32,7 +32,7 @@ function buildDailyBuckets(sessions: SessionUsage[]): DailyBucket[] {
     .map(([, b]) => b);
 }
 
-function DailyBarTooltip({ cost }: { cost: number }): React.ReactElement<any> {
+function DailyBarTooltip({ cost }: { cost: number }): React.JSX.Element {
   return (
     <div
       className="absolute -top-5 rounded px-1.5 py-0.5 text-[8px] font-semibold tabular-nums whitespace-nowrap bg-surface-raised text-interactive-accent"
@@ -59,7 +59,7 @@ function DailyBar({
   isHovered: boolean;
   onEnter: () => void;
   onLeave: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const barHeight = Math.max((bucket.cost / maxCost) * 100, bucket.cost > 0 ? 3 : 0);
   return (
     <div
@@ -86,7 +86,7 @@ export function DailyCostChart({
   sessions,
 }: {
   sessions: SessionUsage[];
-}): React.ReactElement<any> | null {
+}): React.JSX.Element | null {
   const buckets = useMemo(() => buildDailyBuckets(sessions), [sessions]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -123,7 +123,7 @@ export function DailyCostChart({
 
 // ─── Session list ──────────────────────────────────────────────────────────────
 
-function SessionTokenStats({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionTokenStats({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
       <span>
@@ -152,7 +152,7 @@ function SessionTokenStats({ session }: { session: SessionUsage }): React.ReactE
   );
 }
 
-function SessionDateRange({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionDateRange({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <div className="mt-1 flex gap-x-4 text-text-semantic-faint">
       <span>
@@ -166,7 +166,7 @@ function SessionDateRange({ session }: { session: SessionUsage }): React.ReactEl
   );
 }
 
-function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function HistorySessionExpandedDetails({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <div
       className="px-2 py-1.5 text-[10px] bg-surface-raised"
@@ -184,7 +184,7 @@ interface HistorySessionRowProps {
   onToggle: () => void;
 }
 
-function SessionRowContent({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionRowContent({ session }: { session: SessionUsage }): React.JSX.Element {
   const totalTokens = session.inputTokens + session.outputTokens;
   return (
     <>
@@ -223,7 +223,7 @@ function HistorySessionRow({
   session,
   isExpanded,
   onToggle,
-}: HistorySessionRowProps): React.ReactElement<any> {
+}: HistorySessionRowProps): React.JSX.Element {
   return (
     <div>
       <button
@@ -246,7 +246,7 @@ function HistorySessionRow({
   );
 }
 
-export function HistorySessionList({ sessions }: { sessions: SessionUsage[] }): React.ReactElement<any> {
+export function HistorySessionList({ sessions }: { sessions: SessionUsage[] }): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
   if (sessions.length === 0) {
     return (

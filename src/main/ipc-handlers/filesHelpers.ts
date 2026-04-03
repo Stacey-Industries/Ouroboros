@@ -53,8 +53,23 @@ export async function ensureDirExists(dirPath: string): Promise<void> {
 }
 
 export async function movePath(sourcePath: string, destPath: string): Promise<void> {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- both paths are validated before use
-  await fs.rename(sourcePath, destPath);
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- both paths are validated before use
+    await fs.rename(sourcePath, destPath);
+  } catch (err: unknown) {
+    if (!isRenameFallbackError(err)) throw err;
+    // fs.rename fails on Windows with EPERM (locked files) or EXDEV (cross-volume).
+    // Fall back to recursive copy + remove.
+     
+    await fs.cp(sourcePath, destPath, { recursive: true });
+     
+    await fs.rm(sourcePath, { recursive: true, force: true });
+  }
+}
+
+function isRenameFallbackError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException).code;
+  return code === 'EPERM' || code === 'EXDEV';
 }
 
 export function mimeTypeForImage(ext: string): string {
@@ -157,7 +172,13 @@ export async function writeTextFile(filePath: string, content: string): Promise<
 export function broadcastFileChange(type: string, filePath: string): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
-      window.webContents.send('files:change', { type, path: filePath });
+      try {
+        // Use mainFrame.send directly — webContents.send logs internally before
+        // rethrowing when the render frame is disposed during HMR/navigation.
+        window.webContents.mainFrame.send('files:change', { type, path: filePath });
+      } catch {
+        // Render frame disposed — silently skip this window
+      }
     }
   }
   broadcastToWebClients('files:change', { type, path: filePath });

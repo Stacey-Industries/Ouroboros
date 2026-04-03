@@ -82,7 +82,7 @@ interface FilterBarProps {
 const FilterBar = memo(function FilterBar({
   active,
   onChange,
-}: FilterBarProps): React.ReactElement<any> {
+}: FilterBarProps): React.ReactElement<unknown> {
   return (
     <div className="flex items-center gap-1">
       {FILTER_OPTIONS.map((option) => (
@@ -115,7 +115,7 @@ const LogToolbar = memo(function LogToolbar({
   copied,
   onChange,
   onCopy,
-}: LogToolbarProps): React.ReactElement<any> {
+}: LogToolbarProps): React.ReactElement<unknown> {
   return (
     <div
       className="flex-shrink-0 flex items-center justify-between px-3 py-1.5"
@@ -137,7 +137,7 @@ interface LogLineProps {
   call: ToolCallEvent;
 }
 
-const LogLine = memo(function LogLine({ call }: LogLineProps): React.ReactElement<any> {
+const LogLine = memo(function LogLine({ call }: LogLineProps): React.ReactElement<unknown> {
   const durationText =
     call.duration !== undefined ? (
       <span style={{ color: 'var(--text-faint)' }}> [{call.duration}ms]</span>
@@ -175,7 +175,7 @@ interface LogEntriesProps {
   calls: ToolCallEvent[];
 }
 
-const LogEntries = memo(function LogEntries({ calls }: LogEntriesProps): React.ReactElement<any> {
+const LogEntries = memo(function LogEntries({ calls }: LogEntriesProps): React.ReactElement<unknown> {
   if (calls.length === 0) {
     return (
       <p className="px-3 py-3 text-[10px] italic text-[var(--text-faint)]">
@@ -201,7 +201,7 @@ export interface AgentEventLogProps {
 export const AgentEventLog = memo(function AgentEventLog({
   toolCalls,
   sessionId,
-}: AgentEventLogProps): React.ReactElement<any> {
+}: AgentEventLogProps): React.ReactElement<unknown> {
   const [filter, setFilter] = useState<FilterType>('all');
   const { copied, handleCopy } = useCopyLog(toolCalls, sessionId);
   const filteredCalls = filterToolCalls(toolCalls, filter);

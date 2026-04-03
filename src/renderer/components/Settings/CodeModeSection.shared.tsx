@@ -17,7 +17,7 @@ export function SectionLabel({
 }: {
   children: React.ReactNode;
   style?: React.CSSProperties;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="text-text-semantic-muted"

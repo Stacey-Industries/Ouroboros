@@ -20,7 +20,7 @@ interface ProvidersSectionContentProps {
 
 export function ProvidersSectionContent({
   model,
-}: ProvidersSectionContentProps): React.ReactElement<any> {
+}: ProvidersSectionContentProps): React.ReactElement {
   return (
     <div style={providersRootStyle}>
       <div>

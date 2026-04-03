@@ -10,7 +10,7 @@ interface ClaudeSectionContentProps {
 
 export function ClaudeSectionContent({
   model,
-}: ClaudeSectionContentProps): React.ReactElement<any> {
+}: ClaudeSectionContentProps): React.ReactElement {
   return (
     <div style={claudeSectionRootStyle}>
       <ClaudeSectionBody model={model} />

@@ -2,11 +2,13 @@
  * SidebarSections — Stacked sidebar panel container.
  *
  * Replaces bare `<SidebarFileTree />` in the sidebar children slot,
- * adding collapsible Explorer, Outline, Timeline, and Bookmarks sections.
+ * adding collapsible Explorer, Search, Outline, Timeline, and Bookmarks sections.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useProject } from '../../contexts/ProjectContext';
+import { SearchPanel } from '../Search/SearchPanel';
 import { BookmarksSection, useBookmarkCount } from './BookmarksSection';
 import { OutlineSection, useOutlineSymbolCount } from './OutlineSection';
 import { SidebarFileTree } from './SidebarFileTree';
@@ -43,6 +45,7 @@ function usePersistedState<T>(key: string, defaultValue: T): [T, (value: T | ((p
 
 interface CollapseState {
   explorer: boolean;
+  search: boolean;
   outline: boolean;
   timeline: boolean;
   bookmarks: boolean;
@@ -50,6 +53,7 @@ interface CollapseState {
 
 const DEFAULT_COLLAPSE: CollapseState = {
   explorer: false,
+  search: true,
   outline: false,
   timeline: true,
   bookmarks: true,
@@ -62,7 +66,7 @@ interface SidebarResizeDividerProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProps): React.ReactElement<any> {
+function SidebarResizeDivider({ onDrag, containerRef }: SidebarResizeDividerProps): React.ReactElement {
   const startYRef = useRef(0);
 
   const handlePointerDown = useCallback(
@@ -115,6 +119,7 @@ function useSectionToggles(setCollapsed: (fn: (prev: CollapseState) => CollapseS
   }, [setCollapsed]);
   return {
     toggleExplorer: useCallback(() => toggle('explorer'), [toggle]),
+    toggleSearch: useCallback(() => toggle('search'), [toggle]),
     toggleOutline: useCallback(() => toggle('outline'), [toggle]),
     toggleTimeline: useCallback(() => toggle('timeline'), [toggle]),
     toggleBookmarks: useCallback(() => toggle('bookmarks'), [toggle]),
@@ -123,17 +128,23 @@ function useSectionToggles(setCollapsed: (fn: (prev: CollapseState) => CollapseS
 
 // ── Sections JSX ──────────────────────────────────────────────────────────────
 
-function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivider, handleDrag, containerRef, symbolCount, bookmarkCount, toggles }: {
+function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivider, handleDrag,
+  containerRef, symbolCount, bookmarkCount, toggles, projectRoot }: {
   collapsed: CollapseState; explorerFlex: number; outlineFlex: number; showDivider: boolean;
   handleDrag: (dr: number) => void; containerRef: React.RefObject<HTMLDivElement | null>;
   symbolCount: number; bookmarkCount: number;
   toggles: ReturnType<typeof useSectionToggles>;
-}): React.ReactElement<any> {
+  projectRoot: string | null;
+}): React.ReactElement {
   return (
     <div ref={containerRef as React.RefObject<HTMLDivElement | null>} className="flex flex-col h-full overflow-hidden">
       <SidebarSection title="Explorer" collapsed={collapsed.explorer} onToggle={toggles.toggleExplorer}
         style={{ flex: explorerFlex, minHeight: collapsed.explorer ? undefined : 100 }}>
         <SidebarFileTree />
+      </SidebarSection>
+      <SidebarSection title="Search" collapsed={collapsed.search} onToggle={toggles.toggleSearch}
+        style={{ minHeight: collapsed.search ? undefined : 160 }}>
+        <SearchPanel projectRoot={projectRoot ?? ''} />
       </SidebarSection>
       {showDivider && <SidebarResizeDivider onDrag={handleDrag} containerRef={containerRef} />}
       <SidebarSection title="Outline" collapsed={collapsed.outline} onToggle={toggles.toggleOutline}
@@ -150,18 +161,45 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
   );
 }
 
+// ── Ctrl+Shift+F shortcut ─────────────────────────────────────────────────────
+
+function useSearchShortcut(
+  setCollapsed: (fn: (prev: CollapseState) => CollapseState) => void,
+): void {
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+        setCollapsed((prev) => ({ ...prev, search: false }));
+        // Focus input on next frame after section expands
+        requestAnimationFrame(() => {
+          const input = document.querySelector<HTMLInputElement>('[aria-label="Search in files"]');
+          input?.focus();
+          input?.select();
+        });
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [setCollapsed]);
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function SidebarSections(): React.ReactElement<any> {
+export function SidebarSections(): React.ReactElement {
   const [collapsed, setCollapsed] = usePersistedState<CollapseState>('agent-ide:sidebar-sections', DEFAULT_COLLAPSE);
   const [explorerRatio, setExplorerRatio] = usePersistedState<number>('agent-ide:sidebar-explorer-ratio', 0.6);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const symbolCount = useOutlineSymbolCount();
   const bookmarkCount = useBookmarkCount();
   const toggles = useSectionToggles(setCollapsed);
+  const { projectRoot } = useProject();
+
   const handleDrag = useCallback((deltaRatio: number) => {
     setExplorerRatio((prev) => Math.min(0.85, Math.max(0.15, prev + deltaRatio)));
   }, [setExplorerRatio]);
+
+  useSearchShortcut(setCollapsed);
 
   return (
     <SidebarSectionsLayout collapsed={collapsed}
@@ -169,6 +207,7 @@ export function SidebarSections(): React.ReactElement<any> {
       outlineFlex={collapsed.explorer ? 1 : 1 - explorerRatio}
       showDivider={!collapsed.explorer && !collapsed.outline}
       handleDrag={handleDrag} containerRef={containerRef}
-      symbolCount={symbolCount} bookmarkCount={bookmarkCount} toggles={toggles} />
+      symbolCount={symbolCount} bookmarkCount={bookmarkCount}
+      toggles={toggles} projectRoot={projectRoot} />
   );
 }

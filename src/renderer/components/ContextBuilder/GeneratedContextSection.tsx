@@ -33,7 +33,7 @@ export function GeneratedContextSection({
   handleUpdateClaudeMd,
   runScan,
   scanning,
-}: GeneratedContextSectionProps): React.ReactElement<any> {
+}: GeneratedContextSectionProps): React.ReactElement {
   return (
     <Section title="Generated Context (editable)">
       <textarea
@@ -74,7 +74,7 @@ GeneratedContextSectionProps,
   | 'handleUpdateClaudeMd'
   | 'runScan'
   | 'scanning'
->): React.ReactElement<any> {
+>): React.ReactElement {
   return (
     <div style={actionRowStyle}>
       <ActionButton label="Copy to Clipboard" onClick={() => void handleCopyToClipboard()} />
@@ -101,7 +101,7 @@ function ClaudeMdAction({
 }: Pick<
 GeneratedContextSectionProps,
   'context' | 'handleCreateClaudeMd' | 'handleUpdateClaudeMd'
->): React.ReactElement<any> {
+>): React.ReactElement {
   if (!context.hasClaudeMd) {
     return (
       <ActionButton

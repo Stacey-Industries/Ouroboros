@@ -21,7 +21,7 @@ import type { CommandBlock } from './useCommandBlocks';
 
 // ── Gutter Icons ─────────────────────────────────────────────────────────────
 
-export function SpinnerIcon(): React.ReactElement<any> {
+export function SpinnerIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -43,7 +43,7 @@ export function SpinnerIcon(): React.ReactElement<any> {
   );
 }
 
-export function SuccessIcon(): React.ReactElement<any> {
+export function SuccessIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="7" stroke="var(--status-success)" strokeWidth="1.5" opacity="0.8" />
@@ -58,7 +58,7 @@ export function SuccessIcon(): React.ReactElement<any> {
   );
 }
 
-export function ErrorIcon(): React.ReactElement<any> {
+export function ErrorIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="7" stroke="var(--status-error)" strokeWidth="1.5" opacity="0.8" />
@@ -73,7 +73,7 @@ export function ErrorIcon(): React.ReactElement<any> {
 }
 
 /** Steady dot for long-running commands — replaces spinner after SETTLE_MS. */
-function RunningDot(): React.ReactElement<any> {
+function RunningDot(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="4" fill="var(--interactive-accent)" opacity="0.5" />
@@ -83,7 +83,7 @@ function RunningDot(): React.ReactElement<any> {
 
 const SETTLE_MS = 3000;
 
-export function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement<any> {
+export function GutterIcon({ block }: { block: CommandBlock }): React.ReactElement {
   const [settled, setSettled] = useState(false);
   useEffect(() => {
     if (block.complete) return;
@@ -105,7 +105,7 @@ export const OutputBorder = ({
 }: {
   color: string;
   active: boolean;
-}): React.ReactElement<any> => (
+}): React.ReactElement => (
   <div
     style={{
       position: 'absolute',
@@ -126,7 +126,7 @@ export const CommandLabel = ({
 }: {
   command: string;
   cellHeight: number;
-}): React.ReactElement<any> => (
+}): React.ReactElement => (
   <div
     className="text-interactive-accent"
     style={{ ...commandLabelStyle, top: (cellHeight - 14) / 2, height: 14 }}
@@ -136,7 +136,7 @@ export const CommandLabel = ({
   </div>
 );
 
-export function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement<any> {
+export function RelativeTimestamp({ timestamp }: { timestamp: number }): React.ReactElement {
   const [text, setText] = useState(() => formatRelativeTime(timestamp));
   useEffect(() => {
     const id = setInterval(() => setText(formatRelativeTime(timestamp)), 5000);
@@ -153,7 +153,7 @@ export const TimestampRow = ({
   timestamp: number;
   duration?: number;
   cellHeight: number;
-}): React.ReactElement<any> => (
+}): React.ReactElement => (
   <div
     className="text-text-semantic-muted"
     style={{ ...timestampStyle, top: (cellHeight - 12) / 2, height: 12, lineHeight: '12px' }}
@@ -187,7 +187,7 @@ export const ActionBar = ({
   onCopyOutput: (block: CommandBlock) => void;
   onCopyCommand: (block: CommandBlock) => void;
   onExplainError: (block: CommandBlock) => void;
-}): React.ReactElement<any> => (
+}): React.ReactElement => (
   <div
     style={{
       ...actionsContainerStyle,
@@ -219,7 +219,7 @@ export const CollapsedOverlay = ({
   borderColor: string;
   collapsedLines: number;
   onToggleCollapse: (blockId: string) => void;
-}): React.ReactElement<any> => (
+}): React.ReactElement => (
   <div
     className="bg-surface-panel text-text-semantic-muted border-l-2"
     style={{
@@ -261,7 +261,7 @@ export function CommandBlockDecorationHeader({
   onCopyOutput,
   onCopyCommand,
   onExplainError,
-}: DecorationHeaderProps): React.ReactElement<any> {
+}: DecorationHeaderProps): React.ReactElement {
   return (
     <>
       <div className="bg-border-semantic" style={{ ...separatorLineStyle, top: 0 }} />

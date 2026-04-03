@@ -41,7 +41,7 @@ function categorizeTools(tools: Array<AgentChatContentBlock & { kind: 'tool_use'
   }).concat((counts.get('other') ?? 0) ? `${counts.get('other')} other` : null).filter(Boolean).join(', ');
 }
 
-function ToolGroup({ tools, defaultExpanded }: ToolGroupProps): React.ReactElement<any> {
+function ToolGroup({ tools, defaultExpanded }: ToolGroupProps): React.ReactElement {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ function ToolGroupHeader({
   completeCount: number;
   totalCount: number;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button onClick={onToggle} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:opacity-80">
       <ChevronIcon collapsed={!expanded} />
@@ -154,7 +154,7 @@ function buildRenderItems(blocks: AgentChatContentBlock[]): RenderItem[] {
   return items;
 }
 
-function renderTextBlock(content: string, index: number, showCursor: boolean): React.ReactElement<any> {
+function renderTextBlock(content: string, index: number, showCursor: boolean): React.ReactElement {
   return <div key={`text-${index}`} className="pl-7 pb-0.5"><MessageMarkdown content={content} />{showCursor && <BlinkingCursor />}</div>;
 }
 
@@ -166,7 +166,7 @@ function StreamingThinkingBlock({
   block: AgentChatContentBlock & { kind: 'thinking' };
   isLast: boolean;
   isStreaming: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [collapsed, setCollapsed] = useState(false);
   const activelyStreaming = isStreaming && isLast && block.duration === undefined;
 
@@ -189,7 +189,7 @@ export function AgentChatStreamingMessage({
   blocks,
   isStreaming,
   onStop,
-}: AgentChatStreamingMessageProps): React.ReactElement<any> {
+}: AgentChatStreamingMessageProps): React.ReactElement {
   const lastTextIndex = getLastTextIndex(blocks);
   const lastTextContent = lastTextIndex >= 0 ? (blocks[lastTextIndex] as { kind: 'text'; content: string }).content : '';
   const displayedLastText = useTypewriter(lastTextContent, isStreaming);

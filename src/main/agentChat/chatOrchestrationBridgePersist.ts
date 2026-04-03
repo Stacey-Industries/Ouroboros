@@ -136,6 +136,7 @@ function mergeStickyFields(
   applyStickyField(link, existing, 'codexThreadId');
   applyStickyField(link, existing, 'linkedTerminalId');
   if (!link.model) link.model = model || existing?.model;
+  applyStickyField(link, existing, 'effort');
 }
 
 function buildFreshLink(

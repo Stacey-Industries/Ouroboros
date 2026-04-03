@@ -20,7 +20,7 @@ function UsageTabBar({
 }: {
   activeTab: UsageTab;
   onSelect: (tab: UsageTab) => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div
       className="flex border-b border-border-semantic bg-surface-panel"
@@ -52,7 +52,7 @@ function UsageTabBar({
   );
 }
 
-export const UsagePanel = memo(function UsagePanel(): React.ReactElement<any> {
+export const UsagePanel = memo(function UsagePanel(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<UsageTab>('current');
   const content = activeTab === 'current' ? <UsageCurrentTab /> : <UsageHistoryTab />;
 

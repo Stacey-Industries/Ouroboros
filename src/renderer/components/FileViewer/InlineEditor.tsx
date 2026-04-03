@@ -27,7 +27,7 @@ const editorContainerStyle: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-function InlineEditorComponent(props: InlineEditorProps): React.ReactElement<any> {
+function InlineEditorComponent(props: InlineEditorProps): React.ReactElement {
   const { ref, ...rest } = props;
   const { containerRef, viewRef } = useInlineEditorController(rest);
   useImperativeHandle(ref, () => ({

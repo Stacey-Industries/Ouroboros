@@ -44,7 +44,7 @@ function buildRootNode(root: string): TreeNode {
   };
 }
 
-function RootSectionError({ error }: { error: string }): React.ReactElement<any> {
+function RootSectionError({ error }: { error: string }): React.ReactElement {
   return (
     <div className="text-status-error" style={{ padding: '12px', fontSize: '0.8125rem' }}>
       {error}
@@ -52,7 +52,7 @@ function RootSectionError({ error }: { error: string }): React.ReactElement<any>
   );
 }
 
-function RootSectionEmpty(): React.ReactElement<any> {
+function RootSectionEmpty(): React.ReactElement {
   return (
     <div
       className="text-text-semantic-faint"
@@ -75,7 +75,7 @@ function RootSectionBody({
   bookmarks: string[];
   getHeatLevel?: (filePath: string) => FileHeatData | undefined;
   model: RootSectionModel;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (model.isLoading) return <FileTreeSkeleton />;
   if (model.error) return <RootSectionError error={model.error} />;
   if (model.displayItems.length === 0) return <RootSectionEmpty />;
@@ -114,7 +114,7 @@ function ExpandedRootSection({
   bookmarks: string[];
   getHeatLevel?: (filePath: string) => FileHeatData | undefined;
   model: RootSectionModel;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div onKeyDown={model.onKeyDown}>
       <RootSectionBody
@@ -165,7 +165,7 @@ function RootContextMenu({
   bookmarks,
   model,
   handlers,
-}: RootContextMenuProps): React.ReactElement<any> {
+}: RootContextMenuProps): React.ReactElement {
   const menuNode = model.contextMenu.node;
   return (
     <ContextMenu
@@ -188,7 +188,7 @@ function RootContextMenu({
   );
 }
 
-export function RootSection(props: RootSectionProps): React.ReactElement<any> {
+export function RootSection(props: RootSectionProps): React.ReactElement {
   const model = useRootSectionModel({
     root: props.root,
     onFileSelect: props.onFileSelect,

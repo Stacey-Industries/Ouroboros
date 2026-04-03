@@ -184,7 +184,7 @@ function useRememberAction(
 export function AgentChatWorkspace({
   projectRoot,
   onModelReady,
-}: AgentChatWorkspaceProps): React.ReactElement<any> {
+}: AgentChatWorkspaceProps): React.ReactElement {
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
   const { toast } = useToastContext();

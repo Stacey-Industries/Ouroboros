@@ -9,7 +9,7 @@ interface ClaudeSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function ClaudeSection({ draft, onChange }: ClaudeSectionProps): React.ReactElement<any> {
+export function ClaudeSection({ draft, onChange }: ClaudeSectionProps): React.ReactElement {
   const model = useClaudeSectionModel(draft, onChange);
   return <ClaudeSectionContent model={model} />;
 }

@@ -29,7 +29,7 @@ function TerminalToolbarLayer({
 }: {
   controller: TerminalInstanceController;
   isHovered: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const searchAddon = controller.searchAddonRef.current;
   return (
     <>
@@ -49,7 +49,7 @@ function TerminalOptionalButtons({
   controller: TerminalInstanceController;
   isHovered: boolean;
   showSearch: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       {controller.onToggleSync && (
@@ -87,7 +87,7 @@ function TerminalToolbarButtons({
 }: {
   controller: TerminalInstanceController;
   isHovered: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const terminal = controller.terminalRef.current;
   const { showSearch } = controller;
   const richInputOnClick = controller.richInputActive
@@ -115,7 +115,7 @@ function TerminalProgressBarLayer({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   const subscribe = useMemo(() => {
     const addon = controller.progressAddonRef.current;
     if (!addon) return null;
@@ -129,7 +129,7 @@ function TerminalCommandBlocks({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   const handleCopyCommand = useCallback((block: import('./useCommandBlocks').CommandBlock) => {
     if (block.command) void navigator.clipboard.writeText(block.command);
   }, []);
@@ -163,7 +163,7 @@ function TerminalCompletionLayer({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!controller.completions.state.completionVisible) return null;
   const { completions: cpl } = controller;
   return (
@@ -183,7 +183,7 @@ function TerminalActionLayers({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <TerminalOverlayModals controller={controller} />
@@ -196,7 +196,7 @@ function TerminalOverlayModals({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { cmdSearch } = controller.historyHook;
   return (
     <>
@@ -235,7 +235,7 @@ function TerminalRichInputLayer({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <RichInput
       sessionId={controller.sessionId}
@@ -250,7 +250,7 @@ export function TerminalInstanceView({
   controller,
 }: {
   controller: TerminalInstanceController;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
 
   return (

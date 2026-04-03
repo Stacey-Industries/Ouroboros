@@ -30,7 +30,7 @@ export const SemanticScrollbar = memo(function SemanticScrollbar({
   diffLines,
   foldedLines,
   onScrollToLine,
-}: SemanticScrollbarProps): React.ReactElement<any> | null {
+}: SemanticScrollbarProps): React.ReactElement | null {
   const barRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState(HIDDEN_TOOLTIP);
   const metrics = getViewportMetrics(scrollTop, containerHeight, scrollHeight);

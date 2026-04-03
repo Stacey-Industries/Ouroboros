@@ -34,7 +34,7 @@ function ToolbarStart({
 }: {
   onToggleLineNumbers: () => void;
   showLineNumbers: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={toolbarPrimaryStyle}>
       <span style={toolbarTitleStyle}>Multi-line Input</span>
@@ -55,7 +55,7 @@ function ToolbarActionButtons({
 }: {
   doCancel: () => void;
   doSubmit: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <button onClick={doCancel} title="Close multi-line input" style={closeBtnStyle}>
@@ -74,7 +74,7 @@ function ToolbarEnd({
 }: {
   doCancel: () => void;
   doSubmit: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-faint" style={toolbarSecondaryStyle}>
       <span>Ctrl+Up/Down: history</span>
@@ -95,7 +95,7 @@ function RichInputToolbar({
   doSubmit: () => void;
   onToggleLineNumbers: () => void;
   showLineNumbers: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={toolbarStyle}>
       <ToolbarStart onToggleLineNumbers={onToggleLineNumbers} showLineNumbers={showLineNumbers} />
@@ -116,7 +116,7 @@ function RichInputPanel({
   doSubmit: () => void;
   onToggleLineNumbers: () => void;
   showLineNumbers: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={panelStyle}>
       <RichInputToolbar
@@ -135,7 +135,7 @@ export const RichInputBody = memo(function RichInputBody({
   onCancel,
   onSubmit,
   visible,
-}: RichInputProps): React.ReactElement<any> | null {
+}: RichInputProps): React.ReactElement | null {
   const state = useRichInputEditorState(onSubmit, onCancel);
   const {
     containerRef,

@@ -22,7 +22,7 @@ function formatSkillDuration(record: SkillExecutionRecord): string {
 // Status icon
 // ---------------------------------------------------------------------------
 
-function SkillStatusIcon({ status }: { status: SkillExecutionRecord['status'] }): React.ReactElement<any> {
+function SkillStatusIcon({ status }: { status: SkillExecutionRecord['status'] }): React.ReactElement {
   if (status === 'running') {
     return <span className="inline-block h-3.5 w-3.5 animate-pulse rounded-full bg-text-semantic-faint" />;
   }
@@ -36,7 +36,7 @@ function SkillStatusIcon({ status }: { status: SkillExecutionRecord['status'] })
 // Single skill row
 // ---------------------------------------------------------------------------
 
-function SkillRow({ record }: { record: SkillExecutionRecord }): React.ReactElement<any> {
+function SkillRow({ record }: { record: SkillExecutionRecord }): React.ReactElement {
   return (
     <div className="flex items-center gap-2 rounded border border-border-semantic px-2.5 py-2 text-xs">
       <SkillStatusIcon status={record.status} />
@@ -61,7 +61,7 @@ function ToggleButton(props: {
   expanded: boolean;
   hiddenCount: number;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const label = props.expanded
     ? 'Show less'
     : `Show ${props.hiddenCount} more`;
@@ -80,7 +80,7 @@ function ToggleButton(props: {
 // Skill list (handles collapse logic)
 // ---------------------------------------------------------------------------
 
-function SkillList({ records }: { records: SkillExecutionRecord[] }): React.ReactElement<any> {
+function SkillList({ records }: { records: SkillExecutionRecord[] }): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const needsCollapse = records.length > COLLAPSED_LIMIT;
   const visible = expanded ? records : records.slice(0, COLLAPSED_LIMIT);
@@ -110,7 +110,7 @@ export interface SkillHistorySectionProps {
   skillExecutions: SkillExecutionRecord[];
 }
 
-export function SkillHistorySection({ skillExecutions }: SkillHistorySectionProps): React.ReactElement<any> | null {
+export function SkillHistorySection({ skillExecutions }: SkillHistorySectionProps): React.ReactElement | null {
   const sorted = useMemo(
     () => [...skillExecutions].sort((a, b) => b.startedAt - a.startedAt),
     [skillExecutions],

@@ -8,7 +8,7 @@ import type { DiffLine } from './useApplyCode';
 
 /* ---------- Icons ---------- */
 
-export function CopyIcon(): React.ReactElement<any> {
+export function CopyIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -26,7 +26,7 @@ export function CopyIcon(): React.ReactElement<any> {
   );
 }
 
-export function CheckIcon(): React.ReactElement<any> {
+export function CheckIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -43,7 +43,7 @@ export function CheckIcon(): React.ReactElement<any> {
   );
 }
 
-export function WrapIcon({ active }: { active: boolean }): React.ReactElement<any> {
+export function WrapIcon({ active }: { active: boolean }): React.ReactElement {
   return (
     <svg
       width="14"
@@ -62,7 +62,7 @@ export function WrapIcon({ active }: { active: boolean }): React.ReactElement<an
   );
 }
 
-export function OpenFileIcon(): React.ReactElement<any> {
+export function OpenFileIcon(): React.ReactElement {
   return (
     <svg
       width="14"
@@ -83,7 +83,7 @@ export function OpenFileIcon(): React.ReactElement<any> {
 
 /* ---------- ApplyDiffPreview ---------- */
 
-function DiffLineList({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement<any> {
+function DiffLineList({ diffLines }: { diffLines: DiffLine[] }): React.ReactElement {
   return (
     <div
       className="overflow-auto"
@@ -130,7 +130,7 @@ export function ApplyDiffPreview({
   diffLines: DiffLine[];
   onAccept: () => void;
   onReject: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="border-t border-border-semantic">
       <DiffLineList diffLines={diffLines} />
@@ -156,7 +156,7 @@ export function ApplyDiffPreview({
 
 /* ---------- FilePathBreadcrumb ---------- */
 
-export function FilePathBreadcrumb({ filePath }: { filePath: string }): React.ReactElement<any> {
+export function FilePathBreadcrumb({ filePath }: { filePath: string }): React.ReactElement {
   const parts = filePath.replace(/\\/g, '/').split('/');
   return (
     <span className="ml-1.5 truncate text-[10px] text-text-semantic-muted opacity-70">
@@ -179,7 +179,7 @@ export function CodeHeaderStatus({
   revert: () => Promise<void>;
   status: string;
   errorMessage?: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       {isApplied && (
@@ -214,7 +214,7 @@ export function CodeHeaderToggles({
   setShowLineNumbers: React.Dispatch<React.SetStateAction<boolean>>;
   wordWrap: boolean;
   setWordWrap: React.Dispatch<React.SetStateAction<boolean>>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <button
@@ -264,7 +264,7 @@ function ApplyButton({
 }: {
   show: boolean;
   apply: () => Promise<void>;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!show) return null;
   return (
     <button
@@ -278,7 +278,7 @@ function ApplyButton({
   );
 }
 
-export function CodeHeaderActions(p: CodeHeaderActionsProps): React.ReactElement<any> {
+export function CodeHeaderActions(p: CodeHeaderActionsProps): React.ReactElement {
   const showApplyButton = p.showApply && !!p.filePath && !p.isApplied && p.status === 'idle';
   return (
     <>

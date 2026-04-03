@@ -60,7 +60,7 @@ export function getStatusDisplay(status: string): StatusDisplay {
   }
 }
 
-function SpinnerSvg({ color }: { color: string }): React.ReactElement<any> {
+function SpinnerSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg
       className="h-3 w-3 animate-spin shrink-0"
@@ -82,7 +82,7 @@ function SpinnerSvg({ color }: { color: string }): React.ReactElement<any> {
   );
 }
 
-function CheckSvg({ color }: { color: string }): React.ReactElement<any> {
+function CheckSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
       <path
@@ -96,7 +96,7 @@ function CheckSvg({ color }: { color: string }): React.ReactElement<any> {
   );
 }
 
-function WarningSvg({ color }: { color: string }): React.ReactElement<any> {
+function WarningSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
       <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
@@ -105,7 +105,7 @@ function WarningSvg({ color }: { color: string }): React.ReactElement<any> {
   );
 }
 
-function ErrorSvg({ color }: { color: string }): React.ReactElement<any> {
+function ErrorSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg className="h-3 w-3 shrink-0" viewBox="0 0 16 16" fill="none" style={{ color }}>
       <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
@@ -119,7 +119,7 @@ function ErrorSvg({ color }: { color: string }): React.ReactElement<any> {
   );
 }
 
-export function StatusIcon({ display }: { display: StatusDisplay }): React.ReactElement<any> {
+export function StatusIcon({ display }: { display: StatusDisplay }): React.ReactElement {
   if (display.icon === 'spinner') return <SpinnerSvg color={display.color} />;
   if (display.icon === 'check') return <CheckSvg color={display.color} />;
   if (display.icon === 'warning') return <WarningSvg color={display.color} />;
@@ -151,7 +151,7 @@ export const SECTION_LABELS: Record<'active' | 'recent' | 'older', string> = {
 
 /* ---------- Icons ---------- */
 
-export function BranchIcon(): React.ReactElement<any> {
+export function BranchIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -179,7 +179,7 @@ type ThreadItemBodyProps = {
   display: StatusDisplay;
 };
 
-function ThreadItemBody({ thread, isActive, display }: ThreadItemBodyProps): React.ReactElement<any> {
+function ThreadItemBody({ thread, isActive, display }: ThreadItemBodyProps): React.ReactElement {
   const msgCount = thread.messages?.length ?? 0;
   return (
     <div className="min-w-0 flex-1">
@@ -215,7 +215,7 @@ function ThreadItemBody({ thread, isActive, display }: ThreadItemBodyProps): Rea
   );
 }
 
-function ThreadDeleteButton({ onDelete }: { onDelete: () => void }): React.ReactElement<any> {
+function ThreadDeleteButton({ onDelete }: { onDelete: () => void }): React.ReactElement {
   return (
     <button
       onClick={(e) => {
@@ -250,7 +250,7 @@ export function ThreadItem({
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const display = getStatusDisplay(thread.status);
   return (
     <div
@@ -286,7 +286,7 @@ export function ThreadSectionView({
   activeThreadId: string | null;
   onSelect: (threadId: string) => void;
   onDelete: (threadId: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (items.length === 0) return null;
   return (
     <div>

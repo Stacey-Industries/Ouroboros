@@ -60,7 +60,7 @@ const SPECIAL_VIEW_META: Record<SpecialViewType, { label: string; icon: string }
 
 function SpecialViewTab({ specialView, isActive, onClick, onClose }: {
   specialView: SpecialViewType; isActive: boolean; onClick: () => void; onClose?: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const meta = SPECIAL_VIEW_META[specialView];
   if (!meta) return <></>;
   return (
@@ -82,7 +82,7 @@ function SpecialViewTab({ specialView, isActive, onClick, onClose }: {
 
 // ── SplitEditorButton ─────────────────────────────────────────────────────────
 
-function SplitColumnsIcon(): React.ReactElement<any> {
+function SplitColumnsIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <rect x="1" y="2" width="14" height="12" rx="1" stroke="currentColor" strokeWidth="1.2" />
@@ -93,7 +93,7 @@ function SplitColumnsIcon(): React.ReactElement<any> {
 
 function SplitEditorButton({ isSplit, onSplit, onCloseSplit }: {
   isSplit: boolean; onSplit: () => void; onCloseSplit: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
   const accentColor = 'var(--interactive-accent)';
   const faintColor = 'var(--text-faint, var(--text-secondary))';
@@ -115,7 +115,7 @@ function SplitEditorButton({ isSplit, onSplit, onCloseSplit }: {
 
 // ── EditorTabBar ──────────────────────────────────────────────────────────────
 
-export function EditorTabBar({ openSpecialViews, activeSpecialView, onSpecialViewClick, onSpecialViewClose }: EditorTabBarProps): React.ReactElement<any> {
+export function EditorTabBar({ openSpecialViews, activeSpecialView, onSpecialViewClick, onSpecialViewClose }: EditorTabBarProps): React.ReactElement {
   const {
     openFiles, activeIndex, setActive, closeFile,
     pinTab, unpinTab, togglePin, closeOthers, closeToRight, closeAll,

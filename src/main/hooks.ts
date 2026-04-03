@@ -8,26 +8,26 @@ import {
   respondToApproval,
   toolRequiresApproval,
 } from './approvalManager';
-import { generateClaudeMd } from './claudeMdGenerator';
-import { getGraphController } from './codebaseGraph/graphController';
-import { getConfigValue } from './config';
-import { getContextLayerController } from './contextLayer/contextLayerController';
-import { dispatchActivationEvent } from './extensions';
+import {
+  enrichFromPermissionRequest,
+  handleConfigChange,
+  handleCwdChanged,
+  handleFileChanged,
+  type HookEventType,
+} from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
-import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat';
+import {
+  handleSessionEnd,
+  handleSessionStart,
+  handleSessionStop,
+} from './hooksSessionHandlers';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
-export type HookEventType =
-  | 'pre_tool_use'
-  | 'post_tool_use'
-  | 'agent_start'
-  | 'agent_stop'
-  | 'agent_end'
-  | 'session_start'
-  | 'session_stop'
-  | 'instructions_loaded';
+// HookEventType is defined in hooksLifecycleHandlers.ts to avoid a circular
+// dependency. Re-export it here so callers that import from hooks.ts still work.
+export type { HookEventType } from './hooksLifecycleHandlers';
 
 export interface HookPayload {
   type: HookEventType;
@@ -56,6 +56,8 @@ export interface HookPayload {
   cwd?: string;
   /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
   internal?: boolean;
+  /** Catch-all for event-specific data forwarded from Claude Code stdin JSON. */
+  data?: Record<string, unknown>;
 }
 
 export interface AgentEvent {
@@ -118,7 +120,11 @@ function trackSessionLifecycle(payload: HookPayload): void {
     trackSessionStart(payload);
     return;
   }
-  if (payload.type === 'session_stop' || payload.type === 'agent_end') {
+  if (
+    payload.type === 'session_stop' ||
+    payload.type === 'session_end' ||
+    payload.type === 'agent_end'
+  ) {
     activeSessions.delete(payload.sessionId);
     // cwd cleanup is deferred — triggerClaudeMdGeneration reads it before we delete
     return;
@@ -130,22 +136,16 @@ function trackSessionLifecycle(payload: HookPayload): void {
 }
 
 function inferSessionId(payload: HookPayload): HookPayload {
-  // Only infer for tool events
   if (payload.type !== 'pre_tool_use' && payload.type !== 'post_tool_use') {
     return payload;
   }
 
-  // If the session ID is already tracked (registered via session_start or
-  // agent_start), keep it — the event belongs to a known session.
   const isTracked =
     payload.sessionId &&
     payload.sessionId !== 'unknown' &&
     activeSessions.has(payload.sessionId);
   if (isTracked) return payload;
 
-  // Session ID is unknown or untracked (e.g. chat-spawned Claude Code uses a
-  // different session ID domain than the synthetic agent_start). Map the tool
-  // event to the most recently active tracked session.
   let bestId: string | null = null;
   let bestTime = -1;
   for (const [id, lastSeen] of activeSessions) {
@@ -176,97 +176,44 @@ function queuePendingPayload(payload: HookPayload): void {
 
 function getDispatchWindows(): BrowserWindow[] {
   const activeWindows = getAllActiveWindows().filter((window) => !window.isDestroyed());
-  if (activeWindows.length > 0) {
-    return activeWindows;
-  }
+  if (activeWindows.length > 0) return activeWindows;
   return isRenderableWindow(mainWindow) ? [mainWindow] : [];
 }
 
 function sendPayload(windows: BrowserWindow[], payload: HookPayload): void {
   for (const window of windows) {
-    window.webContents.send('hooks:event', payload);
+    try {
+      // Use mainFrame.send directly — webContents.send wraps this in its own
+      // try-catch that console.errors before re-throwing, producing noisy logs
+      // when the render frame is disposed during navigation/reload.
+      window.webContents.mainFrame.send('hooks:event', payload);
+    } catch {
+      // Render frame disposed — silently skip this window
+    }
   }
   broadcastToWebClients('hooks:event', payload);
 }
 
 function flushPendingQueue(windows: BrowserWindow[]): void {
-  if (pendingQueue.length === 0) {
-    return;
-  }
-
+  if (pendingQueue.length === 0) return;
   const flushing = pendingQueue.splice(0);
   for (const payload of flushing) {
     sendPayload(windows, payload);
   }
 }
 
-function triggerClaudeMdGeneration(
-  trigger: 'post-session' | 'post-commit',
-  payload: HookPayload,
-): void {
-  try {
-    const settings = getConfigValue('claudeMdSettings');
-    if (!settings?.enabled || settings.triggerMode !== trigger) return;
-
-    // Determine project root from (in priority order):
-    // 1. The cwd field on the hook payload (set by updated hook scripts)
-    // 2. The session→cwd registry (populated on session_start/agent_start)
-    // 3. Skip generation — we don't know which project this session was in
-    const projectRoot = payload.cwd ?? sessionCwdMap.get(payload.sessionId) ?? null;
-
-    // Clean up the registry entry now that the session is done
-    sessionCwdMap.delete(payload.sessionId);
-
-    if (!projectRoot) {
-      log.info(
-        `Skipping auto-generation — cannot determine project root for session ${payload.sessionId}`,
-      );
-      return;
-    }
-
-    log.info(`Auto-generating for ${projectRoot} (session ${payload.sessionId})`);
-
-    generateClaudeMd(projectRoot).catch((err: unknown) => {
-      log.error('Auto-generation failed:', err);
-    });
-  } catch {
-    // Config not available yet — ignore
-  }
-}
-
-function handleSessionStart(payload: HookPayload): void {
-  dispatchActivationEvent('onSessionStart', { sessionId: payload.sessionId }).catch(() => {});
-  // Internal sessions (Haiku summarizer, CLAUDE.md generator) should not
-  // trigger re-indexing — they never change the codebase.
-  if (!payload.internal) {
-    getContextLayerController()?.onSessionStart();
-    getGraphController()?.onSessionStart();
-  }
-}
-
-function handleSessionEnd(payload: HookPayload): void {
-  dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {});
-}
-
-function handleSessionStop(payload: HookPayload): void {
-  // Only treat a session_stop as a potential git commit when it came from a
-  // real user PTY session.  Internal sessions (Haiku summarizer, CLAUDE.md
-  // generator) never commit files and must not mark modules dirty — doing so
-  // caused a feedback loop where each summarizer completion re-dirtied every
-  // module, triggering another round of summarization.
-  if (!payload.internal) {
-    getContextLayerController()?.onGitCommit();
-    getGraphController()?.onGitCommit();
-    invalidateAgentChatCache();
-    triggerClaudeMdGeneration('post-session', payload);
-  }
+function dispatchNewEventType(payload: HookPayload): boolean {
+  if (payload.type === 'session_end') { handleSessionEnd(payload); return true; }
+  if (payload.type === 'cwd_changed') { handleCwdChanged(sessionCwdMap, payload); return true; }
+  if (payload.type === 'file_changed') { handleFileChanged(payload); return true; }
+  if (payload.type === 'config_change') { handleConfigChange(payload.sessionId); return true; }
+  if (payload.type === 'permission_request') { enrichFromPermissionRequest(payload); return true; }
+  return false;
 }
 
 function dispatchLifecycleEvent(payload: HookPayload): void {
-  if (payload.type === 'session_start') {
-    handleSessionStart(payload);
-    return;
-  }
+  if (payload.type === 'session_start') { handleSessionStart(payload); return; }
+  if (dispatchNewEventType(payload)) return;
 
   const isEndEvent =
     payload.type === 'session_stop' ||
@@ -274,15 +221,12 @@ function dispatchLifecycleEvent(payload: HookPayload): void {
     payload.type === 'agent_end';
 
   if (isEndEvent) handleSessionEnd(payload);
-  if (payload.type === 'session_stop') handleSessionStop(payload);
+  if (payload.type === 'session_stop') handleSessionStop(payload, sessionCwdMap);
 }
 
 function handleApprovalRequest(payload: HookPayload): void {
-  if (payload.type !== 'pre_tool_use' || !payload.toolName || !payload.requestId) {
-    return;
-  }
+  if (payload.type !== 'pre_tool_use' || !payload.toolName || !payload.requestId) return;
 
-  // Internal sessions (Haiku summarizer, CLAUDE.md generator) auto-approve
   if (payload.internal || !toolRequiresApproval(payload.toolName, payload.sessionId)) {
     void respondToApproval(payload.requestId, { decision: 'approve' });
     return;
@@ -304,30 +248,20 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 }
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
-  // While a chat session is launching or streaming, suppress ALL Claude Code
-  // hook events from reaching the renderer. The chat bridge's synthetic events
-  // are the sole source for the agent monitor during chat sessions. Approval
-  // handling still runs so pre_tool_use response-file polling works.
   if (chatLaunchesInFlight > 0 || syntheticSessionIds.size > 0) {
     log.info(`suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`);
     handleApprovalRequest(rawPayload);
     return;
   }
 
-  // Track sessions from lifecycle events, then infer session for tool events
   trackSessionLifecycle(rawPayload);
   const payload = inferSessionId(rawPayload);
 
   const windows = getDispatchWindows();
-  if (windows.length === 0) {
-    queuePendingPayload(payload);
-    return;
-  }
+  if (windows.length === 0) { queuePendingPayload(payload); return; }
 
   flushPendingQueue(windows);
-  log.info(
-    `dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
-  );
+  log.info(`dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
@@ -347,22 +281,14 @@ export function stopHooksServer(): Promise<void> {
 export function dispatchSyntheticHookEvent(payload: HookPayload): void {
   trackSessionLifecycle(payload);
 
-  // Track synthetic session lifecycle so dispatchToRenderer can suppress
-  // competing lifecycle events from Claude Code hook scripts.
   if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
   if (payload.type === 'agent_end') {
-    // Delay removal to suppress trailing hook events from the Claude Code
-    // process that arrive after stream-json completion but before the process
-    // fully exits (session_stop, agent_end hooks fire asynchronously).
     const id = payload.sessionId;
     setTimeout(() => syntheticSessionIds.delete(id), 10_000);
   }
 
   const windows = getDispatchWindows();
-  if (windows.length === 0) {
-    queuePendingPayload(payload);
-    return;
-  }
+  if (windows.length === 0) { queuePendingPayload(payload); return; }
 
   flushPendingQueue(windows);
   sendPayload(windows, payload);

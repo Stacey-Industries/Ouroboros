@@ -14,7 +14,7 @@ interface ControlsPanelState {
   handleCreateSnapshot: () => Promise<void>;
 }
 
-function TimeTravelClockIcon(): React.ReactElement<any> {
+function TimeTravelClockIcon(): React.JSX.Element {
   return (
     <svg
       width="16"
@@ -34,7 +34,7 @@ function TimeTravelClockIcon(): React.ReactElement<any> {
   );
 }
 
-function TimeTravelCloseButton({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function TimeTravelCloseButton({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <button
       onClick={onClose}
@@ -73,7 +73,7 @@ function TimeTravelHeader({
 }: {
   snapshotCount: number;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div
       className="bg-surface-panel border-b border-border-semantic"
@@ -110,7 +110,7 @@ const TOOLBAR_BTN_BASE: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
 };
 
-function CompareModeButton({ panel }: { panel: ControlsPanelState }): React.ReactElement<any> {
+function CompareModeButton({ panel }: { panel: ControlsPanelState }): React.JSX.Element {
   return (
     <button
       onClick={panel.toggleCompareMode}
@@ -134,7 +134,7 @@ function TimeTravelToolbar({
 }: {
   panel: ControlsPanelState;
   onRefreshSnapshots: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const compareHint = getCompareHint(panel.compareFromId, panel.compareToId);
   return (
     <div
@@ -165,7 +165,7 @@ function TimeTravelToolbar({
   );
 }
 
-function SnapshotLabelInput({ panel }: { panel: ControlsPanelState }): React.ReactElement<any> {
+function SnapshotLabelInput({ panel }: { panel: ControlsPanelState }): React.JSX.Element {
   return (
     <input
       type="text"
@@ -188,7 +188,7 @@ function SnapshotLabelInput({ panel }: { panel: ControlsPanelState }): React.Rea
   );
 }
 
-function CreateSnapshotBar({ panel }: { panel: ControlsPanelState }): React.ReactElement<any> {
+function CreateSnapshotBar({ panel }: { panel: ControlsPanelState }): React.JSX.Element {
   return (
     <div
       className="border-b border-border-semantic"
@@ -224,7 +224,7 @@ function CreateSnapshotBar({ panel }: { panel: ControlsPanelState }): React.Reac
   );
 }
 
-function StatusBanner({ statusMessage }: { statusMessage: string }): React.ReactElement<any> {
+function StatusBanner({ statusMessage }: { statusMessage: string }): React.JSX.Element {
   const isFailure = isFailureStatusMessage(statusMessage);
   return (
     <div
@@ -254,7 +254,7 @@ export function TimeTravelControls({
   onClose: () => void;
   panel: ControlsPanelState;
   onRefreshSnapshots: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <>
       <TimeTravelHeader snapshotCount={snapshotCount} onClose={onClose} />

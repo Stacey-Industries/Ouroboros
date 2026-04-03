@@ -221,7 +221,7 @@ function getDiffVisuals(type: DiffLineType): DiffVisuals {
   };
 }
 
-function DiffStatsHeader({ stats, lineCount }: DiffStatsHeaderProps): React.ReactElement<any> {
+function DiffStatsHeader({ stats, lineCount }: DiffStatsHeaderProps): React.ReactElement {
   if (!stats.hasChanges) {
     return (
       <div className="text-text-semantic-muted" style={DIFF_HEADER_STYLE}>
@@ -239,7 +239,7 @@ function DiffStatsHeader({ stats, lineCount }: DiffStatsHeaderProps): React.Reac
   );
 }
 
-function DiffLinesList({ diffLines, gutterWidths }: DiffLinesListProps): React.ReactElement<any> {
+function DiffLinesList({ diffLines, gutterWidths }: DiffLinesListProps): React.ReactElement {
   return (
     <div style={DIFF_CONTENT_STYLE}>
       <div style={DIFF_LIST_STYLE}>
@@ -260,7 +260,7 @@ function DiffLineNumberCell({
   width,
   value,
   visuals,
-}: DiffLineNumberCellProps): React.ReactElement<any> {
+}: DiffLineNumberCellProps): React.ReactElement {
   return (
     <div
       aria-hidden="true"
@@ -277,7 +277,7 @@ function DiffLineNumberCell({
   );
 }
 
-function DiffMarkerCell({ marker, visuals }: DiffMarkerCellProps): React.ReactElement<any> {
+function DiffMarkerCell({ marker, visuals }: DiffMarkerCellProps): React.ReactElement {
   return (
     <div
       aria-hidden="true"
@@ -292,7 +292,7 @@ function DiffMarkerCell({ marker, visuals }: DiffMarkerCellProps): React.ReactEl
   );
 }
 
-function DiffContentCell({ text }: Pick<DiffLine, 'text'>): React.ReactElement<any> {
+function DiffContentCell({ text }: Pick<DiffLine, 'text'>): React.ReactElement {
   return (
     <pre className="text-text-semantic-primary" style={DIFF_CONTENT_CELL_STYLE}>
       {text}
@@ -304,7 +304,7 @@ const DiffLineRow = memo(function DiffLineRow({
   line,
   oldGutterWidth,
   newGutterWidth,
-}: DiffLineRowProps): React.ReactElement<any> {
+}: DiffLineRowProps): React.ReactElement {
   const visuals = getDiffVisuals(line.type);
   return (
     <div style={{ ...DIFF_ROW_STYLE, backgroundColor: visuals.backgroundColor }}>
@@ -319,7 +319,7 @@ const DiffLineRow = memo(function DiffLineRow({
 export const DiffView = memo(function DiffView({
   originalContent,
   currentContent,
-}: DiffViewProps): React.ReactElement<any> {
+}: DiffViewProps): React.ReactElement {
   const diffLines = useMemo(
     () => computeDiff(originalContent, currentContent),
     [originalContent, currentContent],

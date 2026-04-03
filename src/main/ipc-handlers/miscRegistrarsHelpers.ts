@@ -92,7 +92,11 @@ function registerWindowFrameControls(channels: ChannelList): void {
     return ok();
   });
   registerChannel(channels, 'window:toggle-devtools', async (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools();
+    const wc = BrowserWindow.fromWebContents(event.sender)?.webContents;
+    if (wc) {
+      if (wc.isDevToolsOpened()) wc.closeDevTools();
+      else wc.openDevTools({ mode: 'detach' });
+    }
     return ok();
   });
 }

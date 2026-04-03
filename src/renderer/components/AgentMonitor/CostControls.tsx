@@ -24,7 +24,7 @@ export const Controls = memo(function Controls({
   onRangeChange,
   onClearHistory,
   entryCount,
-}: ControlsProps): React.ReactElement<any> {
+}: ControlsProps): React.ReactElement<unknown> {
   const [confirmClear, setConfirmClear] = useState(false);
 
   const handleClear = useCallback(() => {
@@ -61,7 +61,7 @@ function RangeSelector({
 }: {
   range: DateRange;
   onRangeChange: (r: DateRange) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div className="flex items-center gap-1">
       {RANGES.map((r) => (
@@ -94,7 +94,7 @@ function ClearButton({
 }: {
   confirmClear: boolean;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <button
       onClick={onClick}

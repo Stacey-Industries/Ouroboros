@@ -11,6 +11,12 @@ import {
 import type { AgentSession } from '../components/AgentMonitor/types';
 import type { HookPayload } from '../types/electron';
 import {
+  dispatchElicitation,
+  dispatchElicitationResult,
+  dispatchUserPrompt,
+} from './useAgentEvents.conversationDispatchers';
+import { summarizeSubToolInput } from './useAgentEvents.fieldHelpers';
+import {
   type AgentAction,
   dispatchAgentEnd,
   dispatchTokenUpdate,
@@ -32,6 +38,18 @@ import {
   dispatchSkillStart,
 } from './useAgentEvents.ruleSkillDispatchers';
 import { markSessionsAsSaved, shouldPersistSession } from './useAgentEvents.session-utils';
+import {
+  dispatchTaskCompleted,
+  dispatchTaskCreated,
+} from './useAgentEvents.taskDispatchers';
+import {
+  dispatchCompaction,
+  dispatchNotification,
+  dispatchPermissionEvent,
+  dispatchStopFailure,
+  dispatchToolUseFailed,
+  dispatchWorkspaceEvent,
+} from './useAgentEvents.workspaceDispatchers';
 
 export interface UseAgentEventsReturn {
   agents: AgentSession[];
@@ -61,11 +79,7 @@ function persistSessionNotes(
   const session = sessions.find((candidate) => candidate.id === sessionId);
   if (session) {
     window.electronAPI?.sessions
-      ?.save?.({
-        ...session,
-        notes,
-        bookmarked: bookmarked ?? session.bookmarked,
-      })
+      ?.save?.({ ...session, notes, bookmarked: bookmarked ?? session.bookmarked })
       .catch(() => {});
   }
 }
@@ -101,15 +115,7 @@ export function useAgentEvents(): UseAgentEventsReturn {
   const currentSessions = state.sessions.filter((s) => !s.restored);
   const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  return {
-    agents: state.sessions,
-    activeCount,
-    clearCompleted,
-    dismiss,
-    updateNotes,
-    currentSessions,
-    historicalSessions,
-  };
+  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
 }
 
 function usePersistedSessionsLoader(
@@ -118,21 +124,13 @@ function usePersistedSessionsLoader(
 ): void {
   useEffect(() => {
     const loadSessions = window.electronAPI?.sessions?.load;
-    if (!loadSessions) {
-      return;
-    }
-
+    if (!loadSessions) return;
     loadSessions()
       .then((result) => {
-        if (!result.success || !result.sessions) {
-          return;
-        }
-
+        if (!result.success || !result.sessions) return;
         const sessions = parsePersistedSessions(result.sessions);
         markSessionsAsSaved(sessions, savedSessionIdsRef);
-        if (sessions.length > 0) {
-          dispatch({ type: 'LOAD_PERSISTED', sessions });
-        }
+        if (sessions.length > 0) dispatch({ type: 'LOAD_PERSISTED', sessions });
       })
       .catch(() => {});
   }, [dispatch, savedSessionIdsRef]);
@@ -145,15 +143,9 @@ function useCompletedSessionsSaver(
 ): void {
   useEffect(() => {
     const saveSession = window.electronAPI?.sessions?.save;
-    if (!saveSession) {
-      return;
-    }
-
+    if (!saveSession) return;
     for (const session of sessions) {
-      if (!shouldPersistSession(session, liveSessionIdsRef, savedSessionIdsRef)) {
-        continue;
-      }
-
+      if (!shouldPersistSession(session, liveSessionIdsRef, savedSessionIdsRef)) continue;
       savedSessionIdsRef.current.add(session.id);
       saveSession(session).catch(() => {});
     }
@@ -166,14 +158,59 @@ function useAgentEventSubscription(
 ): void {
   useEffect(() => {
     const subscribe = window.electronAPI?.hooks?.onAgentEvent;
-    if (!subscribe) {
-      return;
-    }
-
-    return subscribe((event) => {
-      handleAgentEvent(event, dispatch, liveSessionIdsRef);
-    });
+    if (!subscribe) return;
+    return subscribe((event) => { handleAgentEvent(event, dispatch, liveSessionIdsRef); });
   }, [dispatch, liveSessionIdsRef]);
+}
+
+function dispatchTaskOrConversationEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  switch (payload.type) {
+    case 'task_created': dispatchTaskCreated(payload, dispatch); return true;
+    case 'task_completed': dispatchTaskCompleted(payload, dispatch); return true;
+    case 'user_prompt_submit': dispatchUserPrompt(payload, dispatch); return true;
+    case 'elicitation': dispatchElicitation(payload, dispatch); return true;
+    case 'elicitation_result': dispatchElicitationResult(payload, dispatch); return true;
+    default: return false;
+  }
+}
+
+function dispatchContextEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  switch (payload.type) {
+    case 'pre_compact': case 'post_compact': dispatchCompaction(payload, dispatch); return true;
+    case 'permission_request': case 'permission_denied': dispatchPermissionEvent(payload, dispatch); return true;
+    case 'post_tool_use_failure': dispatchToolUseFailed(payload, dispatch); return true;
+    case 'notification': dispatchNotification(payload, dispatch); return true;
+    default: return false;
+  }
+}
+
+function dispatchSessionLifecycleEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  switch (payload.type) {
+    case 'stop_failure': dispatchStopFailure(payload, dispatch); return true;
+    case 'session_end': dispatchAgentEnd(payload, dispatch); return true;
+    case 'setup': log.info('[hook] setup event received, sessionId:', payload.sessionId); return true;
+    case 'teammate_idle': log.info('[hook] teammate_idle event, sessionId:', payload.sessionId); return true;
+    default: return false;
+  }
+}
+
+function dispatchContextOrPermissionEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  return dispatchContextEvent(payload, dispatch) || dispatchSessionLifecycleEvent(payload, dispatch);
+}
+
+function dispatchFileSystemEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  switch (payload.type) {
+    case 'cwd_changed': case 'file_changed': case 'worktree_create':
+    case 'worktree_remove': case 'config_change':
+      dispatchWorkspaceEvent(payload, dispatch); return true;
+    default: return false;
+  }
+}
+
+function dispatchNewEventTypes(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
+  return dispatchTaskOrConversationEvent(payload, dispatch)
+    || dispatchContextOrPermissionEvent(payload, dispatch)
+    || dispatchFileSystemEvent(payload, dispatch);
 }
 
 function handleAgentEvent(
@@ -182,15 +219,9 @@ function handleAgentEvent(
   liveSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
   const payload = toHookPayload(event);
-  if (!payload) {
-    log.warn('toHookPayload returned null for:', JSON.stringify(event));
-    return;
-  }
-
-  if (payload.type === 'instructions_loaded') {
-    dispatchRuleLoaded(payload, dispatch);
-    return;
-  }
+  if (!payload) { log.warn('toHookPayload returned null for:', JSON.stringify(event)); return; }
+  if (payload.type === 'instructions_loaded') { dispatchRuleLoaded(payload, dispatch); return; }
+  if (dispatchNewEventTypes(payload, dispatch)) return;
   dispatchLifecycleEvent(payload, dispatch, liveSessionIdsRef);
   dispatchTokenUpdate(payload, dispatch);
 }
@@ -201,26 +232,17 @@ function dispatchLifecycleEvent(
   liveSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
   switch (payload.type) {
-    case 'session_start':
-    case 'agent_start':
-      dispatchAgentStart(payload, dispatch, liveSessionIdsRef);
-      return;
+    case 'session_start': case 'agent_start':
+      dispatchAgentStart(payload, dispatch, liveSessionIdsRef); return;
     case 'pre_tool_use':
       if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
-      dispatchToolStart(payload, dispatch);
-      return;
+      dispatchToolStart(payload, dispatch); return;
     case 'post_tool_use':
       if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
-      dispatchToolEnd(payload, dispatch);
-      return;
-    case 'agent_end':
-    case 'agent_stop':
-    case 'session_stop':
-      dispatchAgentEnd(payload, dispatch);
-      dispatchSkillEnd(payload, dispatch);
-      return;
-    default:
-      return;
+      dispatchToolEnd(payload, dispatch); return;
+    case 'agent_end': case 'agent_stop': case 'session_stop':
+      dispatchAgentEnd(payload, dispatch); dispatchSkillEnd(payload, dispatch); return;
+    default: return;
   }
 }
 
@@ -244,26 +266,13 @@ function dispatchAgentStart(
 
 function dispatchToolStart(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
   const toolCall = createToolCall(payload);
-  if (!toolCall) {
-    return;
-  }
-
+  if (!toolCall) return;
   dispatch({ type: 'TOOL_START', sessionId: payload.sessionId, toolCall });
   const childSessionId = getSubagentChildId(toolCall.toolName, payload.input ?? {});
   if (childSessionId) {
-    dispatch({
-      type: 'LINK_SUBAGENT',
-      parentSessionId: payload.sessionId,
-      childSessionId,
-    });
+    dispatch({ type: 'LINK_SUBAGENT', parentSessionId: payload.sessionId, childSessionId });
   } else if (isSubagentTool(toolCall.toolName)) {
-    // No explicit child ID yet — record a temporal stamp so that if a new
-    // agent_start arrives shortly after, we can auto-link it as a child.
-    dispatch({
-      type: 'RECORD_SUBAGENT_TOOL',
-      parentSessionId: payload.sessionId,
-      timestamp: payload.timestamp,
-    });
+    dispatch({ type: 'RECORD_SUBAGENT_TOOL', parentSessionId: payload.sessionId, timestamp: payload.timestamp });
   }
 }
 
@@ -284,7 +293,7 @@ function dispatchSubToolUpdate(payload: HookPayload, dispatch: Dispatch<AgentAct
   if (!payload.parentToolCallId || !payload.toolCallId) return;
   const isComplete = payload.type === 'post_tool_use';
   const details = isComplete ? getToolEndDetails(payload) : undefined;
-  const input = summarizeSubToolInput(payload);
+  const input = summarizeSubToolInput(payload.input);
   dispatch({
     type: 'SUBTOOL_UPDATE',
     sessionId: payload.sessionId,
@@ -299,14 +308,3 @@ function dispatchSubToolUpdate(payload: HookPayload, dispatch: Dispatch<AgentAct
     },
   });
 }
-
-function summarizeSubToolInput(payload: HookPayload): string {
-  if (!payload.input) return '';
-  const filePath = payload.input.file_path ?? payload.input.path;
-  if (typeof filePath === 'string') return filePath;
-  const desc = payload.input.description;
-  if (typeof desc === 'string') return desc;
-  return '';
-}
-
-

@@ -10,12 +10,13 @@ import { SettingsSearchInput } from './SettingsSearchInput';
 import { SettingsSearchResults } from './SettingsSearchResults';
 import { SettingsTabBar } from './SettingsTabBar';
 import { SettingsTabContent } from './SettingsTabContent';
-import type { TabId } from './settingsTabs';
+import type { MainTabId, TabId } from './settingsTabs';
 
 type SettingsChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 
 interface SettingsModalPortalProps {
-  activeTab: TabId;
+  activeMainTab: MainTabId;
+  activeSubTab: TabId;
   draft: AppConfig;
   isSaving: boolean;
   isSearching: boolean;
@@ -23,19 +24,20 @@ interface SettingsModalPortalProps {
   onCancel: () => void;
   onChange: SettingsChangeHandler;
   onImport: (imported: AppConfig) => void;
+  onMainTabChange: (tab: MainTabId) => void;
   onPreviewTheme: (themeId: string) => void;
   onResultClick: (entry: SettingsEntry) => void;
   onSave: () => void;
+  onSubTabChange: (tab: TabId) => void;
   saveError: string | null;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
   searchResults: SearchMatch[];
-  setActiveTab: (tab: TabId) => void;
   setSearchQuery: (query: string) => void;
 }
 
 interface ModalContentProps {
-  activeTab: TabId;
+  activeSubTab: TabId;
   draft: AppConfig;
   isSearching: boolean;
   onChange: SettingsChangeHandler;
@@ -46,7 +48,7 @@ interface ModalContentProps {
   searchResults: SearchMatch[];
 }
 
-function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <button
       onClick={onClose}
@@ -71,7 +73,7 @@ function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement<a
   );
 }
 
-function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function ModalHeader({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <div
       style={{
@@ -98,7 +100,7 @@ function SearchResultsPanel({
   onResultClick,
   searchQuery,
   searchResults,
-}: Pick<ModalContentProps, 'onResultClick' | 'searchQuery' | 'searchResults'>): React.ReactElement<any> {
+}: Pick<ModalContentProps, 'onResultClick' | 'searchQuery' | 'searchResults'>): React.ReactElement {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
       <SettingsSearchResults
@@ -111,19 +113,19 @@ function SearchResultsPanel({
 }
 
 function TabContentPanel({
-  activeTab,
+  activeSubTab,
   draft,
   onChange,
   onImport,
   onPreviewTheme,
 }: Pick<
   ModalContentProps,
-  'activeTab' | 'draft' | 'onChange' | 'onImport' | 'onPreviewTheme'
->): React.ReactElement<any> {
+  'activeSubTab' | 'draft' | 'onChange' | 'onImport' | 'onPreviewTheme'
+>): React.ReactElement {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px' }}>
       <SettingsTabContent
-        activeTab={activeTab}
+        activeTab={activeSubTab}
         draft={draft}
         onChange={onChange}
         onImport={onImport}
@@ -133,7 +135,7 @@ function TabContentPanel({
   );
 }
 
-function ModalContent(props: ModalContentProps): React.ReactElement<any> {
+function ModalContent(props: ModalContentProps): React.ReactElement {
   return props.isSearching ? (
     <SearchResultsPanel
       onResultClick={props.onResultClick}
@@ -142,7 +144,7 @@ function ModalContent(props: ModalContentProps): React.ReactElement<any> {
     />
   ) : (
     <TabContentPanel
-      activeTab={props.activeTab}
+      activeSubTab={props.activeSubTab}
       draft={props.draft}
       onChange={props.onChange}
       onImport={props.onImport}
@@ -159,7 +161,7 @@ function FooterButtons({
   isSaving: boolean;
   onCancel: () => void;
   onSave: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <button
@@ -187,7 +189,7 @@ function ModalFooter({
   onCancel: () => void;
   onSave: () => void;
   saveError: string | null;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       style={{
@@ -212,16 +214,18 @@ function ModalFooter({
 }
 
 function ModalSearchAndNav({
-  activeTab,
+  activeMainTab,
+  activeSubTab,
   isSearching,
+  onMainTabChange,
+  onSubTabChange,
   searchInputRef,
   searchQuery,
-  setActiveTab,
   setSearchQuery,
 }: Pick<
   SettingsModalPortalProps,
-  'activeTab' | 'isSearching' | 'searchInputRef' | 'searchQuery' | 'setActiveTab' | 'setSearchQuery'
->): React.ReactElement<any> {
+  'activeMainTab' | 'activeSubTab' | 'isSearching' | 'onMainTabChange' | 'onSubTabChange' | 'searchInputRef' | 'searchQuery' | 'setSearchQuery'
+>): React.ReactElement {
   return (
     <>
       <SettingsSearchInput
@@ -229,24 +233,33 @@ function ModalSearchAndNav({
         value={searchQuery}
         onChange={setSearchQuery}
       />
-      {!isSearching && <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />}
+      {!isSearching && (
+        <SettingsTabBar
+          activeMainTab={activeMainTab}
+          activeSubTab={activeSubTab}
+          onMainTabChange={onMainTabChange}
+          onSubTabChange={onSubTabChange}
+        />
+      )}
     </>
   );
 }
 
-function ModalBody(props: SettingsModalPortalProps): React.ReactElement<any> {
+function ModalBody(props: SettingsModalPortalProps): React.ReactElement {
   return (
     <>
       <ModalSearchAndNav
-        activeTab={props.activeTab}
+        activeMainTab={props.activeMainTab}
+        activeSubTab={props.activeSubTab}
         isSearching={props.isSearching}
+        onMainTabChange={props.onMainTabChange}
+        onSubTabChange={props.onSubTabChange}
         searchInputRef={props.searchInputRef}
         searchQuery={props.searchQuery}
-        setActiveTab={props.setActiveTab}
         setSearchQuery={props.setSearchQuery}
       />
       <ModalContent
-        activeTab={props.activeTab}
+        activeSubTab={props.activeSubTab}
         draft={props.draft}
         isSearching={props.isSearching}
         onChange={props.onChange}
@@ -260,7 +273,7 @@ function ModalBody(props: SettingsModalPortalProps): React.ReactElement<any> {
   );
 }
 
-function ModalMain(props: SettingsModalPortalProps): React.ReactElement<any> {
+function ModalMain(props: SettingsModalPortalProps): React.ReactElement {
   return (
     <>
       <ModalHeader onClose={props.onCancel} />
@@ -275,7 +288,7 @@ function ModalMain(props: SettingsModalPortalProps): React.ReactElement<any> {
   );
 }
 
-export function SettingsModalPortal(props: SettingsModalPortalProps): React.ReactElement<any> {
+export function SettingsModalPortal(props: SettingsModalPortalProps): React.ReactElement {
   return createPortal(
     <>
       <style>{KEYFRAMES}</style>

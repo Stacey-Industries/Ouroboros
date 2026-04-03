@@ -6,6 +6,7 @@ import { AgentChatThinkingBlock } from './AgentChatThinkingBlock';
 import { AgentChatToolCard } from './AgentChatToolCard';
 import { AgentChatToolGroup } from './AgentChatToolGroup';
 import { ChatCodeBlock } from './ChatCodeBlock';
+import { DiffBlockRenderer } from './DiffBlockRenderer';
 import { MessageMarkdown } from './MessageMarkdown';
 
 export interface AgentChatBlockRendererProps {
@@ -34,7 +35,7 @@ function CodeBlockRenderer({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'code' };
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <ChatCodeBlock
       code={block.content}
@@ -51,7 +52,7 @@ function ErrorBlockRenderer({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'error' };
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="my-1.5 rounded-md border px-3 py-2 text-xs text-status-error"
@@ -85,60 +86,12 @@ function ErrorBlockRenderer({
   );
 }
 
-/* ---------- Diff block (placeholder — Phase 2 will enhance) ---------- */
-
-function getDiffStatusStyle(status: string): React.CSSProperties {
-  if (status === 'accepted')
-    return { backgroundColor: 'rgba(63, 185, 80, 0.15)', color: 'var(--status-success)' };
-  if (status === 'rejected')
-    return { backgroundColor: 'rgba(248, 81, 73, 0.15)', color: 'var(--status-error)' };
-  return { backgroundColor: 'var(--surface-base)', color: 'var(--text-muted)' };
-}
-
-function DiffBlockRenderer({
-  block,
-}: {
-  block: AgentChatContentBlock & { kind: 'diff' };
-}): React.ReactElement<any> {
-  return (
-    <div className="my-1.5 rounded-md border border-border-semantic bg-surface-raised px-3 py-2 text-xs">
-      <div className="flex items-center gap-1.5 text-text-semantic-muted">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 3v18M3 12h18" />
-        </svg>
-        <span className="font-medium text-text-semantic-primary">{block.filePath}</span>
-        <span
-          className="ml-auto rounded-full px-1.5 py-0.5 text-[10px]"
-          style={getDiffStatusStyle(block.status)}
-        >
-          {block.status}
-        </span>
-      </div>
-      <pre
-        className="mt-1.5 overflow-x-auto whitespace-pre-wrap text-[11px] text-text-semantic-muted"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {block.hunks}
-      </pre>
-    </div>
-  );
-}
-
 /* ---------- Plan block (Phase 3 — interactive checklist) ---------- */
 /* Uses the standalone AgentChatPlanBlock component */
 
 /* ---------- Unknown block (debug fallback) ---------- */
 
-function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): React.ReactElement<any> {
+function UnknownBlockRenderer({ block }: { block: AgentChatContentBlock }): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -190,7 +143,7 @@ function ToolUseBlock({
   block: AgentChatContentBlock & { kind: 'tool_use' };
   index: number;
   allBlocks?: AgentChatContentBlock[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (allBlocks) {
     const run = collectToolRun(allBlocks, index);
     if (run.length >= 2) {
@@ -221,7 +174,7 @@ function ThinkingBlock({
   block: AgentChatContentBlock & { kind: 'thinking' };
   isStreaming: boolean;
   isLastBlock: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [thinkingCollapsed, setThinkingCollapsed] = useState(!isStreaming);
   return (
     <AgentChatThinkingBlock
@@ -246,7 +199,7 @@ function ToolResultBlock({
   block,
 }: {
   block: AgentChatContentBlock & { kind: 'tool_result' };
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="my-1 px-2.5 py-1 text-xs text-text-semantic-muted"
@@ -263,7 +216,7 @@ function dispatchBlockByKind({
   isStreaming,
   isLastBlock,
   allBlocks,
-}: DispatchBlockArgs): React.ReactElement<any> {
+}: DispatchBlockArgs): React.ReactElement {
   switch (block.kind) {
     case 'text':
       return <MessageMarkdown content={block.content} />;
@@ -309,7 +262,7 @@ export const AgentChatBlockRenderer = React.memo(function AgentChatBlockRenderer
   isLastBlock,
   allBlocks,
   skipRender,
-}: AgentChatBlockRendererProps): React.ReactElement<any> {
+}: AgentChatBlockRendererProps): React.ReactElement {
   if (skipRender) {
     return <></>;
   }

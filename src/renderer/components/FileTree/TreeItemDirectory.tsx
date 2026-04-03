@@ -33,7 +33,7 @@ function DirectoryName({
 }: Pick<
   TreeItemDirectoryProps,
   'node' | 'isEditing' | 'editValue' | 'onEditConfirm' | 'onEditCancel' | 'statusColor'
->): React.ReactElement<any> {
+>): React.ReactElement {
   if (isEditing && onEditConfirm && onEditCancel) {
     return (
       <InlineEditInput
@@ -66,7 +66,7 @@ function DirectoryMeta({
     | 'diagnosticSeverity'
   >,
   'node'
->): React.ReactElement<any> {
+>): React.ReactElement {
   return (
     <>
       {diagnosticSeverity && <DirDiagnosticIndicator severity={diagnosticSeverity} />}
@@ -89,7 +89,7 @@ export function TreeItemDirectory({
   heatDot,
   heatLevel,
   diagnosticSeverity,
-}: TreeItemDirectoryProps): React.ReactElement<any> {
+}: TreeItemDirectoryProps): React.ReactElement {
   return (
     <>
       <Chevron expanded={!!node.isExpanded} />
@@ -117,7 +117,7 @@ export function TreeItemDirectory({
   );
 }
 
-function Chevron({ expanded }: { expanded: boolean }): React.ReactElement<any> {
+function Chevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       width="16"
@@ -148,7 +148,7 @@ function DirLabel({
 }: {
   name: string;
   statusColor?: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       className="text-text-semantic-primary"
@@ -169,7 +169,7 @@ function DirLabel({
   );
 }
 
-function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement<any> {
+function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement {
   return (
     <span
       style={{
@@ -187,7 +187,7 @@ function StatusBadge({ label, color }: { label: string; color?: string }): React
   );
 }
 
-function PinDot(): React.ReactElement<any> {
+function PinDot(): React.ReactElement {
   return (
     <span
       title="Pinned"
@@ -199,7 +199,7 @@ function PinDot(): React.ReactElement<any> {
   );
 }
 
-function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement<any> {
+function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement {
   return (
     <span
       style={{
@@ -215,7 +215,7 @@ function HeatDot({ color, glow }: { color: string; glow: boolean }): React.React
   );
 }
 
-function LoadingDots(): React.ReactElement<any> {
+function LoadingDots(): React.ReactElement {
   return (
     <span className="text-text-semantic-faint" style={{ fontSize: '0.6875rem', flexShrink: 0 }}>
       ...
@@ -235,7 +235,7 @@ const DIR_DIAGNOSTIC_CONFIG: Record<
   hint: { color: '#6b7280', shape: 'circle', label: 'Contains hints' },
 };
 
-function DirDiagnosticIndicator({ severity }: { severity: string }): React.ReactElement<any> | null {
+function DirDiagnosticIndicator({ severity }: { severity: string }): React.ReactElement | null {
   const config = DIR_DIAGNOSTIC_CONFIG[severity];
   if (!config) return null;
 

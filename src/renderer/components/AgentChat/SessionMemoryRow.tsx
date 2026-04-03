@@ -21,7 +21,7 @@ function formatRelativeTime(timestamp: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function TypeBadge({ type }: { type: string }): React.ReactElement<any> {
+function TypeBadge({ type }: { type: string }): React.ReactElement {
   const color = TYPE_COLORS[type] ?? 'var(--text-muted)';
   return (
     <span
@@ -38,7 +38,7 @@ function TypeBadge({ type }: { type: string }): React.ReactElement<any> {
   );
 }
 
-function ConfidenceBar({ confidence }: { confidence: number }): React.ReactElement<any> {
+function ConfidenceBar({ confidence }: { confidence: number }): React.ReactElement {
   const percent = Math.round(confidence * 100);
   return (
     <div className="flex items-center gap-1.5" title={`Confidence: ${percent}%`}>
@@ -53,7 +53,7 @@ function ConfidenceBar({ confidence }: { confidence: number }): React.ReactEleme
   );
 }
 
-function EditMemoryIcon(): React.ReactElement<any> {
+function EditMemoryIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -70,7 +70,7 @@ function EditMemoryIcon(): React.ReactElement<any> {
   );
 }
 
-function DeleteMemoryIcon(): React.ReactElement<any> {
+function DeleteMemoryIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -92,7 +92,7 @@ function MemoryActions({
 }: {
   onEdit: () => void;
   onDelete: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <button
@@ -139,7 +139,7 @@ function MemoryEditActions({
 }: {
   onCancel: () => void;
   onSave: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex justify-end gap-1.5">
       <button
@@ -158,7 +158,7 @@ function MemoryEditActions({
   );
 }
 
-function MemoryEditForm(props: MemoryEditFormProps): React.ReactElement<any> {
+function MemoryEditForm(props: MemoryEditFormProps): React.ReactElement {
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
       <textarea
@@ -180,7 +180,7 @@ function MemoryEditForm(props: MemoryEditFormProps): React.ReactElement<any> {
   );
 }
 
-function MemoryViewContent({ entry }: { entry: SessionMemoryEntry }): React.ReactElement<any> {
+function MemoryViewContent({ entry }: { entry: SessionMemoryEntry }): React.ReactElement {
   return (
     <>
       <div className="text-text-semantic-primary" style={{ wordBreak: 'break-word' }}>
@@ -246,7 +246,7 @@ function MemoryRowHeader({
   editing: boolean;
   setEditing: (v: boolean) => void;
   onDelete: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="mb-1 flex items-center gap-2">
       <TypeBadge type={entry.type} />
@@ -265,7 +265,7 @@ function MemoryRowHeader({
 function MemoryRowBody(props: {
   entry: SessionMemoryRowProps;
   state: RowState;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { entry, onDelete } = props.entry;
   const {
     editing,
@@ -303,7 +303,7 @@ function MemoryRowBody(props: {
 
 export const SessionMemoryRow = memo(function SessionMemoryRow(
   props: SessionMemoryRowProps,
-): React.ReactElement<any> {
+): React.ReactElement {
   const state = useMemoryRowState(props.entry, props.onUpdate);
   return <MemoryRowBody entry={props} state={state} />;
 });

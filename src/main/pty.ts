@@ -66,16 +66,24 @@ function handleSessionExit(
   }
 
   cleanupSession(id)
-  if (!win.isDestroyed()) {
-    win.webContents.send(`pty:exit:${id}`, { exitCode, signal })
+  try {
+    if (!win.isDestroyed()) {
+      win.webContents.mainFrame.send(`pty:exit:${id}`, { exitCode, signal })
+    }
+  } catch {
+    // Render frame disposed — safe to ignore
   }
   broadcastToWebClients(`pty:exit:${id}`, { exitCode, signal })
 }
 
 function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow): void {
   proc.onData((data: string) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send(`pty:data:${id}`, data)
+    try {
+      if (!win.isDestroyed()) {
+        win.webContents.mainFrame.send(`pty:data:${id}`, data)
+      }
+    } catch {
+      // Render frame disposed — data still reaches web clients and buffer below
     }
     ptyBatcher.append(id, data)
     terminalOutputBuffer.append(id, data)

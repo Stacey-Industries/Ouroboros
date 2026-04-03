@@ -9,7 +9,7 @@ import type { AgentChatThreadRecord } from '../../types/electron';
 
 // ── ThreadStatusIcon ──────────────────────────────────────────────────────────
 
-function SpinningIcon(): React.ReactElement<any> {
+function SpinningIcon(): React.ReactElement {
   return (
     <svg
       className="h-2.5 w-2.5 animate-spin shrink-0 text-interactive-accent"
@@ -30,7 +30,7 @@ function SpinningIcon(): React.ReactElement<any> {
   );
 }
 
-function CheckmarkIcon(): React.ReactElement<any> {
+function CheckmarkIcon(): React.ReactElement {
   return (
     <svg className="h-2.5 w-2.5 shrink-0 text-status-success" viewBox="0 0 16 16" fill="none">
       <path
@@ -44,7 +44,7 @@ function CheckmarkIcon(): React.ReactElement<any> {
   );
 }
 
-function ErrorXIcon(): React.ReactElement<any> {
+function ErrorXIcon(): React.ReactElement {
   return (
     <svg className="h-2.5 w-2.5 shrink-0 text-status-error" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
@@ -58,7 +58,7 @@ function ErrorXIcon(): React.ReactElement<any> {
   );
 }
 
-export function ThreadStatusIcon({ status }: { status: string }): React.ReactElement<any> {
+export function ThreadStatusIcon({ status }: { status: string }): React.ReactElement {
   if (status === 'running' || status === 'submitting' || status === 'verifying')
     return <SpinningIcon />;
   if (status === 'complete') return <CheckmarkIcon />;
@@ -74,7 +74,7 @@ function TabCloseButton({
   onClick,
 }: {
   onClick: (e: React.MouseEvent) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       role="button"
@@ -125,7 +125,7 @@ function useTabHover(isActive: boolean) {
   };
 }
 
-function ActiveTabIndicator(): React.ReactElement<any> {
+function ActiveTabIndicator(): React.ReactElement {
   return (
     <span className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-interactive-accent" />
   );
@@ -141,7 +141,7 @@ function DraftTab({
   isActive: boolean;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const hoverHandlers = useTabHover(isActive);
   return (
     <button
@@ -173,7 +173,7 @@ function ThreadTab({
   isActive: boolean;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const hoverHandlers = useTabHover(isActive);
   return (
     <button
@@ -217,11 +217,14 @@ function ThreadTabList({
 }: Pick<RecentThreadTabsProps, 'activeThreadId' | 'onSelect' | 'onClose'> & {
   drafts: string[];
   recentThreads: AgentChatThreadRecord[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="flex-shrink-0 flex items-center gap-0.5 px-1 overflow-x-auto border-b bg-surface-panel"
       style={{ borderColor: 'var(--border-subtle, var(--border-default))', scrollbarWidth: 'none' }}
+      onWheel={(e) => {
+        if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+      }}
     >
       {drafts.map((draftId) => (
         <DraftTab
@@ -251,7 +254,7 @@ export function RecentThreadTabs({
   onSelect,
   onClose,
   draftTabs,
-}: RecentThreadTabsProps): React.ReactElement<any> | null {
+}: RecentThreadTabsProps): React.ReactElement | null {
   const recentThreads = sortRecentThreads(threads);
   const drafts = draftTabs ?? [];
   if (recentThreads.length === 0 && drafts.length === 0) return null;

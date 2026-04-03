@@ -13,7 +13,7 @@ export interface LineNumberGutterProps {
 export const LineNumberGutter = memo(function LineNumberGutter({
   rows,
   gutterWidth,
-}: LineNumberGutterProps): React.ReactElement<any> {
+}: LineNumberGutterProps): React.ReactElement {
   return (
     <div
       aria-hidden="true"

@@ -4,22 +4,29 @@ import React, { memo, type MutableRefObject,useEffect, useRef, useState } from '
 import type { DiffLineInfo } from '../../types/electron';
 import { registerMonacoEditor, unregisterMonacoEditor } from './editorRegistry';
 import { saveEditorState } from './editorStateStore';
+import { InlineEditWidget } from './InlineEditWidget';
+import { bindInlineEditAction, useEditorRefs } from './monacoEditorRefs';
+import { useMonacoLspLifecycle } from './monacoLsp';
 import { detectLanguage, initMonaco } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
-import { enableEmacsMode, enableVimMode, type KeybindingMode } from './monacoVimMode';
 import {
   buildDiffDecorations,
   createEditorOptions,
+  enableEmacsMode,
+  enableVimMode,
   filePathToUri,
   getHostViewState,
   getOrCreateModel,
   hasHostSavedVersion,
+  type KeybindingMode,
   scheduleHostViewStateFlush,
   setHostDirtyState,
   setHostSavedVersion,
   useStableCallbackRefs,
 } from './monacoVimMode';
 import { ScrollIndicator } from './ScrollIndicator';
+import { useInlineEdit } from './useInlineEdit';
+import { useMonacoBlame } from './useMonacoBlame';
 
 initMonaco();
 
@@ -30,17 +37,21 @@ const vimStatusStyle: React.CSSProperties = { height: '22px', lineHeight: '22px'
 
 export interface MonacoEditorProps {
   filePath: string; content: string; language?: string; readOnly?: boolean;
+  projectRoot?: string | null;
   onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void; onContentChange?: (content: string) => void;
-  keybindingMode?: KeybindingMode; className?: string; wordWrap?: boolean; showMinimap?: boolean; formatOnSave?: boolean; diffLines?: DiffLineInfo[];
+  keybindingMode?: KeybindingMode; className?: string; wordWrap?: boolean; showMinimap?: boolean; showBlame?: boolean; formatOnSave?: boolean; diffLines?: DiffLineInfo[];
 }
 
 interface RuntimeInput {
   filePath: string; content: string; language: string; readOnly: boolean;
+  projectRoot?: string | null;
   onSave?: (content: string) => void; onDirtyChange?: (dirty: boolean) => void; onContentChange?: (content: string) => void;
-  keybindingMode: KeybindingMode; wordWrap?: boolean; showMinimap?: boolean; formatOnSave: boolean; diffLines: DiffLineInfo[];
+  keybindingMode: KeybindingMode; wordWrap?: boolean; showMinimap?: boolean; showBlame?: boolean; formatOnSave: boolean; diffLines: DiffLineInfo[];
   containerRef: MutableRefObject<HTMLDivElement | null>; editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
   vimStatusRef: MutableRefObject<HTMLDivElement | null>; vimDisposeRef: MutableRefObject<(() => void) | null>; isDirtyRef: MutableRefObject<boolean>;
   contentChangeDisposableRef: MutableRefObject<monaco.IDisposable | null>; saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>;
+  inlineEditDisposableRef: MutableRefObject<monaco.IDisposable | null>;
+  activateInlineEditRef: MutableRefObject<() => void>;
   diffDecorationIdsRef: MutableRefObject<string[]>;
   /** Stable refs that track the latest callback props across re-renders */
   callbackRefs: EditorCallbackRefs & { readOnlyRef: MutableRefObject<boolean>; formatOnSaveRef: MutableRefObject<boolean>; filePathRef: MutableRefObject<string> };
@@ -152,7 +163,7 @@ function bindSearchShortcuts(editor: monaco.editor.IStandaloneCodeEditor): () =>
 }
 
 function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): () => void {
-  const { filePath, content, language, readOnly, wordWrap, showMinimap, containerRef, editorRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef } = input;
+  const { filePath, content, language, readOnly, wordWrap, showMinimap, containerRef, editorRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, inlineEditDisposableRef } = input;
   const model = getOrCreateModel(filePath, content, language);
   if (model.getValue() !== content) model.setValue(content);
   if (!hasHostSavedVersion(model.uri.toString())) setHostSavedVersion(model.uri.toString(), model.getAlternativeVersionId());
@@ -163,6 +174,7 @@ function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch
   if (savedViewState) requestAnimationFrame(() => editor.restoreViewState(savedViewState));
   const refs = input.callbackRefs;
   bindSaveAction(editor, refs, isDirtyRef, saveActionDisposableRef);
+  bindInlineEditAction(editor, input.activateInlineEditRef, inlineEditDisposableRef);
   bindContentChange(model, refs, isDirtyRef, contentChangeDisposableRef);
   const disposeGoto = bindGotoLineHandler(editor, refs.filePathRef);
   const disposeScroll = bindScrollTracking(editor, setScrollMetrics, setIsScrolling, scrollTimerRef);
@@ -181,6 +193,8 @@ function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch
     contentChangeDisposableRef.current = null;
     saveActionDisposableRef.current?.dispose();
     saveActionDisposableRef.current = null;
+    inlineEditDisposableRef.current?.dispose();
+    inlineEditDisposableRef.current = null;
     unregisterMonacoEditor(filePath);
     editor.dispose();
     editorRef.current = null;
@@ -268,40 +282,24 @@ function useMonacoEditorRuntime(input: RuntimeInput): { scrollMetrics: { scrollT
   useMonacoEditorOptions(input);
   useMonacoEditorModes(input);
   useMonacoEditorDiffs(input);
+  useMonacoLspLifecycle(input.editorRef, input.filePath, input.projectRoot, input.content);
+  useMonacoBlame(input.editorRef, input.filePath, input.projectRoot, input.showBlame ?? false);
   return { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling };
 }
 
 export type { MonacoEditorProps as MonacoEditorHostProps };
 
-export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement<any> {
-  const {
-    filePath,
-    content,
-    language: languageOverride,
-    readOnly = false,
-    onSave,
-    onDirtyChange,
-    onContentChange,
-    keybindingMode = 'default',
-    className,
-    wordWrap,
-    showMinimap,
-    formatOnSave = false,
-    diffLines = [],
-  } = props;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const vimStatusRef = useRef<HTMLDivElement>(null);
-  const vimDisposeRef = useRef<(() => void) | null>(null);
-  const isDirtyRef = useRef(false);
-  const contentChangeDisposableRef = useRef<monaco.IDisposable | null>(null);
-  const saveActionDisposableRef = useRef<monaco.IDisposable | null>(null);
-  const diffDecorationIdsRef = useRef<string[]>([]);
+export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement {
+  const { filePath, content, language: languageOverride, readOnly = false, projectRoot, onSave, onDirtyChange, onContentChange, keybindingMode = 'default', className, wordWrap, showMinimap, showBlame, formatOnSave = false, diffLines = [] } = props;
+  const { containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, inlineEditDisposableRef, diffDecorationIdsRef } = useEditorRefs();
   const callbackRefs = useStableCallbackRefs({ onSave, onDirtyChange, onContentChange, readOnly, formatOnSave, filePath });
   useMonacoTheme();
   const language = languageOverride ?? detectLanguage(filePath);
+  const { state: inlineEditState, activate, submit, accept, reject, cancel } = useInlineEdit(editorRef, filePath, language);
+  const activateInlineEditRef = useRef(activate);
+  activateInlineEditRef.current = activate;
   const { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling } = useMonacoEditorRuntime({
-    filePath, content, language, readOnly, onSave, onDirtyChange, onContentChange, keybindingMode, wordWrap, showMinimap, formatOnSave, diffLines, containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, diffDecorationIdsRef, callbackRefs,
+    filePath, content, language, readOnly, projectRoot, onSave, onDirtyChange, onContentChange, keybindingMode, wordWrap, showMinimap, showBlame, formatOnSave, diffLines, containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, inlineEditDisposableRef, activateInlineEditRef, diffDecorationIdsRef, callbackRefs,
   });
   return (
     <div className={className} style={frameStyle}>
@@ -310,6 +308,7 @@ export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps)
         <ScrollIndicator {...scrollMetrics} isHovered={isEditorHovered} isScrolling={isScrolling} />
       </div>
       {keybindingMode === 'vim' && <div ref={vimStatusRef} className="text-text-semantic-muted" style={vimStatusStyle} />}
+      <InlineEditWidget editor={editorRef.current} state={inlineEditState} actions={{ submit, accept, reject, cancel }} />
     </div>
   );
 });

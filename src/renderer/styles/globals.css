@@ -966,6 +966,32 @@
   border-left: 3px solid var(--status-error, #f85149);
 }
 
+/* ─── Inline edit (Ctrl+K) preview decorations ──────────────────────────── */
+.monaco-editor .ouroboros-inline-edit-add {
+  background-color: var(--diff-add-bg, rgba(46, 160, 67, 0.12));
+}
+
+.monaco-editor .ouroboros-inline-edit-del {
+  background-color: var(--diff-del-bg, rgba(248, 81, 73, 0.12));
+}
+
+.monaco-editor .ouroboros-inline-edit-add-gutter {
+  border-left: 3px solid var(--diff-add-border, var(--status-success, #3fb950));
+}
+
+.monaco-editor .ouroboros-inline-edit-del-gutter {
+  border-left: 3px solid var(--diff-del-border, var(--status-error, #f85149));
+}
+
+/* ─── Monaco blame decorations (GitLens-style inline annotations) ────────── */
+.monaco-editor .blame-inline-decoration {
+  color: var(--text-faint, rgba(255, 255, 255, 0.3));
+  font-style: italic;
+  font-size: 0.8em;
+  opacity: 0.6;
+  padding-left: 2em;
+}
+
 /* ─── Glass (always-on) ────────────────────────────────────────────────────── */
 /* The CSS variables --bg, --bg-secondary, --bg-tertiary, --term-bg are forced
    transparent in :root above. This makes ALL elements using them transparent

@@ -220,9 +220,7 @@ export function usePdfViewerState(filePath: string, content?: Uint8Array) {
   const zoom = usePdfZoom();
   const nav = usePdfPageNav(numPages, scrollRef);
   const openExternal = useCallback(() => {
-    window.electronAPI.app.openExternal(
-      `file:///${filePath.replace(/\\/g, '/').replace(/^\//, '')}`,
-    );
+    window.electronAPI.app.openExternal(filePath);
   }, [filePath]);
   usePdfDocument({
     filePath,

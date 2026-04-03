@@ -50,7 +50,7 @@ export function ToggleSection({
   label,
   title,
   onChange,
-}: ToggleSectionProps): React.ReactElement<any> {
+}: ToggleSectionProps): React.ReactElement {
   return (
     <section>
       <div style={claudeSectionToggleRowStyle}>
@@ -73,7 +73,7 @@ export function TextInputSection({
   title,
   value,
   onChange,
-}: TextInputSectionProps): React.ReactElement<any> {
+}: TextInputSectionProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
@@ -100,7 +100,7 @@ export function SelectSection({
   title,
   value,
   onChange,
-}: SelectSectionProps): React.ReactElement<any> {
+}: SelectSectionProps): React.ReactElement {
   return (
     <section>
       <SectionLabel>{title}</SectionLabel>
@@ -125,7 +125,7 @@ export function SwitchControl({
   danger,
   label,
   onChange,
-}: SwitchControlProps): React.ReactElement<any> {
+}: SwitchControlProps): React.ReactElement {
   const activeColor = danger ? '#ef4444' : 'var(--interactive-accent)';
   return (
     <button

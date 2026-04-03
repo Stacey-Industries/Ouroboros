@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { CompactionIndicator } from './CompactionIndicator';
 import { estimateCost, formatCost, formatTokenCount } from './costCalculator';
 import type { AgentSession } from './types';
 
@@ -28,7 +29,7 @@ function buildTokenTitle(session: AgentSession): string {
   return base + cacheRead + cacheWrite;
 }
 
-function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement<any> | null {
+function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactElement<unknown> | null {
   if (session.inputTokens < 1 && session.outputTokens < 1) return null;
   const estimatedCost = estimateCost({
     inputTokens: session.inputTokens,
@@ -64,7 +65,7 @@ function TokenUsageSummary({ session }: { session: AgentSession }): React.ReactE
   );
 }
 
-function SubagentBadge({ count }: { count: number }): React.ReactElement<any> | null {
+function SubagentBadge({ count }: { count: number }): React.ReactElement<unknown> | null {
   if (count < 1) return null;
   return (
     <span
@@ -102,7 +103,7 @@ export function AgentCardMeta({
 }: {
   session: AgentSession;
   childCount?: number;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div className="px-6 pb-1 flex items-center gap-2">
       <span className="text-[10px] font-mono text-text-semantic-faint" title={session.id}>
@@ -127,6 +128,7 @@ export function AgentCardMeta({
         </span>
       )}
       <TokenUsageSummary session={session} />
+      <CompactionIndicator compactions={session.compactions} />
     </div>
   );
 }

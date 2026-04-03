@@ -114,6 +114,8 @@ export interface AgentChatAPI {
   revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>;
   /** Cancel a running task. Routes through the singleton orchestration that owns the process. */
   cancelTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+  /** Cancel by thread ID — works even before taskId is available (pending cancel). */
+  cancelByThreadId: (threadId: string) => Promise<{ success: boolean; error?: string }>;
   /** List all active (non-superseded) memories for a workspace. */
   listMemories: (
     workspaceRoot: string,

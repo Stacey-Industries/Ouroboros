@@ -67,7 +67,7 @@ export function SplitDivider({
 }: {
   onDrag: (deltaX: number) => void;
   onReset: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
   const { isDragging, handlePointerDown } = useSplitDividerDrag(onDrag);
   const lineStyle: React.CSSProperties = {

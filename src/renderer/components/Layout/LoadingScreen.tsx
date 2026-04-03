@@ -6,7 +6,7 @@ import React from 'react';
 
 import ouroborosLogo from '../../../../public/OUROBOROS.png';
 
-export function LoadingScreen(): React.ReactElement<any> {
+export function LoadingScreen(): React.ReactElement {
   return (
     <div
       className="text-text-semantic-muted"

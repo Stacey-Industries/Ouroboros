@@ -83,11 +83,11 @@ function useAgentSummary(sessions: AgentSession[]): AgentSessionSummary {
   }, [sessions]);
 }
 
-function SummarySeparator(): React.ReactElement<any> {
+function SummarySeparator(): React.ReactElement<unknown> {
   return <span className="text-text-semantic-faint">·</span>;
 }
 
-function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement<any> {
+function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.ReactElement<unknown> {
   const items = [
     { count: summary.running, color: 'var(--interactive-accent)', label: 'running' },
     { count: summary.complete, color: 'var(--status-success)', label: 'done' },
@@ -111,7 +111,7 @@ function SummaryCounts({ summary }: { summary: AgentSessionSummary }): React.Rea
   );
 }
 
-function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.ReactElement<any> {
+function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.ReactElement<unknown> {
   return (
     <>
       <SummarySeparator />
@@ -132,7 +132,7 @@ function SummaryTokens({ tokenTotals }: { tokenTotals: TokenTotals }): React.Rea
   );
 }
 
-function ClearCompletedButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
+function ClearCompletedButton({ onClick }: { onClick: () => void }): React.ReactElement<unknown> {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -152,7 +152,7 @@ function ClearCompletedButton({ onClick }: { onClick: () => void }): React.React
   );
 }
 
-function RunningDot(): React.ReactElement<any> {
+function RunningDot(): React.ReactElement<unknown> {
   return (
     <span
       className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -167,7 +167,7 @@ function RunningDot(): React.ReactElement<any> {
 export const AgentSummaryBar = memo(function AgentSummaryBar({
   sessions,
   onClearCompleted,
-}: AgentSummaryBarProps): React.ReactElement<any> {
+}: AgentSummaryBarProps): React.ReactElement<unknown> {
   const summary = useAgentSummary(sessions);
 
   return (

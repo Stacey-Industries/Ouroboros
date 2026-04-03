@@ -50,6 +50,7 @@ export interface ComposerSectionProps {
   threadModelUsage: ModelContextUsage[] | undefined;
   streamingTokenUsage: AgentChatStreamingState['streamingTokenUsage'];
   isStreaming?: boolean;
+  routedBy?: string;
   slashCommandContext?: SlashCommandContext;
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
@@ -59,7 +60,7 @@ function isThreadBusy(status: string | undefined): boolean {
   return status === 'submitting' || status === 'running';
 }
 
-export function ComposerSection(props: ComposerSectionProps): React.ReactElement<any> {
+export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
   return (
     <AgentChatComposer
       canSend={props.canSend}
@@ -92,7 +93,7 @@ export function ComposerSection(props: ComposerSectionProps): React.ReactElement
       codexModels={props.codexModels}
       threadModelUsage={props.threadModelUsage}
       streamingTokenUsage={props.streamingTokenUsage}
-      isStreaming={props.isStreaming}
+      isStreaming={props.isStreaming} routedBy={props.routedBy}
       slashCommandContext={props.slashCommandContext}
       attachments={props.attachments}
       onAttachmentsChange={props.onAttachmentsChange}

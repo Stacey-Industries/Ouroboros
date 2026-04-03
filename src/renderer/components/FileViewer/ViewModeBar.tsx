@@ -52,7 +52,7 @@ export const ViewModeBar = memo(function ViewModeBar({
   setViewMode,
   hasDiff,
   isMarkdown,
-}: ViewModeBarProps): React.ReactElement<any> {
+}: ViewModeBarProps): React.ReactElement {
   return (
     <div style={containerStyle}>
       <button

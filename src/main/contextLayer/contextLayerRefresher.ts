@@ -4,15 +4,12 @@
  * Extracted from contextLayerController.ts to stay under the max-lines limit.
  */
 
-import log from '../logger';
 import type {
   IndexedRepoFile,
   RepoIndexSnapshot,
   RootRepoIndexSnapshot,
 } from '../orchestration/repoIndexer';
 import type { RepoMapSummary } from '../orchestration/types';
-import type { AiSummarizerState } from './contextLayerAiSummarizer';
-import { aiEnrichModules } from './contextLayerAiSummarizer';
 import type { CachedModuleData, DetectedModule } from './contextLayerControllerHelpers';
 import {
   applyGraphAnalysis,
@@ -105,29 +102,3 @@ export function countRefreshedModules(
   return count;
 }
 
-export function fireAndForgetRefreshEnrichment(opts: {
-  modules: DetectedModule[];
-  autoSummarize: boolean;
-  cachedModules: Map<string, CachedModuleData>;
-  aiState: AiSummarizerState;
-  workspaceRoots: string[];
-}): void {
-  if (!opts.autoSummarize) return;
-  const toEnrich = opts.modules
-    .filter((m) => {
-      const cached = opts.cachedModules.get(m.id);
-      return cached && !cached.aiEnriched;
-    })
-    .map((m) => m.id);
-
-  if (toEnrich.length > 0) {
-    aiEnrichModules({
-      moduleIds: toEnrich,
-      cachedModules: opts.cachedModules,
-      aiState: opts.aiState,
-      workspaceRoots: opts.workspaceRoots,
-    }).catch((err) => {
-      log.warn('AI enrichment on refresh failed:', err);
-    });
-  }
-}

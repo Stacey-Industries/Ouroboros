@@ -10,6 +10,7 @@ export interface ModelOption {
 }
 
 const ANTHROPIC_MODELS: ModelOption[] = [
+  { value: '', label: 'Auto', group: 'Anthropic' },
   { value: 'opus[1m]', label: 'Opus 4.6 (1M)', group: 'Anthropic' },
   { value: 'opus', label: 'Opus 4.6 (200K)', group: 'Anthropic' },
   { value: 'sonnet', label: 'Sonnet 4.6 (200K)', group: 'Anthropic' },

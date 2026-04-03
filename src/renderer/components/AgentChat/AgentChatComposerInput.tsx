@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { RichTextarea } from 'rich-textarea';
 
 import { getTextareaStyle } from './AgentChatComposerSupport';
 
@@ -78,51 +79,34 @@ export type ComposerInputProps = {
   onCloseMentionAutocomplete?: () => void;
 };
 
-/**
- * Match @mention paths that may contain spaces (e.g. `@C:\Web App\file.ts`).
- * A mention starts with `@` and ends at: a file extension + space/EOL, or a
- * trailing space before another `@`, or EOL.  This handles both Unix and
- * Windows paths with spaces.
- */
-const MENTION_SPLIT_RE = /(@[^\n@]*\.\w+(?=\s|$)|@[^\n@]+(?=\s@|$))/g;
+/** Matches @mentions and /commands (preceded by whitespace or at start). */
+const TOKEN_RE = /(@[^\n@]*\.\w+(?=\s|$)|@[^\n@]+(?=\s@|$)|(?<=^|\s)\/\S+)/g;
+const ACCENT = { color: '#58a6ff' };
 
-const HIGHLIGHT_STYLE_ID = 'composer-mention-highlight';
-function ensureHighlightStyles(): void {
-  if (document.getElementById(HIGHLIGHT_STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = HIGHLIGHT_STYLE_ID;
-  style.textContent = `
-    .mention-blue { color: #58a6ff !important; -webkit-text-fill-color: #58a6ff !important; }
-    .mention-normal { color: var(--text-semantic-primary) !important; -webkit-text-fill-color: var(--text-semantic-primary) !important; }
-  `;
-  document.head.appendChild(style);
+export function isComposerMentionHighlight(part: string): boolean {
+  return part.startsWith('@') && !/^@\s/.test(part);
 }
 
-function ComposerHighlightOverlay({ text, style }: { text: string; style: React.CSSProperties }): React.ReactElement {
-  React.useEffect(ensureHighlightStyles, []);
-  const parts = text.split(MENTION_SPLIT_RE);
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 z-30 overflow-hidden whitespace-pre-wrap break-words text-sm"
-      style={{ ...style, borderColor: 'transparent', background: 'transparent' }}
-    >
-      {parts.map((part, i) =>
-        <span key={i} className={part.startsWith('@') ? 'mention-blue' : 'mention-normal'}>{part}</span>,
-      )}
-    </div>
-  );
+function isHighlightedToken(part: string): boolean {
+  return isComposerMentionHighlight(part) || /^\/\S/.test(part);
+}
+
+function renderHighlights(value: string): React.ReactNode {
+  const parts = value.split(TOKEN_RE);
+  return parts.map((part, i) => (
+    <span key={i} style={isHighlightedToken(part) ? ACCENT : undefined}>
+      {part}
+    </span>
+  ));
 }
 
 function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
-  const overlayText = props.textareaRef.current?.value ?? props.draft;
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
   return (
-    <div className="relative">
-      <ComposerHighlightOverlay text={overlayText} style={baseStyle} />
-      <textarea
+    <div className="w-full">
+      <RichTextarea
         ref={props.textareaRef}
-        defaultValue={props.draft}
+        value={props.draft}
         onChange={(event) => props.handleChange(event.target.value)}
         onKeyDown={props.handleKeyDown}
         onPaste={props.handlePaste}
@@ -135,22 +119,14 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         placeholder="Ask the agent... (/ for commands, @ to mention files)"
         disabled={props.disabled}
         rows={1}
-        className="relative z-20 w-full resize-none border bg-surface-base text-sm placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-        style={{
-          ...baseStyle,
-          WebkitTextFillColor: 'transparent',
-          caretColor: 'var(--text-semantic-primary)',
-        }}
-        onFocus={(event) => {
-          event.currentTarget.style.borderColor = 'var(--interactive-accent)';
-          event.currentTarget.style.boxShadow =
-            '0 0 0 2px var(--interactive-muted, rgba(88, 166, 255, 0.2))';
-        }}
-        onBlurCapture={(event) => {
-          event.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';
-          event.currentTarget.style.boxShadow = 'none';
-        }}
-      />
+        autoHeight
+        className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
+        style={{ ...baseStyle, width: '100%', maxHeight: 120 }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--interactive-accent)'; e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted, rgba(88, 166, 255, 0.2))'; }}
+        onBlurCapture={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))'; e.currentTarget.style.boxShadow = 'none'; }}
+      >
+        {renderHighlights}
+      </RichTextarea>
     </div>
   );
 }

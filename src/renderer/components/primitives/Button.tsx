@@ -30,7 +30,7 @@ const sizeClass: Record<ButtonSize, string> = {
 
 export function Button(
   { variant = 'ghost', size = 'md', icon = false, className, children, ref, ...rest }: ButtonProps,
-): React.ReactElement<any> {
+): React.ReactElement {
   const padding = icon ? 'p-1.5 aspect-square' : sizeClass[size];
   const classes = `${BASE} ${variantClass[variant]} ${padding} ${className ?? ''}`;
   return (

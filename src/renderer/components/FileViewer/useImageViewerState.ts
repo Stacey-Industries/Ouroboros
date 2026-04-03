@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { inferMimeType, useBinaryObjectUrl } from './binaryObjectUrl';
 import type { ZoomMode } from './ImageViewer.parts';
-import { adjustCustomZoom, createResetViewerState, toFileUrl } from './useImageViewerState.helpers';
+import { adjustCustomZoom, createResetViewerState } from './useImageViewerState.helpers';
 
 export interface ImageViewerState {
   naturalWidth: number | null;
@@ -13,7 +14,8 @@ export interface ImageViewerState {
   containerRef: React.RefObject<HTMLDivElement | null>;
   panOffset: { x: number; y: number };
   isPanning: boolean;
-  fileUrl: string;
+  fileUrl: string | null;
+  fileError: string | null;
   handleLoad: () => void;
   handleError: () => void;
   handlePointerDown: (event: React.PointerEvent) => void;
@@ -107,6 +109,10 @@ export function useImageViewerState(filePath: string): ImageViewerState {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { objectUrl, error: fileError } = useBinaryObjectUrl(
+    filePath,
+    inferMimeType(filePath, 'image/png'),
+  );
   useImageViewerReset({ filePath, setNaturalWidth, setNaturalHeight, setZoomMode, setCustomZoom, setLoadError, setPanOffset });
   const pan = useImageViewerPan({ panOffset, setPanOffset, setZoomMode, setCustomZoom });
 
@@ -118,5 +124,5 @@ export function useImageViewerState(filePath: string): ImageViewerState {
     setLoadError(false);
   }, []);
 
-  return { naturalWidth, naturalHeight, zoomMode, customZoom, loadError, imgRef, containerRef, panOffset, isPanning: pan.isPanning, fileUrl: toFileUrl(filePath), handleLoad, handleError: useCallback(() => setLoadError(true), []), handlePointerDown: pan.handlePointerDown, handlePointerMove: pan.handlePointerMove, handlePointerUp: pan.handlePointerUp, handleWheel: pan.handleWheel, zoomIn: pan.zoomIn, zoomOut: pan.zoomOut, setFit: pan.setFit, setActualSize: pan.setActualSize };
+  return { naturalWidth, naturalHeight, zoomMode, customZoom, loadError, imgRef, containerRef, panOffset, isPanning: pan.isPanning, fileUrl: objectUrl, fileError, handleLoad, handleError: useCallback(() => setLoadError(true), []), handlePointerDown: pan.handlePointerDown, handlePointerMove: pan.handlePointerMove, handlePointerUp: pan.handlePointerUp, handleWheel: pan.handleWheel, zoomIn: pan.zoomIn, zoomOut: pan.zoomOut, setFit: pan.setFit, setActualSize: pan.setActualSize };
 }

@@ -7,6 +7,7 @@ import React from 'react';
 import type { SearchMatch } from './searchHelpers';
 import { HighlightedText } from './searchHelpers';
 import type { SettingsEntry } from './settingsEntries';
+import { getMainTabForSubTab, MAIN_TABS, type TabId } from './settingsTabs';
 
 interface SettingsSearchResultsProps {
   searchQuery: string;
@@ -18,7 +19,7 @@ export function SettingsSearchResults({
   searchQuery,
   searchResults,
   onResultClick,
-}: SettingsSearchResultsProps): React.ReactElement<any> {
+}: SettingsSearchResultsProps): React.ReactElement {
   if (searchResults.length === 0) {
     return (
       <p className="text-text-semantic-muted" style={emptyStyle}>
@@ -36,13 +37,21 @@ export function SettingsSearchResults({
   );
 }
 
+function getMainTabLabel(entry: SettingsEntry): string {
+  const mainId = getMainTabForSubTab(entry.section as TabId);
+  return MAIN_TABS.find((m) => m.id === mainId)?.label ?? '';
+}
+
 function SearchResultItem({
   match,
   onClick,
 }: {
   match: SearchMatch;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
+  const mainLabel = getMainTabLabel(match.entry);
+  const breadcrumb = mainLabel ? `${mainLabel} › ${match.entry.sectionLabel}` : match.entry.sectionLabel;
+
   return (
     <button onClick={onClick} style={itemStyle}>
       <div style={itemHeaderStyle}>
@@ -50,7 +59,7 @@ function SearchResultItem({
           <HighlightedText text={match.entry.label} ranges={match.labelRanges} />
         </span>
         <span className="text-interactive-accent" style={badgeStyle}>
-          {match.entry.sectionLabel}
+          {breadcrumb}
         </span>
       </div>
       {match.entry.description && (

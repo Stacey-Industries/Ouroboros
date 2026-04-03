@@ -18,7 +18,7 @@ import {
   OUTLINE_NAME_STYLE,
 } from '../FileViewer/SymbolOutline.shared';
 
-function OutlineEmptyState({ message }: { message: string }): React.ReactElement<any> {
+function OutlineEmptyState({ message }: { message: string }): React.ReactElement {
   return (
     <div
       className="flex items-center justify-center text-text-semantic-muted"
@@ -52,7 +52,7 @@ const OUTLINE_LINE_NUM_STYLE: React.CSSProperties = {
   marginLeft: 'auto', paddingLeft: '4px',
 };
 
-function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement<any> {
+function OutlineItem({ symbol, onClick }: OutlineItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
   }, []);
@@ -87,7 +87,7 @@ function navigateToLine(line: number, filePath: string): void {
   );
 }
 
-export function OutlineSection(): React.ReactElement<any> {
+export function OutlineSection(): React.ReactElement {
   const { activeFile } = useFileViewerManager();
   const language = activeFile?.path ? detectLanguage(activeFile.path) : 'plaintext';
   const symbols = useSymbolOutline(activeFile?.content ?? null, language);

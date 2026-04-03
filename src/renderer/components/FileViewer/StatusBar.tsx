@@ -29,7 +29,7 @@ export const StatusBar = memo(function StatusBar({
   lineCount,
   collapsedFoldCount,
   highlightLang,
-}: StatusBarProps): React.ReactElement<any> {
+}: StatusBarProps): React.ReactElement {
   return (
     <div className="text-text-semantic-faint" style={containerStyle}>
       <span>{lineCount} lines</span>

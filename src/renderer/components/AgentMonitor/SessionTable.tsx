@@ -21,7 +21,7 @@ const TABLE_HEADER_COLS = [
 
 export const SessionTable = memo(function SessionTable({
   entries,
-}: SessionTableProps): React.ReactElement<any> {
+}: SessionTableProps): React.ReactElement<unknown> {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleToggle = useCallback((id: string) => {
@@ -56,7 +56,7 @@ export const SessionTable = memo(function SessionTable({
   );
 });
 
-function TableHeader(): React.ReactElement<any> {
+function TableHeader(): React.ReactElement<unknown> {
   return (
     <div
       className="flex items-center gap-2 py-1 text-[9px] font-medium uppercase tracking-wider text-text-semantic-faint"

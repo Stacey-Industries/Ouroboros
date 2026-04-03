@@ -176,14 +176,37 @@ function buildResultMessage(
   };
 }
 
-export function linksEqual(
-  left: AgentChatThreadRecord['latestOrchestration'],
-  right: AgentChatThreadRecord['latestOrchestration'],
-): boolean {
+type OrchestrationLink = AgentChatThreadRecord['latestOrchestration'];
+
+function compareIdentityFields(left: OrchestrationLink, right: OrchestrationLink): boolean {
   return (
     left?.taskId === right?.taskId &&
     left?.sessionId === right?.sessionId &&
     left?.attemptId === right?.attemptId
+  );
+}
+
+function compareProviderFields(left: OrchestrationLink, right: OrchestrationLink): boolean {
+  return (
+    left?.provider === right?.provider &&
+    left?.claudeSessionId === right?.claudeSessionId &&
+    left?.codexThreadId === right?.codexThreadId
+  );
+}
+
+function compareModelFields(left: OrchestrationLink, right: OrchestrationLink): boolean {
+  return (
+    left?.model === right?.model &&
+    left?.effort === right?.effort &&
+    left?.linkedTerminalId === right?.linkedTerminalId
+  );
+}
+
+export function linksEqual(left: OrchestrationLink, right: OrchestrationLink): boolean {
+  return (
+    compareIdentityFields(left, right) &&
+    compareProviderFields(left, right) &&
+    compareModelFields(left, right)
   );
 }
 

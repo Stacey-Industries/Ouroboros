@@ -6,6 +6,7 @@ import { exec, spawn } from 'child_process';
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, Notification, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { AppConfig, getConfigValue, setConfigValue } from '../config';
 import { broadcastToWebClients } from '../web/webServer';
@@ -48,9 +49,17 @@ async function openExtensionsFolder(): Promise<HandlerResult> {
 
 async function openExternalUrl(url: string): Promise<HandlerResult> {
   try {
+    if (path.isAbsolute(url)) {
+      await shell.openPath(url);
+      return { success: true };
+    }
     const parsed = new URL(url);
+    if (parsed.protocol === 'file:') {
+      await shell.openPath(fileURLToPath(parsed));
+      return { success: true };
+    }
     if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return { success: false, error: 'Only http/https URLs are allowed' };
+      return { success: false, error: 'Only http/https URLs and local files are allowed' };
     }
     await shell.openExternal(url);
     return { success: true };
@@ -206,7 +215,8 @@ function handleRebuildWeb(): Promise<HandlerResult> {
       }
       broadcastToWebClients('app:rebuilding', { status: 'restarting' });
       // Restart the dev server detached — shell:true resolves npm from PATH on Windows.
-      const child = spawn('npm', ['run', 'dev'], {
+      // Args embedded in command string to avoid DEP0190 (unescaped args with shell:true).
+      const child = spawn('npm run dev', [], {
         cwd: projectRoot,
         detached: true,
         stdio: 'ignore',

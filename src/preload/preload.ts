@@ -103,6 +103,9 @@ const filesAPI: ElectronAPI['files'] = {
 
   showImageDialog: () => ipcRenderer.invoke('files:showImageDialog'),
 
+  search: (root, query, options) =>
+    ipcRenderer.invoke('files:search', root, query, options),
+
   onFileChange: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, change: FileChangeEvent) =>
       callback(change);
@@ -137,6 +140,11 @@ const hooksAPI: ElectronAPI['hooks'] = {
 const appAPI: ElectronAPI['app'] = {
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
+  getSystemInfo: () => ({
+    electron: process.versions.electron ?? '',
+    chrome: process.versions.chrome ?? '',
+    node: process.versions.node ?? '',
+  }),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
 
   setTitleBarOverlay: (color, symbolColor) =>

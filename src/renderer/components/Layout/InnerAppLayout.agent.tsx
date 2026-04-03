@@ -81,7 +81,7 @@ function useAgentSidebarModel(): {
   return { chatModel: modelRef.current, handleModelReady };
 }
 
-function AnalyticsSuspense(): React.ReactElement<any> {
+function AnalyticsSuspense(): React.ReactElement {
   return (
     <ErrorBoundary label="Analytics">
       <React.Suspense
@@ -106,7 +106,7 @@ function openSettings(tab?: string): void {
   window.dispatchEvent(new CustomEvent('agent-ide:open-settings', tab ? { detail: tab } : undefined));
 }
 
-export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement<any> {
+export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
   const { chatModel, handleModelReady } = useAgentSidebarModel();
   const { rules, commands, isLoading, createRule } = useRulesAndSkills(projectRoot);
   const handleOpenFile = useCallback((f: string) => openFileInEditor(f), []);

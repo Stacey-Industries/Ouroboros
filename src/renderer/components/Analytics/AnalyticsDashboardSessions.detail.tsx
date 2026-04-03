@@ -37,7 +37,7 @@ function SessionDetailInfo({
   model?: string;
   sessionId: string;
   status: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -69,7 +69,7 @@ const SessionDetailHeader = memo(function SessionDetailHeader({
   onClose: () => void;
   sessionId: string;
   status: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex items-center justify-between mb-2">
       <SessionDetailInfo model={model} sessionId={sessionId} status={status} />
@@ -100,7 +100,7 @@ const SessionTokenBreakdown = memo(function SessionTokenBreakdown({
   inputTokens,
   outputTokens,
   totalTokens,
-}: Pick<SessionMetrics, 'inputTokens' | 'outputTokens' | 'totalTokens'>): React.ReactElement<any> {
+}: Pick<SessionMetrics, 'inputTokens' | 'outputTokens' | 'totalTokens'>): React.ReactElement {
   return (
     <div
       className="rounded-md p-2 mb-2 bg-surface-base"
@@ -130,7 +130,7 @@ const SessionTokenBreakdown = memo(function SessionTokenBreakdown({
 const FileEditRow = memo(function FileEditRow({
   count,
   filePath,
-}: FileEditRowProps): React.ReactElement<any> {
+}: FileEditRowProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between text-[10px]">
       <span
@@ -156,7 +156,7 @@ const FileEditRow = memo(function FileEditRow({
 
 const SessionFilesSection = memo(function SessionFilesSection({
   fileEditCounts,
-}: SessionFilesSectionProps): React.ReactElement<any> | null {
+}: SessionFilesSectionProps): React.ReactElement | null {
   const fileEntries = useMemo(() => getSortedFileEditEntries(fileEditCounts), [fileEditCounts]);
 
   if (fileEntries.length === 0) return null;
@@ -180,7 +180,7 @@ const SessionFilesSection = memo(function SessionFilesSection({
 
 const SessionToolCallRow = memo(function SessionToolCallRow({
   toolCall,
-}: SessionToolCallRowProps): React.ReactElement<any> {
+}: SessionToolCallRowProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5 text-[10px]">
       <span
@@ -216,7 +216,7 @@ const SessionTimelineSection = memo(function SessionTimelineSection({
   session,
 }: {
   session: SessionMetrics;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="rounded-md p-2 bg-surface-base"
@@ -240,7 +240,7 @@ const SessionTimelineSection = memo(function SessionTimelineSection({
 
 const SessionErrorRow = memo(function SessionErrorRow({
   toolCall,
-}: SessionErrorRowProps): React.ReactElement<any> {
+}: SessionErrorRowProps): React.ReactElement {
   return (
     <div
       className="text-[10px] truncate text-text-semantic-muted"
@@ -256,7 +256,7 @@ const SessionErrorsSection = memo(function SessionErrorsSection({
   session,
 }: {
   session: SessionMetrics;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   const errorCalls = useMemo(
     () => session.toolCalls.filter((toolCall) => toolCall.status === 'error'),
     [session.toolCalls],
@@ -287,7 +287,7 @@ export const SessionDetailPanel = memo(function SessionDetailPanel({
 }: {
   session: SessionMetrics;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="px-4 py-3 border-b border-border-semantic bg-surface-raised">
       <SessionDetailHeader

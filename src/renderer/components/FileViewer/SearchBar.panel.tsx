@@ -73,7 +73,7 @@ function getNavButtonStyle(enabled: boolean): React.CSSProperties {
   };
 }
 
-function ArrowIcon({ direction }: { direction: 'up' | 'down' }): React.ReactElement<any> {
+function ArrowIcon({ direction }: { direction: 'up' | 'down' }): React.ReactElement {
   const path = direction === 'up' ? 'M2 8L6 4L10 8' : 'M2 4L6 8L10 4';
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -82,7 +82,7 @@ function ArrowIcon({ direction }: { direction: 'up' | 'down' }): React.ReactElem
   );
 }
 
-function CloseIcon(): React.ReactElement<any> {
+function CloseIcon(): React.ReactElement {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -96,7 +96,7 @@ function ToggleButton(props: {
   title: string;
   fontFamily: string;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button title={props.title} onClick={props.onClick} style={getToggleButtonStyle(props.active, props.fontFamily)}>
       {props.label}
@@ -109,7 +109,7 @@ function IconButton(props: {
   disabled?: boolean;
   onClick: () => void;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button title={props.title} onClick={props.onClick} disabled={props.disabled} style={getNavButtonStyle(!props.disabled)}>
       {props.children}
@@ -117,7 +117,7 @@ function IconButton(props: {
   );
 }
 
-function SearchInput({ controller }: { controller: SearchBarController }): React.ReactElement<any> {
+function SearchInput({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <input
       ref={controller.inputRef as React.RefObject<HTMLInputElement | null>}
@@ -138,7 +138,7 @@ function SearchInput({ controller }: { controller: SearchBarController }): React
   );
 }
 
-function MatchCount({ controller }: { controller: SearchBarController }): React.ReactElement<any> {
+function MatchCount({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <span
       style={{
@@ -151,7 +151,7 @@ function MatchCount({ controller }: { controller: SearchBarController }): React.
   );
 }
 
-function SearchToggles({ controller }: { controller: SearchBarController }): React.ReactElement<any> {
+function SearchToggles({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <>
       <ToggleButton
@@ -172,7 +172,7 @@ function SearchToggles({ controller }: { controller: SearchBarController }): Rea
   );
 }
 
-function SearchNavigation({ controller }: { controller: SearchBarController }): React.ReactElement<any> {
+function SearchNavigation({ controller }: { controller: SearchBarController }): React.ReactElement {
   return (
     <>
       <IconButton title="Previous match (Shift+Enter)" onClick={controller.goToPrev} disabled={!controller.canNavigate}>
@@ -188,7 +188,7 @@ function SearchNavigation({ controller }: { controller: SearchBarController }): 
   );
 }
 
-export function SearchBarPanel(controller: SearchBarController): React.ReactElement<any> {
+export function SearchBarPanel(controller: SearchBarController): React.ReactElement {
   return (
     <div style={panelStyle} onKeyDown={controller.handleKeyDown}>
       <SearchInput controller={controller} />

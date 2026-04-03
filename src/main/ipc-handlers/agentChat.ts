@@ -172,6 +172,13 @@ function registerMessageHandlers(channels: string[], svc: AgentChatService): voi
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.cancelTask, (taskId: unknown) =>
     getOrchestration().cancelTask(requireValidString(taskId, 'taskId')),
   );
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.cancelByThreadId, (threadId: unknown) => {
+    const id = requireValidString(threadId, 'threadId');
+    const taskId = svc.bridge.findTaskIdForThread(id);
+    if (taskId) return getOrchestration().cancelTask(taskId);
+    svc.bridge.registerPendingCancel(id);
+    return { success: true };
+  });
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminal, (threadId: unknown) =>
     getLinkedTerminalHandler(svc, requireValidString(threadId, 'threadId')),
   );

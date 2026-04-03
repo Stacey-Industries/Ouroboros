@@ -1,6 +1,20 @@
 import type { AgentSession, SubToolCallEvent, ToolCallEvent } from '../components/AgentMonitor/types';
 import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
 import {
+  type CompactionAction,
+  type ConversationTurnAction,
+  type NotificationAction,
+  type PermissionEventAction,
+  type PostCompactAction,
+  type PreCompactAction,
+  reduceCompaction,
+  reduceConversationTurn,
+  reduceNotification,
+  reducePermissionEvent,
+  reducePostCompact,
+  reducePreCompact,
+} from './useAgentEvents.miscReducers';
+import {
   reduceRuleLoaded,
   reduceSkillEnd,
   reduceSkillStart,
@@ -11,22 +25,27 @@ import {
 import {
   ensureSession,
   findToolCallIndex,
-  getUsageDeltas,
   hasSession,
   loadPersistedSessions,
-  mergeOptionalTokenCount,
   omitPendingLink,
   resolvePendingToolCalls,
   resolveStaleToolCalls,
   trimToolCalls,
   updateSession,
 } from './useAgentEvents.session-utils';
-
-/** Window (ms) for temporal linking: if a new agent_start arrives within this time
- *  of an unconsumed subagent tool call from another session, auto-link them.
- *  30s accounts for Claude Code subagent initialization overhead (model loading,
- *  context building, etc.) which routinely exceeds 5s. */
-const TEMPORAL_LINK_WINDOW_MS = 30_000;
+import {
+  findTemporalParent,
+  linkSubagent,
+  recordSubagentTool,
+  updateSubTool,
+  updateTokenUsage,
+} from './useAgentEvents.subagentReducers';
+import {
+  reduceTaskCompleted,
+  reduceTaskCreated,
+  type TaskCompletedAction,
+  type TaskCreatedAction,
+} from './useAgentEvents.taskReducers';
 
 export interface PendingSubagentStamp {
   parentSessionId: string;
@@ -36,8 +55,7 @@ export interface PendingSubagentStamp {
 export interface AgentState {
   sessions: AgentSession[];
   pendingSubagentLinks: Record<string, string>;
-  /** Tracks subagent tool calls that haven't been linked to a child session yet.
-   *  Key is a synthetic id (parent+timestamp), value has parentSessionId + timestamp. */
+  /** Tracks subagent tool calls that haven't been linked to a child session yet. */
   pendingSubagentTimestamps: PendingSubagentStamp[];
 }
 
@@ -62,56 +80,67 @@ export type AgentAction =
   | { type: 'SET_NOTES'; sessionId: string; notes: string; bookmarked?: boolean }
   | RuleLoadedAction
   | SkillStartAction
-  | SkillEndAction;
+  | SkillEndAction
+  | TaskCreatedAction
+  | TaskCompletedAction
+  | ConversationTurnAction
+  | CompactionAction
+  | PreCompactAction
+  | PostCompactAction
+  | PermissionEventAction
+  | NotificationAction;
 
 export function reducer(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
-    case 'AGENT_START':
-      return startSession(state, action);
-    case 'TOOL_START':
-      return startToolCall(state, action);
-    case 'TOOL_END':
-      return finishToolCall(state, action);
-    case 'AGENT_END':
-      return endSession(state, action);
-    case 'TOKEN_UPDATE':
-      return updateTokenUsage(state, action);
-    case 'SUBTOOL_UPDATE':
-      return updateSubTool(state, action);
-    default:
-      return reduceUtilityAction(state, action);
+    case 'AGENT_START': return startSession(state, action);
+    case 'TOOL_START': return startToolCall(state, action);
+    case 'TOOL_END': return finishToolCall(state, action);
+    case 'AGENT_END': return endSession(state, action);
+    case 'TOKEN_UPDATE': return updateTokenUsage(state, action);
+    case 'SUBTOOL_UPDATE': return updateSubTool(state, action);
+    default: return reduceUtilityAction(state, action);
   }
 }
 
 function reduceUtilityAction(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
-    case 'LINK_SUBAGENT':
-      return linkSubagent(state, action);
-    case 'RECORD_SUBAGENT_TOOL':
-      return recordSubagentTool(state, action);
+    case 'LINK_SUBAGENT': return linkSubagent(state, action);
+    case 'RECORD_SUBAGENT_TOOL': return recordSubagentTool(state, action);
     case 'DISMISS':
-      return { ...state, sessions: state.sessions.filter((session) => session.id !== action.sessionId) };
+      return { ...state, sessions: state.sessions.filter((s) => s.id !== action.sessionId) };
     case 'CLEAR_COMPLETED':
-      return {
-        ...state,
-        sessions: state.sessions.filter((session) => session.status === 'running' || session.status === 'idle'),
-      };
-    case 'LOAD_PERSISTED':
-      return loadPersistedSessions(state, action.sessions);
+      return { ...state, sessions: state.sessions.filter((s) => s.status === 'running' || s.status === 'idle') };
+    case 'LOAD_PERSISTED': return loadPersistedSessions(state, action.sessions);
     case 'SET_NOTES':
-      return updateSession(state, action.sessionId, (session) => ({
-        ...session,
-        notes: action.notes,
-        bookmarked: action.bookmarked ?? session.bookmarked,
+      return updateSession(state, action.sessionId, (s) => ({
+        ...s, notes: action.notes, bookmarked: action.bookmarked ?? s.bookmarked,
       }));
-    case 'RULE_LOADED':
-      return reduceRuleLoaded(state, action);
-    case 'SKILL_START':
-      return reduceSkillStart(state, action);
-    case 'SKILL_END':
-      return reduceSkillEnd(state, action);
-    default:
-      return state;
+    default: return reduceExtensionAction(state, action);
+  }
+}
+
+function reduceSkillAndTaskAction(state: AgentState, action: AgentAction): AgentState | null {
+  switch (action.type) {
+    case 'RULE_LOADED': return reduceRuleLoaded(state, action);
+    case 'SKILL_START': return reduceSkillStart(state, action);
+    case 'SKILL_END': return reduceSkillEnd(state, action);
+    case 'TASK_CREATED': return reduceTaskCreated(state, action);
+    case 'TASK_COMPLETED': return reduceTaskCompleted(state, action);
+    default: return null;
+  }
+}
+
+function reduceExtensionAction(state: AgentState, action: AgentAction): AgentState {
+  const skillOrTask = reduceSkillAndTaskAction(state, action);
+  if (skillOrTask !== null) return skillOrTask;
+  switch (action.type) {
+    case 'CONVERSATION_TURN': return reduceConversationTurn(state, action);
+    case 'COMPACTION': return reduceCompaction(state, action);
+    case 'PRE_COMPACT': return reducePreCompact(state, action);
+    case 'POST_COMPACT': return reducePostCompact(state, action);
+    case 'PERMISSION_EVENT': return reducePermissionEvent(state, action);
+    case 'NOTIFICATION': return reduceNotification(state, action);
+    default: return state;
   }
 }
 
@@ -147,10 +176,7 @@ function resolveParentAndTimestamps(
 }
 
 function startSession(state: AgentState, action: AgentStartAction): AgentState {
-  // If the session already exists (placeholder or completed chat-thread session
-  // receiving a new turn), update it and reset status to 'running'.
   if (hasSession(state.sessions, action.sessionId)) return updateExistingSession(state, action);
-
   const { resolvedParent, updatedTimestamps } = resolveParentAndTimestamps(state, action);
   const newSession: AgentSession = {
     id: action.sessionId,
@@ -177,11 +203,6 @@ function startToolCall(
 ): AgentState {
   const baseState = ensureSession(state, action.sessionId, action.toolCall.timestamp);
   return updateSession(baseState, action.sessionId, (session) => {
-    // Dedup: skip if a tool call with the same name AND same input arrived
-    // within 2s. This prevents double-counting when both hook events and
-    // synthetic bridge events fire for the same tool invocation, while still
-    // allowing consecutive calls to the same tool with different inputs
-    // (e.g. two Read calls on different files).
     const isDuplicate = session.toolCalls.some((tc) =>
       tc.toolName === action.toolCall.toolName
       && tc.input === action.toolCall.input
@@ -189,7 +210,6 @@ function startToolCall(
       && tc.status === 'pending',
     );
     if (isDuplicate) return session;
-
     return {
       ...session,
       toolCalls: trimToolCalls([...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp), action.toolCall]),
@@ -224,105 +244,8 @@ function endSession(
     completedAt: action.timestamp,
     error: sessionError,
     costUsd: action.costUsd ?? session.costUsd,
-    // If the session ended normally, pending tools likely completed but their
-    // post_tool_use wasn't matched — mark them as success, not error.
     toolCalls: resolvePendingToolCalls(session.toolCalls, sessionError),
   }));
-}
-
-function updateTokenUsage(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'TOKEN_UPDATE' }>,
-): AgentState {
-  const usageDeltas = getUsageDeltas(action.usage);
-  return updateSession(state, action.sessionId, (session) => {
-    const updated = {
-      ...session,
-      inputTokens: session.inputTokens + usageDeltas.input,
-      outputTokens: session.outputTokens + usageDeltas.output,
-      cacheReadTokens: mergeOptionalTokenCount(session.cacheReadTokens, usageDeltas.cacheRead),
-      cacheWriteTokens: mergeOptionalTokenCount(session.cacheWriteTokens, usageDeltas.cacheWrite),
-      model: action.model ?? session.model,
-    };
-    console.warn(
-      '[cost-debug] TOKEN_UPDATE processing',
-      'sessionId:', action.sessionId,
-      'deltas:', usageDeltas,
-      'totals:', { input: updated.inputTokens, output: updated.outputTokens,
-        cacheRead: updated.cacheReadTokens, cacheWrite: updated.cacheWriteTokens },
-    );
-    return updated;
-  });
-}
-
-function updateSubTool(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'SUBTOOL_UPDATE' }>,
-): AgentState {
-  return updateSession(state, action.sessionId, (session) => {
-    const toolCalls = session.toolCalls.map((tc) => {
-      if (tc.id !== action.parentToolCallId) return tc;
-      const existing = tc.subTools ?? [];
-      const idx = existing.findIndex((s) => s.id === action.subTool.id);
-      const subTools = idx >= 0
-        ? existing.map((s, i) => i === idx ? { ...s, ...action.subTool } : s)
-        : [...existing, action.subTool];
-      return { ...tc, subTools };
-    });
-    return { ...session, toolCalls };
-  });
-}
-
-function linkSubagent(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'LINK_SUBAGENT' }>,
-): AgentState {
-  if (hasSession(state.sessions, action.childSessionId)) {
-    return updateSession(state, action.childSessionId, (session) => ({
-      ...session,
-      parentSessionId: action.parentSessionId,
-    }));
-  }
-
-  return {
-    ...state,
-    pendingSubagentLinks: {
-      ...state.pendingSubagentLinks,
-      [action.childSessionId]: action.parentSessionId,
-    },
-  };
-}
-
-function recordSubagentTool(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'RECORD_SUBAGENT_TOOL' }>,
-): AgentState {
-  return {
-    ...state,
-    pendingSubagentTimestamps: [
-      ...state.pendingSubagentTimestamps,
-      { parentSessionId: action.parentSessionId, timestamp: action.timestamp },
-    ],
-  };
-}
-
-/** Find the most recent unconsumed subagent tool call within the temporal window. */
-function findTemporalParent(
-  stamps: PendingSubagentStamp[],
-  childTimestamp: number,
-): PendingSubagentStamp | undefined {
-  let best: PendingSubagentStamp | undefined;
-
-  for (const stamp of stamps) {
-    const delta = childTimestamp - stamp.timestamp;
-    if (delta >= 0 && delta <= TEMPORAL_LINK_WINDOW_MS) {
-      if (!best || stamp.timestamp > best.timestamp) {
-        best = stamp;
-      }
-    }
-  }
-
-  return best;
 }
 
 /* Re-export dispatchers that were moved to ruleSkillDispatchers.ts for line-count budget. */

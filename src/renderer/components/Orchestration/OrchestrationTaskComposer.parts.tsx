@@ -80,7 +80,7 @@ const PROFILE_OPTIONS: Array<{ label: string; value: VerificationProfileName }> 
   { label: 'Full', value: 'full' },
 ];
 
-export function TaskComposerCard({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement<any> {
+export function TaskComposerCard({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <TaskComposerHeader projectRootLabel={model.projectRootLabel} />
@@ -92,7 +92,7 @@ export function TaskComposerCard({ model }: { model: OrchestrationTaskComposerMo
   );
 }
 
-function TaskComposerHeader({ projectRootLabel }: { projectRootLabel: string }): React.ReactElement<any> {
+function TaskComposerHeader({ projectRootLabel }: { projectRootLabel: string }): React.ReactElement {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
@@ -106,7 +106,7 @@ function TaskComposerHeader({ projectRootLabel }: { projectRootLabel: string }):
   );
 }
 
-function TaskComposerGoalField(props: { goal: string; onChange: (value: string) => void }): React.ReactElement<any> {
+function TaskComposerGoalField(props: { goal: string; onChange: (value: string) => void }): React.ReactElement {
   return (
     <div className="mt-4" style={FIELD_STACK_STYLE}>
       <label style={LABEL_STYLE} htmlFor="orchestration-goal">Goal</label>
@@ -121,7 +121,7 @@ function TaskComposerGoalField(props: { goal: string; onChange: (value: string) 
   );
 }
 
-function TaskComposerConfigFields({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement<any> {
+function TaskComposerConfigFields({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
   return (
     <div className="mt-4" style={FIELD_GRID_STYLE}>
       <TaskComposerSelectField<OrchestrationMode>
@@ -155,7 +155,7 @@ function TaskComposerSelectField<T extends string>(props: {
   onChange: (value: T) => void;
   options: Array<{ label: string; value: T }>;
   value: T;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <label style={FIELD_STACK_STYLE} htmlFor={props.fieldId}>
       <span style={LABEL_STYLE}>{props.label}</span>
@@ -171,7 +171,7 @@ function TaskComposerSelectField<T extends string>(props: {
   );
 }
 
-function TaskComposerActions({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement<any> {
+function TaskComposerActions({ model }: { model: OrchestrationTaskComposerModel }): React.ReactElement {
   return (
     <div style={ACTION_ROW_STYLE}>
       <ActionButton label={model.previewing ? 'Previewing…' : 'Preview Context'} onClick={() => { void model.handlePreview(); }} disabled={!model.canSubmit} />
@@ -180,7 +180,7 @@ function TaskComposerActions({ model }: { model: OrchestrationTaskComposerModel 
   );
 }
 
-function TaskComposerMessages({ error, status }: { error: string | null; status: string | null }): React.ReactElement<any> {
+function TaskComposerMessages({ error, status }: { error: string | null; status: string | null }): React.ReactElement {
   return (
     <>
       {status ? <div style={STATUS_STYLE}>{status}</div> : null}

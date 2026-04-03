@@ -54,6 +54,8 @@ export interface QueueState {
   lastError: string | null
   totalProcessed: number
   totalFailed: number
+  /** Stable denominator for progress — set once on first enqueue, grows only when new items are added. */
+  initialTotal: number
   isRateLimited: boolean
   backoffMs: number
   nextJobTimer: ReturnType<typeof setTimeout> | null
@@ -102,7 +104,7 @@ export function broadcastProgress(ctx: ProcessCtx): void {
   const isIdle = !state.processing && state.queue.size === 0
   options.onProgress({
     type: isIdle ? 'idle' : 'summarizing',
-    total: state.queue.size + (state.processing ? 1 : 0) + state.totalProcessed + state.totalFailed,
+    total: state.initialTotal,
     processed: state.totalProcessed,
     failed: state.totalFailed,
     currentModule: state.processing,
@@ -118,10 +120,13 @@ export function makeEnqueue(ctx: ProcessCtx, cfg: SchedulerConfig, scheduleNext:
     const { state } = ctx
     if (state.disposed || !cfg.enabled) return
     const now = Date.now()
+    const sizeBefore = state.queue.size
     for (const moduleId of moduleIds) {
       if (moduleId === '__all__' || moduleId === '__new_files__') continue
       state.queue.set(moduleId, now)
     }
+    const newlyAdded = state.queue.size - sizeBefore
+    state.initialTotal += newlyAdded
     while (state.queue.size > cfg.maxQueueSize) {
       const oldest = [...state.queue.entries()].sort((a, b) => a[1] - b[1])[0]
       if (oldest) state.queue.delete(oldest[0])

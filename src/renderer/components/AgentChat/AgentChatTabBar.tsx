@@ -21,7 +21,7 @@ function truncateTitle(title: string, maxLength = 20): string {
   return title.length <= maxLength ? title : `${title.slice(0, maxLength - 1).trimEnd()}\u2026`;
 }
 
-function PlusIcon(): React.ReactElement<any> {
+function PlusIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -37,7 +37,7 @@ function PlusIcon(): React.ReactElement<any> {
   );
 }
 
-function ChevronDownIcon(): React.ReactElement<any> {
+function ChevronDownIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -54,7 +54,7 @@ function ChevronDownIcon(): React.ReactElement<any> {
   );
 }
 
-function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <span
       role="button"
@@ -80,7 +80,7 @@ type TabProps = {
   title: string;
 };
 
-function Tab(props: TabProps): React.ReactElement<any> {
+function Tab(props: TabProps): React.ReactElement {
   return (
     <button
       onClick={props.onSelect}
@@ -124,11 +124,14 @@ function ThreadTabs({
   onDeleteThread: (threadId: string) => void;
   onSelectThread: (threadId: string) => void;
   threads: AgentChatThreadRecord[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto"
       style={{ scrollbarWidth: 'none' }}
+      onWheel={(e) => {
+        if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+      }}
     >
       {threads.map((thread) => (
         <div key={thread.id} data-thread-id={thread.id}>
@@ -168,7 +171,7 @@ function DropdownToggleButton({
 }: {
   show: boolean;
   onClick: () => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!show) return null;
   return (
     <button
@@ -197,7 +200,7 @@ function TabBarDropdown({
   onCloseDropdown: () => void;
   onDeleteThread: (id: string) => void;
   onSelectThread: (id: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!dropdownOpen || !dropdownRect) return null;
   return (
     <ThreadDropdown
@@ -211,7 +214,7 @@ function TabBarDropdown({
   );
 }
 
-function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement<any> {
+function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement {
   const activeThreadModel =
     props.threads.find((t) => t.id === props.activeThreadId)?.latestOrchestration?.model ?? null;
   return (
@@ -227,7 +230,7 @@ function AgentChatTabBarContent(props: TabBarContentProps): React.ReactElement<a
       >
         <PlusIcon />
       </button>
-      <div ref={props.scrollRef}>
+      <div ref={props.scrollRef} className="min-w-0 flex-1">
         <ThreadTabs
           activeThreadId={props.activeThreadId}
           onDeleteThread={props.onDeleteThread}
@@ -256,7 +259,7 @@ export function AgentChatTabBar({
   onNewChat,
   onSelectThread,
   threads,
-}: AgentChatTabBarProps): React.ReactElement<any> | null {
+}: AgentChatTabBarProps): React.ReactElement | null {
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);

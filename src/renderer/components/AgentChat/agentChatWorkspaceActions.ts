@@ -5,13 +5,14 @@ import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatLinkedDetailsResult, AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord, CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
+import { isAnthropicAutoModel } from './ChatControlsBarSupport';
 import { clearPersistedDraft, isDraftThreadId } from './useAgentChatDraftPersistence';
 import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorkspace';
 
 export interface SendMessageArgs {
   activeThreadId: string | null; attachments?: ImageAttachment[]; setAttachments?: Dispatch<SetStateAction<ImageAttachment[]>>;
   chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[]; contextFilePaths?: string[];
-  draft: string; isSending: boolean; projectRoot: string | null;
+  draft: string; isSending: boolean; pendingUserMessage: string | null; projectRoot: string | null;
   setActiveThreadId: Dispatch<SetStateAction<string | null>>; setDraft: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string | null>>; setIsSending: Dispatch<SetStateAction<boolean>>; setPendingUserMessage: Dispatch<SetStateAction<string | null>>;
   setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>;
@@ -28,7 +29,22 @@ async function saveAllDirtyBuffers(): Promise<void> { const promises: Promise<vo
 function isCodexModel(model: string | undefined, codexModels: CodexModelOption[] | undefined): boolean { return Boolean(model) && (codexModels ?? []).some((entry) => entry.id === model); }
 function getThreadIdForSend(threadId: string | null): string | undefined { return isDraftThreadId(threadId) ? undefined : threadId ?? undefined; }
 function buildContextSelection(contextFilePaths?: string[]): { userSelectedFiles: string[] } | undefined { return contextFilePaths?.length ? { userSelectedFiles: contextFilePaths } : undefined; }
-function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[] }): Record<string, string> | undefined { const overrides: Record<string, string> = {}; const selectedModel = args.chatOverrides?.model; if (selectedModel) { overrides.provider = isCodexModel(selectedModel, args.codexModels) ? 'codex' : 'claude-code'; overrides.model = selectedModel; } if (args.chatOverrides?.effort) overrides.effort = args.chatOverrides.effort; if (args.chatOverrides?.permissionMode && args.chatOverrides.permissionMode !== 'default') overrides.permissionMode = args.chatOverrides.permissionMode; return Object.keys(overrides).length > 0 ? overrides : undefined; }
+function applyModelOverride(overrides: Record<string, string>, model: string, codexModels?: CodexModelOption[]): void {
+  if (isAnthropicAutoModel(model)) {
+    overrides.provider = 'claude-code';
+    return;
+  }
+  overrides.provider = isCodexModel(model, codexModels) ? 'codex' : 'claude-code';
+  overrides.model = model;
+}
+function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[] }): Record<string, string> | undefined {
+  const overrides: Record<string, string> = {};
+  const selectedModel = args.chatOverrides?.model;
+  if (selectedModel) applyModelOverride(overrides, selectedModel, args.codexModels);
+  if (args.chatOverrides?.effort) overrides.effort = args.chatOverrides.effort;
+  if (args.chatOverrides?.permissionMode && args.chatOverrides.permissionMode !== 'default') overrides.permissionMode = args.chatOverrides.permissionMode;
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
 function mergeReturnedThread(resultThread: AgentChatThreadRecord | null | undefined, setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>): void { if (!resultThread) return; setThreads((currentThreads) => mergeThreadCollection(currentThreads, resultThread)); setActiveThreadId(resultThread.id); }
 async function sendAgentChatRequest(request: { threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[]; contextSelection?: { userSelectedFiles: string[] }; overrides?: Record<string, string>; metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean }; skillExpansion?: string }, failureMessage: string): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> { const result = await window.electronAPI.agentChat.sendMessage(request); if (!result.success) throw new Error(result.error ?? failureMessage); return result; }
 function buildComposerRequest(args: SendMessageArgs, content: string, skillExpansion?: string): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: getThreadIdForSend(args.activeThreadId), workspaceRoot: args.projectRoot as string, content, attachments: args.attachments?.length ? args.attachments : undefined, contextSelection: buildContextSelection(args.contextFilePaths), overrides: buildChatOverrides({ chatOverrides: args.chatOverrides, codexModels: args.codexModels }), metadata: { source: 'composer', usedAdvancedControls: Boolean(args.contextFilePaths?.length) }, skillExpansion }; }
@@ -69,8 +85,47 @@ export function useDeleteThreadAction(setThreads: Dispatch<SetStateAction<AgentC
 export function useEditAndResendAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await sendResentMessage(argsRef.current, message, 'edit'); }, []); }
 export function useRetryMessageAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await sendResentMessage(argsRef.current, message, 'retry'); }, []); }
 export function useBranchFromMessageAction(setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>, setError: Dispatch<SetStateAction<string | null>>): (message: AgentChatMessageRecord) => Promise<void> { return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { if (!hasElectronAPI()) return; try { const result = await window.electronAPI.agentChat.branchThread(message.threadId, message.id); if (!result.success) throw new Error(result.error ?? 'Unable to branch the conversation.'); mergeReturnedThread(result.thread, setThreads, setActiveThreadId); } catch (branchError) { setError(getErrorMessage(branchError)); } }, [setActiveThreadId, setError, setThreads]); }
-export function useStopTaskAction(activeThread: AgentChatThreadRecord | null, setError: Dispatch<SetStateAction<string | null>>): () => Promise<void> { return useCallback(async (): Promise<void> => { const taskId = activeThread?.latestOrchestration?.taskId; if (!taskId || !hasElectronAPI()) return; try { await window.electronAPI.agentChat.cancelTask(taskId); } catch (stopError) { setError(getErrorMessage(stopError)); } }, [activeThread, setError]); }
+function markThreadCancelled(a: AgentChatActionArgs, threadId: string): void {
+  a.setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, status: 'cancelled' as const } : t));
+}
+async function stopByTaskId(a: AgentChatActionArgs, threadId: string | undefined, taskId: string): Promise<boolean> {
+  if (!hasElectronAPI()) return false;
+  if (threadId) markThreadCancelled(a, threadId);
+  try { await window.electronAPI.agentChat.cancelTask(taskId); }
+  catch (e) { a.setError(getErrorMessage(e)); }
+  return true;
+}
+async function stopByThreadId(a: AgentChatActionArgs, threadId: string): Promise<void> {
+  if (!hasElectronAPI()) return;
+  markThreadCancelled(a, threadId);
+  try { await window.electronAPI.agentChat.cancelByThreadId(threadId); }
+  catch { /* best-effort */ }
+}
+function stopSendingInFlight(a: AgentChatActionArgs): void {
+  if (!a.isSending) return;
+  a.setIsSending(false);
+  if (a.pendingUserMessage) a.setDraft(a.pendingUserMessage);
+  a.setPendingUserMessage(null);
+}
+async function executeStopTask(a: AgentChatActionArgs): Promise<void> {
+  const threadId = a.activeThread?.id;
+  const taskId = a.activeThread?.latestOrchestration?.taskId;
+  if (taskId) {
+    // Optimistic UI — show "Chat was stopped" immediately before awaiting backend
+    const stopped = await stopByTaskId(a, threadId, taskId);
+    if (stopped) return;
+  }
+  // No taskId yet — the send is still in flight. Register a pending cancel
+  // on the backend so executePendingSend aborts before spawning the process.
+  if (threadId) await stopByThreadId(a, threadId);
+  stopSendingInFlight(a);
+}
+export function useStopTaskAction(args: AgentChatActionArgs): () => Promise<void> {
+  const argsRef = useRef(args);
+  argsRef.current = args;
+  return useCallback(async (): Promise<void> => { await executeStopTask(argsRef.current); }, []);
+}
 export function useRevertMessageAction(setError: Dispatch<SetStateAction<string | null>>, setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>): (message: AgentChatMessageRecord) => Promise<void> { return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { if (!hasElectronAPI()) return; if (!message.orchestration?.preSnapshotHash) return void setError('No snapshot was captured before this agent turn. Revert is unavailable.'); try { const result = await window.electronAPI.agentChat.revertToSnapshot(message.threadId, message.id); if (!result.success) return void setError(result.error ?? 'Revert failed.'); const threadsResult = await window.electronAPI.agentChat.listThreads(); if (threadsResult.success && threadsResult.threads) setThreads(threadsResult.threads); } catch (revertError) { setError(getErrorMessage(revertError)); } }, [setError, setThreads]); }
 
-export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionState { const selectionActions = useThreadSelectionActions(args.setActiveThreadId, args.setError); const sendMessage = useSendMessageAction(args); const openLinkedDetails = useOpenLinkedDetailsAction(args.setError); const deleteThread = useDeleteThreadAction(args.setThreads, args.setActiveThreadId, args.setError); const editAndResend = useEditAndResendAction(args); const retryMessage = useRetryMessageAction(args); const revertMessage = useRevertMessageAction(args.setError, args.setThreads); const branchFromMessage = useBranchFromMessageAction(args.setThreads, args.setActiveThreadId, args.setError); const stopTask = useStopTaskAction(args.activeThread, args.setError); return { branchFromMessage, deleteThread, editAndResend, openLinkedDetails, retryMessage, revertMessage, selectThread: selectionActions.selectThread, sendMessage, startNewChat: selectionActions.startNewChat, stopTask }; }
+export function useAgentChatActions(args: AgentChatActionArgs): AgentChatActionState { const selectionActions = useThreadSelectionActions(args.setActiveThreadId, args.setError); const sendMessage = useSendMessageAction(args); const openLinkedDetails = useOpenLinkedDetailsAction(args.setError); const deleteThread = useDeleteThreadAction(args.setThreads, args.setActiveThreadId, args.setError); const editAndResend = useEditAndResendAction(args); const retryMessage = useRetryMessageAction(args); const revertMessage = useRevertMessageAction(args.setError, args.setThreads); const branchFromMessage = useBranchFromMessageAction(args.setThreads, args.setActiveThreadId, args.setError); const stopTask = useStopTaskAction(args); return { branchFromMessage, deleteThread, editAndResend, openLinkedDetails, retryMessage, revertMessage, selectThread: selectionActions.selectThread, sendMessage, startNewChat: selectionActions.startNewChat, stopTask }; }
 export function buildAgentChatWorkspaceModel(args: BuildWorkspaceModelArgs): AgentChatWorkspaceModel { return { ...args, commands: args.commands ?? [], canSend: Boolean(args.projectRoot && (args.draft.trim() || args.attachments.length > 0)) && !args.isSending, hasProject: Boolean(args.projectRoot) }; }

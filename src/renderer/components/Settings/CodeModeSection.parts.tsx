@@ -8,7 +8,7 @@ import {
 import { CodeModeOverview, ErrorBanner } from './CodeModeSectionOverview';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
-export function CodeModeSectionView(props: CodeModeSectionModel): React.ReactElement<any> {
+export function CodeModeSectionView(props: CodeModeSectionModel): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <ErrorBanner error={props.error} />

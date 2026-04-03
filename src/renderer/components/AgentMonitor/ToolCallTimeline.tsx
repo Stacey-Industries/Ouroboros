@@ -63,7 +63,7 @@ function TimelineRows({
   totalDurationMs: number;
   nowMs: number;
   onHover: (data: TooltipData | null) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <>
       <div
@@ -101,7 +101,7 @@ export const ToolCallTimeline = memo(function ToolCallTimeline({
   toolCalls,
   sessionStartedAt,
   sessionRunning,
-}: ToolCallTimelineProps): React.ReactElement<any> {
+}: ToolCallTimelineProps): React.ReactElement<unknown> {
   const nowMs = useTimelineClock(sessionRunning);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
@@ -145,7 +145,7 @@ interface TimelineHeaderProps {
 const TimelineHeader = memo(function TimelineHeader({
   count,
   totalMs,
-}: TimelineHeaderProps): React.ReactElement<any> {
+}: TimelineHeaderProps): React.ReactElement<unknown> {
   return (
     <div
       className="flex items-center justify-between px-3 py-1"

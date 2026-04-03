@@ -68,7 +68,7 @@ const CommitPatchPanel = memo(function CommitPatchPanel({
 }: {
   onBack: () => void;
   patch: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={containerStyle}>
       <PatchHeader onBack={onBack} />
@@ -97,7 +97,7 @@ const CommitRow = memo(function CommitRow({
 }: {
   commit: CommitEntry;
   onSelect: (hash: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const shortHash = commit.hash.slice(0, 7);
   return (
     <button
@@ -126,7 +126,7 @@ type ListPanelProps = Omit<
   'onBack' | 'patch' | 'patchError' | 'patchLoading' | 'selectedHash'
 >;
 
-function LoadMoreButton({ loadMore }: { loadMore: () => Promise<void> }): React.ReactElement<any> {
+function LoadMoreButton({ loadMore }: { loadMore: () => Promise<void> }): React.ReactElement {
   return (
     <div style={{ padding: '8px 12px', textAlign: 'center' }}>
       <button
@@ -147,7 +147,7 @@ function CommitListBody({
   isLoading,
   loadMore,
   onSelectCommit,
-}: ListPanelProps): React.ReactElement<any> {
+}: ListPanelProps): React.ReactElement {
   return (
     <div style={{ flex: 1, overflow: 'auto' }}>
       {commits.length === 0 && !isLoading && !error ? (
@@ -176,7 +176,7 @@ function CommitListBody({
   );
 }
 
-const CommitListPanel = memo(function CommitListPanel(props: ListPanelProps): React.ReactElement<any> {
+const CommitListPanel = memo(function CommitListPanel(props: ListPanelProps): React.ReactElement {
   return (
     <div style={containerStyle}>
       <div className="text-text-semantic-faint" style={headerStyle}>
@@ -193,7 +193,7 @@ function PatchErrorMessage({
 }: {
   onBack: () => void;
   patchError: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <StatusMessage
       action={
@@ -223,7 +223,7 @@ export const CommitHistoryView = memo(function CommitHistoryView({
   patchError,
   patchLoading,
   selectedHash,
-}: CommitHistoryViewModel): React.ReactElement<any> {
+}: CommitHistoryViewModel): React.ReactElement {
   if (selectedHash !== null && patchLoading) return <StatusMessage message="Loading diff..." />;
   if (selectedHash !== null && patchError)
     return <PatchErrorMessage onBack={onBack} patchError={patchError} />;

@@ -87,7 +87,7 @@ function useSlashCommandKeyboard({
   return useCallback((event: KeyboardEvent) => handleSlashCommandKeyDown({ event, isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose }), [isOpen, filtered, selectedIndex, moveDown, moveUp, onSelect, onClose]);
 }
 
-function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: SlashCommand; selected: boolean; onMouseDown: () => void; onMouseEnter: () => void; }): React.ReactElement<any> {
+function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: SlashCommand; selected: boolean; onMouseDown: () => void; onMouseEnter: () => void; }): React.ReactElement {
   return (
     <button data-slash-item onMouseDown={(event) => { event.preventDefault(); onMouseDown(); }} onMouseEnter={onMouseEnter} className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-75 text-text-semantic-primary${selected ? ' bg-surface-overlay' : ''}`}>
       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-raised text-[11px] text-text-semantic-muted">{cmd.icon}</span>
@@ -97,7 +97,7 @@ function SlashCommandItem({ cmd, selected, onMouseDown, onMouseEnter }: { cmd: S
   );
 }
 
-export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }: SlashCommandMenuProps): React.ReactElement<any> | null {
+export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }: SlashCommandMenuProps): React.ReactElement | null {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const filtered = useMemo(() => filterCommands(query, commands), [query, commands]);
@@ -117,7 +117,7 @@ export function SlashCommandMenu({ query, commands, onSelect, onClose, isOpen }:
   if (!isOpen || filtered.length === 0) return null;
 
   return (
-    <div ref={listRef} className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-base shadow-lg">
+    <div ref={listRef} className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[320px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay shadow-xl">
       <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-semantic-muted">Slash Commands</div>
       {filtered.map((cmd, index) => <SlashCommandItem key={cmd.id} cmd={cmd} selected={index === selectedIndex} onMouseDown={() => onSelect(cmd)} onMouseEnter={() => setSelectedIndex(index)} />)}
     </div>

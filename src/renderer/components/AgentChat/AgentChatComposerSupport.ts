@@ -135,6 +135,25 @@ export function replaceTriggerWithPath(
   textarea.setSelectionRange(newCursor, newCursor);
 }
 
+/** Replace the /trigger text with `/cmdId ` inline in the textarea. */
+function replaceSlashTrigger(
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
+  lastSyncedDraft: React.MutableRefObject<string>,
+  onChange: (value: string) => void,
+  cmdId: string,
+): void {
+  const textarea = textareaRef.current;
+  if (!textarea) return;
+  const cursor = textarea.selectionStart;
+  const lastSlash = textarea.value.slice(0, cursor).lastIndexOf('/');
+  if (lastSlash === -1) return;
+  const insertion = `/${cmdId} `;
+  const nextDraft = textarea.value.slice(0, lastSlash) + insertion + textarea.value.slice(cursor);
+  setDraftValue(textareaRef, lastSyncedDraft, onChange, nextDraft);
+  const newCursor = lastSlash + insertion.length;
+  textarea.setSelectionRange(newCursor, newCursor);
+}
+
 /* ---------- Mention/file selection helpers ---------- */
 
 export function createFileMention(file: FileEntry): MentionItem {
@@ -232,8 +251,11 @@ export function selectComposerSlash(
     },
     cmd,
   );
-  if (cmd.clearDraft !== false)
+  if (cmd.clearDraft !== false) {
     resetDraftTextarea(args.textareaRef, args.lastSyncedDraft, args.onChange);
+  } else {
+    replaceSlashTrigger(args.textareaRef, args.lastSyncedDraft, args.onChange, cmd.id);
+  }
   args.setIsSlashMenuOpen?.(false);
   args.setSlashQuery?.(null);
   args.textareaRef.current?.focus();

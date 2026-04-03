@@ -80,7 +80,7 @@ function BranchDropdownMessage({
 }: {
   children: React.ReactNode;
   color: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return <div style={{ padding: '12px', color, textAlign: 'center' }}>{children}</div>;
 }
 
@@ -94,7 +94,7 @@ function BranchListButton({
   currentBranch: string;
   checkingOut: string | null;
   onCheckout: (branch: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const isCurrent = branch === currentBranch;
   const isCheckingOut = checkingOut === branch;
   const handleMouseEnter = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -137,7 +137,7 @@ function BranchDropdownContent({
   error,
   loading,
   onCheckout,
-}: BranchDropdownContentProps): React.ReactElement<any> {
+}: BranchDropdownContentProps): React.ReactElement {
   if (loading)
     return (
       <BranchDropdownMessage color="var(--text-faint, var(--text-secondary))">
@@ -171,7 +171,7 @@ function BranchSearchInput({
 }: {
   search: string;
   onSearchChange: (value: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={MENU_HEADER_STYLE}>
       <input
@@ -201,7 +201,7 @@ function BranchDropdown({
   onClose,
   onCheckout,
   checkingOut,
-}: BranchDropdownProps): React.ReactElement<any> {
+}: BranchDropdownProps): React.ReactElement {
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { branches, loading, error } = useBranches(projectRoot);
@@ -271,7 +271,7 @@ export function BranchButton({
 }: {
   gitBranch: string;
   projectRoot: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [open, setOpen] = useState(false);
   const closeMenu = useCallback(() => setOpen(false), []);
   const { checkingOut, handleCheckout } = useBranchCheckout(projectRoot, closeMenu);

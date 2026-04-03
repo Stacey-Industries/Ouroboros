@@ -39,7 +39,7 @@ const CARD_DEFS = [
 
 export const SummaryCards = memo(function SummaryCards({
   entries,
-}: SummaryCardsProps): React.ReactElement<any> {
+}: SummaryCardsProps): React.ReactElement<unknown> {
   const stats = useMemo(() => computeStats(entries), [entries]);
 
   return (

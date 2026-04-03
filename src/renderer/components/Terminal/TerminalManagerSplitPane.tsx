@@ -92,7 +92,7 @@ function SplitDivider({
   onPointerDown,
 }: {
   onPointerDown: (event: React.PointerEvent) => void
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="bg-border-semantic"
@@ -109,7 +109,7 @@ function SplitCloseButton({
   onClose,
 }: {
   onClose: () => void
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button onClick={onClose} title="Close split pane" className="border border-border-semantic bg-surface-panel text-text-semantic-muted" style={SPLIT_CLOSE_BUTTON_STYLE}>
       Close split
@@ -133,7 +133,7 @@ export function SplitPaneLayoutFrame({
   onClose,
   leftPane,
   rightPane,
-}: SplitPaneLayoutFrameProps): React.ReactElement<any> {
+}: SplitPaneLayoutFrameProps): React.ReactElement {
   return (
     <div ref={containerRef as React.RefObject<HTMLDivElement | null>} style={SPLIT_LAYOUT_STYLE}>
       <div style={getLeftPaneStyle(splitRatio)}>{leftPane}</div>

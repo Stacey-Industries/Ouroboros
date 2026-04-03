@@ -10,7 +10,7 @@ export function Divider({
   subtle = false,
   className,
   ...rest
-}: DividerProps): React.ReactElement<any> {
+}: DividerProps): React.ReactElement {
   const dirClass =
     direction === 'horizontal' ? 'w-full h-px' : 'h-full w-px';
   const colorClass = subtle ? 'bg-border-semantic-subtle' : 'bg-border-semantic';

@@ -102,7 +102,7 @@ const BranchToggle = memo(function BranchToggle({
   expanded,
   childCount,
   onToggle,
-}: BranchToggleProps): React.ReactElement<any> {
+}: BranchToggleProps): React.ReactElement<unknown> {
   return (
     <button
       onClick={onToggle}
@@ -154,7 +154,7 @@ function TreeGuides({
   depth: number;
   hasChildren: boolean;
   isLastChild: boolean;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (depth === 0) return null;
 
   return (
@@ -184,7 +184,7 @@ function TreeNodeContent({
   onDismiss: (id: string) => void;
   onToggle: () => void;
   session: AgentSession;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div style={{ paddingLeft: `${indent}px` }}>
       <AgentCard session={session} onDismiss={onDismiss} childCount={childCount} />
@@ -209,7 +209,7 @@ function TreeChildren({
   onDismiss: (id: string) => void;
   collapsedIds: Set<string>;
   onToggleCollapse: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div>
       {nodes.map((child, index) => (
@@ -234,7 +234,7 @@ const TreeNodeRenderer = memo(function TreeNodeRenderer({
   collapsedIds,
   onToggleCollapse,
   isLastChild,
-}: TreeNodeRendererProps): React.ReactElement<any> {
+}: TreeNodeRendererProps): React.ReactElement<unknown> {
   const hasChildren = node.children.length > 0;
   const isCollapsed = collapsedIds.has(node.session.id);
 
@@ -270,7 +270,7 @@ export interface AgentTreeProps {
 export const AgentTree = memo(function AgentTree({
   sessions,
   onDismiss,
-}: AgentTreeProps): React.ReactElement<any> {
+}: AgentTreeProps): React.ReactElement<unknown> {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const roots = buildTree(sessions);
 

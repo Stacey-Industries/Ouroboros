@@ -35,7 +35,7 @@ export function AppearanceSectionContent({
   onSaveAsCustom,
   onThemeClick,
   setEditorOpen,
-}: AppearanceSectionContentProps): React.ReactElement<any> {
+}: AppearanceSectionContentProps): React.ReactElement {
   return (
     <div style={containerStyle}>
       <ThemeGrid
@@ -64,7 +64,7 @@ export function AppearanceSectionContent({
 function GlassOpacitySlider({ draft, onChange }: {
   draft: AppConfig;
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { setGlassOpacity } = useTheme();
   const handleChange = useCallback((value: number) => {
     onChange('glassOpacity', value);

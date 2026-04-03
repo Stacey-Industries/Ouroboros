@@ -90,7 +90,7 @@ function handleProgressDotState(
   }
 }
 
-export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): React.ReactElement<any> | null {
+export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): React.ReactElement | null {
   const [display, setDisplay] = useState<ProgressDisplay>({ visualState: 'hidden', value: 0 })
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -123,7 +123,7 @@ export function TerminalProgressBar({ subscribe }: TerminalProgressBarProps): Re
 }
 
 /** Tiny dot indicator for terminal tabs when progress is active */
-export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): React.ReactElement<any> | null {
+export function TerminalProgressDot({ subscribe }: TerminalProgressBarProps): React.ReactElement | null {
   const [active, setActive] = useState(false)
   const [isError, setIsError] = useState(false)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

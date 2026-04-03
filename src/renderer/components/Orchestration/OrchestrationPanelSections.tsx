@@ -17,7 +17,7 @@ export const ORCHESTRATION_TABS: Array<{ key: OrchestrationTab; label: string }>
   { key: 'history', label: 'History' },
 ];
 
-export function NoProjectState({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+export function NoProjectState({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <PanelFrame onClose={onClose} title="Orchestration" subtitle="Open a project folder to inspect orchestration state.">
       <div className="flex flex-1 items-center justify-center p-6 text-[13px]" style={{ color: 'var(--text-muted)' }}>
@@ -27,7 +27,7 @@ export function NoProjectState({ onClose }: { onClose: () => void }): React.Reac
   );
 }
 
-export function LoadingState(): React.ReactElement<any> {
+export function LoadingState(): React.ReactElement {
   return (
     <div className="flex h-full items-center justify-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
       Loading orchestration sessions…
@@ -35,7 +35,7 @@ export function LoadingState(): React.ReactElement<any> {
   );
 }
 
-export function PanelFrame({ onClose, title, subtitle, children }: { onClose: () => void; title: string; subtitle: string; children: React.ReactNode; }): React.ReactElement<any> {
+export function PanelFrame({ onClose, title, subtitle, children }: { onClose: () => void; title: string; subtitle: string; children: React.ReactNode; }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -67,7 +67,7 @@ export function OrchestrationHeader(props: {
   onPauseActive: () => void;
   onCancelActive: () => void;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const tone = resolveStatusTone(props.status);
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -100,7 +100,7 @@ function HeaderActions(props: {
   onPauseActive: () => void;
   onCancelActive: () => void;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
       <ActionButton label={props.refreshing ? 'Refreshing…' : 'Refresh'} onClick={props.onRefresh} />
@@ -113,7 +113,7 @@ function HeaderActions(props: {
   );
 }
 
-function ActionButton({ label, onClick, disabled = false, destructive = false }: { label: string; onClick: () => void; disabled?: boolean; destructive?: boolean; }): React.ReactElement<any> {
+function ActionButton({ label, onClick, disabled = false, destructive = false }: { label: string; onClick: () => void; disabled?: boolean; destructive?: boolean; }): React.ReactElement {
   return (
     <button type="button" onClick={onClick} className="rounded-md border px-3 py-1.5 text-[12px]" style={{ borderColor: destructive ? 'color-mix(in srgb, #ef4444 30%, var(--border))' : 'var(--border)', background: destructive ? 'color-mix(in srgb, #ef4444 10%, var(--bg-secondary))' : 'var(--bg-secondary)', color: destructive ? '#ef4444' : 'var(--text)' }} disabled={disabled}>
       {label}
@@ -121,7 +121,7 @@ function ActionButton({ label, onClick, disabled = false, destructive = false }:
   );
 }
 
-function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <button type="button" onClick={onClose} aria-label="Close orchestration" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', lineHeight: 1 }}>
       x
@@ -129,7 +129,7 @@ function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement<a
   );
 }
 
-export function OrchestrationTabBar({ activeTab, onSelect }: { activeTab: OrchestrationTab; onSelect: (tab: OrchestrationTab) => void; }): React.ReactElement<any> {
+export function OrchestrationTabBar({ activeTab, onSelect }: { activeTab: OrchestrationTab; onSelect: (tab: OrchestrationTab) => void; }): React.ReactElement {
   return (
     <div className="flex" style={{ borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-secondary)' }}>
       {ORCHESTRATION_TABS.map((tab) => (
@@ -141,7 +141,7 @@ export function OrchestrationTabBar({ activeTab, onSelect }: { activeTab: Orches
   );
 }
 
-export function ErrorBanner({ message }: { message: string | null }): React.ReactElement<any> | null {
+export function ErrorBanner({ message }: { message: string | null }): React.ReactElement | null {
   if (!message) {
     return null;
   }
@@ -162,7 +162,7 @@ export function OverviewTabContent(props: {
   actionMessage: string | null;
   actionError: string | null;
   latestResultMessage: string | null;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
@@ -174,7 +174,7 @@ export function OverviewTabContent(props: {
   );
 }
 
-function TaskOverviewCard(props: { session: TaskSessionRecord | null; status: string; provider: string; verificationProfile: string; currentStep: string; }): React.ReactElement<any> {
+function TaskOverviewCard(props: { session: TaskSessionRecord | null; status: string; provider: string; verificationProfile: string; currentStep: string; }): React.ReactElement {
   const tone = resolveStatusTone(props.status);
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
@@ -195,7 +195,7 @@ function TaskOverviewCard(props: { session: TaskSessionRecord | null; status: st
   );
 }
 
-function TaskStateCard(props: { session: TaskSessionRecord | null; actionMessage: string | null; actionError: string | null; latestResultMessage: string | null; }): React.ReactElement<any> {
+function TaskStateCard(props: { session: TaskSessionRecord | null; actionMessage: string | null; actionError: string | null; latestResultMessage: string | null; }): React.ReactElement {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>Task state</div>
@@ -204,7 +204,7 @@ function TaskStateCard(props: { session: TaskSessionRecord | null; actionMessage
   );
 }
 
-export function SessionMemoryCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement<any> {
+export function SessionMemoryCard({ session }: { session: TaskSessionRecord | null }): React.ReactElement {
   return (
     <div className="rounded-lg border p-4" style={panelStyle()}>
       <div className="text-[13px] font-semibold" style={{ color: 'var(--text)' }}>Current session memory</div>
@@ -214,7 +214,7 @@ export function SessionMemoryCard({ session }: { session: TaskSessionRecord | nu
   );
 }
 
-function SectionTitle({ title, description }: { title: string; description: string }): React.ReactElement<any> {
+function SectionTitle({ title, description }: { title: string; description: string }): React.ReactElement {
   return (
     <div>
       <div className="text-[14px] font-semibold" style={{ color: 'var(--text)' }}>{title}</div>
@@ -223,7 +223,7 @@ function SectionTitle({ title, description }: { title: string; description: stri
   );
 }
 
-function SummaryCard({ label, value, accent = false }: { label: string; value: string; accent?: boolean }): React.ReactElement<any> {
+function SummaryCard({ label, value, accent = false }: { label: string; value: string; accent?: boolean }): React.ReactElement {
   return (
     <div className="rounded-md border p-3" style={panelStyle('var(--bg)')}>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>
@@ -232,7 +232,7 @@ function SummaryCard({ label, value, accent = false }: { label: string; value: s
   );
 }
 
-function KeyedBlock({ label, value, large = false, multiline = false }: { label: string; value: string; large?: boolean; multiline?: boolean }): React.ReactElement<any> {
+function KeyedBlock({ label, value, large = false, multiline = false }: { label: string; value: string; large?: boolean; multiline?: boolean }): React.ReactElement {
   return (
     <div className={large ? '' : 'rounded-md border px-3 py-2'} style={large ? undefined : panelStyle('var(--bg)')}>
       <div className={large ? 'text-[11px] uppercase tracking-wide' : ''} style={{ color: 'var(--text-muted)' }}>{label}</div>

@@ -23,7 +23,7 @@ function NotificationLevelSelect({
 }: {
   level: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={levelRowStyle}>
       <label htmlFor="notif-level" className="text-text-semantic-secondary" style={levelLabelStyle}>
@@ -44,7 +44,7 @@ function NotificationLevelSelect({
   );
 }
 
-export function NotificationsSubsection({ draft, onChange }: Props): React.ReactElement<any> {
+export function NotificationsSubsection({ draft, onChange }: Props): React.ReactElement {
   const notifications = draft.notifications ?? getDefaultNotifications();
 
   function handleLevelChange(e: React.ChangeEvent<HTMLSelectElement>): void {

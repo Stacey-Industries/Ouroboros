@@ -82,11 +82,18 @@ function loadCoreAddons(
   term.loadAddon(webLinksAddon)
   try {
     const webgl = new WebglAddon()
-    webgl.onContextLoss(() => { webgl.dispose() })
+    webgl.onContextLoss(() => {
+      console.warn('[terminal:webgl] context loss — disposing WebGL addon')
+      webgl.dispose()
+    })
     term.loadAddon(webgl)
     _context.refs.webglAddonRef.current = webgl
-  } catch { /* WebGL not available — DOM renderer fallback */ }
+    console.warn('[terminal:webgl] loaded BEFORE term.open()')
+  } catch (err) {
+    console.warn('[terminal:webgl] failed to load:', err)
+  }
   term.open(container)
+  console.warn('[terminal:webgl] term.open() complete, renderer:', (term as Record<string, unknown>)._core ? 'active' : 'unknown')
   return { fitAddon, searchAddon }
 }
 
@@ -142,7 +149,7 @@ function attachAllHandlers(
   const selD = term.onSelectionChange(() => {
     if (!term.getSelection()) context.callbacks.setSelectionTooltip(INITIAL_SELECTION_TOOLTIP)
   })
-  const ro = createReadyObserver(context, container, term)
+  const ro = createReadyObserver(context, container)
 
   return { ...terminalDisposables, ...containerHandlers, selD, ro }
 }
@@ -179,7 +186,6 @@ function attachContainerHandlers(
 function createReadyObserver(
   context: TerminalSetupLifecycleContext,
   container: HTMLDivElement,
-  _term: Terminal,
 ): ResizeObserver {
   const ro = new ResizeObserver(() => context.fit())
   requestAnimationFrame(() => {

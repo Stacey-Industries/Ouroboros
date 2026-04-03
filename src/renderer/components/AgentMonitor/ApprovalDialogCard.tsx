@@ -35,7 +35,7 @@ function ActionButton({
   className: string;
   style: React.CSSProperties;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <button onClick={onClick} className={className} style={style} title={title}>
       {label}
@@ -43,7 +43,7 @@ function ActionButton({
   );
 }
 
-function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactElement<any> {
+function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactElement<unknown> {
   return (
     <ActionButton
       title="Approve (Enter or Y)"
@@ -55,7 +55,7 @@ function ApproveButton({ onApprove }: { onApprove: () => void }): React.ReactEle
   );
 }
 
-function RejectButton({ onReject }: { onReject: () => void }): React.ReactElement<any> {
+function RejectButton({ onReject }: { onReject: () => void }): React.ReactElement<unknown> {
   return (
     <ActionButton
       title="Reject (Escape or N)"
@@ -67,7 +67,7 @@ function RejectButton({ onReject }: { onReject: () => void }): React.ReactElemen
   );
 }
 
-function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement<any> {
+function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement<unknown> {
   return (
     <ActionButton
       title="Always Allow this tool for this session (A)"
@@ -95,7 +95,7 @@ function ApprovalActions({
   onAlwaysAllow: () => void;
   onConfirmReject: () => void;
   onShowRejectInput: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   const handleReject = showRejectInput ? onConfirmReject : onShowRejectInput;
   return (
     <div className="flex items-center gap-2 mt-1">
@@ -115,7 +115,7 @@ const DIALOG_PANEL_STYLE: React.CSSProperties = {
   overflow: 'auto',
 };
 
-function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<any> {
+function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<unknown> {
   const rejectInput = props.showRejectInput ? (
     <RejectReasonInput
       rejectReason={props.rejectReason}
@@ -146,7 +146,7 @@ function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<any> {
   );
 }
 
-export function ApprovalDialogCard(props: ApprovalDialogCardProps): React.ReactElement<any> {
+export function ApprovalDialogCard(props: ApprovalDialogCardProps): React.ReactElement<unknown> {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"

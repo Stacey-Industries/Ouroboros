@@ -13,8 +13,10 @@ import {
 import {
   disableContributions,
   enableContributions,
-  getInstalledList,
+  getIconThemeContributions,
+  getProductIconThemeContributions,
   getThemeContributions,
+  refreshInstalledListFromDisk,
   uninstallExtension,
 } from './extensionStoreHelpers';
 import { registerMarketplaceHandlers } from './extensionStoreMarketplace';
@@ -56,45 +58,30 @@ function registerHandler(channels: string[], channel: string, handler: IpcHandle
 }
 
 async function getInstalledExtensions() {
-  return { extensions: getInstalledList() };
+  return { extensions: await refreshInstalledListFromDisk() };
+}
+
+function registerCrudHandlers(channels: string[]): void {
+  registerHandler(channels, 'extensionStore:search', async (_event, query: string, offset?: number) => runHandler(() => searchExtensions(query, offset ?? 0)));
+  registerHandler(channels, 'extensionStore:getDetails', async (_event, namespace: string, name: string) => runHandler(() => getExtensionDetails(namespace, name)));
+  registerHandler(channels, 'extensionStore:install', async (_event, namespace: string, name: string, version?: string) => runHandler(() => installExtension(namespace, name, version)));
+  registerHandler(channels, 'extensionStore:uninstall', async (_event, id: string) => runHandler(() => uninstallExtension(id)));
+  registerHandler(channels, 'extensionStore:getInstalled', async () => runHandler(() => getInstalledExtensions()));
+}
+
+function registerContributionHandlers(channels: string[]): void {
+  registerHandler(channels, 'extensionStore:enableContributions', async (_event, id: string) => runHandler(() => enableContributions(id)));
+  registerHandler(channels, 'extensionStore:disableContributions', async (_event, id: string) => runHandler(() => disableContributions(id)));
+  registerHandler(channels, 'extensionStore:getThemeContributions', async () => runHandler(() => getThemeContributions()));
+  registerHandler(channels, 'extensionStore:getIconThemeContributions', async () => runHandler(() => getIconThemeContributions()));
+  registerHandler(channels, 'extensionStore:getProductIconThemeContributions', async () => runHandler(() => getProductIconThemeContributions()));
 }
 
 export function registerExtensionStoreHandlers(_senderWindow: SenderWindow): string[] {
   void _senderWindow;
   const channels: string[] = [];
-  registerHandler(
-    channels,
-    'extensionStore:search',
-    async (_event, query: string, offset?: number) =>
-      runHandler(() => searchExtensions(query, offset ?? 0)),
-  );
-  registerHandler(
-    channels,
-    'extensionStore:getDetails',
-    async (_event, namespace: string, name: string) =>
-      runHandler(() => getExtensionDetails(namespace, name)),
-  );
-  registerHandler(
-    channels,
-    'extensionStore:install',
-    async (_event, namespace: string, name: string, version?: string) =>
-      runHandler(() => installExtension(namespace, name, version)),
-  );
-  registerHandler(channels, 'extensionStore:uninstall', async (_event, id: string) =>
-    runHandler(() => uninstallExtension(id)),
-  );
-  registerHandler(channels, 'extensionStore:getInstalled', async () =>
-    runHandler(() => getInstalledExtensions()),
-  );
-  registerHandler(channels, 'extensionStore:enableContributions', async (_event, id: string) =>
-    runHandler(() => enableContributions(id)),
-  );
-  registerHandler(channels, 'extensionStore:disableContributions', async (_event, id: string) =>
-    runHandler(() => disableContributions(id)),
-  );
-  registerHandler(channels, 'extensionStore:getThemeContributions', async () =>
-    runHandler(() => getThemeContributions()),
-  );
+  registerCrudHandlers(channels);
+  registerContributionHandlers(channels);
   registerMarketplaceHandlers(channels, registerHandler);
   return channels;
 }

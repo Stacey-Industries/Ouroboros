@@ -4,10 +4,10 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 
+import { ProductIcon } from '../shared/ProductIcon';
 import { shortModelName } from './ClaudeModelMenu';
 import { NewTerminalMenu } from './NewTerminalMenu';
-import type { TabDragDropState } from './TerminalTabs.dnd';
-import { useTabDragDrop } from './TerminalTabs.dnd';
+import { getTabClasses, type TabDragDropState,useTabDragDrop } from './TerminalTabs.dnd';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,57 +38,46 @@ export interface TerminalTabsProps {
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-function CloseIcon(): React.ReactElement<any> {
+function CloseIcon(): React.ReactElement {
   return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 8 8"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
+    <ProductIcon
+      iconId="close"
+      size={8}
+      fallback={
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 8 8"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path d="M1 1L7 7M7 1L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      }
+    />
   );
 }
 
-function PlusIcon(): React.ReactElement<any> {
+function PlusIcon(): React.ReactElement {
   return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M5 1V9M1 5H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
+    <ProductIcon
+      iconId="add"
+      size={10}
+      fallback={
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <path d="M5 1V9M1 5H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      }
+    />
   );
-}
-
-// ─── Tab class builder ────────────────────────────────────────────────────────
-
-function getTabClasses(
-  isActive: boolean,
-  isExited: boolean,
-  isDragging: boolean,
-  isDragOver: boolean,
-): string {
-  const base =
-    'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-border-semantic shrink-0 transition-all duration-150';
-  const dragOver =
-    isDragOver && !isDragging
-      ? 'bg-surface-raised border-l-2 border-l-[var(--interactive-accent)]'
-      : '';
-  const dragging = isDragging ? 'opacity-40' : '';
-  const state = isActive
-    ? 'bg-[var(--term-bg,var(--surface-base))] text-text-semantic-primary after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-interactive-accent'
-    : isExited
-      ? 'bg-surface-panel text-text-semantic-muted opacity-60 hover:opacity-80 hover:bg-surface-raised'
-      : 'bg-surface-panel text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised';
-  return [base, dragOver, dragging, state].filter(Boolean).join(' ');
 }
 
 // ─── Tab badges ───────────────────────────────────────────────────────────────
@@ -99,7 +88,7 @@ function TabBadges({
 }: {
   session: TerminalSession;
   isExited: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       {session.isClaude && (
@@ -152,7 +141,7 @@ function TabCloseButton({
 }: {
   title: string;
   onClose: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={(e) => {
@@ -176,7 +165,7 @@ interface TabItemContentProps extends TabItemProps {
   label: string;
 }
 
-function TabItemContent(p: TabItemContentProps): React.ReactElement<any> {
+function TabItemContent(p: TabItemContentProps): React.ReactElement {
   return (
     <div
       draggable
@@ -208,7 +197,7 @@ function TabItemContent(p: TabItemContentProps): React.ReactElement<any> {
   );
 }
 
-function TabItem(props: TabItemProps): React.ReactElement<any> {
+function TabItem(props: TabItemProps): React.ReactElement {
   const [hovered, setHovered] = useState(false);
   const isExited = props.session.status === 'exited';
   const modelSuffix = props.session.model ? ` (${shortModelName(props.session.model)})` : '';
@@ -240,7 +229,7 @@ function renderSessionTab({
   dnd: TabDragDropState;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <TabItem
       key={session.id}
@@ -268,7 +257,7 @@ function NewTerminalButton({
   onNew,
   onNewClaude,
   onNewCodex,
-}: Pick<TerminalTabsProps, 'onNew' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement<any> {
+}: Pick<TerminalTabsProps, 'onNew' | 'onNewClaude' | 'onNewCodex'>): React.ReactElement {
   const plusBtnRef = useRef<HTMLButtonElement>(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const handleToggleMenu = useCallback(() => setShowNewMenu((prev) => !prev), []);
@@ -309,7 +298,7 @@ export function TerminalTabs({
   onNewClaude,
   onNewCodex,
   onReorder,
-}: TerminalTabsProps): React.ReactElement<any> {
+}: TerminalTabsProps): React.ReactElement {
   const dnd = useTabDragDrop(sessions, onReorder);
   return (
     <div

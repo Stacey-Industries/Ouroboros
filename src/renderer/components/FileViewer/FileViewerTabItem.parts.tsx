@@ -5,7 +5,7 @@ import { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE } from './FileViewerT
 
 export { MENU_ITEM_STYLE, MENU_SEPARATOR_STYLE, MENU_STYLE };
 
-export function CloseIcon(): React.ReactElement<any> {
+export function CloseIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -44,7 +44,7 @@ function DirtyDotButton({
   handleClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={handleClick}
@@ -97,7 +97,7 @@ function CloseXButton({
   handleClick,
   onMouseEnter,
   onMouseLeave,
-}: CloseXButtonProps): React.ReactElement<any> {
+}: CloseXButtonProps): React.ReactElement {
   return (
     <button
       onClick={handleClick}
@@ -130,7 +130,7 @@ export function CloseTabButton({
   isDirty,
   isTabHovered,
   onRequestClose,
-}: CloseTabButtonProps): React.ReactElement<any> {
+}: CloseTabButtonProps): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -247,7 +247,7 @@ interface TabContextMenuProps {
   onDismiss: () => void;
 }
 
-function ContextMenuItem({ item }: { item: MenuItem }): React.ReactElement<any> {
+function ContextMenuItem({ item }: { item: MenuItem }): React.ReactElement {
   if (item === 'separator') return <div style={MENU_SEPARATOR_STYLE} />;
   return (
     <button
@@ -275,7 +275,7 @@ export function TabContextMenu({
   onCloseAll,
   onTogglePin,
   onDismiss,
-}: TabContextMenuProps): React.ReactElement<any> | null {
+}: TabContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null);
   useDismissMenuEffect(menuRef, menu.visible, onDismiss);
   if (!menu.visible) return null;

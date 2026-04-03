@@ -21,7 +21,7 @@ export interface PdfViewerProps {
   content?: Uint8Array;
 }
 
-function PdfLoadingView(): React.ReactElement<any> {
+function PdfLoadingView(): React.ReactElement {
   return (
     <div style={rootStyle}>
       <div
@@ -48,7 +48,7 @@ function PdfPage({
   zoomMode,
   customScale,
   containerWidth,
-}: PdfPageProps): React.ReactElement<any> {
+}: PdfPageProps): React.ReactElement {
   const { canvasRef, containerRef } = usePdfPageRenderer({
     pageNum,
     doc,
@@ -88,7 +88,7 @@ function PdfScrollArea({
   visiblePages,
   zoom,
   containerWidthRef,
-}: PdfScrollAreaProps): React.ReactElement<any> {
+}: PdfScrollAreaProps): React.ReactElement {
   return (
     <div ref={scrollRef as React.RefObject<HTMLDivElement | null>} style={scrollContainerStyle}>
       {pdfDoc &&
@@ -106,7 +106,7 @@ function PdfScrollArea({
   );
 }
 
-export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactElement<any> {
+export function PdfViewer({ filePath, content }: PdfViewerProps): React.ReactElement {
   const {
     pdfDoc,
     error,

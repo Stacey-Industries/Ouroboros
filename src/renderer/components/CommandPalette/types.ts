@@ -11,6 +11,7 @@ export interface Command {
   category?: CommandCategory | string;
   shortcut?: string;
   icon?: string;
+  productIconId?: string;
   action: () => void | Promise<void>;
   when?: () => boolean;
   /**

@@ -28,6 +28,8 @@ export { attachLinkClickHandler,ensureLinkStyles, injectLinks } from './linkDete
 export type { MarkdownPreviewProps } from './MarkdownPreview';
 export { MarkdownPreview } from './MarkdownPreview';
 export { renderMarkdown } from './markdownPreviewRenderer';
+export type { MediaViewerProps } from './MediaViewer';
+export { MediaViewer } from './MediaViewer';
 export type { MinimapProps } from './Minimap';
 export { Minimap } from './Minimap';
 export type { MonacoDiffEditorProps } from './MonacoDiffEditor';

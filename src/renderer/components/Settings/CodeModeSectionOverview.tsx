@@ -3,7 +3,7 @@ import React from 'react';
 import { buttonStyle, SectionLabel } from './CodeModeSection.shared';
 import type { CodeModeSectionModel } from './useCodeModeSectionModel';
 
-export function ErrorBanner({ error }: { error: string | null }): React.ReactElement<any> | null {
+export function ErrorBanner({ error }: { error: string | null }): React.ReactElement | null {
   if (!error) {
     return null;
   }
@@ -25,7 +25,7 @@ export function ErrorBanner({ error }: { error: string | null }): React.ReactEle
   );
 }
 
-function StatusDot({ isEnabled }: { isEnabled: boolean }): React.ReactElement<any> {
+function StatusDot({ isEnabled }: { isEnabled: boolean }): React.ReactElement {
   return (
     <span
       style={{
@@ -39,7 +39,7 @@ function StatusDot({ isEnabled }: { isEnabled: boolean }): React.ReactElement<an
   );
 }
 
-function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement<any> {
+function ProxiedServers({ servers }: { servers: string[] }): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <span className="text-text-semantic-muted" style={{ fontSize: '12px' }}>
@@ -70,7 +70,7 @@ function StatusIndicator({
   isEnabled,
   loading,
   proxiedServers,
-}: Pick<CodeModeSectionModel, 'isEnabled' | 'loading' | 'proxiedServers'>): React.ReactElement<any> {
+}: Pick<CodeModeSectionModel, 'isEnabled' | 'loading' | 'proxiedServers'>): React.ReactElement {
   if (loading) {
     return (
       <p className="text-text-semantic-muted" style={{ fontSize: '12px', fontStyle: 'italic' }}>
@@ -104,7 +104,7 @@ function StatusIndicator({
 function ServerNamesField({
   serverNames,
   setServerNames,
-}: Pick<CodeModeSectionModel, 'serverNames' | 'setServerNames'>): React.ReactElement<any> {
+}: Pick<CodeModeSectionModel, 'serverNames' | 'setServerNames'>): React.ReactElement {
   return (
     <div style={{ marginBottom: '16px' }}>
       <label
@@ -143,7 +143,7 @@ function EnableButton({
   canEnable,
   enabling,
   handleEnable,
-}: Pick<CodeModeSectionModel, 'canEnable' | 'enabling' | 'handleEnable'>): React.ReactElement<any> {
+}: Pick<CodeModeSectionModel, 'canEnable' | 'enabling' | 'handleEnable'>): React.ReactElement {
   return (
     <button
       onClick={() => void handleEnable()}
@@ -167,7 +167,7 @@ function DisableButton({
   canDisable,
   disabling,
   handleDisable,
-}: Pick<CodeModeSectionModel, 'canDisable' | 'disabling' | 'handleDisable'>): React.ReactElement<any> {
+}: Pick<CodeModeSectionModel, 'canDisable' | 'disabling' | 'handleDisable'>): React.ReactElement {
   return (
     <button
       onClick={() => void handleDisable()}
@@ -201,7 +201,7 @@ function ActionButtons({
   | 'fetchStatus'
   | 'handleDisable'
   | 'handleEnable'
->): React.ReactElement<any> {
+>): React.ReactElement {
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       <EnableButton canEnable={canEnable} enabling={enabling} handleEnable={handleEnable} />
@@ -217,7 +217,7 @@ function ActionButtons({
   );
 }
 
-export function CodeModeOverview(props: CodeModeSectionModel): React.ReactElement<any> {
+export function CodeModeOverview(props: CodeModeSectionModel): React.ReactElement {
   return (
     <section>
       <SectionLabel>Code Mode</SectionLabel>

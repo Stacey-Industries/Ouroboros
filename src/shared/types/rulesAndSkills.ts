@@ -24,12 +24,41 @@ export interface ClaudeHookMatcher {
 }
 
 export type HookEventType =
+  // Lifecycle
+  | 'SessionStart'
+  | 'SessionEnd'
+  | 'Stop'
+  | 'StopFailure'
+  | 'Setup'
+  // Tools
   | 'PreToolUse'
   | 'PostToolUse'
+  | 'PostToolUseFailure'
+  // Agents
   | 'SubagentStart'
   | 'SubagentStop'
-  | 'SessionStart'
-  | 'Stop';
+  | 'TeammateIdle'
+  // Tasks
+  | 'TaskCreated'
+  | 'TaskCompleted'
+  // Conversation
+  | 'UserPromptSubmit'
+  | 'Elicitation'
+  | 'ElicitationResult'
+  | 'Notification'
+  // Workspace
+  | 'CwdChanged'
+  | 'FileChanged'
+  | 'WorktreeCreate'
+  | 'WorktreeRemove'
+  | 'ConfigChange'
+  // Context
+  | 'PreCompact'
+  | 'PostCompact'
+  | 'InstructionsLoaded'
+  // Permissions
+  | 'PermissionRequest'
+  | 'PermissionDenied';
 
 export type HooksConfig = Record<string, ClaudeHookMatcher[]>;
 

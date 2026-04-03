@@ -72,9 +72,11 @@ export interface ContentRouterProps {
   showMinimap?: boolean;
   /** Format document before saving */
   formatOnSave?: boolean;
+  /** Show git blame annotations */
+  showBlame?: boolean;
 }
 
-type ConditionalRenderer = (props: ContentRouterProps) => React.ReactElement<any> | null;
+type ConditionalRenderer = (props: ContentRouterProps) => React.ReactElement | null;
 
 const fullPanelStyle: React.CSSProperties = {
   flex: 1,
@@ -90,19 +92,19 @@ const previewPanelStyle: React.CSSProperties = {
 const noop = (): void => { };
 
 function renderPanel(
-  child: React.ReactElement<any>,
+  child: React.ReactElement,
   style: React.CSSProperties = fullPanelStyle,
-): React.ReactElement<any> {
+): React.ReactElement {
   return <div style={style}>{child}</div>;
 }
 
-function buildEditorContent(props: ContentRouterProps): React.ReactElement<any> {
+function buildEditorContent(props: ContentRouterProps): React.ReactElement {
   if (props.isClaudeMd && props.claudeMdEnhanced) return renderClaudeMdEditor(props);
   if (USE_MONACO) return renderMonacoEditor(props);
   return renderInlineEditor(props);
 }
 
-function renderClaudeMdEditor(props: ContentRouterProps): React.ReactElement<any> {
+function renderClaudeMdEditor(props: ContentRouterProps): React.ReactElement {
   return (
     <ClaudeMdEditor
       content={props.content!}
@@ -116,23 +118,25 @@ function renderClaudeMdEditor(props: ContentRouterProps): React.ReactElement<any
   );
 }
 
-function renderMonacoEditor(props: ContentRouterProps): React.ReactElement<any> {
+function renderMonacoEditor(props: ContentRouterProps): React.ReactElement {
   return (
     <MonacoEditorHost
       filePath={props.filePath!}
       content={props.content!}
       readOnly={false}
+      projectRoot={props.projectRoot}
       onSave={props.onSave!}
       onContentChange={props.onContentChange ?? noop}
       onDirtyChange={props.onDirtyChange ?? noop}
       wordWrap={props.wordWrap}
       showMinimap={props.showMinimap}
+      showBlame={props.showBlame}
       formatOnSave={props.formatOnSave}
     />
   );
 }
 
-function renderInlineEditor(props: ContentRouterProps): React.ReactElement<any> {
+function renderInlineEditor(props: ContentRouterProps): React.ReactElement {
   return (
     <InlineEditor
       content={props.content!}
@@ -147,12 +151,12 @@ function renderInlineEditor(props: ContentRouterProps): React.ReactElement<any> 
   );
 }
 
-function renderEditorContent(props: ContentRouterProps): React.ReactElement<any> | null {
+function renderEditorContent(props: ContentRouterProps): React.ReactElement | null {
   if (!props.editMode || !props.filePath || props.content == null || !props.onSave) return null;
   return renderPanel(buildEditorContent(props));
 }
 
-function renderHistoryContent(props: ContentRouterProps): React.ReactElement<any> | null {
+function renderHistoryContent(props: ContentRouterProps): React.ReactElement | null {
   if (!props.showHistory || !props.filePath || !props.projectRoot) {
     return null;
   }
@@ -160,7 +164,7 @@ function renderHistoryContent(props: ContentRouterProps): React.ReactElement<any
   return renderPanel(<CommitHistory filePath={props.filePath} projectRoot={props.projectRoot} />);
 }
 
-function renderPreviewContent(props: ContentRouterProps): React.ReactElement<any> | null {
+function renderPreviewContent(props: ContentRouterProps): React.ReactElement | null {
   if (props.viewMode !== 'preview' || !props.isMarkdown || props.content == null) {
     return null;
   }
@@ -168,7 +172,7 @@ function renderPreviewContent(props: ContentRouterProps): React.ReactElement<any
   return renderPanel(<MarkdownPreview content={props.content} />, previewPanelStyle);
 }
 
-function renderDiffContent(props: ContentRouterProps): React.ReactElement<any> | null {
+function renderDiffContent(props: ContentRouterProps): React.ReactElement | null {
   const diffBaseContent = props.diffBaseContent ?? props.originalContent ?? null;
   if (props.viewMode !== 'diff' || !props.hasDiff || diffBaseContent == null || props.content == null) {
     return null;
@@ -194,7 +198,7 @@ function renderDiffContent(props: ContentRouterProps): React.ReactElement<any> |
   );
 }
 
-function renderConflictContent(props: ContentRouterProps): React.ReactElement<any> | null {
+function renderConflictContent(props: ContentRouterProps): React.ReactElement | null {
   const hasConflictView = props.conflictBlocks.length > 0 && props.viewMode === 'code';
   if (!hasConflictView || props.content == null || props.filePath == null) {
     return null;
@@ -217,7 +221,7 @@ const conditionalRenderers: readonly ConditionalRenderer[] = [
   renderConflictContent,
 ];
 
-function resolveContent(props: ContentRouterProps): React.ReactElement<any> {
+function resolveContent(props: ContentRouterProps): React.ReactElement {
   for (const render of conditionalRenderers) {
     const content = render(props);
     if (content) {
@@ -232,10 +236,12 @@ function resolveContent(props: ContentRouterProps): React.ReactElement<any> {
         filePath={props.filePath}
         content={props.content}
         readOnly={true}
+        projectRoot={props.projectRoot}
         onSave={props.onSave}
         onDirtyChange={props.onDirtyChange}
         wordWrap={props.wordWrap}
         showMinimap={props.showMinimap}
+        showBlame={props.showBlame}
         diffLines={props.codeViewProps.diffLines}
       />,
     );
@@ -250,6 +256,6 @@ function resolveContent(props: ContentRouterProps): React.ReactElement<any> {
  */
 export const ContentRouter = memo(function ContentRouter(
   props: ContentRouterProps,
-): React.ReactElement<any> {
+): React.ReactElement {
   return resolveContent(props);
 });

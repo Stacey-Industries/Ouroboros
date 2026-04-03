@@ -4,7 +4,7 @@
 
 import React, { memo } from 'react';
 
-export const SpinnerIcon = memo(function SpinnerIcon(): React.ReactElement<any> {
+export const SpinnerIcon = memo(function SpinnerIcon(): React.ReactElement<unknown> {
   return (
     <svg
       width="12"
@@ -28,7 +28,7 @@ export const SpinnerIcon = memo(function SpinnerIcon(): React.ReactElement<any> 
   );
 });
 
-export const SuccessIcon = memo(function SuccessIcon(): React.ReactElement<any> {
+export const SuccessIcon = memo(function SuccessIcon(): React.ReactElement<unknown> {
   return (
     <svg
       width="12"
@@ -49,7 +49,7 @@ export const SuccessIcon = memo(function SuccessIcon(): React.ReactElement<any> 
   );
 });
 
-export const ErrorIcon = memo(function ErrorIcon(): React.ReactElement<any> {
+export const ErrorIcon = memo(function ErrorIcon(): React.ReactElement<unknown> {
   return (
     <svg
       width="12"
@@ -73,7 +73,7 @@ export const RowChevron = memo(function RowChevron({
   open,
 }: {
   open: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <svg
       width="10"

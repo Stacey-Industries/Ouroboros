@@ -33,7 +33,7 @@ export function BranchTabIcon({
 }: {
   parentTitle: string;
   messageIndex: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       className="shrink-0 text-interactive-accent"
@@ -85,7 +85,7 @@ function DropdownItemDeleteButton({
 }: {
   threadId: string;
   onDeleteThread: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={(event) => {
@@ -108,7 +108,7 @@ type ThreadDropdownItemProps = {
   thread: AgentChatThreadRecord;
 };
 
-function ThreadDropdownItem(p: ThreadDropdownItemProps): React.ReactElement<any> {
+function ThreadDropdownItem(p: ThreadDropdownItemProps): React.ReactElement {
   const isActive = p.thread.id === p.activeThreadId;
   return (
     <div
@@ -152,7 +152,7 @@ type ThreadDropdownContentProps = {
   triggerRect: DOMRect;
 };
 
-function ThreadDropdownContent(p: ThreadDropdownContentProps): React.ReactElement<any> {
+function ThreadDropdownContent(p: ThreadDropdownContentProps): React.ReactElement {
   return (
     <div
       ref={p.dropdownRef}
@@ -194,7 +194,7 @@ export function ThreadDropdown({
   onSelectThread: (id: string) => void;
   threads: AgentChatThreadRecord[];
   triggerRect: DOMRect;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const dropdownRef = useRef<HTMLDivElement>(null);
   useThreadDropdownDismiss(dropdownRef, onClose);
   return createPortal(
@@ -211,7 +211,7 @@ export function ThreadDropdown({
   );
 }
 
-function TerminalIcon(): React.ReactElement<any> {
+function TerminalIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -235,7 +235,7 @@ export function OpenInTerminalButton({
 }: {
   linkedSession: LinkedSession;
   threadModel: string | null | undefined;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   const handleClick = useCallback(() => {
     if (!linkedSession.provider || !linkedSession.sessionId) return;
     window.dispatchEvent(

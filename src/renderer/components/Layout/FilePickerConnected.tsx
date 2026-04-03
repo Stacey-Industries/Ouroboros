@@ -17,7 +17,7 @@ export function FilePickerConnected({
   isOpen: boolean;
   onClose: () => void;
   projectRoot: string | null;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { openFile } = useFileViewerManager();
 
   const handleOpenFile = useCallback(

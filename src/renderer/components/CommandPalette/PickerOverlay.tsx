@@ -20,7 +20,7 @@ function PickerCard({
   animPrefix: string;
   maxWidth: string;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
@@ -45,7 +45,7 @@ export function PickerOverlay({
   maxWidth,
   onClose,
   children,
-}: PickerOverlayProps): React.ReactElement<any> {
+}: PickerOverlayProps): React.ReactElement {
   return (
     <div
       aria-modal="true"
@@ -95,7 +95,7 @@ function PickerSearchInput({
 }: Pick<
   PickerInputProps,
   'inputRef' | 'placeholder' | 'value' | 'isOpen' | 'controlsId' | 'onChange' | 'onKeyDown'
->): React.ReactElement<any> {
+>): React.ReactElement {
   return (
     <input
       ref={inputRef as React.RefObject<HTMLInputElement | null>}
@@ -128,7 +128,7 @@ export function PickerInput({
   onChange,
   onKeyDown,
   statusText,
-}: PickerInputProps): React.ReactElement<any> {
+}: PickerInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
       <span className="text-text-semantic-muted" style={prefixStyle}>

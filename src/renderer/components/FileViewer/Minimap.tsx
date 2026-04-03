@@ -24,7 +24,7 @@ export const Minimap = memo(function Minimap({
   lines,
   scrollContainer,
   visible,
-}: MinimapProps): React.ReactElement<any> | null {
+}: MinimapProps): React.ReactElement | null {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const totalMinimapHeight = lines.length * MINIMAP_LINE_TOTAL;
@@ -149,7 +149,7 @@ function MinimapPanel({
   canvasRef,
   viewportRect,
   onPointerDown,
-}: MinimapPanelProps): React.ReactElement<any> {
+}: MinimapPanelProps): React.ReactElement {
   return (
     <div
       ref={containerRef as React.RefObject<HTMLDivElement | null>}

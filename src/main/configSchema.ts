@@ -21,6 +21,14 @@ export const schema: Record<string, unknown> = {
     type: 'string',
     default: 'modern',
   },
+  activeFileIconTheme: {
+    type: 'string',
+    default: '',
+  },
+  activeProductIconTheme: {
+    type: 'string',
+    default: '',
+  },
   hooksServerPort: {
     type: 'number',
     minimum: 1024,
@@ -229,6 +237,10 @@ export const schema: Record<string, unknown> = {
     default: [],
   },
   lspEnabled: {
+    type: 'boolean',
+    default: false,
+  },
+  inlineCompletionsEnabled: {
     type: 'boolean',
     default: false,
   },

@@ -84,7 +84,7 @@ const stickyContainerStyle: React.CSSProperties = {
   transition: 'opacity 0.15s ease',
 };
 
-function ExitDot({ exitCode }: { exitCode?: number }): React.ReactElement<any> {
+function ExitDot({ exitCode }: { exitCode?: number }): React.ReactElement {
   const isRunning = exitCode === undefined;
   const isSuccess = exitCode === 0;
   const color = isRunning
@@ -146,7 +146,7 @@ function useStickyViewportY(terminal: Terminal | null): number {
 
 // ── Live Duration ────────────────────────────────────────────────────────────
 
-function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement<any> | null {
+function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | null {
   const [elapsed, setElapsed] = useState(() =>
     block.complete ? block.duration : Date.now() - block.timestamp,
   );
@@ -177,7 +177,7 @@ function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement<an
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-function ExitCodeBadge({ exitCode }: { exitCode: number }): React.ReactElement<any> {
+function ExitCodeBadge({ exitCode }: { exitCode: number }): React.ReactElement {
   return (
     <span
       className="text-status-error"
@@ -188,7 +188,7 @@ function ExitCodeBadge({ exitCode }: { exitCode: number }): React.ReactElement<a
   );
 }
 
-function StickyScrollContent({ block }: { block: CommandBlock }): React.ReactElement<any> {
+function StickyScrollContent({ block }: { block: CommandBlock }): React.ReactElement {
   return (
     <>
       <ExitDot exitCode={block.complete ? (block.exitCode ?? 0) : undefined} />
@@ -222,7 +222,7 @@ function useStickyState(
 export function StickyScrollOverlay({
   blocks,
   terminal,
-}: StickyScrollOverlayProps): React.ReactElement<any> | null {
+}: StickyScrollOverlayProps): React.ReactElement | null {
   ensurePulseKeyframe();
   const { stickyBlock, handleClick } = useStickyState(blocks, terminal);
   if (!stickyBlock || !terminal) return null;

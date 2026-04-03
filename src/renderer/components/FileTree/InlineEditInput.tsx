@@ -156,7 +156,7 @@ function InlineEditField({
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
       <input
@@ -178,7 +178,7 @@ export function InlineEditInput({
   initialValue,
   onConfirm,
   onCancel,
-}: InlineEditInputProps): React.ReactElement<any> {
+}: InlineEditInputProps): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +207,7 @@ export function InlineEditInput({
   );
 }
 
-function EditError({ message }: { message: string }): React.ReactElement<any> {
+function EditError({ message }: { message: string }): React.ReactElement {
   return (
     <div
       className="bg-surface-panel text-status-error"

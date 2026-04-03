@@ -30,7 +30,7 @@ function useSanitizedMarkdown(content: string): string {
   );
 }
 
-export function MarkdownPreview({ content }: MarkdownPreviewProps): React.ReactElement<any> {
+export function MarkdownPreview({ content }: MarkdownPreviewProps): React.ReactElement {
   const sanitizedHtml = useSanitizedMarkdown(content);
 
   useEffect(() => {

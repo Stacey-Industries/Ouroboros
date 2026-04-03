@@ -46,7 +46,7 @@ export const AgentCard = memo(function AgentCard({
   onReviewChanges,
   onReplay,
   childCount,
-}: AgentCardProps): React.ReactElement<any> {
+}: AgentCardProps): React.ReactElement<unknown> {
   const [expanded, setExpanded] = useState(session.status === 'running');
   const [showLog, setShowLog] = useState(false);
   const [showNotes, setShowNotes] = useState(false);

@@ -43,7 +43,7 @@ export function CommandPaletteSearchInput({
   placeholder,
   query,
   selectedId,
-}: CommandPaletteSearchInputProps): React.ReactElement<any> {
+}: CommandPaletteSearchInputProps): React.ReactElement {
   return (
     <div style={inputContainerStyle}>
       <span className="text-text-semantic-muted" style={inputPrefixStyle}>

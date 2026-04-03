@@ -98,11 +98,7 @@ function queryRenderer(method: string, params?: unknown): Promise<unknown> {
 /**
  * Called from IPC when the renderer responds to a query.
  */
-export function handleRendererQueryResponse(
-  queryId: string,
-  result: unknown,
-  error?: string,
-): void {
+export function handleRendererQueryResponse(queryId: string, result: unknown, error?: string): void {
   const pending = pendingRendererQueries.get(queryId);
   if (!pending) return;
 
@@ -261,6 +257,10 @@ function handleSocket(socket: net.Socket, connId: number): void {
 
   socket.on('timeout', () => {
     socket.end();
+    // Force-destroy after grace period to prevent half-open socket handle leaks
+    setTimeout(() => {
+      if (!socket.destroyed) socket.destroy();
+    }, 5_000);
   });
 
   socket.on('error', (err: NodeJS.ErrnoException) => {

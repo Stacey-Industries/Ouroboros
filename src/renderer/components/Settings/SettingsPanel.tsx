@@ -13,8 +13,13 @@ import { SettingsSearchInput } from './SettingsSearchInput';
 import { SettingsSearchResults } from './SettingsSearchResults';
 import { SettingsTabBar } from './SettingsTabBar';
 import { SettingsTabContent } from './SettingsTabContent';
-import type { TabId } from './settingsTabs';
-import { TABS } from './settingsTabs';
+import {
+  getDefaultSubTab,
+  getMainTabForSubTab,
+  type MainTabId,
+  type TabId,
+  TABS,
+} from './settingsTabs';
 import { useSettingsDraft } from './useSettingsDraft';
 
 export interface SettingsPanelProps {
@@ -24,28 +29,37 @@ export interface SettingsPanelProps {
 function useSettingsPanelState(onClose: () => void) {
   const { config } = useConfig();
   const api = useSettingsDraft();
-  const [activeTab, setActiveTab] = useState<TabId>('general');
+  const [activeMainTab, setActiveMainTab] = useState<MainTabId>('general');
+  const [activeSubTab, setActiveSubTab] = useState<TabId>('general');
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useSnapshotEffect(config, api);
   useExternalChangeEffect(api.setDraft);
-  useOpenSettingsTabEvent(setActiveTab);
+  useOpenSettingsTabEvent(setActiveMainTab, setActiveSubTab);
+
+  const handleMainTabChange = (main: MainTabId): void => {
+    setActiveMainTab(main);
+    setActiveSubTab(getDefaultSubTab(main));
+  };
 
   const handleResultClick = (entry: SettingsEntry): void => {
+    const sub = entry.section as TabId;
     setSearchQuery('');
-    setActiveTab(entry.section as TabId);
+    setActiveMainTab(getMainTabForSubTab(sub));
+    setActiveSubTab(sub);
   };
 
   return {
-    api, activeTab, setActiveTab, searchQuery, setSearchQuery,
-    searchInputRef, handleResultClick,
+    api, activeMainTab, activeSubTab, handleMainTabChange,
+    setActiveSubTab: (sub: TabId) => setActiveSubTab(sub),
+    searchQuery, setSearchQuery, searchInputRef, handleResultClick,
     doCancel: () => api.handleCancel(onClose),
     doSave: () => void api.handleSave(),
   };
 }
 
-export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactElement<any> | null {
+export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactElement | null {
   const s = useSettingsPanelState(onClose);
   const isSearching = s.searchQuery.trim().length > 0;
 
@@ -54,18 +68,25 @@ export function SettingsPanel({ onClose }: SettingsPanelProps): React.ReactEleme
   return (
     <div style={panelStyle}>
       <SettingsSearchInput inputRef={s.searchInputRef} value={s.searchQuery} onChange={s.setSearchQuery} />
-      {!isSearching && <SettingsTabBar activeTab={s.activeTab} onTabChange={s.setActiveTab} />}
+      {!isSearching && (
+        <SettingsTabBar
+          activeMainTab={s.activeMainTab}
+          activeSubTab={s.activeSubTab}
+          onMainTabChange={s.handleMainTabChange}
+          onSubTabChange={s.setActiveSubTab}
+        />
+      )}
       {isSearching ? (
         <SettingsPanelSearchView query={s.searchQuery} onResultClick={s.handleResultClick} />
       ) : (
-        <SettingsPanelTabView activeTab={s.activeTab} api={s.api} />
+        <SettingsPanelTabView activeTab={s.activeSubTab} api={s.api} />
       )}
       <PanelFooter isSaving={s.api.isSaving} saveError={s.api.saveError} onCancel={s.doCancel} onSave={s.doSave} />
     </div>
   );
 }
 
-function SettingsPanelSearchView({ query, onResultClick }: { query: string; onResultClick: (e: SettingsEntry) => void }): React.ReactElement<any> {
+function SettingsPanelSearchView({ query, onResultClick }: { query: string; onResultClick: (e: SettingsEntry) => void }): React.ReactElement {
   return (
     <div style={contentScrollStyle}>
       <SettingsSearchResults searchQuery={query} searchResults={searchEntries(query)} onResultClick={onResultClick} />
@@ -73,7 +94,7 @@ function SettingsPanelSearchView({ query, onResultClick }: { query: string; onRe
   );
 }
 
-function SettingsPanelTabView({ activeTab, api }: { activeTab: TabId; api: ReturnType<typeof useSettingsDraft> }): React.ReactElement<any> {
+function SettingsPanelTabView({ activeTab, api }: { activeTab: TabId; api: ReturnType<typeof useSettingsDraft> }): React.ReactElement {
   return (
     <div style={tabContentStyle}>
       <SettingsTabContent activeTab={activeTab} draft={api.draft!} onChange={api.handleChange} onImport={api.handleImport} onPreviewTheme={api.handlePreviewTheme} />
@@ -93,7 +114,7 @@ function PanelFooter({
   saveError: string | null;
   onCancel: () => void;
   onSave: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={footerStyle}>
       {saveError && (
@@ -130,16 +151,20 @@ function extractTabFromDetail(detail: unknown): TabId | null {
 }
 
 function useOpenSettingsTabEvent(
-  setActiveTab: React.Dispatch<React.SetStateAction<TabId>>,
+  setActiveMainTab: React.Dispatch<React.SetStateAction<MainTabId>>,
+  setActiveSubTab: React.Dispatch<React.SetStateAction<TabId>>,
 ): void {
   useEffect(() => {
     function handler(e: Event): void {
-      const tab = extractTabFromDetail((e as CustomEvent).detail);
-      if (tab) setActiveTab(tab);
+      const sub = extractTabFromDetail((e as CustomEvent).detail);
+      if (sub) {
+        setActiveMainTab(getMainTabForSubTab(sub));
+        setActiveSubTab(sub);
+      }
     }
     window.addEventListener(OPEN_SETTINGS_PANEL_EVENT, handler);
     return () => window.removeEventListener(OPEN_SETTINGS_PANEL_EVENT, handler);
-  }, [setActiveTab]);
+  }, [setActiveMainTab, setActiveSubTab]);
 }
 
 function useSnapshotEffect(

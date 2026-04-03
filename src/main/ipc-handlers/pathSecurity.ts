@@ -111,3 +111,18 @@ export function isTrustedConfigPath(targetPath: string): boolean {
 
   return false;
 }
+
+/**
+ * Check whether `targetPath` is inside the installed VSX extensions directory.
+ *
+ * This is read-only trusted content managed by the app itself under
+ * `~/.ouroboros/vsx-extensions/`. Renderer code needs access to icon-theme SVGs
+ * and fonts stored there, but these assets are outside the active workspace.
+ */
+export function isTrustedVsxExtensionPath(targetPath: string): boolean {
+  const resolved = path.resolve(targetPath);
+  const trustedDir = path.join(os.homedir(), '.ouroboros', 'vsx-extensions');
+  const normResolved = process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  const normDir = process.platform === 'win32' ? trustedDir.toLowerCase() : trustedDir;
+  return normResolved.startsWith(normDir + path.sep);
+}

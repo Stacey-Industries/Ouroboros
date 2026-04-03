@@ -11,12 +11,17 @@ import { createHash } from 'crypto'
 import path from 'path'
 
 import log from '../logger'
-import type { IndexedRepoFile } from '../orchestration/repoIndexer'
+import type { IndexedRepoFile, RepoIndexSnapshot } from '../orchestration/repoIndexer'
 import type { ModuleContextSummary } from '../orchestration/types'
 import { runContextLayerGC } from './contextLayerGC'
-import type { ContextLayerConfig, RepoMap } from './contextLayerTypes'
+import { readManifest, readModuleEntry, writeManifest, writeModuleEntry } from './contextLayerStore'
+import type { ContextLayerConfig, ModuleStructuralSummary, RepoMap } from './contextLayerTypes'
 import { type ContextLayerWatcher, createContextLayerWatcher } from './contextLayerWatcher'
-import { createSummarizationQueue, type SummarizationQueue } from './summarizationQueue'
+import {
+  createSummarizationQueue,
+  type SummarizationQueue,
+  type SummarizationQueueProgress,
+} from './summarizationQueue'
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -204,22 +209,93 @@ export async function runGC(workspaceRoot: string, repoMap: RepoMap, config: Con
 }
 
 // ---------------------------------------------------------------------------
+// Summarization queue creation — index builders
+// ---------------------------------------------------------------------------
+
+interface ModuleFile {
+  relativePath: string
+  absolutePath: string
+  size: number
+  language: string
+  imports: string[]
+}
+
+function buildStructuralIndex(repoMap: RepoMap): Map<string, ModuleStructuralSummary> {
+  const index = new Map<string, ModuleStructuralSummary>()
+  for (const entry of repoMap.modules) {
+    index.set(entry.structural.module.id, entry.structural)
+  }
+  return index
+}
+
+function assignFileToModule(
+  file: IndexedRepoFile,
+  repoMap: RepoMap,
+  index: Map<string, ModuleFile[]>,
+): void {
+  const normalizedPath = file.relativePath.replace(/\\/g, '/')
+  for (const entry of repoMap.modules) {
+    const mod = entry.structural.module
+    if (normalizedPath.startsWith(mod.rootPath + '/') || normalizedPath === mod.rootPath) {
+      const arr = index.get(mod.id) ?? []
+      arr.push({ relativePath: file.relativePath, absolutePath: file.path, size: file.size, language: file.language, imports: file.imports })
+      index.set(mod.id, arr)
+      break
+    }
+  }
+}
+
+function buildFileIndex(
+  snapshot: RepoIndexSnapshot | undefined,
+  repoMap: RepoMap,
+): Map<string, ModuleFile[]> {
+  const index = new Map<string, ModuleFile[]>()
+  if (!snapshot) return index
+  for (const root of snapshot.roots) {
+    for (const file of root.files) {
+      assignFileToModule(file, repoMap, index)
+    }
+  }
+  return index
+}
+
+function buildDependencyIndex(repoMap: RepoMap): Map<string, string[]> {
+  const index = new Map<string, string[]>()
+  for (const dep of repoMap.crossModuleDependencies) {
+    const arr = index.get(dep.from) ?? []
+    arr.push(dep.to)
+    index.set(dep.from, arr)
+  }
+  return index
+}
+
+// ---------------------------------------------------------------------------
 // Summarization queue creation
 // ---------------------------------------------------------------------------
 
-export function createQueueForRepoMap(workspaceRoot: string, repoMap: RepoMap): SummarizationQueue {
+export interface CreateQueueOptions {
+  snapshot?: RepoIndexSnapshot
+  onProgress?: (progress: SummarizationQueueProgress) => void
+}
+
+export function createQueueForRepoMap(
+  workspaceRoot: string,
+  repoMap: RepoMap,
+  options?: CreateQueueOptions,
+): SummarizationQueue {
+  const structuralIndex = buildStructuralIndex(repoMap)
+  const fileIndex = buildFileIndex(options?.snapshot, repoMap)
+  const depIndex = buildDependencyIndex(repoMap)
   return createSummarizationQueue({
     workspaceRoot,
-    readModuleEntry: async () => null,
-    writeModuleEntry: async () => undefined,
-    readManifest: async () => null,
-    writeManifest: async () => undefined,
-    getModuleFiles: () => [],
-    getModuleStructural: () => null,
-    projectContext: {
-      languages: repoMap.languages,
-      frameworks: repoMap.frameworks,
-    },
-    getDependencyContext: () => [],
+    readModuleEntry,
+    writeModuleEntry,
+    readManifest,
+    writeManifest,
+    getModuleFiles: (moduleId) => fileIndex.get(moduleId) ?? [],
+    getModuleStructural: (moduleId) => structuralIndex.get(moduleId) ?? null,
+    projectContext: { languages: repoMap.languages, frameworks: repoMap.frameworks },
+    getDependencyContext: (moduleId) => depIndex.get(moduleId) ?? [],
+    onProgress: options?.onProgress,
   })
 }

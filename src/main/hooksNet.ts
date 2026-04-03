@@ -17,14 +17,42 @@ const PIPE_NAME = '\\\\.\\pipe\\agent-ide-hooks';
 const MAX_BUFFER_BYTES = 1_048_576;
 
 const VALID_TYPES = new Set<string>([
+  // Tools
   'pre_tool_use',
   'post_tool_use',
+  'post_tool_use_failure',
+  // Agents
   'agent_start',
   'agent_stop',
   'agent_end',
+  'teammate_idle',
+  // Sessions / lifecycle
   'session_start',
+  'session_end',
   'session_stop',
+  'stop_failure',
+  'setup',
+  // Tasks
+  'task_created',
+  'task_completed',
+  // Conversation
+  'user_prompt_submit',
+  'elicitation',
+  'elicitation_result',
+  'notification',
+  // Workspace
+  'cwd_changed',
+  'file_changed',
+  'worktree_create',
+  'worktree_remove',
+  'config_change',
+  // Context
+  'pre_compact',
+  'post_compact',
   'instructions_loaded',
+  // Permissions
+  'permission_request',
+  'permission_denied',
 ]);
 
 let connectionCounter = 0;
@@ -101,6 +129,10 @@ function handleSocket(
   });
   socket.on('timeout', () => {
     socket.end();
+    // Force-destroy after grace period to prevent half-open socket handle leaks
+    setTimeout(() => {
+      if (!socket.destroyed) socket.destroy();
+    }, 5_000);
   });
   socket.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code !== 'EPIPE' && error.code !== 'ECONNRESET') {
@@ -144,7 +176,11 @@ function flushPendingQueueToWindow(window: BrowserWindow, pendingQueue: HookPayl
   if (pendingQueue.length === 0 || window.isDestroyed()) return;
   const flushing = pendingQueue.splice(0);
   for (const payload of flushing) {
-    window.webContents.send('hooks:event', payload);
+    try {
+      window.webContents.mainFrame.send('hooks:event', payload);
+    } catch {
+      // Render frame disposed — skip window send, still broadcast to web clients
+    }
     broadcastToWebClients('hooks:event', payload);
   }
 }

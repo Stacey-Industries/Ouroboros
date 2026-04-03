@@ -37,7 +37,7 @@ const diffLineColors: Record<DiffLine['type'], React.CSSProperties> = {
 
 /* ---------- Icons ---------- */
 
-export function FileIcon(): React.ReactElement<any> {
+export function FileIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -55,7 +55,7 @@ export function FileIcon(): React.ReactElement<any> {
   );
 }
 
-export function DiffIcon(): React.ReactElement<any> {
+export function DiffIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -73,7 +73,7 @@ export function DiffIcon(): React.ReactElement<any> {
   );
 }
 
-function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement<any> {
+function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       className={`h-3 w-3 shrink-0 transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}
@@ -114,7 +114,7 @@ function useDiffPatch(projectRoot: string, filePath: string) {
   return { patch, loading };
 }
 
-function DiffLineRow({ line }: { line: DiffLine }): React.ReactElement<any> {
+function DiffLineRow({ line }: { line: DiffLine }): React.ReactElement {
   return (
     <div
       className={`px-3 py-0 ${line.type === 'context' ? 'text-text-semantic-muted' : line.type === 'header' ? 'text-interactive-accent' : ''}`}
@@ -132,7 +132,7 @@ export function InlineDiffViewer({
 }: {
   filePath: string;
   projectRoot: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { patch, loading } = useDiffPatch(projectRoot, filePath);
   if (loading)
     return (
@@ -176,7 +176,7 @@ export function FileChangeRow({
   filePath: string;
   isSelected: boolean;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={onClick}
@@ -210,7 +210,7 @@ export function FileChangeRow({
 
 /* ---------- CompletedChangeHeader ---------- */
 
-function TallyLines({ tally }: { tally: ChangeTally }): React.ReactElement<any> | null {
+function TallyLines({ tally }: { tally: ChangeTally }): React.ReactElement | null {
   const hasTallyLines = tally.linesAdded > 0 || tally.linesRemoved > 0;
   if (!hasTallyLines) return null;
   return (
@@ -229,7 +229,7 @@ type CompletedChangeHeaderProps = {
   onOpenFullReview: () => void;
 };
 
-export function CompletedChangeHeader(p: CompletedChangeHeaderProps): React.ReactElement<any> {
+export function CompletedChangeHeader(p: CompletedChangeHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2 border-b border-border-semantic px-3 py-1.5 text-[11px] text-text-semantic-muted">
       {p.fileCount > 0 && (
@@ -271,7 +271,7 @@ export function CompletedChangeFileList({
   projectRoot: string;
   selectedFile: string | null;
   onSelectFile: (file: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!expanded || !tally || tally.filesChanged.length === 0) return null;
   return (
     <div className="border-t border-border-semantic">

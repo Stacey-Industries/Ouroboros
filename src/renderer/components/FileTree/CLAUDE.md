@@ -11,7 +11,6 @@ FileTreeContent ← adds git chrome (branch indicator, filter bar)
   FileTreeSearchBar ← search input + heat map toggle
   GitStatusFilterBar ← filter buttons (all/modified/staged/untracked)
   FileTreeBody ← routes between normal tree / git-filtered flat list
-    StagingArea ← collapsible staged/unstaged changes panel
     PinnedSection ← bookmarked files (persisted to config)
     RootSection ← one section per project root
       VirtualTreeList ← virtualized rows (custom, not react-window)
@@ -37,7 +36,6 @@ FileTreeContent ← adds git chrome (branch indicator, filter bar)
 | `fileTreeUtils.ts`            | `flattenVisibleTree`, `loadDirChildren`, `buildIgnorePredicate`, `ITEM_HEIGHT`                     |
 | `fileNestingRules.ts`         | VS Code-style nesting rules (`*.ts` groups `*.test.ts`, `*.d.ts`, etc.)                            |
 | `rootSectionKeys.ts`          | Keyboard handler (arrow keys, Enter, Delete, F2, Ctrl+A, PageUp/Down)                             |
-| `StagingArea.tsx`             | Stage/unstage/discard per-file actions; calls `git:stage`, `git:unstage`, `git:discard` IPC       |
 | `GitBranchIndicator.tsx`      | Branch list, checkout, create-and-checkout; calls `git:branches`, `git:checkout`                  |
 | `GitStatusFilter.tsx`         | Filter bar + `GitFilteredView` flat list; reads `filter` from store                               |
 
@@ -84,7 +82,6 @@ Optional git-frequency overlay — `useFileHeatMap` maps paths to commit frequen
 | `files:rename`, `files:delete`, `files:newFile`, `files:newFolder` | Tree mutations    |
 | `files:restore`                                | Undo delete                       |
 | `git:status`                                   | Per-file status badges            |
-| `git:stage`, `git:unstage`, `git:discard`      | StagingArea actions               |
 | `git:branches`, `git:checkout`, `git:createBranch` | GitBranchIndicator            |
 | `config:get` / `config:set`                    | Bookmarks, ignore patterns        |
 

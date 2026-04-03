@@ -26,7 +26,7 @@ export interface SearchBarProps {
   onMatchLinesChange?: (lines: number[]) => void;
 }
 
-export function SearchBar(props: SearchBarProps): React.ReactElement<any> | null {
+export function SearchBar(props: SearchBarProps): React.ReactElement | null {
   const controller = useSearchBarController(props);
   if (!props.visible) return null;
   return <SearchBarPanel {...controller} />;

@@ -10,7 +10,7 @@ import { TOOL_ICON_BUILDERS } from './AgentChatToolIcons';
 
 /* ---------- Sub-components ---------- */
 
-function SpinnerIcon(): React.ReactElement<any> {
+function SpinnerIcon(): React.ReactElement {
   return (
     <svg
       className="h-3.5 w-3.5 animate-spin text-interactive-accent"
@@ -31,7 +31,7 @@ function SpinnerIcon(): React.ReactElement<any> {
   );
 }
 
-function CheckIcon(): React.ReactElement<any> {
+function CheckIcon(): React.ReactElement {
   return (
     <svg className="h-3.5 w-3.5 text-interactive-accent" viewBox="0 0 16 16" fill="none">
       <path
@@ -45,7 +45,7 @@ function CheckIcon(): React.ReactElement<any> {
   );
 }
 
-function ToolIcon({ name }: { name: string }): React.ReactElement<any> {
+function ToolIcon({ name }: { name: string }): React.ReactElement {
   return (
     TOOL_ICON_BUILDERS.find((entry) => entry.names.has(name))?.render() ?? (
       <svg
@@ -79,7 +79,7 @@ type ToolHeaderProps = {
 function ToolHeaderMeta({
   editSummary,
   duration,
-}: Pick<ToolHeaderProps, 'editSummary' | 'duration'>): React.ReactElement<any> {
+}: Pick<ToolHeaderProps, 'editSummary' | 'duration'>): React.ReactElement {
   return (
     <>
       {editSummary && (
@@ -98,7 +98,7 @@ function ToolHeaderMeta({
   );
 }
 
-export function ToolHeader(props: ToolHeaderProps): React.ReactElement<any> {
+export function ToolHeader(props: ToolHeaderProps): React.ReactElement {
   return (
     <button
       onClick={props.onToggle}
@@ -128,7 +128,7 @@ export function ToolEmptyState({
   status,
 }: {
   status: 'running' | 'complete' | 'error';
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-faint">
       {status === 'running' ? 'Running...' : 'Completed'}
@@ -140,7 +140,7 @@ export function ToolEditSummary({
   editSummary,
 }: {
   editSummary: { oldLines: number; newLines: number };
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
       <span style={{ color: 'var(--status-error)' }}>
@@ -163,7 +163,7 @@ export function ToolErrorOutput({
   errorExpanded: boolean;
   onToggleErrorExpanded: () => void;
   ChevronIconComponent: React.ComponentType<{ collapsed: boolean }>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div>
       <button
@@ -220,7 +220,7 @@ interface ToolDetailsProps {
   ChevronIconComponent: React.ComponentType<{ collapsed: boolean }>;
 }
 
-function ToolOutputPreview({ output }: { output: string }): React.ReactElement<any> {
+function ToolOutputPreview({ output }: { output: string }): React.ReactElement {
   return (
     <pre
       className="max-h-[200px] overflow-auto whitespace-pre-wrap rounded p-1.5 bg-surface-base text-text-semantic-muted"
@@ -231,7 +231,7 @@ function ToolOutputPreview({ output }: { output: string }): React.ReactElement<a
   );
 }
 
-function ToolDetailsContent(props: ToolDetailsProps): React.ReactElement<any> {
+function ToolDetailsContent(props: ToolDetailsProps): React.ReactElement {
   const hasContent = hasToolDetailsContent(props);
   return (
     <>
@@ -267,7 +267,7 @@ function ToolDetailsContent(props: ToolDetailsProps): React.ReactElement<any> {
   );
 }
 
-export function ToolDetails(props: ToolDetailsProps): React.ReactElement<any> {
+export function ToolDetails(props: ToolDetailsProps): React.ReactElement {
   return (
     <div
       className="space-y-1 border-t border-border-semantic px-2.5 py-2 text-[11px] text-text-semantic-muted"

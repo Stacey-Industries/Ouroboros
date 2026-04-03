@@ -98,6 +98,7 @@ function applyStickyLinkFields(
     'claudeSessionId',
     'codexThreadId',
     'model',
+    'effort',
   ];
   for (const field of stickyFields) {
     // eslint-disable-next-line security/detect-object-injection -- field from static array

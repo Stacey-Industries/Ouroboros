@@ -17,7 +17,7 @@ export function ProjectPicker({
   onSelectProject,
   onAddProject,
   rootCount = 0,
-}: ProjectPickerProps): React.ReactElement<any> {
+}: ProjectPickerProps): React.ReactElement {
   const controller = useProjectPickerController({
     currentPath,
     recentProjects,

@@ -110,6 +110,16 @@ export interface ModelSlotAssignments {
   terminal: string;
   agentChat: string;
   claudeMdGeneration: string;
+  inlineCompletion: string;
+}
+
+export interface RouterSettings {
+  enabled: boolean;
+  layer1Enabled: boolean;
+  layer2Enabled: boolean;
+  layer3Enabled: boolean;
+  layer2ConfidenceThreshold: number;
+  paranoidMode: boolean;
 }
 
 export interface WorkspaceSnapshot {
@@ -127,6 +137,8 @@ export interface AppConfig {
   recentProjects: string[];
   defaultProjectRoot: string;
   activeTheme: AppTheme;
+  activeFileIconTheme: string;
+  activeProductIconTheme: string;
   hooksServerPort: number;
   terminalFontSize: number;
   autoInstallHooks: boolean;
@@ -174,6 +186,8 @@ export interface AppConfig {
     installedAt: string;
     contributes: {
       themes?: Array<{ label: string; uiTheme: string; path: string }>;
+      iconThemes?: Array<{ id: string; label: string; path: string }>;
+      productIconThemes?: Array<{ id: string; label: string; path: string }>;
       grammars?: Array<{ language: string; scopeName: string; path: string }>;
       snippets?: Array<{ language: string; path: string }>;
       languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>;
@@ -182,6 +196,7 @@ export interface AppConfig {
   disabledVsxExtensions: string[];
   lspEnabled: boolean;
   lspServers: Record<string, string>;
+  inlineCompletionsEnabled: boolean;
   claudeAutoLaunch: boolean;
   approvalRequired: string[];
   approvalTimeout: number;
@@ -195,6 +210,7 @@ export interface AppConfig {
   claudeMdSettings: ClaudeMdSettings;
   modelProviders: ModelProvider[];
   modelSlots: ModelSlotAssignments;
+  routerSettings: RouterSettings;
   webAccessPort: number;
   webAccessPassword: string;
   glassOpacity: number;
@@ -238,14 +254,42 @@ export interface DirEntry {
 }
 
 export type AgentEventType =
-  | 'agent_start'
+  // Lifecycle
+  | 'session_start'
+  | 'session_end'
+  | 'session_stop'
+  | 'stop_failure'
+  | 'setup'
+  // Tools
   | 'pre_tool_use'
   | 'post_tool_use'
+  | 'post_tool_use_failure'
+  // Agents
+  | 'agent_start'
   | 'agent_end'
   | 'agent_stop'
-  | 'session_start'
-  | 'session_stop'
-  | 'instructions_loaded';
+  | 'teammate_idle'
+  // Tasks
+  | 'task_created'
+  | 'task_completed'
+  // Conversation
+  | 'user_prompt_submit'
+  | 'elicitation'
+  | 'elicitation_result'
+  | 'notification'
+  // Workspace
+  | 'cwd_changed'
+  | 'file_changed'
+  | 'worktree_create'
+  | 'worktree_remove'
+  | 'config_change'
+  // Context
+  | 'pre_compact'
+  | 'post_compact'
+  | 'instructions_loaded'
+  // Permissions
+  | 'permission_request'
+  | 'permission_denied';
 
 export interface AgentEvent {
   type: AgentEventType;
@@ -288,35 +332,4 @@ export interface HookPayload {
   taskLabel?: string;
 }
 
-export interface ToolCallPayload {
-  tool: string;
-  input: Record<string, unknown>;
-  callId: string;
-}
-
-export interface ToolCallEvent extends AgentEvent {
-  type: 'tool_call';
-  payload: ToolCallPayload;
-}
-
-export interface IpcResult {
-  success: boolean;
-  error?: string;
-}
-
-export interface ReadFileResult extends IpcResult {
-  content?: string;
-}
-
-export interface ReadBinaryFileResult extends IpcResult {
-  data?: Uint8Array;
-}
-
-export interface ReadDirResult extends IpcResult {
-  items?: DirEntry[];
-}
-
-export interface SelectFolderResult extends IpcResult {
-  cancelled?: boolean;
-  path?: string | null;
-}
+export type { IpcResult, ReadBinaryFileResult, ReadDirResult, ReadFileResult, SelectFolderResult, ToolCallEvent, ToolCallPayload } from './electron-ipc-results';

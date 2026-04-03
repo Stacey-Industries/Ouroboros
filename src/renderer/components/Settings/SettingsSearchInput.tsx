@@ -14,7 +14,7 @@ export function SettingsSearchInput({
   inputRef,
   value,
   onChange,
-}: SettingsSearchInputProps): React.ReactElement<any> {
+}: SettingsSearchInputProps): React.ReactElement {
   return (
     <div style={wrapperStyle}>
       <div style={{ position: 'relative' }}>

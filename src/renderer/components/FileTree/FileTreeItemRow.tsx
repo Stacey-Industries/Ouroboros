@@ -99,7 +99,7 @@ export function FileTreeItemRow({
   onDoubleClick,
   onContextMenu,
   children,
-}: FileTreeItemRowProps): React.ReactElement<any> {
+}: FileTreeItemRowProps): React.ReactElement {
   return (
     <div
       role="option"

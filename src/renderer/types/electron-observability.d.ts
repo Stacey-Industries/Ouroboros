@@ -254,11 +254,46 @@ export interface WindowedUsageResult extends IpcResult {
   windowed?: WindowedUsage
 }
 
+export interface CodexUsageWindow {
+  usedPercent: number
+  windowMinutes: number
+  resetsAt: number | null
+}
+
+export interface CodexUsageSnapshot {
+  capturedAt: number
+  planType: string | null
+  fiveHour: CodexUsageWindow | null
+  weekly: CodexUsageWindow | null
+}
+
+export interface ClaudeUsageWindow {
+  usedPercent: number
+  resetsAt: string | number | null
+}
+
+export interface ClaudeUsageSnapshot {
+  capturedAt: number
+  fiveHour: ClaudeUsageWindow | null
+  weekly: ClaudeUsageWindow | null
+}
+
+export interface UsageWindowSnapshot {
+  fetchedAt: number
+  claude: ClaudeUsageSnapshot | null
+  codex: CodexUsageSnapshot | null
+}
+
+export interface UsageWindowSnapshotResult extends IpcResult {
+  snapshot?: UsageWindowSnapshot
+}
+
 export interface UsageAPI {
   getSummary: (options?: { projectFilter?: string; since?: number; maxSessions?: number }) => Promise<UsageSummaryResult>
   getSessionDetail: (sessionId: string) => Promise<SessionDetailResult>
   getRecentSessions: (count?: number) => Promise<RecentSessionsResult>
   getWindowedUsage: () => Promise<WindowedUsageResult>
+  getUsageWindowSnapshot: () => Promise<UsageWindowSnapshotResult>
 }
 
 export interface ContextLayerProgress {

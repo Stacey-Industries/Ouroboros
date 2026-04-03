@@ -25,6 +25,8 @@ const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'recentProjects',
   'defaultProjectRoot',
   'activeTheme',
+  'activeFileIconTheme',
+  'activeProductIconTheme',
   'hooksServerPort',
   'terminalFontSize',
   'terminalCursorStyle',
@@ -59,6 +61,7 @@ const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'installedVsxExtensions',
   'disabledVsxExtensions',
   'lspEnabled',
+  'inlineCompletionsEnabled',
   'lspServers',
   'claudeAutoLaunch',
   'approvalRequired',
@@ -67,6 +70,7 @@ const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
   'promptPattern',
   'formatOnSave',
   'contextLayer',
+  'routerSettings',
 ];
 
 let settingsFileWatcher: FSWatcher | null = null;

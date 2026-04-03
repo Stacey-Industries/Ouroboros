@@ -57,7 +57,7 @@ type ContextBuilderBodyProps = Pick<
   | 'scanning'
 >;
 
-export function ContextBuilderBody(props: ContextBuilderBodyProps): React.ReactElement<any> {
+export function ContextBuilderBody(props: ContextBuilderBodyProps): React.ReactElement {
   const { context } = props;
 
   return (
@@ -83,7 +83,7 @@ function ContextSections({
   projectRoot,
   runScan,
   scanning,
-}: ContextBuilderBodyProps & { context: ProjectContext }): React.ReactElement<any> {
+}: ContextBuilderBodyProps & { context: ProjectContext }): React.ReactElement {
   return (
     <>
       <ProjectDetailsSections context={context} />
@@ -109,7 +109,7 @@ function ContextSections({
   );
 }
 
-function ProjectDetailsSections({ context }: { context: ProjectContext }): React.ReactElement<any> {
+function ProjectDetailsSections({ context }: { context: ProjectContext }): React.ReactElement {
   return (
     <>
       <ProjectSummarySection context={context} />
@@ -126,7 +126,7 @@ function ContextControlsSection({
   handleOptionToggle,
   options,
   projectRoot,
-}: Pick<ContextBuilderBodyProps, 'contextSelection' | 'handleOptionToggle' | 'options' | 'projectRoot'>): React.ReactElement<any> {
+}: Pick<ContextBuilderBodyProps, 'contextSelection' | 'handleOptionToggle' | 'options' | 'projectRoot'>): React.ReactElement {
   return (
     <>
       <GenerationOptionsSection handleOptionToggle={handleOptionToggle} options={options} />
@@ -153,7 +153,7 @@ function GeneratedContextBlock(props: Pick<
   | 'scanning'
 > & {
   context: ProjectContext;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return <GeneratedContextSection {...props} />;
 }
 
@@ -161,7 +161,7 @@ function ContextBuilderState({
   context,
   error,
   scanning,
-}: Pick<ContextBuilderBodyProps, 'context' | 'error' | 'scanning'>): React.ReactElement<any> | null {
+}: Pick<ContextBuilderBodyProps, 'context' | 'error' | 'scanning'>): React.ReactElement | null {
   if (context || error) {
     return null;
   }
@@ -171,7 +171,7 @@ function ContextBuilderState({
     : <EmptyState>No project root selected. Open a folder to scan.</EmptyState>;
 }
 
-function ProjectSummarySection({ context }: { context: ProjectContext }): React.ReactElement<any> {
+function ProjectSummarySection({ context }: { context: ProjectContext }): React.ReactElement {
   return (
     <Section title="Project Summary">
       <div style={cardStyle}>
@@ -191,7 +191,7 @@ function ProjectSummarySection({ context }: { context: ProjectContext }): React.
   );
 }
 
-function EntryPointsSection({ entryPoints }: { entryPoints: string[] }): React.ReactElement<any> | null {
+function EntryPointsSection({ entryPoints }: { entryPoints: string[] }): React.ReactElement | null {
   if (entryPoints.length === 0) {
     return null;
   }
@@ -207,7 +207,7 @@ function EntryPointsSection({ entryPoints }: { entryPoints: string[] }): React.R
   );
 }
 
-function StructureSection({ context }: { context: ProjectContext }): React.ReactElement<any> | null {
+function StructureSection({ context }: { context: ProjectContext }): React.ReactElement | null {
   const keyDirs = context.keyDirs.filter((dir) => !IGNORED_DIRECTORIES.has(dir.path));
 
   if (keyDirs.length === 0) {
@@ -230,7 +230,7 @@ function StructureSection({ context }: { context: ProjectContext }): React.React
   );
 }
 
-function BuildCommandsSection({ context }: { context: ProjectContext }): React.ReactElement<any> | null {
+function BuildCommandsSection({ context }: { context: ProjectContext }): React.ReactElement | null {
   if (context.buildCommands.length === 0) {
     return null;
   }
@@ -249,7 +249,7 @@ function BuildCommandsSection({ context }: { context: ProjectContext }): React.R
   );
 }
 
-function ConfigFilesSection({ keyConfigs }: { keyConfigs: string[] }): React.ReactElement<any> | null {
+function ConfigFilesSection({ keyConfigs }: { keyConfigs: string[] }): React.ReactElement | null {
   if (keyConfigs.length === 0) {
     return null;
   }
@@ -270,7 +270,7 @@ function ConfigFilesSection({ keyConfigs }: { keyConfigs: string[] }): React.Rea
 function GenerationOptionsSection({
   handleOptionToggle,
   options,
-}: Pick<ContextBuilderBodyProps, 'handleOptionToggle' | 'options'>): React.ReactElement<any> {
+}: Pick<ContextBuilderBodyProps, 'handleOptionToggle' | 'options'>): React.ReactElement {
   return (
     <Section title="Generation Options">
       <div style={optionCardStyle}>

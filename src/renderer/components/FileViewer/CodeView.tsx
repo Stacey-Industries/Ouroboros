@@ -55,7 +55,7 @@ const scrollContainerStyle: React.CSSProperties = {
 /**
  * The main code view area with gutters, overlays, and syntax-highlighted content.
  */
-export const CodeView = memo(function CodeView(props: CodeViewProps): React.ReactElement<any> {
+export const CodeView = memo(function CodeView(props: CodeViewProps): React.ReactElement {
   const lineHeight = getEditorLineHeight();
   const handleScrollToLine = useCallback(
     (line: number) => scrollToLine(props.scrollRef, line, lineHeight),
@@ -71,7 +71,7 @@ export const CodeView = memo(function CodeView(props: CodeViewProps): React.Reac
   );
 });
 
-function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement<any> {
+function renderSearchAndNavigation(props: CodeViewProps): React.ReactElement {
   return (
     <>
       <SearchBar
@@ -96,7 +96,7 @@ function renderMapOverlays(
   props: CodeViewProps,
   lineHeight: number,
   onScrollToLine: (line: number) => void,
-): React.ReactElement<any> {
+): React.ReactElement {
   return (
     <>
       {props.lineCount >= 50 && (
@@ -121,7 +121,7 @@ function renderMapOverlays(
   );
 }
 
-function renderViewport(props: CodeViewProps): React.ReactElement<any> {
+function renderViewport(props: CodeViewProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', minWidth: props.wordWrap ? undefined : 'max-content' }}>
       {renderGutters(props)}
@@ -130,7 +130,7 @@ function renderViewport(props: CodeViewProps): React.ReactElement<any> {
   );
 }
 
-function renderGutters(props: CodeViewProps): React.ReactElement<any> {
+function renderGutters(props: CodeViewProps): React.ReactElement {
   return (
     <>
       <LineNumberGutter rows={props.rows} gutterWidth={props.gutterWidth} />
@@ -156,7 +156,7 @@ function renderGutters(props: CodeViewProps): React.ReactElement<any> {
   );
 }
 
-function renderCodeBody(props: CodeViewProps): React.ReactElement<any> {
+function renderCodeBody(props: CodeViewProps): React.ReactElement {
   return (
     <CodeContent
       rows={props.rows}

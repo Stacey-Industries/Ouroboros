@@ -37,7 +37,7 @@ export interface ContextMenuProps {
   onUnstage?: (node: TreeNode) => void;
 }
 
-export function ContextMenu(props: ContextMenuProps): React.ReactElement<any> | null {
+export function ContextMenu(props: ContextMenuProps): React.ReactElement | null {
   const controller = useContextMenuController(props);
 
   if (!props.state.visible || !props.state.node) {

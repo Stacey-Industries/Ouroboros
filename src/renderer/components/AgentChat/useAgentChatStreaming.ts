@@ -18,6 +18,27 @@ type StreamingApi = {
   getBufferedChunks?: (id: string) => Promise<AgentChatStreamChunk[]>;
 };
 
+function estimateStreamingStateScore(state: AgentChatStreamingState): number {
+  const tokenUsageScore = state.streamingTokenUsage
+    ? state.streamingTokenUsage.inputTokens + state.streamingTokenUsage.outputTokens
+    : 0;
+  return JSON.stringify(state.blocks).length + state.activeTextContent.length + tokenUsageScore;
+}
+
+export function mergeReplayState(
+  existing: AgentChatStreamingState,
+  replayed: AgentChatStreamingState,
+): AgentChatStreamingState {
+  if (!existing.streamingMessageId) return replayed;
+  if (!replayed.streamingMessageId) return existing;
+  if (existing.streamingMessageId !== replayed.streamingMessageId) return existing;
+  if (!existing.isStreaming && replayed.isStreaming) return existing;
+  if (!replayed.isStreaming && existing.isStreaming) return replayed;
+  return estimateStreamingStateScore(replayed) >= estimateStreamingStateScore(existing)
+    ? replayed
+    : existing;
+}
+
 function getStreamingApi(): StreamingApi | undefined {
   return (window as unknown as { electronAPI?: { agentChat?: StreamingApi } }).electronAPI
     ?.agentChat;
@@ -45,10 +66,13 @@ function useReplayBufferedChunks(
     const threadId = activeThreadId;
     void api.getBufferedChunks(threadId).then((chunks: AgentChatStreamChunk[]) => {
       if (!chunks || chunks.length === 0) return;
+      const replayed = replayBufferedChunks(chunks);
       setStateMap((prev) => {
-        if (prev.has(threadId)) return prev;
+        const existing = prev.get(threadId) ?? INITIAL_STATE;
+        const merged = mergeReplayState(existing, replayed);
+        if (merged === existing) return prev;
         const updated = new Map(prev);
-        updated.set(threadId, replayBufferedChunks(chunks));
+        updated.set(threadId, merged);
         return updated;
       });
     });

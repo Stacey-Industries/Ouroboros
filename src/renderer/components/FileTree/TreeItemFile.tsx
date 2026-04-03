@@ -37,7 +37,7 @@ function FileName({
 }: Pick<
   TreeItemFileProps,
   'node' | 'isEditing' | 'editValue' | 'onEditConfirm' | 'onEditCancel' | 'statusColor' | 'matchRanges'
->): React.ReactElement<any> {
+>): React.ReactElement {
   if (isEditing && onEditConfirm && onEditCancel) {
     return (
       <InlineEditInput
@@ -69,7 +69,7 @@ function FileMeta({
 }: Pick<
   TreeItemFileProps,
   'node' | 'statusColor' | 'statusLbl' | 'searchMode' | 'heatDot' | 'heatLevel' | 'diagnosticSeverity' | 'isDirty'
->): React.ReactElement<any> {
+>): React.ReactElement {
   return (
     <>
       {isDirty && <DirtyDot />}
@@ -81,7 +81,7 @@ function FileMeta({
   );
 }
 
-function FileNestIndicator({ node }: { node: TreeNode }): React.ReactElement<any> {
+function FileNestIndicator({ node }: { node: TreeNode }): React.ReactElement {
   if (node.hasNestedChildren) return <NestChevron expanded={!!node.isNestExpanded} />;
   return <span style={{ width: '16px', flexShrink: 0 }} />;
 }
@@ -95,7 +95,7 @@ export function TreeItemFile({
   searchMode, matchRanges,
   heatDot, heatLevel,
   diagnosticSeverity, isDirty,
-}: TreeItemFileProps): React.ReactElement<any> {
+}: TreeItemFileProps): React.ReactElement {
   return (
     <>
       <FileNestIndicator node={node} />
@@ -127,7 +127,7 @@ export function TreeItemFile({
 
 function FileLabel({ name, statusColor, matchRanges }: {
   name: string; statusColor?: string; matchRanges?: MatchRange[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span className="text-text-semantic-muted" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', color: statusColor ?? undefined, fontFamily: 'var(--font-mono)' }}>
       <HighlightedName name={name} ranges={matchRanges} />
@@ -135,7 +135,7 @@ function FileLabel({ name, statusColor, matchRanges }: {
   );
 }
 
-function HighlightedName({ name, ranges }: { name: string; ranges?: MatchRange[] }): React.ReactElement<any> {
+function HighlightedName({ name, ranges }: { name: string; ranges?: MatchRange[] }): React.ReactElement {
   if (!ranges || ranges.length === 0) return <span>{name}</span>;
   const parts: React.ReactNode[] = [];
   let cursor = 0;
@@ -152,11 +152,11 @@ function HighlightedName({ name, ranges }: { name: string; ranges?: MatchRange[]
   return <>{parts}</>;
 }
 
-function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement<any> {
+function StatusBadge({ label, color }: { label: string; color?: string }): React.ReactElement {
   return <span style={{ flexShrink: 0, fontSize: '0.625rem', fontWeight: 600, fontFamily: 'var(--font-mono)', color, marginLeft: '4px', lineHeight: 1 }}>{label}</span>;
 }
 
-function SearchPath({ relativePath }: { relativePath: string }): React.ReactElement<any> | null {
+function SearchPath({ relativePath }: { relativePath: string }): React.ReactElement | null {
   if (!relativePath.includes('/')) return null;
   return (
     <span className="text-text-semantic-faint" style={{ flexShrink: 0, fontSize: '0.6875rem', marginLeft: '4px', maxWidth: '40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -165,13 +165,13 @@ function SearchPath({ relativePath }: { relativePath: string }): React.ReactElem
   );
 }
 
-function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement<any> {
+function HeatDot({ color, glow }: { color: string; glow: boolean }): React.ReactElement {
   return <span style={{ flexShrink: 0, width: '6px', height: '6px', borderRadius: '50%', backgroundColor: color, marginLeft: '4px', boxShadow: glow ? `0 0 4px ${color}` : undefined }} />;
 }
 
 // ─── Nesting chevron (4B) ────────────────────────────────────────────────────
 
-function NestChevron({ expanded }: { expanded: boolean }): React.ReactElement<any> {
+function NestChevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       width="16"
@@ -206,7 +206,7 @@ const DIAGNOSTIC_CONFIG: Record<string, { color: string; shape: 'circle' | 'tria
   hint:    { color: 'var(--text-semantic-muted)', shape: 'circle', label: 'Hint' },
 };
 
-function DiagnosticIndicator({ severity }: { severity: string }): React.ReactElement<any> | null {
+function DiagnosticIndicator({ severity }: { severity: string }): React.ReactElement | null {
   const config = DIAGNOSTIC_CONFIG[severity];
   if (!config) return null;
 
@@ -243,7 +243,7 @@ function DiagnosticIndicator({ severity }: { severity: string }): React.ReactEle
 
 // ─── Dirty indicator (4C) ────────────────────────────────────────────────────
 
-function DirtyDot(): React.ReactElement<any> {
+function DirtyDot(): React.ReactElement {
   return (
     <span
       aria-hidden="true"

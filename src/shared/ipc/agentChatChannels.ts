@@ -21,6 +21,7 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   getBufferedChunks: 'agentChat:getBufferedChunks',
   revertToSnapshot: 'agentChat:revertToSnapshot',
   cancelTask: 'agentChat:cancelTask',
+  cancelByThreadId: 'agentChat:cancelByThreadId',
   listMemories: 'agentChat:listMemories',
   createMemory: 'agentChat:createMemory',
   updateMemory: 'agentChat:updateMemory',

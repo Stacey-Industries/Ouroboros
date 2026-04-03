@@ -33,6 +33,7 @@ const LINK_STRING_FIELDS: Array<keyof AgentChatOrchestrationLink> = [
   'claudeSessionId',
   'codexThreadId',
   'model',
+  'effort',
   'linkedTerminalId',
   'preSnapshotHash',
 ];

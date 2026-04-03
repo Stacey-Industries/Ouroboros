@@ -21,7 +21,7 @@ export interface ToastProviderProps {
   children: React.ReactNode;
 }
 
-export function ToastProvider({ children }: ToastProviderProps): React.ReactElement<any> {
+export function ToastProvider({ children }: ToastProviderProps): React.ReactElement {
   const toastState = useToast();
 
   const value = useMemo<UseToastReturn>(

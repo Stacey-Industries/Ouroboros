@@ -29,7 +29,7 @@ export function ProviderList({
   providers,
   onToggle,
   onRemove,
-}: ProviderListProps): React.ReactElement<any> {
+}: ProviderListProps): React.ReactElement {
   return (
     <div style={providerListStyle}>
       <AnthropicRow />
@@ -45,7 +45,7 @@ export function ProviderList({
   );
 }
 
-function AnthropicRow(): React.ReactElement<any> {
+function AnthropicRow(): React.ReactElement {
   return (
     <div style={providerRowStyle}>
       <span className="text-text-semantic-primary" style={providerNameStyle}>{BUILTIN_ANTHROPIC.name}</span>
@@ -69,7 +69,7 @@ function UserProviderRow({
   provider,
   onToggle,
   onRemove,
-}: UserProviderRowProps): React.ReactElement<any> {
+}: UserProviderRowProps): React.ReactElement {
   return (
     <div style={providerRowStyle}>
       <span className="text-text-semantic-primary" style={providerNameStyle}>{provider.name}</span>

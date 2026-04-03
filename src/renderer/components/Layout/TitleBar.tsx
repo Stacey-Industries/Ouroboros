@@ -18,68 +18,90 @@ import {
 } from '../../hooks/appEventNames';
 import { useProgressSubscriptions } from '../../hooks/useProgressSubscriptions';
 import { BellIcon, NotificationBadge, NotificationCenter } from '../shared/NotificationCenter';
+import { ProductIcon } from '../shared/ProductIcon';
 import { MobileHamburgerMenu, MobileOverflowMenu } from './TitleBar.mobile';
 import { NavbarMenus } from './TitleBar.navbar';
+import { UsageActions } from './TitleBar.usage';
 import type { CollapseState, CollapseTarget } from './usePanelCollapse';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
-function SettingsGearIcon(): React.ReactElement<any> {
+function SettingsGearIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="8" r="2.5" />
-      <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M11.99 11.99l1.07 1.07M13.07 2.93l-1.06 1.06M4.01 11.99l-1.07 1.07" />
-    </svg>
+    <ProductIcon
+      iconId="settings-gear"
+      fallback={
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="8" cy="8" r="2.5" />
+          <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M11.99 11.99l1.07 1.07M13.07 2.93l-1.06 1.06M4.01 11.99l-1.07 1.07" />
+        </svg>
+      }
+    />
   );
 }
 
-function UsageBarIcon(): React.ReactElement<any> {
+function UsageBarIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="8" width="3" height="7" rx="0.5" />
-      <rect x="6.5" y="3" width="3" height="12" rx="0.5" />
-      <rect x="12" y="1" width="3" height="14" rx="0.5" />
-    </svg>
+    <ProductIcon
+      iconId="graph-left"
+      fallback={
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="8" width="3" height="7" rx="0.5" />
+          <rect x="6.5" y="3" width="3" height="12" rx="0.5" />
+          <rect x="12" y="1" width="3" height="14" rx="0.5" />
+        </svg>
+      }
+    />
   );
 }
 
-function ExtensionStoreIcon(): React.ReactElement<any> {
+function ExtensionStoreIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
-    </svg>
+    <ProductIcon
+      iconId="extensions"
+      fallback={
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 2H6v4H2v4h4v4h4v-4h4V6h-4V2z" />
+        </svg>
+      }
+    />
   );
 }
 
-function McpStoreIcon(): React.ReactElement<any> {
+function McpStoreIcon(): React.ReactElement {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="1" width="10" height="5" rx="1" />
-      <rect x="3" y="10" width="10" height="5" rx="1" />
-      <line x1="8" y1="6" x2="8" y2="10" />
-      <circle cx="5.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
-      <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
-      <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
-      <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
-    </svg>
+    <ProductIcon
+      iconId="server"
+      fallback={
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="1" width="10" height="5" rx="1" />
+          <rect x="3" y="10" width="10" height="5" rx="1" />
+          <line x1="8" y1="6" x2="8" y2="10" />
+          <circle cx="5.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+          <circle cx="10.5" cy="3.5" r="0.7" fill="currentColor" stroke="none" />
+          <circle cx="5.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+          <circle cx="10.5" cy="12.5" r="0.7" fill="currentColor" stroke="none" />
+        </svg>
+      }
+    />
   );
 }
 
 // ── Panel toggle icons ────────────────────────────────────────────────────────
 
-function PanelLeftIcon(): React.ReactElement<any> {
+function PanelLeftIcon(): React.ReactElement {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="5.5" y1="2.5" x2="5.5" y2="13.5" /></svg>;
 }
 
-function PanelCentreIcon(): React.ReactElement<any> {
+function PanelCentreIcon(): React.ReactElement {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="5,4 3,8 5,12" /><polyline points="11,4 13,8 11,12" /><line x1="9" y1="3" x2="7" y2="13" /></svg>;
 }
 
-function PanelBottomIcon(): React.ReactElement<any> {
+function PanelBottomIcon(): React.ReactElement {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="1.5" y1="10" x2="14.5" y2="10" /></svg>;
 }
 
-function PanelRightIcon(): React.ReactElement<any> {
+function PanelRightIcon(): React.ReactElement {
   return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" /><line x1="10.5" y1="2.5" x2="10.5" y2="13.5" /></svg>;
 }
 
@@ -107,19 +129,21 @@ export const titleButtonStyle: React.CSSProperties = {
 export interface TitleBarAction {
   eventName: string;
   title: string;
-  Icon: () => React.ReactElement<any>;
+  Icon: () => React.ReactElement;
 }
+
+const OPEN_USAGE_PANEL_EVENT = 'agent-ide:open-usage-panel';
 
 export const TITLE_BAR_ACTIONS: TitleBarAction[] = [
   { eventName: OPEN_EXTENSION_STORE_EVENT, title: 'Extension Store', Icon: ExtensionStoreIcon },
   { eventName: OPEN_MCP_STORE_EVENT, title: 'MCP Servers', Icon: McpStoreIcon },
   { eventName: OPEN_SETTINGS_PANEL_EVENT, title: 'Settings (Ctrl+,)', Icon: SettingsGearIcon },
-  { eventName: 'agent-ide:open-usage-panel', title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
+  { eventName: OPEN_USAGE_PANEL_EVENT, title: 'Usage (Ctrl+U)', Icon: UsageBarIcon },
 ];
 
 // ── WindowControls ────────────────────────────────────────────────────────────
 
-function WindowControls(): React.ReactElement<any> | null {
+function WindowControls(): React.ReactElement | null {
   const [platform, setPlatform] = useState<string>('');
   useEffect(() => { window.electronAPI?.app?.getPlatform?.().then(setPlatform).catch(() => {}); }, []);
   if (platform !== 'win32') return null;
@@ -142,14 +166,14 @@ function WindowControls(): React.ReactElement<any> | null {
 
 // ── Panel toggle bar ──────────────────────────────────────────────────────────
 
-const PANEL_TOGGLES: Array<{ panel: CollapseTarget; title: string; shortcut?: string; Icon: () => React.ReactElement<any> }> = [
+const PANEL_TOGGLES: Array<{ panel: CollapseTarget; title: string; shortcut?: string; Icon: () => React.ReactElement }> = [
   { panel: 'leftSidebar', title: 'File Tree', shortcut: 'Ctrl+B', Icon: PanelLeftIcon },
   { panel: 'editor', title: 'Editor', Icon: PanelCentreIcon },
   { panel: 'terminal', title: 'Terminal', shortcut: 'Ctrl+J', Icon: PanelBottomIcon },
   { panel: 'rightSidebar', title: 'Chat', shortcut: 'Ctrl+\\', Icon: PanelRightIcon },
 ];
 
-function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL_TOGGLES[number]; isActive: boolean; onClick: () => void }): React.ReactElement<any> {
+function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL_TOGGLES[number]; isActive: boolean; onClick: () => void }): React.ReactElement {
   const label = `${isActive ? 'Hide' : 'Show'} ${config.title}${config.shortcut ? ` (${config.shortcut})` : ''}`;
   return (
     <button className="titlebar-no-drag" title={label} aria-label={label} onClick={onClick}
@@ -161,7 +185,7 @@ function PanelToggleButton({ config, isActive, onClick }: { config: typeof PANEL
   );
 }
 
-function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement<any> | null {
+function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; onToggle?: (panel: CollapseTarget) => void }): React.ReactElement | null {
   if (!collapsed || !onToggle) return null;
   return (
     <>{PANEL_TOGGLES.map((config) => (
@@ -172,7 +196,7 @@ function PanelToggleBar({ collapsed, onToggle }: { collapsed?: CollapseState; on
 
 // ── Notification bell ─────────────────────────────────────────────────────────
 
-function NotificationBell(): React.ReactElement<any> {
+function NotificationBell(): React.ReactElement {
   const { notifications, unreadCount, markAllRead, removeNotification, clearAllNotifications } = useToastContext();
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => { setOpen((prev) => !prev); }, []);
@@ -196,8 +220,9 @@ export interface TitleBarProps {
   onTogglePanel?: (panel: CollapseTarget) => void;
 }
 
-export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement<any> {
+export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): React.ReactElement {
   useProgressSubscriptions();
+  const titleBarActions = TITLE_BAR_ACTIONS.filter((action) => action.eventName !== OPEN_USAGE_PANEL_EVENT);
   return (
     <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center bg-surface-panel"
       style={{ height: 'var(--titlebar-height, 36px)', borderBottom: '1px solid color-mix(in srgb, var(--border-semantic) 50%, transparent)' }}>
@@ -212,12 +237,18 @@ export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): Reac
       <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
         <PanelToggleBar collapsed={collapsed} onToggle={onTogglePanel} />
         <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-semantic)', margin: '0 6px', opacity: 0.5 }} />
-        {TITLE_BAR_ACTIONS.map((action) => (
+        {titleBarActions.map((action) => (
           <button key={action.eventName} className="titlebar-no-drag text-text-semantic-muted" title={action.title}
             onClick={() => window.dispatchEvent(new CustomEvent(action.eventName))} style={titleButtonStyle} {...hoverStyle}>
             <action.Icon />
           </button>
         ))}
+        <UsageActions
+          UsageIcon={UsageBarIcon}
+          onOpenPanel={() => window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT))}
+          titleButtonStyle={titleButtonStyle}
+          hoverStyle={hoverStyle}
+        />
         <NotificationBell />
       </div>
       <MobileOverflowMenu titleBarActions={TITLE_BAR_ACTIONS} titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />

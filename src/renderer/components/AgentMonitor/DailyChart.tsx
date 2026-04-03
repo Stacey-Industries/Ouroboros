@@ -33,7 +33,7 @@ function DailyBar({
 }: {
   day: { date: string; cost: number };
   maxCost: number;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   const barHeight = maxCost > 0 ? Math.max((day.cost / maxCost) * 100, day.cost > 0 ? 3 : 0) : 0;
   return (
     <div
@@ -55,7 +55,7 @@ function DailyBar({
   );
 }
 
-function ChartHeader({ days, maxCost }: { days: number; maxCost: number }): React.ReactElement<any> {
+function ChartHeader({ days, maxCost }: { days: number; maxCost: number }): React.ReactElement<unknown> {
   return (
     <div className="flex items-center gap-2 mb-2">
       <span className="text-[10px] font-medium uppercase tracking-wider text-text-semantic-faint">
@@ -77,7 +77,7 @@ function ChartLabels({
 }: {
   chartData: { date: string; cost: number }[];
   labelInterval: number;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div className="flex gap-[2px] mt-0.5">
       {chartData.map((day, i) => (
@@ -99,7 +99,7 @@ function ChartLabels({
 export const DailyChart = memo(function DailyChart({
   entries,
   days,
-}: DailyChartProps): React.ReactElement<any> {
+}: DailyChartProps): React.ReactElement<unknown> {
   const chartData = useMemo(() => buildChartData(entries, days), [entries, days]);
   const maxCost = useMemo(() => Math.max(...chartData.map((d) => d.cost), 0.01), [chartData]);
   const labelInterval = Math.ceil(days / 7);

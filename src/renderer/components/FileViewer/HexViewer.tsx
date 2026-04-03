@@ -84,9 +84,7 @@ function useHexViewerNavigation(
     [matchOffsets, scrollRef, viewHeight],
   );
   const openExternal = useCallback(() => {
-    window.electronAPI.app.openExternal(
-      `file:///${filePath.replace(/\\/g, '/').replace(/^\//, '')}`,
-    );
+    window.electronAPI.app.openExternal(filePath);
   }, [filePath]);
   return { goToMatch, openExternal };
 }
@@ -168,7 +166,7 @@ function useHexViewerState(content: Uint8Array, filePath: string) {
   };
 }
 
-export function HexViewer({ content, filePath }: HexViewerProps): React.ReactElement<any> {
+export function HexViewer({ content, filePath }: HexViewerProps): React.ReactElement {
   const state = useHexViewerState(content, filePath);
   return (
     <div style={rootStyle}>

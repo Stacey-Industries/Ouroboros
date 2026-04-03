@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 
+import { ProductIcon } from '../shared/ProductIcon';
 import { CharHighlight } from './HighlightedText';
 import type { Command } from './types';
 
@@ -19,7 +20,7 @@ export const CommandItem = memo(function CommandItem({
   matchIndices,
   onSelect,
   onMouseEnter,
-}: CommandItemProps): React.ReactElement<any> {
+}: CommandItemProps): React.ReactElement {
   const hasChildren = Array.isArray(command.children) && command.children.length > 0;
 
   return (
@@ -31,7 +32,13 @@ export const CommandItem = memo(function CommandItem({
       onMouseEnter={() => onMouseEnter(command)}
       style={itemStyle(isSelected)}
     >
-      {command.icon !== undefined && <ItemIcon icon={command.icon} isSelected={isSelected} />}
+      {(command.productIconId !== undefined || command.icon !== undefined) && (
+        <ItemIcon
+          icon={command.icon}
+          productIconId={command.productIconId}
+          isSelected={isSelected}
+        />
+      )}
       <ItemLabel command={command} isSelected={isSelected} matchIndices={matchIndices} />
       <RightIndicator command={command} isSelected={isSelected} hasChildren={hasChildren} />
     </div>
@@ -40,18 +47,38 @@ export const CommandItem = memo(function CommandItem({
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function ItemIcon({ icon, isSelected }: { icon: string; isSelected: boolean }): React.ReactElement<any> {
+function ItemIcon({
+  icon,
+  productIconId,
+  isSelected,
+}: {
+  icon?: string;
+  productIconId?: string;
+  isSelected: boolean;
+}): React.ReactElement {
+  const style: React.CSSProperties = {
+    flexShrink: 0,
+    width: '18px',
+    fontSize: '12px',
+    textAlign: 'center',
+    opacity: isSelected ? 0.85 : 0.7,
+    fontFamily: 'var(--font-mono)',
+  };
+
+  if (productIconId) {
+    return (
+      <span style={style}>
+        <ProductIcon
+          iconId={productIconId}
+          size={12}
+          fallback={<span>{icon ?? '•'}</span>}
+        />
+      </span>
+    );
+  }
+
   return (
-    <span
-      style={{
-        flexShrink: 0,
-        width: '18px',
-        fontSize: '12px',
-        textAlign: 'center',
-        opacity: isSelected ? 0.85 : 0.7,
-        fontFamily: 'var(--font-mono)',
-      }}
-    >
+    <span style={style}>
       {icon}
     </span>
   );
@@ -65,7 +92,7 @@ function ItemLabel({
   command: Command;
   isSelected: boolean;
   matchIndices: number[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
       {command.category !== undefined && (
@@ -103,7 +130,7 @@ function RightIndicator({
   command: Command;
   isSelected: boolean;
   hasChildren: boolean;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (hasChildren) {
     return (
       <span

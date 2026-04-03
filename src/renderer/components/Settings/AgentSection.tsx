@@ -6,8 +6,10 @@ import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
 import {
+  claudeSectionBudgetInputStyle,
   claudeSectionHeaderTextStyle,
   claudeSectionRootStyle,
+  claudeSectionSectionDescriptionStyle,
 } from './claudeSectionContentStyles';
 import { SelectSection, ToggleSection } from './ClaudeSectionControls';
 import { SectionLabel } from './settingsStyles';
@@ -19,6 +21,16 @@ interface AgentSectionProps {
 
 type AgentChatSettings = NonNullable<AppConfig['agentChatSettings']>;
 type ContextLayerSettings = NonNullable<AppConfig['contextLayer']>;
+type RouterSettings = NonNullable<AppConfig['routerSettings']>;
+
+const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
+  enabled: true,
+  layer1Enabled: true,
+  layer2Enabled: true,
+  layer3Enabled: true,
+  layer2ConfidenceThreshold: 0.6,
+  paranoidMode: false,
+};
 
 function AgentChatSettingsGroup({
   settings,
@@ -26,7 +38,7 @@ function AgentChatSettingsGroup({
 }: {
   settings: AgentChatSettings;
   updateSetting: <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <div>
@@ -65,7 +77,7 @@ function ContextLayerSettingsGroup({
 }: {
   settings: ContextLayerSettings;
   updateSetting: <K extends keyof ContextLayerSettings>(field: K, value: ContextLayerSettings[K]) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <SectionLabel style={{ marginTop: '8px' }}>Context Layer</SectionLabel>
@@ -75,23 +87,109 @@ function ContextLayerSettingsGroup({
   );
 }
 
+type RouterUpdateFn = <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => void;
+
+function RouterThresholdSection({
+  settings,
+  updateSetting,
+}: {
+  settings: RouterSettings;
+  updateSetting: RouterUpdateFn;
+}): React.ReactElement {
+  return (
+    <section>
+      <SectionLabel>Router Classifier Threshold</SectionLabel>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        Minimum classifier confidence required before accepting a layer-2 routing result. Range:
+        0.0 to 1.0.
+      </p>
+      <input
+        type="number"
+        min={0}
+        max={1}
+        step={0.05}
+        value={settings.layer2ConfidenceThreshold}
+        onChange={(event) => updateRouterThreshold(event.target.value, updateSetting)}
+        aria-label="Router classifier confidence threshold"
+        className="text-text-semantic-primary"
+        style={claudeSectionBudgetInputStyle}
+      />
+    </section>
+  );
+}
+
+function RouterToggles({
+  settings,
+  updateSetting,
+}: {
+  settings: RouterSettings;
+  updateSetting: RouterUpdateFn;
+}): React.ReactElement {
+  return (
+    <>
+      <ToggleSection checked={settings.layer2Enabled} description="Use the statistical classifier when the rule engine does not produce a routing decision." label="Enable router classifier" title="Router Classifier" onChange={(value) => updateSetting('layer2Enabled', value)} />
+      <RouterThresholdSection settings={settings} updateSetting={updateSetting} />
+      <ToggleSection checked={settings.layer3Enabled} description="Reserved for the future async fallback layer. The current synchronous router path does not use this yet." label="Enable layer 3 fallback" title="Router Layer 3" onChange={(value) => updateSetting('layer3Enabled', value)} />
+      <ToggleSection checked={settings.paranoidMode} description="Force Opus for all Agent Chat requests regardless of prompt classification." label="Enable paranoid mode" title="Router Paranoid Mode" onChange={(value) => updateSetting('paranoidMode', value)} />
+    </>
+  );
+}
+
+function RouterSettingsGroup({
+  settings,
+  updateSetting,
+}: {
+  settings: RouterSettings;
+  updateSetting: RouterUpdateFn;
+}): React.ReactElement {
+  return (
+    <>
+      <SectionLabel style={{ marginTop: '8px' }}>Model Router</SectionLabel>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        Agent Chat can automatically choose between Haiku, Sonnet, and Opus when the model picker
+        is set to Auto.
+      </p>
+      <ToggleSection checked={settings.enabled} description="Enable automatic model routing for Agent Chat requests that do not explicitly choose a model." label="Enable model router" title="Automatic Model Routing" onChange={(value) => updateSetting('enabled', value)} />
+      <ToggleSection checked={settings.layer1Enabled} description="Use deterministic rules and slash-command mappings as the first routing layer." label="Enable router rule engine" title="Router Rule Engine" onChange={(value) => updateSetting('layer1Enabled', value)} />
+      <RouterToggles settings={settings} updateSetting={updateSetting} />
+    </>
+  );
+}
+
 export function AgentSection({
   draft,
   onChange,
-}: AgentSectionProps): React.ReactElement<any> {
+}: AgentSectionProps): React.ReactElement {
   const agentChatSettings = draft.agentChatSettings ?? {};
   const contextLayerSettings = draft.contextLayer ?? {};
+  const routerSettings = { ...DEFAULT_ROUTER_SETTINGS, ...(draft.routerSettings ?? {}) };
   const updateAgentChat = <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => {
     onChange('agentChatSettings', { ...agentChatSettings, [field]: value });
   };
   const updateContextLayer = <K extends keyof ContextLayerSettings>(field: K, value: ContextLayerSettings[K]) => {
     onChange('contextLayer', { ...contextLayerSettings, [field]: value });
   };
+  const updateRouterSettings = <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => {
+    onChange('routerSettings', { ...routerSettings, [field]: value });
+  };
 
   return (
     <div style={claudeSectionRootStyle}>
       <AgentChatSettingsGroup settings={agentChatSettings} updateSetting={updateAgentChat} />
+      <RouterSettingsGroup settings={routerSettings} updateSetting={updateRouterSettings} />
       <ContextLayerSettingsGroup settings={contextLayerSettings} updateSetting={updateContextLayer} />
     </div>
   );
+}
+
+function updateRouterThreshold(
+  rawValue: string,
+  updateSetting: <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => void,
+): void {
+  const parsed = Number.parseFloat(rawValue);
+  if (!Number.isFinite(parsed)) {
+    return;
+  }
+  const clamped = Math.min(1, Math.max(0, parsed));
+  updateSetting('layer2ConfidenceThreshold', clamped);
 }

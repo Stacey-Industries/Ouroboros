@@ -13,9 +13,11 @@
 import log from '../logger'
 import type { RepoIndexSnapshot } from '../orchestration/repoIndexer'
 import type { ContextPacket, RepoFacts } from '../orchestration/types'
+import { broadcast } from '../web/broadcast'
 import { injectContextLayer } from './contextInjector'
 import {
   createQueueForRepoMap,
+  type CreateQueueOptions,
   runGC,
   setupGcTimer,
   setupWatcher,
@@ -66,6 +68,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
   private workspaceRoot: string
   private buildRepoIndex: (roots: string[]) => Promise<RepoIndexSnapshot>
 
+  private snapshot: RepoIndexSnapshot | null = null
   private repoMap: RepoMap | null = null
   private repoMapGeneratedAt: number | null = null
   private health: 'healthy' | 'degraded' | 'disabled' = 'disabled'
@@ -118,6 +121,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
   private async runFullRebuild(): Promise<void> {
     const snapshot = await this.buildRepoIndex([this.workspaceRoot])
+    this.snapshot = snapshot
     const repoFacts = snapshot.repoFacts
 
     const newRepoMap = generateRepoMap({
@@ -159,7 +163,13 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
   private enqueueForSummarization(repoMap: RepoMap): void {
     if (!this.config.autoSummarize) return
-    if (!this.queue) this.queue = createQueueForRepoMap(this.workspaceRoot, repoMap)
+    if (!this.queue) {
+      const queueOptions: CreateQueueOptions = {
+        snapshot: this.snapshot ?? undefined,
+        onProgress: (progress) => { broadcast('contextLayer:progress', progress) },
+      }
+      this.queue = createQueueForRepoMap(this.workspaceRoot, repoMap, queueOptions)
+    }
     this.queue.enqueue(repoMap.modules.map((e) => e.structural.module.id))
   }
 
@@ -204,6 +214,18 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
   onSessionStart(): void {
     this.watcher?.onSessionStart()
+  }
+
+  onCwdChanged(newCwd: string): void {
+    log.info(`[context-layer] cwd_changed → ${newCwd}`)
+    // Future: re-scope the context layer to the new working directory.
+    // For now, just log — callers that need re-scoping can call forceRebuild.
+  }
+
+  onFileChanged(): void {
+    // Lighter than onGitCommit — mark the layer as needing refresh without
+    // assuming a commit occurred. Delegates to the watcher's file-change path.
+    this.watcher?.onFileChange('change', '')
   }
 
   async onConfigChange(config: ContextLayerConfig): Promise<void> {
@@ -253,6 +275,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
 
     this.queue?.dispose()
     this.queue = null
+    this.snapshot = null
 
     controller = null
   }
@@ -270,6 +293,7 @@ class ContextLayerControllerImpl implements ContextLayerController {
     this.workspaceRoot = newRoot
     this.repoMap = null
     this.repoMapGeneratedAt = null
+    this.snapshot = null
     this.health = 'disabled'
     this.disposed = false
 

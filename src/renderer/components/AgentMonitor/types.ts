@@ -37,6 +37,18 @@ export interface AgentSession {
   loadedRules?: LoadedRule[];
   /** Skill invocations during this session (populated by agent_start/agent_end with skill signatures). */
   skillExecutions?: SkillExecutionRecord[];
+  /** Tasks created/completed during this session (populated by TaskCreated/TaskCompleted hook events). */
+  tasks?: AgentTask[];
+  /** Conversation turns during this session (populated by UserPromptSubmit/Elicitation/ElicitationResult events). */
+  conversationTurns?: ConversationTurn[];
+  /** Context compaction events during this session. */
+  compactions?: CompactionEvent[];
+  /** Permission request/denied events during this session. */
+  permissionEvents?: PermissionEvent[];
+  /** Pending pre-compact token count — stored until post_compact arrives to merge. */
+  pendingPreCompactTokens?: number;
+  /** Notification messages received during this session. */
+  notifications?: string[];
 }
 
 export interface SubToolCallEvent {
@@ -82,7 +94,7 @@ export interface TokenUsage {
 }
 
 export interface HookPayload {
-  type: 'agent_start' | 'pre_tool_use' | 'post_tool_use' | 'agent_end' | 'agent_stop' | 'session_start' | 'session_stop';
+  type: import('../../types/electron-foundation').AgentEventType;
   sessionId: string;
   toolName?: string;
   toolCallId?: string;
@@ -97,4 +109,46 @@ export interface HookPayload {
   model?: string;         // model identifier (e.g. "claude-sonnet-4-20250514")
   /** Links a sub-tool event to its parent Agent/Task tool call. */
   parentToolCallId?: string;
+  /** Event-specific data forwarded from Claude Code stdin JSON. */
+  data?: Record<string, unknown>;
+  costUsd?: number;
+}
+
+// ─── Task tracking (populated by TaskCreated / TaskCompleted events) ─────────
+
+export interface AgentTask {
+  id: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'error';
+  parentTaskId?: string;
+  createdAt: number;
+  completedAt?: number;
+}
+
+// ─── Conversation flow (populated by UserPromptSubmit / Elicitation events) ──
+
+export interface ConversationTurn {
+  type: 'prompt' | 'elicitation' | 'elicitation_result';
+  content: string;
+  timestamp: number;
+  /** For elicitation: the question schema/title */
+  question?: string;
+}
+
+// ─── Compaction (populated by PreCompact / PostCompact events) ───────────────
+
+export interface CompactionEvent {
+  preTokens: number;
+  postTokens: number;
+  timestamp: number;
+}
+
+// ─── Permissions (populated by PermissionRequest / PermissionDenied events) ──
+
+export interface PermissionEvent {
+  type: 'request' | 'denied';
+  permissionType?: string;
+  toolName?: string;
+  timestamp: number;
+  reason?: string;
 }

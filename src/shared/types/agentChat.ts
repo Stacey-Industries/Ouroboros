@@ -98,10 +98,14 @@ export interface AgentChatOrchestrationLink {
    *  Used to detect model changes between turns — a model change invalidates --resume
    *  because thinking block signatures are model-specific. */
   model?: string;
+  /** Effort/reasoning level used for this session. */
+  effort?: string;
   /** PTY session ID backing this chat session (for chat-terminal unification) */
   linkedTerminalId?: string;
   /** Git HEAD hash captured before the agent turn started — used for revert. */
   preSnapshotHash?: string;
+  /** How the model was selected: 'rule', 'classifier', 'llm', 'user', or undefined. */
+  routedBy?: string;
 }
 
 export interface AgentChatContextSummary {

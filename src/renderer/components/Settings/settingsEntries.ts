@@ -39,8 +39,7 @@ export interface SettingsEntry {
     | 'hooks'
     | 'profiles'
     | 'files'
-    | 'extensions'
-    | 'mcp'
+    | 'integrations'
     | 'codemode'
     | 'contextDocs';
   /** Display-friendly section name */
@@ -108,6 +107,10 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
     'Enable Language Server Protocol integration for code intelligence (completions, diagnostics, hover, go-to-definition).',
   ],
   [
+    'Inline Completions',
+    'Show AI-powered code suggestions as you type (ghost text). Uses your Claude credentials.',
+  ],
+  [
     'Custom Language Servers',
     'Configure custom language server commands per language. For example, use "rust-analyzer" for Rust or "pylsp" for Python.',
   ],
@@ -160,6 +163,22 @@ const AGENT_ENTRIES = createEntries('agent', 'Agent', [
   [
     'Open Details on Failure',
     'Automatically open linked task details when an agent request fails or needs review.',
+  ],
+  [
+    'Automatic Model Routing',
+    'Automatically choose Haiku, Sonnet, or Opus for Agent Chat when the model picker is set to Auto.',
+  ],
+  [
+    'Router Rule Engine',
+    'Use deterministic prompt rules and slash-command mappings as the first model-routing layer.',
+  ],
+  [
+    'Router Classifier Threshold',
+    'Minimum classifier confidence required before accepting a non-rule routing decision.',
+  ],
+  [
+    'Router Paranoid Mode',
+    'Force Opus for all Agent Chat requests regardless of prompt classification.',
   ],
   [
     'Enable Context Layer',

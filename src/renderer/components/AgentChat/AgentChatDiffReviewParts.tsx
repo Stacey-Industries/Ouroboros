@@ -50,7 +50,7 @@ export function parseUnifiedDiff(patch: string): ParsedDiffLine[] {
 
 /* ---------- Icons ---------- */
 
-export function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement<any> {
+export function ChevronIcon({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       className={`h-3 w-3 shrink-0 transition-transform duration-150 text-text-semantic-muted ${expanded ? 'rotate-90' : ''}`}
@@ -76,7 +76,7 @@ export function DiffBadge({
 }: {
   additions: number;
   deletions: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span className="flex items-center gap-1 text-[10px]">
       {additions > 0 && <span className="text-status-success">+{additions}</span>}
@@ -87,7 +87,7 @@ export function DiffBadge({
 
 /* ---------- renderDiffLine ---------- */
 
-function renderChangeDiffLine(line: ParsedDiffLine, i: number): React.ReactElement<any> {
+function renderChangeDiffLine(line: ParsedDiffLine, i: number): React.ReactElement {
   const bg =
     line.type === 'add'
       ? 'var(--diff-add-bg, rgba(46, 160, 67, 0.15))'
@@ -121,7 +121,7 @@ function renderChangeDiffLine(line: ParsedDiffLine, i: number): React.ReactEleme
   );
 }
 
-export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElement<any> {
+export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElement {
   if (line.type === 'header')
     return (
       <tr key={i}>
@@ -150,7 +150,7 @@ export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElem
 
 /* ---------- InlineDiffView ---------- */
 
-export function InlineDiffView({ diff }: { diff: string }): React.ReactElement<any> {
+export function InlineDiffView({ diff }: { diff: string }): React.ReactElement {
   const lines = parseUnifiedDiff(diff);
   return (
     <div

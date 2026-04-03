@@ -66,7 +66,7 @@ export function PendingStreamingView({
   onScroll: () => void;
   pendingUserMessage: string;
   onStop?: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       ref={scrollRef}

@@ -38,7 +38,7 @@ const MINIMAX_PRESET: ProviderPreset = {
   ],
 };
 
-export function AddProviderForm({ onAdd }: AddProviderFormProps): React.ReactElement<any> {
+export function AddProviderForm({ onAdd }: AddProviderFormProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!isOpen) {
@@ -57,7 +57,7 @@ interface ProviderFormFieldsProps {
   onCancel: () => void;
 }
 
-function ProviderFormFields({ onAdd, onCancel }: ProviderFormFieldsProps): React.ReactElement<any> {
+function ProviderFormFields({ onAdd, onCancel }: ProviderFormFieldsProps): React.ReactElement {
   const [preset, setPreset] = useState('custom');
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -98,7 +98,7 @@ function ProviderFormFields({ onAdd, onCancel }: ProviderFormFieldsProps): React
   );
 }
 
-function PresetSelector({ value, onChange }: { value: string; onChange: (v: string) => void }): React.ReactElement<any> {
+function PresetSelector({ value, onChange }: { value: string; onChange: (v: string) => void }): React.ReactElement {
   return (
     <div>
       <div className="text-text-semantic-muted" style={formLabelStyle}>Preset</div>
@@ -117,7 +117,7 @@ interface FormFieldProps {
   placeholder: string;
 }
 
-function FormField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement<any> {
+function FormField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement {
   return (
     <div>
       <div className="text-text-semantic-muted" style={formLabelStyle}>{label}</div>
@@ -133,7 +133,7 @@ function FormField({ label, value, onChange, placeholder }: FormFieldProps): Rea
   );
 }
 
-function PasswordField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement<any> {
+function PasswordField({ label, value, onChange, placeholder }: FormFieldProps): React.ReactElement {
   return (
     <div>
       <div className="text-text-semantic-muted" style={formLabelStyle}>{label}</div>

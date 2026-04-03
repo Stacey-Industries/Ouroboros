@@ -145,6 +145,7 @@ function buildComposerSectionProps(
     threadModelUsage,
     streamingTokenUsage: streaming.streamingTokenUsage,
     isStreaming: streaming.isStreaming,
+    routedBy: props.activeThread?.latestOrchestration?.routedBy,
     slashCommandContext: props.slashCommandContext,
     attachments: props.attachments,
     onAttachmentsChange: props.onAttachmentsChange,
@@ -167,7 +168,7 @@ function useActiveSkillExecutions(sessionId?: string): SkillExecutionRecord[] {
   }, [agents, sessionId]);
 }
 
-export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement<any> {
+export function AgentChatConversation(props: AgentChatConversationProps): React.ReactElement {
   const streaming = useAgentChatStreaming(props.activeThread?.id ?? null);
   const threadModelUsage = useThreadModelUsage(props.activeThread);
   const hasQueue = hasQueuedMessages(props);

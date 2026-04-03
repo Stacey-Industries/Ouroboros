@@ -11,7 +11,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import { FileTree } from '../FileTree/FileTree';
 import { useFileViewerManager } from '../FileViewer';
 
-export function SidebarFileTree(): React.ReactElement<any> {
+export function SidebarFileTree(): React.ReactElement {
   const { projectRoots, removeProjectRoot } = useProject();
   const { openFile, openFilePreview, activeFile } = useFileViewerManager();
 

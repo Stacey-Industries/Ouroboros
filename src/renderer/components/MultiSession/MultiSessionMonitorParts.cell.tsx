@@ -37,7 +37,7 @@ export const CompactToolCall = memo(function CompactToolCall({
   call,
 }: {
   call: ToolCallEvent;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="flex items-center gap-1.5 truncate px-2 py-0.5" style={{ fontSize: '10px' }}>
       <span
@@ -83,7 +83,7 @@ function SessionHeader({
   elapsed: string;
   isRunning: boolean;
   session: AgentSession;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const status = STATUS_CONFIG[session.status];
   return (
     <div className="flex flex-shrink-0 items-center gap-2 px-2.5 py-1.5 border-b border-border-semantic">
@@ -114,7 +114,7 @@ function ToolCallFeed({
 }: {
   isRunning: boolean;
   latestCalls: ToolCallEvent[];
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   if (latestCalls.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-[10px] italic text-text-semantic-faint">
@@ -137,7 +137,7 @@ function TokenSummary({
 }: {
   inputTokens: number;
   outputTokens: number;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <span className="flex items-center gap-1 font-mono text-[10px] text-text-semantic-faint">
       <span className="text-text-semantic-muted">
@@ -152,7 +152,7 @@ function TokenSummary({
   );
 }
 
-function ViewFullButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
+function ViewFullButton({ onClick }: { onClick: () => void }): React.JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -173,7 +173,7 @@ function SessionFooter({
 }: {
   onViewFull: () => void;
   session: AgentSession;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="flex flex-shrink-0 items-center gap-2 px-2.5 py-1 border-t border-border-semantic">
       <TokenSummary inputTokens={session.inputTokens} outputTokens={session.outputTokens} />
@@ -186,7 +186,7 @@ function SessionFooter({
   );
 }
 
-export function EmptySessionCell({ label }: { label: string }): React.ReactElement<any> {
+export function EmptySessionCell({ label }: { label: string }): React.JSX.Element {
   return (
     <div className="flex h-full flex-col items-center justify-center rounded bg-surface-panel border border-border-semantic">
       <svg
@@ -217,7 +217,7 @@ export const SessionCell = memo(function SessionCell({
   label: string;
   onViewFull: () => void;
   session: AgentSession | null;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const isRunning = session?.status === 'running';
   const elapsed = useElapsedLabel(session?.startedAt ?? Date.now(), isRunning ?? false);
   if (!session) return <EmptySessionCell label={label} />;

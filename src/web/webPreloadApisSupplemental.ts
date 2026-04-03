@@ -38,6 +38,7 @@ export function buildTransactionApis(t: WebSocketTransport) {
     getSessionDetail: (sessionId: string) => t.invoke('usage:getSessionDetail', sessionId),
     getRecentSessions: (count: number) => t.invoke('usage:getRecentSessions', count),
     getWindowedUsage: () => t.invoke('usage:getWindowedUsage'),
+    getUsageWindowSnapshot: () => t.invoke('usage:getUsageWindowSnapshot'),
   };
 
   return { approvalAPI, sessionsAPI, costAPI, usageAPI };
@@ -178,6 +179,9 @@ export function buildStoreContextApis(t: WebSocketTransport) {
     enableContributions: (id: string) => t.invoke('extensionStore:enableContributions', id),
     disableContributions: (id: string) => t.invoke('extensionStore:disableContributions', id),
     getThemeContributions: () => t.invoke('extensionStore:getThemeContributions'),
+    getIconThemeContributions: () => t.invoke('extensionStore:getIconThemeContributions'),
+    getProductIconThemeContributions: () =>
+      t.invoke('extensionStore:getProductIconThemeContributions'),
   };
   const contextAPI = {
     scan: (projectRoot: string) => t.invoke('context:scan', projectRoot),
@@ -218,6 +222,8 @@ export function buildAgentChatApi(t: WebSocketTransport) {
     revertToSnapshot: (threadId: string, messageId: string) =>
       t.invoke('agentChat:revertToSnapshot', threadId, messageId),
     cancelTask: (taskId: string) => t.invoke('agentChat:cancelTask', taskId),
+    cancelByThreadId: (threadId: string) =>
+      t.invoke('agentChat:cancelByThreadId', threadId),
     listMemories: (workspaceRoot: string) =>
       t.invoke('agentChat:listMemories', workspaceRoot),
     createMemory: (workspaceRoot: string, entry: unknown) =>

@@ -16,6 +16,7 @@ import os from 'os';
 import path from 'path';
 
 import { getConfigValue } from './config';
+import { describeFdPressure } from './fdPressureDiagnostics';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
@@ -49,6 +50,19 @@ const pendingRequests = new Map<string, ApprovalRequest>();
 
 /** Auto-approve timers */
 const autoApproveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Deferred response writes waiting for transient descriptor pressure to clear. */
+const queuedResponseWrites = new Map<
+  string,
+  {
+    filePath: string;
+    data: string;
+    decision: string;
+    attempt: number;
+    timer: ReturnType<typeof setTimeout> | null;
+    deadlineAt: number;
+  }
+>();
 
 // ─── Directory management ────────────────────────────────────────────────────
 
@@ -119,6 +133,11 @@ export function stopApprovalManagerCleanup(): void {
     clearInterval(cleanupIntervalId);
     cleanupIntervalId = null;
   }
+
+  for (const [requestId, queued] of queuedResponseWrites) {
+    if (queued.timer) clearTimeout(queued.timer);
+    queuedResponseWrites.delete(requestId);
+  }
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -154,7 +173,11 @@ export function requestApproval(request: ApprovalRequest): void {
   const windows = getAllActiveWindows();
   for (const win of windows) {
     if (!win.isDestroyed()) {
-      win.webContents.send('approval:request', request);
+      try {
+        win.webContents.mainFrame.send('approval:request', request);
+      } catch {
+        // Render frame disposed — silently skip this window
+      }
     }
   }
   broadcastToWebClients('approval:request', request);
@@ -183,6 +206,12 @@ export function requestApproval(request: ApprovalRequest): void {
 
 const EMFILE_MAX_RETRIES = 2;
 const EMFILE_RETRY_DELAY_MS = 200;
+const EMFILE_QUEUE_BASE_DELAY_MS = 500;
+const EMFILE_QUEUE_MAX_DELAY_MS = 5_000;
+const EMFILE_QUEUE_DEADLINE_MS = 60_000;
+const EMFILE_LOG_THROTTLE_MS = 10_000;
+
+let lastApprovalEmfileLogAt = 0;
 
 function clearAutoApproveTimer(requestId: string): void {
   const timer = autoApproveTimers.get(requestId);
@@ -206,7 +235,13 @@ function notifyApprovalResolved(requestId: string, decision: string): void {
   const windows = getAllActiveWindows();
   for (const win of windows) {
     if (!win.isDestroyed()) {
-      win.webContents.send('approval:resolved', { requestId, decision });
+      try {
+        // Use mainFrame.send directly — webContents.send logs internally before
+        // rethrowing when the render frame is disposed during HMR/navigation.
+        win.webContents.mainFrame.send('approval:resolved', { requestId, decision });
+      } catch {
+        // Render frame disposed — silently skip this window
+      }
     }
   }
   broadcastToWebClients('approval:resolved', { requestId, decision });
@@ -217,29 +252,122 @@ function isRetryableError(err: unknown): boolean {
   return code === 'EMFILE' || code === 'ENFILE';
 }
 
-async function writeResponseWithRetry(
-  filePath: string,
-  data: string,
+function clearQueuedResponseWrite(requestId: string): void {
+  const queued = queuedResponseWrites.get(requestId);
+  if (!queued) return;
+  if (queued.timer) clearTimeout(queued.timer);
+  queuedResponseWrites.delete(requestId);
+}
+
+function logApprovalEmfile(requestId: string, attempt: number): void {
+  const now = Date.now();
+  if (now - lastApprovalEmfileLogAt < EMFILE_LOG_THROTTLE_MS) return;
+  lastApprovalEmfileLogAt = now;
+  log.warn(
+    `[approval] EMFILE while writing ${requestId} (attempt ${attempt}) — ${describeFdPressure()}`,
+  );
+}
+
+interface WriteScheduleOptions {
+  filePath: string;
+  data: string;
+  decision: string;
+  attempt: number;
+  deadlineAt: number;
+}
+
+function scheduleQueuedResponseWrite(requestId: string, opts: WriteScheduleOptions): void {
+  clearQueuedResponseWrite(requestId);
+
+  const { filePath, data, decision, attempt, deadlineAt } = opts;
+  const delay = Math.min(
+    EMFILE_QUEUE_BASE_DELAY_MS * 2 ** Math.max(attempt - 1, 0),
+    EMFILE_QUEUE_MAX_DELAY_MS,
+  );
+  const queued = {
+    filePath,
+    data,
+    decision,
+    attempt,
+    timer: null as ReturnType<typeof setTimeout> | null,
+    deadlineAt,
+  };
+
+  queued.timer = setTimeout(() => {
+    const current = queuedResponseWrites.get(requestId);
+    if (!current) return;
+    current.timer = null;
+    void writeResponseWithRetry(requestId, current.decision, {
+      filePath: current.filePath,
+      data: current.data,
+      queuedAttempt: current.attempt,
+      deadlineAt: current.deadlineAt,
+    });
+  }, delay);
+
+  queuedResponseWrites.set(requestId, queued);
+}
+
+interface WriteRetryOptions {
+  filePath: string;
+  data: string;
+  queuedAttempt?: number;
+  deadlineAt?: number;
+}
+
+async function attemptFileWrite(
   requestId: string,
   decision: string,
-): Promise<boolean> {
+  opts: Required<Pick<WriteRetryOptions, 'filePath' | 'data'>>,
+  queuedAttempt: number,
+): Promise<{ success: boolean; lastError: unknown }> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= EMFILE_MAX_RETRIES; attempt++) {
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from APPROVALS_DIR + requestId
-      fs.writeFileSync(filePath, data, 'utf8');
-      log.info(
-        `wrote response for ${requestId}: ${decision}${attempt > 0 ? ` (retry ${attempt})` : ''}`,
-      );
+      fs.writeFileSync(opts.filePath, opts.data, 'utf8');
+      clearQueuedResponseWrite(requestId);
+      const retrySuffix = queuedAttempt > 0 || attempt > 0 ? ` (retry ${queuedAttempt + attempt})` : '';
+      log.info(`wrote response for ${requestId}: ${decision}${retrySuffix}`);
       notifyApprovalResolved(requestId, decision);
-      return true;
+      return { success: true, lastError: undefined };
     } catch (err) {
       lastError = err;
       if (!isRetryableError(err)) break;
+      logApprovalEmfile(requestId, queuedAttempt + attempt + 1);
       await new Promise<void>((r) => setTimeout(r, EMFILE_RETRY_DELAY_MS));
     }
   }
+  return { success: false, lastError };
+}
 
+async function writeResponseWithRetry(
+  requestId: string,
+  decision: string,
+  opts: WriteRetryOptions,
+): Promise<boolean> {
+  const queuedAttempt = opts.queuedAttempt ?? 0;
+  const deadlineAt = opts.deadlineAt ?? Date.now() + EMFILE_QUEUE_DEADLINE_MS;
+  const { success, lastError } = await attemptFileWrite(
+    requestId,
+    decision,
+    { filePath: opts.filePath, data: opts.data },
+    queuedAttempt,
+  );
+  if (success) return true;
+
+  if (isRetryableError(lastError) && Date.now() < deadlineAt) {
+    scheduleQueuedResponseWrite(requestId, {
+      filePath: opts.filePath,
+      data: opts.data,
+      decision,
+      attempt: queuedAttempt + EMFILE_MAX_RETRIES + 1,
+      deadlineAt,
+    });
+    return true;
+  }
+
+  clearQueuedResponseWrite(requestId);
   log.error(`failed to write response file for ${requestId}:`, lastError);
   return false;
 }
@@ -253,6 +381,7 @@ export async function respondToApproval(
 ): Promise<boolean> {
   pendingRequests.delete(requestId);
   clearAutoApproveTimer(requestId);
+  clearQueuedResponseWrite(requestId);
 
   const filePath = prepareResponseFilePath(requestId);
   if (!filePath) return false;

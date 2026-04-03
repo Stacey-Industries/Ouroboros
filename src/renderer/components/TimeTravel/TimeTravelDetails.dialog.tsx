@@ -11,7 +11,7 @@ const DIALOG_BTN_STYLE = {
   fontFamily: 'var(--font-ui)',
 } as const;
 
-function DirtyWarning({ dirtyCount }: { dirtyCount: number }): React.ReactElement<any> | null {
+function DirtyWarning({ dirtyCount }: { dirtyCount: number }): React.JSX.Element | null {
   if (dirtyCount <= 0) return null;
 
   return (
@@ -40,7 +40,7 @@ function RestoreDialogActions({
 }: {
   onConfirm: () => Promise<void>;
   onCancel: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
       <button
@@ -66,7 +66,7 @@ function RestoreDialogActions({
   );
 }
 
-function RestoreDialogBody({ snapshot }: { snapshot: WorkspaceSnapshot }): React.ReactElement<any> {
+function RestoreDialogBody({ snapshot }: { snapshot: WorkspaceSnapshot }): React.JSX.Element {
   return (
     <p
       className="text-text-semantic-secondary"
@@ -112,7 +112,7 @@ function DialogInner({
   dirtyCount: number;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="bg-surface-panel border border-border-semantic" style={DIALOG_PANEL_STYLE}>
       <h3
@@ -138,7 +138,7 @@ export function RestoreConfirmDialog({
   dirtyCount: number;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div style={DIALOG_OVERLAY_STYLE}>
       <DialogInner

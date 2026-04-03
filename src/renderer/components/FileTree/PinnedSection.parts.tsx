@@ -88,7 +88,7 @@ export const unpinButtonStyle: React.CSSProperties = {
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-export function PinnedChevron({ expanded }: { expanded: boolean }): React.ReactElement<any> {
+export function PinnedChevron({ expanded }: { expanded: boolean }): React.ReactElement {
   return (
     <svg
       width="10"
@@ -114,7 +114,7 @@ export function PinnedChevron({ expanded }: { expanded: boolean }): React.ReactE
   );
 }
 
-export function PinnedIcon(): React.ReactElement<any> {
+export function PinnedIcon(): React.ReactElement {
   return (
     <svg
       width="13"

@@ -29,7 +29,7 @@ export const SlotEditor = memo(function SlotEditor({
   onUpdate: (id: string, updates: Partial<SessionSlot>) => void;
   slot: SessionSlot;
   templates: AgentTemplate[];
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="flex flex-col gap-2 rounded p-3 bg-surface-panel border border-border-semantic">
       <SlotEditorHeader
@@ -48,7 +48,7 @@ export const SlotEditor = memo(function SlotEditor({
   );
 });
 
-export function LauncherHeader({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+export function LauncherHeader({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <div className="flex shrink-0 items-center gap-2 px-3 py-2 border-b border-border-semantic">
       <MultiSessionGridIcon />
@@ -78,7 +78,7 @@ export function LauncherFooter({
   onAddSlot: () => void;
   onLaunchAll: () => void;
   slotsLength: number;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="flex shrink-0 items-center gap-2 px-3 py-2 border-t border-border-semantic">
       <AddSessionButton canAddSlot={slotsLength < MAX_SLOTS} onAddSlot={onAddSlot} />

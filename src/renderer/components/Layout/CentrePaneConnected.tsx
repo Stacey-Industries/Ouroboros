@@ -16,9 +16,9 @@ import {
 import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
 import { ContextBuilder } from '../ContextBuilder';
 import { DiffReviewPanel,useDiffReview } from '../DiffReview';
+import { ExtensionStorePage } from '../ExtensionStore/ExtensionStorePage';
+import { McpStorePage } from '../McpStore/McpStorePage';
 import { SessionReplayPanel } from '../SessionReplay';
-import { ExtensionStoreSection } from '../Settings/ExtensionStoreSection';
-import { McpStoreSection } from '../Settings/McpStoreSection';
 import { SettingsPanel } from '../Settings/SettingsPanel';
 import { UsagePanel } from '../UsageModal/UsagePanel';
 import { CentrePane } from './CentrePane';
@@ -108,24 +108,16 @@ const layerStyle: React.CSSProperties = {
   flexDirection: 'column',
 };
 
-const panelStyle: React.CSSProperties = {
-  display: 'flex', flexDirection: 'column', height: '100%',
-  fontFamily: 'var(--font-ui)',
-};
 
-const scrollStyle: React.CSSProperties = {
-  flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px',
-};
-
-function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement<any> | null {
+function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement | null {
   const noop = useCallback(() => {}, []);
   switch (view) {
     case 'settings': return <SettingsPanel onClose={noop} />;
     case 'usage': return <UsagePanel />;
     case 'context-builder': return projectRoot ? <ContextBuilder projectRoot={projectRoot} onClose={noop} /> : null;
     case 'time-travel': return <TimeTravelPanelConnected onClose={noop} />;
-    case 'extensions': return <div className="bg-surface-base" style={panelStyle}><div style={scrollStyle}><ExtensionStoreSection /></div></div>;
-    case 'mcp': return <div className="bg-surface-base" style={panelStyle}><div style={scrollStyle}><McpStoreSection /></div></div>;
+    case 'extensions': return <ExtensionStorePage />;
+    case 'mcp': return <McpStorePage />;
     default: return null;
   }
 }
@@ -202,7 +194,7 @@ function EditorViewContent({
   projectRoot: string | null;
   openAndActivate: (view: SpecialViewType) => void;
   closeView: (view: SpecialViewType) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const activeSpecialView = activeView === 'editor' ? null : activeView;
   return (
     <CentrePane
@@ -228,7 +220,7 @@ function EditorViewContent({
   );
 }
 
-export function CentrePaneConnected(): React.ReactElement<any> {
+export function CentrePaneConnected(): React.ReactElement {
   const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
   const { projectRoot } = useProject();
   const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);

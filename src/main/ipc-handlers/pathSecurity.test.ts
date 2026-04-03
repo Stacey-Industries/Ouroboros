@@ -36,6 +36,7 @@ import {
   assertPathAllowed,
   getAllowedRoots,
   isTrustedConfigPath,
+  isTrustedVsxExtensionPath,
   validatePathInWorkspace,
 } from './pathSecurity';
 
@@ -359,5 +360,48 @@ describe('isTrustedConfigPath()', () => {
   it('rejects .md file directly in .claude/ (not in commands or rules)', () => {
     const p = path.join(MOCK_HOME, '.claude', 'notes.md');
     expect(isTrustedConfigPath(p)).toBe(false);
+  });
+});
+
+describe('isTrustedVsxExtensionPath()', () => {
+  const MOCK_HOME = process.platform === 'win32' ? 'C:\\Users\\someone' : '/home/user';
+
+  beforeEach(() => {
+    vi.spyOn(os, 'homedir').mockReturnValue(MOCK_HOME);
+  });
+
+  it('allows files under ~/.ouroboros/vsx-extensions/', () => {
+    const p = path.join(
+      MOCK_HOME,
+      '.ouroboros',
+      'vsx-extensions',
+      'PKief.material-icon-theme',
+      'extension',
+      'icons',
+      'folder.svg',
+    );
+    expect(isTrustedVsxExtensionPath(p)).toBe(true);
+  });
+
+  it('allows nested font files under an installed extension directory', () => {
+    const p = path.join(
+      MOCK_HOME,
+      '.ouroboros',
+      'vsx-extensions',
+      'qinjia.seti-icons',
+      'extension',
+      'seti.woff',
+    );
+    expect(isTrustedVsxExtensionPath(p)).toBe(true);
+  });
+
+  it('rejects files outside ~/.ouroboros/vsx-extensions/', () => {
+    const p = path.join(MOCK_HOME, '.ouroboros', 'other', 'asset.svg');
+    expect(isTrustedVsxExtensionPath(p)).toBe(false);
+  });
+
+  it('rejects the directory itself without a child path', () => {
+    const p = path.join(MOCK_HOME, '.ouroboros', 'vsx-extensions');
+    expect(isTrustedVsxExtensionPath(p)).toBe(false);
   });
 });

@@ -14,7 +14,7 @@ const bannerStyle: React.CSSProperties = {
 /**
  * Informational banner shown when viewing a CLAUDE.md file (not in edit mode).
  */
-export const ClaudeMdBanner = memo(function ClaudeMdBanner(): React.ReactElement<any> {
+export const ClaudeMdBanner = memo(function ClaudeMdBanner(): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={bannerStyle}>
       <span className="text-interactive-accent" style={{ fontWeight: 600 }}>

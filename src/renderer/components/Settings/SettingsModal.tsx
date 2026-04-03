@@ -5,7 +5,13 @@ import type { AppConfig } from '../../types/electron';
 import { searchEntries } from './searchHelpers';
 import type { SettingsEntry } from './settingsEntries';
 import { SettingsModalPortal } from './SettingsModalParts';
-import { type TabId,TABS } from './settingsTabs';
+import {
+  getDefaultSubTab,
+  getMainTabForSubTab,
+  type MainTabId,
+  type TabId,
+  TABS,
+} from './settingsTabs';
 import { type SettingsDraftApi,useSettingsDraft } from './useSettingsDraft';
 
 export interface SettingsModalProps {
@@ -14,59 +20,66 @@ export interface SettingsModalProps {
   initialTab?: TabId | string;
 }
 
-export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: SettingsModalProps): React.ReactElement<any> | null {
+function useSettingsModalState(isOpen: boolean, onClose: () => void, initialTab: string) {
   const { config } = useConfig();
   const api = useSettingsDraft();
-  const [activeTab, setActiveTab] = useState<TabId>(resolveTab(initialTab));
+  const resolved = resolveTab(initialTab);
+  const [activeMainTab, setActiveMainTab] = useState<MainTabId>(resolved.mainTab);
+  const [activeSubTab, setActiveSubTab] = useState<TabId>(resolved.subTab);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const cancelRef = useRef<() => void>(() => undefined);
-  const isSearching = searchQuery.trim().length > 0;
-
   cancelRef.current = () => api.handleCancel(onClose);
-
-  useOpenCloseEffect({ config, initialTab, isOpen, api, setActiveTab, setIsMounted, setIsVisible, setSearchQuery });
+  const handleMainTabChange = (main: MainTabId): void => {
+    setActiveMainTab(main);
+    setActiveSubTab(getDefaultSubTab(main));
+  };
+  const handleResultClick = (entry: SettingsEntry): void => {
+    const sub = entry.section as TabId;
+    setSearchQuery('');
+    setActiveMainTab(getMainTabForSubTab(sub));
+    setActiveSubTab(sub);
+  };
+  useOpenCloseEffect({ config, initialTab, isOpen, api, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery });
   useExternalChangeEffect({ isOpen, setDraft: api.setDraft });
+  const isSearching = searchQuery.trim().length > 0;
   useKeyboardEffect({ isOpen, isSearching, onCancelRef: cancelRef, searchInputRef, setSearchQuery });
+  return { api, activeMainTab, activeSubTab, setActiveSubTab, cancelRef, isSearching, isMounted, isVisible, handleMainTabChange, handleResultClick, searchInputRef, searchQuery, setSearchQuery };
+}
 
-  if (!isMounted || !api.draft) return null;
-
+export function SettingsModal({ isOpen, onClose, initialTab = 'general' }: SettingsModalProps): React.ReactElement | null {
+  const s = useSettingsModalState(isOpen, onClose, initialTab);
+  if (!s.isMounted || !s.api.draft) return null;
   return (
     <SettingsModalPortal
-      activeTab={activeTab}
-      draft={api.draft}
-      isSaving={api.isSaving}
-      isSearching={isSearching}
-      isVisible={isVisible}
-      onCancel={cancelRef.current}
-      onChange={api.handleChange}
-      onImport={api.handleImport}
-      onPreviewTheme={api.handlePreviewTheme}
-      onResultClick={(entry) => handleResultClick(entry, setActiveTab, setSearchQuery)}
-      onSave={() => void api.handleSave()}
-      saveError={api.saveError}
-      searchInputRef={searchInputRef}
-      searchQuery={searchQuery}
-      searchResults={searchEntries(searchQuery)}
-      setActiveTab={setActiveTab}
-      setSearchQuery={setSearchQuery}
+      activeMainTab={s.activeMainTab}
+      activeSubTab={s.activeSubTab}
+      draft={s.api.draft}
+      isSaving={s.api.isSaving}
+      isSearching={s.isSearching}
+      isVisible={s.isVisible}
+      onCancel={s.cancelRef.current}
+      onChange={s.api.handleChange}
+      onImport={s.api.handleImport}
+      onMainTabChange={s.handleMainTabChange}
+      onPreviewTheme={s.api.handlePreviewTheme}
+      onResultClick={s.handleResultClick}
+      onSave={() => void s.api.handleSave()}
+      onSubTabChange={s.setActiveSubTab}
+      saveError={s.api.saveError}
+      searchInputRef={s.searchInputRef}
+      searchQuery={s.searchQuery}
+      searchResults={searchEntries(s.searchQuery)}
+      setSearchQuery={s.setSearchQuery}
     />
   );
 }
 
-function resolveTab(initialTab: string): TabId {
-  return (TABS.some((tab) => tab.id === initialTab) ? initialTab : 'general') as TabId;
-}
-
-function handleResultClick(
-  entry: SettingsEntry,
-  setActiveTab: React.Dispatch<React.SetStateAction<TabId>>,
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>,
-): void {
-  setSearchQuery('');
-  setActiveTab(entry.section as TabId);
+function resolveTab(initialTab: string): { mainTab: MainTabId; subTab: TabId } {
+  const sub = (TABS.some((tab) => tab.id === initialTab) ? initialTab : 'general') as TabId;
+  return { mainTab: getMainTabForSubTab(sub), subTab: sub };
 }
 
 interface OpenCloseEffectArgs {
@@ -74,7 +87,8 @@ interface OpenCloseEffectArgs {
   config: AppConfig | null;
   initialTab: string;
   isOpen: boolean;
-  setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
+  setActiveMainTab: React.Dispatch<React.SetStateAction<MainTabId>>;
+  setActiveSubTab: React.Dispatch<React.SetStateAction<TabId>>;
   setIsMounted: React.Dispatch<React.SetStateAction<boolean>>;
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -85,7 +99,8 @@ function useOpenCloseEffect({
   config,
   initialTab,
   isOpen,
-  setActiveTab,
+  setActiveMainTab,
+  setActiveSubTab,
   setIsMounted,
   setIsVisible,
   setSearchQuery,
@@ -98,7 +113,9 @@ function useOpenCloseEffect({
         api.originalThemeRef.current = config.activeTheme;
         api.originalGradientRef.current = config.showBgGradient ?? true;
       }
-      setActiveTab(resolveTab(initialTab));
+      const resolved = resolveTab(initialTab);
+      setActiveMainTab(resolved.mainTab);
+      setActiveSubTab(resolved.subTab);
       setSearchQuery('');
       requestAnimationFrame(() => setIsVisible(true));
       return;
@@ -107,7 +124,7 @@ function useOpenCloseEffect({
     setIsVisible(false);
     const timer = setTimeout(() => setIsMounted(false), 200);
     return () => clearTimeout(timer);
-  }, [api, config, initialTab, isOpen, setActiveTab, setIsMounted, setIsVisible, setSearchQuery]);
+  }, [api, config, initialTab, isOpen, setActiveMainTab, setActiveSubTab, setIsMounted, setIsVisible, setSearchQuery]);
 }
 
 function useExternalChangeEffect({

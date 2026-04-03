@@ -48,7 +48,7 @@ function useSearchState(searchAddon: SearchAddon) {
   return { inputRef, query, setQuery, matchInfo, setMatchInfo }
 }
 
-export function TerminalSearchBar({ searchAddon, onClose }: TerminalSearchBarProps): React.ReactElement<any> {
+export function TerminalSearchBar({ searchAddon, onClose }: TerminalSearchBarProps): React.ReactElement {
   const { inputRef, query, setQuery, matchInfo, setMatchInfo } = useSearchState(searchAddon)
 
   const findNext = useCallback(() => { if (query) searchAddon.findNext(query) }, [query, searchAddon])

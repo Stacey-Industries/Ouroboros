@@ -104,7 +104,7 @@ function buildMenuItems(
 
 // ─── MenuItem component ──────────────────────────────────────────────────────
 
-function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement<any> {
+function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement {
   return (
     <div
       role="menuitem"
@@ -129,7 +129,7 @@ function MenuItem({ item }: { item: MenuItemDef }): React.ReactElement<any> {
 
 // ─── Separator ────────────────────────────────────────────────────────────────
 
-function Separator(): React.ReactElement<any> {
+function Separator(): React.ReactElement {
   return <div className="bg-border-semantic" style={{ height: '1px', margin: '4px 8px' }} />
 }
 
@@ -144,7 +144,7 @@ const menuStyle: React.CSSProperties = {
 
 export function TerminalContextMenu({
   state, terminal, sessionId, onClose,
-}: TerminalContextMenuProps): React.ReactElement<any> | null {
+}: TerminalContextMenuProps): React.ReactElement | null {
   const menuRef = useRef<HTMLDivElement>(null)
 
   useDismissOnClickOutside(state.visible, menuRef, onClose)

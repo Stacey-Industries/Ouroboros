@@ -70,6 +70,7 @@ export function buildAgentChatOrchestrationLink(
     provider: session.providerSession?.provider ?? session.request.provider,
     ...providerIds,
     model: session.request.model,
+    effort: session.request.effort,
     linkedTerminalId: session.providerSession?.linkedTerminalId,
   };
 }

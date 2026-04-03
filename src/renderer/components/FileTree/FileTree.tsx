@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo,useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
+import { REFRESH_FILE_TREE_EVENT } from '../../hooks/appEventNames';
 import { useFileHeatMap } from '../../hooks/useFileHeatMap';
 import { useGitStatusDetailed } from '../../hooks/useGitStatusDetailed';
 import { EmptyState } from '../shared';
@@ -168,7 +169,16 @@ function useSearchQuery(
   return { query, setQuery, handleSearchSelect };
 }
 
-function EmptyFileTree(): React.ReactElement<any> {
+function useRefreshFilesEvent(): void {
+  const clearLoadedDirs = useFileTreeStore((s) => s.clearLoadedDirs);
+  useEffect(() => {
+    const handler = (): void => clearLoadedDirs();
+    window.addEventListener(REFRESH_FILE_TREE_EVENT, handler);
+    return () => window.removeEventListener(REFRESH_FILE_TREE_EVENT, handler);
+  }, [clearLoadedDirs]);
+}
+
+function EmptyFileTree(): React.ReactElement {
   return (
     <div style={treeContainerStyle}>
       <EmptyState
@@ -201,7 +211,7 @@ function FileTreeContent({
   onToggleHeatMap,
   bodyProps,
   primaryRoot,
-}: FileTreeContentProps): React.ReactElement<any> {
+}: FileTreeContentProps): React.ReactElement {
   const { status, isRepo, refresh } = useGitStatusDetailed(primaryRoot);
   const counts = useMemo(() => computeStatusCounts(status), [status]);
   const filter = useFileTreeStore((s) => s.filter);
@@ -231,7 +241,8 @@ function FileTreeContent({
   );
 }
 
-export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement<any> {
+export function FileTree({ projectRoots, activeFilePath, onFileSelect, onFileOpen, onRemoveRoot, projectRoot: singleRootProp }: FileTreeProps): React.ReactElement {
+  useRefreshFilesEvent();
   const roots = useResolvedRoots(projectRoots, singleRootProp);
   const { expandedRoots, toggleRoot } = useExpandedRoots(roots);
   const { bookmarks, setBookmarks, extraIgnorePatterns } = useFileTreeConfig();

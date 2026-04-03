@@ -35,7 +35,7 @@ function handleMarkdownLinkClick(e: React.MouseEvent<HTMLDivElement>): void {
  */
 export const MessageMarkdown = React.memo(function MessageMarkdown({
   content,
-}: MessageMarkdownProps): React.ReactElement<any> {
+}: MessageMarkdownProps): React.ReactElement {
   const handleLinkClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => handleMarkdownLinkClick(e),
     [],

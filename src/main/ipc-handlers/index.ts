@@ -4,6 +4,7 @@
  */
 
 export { cleanupAgentChatHandlers, registerAgentChatHandlers } from './agentChat';
+export { registerAiHandlers } from './aiHandlers';
 export { registerAppHandlers } from './app';
 export { registerAuthHandlers } from './auth';
 export { registerClaudeMdHandlers } from './claudeMd';
@@ -18,4 +19,5 @@ export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';
 export { registerPtyHandlers } from './pty';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
+export { registerSearchHandlers } from './search';
 export { registerSessionHandlers } from './sessions';

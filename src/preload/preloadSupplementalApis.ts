@@ -47,7 +47,8 @@ type SupplementalApiKey =
   | 'orchestration'
   | 'contextLayer'
   | 'claudeMd'
-  | 'rulesAndSkills';
+  | 'rulesAndSkills'
+  | 'ai';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -85,6 +86,7 @@ export const supplementalApis: SupplementalApis = {
     getSessionDetail: (sessionId) => ipcRenderer.invoke('usage:getSessionDetail', sessionId),
     getRecentSessions: (count) => ipcRenderer.invoke('usage:getRecentSessions', count),
     getWindowedUsage: () => ipcRenderer.invoke('usage:getWindowedUsage'),
+    getUsageWindowSnapshot: () => ipcRenderer.invoke('usage:getUsageWindowSnapshot'),
   },
 
   shellHistory: {
@@ -103,7 +105,7 @@ export const supplementalApis: SupplementalApis = {
     clearCrashLogs: () => ipcRenderer.invoke('app:clearCrashLogs'),
     openCrashLogDir: () => ipcRenderer.invoke('app:openCrashLogDir'),
     logError: (source, message, stack) =>
-      ipcRenderer.invoke('app:logError', source, message, stack),
+      ipcRenderer.invoke('app:logError', source, message, stack).catch(() => { /* swallow if handler missing */ }),
   },
 
   perf: {
@@ -199,6 +201,9 @@ export const supplementalApis: SupplementalApis = {
     enableContributions: (id) => ipcRenderer.invoke('extensionStore:enableContributions', id),
     disableContributions: (id) => ipcRenderer.invoke('extensionStore:disableContributions', id),
     getThemeContributions: () => ipcRenderer.invoke('extensionStore:getThemeContributions'),
+    getIconThemeContributions: () => ipcRenderer.invoke('extensionStore:getIconThemeContributions'),
+    getProductIconThemeContributions: () =>
+      ipcRenderer.invoke('extensionStore:getProductIconThemeContributions'),
   },
 
   context: {
@@ -242,6 +247,8 @@ export const supplementalApis: SupplementalApis = {
     revertToSnapshot: (threadId, messageId) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.revertToSnapshot, threadId, messageId),
     cancelTask: (taskId) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+    cancelByThreadId: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelByThreadId, threadId),
     listMemories: (workspaceRoot) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listMemories, workspaceRoot),
     createMemory: (workspaceRoot, entry) =>
@@ -289,4 +296,13 @@ export const supplementalApis: SupplementalApis = {
   },
 
   rulesAndSkills: rulesAndSkillsApi,
+
+  ai: {
+    inlineCompletion: (request) =>
+      ipcRenderer.invoke('ai:inline-completion', request),
+    generateCommitMessage: (request) =>
+      ipcRenderer.invoke('ai:generate-commit-message', request),
+    inlineEdit: (request) =>
+      ipcRenderer.invoke('ai:inline-edit', request),
+  },
 };

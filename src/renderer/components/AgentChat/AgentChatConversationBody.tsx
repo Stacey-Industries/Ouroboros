@@ -134,7 +134,7 @@ interface MessageListProps {
   onScroll: () => void;
 }
 
-function MessageCards(props: MessageListProps): React.ReactElement<any> {
+function MessageCards(props: MessageListProps): React.ReactElement {
   return (
     <>
       {props.messagesWithStreaming.map((message) => (
@@ -160,7 +160,7 @@ function MessageCards(props: MessageListProps): React.ReactElement<any> {
   );
 }
 
-export function MessageList(props: MessageListProps): React.ReactElement<any> {
+export function MessageList(props: MessageListProps): React.ReactElement {
   return (
     <div
       ref={props.scrollRef}
@@ -226,7 +226,7 @@ type BodyState = ReturnType<typeof useConversationBodyState>;
 function ConversationBodyWithThread(
   props: ConversationBodyProps &
     BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
-): React.ReactElement<any> {
+): React.ReactElement {
   return (
     <VirtualizedMessageList
       activeThread={props.activeThread}
@@ -250,7 +250,7 @@ function ConversationBodyWithThread(
   );
 }
 
-export function ConversationBody(props: ConversationBodyProps): React.ReactElement<any> {
+export function ConversationBody(props: ConversationBodyProps): React.ReactElement {
   const state = useConversationBodyState(props);
   const { scrollRef, onScroll } = state;
   const { onStop, activeThread } = props;

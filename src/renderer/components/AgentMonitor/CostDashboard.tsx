@@ -127,7 +127,7 @@ function useCostHistory(sessions: AgentSession[]): {
 
 export const CostDashboard = memo(function CostDashboard({
   sessions,
-}: CostDashboardProps): React.ReactElement<any> {
+}: CostDashboardProps): React.ReactElement<unknown> {
   const { allEntries, filteredEntries, range, isLoading, setRange, handleClearHistory } =
     useCostHistory(sessions);
 

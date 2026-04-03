@@ -112,9 +112,10 @@ function useVirtualScroll(listRef: React.RefObject<HTMLDivElement | null>) {
       setScrollTop,
       setIsFastScrolling,
     });
+    const timerRef = fastScrollTimerRef;
     return () => {
       detach();
-      if (fastScrollTimerRef.current !== null) clearTimeout(fastScrollTimerRef.current);
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
   }, [listRef]);
 
@@ -144,7 +145,7 @@ function rowKey(path: string): string {
   return path === '__new_item_placeholder__' ? '__new_item_placeholder__' : path;
 }
 
-export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement<any> {
+export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
   const vs = useVirtualScroll(listRef);
   const slice = computeVisibleSlice(
@@ -204,7 +205,7 @@ function useDiagnosticSeverity(node: TreeNode): DiagnosticSeverity | undefined {
   });
 }
 
-function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement<any> {
+function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement {
   const { node } = item;
   const isPlaceholder = node.path === '__new_item_placeholder__';
   const isRenaming = p.editState?.mode === 'rename' && p.editState.targetPath === node.path;

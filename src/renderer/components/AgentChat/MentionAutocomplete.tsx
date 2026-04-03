@@ -26,7 +26,7 @@ export interface MentionAutocompleteProps {
   isOpen: boolean;
 }
 
-function FileIcon(): React.ReactElement<any> {
+function FileIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -44,7 +44,7 @@ function FileIcon(): React.ReactElement<any> {
   );
 }
 
-function FolderIcon(): React.ReactElement<any> {
+function FolderIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -61,7 +61,7 @@ function FolderIcon(): React.ReactElement<any> {
   );
 }
 
-function DiffIcon(): React.ReactElement<any> {
+function DiffIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -78,7 +78,7 @@ function DiffIcon(): React.ReactElement<any> {
   );
 }
 
-function TerminalIcon(): React.ReactElement<any> {
+function TerminalIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -96,7 +96,7 @@ function TerminalIcon(): React.ReactElement<any> {
   );
 }
 
-function getMentionIcon(type: MentionType): React.ReactElement<any> {
+function getMentionIcon(type: MentionType): React.ReactElement {
   if (type === 'file') return <FileIcon />;
   if (type === 'folder') return <FolderIcon />;
   if (type === 'diff') return <DiffIcon />;
@@ -113,7 +113,7 @@ function MentionResult({
   selected: boolean;
   onMouseDown: () => void;
   onMouseEnter: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       data-active={selected}
@@ -202,7 +202,7 @@ function useMentionAutocompleteState(
   return { selectedIndex, setSelectedIndex, results };
 }
 
-export function MentionAutocomplete(props: MentionAutocompleteProps): React.ReactElement<any> | null {
+export function MentionAutocomplete(props: MentionAutocompleteProps): React.ReactElement | null {
   const { isOpen, onSelect } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const { selectedIndex, setSelectedIndex, results } = useMentionAutocompleteState(props, listRef);
@@ -210,7 +210,11 @@ export function MentionAutocomplete(props: MentionAutocompleteProps): React.Reac
   return (
     <div
       ref={listRef}
-      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[280px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-base shadow-lg"
+      className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-[280px] overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay shadow-xl"
+      style={{
+        backdropFilter: 'blur(24px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+      }}
     >
       <div className="px-2 py-1.5 text-[10px] font-medium text-text-semantic-muted">Mentions</div>
       {results.map((result, index) => (

@@ -31,7 +31,7 @@ function useStatusBarProps(): {
 
 export function AppLayoutConnected(
   props: Omit<AppLayoutProps, 'statusBar'> & { projectRoot: string | null },
-): React.ReactElement<any> {
+): React.ReactElement {
   const { projectRoot, ...layoutProps } = props;
   const statusBarData = useStatusBarProps();
   const { branch } = useGitBranch(projectRoot);

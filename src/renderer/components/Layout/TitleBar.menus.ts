@@ -3,11 +3,15 @@
  */
 
 import {
+  GO_BACK_EVENT,
+  GO_FORWARD_EVENT,
   OPEN_EXTENSION_STORE_EVENT,
   OPEN_MCP_STORE_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
   SAVE_ALL_DIRTY_EVENT,
+  SHOW_ABOUT_EVENT,
   SPLIT_EDITOR_EVENT,
+  SPLIT_TERMINAL_EVENT,
 } from '../../hooks/appEventNames';
 
 export interface MenuItem {
@@ -23,8 +27,8 @@ export interface MenuDefinition {
   items: MenuItem[];
 }
 
-function dispatchEv(name: string): void {
-  window.dispatchEvent(new CustomEvent(name));
+function dispatchEv(name: string, detail?: unknown): void {
+  window.dispatchEvent(new CustomEvent(name, detail != null ? { detail } : undefined));
 }
 
 export const SEPARATOR: MenuItem = { label: '', divider: true };
@@ -102,8 +106,8 @@ function buildGoMenu(): MenuDefinition {
       { label: 'Go to Symbol', shortcut: 'Ctrl+Shift+O', action: () => dispatchEv('agent-ide:open-symbol-search') },
       { label: 'Go to Line', shortcut: 'Ctrl+G', action: () => dispatchEv('agent-ide:go-to-line') },
       SEPARATOR,
-      { label: 'Back', shortcut: 'Alt+Left', disabled: true },
-      { label: 'Forward', shortcut: 'Alt+Right', disabled: true },
+      { label: 'Back', shortcut: 'Alt+Left', action: () => dispatchEv(GO_BACK_EVENT) },
+      { label: 'Forward', shortcut: 'Alt+Right', action: () => dispatchEv(GO_FORWARD_EVENT) },
     ],
   };
 }
@@ -114,7 +118,7 @@ function buildTerminalMenu(): MenuDefinition {
     items: [
       { label: 'New Terminal', shortcut: 'Ctrl+Shift+`', action: () => dispatchEv('agent-ide:new-terminal') },
       { label: 'New Claude Terminal', shortcut: 'Ctrl+Shift+C', action: () => dispatchEv('agent-ide:new-claude-terminal') },
-      { label: 'Split Terminal', disabled: true },
+      { label: 'Split Terminal', action: () => dispatchEv(SPLIT_TERMINAL_EVENT) },
       SEPARATOR,
       { label: 'Clear Terminal', action: () => dispatchEv('agent-ide:clear-active-terminal') },
     ],
@@ -125,7 +129,7 @@ function showAbout(): void {
   void window.electronAPI?.app?.getVersion?.().then((version) => {
     void window.electronAPI?.app?.getPlatform?.().then((platform) => {
       window.dispatchEvent(
-        new CustomEvent('agent-ide:show-about', {
+        new CustomEvent(SHOW_ABOUT_EVENT, {
           detail: { version, platform },
         }),
       );
@@ -137,8 +141,8 @@ function buildHelpMenu(): MenuDefinition {
   return {
     label: 'Help',
     items: [
-      { label: 'Documentation', action: () => window.electronAPI?.app?.openExternal?.('https://claude.ai/claude-code') },
-      { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+K Ctrl+S', action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT) },
+      { label: 'Documentation', action: () => window.electronAPI?.app?.openExternal?.('https://github.com/hesnotsoharry/Ouroboros') },
+      { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+K Ctrl+S', action: () => dispatchEv(OPEN_SETTINGS_PANEL_EVENT, 'keybindings') },
       SEPARATOR,
       { label: 'Open Logs Folder', action: () => window.electronAPI?.app?.openLogsFolder?.() },
       { label: 'Toggle Developer Tools', shortcut: 'Ctrl+Shift+I', action: () => window.electronAPI?.app?.toggleDevTools?.() },

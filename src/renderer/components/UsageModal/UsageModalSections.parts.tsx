@@ -42,7 +42,7 @@ function ModelRow({
 }: {
   maxTokens: number;
   row: { name: string; tokens: number; cost: number };
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -81,7 +81,7 @@ export const ModelDistribution = memo(function ModelDistribution({
   sessions,
 }: {
   sessions: SessionUsage[];
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const rows = useMemo(() => getModelRows(sessions), [sessions]);
   const maxTokens = rows[0]?.tokens ?? 1;
   return (
@@ -102,7 +102,7 @@ export const ModelDistribution = memo(function ModelDistribution({
 
 // ─── Session list ──────────────────────────────────────────────────────────────
 
-function EmptySessionState(): React.ReactElement<any> {
+function EmptySessionState(): React.JSX.Element {
   return (
     <div className="px-4 py-6 text-center text-[11px] italic text-text-semantic-faint">
       No sessions found in Claude Code&apos;s local data
@@ -110,7 +110,7 @@ function EmptySessionState(): React.ReactElement<any> {
   );
 }
 
-function SessionTableHeader({ count }: { count: number }): React.ReactElement<any> {
+function SessionTableHeader({ count }: { count: number }): React.JSX.Element {
   return (
     <>
       <div className="text-[10px] font-medium uppercase tracking-wider mb-1.5 text-text-semantic-faint">
@@ -130,7 +130,7 @@ function SessionTableHeader({ count }: { count: number }): React.ReactElement<an
   );
 }
 
-function SessionRowCells({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionRowCells({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <>
       <span
@@ -168,7 +168,7 @@ function SessionRowCells({ session }: { session: SessionUsage }): React.ReactEle
   );
 }
 
-function SessionDetailsTokens({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionDetailsTokens({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-semantic-muted">
       <span>
@@ -197,7 +197,7 @@ function SessionDetailsTokens({ session }: { session: SessionUsage }): React.Rea
   );
 }
 
-function SessionDetails({ session }: { session: SessionUsage }): React.ReactElement<any> {
+function SessionDetails({ session }: { session: SessionUsage }): React.JSX.Element {
   return (
     <div
       className="py-1.5 px-2 text-[10px] bg-surface-raised"
@@ -226,7 +226,7 @@ const SessionRow = memo(function SessionRow({
   isExpanded: boolean;
   onToggle: () => void;
   session: SessionUsage;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div>
       <button
@@ -247,7 +247,7 @@ export const SessionList = memo(function SessionList({
   sessions,
 }: {
   sessions: SessionUsage[];
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
   if (sessions.length === 0) return <EmptySessionState />;
   return (

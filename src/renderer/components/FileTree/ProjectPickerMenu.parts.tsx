@@ -25,7 +25,7 @@ const clearHover = createHoverHandler('transparent');
 const actionHover = createHoverHandler('rgba(88, 166, 255, 0.1)');
 const recentHover = createHoverHandler('var(--surface-panel)');
 
-function FolderIcon(): React.ReactElement<any> {
+function FolderIcon(): React.ReactElement {
   return (
     <svg
       width="13"
@@ -47,7 +47,7 @@ function FolderIcon(): React.ReactElement<any> {
   );
 }
 
-function ChevronDownIcon(): React.ReactElement<any> {
+function ChevronDownIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -69,7 +69,7 @@ function ChevronDownIcon(): React.ReactElement<any> {
   );
 }
 
-function PlusIcon(): React.ReactElement<any> {
+function PlusIcon(): React.ReactElement {
   return (
     <svg
       width="13"
@@ -100,7 +100,7 @@ function ActionButton({
   children: React.ReactNode;
   icon: React.ReactNode;
   onClick: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -124,7 +124,7 @@ function RecentProjectButton({
 }: {
   path: string;
   onSelect: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -151,7 +151,7 @@ function RecentProjectsSection({
 }: {
   recents: string[];
   onSelectRecent: (path: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (recents.length === 0) {
     return null;
   }
@@ -183,7 +183,7 @@ export function ProjectPickerToggle({
   projectName: string;
   rootCount: number;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const label = hasMultipleRoots ? `Workspace (${rootCount})` : projectName;
 
   return (
@@ -218,7 +218,7 @@ function MenuActionButtons({
   rootCount: number;
   onAddFolder: () => Promise<void>;
   onOpenFolder: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const openFolderLabel = rootCount > 0 ? 'Open folder... (replace workspace)' : 'Open folder...';
   return (
     <>
@@ -256,7 +256,7 @@ export function ProjectPickerMenu({
   onAddFolder: () => Promise<void>;
   onOpenFolder: () => Promise<void>;
   onSelectRecent: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       role="listbox"

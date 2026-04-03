@@ -113,6 +113,28 @@ export interface ShowImageDialogResult extends IpcResult {
   attachments?: import('@shared/types/agentChat').ImageAttachment[];
 }
 
+export interface SearchOptions {
+  isRegex?: boolean;
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
+  includeGlob?: string;
+  excludeGlob?: string;
+  maxResults?: number;
+}
+
+export interface SearchResultItem {
+  filePath: string;
+  line: number;
+  column: number;
+  lineContent: string;
+  matchLength: number;
+}
+
+export interface SearchResultResponse extends IpcResult {
+  results?: SearchResultItem[];
+  truncated?: boolean;
+}
+
 export interface FilesAPI {
   writeFile: (filePath: string, data: Uint8Array) => Promise<IpcResult>;
   saveFile: (filePath: string, content: string) => Promise<IpcResult>;
@@ -131,6 +153,11 @@ export interface FilesAPI {
   restoreDeleted: (tempPath: string, originalPath: string) => Promise<IpcResult>;
   showImageDialog: () => Promise<ShowImageDialogResult>;
   onFileChange: (callback: (change: FileChangeEvent) => void) => () => void;
+  search: (
+    root: string,
+    query: string,
+    options?: SearchOptions,
+  ) => Promise<SearchResultResponse>;
 }
 
 export interface HooksAPI {
@@ -179,9 +206,16 @@ export interface NotifyResult extends IpcResult {
   skipped?: boolean;
 }
 
+export interface SystemInfo {
+  electron: string;
+  chrome: string;
+  node: string;
+}
+
 export interface AppAPI {
   getVersion: () => Promise<string>;
   getPlatform: () => Promise<NodeJS.Platform>;
+  getSystemInfo: () => SystemInfo;
   openExternal: (url: string) => Promise<IpcResult>;
   setTitleBarOverlay: (color: string, symbolColor: string) => Promise<IpcResult>;
   notify: (options: NotifyOptions) => Promise<NotifyResult>;

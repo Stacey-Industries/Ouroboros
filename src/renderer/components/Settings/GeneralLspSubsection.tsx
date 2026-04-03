@@ -13,7 +13,7 @@ interface Props {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function LspSubsection({ draft, onChange }: Props): React.ReactElement<any> {
+export function LspSubsection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section style={{ marginTop: '24px' }}>
       <SectionLabel>Language Server Protocol (LSP)</SectionLabel>
@@ -31,11 +31,26 @@ export function LspSubsection({ draft, onChange }: Props): React.ReactElement<an
         />
       </div>
       {draft.lspEnabled && <LspServersInput draft={draft} onChange={onChange} />}
+      <div style={{ ...toggleRowStyle, marginTop: '16px' }}>
+        <div style={{ flex: 1 }}>
+          <label className="text-text-semantic-primary" style={{ fontSize: '13px', display: 'block' }}>
+            Inline Completions
+          </label>
+          <p className="text-text-semantic-faint" style={{ fontSize: '11px', margin: '2px 0 0' }}>
+            AI-powered ghost text suggestions. Uses your Claude credentials.
+          </p>
+        </div>
+        <ToggleSwitch
+          label="Inline Completions"
+          checked={draft.inlineCompletionsEnabled ?? false}
+          onChange={(v) => onChange('inlineCompletionsEnabled', v)}
+        />
+      </div>
     </section>
   );
 }
 
-function LspServersInput({ draft, onChange }: Props): React.ReactElement<any> {
+function LspServersInput({ draft, onChange }: Props): React.ReactElement {
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>): void {
     const lines = e.target.value.split('\n').filter((l) => l.includes('='));
     const parsed: Record<string, string> = {};

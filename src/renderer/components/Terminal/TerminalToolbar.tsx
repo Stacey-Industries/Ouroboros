@@ -43,7 +43,7 @@ export function SyncButton({
   isHovered: boolean
   showSearch: boolean
   onToggleSync: () => void
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (showSearch) return null
   if (!syncInput && !isHovered) return null
 
@@ -73,7 +73,7 @@ export function SplitButton({
   isHovered: boolean
   showSearch: boolean
   onSplit: (id: string) => void
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!isHovered || showSearch) return null
 
   return (
@@ -101,7 +101,7 @@ export function RecordingButton({
   isHovered: boolean
   showSearch: boolean
   onToggleRecording: (id: string) => void
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (showSearch) return null
   if (!isRecording && !isHovered) return null
 
@@ -138,7 +138,7 @@ export function MultiLineButton({
   isHovered: boolean
   showSearch: boolean
   onClick: () => void
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!isHovered || showSearch) return null
 
   return (
@@ -174,7 +174,7 @@ function getRecordingVisualState(isRecording: boolean): RecordingVisualState {
   }
 }
 
-function SyncIcon(): React.ReactElement<any> {
+function SyncIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 5h8M8 2l3 3-3 3M14 11H6M8 14l-3-3 3-3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -182,7 +182,7 @@ function SyncIcon(): React.ReactElement<any> {
   )
 }
 
-function SplitIcon(): React.ReactElement<any> {
+function SplitIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="1" y="2" width="14" height="12" rx="1.5" strokeLinejoin="round"/>
@@ -191,7 +191,7 @@ function SplitIcon(): React.ReactElement<any> {
   )
 }
 
-function MultiLineIcon(): React.ReactElement<any> {
+function MultiLineIcon(): React.ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="2" y="3" width="12" height="10" rx="1.5" strokeLinejoin="round"/>
@@ -200,7 +200,7 @@ function MultiLineIcon(): React.ReactElement<any> {
   )
 }
 
-function RecordingDot({ isRecording }: { isRecording: boolean }): React.ReactElement<any> {
+function RecordingDot({ isRecording }: { isRecording: boolean }): React.ReactElement {
   return (
     <span style={{
       display: 'inline-block',
@@ -214,7 +214,7 @@ function RecordingDot({ isRecording }: { isRecording: boolean }): React.ReactEle
   )
 }
 
-function RecordingPulseStyle(): React.ReactElement<any> {
+function RecordingPulseStyle(): React.ReactElement {
   return (
     <style>{`
       @keyframes pty-rec-pulse {

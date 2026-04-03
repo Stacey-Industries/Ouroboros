@@ -34,7 +34,7 @@ const ICON_BOX_STYLE: React.CSSProperties = {
   flexShrink: 0,
 };
 
-function PinIcon(): React.ReactElement<any> {
+function PinIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -55,7 +55,7 @@ function PinIcon(): React.ReactElement<any> {
   );
 }
 
-function TabIndicator({ file }: { file: OpenFile }): React.ReactElement<any> | null {
+function TabIndicator({ file }: { file: OpenFile }): React.ReactElement | null {
   if (!file.isDirtyOnDisk && !file.isDirty) return null;
   return (
     <span
@@ -102,7 +102,7 @@ function getTabStyle(
   };
 }
 
-function TabLabel({ file }: { file: OpenFile }): React.ReactElement<any> {
+function TabLabel({ file }: { file: OpenFile }): React.ReactElement {
   return (
     <span style={{ ...TAB_LABEL_STYLE, fontStyle: file.isPreview ? 'italic' : 'normal' }}>
       {file.name}
@@ -111,7 +111,7 @@ function TabLabel({ file }: { file: OpenFile }): React.ReactElement<any> {
   );
 }
 
-function PinIndicator(): React.ReactElement<any> {
+function PinIndicator(): React.ReactElement {
   return (
     <span className="text-text-semantic-faint" style={ICON_BOX_STYLE} title="Pinned">
       <PinIcon />
@@ -130,7 +130,7 @@ type TabBodyProps = {
   handleContextMenu: (e: React.MouseEvent<HTMLDivElement>) => void;
 };
 
-function TabBody(p: TabBodyProps): React.ReactElement<any> {
+function TabBody(p: TabBodyProps): React.ReactElement {
   const { handleActivate, handleDoubleClick, handleAuxClick, handleKeyDown } = p.tabActions;
   return (
     <div
@@ -185,7 +185,7 @@ function TabOverlays({
   dismissContextMenu,
   isDialogOpen,
   handleDialogAction,
-}: TabOverlaysProps): React.ReactElement<any> {
+}: TabOverlaysProps): React.ReactElement {
   return (
     <>
       <TabContextMenu
@@ -214,7 +214,7 @@ export const FileViewerTabItem = memo(function FileViewerTabItem({
   onCloseToRight,
   onCloseAll,
   tabRef,
-}: FileViewerTabItemProps): React.ReactElement<any> {
+}: FileViewerTabItemProps): React.ReactElement {
   const s = useTabItemState(file, onActivate, onClose, onPin);
   return (
     <>

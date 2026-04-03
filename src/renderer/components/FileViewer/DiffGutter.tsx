@@ -20,7 +20,7 @@ export const DiffGutter = memo(function DiffGutter({
   gutterWidth,
   foldGutterWidth,
   diffGutterWidth,
-}: DiffGutterProps): React.ReactElement<any> {
+}: DiffGutterProps): React.ReactElement {
   return (
     <div
       aria-hidden="true"
@@ -59,17 +59,17 @@ interface DiffGutterLineProps {
   diffGutterWidth: number;
 }
 
-function DiffGutterLine({ index, kind, diffGutterWidth }: DiffGutterLineProps): React.ReactElement<any> {
+function DiffGutterLine({ index, kind, diffGutterWidth }: DiffGutterLineProps): React.ReactElement {
   if (!kind) return <DiffSpacer index={index} />;
   if (kind === 'deleted') return <DeletedDiffMarker />;
   return <ChangedDiffMarker kind={kind} diffGutterWidth={diffGutterWidth} />;
 }
 
-function DiffSpacer({ index }: { index: number }): React.ReactElement<any> {
+function DiffSpacer({ index }: { index: number }): React.ReactElement {
   return <div style={{ height: '1.6em' }} data-line={index} />;
 }
 
-function DeletedDiffMarker(): React.ReactElement<any> {
+function DeletedDiffMarker(): React.ReactElement {
   return (
     <div
       title="Line(s) deleted after this line"
@@ -100,7 +100,7 @@ function ChangedDiffMarker({
 }: {
   kind: Exclude<DiffLineInfo['kind'], 'deleted'>;
   diffGutterWidth: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const marker = getChangedDiffMarker(kind);
 
   return (

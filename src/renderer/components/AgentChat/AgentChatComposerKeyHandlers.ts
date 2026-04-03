@@ -230,23 +230,7 @@ export interface ComposerChangeArgs {
   setIsSlashMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function handleComposerChange(args: ComposerChangeArgs, value: string): void {
-  setDraftValue(args.textareaRef, args.lastSyncedDraft, args.onChange, value);
-  const slashQuery = extractSlashQuery(value);
-  if (slashQuery !== null) {
-    args.setSlashQuery(slashQuery);
-    args.setIsSlashMenuOpen(true);
-    args.setIsMentionAutocompleteOpen(false);
-    args.setMentionQuery(null);
-    args.onCloseAutocomplete?.();
-    return;
-  }
-  args.setSlashQuery(null);
-  args.setIsSlashMenuOpen(false);
-  const mentionQuery = extractMentionQuery(
-    value,
-    args.textareaRef.current?.selectionStart ?? value.length,
-  );
+function handleMentionOrAutocomplete(args: ComposerChangeArgs, mentionQuery: string | null): void {
   if (args.useMentionSystem) {
     args.setMentionQuery(mentionQuery);
     args.setIsMentionAutocompleteOpen(mentionQuery !== null);
@@ -259,4 +243,22 @@ export function handleComposerChange(args: ComposerChangeArgs, value: string): v
   } else {
     args.onCloseAutocomplete?.();
   }
+}
+
+export function handleComposerChange(args: ComposerChangeArgs, value: string): void {
+  setDraftValue(args.textareaRef, args.lastSyncedDraft, args.onChange, value);
+  const cursorPos = args.textareaRef.current?.selectionStart ?? value.length;
+  const slashQuery = extractSlashQuery(value, cursorPos);
+  if (slashQuery !== null) {
+    args.setSlashQuery(slashQuery);
+    args.setIsSlashMenuOpen(true);
+    args.setIsMentionAutocompleteOpen(false);
+    args.setMentionQuery(null);
+    args.onCloseAutocomplete?.();
+    return;
+  }
+  args.setSlashQuery(null);
+  args.setIsSlashMenuOpen(false);
+  const mentionQuery = extractMentionQuery(value, cursorPos);
+  handleMentionOrAutocomplete(args, mentionQuery);
 }

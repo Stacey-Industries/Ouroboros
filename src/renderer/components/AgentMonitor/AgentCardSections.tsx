@@ -66,7 +66,7 @@ function HeaderClickArea({
   session: AgentSession;
   expanded: boolean;
   onToggleExpanded: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div
       role="button"
@@ -104,7 +104,7 @@ function HeaderStatus({
   onUpdateNotes,
   onReviewChanges,
   onReplay,
-}: Omit<AgentCardHeaderProps, 'expanded' | 'onToggleExpanded'>): React.ReactElement<any> {
+}: Omit<AgentCardHeaderProps, 'expanded' | 'onToggleExpanded'>): React.ReactElement<unknown> {
   return (
     <>
       <StatusBadge status={session.status} />
@@ -133,7 +133,7 @@ function HeaderStatus({
 
 const AgentCardHeader = memo(function AgentCardHeader(
   props: AgentCardHeaderProps,
-): React.ReactElement<any> {
+): React.ReactElement<unknown> {
   return (
     <div
       className="w-full flex items-center gap-2 px-2.5 py-2 text-left transition-colors"
@@ -167,7 +167,7 @@ function SessionNotes({
   notesDraft: string;
   onNotesDraftChange: (value: string) => void;
   onSaveNotes?: () => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (showNotes && onSaveNotes) {
     return (
       <SessionNotesEditor
@@ -183,7 +183,7 @@ function SessionNotes({
   return null;
 }
 
-function AgentCardBody(props: AgentCardLayoutProps): React.ReactElement<any> {
+function AgentCardBody(props: AgentCardLayoutProps): React.ReactElement<unknown> {
   const {
     session,
     expanded,
@@ -222,7 +222,7 @@ function AgentCardBody(props: AgentCardLayoutProps): React.ReactElement<any> {
 
 export const AgentCardLayout = memo(function AgentCardLayout(
   props: AgentCardLayoutProps,
-): React.ReactElement<any> {
+): React.ReactElement<unknown> {
   const {
     session,
     expanded,

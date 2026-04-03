@@ -24,7 +24,7 @@ interface NavButtonProps {
   direction: 'up' | 'down'
 }
 
-function NavButton({ onClick, disabled, title, direction }: NavButtonProps): React.ReactElement<any> {
+function NavButton({ onClick, disabled, title, direction }: NavButtonProps): React.ReactElement {
   const path = direction === 'up' ? 'M4 10l4-4 4 4' : 'M4 6l4 4 4-4'
   return (
     <button
@@ -60,7 +60,7 @@ const containerStyle: React.CSSProperties = {
 export function BlockNavigator({
   totalBlocks, activeIndex,
   onNavigateUp, onNavigateDown, visible,
-}: BlockNavigatorProps): React.ReactElement<any> | null {
+}: BlockNavigatorProps): React.ReactElement | null {
   if (!visible || totalBlocks < 2) return null
 
   const displayIndex = activeIndex >= 0 ? activeIndex + 1 : '-'

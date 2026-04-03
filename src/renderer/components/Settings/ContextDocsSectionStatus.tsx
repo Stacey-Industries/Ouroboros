@@ -58,7 +58,7 @@ function GenerateNowButton({
   hasRoot: boolean;
   lastRun: ClaudeMdGenerationStatus['lastRun'] | undefined;
   onGenerate: (fullSweep: boolean) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const disabled = generating || !hasRoot;
   return (
     <button
@@ -86,7 +86,7 @@ function FullSweepButton({
   generating: boolean;
   hasRoot: boolean;
   onGenerate: (fullSweep: boolean) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const disabled = generating || !hasRoot;
   return (
     <button
@@ -119,7 +119,7 @@ export function GenerationActions({
   hasRoot: boolean;
   lastRun: ClaudeMdGenerationStatus['lastRun'] | undefined;
   onGenerate: (fullSweep: boolean) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <section>
       <SectionLabel>Actions</SectionLabel>
@@ -147,7 +147,7 @@ export function GenerationActions({
   );
 }
 
-function RunningStatus({ status }: { status: ClaudeMdGenerationStatus }): React.ReactElement<any> {
+function RunningStatus({ status }: { status: ClaudeMdGenerationStatus }): React.ReactElement {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -191,7 +191,7 @@ function ResultCountRow({
   value: number;
   labelClass?: string;
   valueClass?: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="text-text-semantic-secondary" style={resultRowStyle}>
       <span className={labelClass} style={resultLabelStyle}>
@@ -206,7 +206,7 @@ function ErrorDetailList({
   results,
 }: {
   results: NonNullable<ClaudeMdGenerationStatus['lastRun']>['results'];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const errors = results.filter((r) => r.status === 'error');
   return (
     <>
@@ -240,7 +240,7 @@ function LastRunStatus({
   lastRun,
 }: {
   lastRun: NonNullable<ClaudeMdGenerationStatus['lastRun']>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const resultCounts = buildResultCounts(lastRun);
   return (
     <div>
@@ -280,7 +280,7 @@ export function GenerationStatus({
 }: {
   status: ClaudeMdGenerationStatus | null;
   lastRun: ClaudeMdGenerationStatus['lastRun'] | undefined;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!status) return null;
   return (
     <section>

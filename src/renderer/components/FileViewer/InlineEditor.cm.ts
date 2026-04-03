@@ -32,6 +32,7 @@ import type { LspDiagnostic } from '../../types/electron';
 import { createLanguageExtensions, getLanguageExtension } from './InlineEditor.cm.language';
 import { getLspCompletionType, getLspSeverity } from './InlineEditor.cm.support';
 import { createHighlightExtension, editorThemeExtensions } from './InlineEditor.cm.theme';
+import { hasLspApi as hasLspApiShared, normalizeFilePath as normalizeFilePathShared } from './lspShared';
 
 type StringRef = MutableRefObject<string>;
 type NullableStringRef = MutableRefObject<string | null | undefined>;
@@ -194,9 +195,7 @@ export function cmOffsetToLspPos(
   return { line: lineInfo.number - 1, character: offset - lineInfo.from };
 }
 
-export function hasLspApi(): boolean {
-  return typeof window !== 'undefined' && 'electronAPI' in window && !!window.electronAPI?.lsp;
-}
+export const hasLspApi = hasLspApiShared;
 
 export function createLspCompletionSource(
   filePathRef: StringRef,
@@ -290,6 +289,4 @@ export function createLspLinter(diagnosticsRef: MutableRefObject<LspDiagnostic[]
   );
 }
 
-export function normalizeFilePath(filePath: string): string {
-  return filePath.replace(/\\/g, '/').toLowerCase();
-}
+export const normalizeFilePath = normalizeFilePathShared;

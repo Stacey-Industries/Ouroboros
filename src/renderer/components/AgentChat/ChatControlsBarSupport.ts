@@ -9,6 +9,7 @@ export type OptionItem = { value: string; label: string };
 export type OptionGroup = { label: string; options: OptionItem[] };
 export type ChatControlProvider = 'claude-code' | 'codex' | 'anthropic-api';
 export type ModelUsageEntry = { model: string; inputTokens: number; outputTokens: number };
+export const ANTHROPIC_AUTO_MODEL = '__anthropic_auto__';
 
 /* ---------- Model name helpers ---------- */
 
@@ -56,24 +57,39 @@ export function extractDefaultModelName(label: string): string {
 /* ---------- Constants ---------- */
 
 export const ANTHROPIC_OPTIONS: OptionItem[] = [
+  { value: ANTHROPIC_AUTO_MODEL, label: 'Auto' },
   { value: 'opus[1m]', label: 'Opus 4.6 1M' },
   { value: 'opus', label: 'Opus 4.6' },
   { value: 'sonnet', label: 'Sonnet 4.6' },
   { value: 'haiku', label: 'Haiku 4.5' },
 ];
 
+export function isAnthropicAutoModel(modelId: string): boolean {
+  return modelId === ANTHROPIC_AUTO_MODEL;
+}
+
+/** Opus only — supports extended thinking up to Max budget. */
 export const CLAUDE_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
+  { value: 'auto', label: 'Auto' },
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
   { value: 'max', label: 'Max' },
 ];
 
+/** Sonnet, Haiku, and third-party provider models — no Max effort tier. */
+export const CLAUDE_EFFORT_OPTIONS_LIMITED: ReadonlyArray<OptionItem> = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+];
+
 export const CODEX_EFFORT_OPTIONS: ReadonlyArray<OptionItem> = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
-  { value: 'max', label: 'Extra High' },
+  { value: 'extra_high', label: 'Extra High' },
 ];
 
 export const CLAUDE_PERMISSION_MODES: ReadonlyArray<OptionItem> = [
@@ -126,11 +142,28 @@ export function buildModelOptions(args: {
         ]
       : []),
   ];
-  return { defaultOption: undefined, groups };
+  const defaultOption =
+    args.defaultProvider === 'codex'
+      ? {
+          value: '',
+          label: args.codexSettingsModel
+            ? `Default (${getDisplayModelName(args.codexSettingsModel)})`
+            : 'Default',
+        }
+      : undefined;
+  return { defaultOption, groups };
 }
 
-export function getEffortOptions(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
-  return provider === 'codex' ? CODEX_EFFORT_OPTIONS : CLAUDE_EFFORT_OPTIONS;
+export function getEffortOptions(
+  provider: ChatControlProvider,
+  activeModel: string,
+): ReadonlyArray<OptionItem> {
+  if (provider === 'codex') return CODEX_EFFORT_OPTIONS;
+  // Third-party models (minimax:*, openrouter:*) don't support Max.
+  if (activeModel.includes(':')) return CLAUDE_EFFORT_OPTIONS_LIMITED;
+  // Opus supports Max (extended thinking); Sonnet/Haiku do not.
+  if (activeModel.includes('opus')) return CLAUDE_EFFORT_OPTIONS;
+  return CLAUDE_EFFORT_OPTIONS_LIMITED;
 }
 
 export function getPermissionModes(provider: ChatControlProvider): ReadonlyArray<OptionItem> {
@@ -139,9 +172,12 @@ export function getPermissionModes(provider: ChatControlProvider): ReadonlyArray
 
 export function getSelectedModelLabel(
   value: string,
-  _defaultOption: OptionItem | undefined,
+  defaultOption: OptionItem | undefined,
   groups: OptionGroup[],
 ): string {
+  if (defaultOption && value === defaultOption.value) {
+    return defaultOption.label;
+  }
   for (const group of groups) {
     const match = group.options.find((option) => option.value === value);
     if (match) return match.label;
@@ -157,6 +193,7 @@ export function getSelectedOptionLabel(value: string, options: ReadonlyArray<Opt
 
 /** Extract canonical model family keyword for cross-convention comparison. */
 function modelFamilyKey(id: string): string {
+  if (isAnthropicAutoModel(id)) return 'sonnet';
   const lower = stripProviderPrefix(id).toLowerCase().replace(/\[1m]/, '');
   if (lower.includes('opus')) return 'opus';
   if (lower.includes('sonnet')) return 'sonnet';
@@ -248,6 +285,9 @@ export function resolveActiveModel(args: {
   settingsModel?: string;
   codexSettingsModel?: string;
 }): string {
+  if (isAnthropicAutoModel(args.selectedModel)) {
+    return args.settingsModel ?? 'sonnet';
+  }
   return (
     args.selectedModel ||
     (args.activeProvider === 'codex' ? (args.codexSettingsModel ?? '') : (args.settingsModel ?? '')) ||

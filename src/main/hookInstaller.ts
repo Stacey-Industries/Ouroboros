@@ -1,12 +1,12 @@
 /**
- * hookInstaller.ts â€” Auto-installs Claude Code hook scripts on first launch.
+ * hookInstaller.ts — Auto-installs Claude Code hook scripts on first launch.
  *
  * Behaviour:
  *  - Copies platform-appropriate scripts into ~/.claude/hooks/
  *  - On macOS/Linux: chmod +x the .sh scripts
  *  - Writes a version marker (~/.claude/hooks/.agent-ide-version)
  *  - Skips installation if the version marker matches CURRENT_HOOK_VERSION
- *  - Respects config.autoInstallHooks â€” if false, does nothing
+ *  - Respects config.autoInstallHooks — if false, does nothing
  *  - Shows an Electron notification on first install
  */
 
@@ -17,9 +17,11 @@ import os from 'os';
 import path from 'path';
 
 import { getConfigValue } from './config';
+import { buildHookCommands } from './hookInstallerCommands';
+import { registerStatusLineInSettings } from './hookInstallerStatusLine';
 import log from './logger';
 
-// â”€â”€â”€ Version â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Version ──────────────────────────────────────────────────────────────────
 // Auto-computed from hook script contents — no manual bumping needed.
 // Any change to a hook script file automatically triggers re-installation.
 let _cachedVersion: string | null = null;
@@ -45,7 +47,7 @@ export const CURRENT_HOOK_VERSION = 'auto';
 
 const VERSION_MARKER_FILE = '.agent-ide-version';
 
-// â”€â”€â”€ Hook file manifests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Hook file manifests ──────────────────────────────────────────────────────
 
 interface HookEntry {
   /** Source filename inside assets/hooks/ */
@@ -64,6 +66,8 @@ const WINDOWS_HOOKS: HookEntry[] = [
   { src: 'session_start.ps1', dest: 'session_start.ps1', executable: false },
   { src: 'session_stop.ps1', dest: 'session_stop.ps1', executable: false },
   { src: 'instructions_loaded.ps1', dest: 'instructions_loaded.ps1', executable: false },
+  { src: 'statusline_capture.ps1', dest: 'statusline_capture.ps1', executable: false },
+  { src: 'generic_hook.ps1', dest: 'generic_hook.ps1', executable: false },
 ];
 
 const UNIX_HOOKS: HookEntry[] = [
@@ -72,9 +76,12 @@ const UNIX_HOOKS: HookEntry[] = [
   { src: 'agent_start.sh', dest: 'agent_start.sh', executable: true },
   { src: 'session_start.sh', dest: 'session_start.sh', executable: true },
   { src: 'instructions_loaded.sh', dest: 'instructions_loaded.sh', executable: true },
+  { src: 'generic_hook.sh', dest: 'generic_hook.sh', executable: true },
+  { src: 'session_stop.sh', dest: 'session_stop.sh', executable: true },
+  { src: 'agent_end.sh', dest: 'agent_end.sh', executable: true },
 ];
 
-// â”€â”€â”€ Claude Code hook event types to register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Claude Code hook event types to register ────────────────────────────────
 
 interface ClaudeHookEntry {
   type: 'command';
@@ -86,7 +93,7 @@ interface ClaudeHookMatcher {
   matcher?: string;
 }
 
-// â”€â”€â”€ Path helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Path helpers ─────────────────────────────────────────────────────────────
 
 function getClaudeHooksDir(): string {
   return path.join(os.homedir(), '.claude', 'hooks');
@@ -111,29 +118,7 @@ function getPlatformHooks(): HookEntry[] {
   return process.platform === 'win32' ? WINDOWS_HOOKS : UNIX_HOOKS;
 }
 
-function buildHookCommands(hooksDir: string): Record<string, string> {
-  if (process.platform === 'win32') {
-    return {
-      PreToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'pre_tool_use.ps1')}"`,
-      PostToolUse: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'post_tool_use.ps1')}"`,
-      SubagentStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_start.ps1')}"`,
-      SubagentStop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'agent_end.ps1')}"`,
-      SessionStart: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_start.ps1')}"`,
-      Stop: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'session_stop.ps1')}"`,
-      InstructionsLoaded: `powershell -ExecutionPolicy Bypass -NonInteractive -File "${path.join(hooksDir, 'instructions_loaded.ps1')}"`,
-    };
-  }
-
-  return {
-    PreToolUse: path.join(hooksDir, 'pre_tool_use.sh'),
-    PostToolUse: path.join(hooksDir, 'post_tool_use.sh'),
-    SubagentStart: path.join(hooksDir, 'agent_start.sh'),
-    SessionStart: path.join(hooksDir, 'session_start.sh'),
-    InstructionsLoaded: path.join(hooksDir, 'instructions_loaded.sh'),
-  };
-}
-
-function readClaudeSettings(settingsPath: string): Record<string, unknown> {
+export function readClaudeSettings(settingsPath: string): Record<string, unknown> {
   let settings: unknown = {};
 
   try {
@@ -188,11 +173,11 @@ function registerHookCommand(entries: ClaudeHookMatcher[], command: string): boo
   return true;
 }
 
-// â”€â”€â”€ Settings.json hook registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Settings.json hook registration ─────────────────────────────────────────
 
 /**
  * Merges Ouroboros hook commands into ~/.claude/settings.json so Claude Code
- * actually invokes them. Safe to call multiple times â€” deduplicates by command.
+ * actually invokes them. Safe to call multiple times — deduplicates by command.
  */
 function registerHooksInSettings(hooksDir: string): void {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
@@ -209,7 +194,7 @@ function registerHooksInSettings(hooksDir: string): void {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 }
 
-// â”€â”€â”€ Installer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Installer ────────────────────────────────────────────────────────────────
 
 export interface InstallResult {
   installed: boolean;
@@ -264,6 +249,7 @@ function writeVersionMarker(markerPath: string): void {
 function syncHooksIntoSettings(hooksDir: string): void {
   try {
     registerHooksInSettings(hooksDir);
+    registerStatusLineInSettings(hooksDir);
   } catch (err) {
     log.warn('could not update settings.json:', err);
   }
@@ -314,7 +300,7 @@ export async function installHooks(): Promise<InstallResult> {
   return { installed: true, firstInstall, hooksDir };
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function readVersionMarker(markerPath: string): string | null {
   try {

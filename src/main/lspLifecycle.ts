@@ -263,8 +263,9 @@ export async function startServer(root: string, language: string): Promise<LspAc
     return { success: false, error: `No language server configured for "${language}"` };
   }
 
+  let processHandle: ReturnType<typeof spawnServerProcess> | undefined;
   try {
-    const processHandle = spawnServerProcess(root, command.command, command.args);
+    processHandle = spawnServerProcess(root, command.command, command.args);
     const connection = createConnection(processHandle);
     const instance = createServerInstance(processHandle, connection, root, language);
     servers.set(key, instance);
@@ -276,6 +277,10 @@ export async function startServer(root: string, language: string): Promise<LspAc
     return { success: true };
   } catch (error) {
     servers.delete(key);
+    // Kill orphaned process + connection to prevent fd leak
+    if (processHandle) {
+      try { processHandle.kill(); } catch { /* already dead */ }
+    }
     const message = error instanceof Error ? error.message : String(error);
     log.error(`Failed to start ${language} server:`, message);
     return { success: false, error: message };

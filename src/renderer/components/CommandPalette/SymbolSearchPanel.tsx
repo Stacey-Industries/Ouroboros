@@ -28,7 +28,7 @@ const emptyStateStyle: React.CSSProperties = {
 
 type SymbolSearchPanelProps = SymbolSearchModel & Pick<SymbolSearchProps, 'isOpen' | 'onClose'>;
 
-export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactElement<any> {
+export function SymbolSearchPanel(props: SymbolSearchPanelProps): React.ReactElement {
   return (
     <>
       <PaletteAnimations prefix="ss" />
@@ -77,7 +77,7 @@ function SymbolResultsList({
   onHover: (index: number) => void;
   onSelect: SymbolSearchModel['handleSelect'];
   selectedIndex: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (matches.length === 0) {
     return (
       <div id="ss-listbox" role="listbox" aria-label="Symbols" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>

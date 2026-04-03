@@ -18,7 +18,7 @@ function PasswordField({
 }: {
   value: string;
   onChange: (v: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={fieldRowStyle}>
       <label className="text-text-semantic-muted" style={labelStyle}>
@@ -46,7 +46,7 @@ function PortField({
 }: {
   value: number;
   onChange: (v: number) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={fieldRowStyle}>
       <label className="text-text-semantic-muted" style={labelStyle}>
@@ -71,7 +71,7 @@ function PortField({
   );
 }
 
-export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElement<any> {
+export function WebAccessSubsection({ draft, onChange }: Props): React.ReactElement {
   return (
     <section>
       <SectionLabel>Web Remote Access</SectionLabel>

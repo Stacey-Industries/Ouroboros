@@ -45,7 +45,7 @@ function OverviewTabPane(props: {
   model: UseOrchestrationModelReturn;
   onTaskReady: (sessionId: string) => Promise<void> | void;
   projectRoot: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="space-y-4">
       <OrchestrationTaskComposer projectRoot={props.projectRoot} onTaskReady={props.onTaskReady} />
@@ -54,7 +54,7 @@ function OverviewTabPane(props: {
   );
 }
 
-function HistoryTabPane({ model }: { model: UseOrchestrationModelReturn }): React.ReactElement<any> {
+function HistoryTabPane({ model }: { model: UseOrchestrationModelReturn }): React.ReactElement {
   return (
     <TaskSessionHistory
       sessions={model.sessions}
@@ -72,8 +72,8 @@ interface RenderOrchestrationTabArgs {
   projectRoot: string;
 }
 
-export function renderOrchestrationTab(args: RenderOrchestrationTabArgs): React.ReactElement<any> {
-  const contentByTab: Record<OrchestrationTab, React.ReactElement<any>> = {
+export function renderOrchestrationTab(args: RenderOrchestrationTabArgs): React.ReactElement {
+  const contentByTab: Record<OrchestrationTab, React.ReactElement> = {
     overview: <OverviewTabPane model={args.model} currentStep={args.currentStep} projectRoot={args.projectRoot} onTaskReady={args.onTaskReady} />,
     context: <ContextPreview session={args.model.session} latestResult={args.model.latestResult} />,
     verification: <VerificationSummary summary={args.model.verificationSummary} providerEvent={args.model.providerEvent} />,
@@ -112,7 +112,7 @@ export function OrchestrationPanelLoaded(props: {
   onTaskReady: (sessionId: string) => Promise<void> | void;
   onSelectTab: (tab: OrchestrationTab) => void;
   projectRoot: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const headerProps = buildHeaderProps(props.model, props.projectRoot, props.onClose);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)', fontFamily: 'var(--font-ui)' }}>
@@ -134,6 +134,6 @@ export function OrchestrationPanelLoaded(props: {
   );
 }
 
-export function OrchestrationPanelEmpty({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+export function OrchestrationPanelEmpty({ onClose }: { onClose: () => void }): React.ReactElement {
   return <NoProjectState onClose={onClose} />;
 }

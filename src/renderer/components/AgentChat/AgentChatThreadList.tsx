@@ -16,7 +16,7 @@ export interface AgentChatThreadListProps {
   threads: AgentChatThreadRecord[];
 }
 
-function EmptyThreadList(): React.ReactElement<any> {
+function EmptyThreadList(): React.ReactElement {
   return (
     <div className="rounded border border-dashed border-border-semantic px-3 py-4 text-xs text-text-semantic-muted">
       No previous chats yet.
@@ -24,7 +24,7 @@ function EmptyThreadList(): React.ReactElement<any> {
   );
 }
 
-function ThreadListHeader({ onNewChat }: { onNewChat: () => void }): React.ReactElement<any> {
+function ThreadListHeader({ onNewChat }: { onNewChat: () => void }): React.ReactElement {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <div>
@@ -49,7 +49,7 @@ function ThreadStatusBadge({
   status,
 }: {
   status: AgentChatThreadRecord['status'];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
@@ -65,7 +65,7 @@ function ThreadListItem(props: {
   onSelectThread: (threadId: string) => void;
   thread: AgentChatThreadRecord;
   depth: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const isActive = props.activeThreadId === props.thread.id;
   const isBranch = props.depth > 0;
 
@@ -104,7 +104,7 @@ export function AgentChatThreadList({
   onNewChat,
   onSelectThread,
   threads,
-}: AgentChatThreadListProps): React.ReactElement<any> {
+}: AgentChatThreadListProps): React.ReactElement {
   const flatNodes = useMemo(() => flattenThreadTree(buildThreadTree(threads)), [threads]);
 
   return (

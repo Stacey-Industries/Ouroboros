@@ -9,6 +9,7 @@ import { HexViewer } from './HexViewer';
 import { ImageViewer } from './ImageViewer';
 import { injectLinks } from './linkDetector';
 import { LoadingState } from './LoadingState';
+import { MediaViewer } from './MediaViewer';
 import { PdfViewer } from './PdfViewer';
 import { useFileViewerState } from './useFileViewerState';
 
@@ -23,6 +24,8 @@ export interface FileViewerProps {
   projectRoot?: string | null;
   isImage?: boolean;
   isPdf?: boolean;
+  isAudio?: boolean;
+  isVideo?: boolean;
   isBinary?: boolean;
   binaryContent?: Uint8Array;
   onSave?: (content: string) => void;
@@ -36,34 +39,49 @@ export interface FileViewerProps {
  */
 export const FileViewer = memo(function FileViewer(
   props: FileViewerProps
-): React.ReactElement<any> {
+): React.ReactElement {
   return <FileViewerInner {...props} />;
 });
 
-function renderInitialViewerState(props: FileViewerProps): React.ReactElement<any> | null {
+function hasSpecialViewer(props: FileViewerProps): boolean {
+  return Boolean(props.isImage || props.isPdf || props.isAudio || props.isVideo || props.isBinary);
+}
+
+function renderInitialViewerState(props: FileViewerProps): React.ReactElement | null {
   if (!props.filePath && !props.isLoading) return <EmptyState />;
   if (props.isLoading) return <LoadingState />;
   if (props.error) return <ErrorDisplay error={props.error} />;
-  if (props.content === null) return <EmptyState />;
+  if (props.content === null && !hasSpecialViewer(props)) return <EmptyState />;
   return null;
 }
 
-function renderFileTypeViewer(props: FileViewerProps): React.ReactElement<any> | null {
-  const { filePath, isImage, isPdf, isBinary, binaryContent } = props;
-  if (isImage && filePath) return <ImageViewer filePath={filePath} />;
-  if (isPdf && filePath) return <PdfViewer filePath={filePath} />;
-  if (isBinary && filePath && binaryContent) return <HexViewer content={binaryContent} filePath={filePath} />;
-  if (isBinary && filePath) return <LoadingState />;
+function renderMediaViewer(filePath: string, isVideo?: boolean, isAudio?: boolean): React.ReactElement | null {
+  if (!isAudio && !isVideo) return null;
+  return <MediaViewer filePath={filePath} mediaType={isVideo ? 'video' : 'audio'} />;
+}
+
+function renderBinaryViewer(filePath: string, binaryContent?: Uint8Array): React.ReactElement {
+  if (binaryContent) return <HexViewer content={binaryContent} filePath={filePath} />;
+  return <LoadingState />;
+}
+
+function renderFileTypeViewer(props: FileViewerProps): React.ReactElement | null {
+  const { filePath, isImage, isPdf, isAudio, isVideo, isBinary, binaryContent } = props;
+  if (!filePath) return null;
+  if (isImage) return <ImageViewer filePath={filePath} />;
+  if (isPdf) return <PdfViewer filePath={filePath} />;
+  if (isAudio || isVideo) return renderMediaViewer(filePath, isVideo, isAudio);
+  if (isBinary) return renderBinaryViewer(filePath, binaryContent);
   return null;
 }
 
-function renderSpecialViewer(props: FileViewerProps): React.ReactElement<any> | null {
+function renderSpecialViewer(props: FileViewerProps): React.ReactElement | null {
   return renderInitialViewerState(props) ?? renderFileTypeViewer(props);
 }
 
 const FileViewerInner = memo(function FileViewerInner(
   props: FileViewerProps
-): React.ReactElement<any> {
+): React.ReactElement {
   const s = useFileViewerState(props);
   const specialViewer = renderSpecialViewer(props);
   if (specialViewer) return specialViewer;

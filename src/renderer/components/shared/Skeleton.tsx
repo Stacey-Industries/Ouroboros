@@ -61,7 +61,7 @@ export const SkeletonLine = memo(function SkeletonLine({
   width,
   height,
   style,
-}: SkeletonLineProps): React.ReactElement<any> {
+}: SkeletonLineProps): React.ReactElement {
   return (
     <div
       aria-hidden="true"
@@ -97,7 +97,7 @@ export const SkeletonBlock = memo(function SkeletonBlock({
   widths,
   lineHeight,
   style,
-}: SkeletonBlockProps): React.ReactElement<any> {
+}: SkeletonBlockProps): React.ReactElement {
   const defaultWidths = ['100%', '90%', '75%', '85%', '60%', '95%', '70%', '80%'];
   const resolvedWidths = widths ?? defaultWidths;
 
@@ -127,7 +127,7 @@ export const SkeletonBlock = memo(function SkeletonBlock({
 /**
  * Skeleton that mimics a file tree with indented items.
  */
-export const FileTreeSkeleton = memo(function FileTreeSkeleton(): React.ReactElement<any> {
+export const FileTreeSkeleton = memo(function FileTreeSkeleton(): React.ReactElement {
   // Varying widths and indentation to mimic a tree
   const items = [
     { indent: 0, width: '70%' },
@@ -184,7 +184,7 @@ const CODE_SKELETON_LINE_WIDTHS = [
   '72%',
 ];
 
-function CodeSkeletonGutter({ lineCount }: { lineCount: number }): React.ReactElement<any> {
+function CodeSkeletonGutter({ lineCount }: { lineCount: number }): React.ReactElement {
   return (
     <div
       style={{
@@ -215,7 +215,7 @@ function CodeSkeletonContent({
   lineWidths,
 }: {
   lineWidths: Array<string | number>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       style={{
@@ -236,7 +236,7 @@ function CodeSkeletonContent({
 /**
  * Skeleton that mimics a code editor with gutter and code lines.
  */
-export const CodeSkeleton = memo(function CodeSkeleton(): React.ReactElement<any> {
+export const CodeSkeleton = memo(function CodeSkeleton(): React.ReactElement {
   return (
     <div
       aria-hidden="true"
@@ -257,7 +257,7 @@ export const CodeSkeleton = memo(function CodeSkeleton(): React.ReactElement<any
 /**
  * Skeleton that mimics an agent card.
  */
-export const AgentCardSkeleton = memo(function AgentCardSkeleton(): React.ReactElement<any> {
+export const AgentCardSkeleton = memo(function AgentCardSkeleton(): React.ReactElement {
   return (
     <div
       aria-hidden="true"

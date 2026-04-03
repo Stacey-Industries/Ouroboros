@@ -10,7 +10,7 @@ interface ToastBannerProps {
   toast: ToastState | null;
 }
 
-export function ToastBanner({ toast }: ToastBannerProps): React.ReactElement<any> | null {
+export function ToastBanner({ toast }: ToastBannerProps): React.ReactElement | null {
   if (!toast) return null;
 
   const isSuccess = toast.kind === 'success';

@@ -34,7 +34,7 @@ const backBtnStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
-export function BreadcrumbBar({ stack, onBack }: BreadcrumbBarProps): React.ReactElement<any> {
+export function BreadcrumbBar({ stack, onBack }: BreadcrumbBarProps): React.ReactElement {
   return (
     <div
       className="bg-surface-raised text-text-semantic-muted border-b border-border-semantic"
@@ -65,7 +65,7 @@ function BreadcrumbSegment({
 }: {
   label: string;
   isLast: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <span style={{ opacity: 0.4, flexShrink: 0 }}>&rsaquo;</span>

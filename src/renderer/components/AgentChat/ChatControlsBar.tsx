@@ -13,6 +13,7 @@ import {
   getPermissionModes,
   getSelectedModelLabel,
   getSelectedOptionLabel,
+  isAnthropicAutoModel,
   type ModelUsageEntry,
   type OptionGroup,
   type OptionItem,
@@ -34,9 +35,10 @@ export function resolveChatControlProvider(
   defaultProvider: ChatControlProvider,
   codexModels?: CodexModelOption[],
 ): ChatControlProvider {
-  return model && (codexModels ?? []).some((entry) => entry.id === model)
-    ? 'codex'
-    : defaultProvider;
+  if (isAnthropicAutoModel(model)) return 'claude-code';
+  if (model && (codexModels ?? []).some((entry) => entry.id === model)) return 'codex';
+  if (model) return 'claude-code';
+  return defaultProvider;
 }
 
 export function cyclePermissionMode(current: string, provider: ChatControlProvider): string {
@@ -53,7 +55,7 @@ function ModelSelect(props: {
   groups: OptionGroup[];
   onChange: (value: string) => void;
   codexModelIds?: string[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <SelectPill
       label="Model"
@@ -72,7 +74,7 @@ function ControlSelect(props: {
   value: string;
   options: ReadonlyArray<OptionItem>;
   onChange: (value: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <SelectPill
       label={props.label}
@@ -88,7 +90,7 @@ function PermissionModeIndicator(props: {
   provider: ChatControlProvider;
   value: string;
   onChange: (value: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const modes = getPermissionModes(props.provider);
   const current = modes.find((mode) => mode.value === props.value) ?? modes[0];
   return (
@@ -123,7 +125,7 @@ type ArcProps = {
   offset: number;
 };
 
-function ContextRingArcs(p: ArcProps): React.ReactElement<any> {
+function ContextRingArcs(p: ArcProps): React.ReactElement {
   return (
     <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
       <circle
@@ -150,7 +152,7 @@ function ContextRingArcs(p: ArcProps): React.ReactElement<any> {
   );
 }
 
-function ContextRing(props: ContextRingProps): React.ReactElement<any> {
+function ContextRing(props: ContextRingProps): React.ReactElement {
   const size = props.size ?? 26;
   const stroke = props.stroke ?? 2.5;
   const radius = (size - stroke) / 2;
@@ -190,7 +192,7 @@ function ModelContextUsageIndicator(props: {
   usage: ModelUsageEntry[];
   codexModels?: CodexModelOption[];
   isStreaming?: boolean;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (props.usage.length === 0) return null;
   return (
     <div className="flex items-center gap-2">
@@ -222,6 +224,7 @@ interface ChatControlsBarProps {
   isStreaming?: boolean;
   providers?: ModelProvider[];
   codexModels?: CodexModelOption[];
+  routedBy?: string;
 }
 
 function buildControlsBarState(props: ChatControlsBarProps) {
@@ -241,7 +244,7 @@ function buildControlsBarState(props: ChatControlsBarProps) {
     threadModelUsage: props.threadModelUsage,
     streamingTokenUsage: props.streamingTokenUsage,
   });
-  const effortOptions = getEffortOptions(activeProvider);
+  const effortOptions = getEffortOptions(activeProvider, activeModel);
   const effortValue = effortOptions.some((o) => o.value === props.overrides.effort)
     ? props.overrides.effort
     : 'medium';
@@ -269,7 +272,7 @@ function useActiveSessionRules() {
   }, [agents]);
 }
 
-export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement<any> {
+export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement {
   const { activeProvider, displayUsage, effortOptions, effortValue, defaultOption, groups } =
     buildControlsBarState(props);
   const loadedRules = useActiveSessionRules();
@@ -277,11 +280,14 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
     <div className="flex flex-wrap items-center gap-3 px-3 py-1" data-layout="chat-controls-bar">
       <ModelSelect
         value={props.overrides.model}
-        defaultOption={defaultOption ?? { label: 'Default', value: '' }}
+        defaultOption={defaultOption}
         groups={groups}
         onChange={(model) => props.onChange({ ...props.overrides, model })}
         codexModelIds={props.codexModels?.map((m) => m.id)}
       />
+      {props.routedBy && props.routedBy !== 'user' && (
+        <span className="text-[10px] italic text-text-semantic-muted" style={{ fontFamily: 'var(--font-ui)' }} title={`Model auto-selected by ${props.routedBy} layer`}>auto</span>
+      )}
       <ControlSelect
         label="Effort"
         value={effortValue}

@@ -36,6 +36,8 @@ export interface ResolvedSendOptions {
   effort: string;
   /** Permission mode ('default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions'). */
   permissionMode: string;
+  /** How the model was selected: 'rule', 'classifier', 'llm', 'user', or undefined (provider default). */
+  routedBy?: string;
 }
 
 const DEFAULT_MODE: OrchestrationMode = 'edit';
@@ -253,10 +255,25 @@ function resolveModelWithSlot(
   override: string | undefined,
   settings: ResolvedAgentChatSettings,
   provider: AgentChatSettings['defaultProvider'],
+  hasExplicitProviderOverride: boolean,
 ): string {
   const slots = getConfigValue('modelSlots') as ModelSlotAssignments | undefined;
   const slotDefault = slots?.agentChat || '';
-  return override || slotDefault || resolveProviderModel(settings, provider) || 'sonnet';
+  if (override) return override;
+  if (!hasExplicitProviderOverride && slotDefault) return slotDefault;
+  return resolveProviderModel(settings, provider) || 'sonnet';
+}
+
+/** Resolve effort + permission from overrides or defaults. */
+function resolveEffortAndPermission(
+  settings: ResolvedAgentChatSettings,
+  provider: AgentChatSettings['defaultProvider'],
+  overrides: NonNullable<AgentChatSendMessageRequest['overrides']> | undefined,
+): { effort: string; permissionMode: string } {
+  return {
+    effort: overrides?.effort || DEFAULT_CHAT_EFFORT,
+    permissionMode: overrides?.permissionMode || resolvePermissionMode(settings, provider),
+  };
 }
 
 export function buildResolvedOptions(
@@ -264,12 +281,10 @@ export function buildResolvedOptions(
   provider: AgentChatSettings['defaultProvider'],
   overrides: NonNullable<AgentChatSendMessageRequest['overrides']> | undefined,
 ): ResolvedSendOptions {
-  return {
-    provider,
-    verificationProfile: overrides?.verificationProfile ?? settings.defaultVerificationProfile,
-    mode: overrides?.mode ?? DEFAULT_MODE,
-    model: resolveModelWithSlot(overrides?.model, settings, provider),
-    effort: overrides?.effort || DEFAULT_CHAT_EFFORT,
-    permissionMode: overrides?.permissionMode || resolvePermissionMode(settings, provider),
-  };
+  const verificationProfile =
+    overrides?.verificationProfile ?? settings.defaultVerificationProfile;
+  const mode = overrides?.mode ?? DEFAULT_MODE;
+  const model = resolveModelWithSlot(overrides?.model, settings, provider, Boolean(overrides?.provider));
+  const { effort, permissionMode } = resolveEffortAndPermission(settings, provider, overrides);
+  return { provider, verificationProfile, mode, model, effort, permissionMode };
 }

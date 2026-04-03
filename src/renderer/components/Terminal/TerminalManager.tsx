@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
+import { SPLIT_TERMINAL_EVENT } from '../../hooks/appEventNames';
 import { EmptyState } from '../shared';
 import { ActiveTerminalContent } from './TerminalManagerContent';
 import { useTerminalManagerState } from './TerminalManagerState';
@@ -28,7 +29,7 @@ function TerminalManagerShell({
   activeContent: React.ReactNode;
   isEmpty: boolean;
   onSpawn: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
@@ -75,8 +76,18 @@ function buildActiveContent(
   );
 }
 
-export function TerminalManager(props: TerminalManagerProps): React.ReactElement<any> {
+export function TerminalManager(props: TerminalManagerProps): React.ReactElement {
   const state = useTerminalManagerState(props.sessions, props.activeSessionId);
+  const { activeSessionId, onSplit } = props;
+
+  useEffect(() => {
+    const handler = (): void => {
+      if (activeSessionId && onSplit) onSplit(activeSessionId);
+    };
+    window.addEventListener(SPLIT_TERMINAL_EVENT, handler);
+    return () => window.removeEventListener(SPLIT_TERMINAL_EVENT, handler);
+  }, [activeSessionId, onSplit]);
+
   return (
     <TerminalManagerShell
       activeContent={buildActiveContent(props, state)}

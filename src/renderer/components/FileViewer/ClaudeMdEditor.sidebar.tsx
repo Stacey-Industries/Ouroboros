@@ -96,7 +96,7 @@ const SectionRow = memo(function SectionRow({
 }: {
   onSelect: (section: ClaudeMdSection) => void;
   section: ClaudeMdSection;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={() => onSelect(section)}
@@ -122,7 +122,7 @@ const TemplateMenuButton = memo(function TemplateMenuButton({
 }: {
   onInsertTemplate: (templateContent: string) => void;
   template: ClaudeMdTemplate;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={() => onInsertTemplate(template.content)}
@@ -157,7 +157,7 @@ const TemplatePreview = memo(function TemplatePreview({
   content,
 }: {
   content: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <pre className="text-text-semantic-muted" style={previewStyle}>
       {content.slice(0, 200)}
@@ -171,7 +171,7 @@ const InsertTemplateButton = memo(function InsertTemplateButton({
 }: {
   onInsertTemplate: (templateContent: string) => void;
   templateContent: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={() => onInsertTemplate(templateContent)}
@@ -197,7 +197,7 @@ const TemplateCard = memo(function TemplateCard({
 }: {
   onInsertTemplate: (templateContent: string) => void;
   template: ClaudeMdTemplate;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={SIDEBAR_TEMPLATE_CARD_STYLE}>
       <div className="text-text-semantic-primary" style={SIDEBAR_TEMPLATE_CARD_TITLE_STYLE}>
@@ -218,7 +218,7 @@ const SectionOutline = memo(function SectionOutline({
 }: {
   onSelectSection: (section: ClaudeMdSection) => void;
   sections: ClaudeMdSection[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (sections.length === 0) {
     return (
       <div
@@ -246,7 +246,7 @@ const AddSectionMenu = memo(function AddSectionMenu({
   onInsertTemplate,
 }: {
   onInsertTemplate: (templateContent: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={SIDEBAR_ADD_SECTION_WRAPPER_STYLE}>
       <div className="text-text-semantic-muted" style={SIDEBAR_ADD_SECTION_LABEL_STYLE}>
@@ -272,7 +272,7 @@ export const ClaudeMdOutlineSidebar = memo(function ClaudeMdOutlineSidebar({
   onInsertTemplate,
   onSelectSection,
   sections,
-}: OutlineSidebarProps): React.ReactElement<any> {
+}: OutlineSidebarProps): React.ReactElement {
   return (
     <aside style={sidebarStyle}>
       <div className="text-text-semantic-muted" style={sectionTitleStyle}>
@@ -287,7 +287,7 @@ export const ClaudeMdOutlineSidebar = memo(function ClaudeMdOutlineSidebar({
 type TemplateLibraryProps = { onInsertTemplate: (t: string) => void };
 export const ClaudeMdTemplateLibrary = memo(function ClaudeMdTemplateLibrary({
   onInsertTemplate,
-}: TemplateLibraryProps): React.ReactElement<any> {
+}: TemplateLibraryProps): React.ReactElement {
   return (
     <aside style={panelStyle}>
       <div className="text-text-semantic-muted" style={sectionTitleStyle}>

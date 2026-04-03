@@ -9,7 +9,7 @@ import React from 'react';
 import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
 import { TimeTravelPanel } from '../TimeTravel';
 
-export function TimeTravelPanelConnected({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+export function TimeTravelPanelConnected({ onClose }: { onClose: () => void }): React.ReactElement {
   const { snapshots, createManualSnapshot, refreshSnapshots } = useDiffSnapshots();
   return (
     <TimeTravelPanel

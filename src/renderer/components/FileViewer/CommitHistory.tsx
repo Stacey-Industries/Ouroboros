@@ -11,7 +11,7 @@ export interface CommitHistoryProps {
 export const CommitHistory = memo(function CommitHistory({
   filePath,
   projectRoot,
-}: CommitHistoryProps): React.ReactElement<any> {
+}: CommitHistoryProps): React.ReactElement {
   const model = useCommitHistoryModel({ filePath, projectRoot });
   return <CommitHistoryView {...model} />;
 });

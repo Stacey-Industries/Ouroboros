@@ -40,7 +40,7 @@ export const copyButtonStyle: React.CSSProperties = {
   transition: 'color 100ms ease',
 };
 
-export function CopyIcon(): React.ReactElement<any> {
+export function CopyIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -61,7 +61,7 @@ export function CopyIcon(): React.ReactElement<any> {
   );
 }
 
-export function ChevronIcon(): React.ReactElement<any> {
+export function ChevronIcon(): React.ReactElement {
   return (
     <svg
       width="8"
@@ -83,7 +83,7 @@ export function ChevronIcon(): React.ReactElement<any> {
   );
 }
 
-export function ChevronSeparator(): React.ReactElement<any> {
+export function ChevronSeparator(): React.ReactElement {
   return (
     <span
       className="text-text-semantic-faint"
@@ -94,7 +94,7 @@ export function ChevronSeparator(): React.ReactElement<any> {
   );
 }
 
-export function EllipsisBadge(): React.ReactElement<any> {
+export function EllipsisBadge(): React.ReactElement {
   return (
     <span
       className="text-text-semantic-faint"
@@ -115,7 +115,7 @@ export function DirectorySegmentButton(props: {
   segment: string;
   dirPath: string;
   onNavigateToDir?: (dirPath: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { segment, dirPath, onNavigateToDir } = props;
   return (
     <button
@@ -131,7 +131,7 @@ export function DirectorySegmentButton(props: {
   );
 }
 
-export function CurrentSegmentLabel({ segment }: { segment: string }): React.ReactElement<any> {
+export function CurrentSegmentLabel({ segment }: { segment: string }): React.ReactElement {
   return (
     <span className="text-text-semantic-primary" style={currentSegmentStyle}>
       <FileTypeIcon filename={segment} />
@@ -151,7 +151,7 @@ function setCopyButtonHoverState(
 export function CopyPathButton(props: {
   copied: boolean;
   onCopy: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const { copied, onCopy } = props;
   return (
     <button

@@ -102,7 +102,7 @@ export interface TooltipProps {
   /** Delay in ms before showing. Defaults to 500. */
   delay?: number;
   /** The wrapped element */
-  children: React.ReactElement<any>;
+  children: React.ReactElement;
   /** Disable the tooltip (e.g. when a menu is open) */
   disabled?: boolean;
 }
@@ -182,7 +182,7 @@ function TooltipPopup(args: {
   position: TooltipPosition;
   text: string;
   tooltipRef: React.MutableRefObject<HTMLDivElement | null>;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   const { visible, coords, position, text, tooltipRef } = args;
   if (!visible) {
     return null;
@@ -207,7 +207,7 @@ export const Tooltip = memo(function Tooltip({
   delay = 500,
   children,
   disabled = false,
-}: TooltipProps): React.ReactElement<any> {
+}: TooltipProps): React.ReactElement {
   const tooltip = useTooltipVisibility(delay, disabled);
   useTooltipPositioning({
     visible: tooltip.visible,

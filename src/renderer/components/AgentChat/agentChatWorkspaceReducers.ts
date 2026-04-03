@@ -69,18 +69,26 @@ export function mergeThreadMessage(
   });
 }
 
+type OrchestrationRecord = NonNullable<AgentChatThreadRecord['latestOrchestration']>;
+type StickyOrchestrationKey = 'provider' | 'claudeSessionId' | 'codexThreadId' | 'model' | 'effort' | 'linkedTerminalId';
+const STICKY_ORCHESTRATION_KEYS: StickyOrchestrationKey[] = [
+  'provider', 'claudeSessionId', 'codexThreadId', 'model', 'effort', 'linkedTerminalId',
+];
+function applyStickyFields(target: OrchestrationRecord, existing: AgentChatThreadRecord['latestOrchestration']): void {
+  for (const key of STICKY_ORCHESTRATION_KEYS) {
+    if (target[key] == null && existing?.[key] != null) {
+      (target as Record<string, unknown>)[key] = existing[key];
+    }
+  }
+}
 function mergeOrchestrationFields(
   incoming: AgentChatThreadRecord['latestOrchestration'],
   existing: AgentChatThreadRecord['latestOrchestration'],
 ): AgentChatThreadRecord['latestOrchestration'] {
   if (!incoming) return existing;
-  return {
-    ...incoming,
-    provider: incoming.provider ?? existing?.provider,
-    claudeSessionId: incoming.claudeSessionId ?? existing?.claudeSessionId,
-    codexThreadId: incoming.codexThreadId ?? existing?.codexThreadId,
-    linkedTerminalId: incoming.linkedTerminalId ?? existing?.linkedTerminalId,
-  };
+  const merged: OrchestrationRecord = { ...incoming };
+  applyStickyFields(merged, existing);
+  return merged;
 }
 
 export function mergeThreadStatus(

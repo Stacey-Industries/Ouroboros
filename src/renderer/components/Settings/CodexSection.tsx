@@ -34,7 +34,7 @@ interface CodexSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function CodexSection({ draft, onChange }: CodexSectionProps): React.ReactElement<any> {
+export function CodexSection({ draft, onChange }: CodexSectionProps): React.ReactElement {
   const model = useCodexSectionModel(draft, onChange);
 
   return (
@@ -48,7 +48,7 @@ export function CodexSection({ draft, onChange }: CodexSectionProps): React.Reac
   );
 }
 
-function HeaderSection(): React.ReactElement<any> {
+function HeaderSection(): React.ReactElement {
   return (
     <div>
       <SectionLabel>Codex Settings</SectionLabel>
@@ -59,7 +59,7 @@ function HeaderSection(): React.ReactElement<any> {
   );
 }
 
-function ModelSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function ModelSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <>
       <SelectSection
@@ -98,7 +98,7 @@ function ModelSection({ model }: { model: CodexSectionModel }): React.ReactEleme
   );
 }
 
-function SandboxModeSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function SandboxModeSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <SelectSection
       description="Controls the Codex command sandbox used during edits and tool execution."
@@ -116,7 +116,7 @@ function SandboxModeSection({ model }: { model: CodexSectionModel }): React.Reac
   );
 }
 
-function ApprovalPolicySection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function ApprovalPolicySection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <SelectSection
       description="Controls when Codex asks for approval before executing commands."
@@ -134,7 +134,7 @@ function ApprovalPolicySection({ model }: { model: CodexSectionModel }): React.R
   );
 }
 
-function ProfileSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function ProfileSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <TextInputSection
       description="Optional named profile from ~/.codex/config.toml to apply when launching Codex."
@@ -147,7 +147,7 @@ function ProfileSection({ model }: { model: CodexSectionModel }): React.ReactEle
   );
 }
 
-function SearchSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function SearchSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <ToggleSection
       checked={model.settings.search}
@@ -159,7 +159,7 @@ function SearchSection({ model }: { model: CodexSectionModel }): React.ReactElem
   );
 }
 
-function ExecutionSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function ExecutionSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <>
       <SandboxModeSection model={model} />
@@ -170,7 +170,7 @@ function ExecutionSection({ model }: { model: CodexSectionModel }): React.ReactE
   );
 }
 
-function AdditionalDirectoriesSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function AdditionalDirectoriesSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return <section>
     <SectionLabel>Additional Directories</SectionLabel>
     <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>Extra directories Codex can write to in addition to the primary workspace.</p>
@@ -182,7 +182,7 @@ function AdditionalDirectoriesSection({ model }: { model: CodexSectionModel }): 
   </section>;
 }
 
-function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <ToggleSection
       checked={model.settings.skipGitRepoCheck}
@@ -194,11 +194,11 @@ function SkipGitRepoCheckSection({ model }: { model: CodexSectionModel }): React
   );
 }
 
-function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function WorkspaceSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return <><AdditionalDirectoriesSection model={model} /><SkipGitRepoCheckSection model={model} /></>;
 }
 
-function DangerZoneSection({ model }: { model: CodexSectionModel }): React.ReactElement<any> {
+function DangerZoneSection({ model }: { model: CodexSectionModel }): React.ReactElement {
   return (
     <section style={claudeSectionDangerSectionStyle}>
       <SectionLabel className="text-status-error">Danger Zone</SectionLabel>

@@ -37,7 +37,7 @@ export function CommandPaletteResults({
   onMouseEnter,
   selectedIndex,
   showHeaders,
-}: CommandPaletteResultsProps): React.ReactElement<any> {
+}: CommandPaletteResultsProps): React.ReactElement {
   if (matches.length === 0) {
     return <EmptyResults emptyLabel={emptyLabel} listRef={listRef} />;
   }
@@ -70,7 +70,7 @@ function EmptyResults({
 }: {
   emptyLabel: string;
   listRef: React.RefObject<HTMLDivElement | null>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <ResultsContainer listRef={listRef}>
       <div className="text-text-semantic-muted" style={emptyStateStyle}>{emptyLabel}</div>
@@ -84,7 +84,7 @@ function ResultsContainer({
 }: {
   children: React.ReactNode;
   listRef: React.RefObject<HTMLDivElement | null>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div id="cp-listbox" role="listbox" aria-label="Commands" ref={listRef as React.RefObject<HTMLDivElement | null>} style={listStyle}>
       {children}
@@ -104,7 +104,7 @@ function GroupedResults({
   onExecute: (command: Command) => Promise<void>;
   onMouseEnter: (command: Command) => void;
   selectedIndex: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       {grouped.map((section) => (
@@ -136,7 +136,7 @@ function FlatResults({
   onExecute: (command: Command) => Promise<void>;
   onMouseEnter: (command: Command) => void;
   selectedIndex: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       {matches.map((match, index) => (
@@ -168,7 +168,7 @@ function CommandRow({
   onExecute: (command: Command) => Promise<void>;
   onMouseEnter: (command: Command) => void;
   selectedIndex: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const index = explicitIndex ?? matches.findIndex((item) => item.command.id === match.command.id);
 
   return (

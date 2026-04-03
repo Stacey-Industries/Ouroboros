@@ -164,7 +164,7 @@ export function updateTooltipPosition(
 function ViewportIndicator({
   top,
   height,
-}: Omit<ViewportMetrics, 'trackHeight'>): React.ReactElement<any> {
+}: Omit<ViewportMetrics, 'trackHeight'>): React.ReactElement {
   return (
     <div
       style={{
@@ -187,7 +187,7 @@ function ScrollbarMark({
   onScrollToLine,
   setTooltip,
   trackHeight,
-}: ScrollbarMarkProps): React.ReactElement<any> {
+}: ScrollbarMarkProps): React.ReactElement {
   const top = EDGE_PADDING + mark.position * trackHeight - MARK_HEIGHT / 2;
   return (
     <div
@@ -217,7 +217,7 @@ function ScrollbarMarkList({
   onScrollToLine,
   setTooltip,
   trackHeight,
-}: ScrollbarMarkListProps): React.ReactElement<any> {
+}: ScrollbarMarkListProps): React.ReactElement {
   return (
     <>
       {marks.map((mark, index) => (
@@ -233,7 +233,7 @@ function ScrollbarMarkList({
   );
 }
 
-function ScrollbarTooltip({ tooltip }: { tooltip: Tooltip }): React.ReactElement<any> | null {
+function ScrollbarTooltip({ tooltip }: { tooltip: Tooltip }): React.ReactElement | null {
   if (!tooltip.visible) return null;
   return (
     <div
@@ -268,7 +268,7 @@ export function SemanticScrollbarOverlay({
   onScrollToLine,
   setTooltip,
   tooltip,
-}: SemanticScrollbarOverlayProps): React.ReactElement<any> {
+}: SemanticScrollbarOverlayProps): React.ReactElement {
   return (
     <div
       ref={barRef as React.RefObject<HTMLDivElement | null>}

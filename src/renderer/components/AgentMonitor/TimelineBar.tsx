@@ -94,7 +94,7 @@ export const TimelineBar = memo(function TimelineBar({
   totalDurationMs,
   nowMs,
   onHover,
-}: TimelineBarProps): React.ReactElement<any> {
+}: TimelineBarProps): React.ReactElement<unknown> {
   const color = timelineColor(call.toolName);
   const startOffsetMs = call.timestamp - sessionStartMs;
   const { leftPct, widthPct } = computeBarLayout(call, sessionStartMs, totalDurationMs, nowMs);

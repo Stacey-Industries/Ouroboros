@@ -24,7 +24,7 @@ interface DetailsPanelState {
   handleRestoreClick: (snapshot: WorkspaceSnapshot) => Promise<void>;
 }
 
-function SnapshotSummary({ snapshot }: { snapshot: WorkspaceSnapshot }): React.ReactElement<any> {
+function SnapshotSummary({ snapshot }: { snapshot: WorkspaceSnapshot }): React.JSX.Element {
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
@@ -57,7 +57,7 @@ function SnapshotActions({
   currentHead: string | null;
   restoring: boolean;
   onRestore: (snapshot: WorkspaceSnapshot) => Promise<void>;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const isCurrent = currentHead === snapshot.commitHash;
   const label = restoring ? 'Restoring...' : isCurrent ? 'Current' : 'Restore';
 
@@ -100,7 +100,7 @@ function ComparisonSummary({
 }: {
   fromSnapshot: WorkspaceSnapshot;
   toSnapshot: WorkspaceSnapshot;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div style={{ marginBottom: '12px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Comparison</div>
@@ -150,7 +150,7 @@ const FILE_PATH_STYLE: React.CSSProperties = {
   fontSize: '11px',
 };
 
-function ChangedFileRow({ file }: { file: ChangedFile }): React.ReactElement<any> {
+function ChangedFileRow({ file }: { file: ChangedFile }): React.JSX.Element {
   return (
     <div
       style={{
@@ -184,7 +184,7 @@ function ChangedFilesSection({
 }: {
   loadingFiles: boolean;
   changedFiles: ChangedFile[];
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   if (loadingFiles) {
     return (
       <div className="text-text-semantic-muted" style={{ fontSize: '11px', padding: '8px 0' }}>
@@ -212,7 +212,7 @@ function ChangedFilesSection({
 
 export { RestoreConfirmDialog };
 
-export function TimeTravelDetailsPane({ panel }: { panel: DetailsPanelState }): React.ReactElement<any> {
+export function TimeTravelDetailsPane({ panel }: { panel: DetailsPanelState }): React.JSX.Element {
   const activeSnapshot = panel.compareMode ? null : panel.selectedSnapshot;
   const comparison =
     panel.comparisonReady && panel.compareFromSnapshot && panel.compareToSnapshot

@@ -7,8 +7,10 @@ import {
   disposeMonacoModel,
   type FileReadResult,
   getNextActiveIndex,
+  isAudioFile,
   isImageFile,
   isPdfFile,
+  isVideoFile,
   looksLikeBinary,
   markChangedFile,
   markDeletedFile,
@@ -34,6 +36,7 @@ import {
   useSplitEditorListener,
   useSplitState,
 } from './FileViewerManager.listeners';
+import { useNavigationHistory } from './useNavigationHistory';
 
 // Re-export types for consumers
 export type { FileReadResult, OpenFile, SaveFileResult, SetActiveIndex, SetOpenFiles, SplitState };
@@ -66,6 +69,10 @@ export interface FileViewerState {
   setActiveSplit: (pane: 'left' | 'right') => void;
   setSplitRatio: (ratio: number) => void;
   rightFile: OpenFile | null;
+  goBack: () => void;
+  goForward: () => void;
+  canGoBack: boolean;
+  canGoForward: boolean;
 }
 
 export interface FileViewerManagerProps { projectRoot: string | null; children: ReactNode; }
@@ -80,19 +87,27 @@ export async function handleProjectFileChange(change: FileChangeEvent, setOpenFi
   if (change.type === 'unlink') markDeletedFile(change.path, setOpenFiles);
 }
 
+function isNonBinaryFileType(filePath: string): boolean {
+  return isImageFile(filePath) || isPdfFile(filePath) || isAudioFile(filePath) || isVideoFile(filePath);
+}
+
+async function loadBinaryContent(filePath: string, setOpenFiles: SetOpenFiles): Promise<void> {
+  try {
+    const binResult = await window.electronAPI.files.readBinaryFile(filePath);
+    if (!binResult.success || !binResult.data) return;
+    const binaryContent = new Uint8Array(binResult.data);
+    setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({ ...file, binaryContent })));
+  } catch { /* Binary content loading failed */ }
+}
+
 function useOpenFileActionInternal(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex, isPreview: boolean) {
   return useCallback(async (filePath: string): Promise<void> => {
     primeOpenFile(filePath, setOpenFiles, setActiveIndex, isPreview);
     const result = await readFile(filePath);
     commitOpenFileResult(filePath, result, setOpenFiles);
-    if (!result.success || isImageFile(filePath) || isPdfFile(filePath)) return;
+    if (!result.success || isNonBinaryFileType(filePath)) return;
     if (!looksLikeBinary(result.content ?? '')) return;
-    try {
-      const binResult = await window.electronAPI.files.readBinaryFile(filePath);
-      if (!binResult.success || !binResult.data) return;
-      const binaryContent = new Uint8Array(binResult.data);
-      setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => ({ ...file, binaryContent })));
-    } catch { /* Binary content loading failed */ }
+    await loadBinaryContent(filePath, setOpenFiles);
   }, [setActiveIndex, setOpenFiles, isPreview]);
 }
 
@@ -219,6 +234,24 @@ function useDiscardDraftAction(setOpenFiles: SetOpenFiles) {
   }, [setOpenFiles]);
 }
 
+function useTabActions(setOpenFiles: SetOpenFiles, setActiveIndex: SetActiveIndex) {
+  return {
+    closeFile: useCloseFileAction(setOpenFiles, setActiveIndex),
+    closeOthers: useCloseOthersAction(setOpenFiles, setActiveIndex),
+    closeToRight: useCloseToRightAction(setOpenFiles, setActiveIndex),
+    closeAll: useCloseAllAction(setOpenFiles, setActiveIndex),
+    setActive: useSetActiveAction(setOpenFiles, setActiveIndex),
+    pinTab: usePinTabAction(setOpenFiles),
+    unpinTab: useUnpinTabAction(setOpenFiles),
+    togglePin: useTogglePinAction(setOpenFiles),
+    setDirty: useSetDirtyAction(setOpenFiles),
+    saveFile: useSaveFileAction(setOpenFiles),
+    reloadFile: useReloadFileAction(setOpenFiles),
+    updateDraft: useUpdateDraftAction(setOpenFiles),
+    discardDraft: useDiscardDraftAction(setOpenFiles),
+  };
+}
+
 export function useFileViewerManagerState(projectRoot: string | null): FileViewerState {
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -234,32 +267,20 @@ export function useFileViewerManagerState(projectRoot: string | null): FileViewe
   useOpenFileListener(openFile);
   useNewFileListener(setOpenFiles, setActiveIndex);
 
-  const closeFile = useCloseFileAction(setOpenFiles, setActiveIndex);
-  const closeOthers = useCloseOthersAction(setOpenFiles, setActiveIndex);
-  const closeToRight = useCloseToRightAction(setOpenFiles, setActiveIndex);
-  const closeAll = useCloseAllAction(setOpenFiles, setActiveIndex);
-  const setActive = useSetActiveAction(setOpenFiles, setActiveIndex);
-  const pinTab = usePinTabAction(setOpenFiles);
-  const unpinTab = useUnpinTabAction(setOpenFiles);
-  const togglePin = useTogglePinAction(setOpenFiles);
-  const setDirty = useSetDirtyAction(setOpenFiles);
-  const saveFile = useSaveFileAction(setOpenFiles);
-  const reloadFile = useReloadFileAction(setOpenFiles);
-  const updateDraft = useUpdateDraftAction(setOpenFiles);
-  const discardDraft = useDiscardDraftAction(setOpenFiles);
-
-  useSaveAllDirtyListener(openFilesRef, saveFile);
-  useSaveActiveFileListener(openFilesRef, activeIndexRef, saveFile);
-  useCloseActiveTabListener(openFilesRef, activeIndexRef, closeFile);
+  const actions = useTabActions(setOpenFiles, setActiveIndex);
+  useSaveAllDirtyListener(openFilesRef, actions.saveFile);
+  useSaveActiveFileListener(openFilesRef, activeIndexRef, actions.saveFile);
+  useCloseActiveTabListener(openFilesRef, activeIndexRef, actions.closeFile);
 
   const { split, splitRight, closeSplit, setActiveSplit, setSplitRatio, rightFile } = useSplitState(openFiles, activeIndex);
   useSplitEditorListener(splitRight, closeSplit, split.isSplit);
 
+  const activePath = openFiles[activeIndex]?.path ?? null;
+  const nav = useNavigationHistory(activePath, actions.setActive);
+
   return {
     openFiles, activeIndex, activeFile: openFiles[activeIndex] ?? null,
-    openFile, openFilePreview, closeFile, closeOthers, closeToRight, closeAll,
-    setActive, pinTab, unpinTab, togglePin, saveFile, setDirty, reloadFile,
-    updateDraft, discardDraft, split, splitRight, closeSplit, setActiveSplit,
-    setSplitRatio, rightFile,
+    openFile, openFilePreview, ...actions, split, splitRight, closeSplit,
+    setActiveSplit, setSplitRatio, rightFile, ...nav,
   };
 }

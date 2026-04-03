@@ -10,7 +10,7 @@ import React from 'react';
 const S = { flexShrink: 0 } as const;
 
 /** Generic document / file icon */
-export function DocIcon({ color }: { color: string }): React.ReactElement<any> {
+export function DocIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M3 2h7l3 3v9H3V2z" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1" strokeLinejoin="round" />
@@ -23,7 +23,7 @@ export function DocIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** "TS" badge icon */
-export function TsIcon({ color }: { color: string }): React.ReactElement<any> {
+export function TsIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="2" y="2" width="12" height="12" rx="2" fill={color} />
@@ -33,7 +33,7 @@ export function TsIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** "JS" badge icon */
-export function JsIcon({ color }: { color: string }): React.ReactElement<any> {
+export function JsIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="2" y="2" width="12" height="12" rx="2" fill={color} />
@@ -43,7 +43,7 @@ export function JsIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Python icon */
-export function PyIcon({ color }: { color: string }): React.ReactElement<any> {
+export function PyIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="3" y="2.5" width="6" height="5.5" rx="1.5" fill={color} />
@@ -55,7 +55,7 @@ export function PyIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** JSON curly brace icon */
-export function JsonIcon({ color }: { color: string }): React.ReactElement<any> {
+export function JsonIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <text x="8" y="12" textAnchor="middle" fontSize="11" fontWeight="bold" fontFamily="monospace" fill={color}>{'{'}</text>
@@ -64,7 +64,7 @@ export function JsonIcon({ color }: { color: string }): React.ReactElement<any> 
 }
 
 /** Markdown icon */
-export function MdIcon({ color }: { color: string }): React.ReactElement<any> {
+export function MdIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M2 12V4l4 5 4-5v8" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -74,7 +74,7 @@ export function MdIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** CSS hashtag icon */
-export function CssIcon({ color }: { color: string }): React.ReactElement<any> {
+export function CssIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <line x1="5" y1="3" x2="4" y2="13" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
@@ -86,7 +86,7 @@ export function CssIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** HTML angle-bracket icon */
-export function HtmlIcon({ color }: { color: string }): React.ReactElement<any> {
+export function HtmlIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M4 5L1 8l3 3" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -97,7 +97,7 @@ export function HtmlIcon({ color }: { color: string }): React.ReactElement<any> 
 }
 
 /** YAML/TOML dash-list icon */
-export function YamlIcon({ color }: { color: string }): React.ReactElement<any> {
+export function YamlIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <line x1="3" y1="4.5" x2="5" y2="4.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
@@ -111,7 +111,7 @@ export function YamlIcon({ color }: { color: string }): React.ReactElement<any> 
 }
 
 /** Rust gear icon */
-export function RsIcon({ color }: { color: string }): React.ReactElement<any> {
+export function RsIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <circle cx="8" cy="8" r="2.5" fill={color} />
@@ -127,7 +127,7 @@ export function RsIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Go badge icon */
-export function GoIcon({ color }: { color: string }): React.ReactElement<any> {
+export function GoIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="2" y="2" width="12" height="12" rx="2" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="1" />
@@ -137,7 +137,7 @@ export function GoIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Shell terminal icon */
-export function ShIcon({ color }: { color: string }): React.ReactElement<any> {
+export function ShIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill={color} fillOpacity="0.1" stroke={color} strokeWidth="1" />
@@ -148,7 +148,7 @@ export function ShIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Image mountain icon */
-export function ImgIcon({ color }: { color: string }): React.ReactElement<any> {
+export function ImgIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill={color} fillOpacity="0.1" stroke={color} strokeWidth="1" />
@@ -159,7 +159,7 @@ export function ImgIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Config gear icon */
-export function CfgIcon({ color }: { color: string }): React.ReactElement<any> {
+export function CfgIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <circle cx="8" cy="8" r="2" fill={color} />
@@ -175,7 +175,7 @@ export function CfgIcon({ color }: { color: string }): React.ReactElement<any> {
 }
 
 /** Lock icon for lock files */
-export function LockIcon({ color }: { color: string }): React.ReactElement<any> {
+export function LockIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -186,7 +186,7 @@ export function LockIcon({ color }: { color: string }): React.ReactElement<any> 
 }
 
 /** Open folder SVG */
-export function FolderOpenSvg({ color }: { color: string }): React.ReactElement<any> {
+export function FolderOpenSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M1.5 3.5h4l1.5 1.5h7.5v8h-13z" fill="none" stroke={color} strokeWidth="1" strokeLinejoin="round" />
@@ -196,7 +196,7 @@ export function FolderOpenSvg({ color }: { color: string }): React.ReactElement<
 }
 
 /** Closed folder SVG */
-export function FolderClosedSvg({ color }: { color: string }): React.ReactElement<any> {
+export function FolderClosedSvg({ color }: { color: string }): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" style={S}>
       <path d="M1.5 3.5h4l1.5 1.5h7.5v8h-13z" fill={color} fillOpacity="0.15" stroke={color} strokeWidth="1" strokeLinejoin="round" />

@@ -8,6 +8,8 @@ import path from 'path';
 
 import { getErrorMessage } from '../agentChat/utils';
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager';
+import { getLatestClaudeUsageSnapshot } from '../claudeRateLimits';
+import { getLatestCodexUsageSnapshot } from '../codexRateLimits';
 import { clearCostHistory, type CostEntry, getCostHistory, saveCostEntry } from '../costHistory';
 import {
   aggregateUsageSummary,
@@ -200,6 +202,15 @@ export function registerUsageHandlers(channels: ChannelList): void {
   registerChannel(channels, 'usage:getWindowedUsage', async () =>
     runQuery(async () => ({
       windowed: aggregateWindowedUsage(await getCostHistory()),
+    })),
+  );
+  registerChannel(channels, 'usage:getUsageWindowSnapshot', async () =>
+    runQuery(async () => ({
+      snapshot: {
+        fetchedAt: Date.now(),
+        claude: getLatestClaudeUsageSnapshot(),
+        codex: await getLatestCodexUsageSnapshot(),
+      },
     })),
   );
 }

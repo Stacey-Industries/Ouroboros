@@ -78,7 +78,7 @@ function FileFilterTag({
 }: {
   label: string;
   onRemove?: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span className="text-text-semantic-secondary" style={tagStyle}>
       {label}
@@ -96,7 +96,7 @@ function FileFilterTag({
   );
 }
 
-function FilterInputError({ message }: { message: string | null }): React.ReactElement<any> | null {
+function FilterInputError({ message }: { message: string | null }): React.ReactElement | null {
   if (!message) return null;
 
   return (
@@ -121,7 +121,7 @@ function FilterInputError({ message }: { message: string | null }): React.ReactE
   );
 }
 
-function BaselinePatternsSection(): React.ReactElement<any> {
+function BaselinePatternsSection(): React.ReactElement {
   return (
     <section>
       <SectionLabel>Always Ignored (built-in)</SectionLabel>
@@ -150,7 +150,7 @@ function FilterInput({
   inputValue: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <input
       ref={inputRef}
@@ -189,7 +189,7 @@ function PatternInputRow({
   onAdd: () => void;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div style={inputRowStyle}>
       <div style={inputWrapperStyle}>
@@ -215,7 +215,7 @@ function ActivePatternList({
 }: {
   patterns: string[];
   onRemove: (pattern: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (patterns.length === 0) {
     return (
       <p className="text-text-semantic-muted" style={emptyStateStyle}>
@@ -241,7 +241,7 @@ function CustomPatternsSection({
   patterns: string[];
   input: FileFilterInputState;
   onRemove: (pattern: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <section>
       <SectionLabel>Custom Ignore Patterns</SectionLabel>
@@ -273,7 +273,7 @@ function CustomPatternsSection({
   );
 }
 
-export function FileFilterSection({ draft, onChange }: FileFilterSectionProps): React.ReactElement<any> {
+export function FileFilterSection({ draft, onChange }: FileFilterSectionProps): React.ReactElement {
   const patterns = draft.fileTreeIgnorePatterns ?? [];
   const input = useFileFilterInput(patterns, onChange);
 

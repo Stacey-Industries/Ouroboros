@@ -5,6 +5,7 @@ import { closeThreadStore } from './agentChat/threadStore';
 import { getCredential } from './auth/credentialStore';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
+import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoller';
 import {
   getGraphController,
   GraphController,
@@ -108,6 +109,7 @@ async function startBackgroundServices(win: BrowserWindow): Promise<void> {
   await runStartupStep('[main] failed to start IDE tool server:', startIdeTools);
   await runStartupStep('[main] hook installer error:', installHooks);
   await runStartupStep('[main] extensions init error:', initExtensions);
+  startClaudeUsagePoller();
 }
 
 function registerRenderProcessCrashLogging(): void {
@@ -259,6 +261,7 @@ app.on('window-all-closed', async () => {
 // Handlers are removed here (not in window-all-closed) so that in-flight
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
+  stopClaudeUsagePoller();
   cleanupIpcHandlers();
   closeCostHistoryDb();
   closeThreadStore();

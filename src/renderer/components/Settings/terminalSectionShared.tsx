@@ -180,7 +180,7 @@ export function PresetButton({
   children,
   onClick,
   title,
-}: PresetButtonProps): React.ReactElement<any> {
+}: PresetButtonProps): React.ReactElement {
   return (
     <button
       onClick={onClick}
@@ -207,7 +207,7 @@ export function StepButton({
   disabled,
   label,
   onClick,
-}: StepButtonProps): React.ReactElement<any> {
+}: StepButtonProps): React.ReactElement {
   return (
     <button
       onClick={onClick}
@@ -265,7 +265,7 @@ export function FontSizeResetButton({
 }: {
   fontSize: number;
   onReset: () => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (fontSize === DEFAULT_FONT_SIZE) {
     return null;
   }

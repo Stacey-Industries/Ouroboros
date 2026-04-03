@@ -53,7 +53,7 @@ const SessionCardList = memo(function SessionCardList({
   onReviewChanges,
   onUpdateNotes,
   sessions,
-}: SessionCardListProps): React.ReactElement<any> {
+}: SessionCardListProps): React.ReactElement<unknown> {
   const childCounts = useMemo(() => buildChildCountMap(sessions), [sessions]);
 
   return (
@@ -77,7 +77,7 @@ const NoMatchesState = memo(function NoMatchesState({
   query,
 }: {
   query: string;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div className="px-4 py-6 text-center text-[12px] italic text-text-semantic-faint">
       No sessions match &ldquo;{query}&rdquo;
@@ -97,7 +97,7 @@ const CompareModePane = memo(function CompareModePane({
   handleSelectCompareA: (id: string) => void;
   handleSelectCompareB: (id: string) => void;
   sessions: AgentSession[];
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div
       className="flex-1 min-h-0"
@@ -140,7 +140,7 @@ function CurrentSessionsView({
   updateNotes,
   useTree,
   visibleCurrentSessions,
-}: Omit<NormalMonitorPaneProps, 'filterQuery' | 'visibleHistoricalSessions'>): React.ReactElement<any> {
+}: Omit<NormalMonitorPaneProps, 'filterQuery' | 'visibleHistoricalSessions'>): React.ReactElement<unknown> {
   if (useTree) {
     return <AgentTree sessions={visibleCurrentSessions} onDismiss={dismiss} />;
   }
@@ -164,7 +164,7 @@ const NormalMonitorPane = memo(function NormalMonitorPane({
   useTree,
   visibleCurrentSessions,
   visibleHistoricalSessions,
-}: NormalMonitorPaneProps): React.ReactElement<any> {
+}: NormalMonitorPaneProps): React.ReactElement<unknown> {
   const hasVisibleSessions =
     visibleCurrentSessions.length > 0 || visibleHistoricalSessions.length > 0;
   if (!hasVisibleSessions)
@@ -193,7 +193,7 @@ const NormalMonitorPane = memo(function NormalMonitorPane({
 
 function resolveMultiSessionContent(
   props: AgentMonitorManagerContentProps,
-): React.ReactElement<any> | null {
+): React.ReactElement<unknown> | null {
   if (props.multiSessionMode === 'launcher') {
     return (
       <div className="flex-1 min-h-0 overflow-hidden">
@@ -217,7 +217,7 @@ function resolveMultiSessionContent(
   return null;
 }
 
-function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactElement<any> {
+function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactElement<unknown> {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <NormalMonitorPane
@@ -236,7 +236,7 @@ function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactE
 
 const ResolvedModeContent = memo(function ResolvedModeContent(
   props: AgentMonitorManagerContentProps,
-): React.ReactElement<any> {
+): React.ReactElement<unknown> {
   const multiSession = resolveMultiSessionContent(props);
   if (multiSession) return multiSession;
 
@@ -262,6 +262,6 @@ const ResolvedModeContent = memo(function ResolvedModeContent(
 
 export const AgentMonitorManagerContent = memo(function AgentMonitorManagerContent(
   props: AgentMonitorManagerContentProps,
-): React.ReactElement<any> {
+): React.ReactElement<unknown> {
   return <ResolvedModeContent {...props} />;
 });

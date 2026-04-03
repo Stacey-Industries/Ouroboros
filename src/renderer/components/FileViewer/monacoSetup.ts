@@ -5,6 +5,9 @@
  * Use `detectLanguage(filePath)` to map file extensions to Monaco language IDs.
  */
 
+import { registerInlineCompletionProvider } from './monacoInlineCompletions';
+import { registerAllLspProviders } from './monacoLspProviders';
+
 let initialized = false;
 
 /**
@@ -30,6 +33,12 @@ export function initMonaco(): void {
       },
     };
   }
+
+  // Register global LSP providers (hover, completions, definition).
+  registerAllLspProviders();
+
+  // Register inline AI completion provider (ghost text).
+  registerInlineCompletionProvider();
 }
 
 // ────────────────────────────────────────────────────────────────────────────

@@ -1,3 +1,6 @@
+import { getConfigValue } from '../config';
+import log from '../logger';
+import { logRouterOverride, logRoutingDecision, routePromptSync } from '../router';
 import type { ResolvedSendOptions } from './chatOrchestrationRequestSupportHelpers';
 import {
   buildContextSummary,
@@ -23,6 +26,55 @@ export interface PreparedSend {
   requestedAt: number;
   taskRequest: import('../orchestration/types').TaskRequest;
   thread: AgentChatThreadRecord;
+  /** How the model was selected for this send ('rule', 'classifier', 'user', etc.). */
+  routedBy?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Model router integration
+// ---------------------------------------------------------------------------
+
+interface RouterOverrideResult {
+  overrides: AgentChatSendMessageRequest['overrides'] | undefined;
+  routedBy?: string;
+  tier?: string;
+}
+
+function logOverrideIfDiffers(
+  request: AgentChatSendMessageRequest,
+  previousAssistantMessage?: string,
+): void {
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.enabled) return;
+  const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
+  if (decision && decision.model !== request.overrides?.model) {
+    logRouterOverride(decision.tier, request.overrides!.model!, request.content.slice(0, 100));
+  }
+}
+
+function applyRouterOverride(
+  request: AgentChatSendMessageRequest,
+  previousAssistantMessage?: string,
+): RouterOverrideResult {
+  if (request.overrides?.model) {
+    logOverrideIfDiffers(request, previousAssistantMessage);
+    return { overrides: request.overrides, routedBy: 'user' };
+  }
+
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.enabled) return { overrides: request.overrides };
+
+  const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
+  logRoutingDecision(request.content, decision);
+
+  if (!decision) return { overrides: request.overrides };
+
+  log.info('[router] injecting model override:', decision.model);
+  return {
+    overrides: { ...request.overrides, model: decision.model },
+    routedBy: decision.routedBy,
+    tier: decision.tier,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -85,12 +137,25 @@ async function resolveThreadForSend(args: {
 // Public API
 // ---------------------------------------------------------------------------
 
+function resolveAutoEffort(tier?: string, model?: string): string {
+  if (tier === 'HAIKU') return 'low';
+  if (tier === 'OPUS') return 'high';
+  if (tier === 'SONNET') return 'medium';
+  if (model?.includes('haiku')) return 'low';
+  if (model?.includes('opus')) return 'high';
+  return 'medium';
+}
+
 export function resolveSendOptions(
   settings: ResolvedAgentChatSettings,
   request: AgentChatSendMessageRequest,
+  previousAssistantMessage?: string,
 ): ResolvedSendOptions {
   const provider = request.overrides?.provider ?? settings.defaultProvider;
-  return buildResolvedOptions(settings, provider, request.overrides);
+  const { overrides, routedBy, tier } = applyRouterOverride(request, previousAssistantMessage);
+  const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
+  if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);
+  return resolved;
 }
 
 export async function preparePendingSend(args: {
@@ -128,6 +193,7 @@ export async function preparePendingSend(args: {
       thread,
     }),
     thread,
+    routedBy: args.resolved.routedBy,
   };
 }
 

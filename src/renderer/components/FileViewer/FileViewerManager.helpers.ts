@@ -32,7 +32,12 @@ export interface OpenFile {
   isDirtyOnDisk: boolean;
   originalContent: string | null;
   diskContent: string | null;
-  isImage?: boolean; isPdf?: boolean; isBinary?: boolean; binaryContent?: Uint8Array;
+  isImage?: boolean;
+  isPdf?: boolean;
+  isAudio?: boolean;
+  isVideo?: boolean;
+  isBinary?: boolean;
+  binaryContent?: Uint8Array;
   isDirty: boolean;
   saveError: string | null;
   /** Preview tab: italic title, replaced by next preview open. Pinned on edit or double-click. */
@@ -50,6 +55,8 @@ export interface SplitState {
 
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif']);
 const PDF_EXTENSIONS = new Set(['pdf']);
+const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'ogg', 'oga', 'm4a', 'aac', 'flac']);
+const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'm4v', 'ogv']);
 
 export function basename(filePath: string): string {
   return filePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? filePath;
@@ -69,6 +76,16 @@ export function isPdfFile(filePath: string): boolean {
   return PDF_EXTENSIONS.has(extension);
 }
 
+export function isAudioFile(filePath: string): boolean {
+  const extension = filePath.toLowerCase().split('.').pop() ?? '';
+  return AUDIO_EXTENSIONS.has(extension);
+}
+
+export function isVideoFile(filePath: string): boolean {
+  const extension = filePath.toLowerCase().split('.').pop() ?? '';
+  return VIDEO_EXTENSIONS.has(extension);
+}
+
 export function createLoadingFile(filePath: string, isPreview = false): OpenFile {
   return {
     path: filePath, name: basename(filePath), content: null, isLoading: true,
@@ -82,23 +99,113 @@ export function updateOpenFile(files: OpenFile[], filePath: string, update: (fil
 }
 
 function toReadErrorFile(file: OpenFile, result: FileReadResult): OpenFile {
-  return { ...file, isLoading: false, error: result.error ?? 'Failed to read file', content: null, isImage: false, isPdf: false, isBinary: false, saveError: null };
+  return {
+    ...file,
+    isLoading: false,
+    error: result.error ?? 'Failed to read file',
+    content: null,
+    isImage: false,
+    isPdf: false,
+    isAudio: false,
+    isVideo: false,
+    isBinary: false,
+    saveError: null,
+  };
 }
 
 function toImageViewerFile(file: OpenFile): OpenFile {
-  return { ...file, isLoading: false, error: null, content: null, isImage: true, isPdf: false, isBinary: false, saveError: null };
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: true,
+    isPdf: false,
+    isAudio: false,
+    isVideo: false,
+    isBinary: false,
+    saveError: null,
+  };
 }
 
 function toPdfFile(file: OpenFile): OpenFile {
-  return { ...file, isLoading: false, error: null, content: null, isImage: false, isPdf: true, isBinary: false, saveError: null };
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: false,
+    isPdf: true,
+    isAudio: false,
+    isVideo: false,
+    isBinary: false,
+    saveError: null,
+  };
+}
+
+function toAudioFile(file: OpenFile): OpenFile {
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: false,
+    isPdf: false,
+    isAudio: true,
+    isVideo: false,
+    isBinary: false,
+    saveError: null,
+  };
+}
+
+function toVideoFile(file: OpenFile): OpenFile {
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: false,
+    isPdf: false,
+    isAudio: false,
+    isVideo: true,
+    isBinary: false,
+    saveError: null,
+  };
 }
 
 function toBinaryFile(file: OpenFile, binaryContent?: Uint8Array): OpenFile {
-  return { ...file, isLoading: false, error: null, content: null, isImage: false, isPdf: false, isBinary: true, binaryContent, saveError: null };
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content: null,
+    isImage: false,
+    isPdf: false,
+    isAudio: false,
+    isVideo: false,
+    isBinary: true,
+    binaryContent,
+    saveError: null,
+  };
 }
 
 function toTextFile(file: OpenFile, content: string): OpenFile {
-  return { ...file, isLoading: false, error: null, content, isDirtyOnDisk: false, originalContent: content, diskContent: content, isImage: false, isPdf: false, isBinary: false, isDirty: false, saveError: null };
+  return {
+    ...file,
+    isLoading: false,
+    error: null,
+    content,
+    isDirtyOnDisk: false,
+    originalContent: content,
+    diskContent: content,
+    isImage: false,
+    isPdf: false,
+    isAudio: false,
+    isVideo: false,
+    isBinary: false,
+    isDirty: false,
+    saveError: null,
+  };
 }
 
 export function toLoadedFile(file: OpenFile, filePath: string, result: FileReadResult): OpenFile {
@@ -106,6 +213,8 @@ export function toLoadedFile(file: OpenFile, filePath: string, result: FileReadR
   const content = result.content ?? '';
   if (isImageFile(filePath)) return toImageViewerFile(file);
   if (isPdfFile(filePath)) return toPdfFile(file);
+  if (isAudioFile(filePath)) return toAudioFile(file);
+  if (isVideoFile(filePath)) return toVideoFile(file);
   if (looksLikeBinary(content)) return toBinaryFile(file);
   return toTextFile(file, content);
 }
@@ -161,6 +270,9 @@ export function primeOpenFile(filePath: string, setOpenFiles: SetOpenFiles, setA
 export async function readTextFile(filePath: string): Promise<FileReadResult> {
   const result = await readFile(filePath);
   if (!result.success) return result;
+  if (isImageFile(filePath) || isPdfFile(filePath) || isAudioFile(filePath) || isVideoFile(filePath)) {
+    return result;
+  }
   const content = result.content ?? '';
   if (looksLikeBinary(content)) return { success: false, error: 'Binary file - cannot display' };
   return { success: true, content };
@@ -179,11 +291,16 @@ export function markDeletedFile(filePath: string, setOpenFiles: SetOpenFiles): v
 }
 
 export async function reloadFileContent(filePath: string, setOpenFiles: SetOpenFiles): Promise<FileReadResult> {
-  const result = await readTextFile(filePath);
+  const result = await readFile(filePath);
   if (!result.success) return result;
-  const newContent = result.content ?? '';
-  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => applyDiskSnapshot(file, newContent)));
-  return { success: true, content: newContent };
+  setOpenFiles((prev) => updateOpenFile(prev, filePath, (file) => {
+    const next = toLoadedFile(file, filePath, result);
+    if (next.content == null) {
+      return { ...next, isDirtyOnDisk: false, error: null, saveError: null };
+    }
+    return applyDiskSnapshot(next, next.content);
+  }));
+  return result;
 }
 
 export const DEFAULT_SPLIT_STATE: SplitState = {

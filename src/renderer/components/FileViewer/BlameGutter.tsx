@@ -175,7 +175,7 @@ const BlameAnnotationRow = memo(function BlameAnnotationRow({
   blame,
   backgroundColor,
   onClick,
-}: BlameAnnotationRowProps): React.ReactElement<any> {
+}: BlameAnnotationRowProps): React.ReactElement {
   return (
     <div
       onClick={(event) => onClick(event, blame)}
@@ -206,7 +206,7 @@ const BlameRow = memo(function BlameRow({
   blameMap,
   firstInGroup,
   onClick,
-}: BlameRowProps): React.ReactElement<any> {
+}: BlameRowProps): React.ReactElement {
   if (row.type === 'fold-placeholder') {
     return <div style={EMPTY_ROW_STYLE} />;
   }
@@ -221,7 +221,7 @@ const BlameRow = memo(function BlameRow({
   return <BlameAnnotationRow blame={blame} backgroundColor={backgroundColor} onClick={onClick} />;
 });
 
-function BlameTooltipBackdrop({ onClose }: { onClose: () => void }): React.ReactElement<any> {
+function BlameTooltipBackdrop({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
     <div
       onClick={onClose}
@@ -247,7 +247,7 @@ function BlameTooltipCard({
   blame: BlameLine;
   top: number;
   left: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="text-text-semantic-primary"
@@ -274,7 +274,7 @@ function BlameTooltipCard({
 const BlameTooltip = memo(function BlameTooltip({
   tooltipInfo,
   onClose,
-}: BlameTooltipProps): React.ReactElement<any> | null {
+}: BlameTooltipProps): React.ReactElement | null {
   if (!tooltipInfo) return null;
   const { blame, top, left } = tooltipInfo;
   return (
@@ -288,7 +288,7 @@ const BlameTooltip = memo(function BlameTooltip({
 export const BlameGutter = memo(function BlameGutter({
   blameLines,
   rows,
-}: BlameGutterProps): React.ReactElement<any> {
+}: BlameGutterProps): React.ReactElement {
   const [tooltipInfo, setTooltipInfo] = useState<TooltipInfo | null>(null);
   const blameMap = useMemo(() => buildBlameMap(blameLines), [blameLines]);
   const firstInGroup = useMemo(() => buildFirstInGroup(rows, blameMap), [rows, blameMap]);

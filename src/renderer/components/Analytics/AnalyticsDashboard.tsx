@@ -10,7 +10,7 @@ import {
 } from './AnalyticsDashboardOverview';
 import { SessionDetailPanel, SessionHistoryTable } from './AnalyticsDashboardSessions';
 
-export const AnalyticsDashboard = memo(function AnalyticsDashboard(): React.ReactElement<any> {
+export const AnalyticsDashboard = memo(function AnalyticsDashboard(): React.ReactElement {
   const { agents } = useAgentEventsContext();
   const { sessions, aggregate, toolDistribution } = useSessionAnalytics(agents);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);

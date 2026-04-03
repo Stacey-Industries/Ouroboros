@@ -37,7 +37,7 @@ function summarizeToolTypes(blocks: Array<AgentChatContentBlock & { kind: 'tool_
  * Shows "Read 3 files, Edited 2 files" etc. with expand/collapse chevron.
  * Individual tool cards render inside the expanded group.
  */
-export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ blocks, defaultExpanded }: AgentChatToolGroupProps): React.ReactElement<any> {
+export const AgentChatToolGroup = React.memo(function AgentChatToolGroup({ blocks, defaultExpanded }: AgentChatToolGroupProps): React.ReactElement {
   const [expanded, setExpanded] = useState(defaultExpanded ?? blocks.some((b) => b.status === 'running'));
 
   useEffect(() => {
@@ -87,7 +87,7 @@ function ToolGroupHeader({
   summaryText: string;
   count: number;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button onClick={onToggle} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors duration-100 hover:opacity-80">
       <ChevronIcon collapsed={!expanded} />

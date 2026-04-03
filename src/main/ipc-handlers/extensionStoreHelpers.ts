@@ -12,79 +12,40 @@ import os from 'os';
 import path from 'path';
 
 import { store } from '../config';
+import {
+  type ExtensionIconThemeData,
+  type ExtensionProductIconThemeData,
+  loadExtensionIconThemes,
+  loadExtensionProductIconThemes,
+} from '../contributions/iconThemeLoader';
 import { loadExtensionThemes, type OuroborosTheme } from '../contributions/themeLoader';
 import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
 
-export interface VsxExtensionSummary {
-  namespace: string;
-  name: string;
-  displayName: string;
-  description: string;
-  version: string;
-  downloads: number;
-  rating: number | null;
-  averageRating: number | null;
-  timestamp: string;
-}
-
-export interface VsxExtensionDetail extends VsxExtensionSummary {
-  categories: string[];
-  tags: string[];
-  repository?: string;
-  homepage?: string;
-  bugs?: string;
-  icon?: string;
-  readme?: string;
-  allVersions: Record<string, string>;
-  files: Record<string, string>;
-}
-
-export interface InstalledVsxExtension {
-  id: string;
-  namespace: string;
-  name: string;
-  displayName: string;
-  version: string;
-  description: string;
-  installPath: string;
-  installedAt: string;
-  contributes: {
-    themes?: Array<{ label: string; uiTheme: string; path: string }>;
-    grammars?: Array<{ language: string; scopeName: string; path: string }>;
-    snippets?: Array<{ language: string; path: string }>;
-    languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>;
-  };
-}
-
-export interface InstallFromBufferOptions {
-  buffer: Buffer;
-  tempPath: string;
-  extensionId: string;
-  namespace: string;
-  name: string;
-  version: string;
-  displayName?: string;
-  description?: string;
-  existing: InstalledVsxExtension[];
-}
-
-interface PackageJsonContributes {
-  themes?: Array<{ label?: string; uiTheme?: string; path?: string }>;
-  grammars?: Array<{ language?: string; scopeName?: string; path?: string }>;
-  snippets?: Array<{ language?: string; path?: string }>;
-  languages?: Array<{ id?: string; extensions?: string[]; configuration?: string }>;
-}
-
-interface ExtensionPackageJson {
-  displayName?: string;
-  description?: string;
-  version?: string;
-  contributes?: PackageJsonContributes;
-  [key: string]: unknown;
-}
+export type { InstalledVsxExtension, InstallFromBufferOptions, VsxExtensionDetail, VsxExtensionSummary } from './extensionStoreTypes';
+import type { ExtensionPackageJson, InstalledVsxExtension, InstallFromBufferOptions, PackageJsonContributes } from './extensionStoreTypes';
 
 export const EXTENSIONS_DIR = path.join(os.homedir(), '.ouroboros', 'vsx-extensions');
+
+function resolveLocalizedString(
+  value: string | undefined,
+  bundle: Record<string, string>,
+): string | undefined {
+  if (!value) return value;
+  const match = /^%([^%]+)%$/.exec(value.trim());
+  if (!match) return value;
+  return bundle[match[1]] ?? value;
+}
+
+async function readLocalizationBundle(extensionRoot: string): Promise<Record<string, string>> {
+  const bundlePath = path.join(extensionRoot, 'package.nls.json');
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- extensionRoot is derived from validated extension archive contents
+    return JSON.parse(await fs.readFile(bundlePath, 'utf-8')) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
 
 // ─── Store accessors ─────────────────────────────────────────────────────────
 
@@ -105,46 +66,36 @@ export function setDisabledList(list: string[]): void {
 }
 
 export function broadcastToWindows(channel: string, data: unknown): void {
-  BrowserWindow.getAllWindows().forEach((w) => w.webContents.send(channel, data));
+  for (const w of BrowserWindow.getAllWindows()) {
+    try {
+      if (!w.isDestroyed()) w.webContents.send(channel, data);
+    } catch {
+      // Render frame disposed — skip this window
+    }
+  }
   broadcastToWebClients(channel, data);
 }
 
 // ─── Installation helpers ─────────────────────────────────────────────────────
 
-function buildContributes(
-  rawContributes: PackageJsonContributes,
-  extensionRoot: string,
-): InstalledVsxExtension['contributes'] {
-  const contributes: InstalledVsxExtension['contributes'] = {};
-  if (rawContributes.themes?.length)
-    contributes.themes = rawContributes.themes
-      .filter((t) => t.label && t.path)
-      .map((t) => ({
-        label: t.label!,
-        uiTheme: t.uiTheme ?? 'vs-dark',
-        path: path.join(extensionRoot, t.path!),
-      }));
-  if (rawContributes.grammars?.length)
-    contributes.grammars = rawContributes.grammars
-      .filter((g) => g.language && g.scopeName && g.path)
-      .map((g) => ({
-        language: g.language!,
-        scopeName: g.scopeName!,
-        path: path.join(extensionRoot, g.path!),
-      }));
-  if (rawContributes.snippets?.length)
-    contributes.snippets = rawContributes.snippets
-      .filter((s) => s.language && s.path)
-      .map((s) => ({ language: s.language!, path: path.join(extensionRoot, s.path!) }));
-  if (rawContributes.languages?.length)
-    contributes.languages = rawContributes.languages
-      .filter((l) => l.id)
-      .map((l) => ({
-        id: l.id!,
-        ...(l.extensions ? { extensions: l.extensions } : {}),
-        ...(l.configuration ? { configuration: path.join(extensionRoot, l.configuration) } : {}),
-      }));
-  return contributes;
+function buildThemeContributions(raw: PackageJsonContributes, root: string, bundle: Record<string, string>): InstalledVsxExtension['contributes'] {
+  const c: InstalledVsxExtension['contributes'] = {};
+  if (raw.themes?.length) c.themes = raw.themes.filter((t) => t.label && t.path).map((t) => ({ label: resolveLocalizedString(t.label!, bundle) ?? t.label!, uiTheme: t.uiTheme ?? 'vs-dark', path: path.join(root, t.path!) }));
+  if (raw.iconThemes?.length) c.iconThemes = raw.iconThemes.filter((t) => t.id && t.label && t.path).map((t) => ({ id: t.id!, label: resolveLocalizedString(t.label!, bundle) ?? t.label!, path: path.join(root, t.path!) }));
+  if (raw.productIconThemes?.length) c.productIconThemes = raw.productIconThemes.filter((t) => t.id && t.label && t.path).map((t) => ({ id: t.id!, label: resolveLocalizedString(t.label!, bundle) ?? t.label!, path: path.join(root, t.path!) }));
+  return c;
+}
+
+function buildCodeContributions(raw: PackageJsonContributes, root: string): InstalledVsxExtension['contributes'] {
+  const c: InstalledVsxExtension['contributes'] = {};
+  if (raw.grammars?.length) c.grammars = raw.grammars.filter((g) => g.language && g.scopeName && g.path).map((g) => ({ language: g.language!, scopeName: g.scopeName!, path: path.join(root, g.path!) }));
+  if (raw.snippets?.length) c.snippets = raw.snippets.filter((s) => s.language && s.path).map((s) => ({ language: s.language!, path: path.join(root, s.path!) }));
+  if (raw.languages?.length) c.languages = raw.languages.filter((l) => l.id).map((l) => ({ id: l.id!, ...(l.extensions ? { extensions: l.extensions } : {}), ...(l.configuration ? { configuration: path.join(root, l.configuration) } : {}) }));
+  return c;
+}
+
+function buildContributes(rawContributes: PackageJsonContributes, extensionRoot: string, localizationBundle: Record<string, string>): InstalledVsxExtension['contributes'] {
+  return { ...buildThemeContributions(rawContributes, extensionRoot, localizationBundle), ...buildCodeContributions(rawContributes, extensionRoot) };
 }
 
 async function readPackageJson(
@@ -185,6 +136,35 @@ async function extractAndParse(
   };
 }
 
+async function rehydrateInstalledEntry(
+  entry: InstalledVsxExtension,
+): Promise<InstalledVsxExtension> {
+  try {
+    const extensionRoot = path.join(entry.installPath, 'extension');
+    const pkgJsonPath = path.join(extensionRoot, 'package.json');
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- extensionRoot comes from an installed extension record
+    const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8')) as ExtensionPackageJson;
+    const localizationBundle = await readLocalizationBundle(extensionRoot);
+    return {
+      ...entry,
+      displayName:
+        resolveLocalizedString(pkgJson.displayName, localizationBundle) ?? entry.displayName,
+      description:
+        resolveLocalizedString(pkgJson.description, localizationBundle) ?? entry.description,
+      contributes: buildContributes(pkgJson.contributes ?? {}, extensionRoot, localizationBundle),
+    };
+  } catch {
+    return entry;
+  }
+}
+
+export async function refreshInstalledListFromDisk(): Promise<InstalledVsxExtension[]> {
+  const installed = getInstalledList();
+  const refreshed = await Promise.all(installed.map((entry) => rehydrateInstalledEntry(entry)));
+  setInstalledList(refreshed);
+  return refreshed;
+}
+
 function updateInstalledRegistry(
   extensionId: string,
   installed: InstalledVsxExtension,
@@ -215,14 +195,17 @@ export async function installExtensionFromBuffer(
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- tempPath derived from os.tmpdir() + sanitised extension ID
     await fs.writeFile(tempPath, buffer);
     const { pkgJson, targetDir, extensionRoot } = await extractAndParse(tempPath, extensionId);
-    const contributes = buildContributes(pkgJson.contributes ?? {}, extensionRoot);
+    const localizationBundle = await readLocalizationBundle(extensionRoot);
+    const contributes = buildContributes(pkgJson.contributes ?? {}, extensionRoot, localizationBundle);
     const installed: InstalledVsxExtension = {
       id: extensionId,
       namespace,
       name,
-      displayName: pkgJson.displayName ?? displayName ?? name,
+      displayName:
+        resolveLocalizedString(pkgJson.displayName, localizationBundle) ?? displayName ?? name,
       version,
-      description: pkgJson.description ?? description ?? '',
+      description:
+        resolveLocalizedString(pkgJson.description, localizationBundle) ?? description ?? '',
       installPath: targetDir,
       installedAt: new Date().toISOString(),
       contributes,
@@ -273,7 +256,7 @@ export async function disableContributions(id: string): Promise<Record<string, n
 }
 
 export async function getThemeContributions(): Promise<{ themes: OuroborosTheme[] }> {
-  const installed = getInstalledList();
+  const installed = await refreshInstalledListFromDisk();
   const disabled = new Set(getDisabledList());
   const allThemes: OuroborosTheme[] = [];
   for (const ext of installed) {
@@ -281,4 +264,30 @@ export async function getThemeContributions(): Promise<{ themes: OuroborosTheme[
     allThemes.push(...(await loadExtensionThemes(ext.id, ext.contributes.themes)));
   }
   return { themes: allThemes };
+}
+
+export async function getIconThemeContributions(): Promise<{ iconThemes: ExtensionIconThemeData[] }> {
+  const installed = await refreshInstalledListFromDisk();
+  const disabled = new Set(getDisabledList());
+  const allIconThemes: ExtensionIconThemeData[] = [];
+  for (const ext of installed) {
+    if (disabled.has(ext.id) || !ext.contributes.iconThemes?.length) continue;
+    allIconThemes.push(...(await loadExtensionIconThemes(ext.id, ext.contributes.iconThemes)));
+  }
+  return { iconThemes: allIconThemes };
+}
+
+export async function getProductIconThemeContributions(): Promise<{
+  productIconThemes: ExtensionProductIconThemeData[];
+}> {
+  const installed = await refreshInstalledListFromDisk();
+  const disabled = new Set(getDisabledList());
+  const allProductIconThemes: ExtensionProductIconThemeData[] = [];
+  for (const ext of installed) {
+    if (disabled.has(ext.id) || !ext.contributes.productIconThemes?.length) continue;
+    allProductIconThemes.push(
+      ...(await loadExtensionProductIconThemes(ext.id, ext.contributes.productIconThemes)),
+    );
+  }
+  return { productIconThemes: allProductIconThemes };
 }

@@ -7,6 +7,7 @@
 import React, { useCallback } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
+import { AboutModal } from '../AboutModal';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
@@ -134,7 +135,7 @@ function LayoutProviders({
   children,
 }: React.PropsWithChildren<{
   projectRoot: string | null;
-}>): React.ReactElement<any> {
+}>): React.ReactElement {
   return (
     <ErrorBoundary label="Editor">
       <FileViewerManager projectRoot={projectRoot}>
@@ -158,7 +159,7 @@ function TerminalPanelContent({
   handleToggleRecording,
   handleSplit,
   handleCloseSplit,
-}: TerminalPanelContentProps): React.ReactElement<any> {
+}: TerminalPanelContentProps): React.ReactElement {
   return (
     <ErrorBoundary label="Terminal">
       <TerminalManager
@@ -184,7 +185,7 @@ function ProjectPickerSlot({
   addProjectRoot,
   setRecentProjects,
   rootCount,
-}: ProjectPickerSlotProps): React.ReactElement<any> {
+}: ProjectPickerSlotProps): React.ReactElement {
   const handleAddProject = useCallback(
     (path: string) => {
       addProjectRoot(path);
@@ -206,7 +207,7 @@ function ProjectPickerSlot({
   );
 }
 
-function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement<any> {
+function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
   return (
     <AppLayoutConnected
       terminalControl={props.terminalControl}
@@ -238,7 +239,7 @@ function LayoutOverlays({
   symbolSearchOpen,
   setSymbolSearchOpen,
   perfOverlayVisible,
-}: LayoutOverlaysProps): React.ReactElement<any> {
+}: LayoutOverlaysProps): React.ReactElement {
   return (
     <>
       <CommandPalette
@@ -259,11 +260,12 @@ function LayoutOverlays({
         projectRoot={projectRoot}
       />
       <PerformanceOverlay visible={perfOverlayVisible} />
+      <AboutModal />
     </>
   );
 }
 
-export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement<any> {
+export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
   return (
     <LayoutProviders projectRoot={props.projectRoot}>
       <LayoutChrome {...props} />

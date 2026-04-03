@@ -69,4 +69,6 @@ export interface AgentChatBridgeRuntime {
   threadStore: AgentChatThreadStore;
   streamChunkListeners: Set<StreamChunkListener>;
   activeSends: Map<string, ActiveStreamContext>;
+  /** Thread IDs where cancel was requested before taskId was available. */
+  pendingCancels: Set<string>;
 }

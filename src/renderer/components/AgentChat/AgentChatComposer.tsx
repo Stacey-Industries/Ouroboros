@@ -56,6 +56,7 @@ export type AgentChatComposerProps = {
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   isStreaming?: boolean;
+  routedBy?: string;
   slashCommandContext?: SlashCommandContext;
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
@@ -64,33 +65,27 @@ export type AgentChatComposerProps = {
 /* ---------- ComposerFooter ---------- */
 
 type ComposerFooterProps = {
-  chatOverrides?: ChatOverrides;
-  codexModels?: CodexModelOption[];
-  codexSettingsModel?: string;
-  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  modelProviders?: ModelProvider[];
+  chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[];
+  codexSettingsModel?: string; defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  modelProviders?: ModelProvider[]; routedBy?: string; settingsModel?: string;
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
-  settingsModel?: string;
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
   isStreaming?: boolean;
 };
 
-function ComposerFooter(props: ComposerFooterProps): React.ReactElement<any> | null {
-  return props.chatOverrides && props.onChatOverridesChange ? (
+function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
+  if (!props.chatOverrides || !props.onChatOverridesChange) return null;
+  return (
     <ChatControlsBar
-      overrides={props.chatOverrides}
-      onChange={props.onChatOverridesChange}
-      settingsModel={props.settingsModel}
-      codexSettingsModel={props.codexSettingsModel}
-      defaultProvider={props.defaultProvider}
-      providers={props.modelProviders}
-      codexModels={props.codexModels}
-      threadModelUsage={props.threadModelUsage}
-      streamingTokenUsage={props.streamingTokenUsage}
-      isStreaming={props.isStreaming}
+      overrides={props.chatOverrides} onChange={props.onChatOverridesChange}
+      settingsModel={props.settingsModel} codexSettingsModel={props.codexSettingsModel}
+      defaultProvider={props.defaultProvider} providers={props.modelProviders}
+      codexModels={props.codexModels} threadModelUsage={props.threadModelUsage}
+      streamingTokenUsage={props.streamingTokenUsage} isStreaming={props.isStreaming}
+      routedBy={props.routedBy}
     />
-  ) : null;
+  );
 }
 
 /* ---------- useComposerState ---------- */
@@ -200,7 +195,7 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
 
 type ComposerSubProps = { state: ComposerState; composerProps: AgentChatComposerProps };
 
-function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
+function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
   const { allFiles = [], autocompleteResults = [], isAutocompleteOpen = false, mentions = [] } = cp;
   const { handlers, slashCommands } = state;
   return (
@@ -227,7 +222,7 @@ function ComposerMenusSection({ state, composerProps: cp }: ComposerSubProps): R
 
 /* ---------- ComposerBody ---------- */
 
-function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
+function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
   const { attachmentHandlers, handlers } = state;
   return (
     <ComposerInput
@@ -252,7 +247,7 @@ function ComposerInputSection({ state, composerProps: cp }: ComposerSubProps): R
   );
 }
 
-function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement<any> {
+function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.ReactElement {
   const mentions = cp.mentions ?? [];
   const totalMentionTokens = mentions.reduce((sum, m) => sum + m.estimatedTokens, 0);
   return (
@@ -281,7 +276,7 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
 
 /* ---------- AgentChatComposer ---------- */
 
-export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement<any> {
+export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
   const {
     chatOverrides,
     onChatOverridesChange,
@@ -293,6 +288,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
     threadModelUsage,
     streamingTokenUsage,
     isStreaming,
+    routedBy,
   } = composerProps;
   const state = useComposerState(composerProps);
   const { attachmentHandlers } = state;
@@ -315,6 +311,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
         streamingTokenUsage={streamingTokenUsage}
         threadModelUsage={threadModelUsage}
         isStreaming={isStreaming}
+        routedBy={routedBy}
       />
     </div>
   );

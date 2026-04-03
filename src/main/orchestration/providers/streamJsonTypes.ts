@@ -71,9 +71,10 @@ export interface StreamJsonUserEvent {
 
 export interface StreamJsonResultEvent {
   type: 'result'
-  subtype: 'success' | 'error'
+  subtype: 'success' | 'error' | 'error_during_execution'
   is_error: boolean
   result: string
+  errors?: string[]
   duration_ms?: number
   total_cost_usd?: number
   session_id?: string

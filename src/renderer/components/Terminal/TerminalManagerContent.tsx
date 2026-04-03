@@ -48,7 +48,7 @@ function ExitedActionButton({
   className: string;
   onClick: () => void;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button onClick={onClick} className={className}>
       {children}
@@ -64,7 +64,7 @@ function TerminalExitedOverlay({
   sessionId: string;
   onRestart: (id: string) => void;
   onClose: (id: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className={EXITED_CONTAINER_CLASS}>
       <span className="opacity-60">Process exited</span>
@@ -96,7 +96,7 @@ function SharedTerminalInstance({
   syncInput,
   allSessionIds,
   onToggleSync,
-}: SharedTerminalProps): React.ReactElement<any> {
+}: SharedTerminalProps): React.ReactElement {
   return (
     <TerminalInstance
       sessionId={sessionId}
@@ -171,7 +171,7 @@ function TerminalPaneContent({
   onRestart,
   onClose,
   ...terminalProps
-}: TerminalPaneContentProps): React.ReactElement<any> {
+}: TerminalPaneContentProps): React.ReactElement {
   return status === 'running' ? (
     <SharedTerminalInstance {...terminalProps} />
   ) : (
@@ -183,7 +183,7 @@ function TerminalPaneContent({
   );
 }
 
-function SplitPaneLayout(props: ActiveTerminalContentProps): React.ReactElement<any> {
+function SplitPaneLayout(props: ActiveTerminalContentProps): React.ReactElement {
   const { splitRatio, containerRef, handleDividerPointerDown } = useSplitResize();
   const splitId = props.session.splitSessionId!;
   const closeSplit = () => props.onCloseSplit(props.session.id);
@@ -223,7 +223,7 @@ function SplitPaneLayout(props: ActiveTerminalContentProps): React.ReactElement<
 
 function SingleTerminalContent(
   props: Omit<ActiveTerminalContentProps, 'onCloseSplit'>,
-): React.ReactElement<any> {
+): React.ReactElement {
   const sharedProps = getSharedTerminalProps(props);
 
   return props.session.status === 'running' ? (
@@ -237,7 +237,7 @@ function SingleTerminalContent(
   );
 }
 
-export function ActiveTerminalContent(props: ActiveTerminalContentProps): React.ReactElement<any> {
+export function ActiveTerminalContent(props: ActiveTerminalContentProps): React.ReactElement {
   return props.session.splitSessionId ? (
     <SplitPaneLayout {...props} />
   ) : (

@@ -6,7 +6,7 @@ import { ThemeEditorView } from './ThemeEditor.parts';
 
 export type ThemeEditorProps = ThemeEditorInput;
 
-export function ThemeEditor(props: ThemeEditorProps): React.ReactElement<any> {
+export function ThemeEditor(props: ThemeEditorProps): React.ReactElement {
   const model = useThemeEditorModel(props);
   return <ThemeEditorView {...model} />;
 }

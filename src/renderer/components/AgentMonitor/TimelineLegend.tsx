@@ -6,7 +6,7 @@ import React, { memo } from 'react';
 
 import { LEGEND_ITEMS } from './timelineHelpers';
 
-export const Legend = memo(function Legend(): React.ReactElement<any> {
+export const Legend = memo(function Legend(): React.ReactElement<unknown> {
   return (
     <div
       className="flex items-center flex-wrap gap-x-3 gap-y-1 px-3 py-1.5"

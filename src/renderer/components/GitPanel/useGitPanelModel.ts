@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useGenerateCommitMessage } from './useGitCommitGeneration';
 import {
   type CheckoutActionParams,
   type CommitActionParams,
@@ -22,6 +23,7 @@ export interface GitPanelModel {
   currentBranch: string | null;
   error: string | null;
   isCommitting: boolean;
+  isGenerating: boolean;
   isRepo: boolean | null;
   stagedCount: number;
   stagedFiles: GitFileEntry[];
@@ -32,6 +34,7 @@ export interface GitPanelModel {
   handleCommit: () => Promise<void>;
   handleCommitMessageChange: (value: string) => void;
   handleDiscardFile: (filePath: string) => Promise<void>;
+  handleGenerateCommitMessage: () => Promise<void>;
   handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   handleStageAll: () => Promise<void>;
   handleStageFile: (filePath: string) => Promise<void>;
@@ -286,6 +289,7 @@ export function useGitPanelModel(projectRoot: string | null): GitPanelModel {
   const handleCommit = useCommitAction({ projectRoot, refreshStatus, setCommitMessage: state.setCommitMessage, setError: state.setError, setIsCommitting: state.setIsCommitting, commitMessage: state.commitMessage, staged: state.staged });
   const handleKeyDown = useCommitSubmitShortcut(handleCommit);
   const derived = useGitDerivedState(state.staged, state.unstaged, state.commitMessage, state.isCommitting);
+  const { isGenerating, handleGenerateCommitMessage } = useGenerateCommitMessage(projectRoot, derived.stagedCount, state.setCommitMessage, state.setError);
 
   return {
     branches: state.branches,
@@ -298,12 +302,14 @@ export function useGitPanelModel(projectRoot: string | null): GitPanelModel {
     handleCommit,
     handleCommitMessageChange: state.setCommitMessage,
     handleDiscardFile: fileActions.handleDiscardFile,
+    handleGenerateCommitMessage,
     handleKeyDown,
     handleStageAll: fileActions.handleStageAll,
     handleStageFile: fileActions.handleStageFile,
     handleUnstageAll: fileActions.handleUnstageAll,
     handleUnstageFile: fileActions.handleUnstageFile,
     isCommitting: state.isCommitting,
+    isGenerating,
     isRepo: state.isRepo,
     stagedCount: derived.stagedCount,
     stagedFiles: derived.stagedFiles,

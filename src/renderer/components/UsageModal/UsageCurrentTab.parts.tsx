@@ -21,7 +21,7 @@ function SessionHeader({
 }: {
   detail: SessionDetail;
   isLatest: boolean;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   const model = detail.totals.model;
   const badgeColor = modelColor(model);
 
@@ -57,7 +57,7 @@ function SessionHeader({
   );
 }
 
-function TokenUsageCard({ detail }: { detail: SessionDetail }): React.ReactElement<any> {
+function TokenUsageCard({ detail }: { detail: SessionDetail }): React.JSX.Element {
   const rows = [
     ['Input tokens', formatTokens(detail.totals.inputTokens)],
     ['Output tokens', formatTokens(detail.totals.outputTokens)],
@@ -89,7 +89,7 @@ function TokenUsageCard({ detail }: { detail: SessionDetail }): React.ReactEleme
   );
 }
 
-function SessionMetaCard({ detail }: { detail: SessionDetail }): React.ReactElement<any> {
+function SessionMetaCard({ detail }: { detail: SessionDetail }): React.JSX.Element {
   return (
     <div
       className="rounded-md p-3 bg-surface-raised"
@@ -113,7 +113,7 @@ export function SessionCard({
 }: {
   detail: SessionDetail;
   isLatest: boolean;
-}): React.ReactElement<any> {
+}): React.JSX.Element {
   return (
     <div className="px-4 py-3 border-b border-border-semantic">
       <SessionHeader detail={detail} isLatest={isLatest} />

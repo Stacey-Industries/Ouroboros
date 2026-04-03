@@ -8,6 +8,7 @@ import {
   FilePathBreadcrumb,
 } from './ChatCodeBlockParts';
 import { useApplyCode } from './useApplyCode';
+import { useCodeHighlight } from './useCodeHighlight';
 
 export interface ChatCodeBlockProps {
   code: string;
@@ -16,7 +17,7 @@ export interface ChatCodeBlockProps {
   showApply?: boolean;
 }
 
-function LineNumbers({ count }: { count: number }): React.ReactElement<any> {
+function LineNumbers({ count }: { count: number }): React.ReactElement {
   const lines = useMemo(() => Array.from({ length: count }, (_, index) => index + 1), [count]);
   return (
     <div
@@ -56,7 +57,7 @@ type CodeHeaderProps = {
   handleCopy: () => void;
 };
 
-function CodeHeader(props: CodeHeaderProps): React.ReactElement<any> {
+function CodeHeader(props: CodeHeaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5 border-b border-border-semantic px-2.5 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -96,6 +97,9 @@ function CodeHeader(props: CodeHeaderProps): React.ReactElement<any> {
   );
 }
 
+const codeStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' };
+const preBaseStyle: React.CSSProperties = { margin: 0 };
+
 function CodeBody({
   code,
   language,
@@ -108,25 +112,29 @@ function CodeBody({
   wordWrap: boolean;
   showLineNumbers: boolean;
   lineCount: number;
-}): React.ReactElement<any> {
+}): React.ReactElement {
+  const { html } = useCodeHighlight(code, language);
+  const wrapStyle = { whiteSpace: wordWrap ? 'pre-wrap' as const : 'pre' as const, wordBreak: wordWrap ? 'break-all' as const : 'normal' as const };
+
   return (
     <div className="flex overflow-x-auto p-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
       {showLineNumbers && <LineNumbers count={lineCount} />}
-      <pre
-        className="flex-1"
-        style={{
-          whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
-          wordBreak: wordWrap ? 'break-all' : 'normal',
-          margin: 0,
-        }}
-      >
-        <code
-          className={`text-xs ${language ? `language-${language}` : ''}`}
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {code}
-        </code>
-      </pre>
+      {html ? (
+        <div
+          className="flex-1 text-xs shiki-chat-block"
+          style={{ ...preBaseStyle, ...wrapStyle, ...codeStyle }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <pre className="flex-1" style={{ ...preBaseStyle, ...wrapStyle }}>
+          <code
+            className={`text-xs ${language ? `language-${language}` : ''}`}
+            style={codeStyle}
+          >
+            {code}
+          </code>
+        </pre>
+      )}
     </div>
   );
 }
@@ -166,7 +174,7 @@ function useChatCodeBlockState(
 
 type ChatCodeBlockState = ReturnType<typeof useChatCodeBlockState>;
 
-function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React.ReactElement<any> {
+function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React.ReactElement {
   const isApplied = props.status === 'applied';
   return (
     <div className="group/code my-2 rounded-md border border-border-semantic bg-surface-raised">
@@ -208,7 +216,7 @@ function CodeBlockContent(props: ChatCodeBlockProps & ChatCodeBlockState): React
 
 export const ChatCodeBlock = React.memo(function ChatCodeBlock(
   props: ChatCodeBlockProps,
-): React.ReactElement<any> {
+): React.ReactElement {
   const state = useChatCodeBlockState(props.code, props.language, props.filePath);
   return <CodeBlockContent {...props} {...state} />;
 });

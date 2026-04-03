@@ -166,7 +166,7 @@ function updateProgressEntry({
 }): void {
   setNotifications((prev) => prev.map((n) => {
     if (n.id !== id || !n.progress) return n;
-    return { ...n, type, read: false, progress: { ...n.progress, ...(update.completed !== undefined ? { completed: update.completed } : {}), ...(update.total !== undefined ? { total: update.total } : {}), ...(update.currentItem !== undefined ? { currentItem: update.currentItem } : {}), ...(summary ? { summary } : {}) } };
+    return { ...n, type, read: false, progress: { ...n.progress, ...(update.completed !== undefined ? { completed: update.completed } : {}), ...(update.total !== undefined ? { total: update.total } : {}), ...(update.currentItem !== undefined ? { currentItem: update.currentItem } : {}), ...(summary ? { summary, status: type === 'error' ? 'error' as const : 'completed' as const } : {}) } };
   }));
 }
 

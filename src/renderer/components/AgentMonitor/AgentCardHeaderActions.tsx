@@ -14,7 +14,7 @@ interface AgentCardHeaderActionsProps {
   onReplay?: (sessionId: string) => void;
 }
 
-function BookmarkIcon({ filled }: { filled: boolean }): React.ReactElement<any> {
+function BookmarkIcon({ filled }: { filled: boolean }): React.ReactElement<unknown> {
   return (
     <svg
       width="10"
@@ -30,7 +30,7 @@ function BookmarkIcon({ filled }: { filled: boolean }): React.ReactElement<any> 
   );
 }
 
-function NotesIcon(): React.ReactElement<any> {
+function NotesIcon(): React.ReactElement<unknown> {
   return (
     <svg
       width="10"
@@ -46,7 +46,7 @@ function NotesIcon(): React.ReactElement<any> {
   );
 }
 
-function ReplayIcon(): React.ReactElement<any> {
+function ReplayIcon(): React.ReactElement<unknown> {
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
       <path d="M2 1.5l6.5 3.5-6.5 3.5z" />
@@ -54,7 +54,7 @@ function ReplayIcon(): React.ReactElement<any> {
   );
 }
 
-function ReviewIcon(): React.ReactElement<any> {
+function ReviewIcon(): React.ReactElement<unknown> {
   return (
     <svg
       width="10"
@@ -76,7 +76,7 @@ function BookmarkAction({
 }: {
   session: AgentSession;
   onUpdateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (!onUpdateNotes) return null;
 
   return (
@@ -104,7 +104,7 @@ function NotesAction({
   isDone: boolean;
   onToggleNotes: () => void;
   onUpdateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (!onUpdateNotes || (!isDone && !session.restored)) return null;
 
   return (
@@ -130,7 +130,7 @@ function ReplayAction({
   session: AgentSession;
   isDone: boolean;
   onReplay?: (sessionId: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (!isDone || session.toolCalls.length < 1 || !onReplay) return null;
 
   return (
@@ -157,7 +157,7 @@ function ReviewChangesAction({
   session: AgentSession;
   isDone: boolean;
   onReviewChanges?: (sessionId: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (!isDone || !session.snapshotHash || !onReviewChanges) return null;
 
   return (
@@ -184,7 +184,7 @@ export function AgentCardHeaderActions({
   onUpdateNotes,
   onReviewChanges,
   onReplay,
-}: AgentCardHeaderActionsProps): React.ReactElement<any> {
+}: AgentCardHeaderActionsProps): React.ReactElement<unknown> {
   return (
     <>
       <BookmarkAction session={session} onUpdateNotes={onUpdateNotes} />

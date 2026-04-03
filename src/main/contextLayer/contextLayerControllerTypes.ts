@@ -73,6 +73,10 @@ export interface ContextLayerController {
   onSessionStart(): void
   onGitCommit(): void
   onFileChange(type: string, filePath: string): void
+  /** Called when the working directory of a session changes. */
+  onCwdChanged?(newCwd: string): void
+  /** Called when a file_changed hook fires — lighter signal than onGitCommit. */
+  onFileChanged?(): void
   onConfigChange(config: ContextLayerConfig): Promise<void>
   getStatus(): ContextLayerControllerStatus
   forceRebuild(): Promise<void>

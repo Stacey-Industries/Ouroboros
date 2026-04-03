@@ -64,6 +64,17 @@ export async function failPendingSend(args: {
 // Task creation / linkage
 // ---------------------------------------------------------------------------
 
+function inheritExistingLinkFields(
+  link: AgentChatOrchestrationLink,
+  existing: AgentChatOrchestrationLink,
+): void {
+  if (!link.claudeSessionId && existing.claudeSessionId)
+    link.claudeSessionId = existing.claudeSessionId;
+  if (!link.codexThreadId && existing.codexThreadId) link.codexThreadId = existing.codexThreadId;
+  if (!link.model && existing.model) link.model = existing.model;
+  if (!link.effort && existing.effort) link.effort = existing.effort;
+}
+
 export async function persistCreatedLink(args: {
   created: CreateTaskResult;
   pending: PreparedSend;
@@ -74,12 +85,8 @@ export async function persistCreatedLink(args: {
     sessionId: args.created.session?.id,
   };
   const existing = args.pending.thread.latestOrchestration;
-  if (existing) {
-    if (!link.claudeSessionId && existing.claudeSessionId)
-      link.claudeSessionId = existing.claudeSessionId;
-    if (!link.codexThreadId && existing.codexThreadId) link.codexThreadId = existing.codexThreadId;
-    if (!link.model && existing.model) link.model = existing.model;
-  }
+  if (existing) inheritExistingLinkFields(link, existing);
+  link.routedBy = args.pending.routedBy;
   const thread = await persistThreadLinkage({
     link,
     messageId: args.pending.messageId,
@@ -264,6 +271,22 @@ async function createAndLinkTask(args: {
   return { validCreated: created as ValidCreated, linked };
 }
 
+async function abortCancelledTask(args: {
+  linked: { link: AgentChatOrchestrationLink; thread: PreparedSend['thread'] };
+  pending: PreparedSend;
+  threadStore: AgentChatThreadStore;
+}): Promise<AgentChatSendResult> {
+  log.info('pending cancel for thread:', args.pending.thread.id, '— skipping task start');
+  await persistThreadLinkage({
+    link: args.linked.link,
+    messageId: args.pending.messageId,
+    status: 'cancelled',
+    thread: args.linked.thread,
+    threadStore: args.threadStore,
+  });
+  return buildSendFailureResult({ error: 'Cancelled by user.' });
+}
+
 export async function executePendingSend(args: {
   orchestration: OrchestrationClient;
   pending: PreparedSend;
@@ -282,6 +305,12 @@ export async function executePendingSend(args: {
   if ('success' in result) return result;
 
   const { validCreated, linked } = result;
+
+  // Pending cancel: user clicked stop while createAndLinkTask was in-flight.
+  if (args.runtime.pendingCancels.delete(args.pending.thread.id)) {
+    return abortCancelledTask({ linked, pending: args.pending, threadStore: args.threadStore });
+  }
+
   const assistantMessageId = buildAssistantMessageId(
     args.runtime.createId,
     validCreated.session.id,
@@ -289,8 +318,7 @@ export async function executePendingSend(args: {
   const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId);
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 
-  // Signal hooks.ts to suppress lifecycle events from Claude Code hook scripts
-  // until the synthetic agent_start fires (covers the spawn → first-tool-event race).
+  // Signal hooks.ts to suppress lifecycle events until synthetic agent_start fires.
   beginChatSessionLaunch();
 
   return executePendingSendCore({

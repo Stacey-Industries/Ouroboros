@@ -12,13 +12,12 @@ import { ClaudeSection } from './ClaudeSection';
 import { CodeModeSection } from './CodeModeSection';
 import { CodexSection } from './CodexSection';
 import { ContextDocsSection } from './ContextDocsSection';
-import { ExtensionsSection } from './ExtensionsSection';
 import { FileFilterSection } from './FileFilterSection';
 import { FontSection } from './FontSection';
 import { GeneralSection } from './GeneralSection';
 import { HooksSection } from './HooksSection';
+import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
-import { McpSection } from './McpSection';
 import { ProfilesSection } from './ProfilesSection';
 import { ProvidersSection } from './ProvidersSection';
 import type { TabId } from './settingsTabs';
@@ -33,7 +32,7 @@ interface SettingsTabContentProps {
 }
 
 type SharedTabProps = Omit<SettingsTabContentProps, 'activeTab'>;
-type TabRenderer = (props: SharedTabProps) => React.ReactElement<any>;
+type TabRenderer = (props: SharedTabProps) => React.ReactElement;
 
 const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   accounts: () => <AccountsSection />,
@@ -53,8 +52,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   hooks: ({ draft, onChange }) => <HooksSection draft={draft} onChange={onChange} />,
   profiles: ({ draft, onChange }) => <ProfilesSection draft={draft} onChange={onChange} />,
   files: ({ draft, onChange }) => <FileFilterSection draft={draft} onChange={onChange} />,
-  extensions: () => <ExtensionsSection />,
-  mcp: () => <McpSection />,
+  integrations: () => <IntegrationsSection />,
   codemode: () => <CodeModeSection />,
   contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
 };
@@ -62,6 +60,6 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
 export function SettingsTabContent({
   activeTab,
   ...sharedProps
-}: SettingsTabContentProps): React.ReactElement<any> {
+}: SettingsTabContentProps): React.ReactElement {
   return TAB_RENDERERS[activeTab](sharedProps);
 }

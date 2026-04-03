@@ -63,7 +63,7 @@ function ToggleButton({
 }: {
   collapsed: boolean;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={onToggle}
@@ -82,7 +82,7 @@ function FileLinkButton({
 }: {
   excerpt: BufferExcerpt;
   onOpenFile: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       onClick={onOpenFile}
@@ -95,12 +95,12 @@ function FileLinkButton({
   );
 }
 
-function ExcerptLabel({ label }: { label?: string }): React.ReactElement<any> | null {
+function ExcerptLabel({ label }: { label?: string }): React.ReactElement | null {
   if (!label) return null;
   return <span className="text-text-semantic-primary" style={LABEL_STYLE}>{label}</span>;
 }
 
-function ExcerptMeta({ excerpt }: { excerpt: BufferExcerpt }): React.ReactElement<any> {
+function ExcerptMeta({ excerpt }: { excerpt: BufferExcerpt }): React.ReactElement {
   return (
     <span className="text-text-semantic-muted" style={{ fontSize: '0.75rem' }}>
       lines {excerpt.startLine}-{excerpt.endLine}
@@ -116,7 +116,7 @@ function ActionButton({
   label: string;
   onClick: () => void;
   title: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button onClick={onClick} className="text-text-semantic-muted" style={ACTION_BUTTON_STYLE} title={title}>
       {label}
@@ -130,7 +130,7 @@ function ExcerptActions({
 }: {
   onOpenFile: () => void;
   onRemove: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <div style={{ flex: 1 }} />
@@ -152,7 +152,7 @@ export function MultiBufferExcerptHeader({
   onOpenFile: () => void;
   onRemove: () => void;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       style={{ ...HEADER_STYLE, borderBottom: collapsed ? 'none' : '1px solid var(--border-semantic)' }}

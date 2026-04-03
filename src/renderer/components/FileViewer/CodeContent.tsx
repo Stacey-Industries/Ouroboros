@@ -30,7 +30,7 @@ export const CodeContent = memo(function CodeContent({
   lineCount,
   toggleFold,
   codeRef,
-}: CodeContentProps): React.ReactElement<any> {
+}: CodeContentProps): React.ReactElement {
   return (
     <div
       ref={codeRef as React.RefObject<HTMLDivElement | null>}
@@ -62,7 +62,7 @@ function CodeRows({
   shikiLines,
   textLayout,
   toggleFold,
-}: CodeRowsProps): React.ReactElement<any> {
+}: CodeRowsProps): React.ReactElement {
   return (
     <>
       {rows.map((row) =>
@@ -78,7 +78,7 @@ function renderCodeRow({
   shikiLines,
   textLayout,
   toggleFold,
-}: Omit<CodeRowsProps, 'rows'> & { row: CodeRow }): React.ReactElement<any> {
+}: Omit<CodeRowsProps, 'rows'> & { row: CodeRow }): React.ReactElement {
   if (row.type === 'fold-placeholder') {
     return (
       <FoldPlaceholder
@@ -131,7 +131,7 @@ function FoldPlaceholder({
   startLine,
   count,
   toggleFold,
-}: FoldPlaceholderProps): React.ReactElement<any> {
+}: FoldPlaceholderProps): React.ReactElement {
   return (
     <div style={{ height: '1.6em', lineHeight: '1.6em', userSelect: 'none' }}>
       <span
@@ -168,7 +168,7 @@ function CodeLine({
   plainText,
   whiteSpace,
   wordBreak,
-}: CodeLineProps): React.ReactElement<any> {
+}: CodeLineProps): React.ReactElement {
   const style: React.CSSProperties = {
     minHeight: '1.6em',
     whiteSpace: whiteSpace as React.CSSProperties['whiteSpace'],

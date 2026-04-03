@@ -41,7 +41,7 @@ const COMMIT_MSG_STYLE: React.CSSProperties = { flex: 1, overflow: 'hidden', tex
 const COMMIT_DATE_STYLE: React.CSSProperties = { marginLeft: 'auto', fontSize: '0.6rem' };
 const COMMIT_ROW_STYLE: React.CSSProperties = { padding: '3px 8px', fontSize: '0.6875rem', fontFamily: 'var(--font-ui)' };
 
-function CommitItem({ commit }: CommitItemProps): React.ReactElement<any> {
+function CommitItem({ commit }: CommitItemProps): React.ReactElement {
   const handlePointerEnter = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.style.backgroundColor = 'var(--surface-raised)';
   }, []);
@@ -65,7 +65,7 @@ function CommitItem({ commit }: CommitItemProps): React.ReactElement<any> {
   );
 }
 
-function TimelineEmptyState({ message }: { message: string }): React.ReactElement<any> {
+function TimelineEmptyState({ message }: { message: string }): React.ReactElement {
   return (
     <div
       className="flex items-center justify-center text-text-semantic-muted"
@@ -99,7 +99,7 @@ function useFileCommits(projectRoot: string | null, filePath: string | undefined
   return { commits, loading };
 }
 
-export function TimelineSection(): React.ReactElement<any> {
+export function TimelineSection(): React.ReactElement {
   const { activeFile } = useFileViewerManager();
   const { projectRoot } = useProject();
   const { commits, loading } = useFileCommits(projectRoot, activeFile?.path);

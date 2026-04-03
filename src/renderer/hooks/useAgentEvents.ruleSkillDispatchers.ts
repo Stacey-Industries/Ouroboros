@@ -22,13 +22,6 @@ export function dispatchAgentEnd(payload: HookPayload, dispatch: Dispatch<AgentA
 }
 
 export function dispatchTokenUpdate(payload: HookPayload, dispatch: Dispatch<AgentAction>): void {
-  console.warn(
-    '[cost-debug] dispatchTokenUpdate called',
-    'sessionId:', payload.sessionId,
-    'model:', payload.model,
-    'usage:', payload.usage,
-    'hasUsage:', Boolean(payload.usage),
-  );
   if (!payload.usage) return;
   dispatch({
     type: 'TOKEN_UPDATE',

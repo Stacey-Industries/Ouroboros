@@ -5,6 +5,8 @@
 import React, { useCallback, useState } from 'react';
 import type { Components } from 'react-markdown';
 
+import { useCodeHighlight } from './useCodeHighlight';
+
 // Module-scope regex — avoids re-allocation on every render.
 // g flag used; reset lastIndex before each call.
 const TREE_CHAR_RE = /[│├└─┬┌┐┘┤┊┆╰╭╮╯║═╔╗╚╝╠╣╦╩╬┃┗┣┏┓┛┫┳┻╋]/g;
@@ -21,7 +23,7 @@ export function isTreeLikeText(text: string): boolean {
   return (text.match(TREE_CHAR_RE)?.length ?? 0) >= 3;
 }
 
-function CopyButton({ text }: { text: string }): React.ReactElement<any> {
+function CopyButton({ text }: { text: string }): React.ReactElement {
   const [copied, setCopied] = useState(false);
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text).then(() => {
@@ -45,13 +47,24 @@ interface MarkdownCodeBlockProps {
   rest: Record<string, unknown>;
 }
 
+const mdPreStyle: React.CSSProperties = {
+  margin: 0,
+  padding: '0.65em 0.85em',
+  backgroundColor: 'var(--surface-raised, rgba(30, 30, 40, 0.6))',
+  border: '1px solid var(--border-default)',
+  overflowX: 'auto',
+  lineHeight: 1.5,
+};
+
 function MarkdownCodeBlock({
   className,
   children,
   rest,
-}: MarkdownCodeBlockProps): React.ReactElement<any> {
+}: MarkdownCodeBlockProps): React.ReactElement {
   const match = /language-(\w+)/.exec(className || '');
   const codeStr = String(children).replace(/\n$/, '');
+  const { html } = useCodeHighlight(codeStr, match?.[1]);
+  const roundedClass = match ? 'rounded-b' : 'rounded';
   return (
     <div className="group/code relative my-2">
       {match && (
@@ -62,22 +75,17 @@ function MarkdownCodeBlock({
           {match[1]}
         </div>
       )}
-      <pre
-        className={match ? 'rounded-b' : 'rounded'}
-        style={{
-          margin: 0,
-          padding: '0.65em 0.85em',
-          backgroundColor: 'var(--surface-raised, rgba(30, 30, 40, 0.6))',
-          border: '1px solid var(--border-default)',
-          borderTop: match ? 'none' : undefined,
-          overflowX: 'auto',
-          lineHeight: 1.5,
-        }}
-      >
-        <code className={className} style={{ fontSize: '0.85em' }} {...rest}>
-          {children}
-        </code>
-      </pre>
+      {html ? (
+        <div
+          className={roundedClass}
+          style={{ ...mdPreStyle, borderTop: match ? 'none' : undefined, fontSize: '0.85em', fontFamily: 'var(--font-mono)' }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : (
+        <pre className={roundedClass} style={{ ...mdPreStyle, borderTop: match ? 'none' : undefined }}>
+          <code className={className} style={{ fontSize: '0.85em' }} {...rest}>{children}</code>
+        </pre>
+      )}
       <CopyButton text={codeStr} />
     </div>
   );
@@ -91,7 +99,7 @@ function MarkdownInlineCode({
   className?: string;
   children?: React.ReactNode;
   rest: Record<string, unknown>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <code
       className={`${className ?? ''} bg-surface-raised`}
@@ -116,7 +124,7 @@ export function MarkdownCode({
   className?: string;
   children?: React.ReactNode;
   [key: string]: unknown;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const match = /language-(\w+)/.exec(className || '');
   const codeStr = String(children).replace(/\n$/, '');
   return codeStr.includes('\n') || match ? (
@@ -130,7 +138,7 @@ export function MarkdownCode({
   );
 }
 
-export function MarkdownTable({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function MarkdownTable({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <div className="my-2 overflow-x-auto">
       <table
@@ -147,7 +155,7 @@ export function MarkdownTable({ children }: { children: React.ReactNode }): Reac
   );
 }
 
-export function MarkdownTh({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function MarkdownTh({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <th
       className="text-text-semantic-primary"
@@ -164,7 +172,7 @@ export function MarkdownTh({ children }: { children: React.ReactNode }): React.R
   );
 }
 
-export function MarkdownTd({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function MarkdownTd({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <td
       className="text-text-semantic-muted"
@@ -181,7 +189,7 @@ export function MarkdownLink({
 }: {
   href?: string;
   children?: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <a href={href} className="text-interactive-accent underline">
       {children}
@@ -189,7 +197,7 @@ export function MarkdownLink({
   );
 }
 
-export function MarkdownParagraph({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function MarkdownParagraph({ children }: { children: React.ReactNode }): React.ReactElement {
   const text = getMarkdownText(children);
   if (isTreeLikeText(text)) {
     return (
@@ -217,7 +225,7 @@ export function MarkdownBlockquote({
   children,
 }: {
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <blockquote
       className="text-text-semantic-muted"
@@ -232,7 +240,7 @@ export function MarkdownBlockquote({
   );
 }
 
-export function MarkdownHr(): React.ReactElement<any> {
+export function MarkdownHr(): React.ReactElement {
   return (
     <hr
       style={{ margin: '0.75em 0', border: 'none', borderTop: '1px solid var(--border-default)' }}
@@ -240,7 +248,7 @@ export function MarkdownHr(): React.ReactElement<any> {
   );
 }
 
-export function MarkdownHeading(level: 1 | 2 | 3, children: React.ReactNode): React.ReactElement<any> {
+export function MarkdownHeading(level: 1 | 2 | 3, children: React.ReactNode): React.ReactElement {
   const Tag = `h${level}` as const;
   const style =
     level === 1
@@ -261,7 +269,7 @@ export function MarkdownList({
 }: {
   ordered: boolean;
   children: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return ordered ? (
     <ol style={{ margin: '0.3em 0', paddingLeft: '1.5em', listStyleType: 'decimal' }}>
       {children}
@@ -271,7 +279,7 @@ export function MarkdownList({
   );
 }
 
-export function MarkdownListItem({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+export function MarkdownListItem({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <li className="text-text-semantic-primary" style={{ margin: '0.15em 0' }}>
       {children}

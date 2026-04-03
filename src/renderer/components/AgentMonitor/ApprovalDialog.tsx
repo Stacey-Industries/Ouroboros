@@ -68,7 +68,7 @@ export function ApprovalDialog({
   onApprove,
   onReject,
   onAlwaysAllow,
-}: ApprovalDialogProps): React.ReactElement<any> | null {
+}: ApprovalDialogProps): React.ReactElement<unknown> | null {
   const current = requests[0];
   const state = useApprovalDialogState(current, onApprove, onReject, onAlwaysAllow);
 

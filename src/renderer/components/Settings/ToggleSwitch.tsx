@@ -14,7 +14,7 @@ export function ToggleSwitch({
   label,
   description,
   disabled = false,
-}: ToggleSwitchProps): React.ReactElement<any> {
+}: ToggleSwitchProps): React.ReactElement {
   const id = useId();
   const labelId = `${id}-label`;
   const descriptionId = description ? `${id}-description` : undefined;
@@ -55,7 +55,7 @@ function SwitchButton({
   descriptionId?: string;
   disabled: boolean;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       id={id}
@@ -87,7 +87,7 @@ function SwitchText({
   description?: string;
   descriptionId?: string;
   disabled: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <label htmlFor={controlId} style={textWrapperStyle(disabled)}>
       <div id={labelId} className="text-text-semantic-primary" style={labelStyle}>

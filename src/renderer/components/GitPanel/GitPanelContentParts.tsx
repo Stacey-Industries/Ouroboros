@@ -69,24 +69,58 @@ export function CommitButton({
   );
 }
 
+function GenerateButton({
+  disabled,
+  isGenerating,
+  onClick,
+}: {
+  disabled: boolean;
+  isGenerating: boolean;
+  onClick: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || isGenerating}
+      className="shrink-0 rounded px-1.5 py-1 text-xs transition-colors duration-75 hover:bg-surface-raised text-text-semantic-muted disabled:opacity-40 disabled:cursor-not-allowed"
+      title={disabled ? 'Stage changes first' : 'Generate commit message with AI'}
+    >
+      {isGenerating ? '...' : '✦ AI'}
+    </button>
+  );
+}
+
 export function CommitSection(props: {
   canCommit: boolean;
   commitMessage: string;
   isCommitting: boolean;
+  isGenerating?: boolean;
   stagedCount: number;
   onCommit: () => Promise<void>;
   onCommitMessageChange: (value: string) => void;
+  onGenerateCommitMessage?: () => Promise<void>;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }): React.ReactElement {
   const title = getCommitTitle(props.stagedCount, props.commitMessage);
 
   return (
     <div className="flex-shrink-0 border-t border-border-semantic p-2">
-      <CommitMessageInput
-        commitMessage={props.commitMessage}
-        onCommitMessageChange={props.onCommitMessageChange}
-        onKeyDown={props.onKeyDown}
-      />
+      <div className="flex items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <CommitMessageInput
+            commitMessage={props.isGenerating ? 'Generating...' : props.commitMessage}
+            onCommitMessageChange={props.onCommitMessageChange}
+            onKeyDown={props.onKeyDown}
+          />
+        </div>
+        {props.onGenerateCommitMessage && (
+          <GenerateButton
+            disabled={props.stagedCount === 0}
+            isGenerating={props.isGenerating ?? false}
+            onClick={() => void props.onGenerateCommitMessage!()}
+          />
+        )}
+      </div>
       <CommitButton
         canCommit={props.canCommit}
         isCommitting={props.isCommitting}

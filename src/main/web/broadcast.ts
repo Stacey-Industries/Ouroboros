@@ -19,8 +19,12 @@ import { broadcastToWebClients } from './webServer'
 export function broadcast(channel: string, payload: unknown): void {
   // Send to Electron windows
   for (const win of getAllActiveWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(channel, payload)
+    try {
+      if (!win.isDestroyed()) {
+        win.webContents.mainFrame.send(channel, payload)
+      }
+    } catch {
+      // Render frame disposed — safe to skip
     }
   }
 

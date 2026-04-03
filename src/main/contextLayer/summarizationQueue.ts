@@ -267,6 +267,7 @@ export function createSummarizationQueue(options: SummarizationQueueOptions): Su
     lastError: null,
     totalProcessed: 0,
     totalFailed: 0,
+    initialTotal: 0,
     isRateLimited: false,
     backoffMs: 0,
     nextJobTimer: null,

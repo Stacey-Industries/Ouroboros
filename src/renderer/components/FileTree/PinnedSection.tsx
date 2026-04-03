@@ -103,7 +103,7 @@ function PinnedSectionHeader({
   expanded: boolean;
   count: number;
   onToggle: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="bg-surface-raised"
@@ -127,7 +127,7 @@ function PinnedSectionHeader({
   );
 }
 
-function PinnedItemIcon({ item }: { item: PinnedItemInfo }): React.ReactElement<any> {
+function PinnedItemIcon({ item }: { item: PinnedItemInfo }): React.ReactElement {
   return item.isDirectory ? (
     <FolderTypeIcon name={item.name} open={false} />
   ) : (
@@ -135,7 +135,7 @@ function PinnedItemIcon({ item }: { item: PinnedItemInfo }): React.ReactElement<
   );
 }
 
-function PinnedDot(): React.ReactElement<any> {
+function PinnedDot(): React.ReactElement {
   return (
     <span className="text-interactive-accent" style={dotStyle} aria-hidden="true">
       <svg width="6" height="6" viewBox="0 0 6 6" fill="none">
@@ -153,7 +153,7 @@ function UnpinButton({
   name: string;
   path: string;
   onUnpin: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       className="pinned-unpin-btn text-text-semantic-faint"
@@ -182,7 +182,7 @@ function PinnedItemRow({
   activeFilePath: string | null;
   onFileSelect: (filePath: string) => void;
   onUnpin: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const isActive = item.path === activeFilePath;
   return (
     <div
@@ -211,7 +211,7 @@ function PinnedItemsList({
   activeFilePath: string | null;
   onFileSelect: (filePath: string) => void;
   onUnpin: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div role="list" aria-label="Pinned items">
       {items.map((item) => (
@@ -232,7 +232,7 @@ export function PinnedSection({
   activeFilePath,
   onFileSelect,
   onUnpin,
-}: PinnedSectionProps): React.ReactElement<any> | null {
+}: PinnedSectionProps): React.ReactElement | null {
   const [isExpanded, setIsExpanded] = useState(true);
   const pinnedItems = usePinnedItems(bookmarks);
 

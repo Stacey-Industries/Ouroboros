@@ -137,7 +137,7 @@ export function StatusItem({
 }: {
   children: React.ReactNode;
   title?: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       className="flex items-center px-2 truncate text-text-semantic-faint"
@@ -151,7 +151,7 @@ export function StatusItem({
   );
 }
 
-export function Divider(): React.ReactElement<any> {
+export function Divider(): React.ReactElement {
   return (
     <span
       aria-hidden="true"
@@ -161,7 +161,7 @@ export function Divider(): React.ReactElement<any> {
   );
 }
 
-export function BranchIcon(): React.ReactElement<any> {
+export function BranchIcon(): React.ReactElement {
   return (
     <svg
       width="11"
@@ -183,7 +183,7 @@ export function BranchIcon(): React.ReactElement<any> {
   );
 }
 
-export function LayoutIcon(): React.ReactElement<any> {
+export function LayoutIcon(): React.ReactElement {
   return (
     <svg
       width="12"
@@ -221,7 +221,7 @@ export function StatusBarToggleButton({
   restingColor: string;
   canHover?: boolean;
   cursor?: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -244,7 +244,7 @@ export function LayoutControl({
   layout,
 }: {
   layout: StatusBarLayoutProps;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [open, setOpen] = useState(false);
   const closeMenu = useCallback(() => setOpen(false), []);
   const handleSelect = useCallback((selectedLayout: WorkspaceLayout) => {

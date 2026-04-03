@@ -6,8 +6,10 @@
  */
 
 import { randomUUID } from 'crypto';
+import { existsSync } from 'fs';
 import { unlink, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
+import { join } from 'path';
 
 import type { ImageAttachment } from '../../agentChat/types';
 import type { ClaudeCliSettings } from '../../config';
@@ -50,11 +52,21 @@ export async function cleanupTempFiles(tempPaths: string[]): Promise<void> {
   }
 }
 
+export function cliSessionExists(cwd: string, sessionId: string): boolean {
+  const projectKey = cwd.replace(/[:\\/\s]/g, '-');
+  const sessionPath = join(homedir(), '.claude', 'projects', projectKey, `${sessionId}.jsonl`);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from cwd + UUID, not user input
+  return existsSync(sessionPath);
+}
+
+function formatErrorDetail(result: StreamJsonResultEvent): string {
+  const detail = result.errors?.join('; ') || result.result || '';
+  return detail ? `\n\`\`\`\n${detail.slice(0, 500)}\n\`\`\`` : '';
+}
+
 function buildStopReasonMessage(result: StreamJsonResultEvent): string | null {
-  if (result.is_error || result.subtype === 'error') {
-    const detail = result.result ? `\`\`\`\n${result.result.slice(0, 500)}\n\`\`\`` : '';
-    return `**Agent stopped** — Claude Code reported an error${detail ? `\n${detail}` : ''}`;
-  }
+  const isError = result.is_error || result.subtype === 'error' || result.subtype === 'error_during_execution';
+  if (isError) return `**Agent stopped** — Claude Code reported an error${formatErrorDetail(result)}`;
   if (result.stop_reason === 'max_tokens')
     return '**Agent stopped** — hit output token limit (stop_reason: max_tokens)';
   if (result.stop_reason && result.stop_reason !== 'end_turn')

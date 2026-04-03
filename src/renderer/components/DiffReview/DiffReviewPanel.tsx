@@ -27,7 +27,7 @@ export function DiffReviewPanel({
   onAcceptAll,
   onRejectAll,
   onClose,
-}: DiffReviewPanelProps): React.ReactElement<any> {
+}: DiffReviewPanelProps): React.ReactElement {
   const [selectedFileIdx, setSelectedFileIdx] = useState(0);
   const fileRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const stats = useMemo(() => getDiffReviewStats(state.files), [state.files]);

@@ -31,7 +31,7 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement<any> {
+function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement {
   return (
     <div className="rounded border border-border-semantic bg-surface-base px-2.5 py-2">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{label}</div>
@@ -43,7 +43,7 @@ function SummaryPill({ label, value }: SummaryPillProps): React.ReactElement<any
 function SummaryHeadline(props: {
   activeThread: AgentChatThreadRecord;
   onOpenDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const latestLink = getLatestLink(props.activeThread);
 
   return (
@@ -64,7 +64,7 @@ function SummaryHeadline(props: {
   );
 }
 
-function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElement<any> | null {
+function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElement | null {
   if (pills.length === 0) {
     return null;
   }
@@ -76,7 +76,7 @@ function SummaryGrid({ pills }: { pills: SummaryPillData[] }): React.ReactElemen
   );
 }
 
-function SummaryVerificationNote({ summary }: { summary: string | null }): React.ReactElement<any> | null {
+function SummaryVerificationNote({ summary }: { summary: string | null }): React.ReactElement | null {
   if (!summary) {
     return null;
   }
@@ -94,7 +94,7 @@ export function AgentChatDetailsSummary({
   isLoading,
   onOpenDetails,
   skillCount,
-}: AgentChatDetailsSummaryProps): React.ReactElement<any> {
+}: AgentChatDetailsSummaryProps): React.ReactElement {
   const summary = useMemo(() => buildSummaryData(details, { skillCount: skillCount ?? 0 }), [details, skillCount]);
   const pills = useMemo(
     () => buildSummaryPills({ formatCount, hasDetails: Boolean(details), isLoading, summary }),

@@ -59,7 +59,7 @@ export function CompletionOverlay({
   position,
   onSelect,
   onNavigate,
-}: CompletionOverlayProps): React.ReactElement<any> | null {
+}: CompletionOverlayProps): React.ReactElement | null {
   const listRef = useRef<HTMLDivElement>(null);
 
   useSelectedItemScroll(listRef, selectedIndex);
@@ -92,7 +92,7 @@ function CompletionOverlayBody({
   selectedIndex: number;
   onSelect: (value: string) => void;
   onNavigate: (delta: number) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       ref={listRef as React.RefObject<HTMLDivElement | null>}
@@ -142,7 +142,7 @@ function CompletionItem({
   isSelected: boolean;
   onClick: () => void;
   onHover: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const color = TYPE_COLORS[completion.type];
 
   return (
@@ -181,7 +181,7 @@ function CompletionTypeBadge({
 }: {
   type: Completion['type'];
   color: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span
       style={{
@@ -203,7 +203,7 @@ function CompletionTypeBadge({
   );
 }
 
-function CompletionHint(): React.ReactElement<any> {
+function CompletionHint(): React.ReactElement {
   return (
     <div
       className="text-text-semantic-muted border-t border-border-semantic"

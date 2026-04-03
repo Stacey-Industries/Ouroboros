@@ -31,10 +31,6 @@ export {
 export type { FileTreeSearchBarProps } from './FileTreeSearchBar';
 export { FileTreeSearchBar } from './FileTreeSearchBar';
 
-// Staging area
-export type { StagingAreaProps } from './StagingArea';
-export { StagingArea } from './StagingArea';
-
 // Git status filter
 export type { GitFilteredViewProps,GitStatusCounts, GitStatusFilterBarProps } from './GitStatusFilter';
 export { computeStatusCounts, getFilteredFiles,GitFilteredView, GitStatusFilterBar } from './GitStatusFilter';

@@ -39,7 +39,7 @@ function truncatePath(filePath: string, maxLen = 50): string {
   return '...' + filePath.slice(filePath.length - maxLen + 3);
 }
 
-function RuleRow({ rule }: { rule: LoadedRule }): React.ReactElement<any> {
+function RuleRow({ rule }: { rule: LoadedRule }): React.ReactElement {
   const badgeClass = getMemoryTypeBadgeClass(rule.memoryType);
   const label = MEMORY_TYPE_LABELS[rule.memoryType] ?? rule.memoryType;
   return (
@@ -61,12 +61,12 @@ function RuleRow({ rule }: { rule: LoadedRule }): React.ReactElement<any> {
 
 function RulesPopover(
   { rules, style, ref }: { rules: LoadedRule[]; style?: React.CSSProperties; ref?: React.Ref<HTMLDivElement> },
-): React.ReactElement<any> {
+): React.ReactElement {
   return (
     <div
       ref={ref}
-      className="z-[9999] max-h-[320px] w-[300px] overflow-y-auto rounded-lg border border-border-semantic-subtle bg-surface-raised py-1 shadow-xl"
-      style={{ backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)', ...style }}
+      className="z-[9999] max-h-[320px] w-[300px] overflow-y-auto rounded-lg border border-border-semantic-subtle bg-surface-overlay py-1 shadow-xl"
+      style={style}
     >
       <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-text-semantic-faint">
         Loaded Rules ({rules.length})
@@ -111,7 +111,7 @@ function BadgePillButton(props: {
   open: boolean;
   onClick: () => void;
   buttonRef: React.RefObject<HTMLButtonElement | null>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <button
       type="button"
@@ -138,7 +138,9 @@ function useRulesPopoverState() {
   const updatePos = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPos({ left: rect.left, bottom: window.innerHeight - rect.top + 4 });
+    const popoverWidth = 300;
+    const maxLeft = window.innerWidth - popoverWidth - 8;
+    setPos({ left: Math.min(rect.left, maxLeft), bottom: window.innerHeight - rect.top + 4 });
   }, []);
 
   const toggle = useCallback(() => {
@@ -150,7 +152,7 @@ function useRulesPopoverState() {
   return { open, pos, buttonRef, menuRef, toggle };
 }
 
-export function RulesActivityBadge({ rules }: RulesActivityBadgeProps): React.ReactElement<any> | null {
+export function RulesActivityBadge({ rules }: RulesActivityBadgeProps): React.ReactElement | null {
   const { open, pos, buttonRef, menuRef, toggle } = useRulesPopoverState();
 
   if (rules.length === 0) return null;

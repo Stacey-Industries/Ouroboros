@@ -31,6 +31,7 @@ const DEFAULT_SLOTS: ModelSlotAssignments = {
   terminal: '',
   agentChat: '',
   claudeMdGeneration: '',
+  inlineCompletion: '',
 };
 
 const ANTHROPIC_MODELS: ProviderModel[] = [

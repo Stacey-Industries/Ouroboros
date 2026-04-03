@@ -174,7 +174,7 @@ function buildInnerAppLayoutProps({
   };
 }
 
-function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.ReactElement<any> {
+function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.ReactElement {
   const { setTheme } = useTheme();
   const ctx = useProject();
   const palette = useCommandPalette();
@@ -243,7 +243,7 @@ interface ConfiguredAppProps {
   customCSS: string;
 }
 
-function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: ConfiguredAppProps): React.ReactElement<any> {
+function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: ConfiguredAppProps): React.ReactElement {
   useCustomCSS(customCSS);
 
   return (
@@ -264,7 +264,7 @@ function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: 
 
 // ─── Root App ─────────────────────────────────────────────────
 
-export default function App(): React.ReactElement<any> {
+export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
   useThemeRuntimeBootstrap(config);
 

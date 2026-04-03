@@ -9,6 +9,14 @@ import { CompletedChangeSummaryBar, extractChangeTallyFromBlocks, hasFileChanges
 import { MessageMarkdown } from './MessageMarkdown';
 import { StreamingStatusMessage } from './streamingUtils';
 
+const USER_BUBBLE_STYLE: React.CSSProperties = {
+  backgroundColor: 'color-mix(in srgb, var(--surface-overlay) 38%, transparent)',
+  border: '1px solid color-mix(in srgb, var(--border-semantic-subtle) 70%, transparent)',
+  boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 35%, transparent)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+};
+
 export function ContextSummaryRow({ message }: { message: AgentChatMessageRecord }): React.ReactElement | null {
   if (!message.contextSummary) return null;
   const { omittedFileCount, selectedFileCount, usedAdvancedControls } = message.contextSummary;
@@ -55,12 +63,12 @@ interface UserMessageProps {
 }
 
 function UserMessageEditMode(props: Pick<UserMessageProps, 'editDraft' | 'onEditDraftChange' | 'onEditSubmit' | 'onCancelEdit'>): React.ReactElement {
-  return <div className="flex justify-end"><div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 bg-interactive-accent text-text-semantic-on-accent"><textarea autoFocus value={props.editDraft} onChange={(e) => props.onEditDraftChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); props.onEditSubmit(); } if (e.key === 'Escape') { e.preventDefault(); props.onCancelEdit(); } }} className="w-full resize-none rounded-lg border bg-surface-base border-border-semantic p-2 text-sm text-text-semantic-primary focus:border-interactive-accent focus:outline-hidden" style={{ fontFamily: 'var(--font-ui)', minHeight: '60px' }} rows={3} /><div className="mt-1.5 flex justify-end gap-1.5"><button onClick={props.onCancelEdit} className="rounded px-2 py-0.5 text-[11px] opacity-80 hover:opacity-100">Cancel</button><button onClick={props.onEditSubmit} className="rounded px-2 py-0.5 text-[11px] font-medium opacity-90 hover:opacity-100">Send</button></div></div></div>;
+  return <div className="flex justify-end"><div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-text-semantic-primary" style={USER_BUBBLE_STYLE}><textarea autoFocus value={props.editDraft} onChange={(e) => props.onEditDraftChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); props.onEditSubmit(); } if (e.key === 'Escape') { e.preventDefault(); props.onCancelEdit(); } }} className="w-full resize-none rounded-lg border bg-surface-base border-border-semantic p-2 text-sm text-text-semantic-primary focus:border-interactive-accent focus:outline-hidden" style={{ fontFamily: 'var(--font-ui)', minHeight: '60px' }} rows={3} /><div className="mt-1.5 flex justify-end gap-1.5"><button onClick={props.onCancelEdit} className="rounded px-2 py-0.5 text-[11px] opacity-80 hover:opacity-100">Cancel</button><button onClick={props.onEditSubmit} className="rounded px-2 py-0.5 text-[11px] font-medium opacity-90 hover:opacity-100">Send</button></div></div></div>;
 }
 
 export const UserMessage = React.memo(function UserMessage(props: UserMessageProps): React.ReactElement {
   if (props.isEditing) return <UserMessageEditMode editDraft={props.editDraft} onEditDraftChange={props.onEditDraftChange} onEditSubmit={props.onEditSubmit} onCancelEdit={props.onCancelEdit} />;
-  return <div className="group flex justify-end gap-1.5"><UserMessageActions message={props.message} isLastUserMessage={props.isLastUserMessage} threadStatus={props.threadStatus} onEdit={props.onEdit} onRetry={props.onRetry} onBranch={props.onBranch} /><div className="max-w-[85%] rounded-lg px-3.5 py-2.5 bg-interactive-accent text-text-semantic-on-accent"><div className="whitespace-pre-wrap text-sm leading-relaxed">{props.message.content || ' '}</div><ContextSummaryRow message={props.message} /><div className="mt-1 text-right text-[10px] text-text-semantic-on-accent" style={{ opacity: 0.6 }} title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div></div></div>;
+  return <div className="group flex justify-end gap-1.5"><UserMessageActions message={props.message} isLastUserMessage={props.isLastUserMessage} threadStatus={props.threadStatus} onEdit={props.onEdit} onRetry={props.onRetry} onBranch={props.onBranch} /><div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-text-semantic-primary" style={USER_BUBBLE_STYLE}><div className="whitespace-pre-wrap text-sm leading-relaxed">{props.message.content || ' '}</div><ContextSummaryRow message={props.message} /><div className="mt-1 text-right text-[10px] text-text-semantic-faint" title={formatTimestampFull(props.message.createdAt)}>{formatTimestamp(props.message.createdAt)}</div></div></div>;
 });
 
 type RenderItem = { type: 'text'; block: AgentChatContentBlock; index: number } | { type: 'thinking'; block: AgentChatContentBlock; index: number } | { type: 'tool-group'; tools: AgentChatContentBlock[]; startIndex: number } | { type: 'single-tool'; block: AgentChatContentBlock; index: number } | { type: 'block'; block: AgentChatContentBlock; index: number };
@@ -266,7 +274,7 @@ export function QueuedMessageBanner(props: { messages: import('./useAgentChatWor
 }
 
 export function PendingUserBubble({ text }: { text: string }): React.ReactElement {
-  return <div className="flex justify-end"><div className="max-w-[85%] rounded-xl rounded-tr-sm px-3.5 py-2.5 text-sm leading-relaxed opacity-80 bg-interactive-accent text-text-semantic-on-accent">{text}</div></div>;
+  return <div className="flex justify-end"><div className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-sm leading-relaxed opacity-80 text-text-semantic-primary" style={USER_BUBBLE_STYLE}>{text}</div></div>;
 }
 
 export function InlineError({ error }: { error: string | null }): React.ReactElement | null {

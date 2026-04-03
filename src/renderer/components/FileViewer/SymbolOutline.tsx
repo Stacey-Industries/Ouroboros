@@ -134,11 +134,11 @@ function navigateToSymbolLine(
   flashLine(lineElement);
 }
 
-function OutlineHeader(): React.ReactElement<any> {
+function OutlineHeader(): React.ReactElement {
   return <div className="text-text-semantic-faint" style={OUTLINE_HEADER_STYLE}>Outline</div>;
 }
 
-function OutlineEmptyState(): React.ReactElement<any> {
+function OutlineEmptyState(): React.ReactElement {
   return <div className="text-text-semantic-faint" style={OUTLINE_EMPTY_STATE_STYLE}>No symbols found</div>;
 }
 
@@ -164,7 +164,7 @@ function OutlineItem({
   isActive,
   onClick,
   symbol,
-}: OutlineItemProps): React.ReactElement<any> {
+}: OutlineItemProps): React.ReactElement {
   return (
     <button
       onClick={() => onClick(symbol)}
@@ -191,7 +191,7 @@ function OutlineList({
   activeIndex,
   onSymbolClick,
   symbols,
-}: OutlineListProps): React.ReactElement<any> {
+}: OutlineListProps): React.ReactElement {
   return (
     <div style={OUTLINE_LIST_STYLE}>
       {symbols.map((symbol, index) => (
@@ -211,7 +211,7 @@ export const SymbolOutline = memo(function SymbolOutline({
   scrollContainer,
   codeContainer,
   visible,
-}: SymbolOutlineProps): React.ReactElement<any> | null {
+}: SymbolOutlineProps): React.ReactElement | null {
   useOutlineFlashStyle();
   const activeIndex = useActiveSymbolIndex(
     scrollContainer,

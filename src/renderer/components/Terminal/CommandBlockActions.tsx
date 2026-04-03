@@ -49,7 +49,7 @@ const actionButtonHoverStyle: React.CSSProperties = {
   background: 'rgba(60,60,60,0.8)',
 }
 
-function CopyIcon(): React.ReactElement<any> {
+function CopyIcon(): React.ReactElement {
   return (
     <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="5" y="5" width="9" height="9" rx="1" />
@@ -58,7 +58,7 @@ function CopyIcon(): React.ReactElement<any> {
   )
 }
 
-function RerunIcon(): React.ReactElement<any> {
+function RerunIcon(): React.ReactElement {
   return (
     <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 8a6 6 0 0111.5-2.3" strokeLinecap="round" />
@@ -68,7 +68,7 @@ function RerunIcon(): React.ReactElement<any> {
   )
 }
 
-function ExplainIcon(): React.ReactElement<any> {
+function ExplainIcon(): React.ReactElement {
   return (
     <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="8" cy="8" r="6" />
@@ -78,7 +78,7 @@ function ExplainIcon(): React.ReactElement<any> {
   )
 }
 
-function CollapseIcon({ collapsed }: { collapsed: boolean }): React.ReactElement<any> {
+function CollapseIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
       width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
@@ -97,7 +97,7 @@ function ActionButton({
   onClick: () => void
   title: string
   children: React.ReactNode
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -124,7 +124,7 @@ export function CommandBlockActions({
   onCopyCommand,
   onToggleCollapse,
   onExplainError,
-}: CommandBlockActionsProps): React.ReactElement<any> {
+}: CommandBlockActionsProps): React.ReactElement {
   const handleRerun = useCallback(() => { if (block.command) void window.electronAPI.pty.write(sessionId, block.command + '\n') }, [block.command, sessionId])
   const canCollapse = block.complete && block.endLine - block.startLine > 1
   return <div style={actionsBarStyle}>{block.command && <ActionButton onClick={() => onCopyCommand(block)} title="Copy command"><CopyIcon /> Cmd</ActionButton>}{block.complete && <ActionButton onClick={() => onCopyOutput(block)} title="Copy output"><CopyIcon /> Output</ActionButton>}{block.command && <ActionButton onClick={handleRerun} title="Re-run command"><RerunIcon /> Re-run</ActionButton>}{shouldShowExplain(block, onExplainError) && <ActionButton onClick={() => onExplainError?.(block)} title="Explain this error with AI"><ExplainIcon /> Explain</ActionButton>}{canCollapse && <ActionButton onClick={() => onToggleCollapse(block.id)} title={block.collapsed ? 'Expand output' : 'Collapse output'}><CollapseIcon collapsed={block.collapsed} />{block.collapsed ? 'Expand' : 'Collapse'}</ActionButton>}</div>

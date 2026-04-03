@@ -1,9 +1,4 @@
-/**
- * claudeCodeLaunch.ts — Launch coordination for the Claude Code adapter.
- *
- * Extracted from claudeCodeAdapter.ts to keep each file under 300 lines.
- * Contains scheduleClaudeLaunch, launchClaude and their direct helpers.
- */
+// claudeCodeLaunch.ts — Launch coordination for the Claude Code adapter.
 
 import { type ClaudeCliSettings, getConfigValue } from '../../config';
 import log from '../../logger';
@@ -11,6 +6,7 @@ import { resolveModelEnv } from '../../providers';
 import { buildInitialPrompt } from './claudeCodeContextBuilder';
 import { buildEventHandler } from './claudeCodeEventHandler';
 import {
+  cliSessionExists,
   handleLaunchError,
   handleLaunchSuccess,
   launchHeadless,
@@ -93,6 +89,14 @@ export interface ScheduleClaudeLaunchArgs {
   invocationTempPaths: string[];
 }
 
+function resolveResumeSessionId(args: ScheduleClaudeLaunchArgs): string | undefined {
+  const id = args.effectiveResumeSessionId;
+  if (!id) return undefined;
+  if (cliSessionExists(args.cwd, id)) return id;
+  log.info('session file pruned by CLI, falling back to conversation history:', id);
+  return undefined;
+}
+
 export function scheduleClaudeLaunch(
   args: ScheduleClaudeLaunchArgs,
 ): Promise<StreamJsonResultEvent | null> {
@@ -102,14 +106,15 @@ export function scheduleClaudeLaunch(
       activeProcesses.delete(args.context.taskId);
       return null;
     }
+    const resumeId = resolveResumeSessionId(args);
     const prompt = buildInitialPrompt(
       args.context,
       goalSuffix,
-      Boolean(args.effectiveResumeSessionId),
+      Boolean(resumeId),
       args.resolvedModel ?? '',
     );
     const continueSession =
-      'providerSession' in args.context && !args.effectiveResumeSessionId ? true : undefined;
+      'providerSession' in args.context && !resumeId ? true : undefined;
     return launchHeadless({
       context: args.context,
       prompt,
@@ -117,7 +122,7 @@ export function scheduleClaudeLaunch(
       settings: args.effectiveSettings,
       sessionRef: args.sessionRef,
       sink: args.sink,
-      resumeSessionId: args.effectiveResumeSessionId,
+      resumeSessionId: resumeId,
       continueSession,
       effort: args.effort,
       providerEnv: args.isProviderRouted ? args.providerEnv : undefined,
@@ -219,29 +224,16 @@ function emitLaunchQueued(sink: ProviderProgressSink): void {
 function buildLaunchResult(
   sessionRef: ReturnType<typeof createProviderSessionReference>,
 ): ProviderLaunchResult {
-  const submittedAt = Date.now();
   return {
     session: sessionRef,
     artifact: createProviderArtifact({
-      provider: 'claude-code',
-      status: 'streaming',
-      session: sessionRef,
-      submittedAt,
+      provider: 'claude-code', status: 'streaming', session: sessionRef, submittedAt: Date.now(),
     }),
   };
 }
 
-function emitLaunchStarted(
-  sink: ProviderProgressSink,
-  sessionRef: ReturnType<typeof createProviderSessionReference>,
-): void {
-  sink.emit({
-    provider: 'claude-code',
-    status: 'queued',
-    message: 'Claude Code session started',
-    timestamp: Date.now(),
-    session: sessionRef,
-  });
+function emitLaunchStarted(sink: ProviderProgressSink, sessionRef: ReturnType<typeof createProviderSessionReference>): void {
+  sink.emit({ provider: 'claude-code', status: 'queued', message: 'Claude Code session started', timestamp: Date.now(), session: sessionRef });
 }
 
 interface ScheduleLaunchOpts {

@@ -1,3 +1,5 @@
+import type { LoadedRule, SkillExecutionRecord } from '@shared/types/ruleActivity';
+
 import type { AgentSession, ToolCallEvent } from '../components/AgentMonitor/types';
 import type { HookPayload, RawApiTokenUsage as TokenUsage } from '../types/electron';
 
@@ -204,6 +206,27 @@ function getOutputTimestamp(output?: Record<string, unknown>): number | undefine
   return typeof timestamp === 'number' ? timestamp : undefined;
 }
 
+function buildPersistedSessionFields(raw: Record<string, unknown>): Partial<AgentSession> {
+  return {
+    completedAt: getNumberValue(raw, 'completedAt'),
+    toolCalls: Array.isArray(raw.toolCalls) ? raw.toolCalls as ToolCallEvent[] : [],
+    error: getStringValue(raw, 'error'),
+    parentSessionId: getStringValue(raw, 'parentSessionId'),
+    inputTokens: getNumberValue(raw, 'inputTokens') ?? 0,
+    outputTokens: getNumberValue(raw, 'outputTokens') ?? 0,
+    cacheReadTokens: getNumberValue(raw, 'cacheReadTokens'),
+    cacheWriteTokens: getNumberValue(raw, 'cacheWriteTokens'),
+    model: getStringValue(raw, 'model'),
+    costUsd: getNumberValue(raw, 'costUsd'),
+    notes: getStringValue(raw, 'notes'),
+    bookmarked: typeof raw.bookmarked === 'boolean' ? raw.bookmarked : undefined,
+    snapshotHash: getStringValue(raw, 'snapshotHash'),
+    internal: typeof raw.internal === 'boolean' ? raw.internal : undefined,
+    loadedRules: Array.isArray(raw.loadedRules) ? raw.loadedRules as LoadedRule[] : undefined,
+    skillExecutions: Array.isArray(raw.skillExecutions) ? raw.skillExecutions as SkillExecutionRecord[] : undefined,
+  };
+}
+
 function toPersistedSession(rawSession: unknown): AgentSession | null {
   if (!isRecord(rawSession)) {
     return null;
@@ -223,17 +246,7 @@ function toPersistedSession(rawSession: unknown): AgentSession | null {
     taskLabel,
     status,
     startedAt,
-    completedAt: getNumberValue(rawSession, 'completedAt'),
-    toolCalls: Array.isArray(rawSession.toolCalls) ? rawSession.toolCalls as ToolCallEvent[] : [],
-    error: getStringValue(rawSession, 'error'),
-    parentSessionId: getStringValue(rawSession, 'parentSessionId'),
-    inputTokens: getNumberValue(rawSession, 'inputTokens') ?? 0,
-    outputTokens: getNumberValue(rawSession, 'outputTokens') ?? 0,
-    cacheReadTokens: getNumberValue(rawSession, 'cacheReadTokens'),
-    cacheWriteTokens: getNumberValue(rawSession, 'cacheWriteTokens'),
-    model: getStringValue(rawSession, 'model'),
-    notes: getStringValue(rawSession, 'notes'),
-    bookmarked: typeof rawSession.bookmarked === 'boolean' ? rawSession.bookmarked : undefined,
+    ...buildPersistedSessionFields(rawSession),
     restored: true,
   };
 }

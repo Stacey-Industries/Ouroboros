@@ -45,7 +45,7 @@ function getFileContent(
   return fileContents.get(filePath) ?? EMPTY_FILE_CONTENT;
 }
 
-function EmptyStateIcon(): React.ReactElement<any> {
+function EmptyStateIcon(): React.ReactElement {
   return (
     <div
       style={{
@@ -59,7 +59,7 @@ function EmptyStateIcon(): React.ReactElement<any> {
   );
 }
 
-function EmptyStateBody(): React.ReactElement<any> {
+function EmptyStateBody(): React.ReactElement {
   return (
     <>
       <span className="text-text-semantic-primary" style={{ fontSize: '1rem', fontWeight: 600 }}>
@@ -92,7 +92,7 @@ function EmptyStateBody(): React.ReactElement<any> {
   );
 }
 
-function MultiBufferEmptyState(): React.ReactElement<any> {
+function MultiBufferEmptyState(): React.ReactElement {
   return (
     <div className="text-text-semantic-muted" style={emptyStateContainerStyle}>
       <EmptyStateIcon />
@@ -107,7 +107,7 @@ function MultiBufferHeader({
 }: {
   count: number;
   name: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="text-text-semantic-primary"
@@ -141,7 +141,7 @@ export const MultiBufferView = memo(function MultiBufferView({
   fileContents,
   onRemoveExcerpt,
   onOpenFile,
-}: MultiBufferViewProps): React.ReactElement<any> {
+}: MultiBufferViewProps): React.ReactElement {
   const { theme: ideTheme } = useTheme();
   const shikiTheme = getShikiTheme(ideTheme.id);
 

@@ -45,6 +45,8 @@ export interface InstalledVsxExtension {
   installedAt: string
   contributes: {
     themes?: Array<{ label: string; uiTheme: string; path: string }>
+    iconThemes?: Array<{ id: string; label: string; path: string }>
+    productIconThemes?: Array<{ id: string; label: string; path: string }>
     grammars?: Array<{ language: string; scopeName: string; path: string }>
     snippets?: Array<{ language: string; path: string }>
     languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>
@@ -66,6 +68,55 @@ export interface ExtensionThemeData {
     selection: string; focusRing: string
     termBg: string; termFg: string; termCursor: string; termSelection: string
   }
+}
+
+export interface ExtensionIconThemeAssociations {
+  fileExtensions?: Record<string, string>
+  fileNames?: Record<string, string>
+  folderNames?: Record<string, string>
+  folderNamesExpanded?: Record<string, string>
+  rootFolderNames?: Record<string, string>
+  rootFolderNamesExpanded?: Record<string, string>
+}
+
+export interface ExtensionIconFontDefinition {
+  id: string
+  family: string
+  srcPath: string
+  weight?: string
+  style?: string
+  size?: string
+}
+
+export interface ExtensionIconDefinition {
+  iconPath?: string
+  fontCharacter?: string
+  fontColor?: string
+  fontId?: string
+}
+
+export interface ExtensionIconThemeData extends ExtensionIconThemeAssociations {
+  id: string
+  extensionId: string
+  label: string
+  iconDefinitions: Record<string, ExtensionIconDefinition>
+  fonts: ExtensionIconFontDefinition[]
+  file?: string
+  folder?: string
+  folderExpanded?: string
+  rootFolder?: string
+  rootFolderExpanded?: string
+  hidesExplorerArrows?: boolean
+  light?: ExtensionIconThemeAssociations
+  highContrast?: ExtensionIconThemeAssociations
+}
+
+export interface ExtensionProductIconThemeData {
+  id: string
+  extensionId: string
+  label: string
+  iconDefinitions: Record<string, ExtensionIconDefinition>
+  fonts: ExtensionIconFontDefinition[]
 }
 
 // IPC API shape
@@ -100,5 +151,11 @@ export interface ExtensionStoreAPI {
   disableContributions: (id: string) => Promise<IpcResult>
   getThemeContributions: () => Promise<IpcResult & {
     themes?: ExtensionThemeData[]
+  }>
+  getIconThemeContributions: () => Promise<IpcResult & {
+    iconThemes?: ExtensionIconThemeData[]
+  }>
+  getProductIconThemeContributions: () => Promise<IpcResult & {
+    productIconThemes?: ExtensionProductIconThemeData[]
   }>
 }

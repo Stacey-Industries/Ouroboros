@@ -25,7 +25,11 @@ import {
   writeBinaryFile,
   writeTextFile,
 } from './filesHelpers';
-import { assertPathAllowed, isTrustedConfigPath } from './pathSecurity';
+import {
+  assertPathAllowed,
+  isTrustedConfigPath,
+  isTrustedVsxExtensionPath,
+} from './pathSecurity';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 type FileHandler<TArgs extends unknown[] = unknown[]> = (
@@ -38,6 +42,7 @@ type RegisterHandler = <TArgs extends unknown[]>(
 ) => void;
 
 const watchers = new Map<string, FSWatcher>();
+const MAX_WATCHERS = 8;
 
 const WATCHER_IGNORES = [
   /(^|[/\\])\../,
@@ -72,6 +77,13 @@ function checkPath(event: IpcMainInvokeEvent, p: string) {
 function checkPathOrTrusted(event: IpcMainInvokeEvent, p: string) {
   const denied = assertPathAllowed(event, p);
   if (denied && !isTrustedConfigPath(p)) return denied;
+  return null;
+}
+
+/** Like checkPath but also allows read-only access to trusted extension assets. */
+function checkReadablePath(event: IpcMainInvokeEvent, p: string) {
+  const denied = assertPathAllowed(event, p);
+  if (denied && !isTrustedConfigPath(p) && !isTrustedVsxExtensionPath(p)) return denied;
   return null;
 }
 
@@ -115,8 +127,26 @@ function bindWatcherEvents(watcher: FSWatcher): void {
   });
 }
 
+/** Normalize path for consistent watcher map keys (case-insensitive on Windows, strip trailing sep). */
+function normalizeWatchPath(p: string): string {
+  let norm = path.normalize(p).replace(/[/\\]+$/, '');
+  if (process.platform === 'win32') norm = norm.toLowerCase();
+  return norm;
+}
+
+function evictOldestWatcher(): void {
+  const oldest = watchers.keys().next().value;
+  if (!oldest) return;
+  const watcher = watchers.get(oldest);
+  watchers.delete(oldest);
+  watcher?.close().catch(() => {});
+  log.info(`[watchers] evicted oldest watcher (${oldest}), count=${watchers.size}`);
+}
+
 function watchDirectory(dirPath: string): { success: boolean; already?: true; error?: string } {
-  if (watchers.has(dirPath)) return { success: true, already: true };
+  const key = normalizeWatchPath(dirPath);
+  if (watchers.has(key)) return { success: true, already: true };
+  while (watchers.size >= MAX_WATCHERS) evictOldestWatcher();
   try {
     const watcher = chokidar.watch(dirPath, {
       persistent: true,
@@ -126,7 +156,7 @@ function watchDirectory(dirPath: string): { success: boolean; already?: true; er
       awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
     });
     bindWatcherEvents(watcher);
-    watchers.set(dirPath, watcher);
+    watchers.set(key, watcher);
     return { success: true };
   } catch (err) {
     return toErrorResult(err);
@@ -138,12 +168,17 @@ async function handleReadFile(event: IpcMainInvokeEvent, filePath: string) {
     event,
     filePath,
     async () => loadTextContent(filePath),
-    checkPathOrTrusted,
+    checkReadablePath,
   );
 }
 
 async function handleReadBinaryFile(event: IpcMainInvokeEvent, filePath: string) {
-  return readFileWithLimit(event, filePath, async () => loadBinaryContent(filePath), checkPath);
+  return readFileWithLimit(
+    event,
+    filePath,
+    async () => loadBinaryContent(filePath),
+    checkReadablePath,
+  );
 }
 
 async function handleReadDir(event: IpcMainInvokeEvent, dirPath: string) {
@@ -155,10 +190,11 @@ function handleWatchDir(event: IpcMainInvokeEvent, dirPath: string) {
 }
 
 async function handleUnwatchDir(_event: IpcMainInvokeEvent, dirPath: string) {
-  const watcher = watchers.get(dirPath);
+  const key = normalizeWatchPath(dirPath);
+  const watcher = watchers.get(key);
   if (watcher) {
     await watcher.close();
-    watchers.delete(dirPath);
+    watchers.delete(key);
   }
   return { success: true };
 }

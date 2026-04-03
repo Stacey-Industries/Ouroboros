@@ -52,6 +52,10 @@ export interface AgentChatOrchestrationBridge {
   getActiveThreadIds: () => string[];
   getBufferedChunks: (threadId: string) => AgentChatStreamChunk[];
   findThreadIdForSession: (sessionOrTaskId: string) => string | undefined;
+  /** Reverse lookup: find the taskId for a given threadId in activeSends. */
+  findTaskIdForThread: (threadId: string) => string | undefined;
+  /** Register a pending cancel for a thread whose taskId isn't available yet. */
+  registerPendingCancel: (threadId: string) => void;
   revertToSnapshot: (threadId: string, messageId: string) => Promise<AgentChatRevertResult>;
   dispose: () => void;
 }
@@ -59,6 +63,25 @@ export interface AgentChatOrchestrationBridge {
 // Re-export for consumers that import these from the bridge module
 export { deriveSmartTitle, generateLlmTitle };
 export type { ActiveStreamContext, AgentChatBridgeRuntime };
+
+// ---------------------------------------------------------------------------
+// Router context helper
+// ---------------------------------------------------------------------------
+
+/** Extract the last assistant message text for the model router's context window. */
+function getLastAssistantContent(
+  activeSends: AgentChatBridgeRuntime['activeSends'],
+  threadId: string | undefined,
+): string | undefined {
+  if (!threadId) return undefined;
+  // Check the in-memory stream buffer first (most recent assistant text).
+  for (const [, ctx] of activeSends) {
+    if (ctx.threadId === threadId && ctx.accumulatedText) {
+      return ctx.accumulatedText.substring(0, 500);
+    }
+  }
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Send message
@@ -106,12 +129,13 @@ async function sendMessageWithBridge(
   if (conflictError) return buildSendFailureResult({ error: conflictError });
 
   try {
+    const prevAssistant = getLastAssistantContent(runtime.activeSends, request.threadId);
     const pending = await preparePendingSend({
       content: request.content.trim(),
       createId: runtime.createId,
       now: runtime.now,
       request,
-      resolved: resolveSendOptions(runtime.getSettings(), request),
+      resolved: resolveSendOptions(runtime.getSettings(), request, prevAssistant),
       threadStore: runtime.threadStore,
     });
 
@@ -170,6 +194,7 @@ async function getLinkedDetailsWithBridge(
 function buildRuntime(deps: AgentChatOrchestrationBridgeDeps): AgentChatBridgeRuntime {
   const streamChunkListeners = new Set<StreamChunkListener>();
   const activeSends = new Map<string, ActiveStreamContext>();
+  const pendingCancels = new Set<string>();
   return {
     createId: deps.createId ?? randomUUID,
     getSettings:
@@ -185,30 +210,27 @@ function buildRuntime(deps: AgentChatOrchestrationBridgeDeps): AgentChatBridgeRu
     threadStore: deps.threadStore ?? agentChatThreadStore,
     streamChunkListeners,
     activeSends,
+    pendingCancels,
   };
 }
 
-export function createAgentChatOrchestrationBridge(
-  deps: AgentChatOrchestrationBridgeDeps,
-): AgentChatOrchestrationBridge {
-  const runtime = buildRuntime(deps);
-  const { streamChunkListeners, activeSends } = runtime;
-
-  const unsubProviderEvent = deps.orchestration.onProviderEvent((event) => {
-    handleProviderProgress(runtime, event);
-  });
-
+function buildActiveSendLookups(
+  activeSends: Map<string, ActiveStreamContext>,
+): Pick<
+  AgentChatOrchestrationBridge,
+  'getActiveThreadIds' | 'findThreadIdForSession' | 'findTaskIdForThread' | 'getBufferedChunks'
+> {
   return {
-    sendMessage: (request) => sendMessageWithBridge(runtime, request),
-    getLinkedDetails: (link) => getLinkedDetailsWithBridge(runtime.orchestration, link),
-    onStreamChunk: (listener) => {
-      streamChunkListeners.add(listener);
-      return () => streamChunkListeners.delete(listener);
-    },
     getActiveThreadIds: () => Array.from(activeSends.values()).map((ctx) => ctx.threadId),
     findThreadIdForSession(sessionOrTaskId) {
       for (const [taskId, ctx] of activeSends) {
         if (taskId === sessionOrTaskId || ctx.sessionId === sessionOrTaskId) return ctx.threadId;
+      }
+      return undefined;
+    },
+    findTaskIdForThread(threadId) {
+      for (const [taskId, ctx] of activeSends) {
+        if (ctx.threadId === threadId) return taskId;
       }
       return undefined;
     },
@@ -217,6 +239,25 @@ export function createAgentChatOrchestrationBridge(
         if (ctx.threadId === threadId) return [...ctx.bufferedChunks];
       }
       return [];
+    },
+  };
+}
+
+function buildBridgeObject(
+  runtime: AgentChatBridgeRuntime,
+  unsubProviderEvent: () => void,
+): AgentChatOrchestrationBridge {
+  const { streamChunkListeners, activeSends } = runtime;
+  return {
+    sendMessage: (request) => sendMessageWithBridge(runtime, request),
+    getLinkedDetails: (link) => getLinkedDetailsWithBridge(runtime.orchestration, link),
+    onStreamChunk: (listener) => {
+      streamChunkListeners.add(listener);
+      return () => streamChunkListeners.delete(listener);
+    },
+    ...buildActiveSendLookups(activeSends),
+    registerPendingCancel(threadId) {
+      runtime.pendingCancels.add(threadId);
     },
     revertToSnapshot: (threadId, messageId) =>
       revertToSnapshotWithBridge(runtime.threadStore, activeSends, threadId, messageId),
@@ -227,4 +268,14 @@ export function createAgentChatOrchestrationBridge(
       activeSends.clear();
     },
   };
+}
+
+export function createAgentChatOrchestrationBridge(
+  deps: AgentChatOrchestrationBridgeDeps,
+): AgentChatOrchestrationBridge {
+  const runtime = buildRuntime(deps);
+  const unsubProviderEvent = deps.orchestration.onProviderEvent((event) => {
+    handleProviderProgress(runtime, event);
+  });
+  return buildBridgeObject(runtime, unsubProviderEvent);
 }

@@ -59,13 +59,13 @@ function AuthDot({
 }: {
   provider: AuthProvider;
   state: AuthState | undefined;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <span title={dotTitle(provider, state)} style={{ ...dotStyle, background: dotColor(state) }} />
   );
 }
 
-export function StatusBarAuthIndicator(): React.ReactElement<any> {
+export function StatusBarAuthIndicator(): React.ReactElement {
   const { getProviderState } = useAuth();
 
   const handleClick = useCallback(() => {

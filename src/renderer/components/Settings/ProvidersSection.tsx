@@ -15,7 +15,7 @@ interface ProvidersSectionProps {
   onChange: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-export function ProvidersSection({ draft, onChange }: ProvidersSectionProps): React.ReactElement<any> {
+export function ProvidersSection({ draft, onChange }: ProvidersSectionProps): React.ReactElement {
   const model = useProvidersSectionModel(draft, onChange);
   return <ProvidersSectionContent model={model} />;
 }

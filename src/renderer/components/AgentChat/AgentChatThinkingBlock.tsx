@@ -8,7 +8,7 @@ export interface AgentChatThinkingBlockProps {
   onToggleCollapse: () => void;
 }
 
-function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement<any> {
+function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
     <svg
       className={`h-3 w-3 shrink-0 transition-transform duration-200 text-text-semantic-muted ${collapsed ? '' : 'rotate-90'}`}
@@ -26,7 +26,7 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement<
   );
 }
 
-function DurationBadge({ duration }: { duration: number }): React.ReactElement<any> {
+function DurationBadge({ duration }: { duration: number }): React.ReactElement {
   return (
     <span className="rounded-full bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-text-semantic-muted">
       {duration < 1 ? '<1s' : `${duration}s`}
@@ -63,7 +63,7 @@ function ThinkingContent({
   content: string;
   isStreaming: boolean;
   isCollapsed: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="agent-chat-thinking-collapse" data-collapsed={isCollapsed ? 'true' : 'false'}>
       <div
@@ -82,7 +82,7 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
   isStreaming,
   collapsed,
   onToggleCollapse,
-}: AgentChatThinkingBlockProps): React.ReactElement<any> {
+}: AgentChatThinkingBlockProps): React.ReactElement {
   const isCollapsed = collapsed && !isStreaming;
   const label = getThinkingLabel(duration, isStreaming);
 

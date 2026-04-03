@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 import type { MatchRange,TreeNode } from './FileTreeItem';
@@ -30,6 +30,9 @@ const OVERLAY_STYLE: React.CSSProperties = {
   right: 0,
   bottom: 0,
   zIndex: 10,
+  backgroundColor: 'var(--surface-overlay)',
+  backdropFilter: 'blur(24px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(140%)',
 };
 
 const EMPTY_STATE_STYLE: React.CSSProperties = {
@@ -91,8 +94,27 @@ function useSearchResults(roots: string[], _extraIgnorePatterns: string[], query
   return { isLoading, searchResults };
 }
 
-function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement<any> {
-  return <div className="bg-surface-panel text-text-semantic-faint" style={EMPTY_STATE_STYLE}>{label}</div>;
+function SearchOverlayEmptyState({ label }: { label: string }): React.ReactElement {
+  return <div className="text-text-semantic-faint" style={EMPTY_STATE_STYLE}>{label}</div>;
+}
+
+const ROW_HEIGHT = 28;
+const V_OVERSCAN = 5;
+
+function useOverlayScroll(ref: React.RefObject<HTMLDivElement | null>): { scrollTop: number; viewHeight: number } {
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewHeight, setViewHeight] = useState(400);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onScroll = (): void => { setScrollTop(el.scrollTop); };
+    const ro = new ResizeObserver(() => { setViewHeight(el.clientHeight); setScrollTop(el.scrollTop); });
+    el.addEventListener('scroll', onScroll, { passive: true });
+    ro.observe(el);
+    setViewHeight(el.clientHeight);
+    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
+  }, [ref]);
+  return { scrollTop, viewHeight };
 }
 
 function SearchOverlayResults({
@@ -103,24 +125,25 @@ function SearchOverlayResults({
   searchResults: SearchResult[];
   activeFilePath: string | null;
   onFileSelect: (path: string) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollTop, viewHeight } = useOverlayScroll(ref);
+  const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - V_OVERSCAN);
+  const end = Math.min(searchResults.length, Math.ceil((scrollTop + viewHeight) / ROW_HEIGHT) + V_OVERSCAN);
+
   return (
-    <div className="bg-surface-panel" style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
-      {searchResults.map(({ node, ranges }) => (
-        <FileTreeItem
-          key={node.path}
-          node={node}
-          depth={0}
-          isActive={node.path === activeFilePath}
-          isFocused={false}
-          searchMode={true}
-          matchRanges={ranges}
-          isBookmarked={false}
-          isEditing={false}
-          onClick={(item) => onFileSelect(item.path)}
-          onContextMenu={() => { }}
-        />
-      ))}
+    <div ref={ref} style={{ ...OVERLAY_STYLE, overflowY: 'auto' }}>
+      <div style={{ height: searchResults.length * ROW_HEIGHT, position: 'relative' }}>
+        {searchResults.slice(start, end).map(({ node, ranges }, i) => (
+          <div key={node.path} style={{ position: 'absolute', top: (start + i) * ROW_HEIGHT, left: 0, right: 0, height: ROW_HEIGHT }}>
+            <FileTreeItem
+              node={node} depth={0} isActive={node.path === activeFilePath} isFocused={false}
+              searchMode={true} matchRanges={ranges} isBookmarked={false} isEditing={false}
+              onClick={(item) => onFileSelect(item.path)} onContextMenu={() => { }}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -131,7 +154,7 @@ export function SearchOverlay({
   query,
   activeFilePath,
   onFileSelect,
-}: SearchOverlayProps): React.ReactElement<any> {
+}: SearchOverlayProps): React.ReactElement {
   const { isLoading, searchResults } = useSearchResults(roots, extraIgnorePatterns, query);
   if (searchResults.length === 0) {
     return <SearchOverlayEmptyState label={isLoading ? 'Indexing project files...' : `No files match "${query}"`} />;

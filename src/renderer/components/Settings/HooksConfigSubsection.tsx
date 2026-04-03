@@ -8,8 +8,18 @@ import { useProject } from '../../contexts/ProjectContext';
 import type { HooksConfig } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 
-const HOOK_EVENT_TYPES = ['PreToolUse', 'PostToolUse', 'SubagentStart', 'SubagentStop', 'SessionStart', 'Stop'] as const;
 type HookScope = 'global' | 'project';
+
+const HOOK_EVENT_CATEGORIES: { label: string; events: string[] }[] = [
+  { label: 'Lifecycle', events: ['SessionStart', 'SessionEnd', 'Stop', 'StopFailure', 'Setup'] },
+  { label: 'Tools', events: ['PreToolUse', 'PostToolUse', 'PostToolUseFailure'] },
+  { label: 'Agents', events: ['SubagentStart', 'SubagentStop', 'TeammateIdle'] },
+  { label: 'Tasks', events: ['TaskCreated', 'TaskCompleted'] },
+  { label: 'Conversation', events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'] },
+  { label: 'Workspace', events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'] },
+  { label: 'Context', events: ['PreCompact', 'PostCompact', 'InstructionsLoaded'] },
+  { label: 'Permissions', events: ['PermissionRequest', 'PermissionDenied'] },
+];
 
 interface HooksConfigSubsectionProps {
   projectRoot?: string;
@@ -25,7 +35,7 @@ async function fetchHooks(scope: HookScope, projectRoot: string | undefined): Pr
   return result.success && result.hooks ? result.hooks : {};
 }
 
-function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange: (s: HookScope) => void }): React.ReactElement<any> {
+function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange: (s: HookScope) => void }): React.ReactElement {
   return (
     <div style={scopeToggleStyle}>
       {(['global', 'project'] as const).map((s) => (
@@ -37,7 +47,7 @@ function ScopeToggle({ scope, onScopeChange }: { scope: HookScope; onScopeChange
   );
 }
 
-function AddHookRow({ onAdd }: { onAdd: (command: string) => Promise<void> }): React.ReactElement<any> {
+function AddHookRow({ onAdd }: { onAdd: (command: string) => Promise<void> }): React.ReactElement {
   const [value, setValue] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -69,23 +79,19 @@ interface HookEntriesListProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEntriesList({ eventType, matchers, onRemove }: HookEntriesListProps): React.ReactElement<any> {
+function HookEntriesList({ eventType, matchers, onRemove }: HookEntriesListProps): React.ReactElement {
   if (!matchers.length) {
     return <p className="text-text-semantic-muted" style={{ fontSize: '11px', margin: '4px 0' }}>No hooks registered.</p>;
   }
-  let globalIdx = 0;
   return (
     <>
       {matchers.map((matcher, mi) =>
-        (matcher.hooks ?? []).map((hook) => {
-          const idx = globalIdx++;
-          return (
-            <div key={`${mi}-${idx}`} style={hookRowStyle}>
-              <span className="text-text-semantic-secondary" style={hookCmdStyle}>{hook.command}</span>
-              <button onClick={() => void onRemove(eventType, idx)} aria-label="Remove hook" style={removeBtnStyle}>✕</button>
-            </div>
-          );
-        }),
+        (matcher.hooks ?? []).map((hook, hi) => (
+          <div key={`${mi}-${hi}`} style={hookRowStyle}>
+            <span className="text-text-semantic-secondary" style={hookCmdStyle}>{hook.command}</span>
+            <button onClick={() => void onRemove(eventType, mi)} aria-label="Remove hook" style={removeBtnStyle}>✕</button>
+          </div>
+        )),
       )}
     </>
   );
@@ -98,7 +104,7 @@ interface HookEventSectionProps {
   onRemove: (eventType: string, index: number) => Promise<void>;
 }
 
-function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectionProps): React.ReactElement<any> {
+function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectionProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const matchers = hooks[eventType] ?? [];
   const hookCount = matchers.reduce((sum, m) => sum + (m.hooks?.length ?? 0), 0);
@@ -119,9 +125,15 @@ function HookEventSection({ eventType, hooks, onAdd, onRemove }: HookEventSectio
   );
 }
 
-export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksConfigSubsectionProps): React.ReactElement<any> {
-  const { projectRoot: contextRoot } = useProject();
-  const projectRoot = projectRootProp ?? contextRoot ?? undefined;
+interface HooksSubsectionModel {
+  scope: HookScope;
+  hooks: HooksConfig;
+  setScope: (s: HookScope) => void;
+  handleAdd: (eventType: string, command: string) => Promise<void>;
+  handleRemove: (eventType: string, index: number) => Promise<void>;
+}
+
+function useHooksSubsection(projectRoot: string | undefined): HooksSubsectionModel {
   const [scope, setScope] = useState<HookScope>('global');
   const [hooks, setHooks] = useState<HooksConfig>({});
   const scopeRef = useRef(scope);
@@ -148,6 +160,10 @@ export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksCon
     await reload();
   }, [scope, projectRoot, reload]);
 
+  return { scope, hooks, setScope, handleAdd, handleRemove };
+}
+
+function HooksSubsectionView({ scope, hooks, setScope, handleAdd, handleRemove }: HooksSubsectionModel): React.ReactElement {
   return (
     <section>
       <SectionLabel>Hook Commands</SectionLabel>
@@ -156,16 +172,29 @@ export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksCon
       </p>
       <ScopeToggle scope={scope} onScopeChange={setScope} />
       <div style={{ marginTop: '12px' }}>
-        {HOOK_EVENT_TYPES.map((eventType) => (
-          <HookEventSection key={eventType} eventType={eventType} hooks={hooks} onAdd={handleAdd} onRemove={handleRemove} />
+        {HOOK_EVENT_CATEGORIES.map((category, ci) => (
+          <div key={category.label} style={ci > 0 ? { marginTop: '12px' } : undefined}>
+            <p className="text-text-semantic-muted" style={categoryLabelStyle}>{category.label}</p>
+            {category.events.map((eventType) => (
+              <HookEventSection key={eventType} eventType={eventType} hooks={hooks} onAdd={handleAdd} onRemove={handleRemove} />
+            ))}
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
+export function HooksConfigSubsection({ projectRoot: projectRootProp }: HooksConfigSubsectionProps): React.ReactElement {
+  const { projectRoot: contextRoot } = useProject();
+  const projectRoot = projectRootProp ?? contextRoot ?? undefined;
+  const model = useHooksSubsection(projectRoot);
+  return <HooksSubsectionView {...model} />;
+}
+
 /* ---------- Styles ---------- */
 
+const categoryLabelStyle: React.CSSProperties = { fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' };
 const scopeToggleStyle: React.CSSProperties = { display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--border-default)', overflow: 'hidden' };
 const eventSectionStyle: React.CSSProperties = { borderRadius: '6px', border: '1px solid var(--border-default)', marginBottom: '6px', overflow: 'hidden' };
 const eventBodyStyle: React.CSSProperties = { padding: '8px 12px 10px', background: 'var(--surface-base)', borderTop: '1px solid var(--border-default)' };

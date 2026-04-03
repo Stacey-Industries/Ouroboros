@@ -3,6 +3,7 @@ import React from 'react';
 import { type CardView, ViewToggle } from './AgentCardControls';
 import { AgentCardMeta } from './AgentCardSectionsViews';
 import { AgentEventLog } from './AgentEventLog';
+import { TaskList } from './TaskList';
 import { ToolCallFeed } from './ToolCallFeed';
 import { ToolCallTimeline } from './ToolCallTimeline';
 import type { AgentSession, ToolCallEvent } from './types';
@@ -33,7 +34,7 @@ export function SessionNotesEditor({
   notesDraft,
   onNotesDraftChange,
   onSaveNotes,
-}: SessionNotesEditorProps): React.ReactElement<any> {
+}: SessionNotesEditorProps): React.ReactElement<unknown> {
   return (
     <div className="mx-2.5 mb-2 p-2 rounded bg-surface-raised border border-border-semantic">
       <textarea
@@ -48,7 +49,7 @@ export function SessionNotesEditor({
   );
 }
 
-export function SessionNotesPreview({ notes }: { notes: string }): React.ReactElement<any> {
+export function SessionNotesPreview({ notes }: { notes: string }): React.ReactElement<unknown> {
   return (
     <div className="mx-6 mb-1.5 text-[10px] italic truncate text-text-semantic-muted" title={notes}>
       {notes}
@@ -56,7 +57,7 @@ export function SessionNotesPreview({ notes }: { notes: string }): React.ReactEl
   );
 }
 
-export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement<any> | null {
+export function SessionErrorBanner({ error }: { error?: string }): React.ReactElement<unknown> | null {
   if (!error) return null;
   return (
     <div
@@ -79,7 +80,7 @@ export function EventLogSection({
   session: AgentSession;
   showLog: boolean;
   onToggleLog: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div style={{ borderTop: '1px solid var(--border-subtle)' }}>
       <button
@@ -111,11 +112,14 @@ export function ExpandedToolView({
   showLog: boolean;
   isRunning: boolean;
   onToggleLog: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div>
       {cardView === 'feed' ? (
-        <ToolCallFeed toolCalls={session.toolCalls} />
+        <ToolCallFeed
+          toolCalls={session.toolCalls}
+          conversationTurns={session.conversationTurns}
+        />
       ) : (
         <ToolCallTimeline
           toolCalls={session.toolCalls}
@@ -123,6 +127,7 @@ export function ExpandedToolView({
           sessionRunning={isRunning}
         />
       )}
+      <TaskList tasks={session.tasks} />
       {session.toolCalls.length > 0 && (
         <EventLogSection session={session} showLog={showLog} onToggleLog={onToggleLog} />
       )}
@@ -134,7 +139,7 @@ export function CollapsedPreview({
   latestCall,
 }: {
   latestCall?: ToolCallEvent;
-}): React.ReactElement<any> | null {
+}): React.ReactElement<unknown> | null {
   if (!latestCall) return null;
   return (
     <div
@@ -152,7 +157,7 @@ export function ViewToggleBar({
 }: {
   cardView: CardView;
   onCardViewChange: (view: CardView) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   return (
     <div
       className="flex items-center justify-end px-3 py-1 gap-2"
@@ -181,7 +186,7 @@ export function AgentCardExpandedContent({
   isRunning: boolean;
   onToggleLog: () => void;
   onCardViewChange: (view: CardView) => void;
-}): React.ReactElement<any> {
+}): React.ReactElement<unknown> {
   if (!expanded) return <CollapsedPreview latestCall={latestCall} />;
   return (
     <div>

@@ -17,6 +17,7 @@ import {
   cleanupFileWatchers,
   lspStopAll,
   registerAgentChatHandlers,
+  registerAiHandlers,
   registerAppHandlers,
   registerAuthHandlers,
   registerClaudeMdHandlers,
@@ -31,6 +32,7 @@ import {
   registerMiscHandlers,
   registerPtyHandlers,
   registerRulesAndSkillsHandlers,
+  registerSearchHandlers,
   registerSessionHandlers,
 } from './ipc-handlers';
 import log from './logger';
@@ -46,24 +48,35 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow {
   return win;
 }
 
+function safeRegister(name: string, fn: () => string[]): string[] {
+  try {
+    return fn();
+  } catch (err) {
+    log.error(`[ipc:register] ${name} FAILED:`, err);
+    return [];
+  }
+}
+
 function registerDomainHandlers(win: BrowserWindow): string[] {
   return [
-    ...registerPtyHandlers(senderWindow),
-    ...registerConfigHandlers(senderWindow),
-    ...registerFileHandlers(senderWindow),
-    ...registerGitHandlers(senderWindow),
-    ...registerAppHandlers(senderWindow),
-    ...registerAgentChatHandlers(win),
-    ...registerSessionHandlers(senderWindow),
-    ...registerMiscHandlers(senderWindow, win),
-    ...registerMcpHandlers(senderWindow),
-    ...registerMcpStoreHandlers(senderWindow),
-    ...registerExtensionStoreHandlers(senderWindow),
-    ...registerContextHandlers(senderWindow),
-    ...registerIdeToolsHandlers(senderWindow),
-    ...registerClaudeMdHandlers(senderWindow),
-    ...registerRulesAndSkillsHandlers(senderWindow),
-    ...registerAuthHandlers(senderWindow, win),
+    ...safeRegister('pty', () => registerPtyHandlers(senderWindow)),
+    ...safeRegister('config', () => registerConfigHandlers(senderWindow)),
+    ...safeRegister('files', () => registerFileHandlers(senderWindow)),
+    ...safeRegister('git', () => registerGitHandlers(senderWindow)),
+    ...safeRegister('app', () => registerAppHandlers(senderWindow)),
+    ...safeRegister('agentChat', () => registerAgentChatHandlers(win)),
+    ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
+    ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
+    ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),
+    ...safeRegister('mcpStore', () => registerMcpStoreHandlers(senderWindow)),
+    ...safeRegister('extensionStore', () => registerExtensionStoreHandlers(senderWindow)),
+    ...safeRegister('context', () => registerContextHandlers(senderWindow)),
+    ...safeRegister('ideTools', () => registerIdeToolsHandlers(senderWindow)),
+    ...safeRegister('claudeMd', () => registerClaudeMdHandlers(senderWindow)),
+    ...safeRegister('rulesAndSkills', () => registerRulesAndSkillsHandlers(senderWindow)),
+    ...safeRegister('search', () => registerSearchHandlers()),
+    ...safeRegister('auth', () => registerAuthHandlers(senderWindow, win)),
+    ...safeRegister('ai', () => registerAiHandlers()),
   ];
 }
 

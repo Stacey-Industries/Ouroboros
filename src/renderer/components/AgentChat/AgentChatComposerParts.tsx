@@ -22,7 +22,7 @@ export function AttachmentChip({
 }: {
   attachment: ImageAttachment;
   onRemove: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
   return (
     <span
@@ -56,7 +56,7 @@ export function AttachmentChipsBar({
 }: {
   attachments: ImageAttachment[];
   onRemove: (name: string) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (attachments.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-1 pb-1.5 pt-1">
@@ -81,7 +81,7 @@ export function AutocompleteDropdown(props: {
   results: FileEntry[];
   selectedIndex: number;
   onSelect: (file: FileEntry) => void;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (props.results.length === 0) return null;
 
   return (
@@ -108,10 +108,10 @@ export function AutocompleteDropdown(props: {
 /* ---------- Textarea helpers ---------- */
 
 export function autoResizeTextarea(textarea: HTMLTextAreaElement): void {
+  const saved = textarea.scrollTop;
   textarea.style.height = 'auto';
-  const minHeight = 40;
-  const maxHeight = 120;
-  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)}px`;
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 40), 120)}px`;
+  textarea.scrollTop = saved;
 }
 
 export function extractMentionQuery(value: string, cursorPos: number): string | null {
@@ -121,14 +121,18 @@ export function extractMentionQuery(value: string, cursorPos: number): string | 
   if (lastAt > 0 && !/\s/.test(textBeforeCursor[lastAt - 1])) return null;
   const query = textBeforeCursor.slice(lastAt + 1);
   if (query.includes('\n')) return null;
+  if (query.length > 0 && /^\s/.test(query)) return null;
   return query;
 }
 
-export function extractSlashQuery(value: string): string | null {
-  if (!value.startsWith('/')) return null;
-  const rest = value.slice(1);
-  if (rest.includes(' ') || rest.includes('\n')) return null;
-  return rest;
+export function extractSlashQuery(value: string, cursorPos: number): string | null {
+  const textBeforeCursor = value.slice(0, cursorPos);
+  const lastSlash = textBeforeCursor.lastIndexOf('/');
+  if (lastSlash === -1) return null;
+  if (lastSlash > 0 && !/\s/.test(textBeforeCursor[lastSlash - 1])) return null;
+  const query = textBeforeCursor.slice(lastSlash + 1);
+  if (query.includes(' ') || query.includes('\n')) return null;
+  return query;
 }
 
 export function findLastUserMessageContent(
@@ -164,7 +168,7 @@ export type ComposerMenusProps = {
   useMentionSystem: boolean;
 };
 
-export function ComposerMenus(props: ComposerMenusProps): React.ReactElement<any> {
+export function ComposerMenus(props: ComposerMenusProps): React.ReactElement {
   return (
     <div className="relative">
       {props.isSlashMenuOpen && props.slashQuery !== null && (

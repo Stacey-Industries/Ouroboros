@@ -12,7 +12,7 @@ export interface MultiSessionMonitorProps {
 export const MultiSessionMonitor = memo(function MultiSessionMonitor({
   batchLabels,
   onClose,
-}: MultiSessionMonitorProps): React.ReactElement<any> {
+}: MultiSessionMonitorProps): React.JSX.Element {
   const { agents } = useAgentEventsContext();
   const { batchSessions, gridLayout, stats } = useMultiSessionMonitorModel(agents, batchLabels);
 

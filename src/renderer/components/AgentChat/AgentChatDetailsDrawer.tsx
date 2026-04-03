@@ -23,7 +23,7 @@ export interface AgentChatDetailsDrawerProps {
 function DrawerSection(props: {
   children: React.ReactNode;
   title: string;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <section className="rounded border border-border-semantic bg-surface-base px-3 py-3">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{props.title}</div>
@@ -34,7 +34,7 @@ function DrawerSection(props: {
 
 function MetadataGrid(props: {
   rows: Array<{ label: string; value: string | null }>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
       {props.rows.filter((row) => row.value).map((row) => (
@@ -47,15 +47,15 @@ function MetadataGrid(props: {
   );
 }
 
-function DrawerTextBlock({ children }: { children: React.ReactNode }): React.ReactElement<any> {
+function DrawerTextBlock({ children }: { children: React.ReactNode }): React.ReactElement {
   return <div className="mt-3 text-xs leading-5 text-text-semantic-muted">{children}</div>;
 }
 
-function LoadingState(): React.ReactElement<any> {
+function LoadingState(): React.ReactElement {
   return <div className="text-xs text-text-semantic-muted">Loading linked task details…</div>;
 }
 
-function ErrorState({ error }: { error: string }): React.ReactElement<any> {
+function ErrorState({ error }: { error: string }): React.ReactElement {
   return (
     <div className="rounded border border-border-semantic bg-[rgba(248,81,73,0.08)] px-3 py-3 text-xs leading-5 text-status-error">
       {error}
@@ -63,11 +63,11 @@ function ErrorState({ error }: { error: string }): React.ReactElement<any> {
   );
 }
 
-function EmptyState(): React.ReactElement<any> {
+function EmptyState(): React.ReactElement {
   return <div className="text-xs text-text-semantic-muted">No linked task details are available for this message yet.</div>;
 }
 
-function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement<any> | null {
+function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
   const contextPacket = details.session?.contextPacket;
   if (!contextPacket) {
     return null;
@@ -98,7 +98,7 @@ function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }):
   );
 }
 
-function VerificationSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement<any> | null {
+function VerificationSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
   const verification = details.result?.verificationSummary ?? details.session?.lastVerificationSummary;
   if (!verification) {
     return null;
@@ -125,7 +125,7 @@ function VerificationSection({ details }: { details: AgentChatLinkedDetailsResul
   );
 }
 
-function ResultIssueList({ issues }: { issues: string[] }): React.ReactElement<any> | null {
+function ResultIssueList({ issues }: { issues: string[] }): React.ReactElement | null {
   if (issues.length === 0) {
     return null;
   }
@@ -139,7 +139,7 @@ function ResultIssueList({ issues }: { issues: string[] }): React.ReactElement<a
   );
 }
 
-function ResultSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement<any> | null {
+function ResultSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
   const result = details.result ?? details.session?.latestResult;
   if (!result) {
     return null;
@@ -158,7 +158,7 @@ function ResultSection({ details }: { details: AgentChatLinkedDetailsResult }): 
 function SessionSection(props: {
   activeLink: AgentChatOrchestrationLink | undefined;
   details: AgentChatLinkedDetailsResult;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <DrawerSection title="Linked task">
       <MetadataGrid rows={buildSessionRows(props)} />
@@ -172,7 +172,7 @@ function DrawerBody(props: {
   error: string | null;
   isLoading: boolean;
   skillExecutions?: import('@shared/types/ruleActivity').SkillExecutionRecord[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   if (props.isLoading && !props.details) {
     return <LoadingState />;
   }
@@ -214,7 +214,7 @@ function useEscapeToClose(isOpen: boolean, onClose: () => void): void {
   }, [isOpen, onClose]);
 }
 
-function DrawerHeader({ onClose }: Pick<AgentChatDetailsDrawerProps, 'onClose'>): React.ReactElement<any> {
+function DrawerHeader({ onClose }: Pick<AgentChatDetailsDrawerProps, 'onClose'>): React.ReactElement {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border-semantic px-4 py-3">
       <div className="min-w-0 flex-1">
@@ -231,7 +231,7 @@ function DrawerHeader({ onClose }: Pick<AgentChatDetailsDrawerProps, 'onClose'>)
   );
 }
 
-function DrawerToolbar(props: Pick<AgentChatDetailsDrawerProps, 'activeLink' | 'onOpenOrchestration'>): React.ReactElement<any> {
+function DrawerToolbar(props: Pick<AgentChatDetailsDrawerProps, 'activeLink' | 'onOpenOrchestration'>): React.ReactElement {
   const label = props.activeLink?.sessionId || props.activeLink?.taskId
     ? `Linked to ${shortenId(props.activeLink?.sessionId ?? props.activeLink?.taskId)}`
     : 'No linked session yet';
@@ -249,7 +249,7 @@ function DrawerToolbar(props: Pick<AgentChatDetailsDrawerProps, 'activeLink' | '
   );
 }
 
-function DrawerPanel(props: AgentChatDetailsDrawerProps): React.ReactElement<any> {
+function DrawerPanel(props: AgentChatDetailsDrawerProps): React.ReactElement {
   return (
     <div
       className={`flex h-full w-full max-w-[360px] flex-col border-l border-border-semantic bg-surface-overlay shadow-2xl backdrop-blur-xl transition-transform duration-200 ${props.isOpen ? 'translate-x-0' : 'translate-x-full'}`}
@@ -263,7 +263,7 @@ function DrawerPanel(props: AgentChatDetailsDrawerProps): React.ReactElement<any
   );
 }
 
-function DrawerBackdrop(props: Pick<AgentChatDetailsDrawerProps, 'isOpen' | 'onClose'>): React.ReactElement<any> {
+function DrawerBackdrop(props: Pick<AgentChatDetailsDrawerProps, 'isOpen' | 'onClose'>): React.ReactElement {
   return (
     <div
       className={`flex-1 bg-[rgba(0,0,0,0.18)] transition-opacity duration-150 ${props.isOpen ? 'opacity-100' : 'opacity-0'}`}
@@ -281,7 +281,7 @@ export function AgentChatDetailsDrawer({
   onClose,
   onOpenOrchestration,
   skillExecutions,
-}: AgentChatDetailsDrawerProps): React.ReactElement<any> {
+}: AgentChatDetailsDrawerProps): React.ReactElement {
   useEscapeToClose(isOpen, onClose);
 
   return (

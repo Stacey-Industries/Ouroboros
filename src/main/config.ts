@@ -108,6 +108,8 @@ export interface ModelSlotAssignments {
   agentChat: string;
   /** Model for CLAUDE.md generation */
   claudeMdGeneration: string;
+  /** Model for inline AI completions (ghost text) */
+  inlineCompletion: string;
 }
 
 export interface ClaudeMdSettings {
@@ -125,6 +127,21 @@ export interface ClaudeMdSettings {
   generateSubdirs: boolean;
   /** Directories to exclude from generation */
   excludeDirs: string[];
+}
+
+export interface RouterSettings {
+  /** Master toggle — when false, router is bypassed entirely. */
+  enabled: boolean;
+  /** Enable the deterministic rule engine (Layer 1). */
+  layer1Enabled: boolean;
+  /** Enable the ML classifier (Layer 2). */
+  layer2Enabled: boolean;
+  /** Enable the Haiku LLM fallback (Layer 3). */
+  layer3Enabled: boolean;
+  /** Classifier confidence below this → low confidence → try next layer. */
+  layer2ConfidenceThreshold: number;
+  /** Always route to Opus regardless of classification. */
+  paranoidMode: boolean;
 }
 
 export interface AgentTemplate {
@@ -172,6 +189,8 @@ export interface AppConfig {
     | 'light'
     | 'high-contrast'
     | 'custom';
+  activeFileIconTheme: string;
+  activeProductIconTheme: string;
   hooksServerPort: number;
   terminalFontSize: number;
   autoInstallHooks: boolean;
@@ -226,6 +245,8 @@ export interface AppConfig {
     installedAt: string;
     contributes: {
       themes?: Array<{ label: string; uiTheme: string; path: string }>;
+      iconThemes?: Array<{ id: string; label: string; path: string }>;
+      productIconThemes?: Array<{ id: string; label: string; path: string }>;
       grammars?: Array<{ language: string; scopeName: string; path: string }>;
       snippets?: Array<{ language: string; path: string }>;
       languages?: Array<{ id: string; extensions?: string[]; configuration?: string }>;
@@ -235,6 +256,8 @@ export interface AppConfig {
   disabledVsxExtensions: string[];
   /** Whether LSP integration is enabled */
   lspEnabled: boolean;
+  /** Whether inline AI completions (ghost text) are enabled */
+  inlineCompletionsEnabled: boolean;
   /** Custom language server commands keyed by language id */
   lspServers: Record<string, string>;
   /** Auto-launch a Claude Code session on startup instead of a plain shell */
@@ -268,6 +291,8 @@ export interface AppConfig {
   /** Password for web remote access login (alternative to token) */
   webAccessPassword: string;
   glassOpacity: number;
+  /** Model router settings — automatic tier selection (HAIKU/SONNET/OPUS) */
+  routerSettings: RouterSettings;
 }
 
 export const store = new Store<AppConfig>({ schema: schema as import('electron-store').Schema<AppConfig> });

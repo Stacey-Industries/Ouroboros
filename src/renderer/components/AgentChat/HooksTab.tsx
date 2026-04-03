@@ -6,19 +6,22 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import type { HooksConfig } from '../../../shared/types/rulesAndSkills';
+import type { HookEventType, HooksConfig } from '../../../shared/types/rulesAndSkills';
 import { ScopeToggle, type ScopeValue } from './ClaudeConfigPanelParts';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const HOOK_EVENT_TYPES = [
-  'PreToolUse',
-  'PostToolUse',
-  'SubagentStart',
-  'SubagentStop',
-  'SessionStart',
-  'Stop',
-] as const;
+const HOOK_EVENT_CATEGORIES: { label: string; events: HookEventType[] }[] = [
+  { label: 'Lifecycle', events: ['SessionStart', 'SessionEnd', 'Stop', 'StopFailure', 'Setup'] },
+  { label: 'Tools', events: ['PreToolUse', 'PostToolUse', 'PostToolUseFailure'] },
+  { label: 'Agents', events: ['SubagentStart', 'SubagentStop', 'TeammateIdle'] },
+  { label: 'Tasks', events: ['TaskCreated', 'TaskCompleted'] },
+  { label: 'Conversation', events: ['UserPromptSubmit', 'Elicitation', 'ElicitationResult', 'Notification'] },
+  { label: 'Workspace', events: ['CwdChanged', 'FileChanged', 'WorktreeCreate', 'WorktreeRemove', 'ConfigChange'] },
+  { label: 'Context', events: ['PreCompact', 'PostCompact', 'InstructionsLoaded'] },
+  { label: 'Permissions', events: ['PermissionRequest', 'PermissionDenied'] },
+];
+
 
 // ── API guard ────────────────────────────────────────────────────────────────
 
@@ -230,8 +233,13 @@ function HooksTabBody({ hooks, handleAdd, handleRemove }: {
       <p className="text-[10px] text-text-semantic-muted mb-1.5">
         Shell commands that run at Claude Code lifecycle events.
       </p>
-      {HOOK_EVENT_TYPES.map((eventType) => (
-        <EventTypeSection key={eventType} eventType={eventType} matchers={hooks[eventType]} onAdd={handleAdd} onRemove={handleRemove} />
+      {HOOK_EVENT_CATEGORIES.map((category, ci) => (
+        <div key={category.label} className={ci > 0 ? 'mt-3' : undefined}>
+          <p className="text-[10px] text-text-semantic-muted uppercase tracking-wider mb-1">{category.label}</p>
+          {category.events.map((eventType) => (
+            <EventTypeSection key={eventType} eventType={eventType} matchers={hooks[eventType]} onAdd={handleAdd} onRemove={handleRemove} />
+          ))}
+        </div>
       ))}
     </>
   );

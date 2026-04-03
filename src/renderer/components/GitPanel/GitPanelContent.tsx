@@ -15,7 +15,7 @@ function EmptyState({
 }: {
   message: string;
   centered?: boolean;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div className={`p-4 ${centered ? 'flex h-full items-center justify-center' : ''}`}>
       <span className={`text-xs text-text-semantic-muted ${centered ? 'text-center' : ''}`}>
@@ -31,7 +31,7 @@ function ErrorBanner({
 }: {
   error: string;
   onDismiss: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="flex-shrink-0 border-b border-border-semantic px-2 py-1 text-xs text-status-error"
@@ -55,7 +55,7 @@ function SectionHeader({
   title: string;
   toggleAllLabel?: string;
   onToggleAll?: () => Promise<void>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       className="sticky top-0 z-10 flex items-center justify-between bg-surface-panel px-2 py-1.5"
@@ -104,7 +104,7 @@ function ChangeSection({
   onToggle,
   onToggleAll,
   toggleAllLabel,
-}: ChangeSectionProps): React.ReactElement<any> {
+}: ChangeSectionProps): React.ReactElement {
   return (
     <div className={isStaged ? 'border-b border-border-semantic' : ''}>
       <SectionHeader
@@ -139,7 +139,7 @@ function getEmptyStateMessage(projectRoot: string | null, isRepo: boolean | null
   return null;
 }
 
-function ChangeSections(props: GitPanelContentProps): React.ReactElement<any> {
+function ChangeSections(props: GitPanelContentProps): React.ReactElement {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <ChangeSection
@@ -169,7 +169,7 @@ function ChangeSections(props: GitPanelContentProps): React.ReactElement<any> {
   );
 }
 
-function RepoContent(props: GitPanelContentProps): React.ReactElement<any> {
+function RepoContent(props: GitPanelContentProps): React.ReactElement {
   return (
     <div className="flex h-full flex-col overflow-hidden" style={{ fontSize: '12px' }}>
       <div className="flex-shrink-0 border-b border-border-semantic px-2 py-2">
@@ -190,16 +190,18 @@ function RepoContent(props: GitPanelContentProps): React.ReactElement<any> {
         canCommit={props.canCommit}
         commitMessage={props.commitMessage}
         isCommitting={props.isCommitting}
+        isGenerating={props.isGenerating}
         stagedCount={props.stagedCount}
         onCommit={props.handleCommit}
         onCommitMessageChange={props.handleCommitMessageChange}
+        onGenerateCommitMessage={props.handleGenerateCommitMessage}
         onKeyDown={props.handleKeyDown}
       />
     </div>
   );
 }
 
-export function GitPanelContent(props: GitPanelContentProps): React.ReactElement<any> {
+export function GitPanelContent(props: GitPanelContentProps): React.ReactElement {
   const emptyStateMessage = getEmptyStateMessage(props.projectRoot, props.isRepo);
   return emptyStateMessage ? (
     <EmptyState centered message={emptyStateMessage} />

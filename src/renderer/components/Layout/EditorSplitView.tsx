@@ -18,6 +18,8 @@ export type ActiveFile = {
   originalContent: string | null;
   isImage?: boolean;
   isPdf?: boolean;
+  isAudio?: boolean;
+  isVideo?: boolean;
   isBinary?: boolean;
   binaryContent?: Uint8Array;
   isDirty: boolean;
@@ -32,6 +34,8 @@ export interface FileViewState {
   originalContent: string | null;
   isImage: boolean;
   isPdf: boolean;
+  isAudio: boolean;
+  isVideo: boolean;
   isBinary: boolean;
   binaryContent?: Uint8Array;
   isDirty: boolean;
@@ -46,6 +50,8 @@ export const EMPTY_FILE_VIEW: FileViewState = {
   originalContent: null,
   isImage: false,
   isPdf: false,
+  isAudio: false,
+  isVideo: false,
   isBinary: false,
   isDirty: false,
 };
@@ -61,6 +67,8 @@ export function normalizeFileView(activeFile: ActiveFile): FileViewState {
     originalContent: activeFile.originalContent,
     isImage: activeFile.isImage ?? false,
     isPdf: activeFile.isPdf ?? false,
+    isAudio: activeFile.isAudio ?? false,
+    isVideo: activeFile.isVideo ?? false,
     isBinary: activeFile.isBinary ?? false,
     binaryContent: activeFile.binaryContent,
     isDirty: activeFile.isDirty,
@@ -86,7 +94,7 @@ const CLOSE_SPLIT_BUTTON_BASE: React.CSSProperties = {
   transition: 'opacity 150ms ease, background-color 150ms ease',
 };
 
-export function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElement<any> {
+export function CloseSplitButton({ onClick }: { onClick: () => void }): React.ReactElement {
   const [isHovered, setIsHovered] = useState(false);
   const style: React.CSSProperties = {
     ...CLOSE_SPLIT_BUTTON_BASE,
@@ -140,19 +148,15 @@ export interface SplitFileActions {
 
 // ── File Pane ───────────────────────────────────────────────────────────────
 
-function FilePaneView({
-  view,
-  projectRoot,
-  actions,
-  isActive,
-  onClick,
-}: {
+interface FilePaneViewProps {
   view: FileViewState;
   projectRoot: string | null;
   actions: SplitFileActions;
   isActive: boolean;
   onClick: () => void;
-}): React.ReactElement<any> {
+}
+
+function FilePaneView({ view, projectRoot, actions, isActive, onClick }: FilePaneViewProps): React.ReactElement {
   return (
     <div
       style={{ ...SPLIT_PANE_STYLE, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}
@@ -169,6 +173,8 @@ function FilePaneView({
         projectRoot={projectRoot}
         isImage={view.isImage}
         isPdf={view.isPdf}
+        isAudio={view.isAudio}
+        isVideo={view.isVideo}
         isBinary={view.isBinary}
         binaryContent={view.binaryContent}
         onSave={actions.handleSave}
@@ -213,7 +219,7 @@ function SplitPane({
   onClick: () => void;
   width: string;
   children?: React.ReactNode;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <div
       style={{ ...SPLIT_PANE_STYLE, width, ...(isActive ? ACTIVE_SPLIT_BORDER : {}) }}
@@ -244,7 +250,7 @@ export function SplitContentView({
   onCloseSplit,
   leftActions,
   rightActions,
-}: SplitContentViewProps): React.ReactElement<any> {
+}: SplitContentViewProps): React.ReactElement {
   const leftView = normalizeFileView(leftFile);
   const rightView = normalizeFileView(rightFile);
   return (

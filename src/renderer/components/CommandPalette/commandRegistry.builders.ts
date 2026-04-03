@@ -7,11 +7,11 @@ import type { Command } from './types';
 const EMPTY_ACTION: Command['action'] = () => {};
 
 const THEME_OPTIONS = [
-  { id: 'retro', label: 'Retro', icon: '🟢' },
-  { id: 'modern', label: 'Modern', icon: '🔵' },
-  { id: 'warp', label: 'Warp', icon: '🟣' },
-  { id: 'cursor', label: 'Cursor', icon: '⚫' },
-  { id: 'kiro', label: 'Kiro', icon: '🟡' },
+  { id: 'retro', label: 'Retro', icon: 'R' },
+  { id: 'modern', label: 'Modern', icon: 'M' },
+  { id: 'warp', label: 'Warp', icon: 'W' },
+  { id: 'cursor', label: 'Cursor', icon: 'C' },
+  { id: 'kiro', label: 'Kiro', icon: 'K' },
 ] as const;
 
 const TERMINAL_OPTIONS = [
@@ -20,19 +20,22 @@ const TERMINAL_OPTIONS = [
     label: 'New Tab',
     shortcut: 'Ctrl+Shift+`',
     icon: '+',
+    productIconId: 'add',
     eventName: 'agent-ide:new-terminal',
   },
   {
     id: 'terminal:close-tab',
     label: 'Close Tab',
-    icon: '×',
+    icon: 'x',
+    productIconId: 'close',
     eventName: 'agent-ide:close-terminal',
   },
   {
     id: 'terminal:toggle',
     label: 'Toggle Panel',
     shortcut: 'Ctrl+J',
-    icon: '⬛',
+    icon: 'T',
+    productIconId: 'terminal',
     eventName: 'agent-ide:toggle-terminal',
   },
 ] as const;
@@ -44,6 +47,7 @@ interface DomCommandConfig {
   eventName: string;
   shortcut?: string;
   icon?: string;
+  productIconId?: string;
   detail?: unknown;
 }
 
@@ -66,10 +70,11 @@ function createSubmenu(config: {
   label: string;
   category: Command['category'];
   icon: string;
+  productIconId?: string;
   children: Command[];
 }): Command {
-  const { id, label, category, icon, children } = config;
-  return { id, label, category, icon, action: EMPTY_ACTION, children };
+  const { id, label, category, icon, productIconId, children } = config;
+  return { id, label, category, icon, productIconId, action: EMPTY_ACTION, children };
 }
 
 function buildThemeMenu(): Command {
@@ -79,11 +84,19 @@ function buildThemeMenu(): Command {
       label: theme.label,
       category: 'view',
       icon: theme.icon,
+      productIconId: 'color-mode',
       eventName: 'agent-ide:set-theme',
       detail: theme.id,
     }),
   );
-  return createSubmenu({ id: 'theme', label: 'Theme', category: 'view', icon: '🎨', children });
+  return createSubmenu({
+    id: 'theme',
+    label: 'Theme',
+    category: 'view',
+    icon: 'T',
+    productIconId: 'color-mode',
+    children,
+  });
 }
 
 function buildViewCommands(): Command[] {
@@ -93,7 +106,8 @@ function buildViewCommands(): Command[] {
       label: 'Toggle Left Sidebar',
       category: 'view',
       shortcut: 'Ctrl+B',
-      icon: '⬛',
+      icon: 'F',
+      productIconId: 'files',
       eventName: 'agent-ide:toggle-sidebar',
     }),
     createDomCommand({
@@ -101,14 +115,16 @@ function buildViewCommands(): Command[] {
       label: 'Toggle Agent Monitor',
       category: 'view',
       shortcut: 'Ctrl+\\',
-      icon: '🤖',
+      icon: 'A',
+      productIconId: 'debug-alt',
       eventName: 'agent-ide:toggle-agent-monitor',
     }),
     createDomCommand({
       id: 'view:orchestration',
       label: 'Open Orchestration',
       category: 'view',
-      icon: '◎',
+      icon: 'O',
+      productIconId: 'hubot',
       eventName: OPEN_ORCHESTRATION_PANEL_EVENT,
     }),
   ];
@@ -122,7 +138,8 @@ function buildTerminalMenu(): Command {
     id: 'terminal',
     label: 'Terminal',
     category: 'terminal',
-    icon: '>_',
+    icon: '>',
+    productIconId: 'terminal',
     children,
   });
 }
@@ -133,7 +150,8 @@ function buildFileCommands(): Command[] {
       id: 'file:open-folder',
       label: 'Open Project Folder',
       category: 'file',
-      icon: '📁',
+      icon: 'D',
+      productIconId: 'folder',
       eventName: 'agent-ide:open-folder',
     }),
     createDomCommand({
@@ -141,7 +159,8 @@ function buildFileCommands(): Command[] {
       label: 'Go to File',
       category: 'file',
       shortcut: 'Ctrl+P',
-      icon: '📄',
+      icon: 'F',
+      productIconId: 'go-to-file',
       eventName: 'agent-ide:open-file-picker',
     }),
   ];
@@ -161,7 +180,8 @@ function buildWindowCommands(): Command[] {
       label: 'New Window',
       category: 'app',
       shortcut: 'Ctrl+Shift+N',
-      icon: '+',
+      icon: 'W',
+      productIconId: 'multiple-windows',
       action: async () => {
         await window.electronAPI.window.create();
       },
@@ -170,7 +190,8 @@ function buildWindowCommands(): Command[] {
       id: 'window:new-with-folder',
       label: 'Open Folder in New Window',
       category: 'file',
-      icon: '📁',
+      icon: 'D',
+      productIconId: 'folder',
       action: openFolderInNewWindow,
     },
   ];
@@ -183,7 +204,8 @@ function buildAppCommands(): Command[] {
       label: 'Open Settings',
       category: 'app',
       shortcut: 'Ctrl+,',
-      icon: '⚙',
+      icon: 'S',
+      productIconId: 'settings-gear',
       eventName: OPEN_SETTINGS_PANEL_EVENT,
     }),
     {
@@ -191,21 +213,24 @@ function buildAppCommands(): Command[] {
       label: 'Reload Window',
       category: 'app',
       shortcut: 'Ctrl+Shift+R',
-      icon: '↺',
+      icon: 'R',
+      productIconId: 'refresh',
       action: () => window.location.reload(),
     },
     createDomCommand({
       id: 'app:devtools',
       label: 'Toggle DevTools',
       category: 'app',
-      icon: '🔧',
+      icon: 'D',
+      productIconId: 'tools',
       eventName: 'agent-ide:toggle-devtools',
     }),
     createDomCommand({
       id: 'app:context-builder',
       label: 'Build Project Context',
       category: 'app',
-      icon: '⬡',
+      icon: 'C',
+      productIconId: 'symbol-namespace',
       eventName: 'agent-ide:open-context-builder',
     }),
   ];
@@ -216,7 +241,8 @@ function buildTimeTravelCommand(): Command {
     id: 'git:time-travel',
     label: 'Time Travel: Browse Snapshots',
     category: 'git',
-    icon: '⏱',
+    icon: 'H',
+    productIconId: 'history',
     eventName: 'agent-ide:open-time-travel',
   });
 }

@@ -52,22 +52,10 @@ export const FILE_ENTRIES = createEntries('files', 'Files', [
   ],
 ]);
 
-export const EXTENSION_ENTRIES = createEntries('extensions', 'Extensions', [
+export const EXTENSION_ENTRIES = createEntries('integrations', 'Integrations', [
   [
-    'Installed Extensions',
-    'View, enable, disable, and uninstall sandboxed extensions loaded from the extensions directory.',
-  ],
-  [
-    'Install Extension',
-    'Install an extension from a folder containing a manifest.json and entry script.',
-  ],
-  [
-    'Open Extensions Folder',
-    'Open the extensions/ folder inside userData in the system file manager.',
-  ],
-  [
-    'Extension Commands',
-    'Commands registered by extensions at runtime. Appear in the Command Palette under the Extension category.',
+    'Extensions',
+    'Browse, install, enable, disable, and uninstall themes, grammars, and snippets from Open VSX and VS Code Marketplace.',
   ],
   [
     'Extension Permissions',
@@ -107,14 +95,10 @@ export const CONTEXT_DOCS_ENTRIES = createEntries('contextDocs', 'Context Docs',
   ['Full Sweep', 'Regenerate all CLAUDE.md files from scratch.'],
 ]);
 
-export const MCP_ENTRIES = createEntries('mcp', 'MCP Servers', [
+export const MCP_ENTRIES = createEntries('integrations', 'Integrations', [
   [
     'MCP Servers',
-    'Configure Model Context Protocol servers that provide additional tools and capabilities to Claude Code.',
-  ],
-  [
-    'Add MCP Server',
-    'Add a new MCP server with command, arguments, environment variables, and scope (global or project).',
+    'Discover, install, and configure Model Context Protocol servers that provide additional tools and capabilities to Claude Code.',
   ],
   [
     'MCP Server Scope',

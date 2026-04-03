@@ -78,6 +78,27 @@ function useDragDropHandlers(
   return { handleDragOver, handleDrop };
 }
 
+export function getTabClasses(
+  isActive: boolean,
+  isExited: boolean,
+  isDragging: boolean,
+  isDragOver: boolean,
+): string {
+  const base =
+    'relative flex items-center gap-1.5 px-3 h-full cursor-pointer select-none text-xs font-mono border-r border-border-semantic shrink-0 transition-all duration-150';
+  const dragOver =
+    isDragOver && !isDragging
+      ? 'bg-surface-raised border-l-2 border-l-[var(--interactive-accent)]'
+      : '';
+  const dragging = isDragging ? 'opacity-40' : '';
+  const state = isActive
+    ? 'bg-[var(--term-bg,var(--surface-base))] text-text-semantic-primary after:absolute after:bottom-0 after:inset-x-0 after:h-[2px] after:bg-interactive-accent'
+    : isExited
+      ? 'bg-surface-panel text-text-semantic-muted opacity-60 hover:opacity-80 hover:bg-surface-raised'
+      : 'bg-surface-panel text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-raised';
+  return [base, dragOver, dragging, state].filter(Boolean).join(' ');
+}
+
 export function useTabDragDrop(
   sessions: TerminalSession[],
   onReorder?: (reordered: TerminalSession[]) => void,

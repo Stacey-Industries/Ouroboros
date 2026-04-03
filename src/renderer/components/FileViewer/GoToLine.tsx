@@ -49,7 +49,7 @@ const lineRangeStyle: React.CSSProperties = {
   userSelect: 'none',
 };
 
-export function GoToLine(props: GoToLineProps): React.ReactElement<any> | null {
+export function GoToLine(props: GoToLineProps): React.ReactElement | null {
   const controller = useGoToLineController(props);
   if (!props.visible) return null;
 
@@ -120,7 +120,7 @@ function GoToLinePanel({
   inputRef,
   onChange,
   onKeyDown,
-}: GoToLinePanelProps): React.ReactElement<any> {
+}: GoToLinePanelProps): React.ReactElement {
   return (
     <div style={getPopupStyle(hasError)} onKeyDown={onKeyDown}>
       <GoToLineInput
@@ -139,7 +139,7 @@ function GoToLineInput({ value, hasError, onChange, ref }: {
   hasError: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   ref?: React.Ref<HTMLInputElement>;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <input
       ref={ref}

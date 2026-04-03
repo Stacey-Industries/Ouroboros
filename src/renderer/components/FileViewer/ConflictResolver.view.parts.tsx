@@ -46,7 +46,7 @@ export function ActionButton(props: {
   label: string;
   color: string;
   onClick: () => void;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -80,7 +80,7 @@ export function ConflictSection(props: {
   headerBorder: string;
   bodyBackground: string;
   lines: string[];
-}): React.ReactElement<any> {
+}): React.ReactElement {
   return (
     <>
       <div style={getSectionHeaderStyle(props.headerBackground, props.color, props.headerBorder)}>

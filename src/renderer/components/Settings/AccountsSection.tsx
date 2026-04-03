@@ -15,7 +15,7 @@ import { type AccountsSectionModel, useAccountsSectionModel } from './useAccount
 
 const OAUTH_PROVIDERS: AuthProvider[] = ['github'];
 
-export function AccountsSection(): React.ReactElement<any> {
+export function AccountsSection(): React.ReactElement {
   const model = useAccountsSectionModel();
 
   if (model.loading) {
@@ -38,7 +38,7 @@ export function AccountsSection(): React.ReactElement<any> {
   );
 }
 
-function AccountsHeader(): React.ReactElement<any> {
+function AccountsHeader(): React.ReactElement {
   return (
     <div>
       <SectionLabel style={{ marginBottom: '4px' }}>Accounts</SectionLabel>
@@ -49,7 +49,7 @@ function AccountsHeader(): React.ReactElement<any> {
   );
 }
 
-function CliStatusSection({ model }: { model: AccountsSectionModel }): React.ReactElement<any> {
+function CliStatusSection({ model }: { model: AccountsSectionModel }): React.ReactElement {
   return (
     <>
       <CliStatusCard provider="anthropic" label="Claude Code" model={model} />
@@ -58,7 +58,7 @@ function CliStatusSection({ model }: { model: AccountsSectionModel }): React.Rea
   );
 }
 
-function CliImportBanner({ model }: { model: AccountsSectionModel }): React.ReactElement<any> | null {
+function CliImportBanner({ model }: { model: AccountsSectionModel }): React.ReactElement | null {
   if (model.bannerDismissed) return null;
   const available = getAvailableDetections(model.cliDetections);
   if (available.length === 0) return null;
@@ -95,7 +95,7 @@ function ImportButton({
 }: {
   detection: CliCredentialDetection;
   model: AccountsSectionModel;
-}): React.ReactElement<any> {
+}): React.ReactElement {
   const label = `Import ${detection.provider} (${detection.source})`;
   return (
     <button

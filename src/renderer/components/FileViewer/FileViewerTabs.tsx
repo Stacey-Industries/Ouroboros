@@ -80,7 +80,7 @@ function sortFilesWithPinned(files: OpenFile[]): SortedFile[] {
   return [...pinned, ...unpinned];
 }
 
-function EmptyTabs(): React.ReactElement<any> {
+function EmptyTabs(): React.ReactElement {
   return <div style={{ flex: 1, height: '100%' }} aria-hidden="true" />;
 }
 
@@ -92,7 +92,7 @@ function ScrollButton({
   direction: 'left' | 'right';
   onClick: () => void;
   visible: boolean;
-}): React.ReactElement<any> | null {
+}): React.ReactElement | null {
   if (!visible) return null;
   return (
     <button
@@ -107,7 +107,7 @@ function ScrollButton({
   );
 }
 
-function ChevronDownIcon(): React.ReactElement<any> {
+function ChevronDownIcon(): React.ReactElement {
   return (
     <svg
       width="10"
@@ -213,7 +213,7 @@ function TabList({
   onCloseOthers,
   onCloseToRight,
   onCloseAll,
-}: TabListProps): React.ReactElement<any> {
+}: TabListProps): React.ReactElement {
   return (
     <div ref={scrollRef as React.RefObject<HTMLDivElement | null>} role="tablist" aria-label="Open files" style={TAB_LIST_STYLE}>
       {sortedFiles.map(({ file, originalIndex }) => (
@@ -246,7 +246,7 @@ type OverflowButtonProps = {
   dismissOverflow: () => void;
 };
 
-function OverflowButton(p: OverflowButtonProps): React.ReactElement<any> | null {
+function OverflowButton(p: OverflowButtonProps): React.ReactElement | null {
   if (!p.hasOverflow) return null;
   return (
     <>
@@ -272,7 +272,7 @@ function OverflowButton(p: OverflowButtonProps): React.ReactElement<any> | null 
   );
 }
 
-export function FileViewerTabs(props: FileViewerTabsProps): React.ReactElement<any> {
+export function FileViewerTabs(props: FileViewerTabsProps): React.ReactElement {
   const { files, activeIndex, onActivate } = props;
   const st = useFileViewerTabsState(files, activeIndex);
   if (files.length === 0) return <EmptyTabs />;

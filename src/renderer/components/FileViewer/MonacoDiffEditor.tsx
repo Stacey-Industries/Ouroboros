@@ -182,7 +182,7 @@ function renderToolbar({
   changeCount,
   onAcceptHunk,
   onRejectHunk,
-}: DiffToolbarProps): React.ReactElement<any> {
+}: DiffToolbarProps): React.ReactElement {
   return (
     <div style={toolbarStyle} className="text-text-semantic-muted">
       <button
@@ -206,7 +206,7 @@ function renderToolbar({
   );
 }
 
-export const MonacoDiffEditor = memo(function MonacoDiffEditor(props: MonacoDiffEditorProps): React.ReactElement<any> {
+export const MonacoDiffEditor = memo(function MonacoDiffEditor(props: MonacoDiffEditorProps): React.ReactElement {
   const { originalContent, modifiedContent, language: languageProp, filePath, readOnly = true, onAcceptHunk, onRejectHunk, className } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);

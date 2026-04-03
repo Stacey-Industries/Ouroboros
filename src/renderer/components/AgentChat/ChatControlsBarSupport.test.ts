@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDisplayUsage, buildThreadModelUsage } from './ChatControlsBarSupport';
+import { resolveChatControlProvider } from './ChatControlsBar';
+import {
+  ANTHROPIC_AUTO_MODEL,
+  buildDisplayUsage,
+  buildModelOptions,
+  buildThreadModelUsage,
+  resolveActiveModel,
+} from './ChatControlsBarSupport';
 
 describe('buildDisplayUsage', () => {
   it('returns persisted usage when not streaming', () => {
@@ -109,5 +116,52 @@ describe('buildThreadModelUsage', () => {
       { model: 'gpt-5.4', inputTokens: 900, outputTokens: 100 },
       { model: 'claude-opus-4-6', inputTokens: 1800, outputTokens: 200 },
     ]);
+  });
+});
+
+describe('buildModelOptions', () => {
+  it('includes Auto as the first Anthropic option for Claude-family providers', () => {
+    const { defaultOption, groups } = buildModelOptions({
+      defaultProvider: 'claude-code',
+      settingsModel: '',
+      codexSettingsModel: '',
+    });
+
+    expect(defaultOption).toBeUndefined();
+    expect(groups[0]).toEqual({
+      label: 'Anthropic',
+      options: [
+        { value: ANTHROPIC_AUTO_MODEL, label: 'Auto' },
+        { value: 'opus[1m]', label: 'Opus 4.6 1M' },
+        { value: 'opus', label: 'Opus 4.6' },
+        { value: 'sonnet', label: 'Sonnet 4.6' },
+        { value: 'haiku', label: 'Haiku 4.5' },
+      ],
+    });
+  });
+
+  it('keeps a provider-aware default label for Codex', () => {
+    const { defaultOption } = buildModelOptions({
+      defaultProvider: 'codex',
+      settingsModel: '',
+      codexSettingsModel: 'gpt-5.4',
+    });
+
+    expect(defaultOption).toEqual({ value: '', label: 'Default (gpt-5.4)' });
+  });
+
+  it('treats Anthropic Auto as a Claude provider selection even when Codex is default', () => {
+    expect(resolveChatControlProvider(ANTHROPIC_AUTO_MODEL, 'codex', [{ id: 'gpt-5.4', name: 'GPT-5.4', reasoningEfforts: [] }])).toBe('claude-code');
+  });
+
+  it('resolves the active model for Anthropic Auto from Claude settings', () => {
+    expect(
+      resolveActiveModel({
+        activeProvider: 'claude-code',
+        selectedModel: ANTHROPIC_AUTO_MODEL,
+        settingsModel: 'claude-opus-4-6',
+        codexSettingsModel: 'gpt-5.4',
+      }),
+    ).toBe('claude-opus-4-6');
   });
 });
