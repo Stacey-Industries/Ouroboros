@@ -2,6 +2,7 @@
  * internalMcpToolsGraph.ts — High-level and graph-aware MCP tools.
  * Extracted from internalMcpTools.ts to stay under the 300-line limit.
  */
+// Part of the unwired internalMcp module — see index.ts for deprecation notice.
 
 import { getContextLayerController } from '../contextLayer/contextLayerController'
 import { readModuleEntry, readRepoMap } from '../contextLayer/contextLayerStore'

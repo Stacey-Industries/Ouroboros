@@ -1,3 +1,5 @@
+// Part of the unwired internalMcp module — see index.ts for deprecation notice.
+
 export interface InternalMcpServerOptions {
   workspaceRoot: string
   port?: number  // 0 = random (default)

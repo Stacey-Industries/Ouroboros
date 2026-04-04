@@ -386,7 +386,10 @@ export async function respondToApproval(
   const filePath = prepareResponseFilePath(requestId);
   if (!filePath) return false;
 
-  return writeResponseWithRetry(filePath, JSON.stringify(response), requestId, response.decision);
+  return writeResponseWithRetry(requestId, response.decision, {
+    filePath,
+    data: JSON.stringify(response),
+  });
 }
 
 /**

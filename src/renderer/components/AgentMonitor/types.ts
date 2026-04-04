@@ -47,6 +47,8 @@ export interface AgentSession {
   permissionEvents?: PermissionEvent[];
   /** Pending pre-compact token count — stored until post_compact arrives to merge. */
   pendingPreCompactTokens?: number;
+  /** Count of compactions where pre_compact fired but post_compact never arrived. */
+  failedCompactions?: number;
   /** Notification messages received during this session. */
   notifications?: string[];
 }

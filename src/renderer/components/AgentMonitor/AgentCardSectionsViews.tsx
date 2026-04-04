@@ -128,7 +128,7 @@ export function AgentCardMeta({
         </span>
       )}
       <TokenUsageSummary session={session} />
-      <CompactionIndicator compactions={session.compactions} />
+      <CompactionIndicator compactions={session.compactions} failedCompactions={session.failedCompactions} />
     </div>
   );
 }

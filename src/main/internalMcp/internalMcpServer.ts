@@ -202,6 +202,9 @@ function createRequestHandler(
   }
 }
 
+/**
+ * @deprecated UNWIRED — never called from main.ts or any startup path. See index.ts for details.
+ */
 export async function startInternalMcpServer(
   options: InternalMcpServerOptions,
 ): Promise<InternalMcpServerHandle> {

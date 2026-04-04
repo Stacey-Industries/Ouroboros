@@ -7,6 +7,7 @@
  *                                  get_symbol, trace_imports, detect_changes
  *   internalMcpToolsHelpers.ts  — shared formatting helpers
  */
+// Part of the unwired internalMcp module — see index.ts for deprecation notice.
 
 import { getGraphController } from '../codebaseGraph/graphController'
 import { createGraphMcpTools } from '../codebaseGraph/mcpToolHandlers'

@@ -192,6 +192,7 @@ Never mix these. IPC events flow through preload. DOM events are renderer-only.
 
 - TerminalPane and TerminalManager both render tab bars (double header) — needs state lifting to unify
 - Settings modal in App.tsx is inline — should use the Settings components in `components/Settings/`
+- `internalMcp/` module (SSE MCP server + settings auto-inject) — fully implemented but never wired into main.ts startup sequence. No callers exist. Designed to expose IDE tools to Claude Code via MCP.
 
 ## Project Context
 
