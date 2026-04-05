@@ -142,6 +142,8 @@ export interface RouterSettings {
   layer2ConfidenceThreshold: number;
   /** Always route to Opus regardless of classification. */
   paranoidMode: boolean;
+  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
+  llmJudgeSampleRate: number;
 }
 
 export interface AgentTemplate {
@@ -293,9 +295,13 @@ export interface AppConfig {
   glassOpacity: number;
   /** Model router settings — automatic tier selection (HAIKU/SONNET/OPUS) */
   routerSettings: RouterSettings;
+  /** Number of quality signal lines at last retrain — used by retrain trigger. */
+  routerLastRetrainCount: number;
 }
 
-export const store = new Store<AppConfig>({ schema: schema as import('electron-store').Schema<AppConfig> });
+export const store = new Store<AppConfig>({
+  schema: schema as import('electron-store').Schema<AppConfig>,
+});
 
 // In-memory cache to avoid re-reading config.json from disk on every call.
 // electron-store's underlying conf library reads the file on every .get().

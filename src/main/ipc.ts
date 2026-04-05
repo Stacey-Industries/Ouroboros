@@ -31,6 +31,7 @@ import {
   registerMcpStoreHandlers,
   registerMiscHandlers,
   registerPtyHandlers,
+  registerRouterStatsHandlers,
   registerRulesAndSkillsHandlers,
   registerSearchHandlers,
   registerSessionHandlers,
@@ -77,6 +78,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('search', () => registerSearchHandlers()),
     ...safeRegister('auth', () => registerAuthHandlers(senderWindow, win)),
     ...safeRegister('ai', () => registerAiHandlers()),
+    ...safeRegister('routerStats', () => registerRouterStatsHandlers()),
   ];
 }
 
@@ -178,7 +180,12 @@ function registerProviderHandlers(channels: string[]): void {
     resolveCodexThreadId(args),
   );
 
-  channels.push('providers:list', 'providers:getSlots', 'codex:listModels', 'codex:resolveThreadId');
+  channels.push(
+    'providers:list',
+    'providers:getSlots',
+    'codex:listModels',
+    'codex:resolveThreadId',
+  );
 }
 
 let handlersRegistered = false;

@@ -79,21 +79,17 @@ export function handleCwdChanged(
  * Handle a file_changed event: notify the context layer and graph controller
  * that files may have changed on disk (lighter signal than onGitCommit).
  */
-export function handleFileChanged(
-  payload: { internal?: boolean },
-): void {
+export function handleFileChanged(payload: { internal?: boolean }): void {
   if (payload.internal) return;
   getContextLayerController()?.onFileChanged?.();
-  getGraphController()?.onFileChanged?.();
+  getGraphController()?.onFileChange?.([]);
 }
 
 /**
  * Log a config_change event. No main-process side effects — the renderer
  * handles config changes by re-reading via IPC.
  */
-export function handleConfigChange(
-  sessionId: string,
-): void {
+export function handleConfigChange(sessionId: string): void {
   log.info(`[hooks] config_change session=${sessionId}`);
 }
 
@@ -102,13 +98,15 @@ export function handleConfigChange(
  * event so the approval dialog can display richer information than what
  * comes through the pre_tool_use path.
  */
-export function enrichFromPermissionRequest(
-  payload: { sessionId: string; data?: Record<string, unknown>; toolName?: string },
-): void {
+export function enrichFromPermissionRequest(payload: {
+  sessionId: string;
+  data?: Record<string, unknown>;
+  toolName?: string;
+}): void {
   const permissionType = payload.data?.['permissionType'] as string | undefined;
   log.info(
     `[hooks] permission_request session=${payload.sessionId}` +
-    ` tool=${payload.toolName ?? 'unknown'}` +
-    ` permissionType=${permissionType ?? 'unknown'}`,
+      ` tool=${payload.toolName ?? 'unknown'}` +
+      ` permissionType=${permissionType ?? 'unknown'}`,
   );
 }

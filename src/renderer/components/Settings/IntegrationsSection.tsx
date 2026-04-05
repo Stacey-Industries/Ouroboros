@@ -5,25 +5,18 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  OPEN_EXTENSION_STORE_EVENT,
-  OPEN_MCP_STORE_EVENT,
-} from '../../hooks/appEventNames';
+import { OPEN_EXTENSION_STORE_EVENT, OPEN_MCP_STORE_EVENT } from '../../hooks/appEventNames';
 import { buttonStyle, SectionLabel } from './settingsStyles';
 
 export function IntegrationsSection(): React.ReactElement {
   const counts = useIntegrationCounts();
 
   const openExtensions = useCallback((tab?: 'browse' | 'installed') => {
-    window.dispatchEvent(
-      new CustomEvent(OPEN_EXTENSION_STORE_EVENT, { detail: { tab } }),
-    );
+    window.dispatchEvent(new CustomEvent(OPEN_EXTENSION_STORE_EVENT, { detail: { tab } }));
   }, []);
 
   const openMcp = useCallback((tab?: 'browse' | 'installed') => {
-    window.dispatchEvent(
-      new CustomEvent(OPEN_MCP_STORE_EVENT, { detail: { tab } }),
-    );
+    window.dispatchEvent(new CustomEvent(OPEN_MCP_STORE_EVENT, { detail: { tab } }));
   }, []);
 
   return (
@@ -90,7 +83,8 @@ function IntegrationCard({
           {description}
           {count !== null && (
             <span className="text-text-semantic-secondary">
-              {' \u00b7 '}{count} {countLabel}
+              {' \u00b7 '}
+              {count} {countLabel}
             </span>
           )}
         </p>
@@ -110,11 +104,11 @@ function useIntegrationCounts(): {
   useEffect(() => {
     window.electronAPI?.extensionStore
       ?.getInstalled()
-      .then((list) => setExtensions(list?.length ?? 0))
+      .then((result) => setExtensions(result?.extensions?.length ?? 0))
       .catch(() => setExtensions(0));
     window.electronAPI?.mcpStore
       ?.getInstalledServerNames()
-      .then((names) => setMcpServers(names?.length ?? 0))
+      .then((result) => setMcpServers(result?.names?.length ?? 0))
       .catch(() => setMcpServers(0));
   }, []);
 

@@ -69,11 +69,21 @@ export const SLASH_COMMAND_TIERS: Record<string, ModelTier> = {
 /* ── Rule engine types ────────────────────────────────────────────── */
 
 export type RuleCode =
-  | 'CMD'            // slash command override
-  | 'H1' | 'H2' | 'H3' | 'H4' | 'H5'   // HAIKU rules
-  | 'S1' | 'S2' | 'S3'                   // SONNET confirmation rules
-  | 'O1' | 'O2' | 'O3' | 'O4' | 'O5'   // OPUS rules
-  | 'DEFAULT';       // no rule matched → SONNET
+  | 'CMD' // slash command override
+  | 'H1'
+  | 'H2'
+  | 'H3'
+  | 'H4'
+  | 'H5' // HAIKU rules
+  | 'S1'
+  | 'S2'
+  | 'S3' // SONNET confirmation rules
+  | 'O1'
+  | 'O2'
+  | 'O3'
+  | 'O4'
+  | 'O5' // OPUS rules
+  | 'DEFAULT'; // no rule matched → SONNET
 
 export type RuleConfidence = 'HIGH' | 'MEDIUM';
 
@@ -132,6 +142,40 @@ export interface RoutingLogEntry {
   override: { userChosenModel: string; routerSuggestedTier: ModelTier } | null;
 }
 
+/* ── Enriched logging types (feedback loop) ──────────────────────── */
+
+export type InteractionType = 'chat' | 'terminal_shadow' | 'agentic' | 'unknown';
+
+export interface CounterfactualResult {
+  layer1: RuleEngineResult | null;
+  layer2: ClassifierResult | null;
+  layer3: LLMFallbackResult | null;
+}
+
+/**
+ * Extended log entry for the router feedback loop.
+ * Adds trace_id for joining with quality signals, interaction surface tagging,
+ * workspace identity (hashed), and counterfactual layer outputs.
+ */
+export interface EnrichedRoutingLogEntry extends RoutingLogEntry {
+  traceId: string;
+  sessionId: string | null;
+  interactionType: InteractionType;
+  /** SHA-256 prefix of workspaceRoot — groups entries by project without storing paths. */
+  workspaceRootHash: string | null;
+  /** Longer prompt excerpt (500 chars) for training data export. */
+  promptFull: string;
+  /** What each layer WOULD have picked, regardless of which layer won. */
+  counterfactual: CounterfactualResult;
+}
+
+/** Options passed to the enriched logger from call sites. */
+export interface EnrichedLogOpts {
+  sessionId?: string;
+  interactionType?: InteractionType;
+  workspaceRoot?: string;
+}
+
 /* ── Config types ─────────────────────────────────────────────────── */
 
 export interface RouterSettings {
@@ -147,6 +191,8 @@ export interface RouterSettings {
   layer2ConfidenceThreshold: number;
   /** Always route to Opus regardless of classification. */
   paranoidMode: boolean;
+  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
+  llmJudgeSampleRate: number;
 }
 
 export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
@@ -156,6 +202,7 @@ export const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   layer3Enabled: true,
   layer2ConfidenceThreshold: 0.6,
   paranoidMode: false,
+  llmJudgeSampleRate: 0,
 };
 
 /* ── Feature list (canonical, shared by TS extractor + Python trainer) */

@@ -10,11 +10,7 @@ import {
 
 import type { AgentSession } from '../components/AgentMonitor/types';
 import type { HookPayload } from '../types/electron';
-import {
-  dispatchElicitation,
-  dispatchElicitationResult,
-  dispatchUserPrompt,
-} from './useAgentEvents.conversationDispatchers';
+import { routeNewEventTypes } from './useAgentEvents.eventRouting';
 import { summarizeSubToolInput } from './useAgentEvents.fieldHelpers';
 import {
   type AgentAction,
@@ -38,18 +34,6 @@ import {
   dispatchSkillStart,
 } from './useAgentEvents.ruleSkillDispatchers';
 import { markSessionsAsSaved, shouldPersistSession } from './useAgentEvents.session-utils';
-import {
-  dispatchTaskCompleted,
-  dispatchTaskCreated,
-} from './useAgentEvents.taskDispatchers';
-import {
-  dispatchCompaction,
-  dispatchNotification,
-  dispatchPermissionEvent,
-  dispatchStopFailure,
-  dispatchToolUseFailed,
-  dispatchWorkspaceEvent,
-} from './useAgentEvents.workspaceDispatchers';
 
 export interface UseAgentEventsReturn {
   agents: AgentSession[];
@@ -115,7 +99,15 @@ export function useAgentEvents(): UseAgentEventsReturn {
   const currentSessions = state.sessions.filter((s) => !s.restored);
   const historicalSessions = state.sessions.filter((s) => s.restored === true);
 
-  return { agents: state.sessions, activeCount, clearCompleted, dismiss, updateNotes, currentSessions, historicalSessions };
+  return {
+    agents: state.sessions,
+    activeCount,
+    clearCompleted,
+    dismiss,
+    updateNotes,
+    currentSessions,
+    historicalSessions,
+  };
 }
 
 function usePersistedSessionsLoader(
@@ -159,58 +151,10 @@ function useAgentEventSubscription(
   useEffect(() => {
     const subscribe = window.electronAPI?.hooks?.onAgentEvent;
     if (!subscribe) return;
-    return subscribe((event) => { handleAgentEvent(event, dispatch, liveSessionIdsRef); });
+    return subscribe((event) => {
+      handleAgentEvent(event, dispatch, liveSessionIdsRef);
+    });
   }, [dispatch, liveSessionIdsRef]);
-}
-
-function dispatchTaskOrConversationEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  switch (payload.type) {
-    case 'task_created': dispatchTaskCreated(payload, dispatch); return true;
-    case 'task_completed': dispatchTaskCompleted(payload, dispatch); return true;
-    case 'user_prompt_submit': dispatchUserPrompt(payload, dispatch); return true;
-    case 'elicitation': dispatchElicitation(payload, dispatch); return true;
-    case 'elicitation_result': dispatchElicitationResult(payload, dispatch); return true;
-    default: return false;
-  }
-}
-
-function dispatchContextEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  switch (payload.type) {
-    case 'pre_compact': case 'post_compact': dispatchCompaction(payload, dispatch); return true;
-    case 'permission_request': case 'permission_denied': dispatchPermissionEvent(payload, dispatch); return true;
-    case 'post_tool_use_failure': dispatchToolUseFailed(payload, dispatch); return true;
-    case 'notification': dispatchNotification(payload, dispatch); return true;
-    default: return false;
-  }
-}
-
-function dispatchSessionLifecycleEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  switch (payload.type) {
-    case 'stop_failure': dispatchStopFailure(payload, dispatch); return true;
-    case 'session_end': dispatchAgentEnd(payload, dispatch); return true;
-    case 'setup': log.info('[hook] setup event received, sessionId:', payload.sessionId); return true;
-    case 'teammate_idle': log.info('[hook] teammate_idle event, sessionId:', payload.sessionId); return true;
-    default: return false;
-  }
-}
-
-function dispatchContextOrPermissionEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  return dispatchContextEvent(payload, dispatch) || dispatchSessionLifecycleEvent(payload, dispatch);
-}
-
-function dispatchFileSystemEvent(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  switch (payload.type) {
-    case 'cwd_changed': case 'file_changed': case 'worktree_create':
-    case 'worktree_remove': case 'config_change':
-      dispatchWorkspaceEvent(payload, dispatch); return true;
-    default: return false;
-  }
-}
-
-function dispatchNewEventTypes(payload: HookPayload, dispatch: Dispatch<AgentAction>): boolean {
-  return dispatchTaskOrConversationEvent(payload, dispatch)
-    || dispatchContextOrPermissionEvent(payload, dispatch)
-    || dispatchFileSystemEvent(payload, dispatch);
 }
 
 function handleAgentEvent(
@@ -219,9 +163,15 @@ function handleAgentEvent(
   liveSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
   const payload = toHookPayload(event);
-  if (!payload) { log.warn('toHookPayload returned null for:', JSON.stringify(event)); return; }
-  if (payload.type === 'instructions_loaded') { dispatchRuleLoaded(payload, dispatch); return; }
-  if (dispatchNewEventTypes(payload, dispatch)) return;
+  if (!payload) {
+    log.warn('toHookPayload returned null for:', JSON.stringify(event));
+    return;
+  }
+  if (payload.type === 'instructions_loaded') {
+    dispatchRuleLoaded(payload, dispatch);
+    return;
+  }
+  if (routeNewEventTypes(payload, dispatch)) return;
   dispatchLifecycleEvent(payload, dispatch, liveSessionIdsRef);
   dispatchTokenUpdate(payload, dispatch);
 }
@@ -232,17 +182,32 @@ function dispatchLifecycleEvent(
   liveSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
   switch (payload.type) {
-    case 'session_start': case 'agent_start':
-      dispatchAgentStart(payload, dispatch, liveSessionIdsRef); return;
+    case 'session_start':
+    case 'agent_start':
+      dispatchAgentStart(payload, dispatch, liveSessionIdsRef);
+      return;
     case 'pre_tool_use':
-      if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
-      dispatchToolStart(payload, dispatch); return;
+      if (payload.parentToolCallId) {
+        dispatchSubToolUpdate(payload, dispatch);
+        return;
+      }
+      dispatchToolStart(payload, dispatch);
+      return;
     case 'post_tool_use':
-      if (payload.parentToolCallId) { dispatchSubToolUpdate(payload, dispatch); return; }
-      dispatchToolEnd(payload, dispatch); return;
-    case 'agent_end': case 'agent_stop': case 'session_stop':
-      dispatchAgentEnd(payload, dispatch); dispatchSkillEnd(payload, dispatch); return;
-    default: return;
+      if (payload.parentToolCallId) {
+        dispatchSubToolUpdate(payload, dispatch);
+        return;
+      }
+      dispatchToolEnd(payload, dispatch);
+      return;
+    case 'agent_end':
+    case 'agent_stop':
+    case 'session_stop':
+      dispatchAgentEnd(payload, dispatch);
+      dispatchSkillEnd(payload, dispatch);
+      return;
+    default:
+      return;
   }
 }
 
@@ -272,7 +237,11 @@ function dispatchToolStart(payload: HookPayload, dispatch: Dispatch<AgentAction>
   if (childSessionId) {
     dispatch({ type: 'LINK_SUBAGENT', parentSessionId: payload.sessionId, childSessionId });
   } else if (isSubagentTool(toolCall.toolName)) {
-    dispatch({ type: 'RECORD_SUBAGENT_TOOL', parentSessionId: payload.sessionId, timestamp: payload.timestamp });
+    dispatch({
+      type: 'RECORD_SUBAGENT_TOOL',
+      parentSessionId: payload.sessionId,
+      timestamp: payload.timestamp,
+    });
   }
 }
 

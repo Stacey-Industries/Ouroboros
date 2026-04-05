@@ -25,6 +25,7 @@ import {
   stopContextRefreshTimer,
   terminateContextWorker,
 } from './ipc-handlers/agentChat';
+import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
 import { configureAutoUpdater, writeCrashLog } from './mainStartup';
 import { buildApplicationMenu } from './menu';
@@ -38,6 +39,12 @@ import {
 } from './perfMetrics';
 import { killAllPtySessions } from './pty';
 import { setGithubTokenForPty } from './ptyEnv';
+import { clearQualityTimers } from './router/qualitySignalCollector';
+import {
+  loadRetrainedWeightsIfAvailable,
+  observeDatasetGrowth,
+  stopObserving as stopRetrainObserver,
+} from './router/retrainTrigger';
 import { runAllMigrations } from './storage/migrate';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
@@ -200,11 +207,14 @@ async function initializeApplication(): Promise<void> {
   registerRenderProcessCrashLogging();
   configureAutoUpdater();
   startPerfMetrics();
+  startJankDetector();
   startTokenRefreshManager();
   registerWindowLifecycleHandlers();
   void seedGithubTokenForPty();
   startContextLayerAsync(defaultRoot);
   startWebServerAsync();
+  loadRetrainedWeightsIfAvailable();
+  observeDatasetGrowth();
 }
 
 async function seedGithubTokenForPty(): Promise<void> {
@@ -242,6 +252,7 @@ process.on('SIGTERM', () => app.quit());
 process.on('SIGINT', () => app.quit());
 
 app.on('window-all-closed', async () => {
+  stopJankDetector();
   stopTokenRefreshManager();
   stopContextRefreshTimer();
   terminateContextWorker();
@@ -261,6 +272,8 @@ app.on('window-all-closed', async () => {
 // Handlers are removed here (not in window-all-closed) so that in-flight
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
+  stopRetrainObserver();
+  clearQualityTimers();
   stopClaudeUsagePoller();
   cleanupIpcHandlers();
   closeCostHistoryDb();

@@ -16,13 +16,8 @@ import {
   dispatchElicitationResult,
   dispatchUserPrompt,
 } from './useAgentEvents.conversationDispatchers';
-import {
-  dispatchAgentEnd,
-} from './useAgentEvents.ruleSkillDispatchers';
-import {
-  dispatchTaskCompleted,
-  dispatchTaskCreated,
-} from './useAgentEvents.taskDispatchers';
+import { dispatchAgentEnd } from './useAgentEvents.ruleSkillDispatchers';
+import { dispatchTaskCompleted, dispatchTaskCreated } from './useAgentEvents.taskDispatchers';
 import {
   dispatchCompaction,
   dispatchPermissionEvent,
@@ -135,7 +130,10 @@ describe('event routing — task dispatchers', () => {
 describe('event routing — compaction dispatchers', () => {
   it('pre_compact routes to PRE_COMPACT', () => {
     const dispatch = vi.fn();
-    dispatchCompaction(makePayload({ type: 'pre_compact', data: { token_count: 80000 } }), dispatch);
+    dispatchCompaction(
+      makePayload({ type: 'pre_compact', data: { token_count: 80000 } }),
+      dispatch,
+    );
     expect(dispatch).toHaveBeenCalledOnce();
     expect(dispatch.mock.calls[0][0].type).toBe('PRE_COMPACT');
     expect(dispatch.mock.calls[0][0].tokenCount).toBe(80000);
@@ -143,7 +141,10 @@ describe('event routing — compaction dispatchers', () => {
 
   it('post_compact routes to POST_COMPACT', () => {
     const dispatch = vi.fn();
-    dispatchCompaction(makePayload({ type: 'post_compact', data: { token_count: 40000 } }), dispatch);
+    dispatchCompaction(
+      makePayload({ type: 'post_compact', data: { token_count: 40000 } }),
+      dispatch,
+    );
     expect(dispatch).toHaveBeenCalledOnce();
     expect(dispatch.mock.calls[0][0].type).toBe('POST_COMPACT');
     expect(dispatch.mock.calls[0][0].tokenCount).toBe(40000);
@@ -160,7 +161,10 @@ describe('event routing — permission dispatchers', () => {
   it('permission_request routes to PERMISSION_EVENT with type request', () => {
     const dispatch = vi.fn();
     dispatchPermissionEvent(
-      makePayload({ type: 'permission_request', data: { tool_name: 'Bash', permission_type: 'execute' } }),
+      makePayload({
+        type: 'permission_request',
+        data: { tool_name: 'Bash', permission_type: 'execute' },
+      }),
       dispatch,
     );
     expect(dispatch).toHaveBeenCalledOnce();
@@ -205,10 +209,7 @@ describe('event routing — lifecycle dispatchers', () => {
 
   it('stop_failure routes to AGENT_END', () => {
     const dispatch = vi.fn();
-    dispatchAgentEnd(
-      makePayload({ type: 'stop_failure', error: 'Session stop failed' }),
-      dispatch,
-    );
+    dispatchAgentEnd(makePayload({ type: 'stop_failure', error: 'Session stop failed' }), dispatch);
     expect(dispatch.mock.calls[0][0].type).toBe('AGENT_END');
     expect(dispatch.mock.calls[0][0].error).toBe('Session stop failed');
   });
@@ -216,43 +217,31 @@ describe('event routing — lifecycle dispatchers', () => {
 
 describe('event routing — workspace dispatchers (DOM events)', () => {
   it('file_changed fires agent-ide:file-changed DOM event', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'file_changed' }), dispatch);
+    dispatchWorkspaceEvent(makePayload({ type: 'file_changed' }));
     expect(mockDispatchEvent).toHaveBeenCalledOnce();
     expect(mockDispatchEvent.mock.calls[0][0].type).toBe('agent-ide:file-changed');
-    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('cwd_changed fires agent-ide:cwd-changed DOM event with cwd detail', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(
-      makePayload({ type: 'cwd_changed', data: { cwd: '/project/new' } }),
-      dispatch,
-    );
+    dispatchWorkspaceEvent(makePayload({ type: 'cwd_changed', data: { cwd: '/project/new' } }));
     expect(mockDispatchEvent).toHaveBeenCalledOnce();
     const evt = mockDispatchEvent.mock.calls[0][0];
     expect(evt.type).toBe('agent-ide:cwd-changed');
     expect(evt.detail.cwd).toBe('/project/new');
   });
 
-  it('worktree_create does not fire DOM event or dispatch action', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'worktree_create' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('worktree_create does not fire DOM event', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'worktree_create' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
-  it('worktree_remove does not fire DOM event or dispatch action', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'worktree_remove' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('worktree_remove does not fire DOM event', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'worktree_remove' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
-  it('config_change does not fire DOM event or dispatch action', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'config_change' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('config_change does not fire DOM event', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'config_change' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 });

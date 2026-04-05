@@ -14,20 +14,6 @@ export type AppTheme =
   | 'custom'
   | (string & {});
 
-export interface PanelSizes {
-  leftSidebar: number;
-  rightSidebar: number;
-  terminal: number;
-}
-
-export interface WindowBounds {
-  x?: number;
-  y?: number;
-  width: number;
-  height: number;
-  isMaximized: boolean;
-}
-
 export interface ClaudeCliSettings {
   permissionMode: string;
   model: string;
@@ -272,22 +258,18 @@ export type AgentEventType =
   // Tasks
   | 'task_created'
   | 'task_completed'
-  // Conversation
   | 'user_prompt_submit'
   | 'elicitation'
   | 'elicitation_result'
   | 'notification'
-  // Workspace
   | 'cwd_changed'
   | 'file_changed'
   | 'worktree_create'
   | 'worktree_remove'
   | 'config_change'
-  // Context
   | 'pre_compact'
   | 'post_compact'
   | 'instructions_loaded'
-  // Permissions
   | 'permission_request'
   | 'permission_denied';
 
@@ -320,16 +302,20 @@ export interface HookPayload {
   usage?: RawApiTokenUsage;
   model?: string;
   requestId?: string;
-  /** Working directory of the Claude Code session — set by hook scripts */
   cwd?: string;
-  /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
   internal?: boolean;
-  /** Provider-reported cost in USD (set on agent_end for chat bridge sessions). */
   costUsd?: number;
-  /** Links a sub-tool event to its parent Agent/Task tool call. */
   parentToolCallId?: string;
-  /** Human-readable task label derived from prompt or model — used for session display and skill detection. */
   taskLabel?: string;
+  data?: Record<string, unknown>;
 }
 
-export type { IpcResult, ReadBinaryFileResult, ReadDirResult, ReadFileResult, SelectFolderResult, ToolCallEvent, ToolCallPayload } from './electron-ipc-results';
+export type {
+  IpcResult,
+  ReadBinaryFileResult,
+  ReadDirResult,
+  ReadFileResult,
+  SelectFolderResult,
+  ToolCallEvent,
+  ToolCallPayload,
+} from './electron-ipc-results';

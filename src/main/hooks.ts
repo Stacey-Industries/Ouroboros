@@ -16,12 +16,9 @@ import {
   type HookEventType,
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
-import {
-  handleSessionEnd,
-  handleSessionStart,
-  handleSessionStop,
-} from './hooksSessionHandlers';
+import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
 import log from './logger';
+import { shadowRouteHookEvent } from './router/routerShadow';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -98,8 +95,12 @@ const syntheticSessionIds = new Set<string>();
 // scripts firing and the chat bridge emitting its synthetic session.
 let chatLaunchesInFlight = 0;
 
-export function beginChatSessionLaunch(): void { chatLaunchesInFlight++; }
-export function endChatSessionLaunch(): void { if (chatLaunchesInFlight > 0) chatLaunchesInFlight--; }
+export function beginChatSessionLaunch(): void {
+  chatLaunchesInFlight++;
+}
+export function endChatSessionLaunch(): void {
+  if (chatLaunchesInFlight > 0) chatLaunchesInFlight--;
+}
 
 function trackSessionStart(payload: HookPayload): void {
   activeSessions.set(payload.sessionId, payload.timestamp);
@@ -141,9 +142,7 @@ function inferSessionId(payload: HookPayload): HookPayload {
   }
 
   const isTracked =
-    payload.sessionId &&
-    payload.sessionId !== 'unknown' &&
-    activeSessions.has(payload.sessionId);
+    payload.sessionId && payload.sessionId !== 'unknown' && activeSessions.has(payload.sessionId);
   if (isTracked) return payload;
 
   let bestId: string | null = null;
@@ -156,7 +155,7 @@ function inferSessionId(payload: HookPayload): HookPayload {
   }
 
   if (bestId) {
-    log.info(`inferred session for tool event: ${payload.sessionId} → ${bestId}`);
+    log.debug(`inferred session for tool event: ${payload.sessionId} → ${bestId}`);
     return { ...payload, sessionId: bestId };
   }
 
@@ -203,16 +202,34 @@ function flushPendingQueue(windows: BrowserWindow[]): void {
 }
 
 function dispatchNewEventType(payload: HookPayload): boolean {
-  if (payload.type === 'session_end') { handleSessionEnd(payload); return true; }
-  if (payload.type === 'cwd_changed') { handleCwdChanged(sessionCwdMap, payload); return true; }
-  if (payload.type === 'file_changed') { handleFileChanged(payload); return true; }
-  if (payload.type === 'config_change') { handleConfigChange(payload.sessionId); return true; }
-  if (payload.type === 'permission_request') { enrichFromPermissionRequest(payload); return true; }
+  if (payload.type === 'session_end') {
+    handleSessionEnd(payload);
+    return true;
+  }
+  if (payload.type === 'cwd_changed') {
+    handleCwdChanged(sessionCwdMap, payload);
+    return true;
+  }
+  if (payload.type === 'file_changed') {
+    handleFileChanged(payload);
+    return true;
+  }
+  if (payload.type === 'config_change') {
+    handleConfigChange(payload.sessionId);
+    return true;
+  }
+  if (payload.type === 'permission_request') {
+    enrichFromPermissionRequest(payload);
+    return true;
+  }
   return false;
 }
 
 function dispatchLifecycleEvent(payload: HookPayload): void {
-  if (payload.type === 'session_start') { handleSessionStart(payload); return; }
+  if (payload.type === 'session_start') {
+    handleSessionStart(payload);
+    return;
+  }
   if (dispatchNewEventType(payload)) return;
 
   const isEndEvent =
@@ -249,19 +266,27 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
   if (chatLaunchesInFlight > 0 || syntheticSessionIds.size > 0) {
-    log.info(`suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`);
+    log.info(
+      `suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`,
+    );
     handleApprovalRequest(rawPayload);
     return;
   }
 
+  shadowRouteHookEvent(rawPayload);
   trackSessionLifecycle(rawPayload);
   const payload = inferSessionId(rawPayload);
 
   const windows = getDispatchWindows();
-  if (windows.length === 0) { queuePendingPayload(payload); return; }
+  if (windows.length === 0) {
+    queuePendingPayload(payload);
+    return;
+  }
 
   flushPendingQueue(windows);
-  log.info(`dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`);
+  log.debug(
+    `dispatching to ${windows.length} renderer(s): ${payload.type} session=${payload.sessionId} tool=${payload.toolName ?? ''}`,
+  );
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
@@ -288,7 +313,10 @@ export function dispatchSyntheticHookEvent(payload: HookPayload): void {
   }
 
   const windows = getDispatchWindows();
-  if (windows.length === 0) { queuePendingPayload(payload); return; }
+  if (windows.length === 0) {
+    queuePendingPayload(payload);
+    return;
+  }
 
   flushPendingQueue(windows);
   sendPayload(windows, payload);

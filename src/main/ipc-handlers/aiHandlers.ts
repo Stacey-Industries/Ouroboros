@@ -3,9 +3,9 @@
  *
  * Uses the Anthropic SDK via OAuth (createAnthropicClient) for all API calls.
  */
-import type { AiInlineEditRequest, AiInlineEditResponse } from '@renderer/types/electron-ai';
 import { ipcMain } from 'electron';
 
+import type { AiInlineEditRequest, AiInlineEditResponse } from '../../renderer/types/electron-ai';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { createAnthropicClient } from '../orchestration/providers/anthropicAuth';
@@ -50,7 +50,10 @@ function extractCompletion(response: { content: Array<{ type: string; text?: str
 function classifyError(err: unknown): CompletionResult {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('401') || msg.includes('Unauthorized')) {
-    return { success: false, error: 'OAuth token may have expired. Run `claude auth login` to re-authenticate.' };
+    return {
+      success: false,
+      error: 'OAuth token may have expired. Run `claude auth login` to re-authenticate.',
+    };
   }
   log.warn('[ai:inline-completion] error:', msg);
   return { success: false };
@@ -87,7 +90,10 @@ async function handleInlineCompletion(
 ): Promise<CompletionResult> {
   if (!getConfigValue('inlineCompletionsEnabled')) return { success: false, error: 'disabled' };
 
-  if (activeController) { activeController.abort(); activeController = null; }
+  if (activeController) {
+    activeController.abort();
+    activeController = null;
+  }
   const controller = new AbortController();
   activeController = controller;
 
@@ -121,9 +127,10 @@ interface CommitMessageRequest {
 type CommitMessageResult = { success: boolean; message?: string; error?: string };
 
 function buildCommitPrompt(request: CommitMessageRequest): string {
-  const diff = request.diff.length > MAX_DIFF_LENGTH
-    ? request.diff.slice(0, MAX_DIFF_LENGTH) + '\n... (truncated)'
-    : request.diff;
+  const diff =
+    request.diff.length > MAX_DIFF_LENGTH
+      ? request.diff.slice(0, MAX_DIFF_LENGTH) + '\n... (truncated)'
+      : request.diff;
   const parts: string[] = [];
   if (request.recentCommits) {
     parts.push(`Recent commit messages for style reference:\n${request.recentCommits}\n`);
@@ -181,7 +188,10 @@ function buildInlineEditPrompt(req: AiInlineEditRequest): string {
 function classifyEditError(err: unknown): AiInlineEditResponse {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('401') || msg.includes('Unauthorized')) {
-    return { success: false, error: 'OAuth token may have expired. Run `claude auth login` to re-authenticate.' };
+    return {
+      success: false,
+      error: 'OAuth token may have expired. Run `claude auth login` to re-authenticate.',
+    };
   }
   log.warn('[ai:inline-edit] error:', msg);
   return { success: false, error: msg };
@@ -209,7 +219,10 @@ async function handleInlineEdit(
   _event: Electron.IpcMainInvokeEvent,
   req: AiInlineEditRequest,
 ): Promise<AiInlineEditResponse> {
-  if (editController) { editController.abort(); editController = null; }
+  if (editController) {
+    editController.abort();
+    editController = null;
+  }
   const controller = new AbortController();
   editController = controller;
 

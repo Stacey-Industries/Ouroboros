@@ -1,6 +1,7 @@
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { logRouterOverride, logRoutingDecision, routePromptSync } from '../router';
+import { flushAnnotations, trackChatTurn } from '../router/qualitySignalCollector';
 import type { ResolvedSendOptions } from './chatOrchestrationRequestSupportHelpers';
 import {
   buildContextSummary,
@@ -38,6 +39,7 @@ interface RouterOverrideResult {
   overrides: AgentChatSendMessageRequest['overrides'] | undefined;
   routedBy?: string;
   tier?: string;
+  traceId?: string | null;
 }
 
 function logOverrideIfDiffers(
@@ -65,15 +67,19 @@ function applyRouterOverride(
   if (!routerConfig?.enabled) return { overrides: request.overrides };
 
   const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
-  logRoutingDecision(request.content, decision);
+  const traceId = logRoutingDecision(request.content, decision, {
+    interactionType: 'chat',
+    workspaceRoot: request.workspaceRoot,
+  });
 
-  if (!decision) return { overrides: request.overrides };
+  if (!decision) return { overrides: request.overrides, traceId };
 
   log.info('[router] injecting model override:', decision.model);
   return {
     overrides: { ...request.overrides, model: decision.model },
     routedBy: decision.routedBy,
     tier: decision.tier,
+    traceId,
   };
 }
 
@@ -152,7 +158,16 @@ export function resolveSendOptions(
   previousAssistantMessage?: string,
 ): ResolvedSendOptions {
   const provider = request.overrides?.provider ?? settings.defaultProvider;
-  const { overrides, routedBy, tier } = applyRouterOverride(request, previousAssistantMessage);
+  const { overrides, routedBy, tier, traceId } = applyRouterOverride(
+    request,
+    previousAssistantMessage,
+  );
+
+  if (traceId) {
+    trackChatTurn({ traceId, threadId: request.threadId, prompt: request.content });
+    flushAnnotations();
+  }
+
   const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
   if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);
   return resolved;

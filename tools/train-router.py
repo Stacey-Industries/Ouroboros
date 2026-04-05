@@ -3,18 +3,21 @@
 
 Usage:
     python tools/train-router.py
+    python tools/train-router.py --input-dir /path/to/data
+    python tools/train-router.py --input-dir /path/to/data --output-path /path/to/weights.json
 
 Requirements:
     pip install scikit-learn numpy
 
-Input files (repo root):
+Input files (--input-dir or repo root):
     router-full-extracted.jsonl
     router-full-judged.jsonl
 
-Output:
+Output (--output-path or default):
     src/main/router/model/router-weights.json
 """
 
+import argparse
 import json
 import re
 import sys
@@ -37,12 +40,11 @@ except ImportError as exc:
     sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths (overridable via CLI args)
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EXTRACTED_PATH = REPO_ROOT / "router-full-extracted.jsonl"
-JUDGED_PATH    = REPO_ROOT / "router-full-judged.jsonl"
-OUTPUT_PATH    = REPO_ROOT / "src" / "main" / "router" / "model" / "router-weights.json"
+DEFAULT_INPUT_DIR = REPO_ROOT
+DEFAULT_OUTPUT_PATH = REPO_ROOT / "src" / "main" / "router" / "model" / "router-weights.json"
 
 # ---------------------------------------------------------------------------
 # Canonical feature order — must match FEATURE_NAMES in routerTypes.ts
@@ -244,18 +246,20 @@ def load_jsonl(path: Path) -> list[dict]:
     return records
 
 
-def load_and_join() -> list[dict]:
+def load_and_join(input_dir: Path) -> list[dict]:
     print("-- Loading data ----------------------------------------------")
+    extracted_path = input_dir / "router-full-extracted.jsonl"
+    judged_path    = input_dir / "router-full-judged.jsonl"
 
-    if not EXTRACTED_PATH.exists():
-        print(f"ERROR: {EXTRACTED_PATH} not found", file=sys.stderr)
+    if not extracted_path.exists():
+        print(f"ERROR: {extracted_path} not found", file=sys.stderr)
         sys.exit(1)
-    if not JUDGED_PATH.exists():
-        print(f"ERROR: {JUDGED_PATH} not found", file=sys.stderr)
+    if not judged_path.exists():
+        print(f"ERROR: {judged_path} not found", file=sys.stderr)
         sys.exit(1)
 
-    extracted = load_jsonl(EXTRACTED_PATH)
-    judged    = load_jsonl(JUDGED_PATH)
+    extracted = load_jsonl(extracted_path)
+    judged    = load_jsonl(judged_path)
 
     print(f"  Extracted records : {len(extracted)}")
     print(f"  Judged records    : {len(judged)}")
@@ -414,8 +418,25 @@ def train_and_evaluate(
 # Main
 # ---------------------------------------------------------------------------
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train model router classifier")
+    parser.add_argument(
+        "--input-dir", type=Path, default=DEFAULT_INPUT_DIR,
+        help="Directory containing router-full-extracted.jsonl and router-full-judged.jsonl",
+    )
+    parser.add_argument(
+        "--output-path", type=Path, default=DEFAULT_OUTPUT_PATH,
+        help="Path for the output router-weights.json file",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    records = load_and_join()
+    args = parse_args()
+    input_dir: Path = args.input_dir
+    output_path: Path = args.output_path
+
+    records = load_and_join(input_dir)
     X, y   = prepare_dataset(records)
 
     print("\n-- Train / test split (80/20 stratified) ---------------------")
@@ -456,12 +477,12 @@ def main() -> None:
     print(f"  Reason   : {reason}")
 
     # -- Export --------------------------------------------------------------
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as fh:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2)
 
     print("\n-- Export ----------------------------------------------------")
-    print(f"  Written to : {OUTPUT_PATH}")
+    print(f"  Written to : {output_path}")
     print(f"  Model type : {payload['type']}")
     if payload["type"] == "random_forest":
         print(f"  Trees      : {payload['n_trees']}")

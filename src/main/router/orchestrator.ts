@@ -13,8 +13,9 @@ import { app } from 'electron';
 import log from '../logger';
 import { classifyFeatures } from './classifier';
 import { extractFeatures } from './featureExtractor';
+import { buildEnrichedLogEntry } from './routerFeedback';
 import { createRouterLogger } from './routerLogger';
-import type { ModelTier, RouterSettings, RoutingDecision,RoutingLogEntry } from './routerTypes';
+import type { EnrichedLogOpts, ModelTier, RouterSettings, RoutingDecision } from './routerTypes';
 import { DEFAULT_ROUTER_SETTINGS, TIER_TO_MODEL } from './routerTypes';
 import { routeByRules } from './ruleEngine';
 
@@ -122,22 +123,18 @@ function getJsonlLogger(): ReturnType<typeof createRouterLogger> | null {
 
 /* ── Logging helper (called by the bridge, not internally) ────────── */
 
+/**
+ * Logs a routing decision to electron-log and appends an enriched JSONL entry.
+ * Returns the trace_id for correlation with quality signals, or null if skipped.
+ */
 export function logRoutingDecision(
   prompt: string,
   decision: RoutingDecision | null,
-): void {
-  if (!decision) return;
-  const preview = prompt.substring(0, 80).replace(/\n/g, ' ');
-  log.info('[router]', {
-    tier: decision.tier,
-    model: decision.model,
-    rule: decision.rule ?? '-',
-    routedBy: decision.routedBy,
-    confidence: decision.confidence,
-    latencyMs: decision.latencyMs.toFixed(1),
-    prompt: preview,
-  });
-  writeJsonlEntry(prompt, decision);
+  opts?: EnrichedLogOpts,
+): string | null {
+  if (!decision) return null;
+  logToElectronLog(prompt, decision);
+  return writeEnrichedEntry(prompt, decision, opts);
 }
 
 export function logRouterOverride(
@@ -150,26 +147,27 @@ export function logRouterOverride(
   logger.logOverride(routerTier, userChosenModel, promptPreview);
 }
 
-function writeJsonlEntry(
-  prompt: string,
-  decision: RoutingDecision,
-): void {
-  const logger = getJsonlLogger();
-  if (!logger) return;
-  const entry: RoutingLogEntry = {
-    timestamp: new Date().toISOString(),
-    promptPreview: prompt.substring(0, 100),
-    promptHash: '',
+function logToElectronLog(prompt: string, decision: RoutingDecision): void {
+  const preview = prompt.substring(0, 80).replace(/\n/g, ' ');
+  log.info('[router]', {
     tier: decision.tier,
     model: decision.model,
+    rule: decision.rule ?? '-',
     routedBy: decision.routedBy,
-    rule: decision.rule,
     confidence: decision.confidence,
-    latencyMs: decision.latencyMs,
-    layer1Result: decision.routedBy === 'rule' ? { tier: decision.tier, rule: decision.rule ?? 'DEFAULT', confidence: decision.confidence >= 1 ? 'HIGH' : 'MEDIUM' } : null,
-    layer2Result: decision.routedBy === 'classifier' ? { tier: decision.tier, confidence: decision.confidence, features: decision.features ?? {} } : null,
-    layer3Result: null,
-    override: null,
-  };
+    latencyMs: decision.latencyMs.toFixed(1),
+    prompt: preview,
+  });
+}
+
+function writeEnrichedEntry(
+  prompt: string,
+  decision: RoutingDecision,
+  opts?: EnrichedLogOpts,
+): string | null {
+  const logger = getJsonlLogger();
+  if (!logger) return null;
+  const entry = buildEnrichedLogEntry({ prompt, decision, opts });
   logger.log(entry);
+  return entry.traceId;
 }

@@ -14,6 +14,7 @@ import { dispatchActivationEvent } from './extensions';
 import type { HookPayload } from './hooks';
 import { invalidateSnapshotCache as invalidateAgentChatCache } from './ipc-handlers/agentChat';
 import log from './logger';
+import { trackSessionEnd } from './router/qualitySignalCollector';
 
 // ─── CLAUDE.md auto-generation ───────────────────────────────────────────────
 
@@ -59,14 +60,16 @@ export function handleSessionEnd(payload: HookPayload): void {
   dispatchActivationEvent('onSessionEnd', { sessionId: payload.sessionId }).catch(() => {});
 }
 
-export function handleSessionStop(
-  payload: HookPayload,
-  sessionCwdMap: Map<string, string>,
-): void {
+export function handleSessionStop(payload: HookPayload, sessionCwdMap: Map<string, string>): void {
   if (!payload.internal) {
     getContextLayerController()?.onGitCommit();
     getGraphController()?.onGitCommit();
     invalidateAgentChatCache();
     triggerClaudeMdGeneration('post-session', payload, sessionCwdMap);
+    trackSessionEnd({
+      type: payload.type,
+      sessionId: payload.sessionId,
+      cwd: payload.cwd ?? sessionCwdMap.get(payload.sessionId),
+    });
   }
 }

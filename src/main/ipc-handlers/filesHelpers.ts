@@ -60,9 +60,9 @@ export async function movePath(sourcePath: string, destPath: string): Promise<vo
     if (!isRenameFallbackError(err)) throw err;
     // fs.rename fails on Windows with EPERM (locked files) or EXDEV (cross-volume).
     // Fall back to recursive copy + remove.
-     
+
     await fs.cp(sourcePath, destPath, { recursive: true });
-     
+
     await fs.rm(sourcePath, { recursive: true, force: true });
   }
 }
@@ -160,12 +160,12 @@ export async function writeBinaryFile(
 }
 
 export async function writeTextFile(filePath: string, content: string): Promise<{ success: true }> {
-  log.info(
+  log.debug(
     `[writeTextFile] path=${filePath} contentLength=${content.length} first80=${JSON.stringify(content.slice(0, 80))}`,
   );
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is validated before this helper runs
   await fs.writeFile(filePath, content, 'utf-8');
-  log.info(`[writeTextFile] write complete for ${filePath}`);
+  log.debug(`[writeTextFile] write complete for ${filePath}`);
   return { success: true };
 }
 

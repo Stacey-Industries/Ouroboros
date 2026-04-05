@@ -50,9 +50,11 @@ export function deriveTaskLabel(payload: HookPayload): string {
     return promptLabel;
   }
 
-  return getStringValue(payload as unknown as Record<string, unknown>, 'taskLabel')
-    ?? formatModelLabel(payload.model)
-    ?? `Session ${payload.sessionId.slice(0, 8)}`;
+  return (
+    getStringValue(payload as unknown as Record<string, unknown>, 'taskLabel') ??
+    formatModelLabel(payload.model) ??
+    `Session ${payload.sessionId.slice(0, 8)}`
+  );
 }
 
 /** Convert a model identifier like "claude-opus-4-6" into a human-friendly label. */
@@ -84,9 +86,17 @@ export function createToolCall(payload: HookPayload): ToolCallEvent | null {
 
 /** All field names where Claude Code may embed the child session ID. */
 const CHILD_ID_FIELDS = [
-  'session_id', 'sessionId', 'agent_id', 'agentId', 'id',
-  'task_id', 'taskId', 'child_session_id', 'childSessionId',
-  'spawned_session_id', 'subagent_id',
+  'session_id',
+  'sessionId',
+  'agent_id',
+  'agentId',
+  'id',
+  'task_id',
+  'taskId',
+  'child_session_id',
+  'childSessionId',
+  'spawned_session_id',
+  'subagent_id',
 ];
 
 function findChildIdInInput(input: Record<string, unknown>): string | undefined {
@@ -153,7 +163,7 @@ function getNestedOutputFields(
     return null;
   }
 
-  const usage = isRecord(output.usage) ? output.usage as TokenUsage : undefined;
+  const usage = isRecord(output.usage) ? (output.usage as TokenUsage) : undefined;
   const model = typeof output.model === 'string' ? output.model : undefined;
 
   return usage || model ? { model, usage } : null;
@@ -209,7 +219,7 @@ function getOutputTimestamp(output?: Record<string, unknown>): number | undefine
 function buildPersistedSessionFields(raw: Record<string, unknown>): Partial<AgentSession> {
   return {
     completedAt: getNumberValue(raw, 'completedAt'),
-    toolCalls: Array.isArray(raw.toolCalls) ? raw.toolCalls as ToolCallEvent[] : [],
+    toolCalls: Array.isArray(raw.toolCalls) ? (raw.toolCalls as ToolCallEvent[]) : [],
     error: getStringValue(raw, 'error'),
     parentSessionId: getStringValue(raw, 'parentSessionId'),
     inputTokens: getNumberValue(raw, 'inputTokens') ?? 0,
@@ -222,8 +232,10 @@ function buildPersistedSessionFields(raw: Record<string, unknown>): Partial<Agen
     bookmarked: typeof raw.bookmarked === 'boolean' ? raw.bookmarked : undefined,
     snapshotHash: getStringValue(raw, 'snapshotHash'),
     internal: typeof raw.internal === 'boolean' ? raw.internal : undefined,
-    loadedRules: Array.isArray(raw.loadedRules) ? raw.loadedRules as LoadedRule[] : undefined,
-    skillExecutions: Array.isArray(raw.skillExecutions) ? raw.skillExecutions as SkillExecutionRecord[] : undefined,
+    loadedRules: Array.isArray(raw.loadedRules) ? (raw.loadedRules as LoadedRule[]) : undefined,
+    skillExecutions: Array.isArray(raw.skillExecutions)
+      ? (raw.skillExecutions as SkillExecutionRecord[])
+      : undefined,
   };
 }
 
@@ -241,21 +253,27 @@ function toPersistedSession(rawSession: unknown): AgentSession | null {
     return null;
   }
 
+  const fields = buildPersistedSessionFields(rawSession);
   return {
     id,
     taskLabel,
     status,
     startedAt,
-    ...buildPersistedSessionFields(rawSession),
+    ...fields,
+    toolCalls: fields.toolCalls ?? [],
+    inputTokens: fields.inputTokens ?? 0,
+    outputTokens: fields.outputTokens ?? 0,
     restored: true,
   };
 }
 
 function hasRequiredPayloadFields(event: unknown): event is HookPayload {
-  return isRecord(event)
-    && typeof event.type === 'string'
-    && typeof event.sessionId === 'string'
-    && typeof event.timestamp === 'number';
+  return (
+    isRecord(event) &&
+    typeof event.type === 'string' &&
+    typeof event.sessionId === 'string' &&
+    typeof event.timestamp === 'number'
+  );
 }
 
 function getStatusValue(
@@ -272,9 +290,7 @@ function getStatusValue(
 
 function getStringValue(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];
-  return typeof value === 'string' && value.trim().length > 0
-    ? value.trim()
-    : undefined;
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function getNumberValue(record: Record<string, unknown>, key: string): number | undefined {

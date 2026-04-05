@@ -3,12 +3,11 @@ import React, { useMemo } from 'react';
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import type { CodexModelOption, ModelProvider } from '../../types/electron';
 import { getModelProviderLogo } from '../shared/ProviderLogos';
+import { ModelContextUsageIndicator } from './ChatControlsBar.rings';
 import {
   buildDisplayUsage,
   buildModelOptions,
   type ChatControlProvider,
-  getContextLimit,
-  getContextTone,
   getEffortOptions,
   getPermissionModes,
   getSelectedModelLabel,
@@ -106,113 +105,6 @@ function PermissionModeIndicator(props: {
   );
 }
 
-type ContextRingProps = {
-  pct: number;
-  tone: string;
-  label: string;
-  size?: number;
-  stroke?: number;
-  isStreaming?: boolean;
-};
-
-type ArcProps = {
-  cx: number;
-  cy: number;
-  r: number;
-  stroke: number;
-  tone: string;
-  circumference: number;
-  offset: number;
-};
-
-function ContextRingArcs(p: ArcProps): React.ReactElement {
-  return (
-    <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
-      <circle
-        cx={p.cx}
-        cy={p.cy}
-        r={p.r}
-        fill="none"
-        stroke="var(--border-default)"
-        strokeWidth={p.stroke}
-      />
-      <circle
-        cx={p.cx}
-        cy={p.cy}
-        r={p.r}
-        fill="none"
-        stroke={p.tone}
-        strokeWidth={p.stroke}
-        strokeDasharray={p.circumference}
-        strokeDashoffset={p.offset}
-        strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 0.3s ease' }}
-      />
-    </g>
-  );
-}
-
-function ContextRing(props: ContextRingProps): React.ReactElement {
-  const size = props.size ?? 26;
-  const stroke = props.stroke ?? 2.5;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (props.pct / 100) * circumference;
-  const cx = size / 2;
-  const cy = size / 2;
-  const pulseStyle: React.CSSProperties = props.isStreaming
-    ? { animation: 'contextRingPulse 1.5s ease-in-out infinite' }
-    : {};
-  return (
-    <svg width={size} height={size} style={{ pointerEvents: 'none', ...pulseStyle }}>
-      <ContextRingArcs
-        cx={cx}
-        cy={cy}
-        r={radius}
-        stroke={stroke}
-        tone={props.tone}
-        circumference={circumference}
-        offset={offset}
-      />
-      <text
-        x={cx}
-        y={cy}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="var(--text-primary)"
-        style={{ fontSize: '8px', fontFamily: 'var(--font-mono)' }}
-      >
-        {props.label}
-      </text>
-    </svg>
-  );
-}
-
-function ModelContextUsageIndicator(props: {
-  usage: ModelUsageEntry[];
-  codexModels?: CodexModelOption[];
-  isStreaming?: boolean;
-}): React.ReactElement | null {
-  if (props.usage.length === 0) return null;
-  return (
-    <div className="flex items-center gap-2">
-      {props.usage.map((entry) => {
-        const limit = getContextLimit(entry.model, props.codexModels);
-        const pct = Math.min(100, Math.round((entry.inputTokens / limit) * 100));
-        return (
-          <div
-            key={entry.model}
-            title={`${entry.inputTokens.toLocaleString()} / ${limit.toLocaleString()} Tokens`}
-            style={{ cursor: 'default' }}
-          >
-            <ContextRing pct={pct} tone={getContextTone(pct)} label={String(pct)} isStreaming={props.isStreaming} />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 interface ChatControlsBarProps {
   overrides: ChatOverrides;
   onChange: (overrides: ChatOverrides) => void;
@@ -262,14 +154,46 @@ function useActiveSessionRules() {
   const { agents } = useAgentEventsContext();
   return useMemo(() => {
     const running = agents.filter((s) => s.status === 'running');
-    const target = running.length > 0
-      ? running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b))
-      : agents.reduce<(typeof agents)[number] | undefined>((a, b) => {
-          if (!a) return b;
-          return (b.startedAt > a.startedAt) ? b : a;
-        }, undefined);
+    const target =
+      running.length > 0
+        ? running.reduce((a, b) => (a.startedAt > b.startedAt ? a : b))
+        : agents.reduce<(typeof agents)[number] | undefined>((a, b) => {
+            if (!a) return b;
+            return b.startedAt > a.startedAt ? b : a;
+          }, undefined);
     return target?.loadedRules ?? [];
   }, [agents]);
+}
+
+function RoutedByBadge(props: { routedBy?: string }): React.ReactElement | null {
+  if (!props.routedBy || props.routedBy === 'user') return null;
+  return (
+    <span
+      className="text-[10px] italic text-text-semantic-muted"
+      style={{ fontFamily: 'var(--font-ui)' }}
+      title={`Model auto-selected by ${props.routedBy} layer`}
+    >
+      auto
+    </span>
+  );
+}
+
+function ContextUsageSection(props: {
+  usage: ModelUsageEntry[];
+  codexModels?: CodexModelOption[];
+  isStreaming?: boolean;
+}): React.ReactElement | null {
+  if (props.usage.length === 0) return null;
+  return (
+    <>
+      <div className="mx-0.5 h-3 w-px bg-border-semantic" />
+      <ModelContextUsageIndicator
+        usage={props.usage}
+        codexModels={props.codexModels}
+        isStreaming={props.isStreaming}
+      />
+    </>
+  );
 }
 
 export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement {
@@ -280,14 +204,12 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
     <div className="flex flex-wrap items-center gap-3 px-3 py-1" data-layout="chat-controls-bar">
       <ModelSelect
         value={props.overrides.model}
-        defaultOption={defaultOption}
+        defaultOption={defaultOption!}
         groups={groups}
         onChange={(model) => props.onChange({ ...props.overrides, model })}
         codexModelIds={props.codexModels?.map((m) => m.id)}
       />
-      {props.routedBy && props.routedBy !== 'user' && (
-        <span className="text-[10px] italic text-text-semantic-muted" style={{ fontFamily: 'var(--font-ui)' }} title={`Model auto-selected by ${props.routedBy} layer`}>auto</span>
-      )}
+      <RoutedByBadge routedBy={props.routedBy} />
       <ControlSelect
         label="Effort"
         value={effortValue}
@@ -300,12 +222,11 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
         onChange={(permissionMode) => props.onChange({ ...props.overrides, permissionMode })}
       />
       <RulesActivityBadge rules={loadedRules} />
-      {displayUsage.length > 0 && (
-        <>
-          <div className="mx-0.5 h-3 w-px bg-border-semantic" />
-          <ModelContextUsageIndicator usage={displayUsage} codexModels={props.codexModels} isStreaming={props.isStreaming} />
-        </>
-      )}
+      <ContextUsageSection
+        usage={displayUsage}
+        codexModels={props.codexModels}
+        isStreaming={props.isStreaming}
+      />
     </div>
   );
 }

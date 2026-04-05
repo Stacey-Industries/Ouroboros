@@ -39,7 +39,7 @@ async function readBinaryObjectUrl(filePath: string, mimeType: string): Promise<
     throw new Error(result.error ?? `Failed to read binary file: ${filePath}`);
   }
   const data = result.data instanceof Uint8Array ? result.data : new Uint8Array(result.data);
-  return URL.createObjectURL(new Blob([data], { type: mimeType }));
+  return URL.createObjectURL(new Blob([data.buffer as ArrayBuffer], { type: mimeType }));
 }
 
 export function useBinaryObjectUrl(

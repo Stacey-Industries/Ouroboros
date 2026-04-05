@@ -35,10 +35,7 @@ function makePayload(overrides: Partial<HookPayload> = {}): HookPayload {
 describe('dispatchCompaction', () => {
   it('dispatches PRE_COMPACT for pre_compact', () => {
     const dispatch = vi.fn();
-    dispatchCompaction(
-      makePayload({ type: 'pre_compact', data: { token_count: 5000 } }),
-      dispatch,
-    );
+    dispatchCompaction(makePayload({ type: 'pre_compact', data: { token_count: 5000 } }), dispatch);
     expect(dispatch).toHaveBeenCalledOnce();
     const action = dispatch.mock.calls[0][0];
     expect(action.type).toBe('PRE_COMPACT');
@@ -98,51 +95,37 @@ describe('dispatchPermissionEvent', () => {
 
 describe('dispatchWorkspaceEvent', () => {
   it('fires agent-ide:file-changed DOM event for file_changed', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'file_changed' }), dispatch);
+    dispatchWorkspaceEvent(makePayload({ type: 'file_changed' }));
     expect(mockDispatchEvent).toHaveBeenCalledOnce();
     expect(mockDispatchEvent.mock.calls[0][0].type).toBe('agent-ide:file-changed');
-    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('fires agent-ide:cwd-changed with detail for cwd_changed', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(
-      makePayload({ type: 'cwd_changed', data: { cwd: '/new/path' } }),
-      dispatch,
-    );
+    dispatchWorkspaceEvent(makePayload({ type: 'cwd_changed', data: { cwd: '/new/path' } }));
     expect(mockDispatchEvent).toHaveBeenCalledOnce();
     const event = mockDispatchEvent.mock.calls[0][0];
     expect(event.type).toBe('agent-ide:cwd-changed');
     expect(event.detail.cwd).toBe('/new/path');
   });
 
-  it('does not dispatch for worktree_create', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'worktree_create' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('does not fire DOM event for worktree_create', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'worktree_create' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
-  it('logs worktree_remove without dispatching', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'worktree_remove' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('does not fire DOM event for worktree_remove', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'worktree_remove' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
-  it('logs config_change without dispatching', () => {
-    const dispatch = vi.fn();
-    dispatchWorkspaceEvent(makePayload({ type: 'config_change' }), dispatch);
-    expect(dispatch).not.toHaveBeenCalled();
+  it('does not fire DOM event for config_change', () => {
+    dispatchWorkspaceEvent(makePayload({ type: 'config_change' }));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
   });
 
   it('fires cwd-changed with new_cwd fallback key', () => {
-    const dispatch = vi.fn();
     dispatchWorkspaceEvent(
       makePayload({ type: 'cwd_changed', data: { new_cwd: '/fallback/path' } }),
-      dispatch,
     );
     expect(mockDispatchEvent).toHaveBeenCalledOnce();
     const event = mockDispatchEvent.mock.calls[0][0];

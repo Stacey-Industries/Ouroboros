@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockOnCwdChanged = vi.fn();
 const mockOnFileChanged = vi.fn();
-const mockGraphOnFileChanged = vi.fn();
+const mockGraphOnFileChange = vi.fn();
 
 vi.mock('./contextLayer/contextLayerController', () => ({
   getContextLayerController: () => ({
@@ -19,7 +19,7 @@ vi.mock('./contextLayer/contextLayerController', () => ({
 
 vi.mock('./codebaseGraph/graphController', () => ({
   getGraphController: () => ({
-    onFileChanged: mockGraphOnFileChanged,
+    onFileChange: mockGraphOnFileChange,
   }),
 }));
 
@@ -70,18 +70,20 @@ describe('handleCwdChanged', () => {
 });
 
 describe('handleFileChanged', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('notifies context layer and graph on external file changes', () => {
     handleFileChanged({});
     expect(mockOnFileChanged).toHaveBeenCalled();
-    expect(mockGraphOnFileChanged).toHaveBeenCalled();
+    expect(mockGraphOnFileChange).toHaveBeenCalled();
   });
 
   it('skips notification for internal sessions', () => {
     handleFileChanged({ internal: true });
     expect(mockOnFileChanged).not.toHaveBeenCalled();
-    expect(mockGraphOnFileChanged).not.toHaveBeenCalled();
+    expect(mockGraphOnFileChange).not.toHaveBeenCalled();
   });
 });
 
@@ -93,9 +95,7 @@ describe('handleConfigChange', () => {
 
 describe('enrichFromPermissionRequest', () => {
   it('runs without throwing for a minimal payload', () => {
-    expect(() =>
-      enrichFromPermissionRequest({ sessionId: 'abc' }),
-    ).not.toThrow();
+    expect(() => enrichFromPermissionRequest({ sessionId: 'abc' })).not.toThrow();
   });
 
   it('runs without throwing when data and toolName are provided', () => {

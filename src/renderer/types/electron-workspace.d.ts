@@ -170,6 +170,42 @@ export interface ProvidersAPI {
   getSlots: () => Promise<ModelSlotAssignments>;
 }
 
+/* ── Layout types (moved from electron-foundation for max-lines) ──── */
+
+export interface PanelSizes {
+  leftSidebar: number;
+  rightSidebar: number;
+  terminal: number;
+}
+
+export interface WindowBounds {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized: boolean;
+}
+
+/* ── Router analytics ─────────────────────────────────────────────── */
+
+export interface RouterStatsResult {
+  tierDistribution: { HAIKU: number; SONNET: number; OPUS: number };
+  bySurface: {
+    chat: { HAIKU: number; SONNET: number; OPUS: number };
+    terminal_shadow: { HAIKU: number; SONNET: number; OPUS: number };
+    agentic: { HAIKU: number; SONNET: number; OPUS: number };
+  };
+  overrideRate: number;
+  overrideDirection: { upgradeCount: number; downgradeCount: number };
+  layerDistribution: { rule: number; classifier: number; llm: number; default_: number };
+  totalDecisions: number;
+  signalCounts: Record<string, number>;
+}
+
+export interface RouterAPI {
+  getStats(): Promise<IpcResult & { data?: RouterStatsResult }>;
+}
+
 export interface ElectronAPI {
   pty: PtyAPI;
   config: ConfigAPI;
@@ -204,6 +240,7 @@ export interface ElectronAPI {
   claudeMd: ClaudeMdAPI;
   providers: ProvidersAPI;
   codex: CodexAPI;
+  router: RouterAPI;
   rulesAndSkills: RulesAndSkillsAPI;
   ai: AiAPI;
 }

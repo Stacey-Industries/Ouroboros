@@ -47,6 +47,7 @@ type SupplementalApiKey =
   | 'orchestration'
   | 'contextLayer'
   | 'claudeMd'
+  | 'router'
   | 'rulesAndSkills'
   | 'ai';
 
@@ -105,7 +106,9 @@ export const supplementalApis: SupplementalApis = {
     clearCrashLogs: () => ipcRenderer.invoke('app:clearCrashLogs'),
     openCrashLogDir: () => ipcRenderer.invoke('app:openCrashLogDir'),
     logError: (source, message, stack) =>
-      ipcRenderer.invoke('app:logError', source, message, stack).catch(() => { /* swallow if handler missing */ }),
+      ipcRenderer.invoke('app:logError', source, message, stack).catch(() => {
+        /* swallow if handler missing */
+      }),
   },
 
   perf: {
@@ -268,7 +271,6 @@ export const supplementalApis: SupplementalApis = {
     onEvent: (callback) => onChannel<AgentChatEvent>(AGENT_CHAT_EVENT_CHANNELS.event, callback),
   },
 
-   
   orchestration: {
     previewContext: (request: unknown) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
@@ -277,8 +279,9 @@ export const supplementalApis: SupplementalApis = {
     // Routes to agentChat:cancelTask (singleton orchestration) — the old
     // orchestration:cancelTask handler was removed because it created a fresh
     // adapter with empty process Maps and could never kill the running process.
-    cancelTask: (taskId: string) => ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- orchestration API surface is intentionally partial; full ElectronAPI.orchestration type includes routes handled elsewhere
+    cancelTask: (taskId: string) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.cancelTask, taskId),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- orchestration API surface is intentionally partial; full ElectronAPI.orchestration type includes routes handled elsewhere
   } as any,
 
   contextLayer: {
@@ -295,14 +298,15 @@ export const supplementalApis: SupplementalApis = {
       onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
   },
 
+  router: {
+    getStats: () => ipcRenderer.invoke('router:getStats'),
+  },
+
   rulesAndSkills: rulesAndSkillsApi,
 
   ai: {
-    inlineCompletion: (request) =>
-      ipcRenderer.invoke('ai:inline-completion', request),
-    generateCommitMessage: (request) =>
-      ipcRenderer.invoke('ai:generate-commit-message', request),
-    inlineEdit: (request) =>
-      ipcRenderer.invoke('ai:inline-edit', request),
+    inlineCompletion: (request) => ipcRenderer.invoke('ai:inline-completion', request),
+    generateCommitMessage: (request) => ipcRenderer.invoke('ai:generate-commit-message', request),
+    inlineEdit: (request) => ipcRenderer.invoke('ai:inline-edit', request),
   },
 };

@@ -49,7 +49,9 @@ async function loadObjectUrl(filePath: string): Promise<string> {
       throw new Error(result.error ?? `Failed to read icon asset: ${filePath}`);
     }
     const data = result.data instanceof Uint8Array ? result.data : new Uint8Array(result.data);
-    const objectUrl = URL.createObjectURL(new Blob([data], { type: inferMimeType(filePath) }));
+    const objectUrl = URL.createObjectURL(
+      new Blob([data.buffer as ArrayBuffer], { type: inferMimeType(filePath) }),
+    );
     objectUrlCache.set(filePath, objectUrl);
     pendingObjectUrls.delete(filePath);
     return objectUrl;
@@ -76,14 +78,10 @@ async function ensureFontLoaded(
   const loadPromise = (async () => {
     try {
       const objectUrl = await loadObjectUrl(font.srcPath);
-      const fontFace = new FontFace(
-        font.family,
-        `url(${objectUrl})`,
-        {
-          weight: font.weight,
-          style: font.style,
-        },
-      );
+      const fontFace = new FontFace(font.family, `url(${objectUrl})`, {
+        weight: font.weight,
+        style: font.style,
+      });
       await fontFace.load();
       document.fonts.add(fontFace);
       loadedFonts.add(font.family);

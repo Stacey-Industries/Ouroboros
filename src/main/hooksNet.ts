@@ -74,7 +74,7 @@ function parseHookLine(line: string, connId: number): HookPayload | null {
       log.warn(`#${connId} invalid payload shape - skipping`, JSON.stringify(parsed));
       return null;
     }
-    log.info(`#${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`);
+    log.debug(`#${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`);
     return parsed;
   } catch {
     log.warn(`#${connId} malformed JSON - skipping line`);
@@ -119,7 +119,7 @@ function handleSocket(
   connId: number,
   onPayload: (p: HookPayload) => void,
 ): void {
-  log.info(`connection #${connId} opened`);
+  log.debug(`connection #${connId} opened`);
   let rawBuffer = '';
   socket.setEncoding('utf8');
   socket.setTimeout(60_000);
@@ -140,7 +140,7 @@ function handleSocket(
     }
   });
   socket.on('close', () => {
-    log.info(`connection #${connId} closed`);
+    log.debug(`connection #${connId} closed`);
   });
 }
 

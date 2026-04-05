@@ -327,8 +327,9 @@ async function attemptFileWrite(
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from APPROVALS_DIR + requestId
       fs.writeFileSync(opts.filePath, opts.data, 'utf8');
       clearQueuedResponseWrite(requestId);
-      const retrySuffix = queuedAttempt > 0 || attempt > 0 ? ` (retry ${queuedAttempt + attempt})` : '';
-      log.info(`wrote response for ${requestId}: ${decision}${retrySuffix}`);
+      const retrySuffix =
+        queuedAttempt > 0 || attempt > 0 ? ` (retry ${queuedAttempt + attempt})` : '';
+      log.debug(`wrote response for ${requestId}: ${decision}${retrySuffix}`);
       notifyApprovalResolved(requestId, decision);
       return { success: true, lastError: undefined };
     } catch (err) {

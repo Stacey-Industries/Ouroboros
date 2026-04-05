@@ -126,10 +126,7 @@ describe('resolveSendOptions', () => {
     };
     getConfigValueMock.mockReturnValue(slots);
 
-    const result = resolveSendOptions(
-      createSettings(),
-      createRequest({ provider: 'codex' }),
-    );
+    const result = resolveSendOptions(createSettings(), createRequest({ provider: 'codex' }));
 
     expect(result.provider).toBe('codex');
     expect(result.model).toBe('gpt-5.4');
@@ -147,7 +144,7 @@ describe('resolveSendOptions', () => {
           paranoidMode: false,
         };
       }
-      return undefined;
+      return undefined as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     routePromptSyncMock.mockReturnValue({
       tier: 'OPUS',
@@ -185,7 +182,7 @@ describe('resolveSendOptions', () => {
           paranoidMode: false,
         };
       }
-      return undefined;
+      return undefined as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     });
 
     const result = resolveSendOptions(
@@ -201,14 +198,24 @@ describe('resolveSendOptions', () => {
   it('resolves "auto" effort to "medium" when the router selects SONNET', () => {
     getConfigValueMock.mockImplementation((key) => {
       if (key === 'routerSettings') {
-        return { enabled: true, layer1Enabled: true, layer2Enabled: true,
-          layer3Enabled: true, layer2ConfidenceThreshold: 0.6, paranoidMode: false };
+        return {
+          enabled: true,
+          layer1Enabled: true,
+          layer2Enabled: true,
+          layer3Enabled: true,
+          layer2ConfidenceThreshold: 0.6,
+          paranoidMode: false,
+        };
       }
-      return undefined;
+      return undefined as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     routePromptSyncMock.mockReturnValue({
-      tier: 'SONNET', model: 'claude-sonnet-4-6', routedBy: 'rule',
-      confidence: 1, latencyMs: 0, rule: 'S1',
+      tier: 'SONNET',
+      model: 'claude-sonnet-4-6',
+      routedBy: 'rule',
+      confidence: 1,
+      latencyMs: 0,
+      rule: 'S1',
     });
     const result = resolveSendOptions(createSettings(), createRequest({ effort: 'auto' }));
     expect(result.effort).toBe('medium');
@@ -217,14 +224,24 @@ describe('resolveSendOptions', () => {
   it('resolves "auto" effort to "high" when the router selects OPUS', () => {
     getConfigValueMock.mockImplementation((key) => {
       if (key === 'routerSettings') {
-        return { enabled: true, layer1Enabled: true, layer2Enabled: true,
-          layer3Enabled: true, layer2ConfidenceThreshold: 0.6, paranoidMode: false };
+        return {
+          enabled: true,
+          layer1Enabled: true,
+          layer2Enabled: true,
+          layer3Enabled: true,
+          layer2ConfidenceThreshold: 0.6,
+          paranoidMode: false,
+        };
       }
-      return undefined;
+      return undefined as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     routePromptSyncMock.mockReturnValue({
-      tier: 'OPUS', model: 'claude-opus-4-6', routedBy: 'rule',
-      confidence: 1, latencyMs: 0, rule: 'O1',
+      tier: 'OPUS',
+      model: 'claude-opus-4-6',
+      routedBy: 'rule',
+      confidence: 1,
+      latencyMs: 0,
+      rule: 'O1',
     });
     const result = resolveSendOptions(createSettings(), createRequest({ effort: 'auto' }));
     expect(result.effort).toBe('high');
@@ -233,10 +250,16 @@ describe('resolveSendOptions', () => {
   it('resolves "auto" effort from model name when user explicitly picks a model', () => {
     getConfigValueMock.mockImplementation((key) => {
       if (key === 'routerSettings') {
-        return { enabled: true, layer1Enabled: true, layer2Enabled: true,
-          layer3Enabled: true, layer2ConfidenceThreshold: 0.6, paranoidMode: false };
+        return {
+          enabled: true,
+          layer1Enabled: true,
+          layer2Enabled: true,
+          layer3Enabled: true,
+          layer2ConfidenceThreshold: 0.6,
+          paranoidMode: false,
+        };
       }
-      return undefined;
+      return undefined as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     const result = resolveSendOptions(
       createSettings(),

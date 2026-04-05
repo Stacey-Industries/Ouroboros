@@ -6,12 +6,14 @@
  * score. Pure TypeScript inference — no Python or ONNX at runtime.
  */
 
+import fs from 'node:fs';
+
 import weightsJson from './model/router-weights.json';
 import type { ClassifierResult, ModelTier } from './routerTypes';
 
 /* ── Model weight types ───────────────────────────────────────────── */
 
-interface LRWeights {
+export interface LRWeights {
   type: 'logistic_regression';
   feature_names: string[];
   label_names: string[];
@@ -21,9 +23,9 @@ interface LRWeights {
   scaler_scale: number[];
 }
 
-/* ── Weights (inlined by bundler) ────────────────────────────────── */
+/* ── Weights (inlined by bundler, replaceable at runtime) ────────── */
 
-const weights = weightsJson as unknown as LRWeights;
+let weights = weightsJson as unknown as LRWeights;
 
 /* ── Numeric helpers (use .at() to satisfy security/detect-object-injection) */
 
@@ -53,13 +55,13 @@ function featureVal(features: Record<string, number>, name: string): number {
 /**
  * Classify a prompt's features into a model tier.
  */
-export function classifyFeatures(
-  features: Record<string, number>,
-): ClassifierResult {
+export function classifyFeatures(features: Record<string, number>): ClassifierResult {
   const w = weights;
 
   const raw = w.feature_names.map((n) => featureVal(features, n));
-  const scaled = raw.map((v, i) => scaleValue(v, w.scaler_mean.at(i) ?? 0, w.scaler_scale.at(i) ?? 1));
+  const scaled = raw.map((v, i) =>
+    scaleValue(v, w.scaler_mean.at(i) ?? 0, w.scaler_scale.at(i) ?? 1),
+  );
   const logits = computeLogits(scaled, w);
   const probs = softmax(logits);
 
@@ -87,10 +89,44 @@ function pickBestClass(
   let maxIdx = 0;
   for (let i = 0; i < probs.length; i++) {
     const p = probs.at(i) ?? 0;
-    if (p > maxProb) { maxProb = p; maxIdx = i; }
+    if (p > maxProb) {
+      maxProb = p;
+      maxIdx = i;
+    }
   }
   const validTiers = new Set<string>(['HAIKU', 'SONNET', 'OPUS']);
   const label = labels.at(maxIdx) ?? 'SONNET';
   const tier: ModelTier = validTiers.has(label) ? (label as ModelTier) : 'SONNET';
   return { tier, confidence: maxProb, features };
+}
+
+/* ── Hot-reload ──────────────────────────────────────────────────── */
+
+/**
+ * Replace the in-memory weights with a new set loaded from disk.
+ * Returns true on success, false if the file is missing or malformed.
+ */
+export function reloadWeights(filePath: string): boolean {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is derived from app.getPath('userData'), a trusted internal path
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isValidLRWeights(parsed)) return false;
+    weights = parsed;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isValidLRWeights(obj: unknown): obj is LRWeights {
+  if (!obj || typeof obj !== 'object') return false;
+  const w = obj as Record<string, unknown>;
+  return (
+    w.type === 'logistic_regression' &&
+    Array.isArray(w.feature_names) &&
+    Array.isArray(w.label_names) &&
+    Array.isArray(w.coefficients) &&
+    Array.isArray(w.intercept)
+  );
 }

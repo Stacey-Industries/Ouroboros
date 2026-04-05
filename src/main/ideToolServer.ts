@@ -18,6 +18,12 @@ import net from 'net';
 
 import type { ToolHandler } from './ideToolServerHandlers';
 import { createToolHandlers, execGitStatus } from './ideToolServerHandlers';
+import {
+  createToolErrorResponse,
+  formatAddress,
+  parseToolRequest,
+  writeToolResponse,
+} from './ideToolServerHelpers';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
@@ -98,7 +104,11 @@ function queryRenderer(method: string, params?: unknown): Promise<unknown> {
 /**
  * Called from IPC when the renderer responds to a query.
  */
-export function handleRendererQueryResponse(queryId: string, result: unknown, error?: string): void {
+export function handleRendererQueryResponse(
+  queryId: string,
+  result: unknown,
+  error?: string,
+): void {
   const pending = pendingRendererQueries.get(queryId);
   if (!pending) return;
 
@@ -148,34 +158,8 @@ async function handleRequest(request: ToolRequest): Promise<ToolResponse> {
   }
 }
 
-function createToolErrorResponse(id: string, code: number, message: string): ToolResponse {
-  return { id, error: { code, message } };
-}
-
-function writeToolResponse(socket: net.Socket, response: ToolResponse): void {
-  socket.write(JSON.stringify(response) + '\n');
-}
-
-function parseToolRequest(line: string): { request?: ToolRequest; errorResponse?: ToolResponse } {
-  try {
-    const request = JSON.parse(line) as ToolRequest;
-    if (request.id && request.method) return { request };
-    return {
-      errorResponse: createToolErrorResponse(
-        request.id || 'unknown',
-        -32600,
-        'Invalid request: missing id or method',
-      ),
-    };
-  } catch {
-    return {
-      errorResponse: createToolErrorResponse('unknown', -32700, 'Parse error: invalid JSON'),
-    };
-  }
-}
-
 function dispatchToolRequest(socket: net.Socket, connId: number, request: ToolRequest): void {
-  log.info(`#${connId} request: ${request.method}`);
+  log.debug(`#${connId} request: ${request.method}`);
 
   void handleRequest(request)
     .then((response) => {
@@ -244,7 +228,7 @@ function logSocketError(connId: number, err: NodeJS.ErrnoException): void {
 // â”€â”€â”€ Per-connection handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function handleSocket(socket: net.Socket, connId: number): void {
-  log.info(`connection #${connId} opened`);
+  log.debug(`connection #${connId} opened`);
 
   let rawBuffer = '';
 
@@ -268,7 +252,7 @@ function handleSocket(socket: net.Socket, connId: number): void {
   });
 
   socket.on('close', () => {
-    log.info(`connection #${connId} closed`);
+    log.debug(`connection #${connId} closed`);
   });
 }
 
@@ -305,12 +289,6 @@ function listenUnix(socketServer: net.Server, socketPath: string): Promise<void>
       resolve();
     });
   });
-}
-
-function formatAddress(address: string | net.AddressInfo | null): string | null {
-  if (!address) return null;
-  if (typeof address === 'string') return address;
-  return `${address.address}:${address.port}`;
 }
 
 function rejectPendingQueries(): void {

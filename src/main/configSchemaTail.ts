@@ -4,7 +4,7 @@ import {
   AGENT_CHAT_PROVIDERS,
   AGENT_CHAT_SETTINGS_DEFAULTS,
   AGENT_CHAT_VERIFICATION_PROFILES,
-} from './agentChat/settingsResolver'
+} from './agentChat/settingsResolver';
 
 export const tailSchema = {
   workspaceSnapshots: {
@@ -18,27 +18,27 @@ export const tailSchema = {
         sessionLabel: { type: 'string' },
         timestamp: { type: 'number' },
         type: { type: 'string' },
-        fileCount: { type: 'number' }
-      }
+        fileCount: { type: 'number' },
+      },
     },
-    default: []
+    default: [],
   },
   commandBlocksEnabled: {
     type: 'boolean',
-    default: true
+    default: true,
   },
   promptPattern: {
     type: 'string',
-    default: ''
+    default: '',
   },
   terminalCursorStyle: {
     type: 'string',
     enum: ['block', 'underline', 'bar'],
-    default: 'block'
+    default: 'block',
   },
   formatOnSave: {
     type: 'boolean',
-    default: false
+    default: false,
   },
   contextLayer: {
     type: 'object',
@@ -62,18 +62,22 @@ export const tailSchema = {
   installedVsxExtensions: {
     type: 'array',
     items: { type: 'object' },
-    default: []
+    default: [],
   },
   disabledVsxExtensions: {
     type: 'array',
     items: { type: 'string' },
-    default: []
+    default: [],
   },
   agentChatSettings: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      defaultProvider: { type: 'string', enum: [...AGENT_CHAT_PROVIDERS], default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider },
+      defaultProvider: {
+        type: 'string',
+        enum: [...AGENT_CHAT_PROVIDERS],
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultProvider,
+      },
       defaultVerificationProfile: {
         type: 'string',
         enum: [...AGENT_CHAT_VERIFICATION_PROFILES],
@@ -84,25 +88,35 @@ export const tailSchema = {
         enum: [...AGENT_CHAT_CONTEXT_BEHAVIORS],
         default: AGENT_CHAT_SETTINGS_DEFAULTS.contextBehavior,
       },
-      showAdvancedControls: { type: 'boolean', default: AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls },
-      openDetailsOnFailure: { type: 'boolean', default: AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure },
-      defaultView: { type: 'string', enum: [...AGENT_CHAT_DEFAULT_VIEWS], default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultView }
+      showAdvancedControls: {
+        type: 'boolean',
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.showAdvancedControls,
+      },
+      openDetailsOnFailure: {
+        type: 'boolean',
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.openDetailsOnFailure,
+      },
+      defaultView: {
+        type: 'string',
+        enum: [...AGENT_CHAT_DEFAULT_VIEWS],
+        default: AGENT_CHAT_SETTINGS_DEFAULTS.defaultView,
+      },
     },
-    default: { ...AGENT_CHAT_SETTINGS_DEFAULTS }
+    default: { ...AGENT_CHAT_SETTINGS_DEFAULTS },
   },
   webAccessPort: {
     type: 'number',
     minimum: 1024,
     maximum: 65535,
-    default: 7890
+    default: 7890,
   },
   webAccessToken: {
     type: 'string',
-    default: ''
+    default: '',
   },
   webAccessPassword: {
     type: 'string',
-    default: ''
+    default: '',
   },
   modelProviders: {
     type: 'array',
@@ -155,7 +169,11 @@ export const tailSchema = {
     additionalProperties: false,
     properties: {
       enabled: { type: 'boolean', default: false },
-      triggerMode: { type: 'string', enum: ['post-session', 'post-commit', 'manual'], default: 'manual' },
+      triggerMode: {
+        type: 'string',
+        enum: ['post-session', 'post-commit', 'manual'],
+        default: 'manual',
+      },
       model: { type: 'string', enum: ['haiku', 'sonnet', 'opus'], default: 'sonnet' },
       autoCommit: { type: 'boolean', default: false },
       generateRoot: { type: 'boolean', default: true },
@@ -182,6 +200,8 @@ export const tailSchema = {
       layer3Enabled: { type: 'boolean', default: true },
       layer2ConfidenceThreshold: { type: 'number', default: 0.6 },
       paranoidMode: { type: 'boolean', default: false },
+      /** Fraction of routing decisions sampled for LLM judge scoring (0 = disabled). */
+      llmJudgeSampleRate: { type: 'number', minimum: 0, maximum: 1, default: 0 },
     },
     default: {
       enabled: true,
@@ -190,6 +210,11 @@ export const tailSchema = {
       layer3Enabled: true,
       layer2ConfidenceThreshold: 0.6,
       paranoidMode: false,
+      llmJudgeSampleRate: 0,
     },
   },
-}
+  routerLastRetrainCount: {
+    type: 'number',
+    default: 0,
+  },
+};

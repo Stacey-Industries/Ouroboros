@@ -6,9 +6,9 @@ import type { MutableRefObject } from 'react';
 import { useRef } from 'react';
 
 export interface EditorRefs {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
-  vimStatusRef: React.RefObject<HTMLDivElement>;
+  vimStatusRef: React.RefObject<HTMLDivElement | null>;
   vimDisposeRef: MutableRefObject<(() => void) | null>;
   isDirtyRef: MutableRefObject<boolean>;
   contentChangeDisposableRef: MutableRefObject<monaco.IDisposable | null>;
@@ -40,6 +40,8 @@ export function bindInlineEditAction(
     id: 'ouroboros-inline-edit',
     label: 'Inline Edit',
     keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK],
-    run: () => { activateRef.current(); },
+    run: () => {
+      activateRef.current();
+    },
   });
 }
