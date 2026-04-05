@@ -5,7 +5,7 @@
  * agentChat invoke channels, and forwards events to the renderer.
  */
 
-import { type BrowserWindow, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 
 import {
   AGENT_CHAT_EVENT_CHANNELS,
@@ -27,6 +27,7 @@ import type {
 } from '../agentChat/types';
 import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
+import { getAllActiveWindows } from '../windowManager';
 import {
   invalidateSnapshotCache,
   loadPersistedContextCache,
@@ -270,10 +271,13 @@ async function projectAndSendSessionUpdate(
   });
 }
 
-function registerEventForwarders(svc: AgentChatService, win: BrowserWindow): void {
+function registerEventForwarders(svc: AgentChatService): void {
   const safeSend: SafeSend = (channel, data) => {
-    if (channel && !win.isDestroyed()) win.webContents.send(channel, data);
-    if (channel) broadcastToWebClients(channel, data);
+    if (!channel) return;
+    for (const win of getAllActiveWindows()) {
+      if (!win.isDestroyed()) win.webContents.send(channel, data);
+    }
+    broadcastToWebClients(channel, data);
   };
 
   const orch = getOrchestration();
@@ -297,7 +301,7 @@ function registerEventForwarders(svc: AgentChatService, win: BrowserWindow): voi
 
 // ─── Main registration entry point ───────────────────────────────────────────
 
-export function registerAgentChatHandlers(win?: BrowserWindow): string[] {
+export function registerAgentChatHandlers(): string[] {
   if (cleanupFns.length > 0) {
     for (const fn of cleanupFns) fn();
     cleanupFns.length = 0;
@@ -310,7 +314,7 @@ export function registerAgentChatHandlers(win?: BrowserWindow): string[] {
   registerMessageHandlers(channels, svc);
   registerMemoryHandlers(channels);
 
-  if (win) registerEventForwarders(svc, win);
+  registerEventForwarders(svc);
 
   registeredChannels = channels;
   return channels;

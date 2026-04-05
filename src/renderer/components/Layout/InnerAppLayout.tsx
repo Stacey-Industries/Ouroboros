@@ -191,7 +191,10 @@ function ProjectPickerSlot({
       addProjectRoot(path);
       const updated = [path, ...recentProjects.filter((p) => p !== path)].slice(0, 10);
       setRecentProjects(updated);
-      if (hasElectronAPI()) void window.electronAPI.config.set('recentProjects', updated);
+      if (hasElectronAPI()) {
+        void window.electronAPI.window.setProjectRoot(path);
+        void window.electronAPI.config.set('recentProjects', updated);
+      }
     },
     [addProjectRoot, recentProjects, setRecentProjects],
   );

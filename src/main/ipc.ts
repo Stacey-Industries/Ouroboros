@@ -65,7 +65,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('files', () => registerFileHandlers(senderWindow)),
     ...safeRegister('git', () => registerGitHandlers(senderWindow)),
     ...safeRegister('app', () => registerAppHandlers(senderWindow)),
-    ...safeRegister('agentChat', () => registerAgentChatHandlers(win)),
+    ...safeRegister('agentChat', () => registerAgentChatHandlers()),
     ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
     ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
     ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),

@@ -11,8 +11,11 @@ import {
   closeWindow,
   createWindow,
   focusWindow,
+  getWindow,
   getWindowInfos,
+  getWindowProjectRoots,
   setWindowProjectRoot,
+  setWindowProjectRoots,
 } from '../windowManager';
 
 type ChannelList = string[];
@@ -101,6 +104,38 @@ function registerWindowFrameControls(channels: ChannelList): void {
   });
 }
 
+function registerWindowProjectHandlers(channels: ChannelList): void {
+  registerChannel(channels, 'window:getSelf', async (event) =>
+    runQuery(() => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) throw new Error('Unknown window');
+      const managed = getWindow(win.id);
+      return { windowId: win.id, projectRoot: managed?.projectRoot ?? null };
+    }),
+  );
+  registerChannel(channels, 'window:setProjectRoot', async (event, projectRoot: string) =>
+    runAction(() => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) throw new Error('Unknown window');
+      setWindowProjectRoot(win.id, projectRoot);
+    }),
+  );
+  registerChannel(channels, 'window:getProjectRoots', async (event) =>
+    runQuery(() => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) throw new Error('Unknown window');
+      return { roots: getWindowProjectRoots(win.id) };
+    }),
+  );
+  registerChannel(channels, 'window:setProjectRoots', async (event, roots: string[]) =>
+    runAction(() => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) throw new Error('Unknown window');
+      setWindowProjectRoots(win.id, roots);
+    }),
+  );
+}
+
 export function registerWindowHandlers(channels: ChannelList): void {
   registerChannel(channels, 'window:new', (_event, projectRoot?: string) =>
     runQuery(() => {
@@ -118,6 +153,7 @@ export function registerWindowHandlers(channels: ChannelList): void {
   registerChannel(channels, 'window:close', async (_event, windowId: number) =>
     runAction(() => closeWindow(windowId)),
   );
+  registerWindowProjectHandlers(channels);
   registerWindowFrameControls(channels);
   registerChannel(channels, 'app:open-logs-folder', async () => {
     await shell.openPath(app.getPath('logs'));

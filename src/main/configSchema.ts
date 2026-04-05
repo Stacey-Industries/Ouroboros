@@ -147,6 +147,26 @@ export const schema: Record<string, unknown> = {
     items: { type: 'string' },
     default: [],
   },
+  windowSessions: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        projectRoots: { type: 'array', items: { type: 'string' }, default: [] },
+        bounds: {
+          type: 'object',
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            width: { type: 'number' },
+            height: { type: 'number' },
+            isMaximized: { type: 'boolean' },
+          },
+        },
+      },
+    },
+    default: [],
+  },
   customPrompt: {
     type: 'string',
     default: '',

@@ -1,4 +1,3 @@
-import type { BrowserWindow } from 'electron';
 import path from 'path';
 
 import {
@@ -14,6 +13,7 @@ import {
 import { getConfigValue, setConfigValue } from './config';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
+import { getAllActiveWindows } from './windowManager';
 
 export type { ClaudeMdGenerationResult, ClaudeMdGenerationStatus };
 
@@ -29,8 +29,6 @@ const MAX_RETRIES = 2;
 // ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
-
-let mainWindow: BrowserWindow | null = null;
 
 let status: ClaudeMdGenerationStatus = {
   running: false,
@@ -61,8 +59,8 @@ function saveCooldownTimestamp(ts: number): void {
 // ---------------------------------------------------------------------------
 
 function broadcastStatus(): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('claudeMd:statusChange', status);
+  for (const win of getAllActiveWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('claudeMd:statusChange', status);
   }
   broadcastToWebClients('claudeMd:statusChange', status);
 }
@@ -93,17 +91,16 @@ function isExcluded(relPath: string, excludeDirs: string[]): boolean {
 // Public API
 // ---------------------------------------------------------------------------
 
-export function initClaudeMdGenerator(win: BrowserWindow): void {
-  mainWindow = win;
+export function initClaudeMdGenerator(): void {
   lastCompletedAt = loadCooldownTimestamp();
   log.info('Generator initialized');
 }
 
-async function spawnClaudeWithRetry(prompt: string, model: string): Promise<string | undefined> {
+async function spawnClaudeWithRetry(prompt: string, model: string, cwd?: string): Promise<string | undefined> {
   let lastErr: string | undefined;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await spawnClaude(prompt, model);
+      return await spawnClaude(prompt, model, cwd);
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
       const isRateLimit = /rate|429/i.test(lastErr);
@@ -132,6 +129,7 @@ export async function generateForDirectory(
     const generated = await spawnClaudeWithRetry(
       await buildPrompt(dirPath, projectRoot),
       settings.model || 'sonnet',
+      projectRoot,
     );
     if (!generated || generated.length < 10) {
       log.info(`claudeMd: ${relPath} → skipped`);

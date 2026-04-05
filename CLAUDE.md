@@ -188,6 +188,10 @@ Only load docs relevant to your task. Saves tokens and avoids confusion.
 
 Never mix these. IPC events flow through preload. DOM events are renderer-only.
 
+### Per-Window Project Isolation
+
+Each window owns its project roots independently via `ManagedWindow.projectRoots` in `windowManager.ts`. The renderer persists roots per-window via `window.setProjectRoots()` IPC (not the global `multiRoots` config key). `pathSecurity` reads per-window roots first, with `defaultProjectRoot` as a cold-boot fallback only. Window sessions (roots + bounds) are persisted to `windowSessions` config and restored on relaunch.
+
 ## Known Issues / Tech Debt
 
 - TerminalPane and TerminalManager both render tab bars (double header) — needs state lifting to unify

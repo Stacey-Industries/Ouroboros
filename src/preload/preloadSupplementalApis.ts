@@ -151,6 +151,10 @@ export const supplementalApis: SupplementalApis = {
     list: () => ipcRenderer.invoke('window:list'),
     focus: (windowId) => ipcRenderer.invoke('window:focus', windowId),
     close: (windowId) => ipcRenderer.invoke('window:close', windowId),
+    getSelf: () => ipcRenderer.invoke('window:getSelf'),
+    setProjectRoot: (projectRoot) => ipcRenderer.invoke('window:setProjectRoot', projectRoot),
+    getProjectRoots: () => ipcRenderer.invoke('window:getProjectRoots'),
+    setProjectRoots: (roots) => ipcRenderer.invoke('window:setProjectRoots', roots),
   },
 
   extensions: {

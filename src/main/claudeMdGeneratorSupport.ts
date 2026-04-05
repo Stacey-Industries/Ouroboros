@@ -184,7 +184,7 @@ export async function readParentClaudeMd(
 // ---------------------------------------------------------------------------
 
 function buildPromptHeader(relPath: string, fileListStr: string): string {
-  return `You are generating a CLAUDE.md file for a directory in an Electron IDE codebase.
+  return `You are generating a CLAUDE.md file for a directory in a codebase.
 
 ## Directory
 Path: ${relPath}/
@@ -231,12 +231,13 @@ export async function buildPrompt(dirPath: string, projectRoot: string): Promise
 // Claude CLI spawner
 // ---------------------------------------------------------------------------
 
-export function spawnClaude(prompt: string, model: string): Promise<string> {
+export function spawnClaude(prompt: string, model: string, cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = ['-p', '--output-format', 'text', '--model', model];
     const child = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: CLAUDE_TIMEOUT_MS,
+      cwd: cwd || undefined,
       env: { ...process.env, OUROBOROS_INTERNAL: '1' },
     });
 

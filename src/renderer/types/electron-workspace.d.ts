@@ -146,6 +146,11 @@ export interface CodeModeAPI {
 export interface WindowInfo {
   id: number;
   projectRoot: string | null;
+  projectRoots: string[];
+}
+
+export interface WindowProjectRootsResult extends IpcResult {
+  roots?: string[];
 }
 
 export interface WindowListResult extends IpcResult {
@@ -156,11 +161,20 @@ export interface WindowNewResult extends IpcResult {
   windowId?: number;
 }
 
+export interface WindowSelfResult extends IpcResult {
+  windowId?: number;
+  projectRoot?: string | null;
+}
+
 export interface WindowAPI {
   create: (projectRoot?: string) => Promise<WindowNewResult>;
   list: () => Promise<WindowListResult>;
   focus: (windowId: number) => Promise<IpcResult>;
   close: (windowId: number) => Promise<IpcResult>;
+  getSelf: () => Promise<WindowSelfResult>;
+  setProjectRoot: (projectRoot: string) => Promise<IpcResult>;
+  getProjectRoots: () => Promise<WindowProjectRootsResult>;
+  setProjectRoots: (roots: string[]) => Promise<IpcResult>;
 }
 
 export type { OrchestrationAPI };

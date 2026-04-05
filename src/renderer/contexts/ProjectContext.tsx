@@ -18,7 +18,7 @@ function basename(filePath: string): string {
 
 function persistRoots(roots: string[]): void {
   if (typeof window === 'undefined' || !('electronAPI' in window)) return;
-  void window.electronAPI.config.set('multiRoots', roots);
+  void window.electronAPI.window.setProjectRoots(roots);
 }
 
 function mergeSavedRoots(savedRoots: string[], initialRoot: string | null): string[] {
@@ -35,8 +35,8 @@ function useProjectRootState(
   useEffect(() => {
     if (typeof window === 'undefined' || !('electronAPI' in window)) return;
 
-    void window.electronAPI.config.get('multiRoots').then((saved) => {
-      const savedRoots = saved as string[] | undefined;
+    void window.electronAPI.window.getProjectRoots().then((result) => {
+      const savedRoots = result.roots;
       if (Array.isArray(savedRoots) && savedRoots.length > 0) {
         setProjectRoots(mergeSavedRoots(savedRoots, initialRootRef.current));
       }

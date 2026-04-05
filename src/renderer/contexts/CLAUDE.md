@@ -6,7 +6,7 @@ React contexts that lift shared state above the component tree so it survives pa
 
 | File                     | Role                                                                                                                                                                 |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ProjectContext.tsx`     | Multi-root project state — persists roots to `electron-store` via `config.set('multiRoots')`. Provides `projectRoot`, `addProjectRoot`, `removeProjectRoot`.         |
+| `ProjectContext.tsx`     | Multi-root project state — persists roots per-window via `window.setProjectRoots()`. Provides `projectRoot`, `addProjectRoot`, `removeProjectRoot`.         |
 | `ApprovalContext.tsx`    | Pre-execution approval queue — listens for `approval:request` IPC events, renders `ApprovalDialog` overlay, plays an 880 Hz tone on new requests.                    |
 | `FocusContext.tsx`       | Keyboard focus tracker — `Ctrl+1–4` switches between `sidebar`, `editor`, `terminal`, `agentMonitor`. Panels update focus via click handlers.                        |
 | `ToastContext.tsx`       | Toast/notification system — wraps `useToast` hook, renders `ToastContainer`. Also exposes progress tracking (`startProgress`, `updateProgress`, `completeProgress`). |

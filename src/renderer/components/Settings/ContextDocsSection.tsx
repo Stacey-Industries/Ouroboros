@@ -4,6 +4,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { useProject } from '../../contexts/ProjectContext';
 import type { AppConfig } from '../../types/electron';
 import type {
   ClaudeMdGenerationStatus,
@@ -229,7 +230,8 @@ export function ContextDocsSection({
     },
     [draft.claudeMdSettings, onChange],
   );
-  const { generating, status, handleGenerate } = useGenerationState(draft.defaultProjectRoot);
+  const { projectRoot } = useProject();
+  const { generating, status, handleGenerate } = useGenerationState(projectRoot ?? undefined);
   const lastRun = status?.lastRun;
   return (
     <div style={claudeSectionRootStyle}>
@@ -245,7 +247,7 @@ export function ContextDocsSection({
         <ClaudeMdSettingsControls
           settings={settings}
           generating={generating}
-          hasRoot={Boolean(draft.defaultProjectRoot)}
+          hasRoot={Boolean(projectRoot)}
           lastRun={lastRun}
           onGenerate={handleGenerate}
           updateSetting={updateSetting}

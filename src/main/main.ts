@@ -49,7 +49,7 @@ import { runAllMigrations } from './storage/migrate';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
-import { createWindow, getAllActiveWindows } from './windowManager';
+import { createWindow, getAllActiveWindows, restoreWindowSessions } from './windowManager';
 
 // Configure crash reporter to collect local crash dumps.
 // Remote reporting (e.g., Sentry) should be added before v1.0 GA.
@@ -193,12 +193,13 @@ async function initializeApplication(): Promise<void> {
   installHandlerCapture();
 
   initializePerfMetrics({ getActiveWindows: getAllActiveWindows });
-  mainWindow = createWindow();
+  const restored = restoreWindowSessions();
+  mainWindow = restored[0] ?? createWindow();
   buildApplicationMenu(mainWindow);
   await startBackgroundServices(mainWindow);
 
   try {
-    initClaudeMdGenerator(mainWindow);
+    initClaudeMdGenerator();
     log.info('Generator initialized');
   } catch (err) {
     log.warn('Generator initialization failed:', err);

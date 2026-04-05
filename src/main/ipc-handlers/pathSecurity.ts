@@ -13,7 +13,7 @@ import os from 'os';
 import path from 'path';
 
 import { getConfigValue } from '../config';
-import { getWindow } from '../windowManager';
+import { getWindowProjectRoots } from '../windowManager';
 
 /**
  * Return the set of allowed root directories for the calling window.
@@ -23,23 +23,16 @@ import { getWindow } from '../windowManager';
 export function getAllowedRoots(event: IpcMainInvokeEvent): string[] {
   const roots: string[] = [];
 
-  // Per-window project root (from windowManager)
+  // Per-window project roots (from windowManager)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow available at runtime but missing from typedefs
   const winId = (event.sender as any).getOwnerBrowserWindow?.()?.id as number | undefined;
   if (winId !== undefined) {
-    const managed = getWindow(winId);
-    if (managed?.projectRoot) {
-      roots.push(path.resolve(managed.projectRoot));
+    for (const r of getWindowProjectRoots(winId)) {
+      if (r) roots.push(path.resolve(r));
     }
   }
 
-  // Multi-root workspace entries
-  const multiRoots = getConfigValue('multiRoots') ?? [];
-  for (const r of multiRoots) {
-    if (r) roots.push(path.resolve(r));
-  }
-
-  // Fallback default project root
+  // Fallback default project root (cold-boot seed, migration compat)
   const defaultRoot = getConfigValue('defaultProjectRoot');
   if (defaultRoot) {
     roots.push(path.resolve(defaultRoot));

@@ -18,6 +18,11 @@ export interface WindowBounds {
   isMaximized: boolean;
 }
 
+export interface WindowSession {
+  projectRoots: string[];
+  bounds?: WindowBounds;
+}
+
 export interface TerminalSessionSnapshot {
   cwd: string;
   title: string;
@@ -212,8 +217,10 @@ export interface AppConfig {
   /** Extra ignore patterns (exact names or glob-like prefixes) merged with the hardcoded list */
   fileTreeIgnorePatterns: string[];
   profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>;
-  /** All open project roots for multi-root workspace support */
+  /** All open project roots for multi-root workspace support (deprecated — use per-window roots) */
   multiRoots: string[];
+  /** Per-window session state for restore on relaunch */
+  windowSessions: WindowSession[];
   /** Empty string = use shell default PS1 */
   customPrompt: string;
   /** 'default' | 'minimal' | 'powerline' | 'git' | 'custom' */

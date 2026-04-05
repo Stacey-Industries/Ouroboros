@@ -8,7 +8,7 @@
 import { BrowserWindow } from 'electron'
 import path from 'path'
 
-import { getConfigValue } from './config'
+import { getConfigValue, setConfigValue, type WindowSession } from './config'
 import { registerIpcHandlers } from './ipc'
 import { killPtySessionsForWindow } from './pty'
 import {
@@ -31,11 +31,13 @@ export interface ManagedWindow {
   id: number
   win: BrowserWindow
   projectRoot: string | null
+  projectRoots: string[]
 }
 
 export interface WindowInfo {
   id: number
   projectRoot: string | null
+  projectRoots: string[]
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -98,9 +100,27 @@ function createBrowserWindow(preloadPath: string, state: WindowCreationState): B
   return win
 }
 
+function seedProjectRoots(projectRoot: string | undefined): string[] {
+  if (projectRoot) return [projectRoot]
+  // First window: migrate from global multiRoots config if present
+  if (windows.size === 0) {
+    try {
+      const saved = getConfigValue('multiRoots') ?? []
+      if (Array.isArray(saved) && saved.length > 0) return saved as string[]
+    } catch { /* config not ready yet */ }
+  }
+  return []
+}
+
 function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number {
   const winId = win.id
-  windows.set(winId, { id: winId, win, projectRoot: projectRoot ?? null })
+  const roots = seedProjectRoots(projectRoot)
+  windows.set(winId, {
+    id: winId,
+    win,
+    projectRoot: roots[0] ?? null,
+    projectRoots: roots,
+  })
   windowCleanups.set(winId, registerIpcHandlers(win))
   return winId
 }
@@ -153,6 +173,7 @@ function setupWindowCloseHandler(win: BrowserWindow, winId: number): void {
   win.on('close', () => {
     clearBoundsTimer(winId)
     if (!win.isMaximized()) saveWindowBounds(win, false)
+    persistWindowSessions()
     killPtySessionsForWindow(winId)
   })
   // Defer IPC handler cleanup to 'closed' — the renderer still makes IPC
@@ -196,18 +217,37 @@ export function getAllWindows(): ManagedWindow[] {
 }
 
 export function getWindowInfos(): WindowInfo[] {
-  return Array.from(windows.values()).map((mw) => ({ id: mw.id, projectRoot: mw.projectRoot }))
+  return Array.from(windows.values()).map((mw) => ({
+    id: mw.id,
+    projectRoot: mw.projectRoot,
+    projectRoots: mw.projectRoots,
+  }))
 }
 
 export function setWindowProjectRoot(winId: number, projectRoot: string): void {
   const managed = windows.get(winId)
-  if (managed) managed.projectRoot = projectRoot
+  if (managed) {
+    managed.projectRoot = projectRoot
+    managed.projectRoots = [projectRoot]
+  }
   // Start context refresh for the new project root (timer may already be running for another root).
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
     const { startContextRefreshTimer } = require('./ipc-handlers/agentChat')
     startContextRefreshTimer([projectRoot])
   } catch { /* agentChat module may not be loaded yet */ }
+}
+
+export function setWindowProjectRoots(winId: number, roots: string[]): void {
+  const managed = windows.get(winId)
+  if (managed) {
+    managed.projectRoots = roots
+    managed.projectRoot = roots[0] ?? null
+  }
+}
+
+export function getWindowProjectRoots(winId: number): string[] {
+  return windows.get(winId)?.projectRoots ?? []
 }
 
 export function closeWindow(id: number): void {
@@ -252,4 +292,52 @@ export function getAllActiveWindows(): BrowserWindow[] {
     if (!managed.win.isDestroyed()) result.push(managed.win)
   }
   return result
+}
+
+// ─── Session persistence ────────────────────────────────────────────────────
+
+function collectWindowSessions(): WindowSession[] {
+  const sessions: WindowSession[] = []
+  for (const managed of windows.values()) {
+    if (managed.win.isDestroyed()) continue
+    if (managed.projectRoots.length === 0) continue
+    const bounds = managed.win.getBounds()
+    sessions.push({
+      projectRoots: managed.projectRoots,
+      bounds: { ...bounds, isMaximized: managed.win.isMaximized() },
+    })
+  }
+  return sessions
+}
+
+export function persistWindowSessions(): void {
+  try {
+    setConfigValue('windowSessions', collectWindowSessions())
+  } catch { /* best-effort */ }
+}
+
+function applySessionBounds(win: BrowserWindow, bounds: WindowSession['bounds']): void {
+  if (!bounds) return
+  const validated = validateBounds(bounds)
+  if (!validated) return
+  win.setBounds({ x: validated.x, y: validated.y, width: validated.width, height: validated.height })
+  if (validated.isMaximized) win.maximize()
+}
+
+function restoreOneSession(session: WindowSession): BrowserWindow | null {
+  if (!session.projectRoots?.length) return null
+  const win = createWindow(session.projectRoots[0])
+  const managed = windows.get(win.id)
+  if (managed) {
+    managed.projectRoots = session.projectRoots
+    managed.projectRoot = session.projectRoots[0] ?? null
+  }
+  applySessionBounds(win, session.bounds)
+  return win
+}
+
+export function restoreWindowSessions(): BrowserWindow[] {
+  const sessions = getConfigValue('windowSessions') ?? []
+  if (!Array.isArray(sessions) || sessions.length === 0) return []
+  return sessions.map(restoreOneSession).filter((w): w is BrowserWindow => w !== null)
 }

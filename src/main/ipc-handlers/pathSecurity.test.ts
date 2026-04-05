@@ -20,9 +20,11 @@ vi.mock('electron', () => ({
 }));
 
 // ── Mock windowManager ────────────────────────────────────────────────────────
-const { mockGetWindow } = vi.hoisted(() => ({ mockGetWindow: vi.fn() }));
+const { mockGetWindowProjectRoots } = vi.hoisted(() => ({
+  mockGetWindowProjectRoots: vi.fn().mockReturnValue([]),
+}));
 vi.mock('../windowManager', () => ({
-  getWindow: mockGetWindow,
+  getWindowProjectRoots: mockGetWindowProjectRoots,
 }));
 
 // ── Mock config ───────────────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ function resetConfigMocks() {
 
 beforeEach(() => {
   resetConfigMocks();
-  mockGetWindow.mockReset();
+  mockGetWindowProjectRoots.mockReset().mockReturnValue([]);
 });
 
 afterEach(() => {
@@ -227,28 +229,23 @@ describe('validatePathInWorkspace()', () => {
 // ─── getAllowedRoots ──────────────────────────────────────────────────────────
 
 describe('getAllowedRoots()', () => {
-  it('includes the per-window project root from windowManager', () => {
-    mockGetWindow.mockReturnValue({ projectRoot: WORKSPACE_RESOLVED });
+  it('includes the per-window project roots from windowManager', () => {
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED]);
     const roots = getAllowedRoots(makeEvent(1));
     expect(roots).toContain(path.resolve(WORKSPACE_RESOLVED));
   });
 
-  it('includes multiRoots from config', () => {
-    mockGetWindow.mockReturnValue(null);
+  it('includes multiple per-window roots', () => {
     const extra = process.platform === 'win32' ? 'C:\\extra' : '/extra';
-    mockGetConfigValue.mockImplementation((key: string) => {
-      if (key === 'multiRoots') return [extra];
-      return undefined;
-    });
-    const roots = getAllowedRoots(makeEvent(undefined));
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED, extra]);
+    const roots = getAllowedRoots(makeEvent(1));
+    expect(roots).toContain(path.resolve(WORKSPACE_RESOLVED));
     expect(roots).toContain(path.resolve(extra));
   });
 
-  it('includes defaultProjectRoot from config', () => {
-    mockGetWindow.mockReturnValue(null);
+  it('includes defaultProjectRoot from config as fallback', () => {
     const defRoot = process.platform === 'win32' ? 'C:\\default' : '/default';
     mockGetConfigValue.mockImplementation((key: string) => {
-      if (key === 'multiRoots') return [];
       if (key === 'defaultProjectRoot') return defRoot;
       return undefined;
     });
@@ -256,20 +253,9 @@ describe('getAllowedRoots()', () => {
     expect(roots).toContain(path.resolve(defRoot));
   });
 
-  it('returns empty array when no window, no multiRoots, no defaultRoot', () => {
-    mockGetWindow.mockReturnValue(null);
+  it('returns empty array when no window roots and no defaultRoot', () => {
     const roots = getAllowedRoots(makeEvent(undefined));
     expect(roots).toEqual([]);
-  });
-
-  it('ignores null/undefined entries in multiRoots', () => {
-    mockGetWindow.mockReturnValue(null);
-    mockGetConfigValue.mockImplementation((key: string) => {
-      if (key === 'multiRoots') return [null, undefined, ''];
-      return undefined;
-    });
-    // Should not throw and should not include falsy-resolved paths
-    expect(() => getAllowedRoots(makeEvent(undefined))).not.toThrow();
   });
 });
 
@@ -277,14 +263,14 @@ describe('getAllowedRoots()', () => {
 
 describe('assertPathAllowed()', () => {
   it('returns null when the path is inside the workspace', () => {
-    mockGetWindow.mockReturnValue({ projectRoot: WORKSPACE_RESOLVED });
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED]);
     const target = path.join(WORKSPACE_RESOLVED, 'src', 'main.ts');
     const result = assertPathAllowed(makeEvent(1), target);
     expect(result).toBeNull();
   });
 
   it('returns { success: false, error } when path escapes the workspace', () => {
-    mockGetWindow.mockReturnValue({ projectRoot: WORKSPACE_RESOLVED });
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED]);
     const result = assertPathAllowed(makeEvent(1), '/etc/passwd');
     expect(result).not.toBeNull();
     expect(result?.success).toBe(false);
@@ -293,7 +279,6 @@ describe('assertPathAllowed()', () => {
   });
 
   it('returns { success: false, error } when no workspace is configured', () => {
-    mockGetWindow.mockReturnValue(null);
     const result = assertPathAllowed(makeEvent(undefined), '/some/file.ts');
     expect(result).not.toBeNull();
     expect(result?.success).toBe(false);
@@ -301,13 +286,13 @@ describe('assertPathAllowed()', () => {
   });
 
   it('returns null for the workspace root itself', () => {
-    mockGetWindow.mockReturnValue({ projectRoot: WORKSPACE_RESOLVED });
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED]);
     const result = assertPathAllowed(makeEvent(1), WORKSPACE_RESOLVED);
     expect(result).toBeNull();
   });
 
   it('error message includes the offending path', () => {
-    mockGetWindow.mockReturnValue({ projectRoot: WORKSPACE_RESOLVED });
+    mockGetWindowProjectRoots.mockReturnValue([WORKSPACE_RESOLVED]);
     const bad = process.platform === 'win32' ? 'C:\\Windows\\evil.bat' : '/tmp/evil.sh';
     const result = assertPathAllowed(makeEvent(1), bad);
     expect(result?.error).toContain(bad);
