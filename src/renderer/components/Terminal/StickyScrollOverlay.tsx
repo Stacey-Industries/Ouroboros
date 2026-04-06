@@ -156,7 +156,7 @@ function LiveDuration({ block }: { block: CommandBlock }): React.ReactElement | 
       setElapsed(block.duration);
       return;
     }
-    const id = setInterval(() => setElapsed(Date.now() - block.timestamp), 200);
+    const id = setInterval(() => setElapsed(Date.now() - block.timestamp), 1000);
     return () => clearInterval(id);
   }, [block.complete, block.duration, block.timestamp]);
 

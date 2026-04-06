@@ -6,7 +6,7 @@
  * This provides usage data even when no interactive Claude session is running.
  */
 
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -58,12 +58,14 @@ export function parseUsageText(raw: string): ParsedUsage {
   // TUI cursor-positioning means stripped output may have no spaces between words.
   // Match both spaced ("Current session") and collapsed ("Currentsession") forms.
   const collapsed = clean.replace(/\s+/g, '');
-  const sessionMatch = /Current\s*session[\s\S]{0,300}?(\d+)\s*%\s*used/i.exec(clean)
-    || /Currentsession[\s\S]{0,300}?(\d+)%used/i.exec(collapsed);
+  const sessionMatch =
+    /Current\s*session[\s\S]{0,300}?(\d+)\s*%\s*used/i.exec(clean) ||
+    /Currentsession[\s\S]{0,300}?(\d+)%used/i.exec(collapsed);
   if (sessionMatch) result.fiveHourUsed = parseInt(sessionMatch[1], 10);
 
-  const weekMatch = /Current\s*week[\s\S]{0,300}?(\d+)\s*%\s*used/i.exec(clean)
-    || /Currentweek[\s\S]{0,300}?(\d+)%used/i.exec(collapsed);
+  const weekMatch =
+    /Current\s*week[\s\S]{0,300}?(\d+)\s*%\s*used/i.exec(clean) ||
+    /Currentweek[\s\S]{0,300}?(\d+)%used/i.exec(collapsed);
   if (weekMatch) result.sevenDayUsed = parseInt(weekMatch[1], 10);
 
   result.fiveHourResetsAt = extractResetText(clean, collapsed, 'session');
@@ -75,10 +77,14 @@ export function parseUsageText(raw: string): ParsedUsage {
 // Timezone pattern: (America/Toronto), (Europe/London), etc.
 const TZ_RE = /\([A-Z]\w+\/\w+\)/;
 // After "Current session...N%used", capture text up to (Timezone)
-const SESSION_RESET_RE = /Current\s*session[\s\S]{0,400}?\d+\s*%\s*used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
-const SESSION_RESET_COLLAPSED_RE = /Currentsession[\s\S]{0,400}?\d+%used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
-const WEEK_RESET_RE = /Current\s*week[\s\S]{0,400}?\d+\s*%\s*used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
-const WEEK_RESET_COLLAPSED_RE = /Currentweek[\s\S]{0,400}?\d+%used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
+const SESSION_RESET_RE =
+  /Current\s*session[\s\S]{0,400}?\d+\s*%\s*used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
+const SESSION_RESET_COLLAPSED_RE =
+  /Currentsession[\s\S]{0,400}?\d+%used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
+const WEEK_RESET_RE =
+  /Current\s*week[\s\S]{0,400}?\d+\s*%\s*used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
+const WEEK_RESET_COLLAPSED_RE =
+  /Currentweek[\s\S]{0,400}?\d+%used([\s\S]{0,100}?\([A-Z]\w+\/\w+\))/i;
 
 function cleanResetSegment(raw: string): string | null {
   // Strip leading "Resets/Reset/Rese..." (letter prefix), keep digits + date + timezone
@@ -95,7 +101,7 @@ function extractResetText(clean: string, collapsed: string, section: string): st
 
 // ── File writer ────────────────────────────────────────────────────────
 
-function writeUsageFile(parsed: ParsedUsage): void {
+async function writeUsageFile(parsed: ParsedUsage): Promise<void> {
   const payload: Record<string, unknown> = {
     captured_at: Date.now(),
     rate_limits: {} as Record<string, unknown>,
@@ -103,16 +109,22 @@ function writeUsageFile(parsed: ParsedUsage): void {
 
   const limits = payload['rate_limits'] as Record<string, unknown>;
   if (parsed.fiveHourUsed !== null) {
-    limits['five_hour'] = { used_percentage: parsed.fiveHourUsed, resets_at: parsed.fiveHourResetsAt };
+    limits['five_hour'] = {
+      used_percentage: parsed.fiveHourUsed,
+      resets_at: parsed.fiveHourResetsAt,
+    };
   }
   if (parsed.sevenDayUsed !== null) {
-    limits['seven_day'] = { used_percentage: parsed.sevenDayUsed, resets_at: parsed.sevenDayResetsAt };
+    limits['seven_day'] = {
+      used_percentage: parsed.sevenDayUsed,
+      resets_at: parsed.sevenDayResetsAt,
+    };
   }
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from os.homedir()
-  fs.mkdirSync(USAGE_DIR, { recursive: true });
+  await fs.mkdir(USAGE_DIR, { recursive: true });
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from os.homedir()
-  fs.writeFileSync(USAGE_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  await fs.writeFile(USAGE_FILE, JSON.stringify(payload, null, 2), 'utf8');
 }
 
 // ── PTY spawn ──────────────────────────────────────────────────────────
@@ -161,9 +173,50 @@ function handlePtyData(state: PtySessionState, data: string, term: pty.IPty): vo
   tryDismissUsageTui(state, clean, term);
 }
 
+function spawnPty(shellArgs: { shell: string; args: string[] }): pty.IPty {
+  log.info('[claude-usage-poller] spawning:', shellArgs.shell, shellArgs.args);
+  return pty.spawn(shellArgs.shell, shellArgs.args, {
+    name: 'xterm-256color',
+    cols: 120,
+    rows: 30,
+    cwd: os.homedir(),
+  });
+}
+
+function attachPtyHandlers(
+  term: pty.IPty,
+  state: PtySessionState,
+  finish: (result: ParsedUsage | null, reason: string) => void,
+): void {
+  const timeout = setTimeout(() => {
+    log.warn(
+      '[claude-usage-poller] timeout — trust:',
+      state.confirmedTrust,
+      'usage:',
+      state.sentUsage,
+      'exit:',
+      state.sentExit,
+    );
+    term.kill();
+    finish(null, 'timeout');
+  }, SPAWN_TIMEOUT_MS);
+  term.onData((data: string) => handlePtyData(state, data, term));
+  term.onExit(({ exitCode }) => {
+    clearTimeout(timeout);
+    const parsed = parseUsageText(state.output);
+    log.info('[claude-usage-poller] exited code:', exitCode, 'parsed:', JSON.stringify(parsed));
+    finish(parsed.fiveHourUsed !== null ? parsed : null, 'exit');
+  });
+}
+
 function spawnUsageQuery(): Promise<ParsedUsage | null> {
   return new Promise((resolve) => {
-    const state: PtySessionState = { output: '', confirmedTrust: false, sentUsage: false, sentExit: false };
+    const state: PtySessionState = {
+      output: '',
+      confirmedTrust: false,
+      sentUsage: false,
+      sentExit: false,
+    };
     let resolved = false;
     const finish = (result: ParsedUsage | null, reason: string): void => {
       if (resolved) return;
@@ -171,29 +224,8 @@ function spawnUsageQuery(): Promise<ParsedUsage | null> {
       log.info(`[claude-usage-poller] finish(${reason}), result:`, JSON.stringify(result));
       resolve(result);
     };
-
-    const shellArgs = buildShellArgs();
-    log.info('[claude-usage-poller] spawning:', shellArgs.shell, shellArgs.args);
-    const term = pty.spawn(shellArgs.shell, shellArgs.args, {
-      name: 'xterm-256color',
-      cols: 120,
-      rows: 30,
-      cwd: os.homedir(),
-    });
-
-    const timeout = setTimeout(() => {
-      log.warn('[claude-usage-poller] timeout — trust:', state.confirmedTrust,
-        'usage:', state.sentUsage, 'exit:', state.sentExit);
-      term.kill();
-      finish(null, 'timeout');
-    }, SPAWN_TIMEOUT_MS);
-    term.onData((data: string) => handlePtyData(state, data, term));
-    term.onExit(({ exitCode }) => {
-      clearTimeout(timeout);
-      const parsed = parseUsageText(state.output);
-      log.info('[claude-usage-poller] exited code:', exitCode, 'parsed:', JSON.stringify(parsed));
-      finish(parsed.fiveHourUsed !== null ? parsed : null, 'exit');
-    });
+    const term = spawnPty(buildShellArgs());
+    attachPtyHandlers(term, state, finish);
   });
 }
 
@@ -205,9 +237,10 @@ function buildShellArgs(): { shell: string; args: string[] } {
 }
 
 function looksReady(clean: string): boolean {
-  const hasPrompt = /(?:^|\n)\s*>\s*$/m.test(clean)
-    || clean.includes('You:')
-    || /claude-\d|opus|sonnet|haiku/i.test(clean);
+  const hasPrompt =
+    /(?:^|\n)\s*>\s*$/m.test(clean) ||
+    clean.includes('You:') ||
+    /claude-\d|opus|sonnet|haiku/i.test(clean);
   return hasPrompt && !needsTrustConfirmation(clean.slice(-300));
 }
 
@@ -224,7 +257,7 @@ async function pollOnce(): Promise<void> {
   try {
     const parsed = await spawnUsageQuery();
     if (parsed) {
-      writeUsageFile(parsed);
+      await writeUsageFile(parsed);
       log.info('[claude-usage-poller] captured usage data');
     }
   } catch (err) {

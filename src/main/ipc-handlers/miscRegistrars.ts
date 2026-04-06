@@ -208,7 +208,7 @@ export function registerUsageHandlers(channels: ChannelList): void {
     runQuery(async () => ({
       snapshot: {
         fetchedAt: Date.now(),
-        claude: getLatestClaudeUsageSnapshot(),
+        claude: await getLatestClaudeUsageSnapshot(),
         codex: await getLatestCodexUsageSnapshot(),
       },
     })),

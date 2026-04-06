@@ -4,7 +4,7 @@
  * Claude Code statusline to ~/.ouroboros/claude-usage.json on each update.
  */
 
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -36,15 +36,17 @@ function parseWindow(value: unknown): ClaudeUsageWindow | null {
   if (typeof usedPercent !== 'number') return null;
 
   const resetsRaw = rec['resets_at'];
-  const resetsAt = (typeof resetsRaw === 'string' || typeof resetsRaw === 'number') ? resetsRaw : null;
+  const resetsAt =
+    typeof resetsRaw === 'string' || typeof resetsRaw === 'number' ? resetsRaw : null;
   return { usedPercent, resetsAt };
 }
 
-export function getLatestClaudeUsageSnapshot(): ClaudeUsageSnapshot | null {
+export async function getLatestClaudeUsageSnapshot(): Promise<ClaudeUsageSnapshot | null> {
   let raw: string;
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from os.homedir()
-    raw = fs.readFileSync(USAGE_FILE_PATH, 'utf8').replace(/^\uFEFF/, '');
+    const content = await fs.readFile(USAGE_FILE_PATH, 'utf8');
+    raw = content.replace(/^\uFEFF/, '');
   } catch {
     return null;
   }

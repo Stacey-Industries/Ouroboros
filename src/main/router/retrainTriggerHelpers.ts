@@ -4,7 +4,7 @@
  * Handles sample counting, weight file validation, and Python trainer spawning.
  */
 
-import { execSync, spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 import log from '../logger';
@@ -25,11 +25,11 @@ export { RETRAINED_WEIGHTS_FILE };
  * Count the number of lines (annotations) in the quality signals file.
  * Returns 0 if the file doesn't exist.
  */
-export function countSignalLines(dataDir: string): number {
+export async function countSignalLines(dataDir: string): Promise<number> {
   const filePath = `${dataDir}/${SIGNALS_FILENAME}`;
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- dataDir is app.getPath('userData'), trusted
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = await fs.promises.readFile(filePath, 'utf8');
     return content.trim().split('\n').filter(Boolean).length;
   } catch {
     return 0;
@@ -38,10 +38,10 @@ export function countSignalLines(dataDir: string): number {
 
 /* ── Weight file validation ──────────────────────────────────────────── */
 
-export function validateWeightFile(filePath: string): boolean {
+export async function validateWeightFile(filePath: string): Promise<boolean> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted path
-    const raw = fs.readFileSync(filePath, 'utf8');
+    const raw = await fs.promises.readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return isValidShape(parsed);
   } catch {
@@ -103,17 +103,33 @@ export function spawnTrainer(args: {
 
 /* ── Python binary detection ─────────────────────────────────────────── */
 
-export function findPython(): string | null {
+let cachedPythonBin: string | null | undefined;
+
+function probeCandidate(bin: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(bin, ['--version'], { timeout: 5_000 }, (err) => {
+      if (err) reject(err);
+      else resolve(bin);
+    });
+  });
+}
+
+export async function findPython(): Promise<string | null> {
+  if (cachedPythonBin !== undefined) return cachedPythonBin;
+
   const candidates =
     process.platform === 'win32' ? ['python', 'python3', 'py'] : ['python3', 'python'];
 
   for (const bin of candidates) {
     try {
-      execSync(`${bin} --version`, { stdio: 'ignore', timeout: 5_000 });
-      return bin;
+      const found = await probeCandidate(bin);
+      cachedPythonBin = found;
+      return found;
     } catch {
       continue;
     }
   }
+
+  cachedPythonBin = null;
   return null;
 }

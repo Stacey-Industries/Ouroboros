@@ -1,15 +1,5 @@
-import type {
-  Dispatch,
-  MutableRefObject,
-  SetStateAction,
-} from 'react';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { subscribeToDirectoryChanges } from '../../hooks/directoryWatchRegistry';
 import type { FileChangeEvent } from '../../types/electron';
@@ -69,7 +59,10 @@ interface RefreshScheduleArgs {
   refreshDirRef: MutableRefObject<RefreshDir>;
 }
 
-function loadRootChildren(root: string, shouldIgnore: (name: string) => boolean): Promise<TreeNode[]> {
+function loadRootChildren(
+  root: string,
+  shouldIgnore: (name: string) => boolean,
+): Promise<TreeNode[]> {
   return loadDirChildren(root, root, 0, shouldIgnore);
 }
 
@@ -81,7 +74,11 @@ function setNodeLoading(nodes: TreeNode[], targetPath: string, isLoading: boolea
   return updateNodeInTree(nodes, targetPath, (node) => ({ ...node, isExpanded: true, isLoading }));
 }
 
-function setLoadedChildren(nodes: TreeNode[], targetPath: string, children: TreeNode[]): TreeNode[] {
+function setLoadedChildren(
+  nodes: TreeNode[],
+  targetPath: string,
+  children: TreeNode[],
+): TreeNode[] {
   return updateNodeInTree(nodes, targetPath, (node) => ({
     ...node,
     children,
@@ -94,7 +91,11 @@ function findNodeDepth(nodes: TreeNode[], dirPath: string): number {
   return flattenVisibleTree(nodes).find((node) => node.path === dirPath)?.depth ?? 0;
 }
 
-function findDirToRefresh(changePath: string, root: string, loadedDirs: Set<string>): string | null {
+function findDirToRefresh(
+  changePath: string,
+  root: string,
+  loadedDirs: Set<string>,
+): string | null {
   const changedPath = normPath(changePath);
   const normalizedRoot = normPath(root);
   if (!changedPath.startsWith(normalizedRoot)) {
@@ -114,11 +115,14 @@ function scheduleRefresh({ key, timers, root, refreshDirRef }: RefreshScheduleAr
     clearTimeout(existing);
   }
 
-  timers.set(key, setTimeout(() => {
-    timers.delete(key);
-    const refreshPath = root.includes('\\') ? key.replace(/\//g, '\\') : key;
-    void refreshDirRef.current(refreshPath);
-  }, 300));
+  timers.set(
+    key,
+    setTimeout(() => {
+      timers.delete(key);
+      const refreshPath = root.includes('\\') ? key.replace(/\//g, '\\') : key;
+      void refreshDirRef.current(refreshPath);
+    }, 300),
+  );
 }
 
 function clearTimers(timers: Map<string, ReturnType<typeof setTimeout>>): void {
@@ -146,10 +150,16 @@ function loadRootWithCancellation({
       setRootNodes(nodes);
       loadedDirsRef.current.add(normPath(root));
     })
-    .catch((error: unknown) => { if (!cancelled) setError(String(error)); })
-    .finally(() => { if (!cancelled) setIsLoading(false); });
+    .catch((error: unknown) => {
+      if (!cancelled) setError(String(error));
+    })
+    .finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
 
-  return () => { cancelled = true; };
+  return () => {
+    cancelled = true;
+  };
 }
 
 function useRootLoader({
@@ -162,9 +172,19 @@ function useRootLoader({
   setError,
 }: RootLoaderArgs): void {
   useEffect(() => {
-    if (!enabled) { setIsLoading(false); return; }
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
     if (loadedDirsRef.current.has(normPath(root))) return;
-    return loadRootWithCancellation({ root, shouldIgnore, loadedDirsRef, setRootNodes, setIsLoading, setError });
+    return loadRootWithCancellation({
+      root,
+      shouldIgnore,
+      loadedDirsRef,
+      setRootNodes,
+      setIsLoading,
+      setError,
+    });
   }, [enabled, loadedDirsRef, root, setError, setIsLoading, setRootNodes, shouldIgnore]);
 }
 
@@ -175,20 +195,28 @@ function useRefreshDir({
   loadedDirsRef,
   setRootNodes,
 }: RefreshDirArgs): RefreshDir {
-  return useCallback(async (dirPath: string) => {
-    if (normPath(dirPath) === normPath(root)) {
-      const children = await loadRootChildren(root, shouldIgnore);
-      loadedDirsRef.current.clear();
-      loadedDirsRef.current.add(normPath(root));
-      setRootNodes(children);
-      return;
-    }
+  const rootNodesRef = useRef(rootNodes);
+  useEffect(() => {
+    rootNodesRef.current = rootNodes;
+  }, [rootNodes]);
 
-    const depth = findNodeDepth(rootNodes, dirPath);
-    const children = await loadDirChildren(root, dirPath, depth + 1, shouldIgnore);
-    loadedDirsRef.current.add(normPath(dirPath));
-    setRootNodes((prev) => setLoadedChildren(prev, dirPath, children));
-  }, [loadedDirsRef, root, rootNodes, setRootNodes, shouldIgnore]);
+  return useCallback(
+    async (dirPath: string) => {
+      if (normPath(dirPath) === normPath(root)) {
+        const children = await loadRootChildren(root, shouldIgnore);
+        loadedDirsRef.current.clear();
+        loadedDirsRef.current.add(normPath(root));
+        setRootNodes(children);
+        return;
+      }
+
+      const depth = findNodeDepth(rootNodesRef.current, dirPath);
+      const children = await loadDirChildren(root, dirPath, depth + 1, shouldIgnore);
+      loadedDirsRef.current.add(normPath(dirPath));
+      setRootNodes((prev) => setLoadedChildren(prev, dirPath, children));
+    },
+    [loadedDirsRef, root, setRootNodes, shouldIgnore],
+  );
 }
 
 function useToggleFolder({
@@ -197,26 +225,29 @@ function useToggleFolder({
   loadedDirsRef,
   setRootNodes,
 }: ToggleFolderArgs): (node: TreeNode) => Promise<void> {
-  return useCallback(async (node: TreeNode) => {
-    if (!node.isDirectory) return;
-    if (node.isExpanded) {
-      setRootNodes((prev) => setNodeExpanded(prev, node.path, false));
-      return;
-    }
-    if (node.children !== undefined) {
-      setRootNodes((prev) => setNodeExpanded(prev, node.path, true));
-      return;
-    }
+  return useCallback(
+    async (node: TreeNode) => {
+      if (!node.isDirectory) return;
+      if (node.isExpanded) {
+        setRootNodes((prev) => setNodeExpanded(prev, node.path, false));
+        return;
+      }
+      if (node.children !== undefined) {
+        setRootNodes((prev) => setNodeExpanded(prev, node.path, true));
+        return;
+      }
 
-    setRootNodes((prev) => setNodeLoading(prev, node.path, true));
-    try {
-      const children = await loadDirChildren(root, node.path, node.depth + 1, shouldIgnore);
-      loadedDirsRef.current.add(normPath(node.path));
-      setRootNodes((prev) => setLoadedChildren(prev, node.path, children));
-    } catch {
-      setRootNodes((prev) => setLoadedChildren(prev, node.path, []));
-    }
-  }, [loadedDirsRef, root, setRootNodes, shouldIgnore]);
+      setRootNodes((prev) => setNodeLoading(prev, node.path, true));
+      try {
+        const children = await loadDirChildren(root, node.path, node.depth + 1, shouldIgnore);
+        loadedDirsRef.current.add(normPath(node.path));
+        setRootNodes((prev) => setLoadedChildren(prev, node.path, children));
+      } catch {
+        setRootNodes((prev) => setLoadedChildren(prev, node.path, []));
+      }
+    },
+    [loadedDirsRef, root, setRootNodes, shouldIgnore],
+  );
 }
 
 function useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir }: WatcherArgs): void {
@@ -253,16 +284,31 @@ function useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir }: Watche
   }, [enabled, loadedDirsRef, root]);
 }
 
-export function useRootTreeState(root: string, extraIgnorePatterns: string[], { enabled = true }: UseRootTreeStateOptions = {}) {
+export function useRootTreeState(
+  root: string,
+  extraIgnorePatterns: string[],
+  { enabled = true }: UseRootTreeStateOptions = {},
+) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadedDirsRef = useRef<Set<string>>(new Set());
-  const shouldIgnore = useMemo(() => buildIgnorePredicate(extraIgnorePatterns), [extraIgnorePatterns]);
+  const shouldIgnore = useMemo(
+    () => buildIgnorePredicate(extraIgnorePatterns),
+    [extraIgnorePatterns],
+  );
   const refreshDir = useRefreshDir({ root, rootNodes, shouldIgnore, loadedDirsRef, setRootNodes });
   const toggleFolder = useToggleFolder({ root, shouldIgnore, loadedDirsRef, setRootNodes });
 
-  useRootLoader({ root, enabled, shouldIgnore, loadedDirsRef, setRootNodes, setIsLoading, setError });
+  useRootLoader({
+    root,
+    enabled,
+    shouldIgnore,
+    loadedDirsRef,
+    setRootNodes,
+    setIsLoading,
+    setError,
+  });
   useRootFileWatcher({ root, enabled, loadedDirsRef, refreshDir });
 
   return { rootNodes, setRootNodes, isLoading, error, refreshDir, toggleFolder };

@@ -1,3 +1,111 @@
+<!-- claude-md-auto:start -->
+`★ Insight ─────────────────────────────────────`
+This directory is notably large (~90 files) but follows a rigorous decomposition pattern that keeps each file under 304 lines. The split is: `Section.tsx` (thin orchestrator) → `SectionParts.tsx` (presentational) → `*Styles.ts` (style objects) → `useSection.ts` (business logic). Understanding this split is the key to navigating the directory without reading every file.
+`─────────────────────────────────────────────────`
+# Settings — Modal UI & Section Components
+
+Full settings modal for the Electron IDE. Two-level tab navigation, full-text search, draft/save lifecycle, and ~15 discrete setting sections.
+
+## Structural Decomposition Pattern
+
+Every section follows the same split — do not collapse these into one file:
+
+| Layer | Example | Role |
+|---|---|---|
+| `*Section.tsx` | `GeneralSection.tsx` | Thin orchestrator — composes subsections, reads hooks |
+| `*Subsection.tsx` / `*Parts.tsx` | `GeneralProjectSubsection.tsx` | Presentational chunks; receive props only |
+| `*Styles.ts` | `fileFilterSectionStyles.ts` | Style objects as JS constants (not Tailwind) |
+| `use*.ts` | `useSettingsDraft.ts` | All business logic and local state |
+
+## Key Files
+
+| File | Role |
+|---|---|
+| `SettingsModal.tsx` | Entry point — owns draft lifecycle, wires all state |
+| `SettingsModalParts.tsx` | Portal render + full prop surface for the modal UI |
+| `SettingsModalFrame.tsx` | `ModalOverlay` / `ModalCard` primitives |
+| `SettingsPanel.tsx` | Left-nav + content area shell |
+| `SettingsTabBar.tsx` | Main tab navigation (renders `MainTabId` tabs) |
+| `SettingsTabContent.tsx` | Routes `TabId` → section component |
+| `settingsTabs.ts` | Defines `MainTabId` and `TabId` union types + tab metadata |
+| `settingsEntries.ts` | `SettingsEntry[]` — full registry powering search |
+| `settingsEntriesData.ts` | Static label/keyword data for search entries |
+| `searchHelpers.tsx` | Fuzzy match logic; returns `SearchMatch[]` |
+| `useSettingsDraft.ts` | Draft `AppConfig` state, save/cancel, error handling |
+| `settingsStyles.tsx` | Shared primitives: `SectionLabel`, `SectionDescription` |
+
+## Tab System
+
+Two-level navigation — always distinguish these types:
+
+```ts
+MainTabId  // top-level tabs: 'general' | 'appearance' | 'terminal' | ...
+TabId      // sub-tabs within a main tab (superset of MainTabId)
+```
+
+`settingsTabs.ts` is the canonical source for both. Tab routing happens in `SettingsTabContent.tsx`.
+
+## Settings Change Handler
+
+All sections receive the same typed `onChange`:
+
+```ts
+type SettingsChangeHandler = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+```
+
+Sections **never own save state** — they call `onChange` which writes to draft. Save is triggered from the modal level only.
+
+## Style Convention
+
+Settings components use **inline style objects** from dedicated `*Styles.ts` files, not Tailwind classes. Each section has its own style file. Shared cross-section styles live in `settingsStyles.tsx` and `settingsModalStyles.ts`.
+
+Do not add Tailwind classes to existing settings components — it will mix paradigms. New components in this directory should follow the existing inline-style pattern.
+
+## Search System
+
+1. `settingsEntries.ts` — defines every searchable entry with `id`, `label`, `keywords`, `tabId`, `subTabId`
+2. `settingsEntriesData.ts` — static data consumed by entries
+3. `searchHelpers.tsx` — `searchEntries(query, entries)` → `SearchMatch[]`
+4. `SettingsSearchInput.tsx` / `SettingsSearchResults.tsx` — UI
+5. Clicking a result fires `onResultClick(entry)` which navigates to the correct tab + sub-tab
+
+## Hooks Reference
+
+| Hook | Owns |
+|---|---|
+| `useSettingsDraft` | Draft `AppConfig`, save, cancel, import |
+| `useClaudeSection` | Claude template editing state |
+| `useCodexSection` | Codex provider config |
+| `useAccountsSection` | Auth provider state |
+| `useProviderApiKeysModel` | API key add/remove |
+| `useProvidersSection` | Provider list management |
+| `useCodeModeSectionModel` | CodeMode enable/status |
+| `useCodeModeActions` | CodeMode toggle side-effects |
+| `useCodeModeStatus` | Live CodeMode health |
+| `useThemeEditorActions` | Theme create/delete/rename |
+| `useThemeEditorOverrides` | Live CSS var overrides |
+| `useClaudeTemplateEditor` | CLAUDE.md template editing |
+| `useKeybindingCapture` | Keyboard capture for rebinding |
+| `useToast` | Transient banner messages |
+
+## Gotchas
+
+- **`profilesSectionHelpers.ts`** contains shared logic for the Profiles section — not a hook, not a component. Check here before duplicating profile-merge logic.
+- **`ThemeEditor` is split into 5 files**: `ThemeEditor.tsx` (shell), `.model.ts` (state), `.parts.tsx` (UI), `.shared.ts` (types/helpers), `.styles.ts` (styles). Edit the right layer.
+- **`HooksSection` has 3 subsections**: `HooksConfigSubsection`, `HooksApprovalSubsection`, `HooksStatusSubsection` — each independently testable. `HooksConfigSubsection.test.ts` covers the config subsection only.
+- **`terminalSectionShared.tsx`** exports shared types (`SettingsChangeHandler`, `ShellPreset`, `PromptPreset`) and UI primitives (`PresetButton`, `StepButton`) used by both `TerminalSectionParts.tsx` and `TerminalSection.tsx`.
+- **`claudeSectionContentStyles.ts`** and `claudeTemplateEditorStyles.ts` are separate — the former styles the Claude section body, the latter styles the template editor modal within it.
+- **`index.ts`** re-exports only the public surface (`SettingsModal`, `SettingsPanel`, `ToggleSwitch`). Add new exports there only if consumed outside this directory.
+
+## Dependencies
+
+- `../../types/electron` — `AppConfig` (all settings shape)
+- `../../types/electron-claude-md` — `ClaudeMdGenerationStatus`
+- `../../../shared/` — shared utility types
+- IPC: sections call `window.electronAPI.*` directly for live operations (hook status, CodeMode toggle, etc.) — they do not go through `onChange`
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Settings — Full settings UI: modal, inline panel, 14 tabbed sections
 
 ## Architecture

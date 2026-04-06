@@ -1,46 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useGenerateCommitMessage } from './useGitCommitGeneration';
+import { buildGitPanelModel, useGitFileActions } from './useGitPanelModel.actions';
 import {
   type CheckoutActionParams,
   type CommitActionParams,
-  type GitActionParams,
   type GitDerivedState,
-  type GitFileEntry,
+  type GitPanelModel,
   type GitPanelState,
   type GitStatusMap,
   type RefreshBranchesParams,
   type RefreshStatusParams,
   resetRepoState,
-  runGitMutation,
   sortEntries,
 } from './useGitPanelModel.shared';
-
-export interface GitPanelModel {
-  branches: string[];
-  canCommit: boolean;
-  commitMessage: string;
-  currentBranch: string | null;
-  error: string | null;
-  isCommitting: boolean;
-  isGenerating: boolean;
-  isRepo: boolean | null;
-  stagedCount: number;
-  stagedFiles: GitFileEntry[];
-  unstagedCount: number;
-  unstagedFiles: GitFileEntry[];
-  clearError: () => void;
-  handleCheckout: (branch: string) => Promise<void>;
-  handleCommit: () => Promise<void>;
-  handleCommitMessageChange: (value: string) => void;
-  handleDiscardFile: (filePath: string) => Promise<void>;
-  handleGenerateCommitMessage: () => Promise<void>;
-  handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  handleStageAll: () => Promise<void>;
-  handleStageFile: (filePath: string) => Promise<void>;
-  handleUnstageAll: () => Promise<void>;
-  handleUnstageFile: (filePath: string) => Promise<void>;
-}
 
 function useGitPanelState(): GitPanelState {
   const [staged, setStaged] = useState<GitStatusMap>({});
@@ -76,16 +49,12 @@ function useRefreshStatus(params: RefreshStatusParams): () => Promise<void> {
   const { projectRoot, setCurrentBranch, setError, setStaged, setUnstaged } = params;
 
   return useCallback(async () => {
-    if (!projectRoot) {
-      return;
-    }
-
+    if (!projectRoot) return;
     try {
       const [statusRes, branchRes] = await Promise.all([
         window.electronAPI.git.statusDetailed(projectRoot),
         window.electronAPI.git.branch(projectRoot),
       ]);
-
       if (statusRes.success) {
         setStaged(statusRes.staged ?? {});
         setUnstaged(statusRes.unstaged ?? {});
@@ -93,10 +62,7 @@ function useRefreshStatus(params: RefreshStatusParams): () => Promise<void> {
       } else {
         setError(statusRes.error ?? 'Failed to get status');
       }
-
-      if (branchRes.success) {
-        setCurrentBranch(branchRes.branch ?? null);
-      }
+      if (branchRes.success) setCurrentBranch(branchRes.branch ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
@@ -105,160 +71,126 @@ function useRefreshStatus(params: RefreshStatusParams): () => Promise<void> {
 
 function useRefreshBranches(params: RefreshBranchesParams): () => Promise<void> {
   const { projectRoot, setBranches } = params;
-
   return useCallback(async () => {
-    if (!projectRoot) {
+    if (!projectRoot) return;
+    const branchRes = await window.electronAPI.git.branches(projectRoot);
+    if (branchRes.success && branchRes.branches) setBranches(branchRes.branches);
+  }, [projectRoot, setBranches]);
+}
+
+type InitState = Pick<
+  GitPanelState,
+  'setBranches' | 'setCurrentBranch' | 'setIsRepo' | 'setStaged' | 'setUnstaged'
+>;
+
+interface RepoInitParams {
+  root: string;
+  state: InitState;
+  refreshStatus: () => Promise<void>;
+  refreshBranches: () => Promise<void>;
+  cancelled: { current: boolean };
+}
+
+async function runRepoInit(params: RepoInitParams): Promise<void> {
+  const { root, state, refreshStatus, refreshBranches, cancelled } = params;
+  try {
+    const res = await window.electronAPI.git.isRepo(root);
+    if (cancelled.current) return;
+    const repoExists = Boolean(res.isRepo);
+    state.setIsRepo(repoExists);
+    if (!repoExists) {
+      resetRepoState(state);
       return;
     }
-
-    const branchRes = await window.electronAPI.git.branches(projectRoot);
-    if (branchRes.success && branchRes.branches) {
-      setBranches(branchRes.branches);
-    }
-  }, [projectRoot, setBranches]);
+    await Promise.all([refreshStatus(), refreshBranches()]);
+  } catch {
+    if (!cancelled.current) state.setIsRepo(false);
+  }
 }
 
 function useGitInitialization(
   projectRoot: string | null,
   refreshStatus: () => Promise<void>,
   refreshBranches: () => Promise<void>,
-  state: Pick<GitPanelState, 'setBranches' | 'setCurrentBranch' | 'setIsRepo' | 'setStaged' | 'setUnstaged'>,
+  state: InitState,
 ): void {
-  const { setBranches, setCurrentBranch, setIsRepo, setStaged, setUnstaged } = state;
-
   useEffect(() => {
     if (!projectRoot) {
-      setIsRepo(null);
-      resetRepoState({ setBranches, setCurrentBranch, setStaged, setUnstaged });
+      state.setIsRepo(null);
+      resetRepoState(state);
       return;
     }
-
-    const root = projectRoot;
-    let cancelled = false;
-
-    async function initializeRepoState(): Promise<void> {
-      try {
-        const res = await window.electronAPI.git.isRepo(root);
-        if (cancelled) {
-          return;
-        }
-
-        const repoExists = Boolean(res.isRepo);
-        setIsRepo(repoExists);
-        if (!repoExists) {
-          resetRepoState({ setBranches, setCurrentBranch, setStaged, setUnstaged });
-          return;
-        }
-
-        await Promise.all([refreshStatus(), refreshBranches()]);
-      } catch {
-        if (!cancelled) {
-          setIsRepo(false);
-        }
-      }
-    }
-
-    void initializeRepoState();
-
+    const cancelled = { current: false };
+    void runRepoInit({ root: projectRoot, state, refreshStatus, refreshBranches, cancelled });
     return () => {
-      cancelled = true;
+      cancelled.current = true;
     };
-  }, [projectRoot, refreshBranches, refreshStatus, setBranches, setCurrentBranch, setIsRepo, setStaged, setUnstaged]);
-}
-
-function useGitPolling(
-  projectRoot: string | null,
-  isRepo: boolean | null,
-  refreshStatus: () => Promise<void>,
-): void {
-  useEffect(() => {
-    if (!projectRoot || !isRepo) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      void refreshStatus();
-    }, 3000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [projectRoot, isRepo, refreshStatus]);
-}
-
-function useGitFileActions(params: GitActionParams): Pick<GitPanelModel, 'handleDiscardFile' | 'handleStageAll' | 'handleStageFile' | 'handleUnstageAll' | 'handleUnstageFile'> {
-  const { projectRoot, refreshStatus } = params;
-
-  const handleStageFile = useCallback(async (filePath: string) => {
-    await runGitMutation({ projectRoot, refreshStatus, execute: (root) => window.electronAPI.git.stage(root, filePath) });
-  }, [projectRoot, refreshStatus]);
-  const handleUnstageFile = useCallback(async (filePath: string) => {
-    await runGitMutation({ projectRoot, refreshStatus, execute: (root) => window.electronAPI.git.unstage(root, filePath) });
-  }, [projectRoot, refreshStatus]);
-  const handleStageAll = useCallback(async () => {
-    await runGitMutation({ projectRoot, refreshStatus, execute: (root) => window.electronAPI.git.stageAll(root) });
-  }, [projectRoot, refreshStatus]);
-  const handleUnstageAll = useCallback(async () => {
-    await runGitMutation({ projectRoot, refreshStatus, execute: (root) => window.electronAPI.git.unstageAll(root) });
-  }, [projectRoot, refreshStatus]);
-  const handleDiscardFile = useCallback(async (filePath: string) => {
-    await runGitMutation({ projectRoot, refreshStatus, execute: (root) => window.electronAPI.git.discardFile(root, filePath) });
-  }, [projectRoot, refreshStatus]);
-
-  return { handleDiscardFile, handleStageAll, handleStageFile, handleUnstageAll, handleUnstageFile };
+    // state object is stable (useState setters never change)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectRoot, refreshBranches, refreshStatus]);
 }
 
 function useCheckoutAction(params: CheckoutActionParams): (branch: string) => Promise<void> {
   const { projectRoot, refreshBranches, refreshStatus, setError } = params;
-
-  return useCallback(async (branch: string) => {
-    if (!projectRoot) {
-      return;
-    }
-
-    const res = await window.electronAPI.git.checkout(projectRoot, branch);
-    if (!res.success) {
-      setError(res.error ?? 'Checkout failed');
-    }
-
-    await Promise.all([refreshStatus(), refreshBranches()]);
-  }, [projectRoot, refreshBranches, refreshStatus, setError]);
+  return useCallback(
+    async (branch: string) => {
+      if (!projectRoot) return;
+      const res = await window.electronAPI.git.checkout(projectRoot, branch);
+      if (!res.success) setError(res.error ?? 'Checkout failed');
+      await Promise.all([refreshStatus(), refreshBranches()]);
+    },
+    [projectRoot, refreshBranches, refreshStatus, setError],
+  );
 }
 
 function useCommitAction(params: CommitActionParams): () => Promise<void> {
-  const { commitMessage, projectRoot, refreshStatus, setCommitMessage, setError, setIsCommitting, staged } = params;
-
+  const {
+    commitMessage,
+    projectRoot,
+    refreshStatus,
+    setCommitMessage,
+    setError,
+    setIsCommitting,
+    staged,
+  } = params;
   return useCallback(async () => {
-    if (!projectRoot || !commitMessage.trim() || Object.keys(staged).length === 0) {
-      return;
-    }
-
+    if (!projectRoot || !commitMessage.trim() || Object.keys(staged).length === 0) return;
     setIsCommitting(true);
     try {
       const res = await window.electronAPI.git.commit(projectRoot, commitMessage.trim());
       if (res.success) {
         setCommitMessage('');
         setError(null);
-      } else {
-        setError(res.error ?? 'Commit failed');
-      }
-
+      } else setError(res.error ?? 'Commit failed');
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Commit failed');
     } finally {
       setIsCommitting(false);
     }
-  }, [commitMessage, projectRoot, refreshStatus, setCommitMessage, setError, setIsCommitting, staged]);
+  }, [
+    commitMessage,
+    projectRoot,
+    refreshStatus,
+    setCommitMessage,
+    setError,
+    setIsCommitting,
+    staged,
+  ]);
 }
 
-function useCommitSubmitShortcut(handleCommit: () => Promise<void>): (event: React.KeyboardEvent<HTMLTextAreaElement>) => void {
-  return useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-      event.preventDefault();
-      void handleCommit();
-    }
-  }, [handleCommit]);
+function useCommitSubmitShortcut(
+  handleCommit: () => Promise<void>,
+): (event: React.KeyboardEvent<HTMLTextAreaElement>) => void {
+  return useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        void handleCommit();
+      }
+    },
+    [handleCommit],
+  );
 }
 
 function useGitDerivedState(
@@ -272,8 +204,36 @@ function useGitDerivedState(
   const stagedCount = stagedFiles.length;
   const unstagedCount = unstagedFiles.length;
   const canCommit = stagedCount > 0 && commitMessage.trim().length > 0 && !isCommitting;
-
   return { canCommit, stagedCount, stagedFiles, unstagedCount, unstagedFiles };
+}
+
+function useGitActions(
+  projectRoot: string | null,
+  state: GitPanelState,
+  refreshStatus: () => Promise<void>,
+): {
+  handleCheckout: (b: string) => Promise<void>;
+  handleCommit: () => Promise<void>;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+} {
+  const refreshBranches = useRefreshBranches({ projectRoot, setBranches: state.setBranches });
+  const handleCheckout = useCheckoutAction({
+    projectRoot,
+    refreshBranches,
+    refreshStatus,
+    setError: state.setError,
+  });
+  const handleCommit = useCommitAction({
+    projectRoot,
+    refreshStatus,
+    setCommitMessage: state.setCommitMessage,
+    setError: state.setError,
+    setIsCommitting: state.setIsCommitting,
+    commitMessage: state.commitMessage,
+    staged: state.staged,
+  });
+  const handleKeyDown = useCommitSubmitShortcut(handleCommit);
+  return { handleCheckout, handleCommit, handleKeyDown };
 }
 
 export function useGitPanelModel(projectRoot: string | null): GitPanelModel {
@@ -282,38 +242,34 @@ export function useGitPanelModel(projectRoot: string | null): GitPanelModel {
   const refreshBranches = useRefreshBranches({ projectRoot, setBranches: state.setBranches });
 
   useGitInitialization(projectRoot, refreshStatus, refreshBranches, state);
-  useGitPolling(projectRoot, state.isRepo, refreshStatus);
 
   const fileActions = useGitFileActions({ projectRoot, refreshStatus });
-  const handleCheckout = useCheckoutAction({ projectRoot, refreshBranches, refreshStatus, setError: state.setError });
-  const handleCommit = useCommitAction({ projectRoot, refreshStatus, setCommitMessage: state.setCommitMessage, setError: state.setError, setIsCommitting: state.setIsCommitting, commitMessage: state.commitMessage, staged: state.staged });
-  const handleKeyDown = useCommitSubmitShortcut(handleCommit);
-  const derived = useGitDerivedState(state.staged, state.unstaged, state.commitMessage, state.isCommitting);
-  const { isGenerating, handleGenerateCommitMessage } = useGenerateCommitMessage(projectRoot, derived.stagedCount, state.setCommitMessage, state.setError);
+  const { handleCheckout, handleCommit, handleKeyDown } = useGitActions(
+    projectRoot,
+    state,
+    refreshStatus,
+  );
+  const derived = useGitDerivedState(
+    state.staged,
+    state.unstaged,
+    state.commitMessage,
+    state.isCommitting,
+  );
+  const { isGenerating, handleGenerateCommitMessage } = useGenerateCommitMessage(
+    projectRoot,
+    derived.stagedCount,
+    state.setCommitMessage,
+    state.setError,
+  );
 
-  return {
-    branches: state.branches,
-    canCommit: derived.canCommit,
-    clearError: () => state.setError(null),
-    commitMessage: state.commitMessage,
-    currentBranch: state.currentBranch,
-    error: state.error,
+  return buildGitPanelModel({
+    state,
+    derived,
+    fileActions,
     handleCheckout,
     handleCommit,
-    handleCommitMessageChange: state.setCommitMessage,
-    handleDiscardFile: fileActions.handleDiscardFile,
-    handleGenerateCommitMessage,
     handleKeyDown,
-    handleStageAll: fileActions.handleStageAll,
-    handleStageFile: fileActions.handleStageFile,
-    handleUnstageAll: fileActions.handleUnstageAll,
-    handleUnstageFile: fileActions.handleUnstageFile,
-    isCommitting: state.isCommitting,
     isGenerating,
-    isRepo: state.isRepo,
-    stagedCount: derived.stagedCount,
-    stagedFiles: derived.stagedFiles,
-    unstagedCount: derived.unstagedCount,
-    unstagedFiles: derived.unstagedFiles,
-  };
+    handleGenerateCommitMessage,
+  });
 }

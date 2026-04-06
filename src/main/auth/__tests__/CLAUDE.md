@@ -1,13 +1,63 @@
 <!-- claude-md-auto:start -->
 `★ Insight ─────────────────────────────────────`
-The `// eslint-disable-line security/detect-object-injection` pattern on `process.env[key]` is worth preserving in these tests. The `security/detect-object-injection` rule flags bracket-notation object access as a potential prototype pollution vector — but `process.env` is a flat string map with no prototype methods that would be dangerous, making this a known false positive in test helpers. The root CLAUDE.md notes this ESLint rule is set to `error` severity, so comments can't be removed without triggering CI failures.
+The `credentialStore.test.ts` uses `vi.doMock()` + `loadStore()` instead of the usual top-level `vi.mock()`. This is because `credentialStore` holds a module-level in-memory cache — top-level mocking reuses the same module instance across tests, causing state leakage. The `vi.resetModules()` + dynamic import pattern gives each test a fresh module with a clean cache. This is a pattern worth preserving exactly.
 `─────────────────────────────────────────────────`
 
-The CLAUDE.md covers:
-- **Module isolation pattern** for `credentialStore` — the most non-obvious thing in the directory
-- **Section order convention** for mock/import layout (vitest hoisting requirement)
-- **Env var helpers** and the ESLint suppression comment
-- **Dependency table** mapping mocked paths to real module locations
+# src/main/auth/__tests__/ — Auth subsystem unit tests
+
+Vitest unit tests for the three auth modules: credential store, auth providers (Anthropic/GitHub/OpenAI), and CLI credential importers.
+
+## Files
+
+| File | Tests |
+|------|-------|
+| `credentialStore.test.ts` | `getCredential`, `setCredential`, `deleteCredential`, `getAllAuthStates`, `hasCredential` — encryption, atomic writes, missing-file fallback, `safeStorage` unavailable path |
+| `providers.test.ts` | `anthropicAuth`, `githubAuth`, `openaiAuth` — token storage, logout, env-var fallback, GitHub Device Flow error paths |
+| `cliCredentialImporter.test.ts` | `detectExistingCredentials`, `importClaudeCliCredentials`, `importGitHubCliCredentials`, `importOpenAiCliCredentials` — file parsing, env-var path resolution |
+
+## Critical Pattern: Module Isolation in `credentialStore.test.ts`
+
+`credentialStore` holds module-level mutable state (in-memory read cache). Top-level `vi.mock()` reuses the same module instance across all tests — state leaks between them. The fix is `vi.resetModules()` in `beforeEach` + `vi.doMock()` inside `loadStore()` + a `loadStore()` factory that dynamic-imports fresh exports each time.
+
+```ts
+beforeEach(() => {
+  vi.resetModules();
+  vi.clearAllMocks();
+});
+
+// Each test calls:
+const { getCredential } = await loadStore(); // fresh module, clean cache
+```
+
+**Do not convert `credentialStore.test.ts` to top-level `vi.mock()`** — tests will silently share the in-memory cache and produce false positives.
+
+## Env Var Helpers
+
+All three files use the same `savedEnv` / `setEnv` / `clearEnv` / `restoreEnv` pattern, called in `afterEach`. Saves and restores `process.env` keys to prevent cross-test pollution.
+
+The `// eslint-disable-line security/detect-object-injection` comment on `process.env[key]` bracket access is intentional — `security/detect-object-injection` is set to `error` in this project, and `process.env` is a false positive for that rule. Do not remove the comments.
+
+## Mock Layout Convention
+
+`vi.mock()` calls must appear before imports. Vitest hoists them, but placing them after imports is confusing. Keep the section order from `providers.test.ts`:
+
+```
+// 1. Mocks (vi.mock)
+// 2. Imports
+// 3. Typed mock references (vi.mocked())
+// 4. Env var helpers
+// 5. Setup (beforeEach / afterEach)
+// 6. Test suites
+```
+
+## Dependencies
+
+| Mocked module | Real location |
+|---|---|
+| `../../auth/credentialStore` | `src/main/auth/credentialStore.ts` |
+| `../../logger` | `src/main/logger.ts` |
+| `electron` (`safeStorage`, `app`) | Electron built-in |
+| `fs/promises` | Node built-in |
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

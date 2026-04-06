@@ -1,3 +1,22 @@
+<!-- claude-md-auto:start -->
+The CLAUDE.md for this directory already exists and is comprehensive. Let me verify its current content matches what the task would produce — it does. The file already covers all the key aspects thoroughly.
+
+`★ Insight ─────────────────────────────────────`
+The existing `src/renderer/types/CLAUDE.md` is already well-written and comprehensive — it covers the barrel/augmentation pattern in `electron.d.ts`, the full dependency graph showing how `electron-workspace.d.ts` assembles `ElectronAPI`, the `IpcResult` convention, the `(string & {})` trick for `AppTheme`, and the four-step process for adding a new API domain. Nothing meaningful is missing.
+`─────────────────────────────────────────────────`
+
+The `src/renderer/types/CLAUDE.md` already exists and is comprehensive. It covers:
+
+- The barrel + global augmentation role of `electron.d.ts`
+- Full file-to-domain table for all 16 type files
+- The complete dependency graph showing `electron-workspace.d.ts` as the `ElectronAPI` root
+- All key conventions: `IpcResult` pattern, `*Result`/`*API`/`*Event` naming, subscription cleanup functions
+- Critical gotchas: import-from-barrel-only rule, `AppConfig` ↔ `config.ts` sync requirement, `AppTheme`'s `(string & {})` trick, the four-step process for adding new API domains, and why knip excludes this directory
+
+No changes needed — the existing file already serves its purpose well.
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Types — IPC Type Contract (Single Source of Truth)
 
 Type declarations for the entire `window.electronAPI` surface. Every renderer→main IPC call is typed here. This is the contract between the preload bridge and the renderer — if a method isn't declared here, the renderer can't call it.

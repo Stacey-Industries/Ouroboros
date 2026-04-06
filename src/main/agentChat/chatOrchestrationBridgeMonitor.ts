@@ -19,6 +19,8 @@ import type { AgentChatStreamChunk } from './types';
 // Stream chunk emission
 // ---------------------------------------------------------------------------
 
+const MAX_BUFFERED_CHUNKS = 500;
+
 export function emitStreamChunk(
   listeners: Set<StreamChunkListener>,
   chunk: AgentChatStreamChunk,
@@ -31,6 +33,9 @@ export function emitStreamChunk(
     chunk.type !== 'thread_snapshot'
   ) {
     ctx.bufferedChunks.push(chunk);
+    if (ctx.bufferedChunks.length > MAX_BUFFERED_CHUNKS) {
+      ctx.bufferedChunks.splice(0, ctx.bufferedChunks.length - MAX_BUFFERED_CHUNKS);
+    }
   }
   for (const listener of listeners) {
     try {
@@ -120,7 +125,14 @@ export function emitMonitorToolEnd(
 export function emitMonitorSubTool(
   ctx: ActiveStreamContext,
   blockIndex: number,
-  sub: { name: string; status: 'running' | 'complete'; subToolId: string; filePath?: string; inputSummary?: string; output?: string },
+  sub: {
+    name: string;
+    status: 'running' | 'complete';
+    subToolId: string;
+    filePath?: string;
+    inputSummary?: string;
+    output?: string;
+  },
   now: number,
 ): void {
   if (!ctx.monitorStartEmitted) return;

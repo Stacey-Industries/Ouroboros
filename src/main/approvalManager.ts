@@ -66,24 +66,21 @@ const queuedResponseWrites = new Map<
 
 // ─── Directory management ────────────────────────────────────────────────────
 
-function ensureApprovalsDir(): void {
+async function ensureApprovalsDir(): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- APPROVALS_DIR is a module constant from known path
-  if (!fs.existsSync(APPROVALS_DIR)) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- APPROVALS_DIR is a module constant from known path
-    fs.mkdirSync(APPROVALS_DIR, { recursive: true });
-  }
+  await fs.promises.mkdir(APPROVALS_DIR, { recursive: true });
 }
 
 function getResponseFilePath(requestId: string): string {
   return path.join(APPROVALS_DIR, `${requestId}.response`);
 }
 
-function removeExpiredResponseFile(filePath: string, cutoff: number): void {
+async function removeExpiredResponseFile(filePath: string, cutoff: number): Promise<void> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from APPROVALS_DIR listing
-    const stat = fs.statSync(filePath);
+    const stat = await fs.promises.stat(filePath);
     if (stat.mtimeMs < cutoff) {
-      fs.rmSync(filePath, { force: true });
+      await fs.promises.rm(filePath, { force: true });
     }
   } catch {
     // Ignore individual file errors
@@ -94,21 +91,15 @@ function removeExpiredResponseFile(filePath: string, cutoff: number): void {
  * Clean up old response files (older than 5 minutes).
  * Called periodically to avoid accumulating stale files.
  */
-function cleanupOldResponses(): void {
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- APPROVALS_DIR is a module constant from known path
-    if (!fs.existsSync(APPROVALS_DIR)) return;
+async function cleanupOldResponses(): Promise<void> {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- APPROVALS_DIR is a module constant from known path
+  const entries = await fs.promises.readdir(APPROVALS_DIR).catch(() => null);
+  if (!entries) return;
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- APPROVALS_DIR is a module constant from known path
-    const files = fs.readdirSync(APPROVALS_DIR);
-    const cutoff = Date.now() - 5 * 60 * 1000;
-
-    for (const file of files) {
-      if (!file.endsWith('.response')) continue;
-      removeExpiredResponseFile(path.join(APPROVALS_DIR, file), cutoff);
-    }
-  } catch {
-    // Non-critical — ignore
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  for (const file of entries) {
+    if (!file.endsWith('.response')) continue;
+    await removeExpiredResponseFile(path.join(APPROVALS_DIR, file), cutoff);
   }
 }
 
@@ -221,9 +212,9 @@ function clearAutoApproveTimer(requestId: string): void {
   }
 }
 
-function prepareResponseFilePath(requestId: string): string | null {
+async function prepareResponseFilePath(requestId: string): Promise<string | null> {
   try {
-    ensureApprovalsDir();
+    await ensureApprovalsDir();
     return getResponseFilePath(requestId);
   } catch (err) {
     log.error(`failed to prepare response path for ${requestId}:`, err);
@@ -325,7 +316,7 @@ async function attemptFileWrite(
   for (let attempt = 0; attempt <= EMFILE_MAX_RETRIES; attempt++) {
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from APPROVALS_DIR + requestId
-      fs.writeFileSync(opts.filePath, opts.data, 'utf8');
+      await fs.promises.writeFile(opts.filePath, opts.data, 'utf8');
       clearQueuedResponseWrite(requestId);
       const retrySuffix =
         queuedAttempt > 0 || attempt > 0 ? ` (retry ${queuedAttempt + attempt})` : '';
@@ -384,7 +375,7 @@ export async function respondToApproval(
   clearAutoApproveTimer(requestId);
   clearQueuedResponseWrite(requestId);
 
-  const filePath = prepareResponseFilePath(requestId);
+  const filePath = await prepareResponseFilePath(requestId);
   if (!filePath) return false;
 
   return writeResponseWithRetry(requestId, response.decision, {
@@ -414,9 +405,9 @@ export function clearSessionRules(sessionId: string): void {
 
 /**
  * Get the approvals directory path (used by hook scripts).
+ * Directory is created lazily on first approval response write.
  */
 export function getApprovalsDir(): string {
-  ensureApprovalsDir();
   return APPROVALS_DIR;
 }
 

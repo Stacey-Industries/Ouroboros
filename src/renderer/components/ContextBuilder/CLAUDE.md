@@ -1,3 +1,19 @@
+<!-- claude-md-auto:start -->
+The CLAUDE.md for this directory already exists and is comprehensive. I can see it in the system reminder — it covers the architecture, IPC calls, patterns, and gotchas thoroughly.
+
+No changes needed. The existing `src/renderer/components/ContextBuilder/CLAUDE.md` already accurately documents:
+
+- The model-view split and hook composition pattern
+- All IPC channels and their return shapes
+- The inline-styles-not-Tailwind convention (intentional, self-contained)
+- Options auto-regeneration with cancellation flag
+- Path normalization gotcha for Windows paths
+- `handleCreateClaudeMd` null guard requirement
+- `useTimedStatus` duration behavior
+- Initial scan-on-mount lifecycle
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # ContextBuilder — Project context scanner and CLAUDE.md generator
 
 Scans a project directory, generates structured context (commands, structure, deps), and lets users edit/export the result as a CLAUDE.md file or system prompt injected into Claude CLI settings.

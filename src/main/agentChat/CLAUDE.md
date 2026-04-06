@@ -1,3 +1,120 @@
+<!-- claude-md-auto:start -->
+The existing CLAUDE.md is mostly accurate but missing the `Bridge*.ts` split files and several support modules. Here's the generated content:
+
+---
+
+# `src/main/agentChat/` — Chat thread persistence, orchestration bridge, and session projection
+
+## Summary
+
+Chat subsystem: manages conversation threads in SQLite, bridges the renderer ↔ orchestration layer (streaming, cancellation, revert), and projects session state into typed thread records.
+
+## Key Files
+
+### Public Surface
+| File | Role |
+|------|------|
+| `index.ts` | `createAgentChatService()` factory — assembles bridge + store into `AgentChatService`. Barrel-exports all submodules. |
+| `types.ts` | Re-exports all cross-boundary types from `@shared/types/agentChat`. Canonical consumer for main-process imports. |
+| `events.ts` | IPC channel name constants. No logic. |
+
+### Orchestration Bridge (one logical unit split across 7 files for ESLint line limits)
+| File | Role |
+|------|------|
+| `chatOrchestrationBridge.ts` | Hub — runtime state (`AgentChatBridgeRuntime`), `sendMessage`, chunk buffering, subscription setup, revert dispatch. |
+| `chatOrchestrationBridgeTypes.ts` | Internal shared types: `ActiveStreamContext`, `AgentChatBridgeRuntime`, `OrchestrationClient`, `StreamChunkListener`. |
+| `chatOrchestrationBridgeSend.ts` | Task creation + start flow — builds `TaskRequest`, captures git HEAD hash, links task to thread. |
+| `chatOrchestrationBridgeProgress.ts` | Provider progress event handlers — streaming, completion, cancellation, failure routing. |
+| `chatOrchestrationBridgePersist.ts` | Persistence for terminal progress events — writes completed/cancelled/failed turns to SQLite. |
+| `chatOrchestrationBridgeMonitor.ts` | Emits `agentChat:stream` IPC chunks and monitor events; incremental flush timer. |
+| `chatOrchestrationBridgeSupport.ts` | Pure helpers — status mapping, link builders, message ID scheme, failure constructors. |
+| `chatOrchestrationBridgeSubTools.ts` | Sub-tool stream chunk accumulation and projection. |
+| `chatOrchestrationBridgeGit.ts` | `captureHeadHash` + `revertToSnapshotWithBridge` — git ops for pre/post turn snapshots. |
+| `chatOrchestrationBridgePersistHelpers.ts` | Low-level helpers used by `BridgePersist.ts`: `upsertOrAppendMessage`, `emitTurnComplete`, `emitSnapshotChunk`. |
+
+### Request Preparation
+| File | Role |
+|------|------|
+| `chatOrchestrationRequestSupport.ts` | `preparePendingSend` — resolves send options (provider, model, mode, effort, permissionMode), builds `TaskRequest`. |
+| `chatOrchestrationRequestSupportHelpers.ts` | Pure builders factored out of request support to stay under line limit. |
+| `chatOrchestrationHistorySupport.ts` | Converts thread message history into `TaskRequest` conversation format. |
+| `chatTitleDerivation.ts` | `deriveSmartTitle` (heuristic, sync) + `generateLlmTitle` (LLM, async). Skips decorative lines like `★ Insight ───`. Max 60 chars. |
+
+### Thread Store
+| File | Role |
+|------|------|
+| `threadStore.ts` | `AgentChatThreadStore` facade — CRUD, branching, workspace filtering, max 100 threads. |
+| `threadStoreSqlite.ts` | SQLite backend — `threads` + `messages` tables with FK cascade, schema v1. |
+| `threadStoreSqliteHelpers.ts` | SQL query helpers extracted from the SQLite runtime. |
+| `threadStoreRuntimeSupport.ts` | JSON file backend (legacy) — `{sha1(id)}.json` per thread, mutation queue serializes writes. |
+| `threadStoreSupport.ts` | Shared normalization: `normalizeThreadRecord`, `upsertMessage`, `hashThreadId`, `isDecorativeLine`. |
+| `threadHydrator.ts` | Rehydrates thread from orchestration session on crash recovery. |
+
+### Projectors
+| File | Role |
+|------|------|
+| `eventProjector.ts` | Session-update projector — syncs `TaskSessionRecord` state into thread records. |
+| `eventProjectorSupport.ts` | Builds projected messages with deterministic IDs: `agent-chat:{sessionId}:{kind}`. |
+| `responseProjector.ts` | Streaming projector — converts `ProviderProgressEvent` results/failures into `AgentChatMessageRecord`. Merges adjacent text blocks. |
+
+### Session & Memory
+| File | Role |
+|------|------|
+| `sessionMemory.ts` | In-memory session store — maps `sessionId` → metadata during active turns. |
+| `memoryExtractor.ts` | Extracts memorizable facts from assistant responses. |
+| `settingsResolver.ts` | Resolves `AgentChatSettings` + `ClaudeCliSettings` from partial config. Providers: `anthropic-api`, `claude-code`, `codex`. |
+| `adaptiveBudget.ts` | Dynamic token budget calculation based on conversation length and model. |
+| `conversationCompactor.ts` | Trims conversation history to fit within token limits. |
+| `tokenCalibration.ts` | Token count calibration store — tracks actual vs estimated tokens to refine budget math. |
+| `utils.ts` | `getErrorMessage`, `isNonEmptyString` — shared micro-utilities. |
+
+## Architecture
+
+```
+Renderer (IPC)  →  AgentChatService (index.ts)
+                       ├── AgentChatOrchestrationBridge  ←→  OrchestrationAPI
+                       │       ├── BridgeSend   — task creation + git snapshot
+                       │       ├── BridgeProgress — stream routing
+                       │       ├── BridgePersist — SQLite writes on completion
+                       │       ├── BridgeMonitor — IPC stream emission + flush timer
+                       │       └── BridgeGit    — revert-to-snapshot
+                       ├── AgentChatThreadStore
+                       │       ├── ThreadStoreSqliteRuntime  (primary)
+                       │       └── AgentChatThreadStoreRuntime (JSON, legacy)
+                       └── EventProjector (session updates → thread records)
+```
+
+## Patterns
+
+- **Bridge file split is intentional, not architectural**: `chatOrchestrationBridge*.ts` is one cohesive module split to stay under ESLint `max-lines: 300`. Don't treat the split files as independent subsystems.
+- **Deterministic message IDs**: `agent-chat:{sessionId}:assistant` (also `:context`, `:progress`, `:verification`, `:result`). Bridge and projector write to the same ID — prevents duplicates on crash recovery.
+- **Projector preserves streaming content**: `eventProjector.ts` never overwrites existing assistant message content — the streaming bridge owns that field during active turns.
+- **`*Support.ts` naming**: Whenever a file would exceed 300 lines, pure helpers are extracted to `*Support.ts` or `*Helpers.ts`. The base file retains orchestration/flow logic.
+- **Reconcile-on-list**: `listThreads` cross-references active bridge thread IDs — threads stuck in `running`/`submitting` without an active send are reset to `idle`.
+- **Stream chunk buffer**: Bridge holds chunks in memory per-thread for renderer refresh replay.
+
+## Gotchas
+
+- **Two storage backends coexist**: SQLite is primary; JSON runtime is legacy. Both share `threadStoreSupport.ts` normalization. `listThreads` reads from SQLite only — JSON threads not in the DB are invisible.
+- **Pre-snapshot hash**: Bridge captures `git rev-parse HEAD` before each turn into `preSnapshotHash`. `revertToSnapshot` runs `git checkout` — **destructive, cannot be undone**.
+- **Title logic duplicated**: `threadStoreSqlite.ts` and `threadStoreRuntimeSupport.ts` both implement `isDecorativeLine` + title trimming. Changes must be applied in both.
+- **Sticky orchestration fields**: `eventProjector.ts` preserves `linkedTerminalId` and `claudeSessionId` from the existing thread link — early lifecycle events fire before the adapter sets these fields.
+- **`isNonEmptyString` exported from two places**: canonical in `utils.ts`, re-exported from `threadStoreSupport.ts` for backward compat.
+- **`tokenCalibration` is a module-level singleton**: `tokenCalibrationStore` is imported directly in `BridgePersist.ts` — not injected. Reset state in tests by resetting the module.
+
+## Dependencies
+
+| Direction | Module | Relationship |
+|-----------|--------|-------------|
+| **depends on** | `../orchestration/types` | `TaskSessionRecord`, `OrchestrationAPI`, `TaskRequest`, `OrchestrationMode` |
+| **depends on** | `../config` | `getConfigValue` for settings, `ClaudeCliSettings` type |
+| **depends on** | `../hooks` | `beginChatSessionLaunch` — fires hook events for agent chat turns |
+| **depends on** | `../storage/database` | SQLite helpers (`openDatabase`, `runTransaction`, `setSchemaVersion`) |
+| **depends on** | `@shared/types/agentChat` | All cross-boundary types (re-exported via `types.ts`) |
+| **consumed by** | `../ipc-handlers/agentChat.ts` | Registers all `agentChat:*` IPC handlers using `AgentChatService` |
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Agent Chat — Chat thread persistence, orchestration bridge, and session projection
 
 ## Key Files

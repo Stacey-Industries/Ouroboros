@@ -217,7 +217,10 @@ export function getCachedContext(roots: string[]): CachedContext | null {
 let contextRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startContextRefreshTimer(roots: string[]): void {
-  if (contextRefreshTimer) return;
+  if (contextRefreshTimer) {
+    clearInterval(contextRefreshTimer);
+    contextRefreshTimer = null;
+  }
   log.info('Starting context refresh timer for roots:', roots);
   log.info('Current cache size:', contextCache.size, 'keys:', [...contextCache.keys()]);
   setTimeout(() => {

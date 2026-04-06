@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useGitBranch } from '../../hooks/useGitBranch';
 import {
   BranchIcon,
   BranchItem,
@@ -22,17 +23,14 @@ export interface GitBranchIndicatorProps {
 }
 
 function useBranchFetch(projectRoot: string, isRepo: boolean) {
+  const { branch: polledBranch } = useGitBranch(isRepo ? projectRoot : null);
   const [branch, setBranch] = useState<string | null>(null);
   const [branches, setBranches] = useState<string[]>([]);
-  const fetchBranch = useCallback(async () => {
-    if (!projectRoot || !isRepo) return;
-    try {
-      const r = await window.electronAPI.git.branch(projectRoot);
-      if (r.success && r.branch) setBranch(r.branch);
-    } catch {
-      /* ignore */
-    }
-  }, [projectRoot, isRepo]);
+
+  useEffect(() => {
+    if (polledBranch !== null) setBranch(polledBranch);
+  }, [polledBranch]);
+
   const fetchBranches = useCallback(async () => {
     if (!projectRoot) return;
     try {
@@ -43,11 +41,6 @@ function useBranchFetch(projectRoot: string, isRepo: boolean) {
       /* ignore */
     }
   }, [projectRoot]);
-  useEffect(() => {
-    fetchBranch();
-    const interval = setInterval(fetchBranch, 5000);
-    return () => clearInterval(interval);
-  }, [fetchBranch]);
   return { branch, setBranch, branches, fetchBranches };
 }
 
@@ -211,7 +204,10 @@ type BranchDropdownProps = {
 };
 function BranchDropdown(p: BranchDropdownProps): React.ReactElement {
   return (
-    <div className="frosted-panel bg-surface-panel border border-border-semantic" style={dropdownStyle}>
+    <div
+      className="frosted-panel bg-surface-panel border border-border-semantic"
+      style={dropdownStyle}
+    >
       <div style={dropdownHeaderStyle}>
         <BranchSearchInput
           searchInputRef={p.searchInputRef}

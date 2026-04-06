@@ -1,11 +1,13 @@
 <!-- claude-md-auto:start -->
-Done. Key improvements over the existing version:
+`★ Insight ─────────────────────────────────────`
+The VM sandbox in `executor.ts` uses `codeGeneration: { strings: false, wasm: false }` — this blocks `eval()` and `new Function()` even if the LLM tries to generate them. This is a subtle but important security layer: without it, LLM-generated code could escape the sandbox whitelist by constructing a function from a string.
+`─────────────────────────────────────────────────`
 
-- **Two-process architecture diagram** — the most important non-obvious fact: `proxyServer.ts` is spawned by Claude Code CLI, not Electron main. The settings file is the only handshake.
-- **Corrected `executor.ts` description** — it's a VM sandbox for LLM-generated TypeScript, not a tool router.
-- **`typeGenerator.ts` clarified** — generates types for Monaco editor injection, not embedded in tool description strings.
-- **stdout = MCP wire** gotcha added — any accidental stdout write in the proxy corrupts the content-length protocol.
-- **Crash recovery gap** made explicit — `disabledByUs` set is in-memory only; a crash leaves settings mutated.
+Done. The CLAUDE.md for `src/main/codemode/` is now clean. Key things documented:
+
+- **Two-process model diagram** — the most non-obvious architectural fact: `proxyServer.ts` is spawned by Claude Code CLI (not Electron), and the settings file is the only coordination mechanism between them
+- **Enable/disable flow** with the 6 module-level state vars in `codemodeManager.ts`
+- **Critical gotchas**: stdout corruption risk, VM sandbox whitelist, SSE transport gap, and crash recovery gap where `disabledByUs` is lost if Electron crashes while Code Mode is active
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

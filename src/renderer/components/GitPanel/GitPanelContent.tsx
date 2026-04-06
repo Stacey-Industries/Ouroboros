@@ -3,7 +3,7 @@ import React from 'react';
 import { BranchSelector } from './BranchSelector';
 import { GitFileRow } from './GitFileRow';
 import { CommitSection, ReviewChangesBar } from './GitPanelContentParts';
-import type { GitPanelModel } from './useGitPanelModel';
+import type { GitPanelModel } from './useGitPanelModel.shared';
 
 export interface GitPanelContentProps extends GitPanelModel {
   projectRoot: string | null;

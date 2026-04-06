@@ -18,10 +18,16 @@ export function hasSession(sessions: AgentSession[], sessionId: string): boolean
   return sessions.some((session) => session.id === sessionId);
 }
 
-export function updateSession(state: AgentState, sessionId: string, update: SessionUpdater): AgentState {
+export function updateSession(
+  state: AgentState,
+  sessionId: string,
+  update: SessionUpdater,
+): AgentState {
   return {
     ...state,
-    sessions: state.sessions.map((session) => session.id === sessionId ? update(session) : session),
+    sessions: state.sessions.map((session) =>
+      session.id === sessionId ? update(session) : session,
+    ),
   };
 }
 
@@ -34,6 +40,7 @@ export function createPlaceholderSession(sessionId: string, timestamp: number): 
     toolCalls: [],
     inputTokens: 0,
     outputTokens: 0,
+    external: true,
   };
 }
 
@@ -57,7 +64,7 @@ export function loadPersistedSessions(state: AgentState, sessions: AgentSession[
 export function resolveStaleToolCalls(toolCalls: ToolCallEvent[], now: number): ToolCallEvent[] {
   let changed = false;
   const resolved = toolCalls.map((tc) => {
-    if (tc.status === 'pending' && (now - tc.timestamp) > STALE_TOOL_CALL_MS) {
+    if (tc.status === 'pending' && now - tc.timestamp > STALE_TOOL_CALL_MS) {
       changed = true;
       return { ...tc, status: 'success' as const, duration: now - tc.timestamp };
     }
@@ -67,13 +74,19 @@ export function resolveStaleToolCalls(toolCalls: ToolCallEvent[], now: number): 
 }
 
 /** Resolve pending tool calls when a session ends. */
-export function resolvePendingToolCalls(toolCalls: ToolCallEvent[], sessionError?: string): ToolCallEvent[] {
+export function resolvePendingToolCalls(
+  toolCalls: ToolCallEvent[],
+  sessionError?: string,
+): ToolCallEvent[] {
   const resolvedStatus: 'success' | 'error' = sessionError ? 'error' : 'success';
   return toolCalls.map((tc) => (tc.status === 'pending' ? { ...tc, status: resolvedStatus } : tc));
 }
 
 export function getUsageDeltas(usage: TokenUsage): {
-  input: number; output: number; cacheRead: number; cacheWrite: number;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
 } {
   return {
     input: usage.input_tokens ?? 0,
@@ -83,7 +96,10 @@ export function getUsageDeltas(usage: TokenUsage): {
   };
 }
 
-export function mergeOptionalTokenCount(currentValue: number | undefined, delta: number): number | undefined {
+export function mergeOptionalTokenCount(
+  currentValue: number | undefined,
+  delta: number,
+): number | undefined {
   const nextValue = (currentValue ?? 0) + delta;
   return nextValue > 0 ? nextValue : undefined;
 }

@@ -1,3 +1,19 @@
+<!-- claude-md-auto:start -->
+The CLAUDE.md for this directory already exists and is comprehensive. Here's what it contains — no changes needed:
+
+**`src/renderer/components/MultiSession/CLAUDE.md`** already documents:
+
+- The two-phase Launcher → Monitor pattern
+- Three-layer component hierarchy (`Controls` → `Parts` → top-level)
+- The `agent-ide:spawn-claude-template` CustomEvent dispatch flow and why sessions are matched by label (not ID)
+- `MAX_SLOTS = 4`, default 2 slots, `'__custom__'` sentinel
+- Critical gotchas: duplicate label deduplication, `haveSameIds` re-render guard, DOM event silently no-ops if listener isn't mounted, template overrides merge order
+- All dependency relationships to `AgentMonitor`, `AgentEventsContext`, `templateResolver`
+
+The file is already well-suited to guide future work in this directory.
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # MultiSession — Parallel Agent Session Launcher & Monitor
 
 Two-phase UI for configuring and observing parallel Claude Code sessions: a **Launcher** (configure + fire) and a **Monitor** (watch the batch in a live grid).

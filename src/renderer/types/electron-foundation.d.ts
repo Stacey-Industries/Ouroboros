@@ -304,6 +304,8 @@ export interface HookPayload {
   requestId?: string;
   cwd?: string;
   internal?: boolean;
+  /** True when the event originates from a Claude Code process spawned inside the IDE. */
+  ideSpawned?: boolean;
   costUsd?: number;
   parentToolCallId?: string;
   taskLabel?: string;

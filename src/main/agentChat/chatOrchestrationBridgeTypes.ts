@@ -39,7 +39,7 @@ export interface ActiveStreamContext {
   costUsd?: number;
   /** Resolved model ID (e.g. 'claude-opus-4-6') for this send. */
   model?: string;
-  /** Buffered chunks for replay on renderer reconnect (e.g. after HMR/refresh). */
+  /** Buffered chunks for replay on reconnect. Capped at 500 most recent. */
   bufferedChunks: AgentChatStreamChunk[];
   /** Accumulated tool activity for smart title generation */
   toolsUsed: Array<{ name: string; filePath?: string }>;

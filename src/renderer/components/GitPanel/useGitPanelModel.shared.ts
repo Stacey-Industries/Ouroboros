@@ -3,6 +3,32 @@ import type React from 'react';
 export type GitStatusMap = Record<string, string>;
 export type GitFileEntry = [string, string];
 
+export interface GitPanelModel {
+  branches: string[];
+  canCommit: boolean;
+  commitMessage: string;
+  currentBranch: string | null;
+  error: string | null;
+  isCommitting: boolean;
+  isGenerating: boolean;
+  isRepo: boolean | null;
+  stagedCount: number;
+  stagedFiles: GitFileEntry[];
+  unstagedCount: number;
+  unstagedFiles: GitFileEntry[];
+  clearError: () => void;
+  handleCheckout: (branch: string) => Promise<void>;
+  handleCommit: () => Promise<void>;
+  handleCommitMessageChange: (value: string) => void;
+  handleDiscardFile: (filePath: string) => Promise<void>;
+  handleGenerateCommitMessage: () => Promise<void>;
+  handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleStageAll: () => Promise<void>;
+  handleStageFile: (filePath: string) => Promise<void>;
+  handleUnstageAll: () => Promise<void>;
+  handleUnstageFile: (filePath: string) => Promise<void>;
+}
+
 export interface GitPanelState {
   branches: string[];
   commitMessage: string;

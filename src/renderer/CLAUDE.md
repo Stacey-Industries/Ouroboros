@@ -1,17 +1,14 @@
 <!-- claude-md-auto:start -->
+The `src/renderer/CLAUDE.md` already exists and is comprehensive — it covers the three-layer bootstrap pattern, provider ordering, builder functions, and all the non-obvious gotchas from both `index.tsx` and `App.tsx`.
+
 `★ Insight ─────────────────────────────────────`
-The existing `src/renderer/CLAUDE.md` is already well-written and comprehensive — it covers the three-layer bootstrap pattern, builder functions, and all the non-obvious gotchas from `index.tsx` (splash dismissal, file-drop prevention, `_reactRoot` HMR guard). There's nothing missing that would improve it. Writing a new one would just overwrite it with something equivalent or worse.
+The existing file captures several subtle patterns worth noting:
+- The `_reactRoot` guard on `rootElement` is an HMR safety mechanism — it prevents a second `createRoot()` call during Vite hot-reload, which would throw a React warning and potentially lose state
+- `useThemeRuntimeBootstrap` must live in `App` (the config-gate layer) rather than inside `ConfiguredApp` — it needs to apply CSS vars *before* the provider tree renders to avoid a flash of the wrong theme
+- The three-layer split (App → ConfiguredApp → InnerApp) isn't just organization — each layer has a distinct responsibility: gating on data, mounting contexts, and composing hooks
 `─────────────────────────────────────────────────`
 
-The `src/renderer/CLAUDE.md` already exists and is comprehensive. It covers:
-
-- The three-layer bootstrap pattern (`App` → `ConfiguredApp` → `InnerApp`)
-- Provider stack ordering and why it matters
-- `buildInnerAppLayoutProps` / `buildTerminalControl` builder pattern
-- All gotchas: `useCustomCSS`, splash screen lifecycle, file-drop global handler, `useThemeRuntimeBootstrap` ordering, `_reactRoot` HMR guard
-- Relationship map to preload, hooks, contexts, and layout
-
-No changes needed — the file already serves its purpose well.
+No changes needed — the existing `src/renderer/CLAUDE.md` already serves its purpose well. The content it has is accurate and matches the current code.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

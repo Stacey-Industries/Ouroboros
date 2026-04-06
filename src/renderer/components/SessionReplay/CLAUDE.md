@@ -1,3 +1,21 @@
+<!-- claude-md-auto:start -->
+A CLAUDE.md already exists at `src/renderer/components/SessionReplay/CLAUDE.md` — and it's comprehensive and accurate. No new file needs to be written.
+
+`★ Insight ─────────────────────────────────────`
+The existing CLAUDE.md captures three genuinely non-obvious things: (1) the `TOOL_COLOR` map is intentionally duplicated across three files — not an oversight, (2) step index 0 is always `session_start` which creates an off-by-one when mapping `currentStep` to `session.toolCalls[]`, and (3) `var(--purple)` needs its fallback because it's missing in some themes. These are exactly the kinds of gotchas that cause bugs when someone edits the module cold.
+`─────────────────────────────────────────────────`
+
+The file at `src/renderer/components/SessionReplay/CLAUDE.md` already exists and covers everything needed:
+- Architecture diagram with the controller/view split
+- All three `TOOL_COLOR` duplication callouts
+- Playback timer race condition warning
+- Step index 0 offset gotcha
+- Full key files table and dependency list
+
+No changes needed.
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # SessionReplay — DVR playback for completed agent sessions
 
 Step-through viewer that converts an `AgentSession`'s tool call history into a scrubable timeline with playback controls.

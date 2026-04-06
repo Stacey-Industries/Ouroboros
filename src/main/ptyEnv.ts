@@ -56,6 +56,7 @@ export function buildBaseEnv(extraEnv?: Record<string, string>): Record<string, 
     ...process.env,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
+    OUROBOROS_IDE_SESSION: '1',
     ...githubOverlay,
     ...extraEnv,
   } as Record<string, string>;

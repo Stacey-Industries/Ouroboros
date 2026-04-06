@@ -4,7 +4,7 @@
  * Extracted from RootSection to reduce complexity.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FileHeatData } from '../../hooks/useFileHeatMap';
 import type { GitFileStatus } from '../../types/electron';
@@ -213,6 +213,7 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
   const nodeGitStatus = getNodeGitStatus(node, p.gitStatus);
   const diagnosticSeverity = useDiagnosticSeverity(node);
   const isDirty = useFileTreeStore((s) => s.dirtyFiles.has(node.path));
+  const bookmarkSet = useMemo(() => new Set(p.bookmarks), [p.bookmarks]);
 
   return (
     <FileTreeItem
@@ -223,7 +224,7 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       isSelected={p.selectedPaths.has(node.path)}
       searchMode={false}
       gitStatus={nodeGitStatus}
-      isBookmarked={p.bookmarks.includes(node.path)}
+      isBookmarked={bookmarkSet.has(node.path)}
       heatData={p.getHeatLevel ? p.getHeatLevel(node.path) : undefined}
       isEditing={isEditing}
       editValue={isEditing ? p.editState?.initialValue : undefined}
@@ -234,10 +235,7 @@ function VirtualRow({ item, index, ...p }: VirtualRowProps): React.ReactElement 
       onClick={p.handleItemClick}
       onDoubleClick={p.handleDoubleClick}
       onContextMenu={p.handleContextMenu}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = e.dataTransfer.types.includes('Files') ? 'copy' : 'move';
-      }}
+      onDragOver={handleDragOver}
       onDrop={isPlaceholder ? undefined : p.handleDrop}
     />
   );

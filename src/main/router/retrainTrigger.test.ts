@@ -26,27 +26,27 @@ afterEach(() => {
 // ─── countSignalLines ────────────────────────────────────────────────────────
 
 describe('countSignalLines', () => {
-  it('returns 0 when file does not exist', () => {
-    expect(countSignalLines(tmpDir)).toBe(0);
+  it('returns 0 when file does not exist', async () => {
+    expect(await countSignalLines(tmpDir)).toBe(0);
   });
 
-  it('counts non-empty lines in the signals file', () => {
+  it('counts non-empty lines in the signals file', async () => {
     const filePath = path.join(tmpDir, 'router-quality-signals.jsonl');
     fs.writeFileSync(filePath, '{"a":1}\n{"b":2}\n{"c":3}\n', 'utf8');
-    expect(countSignalLines(tmpDir)).toBe(3);
+    expect(await countSignalLines(tmpDir)).toBe(3);
   });
 
-  it('ignores blank lines', () => {
+  it('ignores blank lines', async () => {
     const filePath = path.join(tmpDir, 'router-quality-signals.jsonl');
     fs.writeFileSync(filePath, '{"a":1}\n\n{"b":2}\n\n', 'utf8');
-    expect(countSignalLines(tmpDir)).toBe(2);
+    expect(await countSignalLines(tmpDir)).toBe(2);
   });
 });
 
 // ─── validateWeightFile ──────────────────────────────────────────────────────
 
 describe('validateWeightFile', () => {
-  it('returns true for valid logistic regression weights', () => {
+  it('returns true for valid logistic regression weights', async () => {
     const weights = {
       type: 'logistic_regression',
       feature_names: ['a', 'b'],
@@ -62,10 +62,10 @@ describe('validateWeightFile', () => {
     };
     const filePath = path.join(tmpDir, 'weights.json');
     fs.writeFileSync(filePath, JSON.stringify(weights), 'utf8');
-    expect(validateWeightFile(filePath)).toBe(true);
+    expect(await validateWeightFile(filePath)).toBe(true);
   });
 
-  it('returns true for valid random forest weights', () => {
+  it('returns true for valid random forest weights', async () => {
     const weights = {
       type: 'random_forest',
       feature_names: ['a'],
@@ -75,23 +75,23 @@ describe('validateWeightFile', () => {
     };
     const filePath = path.join(tmpDir, 'weights.json');
     fs.writeFileSync(filePath, JSON.stringify(weights), 'utf8');
-    expect(validateWeightFile(filePath)).toBe(true);
+    expect(await validateWeightFile(filePath)).toBe(true);
   });
 
-  it('returns false for missing file', () => {
-    expect(validateWeightFile(path.join(tmpDir, 'nope.json'))).toBe(false);
+  it('returns false for missing file', async () => {
+    expect(await validateWeightFile(path.join(tmpDir, 'nope.json'))).toBe(false);
   });
 
-  it('returns false for invalid JSON', () => {
+  it('returns false for invalid JSON', async () => {
     const filePath = path.join(tmpDir, 'bad.json');
     fs.writeFileSync(filePath, 'not json', 'utf8');
-    expect(validateWeightFile(filePath)).toBe(false);
+    expect(await validateWeightFile(filePath)).toBe(false);
   });
 
-  it('returns false for missing required fields', () => {
+  it('returns false for missing required fields', async () => {
     const filePath = path.join(tmpDir, 'incomplete.json');
     fs.writeFileSync(filePath, '{"type":"logistic_regression"}', 'utf8');
-    expect(validateWeightFile(filePath)).toBe(false);
+    expect(await validateWeightFile(filePath)).toBe(false);
   });
 });
 
@@ -127,8 +127,8 @@ describe('reloadWeights', () => {
 // ─── findPython ──────────────────────────────────────────────────────────────
 
 describe('findPython', () => {
-  it('returns a string or null (platform-dependent)', () => {
-    const result = findPython();
+  it('returns a string or null (platform-dependent)', async () => {
+    const result = await findPython();
     // On CI/dev machines Python is usually available; on some it isn't
     expect(result === null || typeof result === 'string').toBe(true);
   });

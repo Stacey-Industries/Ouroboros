@@ -4,6 +4,7 @@ import {
   type MutableRefObject,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
 } from 'react';
@@ -68,6 +69,20 @@ function persistSessionNotes(
   }
 }
 
+function useDerivedSessions(sessions: AgentSession[]): {
+  activeCount: number;
+  currentSessions: AgentSession[];
+  historicalSessions: AgentSession[];
+} {
+  const activeCount = useMemo(
+    () => sessions.filter((s) => s.status === 'running').length,
+    [sessions],
+  );
+  const currentSessions = useMemo(() => sessions.filter((s) => !s.restored), [sessions]);
+  const historicalSessions = useMemo(() => sessions.filter((s) => s.restored === true), [sessions]);
+  return { activeCount, currentSessions, historicalSessions };
+}
+
 export function useAgentEvents(): UseAgentEventsReturn {
   const [state, dispatch] = useReducer(reducer, initialAgentState);
   const liveSessionIdsRef = useRef<Set<string>>(new Set());
@@ -95,9 +110,7 @@ export function useAgentEvents(): UseAgentEventsReturn {
     [state.sessions],
   );
 
-  const activeCount = state.sessions.filter((s) => s.status === 'running').length;
-  const currentSessions = state.sessions.filter((s) => !s.restored);
-  const historicalSessions = state.sessions.filter((s) => s.restored === true);
+  const { activeCount, currentSessions, historicalSessions } = useDerivedSessions(state.sessions);
 
   return {
     agents: state.sessions,
@@ -128,20 +141,33 @@ function usePersistedSessionsLoader(
   }, [dispatch, savedSessionIdsRef]);
 }
 
+function saveEligibleSessions(
+  sessionsToSave: AgentSession[],
+  savedSessionIdsRef: MutableRefObject<Set<string>>,
+): void {
+  const saveSession = window.electronAPI?.sessions?.save;
+  if (!saveSession) return;
+  for (const session of sessionsToSave) {
+    savedSessionIdsRef.current.add(session.id);
+    saveSession(session).catch(() => {});
+  }
+}
+
 function useCompletedSessionsSaver(
   sessions: AgentSession[],
   liveSessionIdsRef: MutableRefObject<Set<string>>,
   savedSessionIdsRef: MutableRefObject<Set<string>>,
 ): void {
+  const sessionsToSave = useMemo(
+    () => sessions.filter((s) => shouldPersistSession(s, liveSessionIdsRef, savedSessionIdsRef)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessions],
+  );
+
   useEffect(() => {
-    const saveSession = window.electronAPI?.sessions?.save;
-    if (!saveSession) return;
-    for (const session of sessions) {
-      if (!shouldPersistSession(session, liveSessionIdsRef, savedSessionIdsRef)) continue;
-      savedSessionIdsRef.current.add(session.id);
-      saveSession(session).catch(() => {});
-    }
-  }, [liveSessionIdsRef, savedSessionIdsRef, sessions]);
+    if (sessionsToSave.length === 0) return;
+    saveEligibleSessions(sessionsToSave, savedSessionIdsRef);
+  }, [savedSessionIdsRef, sessionsToSave]);
 }
 
 function useAgentEventSubscription(
@@ -225,6 +251,7 @@ function dispatchAgentStart(
     parentSessionId: payload.parentSessionId,
     model: payload.model,
     internal: payload.internal,
+    external: payload.ideSpawned ? undefined : true,
   });
   dispatchSkillStart(payload, dispatch);
 }

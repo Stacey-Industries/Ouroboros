@@ -1,3 +1,8 @@
+<!-- claude-md-auto:start -->
+The CLAUDE.md already exists and is comprehensive. No changes needed — it accurately covers the `Theme` interface, the registry pattern, the color token contract, how themes apply via CSS vars, the extension registration API, and all key gotchas (`customTheme` mutability, `themeList` exclusion, ID/key matching, `effects` usage).
+<!-- claude-md-auto:end -->
+
+<!-- claude-md-manual:preserved -->
 # Themes — Runtime theme definitions and registry
 
 ## Key Files

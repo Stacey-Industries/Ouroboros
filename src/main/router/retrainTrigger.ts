@@ -73,7 +73,7 @@ async function checkAndRetrain(minSamples: number): Promise<void> {
   if (!routerConfig?.enabled) return;
 
   const dataDir = app.getPath('userData');
-  const currentCount = countSignalLines(dataDir);
+  const currentCount = await countSignalLines(dataDir);
   const lastCount = getLastRetrainCount();
 
   if (currentCount - lastCount < minSamples) return;
@@ -97,7 +97,7 @@ async function runRetrainPipeline(dataDir: string, signalCount: number): Promise
   }
 
   // Step 2: Find Python
-  const pythonBin = findPython();
+  const pythonBin = await findPython();
   if (!pythonBin) {
     log.warn('[retrain] Python not found — skipping');
     return;
@@ -125,7 +125,7 @@ async function runRetrainPipeline(dataDir: string, signalCount: number): Promise
   }
 
   // Step 5: Validate + reload
-  if (!validateWeightFile(outputPath)) {
+  if (!(await validateWeightFile(outputPath))) {
     log.warn('[retrain] output weights invalid — keeping old weights');
     return;
   }

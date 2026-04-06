@@ -169,7 +169,28 @@ export async function writeTextFile(filePath: string, content: string): Promise<
   return { success: true };
 }
 
-export function broadcastFileChange(type: string, filePath: string): void {
+// Module-level debounce state for expensive downstream work
+let pendingChanges: Array<{ type: string; filePath: string }> = [];
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const DEBOUNCE_MS = 200;
+
+function flushPendingChanges(): void {
+  const changes = pendingChanges;
+  pendingChanges = [];
+  debounceTimer = null;
+
+  const ctrl = getContextLayerController();
+  if (ctrl) {
+    for (const c of changes) ctrl.onFileChange(c.type, c.filePath);
+  }
+
+  invalidateAgentChatCache();
+
+  const graphCtrl = getGraphController();
+  if (graphCtrl) graphCtrl.onFileChange(changes.map((c) => c.filePath));
+}
+
+function broadcastToWindows(type: string, filePath: string): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       try {
@@ -181,11 +202,26 @@ export function broadcastFileChange(type: string, filePath: string): void {
       }
     }
   }
+}
+
+export function broadcastFileChange(type: string, filePath: string): void {
+  // IMMEDIATE: renderer file tree must update without delay
+  broadcastToWindows(type, filePath);
   broadcastToWebClients('files:change', { type, path: filePath });
-  getContextLayerController()?.onFileChange(type, filePath);
-  invalidateAgentChatCache();
-  const graphCtrl = getGraphController();
-  if (graphCtrl) graphCtrl.onFileChange([filePath]);
+
+  // DEBOUNCED: coalesce expensive downstream work over a 200ms quiet window
+  pendingChanges.push({ type, filePath });
+  if (!debounceTimer) {
+    debounceTimer = setTimeout(flushPendingChanges, DEBOUNCE_MS);
+  }
+}
+
+export function flushFileChangesOnShutdown(): void {
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+    flushPendingChanges();
+  }
 }
 
 export async function readFileWithLimit<T extends object>(

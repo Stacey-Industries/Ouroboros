@@ -1,17 +1,18 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import { useProject } from '../../contexts/ProjectContext';
 import { useToastContext } from '../../contexts/ToastContext';
 import { useCostTracking } from '../../hooks/useCostTracking';
 import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
+import type { AgentTemplate } from '../../types/electron';
 import { AgentMonitorManagerContent } from './AgentMonitorManagerContent';
 import { MonitorToolbar, QuickActionBar } from './AgentMonitorManagerPanels';
 import { enrichSessions, filterSessions } from './agentMonitorManagerUtils';
 import { AgentSummaryBar } from './AgentSummaryBar';
 import { hasTreeStructure } from './AgentTree';
 import type { AgentSession } from './types';
-import { useAgentMonitorModes } from './useAgentMonitorModes';
+import { type AgentMonitorModes, useAgentMonitorModes } from './useAgentMonitorModes';
 import { useAgentMonitorTemplates } from './useAgentMonitorTemplates';
 import { useCompletionNotifications } from './useCompletionNotifications';
 
@@ -23,33 +24,209 @@ import { useCompletionNotifications } from './useCompletionNotifications';
  * flowing through the hooks pipeline.
  */
 
-export const AgentMonitorManager = memo(function AgentMonitorManager(): React.ReactElement<unknown> {
-  const { agents, clearCompleted, currentSessions, dismiss, historicalSessions, updateNotes } = useAgentEventsContext();
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setDebounced(value), delayMs);
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+    };
+  }, [value, delayMs]);
+  return debounced;
+}
+
+type EnrichFn = (sessionId: string) => string | undefined;
+
+function useVisibleSessions(
+  currentSessions: AgentSession[],
+  historicalSessions: AgentSession[],
+  filterQuery: string,
+  enrichFn: EnrichFn,
+) {
+  return useMemo(
+    () => ({
+      visibleCurrentSessions: enrichSessions(
+        filterSessions(currentSessions, filterQuery),
+        enrichFn,
+      ),
+      visibleHistoricalSessions: enrichSessions(
+        filterSessions(historicalSessions, filterQuery),
+        enrichFn,
+      ),
+    }),
+    [currentSessions, filterQuery, enrichFn, historicalSessions],
+  );
+}
+
+function useSessionHandlers(
+  enrichedAgents: AgentSession[],
+  projectRoot: string | null | undefined,
+  toast: ReturnType<typeof useToastContext>['toast'],
+) {
+  const handleReplay = useCallback(
+    (sessionId: string) => openReplay(enrichedAgents.find((s) => s.id === sessionId)),
+    [enrichedAgents],
+  );
+  const handleReviewChanges = useCallback(
+    (sessionId: string) =>
+      reviewChanges(
+        enrichedAgents.find((s) => s.id === sessionId),
+        projectRoot,
+        sessionId,
+        toast,
+      ),
+    [enrichedAgents, projectRoot, toast],
+  );
+  return { handleReplay, handleReviewChanges };
+}
+
+interface DerivedOpts {
+  agents: AgentSession[];
+  currentSessions: AgentSession[];
+  historicalSessions: AgentSession[];
+  filterQuery: string;
+  enrichFn: EnrichFn;
+  projectRoot: string | null | undefined;
+  toast: ReturnType<typeof useToastContext>['toast'];
+}
+
+function useAgentMonitorDerived(opts: DerivedOpts) {
+  const { agents, currentSessions, historicalSessions, filterQuery, enrichFn, projectRoot, toast } =
+    opts;
+  const { visibleCurrentSessions, visibleHistoricalSessions } = useVisibleSessions(
+    currentSessions,
+    historicalSessions,
+    filterQuery,
+    enrichFn,
+  );
+  const enrichedAgents = useMemo(() => enrichSessions(agents, enrichFn), [agents, enrichFn]);
+  const useTree =
+    visibleCurrentSessions.length > 0 && !filterQuery && hasTreeStructure(visibleCurrentSessions);
+  const { handleReplay, handleReviewChanges } = useSessionHandlers(
+    enrichedAgents,
+    projectRoot,
+    toast,
+  );
+  return {
+    handleReplay,
+    handleReviewChanges,
+    useTree,
+    visibleCurrentSessions,
+    visibleHistoricalSessions,
+  };
+}
+
+function useAgentMonitorState() {
+  const { agents, clearCompleted, currentSessions, dismiss, historicalSessions, updateNotes } =
+    useAgentEventsContext();
   const { toast } = useToastContext();
   const { projectRoot } = useProject();
   const { getSnapshotHash } = useDiffSnapshots();
-  const getSnapshotHashForEnrich = useCallback((sessionId: string) => getSnapshotHash(sessionId) ?? undefined, [getSnapshotHash]);
+  const getSnapshotHashForEnrich = useCallback(
+    (sessionId: string) => getSnapshotHash(sessionId) ?? undefined,
+    [getSnapshotHash],
+  );
   const modes = useAgentMonitorModes();
   const { executeTemplate, templates } = useAgentMonitorTemplates(projectRoot);
-  const visibleCurrentSessions = useMemo(() => enrichSessions(filterSessions(currentSessions, modes.filterQuery), getSnapshotHashForEnrich), [currentSessions, getSnapshotHashForEnrich, modes.filterQuery]);
-  const visibleHistoricalSessions = useMemo(() => enrichSessions(filterSessions(historicalSessions, modes.filterQuery), getSnapshotHashForEnrich), [getSnapshotHashForEnrich, historicalSessions, modes.filterQuery]);
-  const enrichedAgents = useMemo(() => enrichSessions(agents, getSnapshotHashForEnrich), [agents, getSnapshotHashForEnrich]);
-  const useTree = visibleCurrentSessions.length > 0 && !modes.filterQuery && hasTreeStructure(visibleCurrentSessions);
-  const handleReplay = useCallback((sessionId: string) => openReplay(enrichedAgents.find((session) => session.id === sessionId)), [enrichedAgents]);
-  const handleReviewChanges = useCallback((sessionId: string) => reviewChanges(enrichedAgents.find((session) => session.id === sessionId), projectRoot, sessionId, toast), [enrichedAgents, projectRoot, toast]);
-
+  const debouncedFilterQuery = useDebouncedValue(modes.filterQuery, 150);
+  const derived = useAgentMonitorDerived({
+    agents,
+    currentSessions,
+    historicalSessions,
+    filterQuery: debouncedFilterQuery,
+    enrichFn: getSnapshotHashForEnrich,
+    projectRoot,
+    toast,
+  });
   useCostTracking(agents);
   useCompletionNotifications(agents, toast);
+  return {
+    agents,
+    clearCompleted,
+    dismiss,
+    executeTemplate,
+    modes,
+    templates,
+    updateNotes,
+    ...derived,
+  };
+}
 
+interface MonitorBodyProps {
+  agents: AgentSession[];
+  clearCompleted: () => void;
+  dismiss: (id: string) => void;
+  executeTemplate: (template: AgentTemplate) => void;
+  handleReplay: (sessionId: string) => void;
+  handleReviewChanges: (sessionId: string) => void;
+  modes: AgentMonitorModes;
+  templates: AgentTemplate[];
+  updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
+  useTree: boolean;
+  visibleCurrentSessions: AgentSession[];
+  visibleHistoricalSessions: AgentSession[];
+}
+
+const MonitorContent = memo(function MonitorContent(
+  p: MonitorBodyProps,
+): React.ReactElement<unknown> {
+  return (
+    <AgentMonitorManagerContent
+      agents={p.agents}
+      compareMode={p.modes.compareMode}
+      compareSessionIds={p.modes.compareSessionIds}
+      costMode={p.modes.costMode}
+      dismiss={p.dismiss}
+      filterQuery={p.modes.filterQuery}
+      handleMultiSessionClose={p.modes.handleMultiSessionClose}
+      handleMultiSessionLaunched={p.modes.handleMultiSessionLaunched}
+      handleReplay={p.handleReplay}
+      handleReviewChanges={p.handleReviewChanges}
+      handleSelectCompareA={p.modes.handleSelectCompareA}
+      handleSelectCompareB={p.modes.handleSelectCompareB}
+      multiBatchLabels={p.modes.multiBatchLabels}
+      multiSessionMode={p.modes.multiSessionMode}
+      updateNotes={p.updateNotes}
+      useTree={p.useTree}
+      visibleCurrentSessions={p.visibleCurrentSessions}
+      visibleHistoricalSessions={p.visibleHistoricalSessions}
+    />
+  );
+});
+
+const MonitorBody = memo(function MonitorBody(p: MonitorBodyProps): React.ReactElement<unknown> {
   return (
     <div className="flex flex-col h-full min-h-0">
-      <QuickActionBar templates={templates} onExecuteTemplate={executeTemplate} />
-      {agents.length > 0 ? <div className="flex-shrink-0"><AgentSummaryBar sessions={agents} onClearCompleted={clearCompleted} /></div> : null}
-      <MonitorToolbar hasAnySessions={agents.length > 0} filterQuery={modes.filterQuery} onFilterChange={modes.setFilterQuery} compareMode={modes.compareMode} costMode={modes.costMode} multiSessionMode={modes.multiSessionMode} onToggleCompare={modes.handleToggleCompare} onToggleCost={modes.handleToggleCost} onToggleMultiSession={modes.handleToggleMultiSession} />
-      <AgentMonitorManagerContent agents={agents} compareMode={modes.compareMode} compareSessionIds={modes.compareSessionIds} costMode={modes.costMode} dismiss={dismiss} filterQuery={modes.filterQuery} handleMultiSessionClose={modes.handleMultiSessionClose} handleMultiSessionLaunched={modes.handleMultiSessionLaunched} handleReplay={handleReplay} handleReviewChanges={handleReviewChanges} handleSelectCompareA={modes.handleSelectCompareA} handleSelectCompareB={modes.handleSelectCompareB} multiBatchLabels={modes.multiBatchLabels} multiSessionMode={modes.multiSessionMode} updateNotes={updateNotes} useTree={useTree} visibleCurrentSessions={visibleCurrentSessions} visibleHistoricalSessions={visibleHistoricalSessions} />
+      <QuickActionBar templates={p.templates} onExecuteTemplate={p.executeTemplate} />
+      {p.agents.length > 0 ? (
+        <div className="flex-shrink-0">
+          <AgentSummaryBar sessions={p.agents} onClearCompleted={p.clearCompleted} />
+        </div>
+      ) : null}
+      <MonitorToolbar
+        hasAnySessions={p.agents.length > 0}
+        filterQuery={p.modes.filterQuery}
+        onFilterChange={p.modes.setFilterQuery}
+        compareMode={p.modes.compareMode}
+        costMode={p.modes.costMode}
+        multiSessionMode={p.modes.multiSessionMode}
+        onToggleCompare={p.modes.handleToggleCompare}
+        onToggleCost={p.modes.handleToggleCost}
+        onToggleMultiSession={p.modes.handleToggleMultiSession}
+      />
+      <MonitorContent {...p} />
     </div>
   );
 });
+
+export const AgentMonitorManager = memo(
+  function AgentMonitorManager(): React.ReactElement<unknown> {
+    const state = useAgentMonitorState();
+    return <MonitorBody {...state} />;
+  },
+);
 
 function openReplay(session: AgentSession | undefined): void {
   if (!session) return;
@@ -67,7 +244,9 @@ function reviewChanges(
     return;
   }
 
-  window.dispatchEvent(new CustomEvent('agent-ide:open-diff-review', {
-    detail: { sessionId, snapshotHash: session.snapshotHash, projectRoot },
-  }));
+  window.dispatchEvent(
+    new CustomEvent('agent-ide:open-diff-review', {
+      detail: { sessionId, snapshotHash: session.snapshotHash, projectRoot },
+    }),
+  );
 }

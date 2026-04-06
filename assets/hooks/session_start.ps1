@@ -52,6 +52,7 @@ $payload = [ordered]@{
 }
 
 if ($env:OUROBOROS_INTERNAL -eq '1') { $payload['internal'] = $true }
+if ($env:OUROBOROS_IDE_SESSION -eq '1') { $payload['ideSpawned'] = $true }
 
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)

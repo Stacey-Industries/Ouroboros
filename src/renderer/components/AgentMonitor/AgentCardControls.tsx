@@ -60,7 +60,12 @@ export function useElapsedMs(startedAt: number, running: boolean): number {
     let active = true;
     const tick = (): void => {
       if (!active) return;
-      setElapsed(Date.now() - startedAt);
+      const now = Date.now() - startedAt;
+      setElapsed((prev) => {
+        const bucket = Math.floor(now / 100);
+        const prevBucket = Math.floor(prev / 100);
+        return bucket !== prevBucket ? now : prev;
+      });
       rafRef.current = requestAnimationFrame(tick);
     };
 

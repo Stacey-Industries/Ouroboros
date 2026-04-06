@@ -47,6 +47,7 @@ function shouldNotifySession(
 ): boolean {
   if (session.restored || notifiedSessions.has(session.id)) return false;
   if (session.internal) return false;
+  if (session.external) return false;
   if (session.status !== 'complete' && session.status !== 'error') return false;
   return level !== 'errors-only' || session.status === 'error';
 }

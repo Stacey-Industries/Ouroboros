@@ -51,10 +51,10 @@ else
     j_session="\"${session_id}\""
 fi
 
-payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms}}"
-if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
-    payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms},\"internal\":true}"
-fi
+payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms}"
+if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then payload="${payload},\"internal\":true"; fi
+if [ "${OUROBOROS_IDE_SESSION:-}" = "1" ]; then payload="${payload},\"ideSpawned\":true"; fi
+payload="${payload}}"
 ndjson_line="${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────

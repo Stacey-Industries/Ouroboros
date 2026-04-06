@@ -53,6 +53,8 @@ export interface HookPayload {
   cwd?: string;
   /** True when the session was spawned internally by the IDE (e.g. Haiku summarizer, CLAUDE.md generator) */
   internal?: boolean;
+  /** True when the event originates from a Claude Code process spawned inside the IDE (terminal or agent PTY). */
+  ideSpawned?: boolean;
   /** Catch-all for event-specific data forwarded from Claude Code stdin JSON. */
   data?: Record<string, unknown>;
 }
@@ -75,6 +77,25 @@ export interface ToolCallEvent extends AgentEvent {
 }
 
 const MAX_PENDING_QUEUE = 500;
+const MAX_PAYLOAD_FIELD_BYTES = 10_240; // 10 KB
+
+function truncateField(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  const str = typeof value === 'string' ? value : JSON.stringify(value);
+  if (str.length <= MAX_PAYLOAD_FIELD_BYTES) return value;
+  return `${str.slice(0, MAX_PAYLOAD_FIELD_BYTES)}…[truncated]`;
+}
+
+function truncatePayloadForDispatch(payload: HookPayload): HookPayload {
+  const needsInput = payload.input !== undefined;
+  const needsOutput = payload.output !== undefined;
+  if (!needsInput && !needsOutput) return payload;
+  return {
+    ...payload,
+    ...(needsInput && { input: truncateField(payload.input) }),
+    ...(needsOutput && { output: truncateField(payload.output) }),
+  };
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -180,17 +201,19 @@ function getDispatchWindows(): BrowserWindow[] {
 }
 
 function sendPayload(windows: BrowserWindow[], payload: HookPayload): void {
+  // Truncate large fields before crossing IPC — original payload stays intact for other consumers.
+  const ipcPayload = truncatePayloadForDispatch(payload);
   for (const window of windows) {
     try {
       // Use mainFrame.send directly — webContents.send wraps this in its own
       // try-catch that console.errors before re-throwing, producing noisy logs
       // when the render frame is disposed during navigation/reload.
-      window.webContents.mainFrame.send('hooks:event', payload);
+      window.webContents.mainFrame.send('hooks:event', ipcPayload);
     } catch {
       // Render frame disposed — silently skip this window
     }
   }
-  broadcastToWebClients('hooks:event', payload);
+  broadcastToWebClients('hooks:event', ipcPayload);
 }
 
 function flushPendingQueue(windows: BrowserWindow[]): void {
@@ -293,8 +316,21 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   clearApprovalRulesForEndedSession(payload);
 }
 
+function evictOrphanedSessions(): void {
+  const now = Date.now();
+  const MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
+  for (const [id, timestamp] of activeSessions) {
+    if (now - timestamp > MAX_AGE_MS) {
+      log.info(`evicting orphaned session: ${id} (age=${Math.round((now - timestamp) / 60_000)}m)`);
+      activeSessions.delete(id);
+      sessionCwdMap.delete(id);
+    }
+  }
+}
+
 export async function startHooksServer(window: BrowserWindow): Promise<{ port: number | string }> {
   mainWindow = window;
+  setInterval(evictOrphanedSessions, 5 * 60 * 1000);
   return startHooksNetServer(window, pendingQueue, dispatchToRenderer);
 }
 
@@ -303,7 +339,8 @@ export function stopHooksServer(): Promise<void> {
 }
 
 /** Dispatch a synthetic hook event (from chat orchestration). Skips approval — chat sessions manage permissions. */
-export function dispatchSyntheticHookEvent(payload: HookPayload): void {
+export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
+  const payload: HookPayload = { ...rawPayload, ideSpawned: true };
   trackSessionLifecycle(payload);
 
   if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);

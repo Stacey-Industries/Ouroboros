@@ -49,7 +49,7 @@ function createTerminal(fontSize?: number, cursorStyle?: 'block' | 'underline' |
     cursorBlink: true,
     cursorStyle: cursorStyle ?? 'block',
     cursorInactiveStyle: 'none',
-    scrollback: 50000,
+    scrollback: 10000,
     allowProposedApi: true,
     allowTransparency: true,
     theme: buildXtermTheme(),

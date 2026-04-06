@@ -58,7 +58,8 @@ interface HeatMapDecayOptions {
 
 function normalizePath(filePath: string): string {
   const normalizedPath = filePath.replace(/\\/g, '/');
-  return navigator.userAgent?.includes('Windows') || (typeof process !== 'undefined' && process.platform === 'win32')
+  return navigator.userAgent?.includes('Windows') ||
+    (typeof process !== 'undefined' && process.platform === 'win32')
     ? normalizedPath.toLowerCase()
     : normalizedPath;
 }
@@ -123,7 +124,10 @@ function recordEditToolCall(
   existing.lastEditTime = Math.max(existing.lastEditTime, toolCall.timestamp);
 }
 
-function collectRawHeatData(currentSessions: SessionList): { rawMap: Map<string, RawHeatEntry>; processedIds: Set<string> } {
+function collectRawHeatData(currentSessions: SessionList): {
+  rawMap: Map<string, RawHeatEntry>;
+  processedIds: Set<string>;
+} {
   const rawMap = new Map<string, RawHeatEntry>();
   const processedIds = new Set<string>();
 
@@ -205,7 +209,11 @@ function applyHeatDecay(previous: HeatMapState, now: number): HeatMapState {
   return changed ? next : previous;
 }
 
-function createDecayInterval({ enabled, heatMapSize, setHeatMap }: HeatMapDecayOptions): (() => void) | undefined {
+function createDecayInterval({
+  enabled,
+  heatMapSize,
+  setHeatMap,
+}: HeatMapDecayOptions): (() => void) | undefined {
   if (!enabled || heatMapSize === 0) {
     return undefined;
   }
@@ -217,7 +225,10 @@ function createDecayInterval({ enabled, heatMapSize, setHeatMap }: HeatMapDecayO
   return () => clearInterval(interval);
 }
 
-function resetHeatMapState(setHeatMap: SetHeatMap, processedCallIdsRef: MutableRefObject<Set<string>>): void {
+function resetHeatMapState(
+  setHeatMap: SetHeatMap,
+  processedCallIdsRef: MutableRefObject<Set<string>>,
+): void {
   setHeatMap(new Map());
   processedCallIdsRef.current.clear();
 }
@@ -232,15 +243,30 @@ export function useFileHeatMap(enabled: boolean): UseFileHeatMapReturn {
   const { currentSessions } = useAgentEventsContext();
   const [heatMap, setHeatMap] = useState<HeatMapState>(new Map());
   const processedCallIdsRef = useRef<Set<string>>(new Set());
+  const sessionCountRef = useRef<number>(currentSessions.length);
 
   useEffect(() => {
-    syncHeatMapFromSessions({ enabled, currentSessions, heatMapSize: heatMap.size, processedCallIdsRef, setHeatMap });
+    if (currentSessions.length < sessionCountRef.current) {
+      processedCallIdsRef.current = new Set();
+    }
+    sessionCountRef.current = currentSessions.length;
+    syncHeatMapFromSessions({
+      enabled,
+      currentSessions,
+      heatMapSize: heatMap.size,
+      processedCallIdsRef,
+      setHeatMap,
+    });
   }, [enabled, currentSessions, heatMap.size]);
 
-  useEffect(() => createDecayInterval({ enabled, heatMapSize: heatMap.size, setHeatMap }), [enabled, heatMap.size]);
+  useEffect(
+    () => createDecayInterval({ enabled, heatMapSize: heatMap.size, setHeatMap }),
+    [enabled, heatMap.size],
+  );
 
   const getHeatLevel = useCallback(
-    (filePath: string): FileHeatData | undefined => (enabled ? heatMap.get(normalizePath(filePath)) : undefined),
+    (filePath: string): FileHeatData | undefined =>
+      enabled ? heatMap.get(normalizePath(filePath)) : undefined,
     [enabled, heatMap],
   );
   const resetHeatMap = useCallback(() => {

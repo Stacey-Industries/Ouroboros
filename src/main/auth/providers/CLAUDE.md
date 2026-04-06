@@ -1,17 +1,34 @@
 <!-- claude-md-auto:start -->
 `★ Insight ─────────────────────────────────────`
-The most important non-obvious thing captured here is the **duplicate Anthropic provider** — `orchestration/providers/anthropicAuth.ts` is the active one for the orchestration pipeline, while this file is the newer store-backed version awaiting a Phase 5 migration. Without this note, any future agent touching Anthropic auth could edit the wrong file and see no visible effect.
-
-The **soft-pass network failure in OpenAI** (`handleNetworkError` returns `valid: true`) is another subtle behavior: the comment in the code explains the intent (offline tolerance), but the CLAUDE.md surfaces it as a named design decision so it doesn't get "fixed" by someone who assumes it's a bug.
+The CLAUDE.md already exists and is well-written. It accurately reflects the code — the dual-flow GitHub pattern, the soft-pass OpenAI behavior, the duplicate Anthropic provider warning, and the pure-function contract on `githubPkce.ts` all match the actual implementations. The existing file was clearly generated with full file reads, not inferred from docs.
 `─────────────────────────────────────────────────`
 
-The CLAUDE.md is written. Key decisions made:
+The `providers/CLAUDE.md` already exists and is accurate and complete. No changes needed — it correctly documents all four files, the uniform conventions, both GitHub flows with their event sequences, the module-level singleton pattern, the Anthropic dual-credential + expiry-buffer behavior, the OpenAI soft-pass design decision, and the pure-function contract for `githubPkce.ts`.
 
-- **Two-flow GitHub section** clearly separates Device Flow vs PKCE paths and their event sequences — the callback-based progress model is the most surprising pattern here.
-- **Anthropic dual-credential** section explains how one provider key holds two credential shapes and why the expiry buffer exists.
-- **OpenAI soft-pass** is called out explicitly so it isn't mistaken for a bug.
-- **Duplicate Anthropic provider warning** is front-and-center — easy to hit the wrong file.
-- The pure-function note on `githubPkce.ts` signals that token exchange completing happens in `protocolHandler`, preventing confused edits.
+Here's the content as it stands (the file was already written):
+
+```markdown
+# src/main/auth/providers/ — Authentication provider implementations
+
+One file per external service. Each provider handles credential validation, storage, state queries, and logout via the shared credential store.
+
+## Files
+
+| File               | Role                                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `githubAuth.ts`    | GitHub OAuth — Device Flow (web-mode fallback) + Authorization Code + PKCE (Electron)        |
+| `githubPkce.ts`    | Pure PKCE helpers — challenge generation, authorization URL building, token exchange          |
+| `anthropicAuth.ts` | Anthropic — direct API key entry (`sk-ant-*`) **or** OAuth token with refresh                |
+| `openaiAuth.ts`    | OpenAI — API key validation (live network check) + storage                                   |
+
+...
+```
+
+The key non-obvious things it captures:
+- **Duplicate Anthropic provider** — `orchestration/providers/anthropicAuth.ts` is still the active one for the orchestration pipeline; this directory has the newer store-backed version pending Phase 5 migration
+- **OpenAI soft-pass** — network failure on key validation returns `valid: true` (offline tolerance), not a bug
+- **GitHub module-level singletons** — `activeAbort`/`activeTimer` mean only one login flow is ever active; `cleanup()` must run in every terminal path
+- **PKCE token exchange lives in `protocolHandler`**, not `githubAuth.ts` — `githubPkce.ts` just provides the pure helpers
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->

@@ -1,5 +1,10 @@
-import type { AgentSession, SubToolCallEvent, ToolCallEvent } from '../components/AgentMonitor/types';
+import type {
+  AgentSession,
+  SubToolCallEvent,
+  ToolCallEvent,
+} from '../components/AgentMonitor/types';
 import type { RawApiTokenUsage as TokenUsage } from '../types/electron';
+import { endSession } from './useAgentEvents.endSession';
 import {
   type CompactionAction,
   type ConversationTurnAction,
@@ -28,7 +33,6 @@ import {
   hasSession,
   loadPersistedSessions,
   omitPendingLink,
-  resolvePendingToolCalls,
   resolveStaleToolCalls,
   trimToolCalls,
   updateSession,
@@ -66,14 +70,36 @@ export const initialAgentState: AgentState = {
 };
 
 export type AgentAction =
-  | { type: 'AGENT_START'; sessionId: string; taskLabel: string; timestamp: number; parentSessionId?: string; model?: string; internal?: boolean }
+  | {
+      type: 'AGENT_START';
+      sessionId: string;
+      taskLabel: string;
+      timestamp: number;
+      parentSessionId?: string;
+      model?: string;
+      internal?: boolean;
+      external?: boolean;
+    }
   | { type: 'TOOL_START'; sessionId: string; toolCall: ToolCallEvent }
-  | { type: 'TOOL_END'; sessionId: string; toolCallId?: string; toolName?: string; duration: number; status: 'success' | 'error'; output?: string }
+  | {
+      type: 'TOOL_END';
+      sessionId: string;
+      toolCallId?: string;
+      toolName?: string;
+      duration: number;
+      status: 'success' | 'error';
+      output?: string;
+    }
   | { type: 'AGENT_END'; sessionId: string; timestamp: number; error?: string; costUsd?: number }
   | { type: 'TOKEN_UPDATE'; sessionId: string; usage: TokenUsage; model?: string }
   | { type: 'LINK_SUBAGENT'; parentSessionId: string; childSessionId: string }
   | { type: 'RECORD_SUBAGENT_TOOL'; parentSessionId: string; timestamp: number }
-  | { type: 'SUBTOOL_UPDATE'; sessionId: string; parentToolCallId: string; subTool: SubToolCallEvent }
+  | {
+      type: 'SUBTOOL_UPDATE';
+      sessionId: string;
+      parentToolCallId: string;
+      subTool: SubToolCallEvent;
+    }
   | { type: 'DISMISS'; sessionId: string }
   | { type: 'CLEAR_COMPLETED' }
   | { type: 'LOAD_PERSISTED'; sessions: AgentSession[] }
@@ -92,41 +118,63 @@ export type AgentAction =
 
 export function reducer(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
-    case 'AGENT_START': return startSession(state, action);
-    case 'TOOL_START': return startToolCall(state, action);
-    case 'TOOL_END': return finishToolCall(state, action);
-    case 'AGENT_END': return endSession(state, action);
-    case 'TOKEN_UPDATE': return updateTokenUsage(state, action);
-    case 'SUBTOOL_UPDATE': return updateSubTool(state, action);
-    default: return reduceUtilityAction(state, action);
+    case 'AGENT_START':
+      return startSession(state, action);
+    case 'TOOL_START':
+      return startToolCall(state, action);
+    case 'TOOL_END':
+      return finishToolCall(state, action);
+    case 'AGENT_END':
+      return endSession(state, action);
+    case 'TOKEN_UPDATE':
+      return updateTokenUsage(state, action);
+    case 'SUBTOOL_UPDATE':
+      return updateSubTool(state, action);
+    default:
+      return reduceUtilityAction(state, action);
   }
 }
 
 function reduceUtilityAction(state: AgentState, action: AgentAction): AgentState {
   switch (action.type) {
-    case 'LINK_SUBAGENT': return linkSubagent(state, action);
-    case 'RECORD_SUBAGENT_TOOL': return recordSubagentTool(state, action);
+    case 'LINK_SUBAGENT':
+      return linkSubagent(state, action);
+    case 'RECORD_SUBAGENT_TOOL':
+      return recordSubagentTool(state, action);
     case 'DISMISS':
       return { ...state, sessions: state.sessions.filter((s) => s.id !== action.sessionId) };
     case 'CLEAR_COMPLETED':
-      return { ...state, sessions: state.sessions.filter((s) => s.status === 'running' || s.status === 'idle') };
-    case 'LOAD_PERSISTED': return loadPersistedSessions(state, action.sessions);
+      return {
+        ...state,
+        sessions: state.sessions.filter((s) => s.status === 'running' || s.status === 'idle'),
+      };
+    case 'LOAD_PERSISTED':
+      return loadPersistedSessions(state, action.sessions);
     case 'SET_NOTES':
       return updateSession(state, action.sessionId, (s) => ({
-        ...s, notes: action.notes, bookmarked: action.bookmarked ?? s.bookmarked,
+        ...s,
+        notes: action.notes,
+        bookmarked: action.bookmarked ?? s.bookmarked,
       }));
-    default: return reduceExtensionAction(state, action);
+    default:
+      return reduceExtensionAction(state, action);
   }
 }
 
 function reduceSkillAndTaskAction(state: AgentState, action: AgentAction): AgentState | null {
   switch (action.type) {
-    case 'RULE_LOADED': return reduceRuleLoaded(state, action);
-    case 'SKILL_START': return reduceSkillStart(state, action);
-    case 'SKILL_END': return reduceSkillEnd(state, action);
-    case 'TASK_CREATED': return reduceTaskCreated(state, action);
-    case 'TASK_COMPLETED': return reduceTaskCompleted(state, action);
-    default: return null;
+    case 'RULE_LOADED':
+      return reduceRuleLoaded(state, action);
+    case 'SKILL_START':
+      return reduceSkillStart(state, action);
+    case 'SKILL_END':
+      return reduceSkillEnd(state, action);
+    case 'TASK_CREATED':
+      return reduceTaskCreated(state, action);
+    case 'TASK_COMPLETED':
+      return reduceTaskCompleted(state, action);
+    default:
+      return null;
   }
 }
 
@@ -134,13 +182,20 @@ function reduceExtensionAction(state: AgentState, action: AgentAction): AgentSta
   const skillOrTask = reduceSkillAndTaskAction(state, action);
   if (skillOrTask !== null) return skillOrTask;
   switch (action.type) {
-    case 'CONVERSATION_TURN': return reduceConversationTurn(state, action);
-    case 'COMPACTION': return reduceCompaction(state, action);
-    case 'PRE_COMPACT': return reducePreCompact(state, action);
-    case 'POST_COMPACT': return reducePostCompact(state, action);
-    case 'PERMISSION_EVENT': return reducePermissionEvent(state, action);
-    case 'NOTIFICATION': return reduceNotification(state, action);
-    default: return state;
+    case 'CONVERSATION_TURN':
+      return reduceConversationTurn(state, action);
+    case 'COMPACTION':
+      return reduceCompaction(state, action);
+    case 'PRE_COMPACT':
+      return reducePreCompact(state, action);
+    case 'POST_COMPACT':
+      return reducePostCompact(state, action);
+    case 'PERMISSION_EVENT':
+      return reducePermissionEvent(state, action);
+    case 'NOTIFICATION':
+      return reduceNotification(state, action);
+    default:
+      return state;
   }
 }
 
@@ -149,13 +204,17 @@ type AgentStartAction = Extract<AgentAction, { type: 'AGENT_START' }>;
 function updateExistingSession(state: AgentState, action: AgentStartAction): AgentState {
   return updateSession(state, action.sessionId, (session) => ({
     ...session,
-    taskLabel: action.taskLabel !== `Session ${action.sessionId.slice(0, 8)}` ? action.taskLabel : session.taskLabel,
+    taskLabel:
+      action.taskLabel !== `Session ${action.sessionId.slice(0, 8)}`
+        ? action.taskLabel
+        : session.taskLabel,
     status: 'running',
     startedAt: action.timestamp,
     completedAt: undefined,
     error: undefined,
     model: action.model ?? session.model,
     parentSessionId: action.parentSessionId ?? session.parentSessionId,
+    external: action.external ?? session.external,
   }));
 }
 
@@ -169,7 +228,9 @@ function resolveParentAndTimestamps(
     const temporalMatch = findTemporalParent(state.pendingSubagentTimestamps, action.timestamp);
     if (temporalMatch) {
       resolvedParent = temporalMatch.parentSessionId;
-      updatedTimestamps = state.pendingSubagentTimestamps.filter((stamp) => stamp !== temporalMatch);
+      updatedTimestamps = state.pendingSubagentTimestamps.filter(
+        (stamp) => stamp !== temporalMatch,
+      );
     }
   }
   return { resolvedParent, updatedTimestamps };
@@ -189,6 +250,7 @@ function startSession(state: AgentState, action: AgentStartAction): AgentState {
     outputTokens: 0,
     model: action.model,
     internal: action.internal,
+    external: action.external,
   };
   return {
     sessions: [newSession, ...state.sessions],
@@ -203,16 +265,20 @@ function startToolCall(
 ): AgentState {
   const baseState = ensureSession(state, action.sessionId, action.toolCall.timestamp);
   return updateSession(baseState, action.sessionId, (session) => {
-    const isDuplicate = session.toolCalls.some((tc) =>
-      tc.toolName === action.toolCall.toolName
-      && tc.input === action.toolCall.input
-      && Math.abs(tc.timestamp - action.toolCall.timestamp) < 2000
-      && tc.status === 'pending',
+    const isDuplicate = session.toolCalls.some(
+      (tc) =>
+        tc.toolName === action.toolCall.toolName &&
+        tc.input === action.toolCall.input &&
+        Math.abs(tc.timestamp - action.toolCall.timestamp) < 2000 &&
+        tc.status === 'pending',
     );
     if (isDuplicate) return session;
     return {
       ...session,
-      toolCalls: trimToolCalls([...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp), action.toolCall]),
+      toolCalls: trimToolCalls([
+        ...resolveStaleToolCalls(session.toolCalls, action.toolCall.timestamp),
+        action.toolCall,
+      ]),
     };
   });
 }
@@ -233,44 +299,7 @@ function finishToolCall(
   });
 }
 
-const COMPACT_GUIDANCE = '\n\nContext kept refilling after compaction. Try breaking the task into smaller steps or starting a new session.';
-
-function hasCompactionFailure(session: AgentSession): boolean {
-  return session.pendingPreCompactTokens !== undefined;
-}
-
-function buildEndError(rawError: string | undefined, updatedFailedCompactions: number): string | undefined {
-  if (!rawError) return rawError;
-  const mentionsCompact = /compact/i.test(rawError);
-  if (mentionsCompact || updatedFailedCompactions >= 2) {
-    return rawError + COMPACT_GUIDANCE;
-  }
-  return rawError;
-}
-
-function endSession(
-  state: AgentState,
-  action: Extract<AgentAction, { type: 'AGENT_END' }>,
-): AgentState {
-  const sessionError = action.error;
-  return updateSession(state, action.sessionId, (session) => {
-    const failedNow = hasCompactionFailure(session);
-    const updatedFailedCompactions = failedNow
-      ? (session.failedCompactions ?? 0) + 1
-      : (session.failedCompactions ?? 0);
-    const finalError = buildEndError(sessionError, updatedFailedCompactions);
-    return {
-      ...session,
-      status: sessionError ? 'error' : 'complete',
-      completedAt: action.timestamp,
-      error: finalError,
-      costUsd: action.costUsd ?? session.costUsd,
-      toolCalls: resolvePendingToolCalls(session.toolCalls, sessionError),
-      failedCompactions: updatedFailedCompactions > 0 ? updatedFailedCompactions : undefined,
-      pendingPreCompactTokens: undefined,
-    };
-  });
-}
+/* endSession and its helpers are in useAgentEvents.endSession.ts (line-count budget). */
 
 /* Re-export dispatchers that were moved to ruleSkillDispatchers.ts for line-count budget. */
 export { dispatchAgentEnd, dispatchTokenUpdate } from './useAgentEvents.ruleSkillDispatchers';

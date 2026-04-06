@@ -11,10 +11,10 @@ export type AgentStatus = 'idle' | 'running' | 'complete' | 'error';
 
 export interface AgentSession {
   id: string;
-  taskLabel: string;       // parsed from spawn prompt
+  taskLabel: string; // parsed from spawn prompt
   status: AgentStatus;
-  startedAt: number;       // ms timestamp
-  completedAt?: number;    // ms timestamp
+  startedAt: number; // ms timestamp
+  completedAt?: number; // ms timestamp
   toolCalls: ToolCallEvent[];
   error?: string;
   parentSessionId?: string; // present when this agent was spawned by another agent
@@ -22,9 +22,9 @@ export interface AgentSession {
   outputTokens: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
-  model?: string;          // e.g. "claude-sonnet-4-20250514"
-  costUsd?: number;        // provider-reported cost (preferred over estimate)
-  restored?: boolean;      // true when loaded from disk (not from a live event)
+  model?: string; // e.g. "claude-sonnet-4-20250514"
+  costUsd?: number; // provider-reported cost (preferred over estimate)
+  restored?: boolean; // true when loaded from disk (not from a live event)
   /** User notes / bookmarks for this session */
   notes?: string;
   /** Whether this session is bookmarked for quick reference */
@@ -33,6 +33,8 @@ export interface AgentSession {
   snapshotHash?: string;
   /** True when the session was spawned internally by the IDE (summarizer, CLAUDE.md generator) */
   internal?: boolean;
+  /** True when the session originates from a Claude Code process outside the IDE (external terminal). */
+  external?: boolean;
   /** Rules/instructions loaded during this session (populated by InstructionsLoaded hook events). */
   loadedRules?: LoadedRule[];
   /** Skill invocations during this session (populated by agent_start/agent_end with skill signatures). */
@@ -64,12 +66,12 @@ export interface SubToolCallEvent {
 
 export interface ToolCallEvent {
   id: string;
-  toolName: string;        // Read, Bash, Edit, Grep, Write, etc.
-  input: string;           // truncated summary (e.g., file path, command)
+  toolName: string; // Read, Bash, Edit, Grep, Write, etc.
+  input: string; // truncated summary (e.g., file path, command)
   timestamp: number;
-  duration?: number;       // ms
+  duration?: number; // ms
   status: 'pending' | 'success' | 'error';
-  output?: string;         // full tool output/result text (populated on TOOL_END)
+  output?: string; // full tool output/result text (populated on TOOL_END)
   /** Nested subagent tool calls (populated when this is an Agent/Task tool). */
   subTools?: SubToolCallEvent[];
 }
@@ -102,13 +104,13 @@ export interface HookPayload {
   toolCallId?: string;
   input?: Record<string, unknown>;
   output?: Record<string, unknown>;
-  prompt?: string;        // for agent_start — used to derive taskLabel
-  error?: string;         // for agent_end with error
+  prompt?: string; // for agent_start — used to derive taskLabel
+  error?: string; // for agent_end with error
   parentSessionId?: string; // for agent_start — links subagent to parent
   timestamp: number;
-  requestId?: string;      // unique ID for pre_tool_use approval flow
-  usage?: TokenUsage;     // token usage data (may appear on agent_end or any event)
-  model?: string;         // model identifier (e.g. "claude-sonnet-4-20250514")
+  requestId?: string; // unique ID for pre_tool_use approval flow
+  usage?: TokenUsage; // token usage data (may appear on agent_end or any event)
+  model?: string; // model identifier (e.g. "claude-sonnet-4-20250514")
   /** Links a sub-tool event to its parent Agent/Task tool call. */
   parentToolCallId?: string;
   /** Event-specific data forwarded from Claude Code stdin JSON. */
