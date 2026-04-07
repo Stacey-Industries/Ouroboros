@@ -78,7 +78,8 @@ else
     payload="{\"type\":\"post_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"output\":${safe_output},\"timestamp\":${timestamp_ms}${internal_field}}"
 fi
 
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 send_payload() {

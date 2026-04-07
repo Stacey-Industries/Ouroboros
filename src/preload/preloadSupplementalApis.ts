@@ -315,4 +315,11 @@ export const supplementalApis: SupplementalApis = {
     generateCommitMessage: (request) => ipcRenderer.invoke('ai:generate-commit-message', request),
     inlineEdit: (request) => ipcRenderer.invoke('ai:inline-edit', request),
   },
+
+  workspace: {
+    isTrusted: (p: string) => ipcRenderer.invoke('workspace:isTrusted', p),
+    trustLevel: (roots: string[]) => ipcRenderer.invoke('workspace:trustLevel', roots),
+    trust: (p: string) => ipcRenderer.invoke('workspace:trust', p),
+    untrust: (p: string) => ipcRenderer.invoke('workspace:untrust', p),
+  },
 };

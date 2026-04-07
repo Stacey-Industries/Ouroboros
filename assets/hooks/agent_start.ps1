@@ -109,6 +109,10 @@ if ($env:OUROBOROS_IDE_SESSION -eq '1') { $payload['ideSpawned'] = $true }
 $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
+# Auth line — required by the IDE's pipe auth protocol
+$authLine  = '{"auth":"' + $env:OUROBOROS_HOOKS_TOKEN + '"}' + "`n"
+$authBytes = [System.Text.Encoding]::UTF8.GetBytes($authLine)
+
 # -- Send via named pipe -------------------------------------------------------
 $sent = $false
 
@@ -119,6 +123,7 @@ try {
         [System.IO.Pipes.PipeOptions]::None
     )
     $pipe.Connect($TimeoutMs)
+    $pipe.Write($authBytes, 0, $authBytes.Length)  # auth first
     $pipe.Write($bytes, 0, $bytes.Length)
     $pipe.Flush()
     $pipe.Dispose()
@@ -134,6 +139,7 @@ if (-not $sent) {
         $ok     = $result.AsyncWaitHandle.WaitOne($TimeoutMs, $false)
         if ($ok -and $tcp.Connected) {
             $stream = $tcp.GetStream()
+            $stream.Write($authBytes, 0, $authBytes.Length)  # auth first
             $stream.Write($bytes, 0, $bytes.Length)
             $stream.Flush()
             $stream.Dispose()

@@ -257,4 +257,12 @@ export interface ElectronAPI {
   router: RouterAPI;
   rulesAndSkills: RulesAndSkillsAPI;
   ai: AiAPI;
+  workspace: WorkspaceAPI;
+}
+
+export interface WorkspaceAPI {
+  isTrusted(path: string): Promise<boolean>;
+  trustLevel(roots: string[]): Promise<'trusted' | 'restricted'>;
+  trust(path: string): Promise<IpcResult>;
+  untrust(path: string): Promise<IpcResult>;
 }

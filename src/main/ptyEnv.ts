@@ -3,6 +3,7 @@ import os from 'os';
 import type { ModelSlotAssignments } from './config';
 import { getConfigValue } from './config';
 import { getHooksNetAddress } from './hooksNet';
+import { getHooksToken, getToolServerToken } from './pipeAuth';
 import { resolveModelEnv } from './providers';
 import { buildShellIntegrationEnv } from './shellIntegration/resolve';
 
@@ -55,6 +56,10 @@ export function buildBaseEnv(extraEnv?: Record<string, string>): Record<string, 
     : {};
   const hooksAddr = getHooksNetAddress();
   const hooksOverlay = hooksAddr ? { OUROBOROS_HOOKS_ADDRESS: hooksAddr } : {};
+  const pipeOverlay = {
+    OUROBOROS_TOOL_TOKEN: getToolServerToken(),
+    OUROBOROS_HOOKS_TOKEN: getHooksToken(),
+  };
   return {
     ...process.env,
     TERM: 'xterm-256color',
@@ -62,6 +67,7 @@ export function buildBaseEnv(extraEnv?: Record<string, string>): Record<string, 
     OUROBOROS_IDE_SESSION: '1',
     ...githubOverlay,
     ...hooksOverlay,
+    ...pipeOverlay,
     ...extraEnv,
   } as Record<string, string>;
 }

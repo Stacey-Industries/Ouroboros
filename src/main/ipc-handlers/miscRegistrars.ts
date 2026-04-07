@@ -20,6 +20,12 @@ import {
 import log from '../logger';
 import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
 import { getAutoUpdater } from '../updater';
+import {
+  getWindowTrustLevel,
+  isWorkspaceTrusted,
+  trustWorkspace,
+  untrustWorkspace,
+} from '../workspaceTrust';
 import { registerExtensionHandlers, registerWindowHandlers } from './miscRegistrarsHelpers';
 import { readShellHistory, searchSymbols } from './miscSymbolSearch';
 import { assertPathAllowed } from './pathSecurity';
@@ -281,4 +287,19 @@ export function registerApprovalHandlers(channels: ChannelList): void {
     async (_event, sessionId: string, toolName: string) =>
       runAction(() => addAlwaysAllowRule(sessionId, toolName)),
   );
+}
+
+export function registerTrustHandlers(channels: ChannelList): void {
+  registerChannel(channels, 'workspace:isTrusted', (_event, p: string) => isWorkspaceTrusted(p));
+  registerChannel(channels, 'workspace:trustLevel', (_event, roots: string[]) =>
+    getWindowTrustLevel(roots),
+  );
+  registerChannel(channels, 'workspace:trust', (_event, p: string) => {
+    trustWorkspace(p);
+    return { success: true };
+  });
+  registerChannel(channels, 'workspace:untrust', (_event, p: string) => {
+    untrustWorkspace(p);
+    return { success: true };
+  });
 }

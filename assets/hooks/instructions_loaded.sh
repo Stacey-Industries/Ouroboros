@@ -93,7 +93,8 @@ payload="{\"type\":\"instructions_loaded\",\"sessionId\":${j_session},\"timestam
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
     payload="{\"type\":\"instructions_loaded\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms},\"input\":${input_obj},\"internal\":true}"
 fi
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 send_payload() {

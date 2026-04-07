@@ -7,6 +7,7 @@ import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from '
 import fs from 'fs/promises';
 import path from 'path';
 
+import { setSecureKey } from '../auth/secureKeyStore';
 import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config';
 import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes';
 import log from '../logger';
@@ -145,6 +146,33 @@ function sanitizeConfig(config: AppConfig): AppConfig {
   return sanitized as AppConfig;
 }
 
+function sanitizeConfigValue(key: keyof AppConfig): unknown {
+  if (key === 'webAccessToken' || key === 'webAccessPassword') return '';
+  const value = getConfigValue(key);
+  if (key === 'modelProviders' && Array.isArray(value)) {
+    return (value as Array<Record<string, unknown>>).map((p) => ({
+      ...p,
+      apiKey: p.apiKey ? '••••••••' : '',
+    }));
+  }
+  return value;
+}
+
+/** Redirect secrets to SecureKeyStore; return sanitized value for config. */
+function interceptSecrets(key: string, value: unknown): unknown {
+  if (key === 'webAccessToken' || key === 'webAccessPassword') {
+    const sk = key === 'webAccessToken' ? 'web-access-token' : 'web-access-password';
+    if (typeof value === 'string' && value) void setSecureKey(sk, value);
+    return '';
+  }
+  if (key !== 'modelProviders' || !Array.isArray(value)) return value;
+  return (value as Array<Record<string, unknown>>).map((p) => {
+    if (!p.apiKey || typeof p.apiKey !== 'string' || p.apiKey === '••••••••') return p;
+    void setSecureKey(`provider-key:${p.id}`, p.apiKey as string);
+    return { ...p, apiKey: '' };
+  });
+}
+
 function createCoreHandlers(): ConfigHandlerEntry[] {
   return [
     {
@@ -153,13 +181,14 @@ function createCoreHandlers(): ConfigHandlerEntry[] {
     },
     {
       channel: 'config:get',
-      handler: (_event, key) => getConfigValue(key as keyof AppConfig),
+      handler: (_event, key) => sanitizeConfigValue(key as keyof AppConfig),
     },
     {
       channel: 'config:set',
       handler: (_event, key, value) => {
         try {
-          setConfigValue(key as keyof AppConfig, value as AppConfig[keyof AppConfig]);
+          const safeValue = interceptSecrets(key as string, value);
+          setConfigValue(key as keyof AppConfig, safeValue as AppConfig[keyof AppConfig]);
           // Notify context layer controller on config change
           if (key === 'contextLayer') {
             import('../contextLayer/contextLayerController')
@@ -198,8 +227,9 @@ async function exportConfigFile(
       return { success: true, cancelled: true };
     }
 
+    const sanitized = sanitizeConfig(getConfig());
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from native save dialog
-    await fs.writeFile(result.filePath, JSON.stringify(getConfig(), null, 2), 'utf-8');
+    await fs.writeFile(result.filePath, JSON.stringify(sanitized, null, 2), 'utf-8');
     return { success: true, filePath: result.filePath };
   } catch (error) {
     return { success: false, error: toErrorMessage(error) };

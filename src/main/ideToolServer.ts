@@ -25,6 +25,7 @@ import {
   writeToolResponse,
 } from './ideToolServerHelpers';
 import log from './logger';
+import { getToolServerToken, validatePipeAuth } from './pipeAuth';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -231,11 +232,25 @@ function handleSocket(socket: net.Socket, connId: number): void {
   log.debug(`connection #${connId} opened`);
 
   let rawBuffer = '';
+  let authenticated = false;
 
   socket.setEncoding('utf8');
   socket.setTimeout(30_000);
 
   socket.on('data', (chunk: string) => {
+    if (!authenticated) {
+      rawBuffer += chunk;
+      const nl = rawBuffer.indexOf('\n');
+      if (nl === -1) return;
+      const firstLine = rawBuffer.slice(0, nl).trim();
+      rawBuffer = rawBuffer.slice(nl + 1);
+      if (!validatePipeAuth(firstLine, getToolServerToken())) {
+        log.warn(`#${connId} auth failed — rejecting`);
+        socket.end('{"error":"unauthorized"}\n');
+        return;
+      }
+      authenticated = true;
+    }
     rawBuffer = handleSocketChunk(socket, connId, rawBuffer, chunk);
   });
 

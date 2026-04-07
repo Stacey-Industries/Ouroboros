@@ -225,4 +225,9 @@ export const tailSchema = {
     type: 'boolean',
     default: true,
   },
+  trustedWorkspaces: {
+    type: 'array',
+    items: { type: 'string' },
+    default: [],
+  },
 };

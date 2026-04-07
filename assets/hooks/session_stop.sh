@@ -81,7 +81,8 @@ payload="{\"type\":\"session_stop\",\"sessionId\":${j_session},\"timestamp\":${t
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
     payload="{\"type\":\"session_stop\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms},\"cwd\":${j_cwd},\"internal\":true}"
 fi
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 send_payload() {

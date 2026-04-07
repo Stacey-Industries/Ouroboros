@@ -11,6 +11,7 @@ import net from 'net';
 import { getConfigValue } from './config';
 import type { HookPayload } from './hooks';
 import log from './logger';
+import { getHooksToken, validatePipeAuth } from './pipeAuth';
 import { broadcastToWebClients } from './web/webServer';
 
 const PIPE_NAME = '\\\\.\\pipe\\agent-ide-hooks';
@@ -114,6 +115,19 @@ function processSocketChunk(args: SocketChunkArgs): string {
   return buffer;
 }
 
+/** Try to extract and validate auth from the first line. Returns remaining buffer or null on failure. */
+function tryAuthenticate(buffer: string, socket: net.Socket, connId: number): string | null {
+  const nl = buffer.indexOf('\n');
+  if (nl === -1) return null; // incomplete — wait for more data
+  const firstLine = buffer.slice(0, nl).trim();
+  if (!validatePipeAuth(firstLine, getHooksToken())) {
+    log.warn(`#${connId} auth failed — rejecting`);
+    socket.end('{"error":"unauthorized"}\n');
+    return null;
+  }
+  return buffer.slice(nl + 1);
+}
+
 function handleSocket(
   socket: net.Socket,
   connId: number,
@@ -121,10 +135,18 @@ function handleSocket(
 ): void {
   log.debug(`connection #${connId} opened`);
   let rawBuffer = '';
+  let authenticated = false;
   socket.setEncoding('utf8');
   socket.setTimeout(60_000);
 
   socket.on('data', (chunk: string) => {
+    if (!authenticated) {
+      rawBuffer += chunk;
+      const result = tryAuthenticate(rawBuffer, socket, connId);
+      if (result === null) return;
+      rawBuffer = result;
+      authenticated = true;
+    }
     rawBuffer = processSocketChunk({ socket, connId, rawBuffer, chunk, onPayload });
   });
   socket.on('timeout', () => {

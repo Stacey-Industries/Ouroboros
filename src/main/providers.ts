@@ -1,5 +1,6 @@
-import type { ModelProvider } from './config'
-import { getConfigValue } from './config'
+import { getSecureKeySync } from './auth/secureKeyStore';
+import type { ModelProvider } from './config';
+import { getConfigValue } from './config';
 
 /** Built-in Anthropic provider — always available, uses CLI's own auth */
 const ANTHROPIC_PROVIDER: ModelProvider = {
@@ -8,16 +9,31 @@ const ANTHROPIC_PROVIDER: ModelProvider = {
   baseUrl: '',
   apiKey: '',
   models: [
-    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', provider: 'anthropic', capabilities: ['reasoning'] },
-    { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'anthropic', capabilities: ['coding', 'fast'] },
-    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'anthropic', capabilities: ['fast'] },
+    {
+      id: 'claude-opus-4-6',
+      name: 'Claude Opus 4.6',
+      provider: 'anthropic',
+      capabilities: ['reasoning'],
+    },
+    {
+      id: 'claude-sonnet-4-6',
+      name: 'Claude Sonnet 4.6',
+      provider: 'anthropic',
+      capabilities: ['coding', 'fast'],
+    },
+    {
+      id: 'claude-haiku-4-5-20251001',
+      name: 'Claude Haiku 4.5',
+      provider: 'anthropic',
+      capabilities: ['fast'],
+    },
     { id: 'opus', name: 'Opus (latest)', provider: 'anthropic' },
     { id: 'sonnet', name: 'Sonnet (latest)', provider: 'anthropic' },
     { id: 'haiku', name: 'Haiku (latest)', provider: 'anthropic' },
   ],
   enabled: true,
   builtIn: true,
-}
+};
 
 /** Preset templates for known providers — user just adds API key */
 export const PROVIDER_PRESETS: Omit<ModelProvider, 'apiKey' | 'enabled'>[] = [
@@ -27,7 +43,12 @@ export const PROVIDER_PRESETS: Omit<ModelProvider, 'apiKey' | 'enabled'>[] = [
     baseUrl: 'https://api.minimax.io/anthropic',
     builtIn: false,
     models: [
-      { id: 'MiniMax-M2.7', name: 'MiniMax M2.7', provider: 'minimax', capabilities: ['coding', 'fast'] },
+      {
+        id: 'MiniMax-M2.7',
+        name: 'MiniMax M2.7',
+        provider: 'minimax',
+        capabilities: ['coding', 'fast'],
+      },
       { id: 'MiniMax-M2.5', name: 'MiniMax M2.5', provider: 'minimax', capabilities: ['coding'] },
     ],
   },
@@ -38,11 +59,11 @@ export const PROVIDER_PRESETS: Omit<ModelProvider, 'apiKey' | 'enabled'>[] = [
     builtIn: false,
     models: [],
   },
-]
+];
 
 export function getAllProviders(): ModelProvider[] {
-  const userProviders = getConfigValue('modelProviders') ?? []
-  return [ANTHROPIC_PROVIDER, ...userProviders]
+  const userProviders = getConfigValue('modelProviders') ?? [];
+  return [ANTHROPIC_PROVIDER, ...userProviders];
 }
 
 /**
@@ -50,32 +71,33 @@ export function getAllProviders(): ModelProvider[] {
  * Returns empty object for empty/invalid inputs (no-op = existing behavior).
  */
 export function resolveModelEnv(slotValue: string): Record<string, string> {
-  if (!slotValue || !slotValue.includes(':')) return {}
+  if (!slotValue || !slotValue.includes(':')) return {};
 
-  const colonIndex = slotValue.indexOf(':')
-  const providerId = slotValue.slice(0, colonIndex)
-  const modelId = slotValue.slice(colonIndex + 1)
+  const colonIndex = slotValue.indexOf(':');
+  const providerId = slotValue.slice(0, colonIndex);
+  const modelId = slotValue.slice(colonIndex + 1);
 
-  if (!providerId || !modelId) return {}
+  if (!providerId || !modelId) return {};
 
-  const providers = getAllProviders()
-  const provider = providers.find(p => p.id === providerId && p.enabled)
-  if (!provider) return {}
+  const providers = getAllProviders();
+  const provider = providers.find((p) => p.id === providerId && p.enabled);
+  if (!provider) return {};
 
-  const env: Record<string, string> = {}
+  const env: Record<string, string> = {};
 
   if (provider.baseUrl) {
-    env.ANTHROPIC_BASE_URL = provider.baseUrl
+    env.ANTHROPIC_BASE_URL = provider.baseUrl;
   }
-  if (provider.apiKey) {
-    env.ANTHROPIC_AUTH_TOKEN = provider.apiKey
+  const apiKey = getSecureKeySync(`provider-key:${provider.id}`) ?? provider.apiKey;
+  if (apiKey) {
+    env.ANTHROPIC_AUTH_TOKEN = apiKey;
   }
 
-  env.ANTHROPIC_MODEL = modelId
+  env.ANTHROPIC_MODEL = modelId;
 
   if (provider.id !== 'anthropic') {
-    env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
+    env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
   }
 
-  return env
+  return env;
 }

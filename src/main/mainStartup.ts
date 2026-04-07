@@ -8,7 +8,13 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { getCredential } from './auth/credentialStore';
+import {
+  GraphController,
+  setGraphController,
+} from './codebaseGraph/graphController';
+import { getConfigValue } from './config';
 import log from './logger';
+import { setGithubTokenForPty } from './ptyEnv';
 import { getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
 import { getAllActiveWindows } from './windowManager';
@@ -116,4 +122,46 @@ export function configureAutoUpdater(): void {
   registerAutoUpdaterEvents();
   void seedUpdaterToken();
   scheduleAutoUpdateCheck();
+}
+
+// ---------------------------------------------------------------------------
+// GitHub token seeding for PTY env
+// ---------------------------------------------------------------------------
+
+async function seedGithubTokenForPty(): Promise<void> {
+  const cred = await getCredential('github');
+  if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
+}
+
+export async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await seedGithubTokenForPty();
+      return;
+    } catch (err) {
+      log.warn(`GitHub token seed attempt ${i + 1} failed:`, err);
+      if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Codebase graph initialization
+// ---------------------------------------------------------------------------
+
+export async function initCodebaseGraph(): Promise<void> {
+  const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
+  if (!defaultRoot) {
+    log.info('No default project root configured, skipping graph init');
+    return;
+  }
+
+  try {
+    const controller = new GraphController(defaultRoot);
+    await controller.initialize();
+    setGraphController(controller);
+    log.info('Controller initialized successfully');
+  } catch (err) {
+    log.warn('Failed to start:', err);
+  }
 }

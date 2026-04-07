@@ -120,7 +120,8 @@ if [ -n "$j_error" ]; then payload="${payload},\"error\":${j_error}"; fi
 if [ -n "$j_cost" ]; then payload="${payload},\"costUsd\":${j_cost}"; fi
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then payload="${payload},\"internal\":true"; fi
 payload="${payload}}"
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 send_payload() {

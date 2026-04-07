@@ -2,15 +2,11 @@ import { app, BrowserWindow, crashReporter } from 'electron';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
-import { getCredential } from './auth/credentialStore';
+import { migrateSecretsIfNeeded } from './auth/secretMigration';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoller';
-import {
-  getGraphController,
-  GraphController,
-  setGraphController,
-} from './codebaseGraph/graphController';
+import { getGraphController } from './codebaseGraph/graphController';
 import { getConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { closeCostHistoryDb } from './costHistory';
@@ -32,7 +28,12 @@ import {
 } from './ipc-handlers/agentChat';
 import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
-import { configureAutoUpdater, writeCrashLog } from './mainStartup';
+import {
+  configureAutoUpdater,
+  initCodebaseGraph,
+  seedGithubTokenWithRetry,
+  writeCrashLog,
+} from './mainStartup';
 import { buildApplicationMenu } from './menu';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 import {
@@ -42,8 +43,8 @@ import {
   startPerfMetrics as startManagedPerfMetrics,
   stopPerfMetrics as stopManagedPerfMetrics,
 } from './perfMetrics';
+import { generatePipeTokens } from './pipeAuth';
 import { killAllPtySessions } from './pty';
-import { setGithubTokenForPty } from './ptyEnv';
 import { clearQualityTimers } from './router/qualitySignalCollector';
 import {
   loadRetrainedWeightsIfAvailable,
@@ -55,9 +56,8 @@ import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
 import { createWindow, getAllActiveWindows, restoreWindowSessions } from './windowManager';
+import { isWorkspaceTrusted } from './workspaceTrust';
 
-// Configure crash reporter to collect local crash dumps.
-// Remote reporting (e.g., Sentry) should be added before v1.0 GA.
 crashReporter.start({
   uploadToServer: false,
   compress: true,
@@ -90,16 +90,6 @@ if (!gotTheLock) {
 
 let mainWindow: BrowserWindow | null = null;
 let internalMcpStop: (() => Promise<void>) | null = null;
-
-// â”€â”€â”€ Performance metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function startPerfMetrics(): void {
-  startManagedPerfMetrics();
-}
-
-function stopPerfMetrics(): void {
-  stopManagedPerfMetrics();
-}
 
 function notifyStartupFailure(name: string, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
@@ -163,8 +153,13 @@ async function startBackgroundServices(win: BrowserWindow): Promise<void> {
   );
   await runStartupStep('[main] failed to start IDE tool server:', startIdeTools);
   await runStartupStep('[main] failed to start internal MCP server:', startInternalMcp);
-  await runStartupStep('[main] hook installer error:', installHooks);
-  await runStartupStep('[main] extensions init error:', initExtensions);
+  const root = getConfigValue('defaultProjectRoot') as string | undefined;
+  if (!root || isWorkspaceTrusted(root)) {
+    await runStartupStep('[main] hook installer error:', installHooks);
+    await runStartupStep('[main] extensions init error:', initExtensions);
+  } else {
+    log.info('[main] Restricted mode — hooks/extensions disabled for untrusted workspace');
+  }
   startClaudeUsagePoller();
 }
 
@@ -239,6 +234,8 @@ function startWebServerAsync(): void {
 async function initializeApplication(): Promise<void> {
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
+  await migrateSecretsIfNeeded();
+  generatePipeTokens();
   installHandlerCapture();
 
   initializePerfMetrics({ getActiveWindows: getAllActiveWindows });
@@ -256,7 +253,7 @@ async function initializeApplication(): Promise<void> {
 
   registerRenderProcessCrashLogging();
   configureAutoUpdater();
-  startPerfMetrics();
+  startManagedPerfMetrics();
   startJankDetector();
   startTokenRefreshManager();
   registerWindowLifecycleHandlers();
@@ -267,40 +264,7 @@ async function initializeApplication(): Promise<void> {
   observeDatasetGrowth();
 }
 
-async function seedGithubTokenForPty(): Promise<void> {
-  const cred = await getCredential('github');
-  if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
-}
 
-async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      await seedGithubTokenForPty();
-      return;
-    } catch (err) {
-      log.warn(`GitHub token seed attempt ${i + 1} failed:`, err);
-      if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, 2000));
-    }
-  }
-}
-
-async function initCodebaseGraph(): Promise<void> {
-  const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
-  if (!defaultRoot) {
-    log.info('No default project root configured, skipping graph init');
-    return;
-  }
-
-  try {
-    const controller = new GraphController(defaultRoot);
-    await controller.initialize();
-    setGraphController(controller);
-    log.info('Controller initialized successfully');
-  } catch (err) {
-    log.warn('Failed to start:', err);
-    // Non-fatal -- app continues without graph
-  }
-}
 
 app.setName('Ouroboros');
 app.whenReady().then(initializeApplication);
@@ -315,7 +279,7 @@ app.on('window-all-closed', async () => {
   stopContextRefreshTimer();
   terminateContextWorker();
   clearPerfSubscribers();
-  stopPerfMetrics();
+  stopManagedPerfMetrics();
   await stopWebServer();
   await stopHooksServer();
   await stopIdeToolServer();

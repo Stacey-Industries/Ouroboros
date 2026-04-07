@@ -113,7 +113,8 @@ if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
 fi
 
 payload="{\"type\":\"${TYPE}\",\"sessionId\":${j_session},\"timestamp\":${timestamp_ms}${data_field}${internal_field}}"
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ──────────────────────────────────────────────────────────────
 send_payload() {

@@ -116,7 +116,8 @@ if [ -n "$j_model" ]; then payload="${payload},\"model\":${j_model}"; fi
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then payload="${payload},\"internal\":true"; fi
 if [ "${OUROBOROS_IDE_SESSION:-}" = "1" ]; then payload="${payload},\"ideSpawned\":true"; fi
 payload="${payload}}"
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 send_payload() {

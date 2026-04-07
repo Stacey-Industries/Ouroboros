@@ -5,22 +5,29 @@
  * for the web server. Uses constant-time comparison to prevent timing attacks.
  */
 
-import crypto from 'crypto'
+import crypto from 'crypto';
 
-import { getConfigValue, setConfigValue } from '../config'
+import { getSecureKeySync, setSecureKey } from '../auth/secureKeyStore';
+import { getConfigValue } from '../config';
 
 // ─── Token Management ────────────────────────────────────────────────────────
 
 /**
  * Returns the existing web access token, or generates and persists a new one.
+ * Reads from SecureKeyStore (encrypted), falling back to config for pre-migration installs.
  */
 export function getOrCreateWebToken(): string {
-  let token = getConfigValue('webAccessToken')
-  if (!token) {
-    token = crypto.randomBytes(32).toString('hex')
-    setConfigValue('webAccessToken', token)
-  }
-  return token
+  const fromStore = getSecureKeySync('web-access-token');
+  if (fromStore) return fromStore;
+
+  // Fallback: pre-migration config value
+  const fromConfig = getConfigValue('webAccessToken');
+  if (fromConfig) return fromConfig as string;
+
+  // Generate new token and persist to SecureKeyStore
+  const token = crypto.randomBytes(32).toString('hex');
+  void setSecureKey('web-access-token', token);
+  return token;
 }
 
 /**
@@ -28,17 +35,17 @@ export function getOrCreateWebToken(): string {
  * comparison to prevent timing side-channel attacks.
  */
 export function validateToken(provided: string): boolean {
-  if (!provided || typeof provided !== 'string') return false
+  if (!provided || typeof provided !== 'string') return false;
 
-  const expected = getOrCreateWebToken()
-  if (provided.length !== expected.length) return false
+  const expected = getOrCreateWebToken();
+  if (provided.length !== expected.length) return false;
 
   try {
-    const providedBuf = Buffer.from(provided, 'utf-8')
-    const expectedBuf = Buffer.from(expected, 'utf-8')
-    return crypto.timingSafeEqual(providedBuf, expectedBuf)
+    const providedBuf = Buffer.from(provided, 'utf-8');
+    const expectedBuf = Buffer.from(expected, 'utf-8');
+    return crypto.timingSafeEqual(providedBuf, expectedBuf);
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -46,8 +53,8 @@ export function validateToken(provided: string): boolean {
  * Returns true if a web access password has been configured.
  */
 export function hasPasswordConfigured(): boolean {
-  const password = getConfigValue('webAccessPassword')
-  return typeof password === 'string' && password.length > 0
+  const password = getSecureKeySync('web-access-password') ?? getConfigValue('webAccessPassword');
+  return typeof password === 'string' && password.length > 0;
 }
 
 /**
@@ -55,21 +62,21 @@ export function hasPasswordConfigured(): boolean {
  * Uses constant-time comparison to prevent timing attacks.
  */
 export function validatePassword(provided: string): boolean {
-  if (!provided || typeof provided !== 'string') return false
+  if (!provided || typeof provided !== 'string') return false;
 
-  const expected = getConfigValue('webAccessPassword')
+  const expected = getSecureKeySync('web-access-password') ?? getConfigValue('webAccessPassword');
   if (!expected || typeof expected !== 'string' || expected.length === 0) {
-    return false
+    return false;
   }
 
-  if (provided.length !== expected.length) return false
+  if (provided.length !== expected.length) return false;
 
   try {
-    const providedBuf = Buffer.from(provided, 'utf-8')
-    const expectedBuf = Buffer.from(expected, 'utf-8')
-    return crypto.timingSafeEqual(providedBuf, expectedBuf)
+    const providedBuf = Buffer.from(provided, 'utf-8');
+    const expectedBuf = Buffer.from(expected, 'utf-8');
+    return crypto.timingSafeEqual(providedBuf, expectedBuf);
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -78,59 +85,59 @@ export function validatePassword(provided: string): boolean {
  */
 export function validateCredential(provided: string): boolean {
   if (hasPasswordConfigured()) {
-    return validatePassword(provided)
+    return validatePassword(provided);
   }
-  return validateToken(provided)
+  return validateToken(provided);
 }
 
 // ─── Rate Limiting ───────────────────────────────────────────────────────────
 
 interface RateLimitEntry {
-  count: number
-  firstAttempt: number
+  count: number;
+  firstAttempt: number;
 }
 
-const failedAttempts = new Map<string, RateLimitEntry>()
+const failedAttempts = new Map<string, RateLimitEntry>();
 
-const RATE_LIMIT_MAX_ATTEMPTS = 10
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_MAX_ATTEMPTS = 10;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Checks whether an IP address has exceeded the rate limit for failed auth attempts.
  * Also cleans up stale entries older than the rate limit window.
  */
 export function isRateLimited(ip: string): boolean {
-  const now = Date.now()
+  const now = Date.now();
 
   // Clean up stale entries
   for (const [key, entry] of failedAttempts) {
     if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-      failedAttempts.delete(key)
+      failedAttempts.delete(key);
     }
   }
 
-  const entry = failedAttempts.get(ip)
-  if (!entry) return false
+  const entry = failedAttempts.get(ip);
+  if (!entry) return false;
 
   if (now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-    failedAttempts.delete(ip)
-    return false
+    failedAttempts.delete(ip);
+    return false;
   }
 
-  return entry.count >= RATE_LIMIT_MAX_ATTEMPTS
+  return entry.count >= RATE_LIMIT_MAX_ATTEMPTS;
 }
 
 /**
  * Records a failed authentication attempt for the given IP address.
  */
 export function recordFailedAttempt(ip: string): void {
-  const now = Date.now()
-  const entry = failedAttempts.get(ip)
+  const now = Date.now();
+  const entry = failedAttempts.get(ip);
 
   if (!entry || now - entry.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-    failedAttempts.set(ip, { count: 1, firstAttempt: now })
+    failedAttempts.set(ip, { count: 1, firstAttempt: now });
   } else {
-    entry.count++
+    entry.count++;
   }
 }
 
@@ -158,7 +165,7 @@ function getLoginPageStyles(): string {
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .error { color: #f85149; font-size: 0.8125rem; margin-top: 0.75rem; text-align: center; min-height: 1.25rem; }
     .help { color: #8b949e; font-size: 0.75rem; text-align: center; margin-top: 1.5rem; }
-  </style>`
+  </style>`;
 }
 
 function getLoginPageScript(label: string): string {
@@ -177,16 +184,16 @@ function getLoginPageScript(label: string): string {
       })
       .catch(function() { document.getElementById('error').textContent = 'Connection failed. Try again.'; btn.disabled = false; btn.textContent = 'Connect'; });
     });
-  </script>`
+  </script>`;
 }
 
 export function getLoginPageHtml(): string {
-  const usePassword = hasPasswordConfigured()
-  const label = usePassword ? 'Password' : 'Access Token'
-  const placeholder = usePassword ? 'Enter your password' : 'Paste your access token'
+  const usePassword = hasPasswordConfigured();
+  const label = usePassword ? 'Password' : 'Access Token';
+  const placeholder = usePassword ? 'Enter your password' : 'Paste your access token';
   const helpText = usePassword
     ? 'Set your password in IDE Settings &gt; General &gt; Web Access Password'
-    : 'Find your token in the IDE console or Settings'
+    : 'Find your token in the IDE console or Settings';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -212,5 +219,5 @@ export function getLoginPageHtml(): string {
   </div>
   ${getLoginPageScript(label)}
 </body>
-</html>`
+</html>`;
 }

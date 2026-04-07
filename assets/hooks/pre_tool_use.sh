@@ -85,7 +85,8 @@ payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
     payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"input\":${safe_input},\"requestId\":${j_reqid},\"timestamp\":${timestamp_ms},\"internal\":true}"
 fi
-ndjson_line="${payload}"$'\n'
+auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
 sent=false

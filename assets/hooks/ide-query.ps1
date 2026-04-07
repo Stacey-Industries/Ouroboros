@@ -45,6 +45,10 @@ $request = @{
 
 $requestBytes = [System.Text.Encoding]::UTF8.GetBytes($request + "`n")
 
+# Auth line — required by the IDE's tool pipe auth protocol
+$authLine  = '{"auth":"' + $env:OUROBOROS_TOOL_TOKEN + '"}' + "`n"
+$authBytes = [System.Text.Encoding]::UTF8.GetBytes($authLine)
+
 try {
     $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(
         '.', $PipeName,
@@ -53,7 +57,8 @@ try {
     )
     $pipe.Connect($TimeoutMs)
 
-    # Send request
+    # Send auth first, then request
+    $pipe.Write($authBytes, 0, $authBytes.Length)
     $pipe.Write($requestBytes, 0, $requestBytes.Length)
     $pipe.Flush()
 

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import net from 'net';
 import path from 'path';
 
+import { getToolServerToken } from '../pipeAuth';
 import { terminalOutputBuffer } from '../ptyOutputBuffer';
 import type { DirtyBufferSnapshot, EditorSelectionRange, LiveIdeState } from './types';
 
@@ -109,7 +110,8 @@ export async function invokeIdeTool<TResult>(
     const timer = setTimeout(() => finalize(null), 10_000);
     socket.setEncoding('utf8');
     socket.on('connect', () => {
-      socket.write(JSON.stringify({ id: requestId, method, params }) + '\n');
+      const authLine = JSON.stringify({ auth: getToolServerToken() }) + '\n';
+      socket.write(authLine + JSON.stringify({ id: requestId, method, params }) + '\n');
     });
     socket.on('data', (chunk: string) => {
       buffer += chunk;
@@ -293,4 +295,3 @@ export async function collectLiveIdeState(
     collectedAt: Date.now(),
   };
 }
-

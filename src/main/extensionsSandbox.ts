@@ -108,13 +108,24 @@ function buildTerminalApi(ext: LoadedExtension): Record<string, unknown> {
   };
 }
 
+function sanitizeForExtension(key: string, value: unknown): unknown {
+  if (key === 'webAccessToken' || key === 'webAccessPassword') return '';
+  if (key === 'modelProviders' && Array.isArray(value)) {
+    return (value as Array<Record<string, unknown>>).map((p) => ({
+      ...p,
+      apiKey: p.apiKey ? '••••••••' : '',
+    }));
+  }
+  return value;
+}
+
 function buildConfigApi(ext: LoadedExtension): Record<string, unknown> {
   return {
     get: (key: string): unknown => {
       requirePermission(ext, 'config.read');
       requireString(key, 'Key');
       appendLog(ext, `config.get: ${key}`);
-      return getConfigValue(key as keyof AppConfig);
+      return sanitizeForExtension(key, getConfigValue(key as keyof AppConfig));
     },
   };
 }

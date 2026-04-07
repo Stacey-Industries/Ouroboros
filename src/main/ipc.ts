@@ -9,6 +9,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import { startApprovalManagerCleanup, stopApprovalManagerCleanup } from './approvalManager';
+import { hasSecureKey } from './auth/secureKeyStore';
 import { listCodexModels } from './codex';
 import { getConfigValue } from './config';
 import {
@@ -163,12 +164,15 @@ function registerCodeModeHandlers(channels: string[]): void {
 }
 
 function registerProviderHandlers(channels: string[]): void {
-  ipcMain.handle('providers:list', () => {
+  ipcMain.handle('providers:list', async () => {
     const providers = getAllProviders();
-    return providers.map((p) => ({
-      ...p,
-      apiKey: p.apiKey ? '\u2022\u2022\u2022\u2022' + p.apiKey.slice(-4) : '',
-    }));
+    const mapped = await Promise.all(
+      providers.map(async (p) => {
+        const hasKey = p.apiKey || (await hasSecureKey(`provider-key:${p.id}`));
+        return { ...p, apiKey: hasKey ? '••••••••' : '' };
+      }),
+    );
+    return mapped;
   });
 
   ipcMain.handle('providers:getSlots', () => {

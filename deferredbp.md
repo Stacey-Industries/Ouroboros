@@ -30,24 +30,24 @@ Fix the things that break when users actually use multi-window, and eliminate pr
 
 ---
 
-## Wave 2 — Security Hardening
+## Wave 2 — Security Hardening ✓ (v1.4.0)
 
-Close the plaintext credential and unauthenticated endpoint gaps.
+Closed plaintext credential and unauthenticated endpoint gaps.
 
 ### Credential & Auth Gaps
 
-- **#2 — Move API keys from electron-store to `safeStorage`** — `modelProviders[].apiKey`, `webAccessToken`, `webAccessPassword` are still stored as plaintext JSON in electron-store. Auth provider credentials (GitHub, Anthropic, OpenAI) correctly use `safeStorage`, but custom provider keys do not. Requires a new encrypted storage mechanism mirroring `credentialStore.ts`, plus migration of existing keys.
-- **#5 — IDE tool server has no authentication** — `\\.\pipe\ouroboros-tools` (Win) / `/tmp/ouroboros-tools.sock` (Unix) accepts NDJSON from any local process. Needs a token-based auth scheme: generate on startup, inject into PTY env alongside the socket path. Design decision needed: random per-session token vs persistent token.
+- **#2 — ✓ Move API keys from electron-store to `safeStorage`** — `SecureKeyStore` module created (`src/main/auth/secureKeyStore.ts`). One-time startup migration (`secretMigration.ts`) moves `modelProviders[].apiKey`, `webAccessToken`, `webAccessPassword` to encrypted `secrets.enc`. `config:get` IPC now sanitizes sensitive keys. `config:export` exports masked values. Extension sandbox `config.get` returns masked API keys.
+- **#5 — ✓ IDE tool server + hooks server authenticated** — Per-session 32-byte random tokens generated at startup (`pipeAuth.ts`). Both `ideToolServer.ts` and `hooksNet.ts` require `{"auth":"<token>"}` as the first NDJSON line. Tokens injected into PTY env as `OUROBOROS_TOOL_TOKEN` / `OUROBOROS_HOOKS_TOKEN`. All 17 hook scripts updated.
 
 ### Trust Boundaries
 
-- **#109 — Workspace trust model** — Opening untrusted project folder runs all hooks/extensions with full permissions. No restricted mode.
-- **#110 — MCP server sandboxing** — Any locally installed MCP server runs with full user permissions. VS Code has per-server file/network restrictions on macOS/Linux.
+- **#109 — ✓ Minimal workspace trust gate** — `workspaceTrust.ts` provides binary trusted/restricted mode. Restricted mode disables hook installation and extension loading. Trust persisted in `trustedWorkspaces` config. IPC handlers registered for renderer prompt/response.
+- **#110 — MCP server sandboxing** — **Deferred to Wave 3** — requires `utilityProcess.fork()` infrastructure (same as #58/#61).
 
 ### Test Coverage (attach to Wave 2)
 
-- **#90 — Extension sandbox** — Zero tests for `extensionsSandbox.ts` / `extensionsLifecycle.ts`.
-- **#91 — Web server auth** — Zero tests for web server auth, rate limiting, WebSocket bridge.
+- **#90 — ✓ Extension sandbox** — `extensionsSandbox.test.ts`: 21 tests covering permission gates, config masking, path validation, safe globals, console proxy.
+- **#91 — ✓ Web server auth + WebSocket bridge** — `webAuth.test.ts`: 30 tests. `webSocketBridge.test.ts`: 29 tests. Covers token CRUD, rate limiting, JSON-RPC dispatch, binary encoding.
 
 ---
 
