@@ -52,6 +52,53 @@ function createId(prefix: string): string {
 
 // ── Context packet helpers ────────────────────────────────────────────
 
+function buildEmptyContextPacket(request: TaskRequest): ContextPacket {
+  const now = Date.now();
+  const emptyGitDiff = {
+    changedFiles: [],
+    totalAdditions: 0,
+    totalDeletions: 0,
+    changedFileCount: 0,
+    generatedAt: now,
+  };
+  return {
+    version: 1,
+    id: createId('ctx'),
+    createdAt: now,
+    task: {
+      taskId: request.taskId ?? '',
+      goal: request.goal,
+      mode: request.mode ?? 'direct',
+      provider: request.provider ?? 'claude-code',
+      verificationProfile: 'fast',
+    },
+    repoFacts: {
+      workspaceRoots: request.workspaceRoots,
+      roots: [],
+      gitDiff: emptyGitDiff,
+      diagnostics: {
+        files: [],
+        totalErrors: 0,
+        totalWarnings: 0,
+        totalInfos: 0,
+        totalHints: 0,
+        generatedAt: now,
+      },
+      recentEdits: { files: [], generatedAt: now },
+    },
+    liveIdeState: {
+      selectedFiles: [],
+      openFiles: [],
+      dirtyFiles: [],
+      dirtyBuffers: [],
+      collectedAt: now,
+    },
+    files: [],
+    omittedCandidates: [],
+    budget: { estimatedBytes: 0, estimatedTokens: 0, droppedContentNotes: [] },
+  };
+}
+
 function resolveContextPacket(request: TaskRequest): ContextPacket | undefined {
   const ctx = getCachedContext(request.workspaceRoots);
   log.info('createTask.getCachedContext:', ctx ? 'hit' : 'miss');
@@ -99,7 +146,8 @@ async function createTask(
 
   const contextPacket = resolveContextPacket(request);
   await injectMemories(contextPacket ?? ({} as ContextPacket), request.workspaceRoots);
-  if (request.skillExpansion && contextPacket) contextPacket.skillInstructions = request.skillExpansion;
+  if (request.skillExpansion && contextPacket)
+    contextPacket.skillInstructions = request.skillExpansion;
 
   const session: TaskSessionRecord = {
     version: 1,
@@ -131,7 +179,7 @@ async function submitTaskToAdapter(
         sessionId: session.id,
         attemptId: createId('attempt'),
         request: session.request,
-        contextPacket: session.contextPacket!,
+        contextPacket: session.contextPacket ?? buildEmptyContextPacket(session.request),
         window: null,
       },
       sink,

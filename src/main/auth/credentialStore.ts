@@ -162,3 +162,7 @@ export async function hasCredential(provider: AuthProvider): Promise<boolean> {
   const store = await readStore();
   return provider in store;
 }
+
+export function isStorageSecure(): boolean {
+  return safeStorage.isEncryptionAvailable();
+}

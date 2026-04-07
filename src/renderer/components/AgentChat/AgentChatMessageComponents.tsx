@@ -160,7 +160,7 @@ export function FailedBanner({
     <div className="flex flex-col items-center gap-1">
       <div
         className="rounded-full px-3 py-1 text-[11px] font-medium text-status-error"
-        style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}
+        style={{ backgroundColor: 'var(--status-error-subtle)' }}
       >
         {activeThread.status === 'failed' ? 'Task failed' : 'Chat was stopped'}
       </div>
@@ -229,7 +229,7 @@ export function InlineError({ error }: { error: string | null }): React.ReactEle
   return error ? (
     <div
       className="mx-4 rounded-lg px-3 py-2 text-xs text-status-error"
-      style={{ backgroundColor: 'rgba(248, 81, 73, 0.08)' }}
+      style={{ backgroundColor: 'var(--status-error-subtle)' }}
     >
       {error}
     </div>

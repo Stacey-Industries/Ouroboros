@@ -17,6 +17,7 @@ export interface FileTreeItemRowProps {
   depth: number;
   isActive: boolean;
   isEditing?: boolean;
+  isSelected?: boolean;
   backgroundColor: string;
   heatTitle?: string;
   drag: TreeItemDragHandlers;
@@ -92,6 +93,7 @@ export function FileTreeItemRow({
   depth,
   isActive,
   isEditing,
+  isSelected,
   backgroundColor,
   heatTitle,
   drag,
@@ -100,10 +102,13 @@ export function FileTreeItemRow({
   onContextMenu,
   children,
 }: FileTreeItemRowProps): React.ReactElement {
+  const ariaExpanded = node.isDirectory ? (node.isExpanded ?? false) : undefined;
   return (
     <div
-      role="option"
-      aria-selected={isActive}
+      role="treeitem"
+      aria-selected={isActive || isSelected}
+      aria-expanded={ariaExpanded}
+      aria-level={depth + 1}
       draggable={drag.draggable}
       onDragStart={drag.onDragStart}
       onDragEnter={drag.onDragEnter}

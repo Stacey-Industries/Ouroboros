@@ -47,6 +47,14 @@ export function gitDiffCached(root: string, commitHash: string, filePaths?: stri
 }
 
 export function gitFileAtCommit(root: string, commitHash: string, filePath: string) {
+  const resolved = path.resolve(filePath);
+  const normalizedRoot = path.resolve(root);
+  const isWindows = process.platform === 'win32';
+  const normResolved = isWindows ? resolved.toLowerCase() : resolved;
+  const normRoot = isWindows ? normalizedRoot.toLowerCase() : normalizedRoot;
+  if (normResolved !== normRoot && !normResolved.startsWith(normRoot + path.sep)) {
+    return Promise.resolve({ success: false, error: 'File path is outside the repository root.' });
+  }
   return respond(
     async () => ({
       content: await gitStdout(

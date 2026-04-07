@@ -195,12 +195,29 @@ export function applyMicaEffect(win: BrowserWindow): void {
 
 let cspInstalled = false;
 
+function buildConnectSources(isDev: boolean): string {
+  const configuredPort = String((getConfigValue('webAccessPort') as number) ?? 7890);
+  const sources = [`ws://localhost:${configuredPort}`, `http://localhost:${configuredPort}`];
+
+  if (isDev) {
+    // Derive the Vite dev server port from ELECTRON_RENDERER_URL (set by electron-vite)
+    // or fall back to the electron-vite default of 5173.
+    const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
+    const devPort = rendererUrl ? new URL(rendererUrl).port || '5173' : '5173';
+    if (devPort !== configuredPort) {
+      sources.push(`ws://localhost:${devPort}`, `http://localhost:${devPort}`);
+    }
+  }
+
+  return `'self' ${sources.join(' ')}`;
+}
+
 export function ensureCSP(): void {
   if (cspInstalled) return;
   cspInstalled = true;
 
   const isDev = process.env.NODE_ENV === 'development';
-  const webPort = isDev ? '*' : String((getConfigValue('webAccessPort') as number) ?? 7890);
+  const connectSources = buildConnectSources(isDev);
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -213,7 +230,7 @@ export function ensureCSP(): void {
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' data:",
             "img-src 'self' data: blob: https:",
-            `connect-src 'self' ws://localhost:${webPort} http://localhost:${webPort}`,
+            `connect-src ${connectSources}`,
             "worker-src 'self' blob:",
           ].join('; '),
         ],

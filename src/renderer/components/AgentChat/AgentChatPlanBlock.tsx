@@ -55,7 +55,7 @@ function getStepTextClass(status: PlanStep['status']): string {
 
 function getStepDetailStyle(status: PlanStep['status']): React.CSSProperties | undefined {
   return status === 'failed'
-    ? { backgroundColor: 'rgba(248, 81, 73, 0.06)', fontFamily: 'var(--font-mono)' }
+    ? { backgroundColor: 'var(--status-error-subtle)', fontFamily: 'var(--font-mono)' }
     : { fontFamily: 'var(--font-mono)' };
 }
 
@@ -161,7 +161,7 @@ function PlanBlockHeader({
         {allDone && (
           <span
             className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-            style={{ backgroundColor: 'rgba(63, 185, 80, 0.15)', color: 'var(--status-success)' }}
+            style={{ backgroundColor: 'var(--diff-add-bg)', color: 'var(--status-success)' }}
           >
             Complete
           </span>
@@ -169,7 +169,7 @@ function PlanBlockHeader({
         {hasFailures && (
           <span
             className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-            style={{ backgroundColor: 'rgba(248, 81, 73, 0.15)', color: 'var(--status-error)' }}
+            style={{ backgroundColor: 'var(--diff-del-bg)', color: 'var(--status-error)' }}
           >
             Failed
           </span>
@@ -188,9 +188,9 @@ export function AgentChatPlanBlock({
   const hasFailures = steps.some((step) => step.status === 'failed');
   const allDone = completedCount === steps.length && steps.length > 0 && !isStreaming;
   const borderColor = hasFailures
-    ? 'rgba(248, 81, 73, 0.3)'
+    ? 'var(--diff-del-border)'
     : allDone
-      ? 'rgba(63, 185, 80, 0.3)'
+      ? 'var(--diff-add-border)'
       : undefined;
 
   return (

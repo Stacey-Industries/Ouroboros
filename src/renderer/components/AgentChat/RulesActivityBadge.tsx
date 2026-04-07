@@ -52,16 +52,24 @@ function RuleRow({ rule }: { rule: LoadedRule }): React.ReactElement {
           {truncatePath(rule.filePath)}
         </span>
       </div>
-      <span className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${badgeClass}`}>
+      <span
+        className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${badgeClass}`}
+      >
         {label}
       </span>
     </div>
   );
 }
 
-function RulesPopover(
-  { rules, style, ref }: { rules: LoadedRule[]; style?: React.CSSProperties; ref?: React.Ref<HTMLDivElement> },
-): React.ReactElement {
+function RulesPopover({
+  rules,
+  style,
+  ref,
+}: {
+  rules: LoadedRule[];
+  style?: React.CSSProperties;
+  ref?: React.Ref<HTMLDivElement>;
+}): React.ReactElement {
   return (
     <div
       ref={ref}
@@ -104,7 +112,11 @@ function usePopoverDismiss(args: {
   }, [open, close, buttonRef, menuRef]);
 }
 
-const pillStyle: React.CSSProperties = { borderRadius: '9999px', padding: '2px 10px', fontFamily: 'var(--font-ui)' };
+const pillStyle: React.CSSProperties = {
+  borderRadius: '9999px',
+  padding: '2px 10px',
+  fontFamily: 'var(--font-ui)',
+};
 
 function BadgePillButton(props: {
   count: number;
@@ -118,7 +130,7 @@ function BadgePillButton(props: {
       ref={props.buttonRef}
       onClick={props.onClick}
       aria-expanded={props.open}
-      className="inline-flex items-center gap-1 text-[11px] text-text-semantic-secondary transition-colors duration-150 hover:bg-[rgba(128,128,128,0.15)]"
+      className="inline-flex items-center gap-1 text-[11px] text-text-semantic-secondary transition-colors duration-150 hover:bg-surface-hover"
       style={pillStyle}
       title={`${props.count} rule${props.count === 1 ? '' : 's'} loaded`}
     >
@@ -160,10 +172,16 @@ export function RulesActivityBadge({ rules }: RulesActivityBadgeProps): React.Re
   return (
     <>
       <BadgePillButton count={rules.length} open={open} onClick={toggle} buttonRef={buttonRef} />
-      {open && pos && createPortal(
-        <RulesPopover ref={menuRef} rules={rules} style={{ position: 'fixed', left: pos.left, bottom: pos.bottom }} />,
-        document.body,
-      )}
+      {open &&
+        pos &&
+        createPortal(
+          <RulesPopover
+            ref={menuRef}
+            rules={rules}
+            style={{ position: 'fixed', left: pos.left, bottom: pos.bottom }}
+          />,
+          document.body,
+        )}
     </>
   );
 }

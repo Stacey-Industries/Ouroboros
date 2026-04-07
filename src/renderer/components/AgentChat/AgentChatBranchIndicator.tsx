@@ -9,7 +9,16 @@ export interface AgentChatBranchIndicatorProps {
 
 function ForkIcon(): React.ReactElement {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="6" y1="3" x2="6" y2="15" />
       <circle cx="18" cy="6" r="3" />
       <circle cx="6" cy="18" r="3" />
@@ -32,8 +41,8 @@ export function AgentChatBranchIndicator({
     <div
       className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-[11px] text-text-semantic-muted"
       style={{
-        backgroundColor: 'rgba(100, 100, 255, 0.04)',
-        borderColor: 'rgba(100, 100, 255, 0.15)',
+        backgroundColor: 'var(--interactive-accent-subtle)',
+        borderColor: 'var(--interactive-muted)',
       }}
     >
       <span className="shrink-0 text-interactive-accent">
@@ -47,8 +56,8 @@ export function AgentChatBranchIndicator({
           title={`Switch to "${branchInfo.parentTitle}"`}
         >
           {branchInfo.parentTitle}
-        </button>
-        {' '}at message {branchInfo.fromMessageIndex}
+        </button>{' '}
+        at message {branchInfo.fromMessageIndex}
         {branchInfo.fromMessagePreview && (
           <span className="ml-1 opacity-60">
             &ldquo;{truncatePreview(branchInfo.fromMessagePreview, 40)}&rdquo;

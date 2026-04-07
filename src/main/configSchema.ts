@@ -142,6 +142,13 @@ export const schema: Record<string, unknown> = {
     type: 'object',
     default: {},
   },
+  // @deprecated — multiRoots is a legacy global config key superseded by per-window
+  // projectRoots (stored in windowSessions). New code should read per-window roots via
+  // windowManager. This key is retained for:
+  //   - First-launch migration in windowManager.ts (seedProjectRoots)
+  //   - MCP server resolution in ipc-handlers/mcp.ts and mcpStore.ts (fallback path)
+  //   - Extension sandbox root resolution in extensionsSandbox.ts
+  // Do not remove until all three callers are migrated to per-window roots.
   multiRoots: {
     type: 'array',
     items: { type: 'string' },

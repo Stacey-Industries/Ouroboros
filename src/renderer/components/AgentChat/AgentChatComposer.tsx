@@ -15,7 +15,12 @@ import {
   useComposerMenuState,
   useImageAttachmentHandlers,
 } from './AgentChatComposerHooks';
-import { AttachmentChipsBar, ComposerInput, ComposerMenus } from './AgentChatComposerParts';
+import {
+  AttachmentChipsBar,
+  ComposerContextBar,
+  ComposerInput,
+  ComposerMenus,
+} from './AgentChatComposerParts';
 import { getComposerRootClassName, noop } from './AgentChatComposerSupport';
 import { AgentChatContextBar } from './AgentChatContextBar';
 import { ChatControlsBar, type ChatOverrides } from './ChatControlsBar';
@@ -65,9 +70,13 @@ export type AgentChatComposerProps = {
 /* ---------- ComposerFooter ---------- */
 
 type ComposerFooterProps = {
-  chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[];
-  codexSettingsModel?: string; defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  modelProviders?: ModelProvider[]; routedBy?: string; settingsModel?: string;
+  chatOverrides?: ChatOverrides;
+  codexModels?: CodexModelOption[];
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  modelProviders?: ModelProvider[];
+  routedBy?: string;
+  settingsModel?: string;
   onChatOverridesChange?: (overrides: ChatOverrides) => void;
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
@@ -78,11 +87,16 @@ function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
   if (!props.chatOverrides || !props.onChatOverridesChange) return null;
   return (
     <ChatControlsBar
-      overrides={props.chatOverrides} onChange={props.onChatOverridesChange}
-      settingsModel={props.settingsModel} codexSettingsModel={props.codexSettingsModel}
-      defaultProvider={props.defaultProvider} providers={props.modelProviders}
-      codexModels={props.codexModels} threadModelUsage={props.threadModelUsage}
-      streamingTokenUsage={props.streamingTokenUsage} isStreaming={props.isStreaming}
+      overrides={props.chatOverrides}
+      onChange={props.onChatOverridesChange}
+      settingsModel={props.settingsModel}
+      codexSettingsModel={props.codexSettingsModel}
+      defaultProvider={props.defaultProvider}
+      providers={props.modelProviders}
+      codexModels={props.codexModels}
+      threadModelUsage={props.threadModelUsage}
+      streamingTokenUsage={props.streamingTokenUsage}
+      isStreaming={props.isStreaming}
       routedBy={props.routedBy}
     />
   );
@@ -158,11 +172,11 @@ function useComposerState(props: AgentChatComposerProps): ComposerState {
   const lastSyncedDraft = useRef(props.draft);
   const menuState = useComposerMenuState();
   const useMentionSystem = Boolean(props.onAddMention);
-  const attachmentHandlers = useImageAttachmentHandlers(
-    attachments ?? [],
-    onAttachmentsChange,
-    { textareaRef, lastSyncedDraft, onChange: props.onChange },
-  );
+  const attachmentHandlers = useImageAttachmentHandlers(attachments ?? [], onAttachmentsChange, {
+    textareaRef,
+    lastSyncedDraft,
+    onChange: props.onChange,
+  });
   const slashCommands = useMemo(
     () => buildChatSlashCommands(slashCommandContext ?? {}),
     [slashCommandContext],
@@ -276,22 +290,27 @@ function ComposerBody({ state, composerProps: cp }: ComposerSubProps): React.Rea
 
 /* ---------- AgentChatComposer ---------- */
 
+function buildFooterProps(p: AgentChatComposerProps): ComposerFooterProps {
+  return {
+    chatOverrides: p.chatOverrides,
+    codexModels: p.codexModels,
+    codexSettingsModel: p.codexSettingsModel,
+    defaultProvider: p.defaultProvider,
+    modelProviders: p.modelProviders,
+    routedBy: p.routedBy,
+    settingsModel: p.settingsModel,
+    onChatOverridesChange: p.onChatOverridesChange,
+    streamingTokenUsage: p.streamingTokenUsage,
+    threadModelUsage: p.threadModelUsage,
+    isStreaming: p.isStreaming,
+  };
+}
+
 export function AgentChatComposer(composerProps: AgentChatComposerProps): React.ReactElement {
-  const {
-    chatOverrides,
-    onChatOverridesChange,
-    settingsModel,
-    codexSettingsModel,
-    defaultProvider,
-    modelProviders,
-    codexModels,
-    threadModelUsage,
-    streamingTokenUsage,
-    isStreaming,
-    routedBy,
-  } = composerProps;
   const state = useComposerState(composerProps);
   const { attachmentHandlers } = state;
+  const { streamingTokenUsage, threadModelUsage, chatOverrides, settingsModel, codexModels } =
+    composerProps;
   return (
     <div
       className={getComposerRootClassName(attachmentHandlers.isDragging)}
@@ -300,19 +319,14 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
       onDrop={attachmentHandlers.handleDrop}
     >
       <ComposerBody state={state} composerProps={composerProps} />
-      <ComposerFooter
-        chatOverrides={chatOverrides}
-        codexModels={codexModels}
-        codexSettingsModel={codexSettingsModel}
-        defaultProvider={defaultProvider}
-        modelProviders={modelProviders}
-        onChatOverridesChange={onChatOverridesChange}
-        settingsModel={settingsModel}
+      <ComposerContextBar
         streamingTokenUsage={streamingTokenUsage}
         threadModelUsage={threadModelUsage}
-        isStreaming={isStreaming}
-        routedBy={routedBy}
+        selectedModel={chatOverrides?.model}
+        settingsModel={settingsModel}
+        codexModels={codexModels}
       />
+      <ComposerFooter {...buildFooterProps(composerProps)} />
     </div>
   );
 }

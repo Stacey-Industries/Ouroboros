@@ -13,11 +13,26 @@ import log from '../logger';
 
 const SIGNALS_FILENAME = 'router-quality-signals.jsonl';
 const RETRAINED_WEIGHTS_FILE = 'router-weights-retrained.json';
+const RETRAINED_WEIGHTS_BACKUP_FILE = 'router-weights-retrained.backup.json';
 const TRAINER_TIMEOUT_MS = 120_000; // 2 minutes
 
 /* ── Exports ─────────────────────────────────────────────────────────── */
 
-export { RETRAINED_WEIGHTS_FILE };
+export { RETRAINED_WEIGHTS_BACKUP_FILE, RETRAINED_WEIGHTS_FILE };
+
+/* ── Weight backup ───────────────────────────────────────────────────── */
+
+/**
+ * Copy current weights to a backup file before overwriting.
+ * If no weights file exists yet (first retrain), this is a no-op.
+ */
+export async function backupWeightsFile(src: string, dest: string): Promise<void> {
+  try {
+    await fs.promises.copyFile(src, dest);
+  } catch {
+    // No existing weights to back up — first retrain, silently skip
+  }
+}
 
 /* ── Sample counting ─────────────────────────────────────────────────── */
 

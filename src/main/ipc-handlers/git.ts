@@ -1,4 +1,4 @@
-import { BrowserWindow,ipcMain, IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import {
   applyPatch,
@@ -8,6 +8,7 @@ import {
   gitBranches,
   gitChangedFilesBetween,
   gitCheckout,
+  gitCheckpoint,
   gitCommit,
   gitCreateSnapshot,
   gitDiff,
@@ -71,6 +72,13 @@ function registerCoreGitChannels(rs: SecureRegister): string[] {
   ];
 }
 
+function registerCheckpointChannel(rs: SecureRegister): string {
+  return rs('git:checkpoint', async (root: string, message: string) => {
+    const ok = await gitCheckpoint(root, message);
+    return { success: ok };
+  });
+}
+
 function registerSnapshotGitChannels(rs: SecureRegister): string[] {
   return [
     rs('git:discardFile', discardFile),
@@ -101,5 +109,9 @@ function registerSnapshotGitChannels(rs: SecureRegister): string[] {
 export function registerGitHandlers(_senderWindow: SenderWindow): string[] {
   void _senderWindow;
   const rs = buildSecureRegister();
-  return [...registerCoreGitChannels(rs), ...registerSnapshotGitChannels(rs)];
+  return [
+    ...registerCoreGitChannels(rs),
+    ...registerSnapshotGitChannels(rs),
+    registerCheckpointChannel(rs),
+  ];
 }

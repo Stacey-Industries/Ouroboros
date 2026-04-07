@@ -217,4 +217,12 @@ export const tailSchema = {
     type: 'number',
     default: 0,
   },
+  internalMcpEnabled: {
+    type: 'boolean',
+    default: true,
+  },
+  autoCheckpoint: {
+    type: 'boolean',
+    default: true,
+  },
 };

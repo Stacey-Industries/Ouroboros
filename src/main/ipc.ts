@@ -76,7 +76,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('claudeMd', () => registerClaudeMdHandlers(senderWindow)),
     ...safeRegister('rulesAndSkills', () => registerRulesAndSkillsHandlers(senderWindow)),
     ...safeRegister('search', () => registerSearchHandlers()),
-    ...safeRegister('auth', () => registerAuthHandlers(senderWindow, win)),
+    ...safeRegister('auth', () => registerAuthHandlers(senderWindow)),
     ...safeRegister('ai', () => registerAiHandlers()),
     ...safeRegister('routerStats', () => registerRouterStatsHandlers()),
   ];

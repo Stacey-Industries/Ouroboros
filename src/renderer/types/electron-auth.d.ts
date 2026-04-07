@@ -11,7 +11,12 @@ export type { AuthProvider, AuthState, AuthUser, CliCredentialDetection };
 export type { GitHubDeviceFlowInfo, GitHubLoginEvent };
 
 export interface AuthAPI {
-  getStates: () => Promise<{ success: boolean; states?: AuthState[]; error?: string }>;
+  getStates: () => Promise<{
+    success: boolean;
+    states?: AuthState[];
+    storageSecure?: boolean;
+    error?: string;
+  }>;
   startLogin: (provider: AuthProvider) => Promise<{ success: boolean; error?: string }>;
   cancelLogin: (provider: AuthProvider) => Promise<{ success: boolean; error?: string }>;
   logout: (provider: AuthProvider) => Promise<{ success: boolean; error?: string }>;

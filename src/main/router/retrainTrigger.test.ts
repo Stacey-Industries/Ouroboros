@@ -97,16 +97,41 @@ describe('validateWeightFile', () => {
 
 // ─── reloadWeights ───────────────────────────────────────────────────────────
 
+// Feature names must match FEATURE_NAMES in routerTypes.ts (19 features) for
+// the dimension check in reloadWeights to pass.
+const ALL_FEATURE_NAMES = [
+  'promptCharLength',
+  'wordCount',
+  'questionMarkCount',
+  'sentenceCount',
+  'containsCodeBlock',
+  'containsFilePath',
+  'filePathCount',
+  'judgmentWordCount',
+  'planningWordCount',
+  'implementationWordCount',
+  'lookupWordCount',
+  'ambiguityWordCount',
+  'scopeWordCount',
+  'prevMessageIsAssistant',
+  'prevAssistantEndsWithQuestion',
+  'prevAssistantLength',
+  'prevAssistantIsPlan',
+  'isPastedOnly',
+  'slashCommandPresent',
+];
+const N = ALL_FEATURE_NAMES.length;
+
 describe('reloadWeights', () => {
   it('returns true and loads valid weights from disk', () => {
     const weights = {
       type: 'logistic_regression',
-      feature_names: ['promptCharLength'],
+      feature_names: ALL_FEATURE_NAMES,
       label_names: ['HAIKU', 'SONNET', 'OPUS'],
-      coefficients: [[1], [2], [3]],
+      coefficients: [Array(N).fill(1), Array(N).fill(2), Array(N).fill(3)],
       intercept: [0, 0, 0],
-      scaler_mean: [0],
-      scaler_scale: [1],
+      scaler_mean: Array(N).fill(0),
+      scaler_scale: Array(N).fill(1),
     };
     const filePath = path.join(tmpDir, 'test-weights.json');
     fs.writeFileSync(filePath, JSON.stringify(weights), 'utf8');

@@ -149,7 +149,7 @@ function ToolCardBody(
   return (
     <div
       className={`my-1.5 rounded-md border text-xs glass-card bg-surface-raised ${props.errorOutput ? '' : 'border-border-semantic'}`}
-      style={props.errorOutput ? { borderColor: 'rgba(248, 81, 73, 0.3)' } : undefined}
+      style={props.errorOutput ? { borderColor: 'var(--diff-del-border)' } : undefined}
     >
       <ToolHeader
         name={props.name}

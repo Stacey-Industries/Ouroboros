@@ -19,6 +19,18 @@ $PipeName   = '\\.\pipe\agent-ide-hooks'
 $TcpHost    = '127.0.0.1'
 $TcpPort    = 3333
 $TimeoutMs  = 800   # total budget for initial send
+
+# Override from env if Ouroboros injected the address at PTY spawn time
+if ($env:OUROBOROS_HOOKS_ADDRESS) {
+    $addr = $env:OUROBOROS_HOOKS_ADDRESS
+    if ($addr -match '^(\d+)$') {
+        $TcpPort = [int]$addr
+    } elseif ($addr -match '^(.+):(\d+)$') {
+        $TcpHost = $Matches[1]
+        $TcpPort = [int]$Matches[2]
+    }
+}
+
 $ApprovalsDir = Join-Path $env:USERPROFILE '.ouroboros\approvals'
 $PollIntervalMs = 500
 $MaxPollSeconds = 120  # max time to wait for approval

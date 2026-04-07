@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import type { ApprovalRequest } from '../../types/electron';
 import {
@@ -67,7 +67,11 @@ function RejectButton({ onReject }: { onReject: () => void }): React.ReactElemen
   );
 }
 
-function AlwaysAllowButton({ onAlwaysAllow }: { onAlwaysAllow: () => void }): React.ReactElement<unknown> {
+function AlwaysAllowButton({
+  onAlwaysAllow,
+}: {
+  onAlwaysAllow: () => void;
+}): React.ReactElement<unknown> {
   return (
     <ActionButton
       title="Always Allow this tool for this session (A)"
@@ -115,7 +119,49 @@ const DIALOG_PANEL_STYLE: React.CSSProperties = {
   overflow: 'auto',
 };
 
+const TITLE_ID = 'approval-dialog-title';
+
+const FOCUSABLE_SELECTORS =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function trapFocus(dialogEl: HTMLElement, event: KeyboardEvent): void {
+  const focusable = Array.from(dialogEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS));
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function useFocusTrap(panelRef: React.RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTORS);
+    firstFocusable?.focus();
+
+    function onKeyDown(event: KeyboardEvent): void {
+      if (!panel || event.key !== 'Tab') return;
+      trapFocus(panel, event);
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [panelRef]);
+}
+
 function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<unknown> {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef);
+
   const rejectInput = props.showRejectInput ? (
     <RejectReasonInput
       rejectReason={props.rejectReason}
@@ -127,10 +173,14 @@ function DialogPanel(props: ApprovalDialogCardProps): React.ReactElement<unknown
 
   return (
     <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={TITLE_ID}
       className="flex flex-col gap-3 rounded-lg shadow-2xl border border-border-semantic"
       style={DIALOG_PANEL_STYLE}
     >
-      <ApprovalHeader queuedCount={props.queuedCount} />
+      <ApprovalHeader queuedCount={props.queuedCount} titleId={TITLE_ID} />
       <ApprovalMeta request={props.request} elapsedSeconds={props.elapsedSeconds} />
       <PreviewPanel request={props.request} />
       {rejectInput}

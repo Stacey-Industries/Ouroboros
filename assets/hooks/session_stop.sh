@@ -15,6 +15,14 @@ TCP_HOST="127.0.0.1"
 TCP_PORT="${AGENT_IDE_HOOKS_PORT:-3333}"
 TIMEOUT=1
 
+# Override from OUROBOROS_HOOKS_ADDRESS if Ouroboros injected it at PTY spawn
+if [ -n "${OUROBOROS_HOOKS_ADDRESS:-}" ]; then
+    case "$OUROBOROS_HOOKS_ADDRESS" in
+        *:*) TCP_HOST="${OUROBOROS_HOOKS_ADDRESS%%:*}"; TCP_PORT="${OUROBOROS_HOOKS_ADDRESS##*:}" ;;
+        *)   TCP_PORT="$OUROBOROS_HOOKS_ADDRESS" ;;
+    esac
+fi
+
 # ── Read stdin ────────────────────────────────────────────────────────────────
 stdin_data=""
 if read -t "$TIMEOUT" -r line 2>/dev/null; then

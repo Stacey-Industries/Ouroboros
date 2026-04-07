@@ -57,8 +57,8 @@ function ErrorBlockRenderer({
     <div
       className="my-1.5 rounded-md border px-3 py-2 text-xs text-status-error"
       style={{
-        borderColor: 'rgba(248, 81, 73, 0.3)',
-        backgroundColor: 'rgba(248, 81, 73, 0.06)',
+        borderColor: 'var(--diff-del-border)',
+        backgroundColor: 'var(--status-error-subtle)',
       }}
     >
       <div className="flex items-center gap-1.5">

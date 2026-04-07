@@ -23,7 +23,7 @@ export const THREAD_DROPDOWN_STYLE: React.CSSProperties = {
   zIndex: 9999,
   padding: '4px 0',
   backgroundColor: 'var(--surface-base)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
+  border: '1px solid var(--border-subtle)',
   borderRadius: 10,
 };
 

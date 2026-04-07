@@ -2,6 +2,7 @@ import log from 'electron-log/renderer';
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
+import { SWITCH_SIDEBAR_VIEW_EVENT } from '../../hooks/appEventNames';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -192,7 +193,7 @@ export function AgentChatWorkspace({
   const onRemember = useRememberAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
     window.dispatchEvent(
-      new CustomEvent('agent-ide:switch-sidebar-view', { detail: { view: 'memory' } }),
+      new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }),
     );
   }, []);
 

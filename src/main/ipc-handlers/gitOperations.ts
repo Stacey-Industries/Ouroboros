@@ -275,6 +275,19 @@ export function gitChangedFilesBetween(root: string, fromHash: string, toHash: s
   }));
 }
 
+export async function gitCheckpoint(root: string, message: string): Promise<boolean> {
+  try {
+    const status = await gitStdout(root, ['status', '--porcelain'], MB);
+    if (!status.trim()) return true;
+    await gitExec(['add', '-A'], { cwd: root });
+    await gitExec(['commit', '-m', `[ouroboros-checkpoint] ${message}`], { cwd: root });
+    return true;
+  } catch (err) {
+    log.warn('Checkpoint failed:', err);
+    return false;
+  }
+}
+
 // Extended git operations — defined in gitOperationsExtended.ts, re-exported here for backward compatibility
 export {
   gitBlame,

@@ -304,6 +304,8 @@ export interface AppConfig {
   routerSettings: RouterSettings;
   /** Number of quality signal lines at last retrain — used by retrain trigger. */
   routerLastRetrainCount: number;
+  /** Enable the internal MCP server that exposes IDE tools to Claude Code sessions */
+  internalMcpEnabled: boolean;
 }
 
 export const store = new Store<AppConfig>({

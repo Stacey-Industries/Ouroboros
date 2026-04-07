@@ -178,18 +178,16 @@ function pushAnnotation(annotation: QualityAnnotation): void {
   pendingAnnotations.push(annotation);
 }
 
-/** Write buffered annotations to disk and clear the buffer. */
+/** Write buffered annotations to disk and clear the buffer. Fire-and-forget async write to avoid blocking the IPC hot path. */
 export function flushAnnotations(): void {
   if (pendingAnnotations.length === 0) return;
-  try {
-    const filePath = path.join(app.getPath('userData'), SIGNALS_FILENAME);
-    const lines = pendingAnnotations.map((a) => JSON.stringify(a)).join('\n') + '\n';
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from app.getPath('userData'), trusted
-    fs.appendFileSync(filePath, lines, 'utf8');
-    pendingAnnotations.length = 0;
-  } catch (err) {
+  const filePath = path.join(app.getPath('userData'), SIGNALS_FILENAME);
+  const lines = pendingAnnotations.map((a) => JSON.stringify(a)).join('\n') + '\n';
+  pendingAnnotations.length = 0;
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from app.getPath('userData'), trusted
+  fs.promises.appendFile(filePath, lines, 'utf8').catch((err: unknown) => {
     log.warn('[quality-signals] flush failed:', err);
-  }
+  });
 }
 
 /* ── Eviction + cleanup ──────────────────────────────────────────────── */

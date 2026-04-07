@@ -139,7 +139,7 @@ export function renderDiffLine(line: ParsedDiffLine, i: number): React.ReactElem
         <td
           colSpan={3}
           className="select-text px-2 py-0.5 text-interactive-accent"
-          style={{ backgroundColor: 'rgba(100, 100, 255, 0.06)' }}
+          style={{ backgroundColor: 'var(--interactive-accent-subtle)' }}
         >
           {line.text}
         </td>

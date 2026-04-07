@@ -138,14 +138,14 @@ export function ApplyDiffPreview({
         <button
           onClick={onAccept}
           className="rounded border border-border-semantic px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-          style={{ backgroundColor: 'rgba(63, 185, 80, 0.15)', color: 'var(--status-success)' }}
+          style={{ backgroundColor: 'var(--diff-add-bg)', color: 'var(--status-success)' }}
         >
           Accept
         </button>
         <button
           onClick={onReject}
           className="rounded border border-border-semantic px-2 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80"
-          style={{ backgroundColor: 'rgba(248, 81, 73, 0.15)', color: 'var(--status-error)' }}
+          style={{ backgroundColor: 'var(--diff-del-bg)', color: 'var(--status-error)' }}
         >
           Reject
         </button>
@@ -271,7 +271,7 @@ function ApplyButton({
       onClick={() => void apply()}
       title="Apply to file"
       className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:opacity-80 text-interactive-accent border border-border-semantic"
-      style={{ backgroundColor: 'rgba(100, 100, 255, 0.1)' }}
+      style={{ backgroundColor: 'var(--interactive-accent-subtle)' }}
     >
       Apply
     </button>

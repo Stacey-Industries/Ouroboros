@@ -25,11 +25,7 @@ import {
   writeBinaryFile,
   writeTextFile,
 } from './filesHelpers';
-import {
-  assertPathAllowed,
-  isTrustedConfigPath,
-  isTrustedVsxExtensionPath,
-} from './pathSecurity';
+import { assertPathAllowed, isTrustedConfigPath, isTrustedVsxExtensionPath } from './pathSecurity';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 type FileHandler<TArgs extends unknown[] = unknown[]> = (
@@ -189,7 +185,9 @@ function handleWatchDir(event: IpcMainInvokeEvent, dirPath: string) {
   return assertPathAllowed(event, dirPath) || watchDirectory(dirPath);
 }
 
-async function handleUnwatchDir(_event: IpcMainInvokeEvent, dirPath: string) {
+async function handleUnwatchDir(event: IpcMainInvokeEvent, dirPath: string) {
+  const denied = assertPathAllowed(event, dirPath);
+  if (denied) return denied;
   const key = normalizeWatchPath(dirPath);
   const watcher = watchers.get(key);
   if (watcher) {

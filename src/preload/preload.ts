@@ -32,6 +32,7 @@ const ptyAPI: ElectronAPI['pty'] = {
   startRecording: (id) => ipcRenderer.invoke('pty:startRecording', id),
   stopRecording: (id) => ipcRenderer.invoke('pty:stopRecording', id),
   listSessions: () => ipcRenderer.invoke('pty:listSessions'),
+  getShellState: (id) => ipcRenderer.invoke('pty:shellState', id),
 
   onData: (id, callback) => {
     const channel = `pty:data:${id}`;
@@ -103,8 +104,7 @@ const filesAPI: ElectronAPI['files'] = {
 
   showImageDialog: () => ipcRenderer.invoke('files:showImageDialog'),
 
-  search: (root, query, options) =>
-    ipcRenderer.invoke('files:search', root, query, options),
+  search: (root, query, options) => ipcRenderer.invoke('files:search', root, query, options),
 
   onFileChange: (callback) => {
     const handler = (_event: Electron.IpcRendererEvent, change: FileChangeEvent) =>
@@ -197,6 +197,15 @@ const appAPI: ElectronAPI['app'] = {
     webFrame.setZoomLevel(0);
     return Promise.resolve({ success: true as const });
   },
+
+  onStartupWarning: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: { name: string; message: string },
+    ) => callback(payload);
+    ipcRenderer.on('app:startupWarning', handler);
+    return () => ipcRenderer.removeListener('app:startupWarning', handler);
+  },
 };
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -259,6 +268,7 @@ const gitAPI: ElectronAPI['git'] = {
     ipcRenderer.invoke('git:restoreSnapshot', root, commitHash),
   createSnapshot: (root, label) => ipcRenderer.invoke('git:createSnapshot', root, label),
   dirtyCount: (root) => ipcRenderer.invoke('git:dirtyCount', root),
+  checkpoint: (root, message) => ipcRenderer.invoke('git:checkpoint', root, message),
 };
 
 // ——— Providers ———————————————————————————————————————————————————————

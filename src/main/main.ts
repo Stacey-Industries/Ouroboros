@@ -18,6 +18,11 @@ import { initExtensions } from './extensions';
 import { installHooks } from './hookInstaller';
 import { startHooksServer, stopHooksServer } from './hooks';
 import { startIdeToolServer, stopIdeToolServer } from './ideToolServer';
+import {
+  injectIntoProjectSettings,
+  removeFromProjectSettings,
+  startInternalMcpServer,
+} from './internalMcp';
 import { cleanupIpcHandlers } from './ipc';
 import {
   loadPersistedContextCache,
@@ -84,6 +89,7 @@ if (!gotTheLock) {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let internalMcpStop: (() => Promise<void>) | null = null;
 
 // â”€â”€â”€ Performance metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -95,14 +101,23 @@ function stopPerfMetrics(): void {
   stopManagedPerfMetrics();
 }
 
+function notifyStartupFailure(name: string, err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  for (const win of getAllActiveWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('app:startupWarning', { name, message });
+  }
+}
+
 async function runStartupStep(
   errorMessage: string,
   step: () => Promise<unknown> | unknown,
+  critical = false,
 ): Promise<void> {
   try {
     await step();
   } catch (err) {
     log.error(errorMessage, err);
+    if (critical) notifyStartupFailure(errorMessage, err);
   }
 }
 
@@ -111,9 +126,43 @@ async function startIdeTools(): Promise<void> {
   if (toolAddr) log.info(`IDE tool server started at ${toolAddr.address}`);
 }
 
+async function startInternalMcp(): Promise<void> {
+  if (!getConfigValue('internalMcpEnabled')) return;
+  const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
+  if (!workspaceRoot) {
+    log.info('[internal-mcp] no default project root — skipping startup');
+    return;
+  }
+  const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
+  internalMcpStop = handle.stop;
+  log.info(`[internal-mcp] started on port ${handle.port}`);
+  await injectIntoProjectSettings(workspaceRoot, handle.port);
+  log.info('[internal-mcp] injected into .claude/settings.json');
+}
+
+async function stopInternalMcp(): Promise<void> {
+  const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
+  if (workspaceRoot) {
+    try {
+      await removeFromProjectSettings(workspaceRoot);
+    } catch (err) {
+      log.warn('[internal-mcp] failed to remove from settings:', err);
+    }
+  }
+  if (internalMcpStop) {
+    await internalMcpStop();
+    internalMcpStop = null;
+  }
+}
+
 async function startBackgroundServices(win: BrowserWindow): Promise<void> {
-  await runStartupStep('[main] failed to start hooks server:', async () => startHooksServer(win));
+  await runStartupStep(
+    '[main] failed to start hooks server:',
+    async () => startHooksServer(win),
+    true,
+  );
   await runStartupStep('[main] failed to start IDE tool server:', startIdeTools);
+  await runStartupStep('[main] failed to start internal MCP server:', startInternalMcp);
   await runStartupStep('[main] hook installer error:', installHooks);
   await runStartupStep('[main] extensions init error:', initExtensions);
   startClaudeUsagePoller();
@@ -211,7 +260,7 @@ async function initializeApplication(): Promise<void> {
   startJankDetector();
   startTokenRefreshManager();
   registerWindowLifecycleHandlers();
-  void seedGithubTokenForPty();
+  void seedGithubTokenWithRetry();
   startContextLayerAsync(defaultRoot);
   startWebServerAsync();
   loadRetrainedWeightsIfAvailable();
@@ -219,11 +268,19 @@ async function initializeApplication(): Promise<void> {
 }
 
 async function seedGithubTokenForPty(): Promise<void> {
-  try {
-    const cred = await getCredential('github');
-    if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
-  } catch (err) {
-    log.warn('Failed to seed GitHub token for PTY:', err);
+  const cred = await getCredential('github');
+  if (cred?.type === 'oauth') setGithubTokenForPty(cred.accessToken);
+}
+
+async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await seedGithubTokenForPty();
+      return;
+    } catch (err) {
+      log.warn(`GitHub token seed attempt ${i + 1} failed:`, err);
+      if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, 2000));
+    }
   }
 }
 
@@ -262,6 +319,7 @@ app.on('window-all-closed', async () => {
   await stopWebServer();
   await stopHooksServer();
   await stopIdeToolServer();
+  await stopInternalMcp();
   killAllPtySessions();
 
   if (process.platform !== 'darwin') {
@@ -275,7 +333,7 @@ app.on('window-all-closed', async () => {
 app.on('will-quit', async () => {
   stopRetrainObserver();
   clearQualityTimers();
-  stopClaudeUsagePoller();
+  await stopClaudeUsagePoller();
   cleanupIpcHandlers();
   closeCostHistoryDb();
   closeThreadStore();
@@ -300,13 +358,19 @@ app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
     const parsedUrl = new URL(url);
     const isDev = process.env.NODE_ENV === 'development';
-    const isLocalhost = parsedUrl.hostname === 'localhost';
     const isFile = parsedUrl.protocol === 'file:';
 
-    if (!isDev && !isFile) {
+    if (isFile) return;
+
+    if (!isDev) {
       event.preventDefault();
+      return;
     }
-    if (isDev && !isLocalhost && !isFile) {
+
+    // In dev, only allow navigation to the Vite dev server origin.
+    const devServerUrl = process.env['ELECTRON_RENDERER_URL'] ?? 'http://localhost:5173';
+    const devOrigin = new URL(devServerUrl).origin;
+    if (parsedUrl.origin !== devOrigin) {
       event.preventDefault();
     }
   });

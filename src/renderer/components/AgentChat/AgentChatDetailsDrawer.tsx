@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 
-import type { AgentChatLinkedDetailsResult, AgentChatOrchestrationLink } from '../../types/electron';
-import {
-  buildResultRows,
-  buildSessionRows,
-  shortenId,
-} from './agentChatDetailsSupport';
+import type {
+  AgentChatLinkedDetailsResult,
+  AgentChatOrchestrationLink,
+} from '../../types/electron';
+import { buildResultRows, buildSessionRows, shortenId } from './agentChatDetailsSupport';
 import { SkillHistorySection } from './SkillHistorySection';
 
 export interface AgentChatDetailsDrawerProps {
@@ -20,13 +19,12 @@ export interface AgentChatDetailsDrawerProps {
   skillExecutions?: import('@shared/types/ruleActivity').SkillExecutionRecord[];
 }
 
-function DrawerSection(props: {
-  children: React.ReactNode;
-  title: string;
-}): React.ReactElement {
+function DrawerSection(props: { children: React.ReactNode; title: string }): React.ReactElement {
   return (
     <section className="rounded border border-border-semantic bg-surface-base px-3 py-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">{props.title}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">
+        {props.title}
+      </div>
       <div className="mt-2">{props.children}</div>
     </section>
   );
@@ -37,12 +35,21 @@ function MetadataGrid(props: {
 }): React.ReactElement {
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-      {props.rows.filter((row) => row.value).map((row) => (
-        <div key={row.label} className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">{row.label}</div>
-          <div className="mt-1 truncate text-text-semantic-primary" title={row.value ?? undefined}>{row.value}</div>
-        </div>
-      ))}
+      {props.rows
+        .filter((row) => row.value)
+        .map((row) => (
+          <div key={row.label} className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">
+              {row.label}
+            </div>
+            <div
+              className="mt-1 truncate text-text-semantic-primary"
+              title={row.value ?? undefined}
+            >
+              {row.value}
+            </div>
+          </div>
+        ))}
     </div>
   );
 }
@@ -57,17 +64,25 @@ function LoadingState(): React.ReactElement {
 
 function ErrorState({ error }: { error: string }): React.ReactElement {
   return (
-    <div className="rounded border border-border-semantic bg-[rgba(248,81,73,0.08)] px-3 py-3 text-xs leading-5 text-status-error">
+    <div className="rounded border border-border-semantic bg-status-error-subtle px-3 py-3 text-xs leading-5 text-status-error">
       {error}
     </div>
   );
 }
 
 function EmptyState(): React.ReactElement {
-  return <div className="text-xs text-text-semantic-muted">No linked task details are available for this message yet.</div>;
+  return (
+    <div className="text-xs text-text-semantic-muted">
+      No linked task details are available for this message yet.
+    </div>
+  );
 }
 
-function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
+function ContextSection({
+  details,
+}: {
+  details: AgentChatLinkedDetailsResult;
+}): React.ReactElement | null {
   const contextPacket = details.session?.contextPacket;
   if (!contextPacket) {
     return null;
@@ -75,9 +90,15 @@ function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }):
 
   const budgetText = [
     `${contextPacket.files.length.toLocaleString()} files`,
-    contextPacket.omittedCandidates.length > 0 ? `${contextPacket.omittedCandidates.length.toLocaleString()} omitted` : null,
-    contextPacket.budget.estimatedTokens ? `${contextPacket.budget.estimatedTokens.toLocaleString()} tokens` : null,
-  ].filter(Boolean).join(' • ');
+    contextPacket.omittedCandidates.length > 0
+      ? `${contextPacket.omittedCandidates.length.toLocaleString()} omitted`
+      : null,
+    contextPacket.budget.estimatedTokens
+      ? `${contextPacket.budget.estimatedTokens.toLocaleString()} tokens`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   return (
     <DrawerSection title="Context">
@@ -85,10 +106,18 @@ function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }):
       {contextPacket.files.length > 0 ? (
         <div className="mt-3 space-y-2">
           {contextPacket.files.slice(0, 5).map((file) => (
-            <div key={file.filePath} className="rounded border border-border-semantic px-2.5 py-2 text-xs">
-              <div className="truncate text-text-semantic-primary" title={file.filePath}>{file.filePath}</div>
+            <div
+              key={file.filePath}
+              className="rounded border border-border-semantic px-2.5 py-2 text-xs"
+            >
+              <div className="truncate text-text-semantic-primary" title={file.filePath}>
+                {file.filePath}
+              </div>
               <div className="mt-1 truncate text-[11px] text-text-semantic-muted">
-                {file.reasons.slice(0, 2).map((reason) => reason.detail).join(' • ') || 'Selected for context'}
+                {file.reasons
+                  .slice(0, 2)
+                  .map((reason) => reason.detail)
+                  .join(' • ') || 'Selected for context'}
               </div>
             </div>
           ))}
@@ -98,8 +127,13 @@ function ContextSection({ details }: { details: AgentChatLinkedDetailsResult }):
   );
 }
 
-function VerificationSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
-  const verification = details.result?.verificationSummary ?? details.session?.lastVerificationSummary;
+function VerificationSection({
+  details,
+}: {
+  details: AgentChatLinkedDetailsResult;
+}): React.ReactElement | null {
+  const verification =
+    details.result?.verificationSummary ?? details.session?.lastVerificationSummary;
   if (!verification) {
     return null;
   }
@@ -107,16 +141,23 @@ function VerificationSection({ details }: { details: AgentChatLinkedDetailsResul
   return (
     <DrawerSection title="Verification">
       <div className="text-xs text-text-semantic-primary">{`${verification.profile} • ${verification.status}`}</div>
-      <div className="mt-2 text-xs leading-5 text-text-semantic-muted">{verification.summary || 'No verification summary available.'}</div>
+      <div className="mt-2 text-xs leading-5 text-text-semantic-muted">
+        {verification.summary || 'No verification summary available.'}
+      </div>
       {verification.commandResults.length > 0 ? (
         <div className="mt-3 space-y-2">
           {verification.commandResults.slice(0, 4).map((result) => (
-            <div key={result.stepId} className="rounded border border-border-semantic px-2.5 py-2 text-xs">
+            <div
+              key={result.stepId}
+              className="rounded border border-border-semantic px-2.5 py-2 text-xs"
+            >
               <div className="flex items-center justify-between gap-2 text-text-semantic-primary">
                 <span className="truncate">{result.stepId}</span>
                 <span className="text-text-semantic-muted">{result.status}</span>
               </div>
-              {result.stderr?.trim() ? <div className="mt-1 text-[11px] text-status-error">{result.stderr.trim()}</div> : null}
+              {result.stderr?.trim() ? (
+                <div className="mt-1 text-[11px] text-status-error">{result.stderr.trim()}</div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -133,13 +174,22 @@ function ResultIssueList({ issues }: { issues: string[] }): React.ReactElement |
   return (
     <div className="mt-3 space-y-2">
       {issues.slice(0, 6).map((issue) => (
-        <div key={issue} className="rounded border border-border-semantic px-2.5 py-2 text-xs text-text-semantic-muted">{issue}</div>
+        <div
+          key={issue}
+          className="rounded border border-border-semantic px-2.5 py-2 text-xs text-text-semantic-muted"
+        >
+          {issue}
+        </div>
       ))}
     </div>
   );
 }
 
-function ResultSection({ details }: { details: AgentChatLinkedDetailsResult }): React.ReactElement | null {
+function ResultSection({
+  details,
+}: {
+  details: AgentChatLinkedDetailsResult;
+}): React.ReactElement | null {
   const result = details.result ?? details.session?.latestResult;
   if (!result) {
     return null;
@@ -149,7 +199,9 @@ function ResultSection({ details }: { details: AgentChatLinkedDetailsResult }): 
     <DrawerSection title="Result">
       <MetadataGrid rows={buildResultRows(result)} />
       {result.message?.trim() ? <DrawerTextBlock>{result.message.trim()}</DrawerTextBlock> : null}
-      {result.diffSummary?.summary ? <DrawerTextBlock>{result.diffSummary.summary}</DrawerTextBlock> : null}
+      {result.diffSummary?.summary ? (
+        <DrawerTextBlock>{result.diffSummary.summary}</DrawerTextBlock>
+      ) : null}
       <ResultIssueList issues={result.unresolvedIssues} />
     </DrawerSection>
   );
@@ -214,12 +266,16 @@ function useEscapeToClose(isOpen: boolean, onClose: () => void): void {
   }, [isOpen, onClose]);
 }
 
-function DrawerHeader({ onClose }: Pick<AgentChatDetailsDrawerProps, 'onClose'>): React.ReactElement {
+function DrawerHeader({
+  onClose,
+}: Pick<AgentChatDetailsDrawerProps, 'onClose'>): React.ReactElement {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-border-semantic px-4 py-3">
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium text-text-semantic-primary">Task details</div>
-        <div className="mt-1 text-xs text-text-semantic-muted">Inspect the linked orchestration task without leaving chat.</div>
+        <div className="mt-1 text-xs text-text-semantic-muted">
+          Inspect the linked orchestration task without leaving chat.
+        </div>
       </div>
       <button
         onClick={onClose}
@@ -231,10 +287,13 @@ function DrawerHeader({ onClose }: Pick<AgentChatDetailsDrawerProps, 'onClose'>)
   );
 }
 
-function DrawerToolbar(props: Pick<AgentChatDetailsDrawerProps, 'activeLink' | 'onOpenOrchestration'>): React.ReactElement {
-  const label = props.activeLink?.sessionId || props.activeLink?.taskId
-    ? `Linked to ${shortenId(props.activeLink?.sessionId ?? props.activeLink?.taskId)}`
-    : 'No linked session yet';
+function DrawerToolbar(
+  props: Pick<AgentChatDetailsDrawerProps, 'activeLink' | 'onOpenOrchestration'>,
+): React.ReactElement {
+  const label =
+    props.activeLink?.sessionId || props.activeLink?.taskId
+      ? `Linked to ${shortenId(props.activeLink?.sessionId ?? props.activeLink?.taskId)}`
+      : 'No linked session yet';
 
   return (
     <div className="flex items-center justify-between gap-2 border-b border-border-semantic px-4 py-2">
@@ -255,15 +314,26 @@ function DrawerPanel(props: AgentChatDetailsDrawerProps): React.ReactElement {
       className={`flex h-full w-full max-w-[360px] flex-col border-l border-border-semantic bg-surface-overlay shadow-2xl backdrop-blur-xl transition-transform duration-200 ${props.isOpen ? 'translate-x-0' : 'translate-x-full'}`}
     >
       <DrawerHeader onClose={props.onClose} />
-      <DrawerToolbar activeLink={props.activeLink} onOpenOrchestration={props.onOpenOrchestration} />
+      <DrawerToolbar
+        activeLink={props.activeLink}
+        onOpenOrchestration={props.onOpenOrchestration}
+      />
       <div className="flex-1 overflow-y-auto px-4 py-3">
-        <DrawerBody activeLink={props.activeLink} details={props.details} error={props.error} isLoading={props.isLoading} skillExecutions={props.skillExecutions} />
+        <DrawerBody
+          activeLink={props.activeLink}
+          details={props.details}
+          error={props.error}
+          isLoading={props.isLoading}
+          skillExecutions={props.skillExecutions}
+        />
       </div>
     </div>
   );
 }
 
-function DrawerBackdrop(props: Pick<AgentChatDetailsDrawerProps, 'isOpen' | 'onClose'>): React.ReactElement {
+function DrawerBackdrop(
+  props: Pick<AgentChatDetailsDrawerProps, 'isOpen' | 'onClose'>,
+): React.ReactElement {
   return (
     <div
       className={`flex-1 bg-[rgba(0,0,0,0.18)] transition-opacity duration-150 ${props.isOpen ? 'opacity-100' : 'opacity-0'}`}

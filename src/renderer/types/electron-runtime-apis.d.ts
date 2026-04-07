@@ -31,6 +31,20 @@ export interface ActiveSessionInfo {
   cwd: string;
 }
 
+export interface ShellState {
+  cwd: string;
+  lastExitCode: number | null;
+  lastCommand: string | null;
+  isExecuting: boolean;
+}
+
+export interface PtyShellStateResult extends IpcResult {
+  cwd?: string;
+  lastExitCode?: number | null;
+  lastCommand?: string | null;
+  isExecuting?: boolean;
+}
+
 export interface PtyAPI {
   spawn: (
     id: string,
@@ -73,6 +87,7 @@ export interface PtyAPI {
     callback: (result: { exitCode: number | null; signal: number | null }) => void,
   ) => () => void;
   onRecordingState: (id: string, callback: (state: { recording: boolean }) => void) => () => void;
+  getShellState: (id: string) => Promise<PtyShellStateResult>;
 }
 
 export interface CodexAPI {
@@ -153,11 +168,7 @@ export interface FilesAPI {
   restoreDeleted: (tempPath: string, originalPath: string) => Promise<IpcResult>;
   showImageDialog: () => Promise<ShowImageDialogResult>;
   onFileChange: (callback: (change: FileChangeEvent) => void) => () => void;
-  search: (
-    root: string,
-    query: string,
-    options?: SearchOptions,
-  ) => Promise<SearchResultResponse>;
+  search: (root: string, query: string, options?: SearchOptions) => Promise<SearchResultResponse>;
 }
 
 export interface HooksAPI {
@@ -235,6 +246,8 @@ export interface AppAPI {
   zoomIn: () => Promise<IpcResult>;
   zoomOut: () => Promise<IpcResult>;
   zoomReset: () => Promise<IpcResult>;
+  /** Subscribe to startup failure notifications for critical services */
+  onStartupWarning: (callback: (payload: { name: string; message: string }) => void) => () => void;
 }
 
 export interface ShellAPI {

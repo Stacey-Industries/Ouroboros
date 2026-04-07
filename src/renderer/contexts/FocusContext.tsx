@@ -7,14 +7,7 @@
  * Click handlers on each panel container update focus on interaction.
  */
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,11 +68,7 @@ export function FocusProvider({ children }: { children: React.ReactNode }): Reac
     [focusedPanel, stableSetFocusedPanel],
   );
 
-  return (
-    <FocusContext.Provider value={value}>
-      {children}
-    </FocusContext.Provider>
-  );
+  return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -90,6 +79,7 @@ export function useFocusPanel(): FocusContextValue {
 
 // ─── Utility: returns inline style for focused panel ring ─────────────────────
 
+// TODO: implement focus ring — return a CSS properties object that highlights the focused panel
 export function focusRingStyle(): React.CSSProperties {
   return {};
 }

@@ -3,10 +3,16 @@
  */
 
 // ---- Controller (Phase 8) ---------------------------------------------------
-export { getGraphController,GraphController } from './graphController'
+export {
+  acquireGraphController,
+  getGraphController,
+  getGraphControllerForRoot,
+  GraphController,
+  releaseGraphController,
+} from './graphController';
 
 // ---- Database (Phase 1) -----------------------------------------------------
-export { GraphDatabase } from './graphDatabase'
+export { GraphDatabase } from './graphDatabase';
 export type {
   ADRRecord,
   ADRSection,
@@ -31,11 +37,11 @@ export type {
   ProjectRecord,
   RouteProps,
   TypeProps,
-} from './graphDatabaseTypes'
+} from './graphDatabaseTypes';
 
 // ---- Tree-sitter parser (Phase 2) ------------------------------------------
-export { getLanguageConfig, getSupportedExtensions } from './treeSitterLanguageConfigs'
-export { TreeSitterParser } from './treeSitterParser'
+export { getLanguageConfig, getSupportedExtensions } from './treeSitterLanguageConfigs';
+export { TreeSitterParser } from './treeSitterParser';
 export type {
   ExtractedCall,
   ExtractedDefinition,
@@ -46,21 +52,21 @@ export type {
   LanguageId,
   ParsedFileResult,
   RoutePattern,
-} from './treeSitterTypes'
+} from './treeSitterTypes';
 
 // ---- Indexing pipeline (Phase 3) --------------------------------------------
-export { IndexingPipeline } from './indexingPipeline'
+export { IndexingPipeline } from './indexingPipeline';
 export type {
   DiscoveredFile,
   IndexedFile,
   IndexingOptions,
   IndexingProgress,
   IndexingResult,
-} from './indexingPipelineTypes'
+} from './indexingPipelineTypes';
 
 // ---- Query engines (Phase 5) ------------------------------------------------
-export { CypherEngine } from './cypherEngine'
-export { QueryEngine } from './queryEngine'
+export { CypherEngine } from './cypherEngine';
+export { QueryEngine } from './queryEngine';
 export type {
   ArchitectureAspect,
   ArchitectureResult,
@@ -78,11 +84,11 @@ export type {
   TraceEdge,
   TraceNode,
   TraceResult,
-} from './queryEngineTypes'
+} from './queryEngineTypes';
 
 // ---- MCP tool handlers (Phase 6) --------------------------------------------
-export type { GraphToolContext } from './mcpToolHandlers'
-export { createGraphMcpTools } from './mcpToolHandlers'
+export type { GraphToolContext } from './mcpToolHandlers';
+export { createGraphMcpTools } from './mcpToolHandlers';
 
 // ---- Auto-sync watcher (Phase 7) --------------------------------------------
-export { AutoSyncWatcher } from './autoSync'
+export { AutoSyncWatcher } from './autoSync';

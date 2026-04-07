@@ -97,14 +97,80 @@ export function manageAdrAction(
     : { success: false, error: 'Unknown ADR action' };
 }
 
-// ── Singleton ─────────────────────────────────────────────────────
+// ── Per-root registry (Zed model: keyed by normalized root, ref-counted) ──
 
-let instance: GraphController | null = null;
-
-export function getGraphController(): GraphController | null {
-  return instance;
+interface RegistryEntry {
+  controller: GraphController;
+  refCount: number;
 }
 
+const registry = new Map<string, RegistryEntry>();
+let defaultRoot: string | null = null;
+
+function normalizeRoot(root: string): string {
+  return root.replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
+/** Legacy setter — registers as the default root instance. */
 export function setGraphController(controller: GraphController): void {
-  instance = controller;
+  const key = normalizeRoot(controller.rootPath);
+  defaultRoot = key;
+  registry.set(key, { controller, refCount: 1 });
+}
+
+/**
+ * Backward-compat getter — returns the default root's controller.
+ * Callers without root context use this.
+ */
+export function getGraphController(): GraphController | null {
+  if (defaultRoot) return registry.get(defaultRoot)?.controller ?? null;
+  const first = registry.values().next();
+  return first.done ? null : first.value.controller;
+}
+
+/** Get the controller for a specific root. */
+export function getGraphControllerForRoot(root: string): GraphController | null {
+  return registry.get(normalizeRoot(root))?.controller ?? null;
+}
+
+/**
+ * Acquire a graph controller for a root. Creates + initializes if
+ * new, increments ref-count if already exists.
+ */
+export async function acquireGraphController(root: string): Promise<GraphController> {
+  const key = normalizeRoot(root);
+  const existing = registry.get(key);
+  if (existing) {
+    existing.refCount++;
+    return existing.controller;
+  }
+
+  const { GraphController: GC } = await import('./graphController');
+  const ctrl = new GC(root);
+  await ctrl.initialize();
+  registry.set(key, { controller: ctrl, refCount: 1 });
+  return ctrl;
+}
+
+/** Release a ref. Disposes the controller when count hits 0. */
+export async function releaseGraphController(root: string): Promise<void> {
+  const key = normalizeRoot(root);
+  const entry = registry.get(key);
+  if (!entry) return;
+
+  entry.refCount--;
+  if (entry.refCount <= 0) {
+    await entry.controller.dispose();
+    registry.delete(key);
+    if (defaultRoot === key) defaultRoot = null;
+  }
+}
+
+/** Remove a disposed controller from the registry (called by dispose). */
+export function unregisterGraphController(root: string, controller: GraphController): void {
+  const key = normalizeRoot(root);
+  if (registry.get(key)?.controller === controller) {
+    registry.delete(key);
+    if (defaultRoot === key) defaultRoot = null;
+  }
 }

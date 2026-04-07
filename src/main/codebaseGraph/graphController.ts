@@ -11,8 +11,15 @@ import {
   logIndexProgress,
   manageAdrAction,
   resolveWorkerPath,
+  unregisterGraphController,
 } from './graphControllerSupport';
-export { getGraphController, setGraphController } from './graphControllerSupport';
+export {
+  acquireGraphController,
+  getGraphController,
+  getGraphControllerForRoot,
+  releaseGraphController,
+  setGraphController,
+} from './graphControllerSupport';
 import { GraphQueryEngine } from './graphQuery';
 import { GraphStore } from './graphStore';
 import type {
@@ -28,6 +35,12 @@ import type {
   SearchResult,
 } from './graphTypes';
 import type { WorkerResponse } from './graphWorkerTypes';
+
+function makeIndexTimeout(): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Graph indexing timed out after 60s')), 60_000),
+  );
+}
 
 export class GraphController {
   private store: GraphStore;
@@ -75,6 +88,7 @@ export class GraphController {
       /* ignore save errors on shutdown */
     }
     this.initialized = false;
+    unregisterGraphController(this.rootPath, this);
   }
 
   getStatus(): IndexStatus {
@@ -258,7 +272,7 @@ export class GraphController {
     if (this.indexingInProgress) return Promise.resolve();
     this.indexingInProgress = true;
 
-    return new Promise<void>((resolve, reject) => {
+    const indexPromise = new Promise<void>((resolve, reject) => {
       this.initResolve = resolve;
       this.initReject = reject;
       this.worker?.postMessage({
@@ -268,6 +282,8 @@ export class GraphController {
         incremental,
       });
     });
+
+    return Promise.race([indexPromise, makeIndexTimeout()]);
   }
 
   private resolvePendingInit(): void {

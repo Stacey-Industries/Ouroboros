@@ -177,8 +177,8 @@ export function ToolErrorOutput({
         <pre
           className="mt-1 max-h-[200px] overflow-auto whitespace-pre-wrap rounded p-2 text-[10px] text-status-error"
           style={{
-            backgroundColor: 'rgba(248, 81, 73, 0.06)',
-            border: '1px solid rgba(248, 81, 73, 0.2)',
+            backgroundColor: 'var(--status-error-subtle)',
+            border: '1px solid var(--diff-del-border)',
           }}
         >
           {errorOutput}

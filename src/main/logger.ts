@@ -35,8 +35,10 @@ if (isMainThread) {
   electronLog.initialize();
   log = electronLog;
 } else {
-  // Worker threads: console fallback (electron module unavailable)
-  // Map all levels to console.warn/error (the only methods allowed by no-console rule)
+  // Worker threads: console fallback (electron module unavailable).
+  // All levels map to console.warn/console.error because ESLint's no-console rule
+  // only permits those two methods (console.info, console.log, console.debug are
+  // all flagged as errors). This is intentional — do not change the mapping.
   log = {
     info: console.warn.bind(console),
     warn: console.warn.bind(console),

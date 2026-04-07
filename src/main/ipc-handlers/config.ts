@@ -129,11 +129,27 @@ function registerHandlers(entries: ConfigHandlerEntry[], channels: string[]): vo
   }
 }
 
+// Returns config with secrets stripped. Cast to AppConfig so the renderer type
+// contract is unchanged — webAccessToken and webAccessPassword are web-server
+// fields never read by the renderer, and apiKeys are replaced with a mask.
+function sanitizeConfig(config: AppConfig): AppConfig {
+  const sanitized = { ...config };
+  delete (sanitized as Record<string, unknown>).webAccessToken;
+  delete (sanitized as Record<string, unknown>).webAccessPassword;
+  if (sanitized.modelProviders) {
+    sanitized.modelProviders = sanitized.modelProviders.map((p) => ({
+      ...p,
+      apiKey: p.apiKey ? '••••••••' : '',
+    }));
+  }
+  return sanitized as AppConfig;
+}
+
 function createCoreHandlers(): ConfigHandlerEntry[] {
   return [
     {
       channel: 'config:getAll',
-      handler: () => getConfig(),
+      handler: () => sanitizeConfig(getConfig()),
     },
     {
       channel: 'config:get',

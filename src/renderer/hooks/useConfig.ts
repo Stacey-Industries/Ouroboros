@@ -1,13 +1,13 @@
-import { useCallback,useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react';
 
-import type { AppConfig } from '../types/electron'
+import type { AppConfig } from '../types/electron';
 
 interface UseConfigReturn {
-  config: AppConfig | null
-  isLoading: boolean
-  error: string | null
-  set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<void>
-  refresh: () => Promise<void>
+  config: AppConfig | null;
+  isLoading: boolean;
+  error: string | null;
+  set: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 /**
@@ -17,42 +17,52 @@ interface UseConfigReturn {
  * On error, reverts to previous value.
  */
 export function useConfig(): UseConfigReturn {
-  const [config, setConfig] = useState<AppConfig | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setIsLoading(true)
-      setError(null)
-      const all = await window.electronAPI.config.getAll()
-      setConfig(all)
+      setIsLoading(true);
+      setError(null);
+      const all = await window.electronAPI.config.getAll();
+      setConfig(all);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    load()
-  }, [load])
+    load();
+  }, [load]);
+
+  // Subscribe to config:externalChange so the in-memory state stays in sync
+  // when the user edits the settings file outside the IDE.
+  useEffect(() => {
+    const onExternalChange = window.electronAPI?.config?.onExternalChange;
+    if (!onExternalChange) return;
+    return onExternalChange((updatedConfig) => {
+      setConfig(updatedConfig);
+    });
+  }, []);
 
   const set = useCallback(
     async <K extends keyof AppConfig>(key: K, value: AppConfig[K]): Promise<void> => {
-      const previous = config
+      const previous = config;
       // Optimistic update
-      setConfig((prev) => (prev ? { ...prev, [key]: value } : prev))
+      setConfig((prev) => (prev ? { ...prev, [key]: value } : prev));
 
-      const result = await window.electronAPI.config.set(key, value)
+      const result = await window.electronAPI.config.set(key, value);
       if (!result.success) {
         // Revert
-        setConfig(previous)
-        throw new Error(result.error ?? 'Config write failed')
+        setConfig(previous);
+        throw new Error(result.error ?? 'Config write failed');
       }
     },
-    [config]
-  )
+    [config],
+  );
 
-  return { config, isLoading, error, set, refresh: load }
+  return { config, isLoading, error, set, refresh: load };
 }

@@ -13,7 +13,12 @@ import {
   importGitHubCliCredentials,
   importOpenAiCliCredentials,
 } from '../auth/cliCredentialImporter';
-import { getAllAuthStates, getCredential, setCredential } from '../auth/credentialStore';
+import {
+  getAllAuthStates,
+  getCredential,
+  isStorageSecure,
+  setCredential,
+} from '../auth/credentialStore';
 import { logoutAnthropic, setAnthropicApiKey } from '../auth/providers/anthropicAuth';
 import {
   cancelGitHubLogin,
@@ -79,7 +84,7 @@ function createGetStatesHandler(): AuthHandlerEntry {
     handler: () =>
       wrapAsync(async () => {
         const states = await getAllAuthStates();
-        return { success: true, states };
+        return { success: true, states, storageSecure: isStorageSecure() };
       }),
   };
 }
@@ -88,13 +93,14 @@ function createGetStatesHandler(): AuthHandlerEntry {
 // Handler: auth:startLogin
 // ---------------------------------------------------------------------------
 
-function createStartLoginHandler(
-  _senderWindow: SenderWindow,
-  win: BrowserWindow,
-): AuthHandlerEntry {
+function createStartLoginHandler(_senderWindow: SenderWindow): AuthHandlerEntry {
   return {
     channel: 'auth:startLogin',
-    handler: (event, ...args) => handleStartLogin(event, win, args[0] as AuthProvider),
+    handler: (event, ...args) => {
+      const callerWin = BrowserWindow.fromWebContents(event.sender);
+      if (!callerWin) return { success: false, error: 'No caller window' };
+      return handleStartLogin(event, callerWin, args[0] as AuthProvider);
+    },
   };
 }
 
@@ -156,10 +162,14 @@ function createCancelLoginHandler(): AuthHandlerEntry {
 // Handler: auth:logout
 // ---------------------------------------------------------------------------
 
-function createLogoutHandler(win: BrowserWindow): AuthHandlerEntry {
+function createLogoutHandler(): AuthHandlerEntry {
   return {
     channel: 'auth:logout',
-    handler: (_event, ...args) => handleLogout(win, args[0] as AuthProvider),
+    handler: (event, ...args) => {
+      const callerWin = BrowserWindow.fromWebContents(event.sender);
+      if (!callerWin) return { success: false, error: 'No caller window' };
+      return handleLogout(callerWin, args[0] as AuthProvider);
+    },
   };
 }
 
@@ -191,10 +201,14 @@ async function callLogout(provider: AuthProvider): Promise<void> {
 // Handler: auth:setApiKey
 // ---------------------------------------------------------------------------
 
-function createSetApiKeyHandler(win: BrowserWindow): AuthHandlerEntry {
+function createSetApiKeyHandler(): AuthHandlerEntry {
   return {
     channel: 'auth:setApiKey',
-    handler: (_event, ...args) => handleSetApiKey(win, args[0] as AuthProvider, args[1] as string),
+    handler: (event, ...args) => {
+      const callerWin = BrowserWindow.fromWebContents(event.sender);
+      if (!callerWin) return { success: false, error: 'No caller window' };
+      return handleSetApiKey(callerWin, args[0] as AuthProvider, args[1] as string);
+    },
   };
 }
 
@@ -231,10 +245,14 @@ function callSetApiKey(
 // Handler: auth:importCliCreds
 // ---------------------------------------------------------------------------
 
-function createImportCliCredsHandler(win: BrowserWindow): AuthHandlerEntry {
+function createImportCliCredsHandler(): AuthHandlerEntry {
   return {
     channel: 'auth:importCliCreds',
-    handler: (_event, ...args) => handleImportCliCreds(win, args[0] as AuthProvider),
+    handler: (event, ...args) => {
+      const callerWin = BrowserWindow.fromWebContents(event.sender);
+      if (!callerWin) return { success: false, error: 'No caller window' };
+      return handleImportCliCreds(callerWin, args[0] as AuthProvider);
+    },
   };
 }
 
@@ -297,17 +315,17 @@ function createOpenExternalHandler(): AuthHandlerEntry {
 // Public registration
 // ---------------------------------------------------------------------------
 
-export function registerAuthHandlers(senderWindow: SenderWindow, win: BrowserWindow): string[] {
+export function registerAuthHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
 
   registerEntries(
     [
       createGetStatesHandler(),
-      createStartLoginHandler(senderWindow, win),
+      createStartLoginHandler(senderWindow),
       createCancelLoginHandler(),
-      createLogoutHandler(win),
-      createSetApiKeyHandler(win),
-      createImportCliCredsHandler(win),
+      createLogoutHandler(),
+      createSetApiKeyHandler(),
+      createImportCliCredsHandler(),
       createDetectCliCredsHandler(),
       createOpenExternalHandler(),
     ],

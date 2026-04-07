@@ -8,6 +8,15 @@ import {
   respondToApproval,
   toolRequiresApproval,
 } from './approvalManager';
+import { getChatLaunchesInFlight } from './hooksChatLaunch';
+import {
+  drainQueue,
+  evictOrphanedSessions as evictOrphanedSessionsLogic,
+  inferSessionId as inferSessionIdLogic,
+  queuePayload,
+  trackSessionLifecycle as trackSessionLifecycleLogic,
+  truncatePayloadForDispatch,
+} from './hooksDispatchLogic';
 import {
   enrichFromPermissionRequest,
   handleConfigChange,
@@ -76,26 +85,7 @@ export interface ToolCallEvent extends AgentEvent {
   };
 }
 
-const MAX_PENDING_QUEUE = 500;
-const MAX_PAYLOAD_FIELD_BYTES = 10_240; // 10 KB
-
-function truncateField(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  const str = typeof value === 'string' ? value : JSON.stringify(value);
-  if (str.length <= MAX_PAYLOAD_FIELD_BYTES) return value;
-  return `${str.slice(0, MAX_PAYLOAD_FIELD_BYTES)}…[truncated]`;
-}
-
-function truncatePayloadForDispatch(payload: HookPayload): HookPayload {
-  const needsInput = payload.input !== undefined;
-  const needsOutput = payload.output !== undefined;
-  if (!needsInput && !needsOutput) return payload;
-  return {
-    ...payload,
-    ...(needsInput && { input: truncateField(payload.input) }),
-    ...(needsOutput && { output: truncateField(payload.output) }),
-  };
-}
+// truncatePayloadForDispatch is imported from hooksDispatchLogic.ts
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -110,77 +100,19 @@ const sessionCwdMap = new Map<string, string>();
 // are suppressed to prevent phantom sessions in the Agent Monitor.
 const syntheticSessionIds = new Set<string>();
 
-// Counter for chat sessions being launched. Set BEFORE Claude Code spawns
-// (via beginChatSessionLaunch), cleared when the synthetic agent_start fires
-// (via endChatSessionLaunch). Bridges the race between Claude Code hook
-// scripts firing and the chat bridge emitting its synthetic session.
-let chatLaunchesInFlight = 0;
-
-export function beginChatSessionLaunch(): void {
-  chatLaunchesInFlight++;
-}
-export function endChatSessionLaunch(): void {
-  if (chatLaunchesInFlight > 0) chatLaunchesInFlight--;
-}
-
-function trackSessionStart(payload: HookPayload): void {
-  activeSessions.set(payload.sessionId, payload.timestamp);
-  if (payload.cwd) {
-    sessionCwdMap.set(payload.sessionId, payload.cwd);
-  }
-}
-
-function trackKnownSessionEvent(payload: HookPayload): void {
-  activeSessions.set(payload.sessionId, payload.timestamp);
-  if (payload.cwd && !sessionCwdMap.has(payload.sessionId)) {
-    sessionCwdMap.set(payload.sessionId, payload.cwd);
-  }
-}
+// beginChatSessionLaunch / endChatSessionLaunch are re-exported from hooksChatLaunch.ts
+export { beginChatSessionLaunch, endChatSessionLaunch } from './hooksChatLaunch';
 
 function trackSessionLifecycle(payload: HookPayload): void {
-  if (payload.type === 'session_start' || payload.type === 'agent_start') {
-    trackSessionStart(payload);
-    return;
-  }
-  if (
-    payload.type === 'session_stop' ||
-    payload.type === 'session_end' ||
-    payload.type === 'agent_end'
-  ) {
-    activeSessions.delete(payload.sessionId);
-    // cwd cleanup is deferred — triggerClaudeMdGeneration reads it before we delete
-    return;
-  }
-  const isKnown = payload.sessionId !== 'unknown' && payload.sessionId !== '';
-  if (isKnown && activeSessions.has(payload.sessionId)) {
-    trackKnownSessionEvent(payload);
-  }
+  trackSessionLifecycleLogic(activeSessions, sessionCwdMap, payload);
 }
 
 function inferSessionId(payload: HookPayload): HookPayload {
-  if (payload.type !== 'pre_tool_use' && payload.type !== 'post_tool_use') {
-    return payload;
+  const result = inferSessionIdLogic(activeSessions, payload);
+  if (result.sessionId !== payload.sessionId) {
+    log.debug(`inferred session for tool event: ${payload.sessionId} → ${result.sessionId}`);
   }
-
-  const isTracked =
-    payload.sessionId && payload.sessionId !== 'unknown' && activeSessions.has(payload.sessionId);
-  if (isTracked) return payload;
-
-  let bestId: string | null = null;
-  let bestTime = -1;
-  for (const [id, lastSeen] of activeSessions) {
-    if (lastSeen > bestTime) {
-      bestTime = lastSeen;
-      bestId = id;
-    }
-  }
-
-  if (bestId) {
-    log.debug(`inferred session for tool event: ${payload.sessionId} → ${bestId}`);
-    return { ...payload, sessionId: bestId };
-  }
-
-  return payload;
+  return result;
 }
 
 function isRenderableWindow(window: BrowserWindow | null): window is BrowserWindow {
@@ -189,9 +121,7 @@ function isRenderableWindow(window: BrowserWindow | null): window is BrowserWind
 
 function queuePendingPayload(payload: HookPayload): void {
   log.info(`queuing event (no window): ${payload.type} session=${payload.sessionId}`);
-  if (pendingQueue.length < MAX_PENDING_QUEUE) {
-    pendingQueue.push(payload);
-  }
+  queuePayload(pendingQueue, payload);
 }
 
 function getDispatchWindows(): BrowserWindow[] {
@@ -217,9 +147,7 @@ function sendPayload(windows: BrowserWindow[], payload: HookPayload): void {
 }
 
 function flushPendingQueue(windows: BrowserWindow[]): void {
-  if (pendingQueue.length === 0) return;
-  const flushing = pendingQueue.splice(0);
-  for (const payload of flushing) {
+  for (const payload of drainQueue(pendingQueue)) {
     sendPayload(windows, payload);
   }
 }
@@ -288,7 +216,7 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
 }
 
 function dispatchToRenderer(rawPayload: HookPayload): void {
-  if (chatLaunchesInFlight > 0 || syntheticSessionIds.size > 0) {
+  if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
     log.info(
       `suppressing hook event during active chat session: ${rawPayload.type} session=${rawPayload.sessionId}`,
     );
@@ -317,14 +245,9 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
 }
 
 function evictOrphanedSessions(): void {
-  const now = Date.now();
-  const MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
-  for (const [id, timestamp] of activeSessions) {
-    if (now - timestamp > MAX_AGE_MS) {
-      log.info(`evicting orphaned session: ${id} (age=${Math.round((now - timestamp) / 60_000)}m)`);
-      activeSessions.delete(id);
-      sessionCwdMap.delete(id);
-    }
+  const evicted = evictOrphanedSessionsLogic(activeSessions, sessionCwdMap);
+  for (const id of evicted) {
+    log.info(`evicting orphaned session: ${id}`);
   }
 }
 
@@ -346,7 +269,10 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
   if (payload.type === 'agent_end') {
     const id = payload.sessionId;
-    setTimeout(() => syntheticSessionIds.delete(id), 10_000);
+    // 2-second delay: long enough to absorb in-flight hook events arriving
+    // after agent_end (pipe/network latency), short enough to stop suppressing
+    // legitimate events with the same session ID quickly.
+    setTimeout(() => syntheticSessionIds.delete(id), 2_000);
   }
 
   const windows = getDispatchWindows();

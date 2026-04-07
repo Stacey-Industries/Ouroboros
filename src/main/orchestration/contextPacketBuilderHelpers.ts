@@ -1,5 +1,3 @@
-import path from 'path';
-
 import {
   buildBudgetSummary,
   dedupeSnippetCandidates,
@@ -8,7 +6,11 @@ import {
   deriveSnippetCandidates,
   keepSnippetWithinBudget,
 } from './contextPacketBuilderSupport';
-import { type ContextFileSnapshot, loadContextFileSnapshot } from './contextSelectionSupport';
+import {
+  type ContextFileSnapshot,
+  loadContextFileSnapshot,
+  toPathKey,
+} from './contextSelectionSupport';
 import type { ContextSelectionResult } from './contextSelector';
 import type {
   ContextSnippet,
@@ -31,10 +33,6 @@ export interface SnippetContext {
   totalLines: number;
   liveIdeState: LiveIdeState;
   hunks?: GitDiffHunk[];
-}
-
-function toPathKey(filePath: string): string {
-  return path.normalize(filePath).toLowerCase();
 }
 
 function escapeRegExp(value: string): string {
@@ -270,12 +268,20 @@ function tryAcceptSnippet(
   opts: SnippetBudgetOptions,
 ): ContextSnippet | null {
   const kept = keepSnippetWithinBudget({
-    budget: opts.budget, snapshot: opts.snapshot, snippet,
-    fullFileLineLimit: opts.fullFileLineLimit, targetedSnippetLineLimit: opts.targetedSnippetLineLimit,
+    budget: opts.budget,
+    snapshot: opts.snapshot,
+    snippet,
+    fullFileLineLimit: opts.fullFileLineLimit,
+    targetedSnippetLineLimit: opts.targetedSnippetLineLimit,
   });
   if (!kept) {
-    notes.push({ reason: 'budget', detail: `Dropped snippet ${snippet.label} because packet size budget would be exceeded` });
-    opts.budget.droppedContentNotes.push(`Dropped ${opts.filePath}:${snippet.range.startLine}-${snippet.range.endLine} due to size budget`);
+    notes.push({
+      reason: 'budget',
+      detail: `Dropped snippet ${snippet.label} because packet size budget would be exceeded`,
+    });
+    opts.budget.droppedContentNotes.push(
+      `Dropped ${opts.filePath}:${snippet.range.startLine}-${snippet.range.endLine} due to size budget`,
+    );
     return null;
   }
   if (kept.range.endLine - kept.range.startLine < snippet.range.endLine - snippet.range.startLine) {
@@ -285,19 +291,32 @@ function tryAcceptSnippet(
 }
 
 function buildSnippetList(options: {
-  rankedFile: RankedContextFile; liveIdeState: ContextSelectionResult['liveIdeState'];
-  maxSnippetsPerFile: number; budget: ReturnType<typeof buildBudgetSummary>;
-  snapshot: ContextFileSnapshot; fullFileLineLimit?: number; targetedSnippetLineLimit?: number;
+  rankedFile: RankedContextFile;
+  liveIdeState: ContextSelectionResult['liveIdeState'];
+  maxSnippetsPerFile: number;
+  budget: ReturnType<typeof buildBudgetSummary>;
+  snapshot: ContextFileSnapshot;
+  fullFileLineLimit?: number;
+  targetedSnippetLineLimit?: number;
 }): { acceptedSnippets: ContextSnippet[]; fileTruncationNotes: ContextTruncationNote[] } {
   const { rankedFile, liveIdeState, maxSnippetsPerFile, budget, snapshot } = options;
   const candidates = deriveSnippetCandidates(rankedFile, snapshot, liveIdeState);
   const { snippets, truncationNotes } = dedupeSnippetCandidates(snapshot, candidates);
   const acceptedSnippets: ContextSnippet[] = [];
   const fileTruncationNotes: ContextTruncationNote[] = [...truncationNotes];
-  const budgetOpts: SnippetBudgetOptions = { budget, snapshot, filePath: rankedFile.filePath, fullFileLineLimit: options.fullFileLineLimit, targetedSnippetLineLimit: options.targetedSnippetLineLimit };
+  const budgetOpts: SnippetBudgetOptions = {
+    budget,
+    snapshot,
+    filePath: rankedFile.filePath,
+    fullFileLineLimit: options.fullFileLineLimit,
+    targetedSnippetLineLimit: options.targetedSnippetLineLimit,
+  };
   for (const snippet of snippets) {
     if (acceptedSnippets.length >= maxSnippetsPerFile) {
-      fileTruncationNotes.push({ reason: 'budget', detail: `Dropped snippet ${snippet.label} because maxSnippetsPerFile=${maxSnippetsPerFile}` });
+      fileTruncationNotes.push({
+        reason: 'budget',
+        detail: `Dropped snippet ${snippet.label} because maxSnippetsPerFile=${maxSnippetsPerFile}`,
+      });
       continue;
     }
     const kept = tryAcceptSnippet(snippet, fileTruncationNotes, budgetOpts);
@@ -316,12 +335,19 @@ export interface BuildFilePayloadOptions {
   targetedSnippetLineLimit?: number;
 }
 
-export async function buildFilePayload(options: BuildFilePayloadOptions): Promise<RankedContextFile | null> {
+export async function buildFilePayload(
+  options: BuildFilePayloadOptions,
+): Promise<RankedContextFile | null> {
   const { rankedFile, liveIdeState, maxSnippetsPerFile, budget, cache } = options;
   const snapshot = await loadContextFileSnapshot(rankedFile.filePath, cache);
   const { acceptedSnippets, fileTruncationNotes } = buildSnippetList({
-    rankedFile, liveIdeState, maxSnippetsPerFile, budget, snapshot,
-    fullFileLineLimit: options.fullFileLineLimit, targetedSnippetLineLimit: options.targetedSnippetLineLimit,
+    rankedFile,
+    liveIdeState,
+    maxSnippetsPerFile,
+    budget,
+    snapshot,
+    fullFileLineLimit: options.fullFileLineLimit,
+    targetedSnippetLineLimit: options.targetedSnippetLineLimit,
   });
   if (acceptedSnippets.length === 0) return null;
   return { ...rankedFile, snippets: acceptedSnippets, truncationNotes: fileTruncationNotes };

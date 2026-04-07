@@ -2,6 +2,7 @@ import os from 'os';
 
 import type { ModelSlotAssignments } from './config';
 import { getConfigValue } from './config';
+import { getHooksNetAddress } from './hooksNet';
 import { resolveModelEnv } from './providers';
 import { buildShellIntegrationEnv } from './shellIntegration/resolve';
 
@@ -52,12 +53,15 @@ export function buildBaseEnv(extraEnv?: Record<string, string>): Record<string, 
   const githubOverlay = _cachedGithubToken
     ? { GITHUB_TOKEN: _cachedGithubToken, GH_TOKEN: _cachedGithubToken }
     : {};
+  const hooksAddr = getHooksNetAddress();
+  const hooksOverlay = hooksAddr ? { OUROBOROS_HOOKS_ADDRESS: hooksAddr } : {};
   return {
     ...process.env,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
     OUROBOROS_IDE_SESSION: '1',
     ...githubOverlay,
+    ...hooksOverlay,
     ...extraEnv,
   } as Record<string, string>;
 }

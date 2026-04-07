@@ -44,7 +44,7 @@ export function SendButton(props: {
       disabled={!props.canSend}
       title={label}
       aria-busy={props.isSending}
-      className="absolute right-2 flex items-center justify-center rounded-md text-xs font-medium transition-all duration-100 hover:bg-[rgba(255,255,255,0.08)] disabled:cursor-not-allowed disabled:opacity-30"
+      className="absolute right-2 flex items-center justify-center rounded-md text-xs font-medium transition-all duration-100 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-30"
       style={{
         top: '6px',
         width: '28px',
@@ -122,8 +122,14 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         autoHeight
         className="w-full resize-none border bg-surface-base text-sm text-text-semantic-primary placeholder:text-text-semantic-muted focus:placeholder:text-transparent focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
         style={{ ...baseStyle, width: '100%', maxHeight: 120 }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--interactive-accent)'; e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted, rgba(88, 166, 255, 0.2))'; }}
-        onBlurCapture={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))'; e.currentTarget.style.boxShadow = 'none'; }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'var(--interactive-accent)';
+          e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';
+        }}
+        onBlurCapture={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         {renderHighlights}
       </RichTextarea>
@@ -140,7 +146,7 @@ export function ComposerInput(props: ComposerInputProps): React.ReactElement {
           type="button"
           title="Attach image"
           onClick={() => void props.onPickImage?.()}
-          className="absolute right-10 flex h-[28px] w-[28px] items-center justify-center rounded-md text-text-semantic-muted transition-colors duration-100 hover:bg-[rgba(255,255,255,0.08)] hover:text-text-semantic-primary"
+          className="absolute right-10 flex h-[28px] w-[28px] items-center justify-center rounded-md text-text-semantic-muted transition-colors duration-100 hover:bg-surface-hover hover:text-text-semantic-primary"
           style={{ top: 6 }}
         >
           <svg

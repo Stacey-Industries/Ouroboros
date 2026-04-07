@@ -108,7 +108,12 @@ function startDrag(e: React.DragEvent, node: TreeNode): void {
   e.dataTransfer.setData('text/plain', node.path);
   e.dataTransfer.setData(
     'application/json',
-    JSON.stringify({ path: node.path, relativePath: node.relativePath, isDirectory: node.isDirectory, name: node.name }),
+    JSON.stringify({
+      path: node.path,
+      relativePath: node.relativePath,
+      isDirectory: node.isDirectory,
+      name: node.name,
+    }),
   );
   e.dataTransfer.effectAllowed = 'copyMove';
 }
@@ -240,6 +245,7 @@ export const FileTreeItem = React.memo(function FileTreeItem(
       depth={depth}
       isActive={isActive}
       isEditing={isEditing}
+      isSelected={!!isSelected}
       backgroundColor={backgroundColor}
       heatTitle={heatTitle}
       drag={drag}

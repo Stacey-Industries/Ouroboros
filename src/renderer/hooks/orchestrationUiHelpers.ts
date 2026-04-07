@@ -1,3 +1,5 @@
+import log from 'electron-log/renderer';
+
 import type {
   OrchestrationState,
   OrchestrationStatus,
@@ -12,13 +14,24 @@ import {
 } from './appEventNames';
 import type { ToastOptions, ToastType } from './useToast';
 
-const STATE_MESSAGE_BUILDERS: Partial<Record<OrchestrationStatus, (state: OrchestrationState) => string>> = {
+const STATE_MESSAGE_BUILDERS: Partial<
+  Record<OrchestrationStatus, (state: OrchestrationState) => string>
+> = {
   // Intermediate states (selecting_context, awaiting_provider, applying, verifying) are omitted —
   // they're too noisy when using the chat UI and visible inline in the thread.
   paused: () => 'Orchestration is paused.',
-  cancelled: (state) => state.message?.trim() ? `Orchestration cancelled: ${state.message.trim()}` : 'Orchestration was cancelled.',
-  failed: (state) => state.message?.trim() ? `Orchestration failed: ${state.message.trim()}` : 'Orchestration failed.',
-  needs_review: (state) => state.message?.trim() ? `Orchestration needs review: ${state.message.trim()}` : 'Orchestration needs review.',
+  cancelled: (state) =>
+    state.message?.trim()
+      ? `Orchestration cancelled: ${state.message.trim()}`
+      : 'Orchestration was cancelled.',
+  failed: (state) =>
+    state.message?.trim()
+      ? `Orchestration failed: ${state.message.trim()}`
+      : 'Orchestration failed.',
+  needs_review: (state) =>
+    state.message?.trim()
+      ? `Orchestration needs review: ${state.message.trim()}`
+      : 'Orchestration needs review.',
 };
 
 const STATE_TOAST_TYPES: Partial<Record<OrchestrationStatus, ToastType>> = {
@@ -28,12 +41,23 @@ const STATE_TOAST_TYPES: Partial<Record<OrchestrationStatus, ToastType>> = {
   needs_review: 'warning',
 };
 
-const RESULT_MESSAGE_BUILDERS: Partial<Record<OrchestrationStatus, (result: TaskResult) => string>> = {
+const RESULT_MESSAGE_BUILDERS: Partial<
+  Record<OrchestrationStatus, (result: TaskResult) => string>
+> = {
   complete: (result) => result.message?.trim() || 'Orchestration task completed.',
   needs_review: (result) => result.message?.trim() || 'Orchestration task needs review.',
-  failed: (result) => result.message?.trim() ? `Orchestration failed: ${result.message.trim()}` : 'Orchestration task failed.',
-  cancelled: (result) => result.message?.trim() ? `Orchestration cancelled: ${result.message.trim()}` : 'Orchestration task cancelled.',
-  paused: (result) => result.message?.trim() ? `Orchestration paused: ${result.message.trim()}` : 'Orchestration task paused.',
+  failed: (result) =>
+    result.message?.trim()
+      ? `Orchestration failed: ${result.message.trim()}`
+      : 'Orchestration task failed.',
+  cancelled: (result) =>
+    result.message?.trim()
+      ? `Orchestration cancelled: ${result.message.trim()}`
+      : 'Orchestration task cancelled.',
+  paused: (result) =>
+    result.message?.trim()
+      ? `Orchestration paused: ${result.message.trim()}`
+      : 'Orchestration task paused.',
 };
 
 const RESULT_TOAST_TYPES: Partial<Record<OrchestrationStatus, ToastType>> = {
@@ -56,9 +80,11 @@ export function hasElectronAPI(): boolean {
 export function emitOrchestrationOpen(sessionId?: string): void {
   window.dispatchEvent(new CustomEvent(OPEN_ORCHESTRATION_PANEL_EVENT));
   if (sessionId) {
-    window.dispatchEvent(new CustomEvent(OPEN_ORCHESTRATION_SESSION_EVENT, {
-      detail: { sessionId },
-    }));
+    window.dispatchEvent(
+      new CustomEvent(OPEN_ORCHESTRATION_SESSION_EVENT, {
+        detail: { sessionId },
+      }),
+    );
   }
 }
 
@@ -73,10 +99,15 @@ export function emitProviderSession(detail: {
 
 export function notifyDesktop(title: string, body: string): void {
   if (!hasElectronAPI()) return;
-  window.electronAPI.app.notify({ title, body }).catch(() => { });
+  window.electronAPI.app.notify({ title, body }).catch((err: unknown) => {
+    log.warn('Desktop notification failed:', err);
+  });
 }
 
-export function createOrchestrationActionOptions(sessionId?: string, duration = 6000): ToastOptions {
+export function createOrchestrationActionOptions(
+  sessionId?: string,
+  duration = 6000,
+): ToastOptions {
   if (!sessionId) {
     return { duration };
   }
@@ -92,7 +123,12 @@ export function createOrchestrationActionOptions(sessionId?: string, duration = 
 
 export function getProviderSessionKey(session?: ProviderSessionReference): string | null {
   if (!session) return null;
-  const parts = [session.provider, session.sessionId, session.requestId, session.externalTaskId].filter(Boolean);
+  const parts = [
+    session.provider,
+    session.sessionId,
+    session.requestId,
+    session.externalTaskId,
+  ].filter(Boolean);
   return parts.length > 0 ? parts.join(':') : null;
 }
 
@@ -131,7 +167,8 @@ export function getStateToastPayload(state: OrchestrationState): {
   return {
     duration: state.status === 'failed' ? 7000 : 3000,
     message: builder(state),
-    notify: state.status === 'failed' || state.status === 'needs_review' || state.status === 'cancelled',
+    notify:
+      state.status === 'failed' || state.status === 'needs_review' || state.status === 'cancelled',
     type: STATE_TOAST_TYPES[state.status] ?? 'info',
   };
 }
@@ -147,7 +184,10 @@ export function getResultToastPayload(result: TaskResult): {
   return {
     duration: 7000,
     message: builder(result),
-    notify: result.status === 'needs_review' || result.status === 'failed' || result.status === 'complete',
+    notify:
+      result.status === 'needs_review' ||
+      result.status === 'failed' ||
+      result.status === 'complete',
     type: RESULT_TOAST_TYPES[result.status] ?? 'info',
   };
 }
@@ -164,9 +204,14 @@ export function getVerificationToastPayload(summary: VerificationSummary): {
   }
 
   const detail = summary.summary?.trim();
-  const message = summary.status === 'failed'
-    ? detail ? `Verification failed: ${detail}` : 'Orchestration verification failed.'
-    : detail ? `Verification cancelled: ${detail}` : 'Orchestration verification was cancelled.';
+  const message =
+    summary.status === 'failed'
+      ? detail
+        ? `Verification failed: ${detail}`
+        : 'Orchestration verification failed.'
+      : detail
+        ? `Verification cancelled: ${detail}`
+        : 'Orchestration verification was cancelled.';
 
   return {
     duration: 6000,

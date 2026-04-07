@@ -1,11 +1,10 @@
 /**
  * hookInstaller.test.ts — Unit tests for hook installation logic.
  *
- * Uses vitest with mocked 'fs', 'os', and 'electron' modules so the
- * tests run without a real Electron environment.
+ * Uses vitest with mocked 'fs', 'fs/promises', 'os', and 'electron' modules so
+ * the tests run without a real Electron environment.
  *
  * Run with:  npx vitest run src/main/hookInstaller.test.ts
- * (add vitest to devDependencies if not present:  npm i -D vitest)
  */
 
 import os from 'os';
@@ -23,14 +22,10 @@ vi.mock('electron', () => ({
   },
 }));
 
-// ── Mock 'fs' ─────────────────────────────────────────────────────────────────
+// ── Mock 'fs' (sync — used only by getCurrentHookVersion and uninstallHooks) ─
 const { mockFs } = vi.hoisted(() => ({
   mockFs: {
     existsSync: vi.fn<(path: string) => boolean>(),
-    mkdirSync: vi.fn<(path: string, opts: { recursive?: boolean }) => void>(),
-    copyFileSync: vi.fn<(src: string, dest: string) => void>(),
-    chmodSync: vi.fn<(path: string, mode: number) => void>(),
-    writeFileSync: vi.fn<(path: string, data: string, enc: string) => void>(),
     readFileSync: vi.fn<(path: string, enc: string) => string>(),
     rmSync: vi.fn<(path: string, opts: { force?: boolean }) => void>(),
   },
@@ -41,12 +36,30 @@ vi.mock('fs', () => ({
   ...mockFs,
 }));
 
+// ── Mock 'fs/promises' (async — used by install/read/write helpers) ───────────
+const { mockFsPromises } = vi.hoisted(() => ({
+  mockFsPromises: {
+    access: vi.fn<(path: string) => Promise<void>>(),
+    mkdir: vi.fn<(path: string, opts: { recursive?: boolean }) => Promise<void>>(),
+    copyFile: vi.fn<(src: string, dest: string) => Promise<void>>(),
+    chmod: vi.fn<(path: string, mode: number) => Promise<void>>(),
+    writeFile: vi.fn<(path: string, data: string, enc: string) => Promise<void>>(),
+    readFile: vi.fn<(path: string, enc: string) => Promise<string>>(),
+  },
+}));
+
+vi.mock('fs/promises', () => ({
+  default: mockFsPromises,
+  ...mockFsPromises,
+}));
+
 // ── Import after mocks are set up ─────────────────────────────────────────────
 import {
   CURRENT_HOOK_VERSION,
   getCurrentHookVersion,
   hooksAreUpToDate,
   installHooks,
+  invalidateHookVersionCache,
   uninstallHooks,
 } from './hookInstaller';
 
@@ -65,18 +78,30 @@ const markerPath = path.join(claudeHooksDir, '.agent-ide-version');
 
 function resetMocks() {
   vi.resetAllMocks();
-  // Default: source scripts exist
+  invalidateHookVersionCache();
+  // Default: source scripts exist (access resolves), marker does not (readFile throws)
   mockFs.existsSync.mockImplementation((p: string) => {
     if (typeof p === 'string' && p.includes('assets')) return true;
     return false;
   });
   mockFs.readFileSync.mockReturnValue('');
+  mockFsPromises.access.mockImplementation((p: string) => {
+    if (typeof p === 'string' && p.includes('assets')) return Promise.resolve();
+    return Promise.reject(new Error('ENOENT'));
+  });
+  mockFsPromises.mkdir.mockResolvedValue(undefined);
+  mockFsPromises.copyFile.mockResolvedValue(undefined);
+  mockFsPromises.chmod.mockResolvedValue(undefined);
+  mockFsPromises.writeFile.mockResolvedValue(undefined);
+  mockFsPromises.readFile.mockRejectedValue(new Error('ENOENT'));
 }
 
 async function setAutoInstallHooks(value: boolean): Promise<void> {
   const { getConfigValue } = await import('./config');
   vi.mocked(getConfigValue).mockReturnValue(value as never);
 }
+
+// ─── installHooks() skip tests ────────────────────────────────────────────────
 
 function registerInstallHooksSkipTests(): void {
   it('skips when autoInstallHooks is false', async () => {
@@ -86,78 +111,66 @@ function registerInstallHooksSkipTests(): void {
 
     expect(result.installed).toBe(false);
     expect(result.skippedReason).toMatch(/disabled/);
-    expect(mockFs.mkdirSync).not.toHaveBeenCalled();
+    expect(mockFsPromises.mkdir).not.toHaveBeenCalled();
   });
 
   it('skips when version marker matches current version', async () => {
     await setAutoInstallHooks(true);
-    mockFs.existsSync.mockImplementation(
-      (p: string) => p === markerPath || (typeof p === 'string' && p.includes('assets')),
-    );
-    // readFileSync is called both for the version marker and for hook asset files
-    // (to compute the SHA-256 hash). Return the real computed version for the marker
-    // by letting getCurrentHookVersion() run first, then stubbing readFileSync.
+    // getCurrentHookVersion() uses fs.readFileSync — runs before we stub it
     const currentVersion = getCurrentHookVersion();
-    mockFs.readFileSync.mockReturnValue(currentVersion);
+    // Marker exists and contains current version
+    mockFsPromises.readFile.mockResolvedValue(currentVersion);
 
     const result = await installHooks();
 
     expect(result.installed).toBe(false);
     expect(result.skippedReason).toMatch(currentVersion);
-    expect(mockFs.copyFileSync).not.toHaveBeenCalled();
+    expect(mockFsPromises.copyFile).not.toHaveBeenCalled();
   });
 }
+
+// ─── installHooks() install tests ─────────────────────────────────────────────
 
 function registerInstallHooksInstallTests(): void {
   it('performs a first install when no marker exists', async () => {
     await setAutoInstallHooks(true);
-    mockFs.existsSync.mockImplementation(
-      (p: string) => typeof p === 'string' && p.includes('assets'),
-    );
-    // Capture the real computed version before we stub readFileSync to throw.
-    // getCurrentHookVersion() is cached after the first call so we get the
-    // same hash that installHooks() will use internally.
     const currentVersion = getCurrentHookVersion();
-    mockFs.readFileSync.mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
+    // marker readFile throws (ENOENT) — already default in resetMocks
 
     const result = await installHooks();
 
     expect(result.installed).toBe(true);
     expect(result.firstInstall).toBe(true);
-    expect(mockFs.mkdirSync).toHaveBeenCalledWith(claudeHooksDir, { recursive: true });
-    expect(mockFs.copyFileSync).toHaveBeenCalled();
-    expect(mockFs.writeFileSync).toHaveBeenCalledWith(markerPath, currentVersion, 'utf8');
+    expect(mockFsPromises.mkdir).toHaveBeenCalledWith(claudeHooksDir, { recursive: true });
+    expect(mockFsPromises.copyFile).toHaveBeenCalled();
+    expect(mockFsPromises.writeFile).toHaveBeenCalledWith(markerPath, currentVersion, 'utf8');
   });
 
   it('updates existing install when version is stale', async () => {
     await setAutoInstallHooks(true);
-    mockFs.existsSync.mockImplementation(
-      (p: string) => p === markerPath || (typeof p === 'string' && p.includes('assets')),
-    );
-    mockFs.readFileSync.mockReturnValue('0.0.1');
+    // Marker exists with old version
+    mockFsPromises.readFile.mockResolvedValue('0.0.1');
 
     const result = await installHooks();
 
     expect(result.installed).toBe(true);
     expect(result.firstInstall).toBe(false);
-    expect(mockFs.copyFileSync).toHaveBeenCalled();
+    expect(mockFsPromises.copyFile).toHaveBeenCalled();
   });
 }
+
+// ─── installHooks() missing-source test ───────────────────────────────────────
 
 function registerInstallHooksMissingSourceTest(): void {
   it('skips individual script if source file is missing', async () => {
     await setAutoInstallHooks(true);
-    mockFs.existsSync.mockReturnValue(false);
-    mockFs.readFileSync.mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
+    // All access() calls fail — no source scripts found
+    mockFsPromises.access.mockRejectedValue(new Error('ENOENT'));
 
     const result = await installHooks();
 
     expect(result.installed).toBe(true);
-    expect(mockFs.copyFileSync).not.toHaveBeenCalled();
+    expect(mockFsPromises.copyFile).not.toHaveBeenCalled();
   });
 }
 
@@ -169,7 +182,6 @@ describe('CURRENT_HOOK_VERSION', () => {
   });
 
   it('getCurrentHookVersion() returns a 16-char hex hash', () => {
-    // Reset the module cache so getCurrentHookVersion() recomputes from mocked fs
     expect(getCurrentHookVersion()).toMatch(/^[0-9a-f]{16}$/);
   });
 });
@@ -185,24 +197,22 @@ describe('installHooks()', () => {
 describe('hooksAreUpToDate()', () => {
   beforeEach(resetMocks);
 
-  it('returns true when marker matches current version', () => {
-    mockFs.existsSync.mockImplementation((p: string) => p === markerPath);
-    mockFs.readFileSync.mockReturnValue(getCurrentHookVersion());
+  it('returns true when marker matches current version', async () => {
+    mockFsPromises.readFile.mockResolvedValue(getCurrentHookVersion());
 
-    expect(hooksAreUpToDate()).toBe(true);
+    expect(await hooksAreUpToDate()).toBe(true);
   });
 
-  it('returns false when marker has old version', () => {
-    mockFs.existsSync.mockImplementation((p: string) => p === markerPath);
-    mockFs.readFileSync.mockReturnValue('0.0.1');
+  it('returns false when marker has old version', async () => {
+    mockFsPromises.readFile.mockResolvedValue('0.0.1');
 
-    expect(hooksAreUpToDate()).toBe(false);
+    expect(await hooksAreUpToDate()).toBe(false);
   });
 
-  it('returns false when marker does not exist', () => {
-    mockFs.existsSync.mockReturnValue(false);
+  it('returns false when marker does not exist', async () => {
+    mockFsPromises.readFile.mockRejectedValue(new Error('ENOENT'));
 
-    expect(hooksAreUpToDate()).toBe(false);
+    expect(await hooksAreUpToDate()).toBe(false);
   });
 });
 
@@ -214,7 +224,6 @@ describe('uninstallHooks()', () => {
 
     uninstallHooks();
 
-    // Should have called rmSync for each hook file + the marker
     expect(mockFs.rmSync).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const removedPaths = vi.mocked(mockFs.rmSync).mock.calls.map((args: any) => args[0] as string);

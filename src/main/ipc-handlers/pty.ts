@@ -9,6 +9,7 @@ import { resolveModelEnv } from '../providers';
 import {
   getActiveSessions,
   getPtyCwd,
+  getShellState,
   killPty,
   resizePty,
   spawnClaudePty,
@@ -110,6 +111,13 @@ function registerSessionHandlers(channels: string[]): void {
 
   ipcMain.handle('pty:listSessions', () => getActiveSessions());
   channels.push('pty:listSessions');
+
+  ipcMain.handle('pty:shellState', (_event, id: string) => {
+    const state = getShellState(id);
+    if (!state) return { success: false, error: `Session ${id} not found` };
+    return { success: true, ...state };
+  });
+  channels.push('pty:shellState');
 }
 
 function registerRecordingHandlers(channels: string[], senderWindow: SenderWindow): void {

@@ -17,6 +17,8 @@ import {
   startPtyRecording as startRecording,
   stopPtyRecording as stopRecording,
 } from './ptyRecording';
+import { initShellState, processAndUpdateState, removeShellState } from './ptyShellIntegration';
+import { writeOnShellReady } from './ptyShellReady';
 import { ptyBatcher } from './web/ptyBatcher';
 import { broadcastToWebClients } from './web/webServer';
 
@@ -64,6 +66,7 @@ export function cleanupSession(id: string): void {
   electronBatcher.cleanup(id);
   terminalOutputBuffer.removeSession(id);
   ptyBatcher.removeSession(id);
+  removeShellState(id);
 }
 
 function handleSessionExit(id: string, win: BrowserWindow, exitCode: number, signal: number): void {
@@ -85,9 +88,10 @@ function handleSessionExit(id: string, win: BrowserWindow, exitCode: number, sig
 function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow): void {
   electronBatcher.register(id, win);
   proc.onData((data: string) => {
-    electronBatcher.append(id, data);
-    ptyBatcher.append(id, data);
-    terminalOutputBuffer.append(id, data);
+    const cleaned = processAndUpdateState(id, data);
+    electronBatcher.append(id, cleaned);
+    ptyBatcher.append(id, cleaned);
+    terminalOutputBuffer.append(id, cleaned);
   });
 
   proc.onExit(({ exitCode, signal }) => {
@@ -95,17 +99,8 @@ function attachSessionListeners(id: string, proc: pty.IPty, win: BrowserWindow):
   });
 }
 
-export function scheduleStartupCommand(
-  id: string,
-  proc: pty.IPty,
-  command: string,
-  delay: number,
-): void {
-  setTimeout(() => {
-    if (sessions.has(id)) {
-      proc.write(command + '\r');
-    }
-  }, delay);
+export function scheduleStartupCommand(id: string, proc: pty.IPty, command: string): void {
+  writeOnShellReady(id, proc, command, sessions);
 }
 
 export function registerSession(registration: SessionRegistration): void {
@@ -116,6 +111,7 @@ export function registerSession(registration: SessionRegistration): void {
     shell: registration.shell,
   });
   sessionWindowMap.set(registration.id, registration.win.id);
+  initShellState(registration.id, registration.cwd);
   attachSessionListeners(registration.id, registration.proc, registration.win);
 }
 
@@ -166,7 +162,7 @@ export function spawnPty(
 
     registerSession({ id, proc, cwd, shell, win });
     if (options.startupCommand) {
-      scheduleStartupCommand(id, proc, options.startupCommand, 100);
+      scheduleStartupCommand(id, proc, options.startupCommand);
     }
     notifyTerminalCreated(id, cwd);
     return { success: true };
@@ -293,4 +289,6 @@ export async function stopPtyRecording(
 
 export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent';
 export { spawnAgentPty } from './ptyAgent';
+export type { ShellState } from './ptyShellIntegration';
+export { getShellState } from './ptyShellIntegration';
 export { spawnClaudePty, spawnCodexPty } from './ptySpawn';

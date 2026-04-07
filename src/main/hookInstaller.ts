@@ -13,6 +13,7 @@
 import crypto from 'crypto';
 import { app, Notification } from 'electron';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
@@ -25,6 +26,11 @@ import log from './logger';
 // Auto-computed from hook script contents — no manual bumping needed.
 // Any change to a hook script file automatically triggers re-installation.
 let _cachedVersion: string | null = null;
+
+export function invalidateHookVersionCache(): void {
+  _cachedVersion = null;
+}
+
 export function getCurrentHookVersion(): string {
   if (_cachedVersion) return _cachedVersion;
   const assetsDir = getAssetsHooksDir();
@@ -179,7 +185,7 @@ function registerHookCommand(entries: ClaudeHookMatcher[], command: string): boo
  * Merges Ouroboros hook commands into ~/.claude/settings.json so Claude Code
  * actually invokes them. Safe to call multiple times — deduplicates by command.
  */
-function registerHooksInSettings(hooksDir: string): void {
+async function registerHooksInSettings(hooksDir: string): Promise<void> {
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
   const settings = readClaudeSettings(settingsPath);
   const hooks = ensureHooksMap(settings);
@@ -191,7 +197,7 @@ function registerHooksInSettings(hooksDir: string): void {
   }
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/settings.json
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+  await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 }
 
 // ─── Installer ────────────────────────────────────────────────────────────────
@@ -212,43 +218,50 @@ function createSkippedInstallResult(hooksDir: string, skippedReason: string): In
   };
 }
 
-function installHookFile(entry: HookEntry, assetsDir: string, hooksDir: string): void {
+async function installHookFile(
+  entry: HookEntry,
+  assetsDir: string,
+  hooksDir: string,
+): Promise<void> {
   const srcPath = path.join(assetsDir, entry.src);
   const destPath = path.join(hooksDir, entry.dest);
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from assets dir + hook manifest entry
-  if (!fs.existsSync(srcPath)) {
+  const srcExists = await fsPromises
+    .access(srcPath)
+    .then(() => true)
+    .catch(() => false);
+  if (!srcExists) {
     log.warn(`source script not found: ${srcPath}`);
     return;
   }
 
-  fs.copyFileSync(srcPath, destPath);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from hooks dir + hook manifest entry
+  await fsPromises.copyFile(srcPath, destPath);
 
   if (entry.executable && process.platform !== 'win32') {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from hooks dir + hook manifest entry
-    fs.chmodSync(destPath, 0o755);
+    await fsPromises.chmod(destPath, 0o755);
   }
 
   log.info(`installed ${entry.dest} -> ${destPath}`);
 }
 
-function installHookFiles(assetsDir: string, hooksDir: string): void {
+async function installHookFiles(assetsDir: string, hooksDir: string): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/hooks
-  fs.mkdirSync(hooksDir, { recursive: true });
+  await fsPromises.mkdir(hooksDir, { recursive: true });
 
-  for (const entry of getPlatformHooks()) {
-    installHookFile(entry, assetsDir, hooksDir);
-  }
+  await Promise.all(getPlatformHooks().map((entry) => installHookFile(entry, assetsDir, hooksDir)));
 }
 
-function writeVersionMarker(markerPath: string): void {
+async function writeVersionMarker(markerPath: string): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/hooks version marker
-  fs.writeFileSync(markerPath, getCurrentHookVersion(), 'utf8');
+  await fsPromises.writeFile(markerPath, getCurrentHookVersion(), 'utf8');
 }
 
-function syncHooksIntoSettings(hooksDir: string): void {
+async function syncHooksIntoSettings(hooksDir: string): Promise<void> {
   try {
-    registerHooksInSettings(hooksDir);
+    await registerHooksInSettings(hooksDir);
     registerStatusLineInSettings(hooksDir);
   } catch (err) {
     log.warn('could not update settings.json:', err);
@@ -281,8 +294,9 @@ export async function installHooks(): Promise<InstallResult> {
     return createSkippedInstallResult(hooksDir, 'autoInstallHooks disabled in config');
   }
 
+  invalidateHookVersionCache();
   const markerPath = path.join(hooksDir, VERSION_MARKER_FILE);
-  const installedVersion = readVersionMarker(markerPath);
+  const installedVersion = await readVersionMarker(markerPath);
 
   const currentVersion = getCurrentHookVersion();
   if (installedVersion === currentVersion) {
@@ -291,9 +305,9 @@ export async function installHooks(): Promise<InstallResult> {
 
   const firstInstall = installedVersion === null;
 
-  installHookFiles(getAssetsHooksDir(), hooksDir);
-  writeVersionMarker(markerPath);
-  syncHooksIntoSettings(hooksDir);
+  await installHookFiles(getAssetsHooksDir(), hooksDir);
+  await writeVersionMarker(markerPath);
+  await syncHooksIntoSettings(hooksDir);
   maybeShowInstallNotification(firstInstall, hooksDir);
   logInstallComplete(firstInstall);
 
@@ -302,21 +316,21 @@ export async function installHooks(): Promise<InstallResult> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function readVersionMarker(markerPath: string): string | null {
+async function readVersionMarker(markerPath: string): Promise<string | null> {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/hooks version marker
-    if (!fs.existsSync(markerPath)) return null;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from ~/.claude/hooks version marker
-    return fs.readFileSync(markerPath, 'utf8').trim() || null;
+    const content = await fsPromises.readFile(markerPath, 'utf8');
+    return content.trim() || null;
   } catch {
     return null;
   }
 }
 
 /** Returns true if hooks are installed at the current version. */
-export function hooksAreUpToDate(): boolean {
+export async function hooksAreUpToDate(): Promise<boolean> {
+  invalidateHookVersionCache();
   const markerPath = path.join(getClaudeHooksDir(), VERSION_MARKER_FILE);
-  return readVersionMarker(markerPath) === getCurrentHookVersion();
+  return (await readVersionMarker(markerPath)) === getCurrentHookVersion();
 }
 
 /** Removes all installed hook scripts and the version marker. */

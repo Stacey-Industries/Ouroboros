@@ -96,7 +96,7 @@ function PermissionModeIndicator(props: {
     <button
       type="button"
       onClick={() => props.onChange(cyclePermissionMode(props.value, props.provider))}
-      className="flex items-center gap-1 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-[rgba(128,128,128,0.15)]"
+      className="flex items-center gap-1 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-surface-hover"
       style={{ ...pillStyle, fontFamily: 'var(--font-ui)' }}
       title="Permission mode (Shift+Tab to cycle)"
     >

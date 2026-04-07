@@ -221,10 +221,12 @@ function spawnUsageQuery(): Promise<ParsedUsage | null> {
     const finish = (result: ParsedUsage | null, reason: string): void => {
       if (resolved) return;
       resolved = true;
+      activeTerm = null;
       log.info(`[claude-usage-poller] finish(${reason}), result:`, JSON.stringify(result));
       resolve(result);
     };
     const term = spawnPty(buildShellArgs());
+    activeTerm = term;
     attachPtyHandlers(term, state, finish);
   });
 }
@@ -252,6 +254,8 @@ function hasUsageData(clean: string): boolean {
 // ── Polling loop ───────────────────────────────────────────────────────
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
+let activeTerm: pty.IPty | null = null;
+const DRAIN_TIMEOUT_MS = 3_000;
 
 async function pollOnce(): Promise<void> {
   try {
@@ -272,9 +276,27 @@ export function startClaudeUsagePoller(): void {
   intervalId = setInterval(() => void pollOnce(), POLL_INTERVAL_MS);
 }
 
-export function stopClaudeUsagePoller(): void {
+export async function stopClaudeUsagePoller(): Promise<void> {
   if (!intervalId) return;
   clearInterval(intervalId);
   intervalId = null;
+
+  if (activeTerm) {
+    log.info('[claude-usage-poller] draining in-flight PTY');
+    const term = activeTerm;
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        log.warn('[claude-usage-poller] drain timeout, force-killing');
+        resolve();
+      }, DRAIN_TIMEOUT_MS);
+      term.onExit(() => {
+        clearTimeout(timeout);
+        resolve();
+      });
+      term.kill();
+    });
+    activeTerm = null;
+  }
+
   log.info('[claude-usage-poller] stopped');
 }

@@ -201,6 +201,8 @@ export interface AppConfig {
   webAccessPassword: string;
   glassOpacity: number;
   authOnboardingDismissed: boolean;
+  /** Create a git checkpoint commit before applying AI-generated diffs. Default: true. */
+  autoCheckpoint: boolean;
 }
 
 export interface ContextLayerConfig {

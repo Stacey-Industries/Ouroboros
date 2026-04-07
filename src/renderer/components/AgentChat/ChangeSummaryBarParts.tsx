@@ -29,8 +29,8 @@ function parsePatchLines(patch: string): DiffLine[] {
 }
 
 const diffLineColors: Record<DiffLine['type'], React.CSSProperties> = {
-  add: { backgroundColor: 'rgba(63, 185, 80, 0.1)', color: 'var(--status-success)' },
-  remove: { backgroundColor: 'rgba(248, 81, 73, 0.1)', color: 'var(--status-error)' },
+  add: { backgroundColor: 'var(--diff-add-bg)', color: 'var(--status-success)' },
+  remove: { backgroundColor: 'var(--status-error-subtle)', color: 'var(--status-error)' },
   context: {},
   header: { fontWeight: 600 },
 };

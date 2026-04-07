@@ -8,8 +8,9 @@
 
 import fs from 'node:fs';
 
+import log from '../logger';
 import weightsJson from './model/router-weights.json';
-import type { ClassifierResult, ModelTier } from './routerTypes';
+import { type ClassifierResult, FEATURE_NAMES, type ModelTier } from './routerTypes';
 
 /* ── Model weight types ───────────────────────────────────────────── */
 
@@ -100,11 +101,29 @@ function pickBestClass(
   return { tier, confidence: maxProb, features };
 }
 
+/* ── Weight dimension validation ─────────────────────────────────── */
+
+/**
+ * Guard against FEATURE_NAMES / Python weight matrix divergence.
+ * If the loaded weights expect a different number of features than
+ * FEATURE_NAMES declares, inference would silently score features
+ * against the wrong weights — reject and fall back instead.
+ */
+function checkFeatureDimensions(w: LRWeights): boolean {
+  if (w.feature_names.length === FEATURE_NAMES.length) return true;
+  log.error(
+    `[router] weight dimension mismatch: weights expect ${w.feature_names.length} features` +
+      ` but FEATURE_NAMES has ${FEATURE_NAMES.length} — falling back to previous weights`,
+  );
+  return false;
+}
+
 /* ── Hot-reload ──────────────────────────────────────────────────── */
 
 /**
  * Replace the in-memory weights with a new set loaded from disk.
- * Returns true on success, false if the file is missing or malformed.
+ * Returns true on success, false if the file is missing, malformed,
+ * or has a feature-dimension mismatch with FEATURE_NAMES.
  */
 export function reloadWeights(filePath: string): boolean {
   try {
@@ -112,6 +131,7 @@ export function reloadWeights(filePath: string): boolean {
     const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw) as unknown;
     if (!isValidLRWeights(parsed)) return false;
+    if (!checkFeatureDimensions(parsed)) return false;
     weights = parsed;
     return true;
   } catch {

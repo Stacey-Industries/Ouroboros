@@ -16,7 +16,7 @@ import {
 // Mock electron + fs to prevent real I/O
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp/test-quality' } }));
 vi.mock('node:fs', () => ({
-  default: { appendFileSync: vi.fn() },
+  default: { promises: { appendFile: vi.fn().mockResolvedValue(undefined) } },
 }));
 vi.mock('node:child_process', () => ({
   exec: vi.fn(),

@@ -16,8 +16,10 @@ import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 import { reloadWeights } from './classifier';
 import {
+  backupWeightsFile,
   countSignalLines,
   findPython,
+  RETRAINED_WEIGHTS_BACKUP_FILE,
   RETRAINED_WEIGHTS_FILE,
   spawnTrainer,
   validateWeightFile,
@@ -110,33 +112,53 @@ async function runRetrainPipeline(dataDir: string, signalCount: number): Promise
     return;
   }
 
-  // Step 4: Run trainer
   const outputPath = path.join(dataDir, RETRAINED_WEIGHTS_FILE);
-  const result = await spawnTrainer({
+  const backupPath = path.join(dataDir, RETRAINED_WEIGHTS_BACKUP_FILE);
+  const loaded = await runTrainerAndReload({
     pythonBin,
     trainerScript,
-    inputDir: dataDir,
+    dataDir,
     outputPath,
+    backupPath,
   });
+  if (loaded) setLastRetrainCount(signalCount);
+}
 
+interface TrainerArgs {
+  pythonBin: string;
+  trainerScript: string;
+  dataDir: string;
+  outputPath: string;
+  backupPath: string;
+}
+
+async function runTrainerAndReload(args: TrainerArgs): Promise<boolean> {
+  // Backup current weights before overwriting so we can roll back on failure
+  await backupWeightsFile(args.outputPath, args.backupPath);
+
+  const result = await spawnTrainer({
+    pythonBin: args.pythonBin,
+    trainerScript: args.trainerScript,
+    inputDir: args.dataDir,
+    outputPath: args.outputPath,
+  });
   if (!result.success) {
     log.warn(`[retrain] trainer failed (exit=${result.exitCode}): ${result.stderr.slice(0, 200)}`);
-    return;
+    return false;
   }
 
-  // Step 5: Validate + reload
-  if (!(await validateWeightFile(outputPath))) {
+  if (!(await validateWeightFile(args.outputPath))) {
     log.warn('[retrain] output weights invalid — keeping old weights');
-    return;
+    return false;
   }
 
-  const loaded = reloadWeights(outputPath);
+  const loaded = reloadWeights(args.outputPath);
   if (loaded) {
-    setLastRetrainCount(signalCount);
     log.info('[retrain] weights updated successfully');
   } else {
     log.warn('[retrain] reloadWeights failed — keeping old weights');
   }
+  return loaded;
 }
 
 /* ── Trainer script resolution ───────────────────────────────────────── */

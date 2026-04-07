@@ -7,8 +7,10 @@
 
 import React from 'react';
 
-import type { ImageAttachment } from '../../types/electron';
+import type { CodexModelOption, ImageAttachment } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
+import { resolveActiveModel } from './ChatControlsBarSupport';
+import { ContextUsageBar } from './ContextUsageBar';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import type { SlashCommand } from './SlashCommandMenu';
@@ -27,7 +29,10 @@ export function AttachmentChip({
   return (
     <span
       className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] leading-tight text-interactive-accent"
-      style={{ backgroundColor: 'rgba(100,180,255,0.08)', borderColor: 'rgba(100,180,255,0.25)' }}
+      style={{
+        backgroundColor: 'var(--interactive-accent-subtle)',
+        borderColor: 'var(--interactive-muted)',
+      }}
     >
       <img src={src} alt="" className="h-4 w-4 rounded object-cover" />
       <span className="max-w-[100px] truncate" style={{ fontFamily: 'var(--font-mono)' }}>
@@ -198,6 +203,35 @@ export function ComposerMenus(props: ComposerMenusProps): React.ReactElement {
         />
       )}
     </div>
+  );
+}
+
+/* ---------- ComposerContextBar ---------- */
+
+type ComposerContextBarProps = {
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  threadModelUsage?: { model: string; inputTokens: number; outputTokens: number }[];
+  selectedModel?: string;
+  settingsModel?: string;
+  codexModels?: CodexModelOption[];
+};
+
+export function ComposerContextBar(props: ComposerContextBarProps): React.ReactElement | null {
+  const activeModel = resolveActiveModel({
+    activeProvider: 'claude-code',
+    selectedModel: props.selectedModel ?? '',
+    settingsModel: props.settingsModel,
+  });
+  const usage =
+    props.streamingTokenUsage ??
+    props.threadModelUsage?.find((e) => !e.model || e.model === activeModel);
+  if (!usage || usage.inputTokens <= 0) return null;
+  return (
+    <ContextUsageBar
+      inputTokens={usage.inputTokens}
+      model={activeModel}
+      codexModels={props.codexModels}
+    />
   );
 }
 

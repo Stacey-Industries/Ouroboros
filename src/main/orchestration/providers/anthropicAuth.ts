@@ -1,3 +1,7 @@
+// TODO(phase-5): Duplicate Anthropic provider — src/main/auth/providers/anthropicAuth.ts is the
+// newer credential-store-backed version. Migrate orchestration pipeline to read from that store
+// and delete this file. See src/main/auth/providers/CLAUDE.md for migration notes.
+
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import os from 'os';

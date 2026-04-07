@@ -158,7 +158,7 @@ export function VirtualTreeList(props: VirtualTreeListProps): React.ReactElement
   return (
     <div
       ref={listRef}
-      role="listbox"
+      role="tree"
       aria-label={`Files in ${basename(props.root)}`}
       onDragOver={handleDragOver}
       onDrop={props.handleRootDrop}

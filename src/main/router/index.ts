@@ -4,7 +4,6 @@
 
 export { classifyFeatures, reloadWeights } from './classifier';
 export { extractFeatures } from './featureExtractor';
-export { createLLMFallback } from './llmFallback';
 export { logRouterOverride, logRoutingDecision, routePromptSync } from './orchestrator';
 export {
   loadRetrainedWeightsIfAvailable,

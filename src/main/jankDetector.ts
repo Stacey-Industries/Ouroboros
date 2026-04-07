@@ -41,6 +41,10 @@ function logHeapSnapshot(): void {
 
 function onTick(): void {
   const now = Date.now();
+  if (lastTickAt === 0) {
+    lastTickAt = now;
+    return; // Skip first tick — includes startup overhead, would be a false positive
+  }
   const elapsed = now - lastTickAt;
   const jank = elapsed - CHECK_INTERVAL_MS;
   lastTickAt = now;
@@ -65,7 +69,7 @@ function onTick(): void {
 
 export function startJankDetector(): void {
   if (timerId) return;
-  lastTickAt = Date.now();
+  lastTickAt = 0; // Reset so first tick is skipped (avoids false positive from startup overhead)
   lastHeapLogAt = Date.now();
   timerId = setInterval(onTick, CHECK_INTERVAL_MS);
   // Prevent the interval from keeping the process alive during shutdown

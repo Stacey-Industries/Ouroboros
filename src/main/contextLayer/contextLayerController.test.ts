@@ -860,7 +860,7 @@ describe('contextLayerController', () => {
     expect(mockedRunContextLayerGC.mock.calls.length).toBe(gcCallsBeforeDispose);
   });
 
-  it('reinitializing disposes previous controller', async () => {
+  it('reinitializing same root disposes previous controller', async () => {
     mockedReadManifest.mockResolvedValue(null);
 
     await initContextLayer({
@@ -875,8 +875,9 @@ describe('contextLayerController', () => {
     const secondWatcher = createMockWatcher();
     mockedCreateContextLayerWatcher.mockReturnValue(secondWatcher);
 
+    // Re-init with the SAME root — should dispose the old controller
     await initContextLayer({
-      workspaceRoot: '/workspace-2',
+      workspaceRoot: '/workspace',
       buildRepoIndex: mockBuildRepoIndex,
       config: createMockConfig(),
     });

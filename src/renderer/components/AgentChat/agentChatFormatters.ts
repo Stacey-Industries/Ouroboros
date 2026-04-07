@@ -77,7 +77,7 @@ export function getMessageTone(message: AgentChatMessageRecord): CSSProperties {
   if (message.role === 'assistant') {
     return {
       borderColor: 'var(--interactive-accent)',
-      backgroundColor: 'rgba(100, 100, 255, 0.04)',
+      backgroundColor: 'var(--interactive-accent-subtle)',
     };
   }
 

@@ -51,7 +51,9 @@ function deleteCompletedSessions(sessions: AgentSession[]): void {
     .filter((s) => s.status === 'complete' || s.status === 'error')
     .map((s) => s.id);
   for (const id of completedIds) {
-    window.electronAPI?.sessions?.delete?.(id).catch(() => {});
+    window.electronAPI?.sessions?.delete?.(id).catch((err: unknown) => {
+      log.warn('Session delete failed:', err);
+    });
   }
 }
 
@@ -65,7 +67,9 @@ function persistSessionNotes(
   if (session) {
     window.electronAPI?.sessions
       ?.save?.({ ...session, notes, bookmarked: bookmarked ?? session.bookmarked })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        log.warn('Session notes persistence failed:', err);
+      });
   }
 }
 
@@ -99,7 +103,9 @@ export function useAgentEvents(): UseAgentEventsReturn {
 
   const dismiss = useCallback((sessionId: string) => {
     dispatch({ type: 'DISMISS', sessionId });
-    window.electronAPI?.sessions?.delete?.(sessionId).catch(() => {});
+    window.electronAPI?.sessions?.delete?.(sessionId).catch((err: unknown) => {
+      log.warn('Session dismiss delete failed:', err);
+    });
   }, []);
 
   const updateNotes = useCallback(
@@ -137,7 +143,9 @@ function usePersistedSessionsLoader(
         markSessionsAsSaved(sessions, savedSessionIdsRef);
         if (sessions.length > 0) dispatch({ type: 'LOAD_PERSISTED', sessions });
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        log.warn('Persisted sessions load failed:', err);
+      });
   }, [dispatch, savedSessionIdsRef]);
 }
 
@@ -149,7 +157,9 @@ function saveEligibleSessions(
   if (!saveSession) return;
   for (const session of sessionsToSave) {
     savedSessionIdsRef.current.add(session.id);
-    saveSession(session).catch(() => {});
+    saveSession(session).catch((err: unknown) => {
+      log.warn('Session save failed:', err);
+    });
   }
 }
 

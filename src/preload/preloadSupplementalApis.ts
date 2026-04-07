@@ -278,8 +278,10 @@ export const supplementalApis: SupplementalApis = {
   orchestration: {
     previewContext: (request: unknown) =>
       ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
+    // Alias for previewContext — both channels execute identical logic on the main side.
+    // The renderer only calls previewContext; this alias exists for API symmetry.
     buildContextPacket: (request: unknown) =>
-      ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.buildContextPacket, request),
+      ipcRenderer.invoke(ORCHESTRATION_INVOKE_CHANNELS.previewContext, request),
     // Routes to agentChat:cancelTask (singleton orchestration) — the old
     // orchestration:cancelTask handler was removed because it created a fresh
     // adapter with empty process Maps and could never kill the running process.

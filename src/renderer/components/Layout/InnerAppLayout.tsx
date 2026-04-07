@@ -121,6 +121,8 @@ function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutPr
   return {
     layouts: workspaceLayouts,
     activeLayoutName,
+    // These defaults are always overridden by AppLayout (which spreads live sizes from useResizable/usePanelCollapse).
+    // They exist only to satisfy the StatusBarLayoutProps type at construction time.
     currentPanelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
     currentVisiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
     onSelectLayout: handleSelectLayout,

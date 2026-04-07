@@ -371,17 +371,22 @@ export async function respondToApproval(
   requestId: string,
   response: ApprovalResponse,
 ): Promise<boolean> {
-  pendingRequests.delete(requestId);
   clearAutoApproveTimer(requestId);
   clearQueuedResponseWrite(requestId);
 
   const filePath = await prepareResponseFilePath(requestId);
   if (!filePath) return false;
 
-  return writeResponseWithRetry(requestId, response.decision, {
+  const written = await writeResponseWithRetry(requestId, response.decision, {
     filePath,
     data: JSON.stringify(response),
   });
+
+  if (written) {
+    pendingRequests.delete(requestId);
+  }
+
+  return written;
 }
 
 /**
