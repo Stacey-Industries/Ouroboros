@@ -58,6 +58,16 @@ const ptyAPI: ElectronAPI['pty'] = {
     ipcRenderer.on(channel, handler);
     return () => ipcRenderer.removeListener(channel, handler);
   },
+
+  onDisconnected: (id, callback) => {
+    const channel = `pty:disconnected:${id}`;
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      info: { reason: string; exitCode: number; scrollback: string[] },
+    ) => callback(info);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
 };
 
 const codexAPI: ElectronAPI['codex'] = {

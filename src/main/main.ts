@@ -119,15 +119,18 @@ async function startIdeTools(): Promise<void> {
 async function startInternalMcp(): Promise<void> {
   if (!getConfigValue('internalMcpEnabled')) return;
   const workspaceRoot = getConfigValue('defaultProjectRoot') as string | undefined;
-  if (!workspaceRoot) {
-    log.info('[internal-mcp] no default project root — skipping startup');
+  if (!workspaceRoot) { log.info('[internal-mcp] no project root — skipping'); return; }
+  if (getConfigValue('useMcpHost') === true) {
+    const { startMcpHost, stopMcpHost } = await import('./mcpHost/mcpHostProxy');
+    const res = await startMcpHost(workspaceRoot, 0);
+    if (!res.success || res.port == null) { log.warn('[mcp] host start failed:', res.error); return; }
+    internalMcpStop = stopMcpHost;
+    await injectIntoProjectSettings(workspaceRoot, res.port);
     return;
   }
   const handle = await startInternalMcpServer({ workspaceRoot, port: 0 });
   internalMcpStop = handle.stop;
-  log.info(`[internal-mcp] started on port ${handle.port}`);
   await injectIntoProjectSettings(workspaceRoot, handle.port);
-  log.info('[internal-mcp] injected into .claude/settings.json');
 }
 
 async function stopInternalMcp(): Promise<void> {
@@ -301,11 +304,12 @@ app.on('will-quit', async () => {
   cleanupIpcHandlers();
   closeCostHistoryDb();
   closeThreadStore();
-  try {
-    await getGraphController()?.dispose();
-  } catch (err) {
-    log.warn('Dispose error during shutdown:', err);
-  }
+  try { await getGraphController()?.dispose(); }
+  catch (err) { log.warn('Dispose error during shutdown:', err); }
+  try { await (await import('./extensionHost/extensionHostProxy')).shutdownExtensionHost(); }
+  catch (err) { log.warn('ExtensionHost shutdown error:', err); }
+  try { await (await import('./mcpHost/mcpHostProxy')).shutdownMcpHost(); }
+  catch (err) { log.warn('McpHost shutdown error:', err); }
 });
 
 // Security: prevent new windows from web content (window.open, target=_blank, etc.)

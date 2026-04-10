@@ -87,6 +87,15 @@ export interface PtyAPI {
     callback: (result: { exitCode: number | null; signal: number | null }) => void,
   ) => () => void;
   onRecordingState: (id: string, callback: (state: { recording: boolean }) => void) => () => void;
+  /**
+   * Fires when the PtyHost utility process crashes and the session is lost.
+   * Payload includes the reason, exit code, and recent scrollback captured
+   * from `terminalOutputBuffer` before the host died.
+   */
+  onDisconnected: (
+    id: string,
+    callback: (info: { reason: string; exitCode: number; scrollback: string[] }) => void,
+  ) => () => void;
   getShellState: (id: string) => Promise<PtyShellStateResult>;
 }
 

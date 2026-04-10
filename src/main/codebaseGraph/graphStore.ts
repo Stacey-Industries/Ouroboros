@@ -1,172 +1,340 @@
 /**
- * graphStore.ts — In-memory graph store with JSON persistence.
+ * graphStore.ts — SQLite-backed graph store using better-sqlite3.
+ *
+ * Replaces the previous in-memory Map + JSON persistence. All operations
+ * are synchronous (better-sqlite3's design). The async save()/load()
+ * methods are preserved for API compat but are effectively no-ops — data
+ * is persisted on every write via WAL.
  */
 
-import fs from 'fs/promises';
 import path from 'path';
 
-import log from '../logger';
+import type { Database } from '../storage/database';
+import {
+  closeDatabase,
+  getSchemaVersion,
+  openDatabase,
+  setSchemaVersion,
+} from '../storage/database';
+import type { IGraphStore } from './graphStoreTypes';
 import type { GraphEdge, GraphNode } from './graphTypes';
 
-export class GraphStore {
-  private nodes = new Map<string, GraphNode>();
-  private edges: GraphEdge[] = [];
-  private persistPath: string;
+export type { IGraphStore } from './graphStoreTypes';
+
+// ── Row types ────────────────────────────────────────────────────────
+
+interface NodeRow {
+  id: string;
+  type: string;
+  name: string;
+  filePath: string;
+  line: number;
+  endLine: number | null;
+  metadata: string | null;
+}
+
+interface EdgeRow {
+  source: string;
+  target: string;
+  type: string;
+  metadata: string | null;
+}
+
+interface CountRow { cnt: number }
+
+// ── Schema DDL ───────────────────────────────────────────────────────
+
+const SCHEMA_V1 = `
+  CREATE TABLE IF NOT EXISTS nodes (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    filePath TEXT NOT NULL,
+    line INTEGER NOT NULL,
+    endLine INTEGER,
+    metadata TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_nodes_type
+    ON nodes(type);
+  CREATE INDEX IF NOT EXISTS idx_nodes_filePath
+    ON nodes(filePath);
+
+  CREATE TABLE IF NOT EXISTS edges (
+    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    target TEXT NOT NULL,
+    type TEXT NOT NULL,
+    metadata TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_edges_source
+    ON edges(source);
+  CREATE INDEX IF NOT EXISTS idx_edges_target
+    ON edges(target);
+`;
+
+// ── Prepared statement builders ──────────────────────────────────────
+
+function prepareNodeStmts(db: Database) {
+  return {
+    insertNode: db.prepare(`
+      INSERT OR REPLACE INTO nodes
+        (id, type, name, filePath, line, endLine, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `),
+    deleteNode: db.prepare('DELETE FROM nodes WHERE id = ?'),
+    getNode: db.prepare('SELECT * FROM nodes WHERE id = ?'),
+    getAllNodes: db.prepare('SELECT * FROM nodes'),
+    getNodesByType: db.prepare('SELECT * FROM nodes WHERE type = ?'),
+    getNodesByFile: db.prepare('SELECT * FROM nodes WHERE filePath = ?'),
+    deleteNodesForFile: db.prepare('DELETE FROM nodes WHERE filePath = ?'),
+    nodeCount: db.prepare('SELECT count(*) AS cnt FROM nodes'),
+    fileCount: db.prepare('SELECT count(DISTINCT filePath) AS cnt FROM nodes'),
+  };
+}
+
+function prepareEdgeStmts(db: Database) {
+  return {
+    insertEdge: db.prepare(
+      'INSERT INTO edges (source, target, type, metadata) VALUES (?, ?, ?, ?)',
+    ),
+    deleteEdgesForNode: db.prepare(
+      'DELETE FROM edges WHERE source = ? OR target = ?',
+    ),
+    deleteEdgesForFile: db.prepare(`
+      DELETE FROM edges
+       WHERE source IN (SELECT id FROM nodes WHERE filePath = ?)
+          OR target IN (SELECT id FROM nodes WHERE filePath = ?)
+    `),
+    getEdgesFrom: db.prepare('SELECT * FROM edges WHERE source = ?'),
+    getEdgesTo: db.prepare('SELECT * FROM edges WHERE target = ?'),
+    getAllEdges: db.prepare('SELECT * FROM edges'),
+    edgeCount: db.prepare('SELECT count(*) AS cnt FROM edges'),
+  };
+}
+
+type NodeStmts = ReturnType<typeof prepareNodeStmts>;
+type EdgeStmts = ReturnType<typeof prepareEdgeStmts>;
+type Stmts = NodeStmts & EdgeStmts;
+
+// ── Row ↔ Object mappers ─────────────────────────────────────────────
+
+function rowToNode(row: NodeRow): GraphNode {
+  const node: GraphNode = {
+    id: row.id,
+    type: row.type as GraphNode['type'],
+    name: row.name,
+    filePath: row.filePath,
+    line: row.line,
+  };
+  if (row.endLine != null) node.endLine = row.endLine;
+  if (row.metadata) {
+    node.metadata = JSON.parse(row.metadata) as
+      Record<string, unknown>;
+  }
+  return node;
+}
+
+function rowToEdge(row: EdgeRow): GraphEdge {
+  const edge: GraphEdge = {
+    source: row.source,
+    target: row.target,
+    type: row.type as GraphEdge['type'],
+  };
+  if (row.metadata) {
+    edge.metadata = JSON.parse(row.metadata) as
+      Record<string, unknown>;
+  }
+  return edge;
+}
+
+// ── GraphStore (SQLite) ──────────────────────────────────────────────
+
+export class GraphStore implements IGraphStore {
+  private db: Database;
+  private stmts: Stmts;
+  private txAddBulk: ReturnType<Database['transaction']>;
+  private txClearFile: ReturnType<Database['transaction']>;
+  private txReplaceEdges: ReturnType<Database['transaction']>;
+  private txRemoveNode: ReturnType<Database['transaction']>;
 
   constructor(projectRoot: string) {
-    this.persistPath = path.join(projectRoot, '.ouroboros', 'graph.json');
+    const dbPath = path.join(
+      projectRoot, '.ouroboros', 'graph.db',
+    );
+    this.db = openDatabase(dbPath);
+    this.ensureSchema();
+    this.stmts = {
+      ...prepareNodeStmts(this.db),
+      ...prepareEdgeStmts(this.db),
+    };
+
+    // Pre-build transactions used in hot paths
+    this.txAddBulk = this.db.transaction(
+      (nodes: GraphNode[], edges: GraphEdge[]) => {
+        for (const n of nodes) this.insertNode(n);
+        for (const e of edges) this.insertEdge(e);
+      },
+    );
+    this.txClearFile = this.db.transaction(
+      (filePath: string) => {
+        this.stmts.deleteEdgesForFile.run(
+          filePath, filePath,
+        );
+        this.stmts.deleteNodesForFile.run(filePath);
+      },
+    );
+    this.txReplaceEdges = this.db.transaction(
+      (edges: GraphEdge[]) => {
+        this.db.exec('DELETE FROM edges');
+        for (const e of edges) this.insertEdge(e);
+      },
+    );
+    this.txRemoveNode = this.db.transaction(
+      (id: string) => {
+        this.stmts.deleteEdgesForNode.run(id, id);
+        this.stmts.deleteNode.run(id);
+      },
+    );
   }
 
-  // --- Node CRUD ---
+  private ensureSchema(): void {
+    if (getSchemaVersion(this.db) < 1) {
+      this.db.exec(SCHEMA_V1);
+      setSchemaVersion(this.db, 1);
+    }
+  }
+
+  // ── Internal helpers ──
+
+  private insertNode(node: GraphNode): void {
+    this.stmts.insertNode.run(
+      node.id, node.type, node.name, node.filePath,
+      node.line, node.endLine ?? null,
+      node.metadata ? JSON.stringify(node.metadata) : null,
+    );
+  }
+
+  private insertEdge(edge: GraphEdge): void {
+    this.stmts.insertEdge.run(
+      edge.source, edge.target, edge.type,
+      edge.metadata ? JSON.stringify(edge.metadata) : null,
+    );
+  }
+
+  // ── Node CRUD ──
 
   addNode(node: GraphNode): void {
-    this.nodes.set(node.id, node);
+    this.insertNode(node);
   }
 
   removeNode(id: string): void {
-    this.nodes.delete(id);
-    this.edges = this.edges.filter((e) => e.source !== id && e.target !== id);
+    this.txRemoveNode(id);
   }
 
   getNode(id: string): GraphNode | undefined {
-    return this.nodes.get(id);
+    const row = this.stmts.getNode.get(id) as
+      NodeRow | undefined;
+    return row ? rowToNode(row) : undefined;
   }
 
   getAllNodes(): GraphNode[] {
-    return Array.from(this.nodes.values());
+    return (this.stmts.getAllNodes.all() as NodeRow[])
+      .map(rowToNode);
   }
 
   getNodesByType(type: GraphNode['type']): GraphNode[] {
-    const result: GraphNode[] = [];
-    for (const node of this.nodes.values()) {
-      if (node.type === type) result.push(node);
-    }
-    return result;
+    return (this.stmts.getNodesByType.all(type) as NodeRow[])
+      .map(rowToNode);
   }
 
   getNodesByFile(filePath: string): GraphNode[] {
-    const result: GraphNode[] = [];
-    for (const node of this.nodes.values()) {
-      if (node.filePath === filePath) result.push(node);
-    }
-    return result;
+    return (
+      this.stmts.getNodesByFile.all(filePath) as NodeRow[]
+    ).map(rowToNode);
   }
 
-  // --- Edge CRUD ---
+  // ── Edge CRUD ──
 
   addEdge(edge: GraphEdge): void {
-    this.edges.push(edge);
+    this.insertEdge(edge);
   }
 
   removeEdgesForNode(nodeId: string): void {
-    this.edges = this.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+    this.stmts.deleteEdgesForNode.run(nodeId, nodeId);
   }
 
   removeEdgesForFile(filePath: string): void {
-    const nodeIds = new Set<string>();
-    for (const node of this.nodes.values()) {
-      if (node.filePath === filePath) nodeIds.add(node.id);
-    }
-    this.edges = this.edges.filter((e) => !nodeIds.has(e.source) && !nodeIds.has(e.target));
+    this.stmts.deleteEdgesForFile.run(filePath, filePath);
   }
 
   getEdgesFrom(nodeId: string): GraphEdge[] {
-    return this.edges.filter((e) => e.source === nodeId);
+    return (
+      this.stmts.getEdgesFrom.all(nodeId) as EdgeRow[]
+    ).map(rowToEdge);
   }
 
   getEdgesTo(nodeId: string): GraphEdge[] {
-    return this.edges.filter((e) => e.target === nodeId);
+    return (
+      this.stmts.getEdgesTo.all(nodeId) as EdgeRow[]
+    ).map(rowToEdge);
   }
 
   getAllEdges(): GraphEdge[] {
-    return this.edges.slice();
+    return (this.stmts.getAllEdges.all() as EdgeRow[])
+      .map(rowToEdge);
   }
 
   replaceAllEdges(edges: GraphEdge[]): void {
-    this.edges = edges;
+    this.txReplaceEdges(edges);
   }
 
-  // --- Bulk operations ---
+  // ── Bulk operations ──
 
   addBulk(nodes: GraphNode[], edges: GraphEdge[]): void {
-    for (const node of nodes) {
-      this.nodes.set(node.id, node);
-    }
-    for (const edge of edges) {
-      this.edges.push(edge);
-    }
+    this.txAddBulk(nodes, edges);
   }
 
   clearFile(filePath: string): void {
-    this.removeEdgesForFile(filePath);
-    const toRemove: string[] = [];
-    for (const node of this.nodes.values()) {
-      if (node.filePath === filePath) toRemove.push(node.id);
-    }
-    for (const id of toRemove) {
-      this.nodes.delete(id);
-    }
-  }
-
-  // --- Persistence ---
-
-  async save(): Promise<void> {
-    try {
-      const dir = path.dirname(this.persistPath);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      await fs.mkdir(dir, { recursive: true });
-      const data = {
-        nodes: Array.from(this.nodes.values()),
-        edges: this.edges,
-      };
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      await fs.writeFile(this.persistPath, JSON.stringify(data), 'utf-8');
-    } catch (err) {
-      log.warn('Failed to persist graph:', err);
-    }
-  }
-
-  async load(): Promise<boolean> {
-    try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      const raw = await fs.readFile(this.persistPath, 'utf-8');
-      const data = JSON.parse(raw) as { nodes: GraphNode[]; edges: GraphEdge[] };
-      this.nodes.clear();
-      for (const node of data.nodes) {
-        this.nodes.set(node.id, node);
-      }
-      this.edges = data.edges ?? [];
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  // --- Stats ---
-
-  nodeCount(): number {
-    return this.nodes.size;
-  }
-
-  edgeCount(): number {
-    return this.edges.length;
-  }
-
-  fileCount(): number {
-    const files = new Set<string>();
-    for (const node of this.nodes.values()) {
-      files.add(node.filePath);
-    }
-    return files.size;
+    this.txClearFile(filePath);
   }
 
   clear(): void {
-    this.nodes.clear();
-    this.edges = [];
+    this.db.exec('DELETE FROM edges; DELETE FROM nodes;');
   }
 
-  /** No-op for in-memory store — exists for API compatibility with tests. */
+  // ── Persistence (no-ops — WAL auto-persists) ──
+
+  async save(): Promise<void> {
+    // No-op: SQLite with WAL persists automatically.
+  }
+
+  async load(): Promise<boolean> {
+    return this.nodeCount() > 0;
+  }
+
+  // ── Stats ──
+
+  nodeCount(): number {
+    return (this.stmts.nodeCount.get() as CountRow).cnt;
+  }
+
+  edgeCount(): number {
+    return (this.stmts.edgeCount.get() as CountRow).cnt;
+  }
+
+  fileCount(): number {
+    return (this.stmts.fileCount.get() as CountRow).cnt;
+  }
+
+  // ── Lifecycle ──
+
   close(): void {
-    // Nothing to close for in-memory store
+    closeDatabase(this.db);
+  }
+
+  /** Wrap `fn` in a SQLite transaction. */
+  transaction<T>(fn: () => T): T {
+    const tx = this.db.transaction(fn);
+    return tx();
   }
 }

@@ -6,6 +6,7 @@
 import { BrowserWindow } from 'electron';
 import * as pty from 'node-pty';
 
+import { getConfigValue } from './config';
 import log from './logger';
 import type {
   StreamJsonEvent,
@@ -21,6 +22,7 @@ import {
 import type { AgentBridgeHandle } from './ptyAgentBridge';
 import { createAgentBridge } from './ptyAgentBridge';
 import { buildBaseEnv, buildProviderEnv, resolveSpawnOptions } from './ptyEnv';
+import { spawnAgentViaPtyHost } from './ptyHost/ptyHostProxyAgent';
 
 export interface AgentPtyOptions {
   prompt: string;
@@ -133,42 +135,73 @@ function wireBridgeToProc(
   });
 }
 
+interface ResolvedAgentSpawn {
+  id: string;
+  win: BrowserWindow;
+  options: AgentPtyOptions;
+  cwd: string;
+  cols: number;
+  rows: number;
+  shell: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+function spawnAgentPtyDirect(r: ResolvedAgentSpawn): AgentPtyResult {
+  try {
+    const proc = pty.spawn(r.shell, r.args, {
+      name: 'xterm-256color', cols: r.cols, rows: r.rows, cwd: r.cwd, env: r.env,
+    });
+    registerSession({ id: r.id, proc, cwd: r.cwd, shell: r.shell, win: r.win });
+    const { bridge, result } = createAgentBridgeWithResult(r.id, r.options);
+    wireBridgeToProc(r.id, proc, bridge);
+    const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
+    setTimeout(() => {
+      if (sessions.has(r.id)) {
+        proc.write(r.options.prompt);
+        proc.write(eofChar);
+      }
+    }, 150);
+    notifyTerminalCreated(r.id, r.cwd);
+    return { success: true, sessionId: r.id, bridge, result };
+  } catch (error) {
+    cleanupSession(r.id);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function spawnAgentPtyProxy(r: ResolvedAgentSpawn): Promise<AgentPtyResult> {
+  const res = await spawnAgentViaPtyHost(
+    {
+      id: r.id, shell: r.shell, args: r.args, env: r.env,
+      cwd: r.cwd, cols: r.cols, rows: r.rows, windowId: r.win.id,
+    },
+    r.win, r.options.prompt, r.options.onEvent,
+  );
+  if (!res.success) return { success: false, ...(res.error ? { error: res.error } : {}) };
+  notifyTerminalCreated(r.id, r.cwd);
+  return {
+    success: true, sessionId: r.id,
+    ...(res.bridge ? { bridge: res.bridge } : {}),
+    ...(res.result ? { result: res.result } : {}),
+  };
+}
+
 /** Spawn a PTY session running Claude in stream-json mode with dual streaming (xterm + AgentBridge). */
 export function spawnAgentPty(
   id: string,
   win: BrowserWindow,
   options: AgentPtyOptions,
-): AgentPtyResult {
+): AgentPtyResult | Promise<AgentPtyResult> {
   if (sessions.has(id)) return { success: false, error: `Session ${id} already exists` };
-
   const { cwd, cols, rows } = resolveSpawnOptions({
-    cwd: options.cwd,
-    cols: options.cols,
-    rows: options.rows,
+    cwd: options.cwd, cols: options.cols, rows: options.rows,
   });
   const launch = buildAgentPtyClaudeArgs(options);
-  try {
-    const proc = pty.spawn(launch.shell, launch.args, {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd,
-      env: buildBaseEnv({ ...buildProviderEnv('agentChat'), ...options.env }),
-    });
-    registerSession({ id, proc, cwd, shell: launch.shell, win });
-    const { bridge, result } = createAgentBridgeWithResult(id, options);
-    wireBridgeToProc(id, proc, bridge);
-    const eofChar = process.platform === 'win32' ? '\x1a' : '\x04';
-    setTimeout(() => {
-      if (sessions.has(id)) {
-        proc.write(options.prompt);
-        proc.write(eofChar);
-      }
-    }, 150);
-    notifyTerminalCreated(id, cwd);
-    return { success: true, sessionId: id, bridge, result };
-  } catch (error) {
-    cleanupSession(id);
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
+  const env = buildBaseEnv({ ...buildProviderEnv('agentChat'), ...options.env });
+  const resolved: ResolvedAgentSpawn = {
+    id, win, options, cwd, cols, rows, shell: launch.shell, args: launch.args, env,
+  };
+  if (getConfigValue('usePtyHost') === true) return spawnAgentPtyProxy(resolved);
+  return spawnAgentPtyDirect(resolved);
 }

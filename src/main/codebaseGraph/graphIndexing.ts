@@ -10,7 +10,7 @@ import type TreeSitterModule from 'web-tree-sitter';
 import log from '../logger';
 import { parseFileWithTree, resolveEdgeReferences, walkDirectory } from './graphParser';
 import type { GraphQueryEngine } from './graphQuery';
-import type { GraphStore } from './graphStore';
+import type { IGraphStore } from './graphStoreTypes';
 import type { GraphEdge, GraphNode } from './graphTypes';
 
 const TREE_CACHE_MAX = 200;
@@ -76,7 +76,7 @@ export class TreeCache {
 // ── Indexing helpers ────────────────────────────────────────────────
 
 export interface IndexContext {
-  store: GraphStore;
+  store: IGraphStore;
   treeCache: TreeCache;
   rootPath: string;
 }

@@ -9,6 +9,7 @@ import {
   applyReindexToStore,
   ingestTracesIntoStore,
   logIndexProgress,
+  makeIndexTimeout,
   manageAdrAction,
   resolveWorkerPath,
   unregisterGraphController,
@@ -36,16 +37,10 @@ import type {
 } from './graphTypes';
 import type { WorkerResponse } from './graphWorkerTypes';
 
-function makeIndexTimeout(): Promise<never> {
-  return new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Graph indexing timed out after 60s')), 60_000),
-  );
-}
-
 export class GraphController {
   private store: GraphStore;
   private query: GraphQueryEngine;
-  private rootPath: string;
+  readonly rootPath: string;
   private projectName: string;
   private indexedAt = 0;
   private indexDurationMs = 0;
@@ -87,6 +82,7 @@ export class GraphController {
     } catch {
       /* ignore save errors on shutdown */
     }
+    this.store.close();
     this.initialized = false;
     unregisterGraphController(this.rootPath, this);
   }
@@ -149,9 +145,7 @@ export class GraphController {
     }
   }
 
-  indexStatus(): IndexStatus {
-    return this.getStatus();
-  }
+  indexStatus = this.getStatus.bind(this);
   listProjects(): string[] {
     return this.initialized ? [this.rootPath] : [];
   }
@@ -306,30 +300,21 @@ export class GraphController {
 
   private async reindexChangedFiles(): Promise<void> {
     if (this.indexingInProgress) {
-      const paths = [...new Set(this.pendingChanges)];
+      this.pendingReindex = [...(this.pendingReindex ?? []), ...new Set(this.pendingChanges)];
       this.pendingChanges = [];
-      this.pendingReindex = [...(this.pendingReindex ?? []), ...paths];
       return;
     }
     this.indexingInProgress = true;
-    const paths = [...new Set(this.pendingChanges)];
+    let paths = [...new Set(this.pendingChanges)];
     this.pendingChanges = [];
-
     if (paths.length === 0) {
       const changes = await this.query.detectChanges();
       if (changes.changedFiles.length === 0) {
         this.indexingInProgress = false;
         return;
       }
-      const fullPaths = changes.changedFiles.map((r) => path.join(this.rootPath, r));
-      this.sendReindexRequest(fullPaths);
-      return;
+      paths = changes.changedFiles.map((r) => path.join(this.rootPath, r));
     }
-
-    this.sendReindexRequest(paths);
-  }
-
-  private sendReindexRequest(paths: string[]): void {
     this.worker?.postMessage({
       type: 'reindexFiles',
       projectRoot: this.rootPath,
@@ -340,13 +325,9 @@ export class GraphController {
 
   private drainPendingReindex(): void {
     this.indexingInProgress = false;
-    if (this.pendingReindex) {
-      const deferred = this.pendingReindex;
-      this.pendingReindex = null;
-      this.pendingChanges.push(...deferred);
-      this.reindexChangedFiles().catch((err) => {
-        log.warn('Deferred reindex failed:', err);
-      });
-    }
+    if (!this.pendingReindex) return;
+    this.pendingChanges.push(...this.pendingReindex);
+    this.pendingReindex = null;
+    this.reindexChangedFiles().catch((e) => log.warn('Deferred reindex failed:', e));
   }
 }

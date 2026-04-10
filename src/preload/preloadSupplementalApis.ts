@@ -49,7 +49,8 @@ type SupplementalApiKey =
   | 'claudeMd'
   | 'router'
   | 'rulesAndSkills'
-  | 'ai';
+  | 'ai'
+  | 'workspace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 

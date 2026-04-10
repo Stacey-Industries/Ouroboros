@@ -306,6 +306,18 @@ export interface AppConfig {
   routerLastRetrainCount: number;
   /** Enable the internal MCP server that exposes IDE tools to Claude Code sessions */
   internalMcpEnabled: boolean;
+  /** Wave 3B feature flag — route PTY through PtyHost utility process */
+  usePtyHost: boolean;
+  /** Wave 3B feature flag — route extensions through ExtensionHost utility process */
+  useExtensionHost: boolean;
+  /** Wave 3B feature flag — run internal MCP server in dedicated McpHost utility process */
+  useMcpHost: boolean;
+  /** Workspace trust list — paths approved for hooks, extensions, MCP writes */
+  trustedWorkspaces: string[];
+  /** Whether to auto-create workspace snapshots at session boundaries */
+  autoCheckpoint: boolean;
+  /** Whether the user has dismissed the auth onboarding flow */
+  authOnboardingDismissed: boolean;
 }
 
 export const store = new Store<AppConfig>({

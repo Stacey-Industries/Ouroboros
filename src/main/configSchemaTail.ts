@@ -230,4 +230,16 @@ export const tailSchema = {
     items: { type: 'string' },
     default: [],
   },
+  usePtyHost: {
+    type: 'boolean',
+    default: false,
+  },
+  useExtensionHost: {
+    type: 'boolean',
+    default: false,
+  },
+  useMcpHost: {
+    type: 'boolean',
+    default: false,
+  },
 };

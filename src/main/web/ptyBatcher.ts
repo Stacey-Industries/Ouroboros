@@ -1,64 +1,41 @@
 /**
  * ptyBatcher.ts — Batches PTY output for WebSocket delivery.
  *
- * node-pty fires onData for every tiny chunk (sometimes single bytes).
- * Sending each as a separate WebSocket frame is wasteful over a network.
- * This batcher collects chunks per-session and flushes every 16ms (~60fps),
- * matching the browser's render frame rate.
+ * Thin wrapper around PtyBatcherCore that broadcasts batched output to all
+ * connected web clients via the `pty:data:${sessionId}` channel.
+ *
+ * Sessions are auto-registered on first append (web clients have no per-
+ * session context to track — broadcastToWebClients fans out to all clients).
  */
 
+import { PtyBatcherCore } from '../ptyBatcherCore'
 import { broadcastToWebClients } from './webServer'
 
+function flushToWebClients(id: string, _ctx: void, joined: string): void {
+  broadcastToWebClients(`pty:data:${id}`, joined)
+}
+
 class PtyBatcher {
-  private buffers = new Map<string, string[]>()
-  private timer: ReturnType<typeof setTimeout> | null = null
+  private core = new PtyBatcherCore<void>(flushToWebClients)
 
   /**
-   * Append PTY data for a session. Starts a 16ms flush timer if not already running.
+   * Append PTY data for a session. Auto-registers on first append.
    */
   append(sessionId: string, data: string): void {
-    let buf = this.buffers.get(sessionId)
-    if (!buf) {
-      buf = []
-      this.buffers.set(sessionId, buf)
+    if (!this.core.has(sessionId)) {
+      this.core.register(sessionId, undefined)
     }
-    buf.push(data)
-
-    if (!this.timer) {
-      this.timer = setTimeout(() => this.flush(), 16)
-    }
+    this.core.append(sessionId, data)
   }
 
-  /**
-   * Flush all buffered data to web clients.
-   */
-  private flush(): void {
-    this.timer = null
-    for (const [sessionId, chunks] of this.buffers) {
-      if (chunks.length > 0) {
-        broadcastToWebClients(`pty:data:${sessionId}`, chunks.join(''))
-      }
-    }
-    this.buffers.clear()
-  }
-
-  /**
-   * Remove a session's buffer (call on session cleanup).
-   */
+  /** Remove a session's buffer (call on session cleanup). */
   removeSession(sessionId: string): void {
-    this.buffers.delete(sessionId)
+    this.core.cleanup(sessionId)
   }
 
-  /**
-   * Flush immediately and clear all state (call on shutdown).
-   */
+  /** Flush all sessions and clear state (call on shutdown). */
   dispose(): void {
-    if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
-    }
-    this.flush()
-    this.buffers.clear()
+    this.core.dispose()
   }
 }
 

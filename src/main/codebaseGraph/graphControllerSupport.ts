@@ -7,7 +7,7 @@ import path from 'path';
 
 import log from '../logger';
 import type { GraphController } from './graphController';
-import type { GraphStore } from './graphStore';
+import type { IGraphStore } from './graphStoreTypes';
 import type { GraphEdge, GraphNode } from './graphTypes';
 
 // ---------------------------------------------------------------------------
@@ -19,12 +19,18 @@ export function resolveWorkerPath(dirname: string): string {
   return path.join(outMainDir, 'graphWorker.js');
 }
 
+export function makeIndexTimeout(): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Graph indexing timed out after 60s')), 60_000),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Index application helpers
 // ---------------------------------------------------------------------------
 
 export function applyFullIndexToStore(
-  store: GraphStore,
+  store: IGraphStore,
   nodes: GraphNode[],
   edges: GraphEdge[],
 ): void {
@@ -34,14 +40,16 @@ export function applyFullIndexToStore(
 }
 
 export function applyReindexToStore(
-  store: GraphStore,
+  store: IGraphStore,
   nodes: GraphNode[],
   edges: GraphEdge[],
   removedRelPaths: string[],
 ): void {
-  for (const relPath of removedRelPaths) store.clearFile(relPath);
-  for (const node of nodes) store.addNode(node);
-  store.replaceAllEdges(edges);
+  store.transaction(() => {
+    for (const relPath of removedRelPaths) store.clearFile(relPath);
+    for (const node of nodes) store.addNode(node);
+    store.replaceAllEdges(edges);
+  });
   store.save().catch((e: unknown) => log.error('Save failed:', e));
 }
 
@@ -56,22 +64,24 @@ export function isTraceObject(trace: unknown): boolean {
 }
 
 export function ingestTracesIntoStore(
-  store: GraphStore,
+  store: IGraphStore,
   traces: unknown[],
 ): { success: boolean; ingested: number } {
   let ingested = 0;
   if (!Array.isArray(traces)) return { success: false, ingested: 0 };
-  for (const trace of traces) {
-    if (isTraceObject(trace)) {
-      const t = trace as { source: string; target: string; type?: string };
-      store.addEdge({
-        source: t.source,
-        target: t.target,
-        type: (t.type as GraphEdge['type']) ?? 'calls',
-      });
-      ingested++;
+  store.transaction(() => {
+    for (const trace of traces) {
+      if (isTraceObject(trace)) {
+        const t = trace as { source: string; target: string; type?: string };
+        store.addEdge({
+          source: t.source,
+          target: t.target,
+          type: (t.type as GraphEdge['type']) ?? 'calls',
+        });
+        ingested++;
+      }
     }
-  }
+  });
   if (ingested > 0) {
     store.save().catch((e: unknown) => log.error('Save after trace:', e));
   }

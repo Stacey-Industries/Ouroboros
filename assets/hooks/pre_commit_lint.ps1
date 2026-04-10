@@ -163,9 +163,10 @@ try {
         exit 0
     }
 
-    Write-Output "Commit blocked - staged file violations ($($fileList.Count) files checked):"
-    Write-Output ""
-    Write-Output ($violations -join "`n")
+    $summary = "Commit blocked - staged file violations ($($fileList.Count) files checked):`n`n" + ($violations -join "`n")
+    # Write to both stderr (Claude Code displays first stderr line) and stdout
+    [Console]::Error.WriteLine($summary)
+    Write-Output $summary
     Pop-Location
     exit 2
 

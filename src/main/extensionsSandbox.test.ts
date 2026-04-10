@@ -23,9 +23,9 @@ vi.mock('./ipc-handlers/pathSecurity', () => ({
 }));
 
 import { getConfigValue } from './config';
-import { validatePathInWorkspace } from './ipc-handlers/pathSecurity';
-import type { LoadedExtension } from './extensionsTypes';
 import { appendLog, buildSandboxAPI, getSafeSandboxGlobals } from './extensionsSandbox';
+import type { LoadedExtension } from './extensionsTypes';
+import { validatePathInWorkspace } from './ipc-handlers/pathSecurity';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,7 +66,8 @@ describe('permission gates', () => {
   it('files.readFile throws without files.read permission', async () => {
     const ext = makeExt([]);
     const api = buildSandboxAPI(ext);
-    const readFile = (api.ouroboros as Record<string, Record<string, Function>>).files.readFile;
+    const readFile = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .files.readFile;
     await expect(readFile('/some/file.txt')).rejects.toThrow(
       'Permission denied: files.read not granted',
     );
@@ -75,7 +76,9 @@ describe('permission gates', () => {
   it('files.writeFile throws without files.write permission', async () => {
     const ext = makeExt([]);
     const api = buildSandboxAPI(ext);
-    const writeFile = (api.ouroboros as Record<string, Record<string, Function>>).files.writeFile;
+    const writeFile = (
+      api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>
+    ).files.writeFile;
     await expect(writeFile('/some/file.txt', 'content')).rejects.toThrow(
       'Permission denied: files.write not granted',
     );
@@ -84,7 +87,8 @@ describe('permission gates', () => {
   it('terminal.write throws without terminal.write permission', async () => {
     const ext = makeExt([]);
     const api = buildSandboxAPI(ext);
-    const write = (api.ouroboros as Record<string, Record<string, Function>>).terminal.write;
+    const write = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .terminal.write;
     await expect(write('tab1', 'data')).rejects.toThrow(
       'Permission denied: terminal.write not granted',
     );
@@ -93,14 +97,16 @@ describe('permission gates', () => {
   it('config.get throws without config.read permission', () => {
     const ext = makeExt([]);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     expect(() => get('activeTheme')).toThrow('Permission denied: config.read not granted');
   });
 
   it('commands.register throws without commands.register permission', () => {
     const ext = makeExt([]);
     const api = buildSandboxAPI(ext);
-    const register = (api.ouroboros as Record<string, Record<string, Function>>).commands.register;
+    const register = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .commands.register;
     expect(() => register('my-cmd', () => {})).toThrow(
       'Permission denied: commands.register not granted',
     );
@@ -113,7 +119,7 @@ describe('permission gates', () => {
 
 describe('config masking (sanitizeForExtension)', () => {
   beforeEach(() => {
-    vi.mocked(getConfigValue).mockImplementation((key) => {
+    vi.mocked(getConfigValue).mockImplementation(((key: string) => {
       if (key === 'modelProviders') {
         return [{ id: 'openai', apiKey: 'sk-secret-key' }];
       }
@@ -121,13 +127,14 @@ describe('config masking (sanitizeForExtension)', () => {
       if (key === 'webAccessPassword') return 'real-password';
       if (key === 'activeTheme') return 'retro';
       return null;
-    });
+    }) as typeof getConfigValue);
   });
 
   it('masks apiKey in modelProviders', () => {
     const ext = makeExt(['config.read']);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     const providers = get('modelProviders') as Array<Record<string, unknown>>;
     expect(providers[0].apiKey).toBe('••••••••');
   });
@@ -135,32 +142,36 @@ describe('config masking (sanitizeForExtension)', () => {
   it('returns empty string for webAccessToken', () => {
     const ext = makeExt(['config.read']);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     expect(get('webAccessToken')).toBe('');
   });
 
   it('returns empty string for webAccessPassword', () => {
     const ext = makeExt(['config.read']);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     expect(get('webAccessPassword')).toBe('');
   });
 
   it('returns real value for non-sensitive keys', () => {
     const ext = makeExt(['config.read']);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     expect(get('activeTheme')).toBe('retro');
   });
 
   it('masks apiKey as empty string when provider has no apiKey', () => {
-    vi.mocked(getConfigValue).mockImplementation((key) => {
+    vi.mocked(getConfigValue).mockImplementation(((key: string) => {
       if (key === 'modelProviders') return [{ id: 'local' }];
       return null;
-    });
+    }) as typeof getConfigValue);
     const ext = makeExt(['config.read']);
     const api = buildSandboxAPI(ext);
-    const get = (api.ouroboros as Record<string, Record<string, Function>>).config.get;
+    const get = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .config.get;
     const providers = get('modelProviders') as Array<Record<string, unknown>>;
     expect(providers[0].apiKey).toBe('');
   });
@@ -172,20 +183,22 @@ describe('config masking (sanitizeForExtension)', () => {
 
 describe('path validation', () => {
   it('files.readFile throws "Permission denied" for paths outside workspace roots', async () => {
-    vi.mocked(getConfigValue).mockReturnValue(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(getConfigValue).mockReturnValue(null as any);
     vi.mocked(validatePathInWorkspace).mockReturnValue('path is outside workspace roots');
 
     const ext = makeExt(['files.read']);
     const api = buildSandboxAPI(ext);
-    const readFile = (api.ouroboros as Record<string, Record<string, Function>>).files.readFile;
+    const readFile = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .files.readFile;
     await expect(readFile('../../../etc/passwd')).rejects.toThrow('Permission denied');
   });
 
   it('files.readFile succeeds when path is within workspace roots', async () => {
-    vi.mocked(getConfigValue).mockImplementation((key) => {
+    vi.mocked(getConfigValue).mockImplementation(((key: string) => {
       if (key === 'multiRoots') return ['/workspace'];
       return null;
-    });
+    }) as typeof getConfigValue);
     vi.mocked(validatePathInWorkspace).mockReturnValue(null);
 
     const fsPromises = await import('fs/promises');
@@ -193,7 +206,8 @@ describe('path validation', () => {
 
     const ext = makeExt(['files.read']);
     const api = buildSandboxAPI(ext);
-    const readFile = (api.ouroboros as Record<string, Record<string, Function>>).files.readFile;
+    const readFile = (api.ouroboros as Record<string, Record<string, (...a: unknown[]) => unknown>>)
+      .files.readFile;
     const result = await readFile('/workspace/myfile.ts');
     expect(result).toBe('file contents');
   });

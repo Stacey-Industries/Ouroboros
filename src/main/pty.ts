@@ -11,16 +11,43 @@ import {
   getDefaultShell,
   resolveSpawnOptions,
 } from './ptyEnv';
+import {
+  getCwdViaPtyHost,
+  getProxySession,
+  getShellStateViaPtyHost,
+  killAllViaPtyHost,
+  killForWindowViaPtyHost,
+  killViaPtyHost,
+  listSessionsViaPtyHost,
+  resizeViaPtyHost,
+  spawnViaPtyHost,
+  writeViaPtyHost,
+} from './ptyHost/ptyHostProxy';
+import {
+  startRecordingViaPtyHost,
+  stopRecordingViaPtyHost,
+} from './ptyHost/ptyHostProxyRecording';
 import { terminalOutputBuffer } from './ptyOutputBuffer';
 import {
   type RecordingState,
   startPtyRecording as startRecording,
   stopPtyRecording as stopRecording,
 } from './ptyRecording';
-import { initShellState, processAndUpdateState, removeShellState } from './ptyShellIntegration';
+import type { ShellState } from './ptyShellIntegration';
+import {
+  getShellState as getDirectShellState,
+  initShellState,
+  processAndUpdateState,
+  removeShellState,
+} from './ptyShellIntegration';
 import { writeOnShellReady } from './ptyShellReady';
 import { ptyBatcher } from './web/ptyBatcher';
 import { broadcastToWebClients } from './web/webServer';
+
+/** Feature flag — route PTY operations through PtyHost utility process. */
+function ptyHostEnabled(): boolean {
+  return getConfigValue('usePtyHost') === true;
+}
 
 export interface PtySession {
   id: string;
@@ -139,27 +166,30 @@ export function spawnPty(
   id: string,
   win: BrowserWindow,
   options: SpawnOptions = {},
-): { success: boolean; error?: string } {
+): { success: boolean; error?: string } | Promise<{ success: boolean; error?: string }> {
   if (sessions.has(id)) {
     return { success: false, error: `Session ${id} already exists` };
   }
 
   const shell = (getConfigValue('shell') as string) || getDefaultShell();
   const { cwd, cols, rows } = resolveSpawnOptions(options);
-  try {
-    const { env: shellEnv, shellArgs } = buildShellEnvWithIntegration(shell, options.env);
-    // shellArgs is non-null for PowerShell (replaces default args to dot-source
-    // the integration script). For bash/zsh, shellArgs is null and integration
-    // is injected via environment variables (BASH_ENV, etc.)
-    const finalArgs = shellArgs ?? getDefaultArgs(shell);
-    const proc = pty.spawn(shell, finalArgs, {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd,
-      env: shellEnv,
-    });
+  const { env: shellEnv, shellArgs } = buildShellEnvWithIntegration(shell, options.env);
+  const finalArgs = shellArgs ?? getDefaultArgs(shell);
 
+  if (ptyHostEnabled()) {
+    return spawnViaPtyHost(
+      { id, shell, args: finalArgs, env: shellEnv, cwd, cols, rows, windowId: win.id, ...(options.startupCommand ? { startupCommand: options.startupCommand } : {}) },
+      win,
+    ).then((res) => {
+      if (res.success) notifyTerminalCreated(id, cwd);
+      return res;
+    });
+  }
+
+  try {
+    const proc = pty.spawn(shell, finalArgs, {
+      name: 'xterm-256color', cols, rows, cwd, env: shellEnv,
+    });
     registerSession({ id, proc, cwd, shell, win });
     if (options.startupCommand) {
       scheduleStartupCommand(id, proc, options.startupCommand);
@@ -173,11 +203,9 @@ export function spawnPty(
 }
 
 export function writeToPty(id: string, data: string): { success: boolean; error?: string } {
+  if (ptyHostEnabled()) return writeViaPtyHost(id, data);
   const session = sessions.get(id);
-  if (!session) {
-    return { success: false, error: `Session ${id} not found` };
-  }
-
+  if (!session) return { success: false, error: `Session ${id} not found` };
   try {
     session.process.write(data);
     return { success: true };
@@ -191,11 +219,9 @@ export function resizePty(
   cols: number,
   rows: number,
 ): { success: boolean; error?: string } {
+  if (ptyHostEnabled()) return resizeViaPtyHost(id, cols, rows);
   const session = sessions.get(id);
-  if (!session) {
-    return { success: false, error: `Session ${id} not found` };
-  }
-
+  if (!session) return { success: false, error: `Session ${id} not found` };
   try {
     session.process.resize(cols, rows);
     return { success: true };
@@ -204,12 +230,12 @@ export function resizePty(
   }
 }
 
-export function killPty(id: string): { success: boolean; error?: string } {
+export function killPty(
+  id: string,
+): { success: boolean; error?: string } | Promise<{ success: boolean; error?: string }> {
+  if (ptyHostEnabled()) return killViaPtyHost(id);
   const session = sessions.get(id);
-  if (!session) {
-    return { success: false, error: `Session ${id} not found` };
-  }
-
+  if (!session) return { success: false, error: `Session ${id} not found` };
   try {
     session.process.kill();
     cleanupSession(id);
@@ -219,51 +245,40 @@ export function killPty(id: string): { success: boolean; error?: string } {
   }
 }
 
-export function killAllPtySessions(): void {
+export function killAllPtySessions(): void | Promise<void> {
+  if (ptyHostEnabled()) return killAllViaPtyHost();
   for (const [id, session] of sessions) {
-    try {
-      session.process.kill();
-    } catch {
-      // Ignore kill errors on shutdown.
-    }
+    try { session.process.kill(); } catch { /* ignore */ }
     cleanupSession(id);
   }
 }
 
-export function killPtySessionsForWindow(windowId: number): void {
+export function killPtySessionsForWindow(windowId: number): void | Promise<void> {
+  if (ptyHostEnabled()) return killForWindowViaPtyHost(windowId);
   for (const [sessionId, ownerWindowId] of sessionWindowMap) {
-    if (ownerWindowId !== windowId) {
-      continue;
-    }
-
+    if (ownerWindowId !== windowId) continue;
     const session = sessions.get(sessionId);
     if (session) {
-      try {
-        session.process.kill();
-      } catch {
-        // Ignore kill errors on shutdown.
-      }
+      try { session.process.kill(); } catch { /* ignore */ }
     }
     cleanupSession(sessionId);
   }
 }
 
-export function getActiveSessions(): ActiveSessionInfo[] {
+export function getActiveSessions(): ActiveSessionInfo[] | Promise<ActiveSessionInfo[]> {
+  if (ptyHostEnabled()) {
+    return listSessionsViaPtyHost().then((list) => list.map((s) => ({ id: s.id, cwd: s.cwd })));
+  }
   return Array.from(sessions.values()).map((session) => ({ id: session.id, cwd: session.cwd }));
 }
 
 export async function getPtyCwd(
   id: string,
 ): Promise<{ success: boolean; cwd?: string; error?: string }> {
+  if (ptyHostEnabled()) return getCwdViaPtyHost(id);
   const session = sessions.get(id);
-  if (!session) {
-    return { success: false, error: `Session ${id} not found` };
-  }
-
-  if (process.platform !== 'linux') {
-    return { success: true, cwd: session.cwd };
-  }
-
+  if (!session) return { success: false, error: `Session ${id} not found` };
+  if (process.platform !== 'linux') return { success: true, cwd: session.cwd };
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path uses process PID, not user input
     const link = await fs.readlink(`/proc/${session.process.pid}/cwd`);
@@ -277,6 +292,11 @@ export function startPtyRecording(
   id: string,
   win: BrowserWindow,
 ): { success: boolean; error?: string } {
+  if (ptyHostEnabled()) {
+    const session = getProxySession(id);
+    if (!session) return { success: false, error: `Session ${id} not found` };
+    return startRecordingViaPtyHost(id, session.cols, session.rows, win);
+  }
   return startRecording(id, sessions, recordings, win);
 }
 
@@ -284,11 +304,16 @@ export async function stopPtyRecording(
   id: string,
   win: BrowserWindow,
 ): Promise<{ success: boolean; filePath?: string; cancelled?: boolean; error?: string }> {
+  if (ptyHostEnabled()) return stopRecordingViaPtyHost(id, win);
   return stopRecording(id, recordings, win);
+}
+
+export function getShellState(id: string): ShellState | null {
+  if (ptyHostEnabled()) return getShellStateViaPtyHost(id);
+  return getDirectShellState(id);
 }
 
 export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent';
 export { spawnAgentPty } from './ptyAgent';
 export type { ShellState } from './ptyShellIntegration';
-export { getShellState } from './ptyShellIntegration';
 export { spawnClaudePty, spawnCodexPty } from './ptySpawn';

@@ -12,7 +12,7 @@ import { parentPort } from 'worker_threads';
 
 import { indexAllFiles, reindexSingleFile, TreeCache } from './graphIndexing';
 import { initTreeSitter, resolveEdgeReferences } from './graphParser';
-import { GraphStore } from './graphStore';
+import { GraphStoreMemory } from './graphStoreMemory';
 import type { WorkerRequest, WorkerResponse } from './graphWorkerTypes';
 
 // ── Worker-local state ────────────────────────────────────────────
@@ -38,7 +38,7 @@ async function handleIndexAll(req: WorkerRequest & { type: 'indexAll' }): Promis
   const start = Date.now();
   await ensureTreeSitter();
 
-  const store = new GraphStore(req.projectRoot);
+  const store = new GraphStoreMemory(req.projectRoot);
   const ctx = { store, treeCache, rootPath: req.projectRoot };
   await indexAllFiles(ctx, req.projectRoot, req.incremental);
 
@@ -55,7 +55,7 @@ async function handleIndexAll(req: WorkerRequest & { type: 'indexAll' }): Promis
 async function handleReindexFiles(req: WorkerRequest & { type: 'reindexFiles' }): Promise<void> {
   await ensureTreeSitter();
 
-  const store = new GraphStore(req.projectRoot);
+  const store = new GraphStoreMemory(req.projectRoot);
   const ctx = { store, treeCache, rootPath: req.projectRoot };
   const removedRelPaths: string[] = [];
 
@@ -78,7 +78,7 @@ async function handleReindexFiles(req: WorkerRequest & { type: 'reindexFiles' })
 async function handleReindexSingle(req: WorkerRequest & { type: 'reindexSingle' }): Promise<void> {
   await ensureTreeSitter();
 
-  const store = new GraphStore(req.projectRoot);
+  const store = new GraphStoreMemory(req.projectRoot);
   const ctx = { store, treeCache, rootPath: req.projectRoot };
   await reindexSingleFile(ctx, req.fullPath);
 

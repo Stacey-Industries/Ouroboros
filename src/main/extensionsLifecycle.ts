@@ -3,6 +3,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import vm from 'vm';
 
+import { getConfigValue } from './config';
+import {
+  activateExtensionViaHost,
+  deactivateExtensionViaHost,
+} from './extensionHost/extensionHostProxy';
 import { appendLog, buildSandboxAPI, getSafeSandboxGlobals } from './extensionsSandbox';
 import { type ExtensionManifest, type LoadedExtension, VALID_PERMISSIONS } from './extensionsTypes';
 import log from './logger';
@@ -180,6 +185,12 @@ function createExtensionScript(ext: LoadedExtension, code: string): vm.Script {
 async function runExtensionCode(ext: LoadedExtension, mainPath: string): Promise<void> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- mainPath is derived from trusted extension directory + manifest
   const code = await fs.readFile(mainPath, 'utf-8');
+  if (getConfigValue('useExtensionHost') === true) {
+    appendLog(ext, 'Activating (via ExtensionHost)...');
+    const res = await activateExtensionViaHost(ext.manifest, code);
+    if (!res.success) throw new Error(res.error ?? 'ExtensionHost activation failed');
+    return;
+  }
   const context = createExtensionContext(ext);
   ext.context = context;
   const script = createExtensionScript(ext, code);
@@ -223,6 +234,9 @@ export function deactivateExtension(ext: LoadedExtension): void {
   ext.registeredCommands.clear();
   ext.context = null;
   ext.status = 'inactive';
+  if (getConfigValue('useExtensionHost') === true) {
+    void deactivateExtensionViaHost(ext.manifest.name);
+  }
   appendLog(ext, 'Deactivated.');
 }
 

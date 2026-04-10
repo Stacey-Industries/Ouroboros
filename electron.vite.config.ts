@@ -50,6 +50,9 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/main.ts'),
           graphWorker: resolve(__dirname, 'src/main/codebaseGraph/graphWorker.ts'),
           contextWorker: resolve(__dirname, 'src/main/orchestration/contextWorker.ts'),
+          ptyHostMain: resolve(__dirname, 'src/main/ptyHost/ptyHostMain.ts'),
+          extensionHostMain: resolve(__dirname, 'src/main/extensionHost/extensionHostMain.ts'),
+          mcpHostMain: resolve(__dirname, 'src/main/mcpHost/mcpHostMain.ts'),
         }
       }
     } as any,

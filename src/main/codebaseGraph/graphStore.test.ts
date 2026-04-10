@@ -33,7 +33,7 @@ afterEach(() => {
   store.close();
 });
 
-describe('GraphStore', () => {
+describe('GraphStore (SQLite)', () => {
   describe('node CRUD', () => {
     it('adds and retrieves a node', () => {
       const node = makeNode('fn1');
@@ -41,7 +41,7 @@ describe('GraphStore', () => {
       expect(store.getNode('fn1')).toEqual(node);
     });
 
-    it('replaces node with same id', () => {
+    it('replaces node with same id (INSERT OR REPLACE)', () => {
       store.addNode(makeNode('fn1', { line: 1 }));
       store.addNode(makeNode('fn1', { line: 99 }));
       expect(store.getNode('fn1')?.line).toBe(99);
@@ -103,6 +103,30 @@ describe('GraphStore', () => {
     });
   });
 
+  describe('replaceAllEdges', () => {
+    it('replaces all edges atomically', () => {
+      store.addNode(makeNode('a'));
+      store.addNode(makeNode('b'));
+      store.addNode(makeNode('c'));
+      store.addEdge(makeEdge('a', 'b'));
+      store.addEdge(makeEdge('b', 'c'));
+      expect(store.edgeCount()).toBe(2);
+
+      store.replaceAllEdges([makeEdge('a', 'c', 'imports')]);
+      expect(store.edgeCount()).toBe(1);
+      const edges = store.getAllEdges();
+      expect(edges[0].source).toBe('a');
+      expect(edges[0].target).toBe('c');
+      expect(edges[0].type).toBe('imports');
+    });
+
+    it('handles empty replacement', () => {
+      store.addEdge(makeEdge('a', 'b'));
+      store.replaceAllEdges([]);
+      expect(store.edgeCount()).toBe(0);
+    });
+  });
+
   describe('bulk operations', () => {
     it('addBulk inserts nodes and edges in one transaction', () => {
       const nodes = [makeNode('a'), makeNode('b')];
@@ -143,24 +167,38 @@ describe('GraphStore', () => {
     });
   });
 
-  describe('persistence API compat', () => {
+  describe('persistence (SQLite — WAL auto-persists)', () => {
     it('save() resolves without error', async () => {
       await expect(store.save()).resolves.toBeUndefined();
     });
 
-    it('load() returns true when data exists on disk', async () => {
+    it('load() returns true when data exists', async () => {
       store.addNode(makeNode('a'));
-      await store.save();
       expect(await store.load()).toBe(true);
     });
 
     it('load() returns false when empty', async () => {
       expect(await store.load()).toBe(false);
     });
+
+    it('data survives close + reopen', () => {
+      store.addNode(makeNode('a', { metadata: { mtime: 123 } }));
+      store.addEdge(makeEdge('a', 'b'));
+      store.close();
+
+      const store2 = new GraphStore(tmpDir);
+      expect(store2.nodeCount()).toBe(1);
+      expect(store2.edgeCount()).toBe(1);
+      expect(store2.getNode('a')?.metadata).toEqual({ mtime: 123 });
+      store2.close();
+
+      // Reassign for afterEach cleanup
+      store = new GraphStore(tmpDir);
+    });
   });
 
   describe('metadata roundtrip', () => {
-    it('preserves node metadata', () => {
+    it('preserves node metadata through JSON serialization', () => {
       const node = makeNode('a', { metadata: { mtime: 12345, custom: 'val' } });
       store.addNode(node);
       expect(store.getNode('a')?.metadata).toEqual({ mtime: 12345, custom: 'val' });
@@ -170,6 +208,53 @@ describe('GraphStore', () => {
       store.addEdge({ source: 'a', target: 'b', type: 'calls', metadata: { weight: 3 } });
       const edges = store.getAllEdges();
       expect(edges[0].metadata).toEqual({ weight: 3 });
+    });
+
+    it('handles nodes without metadata', () => {
+      store.addNode(makeNode('a'));
+      const node = store.getNode('a');
+      expect(node?.metadata).toBeUndefined();
+    });
+
+    it('handles nodes without endLine', () => {
+      store.addNode(makeNode('a'));
+      const node = store.getNode('a');
+      expect(node?.endLine).toBeUndefined();
+    });
+  });
+
+  describe('transaction', () => {
+    it('wraps multiple operations atomically', () => {
+      store.transaction(() => {
+        store.addNode(makeNode('a'));
+        store.addNode(makeNode('b'));
+        store.addEdge(makeEdge('a', 'b'));
+      });
+      expect(store.nodeCount()).toBe(2);
+      expect(store.edgeCount()).toBe(1);
+    });
+
+    it('rolls back on error', () => {
+      store.addNode(makeNode('existing'));
+      try {
+        store.transaction(() => {
+          store.addNode(makeNode('new1'));
+          throw new Error('abort');
+        });
+      } catch {
+        // expected
+      }
+      expect(store.nodeCount()).toBe(1);
+      expect(store.getNode('new1')).toBeUndefined();
+    });
+  });
+
+  describe('creates .ouroboros directory', () => {
+    it('graph.db is created on disk', () => {
+      store.addNode(makeNode('a'));
+      const dbPath = path.join(tmpDir, '.ouroboros', 'graph.db');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test-controlled tmpDir path
+      expect(fs.existsSync(dbPath)).toBe(true);
     });
   });
 });

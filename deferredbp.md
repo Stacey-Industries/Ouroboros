@@ -51,25 +51,25 @@ Closed plaintext credential and unauthenticated endpoint gaps.
 
 ---
 
-## Wave 3 — SQLite & Process Architecture
+## Wave 3 — SQLite & Process Architecture ✓ (v1.3.5)
 
 The two biggest architectural debts — JSON graph and main-thread blocking.
 
 ### SQLite Infrastructure
 
-- **#62 — No forward-migration framework for SQLite schemas** — Single `PRAGMA user_version` guard. No "run migrations 1 through N" loop. Will be a problem when post-release schema changes are needed. **Prerequisite for #60.**
-- **#60 — Graph stored as JSON** — `graphStore.ts` uses JSON serialize/deserialize which is O(n) with no indexing. Should migrate to SQLite (infrastructure already exists via `better-sqlite3`). Major refactor — need to assess query patterns first.
+- **#62 — ✓ SQLite migration framework** — `storage/database.ts` provides WAL-mode primitives with `PRAGMA user_version` schema versioning. `storage/migrate.ts` runs one-time JSON→SQLite migrations for graph store, thread store, and cost history. Non-destructive (`.json.bak` on success).
+- **#60 — ✓ Graph migrated to SQLite** — `graphStore.ts` rewritten with `better-sqlite3` (prepared statements, transactions, indexed queries). `graphStoreMemory.ts` kept for worker-thread scratch pad. `graphStoreTypes.ts` defines `IGraphStore` interface shared by both implementations.
 
 ### Main-Thread Unblocking
 
-- **#61 — PTY runs in main process** — Heavy terminal output can block the Electron main thread. Should migrate to `utilityProcess.fork()` (VS Code uses a dedicated PtyHost). Major refactor.
-- **#114 — Dedicated Pty Host process** — VS Code pattern. Prevents terminal output from blocking Electron main thread. Same deliverable as #61.
-- **#58 — Extension sandbox uses Node `vm` (same-process, blocking)** — Should migrate to `utilityProcess.fork()` or a hidden BrowserWindow with restricted contextBridge. Long-running extensions block the main thread. `vm` is not a security boundary. Major refactor. Same `utilityProcess.fork()` pattern as #61.
-- **#68 — Two parallel PTY batchers could drift** — `ptyElectronBatcher.ts` (Electron IPC) and `web/ptyBatcher.ts` (WebSocket) have identical logic but are separate implementations. Behavioral divergence over time is likely. Natural to unify when #61 restructures PTY.
+- **#61 / #114 — ✓ Dedicated PtyHost process** — `utilityProcessHost.ts` provides generic lifecycle wrapper around `utilityProcess.fork()` with typed IPC, request/response correlation, crash detection, and auto-restart. `ptyHost/` subtree implements spawn/write/resize/kill/getCwd/shellState via the host. Gated by `usePtyHost` config flag (default false). Crash recovery sends `pty:disconnected:${id}` with preserved scrollback.
+- **#58 — ✓ ExtensionHost process** — `extensionHost/` subtree runs extension `vm` sandbox in a dedicated utility process. Supports activate/deactivate, config snapshot updates, files/terminal API calls relayed back to main, command registration, and crash recovery with automatic re-activation. Gated by `useExtensionHost` config flag.
+- **#110 — ✓ MCP server sandboxing** — `mcpHost/` subtree runs the internal MCP HTTP/SSE server in a dedicated utility process. Tool list and tool call requests dispatched back to main via parentPort. Gated by `useMcpHost` config flag. (Deferred from Wave 2.)
+- **#68 — ✓ PTY batchers unified** — `ptyBatcherCore.ts` provides a generic per-session 16ms batcher parameterized by transport. `ptyElectronBatcher.ts` and `web/ptyBatcher.ts` are now thin wrappers (~40 lines each) over the shared core. Behavioral drift eliminated.
 
 ### Test Coverage (attach to Wave 3)
 
-- **#93 — PTY core** — Zero tests for `pty.ts`, `ptySpawn.ts`, `ptyAgent.ts` (requires native node-pty).
+- **#93 — ✓ PTY and host tests** — `pty.test.ts`, `utilityProcessHost.test.ts`, `ptyHostMain.test.ts`, `extensionHostMain.test.ts`, `extensionHostProxy.test.ts`, `mcpHostMain.test.ts`, `mcpHostProxy.test.ts` added. `TerminalDisconnectedBanner.test.tsx` covers the crash-recovery UI.
 
 ---
 

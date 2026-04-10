@@ -13,7 +13,6 @@
 
 import path from 'path';
 
-import type { AppConfig } from './config';
 import { getConfigValue, setConfigValue } from './config';
 import log from './logger';
 
@@ -25,7 +24,7 @@ function normalizePath(p: string): string {
 }
 
 function getTrustedPaths(): string[] {
-  return ((getConfigValue('trustedWorkspaces') as string[] | undefined) ?? []).map(normalizePath);
+  return (getConfigValue('trustedWorkspaces') ?? []).map(normalizePath);
 }
 
 /** Check if a workspace path is trusted. */
@@ -45,18 +44,17 @@ export function trustWorkspace(workspacePath: string): void {
   const current = getTrustedPaths();
   if (current.includes(normalized)) return;
 
-  const raw = (getConfigValue('trustedWorkspaces') as string[] | undefined) ?? [];
-  raw.push(workspacePath);
-  setConfigValue('trustedWorkspaces' as keyof AppConfig, raw as never);
+  const raw = getConfigValue('trustedWorkspaces') ?? [];
+  setConfigValue('trustedWorkspaces', [...raw, workspacePath]);
   log.info(`[WorkspaceTrust] Trusted: ${workspacePath}`);
 }
 
 /** Remove a path from the trusted workspaces list. */
 export function untrustWorkspace(workspacePath: string): void {
   const normalized = normalizePath(workspacePath);
-  const raw = (getConfigValue('trustedWorkspaces') as string[] | undefined) ?? [];
+  const raw = getConfigValue('trustedWorkspaces') ?? [];
   const filtered = raw.filter((p) => normalizePath(p) !== normalized);
-  setConfigValue('trustedWorkspaces' as keyof AppConfig, filtered as never);
+  setConfigValue('trustedWorkspaces', filtered);
   log.info(`[WorkspaceTrust] Untrusted: ${workspacePath}`);
 }
 
