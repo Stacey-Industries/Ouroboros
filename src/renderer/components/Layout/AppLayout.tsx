@@ -245,7 +245,7 @@ function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p:
 function useAppLayoutState(props: AppLayoutProps) {
   const { sizes, startResize, resetSize, applySizes } = useResizable();
   const { collapsed, toggle, expand, collapse, applyState } = usePanelCollapse({ keybindings: props.keybindings });
-  const { setFocusedPanel } = useFocusPanel();
+  const { setFocusedPanel, focusRingStyle: pfs } = useFocusPanel();
   const [mobileActivePanel, setMobileActivePanel] = useState<MobilePanel>('chat');
   useApplyLayoutEvent(applySizes, applyState);
   usePanelEventHandlers({
@@ -265,8 +265,6 @@ function useAppLayoutState(props: AppLayoutProps) {
     };
     actions[panel]();
   }, [expand, collapse]);
-  // pfs: stub until focus manager is implemented — always returns empty style
-  const pfs = useCallback((panel: FocusPanel): React.CSSProperties => { void panel; return {}; }, []);
   const mkResize = useCallback(
     (panel: 'leftSidebar' | 'rightSidebar' | 'terminal', axis: 'vertical' | 'horizontal') =>
       (e: React.PointerEvent) => {
@@ -288,25 +286,26 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
 
   return (
     <div data-layout="app" data-mobile-active={s.mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+      <a href="#editor-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-2 focus:bg-interactive-accent focus:text-text-semantic-on-accent">Skip to editor</a>
       <TitleBar collapsed={s.collapsed} onTogglePanel={s.toggle} />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {!s.collapsed.leftSidebar && (
           <>
-            <Sidebar width={s.sizes.leftSidebar} collapsed={false} onToggleCollapse={() => s.toggle('leftSidebar')} header={props.sidebarHeader} focusStyle={s.pfs('sidebar')} onFocus={() => s.setFocusedPanel('sidebar')}>{props.sidebarContent}</Sidebar>
+            <div data-panel="sidebar" className="contents"><Sidebar width={s.sizes.leftSidebar} collapsed={false} onToggleCollapse={() => s.toggle('leftSidebar')} header={props.sidebarHeader} focusStyle={s.pfs('sidebar')} onFocus={() => s.setFocusedPanel('sidebar')}>{props.sidebarContent}</Sidebar></div>
             <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
           </>
         )}
         <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
           {!s.collapsed.editor && (
             <>
-              <CentrePane tabBar={props.editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{props.editorContent}</CentrePane>
+              <div id="editor-main" data-panel="editor" className="contents"><CentrePane tabBar={props.editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{props.editorContent}</CentrePane></div>
               <ResizeDivider direction="horizontal" onPointerDown={s.mkResize('terminal', 'horizontal')} onDoubleClick={() => s.resetSize('terminal')} label="Resize terminal" />
             </>
           )}
-          <TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{props.terminalContent}</TerminalPane>
+          <div data-panel="terminal" className="contents"><TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{props.terminalContent}</TerminalPane></div>
         </div>
         {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
-        <div style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
+        <div data-panel="agent-monitor" style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
           <AgentMonitorPane width={s.sizes.rightSidebar} collapsed={false} onToggleCollapse={() => s.toggle('rightSidebar')} focusStyle={s.pfs('agentMonitor')} onFocus={() => s.setFocusedPanel('agentMonitor')}>{props.agentCards}</AgentMonitorPane>
         </div>
       </div>

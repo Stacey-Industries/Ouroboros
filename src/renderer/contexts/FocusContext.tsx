@@ -13,9 +13,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 export type FocusPanel = 'sidebar' | 'editor' | 'terminal' | 'agentMonitor';
 
-interface FocusContextValue {
+export interface FocusContextValue {
   focusedPanel: FocusPanel;
   setFocusedPanel: (panel: FocusPanel) => void;
+  focusRingStyle: (panel: FocusPanel) => React.CSSProperties;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -23,49 +24,59 @@ interface FocusContextValue {
 const FocusContext = createContext<FocusContextValue>({
   focusedPanel: 'editor',
   setFocusedPanel: () => undefined,
+  focusRingStyle: () => ({}),
 });
+
+// ─── DOM focus helper ─────────────────────────────────────────────────────────
+
+const FOCUS_TARGETS: Record<FocusPanel, [string, string]> = {
+  sidebar:      ['[data-panel="sidebar"] [tabindex]', '[data-panel="sidebar"]'],
+  editor:       ['.monaco-editor textarea', '[data-panel="editor"]'],
+  terminal:     ['.xterm-helper-textarea', '[data-panel="terminal"]'],
+  agentMonitor: ['[data-panel="agent-monitor"] textarea', '[data-panel="agent-monitor"]'],
+};
+
+function focusPanelElement(panel: FocusPanel): void {
+  requestAnimationFrame(() => {
+    const [primary, fallback] = FOCUS_TARGETS[panel];
+    const el = (document.querySelector(primary) ?? document.querySelector(fallback)) as HTMLElement | null;
+    el?.focus({ preventScroll: true });
+  });
+}
+
+// ─── Keyboard shortcut handler (extracted for max-lines-per-function) ────────
+
+function useFocusKeyboard(setPanel: (p: FocusPanel) => void): void {
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
+      const map: Record<string, FocusPanel> = {
+        '1': 'sidebar', '2': 'editor', '3': 'terminal', '4': 'agentMonitor',
+      };
+      const panel = map[e.key];
+      if (panel) { e.preventDefault(); setPanel(panel); focusPanelElement(panel); }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setPanel]);
+}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function FocusProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [focusedPanel, setFocusedPanel] = useState<FocusPanel>('editor');
+  const stableSet = useCallback((panel: FocusPanel) => setFocusedPanel(panel), []);
 
-  // Keyboard shortcuts: Ctrl+1=sidebar, Ctrl+2=editor, Ctrl+3=terminal, Ctrl+4=agentMonitor
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
+  useFocusKeyboard(stableSet);
 
-      switch (e.key) {
-        case '1':
-          e.preventDefault();
-          setFocusedPanel('sidebar');
-          break;
-        case '2':
-          e.preventDefault();
-          setFocusedPanel('editor');
-          break;
-        case '3':
-          e.preventDefault();
-          setFocusedPanel('terminal');
-          break;
-        case '4':
-          e.preventDefault();
-          setFocusedPanel('agentMonitor');
-          break;
-        default:
-          break;
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const stableSetFocusedPanel = useCallback((panel: FocusPanel) => setFocusedPanel(panel), []);
+  const ringStyle = useCallback(
+    (panel: FocusPanel): React.CSSProperties => focusRingStyle(panel, focusedPanel),
+    [focusedPanel],
+  );
 
   const value = useMemo<FocusContextValue>(
-    () => ({ focusedPanel, setFocusedPanel: stableSetFocusedPanel }),
-    [focusedPanel, stableSetFocusedPanel],
+    () => ({ focusedPanel, focusRingStyle: ringStyle, setFocusedPanel: stableSet }),
+    [focusedPanel, ringStyle, stableSet],
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;
@@ -79,7 +90,7 @@ export function useFocusPanel(): FocusContextValue {
 
 // ─── Utility: returns inline style for focused panel ring ─────────────────────
 
-// TODO: implement focus ring — return a CSS properties object that highlights the focused panel
-export function focusRingStyle(): React.CSSProperties {
-  return {};
+export function focusRingStyle(panel: FocusPanel, focused: FocusPanel): React.CSSProperties {
+  if (panel !== focused) return {};
+  return { boxShadow: 'inset 0 0 0 2px var(--interactive-focus)' };
 }

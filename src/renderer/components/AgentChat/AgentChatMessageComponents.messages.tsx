@@ -10,6 +10,7 @@ import { formatTimestamp, formatTimestampFull } from './agentChatFormatters';
 import { UserMessageActions } from './AgentChatMessageActions';
 import { ContextSummaryRow } from './AgentChatMessageComponents.rows';
 import { AgentChatToolGroup } from './AgentChatToolGroup';
+import { StreamingChangeSummaryBar } from './ChangeSummaryBar';
 import { MessageMarkdown } from './MessageMarkdown';
 import { StreamingStatusMessage } from './streamingUtils';
 
@@ -142,28 +143,13 @@ function buildRenderItems(blocks: AgentChatContentBlock[]): RenderItem[] {
   const items: RenderItem[] = [];
   for (let i = 0; i < blocks.length; ) {
     const block = blocks[i];
-    if (block.kind === 'text') {
-      items.push({ type: 'text', block, index: i });
-      i++;
-      continue;
-    }
-    if (block.kind === 'thinking') {
-      items.push({ type: 'thinking', block, index: i });
-      i++;
-      continue;
-    }
+    if (block.kind === 'text') { items.push({ type: 'text', block, index: i }); i++; continue; }
+    if (block.kind === 'thinking') { items.push({ type: 'thinking', block, index: i }); i++; continue; }
     if (block.kind === 'tool_use') {
       const run: AgentChatContentBlock[] = [];
       const startIndex = i;
-      while (i < blocks.length && blocks[i].kind === 'tool_use') {
-        run.push(blocks[i]);
-        i++;
-      }
-      items.push(
-        run.length >= 2
-          ? { type: 'tool-group', tools: run, startIndex }
-          : { type: 'single-tool', block: run[0], index: startIndex },
-      );
+      while (i < blocks.length && blocks[i].kind === 'tool_use') { run.push(blocks[i]); i++; }
+      items.push(run.length >= 2 ? { type: 'tool-group', tools: run, startIndex } : { type: 'single-tool', block: run[0], index: startIndex });
       continue;
     }
     items.push({ type: 'block', block, index: i });
@@ -172,15 +158,32 @@ function buildRenderItems(blocks: AgentChatContentBlock[]): RenderItem[] {
   return items;
 }
 
-function renderItem(item: RenderItem, isStreaming: boolean): React.ReactNode {
-  if (item.type === 'text')
+function findLastTextIndex(items: RenderItem[]): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].type === 'text') return i;
+  }
+  return -1;
+}
+
+function renderToolGroup(item: RenderItem & { type: 'tool-group' }, isStreaming: boolean): React.ReactNode {
+  return (
+    <AgentChatToolGroup
+      key={`tg-${item.startIndex}`}
+      blocks={item.tools as Array<AgentChatContentBlock & { kind: 'tool_use' }>}
+      defaultExpanded={isStreaming && item.tools.some((t) => t.kind === 'tool_use' && t.status === 'running')}
+    />
+  );
+}
+
+function renderItem(item: RenderItem, isStreaming: boolean, isLastText: boolean): React.ReactNode {
+  if (item.type === 'text') {
+    const content = (item.block as AgentChatContentBlock & { kind: 'text' }).content;
     return (
       <div key={`text-${item.index}`} className="pl-7 pb-0.5">
-        <MessageMarkdown
-          content={(item.block as AgentChatContentBlock & { kind: 'text' }).content}
-        />
+        <MessageMarkdown content={content} streaming={isStreaming && isLastText} />
       </div>
     );
+  }
   if (item.type === 'thinking')
     return (
       <AgentChatBlockRenderer
@@ -191,16 +194,7 @@ function renderItem(item: RenderItem, isStreaming: boolean): React.ReactNode {
         isLastBlock={false}
       />
     );
-  if (item.type === 'tool-group')
-    return (
-      <AgentChatToolGroup
-        key={`tg-${item.startIndex}`}
-        blocks={item.tools as Array<AgentChatContentBlock & { kind: 'tool_use' }>}
-        defaultExpanded={
-          isStreaming && item.tools.some((t) => t.kind === 'tool_use' && t.status === 'running')
-        }
-      />
-    );
+  if (item.type === 'tool-group') return renderToolGroup(item, isStreaming);
   return (
     <AgentChatBlockRenderer
       key={item.type === 'single-tool' ? `tool-${item.index}` : `block-${item.index}`}
@@ -222,10 +216,12 @@ export function AssistantBlocksContent({
   onStop?: () => Promise<void>;
 }): React.ReactElement {
   const renderItems = useMemo(() => buildRenderItems(blocks), [blocks]);
+  const lastTextIdx = isStreaming ? findLastTextIndex(renderItems) : -1;
   return (
     <div className="space-y-2">
-      {renderItems.map((item) => renderItem(item, isStreaming))}
+      {renderItems.map((item, i) => renderItem(item, isStreaming, i === lastTextIdx))}
       {isStreaming && <StreamingStatusMessage onStop={onStop} />}
+      {isStreaming && <StreamingChangeSummaryBar blocks={blocks} isStreaming={isStreaming} />}
     </div>
   );
 }

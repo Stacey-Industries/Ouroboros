@@ -749,6 +749,27 @@
       transform: none;
     }
   }
+
+  /* Catch-all: disable all remaining transitions/animations */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 4B: High-contrast focus enhancement */
+@media (prefers-contrast: more) {
+  :root {
+    /* High-contrast override — non-themed accessibility value */
+    --interactive-focus: #fff;
+  }
+
+  :focus-visible {
+    outline-width: 3px;
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

@@ -83,7 +83,13 @@ export default defineConfig({
     root: 'src/renderer',
     publicDir: resolve(__dirname, 'public'),
     plugins: [
-      react(),
+      react({
+        babel: {
+          plugins: [
+            ['babel-plugin-react-compiler', {}],
+          ],
+        },
+      }),
       monacoEditorPlugin({
         languageWorkers: ['editorWorkerService', 'typescript', 'json', 'css', 'html'],
         globalAPI: false,

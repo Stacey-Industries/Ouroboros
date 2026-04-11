@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from '../../types/electron';
 import { PendingUserBubble } from './AgentChatMessageComponents';
 import { buildFilteredMessages, buildSyntheticStreamingMessage } from './AgentChatStreamingHelpers';
-import { AgentChatStreamingMessage } from './AgentChatStreamingMessage';
+import { StreamingStatusMessage } from './streamingUtils';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 
 export function findLastUserMessageId(messages: AgentChatMessageRecord[]): string | null {
@@ -56,6 +56,7 @@ export function useMessagesWithStreaming(
   ]);
 }
 
+/** Shown before the first streaming blocks arrive — just the user bubble + status spinner. */
 export function PendingStreamingView({
   scrollRef,
   onScroll,
@@ -75,12 +76,7 @@ export function PendingStreamingView({
     >
       <div className="mt-auto space-y-4">
         <PendingUserBubble text={pendingUserMessage} />
-        <AgentChatStreamingMessage
-          blocks={[]}
-          isStreaming={true}
-          activeTextContent=""
-          onStop={onStop}
-        />
+        <StreamingStatusMessage onStop={onStop} />
       </div>
     </div>
   );

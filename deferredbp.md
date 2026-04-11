@@ -73,33 +73,33 @@ The two biggest architectural debts — JSON graph and main-thread blocking.
 
 ---
 
-## Wave 4 — UI Architecture & Accessibility
+## Wave 4 — UI Architecture & Accessibility ✓ (v1.3.6)
 
 Prop drilling, memoization, focus management, and the unified rendering initiative.
 
 ### AgentChat Performance
 
-- **#71 — `AgentChatConversation` receives ~30 props** — Severe prop drilling. Should extract into a React context inside `AgentChatWorkspace` (or split into sub-contexts by concern: thread state, context state, model settings).
-- **#73 — `buildModel` returns new reference every render** — Defeats downstream memoization. Should memoize the model object or split into stable sub-objects.
+- **#71 — ✓ `AgentChatConversation` 51-prop interface eliminated** — Zustand store (`agentChatStore.ts`) with selector hooks replaces all prop threading. Per-workspace scoping via `AgentChatStoreContext`. Consumers use `useAgentChatThread()`, `useAgentChatActions()`, etc.
+- **#73 — ✓ `buildModel` memoization automated** — React Compiler (`babel-plugin-react-compiler@1.0.0`) installed and wired into `electron.vite.config.ts`. Auto-memoizes all component/hook returns — eliminates the cascading re-render from `buildModel` and makes 1,177 manual `useMemo`/`useCallback` calls redundant (progressive removal is future work).
 
 ### Chat Rendering
 
-- **#74 — Dual tool rendering paths in chat** — Streaming uses `AgentChatStreamingMessage`, persisted uses `AgentChatBlockRenderer`, with duplicated grouping logic. The "unified chat rendering" initiative targets this.
+- **#74 — ✓ Dual tool rendering paths unified** — `AgentChatStreamingMessage.tsx` deleted. All messages (streaming + persisted) render through `AssistantBlocksContent` in `AgentChatMessageComponents.messages.tsx` → `AgentChatBlockRenderer` → `AgentChatToolGroup`. Duplicated `TOOL_SUMMARIES`, `categorizeTools`, `buildRenderItems`, inline `ToolGroup` all removed. `react-markdown` replaced by Streamdown (`streamdown@2.5.0`) in `MessageMarkdown.tsx` for per-block memoization and streaming-aware rendering. `PendingStreamingView` simplified to `StreamingStatusMessage` (no longer wraps the deleted component).
 
 ### Focus & Accessibility
 
-- **#76 — Focus ring not implemented** — `focusRingStyle()` returns `{}`, `pfs()` is stubbed. Users have no visual indication of which panel has keyboard focus. Marked with TODO.
-- **#87 — No skip-to-content links** — Standard web accessibility pattern missing.
-- **#88 — No focus-visible styles beyond browser default** — No custom `:focus-visible` styles. Power users relying on keyboard can't see which element has focus.
+- **#76 — ✓ Focus ring implemented** — `focusRingStyle()` returns `boxShadow: inset 0 0 0 2px var(--interactive-focus)` for the focused panel. `pfs` in `AppLayout` wired to real implementation via `useFocusPanel()`.
+- **#87 — ✓ Skip-to-content link added** — Visually hidden `<a href="#editor-main">Skip to editor</a>` as first child of `AppLayout`. Visible on Tab focus.
+- **#88 — ✓ Focus-visible and accessibility media queries** — `prefers-reduced-motion: reduce` catch-all disables all animations/transitions. `prefers-contrast: more` increases focus ring to 3px white. Ctrl+1-4 now moves real DOM focus via `focusPanelElement()` with `data-panel` selectors on all four panel containers.
 
 ### Renderer Cleanup
 
-- **#77 — LSP diagnostics never reach file tree** — `fileTreeStore.updateDiagnostics` action exists with TODO comment but nothing calls it. LSP errors don't produce per-file badges.
-- **#80 — `FileViewerManager.internal.ts` at 781 lines** — Single source of truth for tab management. Justified density but could be split into tab-state, dirty-tracking, and lifecycle concerns.
+- **#77 — ✓ LSP diagnostics wired to file tree** — `useLspDiagnosticsSync` hook subscribes to `lsp:diagnostics:push` IPC, computes worst severity, feeds `fileTreeStore.updateDiagnostics()`. Mounted in `InnerApp`. TODO comment removed.
+- **#80 — Already resolved (pre-Wave 4)** — `FileViewerManager.internal.ts` is 286 lines after prior splits. No further action needed.
 
 ### Test Coverage (attach to Wave 4)
 
-- **#92 — Window manager** — Zero tests for CSP installation, window creation, multi-window lifecycle.
+- **#92 — ✓ Window manager tests** — `windowManagerHelpers.test.ts` (23 tests) covers all pure helpers. `windowManager.test.ts` (43 tests) covers create/get/close/focus/persist/restore lifecycle with full mock infrastructure. Module-level state isolation via `vi.resetModules()`.
 
 ---
 

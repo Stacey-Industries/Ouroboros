@@ -1,11 +1,15 @@
+import 'streamdown/styles.css';
+
 import React, { useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Streamdown } from 'streamdown';
 
 import { markdownComponents } from './MessageMarkdownParts';
+import { BlinkingCursor, useTypewriter } from './streamingUtils';
 
 export interface MessageMarkdownProps {
   content: string;
+  /** When true, enables typewriter animation and shows a blinking cursor. */
+  streaming?: boolean;
 }
 
 function openExternalLink(href: string): void {
@@ -30,12 +34,16 @@ function handleMarkdownLinkClick(e: React.MouseEvent<HTMLDivElement>): void {
 }
 
 /**
- * Renders markdown using react-markdown + remark-gfm.
- * Full control over every rendered element — no third-party wrappers or borders.
+ * Renders markdown using Streamdown (per-block memoization, streaming-aware).
+ * Replaces react-markdown — completed blocks never re-render during streaming.
  */
 export const MessageMarkdown = React.memo(function MessageMarkdown({
   content,
+  streaming = false,
 }: MessageMarkdownProps): React.ReactElement {
+  const displayedContent = useTypewriter(content, streaming);
+  const showCursor = streaming || (content.length > 0 && displayedContent.length < content.length);
+
   const handleLinkClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => handleMarkdownLinkClick(e),
     [],
@@ -46,9 +54,13 @@ export const MessageMarkdown = React.memo(function MessageMarkdown({
       className="agent-chat-markdown text-sm leading-relaxed text-text-semantic-primary"
       onClick={handleLinkClick}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-        {content || ' '}
-      </ReactMarkdown>
+      <Streamdown
+        mode={streaming ? 'streaming' : 'static'}
+        components={markdownComponents}
+      >
+        {(streaming ? displayedContent : content) || ' '}
+      </Streamdown>
+      {showCursor && <BlinkingCursor />}
     </div>
   );
 });

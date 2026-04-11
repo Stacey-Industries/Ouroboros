@@ -1,10 +1,11 @@
 import log from 'electron-log/renderer';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { SWITCH_SIDEBAR_VIEW_EVENT } from '../../hooks/appEventNames';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
+import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
@@ -15,149 +16,95 @@ export interface AgentChatWorkspaceProps {
   onModelReady?: (model: AgentChatWorkspaceModel) => void;
 }
 
-function buildSlashCommandContext(
-  model: AgentChatWorkspaceModel,
-  onRemember: (content: string) => Promise<void>,
-  onOpenMemories: () => void,
-): SlashCommandContext {
-  return {
-    onClearChat: model.reloadThreads,
-    onNewThread: model.startNewChat,
-    onRemember,
-    onOpenMemories,
-    commands: model.commands,
-  };
-}
+/* ── Sync hooks: push existing hook data into zustand store ──────────────── */
 
-function buildConversationThreadProps(
-  model: AgentChatWorkspaceModel,
-): Pick<
-  React.ComponentProps<typeof AgentChatConversation>,
-  | 'activeThread'
-  | 'pendingUserMessage'
-  | 'error'
-  | 'hasProject'
-  | 'isDetailsOpen'
-  | 'isLoading'
-  | 'isSending'
-  | 'draft'
-  | 'closeDetails'
-  | 'details'
-  | 'detailsError'
-  | 'detailsIsLoading'
-  | 'canSend'
-> {
-  return {
-    activeThread: model.activeThread,
-    pendingUserMessage: model.pendingUserMessage,
-    error: model.error,
-    hasProject: model.hasProject,
-    isDetailsOpen: model.isDetailsOpen,
-    isLoading: model.isLoading,
-    isSending: model.isSending,
-    draft: model.draft,
-    closeDetails: model.closeDetails,
-    details: model.details,
-    detailsError: model.detailsError,
-    detailsIsLoading: model.detailsIsLoading,
-    canSend: model.canSend,
-  };
-}
-
-function buildConversationContextProps(
-  _model: AgentChatWorkspaceModel,
-  context: ReturnType<typeof useAgentChatContext>,
-): Pick<
-  React.ComponentProps<typeof AgentChatConversation>,
-  | 'pinnedFiles'
-  | 'onRemoveFile'
-  | 'contextSummary'
-  | 'autocompleteResults'
-  | 'isAutocompleteOpen'
-  | 'onAutocompleteQuery'
-  | 'onSelectFile'
-  | 'onCloseAutocomplete'
-  | 'onOpenAutocomplete'
-  | 'mentions'
-  | 'onAddMention'
-  | 'onRemoveMention'
-  | 'allFiles'
-> {
-  return {
-    pinnedFiles: context.pinnedFiles,
-    onRemoveFile: context.removeFile,
-    contextSummary: context.contextSummary,
-    autocompleteResults: context.autocompleteResults,
-    isAutocompleteOpen: context.isAutocompleteOpen,
-    onAutocompleteQuery: context.setAutocompleteQuery,
-    onSelectFile: context.addFile,
-    onCloseAutocomplete: context.closeAutocomplete,
-    onOpenAutocomplete: context.openAutocomplete,
-    mentions: context.mentions,
-    onAddMention: context.addMention,
-    onRemoveMention: context.removeMention,
-    allFiles: context.allFiles,
-  };
-}
-
-function buildConversationHandlerProps(
-  model: AgentChatWorkspaceModel,
-  slashCommandContext: SlashCommandContext,
-) {
-  return {
-    onDraftChange: model.setDraft,
-    onEdit: model.editAndResend,
-    onRetry: model.retryMessage,
-    onBranch: model.branchFromMessage,
-    onRevert: model.revertMessage,
-    onOpenLinkedDetails: model.openLinkedDetails,
-    onOpenLinkedTask: model.openDetailsInOrchestration,
-    onSend: model.sendMessage,
-    onStop: model.stopTask,
-    onSelectThread: model.selectThread,
-    slashCommandContext,
-  };
-}
-
-function buildConversationModelProps(model: AgentChatWorkspaceModel) {
-  return {
-    chatOverrides: model.chatOverrides,
-    onChatOverridesChange: model.setChatOverrides,
-    settingsModel: model.settingsModel,
-    codexSettingsModel: model.codexSettingsModel,
-    defaultProvider: model.defaultProvider,
-    modelProviders: model.modelProviders,
-    codexModels: model.codexModels,
-    queuedMessages: model.queuedMessages,
-    onEditQueuedMessage: model.editQueuedMessage,
-    onDeleteQueuedMessage: model.deleteQueuedMessage,
-    onSendQueuedMessageNow: model.sendQueuedMessageNow,
-    attachments: model.attachments,
-    onAttachmentsChange: model.setAttachments,
-  };
-}
-
-function buildConversationActionProps(
-  model: AgentChatWorkspaceModel,
-  slashCommandContext: SlashCommandContext,
-) {
-  return {
-    ...buildConversationHandlerProps(model, slashCommandContext),
-    ...buildConversationModelProps(model),
-  };
-}
-
-function buildConversationProps(
+function useSyncStateIntoStore(
+  store: ReturnType<typeof createAgentChatStore>,
   model: AgentChatWorkspaceModel,
   context: ReturnType<typeof useAgentChatContext>,
-  slashCommandContext: SlashCommandContext,
-): React.ComponentProps<typeof AgentChatConversation> {
-  return {
-    ...buildConversationThreadProps(model),
-    ...buildConversationContextProps(model, context),
-    ...buildConversationActionProps(model, slashCommandContext),
-  };
+): void {
+  useEffect(() => {
+    store.setState({
+      activeThread: model.activeThread,
+      canSend: model.canSend,
+      draft: model.draft,
+      error: model.error,
+      hasProject: model.hasProject,
+      isLoading: model.isLoading,
+      isSending: model.isSending,
+      pendingUserMessage: model.pendingUserMessage,
+      isDetailsOpen: model.isDetailsOpen,
+      details: model.details,
+      detailsError: model.detailsError,
+      detailsIsLoading: model.detailsIsLoading,
+    });
+  }, [store, model]);
+
+  useEffect(() => {
+    store.setState({
+      pinnedFiles: context.pinnedFiles,
+      contextSummary: context.contextSummary,
+      autocompleteResults: context.autocompleteResults,
+      isAutocompleteOpen: context.isAutocompleteOpen,
+      mentions: context.mentions,
+      allFiles: context.allFiles,
+    });
+  }, [store, context]);
 }
+
+function useSyncModelSettingsIntoStore(
+  store: ReturnType<typeof createAgentChatStore>,
+  model: AgentChatWorkspaceModel,
+): void {
+  useEffect(() => {
+    store.setState({
+      chatOverrides: model.chatOverrides,
+      settingsModel: model.settingsModel,
+      codexSettingsModel: model.codexSettingsModel,
+      defaultProvider: model.defaultProvider,
+      modelProviders: model.modelProviders,
+      codexModels: model.codexModels,
+      queuedMessages: model.queuedMessages,
+      attachments: model.attachments,
+    });
+  }, [store, model]);
+}
+
+function useSyncActionsIntoStore(
+  store: ReturnType<typeof createAgentChatStore>,
+  model: AgentChatWorkspaceModel,
+  context: ReturnType<typeof useAgentChatContext>,
+): void {
+  useEffect(() => {
+    store.setState({
+      onDraftChange: model.setDraft,
+      onEdit: model.editAndResend,
+      onRetry: model.retryMessage,
+      onBranch: model.branchFromMessage,
+      onRevert: model.revertMessage,
+      onOpenLinkedDetails: model.openLinkedDetails,
+      onOpenLinkedTask: model.openDetailsInOrchestration,
+      onSend: model.sendMessage,
+      onStop: model.stopTask,
+      closeDetails: model.closeDetails,
+      onSelectThread: model.selectThread,
+      onChatOverridesChange: model.setChatOverrides,
+      onEditQueuedMessage: model.editQueuedMessage,
+      onDeleteQueuedMessage: model.deleteQueuedMessage,
+      onSendQueuedMessageNow: model.sendQueuedMessageNow,
+      onAttachmentsChange: model.setAttachments,
+      onRemoveFile: context.removeFile,
+      onAutocompleteQuery: context.setAutocompleteQuery,
+      onSelectFile: context.addFile,
+      onCloseAutocomplete: context.closeAutocomplete,
+      onOpenAutocomplete: context.openAutocomplete,
+      onAddMention: context.addMention,
+      onRemoveMention: context.removeMention,
+    });
+  }, [store, model, context]);
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
 
 function useRememberAction(
   projectRoot: string | null,
@@ -182,6 +129,22 @@ function useRememberAction(
   );
 }
 
+/* ── Store sync orchestration ────────────────────────────────────────────── */
+
+function useWorkspaceStoreSync(
+  store: ReturnType<typeof createAgentChatStore>,
+  model: AgentChatWorkspaceModel,
+  context: ReturnType<typeof useAgentChatContext>,
+  slashCmd: SlashCommandContext,
+): void {
+  useEffect(() => { store.setState({ slashCommandContext: slashCmd }); }, [store, slashCmd]);
+  useSyncStateIntoStore(store, model, context);
+  useSyncModelSettingsIntoStore(store, model);
+  useSyncActionsIntoStore(store, model, context);
+}
+
+/* ���─ Workspace component ─────────���───────────────────────���───────────────── */
+
 export function AgentChatWorkspace({
   projectRoot,
   onModelReady,
@@ -189,6 +152,7 @@ export function AgentChatWorkspace({
   const model = useAgentChatWorkspace(projectRoot);
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
   const { toast } = useToastContext();
+  const store = useRef(createAgentChatStore()).current;
 
   const onRemember = useRememberAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
@@ -197,28 +161,24 @@ export function AgentChatWorkspace({
     );
   }, []);
 
-  useEffect(() => {
-    model.setContextFilePaths(context.filePaths);
-  }, [context.filePaths, model]);
+  useEffect(() => { model.setContextFilePaths(context.filePaths); }, [context.filePaths, model]);
+  useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
 
-  useEffect(() => {
-    onModelReady?.(model);
-  }, [model, onModelReady]);
-
-  const slashCommandContext = useMemo(
-    () => buildSlashCommandContext(model, onRemember, onOpenMemories),
+  const slashCmd = useMemo<SlashCommandContext>(
+    () => ({
+      onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
+      onRemember, onOpenMemories, commands: model.commands,
+    }),
     [model, onRemember, onOpenMemories],
   );
-  const conversationProps = useMemo(
-    () => buildConversationProps(model, context, slashCommandContext),
-    [model, context, slashCommandContext],
-  );
+
+  useWorkspaceStoreSync(store, model, context, slashCmd);
 
   return (
-    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <AgentChatConversation {...conversationProps} />
+    <AgentChatStoreContext.Provider value={store}>
+      <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
+        <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
       </div>
-    </div>
+    </AgentChatStoreContext.Provider>
   );
 }

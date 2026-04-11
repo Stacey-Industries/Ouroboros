@@ -3,7 +3,7 @@
  * Extracted to keep MessageMarkdown.tsx under the 300-line limit.
  */
 import React, { useCallback, useState } from 'react';
-import type { Components } from 'react-markdown';
+import type { Components } from 'streamdown';
 
 import { useCodeHighlight } from './useCodeHighlight';
 

@@ -126,10 +126,7 @@ export interface FileTreeState {
   clearSelection: () => void;
 
   // ─── Diagnostic actions (4A) ────────────────────────────────────────────
-  /**
-   * Replace the entire diagnostics map.
-   * TODO: Call this from the LSP bridge when diagnostics are received.
-   */
+  /** Replace the entire diagnostics map. Called by `useLspDiagnosticsSync`. */
   updateDiagnostics: (diagnostics: Map<string, DiagnosticSeverity>) => void;
 
   // ─── Dirty file actions (4C) ────────────────────────────────────────────

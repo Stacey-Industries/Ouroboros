@@ -28,6 +28,7 @@ import { useConfig } from './hooks/useConfig';
 import { useExtensionThemes } from './hooks/useExtensionThemes';
 import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
+import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
 import { useProjectManagement } from './hooks/useProjectManagement';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
@@ -187,6 +188,9 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
 
   // Register extension themes at startup so they're available before opening settings
   useExtensionThemes();
+
+  // Sync LSP diagnostic events into the file tree store for per-file badges
+  useLspDiagnosticsSync();
 
   // On first launch with no providers authenticated, open Settings → Accounts
   useFirstLaunchAuth();
