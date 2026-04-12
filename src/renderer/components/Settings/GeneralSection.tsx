@@ -5,6 +5,7 @@ import { BackupSubsection } from './GeneralBackupSubsection';
 import { LspSubsection } from './GeneralLspSubsection';
 import { NotificationsSubsection } from './GeneralNotificationsSubsection';
 import { DefaultProjectFolder, RecentProjects } from './GeneralProjectSubsection';
+import { SemanticSearchSubsection } from './GeneralSemanticSearchSubsection';
 import { WebAccessSubsection } from './GeneralWebAccessSubsection';
 import { ToggleSwitch } from './ToggleSwitch';
 
@@ -31,6 +32,7 @@ export function GeneralSection({ draft, onChange, onImport }: GeneralSectionProp
       <WebAccessSubsection draft={draft} onChange={onChange} />
       <BackupSubsection onImport={onImport} />
       <LspSubsection draft={draft} onChange={onChange} />
+      <SemanticSearchSubsection draft={draft} onChange={onChange} />
     </div>
   );
 }

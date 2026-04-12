@@ -1,6 +1,7 @@
 import { type Dispatch, type SetStateAction, useCallback, useRef } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
+import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
 import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatLinkedDetailsResult, AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord, CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
@@ -12,6 +13,7 @@ import type { AgentChatWorkspaceModel, QueuedMessage } from './useAgentChatWorks
 export interface SendMessageArgs {
   activeThreadId: string | null; attachments?: ImageAttachment[]; setAttachments?: Dispatch<SetStateAction<ImageAttachment[]>>;
   chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[]; contextFilePaths?: string[];
+  mentionRanges?: UserSelectedFileRange[];
   draft: string; isSending: boolean; pendingUserMessage: string | null; projectRoot: string | null;
   setActiveThreadId: Dispatch<SetStateAction<string | null>>; setDraft: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string | null>>; setIsSending: Dispatch<SetStateAction<boolean>>; setPendingUserMessage: Dispatch<SetStateAction<string | null>>;
@@ -20,7 +22,7 @@ export interface SendMessageArgs {
 
 type AgentChatActionArgs = SendMessageArgs & { activeThread: AgentChatThreadRecord | null; setError: Dispatch<SetStateAction<string | null>> };
 type AgentChatActionState = { branchFromMessage: (message: AgentChatMessageRecord) => Promise<void>; deleteThread: (threadId: string) => Promise<void>; editAndResend: (message: AgentChatMessageRecord) => Promise<void>; openLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; retryMessage: (message: AgentChatMessageRecord) => Promise<void>; revertMessage: (message: AgentChatMessageRecord) => Promise<void>; selectThread: (threadId: string | null) => void; sendMessage: () => Promise<void>; startNewChat: () => void; stopTask: () => Promise<void>; };
-type BuildWorkspaceModelArgs = AgentChatActionState & { activeThread: AgentChatThreadRecord | null; activeThreadId: string | null; attachments: ImageAttachment[]; setAttachments: (attachments: ImageAttachment[]) => void; chatOverrides: ChatOverrides; setChatOverrides: (overrides: ChatOverrides) => void; settingsModel: string; codexSettingsModel: string; defaultProvider: 'claude-code' | 'codex' | 'anthropic-api'; modelProviders: ModelProvider[]; codexModels: CodexModelOption[]; closeDetails: () => void; details: AgentChatLinkedDetailsResult | null; detailsError: string | null; detailsIsLoading: boolean; draft: string; error: string | null; isLoading: boolean; isDetailsOpen: boolean; isSending: boolean; pendingUserMessage: string | null; openConversationDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; openDetailsInOrchestration: () => void; projectRoot: string | null; reloadThreads: () => Promise<void>; setContextFilePaths: (paths: string[]) => void; setDraft: (value: string) => void; threads: AgentChatThreadRecord[]; queuedMessages: QueuedMessage[]; editQueuedMessage: (id: string) => void; deleteQueuedMessage: (id: string) => void; sendQueuedMessageNow: (id: string) => Promise<void>; commands?: CommandDefinition[]; };
+type BuildWorkspaceModelArgs = AgentChatActionState & { activeThread: AgentChatThreadRecord | null; activeThreadId: string | null; attachments: ImageAttachment[]; setAttachments: (attachments: ImageAttachment[]) => void; chatOverrides: ChatOverrides; setChatOverrides: (overrides: ChatOverrides) => void; settingsModel: string; codexSettingsModel: string; defaultProvider: 'claude-code' | 'codex' | 'anthropic-api'; modelProviders: ModelProvider[]; codexModels: CodexModelOption[]; closeDetails: () => void; details: AgentChatLinkedDetailsResult | null; detailsError: string | null; detailsIsLoading: boolean; draft: string; error: string | null; isLoading: boolean; isDetailsOpen: boolean; isSending: boolean; pendingUserMessage: string | null; openConversationDetails: (link?: AgentChatOrchestrationLink) => Promise<void>; openDetailsInOrchestration: () => void; projectRoot: string | null; reloadThreads: () => Promise<void>; setContextFilePaths: (paths: string[]) => void; setMentionRanges: (ranges: UserSelectedFileRange[]) => void; setDraft: (value: string) => void; threads: AgentChatThreadRecord[]; queuedMessages: QueuedMessage[]; editQueuedMessage: (id: string) => void; deleteQueuedMessage: (id: string) => void; sendQueuedMessageNow: (id: string) => Promise<void>; commands?: CommandDefinition[]; };
 
 function hasElectronAPI(): boolean { return typeof window !== 'undefined' && 'electronAPI' in window; }
 function getErrorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error); }
@@ -28,7 +30,17 @@ function getErrorMessage(error: unknown): string { return error instanceof Error
 async function saveAllDirtyBuffers(): Promise<void> { const promises: Promise<void>[] = []; window.dispatchEvent(new CustomEvent(SAVE_ALL_DIRTY_EVENT, { detail: { addPromise: (promise: Promise<void>) => promises.push(promise) } })); if (promises.length > 0) await Promise.all(promises); }
 function isCodexModel(model: string | undefined, codexModels: CodexModelOption[] | undefined): boolean { return Boolean(model) && (codexModels ?? []).some((entry) => entry.id === model); }
 function getThreadIdForSend(threadId: string | null): string | undefined { return isDraftThreadId(threadId) ? undefined : threadId ?? undefined; }
-function buildContextSelection(contextFilePaths?: string[]): { userSelectedFiles: string[] } | undefined { return contextFilePaths?.length ? { userSelectedFiles: contextFilePaths } : undefined; }
+function buildContextSelection(
+  contextFilePaths?: string[],
+  mentionRanges?: UserSelectedFileRange[],
+): { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] } | undefined {
+  if (!contextFilePaths?.length) return undefined;
+  const result: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] } = {
+    userSelectedFiles: contextFilePaths,
+  };
+  if (mentionRanges?.length) result.userSelectedRanges = mentionRanges;
+  return result;
+}
 function applyModelOverride(overrides: Record<string, string>, model: string, codexModels?: CodexModelOption[]): void {
   if (isAnthropicAutoModel(model)) {
     overrides.provider = 'claude-code';
@@ -46,8 +58,8 @@ function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?:
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 function mergeReturnedThread(resultThread: AgentChatThreadRecord | null | undefined, setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>): void { if (!resultThread) return; setThreads((currentThreads) => mergeThreadCollection(currentThreads, resultThread)); setActiveThreadId(resultThread.id); }
-async function sendAgentChatRequest(request: { threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[]; contextSelection?: { userSelectedFiles: string[] }; overrides?: Record<string, string>; metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean }; skillExpansion?: string }, failureMessage: string): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> { const result = await window.electronAPI.agentChat.sendMessage(request); if (!result.success) throw new Error(result.error ?? failureMessage); return result; }
-function buildComposerRequest(args: SendMessageArgs, content: string, skillExpansion?: string): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: getThreadIdForSend(args.activeThreadId), workspaceRoot: args.projectRoot as string, content, attachments: args.attachments?.length ? args.attachments : undefined, contextSelection: buildContextSelection(args.contextFilePaths), overrides: buildChatOverrides({ chatOverrides: args.chatOverrides, codexModels: args.codexModels }), metadata: { source: 'composer', usedAdvancedControls: Boolean(args.contextFilePaths?.length) }, skillExpansion }; }
+async function sendAgentChatRequest(request: { threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[]; contextSelection?: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] }; overrides?: Record<string, string>; metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean }; skillExpansion?: string }, failureMessage: string): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> { const result = await window.electronAPI.agentChat.sendMessage(request); if (!result.success) throw new Error(result.error ?? failureMessage); return result; }
+function buildComposerRequest(args: SendMessageArgs, content: string, skillExpansion?: string): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: getThreadIdForSend(args.activeThreadId), workspaceRoot: args.projectRoot as string, content, attachments: args.attachments?.length ? args.attachments : undefined, contextSelection: buildContextSelection(args.contextFilePaths, args.mentionRanges), overrides: buildChatOverrides({ chatOverrides: args.chatOverrides, codexModels: args.codexModels }), metadata: { source: 'composer', usedAdvancedControls: Boolean(args.contextFilePaths?.length) }, skillExpansion }; }
 function buildResendRequest(args: AgentChatActionArgs, content: string, source: 'edit' | 'retry'): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: args.activeThreadId ?? undefined, workspaceRoot: args.projectRoot as string, content, metadata: { source, usedAdvancedControls: false } }; }
 function applyComposerSuccess(args: SendMessageArgs, result: Awaited<ReturnType<typeof sendAgentChatRequest>>): void { args.setAttachments?.([]); mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId); args.setPendingUserMessage(null); clearPersistedDraft(result.thread?.id ?? args.activeThreadId); if (isDraftThreadId(args.activeThreadId) && result.thread) clearPersistedDraft(args.activeThreadId); }
 function applyComposerFailure(args: SendMessageArgs, content: string, error: unknown): void { args.setError(getErrorMessage(error)); args.setDraft(content); args.setPendingUserMessage(null); }

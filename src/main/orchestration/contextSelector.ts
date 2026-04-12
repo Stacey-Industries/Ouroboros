@@ -72,6 +72,7 @@ const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
   ['keyword_match', 26],
   ['import_adjacency', 22],
   ['dependency', 12],
+  ['semantic_match', 45],
 ])
 
 const STOP_WORDS = new Set([

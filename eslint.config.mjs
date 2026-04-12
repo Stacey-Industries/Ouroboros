@@ -17,6 +17,7 @@ export default tseslint.config(
       'coverage/',
       'e2e/',
       '*.config.*',
+      'spike/',
     ],
   },
 

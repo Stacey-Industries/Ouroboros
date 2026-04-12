@@ -77,12 +77,16 @@ export function normalizeContextSelection(
   selection: Partial<TaskRequestContextSelection> | undefined,
 ): Partial<TaskRequestContextSelection> | undefined {
   if (!selection || !hasExplicitContextSelection(selection)) return undefined;
-  return {
+  const normalized: Partial<TaskRequestContextSelection> = {
     userSelectedFiles: uniqueStrings(selection.userSelectedFiles),
     pinnedFiles: uniqueStrings(selection.pinnedFiles),
     includedFiles: uniqueStrings(selection.includedFiles),
     excludedFiles: uniqueStrings(selection.excludedFiles),
   };
+  if (selection.userSelectedRanges?.length) {
+    normalized.userSelectedRanges = selection.userSelectedRanges;
+  }
+  return normalized;
 }
 
 export function buildContextSummary(

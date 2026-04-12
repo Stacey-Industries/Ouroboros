@@ -7,7 +7,7 @@ import {
   getMentionTypeColor,
 } from './MentionAutocompleteSupport';
 
-export type MentionType = 'file' | 'folder' | 'diff' | 'terminal';
+export type MentionType = 'file' | 'folder' | 'diff' | 'terminal' | 'symbol' | 'codebase';
 
 export interface MentionItem {
   type: MentionType;
@@ -15,6 +15,17 @@ export interface MentionItem {
   label: string;
   path: string;
   estimatedTokens: number;
+  startLine?: number;
+  endLine?: number;
+  symbolType?: string;
+}
+
+export interface SymbolGraphNode {
+  name: string;
+  type: string;
+  filePath: string;
+  line: number;
+  endLine?: number;
 }
 
 export interface MentionAutocompleteProps {
@@ -24,6 +35,7 @@ export interface MentionAutocompleteProps {
   onSelect: (mention: MentionItem) => void;
   onClose: () => void;
   isOpen: boolean;
+  symbolResults?: SymbolGraphNode[];
 }
 
 function FileIcon(): React.ReactElement {
@@ -96,10 +108,28 @@ function TerminalIcon(): React.ReactElement {
   );
 }
 
+function SymbolIcon(): React.ReactElement {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+    </svg>
+  );
+}
+
 function getMentionIcon(type: MentionType): React.ReactElement {
   if (type === 'file') return <FileIcon />;
   if (type === 'folder') return <FolderIcon />;
   if (type === 'diff') return <DiffIcon />;
+  if (type === 'symbol') return <SymbolIcon />;
   return <TerminalIcon />;
 }
 
@@ -132,6 +162,11 @@ function MentionResult({
           ? result.mention.path
           : result.mention.label}
       </span>
+      {result.mention.startLine != null && (
+        <span className="shrink-0 text-[10px] text-text-semantic-faint">
+          :{result.mention.startLine}
+        </span>
+      )}
       {result.description && (
         <span className="shrink-0 text-[10px] text-text-semantic-muted">{result.description}</span>
       )}
@@ -175,11 +210,11 @@ function useMentionAutocompleteState(
   props: MentionAutocompleteProps,
   listRef: React.RefObject<HTMLDivElement | null>,
 ) {
-  const { query, allFiles, selectedMentions, isOpen, onSelect, onClose } = props;
+  const { query, allFiles, selectedMentions, isOpen, onSelect, onClose, symbolResults } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const results = useMemo(
-    () => buildMentionResults(query, allFiles, selectedMentions, isOpen),
-    [query, allFiles, selectedMentions, isOpen],
+    () => buildMentionResults({ query, allFiles, selectedMentions, isOpen, symbolResults }),
+    [query, allFiles, selectedMentions, isOpen, symbolResults],
   );
   const handleKeyDown = useMentionAutocompleteKeyboard({
     isOpen,

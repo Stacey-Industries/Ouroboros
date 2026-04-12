@@ -7,7 +7,7 @@ import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import type { SlashCommandContext } from './SlashCommandMenu';
-import { useAgentChatContext } from './useAgentChatContext';
+import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
 
@@ -162,6 +162,9 @@ export function AgentChatWorkspace({
   }, []);
 
   useEffect(() => { model.setContextFilePaths(context.filePaths); }, [context.filePaths, model]);
+  useEffect(() => {
+    model.setMentionRanges(buildMentionRanges(context.mentions));
+  }, [context.mentions, model]);
   useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
 
   const slashCmd = useMemo<SlashCommandContext>(

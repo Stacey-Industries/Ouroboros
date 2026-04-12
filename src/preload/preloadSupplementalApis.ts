@@ -50,6 +50,7 @@ type SupplementalApiKey =
   | 'router'
   | 'rulesAndSkills'
   | 'ai'
+  | 'embedding'
   | 'workspace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
@@ -121,6 +122,8 @@ export const supplementalApis: SupplementalApis = {
 
   symbol: {
     search: (root) => ipcRenderer.invoke('symbol:search', root),
+    graphSearch: (query, projectRoot) =>
+      ipcRenderer.invoke('symbol:graphSearch', query, projectRoot),
   },
 
   lsp: {
@@ -315,6 +318,15 @@ export const supplementalApis: SupplementalApis = {
     inlineCompletion: (request) => ipcRenderer.invoke('ai:inline-completion', request),
     generateCommitMessage: (request) => ipcRenderer.invoke('ai:generate-commit-message', request),
     inlineEdit: (request) => ipcRenderer.invoke('ai:inline-edit', request),
+  },
+
+  embedding: {
+    search: (query: string, projectRoot: string, topK?: number) =>
+      ipcRenderer.invoke('embedding:search', query, projectRoot, topK),
+    getStatus: (projectRoot: string) =>
+      ipcRenderer.invoke('embedding:status', projectRoot),
+    reindex: (projectRoot: string) =>
+      ipcRenderer.invoke('embedding:reindex', projectRoot),
   },
 
   workspace: {

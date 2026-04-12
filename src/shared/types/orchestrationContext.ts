@@ -81,6 +81,7 @@ export interface ContextBudgetSummary {
   byteLimit?: number;
   tokenLimit?: number;
   droppedContentNotes: string[];
+  tierAllocation?: Record<string, number>;
 }
 
 export interface ContextPacketTaskMetadata {

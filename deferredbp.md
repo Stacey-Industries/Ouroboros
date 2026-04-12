@@ -103,20 +103,33 @@ Prop drilling, memoization, focus management, and the unified rendering initiati
 
 ---
 
-## Wave 5 — Competitive Feature Parity (Context & Completions)
+## Wave 5 — Competitive Feature Parity (Context & Completions) ✓ (v1.3.7)
 
-The features every competitor ships — ghost text, @-mentions, semantic search.
+Shipped @-mention enhancements, semantic codebase search with local+Voyage providers, tiered budget enforcement, and open-tab context for inline completions.
 
 ### Context Injection
 
-- **#100 — @-mention context injection in chat** — No `@file`, `@symbol`, `@folder`, `@web` injection in chat input. Table-stakes UX. Needs: autocomplete picker triggered by `@` keystroke, backed by file tree, LSP symbol index, graph search. Estimated: 1-2 weeks.
-- **#102 — Semantic codebase search (vector embeddings)** — Graph engine does string-based search only. Cursor (14.7% context utilization), Windsurf, VS Code Copilot all do semantic similarity. Without embeddings, context injection relies on structural graph traversal which misses semantically similar but textually distant code. Estimated: 2-4 weeks.
-- **#117 — Cross-session persistent embedding index** — No vector index persisted across sessions. Rebuilt from scratch each time. Without this, #102 rebuilds on every launch.
-- **#65 — Budget enforcement is greedy** — Snippets accepted in score order until budget exhausts. One large file early in ranking crowds out many smaller relevant ones. Should consider size-aware allocation. Directly affects how #100/#102 results are packed.
+- **#100 — ✓ @-mention context injection in chat** — Fuse.js fuzzy picker with `@file`, `@folder`, `@diff`, `@terminal`, `@symbol`, `@codebase` mention types. `MentionItem` extended with optional `startLine`/`endLine`/`symbolType` for symbol ranges. `symbol:graphSearch` IPC handler queries `graphStore.getNodesByType()`. Critical fix: `useAgentChatContext.ts` now merges `mentions[]` into `filePaths` at send time (previously dropped). `TaskRequestContextSelection.userSelectedRanges?` carries line-range data for symbol mentions through to `deriveSnippetCandidates`.
+- **#102 — ✓ Semantic codebase search (vector embeddings)** — Full SQLite-backed vector store (`embeddings.db` with BLOB vectors), brute-force cosine search, AST-aware chunker using graph node boundaries with fixed-window fallback. Dual provider support: local ONNX (`Xenova/all-MiniLM-L6-v2`, 384 dims, ~17ms/embedding, $0 cost) and Voyage AI (`voyage-code-3`, 1024 dims, higher quality). Hybrid retrieval via reciprocal rank fusion (`embeddingSearch.fuseResults`). `@codebase` is a special mention (flag semantics) — search runs at send time against the full message.
+- **#117 — ✓ Cross-session persistent embedding index** — SQLite persistence at `{projectRoot}/.ouroboros/embeddings.db`, content-hash deduplication (`hasChunkHash`), `model` column enables invalidation on provider switch. Incremental reindex only embeds chunks with changed content hashes.
+- **#65 — ✓ Budget enforcement reformed** — Two-pass tiered allocation: Tier 1 (user_selected/pinned) capped at 60%, Tier 2+ guaranteed remainder. `getFileTier()` classifies ranked files by top reason kind. Snippets sort by relevance-per-token ratio (score/estimatedTokens) instead of ascending length. `truncateToSignatures()` preserves head+tail for oversized files. `ContextBudgetSummary.tierAllocation` exposes per-tier bytes for transparency. 5 regression tests cover "large file doesn't crowd out small", tier-1 guaranteed allocation, tier-1 cap, structure-preserving truncation, and backward compat.
 
 ### Inline Completions
 
-- **#99 — Inline ghost text completion** — No tab-completion. Every major competitor (Cursor, Windsurf, VS Code Copilot, Zed) offers inline AI completions as ghost text. Needs: completion provider in CodeMirror/Monaco, fast inference endpoint, debounced trigger. `codemirror-ai` and `monacopilot` provide extension points. Estimated: 2-3 weeks.
+- **#99 — ✓ Inline ghost text — Phase 4 context enrichment** — Already production-ready in v1.3.6. This wave completed the deferred Phase 4: `editorRegistry.getOpenFilePaths()` exports mounted-editor paths. `monacoInlineCompletions.buildOpenTabContext()` populates `openTabContext` with first 50 lines of up to 5 open tabs (excluding current file). `aiHandlers.buildFimPrompt()` prepends `Context from open files:` section before the FIM tags when tabs are present. Completions are now context-aware across open files (e.g., suggests imports from open tabs).
+
+### Embedding Infrastructure
+
+- **Provider system** — `IEmbeddingProvider` interface with `embed(texts, inputType?)` supporting document vs query distinction (Voyage optimization). Three implementations: `createLocalOnnxProvider()`, `createVoyageProvider(apiKey)`, `createStubProvider()` (tests).
+- **IPC handlers** — `embedding:search`, `embedding:status`, `embedding:reindex`. Provider cached by `provider:hasKey` combo so Settings changes hot-swap without restart.
+- **Settings UI** — `GeneralSemanticSearchSubsection` in Settings → General after LSP: enable toggle, provider dropdown (local/voyage), conditional API key input, live index status display, reindex button. Config keys: `embeddingsEnabled`, `embeddingProvider`, `voyageApiKey`.
+- **Spike** — `spike/embedding-spike.ts` tests all three paths (Voyage API, Anthropic pseudo-embeddings, local ONNX). Quality test runs 4 semantic queries against real source files and verifies top-1 ranking matches expectations. Runnable via `spike/run-spike.ps1` (PowerShell) or `bash spike/run-spike.sh`.
+
+### Test Coverage
+
+- **26 embedding tests** — store (9), chunker (6), provider (5), indexer (3), search (3).
+- **5 budget enforcement regression tests** added to `contextPacketBuilder.test.ts`.
+- **6 reason-to-range tests** in new `contextPacketBuilderReasons.test.ts`.
 
 ---
 

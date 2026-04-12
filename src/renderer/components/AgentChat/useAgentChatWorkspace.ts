@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
+import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
 import { useRulesAndSkills } from '../../hooks/useRulesAndSkills';
 import type {
   AgentChatLinkedDetailsResult,
@@ -67,6 +68,7 @@ export interface AgentChatWorkspaceModel {
   selectThread: (threadId: string | null) => void;
   sendMessage: () => Promise<void>;
   setContextFilePaths: (paths: string[]) => void;
+  setMentionRanges: (ranges: UserSelectedFileRange[]) => void;
   setDraft: (value: string) => void;
   reloadThreads: () => Promise<void>;
   startNewChat: () => void;
@@ -84,12 +86,24 @@ export interface AgentChatWorkspaceModel {
 
 /* ---------- Controller ---------- */
 
-function useAgentChatWorkspaceController(projectRoot: string | null) {
+function useControllerState() {
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [contextFilePaths, setContextFilePaths] = useState<string[]>([]);
+  const [mentionRanges, setMentionRanges] = useState<UserSelectedFileRange[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
+  return {
+    draft, setDraft, isSending, setIsSending,
+    pendingUserMessage, setPendingUserMessage,
+    contextFilePaths, setContextFilePaths,
+    mentionRanges, setMentionRanges,
+    attachments, setAttachments,
+  };
+}
+
+function useAgentChatWorkspaceController(projectRoot: string | null) {
+  const state = useControllerState();
   const threadState = useThreadState({ projectRoot });
   const modelSettings = useModelSettings();
   const activeThread = useActiveThread(threadState.threads, threadState.activeThreadId);
@@ -98,7 +112,7 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
     activeThread?.latestOrchestration?.model,
     activeThread?.latestOrchestration?.effort,
   );
-  const queue = useQueueActions(threadState.activeThreadId, setDraft);
+  const queue = useQueueActions(threadState.activeThreadId, state.setDraft);
 
   useAgentChatEventSubscriptions({
     projectRootRef: threadState.projectRootRef,
@@ -106,25 +120,9 @@ function useAgentChatWorkspaceController(projectRoot: string | null) {
     setThreads: threadState.setThreads,
   });
 
-  useAgentChatDraftPersistence(threadState.activeThreadId, draft, setDraft);
+  useAgentChatDraftPersistence(threadState.activeThreadId, state.draft, state.setDraft);
 
-  return {
-    activeThread,
-    attachments,
-    contextFilePaths,
-    draft,
-    isSending,
-    pendingUserMessage,
-    ...modelSettings,
-    ...overrides,
-    ...queue,
-    setAttachments,
-    setContextFilePaths,
-    setDraft,
-    setIsSending,
-    setPendingUserMessage,
-    threadState,
-  };
+  return { activeThread, ...state, ...modelSettings, ...overrides, ...queue, threadState };
 }
 
 /* ---------- Public hook ---------- */

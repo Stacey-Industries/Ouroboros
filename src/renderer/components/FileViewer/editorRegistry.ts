@@ -42,6 +42,16 @@ export function unregisterMonacoEditor(filePath: string): void {
   monacoRegistry.delete(filePath)
 }
 
+// ── Open file paths ──────────────────────────────────────────────────────────
+
+/**
+ * Returns the file paths of all currently mounted editors (both CodeMirror and Monaco).
+ * Deduplicates paths that are open in both registries (should not happen in practice).
+ */
+export function getOpenFilePaths(): string[] {
+  return [...new Set([...cmRegistry.keys(), ...monacoRegistry.keys()])];
+}
+
 // ── Unified content access ───────────────────────────────────────────────────
 
 /**

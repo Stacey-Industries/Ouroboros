@@ -267,6 +267,12 @@ export interface AppConfig {
   lspEnabled: boolean;
   /** Whether inline AI completions (ghost text) are enabled */
   inlineCompletionsEnabled: boolean;
+  /** Whether semantic codebase search (vector embeddings) is enabled */
+  embeddingsEnabled: boolean;
+  /** Embedding provider: 'local' (Xenova ONNX) or 'voyage' (Voyage AI API) */
+  embeddingProvider: 'local' | 'voyage';
+  /** Voyage AI API key (used when embeddingProvider === 'voyage') */
+  voyageApiKey: string;
   /** Custom language server commands keyed by language id */
   lspServers: Record<string, string>;
   /** Auto-launch a Claude Code session on startup instead of a plain shell */

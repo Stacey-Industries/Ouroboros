@@ -19,8 +19,27 @@ function resolveModel(slotValue: string): string {
   return slotValue || DEFAULT_MODEL;
 }
 
-function buildFimPrompt(before: string, after: string): string {
-  return `<fim_prefix>${before}</fim_prefix>\n<fim_suffix>${after}</fim_suffix>\n<fim_middle>`;
+function buildFimPrompt(
+  before: string,
+  after: string,
+  openTabs?: Array<{ filePath: string; snippet: string }>,
+): string {
+  const parts: string[] = [];
+
+  if (openTabs?.length) {
+    parts.push('Context from open files:');
+    for (const tab of openTabs) {
+      parts.push(`--- ${tab.filePath} ---`);
+      parts.push(tab.snippet);
+    }
+    parts.push('');
+  }
+
+  parts.push(`<fim_prefix>${before}</fim_prefix>`);
+  parts.push(`<fim_suffix>${after}</fim_suffix>`);
+  parts.push('<fim_middle>');
+
+  return parts.join('\n');
 }
 
 const SYSTEM_PROMPT = [
@@ -35,6 +54,7 @@ interface CompletionRequest {
   languageId: string;
   textBeforeCursor: string;
   textAfterCursor: string;
+  openTabContext?: Array<{ filePath: string; snippet: string }>;
 }
 
 type CompletionResult = { success: boolean; completion?: string; error?: string };
@@ -66,7 +86,7 @@ async function callAnthropicApi(
   const slots = getConfigValue('modelSlots');
   const model = resolveModel(slots?.inlineCompletion ?? '');
   const client = await createAnthropicClient();
-  const prompt = buildFimPrompt(request.textBeforeCursor, request.textAfterCursor);
+  const prompt = buildFimPrompt(request.textBeforeCursor, request.textAfterCursor, request.openTabContext);
 
   const response = await client.messages.create(
     {

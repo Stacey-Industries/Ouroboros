@@ -33,7 +33,8 @@ export type ContextReasonKind =
   | 'keyword_match'
   | 'import_adjacency'
   | 'dependency'
-  | 'test_companion';
+  | 'test_companion'
+  | 'semantic_match';
 
 export type ContextConfidence = 'high' | 'medium' | 'low';
 
@@ -45,7 +46,8 @@ export type ContextSnippetSource =
   | 'manual_pin'
   | 'keyword_match'
   | 'import_adjacency'
-  | 'dirty_buffer';
+  | 'dirty_buffer'
+  | 'semantic_chunk';
 
 export type VerificationStepKind = 'command' | 'diagnostics' | 'git';
 
@@ -72,8 +74,16 @@ export interface OperationResult {
   error?: string;
 }
 
+export interface UserSelectedFileRange {
+  path: string;
+  startLine?: number;
+  endLine?: number;
+  symbolType?: string;
+}
+
 export interface TaskRequestContextSelection {
   userSelectedFiles: string[];
+  userSelectedRanges?: UserSelectedFileRange[];
   pinnedFiles: string[];
   includedFiles: string[];
   excludedFiles: string[];

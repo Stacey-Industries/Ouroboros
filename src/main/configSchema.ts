@@ -271,6 +271,19 @@ export const schema: Record<string, unknown> = {
     type: 'boolean',
     default: false,
   },
+  embeddingsEnabled: {
+    type: 'boolean',
+    default: false,
+  },
+  embeddingProvider: {
+    type: 'string',
+    enum: ['local', 'voyage'],
+    default: 'local',
+  },
+  voyageApiKey: {
+    type: 'string',
+    default: '',
+  },
   lspServers: {
     type: 'object',
     default: {},

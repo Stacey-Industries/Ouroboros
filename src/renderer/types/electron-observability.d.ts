@@ -103,8 +103,21 @@ export interface SymbolSearchResult extends IpcResult {
   symbols?: SymbolEntry[]
 }
 
+export interface SymbolGraphNode {
+  name: string
+  type: string
+  filePath: string
+  line: number
+  endLine?: number
+}
+
+export interface SymbolGraphSearchResult extends IpcResult {
+  results?: SymbolGraphNode[]
+}
+
 export interface SymbolAPI {
   search: (root: string) => Promise<SymbolSearchResult>
+  graphSearch: (query: string, projectRoot: string) => Promise<SymbolGraphSearchResult>
 }
 
 export interface LspCompletionItem {

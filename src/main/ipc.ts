@@ -16,6 +16,7 @@ import {
   cleanupAgentChatHandlers,
   cleanupConfigWatcher,
   cleanupFileWatchers,
+  closeEmbeddingStore,
   lspStopAll,
   registerAgentChatHandlers,
   registerAiHandlers,
@@ -24,6 +25,7 @@ import {
   registerClaudeMdHandlers,
   registerConfigHandlers,
   registerContextHandlers,
+  registerEmbeddingHandlers,
   registerExtensionStoreHandlers,
   registerFileHandlers,
   registerGitHandlers,
@@ -79,6 +81,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('search', () => registerSearchHandlers()),
     ...safeRegister('auth', () => registerAuthHandlers(senderWindow)),
     ...safeRegister('ai', () => registerAiHandlers()),
+    ...safeRegister('embedding', () => registerEmbeddingHandlers(senderWindow)),
     ...safeRegister('routerStats', () => registerRouterStatsHandlers()),
   ];
 }
@@ -228,6 +231,7 @@ export function cleanupIpcHandlers(): void {
   cleanupConfigWatcher();
 
   cleanupAgentChatHandlers();
+  closeEmbeddingStore();
   stopApprovalManagerCleanup();
 
   // Stop all LSP servers

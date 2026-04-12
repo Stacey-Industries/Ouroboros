@@ -33,6 +33,18 @@ function getChipColor(type: MentionType): { bg: string; border: string; text: st
         border: 'color-mix(in srgb, var(--palette-purple) 25%, transparent)',
         text: 'var(--palette-purple)',
       };
+    case 'symbol':
+      return {
+        bg: 'color-mix(in srgb, var(--status-info) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--status-info) 25%, transparent)',
+        text: 'var(--status-info)',
+      };
+    case 'codebase':
+      return {
+        bg: 'color-mix(in srgb, var(--status-warning) 8%, transparent)',
+        border: 'color-mix(in srgb, var(--status-warning) 25%, transparent)',
+        text: 'var(--status-warning)',
+      };
   }
 }
 
@@ -106,10 +118,28 @@ function TerminalChipIcon(): React.ReactElement {
   );
 }
 
+function SymbolChipIcon(): React.ReactElement {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" />
+    </svg>
+  );
+}
+
 function ChipIcon({ type }: { type: MentionType }): React.ReactElement {
   if (type === 'file') return <FileChipIcon />;
   if (type === 'folder') return <FolderChipIcon />;
   if (type === 'diff') return <DiffChipIcon />;
+  if (type === 'symbol') return <SymbolChipIcon />;
   return <TerminalChipIcon />;
 }
 
@@ -147,6 +177,9 @@ export function MentionChip({ mention, onRemove }: MentionChipProps): React.Reac
           ? truncatePath(mention.path)
           : mention.label}
       </span>
+      {mention.startLine != null && (
+        <span className="text-[9px] opacity-70">:{mention.startLine}</span>
+      )}
       <button
         onClick={(e) => {
           e.stopPropagation();

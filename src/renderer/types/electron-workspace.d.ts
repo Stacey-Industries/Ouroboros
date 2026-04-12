@@ -2,6 +2,7 @@ import type { AgentChatAPI } from './electron-agent-chat';
 import type { AiAPI } from './electron-ai';
 import type { AuthAPI } from './electron-auth';
 import type { ClaudeMdAPI } from './electron-claude-md';
+import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type { ExtensionsAPI } from './electron-extensions';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
@@ -257,6 +258,7 @@ export interface ElectronAPI {
   router: RouterAPI;
   rulesAndSkills: RulesAndSkillsAPI;
   ai: AiAPI;
+  embedding: EmbeddingAPI;
   workspace: WorkspaceAPI;
 }
 

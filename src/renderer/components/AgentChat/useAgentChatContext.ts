@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
 import { useProjectFileIndex } from '../../hooks/useProjectFileIndex';
 import type { FileEntry } from '../FileTree/FileListItem';
 import type { MentionItem } from './MentionAutocomplete';
@@ -164,7 +165,15 @@ export function useAgentChatContext(
 
   const totalTokens = useMemo(() => pinnedFiles.reduce((sum, f) => sum + f.estimatedTokens, 0), [pinnedFiles]);
   const contextSummary = useMemo(() => buildContextSummary(pinnedFiles, totalTokens), [pinnedFiles, totalTokens]);
-  const filePaths = useMemo(() => pinnedFiles.map((f) => f.path), [pinnedFiles]);
+  const filePaths = useMemo(() => {
+    const paths = pinnedFiles.map((f) => f.path);
+    for (const m of mentions) {
+      if (m.type === 'file' || m.type === 'folder' || m.type === 'symbol') {
+        if (!paths.includes(m.path)) paths.push(m.path);
+      }
+    }
+    return paths;
+  }, [pinnedFiles, mentions]);
 
   return {
     pinnedFiles, addFile, removeFile, clearFiles, contextSummary, totalTokens, filePaths,
@@ -172,3 +181,11 @@ export function useAgentChatContext(
     allFiles, mentions, addMention, removeMention,
   };
 }
+
+export function buildMentionRanges(mentions: MentionItem[]): UserSelectedFileRange[] {
+  return mentions
+    .filter((m) => m.type === 'symbol' && m.startLine != null)
+    .map((m) => ({ path: m.path, startLine: m.startLine, endLine: m.endLine, symbolType: m.symbolType }));
+}
+
+export type { UserSelectedFileRange };

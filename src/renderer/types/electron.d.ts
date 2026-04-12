@@ -3,6 +3,7 @@ import type { ElectronAPI } from './electron-workspace';
 export * from './electron-agent-chat';
 export * from './electron-auth';
 export * from './electron-claude-md';
+export * from './electron-embedding';
 export * from './electron-extension-store';
 export * from './electron-extensions';
 export * from './electron-foundation';

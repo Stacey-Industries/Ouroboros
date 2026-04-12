@@ -7,6 +7,8 @@
  */
 import * as monaco from 'monaco-editor';
 
+import { getEditorContent, getOpenFilePaths } from './editorRegistry';
+
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let requestId = 0;
 
@@ -52,6 +54,20 @@ function makeResult(
   return { items: [{ insertText: completion, range }] };
 }
 
+function buildOpenTabContext(
+  currentPath: string,
+): Array<{ filePath: string; snippet: string }> {
+  const openTabContext: Array<{ filePath: string; snippet: string }> = [];
+  const openPaths = getOpenFilePaths().filter((p) => p !== currentPath);
+  for (const tabPath of openPaths.slice(0, 5)) {
+    const content = getEditorContent(tabPath);
+    if (content) {
+      openTabContext.push({ filePath: tabPath, snippet: content.split('\n').slice(0, 50).join('\n') });
+    }
+  }
+  return openTabContext;
+}
+
 async function fetchCompletion(
   model: monaco.editor.ITextModel,
   position: monaco.Position,
@@ -61,11 +77,15 @@ async function fetchCompletion(
   const { before, after } = extractContext(model, position);
   if (!before.trim() && !after.trim()) return EMPTY;
 
+  const filePath = model.uri.path;
+  const openTabContext = buildOpenTabContext(filePath);
+
   const result = await window.electronAPI.ai.inlineCompletion({
-    filePath: model.uri.path,
+    filePath,
     languageId: model.getLanguageId(),
     textBeforeCursor: before,
     textAfterCursor: after,
+    openTabContext: openTabContext.length ? openTabContext : undefined,
   });
 
   if (token.isCancellationRequested || id !== requestId) return EMPTY;
