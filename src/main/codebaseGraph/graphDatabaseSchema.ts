@@ -3,15 +3,32 @@
  *
  * Extracted from graphDatabaseHelpers.ts to stay under the 300-line limit.
  * Import SCHEMA_SQL from here; do not duplicate it elsewhere.
+ *
+ * Schema versions:
+ *   0 → initial (no user_version set)
+ *   1 → added last_opened_at to projects; added graph_metadata table
  */
+
+// ─── Node label constants (informational — actual values are in graphDatabaseTypes.ts) ──
+// Labels: Project, Package, Folder, File, Module, Function, Method, Class,
+//         Interface, Type, Enum, Route, Variable, Export
+
+// ─── Edge type constants (informational — actual values are in graphDatabaseTypes.ts) ───
+// Types: CONTAINS_PACKAGE, CONTAINS_FOLDER, CONTAINS_FILE, DEFINES, DEFINES_METHOD,
+//        IMPORTS, CALLS, HTTP_CALLS, ASYNC_CALLS, IMPLEMENTS, HANDLES, USAGE,
+//        CONFIGURES, WRITES, MEMBER_OF, TESTS, USES_TYPE, FILE_CHANGES_WITH,
+//        EXPORTS, EXTENDS
+
+export const SCHEMA_VERSION = 1
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
-  name       TEXT PRIMARY KEY,
-  root_path  TEXT NOT NULL,
-  indexed_at INTEGER NOT NULL DEFAULT 0,
-  node_count INTEGER NOT NULL DEFAULT 0,
-  edge_count INTEGER NOT NULL DEFAULT 0
+  name            TEXT PRIMARY KEY,
+  root_path       TEXT NOT NULL,
+  indexed_at      INTEGER NOT NULL DEFAULT 0,
+  node_count      INTEGER NOT NULL DEFAULT 0,
+  edge_count      INTEGER NOT NULL DEFAULT 0,
+  last_opened_at  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS nodes (
@@ -62,6 +79,11 @@ CREATE TABLE IF NOT EXISTS project_summaries (
   created_at  INTEGER NOT NULL DEFAULT 0,
   updated_at  INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS graph_metadata (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+) STRICT;
 
 CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(
   name, qualified_name, file_path,

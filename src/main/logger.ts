@@ -17,6 +17,8 @@
 
 import { isMainThread } from 'worker_threads';
 
+import { wrapFileTransport } from './loggerQueue';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let log: any;
 
@@ -33,6 +35,8 @@ if (isMainThread) {
   electronLog.transports.file.getFile().writeAsync = true;
   // Register IPC listener so electron-log/renderer can forward logs to main.
   electronLog.initialize();
+  // Wrap the file transport with EMFILE retry logic (10ms→100ms→1000ms backoff).
+  wrapFileTransport(electronLog.transports.file);
   log = electronLog;
 } else {
   // Worker threads: console fallback (electron module unavailable).

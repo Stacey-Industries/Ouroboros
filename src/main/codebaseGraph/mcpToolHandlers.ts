@@ -57,7 +57,7 @@ const TOOL_SCHEMAS = {
   trace_call_path: { type: 'object', properties: { function_name: { type: 'string' }, direction: { type: 'string', enum: ['inbound', 'outbound', 'both'] }, depth: { type: 'number' }, risk_labels: { type: 'boolean' } }, required: ['function_name'] },
   detect_changes: { type: 'object', properties: { scope: { type: 'string', enum: ['unstaged', 'staged', 'all', 'branch'] }, base_branch: { type: 'string' }, depth: { type: 'number' } }, required: [] },
   query_graph: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
-  manage_adr: { type: 'object', properties: { mode: { type: 'string', enum: ['get', 'store', 'update', 'delete'] }, project: { type: 'string' }, content: { type: 'string' }, sections: { type: 'object' } }, required: ['mode'] },
+  manage_adr: { type: 'object', properties: { mode: { type: 'string', enum: ['list', 'get', 'store', 'update', 'delete'] }, project: { type: 'string' }, content: { type: 'string' }, sections: { type: 'object' } }, required: ['mode'] },
   ingest_traces: { type: 'object', properties: { traces: { type: 'string' } }, required: ['traces'] },
 } as const
 
@@ -80,6 +80,6 @@ export function createGraphMcpTools(context: GraphToolContext): McpToolDefinitio
     { name: 'detect_changes', description: 'Map uncommitted git changes to affected graph symbols and compute blast radius.', inputSchema: TOOL_SCHEMAS.detect_changes, handler: async (args: Record<string, unknown>) => { try { return await handleDetectChanges(args, queryEngine) } catch (err) { return `Error detecting changes: ${err instanceof Error ? err.message : String(err)}` } } },
     { name: 'query_graph', description: 'Execute a Cypher-like query against the codebase graph. Read-only, results capped at 200 rows.', inputSchema: TOOL_SCHEMAS.query_graph, handler: async (args: Record<string, unknown>) => { try { return formatQueryResult(cypherEngine.execute(args.query as string)) } catch (err) { return `Query error: ${err instanceof Error ? err.message : String(err)}` } } },
     { name: 'manage_adr', description: 'Manage Architecture Decision Records (ADR). Modes: get, store, update, delete.', inputSchema: TOOL_SCHEMAS.manage_adr, handler: async (args: Record<string, unknown>) => { try { return await handleManageAdr(args, context) } catch (err) { return `Error managing ADR: ${err instanceof Error ? err.message : String(err)}` } } },
-    { name: 'ingest_traces', description: 'Ingest OpenTelemetry traces to validate/strengthen HTTP_CALLS edges. (Stub)', inputSchema: TOOL_SCHEMAS.ingest_traces, handler: async (args: Record<string, unknown>) => handleIngestTraces(args) },
+    { name: 'ingest_traces', description: 'Ingest traces to add/strengthen HTTP_CALLS edges. Accepts {fromId, toId, type, weight?}[] as JSON string.', inputSchema: TOOL_SCHEMAS.ingest_traces, handler: async (args: Record<string, unknown>) => handleIngestTraces(args, context) },
   ]
 }

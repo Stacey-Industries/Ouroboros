@@ -72,7 +72,7 @@ function parseHookLine(line: string, connId: number): HookPayload | null {
   try {
     const parsed = JSON.parse(line);
     if (!isValidPayload(parsed)) {
-      log.warn(`#${connId} invalid payload shape - skipping`, JSON.stringify(parsed));
+      log.debug(`#${connId} invalid payload shape - skipping`, JSON.stringify(parsed));
       return null;
     }
     log.debug(`#${connId} valid payload: type=${parsed.type} session=${parsed.sessionId}`);
@@ -121,7 +121,7 @@ function tryAuthenticate(buffer: string, socket: net.Socket, connId: number): st
   if (nl === -1) return null; // incomplete — wait for more data
   const firstLine = buffer.slice(0, nl).trim();
   if (!validatePipeAuthWithGrace(firstLine, 'hooks')) {
-    log.warn(`#${connId} auth failed — rejecting`);
+    log.debug(`#${connId} auth failed — rejecting`);
     socket.end('{"error":"unauthorized"}\n');
     return null;
   }

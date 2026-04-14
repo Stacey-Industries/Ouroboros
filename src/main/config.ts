@@ -134,6 +134,13 @@ export interface ClaudeMdSettings {
   excludeDirs: string[];
 }
 
+export interface CodebaseGraphSettings {
+  /** Enable GC pruning of stale project graphs on startup */
+  gcEnabled: boolean;
+  /** Prune projects not opened within this many days (default: 90, max: 3650) */
+  gcDaysThreshold: number;
+}
+
 export interface RouterSettings {
   /** Master toggle — when false, router is bypassed entirely. */
   enabled: boolean;
@@ -330,6 +337,8 @@ export interface AppConfig {
   autoCheckpoint: boolean;
   /** Whether the user has dismissed the auth onboarding flow */
   authOnboardingDismissed: boolean;
+  /** Codebase graph settings (GC, etc.) */
+  codebaseGraph: CodebaseGraphSettings;
 }
 
 export const store = new Store<AppConfig>({

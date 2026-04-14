@@ -3,11 +3,13 @@
  * indexingPipeline.ts to keep the main file under the 300-line limit.
  */
 
-import { createHash } from 'crypto'
 import fs from 'fs/promises'
 import ignore from 'ignore'
 import path from 'path'
 
+import { xxh3 } from '@node-rs/xxhash'
+
+import { mapConcurrent } from './concurrency'
 import type { DiscoveredFile, IndexedFile } from './indexingPipelineTypes'
 import type { ExtractedDefinition } from './treeSitterTypes'
 
@@ -108,15 +110,6 @@ async function processFile(name: string, relPath: string, fullPath: string, ctx:
   } catch { /* stat failed, skip */ }
 }
 
-/** Walk a single directory entry and push to `files` if it passes filters. */
-async function processEntry(entry: import('fs').Dirent, dir: string, ctx: WalkContext): Promise<void> {
-  if (ctx.files.length >= ctx.maxFiles) return
-  const fullPath = path.join(dir, entry.name)
-  const relPath = path.relative(ctx.projectRoot, fullPath).replace(/\\/g, '/')
-  if (entry.isDirectory()) { await processDirectory(entry.name, relPath, fullPath, ctx); return }
-  if (entry.isFile()) await processFile(entry.name, relPath, fullPath, ctx)
-}
-
 async function walkDirectoryImpl(dir: string, ctx: WalkContext): Promise<void> {
   if (ctx.files.length >= ctx.maxFiles) return
 
@@ -128,8 +121,23 @@ async function walkDirectoryImpl(dir: string, ctx: WalkContext): Promise<void> {
     return
   }
 
-  for (const entry of entries) {
-    await processEntry(entry, dir, ctx)
+  const dirs = entries.filter((e) => e.isDirectory())
+  const fileEntries = entries.filter((e) => e.isFile())
+
+  // Batch fs.stat for all files in this directory concurrently.
+  await mapConcurrent(fileEntries, async (entry) => {
+    if (ctx.files.length >= ctx.maxFiles) return
+    const fullPath = path.join(dir, entry.name)
+    const relPath = path.relative(ctx.projectRoot, fullPath).replace(/\\/g, '/')
+    await processFile(entry.name, relPath, fullPath, ctx)
+  })
+
+  // Recurse into subdirectories sequentially to honour maxFiles cap correctly.
+  for (const entry of dirs) {
+    if (ctx.files.length >= ctx.maxFiles) break
+    const fullPath = path.join(dir, entry.name)
+    const relPath = path.relative(ctx.projectRoot, fullPath).replace(/\\/g, '/')
+    await processDirectory(entry.name, relPath, fullPath, ctx)
   }
 }
 
@@ -142,7 +150,8 @@ export async function walkDirectory(dir: string, ctx: WalkContext): Promise<void
 export async function hashFileContent(filePath: string): Promise<string> {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath from trusted discovery
   const content = await fs.readFile(filePath)
-  return createHash('sha256').update(content).digest('hex')
+  // xxh3 128-bit: ~3-5× faster than SHA-256; 128-bit avoids birthday collisions at 50k+ files
+  return xxh3.xxh128(content).toString(16).padStart(32, '0')
 }
 
 // ─── Definition pass helpers ──────────────────────────────────────────────────

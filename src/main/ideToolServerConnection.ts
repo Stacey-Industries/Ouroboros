@@ -131,7 +131,7 @@ export function handleSocketData(
     const firstLine = ctx.rawBuffer.slice(0, nl).trim();
     ctx.rawBuffer = ctx.rawBuffer.slice(nl + 1);
     if (!validatePipeAuthWithGrace(firstLine, 'tool')) {
-      log.warn(`#${connId} auth failed — rejecting`);
+      log.debug(`#${connId} auth failed — rejecting`);
       socket.end('{"error":"unauthorized"}\n');
       return;
     }

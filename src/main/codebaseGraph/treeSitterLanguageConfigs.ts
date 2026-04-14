@@ -4,6 +4,14 @@
  * Maps tree-sitter AST node types to our graph node labels for each supported
  * language. Includes route detection patterns for web frameworks (Express,
  * FastAPI, Gin, etc.) and an extension-to-config lookup.
+ *
+ * Grammar source (v0.3.1): @vscode/tree-sitter-wasm (wasm/ directory).
+ * Grammars present: typescript, tsx, javascript, python, go, rust, java,
+ *   cpp, ruby, php, c-sharp (filename: tree-sitter-c-sharp.wasm).
+ * Grammars absent from @vscode/tree-sitter-wasm, fallback to tree-sitter-wasms:
+ *   c (tree-sitter-c.wasm).
+ * Path resolution and c_sharp→c-sharp rename handled in treeSitterParser.ts
+ * resolveGrammarPath(). wasmFile values here use canonical underscore names.
  */
 
 import type { LanguageConfig } from './treeSitterTypes'

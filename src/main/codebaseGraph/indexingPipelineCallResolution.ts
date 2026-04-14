@@ -113,35 +113,62 @@ function resolveCallEdges(
   }
 }
 
-// ─── Public: Call Resolution Pass ─────────────────────────────────────────────
+// ─── Chunk helper ────────────────────────────────────────────────────────────
 
-export function callResolutionPass(
-  db: GraphDatabase,
-  projectName: string,
-  indexedFiles: IndexedFile[],
-): void {
-  const edges: Omit<GraphEdge, 'id'>[] = []
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
+  return chunks
+}
+
+// ─── Public: Call Resolution Pass ────────────────────────────────────────────
+
+function buildSymbolsByName(db: GraphDatabase, projectName: string): Map<string, string[]> {
   const symbolsByName = new Map<string, string[]>()
   const allDefinitions = db.getNodesByLabel(projectName, 'Function')
     .concat(db.getNodesByLabel(projectName, 'Method'))
-
   for (const node of allDefinitions) {
     const names = symbolsByName.get(node.name) ?? []
     names.push(node.id)
     symbolsByName.set(node.name, names)
   }
+  return symbolsByName
+}
 
-  const fileImportMap = buildFileImportMap(indexedFiles, projectName, symbolsByName)
-  const callCtx: CallResolutionContext = { projectName, symbolsByName, fileImportMap }
-  resolveCallEdges(indexedFiles, callCtx, edges)
-
+function deduplicateEdges(edges: Omit<GraphEdge, 'id'>[]): Omit<GraphEdge, 'id'>[] {
   const seen = new Set<string>()
-  const uniqueEdges = edges.filter((e) => {
+  return edges.filter((e) => {
     const key = `${e.source_id}|${e.target_id}|${e.type}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
   })
+}
 
-  db.insertEdges(uniqueEdges)
+function resolveChunkEdges(
+  files: IndexedFile[],
+  callCtx: CallResolutionContext,
+): Omit<GraphEdge, 'id'>[] {
+  const edges: Omit<GraphEdge, 'id'>[] = []
+  resolveCallEdges(files, callCtx, edges)
+  return deduplicateEdges(edges)
+}
+
+export function callResolutionPass(
+  db: GraphDatabase,
+  projectName: string,
+  indexedFiles: IndexedFile[],
+  options?: { chunkSize?: number },
+): void {
+  const symbolsByName = buildSymbolsByName(db, projectName)
+  const fileImportMap = buildFileImportMap(indexedFiles, projectName, symbolsByName)
+  const callCtx: CallResolutionContext = { projectName, symbolsByName, fileImportMap }
+  const size = options?.chunkSize
+  if (!size) {
+    db.insertEdges(resolveChunkEdges(indexedFiles, callCtx))
+    return
+  }
+  for (const chunk of chunkArray(indexedFiles, size)) {
+    db.transaction(() => db.insertEdges(resolveChunkEdges(chunk, callCtx)))
+  }
 }

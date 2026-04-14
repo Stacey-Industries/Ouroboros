@@ -65,8 +65,13 @@ export function buildHashAndProjectStatements(db: Database.Database): Record<str
     deleteFileHashes: db.prepare('DELETE FROM file_hashes WHERE project = ?'),
     deleteFileHash: db.prepare('DELETE FROM file_hashes WHERE project = ? AND rel_path = ?'),
     upsertProject: db.prepare(`
-      INSERT OR REPLACE INTO projects (name, root_path, indexed_at, node_count, edge_count)
+      INSERT INTO projects (name, root_path, indexed_at, node_count, edge_count)
       VALUES (@name, @root_path, @indexed_at, @node_count, @edge_count)
+      ON CONFLICT(name) DO UPDATE SET
+        root_path  = excluded.root_path,
+        indexed_at = excluded.indexed_at,
+        node_count = excluded.node_count,
+        edge_count = excluded.edge_count
     `),
     getProject: db.prepare('SELECT * FROM projects WHERE name = ?'),
     listProjects: db.prepare('SELECT * FROM projects ORDER BY name'),

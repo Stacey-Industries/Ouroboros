@@ -1,11 +1,17 @@
 /**
  * treeSitterParser.ts — WASM-based tree-sitter parser for multi-language
  * source code analysis. Extracts definitions, imports, calls, and routes.
+ *
+ * Grammars are loaded lazily on first use per extension and cached.
+ * Concurrent loads of the same grammar are deduped via pendingLanguageLoads.
+ * Grammar load failures mark the language as unsupported for the session
+ * (no retry noise) and parseFile returns null for those files.
  */
 
 import path from 'path'
 import Parser from 'web-tree-sitter'
 
+import log from '../logger'
 import { getLanguageConfig } from './treeSitterLanguageConfigs'
 import { extractSingleDefinition } from './treeSitterParserDefs'
 import {
@@ -32,9 +38,32 @@ const MAX_SIGNATURE_LENGTH = 200
 
 const TS_JS_LANGUAGES = new Set<LanguageId>(['typescript', 'tsx', 'javascript', 'jsx'])
 
+/**
+ * Resolve grammar WASM path. Prefers @vscode/tree-sitter-wasm; falls back to
+ * tree-sitter-wasms for grammars not present in the vscode package (e.g. C).
+ */
+function resolveGrammarPath(wasmFile: string): string {
+  const vscodeWasmFile = wasmFile.replace('tree-sitter-c_sharp', 'tree-sitter-c-sharp')
+  try {
+    const vscodeDir = path.dirname(require.resolve('@vscode/tree-sitter-wasm/package.json'))
+    const candidate = path.join(vscodeDir, 'wasm', vscodeWasmFile)
+    // require.resolve only works for JS modules, not .wasm files.
+    // Use a synchronous existence check via the fs module loaded at call-time.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs') as typeof import('fs')
+    if (fs.existsSync(candidate)) return candidate
+  } catch { /* package not installed */ }
+
+  // Fallback: tree-sitter-wasms (System 1 source, always present)
+  const fallbackDir = path.dirname(require.resolve('tree-sitter-wasms/package.json'))
+  return path.join(fallbackDir, 'out', wasmFile)
+}
+
 export class TreeSitterParser {
   private parser: Parser | null = null
   private languages = new Map<LanguageId, Parser.Language>()
+  private pendingLanguageLoads = new Map<LanguageId, Promise<Parser.Language | null>>()
+  private unsupportedLanguages = new Set<LanguageId>()
   private initialized = false
 
   // ─── Initialization ──────────────────────────────────────────────────────
@@ -59,15 +88,33 @@ export class TreeSitterParser {
 
   // ─── Language loading ─────────────────────────────────────────────────────
 
-  private async loadLanguage(config: LanguageConfig): Promise<Parser.Language> {
+  private async loadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
     const cached = this.languages.get(config.id)
     if (cached) return cached
+    if (this.unsupportedLanguages.has(config.id)) return null
 
-    const wasmDir = path.dirname(require.resolve('tree-sitter-wasms/package.json'))
-    const wasmPath = path.join(wasmDir, 'out', config.wasmFile)
-    const language = await Parser.Language.load(wasmPath)
-    this.languages.set(config.id, language)
-    return language
+    // Dedup: if a load is already in-flight for this language, await it.
+    const pending = this.pendingLanguageLoads.get(config.id)
+    if (pending) return pending
+
+    const load = this.doLoadLanguage(config)
+    this.pendingLanguageLoads.set(config.id, load)
+    return load
+  }
+
+  private async doLoadLanguage(config: LanguageConfig): Promise<Parser.Language | null> {
+    try {
+      const wasmPath = resolveGrammarPath(config.wasmFile)
+      const language = await Parser.Language.load(wasmPath)
+      this.languages.set(config.id, language)
+      return language
+    } catch (err) {
+      log.debug(`[treeSitterParser] grammar load failed for ${config.id}:`, err)
+      this.unsupportedLanguages.add(config.id)
+      return null
+    } finally {
+      this.pendingLanguageLoads.delete(config.id)
+    }
   }
 
   // ─── Main entry point ────────────────────────────────────────────────────
@@ -80,6 +127,7 @@ export class TreeSitterParser {
     if (!config) return null
 
     const language = await this.loadLanguage(config)
+    if (!language) return null
     this.parser.setLanguage(language)
     const tree = this.parser.parse(source)
     if (!tree) return null
@@ -298,6 +346,8 @@ export class TreeSitterParser {
       this.parser = null
     }
     this.languages.clear()
+    this.pendingLanguageLoads.clear()
+    this.unsupportedLanguages.clear()
     this.initialized = false
   }
 }

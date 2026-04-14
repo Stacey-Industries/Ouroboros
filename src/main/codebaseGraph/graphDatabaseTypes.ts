@@ -13,6 +13,8 @@ export type NodeLabel =
   | 'Type'
   | 'Enum'
   | 'Route'
+  | 'Variable'
+  | 'Export'
 
 // ─── Edge Types ──────────────────────────────────────────────────────────────
 
@@ -35,6 +37,8 @@ export type EdgeType =
   | 'TESTS'
   | 'USES_TYPE'
   | 'FILE_CHANGES_WITH'
+  | 'EXPORTS'
+  | 'EXTENDS'
 
 // ─── Node Properties (stored as JSON) ───────────────────────────────────────
 

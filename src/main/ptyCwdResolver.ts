@@ -52,7 +52,7 @@ export async function resolvePtyCwd(pid: number, fallbackCwd: string): Promise<s
       // Known limitation: Windows does not expose foreign process cwd without
       // elevated privileges or NtQueryInformationProcess. See issue #25.
       if (!warnedWindows) {
-        log.info('[ptyCwdResolver] Windows cwd resolution unsupported; returning spawn-time cwd');
+        log.debug('[ptyCwdResolver] Windows cwd resolution unsupported; returning spawn-time cwd');
         warnedWindows = true;
       }
       return fallbackCwd;

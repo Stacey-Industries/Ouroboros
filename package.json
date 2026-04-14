@@ -32,6 +32,7 @@
     "depcheck": "depcheck",
     "audit:prod": "npm audit --omit=dev",
     "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
+    "bench:indexer": "node scripts/benchmark-indexer.mjs",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
     "build:web": "vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
@@ -60,8 +61,10 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.39.17",
+    "@node-rs/xxhash": "^1.7.6",
     "@parcel/watcher": "^2.5.6",
     "@tanstack/react-virtual": "^3.13.23",
+    "@vscode/tree-sitter-wasm": "^0.3.1",
     "@xenova/transformers": "^2.17.2",
     "@xterm/addon-clipboard": "^0.2.0",
     "@xterm/addon-fit": "^0.11.0",
@@ -163,10 +166,12 @@
     "asarUnpack": [
       "**/node_modules/node-pty/**",
       "**/node_modules/better-sqlite3/**",
+      "**/node_modules/@vscode/tree-sitter-wasm/**",
       "**/node_modules/web-tree-sitter/**",
       "**/node_modules/tree-sitter-wasms/**",
       "**/node_modules/@parcel/watcher/**",
-      "**/node_modules/@parcel/watcher-*/**"
+      "**/node_modules/@parcel/watcher-*/**",
+      "**/node_modules/@node-rs/xxhash*/**"
     ],
     "extraResources": [
       {

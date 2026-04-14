@@ -259,4 +259,17 @@ export const tailSchema = {
     type: 'boolean',
     default: false,
   },
+  /** Wave 14 (Package 4) — codebase graph GC settings */
+  codebaseGraph: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      gcEnabled: { type: 'boolean', default: true },
+      gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 },
+    },
+    default: {
+      gcEnabled: true,
+      gcDaysThreshold: 90,
+    },
+  },
 };

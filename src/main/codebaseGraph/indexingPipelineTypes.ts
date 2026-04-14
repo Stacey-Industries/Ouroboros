@@ -44,6 +44,7 @@ export interface IndexingResult {
   errors: string[]
   durationMs: number
   incremental: boolean          // Was this an incremental reindex?
+  phaseTimingsMs?: Record<string, number>  // per-pass wall-clock time (ms)
 }
 
 // ─── Discovered file (from directory walk) ────────────────────────────────────

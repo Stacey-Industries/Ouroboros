@@ -161,3 +161,37 @@ export function cleanupPerfSubscriber(webContentsId: number): void {
 export function clearPerfSubscribers(): void {
   subscriberIds.clear()
 }
+
+// ─── Indexer completed event ─────────────────────────────────────────────────
+// NOTE: This emitter is currently UNWIRED — no caller invokes it yet.
+// It is provided for future integration in IndexingPipeline.index() once
+// the indexer result is plumbed back through the IPC layer to subscribers.
+
+export interface IndexerCompletedPayload {
+  durationMs: number
+  filesIndexed: number
+  nodesCreated: number
+  edgesCreated: number
+  phaseTimingsMs?: Record<string, number>
+  maxJankMs?: number
+}
+
+export function emitIndexerCompleted(payload: IndexerCompletedPayload): void {
+  if (!options) return
+  const windows = options.getActiveWindows()
+  for (const win of windows) {
+    try {
+      if (!win.isDestroyed()) {
+        win.webContents.send('perf:indexer-completed', payload)
+      }
+    } catch {
+      // Window may have been destroyed between check and send
+    }
+  }
+  broadcastToWebClients('perf:indexer-completed', payload)
+  log.info(
+    `[perf] indexer-completed: ${payload.filesIndexed} files, ` +
+    `${payload.nodesCreated} nodes, ${payload.edgesCreated} edges, ` +
+    `${Math.round(payload.durationMs)}ms`,
+  )
+}

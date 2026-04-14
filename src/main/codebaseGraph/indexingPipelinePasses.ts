@@ -9,6 +9,8 @@ import { createHash } from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
 
+import log from '../logger'
+import { mapConcurrent } from './concurrency'
 import type { GraphDatabase } from './graphDatabase'
 import type { GraphEdge, GraphNode } from './graphDatabaseTypes'
 import {
@@ -46,37 +48,46 @@ export function structurePass(
 
 // ─── Parse Pass (Pass 2) ─────────────────────────────────────────────────────
 
+async function readAndParseOne(
+  parser: TreeSitterParser,
+  file: DiscoveredFile,
+): Promise<IndexedFile> {
+  let content: string
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from trusted discovery
+    content = await fs.readFile(file.absolutePath, 'utf-8')
+  } catch {
+    return { ...file, contentHash: '', parsed: null }
+  }
+
+  const contentHash = createHash('sha256').update(content).digest('hex')
+  let parsed = null
+  try { parsed = await parser.parseFile(file.relativePath, content) } catch { /* skip */ }
+  return { ...file, contentHash, parsed }
+}
+
 export async function parsePass(
   parser: TreeSitterParser,
   files: DiscoveredFile[],
   onProgress?: (processed: number, total: number) => void,
 ): Promise<IndexedFile[]> {
-  const results: IndexedFile[] = []
   let processed = 0
+  const total = files.length
 
-  for (const file of files) {
-    let content: string
+  return mapConcurrent(files, async (file) => {
+    let result: IndexedFile
     try {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from trusted discovery
-      content = await fs.readFile(file.absolutePath, 'utf-8')
-    } catch {
-      results.push({ ...file, contentHash: '', parsed: null })
-      processed++
-      continue
+      result = await readAndParseOne(parser, file)
+    } catch (err) {
+      log.debug('[parsePass] per-file failure, skipping:', file.relativePath, err)
+      result = { ...file, contentHash: '', parsed: null }
     }
-
-    const contentHash = createHash('sha256').update(content).digest('hex')
-    let parsed = null
-    try { parsed = await parser.parseFile(file.relativePath, content) } catch { /* skip */ }
-
-    results.push({ ...file, contentHash, parsed })
     processed++
-    if (onProgress && (processed % 50 === 0 || processed === files.length)) {
-      onProgress(processed, files.length)
+    if (onProgress && (processed % 50 === 0 || processed === total)) {
+      onProgress(processed, total)
     }
-  }
-
-  return results
+    return result
+  })
 }
 
 // ─── Definition Pass (Pass 3) ─────────────────────────────────────────────────
@@ -126,46 +137,66 @@ function addRouteNodes(file: IndexedFile, fileQn: string, acc: NodeAccumulator):
   }
 }
 
-export function definitionPass(
-  db: GraphDatabase,
-  projectName: string,
-  indexedFiles: IndexedFile[],
-): void {
-  const acc: NodeAccumulator = { nodes: [], edges: [], projectName }
+// ─── Chunk helper ────────────────────────────────────────────────────────────
 
-  for (const file of indexedFiles) {
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
+  return chunks
+}
+
+// ─── Definition Pass (Pass 3, continued) ─────────────────────────────────────
+
+function processDefinitionChunk(db: GraphDatabase, projectName: string, files: IndexedFile[]): void {
+  const acc: NodeAccumulator = { nodes: [], edges: [], projectName }
+  for (const file of files) {
     if (!file.parsed) continue
     const fileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
     updateFileProps(db, fileQn, file)
     collectDefinitions(file, fileQn, acc)
     addRouteNodes(file, fileQn, acc)
   }
-
   db.insertNodes(acc.nodes)
   db.insertEdges(acc.edges)
 }
 
-// ─── Import Pass (Pass 4) ─────────────────────────────────────────────────────
-
-export function importPass(
+export function definitionPass(
   db: GraphDatabase,
   projectName: string,
   indexedFiles: IndexedFile[],
-  allFiles?: DiscoveredFile[],
+  options?: { chunkSize?: number },
+): void {
+  const size = options?.chunkSize
+  if (!size) {
+    processDefinitionChunk(db, projectName, indexedFiles)
+    return
+  }
+  for (const chunk of chunkArray(indexedFiles, size)) {
+    db.transaction(() => processDefinitionChunk(db, projectName, chunk))
+  }
+}
+
+// ─── Import Pass (Pass 4) ─────────────────────────────────────────────────────
+
+// ─── Import chunk helper ──────────────────────────────────────────────────────
+
+type ImportPassOptions = { allFiles?: DiscoveredFile[]; chunkSize?: number }
+
+function processImportChunk(
+  db: GraphDatabase,
+  projectName: string,
+  files: IndexedFile[],
+  fileQnMap: Map<string, string>,
 ): void {
   const edges: Omit<GraphEdge, 'id'>[] = []
-  const fileQnMap = buildFileQnMap(projectName, allFiles ?? indexedFiles)
-
-  for (const file of indexedFiles) {
+  for (const file of files) {
     if (!file.parsed) continue
     const sourceFileQn = `${projectName}.${file.relativePath.replace(/\//g, '.').replace(/\.[^.]+$/, '')}`
     const fileDir = path.posix.dirname(file.relativePath)
-
     for (const imp of file.parsed.imports) {
       const targetQn: string | null = imp.source.startsWith('.')
         ? resolveRelativeImport(imp.source, fileDir, fileQnMap)
         : getOrCreatePackageNode(db, projectName, imp.source)
-
       if (targetQn && targetQn !== sourceFileQn) {
         edges.push({
           project: projectName, source_id: sourceFileQn, target_id: targetQn,
@@ -175,6 +206,22 @@ export function importPass(
       }
     }
   }
-
   db.insertEdges(edges)
+}
+
+export function importPass(
+  db: GraphDatabase,
+  projectName: string,
+  indexedFiles: IndexedFile[],
+  options?: ImportPassOptions,
+): void {
+  const fileQnMap = buildFileQnMap(projectName, options?.allFiles ?? indexedFiles)
+  const size = options?.chunkSize
+  if (!size) {
+    processImportChunk(db, projectName, indexedFiles, fileQnMap)
+    return
+  }
+  for (const chunk of chunkArray(indexedFiles, size)) {
+    db.transaction(() => processImportChunk(db, projectName, chunk, fileQnMap))
+  }
 }

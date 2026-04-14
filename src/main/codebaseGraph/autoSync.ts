@@ -23,12 +23,22 @@ export interface AutoSyncOptions {
   onError?: (error: Error) => void
 }
 
+// ─── Launch diff result ───────────────────────────────────────────────────────
+
+export interface LaunchDiffResult {
+  changed: string[]
+  deleted: string[]
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /** Maximum files to check per poll cycle to avoid blocking the event loop. */
 const MAX_FILES_PER_POLL = 100
 
-/** Debounce window for rapid change events (ms). */
+/** Application-layer idle debounce on top of @parcel/watcher OS coalescing (ms). */
+const APP_DEBOUNCE_MS = 300
+
+/** Legacy 3s debounce for git commits and explicit triggers. */
 const DEBOUNCE_MS = 3000
 
 /** Threshold: if onFileChange receives more than this many paths, defer to polling. */
@@ -39,10 +49,14 @@ const IMMEDIATE_REINDEX_THRESHOLD = 5
 export class AutoSyncWatcher {
   private timer: ReturnType<typeof setTimeout> | null = null
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
+  private appDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private running = false
   private disposed = false
   private reindexing = false
   private pollIntervalMs: number
+
+  /** Accumulates file paths received during the 300ms app-layer debounce window. */
+  private pendingEvents: Map<string, number> = new Map()
 
   private opts: AutoSyncOptions
 
@@ -80,6 +94,10 @@ export class AutoSyncWatcher {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
+    }
+    if (this.appDebounceTimer) {
+      clearTimeout(this.appDebounceTimer)
+      this.appDebounceTimer = null
     }
   }
 
@@ -193,6 +211,97 @@ export class AutoSyncWatcher {
     } finally {
       this.reindexing = false
     }
+  }
+
+  // ─── Launch diff ──────────────────────────────────────────────────────────
+
+  /**
+   * Run init: perform a launch-time catalog diff to catch changes that
+   * happened while the IDE was closed, then trigger a reindex of stale files.
+   * Called by the registry during acquire(); not intended for direct use.
+   */
+  async initWithLaunchDiff(): Promise<void> {
+    if (this.disposed) return
+    try {
+      const diff = await this.onLaunchDiff()
+      const stale = [...diff.changed, ...diff.deleted]
+      if (stale.length > 0) {
+        await this.triggerReindex()
+      }
+    } catch (err) {
+      this.opts.onError?.(err instanceof Error ? err : new Error(String(err)))
+    }
+  }
+
+  /**
+   * Stat-only catalog diff (Continue.dev pattern).
+   * Compares each stored file_hash record's mtime_ns+size against the live FS.
+   * Returns paths whose mtime/size differ (changed) or are missing (deleted).
+   * Does NOT read file contents — O(N) stat calls only.
+   */
+  async onLaunchDiff(): Promise<LaunchDiffResult> {
+    const changed: string[] = []
+    const deleted: string[] = []
+    let hashes: ReturnType<typeof this.opts.db.getAllFileHashes>
+
+    try {
+      hashes = this.opts.db.getAllFileHashes(this.opts.projectName)
+    } catch {
+      return { changed, deleted }
+    }
+
+    for (const record of hashes) {
+      const absPath = path.join(this.opts.projectRoot, record.rel_path)
+      await this.classifyStoredFile(absPath, record, changed, deleted)
+    }
+
+    return { changed, deleted }
+  }
+
+  private async classifyStoredFile(
+    absPath: string,
+    record: ReturnType<typeof this.opts.db.getAllFileHashes>[number],
+    changed: string[],
+    deleted: string[],
+  ): Promise<void> {
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- absPath from trusted graph record
+      const stat = await fs.stat(absPath)
+      const mtimeNs = Math.floor(stat.mtimeMs * 1e6)
+      if (mtimeNs !== record.mtime_ns || stat.size !== record.size) {
+        changed.push(record.rel_path)
+      }
+    } catch {
+      deleted.push(record.rel_path)
+    }
+  }
+
+  // ─── Application-layer debounce (300ms) ───────────────────────────────────
+
+  /**
+   * Receives individual file-change events from @parcel/watcher (which already
+   * does OS-level coalescing at 50–500ms). Accumulates paths in pendingEvents
+   * and schedules a drain after 300ms of silence — handles editor atomic-save
+   * sequences where multiple writes arrive in rapid succession.
+   */
+  receiveWatcherEvent(filePath: string): void {
+    if (this.disposed) return
+
+    const current = this.pendingEvents.get(filePath) ?? 0
+    this.pendingEvents.set(filePath, current + 1)
+
+    if (this.appDebounceTimer) clearTimeout(this.appDebounceTimer)
+    this.appDebounceTimer = setTimeout(() => this.drainPendingEvents(), APP_DEBOUNCE_MS)
+  }
+
+  /** Flush all accumulated paths as a single batch and clear the map. */
+  private drainPendingEvents(): void {
+    this.appDebounceTimer = null
+    if (this.disposed || this.pendingEvents.size === 0) return
+
+    const paths = Array.from(this.pendingEvents.keys())
+    this.pendingEvents.clear()
+    this.onFileChange(paths)
   }
 
   // ─── Debouncing ───────────────────────────────────────────────────────────

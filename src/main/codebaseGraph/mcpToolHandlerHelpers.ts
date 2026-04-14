@@ -257,6 +257,11 @@ export async function handleManageAdr(
   const mode = args.mode as string;
 
   switch (mode) {
+    case 'list': {
+      const adrs = ctx.db.listAdrs()
+      if (adrs.length === 0) return 'No ADRs stored.'
+      return truncate(adrs.map((a) => `${a.project}: updated ${new Date(a.updated_at).toISOString()}`).join('\n'))
+    }
     case 'get':
       return handleAdrGet(proj, ctx);
     case 'store':

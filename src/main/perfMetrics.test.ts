@@ -258,3 +258,55 @@ describe('perfMetrics', () => {
     clearIntervalSpy.mockRestore()
   })
 })
+
+describe('emitIndexerCompleted', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    mockGetAppMetrics.mockReturnValue([])
+  })
+
+  it('broadcasts perf:indexer-completed to live windows', async () => {
+    const send = vi.fn()
+    const perfMetrics = await import('./perfMetrics')
+    perfMetrics.initializePerfMetrics({
+      getActiveWindows: () => [
+        { isDestroyed: () => false, webContents: { id: 9, send } } as never,
+      ],
+    })
+
+    const payload = {
+      durationMs: 1234,
+      filesIndexed: 50,
+      nodesCreated: 200,
+      edgesCreated: 400,
+      phaseTimingsMs: { structure: 10, definitions: 20 },
+    }
+    perfMetrics.emitIndexerCompleted(payload)
+
+    expect(send).toHaveBeenCalledWith('perf:indexer-completed', payload)
+  })
+
+  it('skips destroyed windows without throwing', async () => {
+    const send = vi.fn()
+    const perfMetrics = await import('./perfMetrics')
+    perfMetrics.initializePerfMetrics({
+      getActiveWindows: () => [
+        { isDestroyed: () => true, webContents: { id: 10, send } } as never,
+      ],
+    })
+
+    expect(() => {
+      perfMetrics.emitIndexerCompleted({ durationMs: 1, filesIndexed: 1, nodesCreated: 1, edgesCreated: 1 })
+    }).not.toThrow()
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when options not initialized', async () => {
+    const perfMetrics = await import('./perfMetrics')
+    // No initializePerfMetrics call — options is null
+    expect(() => {
+      perfMetrics.emitIndexerCompleted({ durationMs: 1, filesIndexed: 1, nodesCreated: 1, edgesCreated: 1 })
+    }).not.toThrow()
+  })
+})

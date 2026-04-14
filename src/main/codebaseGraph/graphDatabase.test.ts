@@ -869,5 +869,228 @@ describe('GraphDatabase', () => {
       expect(triggerNames).toContain('nodes_ad')
       expect(triggerNames).toContain('nodes_au')
     })
+
+    it('creates graph_metadata table (Package 2 schema)', () => {
+      const tables = db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='graph_metadata'",
+      ) as Array<{ name: string }>
+      expect(tables).toHaveLength(1)
+    })
+
+    it('projects table has last_opened_at column (Package 2 schema)', () => {
+      const cols = db.rawQuery('PRAGMA table_info(projects)') as Array<{ name: string }>
+      expect(cols.some((c) => c.name === 'last_opened_at')).toBe(true)
+    })
+
+    it('user_version is set to SCHEMA_VERSION after migration', () => {
+      const version = db.rawQuery('PRAGMA user_version') as Array<{ user_version: number }>
+      expect(version[0].user_version).toBe(1)
+    })
+  })
+
+  // ─── Migration: v0 → v1 ─────────────────────────────────────────────
+
+  describe('migration v0 → v1', () => {
+    it('migration is idempotent on a fresh DB (already at v1)', () => {
+      // A fresh :memory: DB runs through migration on construction.
+      // Creating a second instance should not throw.
+      const db2 = new GraphDatabase(':memory:')
+      const version = db2.rawQuery('PRAGMA user_version') as Array<{ user_version: number }>
+      expect(version[0].user_version).toBe(1)
+      db2.close()
+    })
+  })
+
+  // ─── Project GC helpers ──────────────────────────────────────────────
+
+  describe('touchProjectOpened / getProjectLastOpened', () => {
+    beforeEach(() => {
+      db.upsertProject(makeProject())
+    })
+
+    it('returns 0 (default) before touch', () => {
+      expect(db.getProjectLastOpened('test-project')).toBe(0)
+    })
+
+    it('updates last_opened_at after touch', () => {
+      const before = Date.now()
+      db.touchProjectOpened('test-project')
+      const after = Date.now()
+      const ts = db.getProjectLastOpened('test-project')
+      expect(ts).toBeGreaterThanOrEqual(before)
+      expect(ts).toBeLessThanOrEqual(after)
+    })
+
+    it('returns null for non-existent project', () => {
+      expect(db.getProjectLastOpened('nope')).toBeNull()
+    })
+
+    it('listAllProjects includes last_opened_at', () => {
+      db.upsertProject(makeProject({ name: 'alpha' }))
+      db.upsertProject(makeProject({ name: 'beta' }))
+      const projects = db.listAllProjects()
+      expect(projects.length).toBeGreaterThanOrEqual(2)
+      expect(projects[0]).toHaveProperty('name')
+      expect(projects[0]).toHaveProperty('last_opened_at')
+    })
+  })
+
+  // ─── Graph metadata ──────────────────────────────────────────────────
+
+  describe('setGraphMetadata / getGraphMetadata', () => {
+    it('stores and retrieves a key-value pair', () => {
+      db.setGraphMetadata('catalog_hash', 'abc123')
+      expect(db.getGraphMetadata('catalog_hash')).toBe('abc123')
+    })
+
+    it('returns null for missing key', () => {
+      expect(db.getGraphMetadata('nonexistent')).toBeNull()
+    })
+
+    it('overwrites existing value on re-set', () => {
+      db.setGraphMetadata('schema_version', '1')
+      db.setGraphMetadata('schema_version', '2')
+      expect(db.getGraphMetadata('schema_version')).toBe('2')
+    })
+
+    it('stores multiple independent keys', () => {
+      db.setGraphMetadata('key_a', 'val_a')
+      db.setGraphMetadata('key_b', 'val_b')
+      expect(db.getGraphMetadata('key_a')).toBe('val_a')
+      expect(db.getGraphMetadata('key_b')).toBe('val_b')
+    })
+  })
+
+  // ─── detectChangesForSession ─────────────────────────────────────────
+
+  describe('detectChangesForSession', () => {
+    beforeEach(() => {
+      db.upsertProject(makeProject())
+      db.insertNodes([
+        makeNode({ id: 'fn1', qualified_name: 'fn1', name: 'fn1', file_path: 'src/a.ts' }),
+        makeNode({ id: 'fn2', qualified_name: 'fn2', name: 'fn2', file_path: 'src/b.ts' }),
+        makeNode({ id: 'fn3', qualified_name: 'fn3', name: 'fn3', file_path: 'src/c.ts' }),
+      ])
+      db.insertEdges([
+        // fn2 calls fn1 (fn2 is a caller of fn1)
+        makeEdge({ source_id: 'fn2', target_id: 'fn1', type: 'CALLS' }),
+        // fn3 calls fn2
+        makeEdge({ source_id: 'fn3', target_id: 'fn2', type: 'CALLS' }),
+      ])
+    })
+
+    it('returns empty result when no files have stored hashes (all changed)', () => {
+      // No file_hashes stored → isFileChanged returns true for all
+      const result = db.detectChangesForSession('test-project', ['src/a.ts'])
+      expect(result.projectName).toBe('test-project')
+      expect(result.changedFiles).toContain('src/a.ts')
+      expect(result.affectedSymbols.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('returns empty affectedSymbols when sessionFiles is empty', () => {
+      const result = db.detectChangesForSession('test-project', [])
+      expect(result.changedFiles).toHaveLength(0)
+      expect(result.affectedSymbols).toHaveLength(0)
+      expect(result.blastRadius).toBe(0)
+    })
+
+    it('includes transitive callers up to 2 hops', () => {
+      // src/a.ts has no stored hash → considered changed
+      const result = db.detectChangesForSession('test-project', ['src/a.ts'])
+      const ids = result.affectedSymbols.map((s) => s.id)
+      // fn1 is in src/a.ts (hop 0), fn2 calls fn1 (hop 1), fn3 calls fn2 (hop 2)
+      expect(ids).toContain('fn1')
+      expect(ids).toContain('fn2')
+      expect(ids).toContain('fn3')
+    })
+
+    it('blastRadius equals affectedSymbols count', () => {
+      const result = db.detectChangesForSession('test-project', ['src/a.ts'])
+      expect(result.blastRadius).toBe(result.affectedSymbols.length)
+    })
+
+    it('result shape conforms to ChangedSymbolsForSession', () => {
+      const result = db.detectChangesForSession('test-project', ['src/a.ts'])
+      for (const sym of result.affectedSymbols) {
+        expect(typeof sym.id).toBe('string')
+        expect(typeof sym.name).toBe('string')
+        expect(typeof sym.label).toBe('string')
+        expect(typeof sym.hopDepth).toBe('number')
+      }
+    })
+  })
+
+  // ─── pruneProject ────────────────────────────────────────────────────
+
+  describe('pruneProject', () => {
+    beforeEach(() => {
+      db.upsertProject(makeProject())
+      db.insertNodes([
+        makeNode({ id: 'p1', qualified_name: 'p1', name: 'n1' }),
+        makeNode({ id: 'p2', qualified_name: 'p2', name: 'n2' }),
+      ])
+      db.insertEdge(makeEdge({ source_id: 'p1', target_id: 'p2' }))
+      db.upsertFileHash({ project: 'test-project', rel_path: 'src/a.ts', content_hash: 'h1', mtime_ns: 1, size: 100 })
+    })
+
+    it('deletes the project row and returns node/edge counts', () => {
+      const report = db.pruneProject('test-project')
+      expect(report.nodes).toBe(2)
+      expect(report.edges).toBe(1)
+      expect(db.getProject('test-project')).toBeNull()
+    })
+
+    it('deletes file hashes for the project', () => {
+      db.pruneProject('test-project')
+      expect(db.getAllFileHashes('test-project')).toHaveLength(0)
+    })
+
+    it('returns zero counts for a project with no data', () => {
+      db.upsertProject(makeProject({ name: 'empty-project' }))
+      const report = db.pruneProject('empty-project')
+      expect(report.nodes).toBe(0)
+      expect(report.edges).toBe(0)
+    })
+  })
+
+  // ─── writeCatalogHash / verifyCatalogHash ────────────────────────────
+
+  describe('writeCatalogHash / verifyCatalogHash', () => {
+    beforeEach(() => {
+      db.upsertProject(makeProject())
+      db.upsertFileHash({ project: 'test-project', rel_path: 'src/a.ts', content_hash: 'hash_a', mtime_ns: 1, size: 100 })
+      db.upsertFileHash({ project: 'test-project', rel_path: 'src/b.ts', content_hash: 'hash_b', mtime_ns: 2, size: 200 })
+    })
+
+    it('verifyCatalogHash returns true when no hash is stored (first run)', () => {
+      expect(db.verifyCatalogHash('test-project')).toBe(true)
+    })
+
+    it('writeCatalogHash stores a non-empty hash string', () => {
+      db.writeCatalogHash('test-project')
+      const stored = db.getGraphMetadata('catalog_hash:test-project')
+      expect(stored).not.toBeNull()
+      expect(stored!.length).toBe(32)
+    })
+
+    it('verifyCatalogHash returns true immediately after writing', () => {
+      db.writeCatalogHash('test-project')
+      expect(db.verifyCatalogHash('test-project')).toBe(true)
+    })
+
+    it('verifyCatalogHash returns false after file_hashes data changes', () => {
+      db.writeCatalogHash('test-project')
+      // Mutate the hash data after writing catalog hash
+      db.upsertFileHash({ project: 'test-project', rel_path: 'src/a.ts', content_hash: 'changed_hash', mtime_ns: 1, size: 100 })
+      expect(db.verifyCatalogHash('test-project')).toBe(false)
+    })
+
+    it('catalog hash is deterministic (stable sort by rel_path)', () => {
+      db.writeCatalogHash('test-project')
+      const first = db.getGraphMetadata('catalog_hash:test-project')
+      db.writeCatalogHash('test-project')
+      const second = db.getGraphMetadata('catalog_hash:test-project')
+      expect(first).toBe(second)
+    })
   })
 })

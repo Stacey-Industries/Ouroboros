@@ -3,6 +3,7 @@
  * mcpToolHandlers.ts to keep the factory function under the line limit.
  */
 
+import type { EdgeType } from './graphDatabaseTypes'
 import { truncate } from './mcpToolHandlerHelpers'
 import type { GraphToolContext } from './mcpToolHandlers'
 
@@ -134,10 +135,42 @@ export async function handleGetCodeSnippet(args: Record<string, unknown>, ctx: G
 
 // ─── ingest_traces handler ────────────────────────────────────────────────────
 
-export async function handleIngestTraces(args: Record<string, unknown>): Promise<string> {
+interface TraceEdgeInput {
+  fromId: string
+  toId: string
+  type: string
+  weight?: number
+}
+
+function parseTraces(raw: unknown): TraceEdgeInput[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (t): t is TraceEdgeInput =>
+      typeof t === 'object' && t !== null &&
+      typeof (t as TraceEdgeInput).fromId === 'string' &&
+      typeof (t as TraceEdgeInput).toId === 'string' &&
+      typeof (t as TraceEdgeInput).type === 'string',
+  )
+}
+
+export async function handleIngestTraces(
+  args: Record<string, unknown>,
+  ctx: GraphToolContext,
+): Promise<string> {
   try {
     const parsed = JSON.parse(args.traces as string)
-    const spanCount = Array.isArray(parsed) ? parsed.length : 1
-    return `Received ${spanCount} trace span(s). Trace ingestion is not yet fully implemented -- edges will be updated in a future release.`
-  } catch { return 'Error: invalid JSON trace data.' }
+    const traces = parseTraces(parsed)
+    if (traces.length === 0) return 'No valid trace edges in payload.'
+    const edges = traces.map((t) => ({
+      project: ctx.projectName,
+      source_id: t.fromId,
+      target_id: t.toId,
+      type: t.type as EdgeType,
+      props: t.weight !== undefined ? { weight: t.weight } : {},
+    }))
+    ctx.db.insertEdges(edges)
+    return `Ingested ${edges.length} trace edge(s) into project "${ctx.projectName}".`
+  } catch (err) {
+    return `Error ingesting traces: ${err instanceof Error ? err.message : String(err)}`
+  }
 }
