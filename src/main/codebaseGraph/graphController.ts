@@ -21,6 +21,7 @@ export {
   getGraphControllerForRoot,
   releaseGraphController,
   setGraphController,
+  type GraphControllerLike,
 } from './graphControllerSupport';
 import { GraphQueryEngine } from './graphQuery';
 import { GraphStore } from './graphStore';

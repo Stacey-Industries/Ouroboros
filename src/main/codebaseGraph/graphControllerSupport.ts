@@ -8,7 +8,58 @@ import path from 'path';
 import log from '../logger';
 import type { GraphController } from './graphController';
 import type { IGraphStore } from './graphStoreTypes';
-import type { GraphEdge, GraphNode } from './graphTypes';
+import type {
+  ArchitectureView,
+  CallPathResult,
+  ChangeDetectionResult,
+  CodeSnippetResult,
+  GraphEdge,
+  GraphNode,
+  GraphSchema,
+  GraphToolContext,
+  IndexStatus,
+  SearchResult,
+} from './graphTypes';
+
+// ---------------------------------------------------------------------------
+// GraphControllerLike — shared interface for System 1 and System 2 compat.
+//
+// Both GraphController and GraphControllerCompat conform to this interface
+// structurally. The registry stores GraphControllerLike so the factory can
+// register a GraphControllerCompat instance without a type cast.
+// ---------------------------------------------------------------------------
+
+export interface GraphControllerLike {
+  readonly rootPath: string;
+  getStatus(): IndexStatus;
+  indexStatus: () => IndexStatus;
+  getGraphToolContext(): GraphToolContext;
+  onSessionStart(): void;
+  onGitCommit(): void;
+  onFileChange(paths: string[]): void;
+  indexRepository(opts: {
+    projectRoot: string;
+    projectName: string;
+    incremental: boolean;
+  }): Promise<{ success: boolean }>;
+  listProjects(): string[];
+  deleteProject(projectRoot: string): { success: boolean };
+  detectChanges(): Promise<ChangeDetectionResult>;
+  detectChangesForSession(sessionId: string, files: string[]): Promise<ChangeDetectionResult>;
+  getArchitecture(aspects?: string[]): ArchitectureView;
+  getCodeSnippet(symbolId: string): Promise<CodeSnippetResult | null>;
+  getGraphSchema(): GraphSchema;
+  ingestTraces(traces: unknown[]): { success: boolean; ingested: number };
+  manageAdr(action: 'list' | 'get' | 'create' | 'update' | 'delete', id?: string): unknown;
+  queryGraph(query: string): Array<Record<string, unknown>>;
+  searchCode(
+    pattern: string,
+    opts?: { fileGlob?: string; maxResults?: number },
+  ): Promise<Array<{ filePath: string; line: number; match: string }>>;
+  searchGraph(query: string, limit?: number): SearchResult[];
+  traceCallPath(fromId: string, toId: string, maxDepth?: number): CallPathResult;
+  dispose(): Promise<void>;
+}
 
 // ---------------------------------------------------------------------------
 // Worker path helpers
@@ -108,21 +159,36 @@ export function manageAdrAction(
 }
 
 // ── Per-root registry (Zed model: keyed by normalized root, ref-counted) ──
+//
+// The registry stores GraphControllerLike so both System 1 (GraphController)
+// and System 2 (GraphControllerCompat) instances can be registered without
+// casting. Consumers receive GraphControllerLike from getGraphController().
 
 interface RegistryEntry {
-  controller: GraphController;
+  controller: GraphControllerLike;
   refCount: number;
 }
 
 const registry = new Map<string, RegistryEntry>();
 let defaultRoot: string | null = null;
 
+// Shared System 2 GraphDatabase instance — set by setSystem2Db() when the
+// System 2 path is enabled. Allows per-window acquireGraphController to
+// reuse the same DB connection rather than opening a new one per root.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- avoid direct import of GraphDatabase here to prevent eager load
+let _system2Db: any | null = null;
+
+/** Called once at startup (by initCodebaseGraphSystem2) with the shared DB. */
+export function setSystem2Db(db: unknown): void {
+  _system2Db = db;
+}
+
 function normalizeRoot(root: string): string {
   return root.replace(/\\/g, '/').replace(/\/+$/, '');
 }
 
 /** Legacy setter — registers as the default root instance. */
-export function setGraphController(controller: GraphController): void {
+export function setGraphController(controller: GraphControllerLike): void {
   const key = normalizeRoot(controller.rootPath);
   defaultRoot = key;
   registry.set(key, { controller, refCount: 1 });
@@ -130,24 +196,32 @@ export function setGraphController(controller: GraphController): void {
 
 /**
  * Backward-compat getter — returns the default root's controller.
+ * Returns GraphControllerLike (satisfied by both System 1 and System 2).
  * Callers without root context use this.
  */
-export function getGraphController(): GraphController | null {
+export function getGraphController(): GraphControllerLike | null {
   if (defaultRoot) return registry.get(defaultRoot)?.controller ?? null;
   const first = registry.values().next();
   return first.done ? null : first.value.controller;
 }
 
 /** Get the controller for a specific root. */
-export function getGraphControllerForRoot(root: string): GraphController | null {
+export function getGraphControllerForRoot(root: string): GraphControllerLike | null {
   return registry.get(normalizeRoot(root))?.controller ?? null;
 }
 
 /**
- * Acquire a graph controller for a root. Creates + initializes if
- * new, increments ref-count if already exists.
+ * Acquire a graph controller for a root. Creates + initializes if new,
+ * increments ref-count if already exists.
+ *
+ * When system2.enabled is true, delegates to the compat registry so every
+ * per-window acquire/release goes through System 2. The compat registry must
+ * already have been initialized via initCompatRegistry() (done by
+ * initCodebaseGraphSystem2 during startup) so _deps.db is the shared DB.
+ * This keeps windowManager unchanged — it always imports from
+ * graphControllerSupport via graphController.ts and gets the right impl.
  */
-export async function acquireGraphController(root: string): Promise<GraphController> {
+export async function acquireGraphController(root: string): Promise<GraphControllerLike> {
   const key = normalizeRoot(root);
   const existing = registry.get(key);
   if (existing) {
@@ -155,6 +229,31 @@ export async function acquireGraphController(root: string): Promise<GraphControl
     return existing.controller;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic to avoid circular dep at module init
+  const { getConfigValue } = require('../config') as typeof import('../config');
+  const s2Settings = getConfigValue('system2') as { enabled: boolean } | undefined;
+
+  if (s2Settings?.enabled) {
+    // System 2 path: delegate to compat registry, which uses the shared DB
+    // injected by initCompatRegistry() at startup. A new TreeSitterParser is
+    // created per root (stateless once initialized) but the DB is shared.
+    const compatRegistry = await import('./graphControllerCompatRegistry');
+    const { IndexingPipeline } = await import('./indexingPipeline');
+    const { TreeSitterParser } = await import('./treeSitterParser');
+    const parser = new TreeSitterParser();
+    await parser.init();
+    const { GraphDatabase } = await import('./graphDatabase');
+    // Reuse shared DB if startup already created it; otherwise open a new connection.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- _system2Db is typed as any to avoid eager import
+    const db = _system2Db ?? new GraphDatabase();
+    const pipeline = new IndexingPipeline(db, parser);
+    const compat = await compatRegistry.acquireGraphController(root, pipeline);
+    registry.set(key, { controller: compat, refCount: 1 });
+    if (!defaultRoot) defaultRoot = key;
+    return compat;
+  }
+
+  // System 1 path
   const { GraphController: GC } = await import('./graphController');
   const ctrl = new GC(root);
   await ctrl.initialize();

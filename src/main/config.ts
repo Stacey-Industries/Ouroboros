@@ -141,6 +141,11 @@ export interface CodebaseGraphSettings {
   gcDaysThreshold: number;
 }
 
+export interface System2Settings {
+  /** Phase C feature flag — when true, System 2 powers the graph engine. Default false. */
+  enabled: boolean;
+}
+
 export interface RouterSettings {
   /** Master toggle — when false, router is bypassed entirely. */
   enabled: boolean;
@@ -339,6 +344,8 @@ export interface AppConfig {
   authOnboardingDismissed: boolean;
   /** Codebase graph settings (GC, etc.) */
   codebaseGraph: CodebaseGraphSettings;
+  /** Phase C — System 2 graph engine feature flag (default: { enabled: false }) */
+  system2: System2Settings;
 }
 
 export const store = new Store<AppConfig>({

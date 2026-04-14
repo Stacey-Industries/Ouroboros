@@ -8,7 +8,6 @@ import { migrateSecretsIfNeeded } from './auth/secretMigration';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoller';
-import { getGraphController } from './codebaseGraph/graphController';
 import { getConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { closeCostHistoryDb } from './costHistory';
@@ -35,6 +34,7 @@ import {
   bootstrapCrashReporter,
   bootstrapProcessHandlers,
   configureAutoUpdater,
+  disposeCodebaseGraph,
   ensureSingleInstance,
   initCodebaseGraph,
   seedGithubTokenWithRetry,
@@ -293,7 +293,7 @@ app.on('will-quit', async () => {
   closeCostHistoryDb();
   closeThreadStore();
   deleteTokenFile(); // best-effort; ignore errors
-  try { await getGraphController()?.dispose(); }
+  try { await disposeCodebaseGraph(); }
   catch (err) { log.warn('Dispose error during shutdown:', err); }
   try { await (await import('./extensionHost/extensionHostProxy')).shutdownExtensionHost(); }
   catch (err) { log.warn('ExtensionHost shutdown error:', err); }

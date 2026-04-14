@@ -14,6 +14,12 @@ import {
   GraphController,
   setGraphController,
 } from './codebaseGraph/graphController';
+import {
+  initCompatRegistry,
+  acquireGraphController as acquireCompatController,
+} from './codebaseGraph/graphControllerCompatRegistry';
+import { setSystem2Db } from './codebaseGraph/graphControllerSupport';
+import { pruneExpiredProjects } from './codebaseGraph/graphGc';
 import { getConfigValue } from './config';
 import log from './logger';
 import { setGithubTokenForPty } from './ptyEnv';
@@ -151,6 +157,66 @@ export async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
 // Codebase graph initialization
 // ---------------------------------------------------------------------------
 
+async function initCodebaseGraphSystem2(projectRoot: string): Promise<void> {
+  const { GraphDatabase } = await import('./codebaseGraph/graphDatabase');
+  const { IndexingPipeline } = await import('./codebaseGraph/indexingPipeline');
+  const { TreeSitterParser } = await import('./codebaseGraph/treeSitterParser');
+  const { QueryEngine } = await import('./codebaseGraph/queryEngine');
+  const { CypherEngine } = await import('./codebaseGraph/cypherEngine');
+  const { IndexingWorkerClient } = await import('./codebaseGraph/indexingWorkerClient');
+
+  const db = new GraphDatabase();
+  setSystem2Db(db);
+
+  const workerClient = new IndexingWorkerClient();
+  initCompatRegistry({
+    db,
+    buildQueryEngine: (name, root) => new QueryEngine(db, name, root),
+    buildCypherEngine: (name) => new CypherEngine(db, name),
+    workerClient,
+  });
+
+  const projectName = path.basename(projectRoot);
+  const gcConfig = getConfigValue('codebaseGraph');
+  if (gcConfig?.gcEnabled) {
+    const report = pruneExpiredProjects(db, gcConfig.gcDaysThreshold);
+    if (report.prunedCount > 0) {
+      log.info(`[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`);
+    }
+  }
+
+  const hashOk = db.verifyCatalogHash(projectName);
+  if (!hashOk) {
+    log.info('[system2] catalog hash mismatch, triggering full rebuild');
+  }
+
+  const parser = new TreeSitterParser();
+  await parser.init();
+  const pipeline = new IndexingPipeline(db, parser);
+  const compat = await acquireCompatController(projectRoot, pipeline);
+  setGraphController(compat);
+  db.touchProjectOpened(projectName);
+  log.info(`[system2] controller initialized for ${projectName}`);
+}
+
+/**
+ * Dispose the active graph controller on app shutdown.
+ *
+ * When System 2 is enabled, calls disposeAllCompat() so the compat registry
+ * cleans up its watcher and System 2 resources.
+ * When System 1 is active, falls through to the standard dispose().
+ */
+export async function disposeCodebaseGraph(): Promise<void> {
+  const s2Config = getConfigValue('system2');
+  if (s2Config?.enabled) {
+    const { disposeAllCompat } = await import('./codebaseGraph/graphControllerCompatRegistry');
+    await disposeAllCompat();
+    return;
+  }
+  const { getGraphController } = await import('./codebaseGraph/graphController');
+  await getGraphController()?.dispose();
+}
+
 export async function initCodebaseGraph(): Promise<void> {
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   if (!defaultRoot) {
@@ -158,11 +224,18 @@ export async function initCodebaseGraph(): Promise<void> {
     return;
   }
 
+  const s2Config = getConfigValue('system2');
+  const useSystem2 = s2Config?.enabled === true;
+
   try {
-    const controller = new GraphController(defaultRoot);
-    await controller.initialize();
-    setGraphController(controller);
-    log.info('Controller initialized successfully');
+    if (useSystem2) {
+      await initCodebaseGraphSystem2(defaultRoot);
+    } else {
+      const controller = new GraphController(defaultRoot);
+      await controller.initialize();
+      setGraphController(controller);
+      log.info('Controller initialized successfully');
+    }
   } catch (err) {
     log.warn('Failed to start:', err);
   }
