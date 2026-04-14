@@ -3,7 +3,7 @@ import os from 'os';
 import type { ModelSlotAssignments } from './config';
 import { getConfigValue } from './config';
 import { getHooksNetAddress } from './hooksNet';
-import { getHooksToken, getToolServerToken } from './pipeAuth';
+import { getHooksToken, getTokenFilePath, getToolServerToken } from './pipeAuth';
 import { resolveModelEnv } from './providers';
 import { buildShellIntegrationEnv } from './shellIntegration/resolve';
 
@@ -56,9 +56,11 @@ export function buildBaseEnv(extraEnv?: Record<string, string>): Record<string, 
     : {};
   const hooksAddr = getHooksNetAddress();
   const hooksOverlay = hooksAddr ? { OUROBOROS_HOOKS_ADDRESS: hooksAddr } : {};
-  const pipeOverlay = {
+  const tokenFile = getTokenFilePath();
+  const pipeOverlay: Record<string, string> = {
     OUROBOROS_TOOL_TOKEN: getToolServerToken(),
     OUROBOROS_HOOKS_TOKEN: getHooksToken(),
+    ...(tokenFile ? { OUROBOROS_TOKEN_FILE: tokenFile } : {}),
   };
   return {
     ...process.env,

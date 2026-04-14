@@ -144,7 +144,7 @@ function openDevToolsInDevelopment(win: BrowserWindow): void {
 
 function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
   win.once('ready-to-show', () => {
-    markStartup('window-created');
+    markStartup('window-ready');
     if (state.isFirst && state.savedBounds?.isMaximized) win.maximize();
     win.show();
     openDevToolsInDevelopment(win);

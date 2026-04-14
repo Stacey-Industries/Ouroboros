@@ -36,6 +36,7 @@ interface ParsedUsage {
   sevenDayUsed: number | null;
   fiveHourResetsAt: string | null;
   sevenDayResetsAt: string | null;
+  stale?: boolean;
 }
 
 export function parseUsageText(raw: string): ParsedUsage {
@@ -186,6 +187,7 @@ function spawnPty(shellArgs: { shell: string; args: string[] }): pty.IPty {
 function attachPtyHandlers(
   term: pty.IPty,
   state: PtySessionState,
+  lastParseRef: { value: ParsedUsage | null },
   finish: (result: ParsedUsage | null, reason: string) => void,
 ): void {
   const timeout = setTimeout(() => {
@@ -198,14 +200,17 @@ function attachPtyHandlers(
       state.sentExit,
     );
     term.kill();
-    finish(null, 'timeout');
+    const staleResult = lastParseRef.value ? { ...lastParseRef.value, stale: true } : null;
+    finish(staleResult, 'timeout');
   }, SPAWN_TIMEOUT_MS);
   term.onData((data: string) => handlePtyData(state, data, term));
   term.onExit(({ exitCode }) => {
     clearTimeout(timeout);
     const parsed = parseUsageText(state.output);
     log.info('[claude-usage-poller] exited code:', exitCode, 'parsed:', JSON.stringify(parsed));
-    finish(parsed.fiveHourUsed !== null ? parsed : null, 'exit');
+    const result = parsed.fiveHourUsed !== null ? parsed : null;
+    lastParseRef.value = result;
+    finish(result, 'exit');
   });
 }
 
@@ -217,17 +222,19 @@ function spawnUsageQuery(): Promise<ParsedUsage | null> {
       sentUsage: false,
       sentExit: false,
     };
+    const lastParseRef: { value: ParsedUsage | null } = { value: null };
     let resolved = false;
     const finish = (result: ParsedUsage | null, reason: string): void => {
       if (resolved) return;
       resolved = true;
       activeTerm = null;
-      log.info(`[claude-usage-poller] finish(${reason}), result:`, JSON.stringify(result));
+      const tag = reason === 'timeout' && result ? 'stale' : reason === 'timeout' ? 'null' : reason;
+      log.info(`[claude-usage-poller] finish(${tag}), result:`, JSON.stringify(result));
       resolve(result);
     };
     const term = spawnPty(buildShellArgs());
     activeTerm = term;
-    attachPtyHandlers(term, state, finish);
+    attachPtyHandlers(term, state, lastParseRef, finish);
   });
 }
 

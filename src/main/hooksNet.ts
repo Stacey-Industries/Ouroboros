@@ -11,7 +11,7 @@ import net from 'net';
 import { getConfigValue } from './config';
 import type { HookPayload } from './hooks';
 import log from './logger';
-import { getHooksToken, validatePipeAuth } from './pipeAuth';
+import { validatePipeAuthWithGrace } from './pipeAuth';
 import { broadcastToWebClients } from './web/webServer';
 
 const PIPE_NAME = '\\\\.\\pipe\\agent-ide-hooks';
@@ -120,7 +120,7 @@ function tryAuthenticate(buffer: string, socket: net.Socket, connId: number): st
   const nl = buffer.indexOf('\n');
   if (nl === -1) return null; // incomplete — wait for more data
   const firstLine = buffer.slice(0, nl).trim();
-  if (!validatePipeAuth(firstLine, getHooksToken())) {
+  if (!validatePipeAuthWithGrace(firstLine, 'hooks')) {
     log.warn(`#${connId} auth failed — rejecting`);
     socket.end('{"error":"unauthorized"}\n');
     return null;

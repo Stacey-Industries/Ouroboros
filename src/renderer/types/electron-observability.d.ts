@@ -48,7 +48,7 @@ export interface PerfPingResult extends IpcResult {
  * over IPC (structured-clone drops it). Parse with BigInt(tsNs) if needed.
  */
 export interface StartupMark {
-  phase: 'app-ready' | 'window-created' | 'ipc-ready' | 'services-ready' | 'first-render'
+  phase: 'app-ready' | 'window-ready' | 'ipc-ready' | 'services-ready' | 'renderer-bundle-loaded' | 'react-root-created' | 'first-render'
   tsNs: string
   deltaMs: number
 }
@@ -100,6 +100,7 @@ export interface PerfAPI {
   subscribe: () => Promise<IpcResult>
   unsubscribe: () => Promise<IpcResult>
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void
+  mark: (phase: StartupMark['phase']) => Promise<IpcResult>
   markFirstRender: () => Promise<IpcResult>
   getStartupTimings: () => Promise<StartupTimingsResult>
   getRuntimeMetrics: () => Promise<RuntimeMetricsResult>

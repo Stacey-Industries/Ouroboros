@@ -35,12 +35,34 @@ $ApprovalsDir = Join-Path $env:USERPROFILE '.ouroboros\approvals'
 $PollIntervalMs = 500
 $MaxPollSeconds = 15  # max time to wait for approval before approving by default
 
+# -- Load tokens (disk-first for cross-restart grace, env-var fallback) --------
+# The IDE writes {userData}/session-tokens.json on each startup. Hook scripts
+# from a prior IDE launch read this file to get the new token instead of using
+# the stale value frozen in their env. Falls back to env vars for compatibility
+# with older IDE builds that don't write the file.
+#
+# Path resolution order:
+#   1. OUROBOROS_TOKEN_FILE env var  (explicit override / test injection)
+#   2. Well-known platform path      (works from external terminals with no IDE env)
+#   3. OUROBOROS_HOOKS_TOKEN / OUROBOROS_TOOL_TOKEN env vars (IDE-spawned sessions)
+. "$PSScriptRoot\_token-lookup.ps1"
+$hooksToken = $env:OUROBOROS_HOOKS_TOKEN
+$toolToken  = $env:OUROBOROS_TOOL_TOKEN
+$_tokenFile = Get-OuroborosTokenFile
+if (-not [string]::IsNullOrEmpty($_tokenFile) -and (Test-Path $_tokenFile)) {
+    try {
+        $tokenData = Get-Content -Path $_tokenFile -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ($tokenData.hooksToken) { $hooksToken = $tokenData.hooksToken }
+        if ($tokenData.toolToken)  { $toolToken  = $tokenData.toolToken  }
+    } catch { }
+}
+
 # Skip entirely for sessions not spawned by Ouroboros. The hook is installed
 # in the user's global ~/.claude/settings.json so it fires for every Claude
 # CLI session on this machine — including standalone ones. Without a valid
 # token the server will reject the auth anyway, and the old code still polled
 # 120s for an approval that could never arrive. Bail out fast.
-if ([string]::IsNullOrEmpty($env:OUROBOROS_HOOKS_TOKEN)) { exit 0 }
+if ([string]::IsNullOrEmpty($hooksToken)) { exit 0 }
 
 # -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
@@ -96,7 +118,7 @@ $line = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
 # Auth line — required by the IDE's pipe auth protocol
-$authLine  = '{"auth":"' + $env:OUROBOROS_HOOKS_TOKEN + '"}' + "`n"
+$authLine  = '{"auth":"' + $hooksToken + '"}' + "`n"
 $authBytes = [System.Text.Encoding]::UTF8.GetBytes($authLine)
 
 # -- Send via named pipe -------------------------------------------------------
@@ -155,7 +177,7 @@ if (-not $sent) { exit 0 }
 $decision = $null
 $reason   = $null
 
-if (-not [string]::IsNullOrEmpty($env:OUROBOROS_TOOL_TOKEN)) {
+if (-not [string]::IsNullOrEmpty($toolToken)) {
     try {
         $toolPipe = New-Object System.IO.Pipes.NamedPipeClientStream(
             '.', 'ouroboros-tools',
@@ -164,7 +186,7 @@ if (-not [string]::IsNullOrEmpty($env:OUROBOROS_TOOL_TOKEN)) {
         )
         $toolPipe.Connect(2000)
 
-        $toolAuthLine    = '{"auth":"' + $env:OUROBOROS_TOOL_TOKEN + '"}' + "`n"
+        $toolAuthLine    = '{"auth":"' + $toolToken + '"}' + "`n"
         $toolAuthBytes   = [System.Text.Encoding]::UTF8.GetBytes($toolAuthLine)
         $waitRequest     = '{"id":"aw-' + $requestId + '","method":"approval.wait","params":{"requestId":"' + $requestId + '","timeoutMs":' + ($MaxPollSeconds * 1000) + '}}' + "`n"
         $waitRequestBytes = [System.Text.Encoding]::UTF8.GetBytes($waitRequest)

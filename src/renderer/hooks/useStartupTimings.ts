@@ -1,15 +1,15 @@
 /**
  * useStartupTimings.ts — Hook for fetching startup phase timing marks.
  *
- * Polls every 5 seconds until all 5 expected marks are present, then stops.
- * `isComplete` gates the "all timings collected" state (5 phases minimum).
+ * Polls every 5 seconds until all 7 expected marks are present, then stops.
+ * `isComplete` gates the "all timings collected" state (7 phases minimum).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { StartupMark } from '../types/electron';
 
-const EXPECTED_PHASE_COUNT = 5;
+const EXPECTED_PHASE_COUNT = 7;
 const POLL_INTERVAL_MS = 5000;
 
 export interface UseStartupTimingsResult {

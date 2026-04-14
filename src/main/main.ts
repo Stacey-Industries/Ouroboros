@@ -48,7 +48,7 @@ import {
   startPerfMetrics as startManagedPerfMetrics,
   stopPerfMetrics as stopManagedPerfMetrics,
 } from './perfMetrics';
-import { generatePipeTokens } from './pipeAuth';
+import { deleteTokenFile, generatePipeTokens, setTokenFilePath } from './pipeAuth';
 import { killAllPtySessions } from './pty';
 import { clearQualityTimers } from './router/qualitySignalCollector';
 import {
@@ -233,6 +233,7 @@ async function initializeApplication(): Promise<void> {
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
   await migrateSecretsIfNeeded();
+  setTokenFilePath(app.getPath('userData'));
   generatePipeTokens();
   installHandlerCapture();
 
@@ -289,6 +290,7 @@ app.on('will-quit', async () => {
   cleanupIpcHandlers();
   closeCostHistoryDb();
   closeThreadStore();
+  deleteTokenFile(); // best-effort; ignore errors
   try { await getGraphController()?.dispose(); }
   catch (err) { log.warn('Dispose error during shutdown:', err); }
   try { await (await import('./extensionHost/extensionHostProxy')).shutdownExtensionHost(); }

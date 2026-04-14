@@ -15,7 +15,7 @@ import {
   writeToolResponse,
 } from './ideToolServerHelpers';
 import log from './logger';
-import { getToolServerToken, validatePipeAuth } from './pipeAuth';
+import { validatePipeAuthWithGrace } from './pipeAuth';
 
 // ─── Request dispatch ─────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ export function handleSocketData(
     if (nl === -1) return;
     const firstLine = ctx.rawBuffer.slice(0, nl).trim();
     ctx.rawBuffer = ctx.rawBuffer.slice(nl + 1);
-    if (!validatePipeAuth(firstLine, getToolServerToken())) {
+    if (!validatePipeAuthWithGrace(firstLine, 'tool')) {
       log.warn(`#${connId} auth failed — rejecting`);
       socket.end('{"error":"unauthorized"}\n');
       return;

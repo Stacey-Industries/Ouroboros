@@ -20,6 +20,22 @@ if [ -n "${OUROBOROS_HOOKS_ADDRESS:-}" ]; then
     esac
 fi
 
+# ── Load tokens (disk-first for cross-restart grace, env-var fallback) ────────
+# Path resolution order: OUROBOROS_TOKEN_FILE env var → well-known platform path
+# → OUROBOROS_HOOKS_TOKEN env var (IDE-spawned sessions).
+# shellcheck source=_token-lookup.sh
+. "$(dirname "$0")/_token-lookup.sh"
+_hooks_token="${OUROBOROS_HOOKS_TOKEN:-}"
+_token_file="$(get_ouroboros_token_file)"
+if [ -f "$_token_file" ]; then
+    if command -v jq &>/dev/null; then
+        _file_hooks=$(jq -r '.hooksToken // empty' "$_token_file" 2>/dev/null || true)
+    elif command -v python3 &>/dev/null; then
+        _file_hooks=$(python3 -c "import json; d=json.load(open('$_token_file')); print(d.get('hooksToken',''))" 2>/dev/null || true)
+    fi
+    [ -n "${_file_hooks:-}" ] && _hooks_token="$_file_hooks"
+fi
+
 # ── Read stdin ────────────────────────────────────────────────────────────────
 stdin_data=""
 if read -t "$TIMEOUT" -r line 2>/dev/null; then
@@ -63,7 +79,7 @@ payload="{\"type\":\"session_start\",\"sessionId\":${j_session},\"timestamp\":${
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then payload="${payload},\"internal\":true"; fi
 if [ "${OUROBOROS_IDE_SESSION:-}" = "1" ]; then payload="${payload},\"ideSpawned\":true"; fi
 payload="${payload}}"
-auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+auth_line='{"auth":"'"${_hooks_token}"'"}'$'\n'
 ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────

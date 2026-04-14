@@ -8,6 +8,10 @@ import { createRoot } from 'react-dom/client';
 
 import App from './App';
 
+// renderer-bundle-loaded: bundle is parsed, all top-level imports resolved.
+// Fires before React mounts — captures Vite transform + chunk-load time.
+window.electronAPI?.perf?.mark?.('renderer-bundle-loaded').catch(() => void 0);
+
 // ── Root error boundary ───────────────────────────────────────────────────────
 // Inline intentionally — must work even if the module graph or CSS has failed.
 // Same pattern as ChatErrorBoundary in InnerAppLayout.tsx.
@@ -137,6 +141,9 @@ const root =
   createRoot(rootElement);
 (rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot = root;
 
+// react-root-created: createRoot() returned; React tree not yet committed.
+window.electronAPI?.perf?.mark?.('react-root-created').catch(() => void 0);
+
 root.render(
   <StrictMode>
     <RootErrorBoundary>
@@ -145,10 +152,11 @@ root.render(
   </StrictMode>,
 );
 
-// Double-rAF guarantees first frame is committed before marking
+// Double-rAF guarantees first frame is committed before marking.
+// Uses perf.mark('first-render') which also flushes the startup log.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    window.electronAPI.perf.markFirstRender().catch(() => void 0);
+    window.electronAPI.perf.mark('first-render').catch(() => void 0);
   });
 });
 

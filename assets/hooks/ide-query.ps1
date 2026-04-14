@@ -33,6 +33,19 @@ $ErrorActionPreference = 'Stop'
 $PipeName = 'ouroboros-tools'
 $TimeoutMs = 10000
 
+# -- Load tokens (disk-first for cross-restart grace, env-var fallback) --------
+# Path resolution order: OUROBOROS_TOKEN_FILE env var → well-known platform path
+# → OUROBOROS_TOOL_TOKEN env var (IDE-spawned sessions).
+. "$PSScriptRoot\_token-lookup.ps1"
+$toolToken = $env:OUROBOROS_TOOL_TOKEN
+$_tokenFile = Get-OuroborosTokenFile
+if (-not [string]::IsNullOrEmpty($_tokenFile) -and (Test-Path $_tokenFile)) {
+    try {
+        $tokenData = Get-Content -Path $_tokenFile -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($tokenData.toolToken) { $toolToken = $tokenData.toolToken }
+    } catch { }
+}
+
 # Generate a unique request ID
 $requestId = [System.Guid]::NewGuid().ToString('N').Substring(0, 16)
 
@@ -46,7 +59,7 @@ $request = @{
 $requestBytes = [System.Text.Encoding]::UTF8.GetBytes($request + "`n")
 
 # Auth line — required by the IDE's tool pipe auth protocol
-$authLine  = '{"auth":"' + $env:OUROBOROS_TOOL_TOKEN + '"}' + "`n"
+$authLine  = '{"auth":"' + $toolToken + '"}' + "`n"
 $authBytes = [System.Text.Encoding]::UTF8.GetBytes($authLine)
 
 try {

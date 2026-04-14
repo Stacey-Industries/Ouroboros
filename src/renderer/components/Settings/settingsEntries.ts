@@ -293,7 +293,7 @@ const PROVIDER_ENTRIES = createEntries('providers', 'Providers', [
 ]);
 
 const PERFORMANCE_ENTRIES = createEntries('performance', 'Performance', [
-  ['Startup Timings', 'View per-phase app startup times: app-ready, window-created, ipc-ready, services-ready, first-render.'],
+  ['Startup Timings', 'View per-phase app startup times: app-ready, window-ready, ipc-ready, services-ready, renderer-bundle-loaded, react-root-created, first-render.'],
   ['Runtime Metrics', 'Live heap used/total, external memory, and CPU usage. Updated every 5 seconds.'],
   ['Heap Usage', 'View current and total V8 heap allocation.'],
   ['CPU Usage', 'View main-process CPU percentage snapshot.'],

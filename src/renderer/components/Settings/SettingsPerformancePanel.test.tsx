@@ -27,11 +27,13 @@ function totalMs(timings: Array<{ tsNs: string }>): number {
 }
 
 const SAMPLE_TIMINGS = [
-  { phase: 'app-ready',      tsNs: '1000000000', deltaMs: 0 },
-  { phase: 'window-created', tsNs: '1050000000', deltaMs: 50 },
-  { phase: 'ipc-ready',      tsNs: '1080000000', deltaMs: 30 },
-  { phase: 'services-ready', tsNs: '1120000000', deltaMs: 40 },
-  { phase: 'first-render',   tsNs: '1200000000', deltaMs: 80 },
+  { phase: 'app-ready',              tsNs: '1000000000', deltaMs: 0 },
+  { phase: 'window-ready',           tsNs: '1050000000', deltaMs: 50 },
+  { phase: 'ipc-ready',              tsNs: '1080000000', deltaMs: 30 },
+  { phase: 'services-ready',         tsNs: '1120000000', deltaMs: 40 },
+  { phase: 'renderer-bundle-loaded', tsNs: '1150000000', deltaMs: 30 },
+  { phase: 'react-root-created',     tsNs: '1170000000', deltaMs: 20 },
+  { phase: 'first-render',           tsNs: '1200000000', deltaMs: 30 },
 ];
 
 describe('SettingsPerformancePanel', () => {
@@ -71,12 +73,12 @@ describe('SettingsPerformancePanel', () => {
   });
 
   describe('isComplete threshold', () => {
-    it('is complete when 5 or more timings are present', () => {
-      expect(SAMPLE_TIMINGS.length >= 5).toBe(true);
+    it('is complete when 7 or more timings are present', () => {
+      expect(SAMPLE_TIMINGS.length >= 7).toBe(true);
     });
 
-    it('is not complete when fewer than 5 timings are present', () => {
-      expect(SAMPLE_TIMINGS.slice(0, 3).length >= 5).toBe(false);
+    it('is not complete when fewer than 7 timings are present', () => {
+      expect(SAMPLE_TIMINGS.slice(0, 5).length >= 7).toBe(false);
     });
   });
 });

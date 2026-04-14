@@ -26,11 +26,33 @@ fi
 POLL_INTERVAL=0.5  # seconds
 MAX_POLL_SECONDS=15  # approve by default after this; avoids the old 2-minute stall
 
+# -- Load tokens (disk-first for cross-restart grace, env-var fallback) --------
+# Path resolution order:
+#   1. OUROBOROS_TOKEN_FILE env var  (explicit override / test injection)
+#   2. Well-known platform path      (works from external terminals with no IDE env)
+#   3. OUROBOROS_HOOKS_TOKEN / OUROBOROS_TOOL_TOKEN env vars (IDE-spawned sessions)
+# shellcheck source=_token-lookup.sh
+. "$(dirname "$0")/_token-lookup.sh"
+_hooks_token="${OUROBOROS_HOOKS_TOKEN:-}"
+_tool_token="${OUROBOROS_TOOL_TOKEN:-}"
+_token_file="$(get_ouroboros_token_file)"
+if [ -f "$_token_file" ]; then
+    if command -v jq &>/dev/null; then
+        _file_hooks=$(jq -r '.hooksToken // empty' "$_token_file" 2>/dev/null || true)
+        _file_tool=$(jq -r '.toolToken // empty' "$_token_file" 2>/dev/null || true)
+    elif command -v python3 &>/dev/null; then
+        _file_hooks=$(python3 -c "import sys,json; d=json.load(open('$_token_file')); print(d.get('hooksToken',''))" 2>/dev/null || true)
+        _file_tool=$(python3 -c "import sys,json; d=json.load(open('$_token_file')); print(d.get('toolToken',''))" 2>/dev/null || true)
+    fi
+    [ -n "${_file_hooks:-}" ] && _hooks_token="$_file_hooks"
+    [ -n "${_file_tool:-}" ]  && _tool_token="$_file_tool"
+fi
+
 # Skip entirely for sessions not spawned by Ouroboros. This hook is installed
 # globally in ~/.claude/settings.json so it fires for every Claude CLI session
 # on this machine. Without a token the server will reject auth anyway, and the
 # old code then polled 120s for an approval that could never arrive.
-if [ -z "${OUROBOROS_HOOKS_TOKEN:-}" ]; then
+if [ -z "${_hooks_token:-}" ]; then
     exit 0
 fi
 
@@ -93,7 +115,7 @@ payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_
 if [ "${OUROBOROS_INTERNAL:-}" = "1" ]; then
     payload="{\"type\":\"pre_tool_use\",\"sessionId\":${j_session},\"toolName\":${j_tool},\"input\":${safe_input},\"requestId\":${j_reqid},\"timestamp\":${timestamp_ms},\"internal\":true}"
 fi
-auth_line='{"auth":"'"${OUROBOROS_HOOKS_TOKEN:-}"'"}'$'\n'
+auth_line='{"auth":"'"${_hooks_token}"'"}'$'\n'
 ndjson_line="${auth_line}${payload}"$'\n'
 
 # ── Send helper ───────────────────────────────────────────────────────────────
@@ -145,9 +167,9 @@ TOOL_TIMEOUT_MS=$((MAX_POLL_SECONDS * 1000))
 decision=""
 reason=""
 
-if [ -n "${OUROBOROS_TOOL_TOKEN:-}" ]; then
+if [ -n "${_tool_token:-}" ]; then
     tool_req_id="aw-${request_id}"
-    tool_auth_line='{"auth":"'"${OUROBOROS_TOOL_TOKEN}"'"}'
+    tool_auth_line='{"auth":"'"${_tool_token}"'"}'
     tool_wait_line='{"id":"'"${tool_req_id}"'","method":"approval.wait","params":{"requestId":"'"${request_id}"'","timeoutMs":'"${TOOL_TIMEOUT_MS}"'}}'
     tool_ndjson="${tool_auth_line}
 ${tool_wait_line}

@@ -18,11 +18,13 @@ import { SectionLabel } from './settingsStyles';
 
 function phaseLabel(phase: StartupMark['phase']): string {
   const labels: Record<StartupMark['phase'], string> = {
-    'app-ready':       'App ready',
-    'window-created':  'Window created',
-    'ipc-ready':       'IPC ready',
-    'services-ready':  'Services ready',
-    'first-render':    'First render',
+    'app-ready':              'App ready',
+    'window-ready':           'Window ready',
+    'ipc-ready':              'IPC ready',
+    'services-ready':         'Services ready',
+    'renderer-bundle-loaded': 'Renderer bundle loaded',
+    'react-root-created':     'React root created',
+    'first-render':           'First render',
   };
   return labels[phase] ?? phase;
 }
@@ -108,9 +110,9 @@ function StartupTimingsSection({ timings, isComplete, onReload }: StartupTimings
           </button>
         </p>
       )}
-      {timings.length > 0 && timings.length < 5 && (
+      {timings.length > 0 && timings.length < 7 && (
         <p className="text-text-semantic-faint" style={hintStyle}>
-          Collecting… ({timings.length}/5 marks)
+          Collecting… ({timings.length}/7 marks)
         </p>
       )}
       {timings.length > 0 && <TimingsTable timings={timings} isComplete={isComplete} />}

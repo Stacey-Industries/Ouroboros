@@ -15,9 +15,11 @@ import { broadcastToWebClients } from './web/webServer'
 
 export type StartupPhase =
   | 'app-ready'
-  | 'window-created'
+  | 'window-ready'
   | 'ipc-ready'
   | 'services-ready'
+  | 'renderer-bundle-loaded'
+  | 'react-root-created'
   | 'first-render'
 
 export interface StartupMark {

@@ -75,8 +75,8 @@ describe('startup timing', () => {
 
   it('does not throw on duplicate phase', () => {
     expect(() => {
-      markStartup('window-created')
-      markStartup('window-created')
+      markStartup('window-ready')
+      markStartup('window-ready')
     }).not.toThrow()
   })
 
@@ -101,7 +101,7 @@ describe('startup timing', () => {
 
   it('clears all recorded marks after reset', () => {
     markStartup('app-ready')
-    markStartup('window-created')
+    markStartup('window-ready')
     resetStartupTimings()
     expect(getStartupTimings()).toHaveLength(0)
   })
@@ -117,7 +117,7 @@ describe('startup timing', () => {
     markStartup('app-ready')
     const start = Date.now()
     while (Date.now() - start < 2) { /* spin */ }
-    markStartup('window-created')
+    markStartup('window-ready')
     const timings = getStartupTimings()
     expect(timings[1].deltaMs).toBeGreaterThanOrEqual(timings[0].deltaMs)
   })
@@ -151,20 +151,24 @@ describe('formatStartupSummary', () => {
     expect(formatStartupSummary()).toBe('')
   })
 
-  it('formats all 5 phases as space-separated key=value pairs', () => {
+  it('formats all 7 phases as space-separated key=value pairs', () => {
     markStartup('app-ready')
-    markStartup('window-created')
+    markStartup('window-ready')
     markStartup('ipc-ready')
     markStartup('services-ready')
+    markStartup('renderer-bundle-loaded')
+    markStartup('react-root-created')
     markStartup('first-render')
     const summary = formatStartupSummary()
     expect(summary).toMatch(/app-ready=\d+ms/)
-    expect(summary).toMatch(/window-created=\d+ms/)
+    expect(summary).toMatch(/window-ready=\d+ms/)
     expect(summary).toMatch(/ipc-ready=\d+ms/)
     expect(summary).toMatch(/services-ready=\d+ms/)
+    expect(summary).toMatch(/renderer-bundle-loaded=\d+ms/)
+    expect(summary).toMatch(/react-root-created=\d+ms/)
     expect(summary).toMatch(/first-render=\d+ms/)
-    // 5 entries separated by spaces → 4 spaces
-    expect(summary.split(' ')).toHaveLength(5)
+    // 7 entries separated by spaces → 6 spaces
+    expect(summary.split(' ')).toHaveLength(7)
   })
 })
 

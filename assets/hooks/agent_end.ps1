@@ -33,6 +33,19 @@ if ($env:OUROBOROS_HOOKS_ADDRESS) {
     }
 }
 
+# -- Load tokens (disk-first for cross-restart grace, env-var fallback) --------
+# Path resolution order: OUROBOROS_TOKEN_FILE env var → well-known platform path
+# → OUROBOROS_HOOKS_TOKEN env var (IDE-spawned sessions).
+. "$PSScriptRoot\_token-lookup.ps1"
+$hooksToken = $env:OUROBOROS_HOOKS_TOKEN
+$_tokenFile = Get-OuroborosTokenFile
+if (-not [string]::IsNullOrEmpty($_tokenFile) -and (Test-Path $_tokenFile)) {
+    try {
+        $tokenData = Get-Content -Path $_tokenFile -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        if ($tokenData.hooksToken) { $hooksToken = $tokenData.hooksToken }
+    } catch { }
+}
+
 # -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
 try {
@@ -86,7 +99,7 @@ $line  = ($payload | ConvertTo-Json -Compress -Depth 10) + "`n"
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($line)
 
 # Auth line — required by the IDE's pipe auth protocol
-$authLine  = '{"auth":"' + $env:OUROBOROS_HOOKS_TOKEN + '"}' + "`n"
+$authLine  = '{"auth":"' + $hooksToken + '"}' + "`n"
 $authBytes = [System.Text.Encoding]::UTF8.GetBytes($authLine)
 
 # -- Send via named pipe -------------------------------------------------------

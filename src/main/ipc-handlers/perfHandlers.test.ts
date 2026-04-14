@@ -91,7 +91,7 @@ describe('registerPerfHandlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers all 7 expected channels', () => {
+  it('registers all 8 expected channels', () => {
     const channels: string[] = []
     mockHandle.mockImplementation((ch: string) => channels.push(ch))
 
@@ -106,6 +106,7 @@ describe('registerPerfHandlers', () => {
         'perf:ping',
         'perf:subscribe',
         'perf:unsubscribe',
+        'perf:mark',
         'perf:markFirstRender',
         'perf:getStartupTimings',
         'perf:getRuntimeMetrics',
@@ -120,7 +121,33 @@ describe('registerPerfHandlers', () => {
     expect(typeof (result as { ts: number }).ts).toBe('number')
   })
 
-  it('perf:markFirstRender calls markStartup, logs summary, and appends record', () => {
+  it('perf:mark with first-render calls markStartup, logs summary, and appends record', () => {
+    mockFormatSummary.mockReturnValue('app-ready=10ms first-render=200ms')
+    handlers['perf:mark']?.({} as never, 'first-render' as never)
+
+    expect(mockMarkStartup).toHaveBeenCalledWith('first-render')
+    expect(mockLogInfo).toHaveBeenCalledWith('[perf] startup:', 'app-ready=10ms first-render=200ms')
+    expect(mockAppendRecord).toHaveBeenCalledWith(mockGetStartupTimings())
+    expect(handlers['perf:mark']?.({} as never, 'first-render' as never)).toMatchObject({ success: true })
+  })
+
+  it('perf:mark with a non-final phase marks without flushing log', () => {
+    vi.clearAllMocks()
+    handlers['perf:mark']?.({} as never, 'renderer-bundle-loaded' as never)
+
+    expect(mockMarkStartup).toHaveBeenCalledWith('renderer-bundle-loaded')
+    expect(mockLogInfo).not.toHaveBeenCalled()
+    expect(mockAppendRecord).not.toHaveBeenCalled()
+    expect(handlers['perf:mark']?.({} as never, 'react-root-created' as never)).toMatchObject({ success: true })
+  })
+
+  it('perf:mark rejects an unknown phase', () => {
+    const result = handlers['perf:mark']?.({} as never, 'totally-fake-phase' as never)
+    expect(result).toMatchObject({ success: false })
+    expect(mockMarkStartup).not.toHaveBeenCalled()
+  })
+
+  it('perf:markFirstRender (back-compat) calls markStartup, logs summary, and appends record', () => {
     mockFormatSummary.mockReturnValue('app-ready=10ms first-render=200ms')
     handlers['perf:markFirstRender']?.({} as never, ...([] as never[]))
 
@@ -134,6 +161,15 @@ describe('registerPerfHandlers', () => {
     mockFormatSummary.mockReturnValue('')
     vi.clearAllMocks()
     handlers['perf:markFirstRender']?.({} as never, ...([] as never[]))
+
+    expect(mockLogInfo).not.toHaveBeenCalled()
+    expect(mockAppendRecord).toHaveBeenCalledTimes(1)
+  })
+
+  it('perf:mark(first-render) does NOT log when summary is empty', () => {
+    mockFormatSummary.mockReturnValue('')
+    vi.clearAllMocks()
+    handlers['perf:mark']?.({} as never, 'first-render' as never)
 
     expect(mockLogInfo).not.toHaveBeenCalled()
     expect(mockAppendRecord).toHaveBeenCalledTimes(1)
