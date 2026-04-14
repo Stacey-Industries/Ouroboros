@@ -2,6 +2,7 @@
 
 import { BrowserWindow } from 'electron';
 
+import { getConflictMonitor } from './agentConflict/conflictMonitor';
 import {
   clearSessionRules,
   requestApproval,
@@ -215,6 +216,29 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
   }
 }
 
+const CONFLICT_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
+
+function tapConflictMonitor(payload: HookPayload): void {
+  if (payload.type !== 'post_tool_use') return;
+  if (!payload.toolName || !CONFLICT_EDIT_TOOLS.has(payload.toolName)) return;
+  const filePath =
+    (payload.input as Record<string, unknown> | undefined)?.file_path as string | undefined ??
+    (payload.input as Record<string, unknown> | undefined)?.path as string | undefined;
+  if (!filePath) return;
+  const cwd = sessionCwdMap.get(payload.sessionId) ?? '';
+  log.info(
+    `[trace:conflict] emission session=${payload.sessionId} tool=${payload.toolName} file=${filePath}`,
+  );
+  // Detach from hook pipe response — must not block the named-pipe handler
+  setImmediate(() => {
+    try {
+      getConflictMonitor().recordEdit(cwd, payload.sessionId, filePath);
+    } catch (err) {
+      log.warn('[conflictMonitor] recordEdit error:', err);
+    }
+  });
+}
+
 function dispatchToRenderer(rawPayload: HookPayload): void {
   if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
     log.info(
@@ -242,6 +266,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
   clearApprovalRulesForEndedSession(payload);
+  tapConflictMonitor(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -284,6 +309,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   flushPendingQueue(windows);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
+  tapConflictMonitor(payload);
 }
 
 export function getHooksAddress(): string | null {

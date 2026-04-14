@@ -8,6 +8,7 @@
 
 import v8 from 'node:v8';
 
+import { describeFdPressure } from './fdPressureDiagnostics';
 import log from './logger';
 
 // ─── Config ─────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ function onTick(): void {
         ` — total janks this session: ${jankCount}`,
     );
     logHeapSnapshot();
+    log.warn(`[jank] ${describeFdPressure()}`);
   }
 
   if (now - lastHeapLogAt > HEAP_LOG_INTERVAL_MS) {

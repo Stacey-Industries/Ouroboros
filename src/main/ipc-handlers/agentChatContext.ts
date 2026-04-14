@@ -18,6 +18,7 @@ import {
 } from '../orchestration/graphSummaryBuilder';
 import type { RepoIndexSnapshot } from '../orchestration/repoIndexer';
 import type { ContextPacket } from '../orchestration/types';
+import { buildWorkerPipeAuthSeed } from '../pipeAuth';
 
 /**
  * Eagerly-built repo snapshot cache.
@@ -110,7 +111,7 @@ function ensureContextWorker(): Worker | null {
   if (contextWorker) return contextWorker;
   const workerPath = getWorkerPath();
   try {
-    contextWorker = new Worker(workerPath);
+    contextWorker = new Worker(workerPath, { workerData: buildWorkerPipeAuthSeed() });
     contextWorker.on('message', handleContextWorkerMessage);
     contextWorker.on('error', (err) => {
       log.warn('context worker error:', err);

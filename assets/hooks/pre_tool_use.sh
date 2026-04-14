@@ -24,7 +24,15 @@ if [ -n "${OUROBOROS_HOOKS_ADDRESS:-}" ]; then
     esac
 fi
 POLL_INTERVAL=0.5  # seconds
-MAX_POLL_SECONDS=120
+MAX_POLL_SECONDS=15  # approve by default after this; avoids the old 2-minute stall
+
+# Skip entirely for sessions not spawned by Ouroboros. This hook is installed
+# globally in ~/.claude/settings.json so it fires for every Claude CLI session
+# on this machine. Without a token the server will reject auth anyway, and the
+# old code then polled 120s for an approval that could never arrive.
+if [ -z "${OUROBOROS_HOOKS_TOKEN:-}" ]; then
+    exit 0
+fi
 
 # ── Read stdin ────────────────────────────────────────────────────────────────
 stdin_data=""

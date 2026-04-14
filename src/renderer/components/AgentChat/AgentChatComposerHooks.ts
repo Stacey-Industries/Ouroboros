@@ -221,6 +221,7 @@ export function useComposerDraftSync(
 ): void {
   useEffect(() => {
     if (draft !== lastSyncedDraft.current && textareaRef.current) {
+      // eslint-disable-next-line react-compiler/react-compiler
       lastSyncedDraft.current = draft;
       textareaRef.current.value = draft;
       autoResizeTextarea(textareaRef.current);

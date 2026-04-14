@@ -8,6 +8,41 @@ import log from '../logger';
 import { DEFAULT_THREAD_TITLE } from './threadStoreSupport';
 
 const TITLE_MAX_LENGTH = 80;
+// Max length for summarizeForTitle (used by SQLite auto-titling from assistant responses)
+const SUMMARY_TITLE_MAX_LENGTH = 60;
+
+// ── Decorative-line helpers (canonical home for title helpers) ───────
+
+export function isDecorativeLine(line: string): boolean {
+  if (/^`[^`]*`$/.test(line) && /[─═━\-★]{3,}/.test(line)) return true;
+  if (/^[─═━\-*★│┃|+\s]+$/.test(line) && line.length > 2) return true;
+  if (/^```/.test(line)) return true;
+  return false;
+}
+
+export function findFirstMeaningfulLine(text: string): string {
+  for (const line of text.split(/\r?\n/)) {
+    const stripped = line.trim();
+    if (stripped && !isDecorativeLine(stripped)) return stripped;
+  }
+  return text.trim();
+}
+
+export function summarizeForTitle(assistantContent: string): string {
+  const trimmed = assistantContent.trim();
+  if (!trimmed) return '';
+
+  const meaningful = findFirstMeaningfulLine(trimmed);
+  const sentenceMatch = meaningful.match(/^(.+?[.!?])(?:\s|$)/);
+  const firstSentence = sentenceMatch ? sentenceMatch[1].trim() : '';
+
+  if (firstSentence && firstSentence.length <= SUMMARY_TITLE_MAX_LENGTH) return firstSentence;
+
+  const slice = meaningful.slice(0, SUMMARY_TITLE_MAX_LENGTH).trimEnd();
+  const lastSpace = slice.lastIndexOf(' ');
+  if (lastSpace > SUMMARY_TITLE_MAX_LENGTH * 0.5) return `${slice.slice(0, lastSpace)}\u2026`;
+  return `${slice}\u2026`;
+}
 
 const EDIT_TOOLS = new Set([
   'Edit',

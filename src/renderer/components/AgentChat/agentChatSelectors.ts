@@ -7,6 +7,8 @@
  * Fine-grained single-value selectors are provided for hot-path components
  * (e.g. draft changes on every keystroke) to minimise re-renders.
  */
+import { useShallow } from 'zustand/react/shallow';
+
 import { useAgentChatStoreContext } from './agentChatStore';
 import type {
   AgentChatActions,
@@ -21,7 +23,7 @@ import type {
 /* ── Group selectors ──────────────────────────────── */
 
 export function useAgentChatThread(): AgentChatThreadState {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     activeThread: s.activeThread,
     canSend: s.canSend,
     draft: s.draft,
@@ -30,20 +32,20 @@ export function useAgentChatThread(): AgentChatThreadState {
     isLoading: s.isLoading,
     isSending: s.isSending,
     pendingUserMessage: s.pendingUserMessage,
-  }));
+  })));
 }
 
 export function useAgentChatDetails(): AgentChatDetailsState {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     isDetailsOpen: s.isDetailsOpen,
     details: s.details,
     detailsError: s.detailsError,
     detailsIsLoading: s.detailsIsLoading,
-  }));
+  })));
 }
 
 export function useAgentChatContextFiles(): AgentChatContextFilesState {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     pinnedFiles: s.pinnedFiles,
     contextSummary: s.contextSummary,
     autocompleteResults: s.autocompleteResults,
@@ -51,33 +53,33 @@ export function useAgentChatContextFiles(): AgentChatContextFilesState {
     mentions: s.mentions,
     allFiles: s.allFiles,
     attachments: s.attachments,
-  }));
+  })));
 }
 
 export function useAgentChatModel(): AgentChatModelState {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     chatOverrides: s.chatOverrides,
     settingsModel: s.settingsModel,
     codexSettingsModel: s.codexSettingsModel,
     defaultProvider: s.defaultProvider,
     modelProviders: s.modelProviders,
     codexModels: s.codexModels,
-  }));
+  })));
 }
 
 export function useAgentChatQueue(): AgentChatQueueState {
-  return useAgentChatStoreContext((s) => ({ queuedMessages: s.queuedMessages }));
+  return useAgentChatStoreContext(useShallow((s) => ({ queuedMessages: s.queuedMessages })));
 }
 
 export function useAgentChatSlash(): AgentChatSlashState {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     slashCommandContext: s.slashCommandContext,
-  }));
+  })));
 }
 
 /** Actions selector — action refs in zustand are stable, so this never causes re-renders. */
 export function useAgentChatActions(): AgentChatActions {
-  return useAgentChatStoreContext((s) => ({
+  return useAgentChatStoreContext(useShallow((s) => ({
     onDraftChange: s.onDraftChange,
     onEdit: s.onEdit,
     onRetry: s.onRetry,
@@ -101,7 +103,7 @@ export function useAgentChatActions(): AgentChatActions {
     onEditQueuedMessage: s.onEditQueuedMessage,
     onDeleteQueuedMessage: s.onDeleteQueuedMessage,
     onSendQueuedMessageNow: s.onSendQueuedMessageNow,
-  }));
+  })));
 }
 
 /* ── Fine-grained selectors (hot path) ───────────── */

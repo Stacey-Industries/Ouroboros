@@ -227,6 +227,11 @@ function runComposerSlashCommand(
     args.onAddMention?.(DIFF_MENTION);
     return;
   }
+  if (cmd.id === 'spec') {
+    const featureName = args.draft.replace(/^\/spec\s*/i, '').trim();
+    args.slashCommandContext?.onSpec?.(featureName);
+    return;
+  }
   cmd.action();
 }
 

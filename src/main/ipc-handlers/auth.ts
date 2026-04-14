@@ -35,8 +35,6 @@ import { setGithubTokenForPty } from '../ptyEnv';
 import { setUpdaterGitHubToken } from '../updater';
 import { broadcastToWebClients } from '../web/webServer';
 
-type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -93,7 +91,7 @@ function createGetStatesHandler(): AuthHandlerEntry {
 // Handler: auth:startLogin
 // ---------------------------------------------------------------------------
 
-function createStartLoginHandler(_senderWindow: SenderWindow): AuthHandlerEntry {
+function createStartLoginHandler(): AuthHandlerEntry {
   return {
     channel: 'auth:startLogin',
     handler: (event, ...args) => {
@@ -315,13 +313,13 @@ function createOpenExternalHandler(): AuthHandlerEntry {
 // Public registration
 // ---------------------------------------------------------------------------
 
-export function registerAuthHandlers(senderWindow: SenderWindow): string[] {
+export function registerAuthHandlers(): string[] {
   const channels: string[] = [];
 
   registerEntries(
     [
       createGetStatesHandler(),
-      createStartLoginHandler(senderWindow),
+      createStartLoginHandler(),
       createCancelLoginHandler(),
       createLogoutHandler(),
       createSetApiKeyHandler(),

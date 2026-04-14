@@ -98,12 +98,15 @@ export function usePersistSessions(
   enabled: boolean,
   persistedSessionsSeed: string | null,
 ): void {
-  const { sessionsRef, lastPersistedSerializedRef, persistInFlightRef, hasPendingPersistRef } = usePersistRefs(sessions);
+  const persistRefs = usePersistRefs(sessions);
+  const { sessionsRef, persistInFlightRef, hasPendingPersistRef } = persistRefs;
+  const { lastPersistedSerializedRef } = persistRefs;
   const runningTopologySignature = buildRunningTopologySignature(getRunningSessions(sessions));
 
   useEffect(() => {
     if (!enabled || persistedSessionsSeed === null) return;
     if (lastPersistedSerializedRef.current !== null) return;
+    // eslint-disable-next-line react-compiler/react-compiler
     lastPersistedSerializedRef.current = persistedSessionsSeed;
   }, [enabled, persistedSessionsSeed, lastPersistedSerializedRef]);
 

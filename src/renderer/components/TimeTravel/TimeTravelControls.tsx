@@ -9,6 +9,7 @@ interface ControlsPanelState {
   snapshotLabel: string;
   creatingSnapshot: boolean;
   statusMessage: string | null;
+  hideCreateSnapshot: boolean;
   toggleCompareMode: () => void;
   setSnapshotLabel: (label: string) => void;
   handleCreateSnapshot: () => Promise<void>;
@@ -259,7 +260,7 @@ export function TimeTravelControls({
     <>
       <TimeTravelHeader snapshotCount={snapshotCount} onClose={onClose} />
       <TimeTravelToolbar panel={panel} onRefreshSnapshots={onRefreshSnapshots} />
-      <CreateSnapshotBar panel={panel} />
+      {!panel.hideCreateSnapshot && <CreateSnapshotBar panel={panel} />}
       {panel.statusMessage && <StatusBanner statusMessage={panel.statusMessage} />}
     </>
   );

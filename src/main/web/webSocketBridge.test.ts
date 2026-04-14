@@ -1,5 +1,5 @@
-import { WebSocket } from 'ws';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WebSocket } from 'ws';
 
 import { handleJsonRpcMessage } from './webSocketBridge';
 
@@ -260,7 +260,7 @@ describe('handleJsonRpcMessage', () => {
 
     it('converts non-Error thrown values to string', async () => {
       mockHandlerRegistry.set('string:throw', () => {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error
+         
         throw 'plain string error';
       });
       const { ws, sent } = createMockWs();

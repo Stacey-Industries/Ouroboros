@@ -143,6 +143,7 @@ function useApplyCodeState(): ApplyCodeState & ApplyCodeRefs & {
 }
 
 function useApplyAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  const { originalContentRef } = state;
   return useCallback(async () => {
     if (!filePath) {
       state.setStatus('error');
@@ -154,13 +155,14 @@ function useApplyAction(code: string, filePath: string | undefined, state: Retur
       if (!api?.readFile) { state.setStatus('error'); state.setErrorMessage('File API not available.'); return; }
       const result = await api.readFile(filePath);
       if (!result.success) {
-        state.originalContentRef.current = '';
+        // eslint-disable-next-line react-compiler/react-compiler
+        originalContentRef.current = '';
         state.setDiffLines(buildNewFileDiff(code));
         state.setStatus('previewing');
         return;
       }
       const currentContent = result.content ?? '';
-      state.originalContentRef.current = currentContent;
+      originalContentRef.current = currentContent;
       state.setDiffLines(computeLineDiff(currentContent, code));
       state.setStatus('previewing');
       state.setErrorMessage(null);
@@ -168,10 +170,11 @@ function useApplyAction(code: string, filePath: string | undefined, state: Retur
       state.setStatus('error');
       state.setErrorMessage(toErrorString(err, 'Failed to read file for diff.'));
     }
-  }, [code, filePath, state]);
+  }, [code, filePath, originalContentRef, state]);
 }
 
 function useAcceptAction(code: string, filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  const { revertTimerRef, originalContentRef } = state;
   return useCallback(async () => {
     if (!filePath) return;
     try {
@@ -183,38 +186,41 @@ function useAcceptAction(code: string, filePath: string | undefined, state: Retu
       state.setDiffLines([]);
       state.setErrorMessage(null);
       state.setCanRevert(true);
-      if (state.revertTimerRef.current) clearTimeout(state.revertTimerRef.current);
-      state.revertTimerRef.current = setTimeout(() => {
+      if (revertTimerRef.current) clearTimeout(revertTimerRef.current);
+      revertTimerRef.current = setTimeout(() => {
         state.setCanRevert(false);
-        state.originalContentRef.current = null;
-        state.revertTimerRef.current = null;
+        // eslint-disable-next-line react-compiler/react-compiler
+        originalContentRef.current = null;
+        revertTimerRef.current = null;
       }, 30_000);
     } catch (err) {
       state.setStatus('error');
       state.setErrorMessage(toErrorString(err, 'Failed to write file.'));
     }
-  }, [code, filePath, state]);
+  }, [code, filePath, originalContentRef, revertTimerRef, state]);
 }
 
 function useRevertAction(filePath: string | undefined, state: ReturnType<typeof useApplyCodeState>): () => Promise<void> {
+  const { originalContentRef, revertTimerRef } = state;
   return useCallback(async () => {
-    if (!filePath || state.originalContentRef.current === null) return;
+    if (!filePath || originalContentRef.current === null) return;
     try {
       const api = getFilesApi();
       if (!api?.saveFile) { state.setStatus('error'); state.setErrorMessage('File save API not available.'); return; }
-      const result = await api.saveFile(filePath, state.originalContentRef.current);
+      const result = await api.saveFile(filePath, originalContentRef.current);
       if (!result.success) { state.setStatus('error'); state.setErrorMessage(result.error ?? 'Failed to revert file.'); return; }
       state.setStatus('idle');
       state.setCanRevert(false);
       state.setDiffLines([]);
       state.setErrorMessage(null);
-      state.originalContentRef.current = null;
-      if (state.revertTimerRef.current) { clearTimeout(state.revertTimerRef.current); state.revertTimerRef.current = null; }
+      // eslint-disable-next-line react-compiler/react-compiler
+      originalContentRef.current = null;
+      if (revertTimerRef.current) { clearTimeout(revertTimerRef.current); revertTimerRef.current = null; }
     } catch (err) {
       state.setStatus('error');
       state.setErrorMessage(toErrorString(err, 'Failed to revert file.'));
     }
-  }, [filePath, state]);
+  }, [filePath, originalContentRef, revertTimerRef, state]);
 }
 
 /**

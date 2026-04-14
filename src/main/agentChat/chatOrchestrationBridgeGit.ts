@@ -6,13 +6,101 @@
 
 import { execFile } from 'child_process';
 import { unlink } from 'fs/promises';
-import { join } from 'path';
+import path, { join } from 'path';
 
 import log from '../logger';
-import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';
+import { openDatabase } from '../storage/database';
+import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
+import { CheckpointStore, MAX_CHECKPOINTS_PER_THREAD } from './checkpointStore';
 import type { AgentChatThreadStore } from './threadStore';
 import type { AgentChatRevertResult } from './types';
 import { getErrorMessage } from './utils';
+
+// ---------------------------------------------------------------------------
+// Checkpoint commit helpers
+// ---------------------------------------------------------------------------
+
+/** Dedicated ref prefix for per-thread checkpoint commits. */
+export const CHECKPOINT_REF_PREFIX = 'refs/ouroboros/checkpoints/';
+
+/**
+ * Creates a commit on the dedicated checkpoint ref for a thread.
+ * Uses `git commit-tree` to write a commit that records the current HEAD tree
+ * without touching the working tree or index — safe to call mid-session.
+ *
+ * Returns the new commit hash, or undefined on failure.
+ */
+export async function createCheckpointCommit(
+  cwd: string,
+  threadId: string,
+  headHash: string,
+): Promise<string | undefined> {
+  const ref = `${CHECKPOINT_REF_PREFIX}${threadId}`;
+  return new Promise((resolve) => {
+    // Build the commit-tree args: tree from HEAD, parent = HEAD, message
+    const msg = `[checkpoint] thread:${threadId} base:${headHash.slice(0, 8)}`;
+    execFile(
+      'git',
+      ['commit-tree', `${headHash}^{tree}`, '-p', headHash, '-m', msg],
+      { cwd, timeout: 10000 },
+      (err, stdout) => {
+        if (err) {
+          log.warn('[checkpoint] commit-tree failed:', err.message);
+          resolve(undefined);
+          return;
+        }
+        const newHash = stdout.trim();
+        execFile('git', ['update-ref', ref, newHash], { cwd, timeout: 5000 }, (err2) => {
+          if (err2) log.warn('[checkpoint] update-ref failed:', err2.message);
+          resolve(err2 ? undefined : newHash);
+        });
+      },
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Post-turn checkpoint capture
+// ---------------------------------------------------------------------------
+
+/** Module-level singleton — lazily initialised on first post-turn capture. */
+let _checkpointStore: CheckpointStore | null = null;
+
+function getCheckpointStore(threadsDir: string): CheckpointStore {
+  if (!_checkpointStore) {
+    const db = openDatabase(path.join(threadsDir, 'checkpoints.db'));
+    _checkpointStore = new CheckpointStore(db);
+  }
+  return _checkpointStore;
+}
+
+/**
+ * After a completed assistant turn, create a checkpoint commit on the dedicated
+ * ref and update the assistant message record with the resulting hash.
+ *
+ * Fire-and-forget — errors are logged but never re-thrown.
+ */
+export async function capturePostTurnCheckpoint(
+  runtime: AgentChatBridgeRuntime,
+  threadId: string,
+  messageId: string,
+  workspaceRoot: string,
+): Promise<void> {
+  try {
+    const headHash = await captureHeadHash(workspaceRoot);
+    if (!headHash) return;
+    const checkpointHash = await createCheckpointCommit(workspaceRoot, threadId, headHash);
+    if (!checkpointHash) return;
+    const store = getCheckpointStore(runtime.threadStore.getStorageDirectory());
+    store.create({ threadId, messageId, commitHash: checkpointHash, filesChanged: [] });
+    store.trimToMax(threadId, MAX_CHECKPOINTS_PER_THREAD);
+    await runtime.threadStore.updateMessage(threadId, messageId, {
+      checkpointCommit: checkpointHash,
+    });
+  } catch (err) {
+    log.warn('[checkpoint] post-turn capture failed:', getErrorMessage(err));
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Git exec helpers

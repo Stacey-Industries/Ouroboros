@@ -4,6 +4,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAgentConflicts } from '../../hooks/useAgentConflicts';
 import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
@@ -25,6 +26,7 @@ import {
   PendingUserBubble,
 } from './AgentChatMessageComponents';
 import { dispatchDiffReviewEvent } from './AgentChatStreamingHelpers';
+import { AgentConflictBanner } from './AgentConflictBanner';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 import { VirtualizedMessageList } from './VirtualizedMessageList';
 
@@ -50,6 +52,7 @@ export function useSmartAutoScroll(deps: unknown[]): {
   useEffect(() => {
     const el = scrollRef.current;
     if (el && isNearBottomRef.current) el.scrollTop = el.scrollHeight;
+    // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
@@ -223,30 +226,52 @@ function useConversationBodyState(props: ConversationBodyProps) {
 
 type BodyState = ReturnType<typeof useConversationBodyState>;
 
+function ConflictBanners({ activeThread }: { activeThread: AgentChatThreadRecord }): React.ReactElement | null {
+  const sessionId = activeThread.latestOrchestration?.claudeSessionId;
+  const { reports } = useAgentConflicts(sessionId);
+
+  function handleDismiss(sessionA: string, sessionB: string): void {
+    void window.electronAPI?.agentConflict?.dismiss(sessionA, sessionB);
+  }
+
+  if (reports.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1 px-4 pt-2">
+      {reports.map((r) => (
+        <AgentConflictBanner key={`${r.sessionA}||${r.sessionB}`} report={r} onDismiss={handleDismiss} />
+      ))}
+    </div>
+  );
+}
+
 function ConversationBodyWithThread(
   props: ConversationBodyProps &
     BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
 ): React.ReactElement {
   return (
-    <VirtualizedMessageList
-      activeThread={props.activeThread}
-      messagesWithStreaming={props.messagesWithStreaming}
-      lastUserMessageId={findLastUserMessageId(props.activeThread.messages)}
-      editingMessageId={props.editingMessageId}
-      editDraft={props.editDraft}
-      onCancelEdit={props.handleCancelEdit}
-      onStartEdit={props.handleStartEdit}
-      onEditDraftChange={props.setEditDraft}
-      onEditSubmit={props.handleEditSubmit}
-      onRetry={props.onRetry}
-      onBranch={props.onBranch}
-      onRevert={props.onRevert}
-      onOpenLinkedDetails={props.onOpenLinkedDetails}
-      onSelectThread={props.onSelectThread}
-      pendingUserMessage={props.pendingUserMessage}
-      isSending={props.isSending}
-      error={props.error}
-    />
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <ConflictBanners activeThread={props.activeThread} />
+      <VirtualizedMessageList
+        activeThread={props.activeThread}
+        messagesWithStreaming={props.messagesWithStreaming}
+        lastUserMessageId={findLastUserMessageId(props.activeThread.messages)}
+        editingMessageId={props.editingMessageId}
+        editDraft={props.editDraft}
+        onCancelEdit={props.handleCancelEdit}
+        onStartEdit={props.handleStartEdit}
+        onEditDraftChange={props.setEditDraft}
+        onEditSubmit={props.handleEditSubmit}
+        onRetry={props.onRetry}
+        onBranch={props.onBranch}
+        onRevert={props.onRevert}
+        onOpenLinkedDetails={props.onOpenLinkedDetails}
+        onSelectThread={props.onSelectThread}
+        pendingUserMessage={props.pendingUserMessage}
+        isSending={props.isSending}
+        error={props.error}
+      />
+    </div>
   );
 }
 

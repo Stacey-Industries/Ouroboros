@@ -106,149 +106,74 @@ function useSelectPillWindowListeners(args: {
   }, [open, close, updateMenuPos, buttonRef, menuRef]);
 }
 
-function SelectPillMenu({
-  options,
-  groups,
-  defaultOption,
-  value,
-  onSelect,
-  style,
-  ref,
-}: {
-  options?: ReadonlyArray<OptionItem>;
-  groups?: OptionGroup[];
-  defaultOption?: OptionItem;
-  value: string;
-  onSelect: (value: string) => void;
-  style?: React.CSSProperties;
-  ref?: React.Ref<HTMLDivElement>;
-}): React.ReactElement {
+function SelectPillGroupItems({ groups, value, onSelect }: { groups: OptionGroup[]; value: string; onSelect: (v: string) => void }): React.ReactElement {
   return (
-    <div
-      ref={ref}
-      role="listbox"
-      className="z-[9999] max-h-[280px] overflow-x-hidden overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay py-1 shadow-xl"
-      style={{
-        backdropFilter: 'blur(24px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-        ...style,
-      }}
-    >
-      {defaultOption && (
-        <SelectPillItem
-          item={defaultOption}
-          selected={value === defaultOption.value}
-          onSelect={onSelect}
-        />
-      )}
-      {groups?.map((group) => (
+    <>
+      {groups.map((group) => (
         <div key={group.label}>
           <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-text-semantic-faint">
             {group.label}
           </div>
           {group.options.map((item) => (
-            <SelectPillItem
-              key={item.value}
-              item={item}
-              selected={value === item.value}
-              onSelect={onSelect}
-            />
+            <SelectPillItem key={item.value} item={item} selected={value === item.value} onSelect={onSelect} />
           ))}
         </div>
       ))}
-      {options?.map((item) => (
-        <SelectPillItem
-          key={item.value}
-          item={item}
-          selected={value === item.value}
-          onSelect={onSelect}
-        />
-      ))}
+    </>
+  );
+}
+
+function SelectPillMenu({
+  options, groups, defaultOption, value, onSelect, style, ref,
+}: {
+  options?: ReadonlyArray<OptionItem>; groups?: OptionGroup[]; defaultOption?: OptionItem;
+  value: string; onSelect: (value: string) => void; style?: React.CSSProperties; ref?: React.Ref<HTMLDivElement>;
+}): React.ReactElement {
+  return (
+    <div ref={ref} role="listbox" className="z-[9999] max-h-[280px] overflow-x-hidden overflow-y-auto rounded-lg border border-border-semantic bg-surface-overlay py-1 shadow-xl"
+      style={{ backdropFilter: 'blur(24px) saturate(140%)', WebkitBackdropFilter: 'blur(24px) saturate(140%)', ...style }}>
+      {defaultOption && <SelectPillItem item={defaultOption} selected={value === defaultOption.value} onSelect={onSelect} />}
+      {groups && <SelectPillGroupItems groups={groups} value={value} onSelect={onSelect} />}
+      {options?.map((item) => <SelectPillItem key={item.value} item={item} selected={value === item.value} onSelect={onSelect} />)}
     </div>
   );
 }
 
-export function SelectPill({
-  label: _label,
-  value,
-  options,
-  groups,
-  defaultOption,
-  onChange,
-  title,
-  icon: Icon,
-}: SelectPillProps): React.ReactElement {
+function usePillState(onChange: (v: string) => void): { open: boolean; menuPos: { left: number; bottom: number; width: number } | null; buttonRef: React.RefObject<HTMLButtonElement | null>; menuRef: React.RefObject<HTMLDivElement | null>; toggle: () => void; handleSelect: (v: string) => void; close: () => void; updateMenuPos: () => void } {
   const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(
-    null,
-  );
+  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number; width: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
-
   const updateMenuPos = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
     setMenuPos({ left: rect.left, bottom: window.innerHeight - rect.top + 4, width: rect.width });
   }, []);
+  const toggle = useCallback(() => setOpen((prev) => (prev ? false : (updateMenuPos(), true))), [updateMenuPos]);
+  const handleSelect = useCallback((nextValue: string) => { setOpen(false); onChange(nextValue); }, [onChange]);
+  return { open, menuPos, buttonRef, menuRef, toggle, handleSelect, close, updateMenuPos };
+}
 
-  const toggle = useCallback(
-    () => setOpen((prev) => (prev ? false : (updateMenuPos(), true))),
-    [updateMenuPos],
-  );
-  const handleSelect = useCallback(
-    (nextValue: string) => {
-      setOpen(false);
-      onChange(nextValue);
-    },
-    [onChange],
-  );
+export function SelectPill({ label: _label, value, options, groups, defaultOption, onChange, title, icon: Icon }: SelectPillProps): React.ReactElement {
+  const { open, menuPos, buttonRef, menuRef, toggle, handleSelect, close, updateMenuPos } = usePillState(onChange);
   const displayLabel = getDisplayLabel(value, options, groups, defaultOption);
   useSelectPillWindowListeners({ open, close, updateMenuPos, buttonRef, menuRef });
-
   return (
     <>
-      <button
-        type="button"
-        ref={buttonRef}
-        onClick={toggle}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        aria-label={_label}
+      <button type="button" ref={buttonRef} onClick={toggle} aria-expanded={open} aria-haspopup="listbox" aria-label={_label}
         className="items-center gap-1 text-[11px] transition-colors duration-150 hover:bg-surface-hover"
-        style={{
-          display: 'inline-flex',
-          width: 'fit-content',
-          flex: '0 0 auto',
-          borderRadius: '9999px',
-          padding: '2px 18px',
-          fontFamily: 'var(--font-ui)',
-        }}
-        title={title ?? displayLabel}
-      >
+        style={{ display: 'inline-flex', width: 'fit-content', flex: '0 0 auto', borderRadius: '9999px', padding: '2px 18px', fontFamily: 'var(--font-ui)' }}
+        title={title ?? displayLabel}>
         {Icon && <Icon size={13} />}
         <span className="text-text-semantic-primary">{displayLabel}</span>
         <ChevronUp />
       </button>
-      {open &&
-        menuPos &&
-        createPortal(
-          <SelectPillMenu
-            ref={menuRef}
-            options={options}
-            groups={groups}
-            defaultOption={defaultOption}
-            value={value}
-            onSelect={handleSelect}
-            style={{
-              position: 'fixed',
-              left: menuPos.left,
-              bottom: menuPos.bottom,
-              width: menuPos.width,
-            }}
-          />,
-          document.body,
-        )}
+      {open && menuPos && createPortal(
+        <SelectPillMenu ref={menuRef} options={options} groups={groups} defaultOption={defaultOption} value={value} onSelect={handleSelect}
+          style={{ position: 'fixed', left: menuPos.left, bottom: menuPos.bottom, width: menuPos.width }} />,
+        document.body,
+      )}
     </>
   );
 }

@@ -150,25 +150,15 @@ function insertThreadMessages(
 ): void {
   const s = (v: unknown) => (v ? JSON.stringify(v) : null);
   for (const m of msgs) {
-    const msgArgs = [
-      m.id,
-      threadId,
-      m.role,
-      (m.content as string) ?? '',
-      (m.createdAt as number) ?? 0,
-      (m.statusKind as string) ?? null,
-      s(m.orchestration),
-      s(m.contextSummary),
-      s(m.verificationPreview),
-      s(m.error),
-      (m.toolsSummary as string) ?? null,
-      (m.costSummary as string) ?? null,
-      (m.durationSummary as string) ?? null,
-      s(m.tokenUsage),
-      s(m.blocks),
-    ];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (insertMsg as any).run(...msgArgs);
+    (insertMsg as any).run(
+      m.id, threadId, m.role, (m.content as string) ?? '',
+      (m.createdAt as number) ?? 0, (m.statusKind as string) ?? null,
+      s(m.orchestration), s(m.contextSummary), s(m.verificationPreview),
+      s(m.error), (m.toolsSummary as string) ?? null,
+      (m.costSummary as string) ?? null, (m.durationSummary as string) ?? null,
+      s(m.tokenUsage), s(m.blocks),
+    );
   }
 }
 
@@ -275,38 +265,27 @@ function ensureCostSchema(db: Database): void {
   setSchemaVersion(db, 1);
 }
 
-function readCostHistoryJson(jsonPath: string): Array<Record<string, unknown>> | null {
+function readCostEntries(jsonPath: string): Array<Record<string, unknown>> | null {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     const data = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    const entries = data.entries;
-    return Array.isArray(entries) ? entries : null;
-  } catch {
-    return null;
-  }
+    return Array.isArray(data.entries) ? (data.entries as Array<Record<string, unknown>>) : null;
+  } catch { return null; }
 }
 
+const COST_INSERT_SQL = `INSERT OR IGNORE INTO cost_entries
+  (date, session_id, task_label, model, input_tokens, output_tokens,
+   cache_read_tokens, cache_write_tokens, estimated_cost, timestamp)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
 function insertCostEntries(db: Database, entries: Array<Record<string, unknown>>): void {
-  const insert = db.prepare(
-    `INSERT OR IGNORE INTO cost_entries
-     (date, session_id, task_label, model, input_tokens, output_tokens,
-      cache_read_tokens, cache_write_tokens, estimated_cost, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
+  const insert = db.prepare(COST_INSERT_SQL);
   runTransaction(db, () => {
     for (const e of entries) {
-      insert.run(
-        e.date,
-        e.sessionId,
-        e.taskLabel,
-        e.model,
-        e.inputTokens,
-        e.outputTokens,
-        e.cacheReadTokens,
-        e.cacheWriteTokens,
-        e.estimatedCost,
-        e.timestamp,
-      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (insert as any).run(e.date, e.sessionId, e.taskLabel, e.model,
+        e.inputTokens, e.outputTokens, e.cacheReadTokens, e.cacheWriteTokens,
+        e.estimatedCost, e.timestamp);
     }
   });
 }
@@ -318,7 +297,7 @@ export function migrateCostHistory(): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!fs.existsSync(jsonPath) || fs.existsSync(bakPath)) return;
 
-  const entries = readCostHistoryJson(jsonPath);
+  const entries = readCostEntries(jsonPath);
   if (!entries) return;
 
   let db: Database | null = null;
@@ -334,6 +313,41 @@ export function migrateCostHistory(): void {
   } finally {
     closeDatabase(db);
   }
+}
+
+// ── Background Jobs table ──────────────────────────────────────────────────
+
+/**
+ * ensureBackgroundJobsTable — creates the background_jobs table in the
+ * given database if it doesn't already exist.
+ *
+ * Called by jobStore.ts via its own ensureSchema(), but also exposed here
+ * so the shared storage layer can guarantee the table exists before any
+ * consumer opens the database.
+ *
+ * Non-destructive: guarded by IF NOT EXISTS; safe to call repeatedly.
+ */
+export function ensureBackgroundJobsTable(db: Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS background_jobs (
+      id TEXT PRIMARY KEY,
+      projectRoot TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      label TEXT,
+      status TEXT NOT NULL DEFAULT 'queued',
+      createdAt TEXT NOT NULL,
+      startedAt TEXT,
+      completedAt TEXT,
+      exitCode INTEGER,
+      sessionId TEXT,
+      resultSummary TEXT,
+      errorMessage TEXT,
+      costUsd REAL
+    );
+    CREATE INDEX IF NOT EXISTS idx_bgjobs_status ON background_jobs(status);
+    CREATE INDEX IF NOT EXISTS idx_bgjobs_root ON background_jobs(projectRoot);
+    CREATE INDEX IF NOT EXISTS idx_bgjobs_created ON background_jobs(createdAt DESC);
+  `);
 }
 
 // ── Run all migrations ─────────────────────────────────────────────────────

@@ -4,6 +4,14 @@ import type {
   AgentChatLinkedDetailsResult,
   AgentChatOrchestrationLink,
 } from '../../types/electron';
+import {
+  DrawerSection,
+  DrawerTextBlock,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  MetadataGrid,
+} from './AgentChatDetailsSummary';
 import { buildResultRows, buildSessionRows, shortenId } from './agentChatDetailsSupport';
 import { SkillHistorySection } from './SkillHistorySection';
 
@@ -19,63 +27,23 @@ export interface AgentChatDetailsDrawerProps {
   skillExecutions?: import('@shared/types/ruleActivity').SkillExecutionRecord[];
 }
 
-function DrawerSection(props: { children: React.ReactNode; title: string }): React.ReactElement {
+function ContextFileItem({ file }: { file: { filePath: string; reasons: Array<{ detail: string }> } }) {
   return (
-    <section className="rounded border border-border-semantic bg-surface-base px-3 py-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">
-        {props.title}
+    <div className="rounded border border-border-semantic px-2.5 py-2 text-xs">
+      <div className="truncate text-text-semantic-primary" title={file.filePath}>{file.filePath}</div>
+      <div className="mt-1 truncate text-[11px] text-text-semantic-muted">
+        {file.reasons.slice(0, 2).map((r) => r.detail).join(' • ') || 'Selected for context'}
       </div>
-      <div className="mt-2">{props.children}</div>
-    </section>
-  );
-}
-
-function MetadataGrid(props: {
-  rows: Array<{ label: string; value: string | null }>;
-}): React.ReactElement {
-  return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-      {props.rows
-        .filter((row) => row.value)
-        .map((row) => (
-          <div key={row.label} className="min-w-0">
-            <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">
-              {row.label}
-            </div>
-            <div
-              className="mt-1 truncate text-text-semantic-primary"
-              title={row.value ?? undefined}
-            >
-              {row.value}
-            </div>
-          </div>
-        ))}
     </div>
   );
 }
 
-function DrawerTextBlock({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div className="mt-3 text-xs leading-5 text-text-semantic-muted">{children}</div>;
-}
-
-function LoadingState(): React.ReactElement {
-  return <div className="text-xs text-text-semantic-muted">Loading linked task details…</div>;
-}
-
-function ErrorState({ error }: { error: string }): React.ReactElement {
-  return (
-    <div className="rounded border border-border-semantic bg-status-error-subtle px-3 py-3 text-xs leading-5 text-status-error">
-      {error}
-    </div>
-  );
-}
-
-function EmptyState(): React.ReactElement {
-  return (
-    <div className="text-xs text-text-semantic-muted">
-      No linked task details are available for this message yet.
-    </div>
-  );
+function buildBudgetText(contextPacket: { files: unknown[]; omittedCandidates: unknown[]; budget: { estimatedTokens: number } }): string {
+  return [
+    `${contextPacket.files.length.toLocaleString()} files`,
+    contextPacket.omittedCandidates.length > 0 ? `${contextPacket.omittedCandidates.length.toLocaleString()} omitted` : null,
+    contextPacket.budget.estimatedTokens ? `${contextPacket.budget.estimatedTokens.toLocaleString()} tokens` : null,
+  ].filter(Boolean).join(' • ');
 }
 
 function ContextSection({
@@ -84,42 +52,15 @@ function ContextSection({
   details: AgentChatLinkedDetailsResult;
 }): React.ReactElement | null {
   const contextPacket = details.session?.contextPacket;
-  if (!contextPacket) {
-    return null;
-  }
-
-  const budgetText = [
-    `${contextPacket.files.length.toLocaleString()} files`,
-    contextPacket.omittedCandidates.length > 0
-      ? `${contextPacket.omittedCandidates.length.toLocaleString()} omitted`
-      : null,
-    contextPacket.budget.estimatedTokens
-      ? `${contextPacket.budget.estimatedTokens.toLocaleString()} tokens`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(' • ');
-
+  if (!contextPacket) return null;
+  const budgetText = buildBudgetText(contextPacket);
   return (
     <DrawerSection title="Context">
       <div className="text-xs leading-5 text-text-semantic-muted">{budgetText}</div>
       {contextPacket.files.length > 0 ? (
         <div className="mt-3 space-y-2">
           {contextPacket.files.slice(0, 5).map((file) => (
-            <div
-              key={file.filePath}
-              className="rounded border border-border-semantic px-2.5 py-2 text-xs"
-            >
-              <div className="truncate text-text-semantic-primary" title={file.filePath}>
-                {file.filePath}
-              </div>
-              <div className="mt-1 truncate text-[11px] text-text-semantic-muted">
-                {file.reasons
-                  .slice(0, 2)
-                  .map((reason) => reason.detail)
-                  .join(' • ') || 'Selected for context'}
-              </div>
-            </div>
+            <ContextFileItem key={file.filePath} file={file} />
           ))}
         </div>
       ) : null}

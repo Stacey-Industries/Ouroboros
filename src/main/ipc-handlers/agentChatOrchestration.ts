@@ -52,15 +52,18 @@ function createId(prefix: string): string {
 
 // ── Context packet helpers ────────────────────────────────────────────
 
+function buildEmptyRepoFacts(workspaceRoots: string[], now: number): ContextPacket['repoFacts'] {
+  return {
+    workspaceRoots,
+    roots: [],
+    gitDiff: { changedFiles: [], totalAdditions: 0, totalDeletions: 0, changedFileCount: 0, generatedAt: now },
+    diagnostics: { files: [], totalErrors: 0, totalWarnings: 0, totalInfos: 0, totalHints: 0, generatedAt: now },
+    recentEdits: { files: [], generatedAt: now },
+  };
+}
+
 function buildEmptyContextPacket(request: TaskRequest): ContextPacket {
   const now = Date.now();
-  const emptyGitDiff = {
-    changedFiles: [],
-    totalAdditions: 0,
-    totalDeletions: 0,
-    changedFileCount: 0,
-    generatedAt: now,
-  };
   return {
     version: 1,
     id: createId('ctx'),
@@ -72,27 +75,8 @@ function buildEmptyContextPacket(request: TaskRequest): ContextPacket {
       provider: request.provider ?? 'claude-code',
       verificationProfile: 'fast',
     },
-    repoFacts: {
-      workspaceRoots: request.workspaceRoots,
-      roots: [],
-      gitDiff: emptyGitDiff,
-      diagnostics: {
-        files: [],
-        totalErrors: 0,
-        totalWarnings: 0,
-        totalInfos: 0,
-        totalHints: 0,
-        generatedAt: now,
-      },
-      recentEdits: { files: [], generatedAt: now },
-    },
-    liveIdeState: {
-      selectedFiles: [],
-      openFiles: [],
-      dirtyFiles: [],
-      dirtyBuffers: [],
-      collectedAt: now,
-    },
+    repoFacts: buildEmptyRepoFacts(request.workspaceRoots, now),
+    liveIdeState: { selectedFiles: [], openFiles: [], dirtyFiles: [], dirtyBuffers: [], collectedAt: now },
     files: [],
     omittedCandidates: [],
     budget: { estimatedBytes: 0, estimatedTokens: 0, droppedContentNotes: [] },

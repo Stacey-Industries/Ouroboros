@@ -2,21 +2,22 @@
  * ipc-handlers/files.ts - File system IPC handlers
  */
 
-import chokidar, { FSWatcher } from 'chokidar';
-import { BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
 import log from '../logger';
+import { watchRecursive, type WatchSubscription } from '../watchers';
 import {
   broadcastFileChange,
   createExclusiveFile,
+  createSelectFolderHandler,
   ensureDirExists,
+  handleShowImageDialog,
   handleSoftDeleteOp,
   isTempDeletionPath,
   listDirectoryItems,
   loadBinaryContent,
-  loadImageAttachment,
   loadTextContent,
   movePath,
   pathExists,
@@ -37,26 +38,32 @@ type RegisterHandler = <TArgs extends unknown[]>(
   handler: FileHandler<TArgs>,
 ) => void;
 
-const watchers = new Map<string, FSWatcher>();
+/**
+ * Per-root watcher handle. The dirSet tracks paths seen as directories within
+ * this watcher's tree — used to disambiguate parcel 'delete' events into the
+ * renderer-expected 'unlink' vs 'unlinkDir' shape.
+ */
+interface WatcherEntry {
+  subscription: WatchSubscription;
+  dirSet: Set<string>;
+}
+
+const watchers = new Map<string, WatcherEntry>();
 const MAX_WATCHERS = 8;
 
-const WATCHER_IGNORES = [
-  /(^|[/\\])\../,
-  /node_modules/,
-  /\.git/,
-  /dist/,
-  /out/,
-  /build/,
-  /coverage/,
+/**
+ * Glob patterns passed to @parcel/watcher. These cover dot-prefixed dirs,
+ * VCS directories, and common build output directories.
+ */
+const WATCHER_IGNORE_GLOBS = [
+  '**/.*/**',
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/out/**',
+  '**/build/**',
+  '**/coverage/**',
 ];
-
-const WATCHER_EVENTS = [
-  ['add', 'add'],
-  ['change', 'change'],
-  ['unlink', 'unlink'],
-  ['addDir', 'addDir'],
-  ['unlinkDir', 'unlinkDir'],
-] as const;
 
 function createRegistrar(channels: string[]): RegisterHandler {
   return (channel, handler) => {
@@ -114,13 +121,38 @@ async function runDualPathOperation<T extends object>(
   }
 }
 
-function bindWatcherEvents(watcher: FSWatcher): void {
-  for (const [eventName, changeType] of WATCHER_EVENTS) {
-    watcher.on(eventName, (changedPath) => broadcastFileChange(changeType, changedPath));
+/**
+ * Map a parcel WatchEventType to the renderer FileChangeType.
+ *
+ * parcel emits: 'create' | 'update' | 'delete'
+ * renderer expects: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
+ *
+ * For 'create': stat the path and record it in dirSet if it is a directory.
+ * For 'delete': check dirSet to distinguish file vs directory deletion.
+ */
+async function resolveChangeType(
+  parcelType: 'create' | 'update' | 'delete',
+  changedPath: string,
+  dirSet: Set<string>,
+): Promise<'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir'> {
+  if (parcelType === 'update') return 'change';
+  if (parcelType === 'delete') {
+    const wasDir = dirSet.has(changedPath);
+    dirSet.delete(changedPath);
+    return wasDir ? 'unlinkDir' : 'unlink';
   }
-  watcher.on('error', (err) => {
-    log.error('watcher error:', err);
-  });
+  // parcelType === 'create'
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- changedPath comes from chokidar watcher event, not user input
+    const stat = await fs.stat(changedPath);
+    if (stat.isDirectory()) {
+      dirSet.add(changedPath);
+      return 'addDir';
+    }
+  } catch {
+    // Path disappeared between the event and the stat — treat as a file.
+  }
+  return 'add';
 }
 
 /** Normalize path for consistent watcher map keys (case-insensitive on Windows, strip trailing sep). */
@@ -133,26 +165,30 @@ function normalizeWatchPath(p: string): string {
 function evictOldestWatcher(): void {
   const oldest = watchers.keys().next().value;
   if (!oldest) return;
-  const watcher = watchers.get(oldest);
+  const entry = watchers.get(oldest);
   watchers.delete(oldest);
-  watcher?.close().catch(() => {});
+  entry?.subscription.close().catch(() => {});
   log.info(`[watchers] evicted oldest watcher (${oldest}), count=${watchers.size}`);
 }
 
-function watchDirectory(dirPath: string): { success: boolean; already?: true; error?: string } {
+async function watchDirectory(
+  dirPath: string,
+): Promise<{ success: boolean; already?: true; error?: string }> {
   const key = normalizeWatchPath(dirPath);
   if (watchers.has(key)) return { success: true, already: true };
   while (watchers.size >= MAX_WATCHERS) evictOldestWatcher();
   try {
-    const watcher = chokidar.watch(dirPath, {
-      persistent: true,
-      ignoreInitial: true,
-      ignored: WATCHER_IGNORES,
-      depth: 8,
-      awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
-    });
-    bindWatcherEvents(watcher);
-    watchers.set(key, watcher);
+    const dirSet = new Set<string>();
+    const subscription = await watchRecursive(
+      dirPath,
+      { ignore: WATCHER_IGNORE_GLOBS },
+      (event) => {
+        resolveChangeType(event.type, event.path, dirSet)
+          .then((changeType) => broadcastFileChange(changeType, event.path))
+          .catch((err) => log.error('[watchers] resolveChangeType failed:', err));
+      },
+    );
+    watchers.set(key, { subscription, dirSet });
     return { success: true };
   } catch (err) {
     return toErrorResult(err);
@@ -181,17 +217,19 @@ async function handleReadDir(event: IpcMainInvokeEvent, dirPath: string) {
   return runPathOperation(event, dirPath, async () => listDirectoryItems(dirPath));
 }
 
-function handleWatchDir(event: IpcMainInvokeEvent, dirPath: string) {
-  return assertPathAllowed(event, dirPath) || watchDirectory(dirPath);
+async function handleWatchDir(event: IpcMainInvokeEvent, dirPath: string) {
+  const denied = assertPathAllowed(event, dirPath);
+  if (denied) return denied;
+  return watchDirectory(dirPath);
 }
 
 async function handleUnwatchDir(event: IpcMainInvokeEvent, dirPath: string) {
   const denied = assertPathAllowed(event, dirPath);
   if (denied) return denied;
   const key = normalizeWatchPath(dirPath);
-  const watcher = watchers.get(key);
-  if (watcher) {
-    await watcher.close();
+  const entry = watchers.get(key);
+  if (entry) {
+    await entry.subscription.close();
     watchers.delete(key);
   }
   return { success: true };
@@ -273,35 +311,6 @@ async function handleRestoreDeleted(
   });
 }
 
-function createSelectFolderHandler(senderWindow: SenderWindow): FileHandler {
-  return async (event) => {
-    const result = await dialog.showOpenDialog(senderWindow(event), {
-      properties: ['openDirectory', 'createDirectory'],
-      title: 'Select Project Folder',
-    });
-    return result.canceled || result.filePaths.length === 0
-      ? { success: true, cancelled: true, path: null }
-      : { success: true, cancelled: false, path: result.filePaths[0] };
-  };
-}
-
-async function handleShowImageDialog(event: IpcMainInvokeEvent) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime even if not in typedefs
-  const win = ((event.sender as any).getOwnerBrowserWindow?.() ??
-    BrowserWindow.getFocusedWindow())!;
-  const result = await dialog.showOpenDialog(win, {
-    title: 'Attach Image',
-    properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
-  });
-  if (result.canceled || result.filePaths.length === 0) return { success: true, cancelled: true };
-  try {
-    const attachments = await Promise.all(result.filePaths.slice(0, 5).map(loadImageAttachment));
-    return { success: true, cancelled: false, attachments };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
-}
 
 export function registerFileHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
@@ -329,6 +338,6 @@ export function registerFileHandlers(senderWindow: SenderWindow): string[] {
 }
 
 export function cleanupFileWatchers(): void {
-  for (const [, watcher] of watchers) watcher.close().catch(() => {});
+  for (const [, entry] of watchers) entry.subscription.close().catch(() => {});
   watchers.clear();
 }

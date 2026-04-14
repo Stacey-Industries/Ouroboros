@@ -242,4 +242,16 @@ export const tailSchema = {
     type: 'boolean',
     default: false,
   },
+  /** Wave 6 (#116) — token-by-token streaming for Ctrl+K inline edits. Default off. */
+  streamingInlineEdit: {
+    type: 'boolean',
+    default: false,
+  },
+  /** Wave 6 (#103) — max concurrent background agent jobs. Default 2. */
+  backgroundJobsMaxConcurrent: {
+    type: 'number',
+    minimum: 1,
+    maximum: 10,
+    default: 2,
+  },
 };

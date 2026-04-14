@@ -33,7 +33,14 @@ if ($env:OUROBOROS_HOOKS_ADDRESS) {
 
 $ApprovalsDir = Join-Path $env:USERPROFILE '.ouroboros\approvals'
 $PollIntervalMs = 500
-$MaxPollSeconds = 120  # max time to wait for approval
+$MaxPollSeconds = 15  # max time to wait for approval before approving by default
+
+# Skip entirely for sessions not spawned by Ouroboros. The hook is installed
+# in the user's global ~/.claude/settings.json so it fires for every Claude
+# CLI session on this machine — including standalone ones. Without a valid
+# token the server will reject the auth anyway, and the old code still polled
+# 120s for an approval that could never arrive. Bail out fast.
+if ([string]::IsNullOrEmpty($env:OUROBOROS_HOOKS_TOKEN)) { exit 0 }
 
 # -- Read stdin ----------------------------------------------------------------
 $stdinData = $null
@@ -98,15 +105,23 @@ $sent = $false
 try {
     $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(
         '.', 'agent-ide-hooks',
-        [System.IO.Pipes.PipeDirection]::Out,
+        [System.IO.Pipes.PipeDirection]::InOut,
         [System.IO.Pipes.PipeOptions]::None
     )
     $pipe.Connect($TimeoutMs)
     $pipe.Write($authBytes, 0, $authBytes.Length)  # auth first
     $pipe.Write($bytes, 0, $bytes.Length)
     $pipe.Flush()
+    # Detect explicit auth rejection: the server writes
+    # '{"error":"unauthorized"}\n' and half-closes. Give it a brief window
+    # to respond, then check whether the pipe was closed from the server
+    # side. Without this, a buffered write "succeeds" even when the server
+    # rejected us, and we used to fall into a 2-minute approval poll.
+    Start-Sleep -Milliseconds 150
+    if ($pipe.IsConnected) {
+        $sent = $true
+    }
     $pipe.Dispose()
-    $sent = $true
 } catch {
     # Named pipe unavailable - try TCP
 }
@@ -147,9 +162,9 @@ while ($elapsed -lt ($MaxPollSeconds * 1000)) {
             Remove-Item -Path $responsePath -Force -ErrorAction SilentlyContinue
 
             if ($response.decision -eq 'reject') {
-                # Output rejection reason for Claude Code
+                # Output rejection reason for Claude Code (stderr so model sees it on exit 2)
                 $reason = if ($response.reason) { $response.reason } else { 'Rejected by user in Ouroboros IDE' }
-                Write-Output $reason
+                [Console]::Error.WriteLine($reason)
                 exit 2
             }
 

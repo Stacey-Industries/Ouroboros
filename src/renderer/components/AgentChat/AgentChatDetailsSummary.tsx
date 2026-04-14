@@ -109,3 +109,53 @@ export function AgentChatDetailsSummary({
     </div>
   );
 }
+
+/* ---------- Drawer sub-components (exported for use in AgentChatDetailsDrawer) ---------- */
+
+export function DrawerSection(props: { children: React.ReactNode; title: string }): React.ReactElement {
+  return (
+    <section className="rounded border border-border-semantic bg-surface-base px-3 py-3">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-semantic-muted">
+        {props.title}
+      </div>
+      <div className="mt-2">{props.children}</div>
+    </section>
+  );
+}
+
+export function MetadataGrid(props: { rows: Array<{ label: string; value: string | null }> }): React.ReactElement {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+      {props.rows.filter((row) => row.value).map((row) => (
+        <div key={row.label} className="min-w-0">
+          <div className="text-[10px] uppercase tracking-wide text-text-semantic-muted">{row.label}</div>
+          <div className="mt-1 truncate text-text-semantic-primary" title={row.value ?? undefined}>{row.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function DrawerTextBlock({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <div className="mt-3 text-xs leading-5 text-text-semantic-muted">{children}</div>;
+}
+
+export function LoadingState(): React.ReactElement {
+  return <div className="text-xs text-text-semantic-muted">Loading linked task details…</div>;
+}
+
+export function ErrorState({ error }: { error: string }): React.ReactElement {
+  return (
+    <div className="rounded border border-border-semantic bg-status-error-subtle px-3 py-3 text-xs leading-5 text-status-error">
+      {error}
+    </div>
+  );
+}
+
+export function EmptyState(): React.ReactElement {
+  return (
+    <div className="text-xs text-text-semantic-muted">
+      No linked task details are available for this message yet.
+    </div>
+  );
+}

@@ -25,6 +25,7 @@ import type {
 } from './chatOrchestrationBridgeTypes';
 import type { PreparedSend } from './chatOrchestrationRequestSupport';
 import type { AgentChatThreadStore } from './threadStore';
+import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatOrchestrationLink, AgentChatSendResult } from './types';
 
 type CreateTaskResult = Awaited<ReturnType<OrchestrationClient['createTask']>>;
@@ -156,7 +157,7 @@ export function buildStreamContext(
     userPrompt: userPrompt?.slice(0, 120),
     streamEnded: false,
     estimatedHistoryTokens: pending.taskRequest.conversationHistory?.reduce(
-      (sum, m) => sum + Math.ceil(m.content.length / 3.5),
+      (sum, m) => sum + tokenCalibrationStore.calibrate(m.content.length / 4),
       0,
     ),
   };

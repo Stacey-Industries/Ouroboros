@@ -8,6 +8,7 @@ import React, { useCallback } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
 import { AboutModal } from '../AboutModal';
+import { BackgroundJobsPanel } from '../BackgroundJobs/BackgroundJobsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
@@ -266,6 +267,7 @@ function LayoutOverlays({
       />
       <PerformanceOverlay visible={perfOverlayVisible} />
       <AboutModal />
+      <BackgroundJobsPanel />
     </>
   );
 }

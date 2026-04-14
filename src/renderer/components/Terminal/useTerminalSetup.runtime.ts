@@ -7,6 +7,7 @@ import type {
 } from './useTerminalSetup.shared'
 
 export function useTerminalSetupRuntimeRefs(): TerminalSetupRuntimeRefs {
+  'use no memo'
   return {
     rafIdRef: useRef(0),
     resizeDebounceRef: useRef<ReturnType<typeof setTimeout> | null>(null),
@@ -35,15 +36,12 @@ function restoreScrollPosition(
   }
 }
 
-export function useTerminalFitHandlers(
-  sessionId: string,
-  refs: TerminalRefs,
-  runtimeRefs: TerminalSetupRuntimeRefs,
-): { fit: () => void; syncTheme: () => void } {
-  const fitNow = useCallback(() => {
-    if (!refs.isReadyRef.current) return
-    const addon = refs.fitAddonRef.current
-    const term = refs.terminalRef.current
+function useFitNow(sessionId: string, refs: TerminalRefs, resizeDebounceRef: TerminalSetupRuntimeRefs['resizeDebounceRef']): () => void {
+  const { fitAddonRef, isReadyRef, terminalRef } = refs
+  return useCallback(() => {
+    if (!isReadyRef.current) return
+    const addon = fitAddonRef.current
+    const term = terminalRef.current
     if (!addon || !term) return
     try {
       const proposed = addon.proposeDimensions()
@@ -54,26 +52,37 @@ export function useTerminalFitHandlers(
       const offsetFromBottom = buffer.baseY - buffer.viewportY
       addon.fit()
       restoreScrollPosition(term, isAtBottom, offsetFromBottom)
-      queuePtyResize(sessionId, term.cols, term.rows, runtimeRefs.resizeDebounceRef)
+      queuePtyResize(sessionId, term.cols, term.rows, resizeDebounceRef)
     } catch {
       // fit can throw if the container has zero dimensions
     }
-  }, [refs.fitAddonRef, refs.isReadyRef, refs.terminalRef, runtimeRefs.resizeDebounceRef, sessionId])
+  }, [fitAddonRef, isReadyRef, terminalRef, resizeDebounceRef, sessionId])
+}
+
+export function useTerminalFitHandlers(
+  sessionId: string,
+  refs: TerminalRefs,
+  runtimeRefs: TerminalSetupRuntimeRefs,
+): { fit: () => void; syncTheme: () => void } {
+  'use no memo'
+  const { isReadyRef, terminalRef } = refs
+  const { rafIdRef, resizeDebounceRef } = runtimeRefs
+  const fitNow = useFitNow(sessionId, refs, resizeDebounceRef)
 
   const fit = useCallback(() => {
-    if (!refs.isReadyRef.current) return
-    if (runtimeRefs.rafIdRef.current) cancelAnimationFrame(runtimeRefs.rafIdRef.current)
-    runtimeRefs.rafIdRef.current = requestAnimationFrame(() => {
-      runtimeRefs.rafIdRef.current = 0
+    if (!isReadyRef.current) return
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = 0
       fitNow()
     })
-  }, [fitNow, refs.isReadyRef, runtimeRefs.rafIdRef])
+  }, [fitNow, isReadyRef, rafIdRef])
 
   const syncTheme = useCallback(() => {
-    const term = refs.terminalRef.current
+    const term = terminalRef.current
     if (!term) return
     term.options = { theme: buildXtermTheme() }
-  }, [refs.terminalRef])
+  }, [terminalRef])
 
   return { fit, syncTheme }
 }

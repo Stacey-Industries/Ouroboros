@@ -11,6 +11,7 @@
  */
 
 import crypto from 'crypto';
+import { isMainThread, workerData } from 'worker_threads';
 
 import log from './logger';
 
@@ -18,8 +19,30 @@ import log from './logger';
 // Token storage (module-level, per-process lifetime)
 // ---------------------------------------------------------------------------
 
+interface PipeTokenBundle {
+  toolServerToken: string;
+  hooksToken: string;
+}
+
 let toolServerToken: string | null = null;
 let hooksToken: string | null = null;
+
+// Worker threads have their own module scope, so lazy generation would produce
+// tokens that don't match the main process's pipe servers. Seed from the
+// workerData payload the main process attaches via buildWorkerPipeAuthSeed().
+function seedFromWorkerData(): void {
+  if (isMainThread) return;
+  const seed = (workerData as { __pipeAuth?: PipeTokenBundle } | null)?.__pipeAuth;
+  if (!seed) return;
+  if (typeof seed.toolServerToken === 'string' && seed.toolServerToken.length > 0) {
+    toolServerToken = seed.toolServerToken;
+  }
+  if (typeof seed.hooksToken === 'string' && seed.hooksToken.length > 0) {
+    hooksToken = seed.hooksToken;
+  }
+}
+
+seedFromWorkerData();
 
 /** Generate both tokens. Call once at app startup. */
 export function generatePipeTokens(): void {
@@ -36,6 +59,20 @@ export function getToolServerToken(): string {
 export function getHooksToken(): string {
   if (!hooksToken) generatePipeTokens();
   return hooksToken!;
+}
+
+/**
+ * Build the `workerData` payload for spawning a Worker that transitively
+ * imports this module. The worker will adopt the main process's tokens
+ * instead of generating its own.
+ */
+export function buildWorkerPipeAuthSeed(): { __pipeAuth: PipeTokenBundle } {
+  return {
+    __pipeAuth: {
+      toolServerToken: getToolServerToken(),
+      hooksToken: getHooksToken(),
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,27 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'electron-vite'
+import { cpSync, mkdirSync } from 'fs'
 import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import type { Plugin } from 'vite'
 import monacoEditorPluginModule from 'vite-plugin-monaco-editor'
+
+/**
+ * copyTemplates — copies src/main/templates/ → out/main/templates/ at build
+ * time so runtime code (e.g. specScaffold.ts) can read them via __dirname.
+ * Runs in closeBundle to ensure the output directory exists first.
+ */
+function copyTemplatesPlugin(): Plugin {
+  return {
+    name: 'copy-main-templates',
+    closeBundle(): void {
+      const src = resolve(__dirname, 'src/main/templates')
+      const dest = resolve(__dirname, 'out/main/templates')
+      mkdirSync(dest, { recursive: true })
+      cpSync(src, dest, { recursive: true })
+    },
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CJS/ESM interop: vite-plugin-monaco-editor may export default or module directly
 const monacoEditorPlugin = ((monacoEditorPluginModule as unknown as { default: typeof monacoEditorPluginModule }).default ?? monacoEditorPluginModule) as unknown as (opts: Record<string, unknown>) => import('vite').Plugin
@@ -32,6 +51,7 @@ const watchIgnored = [
 export default defineConfig({
   main: {
     plugins: [
+      copyTemplatesPlugin(),
       ...(analyze ? [visualizer({ filename: 'stats/main.html', gzipSize: true, brotliSize: true })] : []),
     ],
     resolve: {

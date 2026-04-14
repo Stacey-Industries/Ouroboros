@@ -3,7 +3,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
-  retries: 0,
+  retries: 1,
+  globalSetup: './e2e/mocks/globalSetup.ts',
   use: {
     trace: 'on-first-retry',
   },

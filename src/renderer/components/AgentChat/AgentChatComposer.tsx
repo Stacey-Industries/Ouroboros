@@ -18,12 +18,14 @@ import {
 import {
   AttachmentChipsBar,
   ComposerContextBar,
+  ComposerFooter,
+  type ComposerFooterProps,
   ComposerInput,
   ComposerMenus,
 } from './AgentChatComposerParts';
 import { getComposerRootClassName, noop } from './AgentChatComposerSupport';
 import { AgentChatContextBar } from './AgentChatContextBar';
-import { ChatControlsBar, type ChatOverrides } from './ChatControlsBar';
+import type { ChatOverrides } from './ChatControlsBar';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionChipsBar } from './MentionChip';
 import { buildChatSlashCommands, type SlashCommandContext } from './SlashCommandMenu';
@@ -66,41 +68,6 @@ export type AgentChatComposerProps = {
   attachments?: ImageAttachment[];
   onAttachmentsChange?: (attachments: ImageAttachment[]) => void;
 };
-
-/* ---------- ComposerFooter ---------- */
-
-type ComposerFooterProps = {
-  chatOverrides?: ChatOverrides;
-  codexModels?: CodexModelOption[];
-  codexSettingsModel?: string;
-  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
-  modelProviders?: ModelProvider[];
-  routedBy?: string;
-  settingsModel?: string;
-  onChatOverridesChange?: (overrides: ChatOverrides) => void;
-  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
-  threadModelUsage?: import('./AgentChatConversation').ModelContextUsage[];
-  isStreaming?: boolean;
-};
-
-function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
-  if (!props.chatOverrides || !props.onChatOverridesChange) return null;
-  return (
-    <ChatControlsBar
-      overrides={props.chatOverrides}
-      onChange={props.onChatOverridesChange}
-      settingsModel={props.settingsModel}
-      codexSettingsModel={props.codexSettingsModel}
-      defaultProvider={props.defaultProvider}
-      providers={props.modelProviders}
-      codexModels={props.codexModels}
-      threadModelUsage={props.threadModelUsage}
-      streamingTokenUsage={props.streamingTokenUsage}
-      isStreaming={props.isStreaming}
-      routedBy={props.routedBy}
-    />
-  );
-}
 
 /* ---------- useComposerState ---------- */
 

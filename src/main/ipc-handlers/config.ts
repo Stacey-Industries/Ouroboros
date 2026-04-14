@@ -2,8 +2,9 @@
  * ipc-handlers/config.ts - Config IPC handlers
  */
 
-import chokidar, { FSWatcher } from 'chokidar';
 import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, shell } from 'electron';
+import type { FSWatcher } from 'fs';
+import fsSync from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -12,6 +13,7 @@ import { AppConfig, getConfig, getConfigValue, setConfigValue } from '../config'
 import type { ContextLayerConfig } from '../contextLayer/contextLayerTypes';
 import log from '../logger';
 import { broadcastToWebClients } from '../web/webServer';
+import { IMPORTABLE_KEYS } from './configHelpers';
 
 type SenderWindow = (event: IpcMainInvokeEvent) => BrowserWindow;
 type ConfigInvokeHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
@@ -21,60 +23,8 @@ interface ConfigHandlerEntry {
   handler: ConfigInvokeHandler;
 }
 
-/** Config keys that can be imported/synced from external JSON files. */
-const IMPORTABLE_KEYS: (keyof AppConfig)[] = [
-  'recentProjects',
-  'defaultProjectRoot',
-  'activeTheme',
-  'activeFileIconTheme',
-  'activeProductIconTheme',
-  'hooksServerPort',
-  'terminalFontSize',
-  'terminalCursorStyle',
-  'autoInstallHooks',
-  'shell',
-  'panelSizes',
-  'windowBounds',
-  'fontUI',
-  'fontMono',
-  'fontSizeUI',
-  'keybindings',
-  'showBgGradient',
-  'customThemeColors',
-  'terminalSessions',
-  'claudeCliSettings',
-  'codexCliSettings',
-  'customCSS',
-  'bookmarks',
-  'fileTreeIgnorePatterns',
-  'profiles',
-  'multiRoots',
-  'customPrompt',
-  'promptPreset',
-  'agentChatSettings',
-  'notifications',
-  'agentTemplates',
-  'workspaceLayouts',
-  'activeLayoutName',
-  'workspaceSnapshots',
-  'extensionsEnabled',
-  'disabledExtensions',
-  'installedVsxExtensions',
-  'disabledVsxExtensions',
-  'lspEnabled', 'inlineCompletionsEnabled',
-  'embeddingsEnabled', 'embeddingProvider', 'voyageApiKey',
-  'lspServers',
-  'claudeAutoLaunch',
-  'approvalRequired',
-  'approvalTimeout',
-  'commandBlocksEnabled',
-  'promptPattern',
-  'formatOnSave',
-  'contextLayer',
-  'routerSettings',
-];
-
 let settingsFileWatcher: FSWatcher | null = null;
+let settingsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -290,15 +240,28 @@ function startSettingsFileWatcher(settingsFilePath: string): void {
     return;
   }
 
-  settingsFileWatcher = chokidar.watch(settingsFilePath, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
-  });
-
-  settingsFileWatcher.on('change', () => {
-    void syncExternalSettings(settingsFilePath);
-  });
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from app.getPath('userData')
+    settingsFileWatcher = fsSync.watch(settingsFilePath, (eventType) => {
+      if (eventType !== 'change') {
+        return;
+      }
+      // Debounce: Windows fires 'change' twice per save; coalesce within 50ms.
+      if (settingsDebounceTimer !== null) {
+        clearTimeout(settingsDebounceTimer);
+      }
+      settingsDebounceTimer = setTimeout(() => {
+        settingsDebounceTimer = null;
+        void syncExternalSettings(settingsFilePath);
+      }, 50);
+    });
+  } catch (err) {
+    // settings.json should exist after first write; log and skip if not.
+    log.warn('[config] startSettingsFileWatcher: failed to watch', settingsFilePath, err);
+    setTimeout(() => {
+      startSettingsFileWatcher(settingsFilePath);
+    }, 1000);
+  }
 }
 
 function createDialogHandlers(
@@ -341,10 +304,15 @@ export function registerConfigHandlers(senderWindow: SenderWindow): string[] {
 }
 
 export function cleanupConfigWatcher(): void {
+  if (settingsDebounceTimer !== null) {
+    clearTimeout(settingsDebounceTimer);
+    settingsDebounceTimer = null;
+  }
+
   if (!settingsFileWatcher) {
     return;
   }
 
-  settingsFileWatcher.close().catch(() => {});
+  settingsFileWatcher.close();
   settingsFileWatcher = null;
 }

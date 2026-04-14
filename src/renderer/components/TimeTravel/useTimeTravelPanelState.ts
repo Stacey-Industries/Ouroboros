@@ -16,6 +16,8 @@ interface UseTimeTravelPanelStateArgs {
   snapshots: WorkspaceSnapshot[];
   onCreateSnapshot: (label?: string) => Promise<WorkspaceSnapshot | null>;
   onRefreshSnapshots: () => Promise<void>;
+  /** When true, the manual snapshot creation controls are hidden (thread scope). */
+  hideCreateSnapshot?: boolean;
 }
 
 function useCurrentHead(
@@ -278,6 +280,7 @@ export function useTimeTravelPanelState(args: UseTimeTravelPanelStateArgs) {
     loadingFiles,
     currentHead,
     statusMessage,
+    hideCreateSnapshot: args.hideCreateSnapshot ?? false,
     ...selectionState,
     ...restoreState,
     ...createSnapshotState,

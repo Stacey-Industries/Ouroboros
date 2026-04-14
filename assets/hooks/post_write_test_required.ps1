@@ -70,7 +70,7 @@ $underTests = Join-Path $testsDir "${name}.test${ext}"
 if ((Test-Path $colocated) -or (Test-Path $underTests)) { exit 0 }
 
 # -- No test file - block agent ------------------------------------------------
-Write-Output "BLOCKED - New source file has no tests: ${filename}"
-Write-Output "Create ${name}.test${ext} with smoke tests covering the acceptance criteria."
-Write-Output "Co-locate it at: ${colocated}"
+[Console]::Error.WriteLine("BLOCKED - New source file has no tests: ${filename}")
+[Console]::Error.WriteLine("Create ${name}.test${ext} with smoke tests covering the acceptance criteria.")
+[Console]::Error.WriteLine("Co-locate it at: ${colocated}")
 exit 2

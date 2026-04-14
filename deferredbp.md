@@ -133,28 +133,52 @@ Shipped @-mention enhancements, semantic codebase search with local+Voyage provi
 
 ---
 
-## Wave 6 — Multi-Agent & Workflow
+## Wave 6 — Multi-Agent & Workflow ✓ (v1.3.8)
 
 Background agents, parallel conflict detection, checkpoints, spec workflows.
 
+**Spec:** `plan/wave6-spec.md` — full phased plan for option 1 (dependency-ordered full wave).
+
+### Completed items
+
+- **#106 — ✓ In-editor hunk gutter** — `useEditorHunkDecorations` + `EditorHunkGutterActions` widget in `MonacoEditorInstance`. Accept/reject per hunk without opening DiffReview panel. CSS tokens in `editor-hunk.css`. Alt+Y / Alt+N keybindings.
+- **#108 — ✓ /spec slash command** — `specScaffold.ts` IPC handler writes `{requirements,design,tasks}.md` under `.ouroboros/specs/<slug>/`. Templates in `src/main/templates/spec/` (copied to `out/main/templates/spec/` at build time). Collision detection and toast on duplicate.
+- **#107 — ✓ Session checkpoint timeline** — Per-turn auto-snapshots via `chatOrchestrationBridgeGit.ts`. `checkpointStore.ts` queries thread-scoped checkpoints. `RewindButton` on assistant messages. `TimeTravelPanel` extended with `scope: 'thread'` view. Git ref convention: `refs/ouroboros/checkpoints/<threadId>`.
+- **#103 — ✓ Background agent queue** — `backgroundJobs/` subsystem: `jobStore` (SQLite `background_jobs` table), `jobScheduler` (concurrency cap 2, queue cap 50), `jobRunner` (PTY-based, session correlation). `BackgroundJobsPanel` with status pill + cancel. OS notification on completion.
+- **#116 — ✓ Streaming inline edit** — `useStreamingInlineEdit` hook on `ai:streamInlineEdit:<requestId>` channel. Token batching, ghost decoration, single-undo via `pushStackElement`. Feature-flagged via `config.streamingInlineEdit`; flag mirrored to `window.__streamingInlineEdit__` by `useStreamingInlineEditFlag`.
+- **#104 — ✓ Parallel agent conflict detection** — `conflictMonitor.ts` debounced 200ms, pairwise symbol intersection via `graphQuery.detectChangesForSession`. `AgentConflictBanner` inline in affected chat threads. Severity: `blocking` (symbol overlap) / `warning` (file-only, graph cold).
+- **#95 — ✓ E2E coverage** — Playwright specs: `agent-launch`, `diff-gutter`, `spec-scaffold`, `checkpoint-restore`, `conflict-banner`. Mock `claude` binary (`e2e/mocks/mockClaudeBin.*`). Fixture creates throwaway git-initialized project in `%TEMP%`.
+
+**Slicing alternatives** (evaluated 2026-04-13):
+
+- **Option 2 — Quick-wins slice:** #106 (re-scoped to in-editor gutter actions; panel-level hunk accept/reject already shipped) + #108 (`/spec` slash command — existing infra, new entry only). ~2 weeks. Independent phases. Pick when cadence pressure outweighs architectural investment.
+- **Option 3 — Agent-core bundle:** #103 + #104 only. ~4–7 weeks. Largest infra lift but unblocks #115 (persistent terminals) via shared PtyHost+SQLite pattern. Pick when the dominant user pain is "queue a long task and walk away" — the combo is only meaningful end-to-end.
+
+**Pre-spec discoveries worth noting:**
+
+- **#106 is already hunk-level** in `DiffReview/HunkView.tsx` with per-hunk `stageHunk`/`revertHunk` IPC. Remaining gap is in-editor gutter UX, not hunk granularity.
+- **#107 largely exists** — `TimeTravelPanel`, `git:snapshot`/`git:restoreSnapshot`, `captureHeadHash` in `chatOrchestrationBridgeGit.ts`. Wave 6 work is auto-snapshot triggers + thread-scoped timeline, not greenfield.
+- **#108 slash-command infra exists** in `SlashCommandMenu.tsx` + `AgentChatComposerSupport.ts`. Adding `/spec` is a new entry + scaffold handler, not a subsystem.
+- **#103/#104/#116** are greenfield — no queue, no cross-session tracking, no token-streaming inline edit exists.
+
 ### Agent Management
 
-- **#103 — Background/async agent mode** — All sessions require a visible terminal window. For long-running tasks, async/fire-and-forget is the pattern developers want most. Queue headless Claude Code sessions, notify on completion via hooks. Estimated: 2-4 weeks.
-- **#104 — Parallel agent conflict detection** — When two Claude Code sessions modify overlapping symbols, no warning. The codebase graph can detect this via blast-radius comparison. Estimated: 2-3 weeks. Depends on #103.
+- **#103 — ✓ Background/async agent mode** — `backgroundJobs/` subsystem with SQLite persistence, concurrency cap, PTY-based runner. See completed items above.
+- **#104 — ✓ Parallel agent conflict detection** — `conflictMonitor.ts` + `AgentConflictBanner`. See completed items above.
 
 ### Workflow Features
 
-- **#107 — Session checkpoint/rewind** — No timeline of AI checkpoints to revert to. Git-backed snapshots with UI timeline. Estimated: 1-2 weeks.
-- **#108 — Spec-driven workflow scaffolding** — Kiro's `requirements.md → design.md → tasks.md` pattern. Add a `/spec` command. Estimated: 1-2 weeks.
+- **#107 — ✓ Session checkpoint/rewind** — Per-turn git snapshots on `refs/ouroboros/checkpoints/<threadId>`. See completed items above.
+- **#108 — ✓ Spec-driven workflow scaffolding** — `/spec` slash command + `specScaffold.ts` IPC handler. See completed items above.
 
 ### Diff & Edit Visibility
 
-- **#106 — Hunk-level diff accept/reject** — DiffReview appears to be whole-file accept/reject. Industry standard is per-hunk. Estimated: 1 week.
-- **#116 — Streaming diff protocol for inline edits** — Zed implements token-by-token edit streaming. Shows edits as-they-happen in the editor.
+- **#106 — ✓ In-editor hunk gutter** — `EditorHunkGutterActions` widget; re-scoped from whole-file to gutter UX (panel-level was already shipped). See completed items above.
+- **#116 — ✓ Streaming inline edit** — `useStreamingInlineEdit` + `ai:streamInlineEdit` channel. Feature-flagged. See completed items above.
 
 ### Test Coverage (attach to Wave 6)
 
-- **#95 — E2E tests are smoke-only** — App launches, window dimensions, no uncaught exceptions. No regression coverage for agent launch, file ops, or chat.
+- **#95 — ✓ E2E coverage** — Playwright specs for all five key flows. Mock claude binary for hermetic tests. See completed items above.
 
 ---
 
@@ -169,7 +193,7 @@ Items that don't naturally cluster. Pick off individually when touching nearby c
 | 25 | `getPtyCwd` stale on Windows/macOS | When #61 restructures PTY |
 | 30 | `estimatedHistoryTokens` 3.5 chars/token heuristic | When calibration data shows it matters |
 | 33 | Shadow routing training/serving distribution mismatch | When router accuracy is measured |
-| 36 | `graphStore ingestTraces` tool returns a stub | When trace ingestion is actually needed |
+| 36 | ✓ `graphStore ingestTraces` — implemented in `graphControllerSupport.ts:66-88` (Wave 7) | — |
 | 64 | Title logic duplicated in two files | When touching either file |
 | 59 | Approval response uses 500ms file polling | When hooks infrastructure is next revisited |
 | 6 | Web mode `wsToken` is non-HttpOnly | When web deployment is prioritized |

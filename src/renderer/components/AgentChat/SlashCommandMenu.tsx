@@ -130,6 +130,7 @@ export interface SlashCommandContext {
   onNewThread?: () => void;
   onRemember?: (content: string) => void;
   onOpenMemories?: () => void;
+  onSpec?: (featureName: string) => void;
   commands?: CommandDefinition[];
 }
 
@@ -158,6 +159,7 @@ export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[]
     { id: 'help', label: 'Help', description: 'Show keyboard shortcuts and tips', icon: '?', action: () => dispatchIdeEvent('agent-ide:open-settings', 'keybindings') },
     { id: 'remember', label: 'Remember', description: 'Save a memory for future sessions', icon: '◆', action: () => {}, clearDraft: true },
     { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
+    { id: 'spec', label: 'Spec', description: 'Scaffold requirements/design/tasks for a feature', icon: '✦', action: () => {}, clearDraft: true },
   ];
   const commandEntries = buildCommandSlashCommands(ctx.commands ?? []);
   return [...builtIn, ...commandEntries];

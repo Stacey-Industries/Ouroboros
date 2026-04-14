@@ -3,10 +3,16 @@
  *
  * Phases: idle → input → loading → preview → idle
  * Accepts / reject / cancel return to idle.
+ *
+ * Feature flag: when config.streamingInlineEdit === true, submit routes
+ * through useStreamingInlineEdit instead of the bulk ai:inline-edit path.
  */
 import * as monaco from 'monaco-editor';
 import type { MutableRefObject } from 'react';
 import { useCallback, useRef, useState } from 'react';
+
+import type { StreamingInlineEditActions } from './useStreamingInlineEdit';
+import { useStreamingInlineEdit } from './useStreamingInlineEdit';
 
 export type InlineEditPhase = 'idle' | 'input' | 'loading' | 'preview';
 
@@ -31,6 +37,8 @@ export interface InlineEditActions {
   accept: () => void;
   reject: () => void;
   cancel: () => void;
+  /** Present only when streamingInlineEdit flag is on. */
+  streaming?: StreamingInlineEditActions;
 }
 
 export const IDLE_STATE: InlineEditState = {
@@ -115,6 +123,20 @@ async function runSubmit(instruction: string, deps: SubmitDeps): Promise<void> {
   }
 }
 
+function isStreamingEnabled(): boolean {
+  return typeof window !== 'undefined' &&
+    !!(window.electronAPI?.config as unknown as Record<string, unknown> | undefined);
+}
+
+function checkStreamFlag(): boolean {
+  try {
+    // Read synchronously from config cache via a best-effort approach.
+    // The flag starts false; config loads asynchronously. We check on submit.
+    const raw = (window as unknown as Record<string, unknown>).__streamingInlineEdit__;
+    return raw === true;
+  } catch { return false; }
+}
+
 export function useInlineEdit(
   editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>,
   filePath: string,
@@ -123,6 +145,8 @@ export function useInlineEdit(
   const [state, setState] = useState<InlineEditState>(IDLE_STATE);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const streaming = useStreamingInlineEdit(editorRef, filePath);
 
   const activate = useCallback((): void => {
     const editor = editorRef.current;
@@ -133,8 +157,16 @@ export function useInlineEdit(
   }, [editorRef]);
 
   const submit = useCallback((instruction: string): Promise<void> => {
+    // Streaming branch: flag on + streaming API available
+    if (isStreamingEnabled() && checkStreamFlag() && stateRef.current.selectionRange) {
+      setState((s) => ({ ...s, phase: 'loading' as InlineEditPhase, instruction, error: null }));
+      const { selectionRange, originalCode } = stateRef.current;
+      return streaming.startStream(instruction, originalCode, selectionRange).then(() => {
+        setState((s) => ({ ...s, phase: 'preview' as InlineEditPhase }));
+      });
+    }
     return runSubmit(instruction, { stateRef, editorRef, filePath, languageId, setState });
-  }, [editorRef, filePath, languageId]);
+  }, [editorRef, filePath, languageId, streaming]);
 
   const accept = useCallback((): void => {
     const current = stateRef.current;
@@ -144,7 +176,11 @@ export function useInlineEdit(
   }, [editorRef]);
 
   const reject = useCallback((): void => { setState(IDLE_STATE); }, []);
-  const cancel = useCallback((): void => { setState(IDLE_STATE); }, []);
 
-  return { state, activate, submit, accept, reject, cancel };
+  const cancel = useCallback((): void => {
+    if (streaming.isStreaming) { void streaming.cancel(); }
+    setState(IDLE_STATE);
+  }, [streaming]);
+
+  return { state, activate, submit, accept, reject, cancel, streaming };
 }

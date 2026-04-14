@@ -2,6 +2,7 @@
  * AI IPC handlers — inline completions and future AI-powered features.
  *
  * Uses the Anthropic SDK via OAuth (createAnthropicClient) for all API calls.
+ * Streaming inline edit (Wave 6 #116) uses claude -p stream-json — see aiStreamHandler.ts.
  */
 import { ipcMain } from 'electron';
 

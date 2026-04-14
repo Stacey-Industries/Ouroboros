@@ -109,6 +109,7 @@ interface ViewerData {
  * This is the single hook that owns the component's brain.
  */
 export function useFileViewerState(input: FileViewerStateInput): FileViewerState {
+  'use no memo';
   const { theme: ideTheme } = useTheme();
   const refs = useViewerRefs();
   const toggles = useViewerToggles();
@@ -147,6 +148,7 @@ export function useFileViewerState(input: FileViewerStateInput): FileViewerState
 }
 
 function useViewerUiResetters(ui: ViewerUiState): ViewerUiResetters {
+  'use no memo';
   return useMemo(
     () => ({
       setShowSearch: ui.setShowSearch,
@@ -159,9 +161,10 @@ function useViewerUiResetters(ui: ViewerUiState): ViewerUiResetters {
   );
 }
 
-function useViewerRefs(): ViewerRefs { return { codeRef: useRef<HTMLDivElement>(null), scrollRef: useRef<HTMLDivElement>(null), containerRef: useRef<HTMLDivElement>(null) }; }
+function useViewerRefs(): ViewerRefs { 'use no memo'; return { codeRef: useRef<HTMLDivElement>(null), scrollRef: useRef<HTMLDivElement>(null), containerRef: useRef<HTMLDivElement>(null) }; }
 
 function useViewerToggles(): ViewerToggles {
+  'use no memo';
   const [wordWrap, setWordWrap] = usePersistedToggle('fileviewer:wordWrap', false);
   const [showMinimap, setShowMinimap] = usePersistedToggle('fileviewer:minimap', true);
   const [showBlame, setShowBlame] = usePersistedToggle('fileviewer:blame', false);
@@ -171,6 +174,7 @@ function useViewerToggles(): ViewerToggles {
 }
 
 function useViewerUiState(): ViewerUiState {
+  'use no memo';
   const [showSearch, setShowSearch] = useState(false);
   const [showGoToLine, setShowGoToLine] = useState(false);
   const [searchMatchLines, setSearchMatchLines] = useState<number[]>([]);
@@ -182,6 +186,7 @@ function useViewerUiState(): ViewerUiState {
 }
 
 function useViewerDerivedState({ filePath, content, originalContent }: FileViewerStateInput, gitDiffBaseContent: string | null): ViewerDerivedState {
+  'use no memo';
   const diffBaseContent = originalContent != null && content != null && originalContent !== content ? originalContent : gitDiffBaseContent;
   return { isClaudeMd: filePath != null && /(?:^|[\\/])CLAUDE\.md$/i.test(filePath), isMarkdown: filePath != null && /\.(md|markdown)$/i.test(filePath), hasDiff: diffBaseContent != null && content != null && diffBaseContent !== content, diffBaseContent };
 }
@@ -192,6 +197,7 @@ function useViewerData(
   scrollRef: React.RefObject<HTMLDivElement | null>,
   showBlame: boolean
 ): ViewerData {
+  'use no memo';
   const { highlightedHtml, highlightLang } = useHighlighting(input.filePath, input.content, ideThemeId);
   const { diffLines } = useGitDiff(input.projectRoot ?? null, input.filePath, input.content);
   const diffBaseContent = useGitDiffBaseContent(input.projectRoot ?? null, input.filePath, input.content, diffLines);
@@ -258,6 +264,7 @@ function useGitDiffBaseContent(
   content: string | null,
   diffLines: DiffLineInfo[],
 ): string | null {
+  'use no memo';
   const [diffBaseContent, setDiffBaseContent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -274,6 +281,7 @@ function useConflictState(
   filePath: string | null,
   content: string | null
 ): ViewerConflicts {
+  'use no memo';
   const [conflictBlocks, setConflictBlocks] = useState<ConflictBlock[]>([]);
   useEffect(() => { setConflictBlocks(parseConflictContent(content, hasConflictMarkers, parseConflictBlocks)); }, [content]);
   const handleConflictResolved = useCallback((newContent: string) => {
@@ -285,6 +293,7 @@ function useConflictState(
 }
 
 function useCollapsedFoldState(filePath: string | null, content: string | null): ViewerFolds {
+  'use no memo';
   const [collapsedFolds, setCollapsedFolds] = useState<Set<number>>(new Set());
   useEffect(() => { setCollapsedFolds(new Set()); }, [filePath, content]);
   const toggleFold = useCallback((startLine: number) => { setCollapsedFolds((previous) => toggleCollapsedFold(previous, startLine)); }, []);
@@ -292,10 +301,12 @@ function useCollapsedFoldState(filePath: string | null, content: string | null):
 }
 
 function useScrollReset(filePath: string | null, scrollRef: React.RefObject<HTMLDivElement | null>): void {
+  'use no memo';
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [filePath, scrollRef]);
 }
 
 function useLinkHandling(codeRef: React.RefObject<HTMLDivElement | null>, filePath: string | null, projectRoot?: string | null): void {
+  'use no memo';
   useEffect(() => { ensureLinkStyles(); }, []);
   useEffect(() => {
     const element = codeRef.current;
@@ -305,9 +316,11 @@ function useLinkHandling(codeRef: React.RefObject<HTMLDivElement | null>, filePa
 }
 
 function useResetViewerUi(filePath: string | null, resetters: ViewerUiResetters): void {
+  'use no memo';
   useEffect(() => { resetters.setShowSearch(false); resetters.setShowGoToLine(false); resetters.setViewMode('code'); resetters.setShowHistory(false); resetters.setEditMode(false); }, [filePath, resetters]);
 }
 
 function useExpandFoldsForSearch(showSearch: boolean, setCollapsedFolds: React.Dispatch<React.SetStateAction<Set<number>>>): void {
+  'use no memo';
   useEffect(() => { if (showSearch) setCollapsedFolds((previous) => (previous.size === 0 ? previous : new Set())); }, [showSearch, setCollapsedFolds]);
 }

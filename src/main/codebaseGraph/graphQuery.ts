@@ -281,6 +281,32 @@ export class GraphQueryEngine {
     return blastRadius;
   }
 
+  // --- detectChangesForSession: scoped detectChanges for a file set ---
+  async detectChangesForSession(
+    _sessionId: string,
+    touchedFiles: string[],
+  ): Promise<ChangeDetectionResult> {
+    const touchedSet = new Set(
+      touchedFiles.map((f) => f.replace(/\\/g, '/').replace(/\/+$/, '')),
+    );
+    const fileNodes = this.store.getNodesByType('file').filter((n) => {
+      const normalized = n.filePath.replace(/\\/g, '/').replace(/\/+$/, '');
+      return touchedSet.has(normalized) || touchedFiles.some((f) => f.endsWith(n.filePath));
+    });
+
+    const changedFiles: string[] = [];
+    const affectedSymbols: GraphNode[] = [];
+
+    for (const fileNode of fileNodes) {
+      changedFiles.push(fileNode.filePath);
+      const symbols = this.store.getNodesByFile(fileNode.filePath);
+      affectedSymbols.push(...symbols.filter((s) => s.type !== 'file'));
+    }
+
+    const blastRadius = this.computeBlastRadius(affectedSymbols);
+    return { changedFiles, affectedSymbols, blastRadius };
+  }
+
   // --- getGraphSchema: describe the graph structure ---
   getGraphSchema(): GraphSchema {
     const nodeTypes = new Set<string>();

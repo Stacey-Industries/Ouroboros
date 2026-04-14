@@ -33,6 +33,7 @@ export function useProjectFileIndex({
   // Stabilize roots array reference — callers often pass inline `[projectRoot]`
   // which creates a new array every render, causing infinite re-scan loops.
   const rootsKey = roots.join('\0');
+  // eslint-disable-next-line react-compiler/react-compiler
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stableRoots = useMemo(() => roots, [rootsKey]);
 

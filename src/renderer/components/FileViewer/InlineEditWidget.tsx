@@ -93,16 +93,25 @@ function LoadingPhase(): React.ReactElement {
 interface PreviewActionsProps {
   onAccept: () => void;
   onReject: () => void;
+  isStreaming?: boolean;
 }
 
-function PreviewActions({ onAccept, onReject }: PreviewActionsProps): React.ReactElement {
+function PreviewActions({ onAccept, onReject, isStreaming }: PreviewActionsProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2 pt-1">
+      {isStreaming && (
+        <span
+          className="inline-block h-2 w-2 rounded-full bg-interactive-accent animate-pulse-soft"
+          aria-hidden="true"
+          title="Streaming..."
+        />
+      )}
       <button
         type="button"
-        className="btn-primary text-xs px-2 py-1"
+        className="btn-primary text-xs px-2 py-1 disabled:opacity-50"
         onClick={onAccept}
-        title="Accept edit (Enter)"
+        disabled={isStreaming}
+        title={isStreaming ? 'Waiting for stream to complete...' : 'Accept edit (Enter)'}
       >
         ✓ Accept
       </button>
@@ -208,7 +217,7 @@ function usePreviewKeyboard(
 export interface InlineEditWidgetProps {
   editor: monaco.editor.IStandaloneCodeEditor | null;
   state: InlineEditState;
-  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel'>;
+  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel' | 'streaming'>;
 }
 
 export function InlineEditWidget({ editor, state, actions }: InlineEditWidgetProps): React.ReactElement | null {
@@ -231,7 +240,7 @@ export function InlineEditWidget({ editor, state, actions }: InlineEditWidgetPro
 interface WidgetPortalProps {
   nodeRef: React.RefObject<HTMLDivElement>;
   state: InlineEditState;
-  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel'>;
+  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel' | 'streaming'>;
 }
 
 function WidgetPortal({ nodeRef, state, actions }: WidgetPortalProps): React.ReactElement | null {
@@ -247,13 +256,20 @@ function WidgetPortal({ nodeRef, state, actions }: WidgetPortalProps): React.Rea
 
 interface WidgetContentProps {
   state: InlineEditState;
-  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel'>;
+  actions: Pick<InlineEditActions, 'submit' | 'accept' | 'reject' | 'cancel' | 'streaming'>;
 }
 
 function WidgetContent({ state, actions }: WidgetContentProps): React.ReactElement {
-  if (state.phase === 'loading') return <LoadingPhase />;
-  if (state.phase === 'preview') {
-    return <PreviewActions onAccept={actions.accept} onReject={actions.reject} />;
+  const isStreaming = actions.streaming?.isStreaming ?? false;
+  if (state.phase === 'loading' && !isStreaming) return <LoadingPhase />;
+  if (state.phase === 'preview' || (state.phase === 'loading' && isStreaming)) {
+    return (
+      <PreviewActions
+        onAccept={actions.accept}
+        onReject={actions.reject}
+        isStreaming={isStreaming}
+      />
+    );
   }
   return (
     <InputPhase

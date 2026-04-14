@@ -7,6 +7,7 @@
 
 import log from '../logger';
 import type { ProviderProgressEvent } from '../orchestration/types';
+import { capturePostTurnCheckpoint } from './chatOrchestrationBridgeGit';
 import { emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import {
   emitSnapshotChunk,
@@ -170,6 +171,7 @@ async function persistCompletedTurnInner(
   if (isFirstResponse) await updateHeuristicTitle(runtime, finalThread, ctx);
   const snapshot = (await runtime.threadStore.loadThread(threadId)) ?? finalThread;
   emitSnapshotChunk(runtime, threadId, assistantMessageId, snapshot);
+  void capturePostTurnCheckpoint(runtime, threadId, assistantMessageId, snapshot.workspaceRoot);
   void sessionMemoryStore.decayUnused(snapshot.workspaceRoot, []).catch(() => {});
 }
 

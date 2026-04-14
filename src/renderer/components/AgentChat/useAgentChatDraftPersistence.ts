@@ -63,6 +63,7 @@ function useThreadSwitchPersistence(
     const prevId = previousThreadIdRef.current;
     previousThreadIdRef.current = activeThreadId;
 
+    // eslint-disable-next-line react-compiler/react-compiler
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     flushDraftToStorage(getDraftKey(prevId), draftRef.current);
     restoreDraftFromStorage(getDraftKey(activeThreadId), setDraft);
@@ -74,6 +75,7 @@ function useMountRestoreDraft(activeThreadId: string | null, setDraft: Dispatch<
     const stored = localStorage.getItem(getDraftKey(activeThreadId));
     if (stored) setDraft(stored);
     // Only run on mount
+    // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

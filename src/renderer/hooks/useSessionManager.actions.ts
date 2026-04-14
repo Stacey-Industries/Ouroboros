@@ -51,6 +51,7 @@ function useSpawnSessionAction(
     async (optionalCwd?: string): Promise<void> => {
       const id = generateSessionId();
       const index = spawnCountRef.current;
+      // eslint-disable-next-line react-compiler/react-compiler
       spawnCountRef.current += 1;
       const cwd = await resolveSessionCwd(optionalCwd);
       await spawnManagedSession({
@@ -74,6 +75,7 @@ function useSpawnClaudeSessionAction(
     async (optionalCwd?: string, options?: ClaudeSessionOptions): Promise<void> => {
       const id = generateSessionId();
       const index = spawnCountRef.current;
+      // eslint-disable-next-line react-compiler/react-compiler
       spawnCountRef.current += 1;
       const cwd = await resolveSessionCwd(optionalCwd);
       await spawnManagedSession({

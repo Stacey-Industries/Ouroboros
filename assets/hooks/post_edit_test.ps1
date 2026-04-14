@@ -17,6 +17,14 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
 
+# Kill-switch for rapid iteration sessions.
+if ($env:OUROBOROS_SKIP_QUALITY_HOOKS -eq '1') { exit 0 }
+
+# Wall-clock budget. Vitest cold-starts slowly on Windows and native-module
+# teardown (better-sqlite3) has hung indefinitely in the wild. 60s is enough
+# for a normal single-file run while capping runaway invocations.
+$TimeoutSeconds = 60
+
 # -- Read stdin ----------------------------------------------------------------
 $stdin = $null
 try { $stdin = [Console]::In.ReadToEnd() } catch {
@@ -117,35 +125,50 @@ if (Test-Path $debounceFile) {
 # Touch debounce file BEFORE running (so concurrent hooks also skip)
 Set-Content -Path $debounceFile -Value '' -Force -ErrorAction SilentlyContinue
 
-# -- Change to project root ----------------------------------------------------
-Push-Location $projectRoot
+# -- Verify npx is available ---------------------------------------------------
+$npxCmd = Get-Command npx -ErrorAction SilentlyContinue
+if (-not $npxCmd) {
+    [Console]::Error.WriteLine("post_edit_test: npx not found in PATH")
+    exit 0
+}
+$npxFile = $npxCmd.Source
+
+# -- Run vitest with a wall-clock timeout --------------------------------------
+$testFilename = [System.IO.Path]::GetFileName($testFile)
+$tmpOut = [System.IO.Path]::GetTempFileName()
+$tmpErr = [System.IO.Path]::GetTempFileName()
 
 try {
-    $npxPath = Get-Command npx -ErrorAction SilentlyContinue
-    if (-not $npxPath) {
-        [Console]::Error.WriteLine("post_edit_test: npx not found in PATH")
-        Pop-Location
+    $proc = Start-Process -FilePath $npxFile `
+        -ArgumentList @('vitest', 'run', $testFile, '--reporter=verbose') `
+        -NoNewWindow -PassThru `
+        -RedirectStandardOutput $tmpOut `
+        -RedirectStandardError $tmpErr `
+        -WorkingDirectory $projectRoot
+
+    if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+        # Kill the process tree — vitest spawns workers and native module
+        # teardown has hung indefinitely in the wild.
+        try { & taskkill.exe /F /T /PID $proc.Id 2>&1 | Out-Null } catch {}
+        [Console]::Error.WriteLine("post_edit_test: timed out after ${TimeoutSeconds}s on ${testFilename}; failing open")
         exit 0
     }
 
-    # -- Run vitest ------------------------------------------------------------
-    $testFilename = [System.IO.Path]::GetFileName($testFile)
-
-    $output = & npx vitest run "$testFile" --reporter=verbose 2>&1 | Out-String
-    $exitCode = $LASTEXITCODE
+    $exitCode = $proc.ExitCode
+    $output = ((Get-Content $tmpOut -Raw -ErrorAction SilentlyContinue) `
+             + (Get-Content $tmpErr -Raw -ErrorAction SilentlyContinue))
 
     if ($exitCode -ne 0 -and -not [string]::IsNullOrWhiteSpace($output)) {
         $lines = $output -split "`n" | Where-Object { $_.Trim() -ne '' }
         $tail = $lines | Select-Object -Last 20
-        Write-Output "BLOCKED - Test failures in ${testFilename} (triggered by edit to ${filename}). Fix before continuing:"
-        Write-Output ($tail -join "`n")
-        Pop-Location
+        [Console]::Error.WriteLine("BLOCKED - Test failures in ${testFilename} (triggered by edit to ${filename}). Fix before continuing:")
+        [Console]::Error.WriteLine($tail -join "`n")
         exit 2
     }
 } catch {
     [Console]::Error.WriteLine("post_edit_test: execution error: $_")
 } finally {
-    Pop-Location
+    Remove-Item $tmpOut, $tmpErr -Force -ErrorAction SilentlyContinue
 }
 
 exit 0

@@ -4,12 +4,14 @@
  */
 
 import log from '../logger';
+import { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle } from './chatTitleDerivation';
 import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 2;
-const TITLE_MAX_LENGTH = 60;
+export const SCHEMA_VERSION = 3;
+
+export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
 // ── Schema SQL ───────────────────────────────────────────────────────
 
@@ -28,7 +30,7 @@ export const SCHEMA_SQL = `
     statusKind TEXT, orchestration TEXT, contextSummary TEXT,
     verificationPreview TEXT, error TEXT, toolsSummary TEXT,
     costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
-    model TEXT,
+    model TEXT, checkpointCommit TEXT,
     PRIMARY KEY (id, threadId)
   );
   CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
@@ -64,6 +66,7 @@ export interface RawMessageRow {
   tokenUsage: string | null;
   blocks: string | null;
   model: string | null;
+  checkpointCommit: string | null;
 }
 
 // ── Parse / convert helpers ──────────────────────────────────────────
@@ -93,6 +96,7 @@ function applyOptionalStringFields(base: AgentChatMessageRecord, row: RawMessage
   if (row.costSummary) base.costSummary = row.costSummary;
   if (row.durationSummary) base.durationSummary = row.durationSummary;
   if (row.model) base.model = row.model;
+  if (row.checkpointCommit) base.checkpointCommit = row.checkpointCommit;
 }
 
 export function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
@@ -109,37 +113,6 @@ export function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
 }
 
 // ── Title helpers ────────────────────────────────────────────────────
-
-function isDecorativeLine(line: string): boolean {
-  if (/^`[^`]*`$/.test(line) && /[─═━\-★]{3,}/.test(line)) return true;
-  if (/^[─═━\-*★│┃|+\s]+$/.test(line) && line.length > 2) return true;
-  if (/^```/.test(line)) return true;
-  return false;
-}
-
-function findFirstMeaningfulLine(text: string): string {
-  for (const line of text.split(/\r?\n/)) {
-    const stripped = line.trim();
-    if (stripped && !isDecorativeLine(stripped)) return stripped;
-  }
-  return text.trim();
-}
-
-export function summarizeForTitle(assistantContent: string): string {
-  const trimmed = assistantContent.trim();
-  if (!trimmed) return '';
-
-  const meaningful = findFirstMeaningfulLine(trimmed);
-  const sentenceMatch = meaningful.match(/^(.+?[.!?])(?:\s|$)/);
-  const firstSentence = sentenceMatch ? sentenceMatch[1].trim() : '';
-
-  if (firstSentence && firstSentence.length <= TITLE_MAX_LENGTH) return firstSentence;
-
-  const slice = meaningful.slice(0, TITLE_MAX_LENGTH).trimEnd();
-  const lastSpace = slice.lastIndexOf(' ');
-  if (lastSpace > TITLE_MAX_LENGTH * 0.5) return `${slice.slice(0, lastSpace)}\u2026`;
-  return `${slice}\u2026`;
-}
 
 export function titleMatchesUserMessage(title: string, content: string): boolean {
   const trimmed = content.trim();

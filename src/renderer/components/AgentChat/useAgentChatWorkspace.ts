@@ -1,5 +1,5 @@
 /* @refresh reset */
-import { useState } from 'react';
+import { useMemo,useState } from 'react';
 
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
@@ -183,5 +183,8 @@ export function useAgentChatWorkspace(projectRoot: string | null): AgentChatWork
   const { commands } = useRulesAndSkills(projectRoot);
   const actions = useAgentChatActions(buildActionArgs(controller, projectRoot));
   const hooks = useWorkspaceHooks(controller, actions);
-  return buildModel({ controller, actions, hooks, projectRoot, commands });
+  return useMemo(
+    () => buildModel({ controller, actions, hooks, projectRoot, commands }),
+    [controller, actions, hooks, projectRoot, commands],
+  );
 }

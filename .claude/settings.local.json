@@ -13,7 +13,9 @@
       "WebFetch(domain:api.github.com)",
       "mcp__codebase-memory-mcp__index_status",
       "WebFetch(domain:plugins.jetbrains.com)",
-      "WebFetch(domain:tanstack.com)"
+      "WebFetch(domain:tanstack.com)",
+      "Bash(cp \"/mnt/c/Web App/Agent IDE/assets/hooks/pre_tool_use.ps1\" /mnt/c/Users/coles/.claude/hooks/pre_tool_use.ps1)",
+      "Read(//mnt/c/Users/coles/.claude/hooks/**)"
     ]
   }
 }

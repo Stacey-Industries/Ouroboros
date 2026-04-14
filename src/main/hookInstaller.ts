@@ -226,7 +226,7 @@ async function installHookFile(
   const srcPath = path.join(assetsDir, entry.src);
   const destPath = path.join(hooksDir, entry.dest);
 
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from assets dir + hook manifest entry
+   
   const srcExists = await fsPromises
     .access(srcPath)
     .then(() => true)
@@ -236,7 +236,7 @@ async function installHookFile(
     return;
   }
 
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- path built from hooks dir + hook manifest entry
+   
   await fsPromises.copyFile(srcPath, destPath);
 
   if (entry.executable && process.platform !== 'win32') {

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { reloadWeights } from './classifier';
-import { countSignalLines, findPython, validateWeightFile } from './retrainTriggerHelpers';
+import { countSignalLines, validateWeightFile } from './retrainTriggerHelpers';
 
 // Mock electron
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp/test-retrain' } }));
@@ -150,11 +150,75 @@ describe('reloadWeights', () => {
 });
 
 // ─── findPython ──────────────────────────────────────────────────────────────
+//
+// findPython shells out to probe python3/python/py. We mock node:child_process
+// so the tests are hermetic — no actual subprocess is spawned.
+//
+// Note: findPython caches its result in a module-level variable. Each sub-
+// describe uses vi.resetModules() + a dynamic re-import so the cache is fresh
+// for each test group.
 
 describe('findPython', () => {
-  it('returns a string or null (platform-dependent)', async () => {
-    const result = await findPython();
-    // On CI/dev machines Python is usually available; on some it isn't
-    expect(result === null || typeof result === 'string').toBe(true);
+  describe('when a python binary is available', () => {
+    let localFindPython: () => Promise<string | null>;
+
+    beforeEach(async () => {
+      vi.resetModules();
+      vi.doMock('node:child_process', () => ({
+        execFile: (
+          _bin: string,
+          _args: string[],
+          _opts: object,
+          cb: (err: Error | null) => void,
+        ) => {
+          cb(null); // simulate binary found
+        },
+        spawn: vi.fn(),
+      }));
+      const mod = await import('./retrainTriggerHelpers');
+      localFindPython = mod.findPython;
+    });
+
+    afterEach(() => {
+      vi.doUnmock('node:child_process');
+      vi.resetModules();
+    });
+
+    it('returns the candidate binary name as a string', async () => {
+      const result = await localFindPython();
+      expect(typeof result).toBe('string');
+      expect(result).toBeTruthy();
+    });
+  });
+
+  describe('when no python binary is available', () => {
+    let localFindPython: () => Promise<string | null>;
+
+    beforeEach(async () => {
+      vi.resetModules();
+      vi.doMock('node:child_process', () => ({
+        execFile: (
+          _bin: string,
+          _args: string[],
+          _opts: object,
+          cb: (err: Error | null) => void,
+        ) => {
+          cb(new Error('not found')); // simulate all candidates missing
+        },
+        spawn: vi.fn(),
+      }));
+      const mod = await import('./retrainTriggerHelpers');
+      localFindPython = mod.findPython;
+    });
+
+    afterEach(() => {
+      vi.doUnmock('node:child_process');
+      vi.resetModules();
+    });
+
+    it('returns null', async () => {
+      const result = await localFindPython();
+      expect(result).toBeNull();
+    });
   });
 });

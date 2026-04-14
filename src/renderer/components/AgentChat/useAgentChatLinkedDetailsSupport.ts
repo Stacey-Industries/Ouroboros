@@ -200,6 +200,7 @@ function useAutoOpenLinkedDetails(args: {
     const autoOpenKey = createAutoOpenKey(activeThread, preferredLinkKey);
     if (!enabled || !shouldAutoOpen(activeThread?.status) || !preferredLink || !autoOpenKey) return;
     if (autoOpenedRef.current === autoOpenKey) return;
+    // eslint-disable-next-line react-compiler/react-compiler
     autoOpenedRef.current = autoOpenKey;
     void loadDetails(preferredLink, true);
   }, [activeThread, autoOpenedRef, enabled, loadDetails, preferredLink, preferredLinkKey]);

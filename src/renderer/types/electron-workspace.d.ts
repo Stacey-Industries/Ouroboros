@@ -1,6 +1,10 @@
 import type { AgentChatAPI } from './electron-agent-chat';
+import type { AgentConflictAPI } from './electron-agent-conflict';
 import type { AiAPI } from './electron-ai';
+import type { AiStreamAPI } from './electron-ai-stream';
 import type { AuthAPI } from './electron-auth';
+import type { BackgroundJobsAPI } from './electron-background-jobs';
+import type { CheckpointAPI } from './electron-checkpoint';
 import type { ClaudeMdAPI } from './electron-claude-md';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
@@ -31,6 +35,7 @@ import type {
   ShellAPI,
   ThemeAPI,
 } from './electron-runtime-apis';
+import type { SpecAPI } from './electron-spec';
 
 export interface McpServerConfig {
   command?: string;
@@ -258,8 +263,13 @@ export interface ElectronAPI {
   router: RouterAPI;
   rulesAndSkills: RulesAndSkillsAPI;
   ai: AiAPI;
+  aiStream: AiStreamAPI;
   embedding: EmbeddingAPI;
   workspace: WorkspaceAPI;
+  backgroundJobs: BackgroundJobsAPI;
+  agentConflict: AgentConflictAPI;
+  checkpoint: CheckpointAPI;
+  spec: SpecAPI;
 }
 
 export interface WorkspaceAPI {

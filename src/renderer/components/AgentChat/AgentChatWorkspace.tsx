@@ -129,6 +129,37 @@ function useRememberAction(
   );
 }
 
+function useSpecAction(
+  projectRoot: string | null,
+  toast: (msg: string, type?: ToastType) => void,
+): (featureName: string) => void {
+  return useCallback(
+    (featureName: string) => {
+      if (!projectRoot) { toast('Open a project before scaffolding a spec.', 'error'); return; }
+      void window.electronAPI.spec.scaffold({ projectRoot, featureName })
+        .then((result) => {
+          if (!result.success) {
+            if (result.collision) {
+              toast(`Spec "${featureName}" already exists — not overwritten.`, 'error');
+            } else {
+              toast(result.error ?? 'Scaffold failed', 'error');
+            }
+            return;
+          }
+          for (const filePath of result.files ?? []) {
+            window.dispatchEvent(new CustomEvent('agent-ide:open-file', { detail: filePath }));
+          }
+          toast(`Spec scaffolded: .ouroboros/specs/${result.slug}/`, 'success');
+        })
+        .catch((err: unknown) => {
+          log.warn('[spec] scaffold error:', err);
+          toast('Scaffold failed', 'error');
+        });
+    },
+    [projectRoot, toast],
+  );
+}
+
 /* ── Store sync orchestration ────────────────────────────────────────────── */
 
 function useWorkspaceStoreSync(
@@ -155,24 +186,26 @@ export function AgentChatWorkspace({
   const store = useRef(createAgentChatStore()).current;
 
   const onRemember = useRememberAction(projectRoot, toast);
+  const onSpec = useSpecAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
     window.dispatchEvent(
       new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }),
     );
   }, []);
 
-  useEffect(() => { model.setContextFilePaths(context.filePaths); }, [context.filePaths, model]);
+  const { setContextFilePaths, setMentionRanges } = model;
+  useEffect(() => { setContextFilePaths(context.filePaths); }, [context.filePaths, setContextFilePaths]);
   useEffect(() => {
-    model.setMentionRanges(buildMentionRanges(context.mentions));
-  }, [context.mentions, model]);
+    setMentionRanges(buildMentionRanges(context.mentions));
+  }, [context.mentions, setMentionRanges]);
   useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
 
   const slashCmd = useMemo<SlashCommandContext>(
     () => ({
       onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
-      onRemember, onOpenMemories, commands: model.commands,
+      onRemember, onOpenMemories, onSpec, commands: model.commands,
     }),
-    [model, onRemember, onOpenMemories],
+    [model, onRemember, onOpenMemories, onSpec],
   );
 
   useWorkspaceStoreSync(store, model, context, slashCmd);

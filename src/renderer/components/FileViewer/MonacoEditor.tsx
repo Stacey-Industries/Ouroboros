@@ -2,10 +2,20 @@ import * as monaco from 'monaco-editor';
 import React, { memo, type MutableRefObject,useEffect, useRef, useState } from 'react';
 
 import type { DiffLineInfo } from '../../types/electron';
+import { EditorHunkGutterActions } from './EditorHunkGutterActions';
 import { registerMonacoEditor, unregisterMonacoEditor } from './editorRegistry';
 import { saveEditorState } from './editorStateStore';
 import { InlineEditWidget } from './InlineEditWidget';
-import { bindInlineEditAction, useEditorRefs } from './monacoEditorRefs';
+import {
+  bindContentChange,
+  bindGotoLineHandler,
+  bindInlineEditAction,
+  bindSaveAction,
+  bindScrollTracking,
+  bindSearchShortcuts,
+  type EditorCallbackRefs,
+  useEditorRefs,
+} from './monacoEditorRefs';
 import { useMonacoLspLifecycle } from './monacoLsp';
 import { detectLanguage, initMonaco } from './monacoSetup';
 import { useMonacoTheme } from './monacoThemeBridge';
@@ -20,11 +30,11 @@ import {
   hasHostSavedVersion,
   type KeybindingMode,
   scheduleHostViewStateFlush,
-  setHostDirtyState,
   setHostSavedVersion,
   useStableCallbackRefs,
 } from './monacoVimMode';
 import { ScrollIndicator } from './ScrollIndicator';
+import { useEditorHunkDecorations } from './useEditorHunkDecorations';
 import { useInlineEdit } from './useInlineEdit';
 import { useMonacoBlame } from './useMonacoBlame';
 
@@ -55,111 +65,6 @@ interface RuntimeInput {
   diffDecorationIdsRef: MutableRefObject<string[]>;
   /** Stable refs that track the latest callback props across re-renders */
   callbackRefs: EditorCallbackRefs & { readOnlyRef: MutableRefObject<boolean>; formatOnSaveRef: MutableRefObject<boolean>; filePathRef: MutableRefObject<string> };
-}
-
-interface EditorCallbackRefs {
-  onSaveRef: MutableRefObject<((content: string) => void) | undefined>;
-  onDirtyChangeRef: MutableRefObject<((dirty: boolean) => void) | undefined>;
-  onContentChangeRef: MutableRefObject<((content: string) => void) | undefined>;
-}
-
-function updateScrollMetrics(editor: monaco.editor.IStandaloneCodeEditor, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>): void {
-  const layoutInfo = editor.getLayoutInfo();
-  setScrollMetrics({ scrollTop: editor.getScrollTop(), scrollHeight: editor.getScrollHeight(), clientHeight: layoutInfo.height });
-}
-
-function bindGotoLineHandler(editor: monaco.editor.IStandaloneCodeEditor, filePathRef: React.RefObject<string | null>): () => void {
-  const handleGotoLine = (event: Event): void => {
-    const detail = (event as CustomEvent<{ line: number; filePath?: string }>).detail;
-    if (!detail || (detail.filePath && detail.filePath !== filePathRef.current)) return;
-    editor.revealLineInCenter(detail.line);
-    editor.setPosition({ lineNumber: detail.line, column: 1 });
-    editor.focus();
-  };
-  window.addEventListener('agent-ide:goto-line', handleGotoLine);
-  return () => window.removeEventListener('agent-ide:goto-line', handleGotoLine);
-}
-
-function bindScrollTracking(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>,
-  setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>,
-  scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>,
-): () => void {
-  const onScroll = (): void => {
-    updateScrollMetrics(editor, setScrollMetrics);
-    setIsScrolling(true);
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => setIsScrolling(false), 800);
-  };
-  requestAnimationFrame(() => updateScrollMetrics(editor, setScrollMetrics));
-  const scrollDisposable = editor.onDidScrollChange(onScroll);
-  const layoutDisposable = editor.onDidLayoutChange(() => updateScrollMetrics(editor, setScrollMetrics));
-  return () => {
-    scrollDisposable.dispose();
-    layoutDisposable.dispose();
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-  };
-}
-
-function bindSaveAction(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  refs: EditorCallbackRefs & { readOnlyRef: React.RefObject<boolean | null>; formatOnSaveRef: React.RefObject<boolean | null> },
-  isDirtyRef: MutableRefObject<boolean>,
-  saveActionDisposableRef: MutableRefObject<monaco.IDisposable | null>,
-): void {
-  const save = (): void => {
-    const currentModel = editor.getModel();
-    if (!currentModel) return;
-    setHostSavedVersion(currentModel.uri.toString(), currentModel.getAlternativeVersionId());
-    if (isDirtyRef.current) {
-      isDirtyRef.current = false;
-      refs.onDirtyChangeRef.current?.(false);
-    }
-    refs.onSaveRef.current?.(currentModel.getValue());
-  };
-  saveActionDisposableRef.current = editor.addAction({
-    id: 'ouroboros-save',
-    label: 'Save File',
-    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-    run: () => {
-      if (refs.readOnlyRef.current) return;
-      if (refs.formatOnSaveRef.current) {
-        const formatAction = editor.getAction('editor.action.formatDocument');
-        if (formatAction) {
-          formatAction.run().then(save).catch(save);
-          return;
-        }
-      }
-      save();
-    },
-  });
-}
-
-function bindContentChange(
-  model: monaco.editor.ITextModel,
-  refs: EditorCallbackRefs,
-  isDirtyRef: MutableRefObject<boolean>,
-  contentChangeDisposableRef: MutableRefObject<monaco.IDisposable | null>,
-): void {
-  contentChangeDisposableRef.current = model.onDidChangeContent(() => {
-    setHostDirtyState(model, isDirtyRef, refs.onDirtyChangeRef);
-    refs.onContentChangeRef.current?.(model.getValue());
-  });
-}
-
-function bindSearchShortcuts(editor: monaco.editor.IStandaloneCodeEditor): () => void {
-  const onFind = (): void => { editor.focus(); editor.getAction('actions.find')?.run(); };
-  const onReplace = (): void => { editor.focus(); editor.getAction('editor.action.startFindReplaceAction')?.run(); };
-  const onGoToLine = (): void => { editor.focus(); editor.getAction('editor.action.gotoLine')?.run(); };
-  window.addEventListener('agent-ide:find', onFind);
-  window.addEventListener('agent-ide:replace', onReplace);
-  window.addEventListener('agent-ide:go-to-line', onGoToLine);
-  return () => {
-    window.removeEventListener('agent-ide:find', onFind);
-    window.removeEventListener('agent-ide:replace', onReplace);
-    window.removeEventListener('agent-ide:go-to-line', onGoToLine);
-  };
 }
 
 function mountMonacoEditor(input: RuntimeInput, setScrollMetrics: React.Dispatch<React.SetStateAction<{ scrollTop: number; scrollHeight: number; clientHeight: number }>>, setIsScrolling: React.Dispatch<React.SetStateAction<boolean>>, scrollTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>): () => void {
@@ -287,6 +192,49 @@ function useMonacoEditorRuntime(input: RuntimeInput): { scrollMetrics: { scrollT
   return { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling };
 }
 
+interface MonacoInlineEditLayerProps {
+  editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
+  filePath: string;
+  language: string;
+  activateInlineEditRef: MutableRefObject<() => void>;
+}
+
+function MonacoInlineEditLayer({
+  editorRef,
+  filePath,
+  language,
+  activateInlineEditRef,
+}: MonacoInlineEditLayerProps): React.ReactElement {
+  const { state, activate, submit, accept, reject, cancel, streaming } = useInlineEdit(editorRef, filePath, language);
+  activateInlineEditRef.current = activate;
+  return (
+    <InlineEditWidget
+      editor={editorRef.current}
+      state={state}
+      actions={{ submit, accept, reject, cancel, streaming }}
+    />
+  );
+}
+
+interface MonacoHunkGutterLayerProps {
+  editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>;
+  filePath: string;
+}
+
+function MonacoHunkGutterLayer({
+  editorRef,
+  filePath,
+}: MonacoHunkGutterLayerProps): React.ReactElement | null {
+  const { decorations, diffReview } = useEditorHunkDecorations(editorRef, filePath);
+  return (
+    <EditorHunkGutterActions
+      editor={editorRef.current}
+      decorations={decorations}
+      diffReview={diffReview}
+    />
+  );
+}
+
 export type { MonacoEditorProps as MonacoEditorHostProps };
 
 export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps): React.ReactElement {
@@ -295,9 +243,7 @@ export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps)
   const callbackRefs = useStableCallbackRefs({ onSave, onDirtyChange, onContentChange, readOnly, formatOnSave, filePath });
   useMonacoTheme();
   const language = languageOverride ?? detectLanguage(filePath);
-  const { state: inlineEditState, activate, submit, accept, reject, cancel } = useInlineEdit(editorRef, filePath, language);
-  const activateInlineEditRef = useRef(activate);
-  activateInlineEditRef.current = activate;
+  const activateInlineEditRef = useRef<() => void>(() => { });
   const { scrollMetrics, isEditorHovered, setIsEditorHovered, isScrolling } = useMonacoEditorRuntime({
     filePath, content, language, readOnly, projectRoot, onSave, onDirtyChange, onContentChange, keybindingMode, wordWrap, showMinimap, showBlame, formatOnSave, diffLines, containerRef, editorRef, vimStatusRef, vimDisposeRef, isDirtyRef, contentChangeDisposableRef, saveActionDisposableRef, inlineEditDisposableRef, activateInlineEditRef, diffDecorationIdsRef, callbackRefs,
   });
@@ -308,7 +254,13 @@ export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps)
         <ScrollIndicator {...scrollMetrics} isHovered={isEditorHovered} isScrolling={isScrolling} />
       </div>
       {keybindingMode === 'vim' && <div ref={vimStatusRef} className="text-text-semantic-muted" style={vimStatusStyle} />}
-      <InlineEditWidget editor={editorRef.current} state={inlineEditState} actions={{ submit, accept, reject, cancel }} />
+      <MonacoInlineEditLayer
+        editorRef={editorRef}
+        filePath={filePath}
+        language={language}
+        activateInlineEditRef={activateInlineEditRef}
+      />
+      <MonacoHunkGutterLayer editorRef={editorRef} filePath={filePath} />
     </div>
   );
 });

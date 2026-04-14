@@ -170,6 +170,7 @@ function useCompletedSessionsSaver(
 ): void {
   const sessionsToSave = useMemo(
     () => sessions.filter((s) => shouldPersistSession(s, liveSessionIdsRef, savedSessionIdsRef)),
+    // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessions],
   );

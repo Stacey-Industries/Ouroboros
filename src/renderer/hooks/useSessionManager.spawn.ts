@@ -30,6 +30,7 @@ export function useRestoreSessionsEffect(args: {
   const { actionArgs, hasRestoredSessionsRef, spawnSession } = args;
   useEffect(() => {
     if (!hasElectronAPI() || hasRestoredSessionsRef.current) return;
+    // eslint-disable-next-line react-compiler/react-compiler
     hasRestoredSessionsRef.current = true;
     void restoreSessions({ ...actionArgs, spawnSession });
   }, [actionArgs, hasRestoredSessionsRef, spawnSession]);

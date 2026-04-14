@@ -12,6 +12,12 @@ export interface TimeTravelPanelProps {
   onCreateSnapshot: (label?: string) => Promise<WorkspaceSnapshot | null>;
   onRefreshSnapshots: () => Promise<void>;
   onClose: () => void;
+  /**
+   * 'workspace' (default) — shows all workspace snapshots.
+   * 'thread' — shows only checkpoints for the active thread.
+   * In thread scope, snapshot creation is hidden (checkpoints are auto-created).
+   */
+  scope?: 'workspace' | 'thread';
 }
 
 export function TimeTravelPanel({
@@ -19,9 +25,16 @@ export function TimeTravelPanel({
   onCreateSnapshot,
   onRefreshSnapshots,
   onClose,
+  scope = 'workspace',
 }: TimeTravelPanelProps): React.JSX.Element {
   const { projectRoot } = useProject();
-  const panel = useTimeTravelPanelState({ projectRoot: projectRoot ?? undefined, snapshots, onCreateSnapshot, onRefreshSnapshots });
+  const panel = useTimeTravelPanelState({
+    projectRoot: projectRoot ?? undefined,
+    snapshots,
+    onCreateSnapshot,
+    onRefreshSnapshots,
+    hideCreateSnapshot: scope === 'thread',
+  });
   const hasDetailPane = Boolean(panel.selectedSnapshot || panel.comparisonReady);
 
   return (

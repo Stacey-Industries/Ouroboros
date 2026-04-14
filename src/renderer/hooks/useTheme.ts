@@ -4,14 +4,12 @@ import {
   customTheme,
   defaultThemeId,
   getTheme,
-  registerExtensionTheme,
   type Theme,
   themeList,
   themes,
-  unregisterExtensionTheme,
 } from '../themes';
 import type { AppConfig, AppTheme } from '../types/electron';
-import { applyFontConfig, applyThemeToDom, updateTitleBarOverlay } from './useTheme.tokens';
+import { applyFontConfig, applyThemeToDom, loadExtensionThemesIntoRegistry, updateTitleBarOverlay } from './useTheme.tokens';
 
 export { applyFontConfig, brightenIfDark } from './useTheme.tokens';
 
@@ -200,33 +198,6 @@ function registerThemeChangeListener(): void {
   });
 }
 
-/** Fetch extension theme contributions and register them into the themes registry. */
-async function loadExtensionThemesIntoRegistry(): Promise<void> {
-  try {
-    const api = window.electronAPI?.extensionStore;
-    if (!api?.getThemeContributions) return;
-
-    const result = await api.getThemeContributions();
-    if (!result.success || !result.themes) return;
-
-    // Clear any stale ext themes
-    for (const id of Object.keys(themes)) {
-      if (id.startsWith('ext:')) unregisterExtensionTheme(id);
-    }
-
-    for (const t of result.themes) {
-      registerExtensionTheme({
-        id: t.id,
-        name: t.name,
-        fontFamily: t.fontFamily,
-        colors: t.colors,
-      });
-    }
-  } catch {
-    // Extension themes are optional — don't block startup
-  }
-}
-
 async function hydrateThemeOnMount(config?: Partial<ThemeBootstrapConfig> | null): Promise<void> {
   // Load extension themes BEFORE resolving activeTheme so ext:* IDs are valid
   await loadExtensionThemesIntoRegistry();
@@ -260,6 +231,7 @@ function subscribeToThemeRuntime(listener: (state: ThemeRuntimeState) => void): 
 }
 
 export function useThemeRuntimeBootstrap(config: AppConfig | null): void {
+  'use no memo';
   useLayoutEffect(() => {
     if (!config) {
       return;
@@ -285,6 +257,7 @@ function persistBgGradient(value: boolean): void {
 }
 
 function useThemeSnapshot(): ThemeRuntimeState {
+  'use no memo';
   const [snapshot, setSnapshot] = useState<ThemeRuntimeState>(() => cloneRuntimeState());
   useEffect(() => {
     ensureThemeRuntime();
@@ -299,6 +272,7 @@ function useThemeActions(): Pick<
   UseThemeReturn,
   'setTheme' | 'setShowBgGradient' | 'setGlassOpacity'
 > {
+  'use no memo';
   const setTheme = useCallback(async (id: string) => {
     const resolved = (isValidThemeId(id) ? id : defaultThemeId) as AppTheme;
     setRuntimeState({ themeId: resolved, hydrated: true });
@@ -323,6 +297,7 @@ function useThemeActions(): Pick<
 }
 
 export function useTheme(): UseThemeReturn {
+  'use no memo';
   const snapshot = useThemeSnapshot();
   const { setTheme, setShowBgGradient, setGlassOpacity } = useThemeActions();
 
@@ -331,6 +306,7 @@ export function useTheme(): UseThemeReturn {
     const extThemes = Object.values(themes).filter((t) => t.id.startsWith('ext:'));
     return [...themeList, ...extThemes];
     // Re-derive when the theme ID changes (triggers after extension install/uninstall)
+    // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.themeId, snapshot.hydrated]);
 

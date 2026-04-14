@@ -7,6 +7,7 @@ import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
+import { initConflictMonitor } from './agentConflict/conflictMonitor';
 import { getCredential } from './auth/credentialStore';
 import {
   GraphController,
@@ -164,4 +165,8 @@ export async function initCodebaseGraph(): Promise<void> {
   } catch (err) {
     log.warn('Failed to start:', err);
   }
+
+  // Initialize conflict monitor after graph (operates in file-only mode if graph is cold)
+  initConflictMonitor();
+  log.info('[conflictMonitor] initialized after codebase graph');
 }

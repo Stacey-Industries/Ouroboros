@@ -4,6 +4,7 @@ import path from 'path';
 import { Worker } from 'worker_threads';
 
 import log from '../logger';
+import { buildWorkerPipeAuthSeed } from '../pipeAuth';
 import {
   applyFullIndexToStore,
   applyReindexToStore,
@@ -157,8 +158,9 @@ export class GraphController {
     return { success: true };
   }
 
-  async detectChanges(): Promise<ChangeDetectionResult> {
-    return this.query.detectChanges();
+  async detectChanges(): Promise<ChangeDetectionResult> { return this.query.detectChanges(); }
+  async detectChangesForSession(sid: string, files: string[]): Promise<ChangeDetectionResult> {
+    return this.query.detectChangesForSession(sid, files);
   }
   getArchitecture(aspects?: string[]): ArchitectureView {
     return this.query.getArchitecture(aspects);
@@ -196,7 +198,7 @@ export class GraphController {
 
   private spawnWorker(): void {
     if (this.worker) return;
-    this.worker = new Worker(resolveWorkerPath(__dirname));
+    this.worker = new Worker(resolveWorkerPath(__dirname), { workerData: buildWorkerPipeAuthSeed() });
 
     this.worker.on('message', (msg: WorkerResponse) => {
       this.handleWorkerMessage(msg);

@@ -105,6 +105,7 @@ interface AppConfig {
 
   // Editor
   formatOnSave: boolean;
+  streamingInlineEdit: boolean; // Wave 6: token-by-token inline edit streaming (feature flag)
 
   // Web remote access
   webAccessPort: number; // default: 7890
@@ -310,6 +311,75 @@ type AgentChatMessageRole = 'user' | 'assistant' | 'system' | 'status';
 // Threads and messages persisted in SQLite (userData/agent-chat.db).
 // JSON file fallback lives in userData/agent-chat/threads/{sha1(threadId)}.json.
 // Max 100 threads per workspace root.
+
+// Schema v2 → v3 addition (Wave 6 / Session Checkpoints):
+// ALTER TABLE messages ADD COLUMN checkpointCommit TEXT;
+// Populated by chatOrchestrationBridgeGit.ts post-turn capture.
+```
+
+### Background Jobs (SQLite — Wave 6)
+
+Table `background_jobs` in the main `storage/database.ts` database (`userData/storage.db`).
+Created by `src/main/storage/migrate.ts` schema migration.
+
+```sql
+CREATE TABLE IF NOT EXISTS background_jobs (
+  id           TEXT PRIMARY KEY,
+  projectRoot  TEXT NOT NULL,
+  prompt       TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'queued',
+  createdAt    INTEGER NOT NULL,
+  startedAt    INTEGER,
+  completedAt  INTEGER,
+  exitCode     INTEGER,
+  sessionId    TEXT,
+  resultSummary TEXT
+);
+```
+
+Status enum: `'queued' | 'running' | 'done' | 'error' | 'cancelled'`
+
+- `sessionId` — set from the first `session_id` field in the stream-json output; used to correlate `session_stop` hook events back to the job.
+- Queue cap: 50 pending. Concurrency cap: `config.backgroundJobsMaxConcurrent` (default 2).
+- On restart: rows with `status = 'running'` whose PTY process is gone are updated to `status = 'error'` with `resultSummary = 'interrupted'`.
+
+```typescript
+// Shared type — src/shared/types/backgroundJob.ts
+interface BackgroundJob {
+  id: string;
+  projectRoot: string;
+  prompt: string;
+  status: 'queued' | 'running' | 'done' | 'error' | 'cancelled';
+  createdAt: number;       // Unix ms
+  startedAt?: number;
+  completedAt?: number;
+  exitCode?: number;
+  sessionId?: string;
+  resultSummary?: string;
+}
+```
+
+### Session Checkpoints (Wave 6)
+
+Checkpoints are stored as git commits on a dedicated ref rather than in a separate database.
+
+- **Git ref convention**: `refs/ouroboros/checkpoints/<threadId>`
+- **Commit scope**: per assistant turn (each assistant message boundary that modifies files).
+- **Metadata**: the `checkpointCommit` column on the `messages` table links a thread message to its post-turn commit hash.
+- **Restore**: `git:restoreSnapshot` (checkout with `git stash` guard for dirty working tree). Intervening messages are flagged `rewound` in the thread record.
+- **GC policy**: keep last 50 checkpoints per thread; older commits pruned on next capture.
+
+```typescript
+// Shared type — src/shared/types/sessionCheckpoint.ts
+interface SessionCheckpoint {
+  id: string;
+  threadId: string;
+  messageId: string;
+  commitHash: string;
+  filesChanged: string[];
+  createdAt: number;
+  label?: string;
+}
 ```
 
 ### PTY Sessions (main process, in-memory Map)

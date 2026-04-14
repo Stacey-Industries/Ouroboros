@@ -91,6 +91,8 @@ Ouroboros follows Electron's standard three-process architecture with strict iso
 | `codebaseGraph/`     | In-process codebase knowledge graph engine                               | IPC registration                    |
 | `storage/`           | SQLite database layer and JSON→SQLite migration                          | Business logic                      |
 | `web/`               | HTTP + WebSocket server for browser-based IDE access                     | Electron window management          |
+| `backgroundJobs/`    | Headless `claude -p` job queue — SQLite-persisted, concurrency-capped    | Terminal/PTY management             |
+| `agentConflict/`     | Cross-session symbol overlap detection via codebase graph                | IPC registration                    |
 
 ### Preload
 
@@ -137,11 +139,13 @@ App
 │                       ├── AgentMonitorPane      # Right sidebar container
 │                       │   └── RightSidebarTabs    # Chat-dominant with view switcher
 │                       │       ├── AgentChatWorkspace    # Chat thread UI
+│                       │       │   └── AgentConflictBanner   # Wave 6 — conflict warning
 │                       │       ├── AgentMonitorManager   # Hook event aggregation
 │                       │       │   ├── AgentCard[]
 │                       │       │   ├── AgentEventLog
 │                       │       │   ├── CostDashboard
-│                       │       │   └── ToolCallFeed
+│                       │       │   ├── ToolCallFeed
+│                       │       │   └── BackgroundJobsPanel   # Wave 6 — bg job queue
 │                       │       ├── GitPanel              # Staging area + branch ops
 │                       │       └── AnalyticsDashboard    # Usage analytics (lazy)
 │                       ├── TerminalPane          # Bottom panel
@@ -233,9 +237,11 @@ components/
     TerminalInstance.tsx      # Single xterm.js terminal
     TerminalTabs.tsx          # Tab bar rendering
   TimeTravel/
-    TimeTravelPanel.tsx       # Workspace snapshot timeline
+    TimeTravelPanel.tsx       # Workspace snapshot timeline (workspace + thread scope)
   UsageModal/
     UsageModal.tsx            # Token/cost usage display
+  BackgroundJobs/
+    BackgroundJobsPanel.tsx   # Wave 6 — headless job queue UI (status pill, cancel, result)
   primitives/
     Button, Card, Input, Surface, Badge, Dropdown, Menu, TextArea, Divider
   shared/
@@ -356,6 +362,97 @@ Claude Code Hook Script
                            └─ AgentEventsProvider / useAgentEvents (renderer)
                                 └─ AgentMonitorManager, AgentChatWorkspace
 ```
+
+### Background Job Queue (#103)
+
+```
+Renderer                         Preload                        Main
+BackgroundJobsPanel              backgroundJobsAPI              backgroundJobs/
+  enqueue(prompt) ──invoke──→ backgroundJobs:enqueue ──→ jobScheduler.enqueue()
+  cancel(id)      ──invoke──→ backgroundJobs:cancel  ──→ jobScheduler.cancel()
+  list()          ──invoke──→ backgroundJobs:list    ──→ jobStore.listAll()
+  subscribe(cb) ←──on──  backgroundJobs:update ←──send── jobScheduler.onChange()
+```
+
+- `jobStore.ts` persists jobs to the `background_jobs` SQLite table in `storage/database.ts`.
+- `jobScheduler.ts` enforces `backgroundJobsMaxConcurrent` (default 2) and polls queue on completion.
+- `jobRunner.ts` spawns via `spawnAgentViaPtyHost`; correlates completion via `sessionId` from the first stream-json event.
+- On restart, running jobs are reconciled: any with `status = 'running'` and a dead PID are set to `error: 'interrupted'`.
+
+### Session Checkpoints (#107)
+
+```
+chatOrchestrationBridgeGit.ts
+  └─ captureHeadHash() (pre-turn) + post-turn capture
+       └─ writes commitHash onto AgentChatMessageRecord.checkpointCommit
+            └─ checkpointStore.ts — getCheckpointsForThread(threadId)
+                 └─ ipc-handlers/checkpoint.ts — list / restore / delete
+                      └─ renderer: useThreadCheckpoints()
+                           └─ AgentChatMessageActions.tsx — RewindButton
+```
+
+- Checkpoint commits are pushed to `refs/ouroboros/checkpoints/<threadId>` to avoid polluting `main`.
+- Restore uses existing `git:restoreSnapshot` (checkout with stash guard). Intervening messages flagged `rewound`.
+- `checkpointStore` is a thin wrapper over the existing `threadStoreSqlite` — no separate database.
+
+### /spec Slash Command (#108)
+
+```
+Composer → AgentChatComposerSupport.runComposerSlashCommand('spec', featureName)
+  └─ window.electronAPI.spec.scaffold({ projectRoot, featureName })
+       └─ ipc-handlers/specScaffold.ts
+            └─ reads src/main/templates/spec/{requirements,design,tasks}.md
+                 (copied to out/main/templates/spec/ at build time by copyTemplatesPlugin)
+            └─ writes .ouroboros/specs/<slug>/{requirements,design,tasks}.md
+  └─ dispatches agent-ide:open-file for each created file
+```
+
+### Streaming Inline Edit (#116)
+
+```
+FileViewer (Ctrl+K)
+  └─ useInlineEdit.submit()
+       ├─ flag OFF → ai:inline-edit IPC (bulk replace, existing path)
+       └─ flag ON  → useStreamingInlineEdit.startStream()
+                       └─ ai:streamInlineEdit:<requestId> IPC
+                            └─ aiHandlers.ts streams content_block_delta tokens
+                                 └─ editor.executeEdits('inline-edit-stream', [...])
+                                      └─ done event → commit; Escape → cancel + revert
+```
+
+- Feature flag: `config.streamingInlineEdit`. Mirrored onto `window.__streamingInlineEdit__` by `useStreamingInlineEditFlag` (called in `App.tsx` alongside `useThemeRuntimeBootstrap`).
+- Streaming transport: dedicated `ai:streamInlineEdit:<requestId>` channel (not the chat stream-json channel).
+- Single undo: `editor.pushStackElement()` between tokens; undo rolls back the whole edit.
+
+### In-Editor Hunk Gutter (#106)
+
+```
+MonacoEditorInstance.tsx
+  └─ useEditorHunkDecorations(filePath) → decorations from diffReviewStore
+       └─ EditorHunkGutterActions.tsx (content widget per hunk boundary)
+            └─ click ✓ → window.electronAPI.git.stageHunk(rawPatch)
+            └─ click ✗ → window.electronAPI.git.revertHunk(rawPatch)
+  └─ DiffReviewProvider pushes decision: 'accepted' | 'rejected'
+```
+
+- Gutter and DiffReview panel stay in sync through shared `diffReviewStore` state.
+- CSS for gutter glyphs in `src/renderer/styles/editor-hunk.css` uses design tokens (`--diff-add-bg`, `--diff-del-bg`).
+
+### Parallel Agent Conflict Detection (#104)
+
+```
+hooks.ts PostToolUse events + stream-json tool_use
+  └─ conflictMonitor.ts — Map<sessionId, Set<file>>
+       └─ graphQuery.detectChangesForSession(sessionId, touchedFiles)
+            └─ pairwise symbol intersection per project root
+                 └─ ipc-handlers/conflict.ts — getReports / subscribe
+                      └─ renderer: useAgentConflicts()
+                           └─ AgentConflictBanner.tsx (inline, both affected threads)
+```
+
+- Graph lookup is debounced 200ms and runs async to avoid blocking the pipe response.
+- Falls back to file-level overlap when graph is cold (index in progress), sets severity `'warning'`.
+- Scoped per `projectRoot` — multi-root workspaces do not cross-contaminate.
 
 ## Rendering Patterns
 

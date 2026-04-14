@@ -72,51 +72,28 @@ function useWrappedAcceptActions(
   return { acceptHunk, acceptAllFile, acceptAll };
 }
 
-export function DiffReviewProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
+function useDiffReviewContextValue(): DiffReviewContextValue {
   const [state, dispatch] = useReducer(diffReviewReducer, null);
   const { openReview, closeReview } = useReviewLifecycleActions(dispatch);
   const { acceptHunk: baseAcceptHunk, rejectHunk } = useSingleHunkActions(state, dispatch);
-  const {
-    acceptAllFile: baseAcceptAllFile,
-    rejectAllFile,
-    acceptAll: baseAcceptAll,
-    rejectAll,
-  } = useBulkReviewActions(state, dispatch);
-
+  const { acceptAllFile: baseAcceptAllFile, rejectAllFile, acceptAll: baseAcceptAll, rejectAll } =
+    useBulkReviewActions(state, dispatch);
   const checkpoint = useCheckpointGuard(state);
   const { acceptHunk, acceptAllFile, acceptAll } = useWrappedAcceptActions(
     { acceptHunk: baseAcceptHunk, acceptAllFile: baseAcceptAllFile, acceptAll: baseAcceptAll },
     checkpoint,
   );
-
-  const value = useMemo<DiffReviewContextValue>(
-    () => ({
-      state,
-      openReview,
-      closeReview,
-      acceptHunk,
-      rejectHunk,
-      acceptAllFile,
-      rejectAllFile,
-      acceptAll,
-      rejectAll,
-    }),
-    [
-      state,
-      openReview,
-      closeReview,
-      acceptHunk,
-      rejectHunk,
-      acceptAllFile,
-      rejectAllFile,
-      acceptAll,
-      rejectAll,
-    ],
+  return useMemo<DiffReviewContextValue>(
+    () => ({ state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll }),
+    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll],
   );
+}
 
+export function DiffReviewProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
+  const value = useDiffReviewContextValue();
   return <DiffReviewContext.Provider value={value}>{children}</DiffReviewContext.Provider>;
 }

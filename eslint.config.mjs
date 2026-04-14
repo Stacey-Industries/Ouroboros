@@ -2,6 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import reactCompilerPlugin from 'eslint-plugin-react-compiler';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import security from 'eslint-plugin-security';
 import prettierConfig from 'eslint-config-prettier';
@@ -31,6 +32,7 @@ export default tseslint.config(
     plugins: {
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
+      'react-compiler': reactCompilerPlugin,
       'simple-import-sort': simpleImportSort,
     },
     settings: {
@@ -61,6 +63,12 @@ export default tseslint.config(
       'max-depth': ['error', 3],
       'max-params': ['error', 4],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+
+      // ── React Compiler — flags rule violations statically ─────────
+      // NOTE: 'warn' (not 'error') — large existing codebase has ~65 pre-existing
+      // violations (mostly prop mutation). Compiler bails gracefully on these;
+      // fix them incrementally and promote to 'error' once clean.
+      'react-compiler/react-compiler': 'warn',
 
       // ── Import sorting (deterministic, diff-friendly) ─────────────
       'simple-import-sort/imports': 'error',

@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from 'crypto';
-import { BrowserWindow, IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, dialog, IpcMainInvokeEvent } from 'electron';
 import type { Dirent } from 'fs';
 import fs from 'fs/promises';
 import { tmpdir } from 'os';
@@ -260,4 +260,36 @@ export async function handleSoftDeleteOp(
   const tempPath = path.join(tempDir, randomUUID());
   await movePath(targetPath, tempPath);
   return { success: true, tempPath };
+}
+
+type SenderWindowFn = (event: IpcMainInvokeEvent) => BrowserWindow;
+type FileHandlerFn = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown> | unknown;
+
+export function createSelectFolderHandler(senderWindow: SenderWindowFn): FileHandlerFn {
+  return async (event) => {
+    const result = await dialog.showOpenDialog(senderWindow(event), {
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Select Project Folder',
+    });
+    return result.canceled || result.filePaths.length === 0
+      ? { success: true, cancelled: true, path: null }
+      : { success: true, cancelled: false, path: result.filePaths[0] };
+  };
+}
+
+export async function handleShowImageDialog(event: IpcMainInvokeEvent): Promise<unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime
+  const win = ((event.sender as any).getOwnerBrowserWindow?.() ?? BrowserWindow.getFocusedWindow())!;
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Attach Image',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+  });
+  if (result.canceled || result.filePaths.length === 0) return { success: true, cancelled: true };
+  try {
+    const attachments = await Promise.all(result.filePaths.slice(0, 5).map(loadImageAttachment));
+    return { success: true, cancelled: false, attachments };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }

@@ -66,6 +66,7 @@ Outputs `stats/main.html`, `stats/preload.html`, `stats/renderer.html` via `roll
 - **File watcher exclusions**: `electron.vite.config.ts` ignores `docs/`, `plan/`, `ai/`, `stats/`, `*.md`, etc. to prevent agent/IDE file changes from triggering hot-reload restarts.
 - **Tailwind only scans `src/renderer/`**: Classes used in main or preload code won't appear in the CSS bundle.
 - **`src/renderer/types/**` excluded from knip**: These are `.d.ts` declaration files — knip can't analyze them as entry consumers.
+- **`src/main/templates/` copied at build time**: `copyTemplatesPlugin` in `electron.vite.config.ts` copies `src/main/templates/` → `out/main/templates/` via `closeBundle`. `specScaffold.ts` reads templates via `path.join(__dirname, '..', 'templates', 'spec')` at runtime. Without the copy, `/spec` fails silently in production builds.
 <!-- claude-md-auto:end -->
 
 <!-- claude-md-manual:preserved -->
@@ -185,6 +186,9 @@ Each window owns its project roots independently via `ManagedWindow.projectRoots
 - TerminalPane and TerminalManager both render tab bars (double header) — needs state lifting to unify
 - Settings modal in App.tsx is inline — should use the Settings components in `components/Settings/`
 - `internalMcp/` module (SSE MCP server + settings auto-inject) — fully implemented but never wired into main.ts startup sequence. No callers exist. Designed to expose IDE tools to Claude Code via MCP.
+- `streamingInlineEdit` feature flag is wired but not removed — Phase 8 spec says remove after 1 release of soak. Flag lives in `config.streamingInlineEdit`; mirrored to `window.__streamingInlineEdit__` by `useStreamingInlineEditFlag` (App.tsx).
+- Background job queue concurrency cap and queue length cap (50) are hardcoded — expose as settings when the feature matures.
+- `refs/ouroboros/checkpoints/<threadId>` refs accumulate over time — GC policy (keep last 50) runs lazily on next checkpoint capture, not on a schedule.
 
 ## Project Context
 

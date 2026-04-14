@@ -136,6 +136,24 @@ function RevertIcon(): React.ReactElement {
   );
 }
 
+function RewindIcon(): React.ReactElement {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="11 19 2 12 11 5 11 19" />
+      <polygon points="22 19 13 12 22 5 22 19" />
+    </svg>
+  );
+}
+
 export function UserMessageActions({
   message,
   isLastUserMessage,
@@ -182,32 +200,55 @@ export interface AssistantMessageActionsProps {
   message: AgentChatMessageRecord;
   onBranch: (message: AgentChatMessageRecord) => void;
   onRevert?: (message: AgentChatMessageRecord) => void;
+  onRewind?: (message: AgentChatMessageRecord) => void;
+}
+
+function RewindButton({ onClick }: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      title="Rewind to after this message"
+      onClick={onClick}
+      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-warning-subtle hover:text-status-warning"
+    >
+      <div className="flex items-center gap-1">
+        <RewindIcon />
+        <span className="text-[10px] font-medium">Rewind</span>
+      </div>
+    </button>
+  );
+}
+
+function RevertButton({ onClick }: { onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      title="Revert changes from this turn"
+      onClick={onClick}
+      className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-error-subtle hover:text-status-error"
+    >
+      <div className="flex items-center gap-1">
+        <RevertIcon />
+        <span className="text-[10px] font-medium">Revert</span>
+      </div>
+    </button>
+  );
 }
 
 export function AssistantMessageActions({
   message,
   onBranch,
   onRevert,
+  onRewind,
 }: AssistantMessageActionsProps): React.ReactElement {
   const { copied, copy } = useCopyMessage(message.content);
   const hasSnapshot = !!message.orchestration?.preSnapshotHash;
+  const hasCheckpoint = !!message.checkpointCommit;
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-hover:opacity-100">
       <ActionButton title={copied ? 'Copied!' : 'Copy message'} onClick={copy}>
         {copied ? <CheckIcon /> : <CopyIcon />}
       </ActionButton>
-      {hasSnapshot && onRevert && (
-        <button
-          title="Revert changes from this turn"
-          onClick={() => onRevert(message)}
-          className="rounded px-1.5 py-0.5 text-text-semantic-muted transition-all duration-100 hover:bg-status-error-subtle hover:text-status-error"
-        >
-          <div className="flex items-center gap-1">
-            <RevertIcon />
-            <span className="text-[10px] font-medium">Revert</span>
-          </div>
-        </button>
-      )}
+      {hasCheckpoint && onRewind && <RewindButton onClick={() => onRewind(message)} />}
+      {hasSnapshot && onRevert && <RevertButton onClick={() => onRevert(message)} />}
       <button
         title="Branch from this message"
         onClick={() => onBranch(message)}

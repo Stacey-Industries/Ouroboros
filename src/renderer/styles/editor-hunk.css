@@ -1,0 +1,75 @@
+/**
+ * editor-hunk.css — Monaco gutter decorations for per-hunk accept/reject.
+ *
+ * Uses design tokens only — no hardcoded hex/rgb values.
+ * Imported by MonacoEditor.tsx alongside globals.css.
+ */
+
+/* ─── Glyph margin marker ─────────────────────────────────────────────────── */
+
+.monaco-editor .ouroboros-hunk-gutter {
+  /* Subtle add-colored left border in the glyph margin */
+  border-left: 3px solid var(--diff-add-border);
+  background-color: var(--diff-add-bg);
+  width: 100%;
+  cursor: pointer;
+}
+
+/* ─── Whole-line tint for the hunk anchor row ─────────────────────────────── */
+
+.monaco-editor .ouroboros-hunk-line-bg {
+  background-color: var(--diff-add-bg) !important;
+}
+
+/* ─── Content widget container ────────────────────────────────────────────── */
+
+.ouroboros-hunk-actions-widget {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  z-index: 10;
+}
+
+/* ─── Accept / Reject buttons ─────────────────────────────────────────────── */
+
+.ouroboros-hunk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  background: transparent;
+  transition: background 80ms ease;
+}
+
+.ouroboros-hunk-btn:focus-visible {
+  outline: 2px solid var(--interactive-focus);
+  outline-offset: 1px;
+}
+
+.ouroboros-hunk-btn-accept {
+  color: var(--status-success);
+}
+
+.ouroboros-hunk-btn-accept:hover {
+  background: var(--status-success-subtle);
+}
+
+.ouroboros-hunk-btn-reject {
+  color: var(--status-error);
+}
+
+.ouroboros-hunk-btn-reject:hover {
+  background: var(--status-error-subtle);
+}

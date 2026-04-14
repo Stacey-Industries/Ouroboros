@@ -208,6 +208,11 @@ export interface AgentChatMessageRecord {
   blocks?: AgentChatContentBlock[];
   /** Skill invocations that occurred during this message's processing. */
   skillExecutions?: SkillExecutionRecord[];
+  /**
+   * Git commit hash on refs/ouroboros/checkpoints/<threadId> captured after this turn.
+   * Present only on assistant messages that had a checkpoint created.
+   */
+  checkpointCommit?: string;
 }
 
 export interface AgentChatBranchInfo {

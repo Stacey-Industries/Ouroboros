@@ -179,6 +179,13 @@ export class ThreadStoreSqliteRuntime {
               this.db!.exec('ALTER TABLE messages ADD COLUMN model TEXT');
             }
           }
+          if (currentVersion >= 2) {
+            // v2→v3: add checkpointCommit column to existing messages table
+            const cols = this.db!.pragma('table_info(messages)') as { name: string }[];
+            if (!cols.some((c) => c.name === 'checkpointCommit')) {
+              this.db!.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
+            }
+          }
           setSchemaVersion(this.db!, SCHEMA_VERSION);
         });
       }
@@ -238,8 +245,9 @@ export class ThreadStoreSqliteRuntime {
   private prepareInsertMessage(db: Database): BetterSqlite3.Statement {
     return db.prepare(
       `INSERT OR REPLACE INTO messages (id, threadId, role, content, createdAt, statusKind, orchestration,
-        contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage, blocks, model)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage,
+        blocks, model, checkpointCommit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
   }
 
@@ -266,6 +274,7 @@ export class ThreadStoreSqliteRuntime {
       s(msg.tokenUsage),
       s(msg.blocks),
       msg.model ?? null,
+      msg.checkpointCommit ?? null,
     );
   }
 

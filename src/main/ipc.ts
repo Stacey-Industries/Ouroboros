@@ -17,11 +17,16 @@ import {
   cleanupConfigWatcher,
   cleanupFileWatchers,
   closeEmbeddingStore,
+  ensureSchedulerInit,
   lspStopAll,
   registerAgentChatHandlers,
+  registerAgentConflictHandlers,
   registerAiHandlers,
+  registerAiStreamHandlers,
   registerAppHandlers,
   registerAuthHandlers,
+  registerBackgroundJobsHandlers,
+  registerCheckpointHandlers,
   registerClaudeMdHandlers,
   registerConfigHandlers,
   registerContextHandlers,
@@ -38,6 +43,7 @@ import {
   registerRulesAndSkillsHandlers,
   registerSearchHandlers,
   registerSessionHandlers,
+  registerSpecHandlers,
 } from './ipc-handlers';
 import log from './logger';
 import { getAllProviders } from './providers';
@@ -79,10 +85,15 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('claudeMd', () => registerClaudeMdHandlers(senderWindow)),
     ...safeRegister('rulesAndSkills', () => registerRulesAndSkillsHandlers(senderWindow)),
     ...safeRegister('search', () => registerSearchHandlers()),
-    ...safeRegister('auth', () => registerAuthHandlers(senderWindow)),
+    ...safeRegister('auth', () => registerAuthHandlers()),
     ...safeRegister('ai', () => registerAiHandlers()),
+    ...safeRegister('aiStream', () => registerAiStreamHandlers()),
     ...safeRegister('embedding', () => registerEmbeddingHandlers(senderWindow)),
     ...safeRegister('routerStats', () => registerRouterStatsHandlers()),
+    ...safeRegister('spec', () => registerSpecHandlers()),
+    ...safeRegister('checkpoint', () => registerCheckpointHandlers()),
+    ...safeRegister('backgroundJobs', () => registerBackgroundJobsHandlers()),
+    ...safeRegister('agentConflict', () => registerAgentConflictHandlers()),
   ];
 }
 
@@ -212,6 +223,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   }
 
   handlersRegistered = true;
+  ensureSchedulerInit();
   allChannels = registerDomainHandlers(win);
   registerCodeModeHandlers(allChannels);
   registerProviderHandlers(allChannels);

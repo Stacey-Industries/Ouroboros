@@ -247,6 +247,17 @@ function buildTimeTravelCommand(): Command {
   });
 }
 
+function buildBackgroundJobsCommand(): Command {
+  return createDomCommand({
+    id: 'agent:queue-background',
+    label: 'Queue background agent\u2026',
+    category: 'app',
+    icon: 'B',
+    productIconId: 'debug-start',
+    eventName: 'agent-ide:open-background-jobs',
+  });
+}
+
 export function buildBuiltinCommands(): Command[] {
   return [
     buildThemeMenu(),
@@ -256,5 +267,6 @@ export function buildBuiltinCommands(): Command[] {
     ...buildWindowCommands(),
     ...buildAppCommands(),
     buildTimeTravelCommand(),
+    buildBackgroundJobsCommand(),
   ];
 }

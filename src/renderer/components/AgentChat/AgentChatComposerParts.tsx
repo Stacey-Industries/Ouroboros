@@ -7,8 +7,10 @@
 
 import React from 'react';
 
-import type { CodexModelOption, ImageAttachment } from '../../types/electron';
+import type { CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
+import type { ModelContextUsage } from './AgentChatConversation';
+import { ChatControlsBar, type ChatOverrides } from './ChatControlsBar';
 import { resolveActiveModel } from './ChatControlsBarSupport';
 import { ContextUsageBar } from './ContextUsageBar';
 import type { MentionItem } from './MentionAutocomplete';
@@ -239,3 +241,38 @@ export function ComposerContextBar(props: ComposerContextBarProps): React.ReactE
 
 export type { ComposerInputProps } from './AgentChatComposerInput';
 export { ComposerInput } from './AgentChatComposerInput';
+
+/* ---------- ComposerFooter ---------- */
+
+export type ComposerFooterProps = {
+  chatOverrides?: ChatOverrides;
+  codexModels?: CodexModelOption[];
+  codexSettingsModel?: string;
+  defaultProvider?: 'claude-code' | 'codex' | 'anthropic-api';
+  modelProviders?: ModelProvider[];
+  routedBy?: string;
+  settingsModel?: string;
+  onChatOverridesChange?: (overrides: ChatOverrides) => void;
+  streamingTokenUsage?: { inputTokens: number; outputTokens: number };
+  threadModelUsage?: ModelContextUsage[];
+  isStreaming?: boolean;
+};
+
+export function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
+  if (!props.chatOverrides || !props.onChatOverridesChange) return null;
+  return (
+    <ChatControlsBar
+      overrides={props.chatOverrides}
+      onChange={props.onChatOverridesChange}
+      settingsModel={props.settingsModel}
+      codexSettingsModel={props.codexSettingsModel}
+      defaultProvider={props.defaultProvider}
+      providers={props.modelProviders}
+      codexModels={props.codexModels}
+      threadModelUsage={props.threadModelUsage}
+      streamingTokenUsage={props.streamingTokenUsage}
+      isStreaming={props.isStreaming}
+      routedBy={props.routedBy}
+    />
+  );
+}

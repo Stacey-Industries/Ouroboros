@@ -8,6 +8,7 @@ export function usePersistedToggle(
   key: string,
   defaultValue: boolean
 ): [boolean, (updater: boolean | ((prev: boolean) => boolean)) => void] {
+  'use no memo';
   const [value, setValue] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(key);

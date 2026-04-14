@@ -1,7 +1,11 @@
 import type { ElectronAPI } from './electron-workspace';
 
 export * from './electron-agent-chat';
+export * from './electron-agent-conflict';
+export * from './electron-ai-stream';
 export * from './electron-auth';
+export * from './electron-background-jobs';
+export * from './electron-checkpoint';
 export * from './electron-claude-md';
 export * from './electron-embedding';
 export * from './electron-extension-store';
@@ -13,6 +17,7 @@ export * from './electron-observability';
 export * from './electron-orchestration';
 export * from './electron-rules-skills';
 export * from './electron-runtime-apis';
+export * from './electron-spec';
 export * from './electron-workspace';
 
 declare global {

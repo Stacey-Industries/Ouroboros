@@ -79,3 +79,10 @@ screenshots/
 tmp-*.js
 lint-output.txt
 .lint-report.json
+compiler-violations.json
+
+# Playwright test output
+test-results/
+
+# Scheduled task runtime state
+.claude/scheduled_tasks.lock

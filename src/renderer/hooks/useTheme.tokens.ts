@@ -4,6 +4,7 @@
  */
 
 import type { Theme } from '../themes';
+import { registerExtensionTheme, themes, unregisterExtensionTheme } from '../themes';
 
 export function applyFontConfig(fontUI: string, fontMono: string, fontSizeUI: number): void {
   const root = document.documentElement;
@@ -132,4 +133,22 @@ export function applyThemeToDom(theme: Theme, showBgGradient = true, glassOpacit
   root.dataset['scanlines'] = String(effects?.scanlines ?? false);
   root.dataset['glowText'] = String(effects?.glowText ?? false);
   window.dispatchEvent(new Event('agent-ide:theme-applied'));
+}
+
+/** Fetch extension theme contributions and register them into the themes registry. */
+export async function loadExtensionThemesIntoRegistry(): Promise<void> {
+  try {
+    const api = window.electronAPI?.extensionStore;
+    if (!api?.getThemeContributions) return;
+    const result = await api.getThemeContributions();
+    if (!result.success || !result.themes) return;
+    for (const id of Object.keys(themes)) {
+      if (id.startsWith('ext:')) unregisterExtensionTheme(id);
+    }
+    for (const t of result.themes) {
+      registerExtensionTheme({ id: t.id, name: t.name, fontFamily: t.fontFamily, colors: t.colors });
+    }
+  } catch {
+    // Extension themes are optional — don't block startup
+  }
 }

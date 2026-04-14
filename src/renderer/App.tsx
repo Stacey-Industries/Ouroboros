@@ -30,6 +30,7 @@ import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
 import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
 import { useProjectManagement } from './hooks/useProjectManagement';
+import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
@@ -271,6 +272,7 @@ function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: 
 export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
   useThemeRuntimeBootstrap(config);
+  useStreamingInlineEditFlag(config);
 
   if (configLoading || !config) return <LoadingScreen />;
 

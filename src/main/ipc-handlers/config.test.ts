@@ -1,8 +1,10 @@
 /**
- * config.test.ts — Unit tests for sanitizeConfig (via config:getAll handler).
+ * config.test.ts — Unit tests for sanitizeConfig (via config:getAll handler)
+ * and the settings file watcher (fs.watch + debounce).
  *
  * Verifies that sensitive fields (webAccessToken, webAccessPassword, apiKey)
  * are stripped or masked before the config is returned to the renderer.
+ * Also verifies the 50 ms debounce on the settings file watcher.
  *
  * Run with: npx vitest run src/main/ipc-handlers/config.test.ts
  */
@@ -29,15 +31,24 @@ vi.mock('electron', () => ({
   shell: { openPath: vi.fn() },
 }));
 
-// ── Mock chokidar ─────────────────────────────────────────────────────────────
-vi.mock('chokidar', () => ({
-  default: { watch: vi.fn().mockReturnValue({ on: vi.fn(), close: vi.fn() }) },
-}));
+// ── Mock fs (core) — provides fs.watch used by the settings file watcher ──────
+type WatchCallback = (eventType: string, filename: string | null) => void;
+
+const { mockFsWatcher, mockFsWatch } = vi.hoisted(() => {
+  const watcher = { close: vi.fn() };
+  const watchFn = vi.fn((...args: unknown[]) => { void args; return watcher; });
+  return { mockFsWatcher: watcher, mockFsWatch: watchFn };
+});
+
+vi.mock('fs', async () => {
+  const actual = await vi.importActual<typeof import('fs')>('fs');
+  return { ...actual, default: { ...actual, watch: mockFsWatch }, watch: mockFsWatch };
+});
 
 // ── Mock fs/promises ──────────────────────────────────────────────────────────
 vi.mock('fs/promises', () => ({
-  default: { writeFile: vi.fn(), readFile: vi.fn() },
-  writeFile: vi.fn(),
+  default: { writeFile: vi.fn().mockResolvedValue(undefined), readFile: vi.fn() },
+  writeFile: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn(),
 }));
 
@@ -64,7 +75,7 @@ vi.mock('../config', () => ({
 }));
 
 // ── Import module under test AFTER mocks ──────────────────────────────────────
-import { registerConfigHandlers } from './config';
+import { cleanupConfigWatcher, registerConfigHandlers } from './config';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,12 +101,17 @@ async function invokeGetAll(): Promise<Record<string, unknown>> {
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
+  vi.useFakeTimers();
+  mockFsWatch.mockClear();
+  mockFsWatcher.close.mockClear();
   registeredHandlers.clear();
   mockGetConfig.mockReturnValue(makeConfig());
   registerConfigHandlers(() => ({ webContents: { send: vi.fn() } }) as never);
 });
 
 afterEach(() => {
+  cleanupConfigWatcher();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -192,5 +208,77 @@ describe('config:getAll — modelProviders apiKey masking', () => {
 
     await invokeGetAll();
     expect(original[0].apiKey).toBe('real-key');
+  });
+});
+
+// ─── Settings file watcher — fs.watch + 50 ms debounce ───────────────────────
+
+async function invokeOpenSettingsFile(): Promise<Record<string, unknown>> {
+  const handler = registeredHandlers.get('config:openSettingsFile');
+  if (!handler) throw new Error('config:openSettingsFile handler not registered');
+  return handler({} as never) as Promise<Record<string, unknown>>;
+}
+
+describe('settings file watcher', () => {
+  it('calls fs.watch when config:openSettingsFile is invoked', async () => {
+    await invokeOpenSettingsFile();
+    expect(mockFsWatch).toHaveBeenCalledOnce();
+    expect(mockFsWatch).toHaveBeenCalledWith(
+      expect.stringContaining('settings.json'),
+      expect.any(Function),
+    );
+  });
+
+  it('does not start a second watcher if already watching', async () => {
+    await invokeOpenSettingsFile();
+    await invokeOpenSettingsFile();
+    expect(mockFsWatch).toHaveBeenCalledOnce();
+  });
+
+  it('debounces rapid change events and calls syncExternalSettings once', async () => {
+    mockGetConfig.mockReturnValue(makeConfig());
+    // config.ts imports `fs` as default from 'fs/promises', so we must spy on default.readFile
+    const fsMod = await import('fs/promises');
+    const mockReadFile = vi.spyOn(fsMod.default, 'readFile').mockResolvedValue('{}' as never);
+
+    await invokeOpenSettingsFile();
+    // The callback registered with fs.watch is the second argument of the first call
+    const cb = mockFsWatch.mock.calls[0][1] as WatchCallback;
+    expect(cb).toBeTypeOf('function');
+
+    // Fire 'change' three times in quick succession (simulating Windows double-fire)
+    cb('change', 'settings.json');
+    cb('change', 'settings.json');
+    cb('change', 'settings.json');
+
+    // Before the 50ms debounce fires, readFile should not have been called
+    expect(mockReadFile).not.toHaveBeenCalled();
+
+    // Advance past the debounce window
+    await vi.advanceTimersByTimeAsync(60);
+
+    // syncExternalSettings reads the file exactly once
+    expect(mockReadFile).toHaveBeenCalledOnce();
+  });
+
+  it('ignores non-change events (e.g. rename)', async () => {
+    const fsMod = await import('fs/promises');
+    const mockReadFile = vi.spyOn(fsMod.default, 'readFile').mockResolvedValue('{}' as never);
+
+    await invokeOpenSettingsFile();
+    // Clear any calls that happened during handler setup (e.g. from a prior watcher flush)
+    mockReadFile.mockClear();
+
+    const cb = mockFsWatch.mock.calls[0][1] as WatchCallback;
+    cb('rename', 'settings.json');
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(mockReadFile).not.toHaveBeenCalled();
+  });
+
+  it('closes the watcher on cleanupConfigWatcher', async () => {
+    await invokeOpenSettingsFile();
+    cleanupConfigWatcher();
+    expect(mockFsWatcher.close).toHaveBeenCalledOnce();
   });
 });
