@@ -118,6 +118,7 @@ export const supplementalApis: SupplementalApis = {
     subscribe: () => ipcRenderer.invoke('perf:subscribe'),
     unsubscribe: () => ipcRenderer.invoke('perf:unsubscribe'),
     onMetrics: (callback) => onChannel<PerfMetrics>('perf:metrics', callback),
+    markFirstRender: () => ipcRenderer.invoke('perf:markFirstRender'),
   },
 
   symbol: {
@@ -308,9 +309,7 @@ export const supplementalApis: SupplementalApis = {
       onChannel<ClaudeMdGenerationStatus>('claudeMd:statusChange', callback),
   },
 
-  router: {
-    getStats: () => ipcRenderer.invoke('router:getStats'),
-  },
+  router: { getStats: () => ipcRenderer.invoke('router:getStats') },
 
   rulesAndSkills: rulesAndSkillsApi,
 

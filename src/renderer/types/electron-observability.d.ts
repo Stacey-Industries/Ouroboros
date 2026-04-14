@@ -46,6 +46,7 @@ export interface PerfAPI {
   subscribe: () => Promise<IpcResult>
   unsubscribe: () => Promise<IpcResult>
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void
+  markFirstRender: () => Promise<IpcResult>
 }
 
 export interface CostEntry {

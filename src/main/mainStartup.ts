@@ -1,9 +1,10 @@
 /**
  * mainStartup.ts — Startup helpers extracted from main.ts to satisfy max-lines.
- * Contains crash logging, auto-updater wiring, and web-contents security setup.
+ * Contains crash logging, auto-updater wiring, web-contents security setup,
+ * and synchronous bootstrap functions for V8 snapshot safety.
  */
 
-import { app } from 'electron';
+import { app, crashReporter } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -169,4 +170,58 @@ export async function initCodebaseGraph(): Promise<void> {
   // Initialize conflict monitor after graph (operates in file-only mode if graph is cold)
   initConflictMonitor();
   log.info('[conflictMonitor] initialized after codebase graph');
+}
+
+// ---------------------------------------------------------------------------
+// Synchronous bootstrap — V8 snapshot safety
+//
+// These functions wrap the calls that must happen synchronously before
+// app.whenReady() resolves, but were previously naked at module scope in
+// main.ts. Extracting them here keeps main.ts under the 300-line ESLint
+// limit and makes the snapshot-hostile boundary explicit.
+// ---------------------------------------------------------------------------
+
+export function bootstrapProcessHandlers(
+  onWriteCrashLog: (source: string, details: string) => Promise<void>,
+): void {
+  process.on('uncaughtException', (err: Error) => {
+    log.error('uncaughtException:', err);
+    void onWriteCrashLog('main:uncaughtException', `${err.stack ?? err.message}`);
+  });
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    const msg = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
+    log.error('unhandledRejection:', msg);
+    void onWriteCrashLog('main:unhandledRejection', msg);
+  });
+
+  // Graceful shutdown on POSIX signals (Docker, systemd, etc.)
+  process.on('SIGTERM', () => app.quit());
+  process.on('SIGINT', () => app.quit());
+}
+
+export function bootstrapCrashReporter(): void {
+  crashReporter.start({
+    uploadToServer: false,
+    compress: true,
+  });
+}
+
+export function bootstrapApp(): void {
+  // Must be called before app.ready fires.
+  app.setName('Ouroboros');
+
+  // Suppress GPU errors in dev. Must precede app.ready.
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  if (!app.isPackaged) {
+    app.commandLine.appendSwitch('no-sandbox');
+  }
+}
+
+export function ensureSingleInstance(): void {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.quit();
+    process.exit(0);
+  }
 }

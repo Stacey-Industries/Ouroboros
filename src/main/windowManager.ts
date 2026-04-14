@@ -12,6 +12,7 @@ import { acquireGraphController, releaseGraphController } from './codebaseGraph/
 import { getConfigValue, setConfigValue, type WindowSession } from './config';
 import { acquireContextLayer, releaseContextLayer } from './contextLayer/contextLayerController';
 import { registerIpcHandlers } from './ipc';
+import { markStartup } from './perfMetrics';
 import { killPtySessionsForWindow } from './pty';
 import {
   applyMicaEffect,
@@ -143,6 +144,7 @@ function openDevToolsInDevelopment(win: BrowserWindow): void {
 
 function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
   win.once('ready-to-show', () => {
+    markStartup('window-created');
     if (state.isFirst && state.savedBounds?.isMaximized) win.maximize();
     win.show();
     openDevToolsInDevelopment(win);
@@ -252,9 +254,7 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
     const { startContextRefreshTimer } = require('./ipc-handlers/agentChat');
     startContextRefreshTimer([projectRoot]);
-  } catch {
-    /* agentChat module may not be loaded yet */
-  }
+  } catch { /* agentChat module may not be loaded yet */ }
 }
 
 export function setWindowProjectRoots(winId: number, roots: string[]): void {

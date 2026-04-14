@@ -18,7 +18,7 @@ import {
   getRecentSessionsFromEntries,
 } from '../costHistoryAggregation';
 import log from '../logger';
-import { subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
+import { markStartup, subscribeToPerfMetrics, unsubscribeFromPerfMetrics } from '../perfMetrics';
 import { getAutoUpdater } from '../updater';
 import {
   getWindowTrustLevel,
@@ -250,6 +250,7 @@ export function registerPerfHandlers(channels: ChannelList): void {
   registerChannel(channels, 'perf:ping', () => ok({ ts: Date.now() }));
   registerChannel(channels, 'perf:subscribe', (event) => subscribeToPerfMetrics(event));
   registerChannel(channels, 'perf:unsubscribe', (event) => unsubscribeFromPerfMetrics(event));
+  registerChannel(channels, 'perf:markFirstRender', () => { markStartup('first-render'); return ok(); });
 }
 
 export function registerShellHistoryHandlers(channels: ChannelList): void {

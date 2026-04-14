@@ -1,4 +1,4 @@
-import { app, BrowserWindow, crashReporter } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
 
 import { closeThreadStore } from './agentChat/threadStore';
@@ -29,7 +29,11 @@ import {
 import { startJankDetector, stopJankDetector } from './jankDetector';
 import log from './logger';
 import {
+  bootstrapApp,
+  bootstrapCrashReporter,
+  bootstrapProcessHandlers,
   configureAutoUpdater,
+  ensureSingleInstance,
   initCodebaseGraph,
   seedGithubTokenWithRetry,
   writeCrashLog,
@@ -40,6 +44,7 @@ import {
   cleanupPerfSubscriber,
   clearPerfSubscribers,
   initializePerfMetrics,
+  markStartup,
   startPerfMetrics as startManagedPerfMetrics,
   stopPerfMetrics as stopManagedPerfMetrics,
 } from './perfMetrics';
@@ -58,38 +63,27 @@ import { getOrCreateWebToken } from './web/webAuth';
 import { createWindow, getAllActiveWindows, restoreWindowSessions } from './windowManager';
 import { isWorkspaceTrusted } from './workspaceTrust';
 
-crashReporter.start({
-  uploadToServer: false,
-  compress: true,
-});
+// ---------------------------------------------------------------------------
+// Bootstrap — must run synchronously before app.whenReady() resolves.
+// Functions are defined in mainStartup.ts; called here in the correct order.
+// Order matters: process handlers first so errors during bootstrap are captured.
+// ---------------------------------------------------------------------------
 
-// Capture uncaught main-process exceptions
-process.on('uncaughtException', (err: Error) => {
-  log.error('uncaughtException:', err);
-  void writeCrashLog('main:uncaughtException', `${err.stack ?? err.message}`);
-});
+bootstrapProcessHandlers(writeCrashLog);
+bootstrapCrashReporter();
+bootstrapApp();
+ensureSingleInstance();
 
-process.on('unhandledRejection', (reason: unknown) => {
-  const msg = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
-  log.error('unhandledRejection:', msg);
-  void writeCrashLog('main:unhandledRejection', msg);
-});
-
-// Suppress GPU errors in dev
-app.commandLine.appendSwitch('disable-gpu-sandbox');
-if (!app.isPackaged) {
-  app.commandLine.appendSwitch('no-sandbox');
-}
-
-// Ensure single instance
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.quit();
-  process.exit(0);
-}
+// ---------------------------------------------------------------------------
+// Module-level mutable state (declarations only — no side effects)
+// ---------------------------------------------------------------------------
 
 let mainWindow: BrowserWindow | null = null;
 let internalMcpStop: (() => Promise<void>) | null = null;
+
+// ---------------------------------------------------------------------------
+// Startup helpers
+// ---------------------------------------------------------------------------
 
 function notifyStartupFailure(name: string, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
@@ -235,6 +229,7 @@ function startWebServerAsync(): void {
 }
 
 async function initializeApplication(): Promise<void> {
+  markStartup('app-ready');
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
   await migrateSecretsIfNeeded();
@@ -247,12 +242,8 @@ async function initializeApplication(): Promise<void> {
   buildApplicationMenu(mainWindow);
   await startBackgroundServices(mainWindow);
 
-  try {
-    initClaudeMdGenerator();
-    log.info('Generator initialized');
-  } catch (err) {
-    log.warn('Generator initialization failed:', err);
-  }
+  try { initClaudeMdGenerator(); log.info('Generator initialized'); }
+  catch (err) { log.warn('Generator initialization failed:', err); }
 
   registerRenderProcessCrashLogging();
   configureAutoUpdater();
@@ -265,16 +256,10 @@ async function initializeApplication(): Promise<void> {
   startWebServerAsync();
   loadRetrainedWeightsIfAvailable();
   observeDatasetGrowth();
+  markStartup('services-ready');
 }
 
-
-
-app.setName('Ouroboros');
 app.whenReady().then(initializeApplication);
-
-// Graceful shutdown on POSIX signals (Docker, systemd, etc.)
-process.on('SIGTERM', () => app.quit());
-process.on('SIGINT', () => app.quit());
 
 app.on('window-all-closed', async () => {
   stopJankDetector();

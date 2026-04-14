@@ -8,7 +8,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useProject } from '../../contexts/ProjectContext';
-import { SearchPanel } from '../Search/SearchPanel';
+import { LazyPanelFallback } from './LazyPanelFallback';
+
+const SearchPanel = React.lazy(() =>
+  import('../Search/SearchPanel').then((m) => ({ default: m.SearchPanel })),
+);
 import { BookmarksSection, useBookmarkCount } from './BookmarksSection';
 import { OutlineSection, useOutlineSymbolCount } from './OutlineSection';
 import { SidebarFileTree } from './SidebarFileTree';
@@ -144,7 +148,9 @@ function SidebarSectionsLayout({ collapsed, explorerFlex, outlineFlex, showDivid
       </SidebarSection>
       <SidebarSection title="Search" collapsed={collapsed.search} onToggle={toggles.toggleSearch}
         style={{ minHeight: collapsed.search ? undefined : 160 }}>
-        <SearchPanel projectRoot={projectRoot ?? ''} />
+        <React.Suspense fallback={<LazyPanelFallback />}>
+          <SearchPanel projectRoot={projectRoot ?? ''} />
+        </React.Suspense>
       </SidebarSection>
       {showDivider && <SidebarResizeDivider onDrag={handleDrag} containerRef={containerRef} />}
       <SidebarSection title="Outline" collapsed={collapsed.outline} onToggle={toggles.toggleOutline}

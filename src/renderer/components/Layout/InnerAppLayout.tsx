@@ -8,7 +8,11 @@ import React, { useCallback } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
 import { AboutModal } from '../AboutModal';
-import { BackgroundJobsPanel } from '../BackgroundJobs/BackgroundJobsPanel';
+import { LazyPanelFallback } from './LazyPanelFallback';
+
+const BackgroundJobsPanel = React.lazy(() =>
+  import('../BackgroundJobs/BackgroundJobsPanel').then((m) => ({ default: m.BackgroundJobsPanel })),
+);
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
@@ -267,7 +271,9 @@ function LayoutOverlays({
       />
       <PerformanceOverlay visible={perfOverlayVisible} />
       <AboutModal />
-      <BackgroundJobsPanel />
+      <React.Suspense fallback={<LazyPanelFallback />}>
+        <BackgroundJobsPanel />
+      </React.Suspense>
     </>
   );
 }

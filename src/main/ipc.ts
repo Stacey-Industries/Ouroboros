@@ -47,6 +47,7 @@ import {
   registerSpecHandlers,
 } from './ipc-handlers';
 import log from './logger';
+import { markStartup } from './perfMetrics';
 import { getAllProviders } from './providers';
 import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
 import { resolveCodexThreadId } from './ptyCodexCapture';
@@ -233,6 +234,7 @@ export function registerIpcHandlers(win: BrowserWindow): () => void {
   registerProviderHandlers(allChannels);
   registerOrchestrationStubHandlers(allChannels);
   startApprovalManagerCleanup();
+  markStartup('ipc-ready');
 
   return () => {
     cleanupIpcHandlers();

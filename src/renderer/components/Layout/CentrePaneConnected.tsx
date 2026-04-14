@@ -14,17 +14,36 @@ import {
   OPEN_SETTINGS_PANEL_EVENT,
 } from '../../hooks/appEventNames';
 import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
-import { ContextBuilder } from '../ContextBuilder';
-import { DiffReviewPanel,useDiffReview } from '../DiffReview';
-import { ExtensionStorePage } from '../ExtensionStore/ExtensionStorePage';
-import { McpStorePage } from '../McpStore/McpStorePage';
-import { SessionReplayPanel } from '../SessionReplay';
-import { SettingsPanel } from '../Settings/SettingsPanel';
-import { UsagePanel } from '../UsageModal/UsagePanel';
+import { useDiffReview } from '../DiffReview';
 import { CentrePane } from './CentrePane';
 import { EditorContent } from './EditorContent';
 import { EditorTabBar, type SpecialViewType } from './EditorTabBar';
-import { TimeTravelPanelConnected } from './TimeTravelPanelConnected';
+import { LazyPanelFallback } from './LazyPanelFallback';
+
+const ContextBuilder = React.lazy(() =>
+  import('../ContextBuilder').then((m) => ({ default: m.ContextBuilder })),
+);
+const DiffReviewPanel = React.lazy(() =>
+  import('../DiffReview').then((m) => ({ default: m.DiffReviewPanel })),
+);
+const ExtensionStorePage = React.lazy(() =>
+  import('../ExtensionStore/ExtensionStorePage').then((m) => ({ default: m.ExtensionStorePage })),
+);
+const McpStorePage = React.lazy(() =>
+  import('../McpStore/McpStorePage').then((m) => ({ default: m.McpStorePage })),
+);
+const SessionReplayPanel = React.lazy(() =>
+  import('../SessionReplay').then((m) => ({ default: m.SessionReplayPanel })),
+);
+const SettingsPanel = React.lazy(() =>
+  import('../Settings/SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
+);
+const UsagePanel = React.lazy(() =>
+  import('../UsageModal/UsagePanel').then((m) => ({ default: m.UsagePanel })),
+);
+const TimeTravelPanelConnected = React.lazy(() =>
+  import('./TimeTravelPanelConnected').then((m) => ({ default: m.TimeTravelPanelConnected })),
+);
 
 // ── Event → view mapping ────────────────────────────────────────────────────
 
@@ -111,13 +130,16 @@ const layerStyle: React.CSSProperties = {
 
 function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projectRoot: string | null }): React.ReactElement | null {
   const noop = useCallback(() => {}, []);
+  const fallback = <LazyPanelFallback />;
   switch (view) {
-    case 'settings': return <SettingsPanel onClose={noop} />;
-    case 'usage': return <UsagePanel />;
-    case 'context-builder': return projectRoot ? <ContextBuilder projectRoot={projectRoot} onClose={noop} /> : null;
-    case 'time-travel': return <TimeTravelPanelConnected onClose={noop} />;
-    case 'extensions': return <ExtensionStorePage />;
-    case 'mcp': return <McpStorePage />;
+    case 'settings': return <React.Suspense fallback={fallback}><SettingsPanel onClose={noop} /></React.Suspense>;
+    case 'usage': return <React.Suspense fallback={fallback}><UsagePanel /></React.Suspense>;
+    case 'context-builder': return projectRoot
+      ? <React.Suspense fallback={fallback}><ContextBuilder projectRoot={projectRoot} onClose={noop} /></React.Suspense>
+      : null;
+    case 'time-travel': return <React.Suspense fallback={fallback}><TimeTravelPanelConnected onClose={noop} /></React.Suspense>;
+    case 'extensions': return <React.Suspense fallback={fallback}><ExtensionStorePage /></React.Suspense>;
+    case 'mcp': return <React.Suspense fallback={fallback}><McpStorePage /></React.Suspense>;
     default: return null;
   }
 }
@@ -220,6 +242,31 @@ function EditorViewContent({
   );
 }
 
+// ── Lazy full-pane overlays ──────────────────────────────────────────────────
+
+type DiffReviewProps = React.ComponentPropsWithoutRef<typeof DiffReviewPanel>;
+
+function LazyDiffReview(props: DiffReviewProps): React.ReactElement {
+  return (
+    <React.Suspense fallback={<LazyPanelFallback />}>
+      <DiffReviewPanel {...props} />
+    </React.Suspense>
+  );
+}
+
+function LazySessionReplay({
+  session,
+  onClose,
+}: React.ComponentPropsWithoutRef<typeof SessionReplayPanel>): React.ReactElement {
+  return (
+    <React.Suspense fallback={<LazyPanelFallback />}>
+      <SessionReplayPanel session={session} onClose={onClose} />
+    </React.Suspense>
+  );
+}
+
+// ── Main connected component ─────────────────────────────────────────────────
+
 export function CentrePaneConnected(): React.ReactElement {
   const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
   const { projectRoot } = useProject();
@@ -233,7 +280,7 @@ export function CentrePaneConnected(): React.ReactElement {
 
   if (state) {
     return (
-      <DiffReviewPanel
+      <LazyDiffReview
         state={state}
         onAcceptHunk={acceptHunk}
         onRejectHunk={rejectHunk}
@@ -247,7 +294,7 @@ export function CentrePaneConnected(): React.ReactElement {
   }
 
   if (replaySession) {
-    return <SessionReplayPanel session={replaySession} onClose={() => setReplaySession(null)} />;
+    return <LazySessionReplay session={replaySession} onClose={() => setReplaySession(null)} />;
   }
 
   return (

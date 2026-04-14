@@ -3,11 +3,50 @@
  *
  * Collects Node.js memory usage and Electron app metrics,
  * then broadcasts to subscribed renderer windows every 5 seconds.
+ * Also provides startup phase marking for cold-start instrumentation.
  */
 
 import { app, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
 
+import log from './logger'
 import { broadcastToWebClients } from './web/webServer'
+
+// ─── Startup phase timing ────────────────────────────────────────────────────
+
+export type StartupPhase =
+  | 'app-ready'
+  | 'window-created'
+  | 'ipc-ready'
+  | 'services-ready'
+  | 'first-render'
+
+interface StartupMark {
+  phase: StartupPhase
+  tsNs: bigint
+  deltaMs: number
+}
+
+const baseNs: bigint = process.hrtime.bigint()
+let marks: StartupMark[] = []
+
+export function markStartup(phase: StartupPhase): void {
+  const already = marks.find((m) => m.phase === phase)
+  if (already) {
+    log.warn(`[perf] markStartup: phase "${phase}" already marked — ignoring duplicate`)
+    return
+  }
+  const tsNs = process.hrtime.bigint()
+  const deltaMs = Number(tsNs - baseNs) / 1_000_000
+  marks.push({ phase, tsNs, deltaMs })
+}
+
+export function getStartupTimings(): StartupMark[] {
+  return [...marks].sort((a, b) => (a.tsNs < b.tsNs ? -1 : a.tsNs > b.tsNs ? 1 : 0))
+}
+
+export function resetStartupTimings(): void {
+  marks = []
+}
 
 interface PerfMetricsOptions {
   getActiveWindows: () => BrowserWindow[]

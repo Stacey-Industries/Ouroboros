@@ -14,11 +14,14 @@ import { AgentChatWorkspace } from '../AgentChat/AgentChatWorkspace';
 import { ClaudeConfigPanel } from '../AgentChat/ClaudeConfigPanel';
 import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
 import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
-import { AgentMonitorManager } from '../AgentMonitor';
 import { GitPanel } from '../GitPanel';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
+import { LazyPanelFallback } from './LazyPanelFallback';
 import { RightSidebarTabs } from './RightSidebarTabs';
 
+const AgentMonitorManager = React.lazy(() =>
+  import('../AgentMonitor').then((m) => ({ default: m.AgentMonitorManager })),
+);
 const AnalyticsDashboard = React.lazy(() =>
   import('../Analytics').then((m) => ({ default: m.AnalyticsDashboard })),
 );
@@ -84,13 +87,7 @@ function useAgentSidebarModel(): {
 function AnalyticsSuspense(): React.ReactElement {
   return (
     <ErrorBoundary label="Analytics">
-      <React.Suspense
-        fallback={
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            Loading...
-          </div>
-        }
-      >
+      <React.Suspense fallback={<LazyPanelFallback />}>
         <AnalyticsDashboard />
       </React.Suspense>
     </ErrorBoundary>
@@ -115,7 +112,7 @@ export function AgentSidebarContent({ projectRoot }: { projectRoot: string | nul
   return (
     <RightSidebarTabs
       chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
-      monitorContent={<ErrorBoundary label="Agent Monitor"><AgentMonitorManager /></ErrorBoundary>}
+      monitorContent={<ErrorBoundary label="Agent Monitor"><React.Suspense fallback={<LazyPanelFallback />}><AgentMonitorManager /></React.Suspense></ErrorBoundary>}
       gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
       analyticsContent={<AnalyticsSuspense />}
       memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}

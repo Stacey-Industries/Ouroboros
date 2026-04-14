@@ -1,6 +1,6 @@
 {
   "name": "ouroboros",
-  "version": "1.3.10",
+  "version": "1.3.11",
   "description": "Electron desktop app for launching and monitoring Claude Code sessions",
   "author": "Ouroboros",
   "main": "out/main/index.js",
@@ -31,6 +31,7 @@
     "licenses": "generate-license-file --input package.json --output THIRD_PARTY_LICENSES --overwrite",
     "depcheck": "depcheck",
     "audit:prod": "npm audit --omit=dev",
+    "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
     "build:web": "vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",

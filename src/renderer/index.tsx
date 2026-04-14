@@ -145,5 +145,12 @@ root.render(
   </StrictMode>,
 );
 
+// Double-rAF guarantees first frame is committed before marking
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    window.electronAPI.perf.markFirstRender().catch(() => void 0);
+  });
+});
+
 // Dismiss after a brief delay to let the first React frame paint
 setTimeout(dismissSplash, 300);
