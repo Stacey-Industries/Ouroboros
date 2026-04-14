@@ -22,6 +22,7 @@ interface TierCounts {
 }
 interface SurfaceCounts {
   chat: TierCounts;
+  chat_shadow: TierCounts;
   terminal_shadow: TierCounts;
   agentic: TierCounts;
 }
@@ -58,6 +59,7 @@ function emptyStats(): RouterStatsResult {
     tierDistribution: emptyTierCounts(),
     bySurface: {
       chat: emptyTierCounts(),
+      chat_shadow: emptyTierCounts(),
       terminal_shadow: emptyTierCounts(),
       agentic: emptyTierCounts(),
     },
@@ -127,6 +129,7 @@ function aggregateDecisions(
 
       const surface = rec.interactionType as string;
       if (surface === 'chat') incrementTier(stats.bySurface.chat, tier);
+      else if (surface === 'chat_shadow') incrementTier(stats.bySurface.chat_shadow, tier);
       else if (surface === 'terminal_shadow') incrementTier(stats.bySurface.terminal_shadow, tier);
       else if (surface === 'agentic') incrementTier(stats.bySurface.agentic, tier);
 

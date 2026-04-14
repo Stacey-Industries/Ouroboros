@@ -192,11 +192,11 @@ Items that don't naturally cluster. Pick off individually when touching nearby c
 | 21 | ✓ `enrichFromPermissionRequest` — caches permissionType/matchedRule by session+tool, attaches to `ApprovalRequest`, rendered by `PermissionContextBadge` in approval dialog (Wave 9) | — |
 | 25 | ✓ `getPtyCwd` — OS-aware resolver in `ptyCwdResolver.ts`: Linux readlink, Darwin lsof, Windows acknowledged-limitation fallback (Wave 8) | — |
 | 30 | `estimatedHistoryTokens` 3.5 chars/token heuristic | When calibration data shows it matters |
-| 33 | Shadow routing training/serving distribution mismatch | When router accuracy is measured |
+| 33 | ✓ Chat-path shadow routing — `shadowRouteChatPrompt` + `chat_shadow` interactionType; trainer already accepts all surfaces (Wave 11). Router accuracy measurement still deferred | — |
 | 36 | ✓ `graphStore ingestTraces` — implemented in `graphControllerSupport.ts:66-88` (Wave 7) | — |
 | 64 | Title logic duplicated in two files | When touching either file |
 | 59 | ✓ Approval response — `approval.wait` NDJSON method on `ideToolServer`, pipe-based handshake with auth + timeout + recent-resolutions cache; hook scripts fall back to file-poll on pipe error (Wave 9) | — |
-| 6 | Web mode `wsToken` is non-HttpOnly | When web deployment is prioritized |
+| 6 | ✓ Web mode ticket exchange — `wsToken` cookie removed; `POST /api/ws-ticket` issues 30s single-use ticket consumed at WS upgrade; legacy cookie fallback through v1.4.0 (Wave 11) | — |
 | 112 | ⚑ V8 snapshot — prep landed in Wave 10 (`mainStartup.ts` bootstrap refactor, `audit-snapshot-safety.mjs`, `docs/v8-snapshot.md`); full electron-link integration still deferred | After docs/v8-snapshot.md recommendations |
 | 113 | ✓ Route-based code splitting — 12 panels lazy-loaded (Settings, ExtensionStore, McpStore, TimeTravel, Usage, Search, BackgroundJobs, DiffReview, SessionReplay, AgentMonitor, Analytics, ContextBuilder); entry chunk −1,448 kB / −8.8% (Wave 10) | — |
 | 115 | ✓ Persistent terminal sessions — `ptyPersistence.ts` SQLite store + IPC restore handlers behind `persistTerminalSessions` flag (Wave 8); RestoreSessionsDialog UI deferred | — |

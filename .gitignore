@@ -86,3 +86,7 @@ test-results/
 
 # Scheduled task runtime state
 .claude/scheduled_tasks.lock
+
+# Python artifacts (tools/train-router.py syntax-check cache)
+__pycache__/
+*.pyc

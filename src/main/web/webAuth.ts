@@ -141,6 +141,72 @@ export function recordFailedAttempt(ip: string): void {
   }
 }
 
+// ─── WS Ticket Exchange ──────────────────────────────────────────────────────
+
+const WS_TICKET_TTL_MS = 30_000;
+
+interface WsTicketEntry {
+  ticket: string; // stored alongside key for timingSafeEqual comparison
+  expiresAt: number;
+}
+
+const wsTickets = new Map<string, WsTicketEntry>();
+
+/**
+ * Creates a short-lived, single-use WS upgrade ticket (32-byte random hex).
+ * Opportunistically evicts expired entries at insertion time.
+ */
+export function createWsTicket(): { ticket: string; expiresInMs: number } {
+  const now = Date.now();
+  // Opportunistic eviction of expired tickets
+  for (const [key, entry] of wsTickets) {
+    if (now >= entry.expiresAt) wsTickets.delete(key);
+  }
+  const ticket = crypto.randomBytes(32).toString('hex');
+  wsTickets.set(ticket, { ticket, expiresAt: now + WS_TICKET_TTL_MS });
+  return { ticket, expiresInMs: WS_TICKET_TTL_MS };
+}
+
+/**
+ * Validates and consumes a WS ticket. Returns true if the ticket is valid,
+ * unused, and not expired. Deletes the ticket on success (single-use).
+ * Map.get uses exact equality; timingSafeEqual guards against length-oracle
+ * attacks on the retrieved key comparison.
+ */
+export function consumeWsTicket(provided: string): boolean {
+  if (!provided || typeof provided !== 'string') return false;
+  const entry = wsTickets.get(provided);
+  if (!entry) return false;
+  if (Date.now() >= entry.expiresAt) {
+    wsTickets.delete(provided);
+    return false;
+  }
+  // Timing-safe comparison: compare provided against the stored ticket value
+  try {
+    const providedBuf = Buffer.from(provided, 'utf-8');
+    const storedBuf = Buffer.from(entry.ticket, 'utf-8');
+    if (providedBuf.length !== storedBuf.length) return false;
+    if (!crypto.timingSafeEqual(providedBuf, storedBuf)) return false;
+  } catch {
+    return false;
+  }
+  wsTickets.delete(provided);
+  return true;
+}
+
+/**
+ * Returns count of currently active (non-expired) WS tickets.
+ * For tests and diagnostics only.
+ */
+export function getWsTicketStats(): { active: number } {
+  const now = Date.now();
+  let active = 0;
+  for (const entry of wsTickets.values()) {
+    if (now < entry.expiresAt) active++;
+  }
+  return { active };
+}
+
 // ─── Login Page ──────────────────────────────────────────────────────────────
 
 /**

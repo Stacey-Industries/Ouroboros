@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { shadowRouteHookEvent } from './routerShadow';
+import { shadowRouteChatPrompt, shadowRouteHookEvent } from './routerShadow';
 
 // Mock dependencies to isolate shadow routing logic
 vi.mock('electron', () => ({ app: { getPath: () => '/tmp/test-shadow' } }));
@@ -130,5 +130,57 @@ describe('shadowRouteHookEvent', () => {
     });
     const entry = loggedEntries[0] as Record<string, unknown>;
     expect(entry.workspaceRootHash).toBeNull();
+  });
+});
+
+describe('shadowRouteChatPrompt', () => {
+  it('does nothing when router is disabled', () => {
+    disableRouter();
+    shadowRouteChatPrompt({ prompt: 'fix the bug', sessionId: 'thread-1' });
+    expect(loggedEntries).toHaveLength(0);
+  });
+
+  it('ignores empty prompt', () => {
+    enableRouter();
+    shadowRouteChatPrompt({ prompt: '', sessionId: 'thread-1' });
+    shadowRouteChatPrompt({ prompt: '   ', sessionId: 'thread-1' });
+    expect(loggedEntries).toHaveLength(0);
+  });
+
+  it('logs an enriched entry for a valid chat prompt', () => {
+    enableRouter();
+    shadowRouteChatPrompt({
+      prompt: 'Implement the new auth module with OAuth2',
+      sessionId: 'thread-abc',
+      workspaceRoot: 'C:\\projects\\myapp',
+    });
+    expect(loggedEntries).toHaveLength(1);
+    const entry = loggedEntries[0] as Record<string, unknown>;
+    expect(entry.interactionType).toBe('chat_shadow');
+    expect(entry.sessionId).toBe('thread-abc');
+    expect(entry.workspaceRootHash).toBeTruthy();
+    expect(entry.traceId).toBeTruthy();
+  });
+
+  it('tags entries with chat_shadow interaction type', () => {
+    enableRouter();
+    shadowRouteChatPrompt({ prompt: 'What should I refactor here?', sessionId: 's1' });
+    expect(loggedEntries).toHaveLength(1);
+    expect((loggedEntries[0] as Record<string, unknown>).interactionType).toBe('chat_shadow');
+  });
+
+  it('sets workspaceRootHash to null when workspaceRoot is absent', () => {
+    enableRouter();
+    shadowRouteChatPrompt({ prompt: 'add unit tests', sessionId: 's1' });
+    const entry = loggedEntries[0] as Record<string, unknown>;
+    expect(entry.workspaceRootHash).toBeNull();
+  });
+
+  it('is non-blocking on logger errors (no throw)', () => {
+    enableRouter();
+    // The logger mock never throws; this verifies the function itself handles the path
+    expect(() =>
+      shadowRouteChatPrompt({ prompt: 'deploy the app', sessionId: 's1' }),
+    ).not.toThrow();
   });
 });

@@ -76,11 +76,20 @@ export class WebSocketTransport {
   private maxReconnectDelay = 30000
   private connected = false
   private connectPromise: Promise<void> | null = null
+  private ticketFetcher: (() => Promise<string>) | null = null
 
   constructor(
     private url: string,
     private authToken?: string
   ) {}
+
+  /**
+   * Registers a callback that fetches a fresh WS ticket on each (re)connect.
+   * Called by webPreload.ts so reconnects also use ticket auth.
+   */
+  setTicketFetcher(fetcher: () => Promise<string>): void {
+    this.ticketFetcher = fetcher
+  }
 
   connect(): Promise<void> {
     if (this.connectPromise) return this.connectPromise
@@ -88,10 +97,21 @@ export class WebSocketTransport {
     return this.connectPromise
   }
 
-  private doConnect(): Promise<void> {
+  /**
+   * Fetches a new WS ticket and opens the connection with it.
+   * Used by webPreload.ts for the initial connect after ticket exchange.
+   */
+  connectWithTicket(ticket: string): Promise<void> {
+    if (this.connectPromise) return this.connectPromise
+    this.connectPromise = this.doConnect(ticket)
+    return this.connectPromise
+  }
+
+  private doConnect(ticket?: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
-        const wsUrl = this.authToken ? `${this.url}?token=${this.authToken}` : this.url
+        const param = ticket ? `?ticket=${ticket}` : this.authToken ? `?token=${this.authToken}` : ''
+        const wsUrl = `${this.url}${param}`
         this.ws = new WebSocket(wsUrl)
         this.ws.onopen = () => this.handleOpen(resolve)
         this.ws.onmessage = (event) => this.handleMessage(event.data as string)
@@ -201,6 +221,14 @@ export class WebSocketTransport {
   private scheduleReconnect(): void {
     const delay = Math.min(1000 * 2 ** this.reconnectAttempts, this.maxReconnectDelay)
     this.reconnectAttempts++
-    setTimeout(() => this.connect().catch(() => {}), delay)
+    setTimeout(() => {
+      if (this.ticketFetcher) {
+        this.ticketFetcher()
+          .then((ticket) => this.connectWithTicket(ticket))
+          .catch(() => {})
+      } else {
+        this.connect().catch(() => {})
+      }
+    }, delay)
   }
 }

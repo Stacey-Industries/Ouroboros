@@ -43,16 +43,17 @@ The capture is the core mechanism: `installHandlerCapture()` wraps `ipcMain.hand
 
 1. Token auto-generated on first access, persisted to electron-store as `webAccessToken`
 2. Three auth methods checked in order: cookie (`webAccessToken`) → query param (`?token=`) → `Authorization: Bearer`
-3. Query param auth upgrades to cookie — sets `webAccessToken` (HttpOnly) + `wsToken` (non-HttpOnly), then redirects to clean URL
-4. WebSocket connections authenticate via `?token=` or `wsToken` cookie
+3. Query param auth upgrades to cookie — sets `webAccessToken` (HttpOnly) only, then redirects to clean URL
+4. WebSocket connections authenticate via `?ticket=` (primary) — JS shim calls `POST /api/ws-ticket` before opening WS and appends the one-time ticket to the upgrade URL. Legacy `wsToken` cookie fallback remains until v1.4.0 (logs a warn when used).
 5. Unauthenticated browser requests get the inline login page HTML; API clients get `401` JSON
 6. If `webAccessPassword` is configured, `validateCredential` accepts it; otherwise falls back to the token
 7. `/api/health` is intentionally public — no auth required
+8. `POST /api/ws-ticket` issues a 30-second, single-use ticket stored in-memory. Requires `webAccessToken` HttpOnly cookie (goes through `authMiddleware`). The ticket is consumed on first successful WS upgrade.
 
 ## Gotchas
 
 - **`installHandlerCapture()` call order is critical** — must run in `main.ts` before any `ipcMain.handle` registration (before `registerIpcHandlers`). Handlers registered before the patch are invisible to web clients.
-- **Two cookies, two purposes** — `webAccessToken` is HttpOnly (HTTP middleware reads it), `wsToken` is non-HttpOnly (JS reads it for WebSocket auth). The browser WebSocket API cannot send custom headers, so they cannot be merged into one.
+- **WS ticket replaces non-HttpOnly wsToken cookie** — the former `wsToken` cookie was readable by JS (XSS risk). The ticket exchange (`POST /api/ws-ticket` → `?ticket=X` on WS upgrade) eliminates the persistent readable token. The cookie is no longer set on login or query-param redirect.
 - **SPA fallback injects `window.__WEB_TOKEN__`** — inserted into `<head>` of cached `index.html` so `src/web/webPreload.ts` can bootstrap the WS connection. Cross-directory coupling.
 - **`index.html` is cached in memory** — `cachedIndexHtml` is read from disk once and never invalidated. If the renderer build changes while the server is running, the stale HTML persists until restart.
 - **Mock IPC event uses `windows[0]`** — `createMockIpcEvent()` picks the first active `BrowserWindow`. Handlers relying on specific window identity may behave unexpectedly for web clients.

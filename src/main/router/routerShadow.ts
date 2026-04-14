@@ -38,7 +38,44 @@ function getLogger(): ReturnType<typeof createRouterLogger> | null {
   }
 }
 
+/** Minimal event shape for chat shadow routing. */
+interface ShadowChatEvent {
+  prompt: string;
+  sessionId: string;
+  workspaceRoot?: string;
+}
+
 /* ── Public API ──────────────────────────────────────────────────────── */
+
+/**
+ * Shadow-route a chat prompt for training data collection.
+ * Logs a routing decision with interactionType: 'chat_shadow' but never
+ * affects the model actually used for the chat send.
+ */
+export function shadowRouteChatPrompt(event: ShadowChatEvent): void {
+  if (!event.prompt || event.prompt.trim().length === 0) return;
+
+  const routerConfig = getConfigValue('routerSettings');
+  if (!routerConfig?.enabled) return;
+
+  const decision = routePromptSync(event.prompt, undefined, routerConfig);
+  if (!decision) return;
+
+  const entry = buildEnrichedLogEntry({
+    prompt: event.prompt,
+    decision,
+    opts: {
+      interactionType: 'chat_shadow',
+      sessionId: event.sessionId,
+      workspaceRoot: event.workspaceRoot,
+    },
+  });
+
+  const sink = getLogger();
+  if (!sink) return;
+  sink.log(entry);
+  log.debug('[router:shadow:chat]', { tier: entry.tier, session: event.sessionId });
+}
 
 /**
  * Shadow-route a hook event for training data collection.

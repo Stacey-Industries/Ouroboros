@@ -15,8 +15,11 @@ vi.mock('../config', () => ({
 
 // Import after mocks are declared
 const {
+  consumeWsTicket,
+  createWsTicket,
   getLoginPageHtml,
   getOrCreateWebToken,
+  getWsTicketStats,
   hasPasswordConfigured,
   isRateLimited,
   recordFailedAttempt,
@@ -306,5 +309,70 @@ describe('getLoginPageHtml', () => {
     );
     const html = getLoginPageHtml();
     expect(html).toContain('Web Access Password');
+  });
+});
+
+// ─── WS Ticket Exchange ──────────────────────────────────────────────────────
+
+describe('createWsTicket', () => {
+  it('returns a 64-char hex ticket', () => {
+    const { ticket } = createWsTicket();
+    expect(ticket).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('returns expiresInMs of 30000', () => {
+    const { expiresInMs } = createWsTicket();
+    expect(expiresInMs).toBe(30000);
+  });
+
+  it('concurrent creation yields distinct tickets (~100 calls)', () => {
+    const tickets = Array.from({ length: 100 }, () => createWsTicket().ticket);
+    const unique = new Set(tickets);
+    expect(unique.size).toBe(100);
+  });
+});
+
+describe('consumeWsTicket', () => {
+  it('returns true for a fresh ticket', () => {
+    const { ticket } = createWsTicket();
+    expect(consumeWsTicket(ticket)).toBe(true);
+  });
+
+  it('returns false on second call (single-use)', () => {
+    const { ticket } = createWsTicket();
+    consumeWsTicket(ticket);
+    expect(consumeWsTicket(ticket)).toBe(false);
+  });
+
+  it('returns false for an unknown ticket', () => {
+    expect(consumeWsTicket('a'.repeat(64))).toBe(false);
+  });
+
+  it('returns false for an empty string', () => {
+    expect(consumeWsTicket('')).toBe(false);
+  });
+
+  it('returns false for an expired ticket (via fake timers)', () => {
+    vi.useFakeTimers();
+    const { ticket: expiredTicket } = createWsTicket();
+    vi.advanceTimersByTime(30001);
+    expect(consumeWsTicket(expiredTicket)).toBe(false);
+    vi.useRealTimers();
+  });
+});
+
+describe('getWsTicketStats', () => {
+  it('reflects active ticket count accurately', () => {
+    vi.useFakeTimers();
+    const before = getWsTicketStats().active;
+    const { ticket: t1 } = createWsTicket();
+    createWsTicket(); // second ticket — will expire
+    expect(getWsTicketStats().active).toBe(before + 2);
+    consumeWsTicket(t1);
+    expect(getWsTicketStats().active).toBe(before + 1);
+    vi.advanceTimersByTime(30001);
+    // second ticket is expired — stats should not count it
+    expect(getWsTicketStats().active).toBe(0);
+    vi.useRealTimers();
   });
 });

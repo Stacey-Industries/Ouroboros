@@ -19,6 +19,8 @@ import { WebSocket, WebSocketServer } from 'ws';
 
 import log from '../logger';
 import {
+  consumeWsTicket,
+  createWsTicket,
   getLoginPageHtml,
   getOrCreateWebToken,
   isRateLimited,
@@ -72,7 +74,6 @@ function handleQueryParamToken(req: Request, res: Response, token: string): void
   const maxAge = 30 * 24 * 60 * 60;
   res.setHeader('Set-Cookie', [
     `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-    `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
   ]);
   const url = new URL(req.originalUrl, `http://${req.headers.host}`);
   url.searchParams.delete('token');
@@ -157,9 +158,13 @@ function handleLoginPost(req: Request, res: Response): void {
   const maxAge = 30 * 24 * 60 * 60;
   res.setHeader('Set-Cookie', [
     `webAccessToken=${token}; HttpOnly; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
-    `wsToken=${token}; SameSite=Strict; Max-Age=${maxAge}; Path=/`,
   ]);
   res.json({ success: true });
+}
+
+function handleWsTicketPost(_req: Request, res: Response): void {
+  const { ticket, expiresInMs } = createWsTicket();
+  res.json({ ticket, expiresInMs });
 }
 
 function buildExpressApp(options: WebServerOptions): express.Express {
@@ -170,6 +175,9 @@ function buildExpressApp(options: WebServerOptions): express.Express {
   app.use(express.json());
   app.post('/api/login', handleLoginPost);
   app.use(authMiddleware);
+  // POST /api/ws-ticket — authenticated (behind authMiddleware). Issues a short-lived,
+  // single-use ticket for the WebSocket upgrade. Replaces the former wsToken cookie.
+  app.post('/api/ws-ticket', handleWsTicketPost);
   app.use((_req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -185,12 +193,25 @@ function buildExpressApp(options: WebServerOptions): express.Express {
 
 function handleWsConnection(ws: WebSocket, req: IncomingMessage): void {
   const url = new URL(req.url || '', 'http://localhost');
-  const wsQueryToken = url.searchParams.get('token') || '';
+  const ticketParam = url.searchParams.get('ticket') || '';
   const cookies = parseCookies(req.headers.cookie);
-  const wsCookieToken = cookies['wsToken'] || cookies['webAccessToken'] || '';
-  if (!validateToken(wsQueryToken || wsCookieToken)) {
-    ws.close(4001, 'Unauthorized');
-    return;
+
+  if (ticketParam) {
+    // Primary path: ticket-based auth (single-use, short-lived, XSS-safe)
+    if (!consumeWsTicket(ticketParam)) {
+      ws.close(4001, 'Unauthorized');
+      return;
+    }
+  } else {
+    // TODO remove in v1.4.0 — legacy wsToken cookie fallback (deprecation path)
+    const legacyCookieToken = cookies['wsToken'] || cookies['webAccessToken'] || '';
+    if (legacyCookieToken) {
+      log.warn('[webServer] WS auth via legacy wsToken cookie — migrate to ticket exchange');
+    }
+    if (!validateToken(legacyCookieToken)) {
+      ws.close(4001, 'Unauthorized');
+      return;
+    }
   }
 
   wsClients.add(ws);

@@ -49,18 +49,26 @@ type MonacoEnv = { getWorkerUrl: (_moduleId: string, label: string) => string };
   },
 };
 
-// ─── Auth Token Extraction ───────────────────────────────────────────────────
+// ─── WS Ticket Fetch ─────────────────────────────────────────────────────────
 
-function getAuthToken(): string | undefined {
-  const win = window as unknown as Record<string, unknown>;
-  if (win['__WEB_TOKEN__']) return win['__WEB_TOKEN__'] as string;
-  const match = document.cookie.match(/(^| )wsToken=([^;]+)/);
-  return match ? match[2] : undefined;
+interface WsTicketResponse {
+  ticket: string;
+  expiresInMs: number;
+}
+
+async function fetchWsTicket(): Promise<string> {
+  const res = await fetch('/api/ws-ticket', { method: 'POST', credentials: 'same-origin' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch WS ticket: HTTP ${res.status}`);
+  }
+  const body = (await res.json()) as WsTicketResponse;
+  return body.ticket;
 }
 
 // ─── Transport + API ─────────────────────────────────────────────────────────
 
-const transport = new WebSocketTransport(`ws://${window.location.host}/ws`, getAuthToken());
+const transport = new WebSocketTransport(`ws://${window.location.host}/ws`);
+transport.setTicketFetcher(fetchWsTicket);
 
 const { ptyAPI, codexAPI } = buildPtyApis(transport);
 const configAPI = buildConfigApi(transport);
@@ -126,7 +134,10 @@ document.documentElement.classList.add('web-mode');
 
 // ─── Connect ─────────────────────────────────────────────────────────────────
 
-transport.connect().catch((err) => {
-  console.error('[webPreload] Initial WebSocket connection failed:', err);
-  showConnectionOverlay('Connection failed — retrying...');
-});
+fetchWsTicket()
+  .then((ticket) => transport.connectWithTicket(ticket))
+  .catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('[webPreload] WS ticket fetch failed, connection aborted:', msg);
+    showConnectionOverlay('Authentication failed — please refresh the page.');
+  });

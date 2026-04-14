@@ -2,6 +2,7 @@ import { getConfigValue } from '../config';
 import log from '../logger';
 import { logRouterOverride, logRoutingDecision, routePromptSync } from '../router';
 import { flushAnnotations, trackChatTurn } from '../router/qualitySignalCollector';
+import { shadowRouteChatPrompt } from '../router/routerShadow';
 import type { ResolvedSendOptions } from './chatOrchestrationRequestSupportHelpers';
 import {
   buildContextSummary,
@@ -65,6 +66,16 @@ function applyRouterOverride(
 
   const routerConfig = getConfigValue('routerSettings');
   if (!routerConfig?.enabled) return { overrides: request.overrides };
+
+  try {
+    shadowRouteChatPrompt({
+      prompt: request.content,
+      sessionId: request.threadId ?? '',
+      workspaceRoot: request.workspaceRoot,
+    });
+  } catch (err) {
+    log.warn('[router:shadow:chat] error during shadow routing:', err);
+  }
 
   const decision = routePromptSync(request.content, previousAssistantMessage, routerConfig);
   const traceId = logRoutingDecision(request.content, decision, {

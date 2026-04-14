@@ -144,7 +144,7 @@ export interface RoutingLogEntry {
 
 /* ── Enriched logging types (feedback loop) ──────────────────────── */
 
-export type InteractionType = 'chat' | 'terminal_shadow' | 'agentic' | 'unknown';
+export type InteractionType = 'chat' | 'chat_shadow' | 'terminal_shadow' | 'agentic' | 'unknown';
 
 export interface CounterfactualResult {
   layer1: RuleEngineResult | null;
