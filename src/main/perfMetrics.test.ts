@@ -123,6 +123,84 @@ describe('startup timing', () => {
   })
 })
 
+describe('formatStartupSummary', () => {
+  let formatStartupSummary: typeof import('./perfMetrics').formatStartupSummary
+  let markStartup: typeof import('./perfMetrics').markStartup
+  let resetStartupTimings: typeof import('./perfMetrics').resetStartupTimings
+
+  beforeEach(async () => {
+    vi.resetModules()
+    const mod = await import('./perfMetrics')
+    formatStartupSummary = mod.formatStartupSummary
+    markStartup = mod.markStartup
+    resetStartupTimings = mod.resetStartupTimings
+    resetStartupTimings()
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    resetStartupTimings()
+  })
+
+  it('returns empty string when no marks recorded', () => {
+    expect(formatStartupSummary()).toBe('')
+  })
+
+  it('returns empty string when only 1 mark is present', () => {
+    markStartup('app-ready')
+    expect(formatStartupSummary()).toBe('')
+  })
+
+  it('formats all 5 phases as space-separated key=value pairs', () => {
+    markStartup('app-ready')
+    markStartup('window-created')
+    markStartup('ipc-ready')
+    markStartup('services-ready')
+    markStartup('first-render')
+    const summary = formatStartupSummary()
+    expect(summary).toMatch(/app-ready=\d+ms/)
+    expect(summary).toMatch(/window-created=\d+ms/)
+    expect(summary).toMatch(/ipc-ready=\d+ms/)
+    expect(summary).toMatch(/services-ready=\d+ms/)
+    expect(summary).toMatch(/first-render=\d+ms/)
+    // 5 entries separated by spaces → 4 spaces
+    expect(summary.split(' ')).toHaveLength(5)
+  })
+})
+
+describe('getLatestPerfMetrics', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    mockGetAppMetrics.mockReturnValue([])
+  })
+
+  it('returns null when no broadcast has occurred yet', async () => {
+    const mod = await import('./perfMetrics')
+    expect(mod.getLatestPerfMetrics()).toBeNull()
+  })
+
+  it('returns the most recent sample after a broadcast fires', async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation(
+      (cb: () => void) => { cb(); return 99 as never; },
+    )
+
+    const mod = await import('./perfMetrics')
+    mod.initializePerfMetrics({ getActiveWindows: () => [] })
+    mod.subscribeToPerfMetrics({ sender: { id: 42 } } as never)
+
+    const sample = mod.getLatestPerfMetrics()
+    expect(sample).not.toBeNull()
+    expect(sample).toHaveProperty('timestamp')
+    expect(sample).toHaveProperty('memory')
+    expect(sample).toHaveProperty('processes')
+
+    mod.clearPerfSubscribers()
+    mod.stopPerfMetrics()
+    setIntervalSpy.mockRestore()
+  })
+})
+
 describe('perfMetrics', () => {
   beforeEach(() => {
     vi.resetModules()

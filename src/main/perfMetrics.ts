@@ -20,7 +20,7 @@ export type StartupPhase =
   | 'services-ready'
   | 'first-render'
 
-interface StartupMark {
+export interface StartupMark {
   phase: StartupPhase
   tsNs: bigint
   deltaMs: number
@@ -46,6 +46,21 @@ export function getStartupTimings(): StartupMark[] {
 
 export function resetStartupTimings(): void {
   marks = []
+}
+
+export function formatStartupSummary(): string {
+  const sorted = getStartupTimings()
+  if (sorted.length < 2) return ''
+  return sorted.map((m) => `${m.phase}=${Math.round(m.deltaMs)}ms`).join(' ')
+}
+
+// ─── Latest runtime metrics snapshot ────────────────────────────────────────
+
+type RuntimeMetrics = ReturnType<typeof collectMetrics>
+let latestMetrics: RuntimeMetrics | null = null
+
+export function getLatestPerfMetrics(): RuntimeMetrics | null {
+  return latestMetrics
 }
 
 interface PerfMetricsOptions {
@@ -91,6 +106,7 @@ function broadcast(): void {
   if (subscriberIds.size === 0 || !options) return
 
   const metrics = collectMetrics()
+  latestMetrics = metrics
   const windows = options.getActiveWindows()
 
   for (const win of windows) {

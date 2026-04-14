@@ -21,7 +21,8 @@ export type TabId =
   | 'files'
   | 'integrations'
   | 'codemode'
-  | 'contextDocs';
+  | 'contextDocs'
+  | 'performance';
 
 export interface Tab {
   id: TabId;
@@ -46,6 +47,7 @@ export const TABS: Tab[] = [
   { id: 'integrations', label: 'Integrations' },
   { id: 'codemode', label: 'Code Mode' },
   { id: 'contextDocs', label: 'Context Docs' },
+  { id: 'performance', label: 'Performance' },
 ];
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
@@ -68,7 +70,7 @@ export const MAIN_TABS: MainTab[] = [
   { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
   { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
   { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'codemode', 'contextDocs'] },
-  { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations'] },
+  { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance'] },
 ];
 
 const SUBTAB_LABELS = new Map<TabId, string>(

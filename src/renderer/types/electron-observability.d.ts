@@ -41,12 +41,43 @@ export interface PerfPingResult extends IpcResult {
   ts?: number
 }
 
+/**
+ * A single startup timing mark emitted by the main process.
+ * tsNs is the raw nanosecond timestamp from process.hrtime.bigint(),
+ * serialized as a string because bigint does not survive JSON serialization
+ * over IPC (structured-clone drops it). Parse with BigInt(tsNs) if needed.
+ */
+export interface StartupMark {
+  phase: 'app-ready' | 'window-created' | 'ipc-ready' | 'services-ready' | 'first-render'
+  tsNs: string
+  deltaMs: number
+}
+
+export interface StartupTimingsResult extends IpcResult {
+  timings?: StartupMark[]
+}
+
+/** Point-in-time snapshot of runtime resource usage. */
+export interface RuntimeMetrics {
+  tsMs: number
+  heapUsedMb: number
+  heapTotalMb: number
+  externalMb: number
+  cpuPercent?: number
+}
+
+export interface RuntimeMetricsResult extends IpcResult {
+  metrics?: RuntimeMetrics | null
+}
+
 export interface PerfAPI {
   ping: () => Promise<PerfPingResult>
   subscribe: () => Promise<IpcResult>
   unsubscribe: () => Promise<IpcResult>
   onMetrics: (callback: (metrics: PerfMetrics) => void) => () => void
   markFirstRender: () => Promise<IpcResult>
+  getStartupTimings: () => Promise<StartupTimingsResult>
+  getRuntimeMetrics: () => Promise<RuntimeMetricsResult>
 }
 
 export interface CostEntry {

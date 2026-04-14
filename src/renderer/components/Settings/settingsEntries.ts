@@ -41,7 +41,8 @@ export interface SettingsEntry {
     | 'files'
     | 'integrations'
     | 'codemode'
-    | 'contextDocs';
+    | 'contextDocs'
+    | 'performance';
   /** Display-friendly section name */
   sectionLabel: string;
 }
@@ -259,6 +260,14 @@ const PROVIDER_ENTRIES = createEntries('providers', 'Providers', [
   ],
 ]);
 
+const PERFORMANCE_ENTRIES = createEntries('performance', 'Performance', [
+  ['Startup Timings', 'View per-phase app startup times: app-ready, window-created, ipc-ready, services-ready, first-render.'],
+  ['Runtime Metrics', 'Live heap used/total, external memory, and CPU usage. Updated every 5 seconds.'],
+  ['Heap Usage', 'View current and total V8 heap allocation.'],
+  ['CPU Usage', 'View main-process CPU percentage snapshot.'],
+  ['Performance Diagnostics', 'Diagnostic panel showing startup and runtime performance metrics.'],
+]);
+
 export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...ACCOUNTS_ENTRIES,
   ...EDITOR_ENTRIES,
@@ -277,4 +286,5 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...CODE_MODE_ENTRIES,
   ...MCP_ENTRIES,
   ...CONTEXT_DOCS_ENTRIES,
+  ...PERFORMANCE_ENTRIES,
 ];

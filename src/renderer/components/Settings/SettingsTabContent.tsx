@@ -20,6 +20,7 @@ import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { ProfilesSection } from './ProfilesSection';
 import { ProvidersSection } from './ProvidersSection';
+import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
 import { TerminalSection } from './TerminalSection';
 
@@ -55,6 +56,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   integrations: () => <IntegrationsSection />,
   codemode: () => <CodeModeSection />,
   contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
+  performance: () => <SettingsPerformancePanel />,
 };
 
 export function SettingsTabContent({

@@ -49,8 +49,7 @@ type SupplementalApiKey =
   | 'claudeMd'
   | 'router'
   | 'rulesAndSkills'
-  | 'ai'
-  | 'embedding'
+  | 'ai' | 'embedding'
   | 'workspace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
@@ -119,6 +118,8 @@ export const supplementalApis: SupplementalApis = {
     unsubscribe: () => ipcRenderer.invoke('perf:unsubscribe'),
     onMetrics: (callback) => onChannel<PerfMetrics>('perf:metrics', callback),
     markFirstRender: () => ipcRenderer.invoke('perf:markFirstRender'),
+    getStartupTimings: () => ipcRenderer.invoke('perf:getStartupTimings'),
+    getRuntimeMetrics: () => ipcRenderer.invoke('perf:getRuntimeMetrics'),
   },
 
   symbol: {
