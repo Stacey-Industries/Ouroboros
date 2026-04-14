@@ -148,7 +148,62 @@ if (-not $sent) {
 # If we couldn't reach Ouroboros, approve by default
 if (-not $sent) { exit 0 }
 
-# -- Poll for approval response ------------------------------------------------
+# -- Wait for approval via ideToolServer pipe (primary channel) ----------------
+# Uses approval.wait NDJSON request over the ouroboros-tools pipe instead of
+# polling the filesystem. Falls back to file-poll if the pipe is unavailable.
+
+$decision = $null
+$reason   = $null
+
+if (-not [string]::IsNullOrEmpty($env:OUROBOROS_TOOL_TOKEN)) {
+    try {
+        $toolPipe = New-Object System.IO.Pipes.NamedPipeClientStream(
+            '.', 'ouroboros-tools',
+            [System.IO.Pipes.PipeDirection]::InOut,
+            [System.IO.Pipes.PipeOptions]::None
+        )
+        $toolPipe.Connect(2000)
+
+        $toolAuthLine    = '{"auth":"' + $env:OUROBOROS_TOOL_TOKEN + '"}' + "`n"
+        $toolAuthBytes   = [System.Text.Encoding]::UTF8.GetBytes($toolAuthLine)
+        $waitRequest     = '{"id":"aw-' + $requestId + '","method":"approval.wait","params":{"requestId":"' + $requestId + '","timeoutMs":' + ($MaxPollSeconds * 1000) + '}}' + "`n"
+        $waitRequestBytes = [System.Text.Encoding]::UTF8.GetBytes($waitRequest)
+
+        $toolPipe.Write($toolAuthBytes,    0, $toolAuthBytes.Length)
+        $toolPipe.Write($waitRequestBytes, 0, $waitRequestBytes.Length)
+        $toolPipe.Flush()
+
+        $reader   = New-Object System.IO.StreamReader($toolPipe, [System.Text.Encoding]::UTF8)
+        $respLine = $reader.ReadLine()
+        $toolPipe.Dispose()
+
+        if ($respLine) {
+            $resp = $respLine | ConvertFrom-Json -ErrorAction Stop
+            # Unwrap JSON-RPC envelope: { id, result: { decision, reason? } }
+            $inner = if ($resp.result) { $resp.result } else { $resp }
+            if ($inner.decision) {
+                $decision = $inner.decision
+                $reason   = $inner.reason
+            }
+        }
+    } catch {
+        # Pipe unavailable or timed out — fall through to file-poll fallback below
+        $decision = $null
+    }
+}
+
+if ($decision -ne $null) {
+    if ($decision -eq 'reject') {
+        $msg = if ($reason) { $reason } else { 'Rejected by user in Ouroboros IDE' }
+        [Console]::Error.WriteLine($msg)
+        exit 2
+    }
+    exit 0
+}
+
+# -- Fallback: poll for approval response file --------------------------------
+# Used when the ideToolServer pipe is unreachable (older IDE, pipe not started,
+# or OUROBOROS_TOOL_TOKEN not set). Matches pre-pipe behavior exactly.
 $responsePath = Join-Path $ApprovalsDir "$requestId.response"
 $elapsed = 0
 

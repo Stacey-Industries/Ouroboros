@@ -189,13 +189,13 @@ Items that don't naturally cluster. Pick off individually when touching nearby c
 | # | Item | When to address |
 |---|------|-----------------|
 | 19 | `claudeUsagePoller` brittle regex — reverified 2026-04-13 against CLI 2.1.105 + Context7: no JSON flag for `/usage` (TUI-only); deferred until CLI ships one | — |
-| 21 | `enrichFromPermissionRequest` is a log stub | When enhancing approval UX |
+| 21 | ✓ `enrichFromPermissionRequest` — caches permissionType/matchedRule by session+tool, attaches to `ApprovalRequest`, rendered by `PermissionContextBadge` in approval dialog (Wave 9) | — |
 | 25 | ✓ `getPtyCwd` — OS-aware resolver in `ptyCwdResolver.ts`: Linux readlink, Darwin lsof, Windows acknowledged-limitation fallback (Wave 8) | — |
 | 30 | `estimatedHistoryTokens` 3.5 chars/token heuristic | When calibration data shows it matters |
 | 33 | Shadow routing training/serving distribution mismatch | When router accuracy is measured |
 | 36 | ✓ `graphStore ingestTraces` — implemented in `graphControllerSupport.ts:66-88` (Wave 7) | — |
 | 64 | Title logic duplicated in two files | When touching either file |
-| 59 | Approval response uses 500ms file polling | When hooks infrastructure is next revisited |
+| 59 | ✓ Approval response — `approval.wait` NDJSON method on `ideToolServer`, pipe-based handshake with auth + timeout + recent-resolutions cache; hook scripts fall back to file-poll on pipe error (Wave 9) | — |
 | 6 | Web mode `wsToken` is non-HttpOnly | When web deployment is prioritized |
 | 112 | V8 snapshot for fast startup | After cold startup is measured |
 | 113 | Route-based code splitting in renderer | After bundle analysis |

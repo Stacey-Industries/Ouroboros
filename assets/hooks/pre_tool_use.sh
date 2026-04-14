@@ -135,7 +135,54 @@ if [ "$sent" != "true" ]; then
     exit 0
 fi
 
-# ── Poll for approval response ────────────────────────────────────────────────
+# ── Wait for approval via ideToolServer socket (primary channel) ──────────────
+# Sends an approval.wait NDJSON request over the ouroboros-tools socket instead
+# of polling the filesystem. Falls back to file-poll if the socket is unavailable.
+
+TOOL_SOCKET_PATH="${TMPDIR:-/tmp}/ouroboros-tools.sock"
+TOOL_TIMEOUT_MS=$((MAX_POLL_SECONDS * 1000))
+
+decision=""
+reason=""
+
+if [ -n "${OUROBOROS_TOOL_TOKEN:-}" ]; then
+    tool_req_id="aw-${request_id}"
+    tool_auth_line='{"auth":"'"${OUROBOROS_TOOL_TOKEN}"'"}'
+    tool_wait_line='{"id":"'"${tool_req_id}"'","method":"approval.wait","params":{"requestId":"'"${request_id}"'","timeoutMs":'"${TOOL_TIMEOUT_MS}"'}}'
+    tool_ndjson="${tool_auth_line}
+${tool_wait_line}
+"
+    resp_line=""
+
+    # Try Unix domain socket via nc (blocking read; nc exits after server closes conn)
+    if [ -S "$TOOL_SOCKET_PATH" ] && command -v nc &>/dev/null; then
+        resp_line=$(printf '%s' "$tool_ndjson" | nc -U -w $((MAX_POLL_SECONDS + 5)) "$TOOL_SOCKET_PATH" 2>/dev/null | tail -n 1 || true)
+    fi
+
+    if [ -n "$resp_line" ] && command -v jq &>/dev/null; then
+        # Unwrap JSON-RPC envelope: { id, result: { decision, reason? } }
+        decision=$(printf '%s' "$resp_line" | jq -r '.result.decision // .decision // ""' 2>/dev/null || true)
+        reason=$(printf '%s' "$resp_line"   | jq -r '.result.reason  // .reason  // ""' 2>/dev/null || true)
+    fi
+fi
+
+if [ -n "$decision" ]; then
+    if [ "$decision" = "reject" ]; then
+        if [ -n "$reason" ]; then
+            echo "$reason"
+        else
+            echo "Rejected by user in Ouroboros IDE"
+        fi
+        exit 2
+    fi
+    # Approved via pipe
+    exit 0
+fi
+
+# ── Fallback: poll for approval response file ─────────────────────────────────
+# Used when the ideToolServer socket is unreachable (older IDE, socket not
+# started, nc unavailable, or OUROBOROS_TOOL_TOKEN not set).
+# Matches pre-pipe behavior exactly.
 response_path="${APPROVALS_DIR}/${request_id}.response"
 elapsed=0
 
@@ -145,20 +192,20 @@ while [ "$elapsed" -lt "$MAX_POLL_SECONDS" ]; do
         rm -f "$response_path" 2>/dev/null || true
 
         if [ -n "$response_text" ]; then
-            decision=""
-            reason=""
+            fb_decision=""
+            fb_reason=""
 
             if command -v jq &>/dev/null; then
-                decision=$(printf '%s' "$response_text" | jq -r '.decision // "approve"' 2>/dev/null || echo "approve")
-                reason=$(printf '%s' "$response_text" | jq -r '.reason // ""' 2>/dev/null || echo "")
+                fb_decision=$(printf '%s' "$response_text" | jq -r '.decision // "approve"' 2>/dev/null || echo "approve")
+                fb_reason=$(printf '%s' "$response_text" | jq -r '.reason // ""' 2>/dev/null || echo "")
             elif command -v python3 &>/dev/null; then
-                decision=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('decision','approve'))" 2>/dev/null || echo "approve")
-                reason=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('reason',''))" 2>/dev/null || echo "")
+                fb_decision=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('decision','approve'))" 2>/dev/null || echo "approve")
+                fb_reason=$(printf '%s' "$response_text" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('reason',''))" 2>/dev/null || echo "")
             fi
 
-            if [ "$decision" = "reject" ]; then
-                if [ -n "$reason" ]; then
-                    echo "$reason"
+            if [ "$fb_decision" = "reject" ]; then
+                if [ -n "$fb_reason" ]; then
+                    echo "$fb_reason"
                 else
                     echo "Rejected by user in Ouroboros IDE"
                 fi

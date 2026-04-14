@@ -11,15 +11,20 @@
  *   The hook script polls for this file at ~500ms intervals.
  */
 
+import type { PermissionContext } from '@shared/types/permissionContext';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { notifyWaiters } from './approvalWaiterRegistry';
 import { getConfigValue } from './config';
 import { describeFdPressure } from './fdPressureDiagnostics';
+import { getPermissionContext } from './hooksLifecycleHandlers';
 import log from './logger';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
+
+export { waitForResolution } from './approvalWaiterRegistry';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +34,7 @@ export interface ApprovalRequest {
   toolInput: Record<string, unknown>;
   sessionId: string;
   timestamp: number;
+  permissionContext?: PermissionContext;
 }
 
 export interface ApprovalResponse {
@@ -158,6 +164,9 @@ export function toolRequiresApproval(toolName: string, sessionId: string): boole
  * Sends the approval request to all renderer windows and sets up auto-approve timeout.
  */
 export function requestApproval(request: ApprovalRequest): void {
+  // Attach enriched context cached from the earlier permission_request event (evicts on read).
+  request.permissionContext = getPermissionContext(request.sessionId, request.toolName);
+
   pendingRequests.set(request.requestId, request);
 
   // Notify all renderer windows
@@ -201,7 +210,6 @@ const EMFILE_QUEUE_BASE_DELAY_MS = 500;
 const EMFILE_QUEUE_MAX_DELAY_MS = 5_000;
 const EMFILE_QUEUE_DEADLINE_MS = 60_000;
 const EMFILE_LOG_THROTTLE_MS = 10_000;
-
 let lastApprovalEmfileLogAt = 0;
 
 function clearAutoApproveTimer(requestId: string): void {
@@ -236,11 +244,14 @@ function notifyApprovalResolved(requestId: string, decision: string): void {
     }
   }
   broadcastToWebClients('approval:resolved', { requestId, decision });
+
+  // Resolve any pipe waiters blocked on approval.wait for this requestId.
+  notifyWaiters(requestId, { decision: decision as 'approve' | 'reject' });
 }
 
 function isRetryableError(err: unknown): boolean {
-  const code = (err as NodeJS.ErrnoException).code;
-  return code === 'EMFILE' || code === 'ENFILE';
+  const c = (err as NodeJS.ErrnoException).code;
+  return c === 'EMFILE' || c === 'ENFILE';
 }
 
 function clearQueuedResponseWrite(requestId: string): void {
@@ -251,12 +262,9 @@ function clearQueuedResponseWrite(requestId: string): void {
 }
 
 function logApprovalEmfile(requestId: string, attempt: number): void {
-  const now = Date.now();
-  if (now - lastApprovalEmfileLogAt < EMFILE_LOG_THROTTLE_MS) return;
-  lastApprovalEmfileLogAt = now;
-  log.warn(
-    `[approval] EMFILE while writing ${requestId} (attempt ${attempt}) — ${describeFdPressure()}`,
-  );
+  if (Date.now() - lastApprovalEmfileLogAt < EMFILE_LOG_THROTTLE_MS) return;
+  lastApprovalEmfileLogAt = Date.now();
+  log.warn(`[approval] EMFILE while writing ${requestId} (attempt ${attempt}) — ${describeFdPressure()}`);
 }
 
 interface WriteScheduleOptions {
@@ -422,3 +430,5 @@ export function getApprovalsDir(): string {
 export function getPendingRequests(): ApprovalRequest[] {
   return Array.from(pendingRequests.values());
 }
+
+// waitForResolution is re-exported from approvalWaiterRegistry at the top of this file.

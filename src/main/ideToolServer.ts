@@ -16,16 +16,9 @@
 import fs from 'fs';
 import net from 'net';
 
-import type { ToolHandler } from './ideToolServerHandlers';
-import { createToolHandlers, execGitStatus } from './ideToolServerHandlers';
-import {
-  createToolErrorResponse,
-  formatAddress,
-  parseToolRequest,
-  writeToolResponse,
-} from './ideToolServerHelpers';
+import { handleSocketData, makeConnContext } from './ideToolServerConnection';
+import { formatAddress } from './ideToolServerHelpers';
 import log from './logger';
-import { getToolServerToken, validatePipeAuth } from './pipeAuth';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -47,7 +40,6 @@ export interface ToolResponse {
 
 const PIPE_NAME = '\\\\.\\pipe\\ouroboros-tools';
 const UNIX_SOCKET_PATH = '/tmp/ouroboros-tools.sock';
-const MAX_BUFFER_BYTES = 1_048_576; // 1 MB per connection
 const REQUEST_TIMEOUT_MS = 10_000; // 10 s timeout for renderer queries
 
 // â”€â”€â”€ Module state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -123,151 +115,27 @@ export function handleRendererQueryResponse(
   }
 }
 
-const toolHandlers: Record<string, ToolHandler> = createToolHandlers({
-  queryRenderer,
-  execGitStatus,
-});
-
-// â”€â”€â”€ Request handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async function handleRequest(request: ToolRequest): Promise<ToolResponse> {
-  const { id, method, params } = request;
-  // eslint-disable-next-line security/detect-object-injection -- method is a string from validated JSON-RPC request
-  const handler = toolHandlers[method];
-
-  if (!handler) {
-    return {
-      id,
-      error: {
-        code: -32601,
-        message: `Unknown method: ${method}. Available: ${Object.keys(toolHandlers).join(', ')}`,
-      },
-    };
-  }
-
-  try {
-    const result = await handler(params ?? {});
-    return { id, result };
-  } catch (err) {
-    return {
-      id,
-      error: {
-        code: -1,
-        message: (err as Error).message || String(err),
-      },
-    };
-  }
-}
-
-function dispatchToolRequest(socket: net.Socket, connId: number, request: ToolRequest): void {
-  log.debug(`#${connId} request: ${request.method}`);
-
-  void handleRequest(request)
-    .then((response) => {
-      if (!socket.destroyed) {
-        writeToolResponse(socket, response);
-      }
-    })
-    .catch((err) => {
-      if (!socket.destroyed) {
-        writeToolResponse(socket, createToolErrorResponse(request.id, -1, (err as Error).message));
-      }
-    });
-}
-
-function processSocketLine(socket: net.Socket, connId: number, line: string): void {
-  if (!line) return;
-
-  const { request, errorResponse } = parseToolRequest(line);
-  if (errorResponse) {
-    writeToolResponse(socket, errorResponse);
-    return;
-  }
-
-  if (request) {
-    dispatchToolRequest(socket, connId, request);
-  }
-}
-
-function drainSocketBuffer(socket: net.Socket, connId: number, rawBuffer: string): string {
-  let nextBuffer = rawBuffer;
-  let newLineIndex = nextBuffer.indexOf('\n');
-
-  while (newLineIndex !== -1) {
-    const line = nextBuffer.slice(0, newLineIndex).trim();
-    nextBuffer = nextBuffer.slice(newLineIndex + 1);
-    processSocketLine(socket, connId, line);
-    newLineIndex = nextBuffer.indexOf('\n');
-  }
-
-  return nextBuffer;
-}
-
-function handleSocketChunk(
-  socket: net.Socket,
-  connId: number,
-  rawBuffer: string,
-  chunk: string,
-): string {
-  const nextBuffer = rawBuffer + chunk;
-
-  if (Buffer.byteLength(nextBuffer, 'utf8') > MAX_BUFFER_BYTES) {
-    log.warn(`#${connId} buffer overflow — dropping connection`);
-    socket.destroy();
-    return '';
-  }
-
-  return drainSocketBuffer(socket, connId, nextBuffer);
-}
-
+// toolHandlers is created per-connection to support per-connection registerCancel.
 function logSocketError(connId: number, err: NodeJS.ErrnoException): void {
   if (err.code !== 'EPIPE' && err.code !== 'ECONNRESET') {
     log.error(`#${connId} socket error: ${err.message}`);
   }
 }
 
-// â”€â”€â”€ Per-connection handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 function handleSocket(socket: net.Socket, connId: number): void {
   log.debug(`connection #${connId} opened`);
-
-  let rawBuffer = '';
-  let authenticated = false;
-
+  const ctx = makeConnContext(queryRenderer);
   socket.setEncoding('utf8');
   socket.setTimeout(30_000);
-
-  socket.on('data', (chunk: string) => {
-    if (!authenticated) {
-      rawBuffer += chunk;
-      const nl = rawBuffer.indexOf('\n');
-      if (nl === -1) return;
-      const firstLine = rawBuffer.slice(0, nl).trim();
-      rawBuffer = rawBuffer.slice(nl + 1);
-      if (!validatePipeAuth(firstLine, getToolServerToken())) {
-        log.warn(`#${connId} auth failed — rejecting`);
-        socket.end('{"error":"unauthorized"}\n');
-        return;
-      }
-      authenticated = true;
-    }
-    rawBuffer = handleSocketChunk(socket, connId, rawBuffer, chunk);
-  });
-
+  socket.on('data', (chunk: string) => handleSocketData(socket, connId, ctx, chunk));
   socket.on('timeout', () => {
     socket.end();
-    // Force-destroy after grace period to prevent half-open socket handle leaks
-    setTimeout(() => {
-      if (!socket.destroyed) socket.destroy();
-    }, 5_000);
+    setTimeout(() => { if (!socket.destroyed) socket.destroy(); }, 5_000);
   });
-
-  socket.on('error', (err: NodeJS.ErrnoException) => {
-    logSocketError(connId, err);
-  });
-
+  socket.on('error', (err: NodeJS.ErrnoException) => logSocketError(connId, err));
   socket.on('close', () => {
     log.debug(`connection #${connId} closed`);
+    for (const cancel of ctx.cancelFns) cancel();
   });
 }
 

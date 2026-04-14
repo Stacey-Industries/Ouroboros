@@ -30,7 +30,9 @@ vi.mock('./logger', () => ({
 // ── Import after mocks ───────────────────────────────────────────────────────
 
 import {
+  clearPermissionContext,
   enrichFromPermissionRequest,
+  getPermissionContext,
   handleConfigChange,
   handleCwdChanged,
   handleFileChanged,
@@ -94,17 +96,48 @@ describe('handleConfigChange', () => {
 });
 
 describe('enrichFromPermissionRequest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('runs without throwing for a minimal payload', () => {
     expect(() => enrichFromPermissionRequest({ sessionId: 'abc' })).not.toThrow();
   });
 
-  it('runs without throwing when data and toolName are provided', () => {
-    expect(() =>
-      enrichFromPermissionRequest({
-        sessionId: 'abc',
-        toolName: 'Bash',
-        data: { permissionType: 'shell_exec' },
-      }),
-    ).not.toThrow();
+  it('stores context in the cache when data and toolName are provided', () => {
+    enrichFromPermissionRequest({
+      sessionId: 'sess1',
+      toolName: 'Bash',
+      data: { permissionType: 'shell_exec', matchedRule: 'allow-bash' },
+    });
+    const ctx = getPermissionContext('sess1', 'Bash');
+    expect(ctx).toMatchObject({
+      permissionType: 'shell_exec',
+      matchedRule: 'allow-bash',
+    });
+  });
+
+  it('getPermissionContext evicts on first read', () => {
+    enrichFromPermissionRequest({
+      sessionId: 'sess2',
+      toolName: 'Write',
+      data: { permissionType: 'file_write' },
+    });
+    // First read returns the value
+    const first = getPermissionContext('sess2', 'Write');
+    expect(first?.permissionType).toBe('file_write');
+    // Second read returns undefined (evicted)
+    const second = getPermissionContext('sess2', 'Write');
+    expect(second).toBeUndefined();
+  });
+
+  it('clearPermissionContext removes the entry before it is read', () => {
+    enrichFromPermissionRequest({
+      sessionId: 'sess3',
+      toolName: 'Edit',
+      data: { permissionType: 'file_edit' },
+    });
+    clearPermissionContext('sess3', 'Edit');
+    expect(getPermissionContext('sess3', 'Edit')).toBeUndefined();
   });
 });

@@ -1,3 +1,5 @@
+import type { PermissionContext } from '@shared/types/permissionContext';
+
 import type {
   AppConfig,
   AppTheme,
@@ -12,6 +14,8 @@ import type {
   ReadFileResult,
   SelectFolderResult,
 } from './electron-foundation';
+
+export type { PermissionContext };
 
 export interface PtySpawnResult extends IpcResult {
   already?: boolean;
@@ -191,6 +195,7 @@ export interface ApprovalRequest {
   toolInput: Record<string, unknown>;
   sessionId: string;
   timestamp: number;
+  permissionContext?: PermissionContext;
 }
 
 export interface ApprovalResolved {

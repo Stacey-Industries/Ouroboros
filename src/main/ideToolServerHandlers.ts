@@ -2,6 +2,8 @@ import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import { waitForResolution } from './approvalManager';
+import log from './logger';
 import { getDiagnostics } from './lsp';
 import { getActiveSessions } from './pty';
 
@@ -10,6 +12,8 @@ export type ToolHandler = (params: Record<string, unknown>) => Promise<unknown>;
 interface ToolHandlerDeps {
   queryRenderer: (method: string, params?: unknown) => Promise<unknown>;
   execGitStatus: (cwd?: string) => Promise<Record<string, unknown>>;
+  /** Called by long-lived handlers to register cleanup on connection close. */
+  registerCancel: (cancel: () => void) => void;
 }
 
 type ToolHandlers = Record<string, ToolHandler>;
@@ -123,18 +127,46 @@ function createGetDiagnosticsHandler(queryRenderer: ToolHandlerDeps['queryRender
   };
 }
 
+const DEFAULT_APPROVAL_TIMEOUT_MS = 120_000;
+
+function createApprovalWaitHandler(registerCancel: ToolHandlerDeps['registerCancel']): ToolHandler {
+  return async (params) => {
+    const requestId = requireStringParam(params, 'requestId');
+    const timeoutMs =
+      typeof params.timeoutMs === 'number' ? params.timeoutMs : DEFAULT_APPROVAL_TIMEOUT_MS;
+
+    log.info(`[approval.wait] waiting for ${requestId} (timeout ${timeoutMs}ms)`);
+
+    const { promise, cancel } = waitForResolution(requestId, timeoutMs);
+    registerCancel(cancel);
+
+    try {
+      const response = await promise;
+      log.info(`[approval.wait] resolved ${requestId}: ${response.decision}`);
+      return response;
+    } catch {
+      // Timeout — return approve to preserve existing hook behavior
+      log.info(`[approval.wait] timeout for ${requestId} — defaulting to approve`);
+      return { decision: 'approve', reason: 'timeout_fallback' };
+    }
+  };
+}
+
 export function createToolHandlers({
   queryRenderer,
   execGitStatus,
+  registerCancel,
 }: ToolHandlerDeps): ToolHandlers {
   return {
-    'ide.getOpenFiles': createRendererHandler(queryRenderer, 'getOpenFiles'),
+    'approval.wait': createApprovalWaitHandler(registerCancel),
+    'ide.getActiveSessions': async () => getActiveSessions(),
     'ide.getActiveFile': createRendererHandler(queryRenderer, 'getActiveFile'),
+    'ide.getDiagnostics': createGetDiagnosticsHandler(queryRenderer),
     'ide.getFileContent': createGetFileContentHandler(queryRenderer),
     'ide.getGitStatus': async (params) => execGitStatus(params.cwd as string | undefined),
-    'ide.getSelection': createRendererHandler(queryRenderer, 'getSelection'),
+    'ide.getOpenFiles': createRendererHandler(queryRenderer, 'getOpenFiles'),
     'ide.getProjectInfo': createRendererHandler(queryRenderer, 'getProjectInfo'),
-    'ide.getDiagnostics': createGetDiagnosticsHandler(queryRenderer),
+    'ide.getSelection': createRendererHandler(queryRenderer, 'getSelection'),
     'ide.getTerminalOutput': createRendererHandler(
       queryRenderer,
       'getTerminalOutput',
@@ -143,7 +175,6 @@ export function createToolHandlers({
         lines: (params.lines as number) || 50,
       }),
     ),
-    'ide.getActiveSessions': async () => getActiveSessions(),
     'ide.ping': async () => ({
       status: 'ok',
       timestamp: Date.now(),

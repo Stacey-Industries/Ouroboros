@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { ApprovalRequest } from '../../types/electron';
+import type { ApprovalRequest, PermissionContext } from '../../types/electron';
 import { ToolInputPreview } from './ToolInputPreview';
 
 export const TOOL_COLORS: Record<string, string> = {
@@ -89,6 +89,32 @@ export function ApprovalMeta({
   );
 }
 
+export function PermissionContextBadge({
+  context,
+}: {
+  context: PermissionContext;
+}): React.ReactElement | null {
+  const { permissionType, matchedRule } = context;
+  if (!permissionType && !matchedRule) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-1">
+      {permissionType && (
+        <span className="inline-flex items-center gap-1 text-xs text-text-semantic-secondary">
+          <span className="text-text-semantic-muted">type:</span>
+          <span className="font-mono">{permissionType}</span>
+        </span>
+      )}
+      {matchedRule && (
+        <span className="inline-flex items-center gap-1 text-xs text-text-semantic-secondary">
+          <span className="text-text-semantic-muted">rule:</span>
+          <span className="font-mono">{matchedRule}</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function PreviewPanel({ request }: { request: ApprovalRequest }): React.ReactElement {
   return (
     <div
@@ -96,6 +122,9 @@ export function PreviewPanel({ request }: { request: ApprovalRequest }): React.R
       style={{ backgroundColor: 'var(--bg-deeper, rgba(0,0,0,0.2))' }}
     >
       <ToolInputPreview toolName={request.toolName} input={request.toolInput} />
+      {request.permissionContext && (
+        <PermissionContextBadge context={request.permissionContext} />
+      )}
     </div>
   );
 }
