@@ -6,11 +6,12 @@
  *   2. Runtime metrics — live heap/CPU snapshot, refreshed every 5 s.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useRuntimeMetrics } from '../../hooks/useRuntimeMetrics';
+import { useStartupHistory } from '../../hooks/useStartupHistory';
 import { useStartupTimings } from '../../hooks/useStartupTimings';
-import type { RuntimeMetrics, StartupMark } from '../../types/electron';
+import type { RuntimeMetrics, StartupHistoryRecord, StartupMark } from '../../types/electron';
 import { SectionLabel } from './settingsStyles';
 
 // ── Startup Timings ────────────────────────────────────────────────────────
@@ -166,6 +167,100 @@ function RuntimeMetricsSection({ metrics, lastUpdated }: RuntimeMetricsSectionPr
   );
 }
 
+// ── Startup History ────────────────────────────────────────────────────────
+
+function lastPhaseMs(record: StartupHistoryRecord): number {
+  if (record.timings.length === 0) return 0;
+  return record.timings[record.timings.length - 1].deltaMs;
+}
+
+function DeltaCell({ curr, prev }: { curr: number; prev: number | undefined }): React.ReactElement {
+  if (prev === undefined) return <td style={cellStyle} />;
+  const diff = curr - prev;
+  const isFaster = diff < -50;
+  const isSlower = diff > 50;
+  const cls = isFaster
+    ? 'text-status-success'
+    : isSlower
+      ? 'text-status-error'
+      : 'text-text-semantic-muted';
+  const sign = diff > 0 ? '+' : '';
+  return (
+    <td className={cls} style={{ ...cellStyle, textAlign: 'right' }}>
+      {sign}{diff.toFixed(0)} ms
+    </td>
+  );
+}
+
+function HistoryTable({ records }: { records: StartupHistoryRecord[] }): React.ReactElement {
+  return (
+    <table style={tableStyle}>
+      <thead>
+        <tr>
+          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle }}>Time</th>
+          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>Total ms</th>
+          <th className="text-text-semantic-muted" style={{ ...cellStyle, ...thStyle, textAlign: 'right' }}>vs prev</th>
+        </tr>
+      </thead>
+      <tbody>
+        {records.map((rec, i) => {
+          const ms = lastPhaseMs(rec);
+          const prevMs = i > 0 ? lastPhaseMs(records[i - 1]) : undefined;
+          return (
+            <tr key={rec.ts}>
+              <td className="text-text-semantic-primary" style={cellStyle}>
+                {new Date(rec.ts).toLocaleString()}
+              </td>
+              <td className="text-text-semantic-secondary" style={{ ...cellStyle, textAlign: 'right' }}>
+                {ms.toFixed(0)} ms
+              </td>
+              <DeltaCell curr={ms} prev={prevMs} />
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function StartupHistorySection(): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const { records, isLoading, reload } = useStartupHistory(20);
+
+  function toggleOpen(): void {
+    if (!open) reload();
+    setOpen((v) => !v);
+  }
+
+  return (
+    <section style={sectionStyle}>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        className="text-text-semantic-primary"
+        style={historyToggleStyle}
+      >
+        <SectionLabel>Startup history (last 20 launches)</SectionLabel>
+        <span style={chevronStyle}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <>
+          <p className="text-text-semantic-muted" style={descStyle}>
+            Total startup duration per launch. Green = faster by &gt;50 ms, red = slower by &gt;50 ms.
+          </p>
+          {isLoading && (
+            <p className="text-text-semantic-faint" style={hintStyle}>Loading…</p>
+          )}
+          {!isLoading && records.length === 0 && (
+            <p className="text-text-semantic-faint" style={hintStyle}>No history yet.</p>
+          )}
+          {!isLoading && records.length > 0 && <HistoryTable records={records} />}
+        </>
+      )}
+    </section>
+  );
+}
+
 // ── Root panel ─────────────────────────────────────────────────────────────
 
 export function SettingsPerformancePanel(): React.ReactElement {
@@ -176,6 +271,7 @@ export function SettingsPerformancePanel(): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <StartupTimingsSection timings={timings} isComplete={isComplete} onReload={reload} />
       <RuntimeMetricsSection metrics={metrics} lastUpdated={lastUpdated} />
+      <StartupHistorySection />
     </div>
   );
 }
@@ -214,3 +310,9 @@ const metricValueStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)', fontSize: '12px', fontVariantNumeric: 'tabular-nums',
 };
 const updatedStyle: React.CSSProperties = { fontSize: '11px', margin: '4px 0 0' };
+const historyToggleStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  width: '100%', background: 'none', border: 'none', padding: 0,
+  cursor: 'pointer', textAlign: 'left',
+};
+const chevronStyle: React.CSSProperties = { fontSize: '10px', marginLeft: '8px' };

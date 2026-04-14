@@ -133,6 +133,76 @@ describe('countLines', () => {
   })
 })
 
+describe('readRecentStartups', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'perf-read-'))
+  })
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  function writeRecords(filePath: string, count: number, offset = 0): void {
+    const lines = Array.from({ length: count }, (_, i) => {
+      const rec = {
+        ts: new Date(Date.UTC(2026, 0, 1, 0, 0, i + offset)).toISOString(),
+        timings: [{ phase: 'first-render', tsNs: '1000000', deltaMs: (i + offset + 1) * 100 }],
+        platform: 'linux',
+        version: '1.0.0',
+      }
+      return JSON.stringify(rec)
+    }).join('\n') + '\n'
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath is inside OS tmpdir, safe test path
+    fs.writeFileSync(filePath, lines, 'utf-8')
+  }
+
+  it('returns empty array when no file exists', async () => {
+    const { readRecentStartups } = await import('./perfStartupLog')
+    const result = await readRecentStartups(20)
+    expect(result).toEqual([])
+  })
+
+  it('returns all records from a single-record file', async () => {
+    writeRecords(logPath(), 1)
+    const { readRecentStartups } = await import('./perfStartupLog')
+    const result = await readRecentStartups(20)
+    expect(result).toHaveLength(1)
+  })
+
+  it('truncates to limit when file has more records', async () => {
+    writeRecords(logPath(), 30)
+    const { readRecentStartups } = await import('./perfStartupLog')
+    const result = await readRecentStartups(5)
+    expect(result).toHaveLength(5)
+  })
+
+  it('reads from rotation file when primary has fewer records than limit', async () => {
+    // Write 3 records to rotation file, 2 to primary
+    writeRecords(`${logPath()}.1.jsonl`, 3, 0)
+    writeRecords(logPath(), 2, 3)
+    const { readRecentStartups } = await import('./perfStartupLog')
+    const result = await readRecentStartups(20)
+    expect(result).toHaveLength(5)
+  })
+
+  it('skips malformed lines without crashing', async () => {
+    const lp = logPath()
+    const content = [
+      JSON.stringify({ ts: '2026-01-01T00:00:00.000Z', timings: [], platform: 'linux', version: '1.0.0' }),
+      'NOT VALID JSON {{{',
+      JSON.stringify({ ts: '2026-01-01T00:01:00.000Z', timings: [], platform: 'linux', version: '1.0.0' }),
+    ].join('\n') + '\n'
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- lp is inside OS tmpdir, safe test path
+    fs.writeFileSync(lp, content, 'utf-8')
+
+    const { readRecentStartups } = await import('./perfStartupLog')
+    const result = await readRecentStartups(20)
+    // Only the 2 valid lines should be returned
+    expect(result).toHaveLength(2)
+  })
+})
+
 describe('rotation', () => {
   beforeEach(() => {
     vi.resetModules()

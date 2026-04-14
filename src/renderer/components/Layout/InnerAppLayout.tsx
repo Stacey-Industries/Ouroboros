@@ -2,34 +2,26 @@
  * InnerAppLayout — renders the main application layout with all panels wired.
  *
  * Extracted from InnerApp's render method to reduce component size.
+ * Overlay sub-components live in InnerAppLayout.overlays.tsx.
  */
 
 import React, { useCallback } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
-import { AboutModal } from '../AboutModal';
-import { LazyPanelFallback } from './LazyPanelFallback';
-
-const BackgroundJobsPanel = React.lazy(() =>
-  import('../BackgroundJobs/BackgroundJobsPanel').then((m) => ({ default: m.BackgroundJobsPanel })),
-);
-import { CommandPalette } from '../CommandPalette/CommandPalette';
-import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
 import { DiffReviewProvider } from '../DiffReview';
 import { ProjectPicker } from '../FileTree/ProjectPicker';
 import { FileViewerManager } from '../FileViewer';
 import { MultiBufferManager } from '../FileViewer/MultiBufferManager';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
-import { PerformanceOverlay } from '../shared/PerformanceOverlay';
 import { TerminalManager } from '../Terminal/TerminalManager';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
 import type { AppLayoutProps } from './AppLayout';
 import { AppLayoutConnected } from './AppLayoutConnected';
 import { CentrePaneConnected } from './CentrePaneConnected';
-import { FilePickerConnected } from './FilePickerConnected';
 import { IdeToolBridge } from './IdeToolBridge';
 import { AgentSidebarContent } from './InnerAppLayout.agent';
+import { LayoutOverlays } from './InnerAppLayout.overlays';
 import { SidebarSections } from './SidebarSections';
 
 export interface InnerAppLayoutProps {
@@ -71,6 +63,7 @@ export interface InnerAppLayoutProps {
   symbolSearchOpen: boolean;
   setSymbolSearchOpen: (v: boolean) => void;
   perfOverlayVisible: boolean;
+  persistTerminalSessions: boolean;
 }
 
 function hasElectronAPI(): boolean {
@@ -80,9 +73,7 @@ function hasElectronAPI(): boolean {
 type ProjectPickerSlotProps = Pick<
   InnerAppLayoutProps,
   'projectRoot' | 'recentProjects' | 'handleProjectChange' | 'addProjectRoot' | 'setRecentProjects'
-> & {
-  rootCount: number;
-};
+> & { rootCount: number };
 
 type TerminalPanelContentProps = Pick<
   InnerAppLayoutProps,
@@ -98,36 +89,11 @@ type TerminalPanelContentProps = Pick<
   | 'handleCloseSplit'
 >;
 
-type LayoutOverlaysProps = Pick<
-  InnerAppLayoutProps,
-  | 'paletteOpen'
-  | 'closePalette'
-  | 'commands'
-  | 'recentIds'
-  | 'handleExecute'
-  | 'filePickerOpen'
-  | 'setFilePickerOpen'
-  | 'projectRoot'
-  | 'symbolSearchOpen'
-  | 'setSymbolSearchOpen'
-  | 'perfOverlayVisible'
->;
-
 function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutProps'] {
-  const {
-    workspaceLayouts,
-    activeLayoutName,
-    handleSelectLayout,
-    handleSaveLayout,
-    handleUpdateLayout,
-    handleDeleteLayout,
-  } = props;
-
+  const { workspaceLayouts, activeLayoutName, handleSelectLayout, handleSaveLayout, handleUpdateLayout, handleDeleteLayout } = props;
   return {
     layouts: workspaceLayouts,
     activeLayoutName,
-    // These defaults are always overridden by AppLayout (which spreads live sizes from useResizable/usePanelCollapse).
-    // They exist only to satisfy the StatusBarLayoutProps type at construction time.
     currentPanelSizes: { leftSidebar: 240, rightSidebar: 300, terminal: 250 },
     currentVisiblePanels: { leftSidebar: true, rightSidebar: true, terminal: true },
     onSelectLayout: handleSelectLayout,
@@ -137,12 +103,7 @@ function createLayoutProps(props: InnerAppLayoutProps): AppLayoutProps['layoutPr
   };
 }
 
-function LayoutProviders({
-  projectRoot,
-  children,
-}: React.PropsWithChildren<{
-  projectRoot: string | null;
-}>): React.ReactElement {
+function LayoutProviders({ projectRoot, children }: React.PropsWithChildren<{ projectRoot: string | null }>): React.ReactElement {
   return (
     <ErrorBoundary label="Editor">
       <FileViewerManager projectRoot={projectRoot}>
@@ -156,16 +117,9 @@ function LayoutProviders({
 }
 
 function TerminalPanelContent({
-  sessions,
-  activeSessionId,
-  recordingSessions,
-  handleTerminalRestart,
-  handleTerminalClose,
-  handleTerminalTitleChange,
-  spawnSession,
-  handleToggleRecording,
-  handleSplit,
-  handleCloseSplit,
+  sessions, activeSessionId, recordingSessions, handleTerminalRestart,
+  handleTerminalClose, handleTerminalTitleChange, spawnSession,
+  handleToggleRecording, handleSplit, handleCloseSplit,
 }: TerminalPanelContentProps): React.ReactElement {
   return (
     <ErrorBoundary label="Terminal">
@@ -186,12 +140,7 @@ function TerminalPanelContent({
 }
 
 function ProjectPickerSlot({
-  projectRoot,
-  recentProjects,
-  handleProjectChange,
-  addProjectRoot,
-  setRecentProjects,
-  rootCount,
+  projectRoot, recentProjects, handleProjectChange, addProjectRoot, setRecentProjects, rootCount,
 }: ProjectPickerSlotProps): React.ReactElement {
   const handleAddProject = useCallback(
     (path: string) => {
@@ -205,7 +154,6 @@ function ProjectPickerSlot({
     },
     [addProjectRoot, recentProjects, setRecentProjects],
   );
-
   return (
     <ProjectPicker
       currentPath={projectRoot}
@@ -225,56 +173,11 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       keybindings={props.keybindings}
       layoutProps={createLayoutProps(props)}
       sidebarHeader={<ProjectPickerSlot {...props} rootCount={props.projectRoots.length} />}
-      sidebarContent={
-        <ErrorBoundary label="File Tree">
-          <SidebarSections />
-        </ErrorBoundary>
-      }
+      sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
       terminalContent={<TerminalPanelContent {...props} />}
     />
-  );
-}
-
-function LayoutOverlays({
-  paletteOpen,
-  closePalette,
-  commands,
-  recentIds,
-  handleExecute,
-  filePickerOpen,
-  setFilePickerOpen,
-  projectRoot,
-  symbolSearchOpen,
-  setSymbolSearchOpen,
-  perfOverlayVisible,
-}: LayoutOverlaysProps): React.ReactElement {
-  return (
-    <>
-      <CommandPalette
-        isOpen={paletteOpen}
-        onClose={closePalette}
-        commands={commands}
-        recentIds={recentIds}
-        onExecute={handleExecute}
-      />
-      <FilePickerConnected
-        isOpen={filePickerOpen}
-        onClose={() => setFilePickerOpen(false)}
-        projectRoot={projectRoot}
-      />
-      <SymbolSearch
-        isOpen={symbolSearchOpen}
-        onClose={() => setSymbolSearchOpen(false)}
-        projectRoot={projectRoot}
-      />
-      <PerformanceOverlay visible={perfOverlayVisible} />
-      <AboutModal />
-      <React.Suspense fallback={<LazyPanelFallback />}>
-        <BackgroundJobsPanel />
-      </React.Suspense>
-    </>
   );
 }
 

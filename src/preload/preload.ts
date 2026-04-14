@@ -34,6 +34,9 @@ const ptyAPI: ElectronAPI['pty'] = {
   stopRecording: (id) => ipcRenderer.invoke('pty:stopRecording', id),
   listSessions: () => ipcRenderer.invoke('pty:listSessions'),
   getShellState: (id) => ipcRenderer.invoke('pty:shellState', id),
+  listPersistedSessions: () => ipcRenderer.invoke('pty:listPersistedSessions'),
+  restoreSession: (id) => ipcRenderer.invoke('pty:restoreSession', id),
+  discardPersistedSessions: () => ipcRenderer.invoke('pty:discardPersistedSessions'),
 
   onData: (id, callback) => {
     const channel = `pty:data:${id}`;

@@ -27,8 +27,8 @@ function ensureStore(projectRoot: string): IEmbeddingStore {
 }
 
 function ensureProvider(): IEmbeddingProvider {
-  const providerName = (getConfigValue('embeddingProvider' as never) as string | undefined) ?? 'local';
-  const apiKey = (getConfigValue('voyageApiKey' as never) as string | undefined) ?? '';
+  const providerName = getConfigValue('embeddingProvider') ?? 'local';
+  const apiKey = getConfigValue('voyageApiKey') ?? '';
   const cacheKey = `${providerName}:${apiKey ? 'k' : 'n'}`;
   if (!provider || providerCacheKey !== cacheKey) {
     provider = createProvider({ provider: providerName, voyageApiKey: apiKey });
@@ -38,6 +38,9 @@ function ensureProvider(): IEmbeddingProvider {
 }
 
 async function handleSearch(_e: unknown, query: string, projectRoot: string, topK = 5) {
+  if (getConfigValue('embeddingsEnabled') !== true) {
+    return { success: false, error: 'embeddings_disabled' };
+  }
   try {
     const s = ensureStore(projectRoot);
     const p = ensureProvider();
@@ -50,6 +53,9 @@ async function handleSearch(_e: unknown, query: string, projectRoot: string, top
 }
 
 function handleStatus(_e: unknown, projectRoot: string) {
+  if (getConfigValue('embeddingsEnabled') !== true) {
+    return { success: false, error: 'embeddings_disabled' };
+  }
   try {
     return { success: true, status: ensureStore(projectRoot).getStatus() };
   } catch (err) {
@@ -58,6 +64,9 @@ function handleStatus(_e: unknown, projectRoot: string) {
 }
 
 async function handleReindex(_e: unknown, projectRoot: string) {
+  if (getConfigValue('embeddingsEnabled') !== true) {
+    return { success: false, error: 'embeddings_disabled' };
+  }
   try {
     const { indexProject } = await import('../embeddings');
     const s = ensureStore(projectRoot);

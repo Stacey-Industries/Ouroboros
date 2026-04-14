@@ -70,6 +70,31 @@ export interface RuntimeMetricsResult extends IpcResult {
   metrics?: RuntimeMetrics | null
 }
 
+/**
+ * A single timing mark from a persisted startup record.
+ * Mirrors SerializedMark in perfStartupLog.ts (main-side private type).
+ */
+export interface StartupHistoryMark {
+  phase: StartupMark['phase']
+  tsNs: string
+  deltaMs: number
+}
+
+/**
+ * One entry in the startup-timings.jsonl history log.
+ * Returned by perf:getStartupHistory.
+ */
+export interface StartupHistoryRecord {
+  ts: string
+  timings: StartupHistoryMark[]
+  platform: string
+  version: string
+}
+
+export interface StartupHistoryResult extends IpcResult {
+  records?: StartupHistoryRecord[]
+}
+
 export interface PerfAPI {
   ping: () => Promise<PerfPingResult>
   subscribe: () => Promise<IpcResult>
@@ -78,6 +103,7 @@ export interface PerfAPI {
   markFirstRender: () => Promise<IpcResult>
   getStartupTimings: () => Promise<StartupTimingsResult>
   getRuntimeMetrics: () => Promise<RuntimeMetricsResult>
+  getStartupHistory: (limit?: number) => Promise<StartupHistoryResult>
 }
 
 export interface CostEntry {
@@ -135,21 +161,8 @@ export interface SymbolSearchResult extends IpcResult {
   symbols?: SymbolEntry[]
 }
 
-export interface SymbolGraphNode {
-  name: string
-  type: string
-  filePath: string
-  line: number
-  endLine?: number
-}
-
-export interface SymbolGraphSearchResult extends IpcResult {
-  results?: SymbolGraphNode[]
-}
-
 export interface SymbolAPI {
   search: (root: string) => Promise<SymbolSearchResult>
-  graphSearch: (query: string, projectRoot: string) => Promise<SymbolGraphSearchResult>
 }
 
 export interface LspCompletionItem {

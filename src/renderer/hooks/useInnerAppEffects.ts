@@ -5,7 +5,10 @@
  * and event listener hooks in one place.
  */
 
+import { useEffect } from 'react';
+
 import type { Command } from '../components/CommandPalette/types';
+import { useToastContext } from '../contexts/ToastContext';
 import type { AppTheme, WorkspaceLayout } from '../types/electron';
 import { useDomEventListeners,useMenuEvents } from './useAppEventListeners';
 import { useKeyboardShortcuts } from './useAppKeyboardShortcuts';
@@ -39,6 +42,15 @@ export interface InnerAppEffectsDeps {
   keybindings: Record<string, string>;
 }
 
+function useStartupWarningToast(): void {
+  const { toast } = useToastContext();
+  useEffect(() => {
+    return window.electronAPI.app.onStartupWarning(({ message }) => {
+      toast(message, 'warning');
+    });
+  }, [toast]);
+}
+
 function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
   useAgentChatCommands(deps.projectRoot, deps.registerCommand);
   useAgentTemplateCommands(deps.projectRoot, deps.registerCommand);
@@ -55,6 +67,7 @@ function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
 export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
   useUpdater();
   useErrorCapture();
+  useStartupWarningToast();
 
   useRegisteredCommands(deps);
 

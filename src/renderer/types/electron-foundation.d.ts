@@ -106,6 +106,8 @@ export interface RouterSettings {
   layer3Enabled: boolean;
   layer2ConfidenceThreshold: number;
   paranoidMode: boolean;
+  /** Fraction of decisions sampled for LLM judge scoring (0 = disabled). */
+  llmJudgeSampleRate: number;
 }
 
 export interface WorkspaceSnapshot {
@@ -183,6 +185,12 @@ export interface AppConfig {
   lspEnabled: boolean;
   lspServers: Record<string, string>;
   inlineCompletionsEnabled: boolean;
+  /** Whether semantic codebase search (vector embeddings) is enabled */
+  embeddingsEnabled: boolean;
+  /** Embedding provider: 'local' (Xenova ONNX) or 'voyage' (Voyage AI API) */
+  embeddingProvider: 'local' | 'voyage';
+  /** Voyage AI API key (used when embeddingProvider === 'voyage') */
+  voyageApiKey: string;
   claudeAutoLaunch: boolean;
   approvalRequired: string[];
   approvalTimeout: number;
@@ -198,6 +206,9 @@ export interface AppConfig {
   modelSlots: ModelSlotAssignments;
   routerSettings: RouterSettings;
   webAccessPort: number;
+  /** @internal — do not expose in Settings UI */
+  webAccessToken: string;
+  /** @internal — do not expose in Settings UI */
   webAccessPassword: string;
   glassOpacity: number;
   authOnboardingDismissed: boolean;
@@ -209,6 +220,14 @@ export interface AppConfig {
   backgroundJobsMaxConcurrent: number;
   /** Wave 8 (issue 115) — persist PTY session descriptors to SQLite for cross-restart restore. Default: false. */
   persistTerminalSessions: boolean;
+  /** Wave 3B feature flag — route PTY through PtyHost utility process */
+  usePtyHost: boolean;
+  /** Wave 3B feature flag — route extensions through ExtensionHost utility process */
+  useExtensionHost: boolean;
+  /** Wave 3B feature flag — run internal MCP server in dedicated McpHost utility process */
+  useMcpHost: boolean;
+  /** @internal — do not expose in Settings UI */
+  routerLastRetrainCount: number;
 }
 
 export interface ContextLayerConfig {
@@ -220,32 +239,13 @@ export interface ContextLayerConfig {
   moduleDepthLimit: number;
 }
 
-export interface BufferExcerpt {
-  filePath: string;
-  startLine: number;
-  endLine: number;
-  label?: string;
-}
-
-export interface MultiBufferConfig {
-  name: string;
-  excerpts: BufferExcerpt[];
-}
-
-export type FileChangeType = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir';
-
-export interface FileChangeEvent {
-  type: FileChangeType;
-  path: string;
-}
-
-export interface DirEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  isFile: boolean;
-  isSymlink: boolean;
-}
+export type {
+  BufferExcerpt,
+  DirEntry,
+  FileChangeEvent,
+  FileChangeType,
+  MultiBufferConfig,
+} from './electron-file-types';
 
 export type AgentEventType =
   // Lifecycle

@@ -96,12 +96,10 @@ function VoyageKeyInput({ value, onChange }: {
 }
 
 export function SemanticSearchSubsection({ draft, onChange }: Props): React.ReactElement {
-  const cfg = draft as unknown as Record<string, unknown>;
-  const enabled = cfg.embeddingsEnabled === true;
-  const providerValue = (cfg.embeddingProvider as string) ?? 'local';
-  const voyageKey = (cfg.voyageApiKey as string) ?? '';
+  const enabled = draft.embeddingsEnabled === true;
+  const providerValue = draft.embeddingProvider ?? 'local';
+  const voyageKey = draft.voyageApiKey ?? '';
   const { status, reindexing, handleReindex } = useSemanticSearchState(enabled);
-  const set = <K extends keyof AppConfig>(k: K, v: AppConfig[K]) => onChange(k, v);
   return (
     <section style={{ marginTop: '24px' }}>
       <SectionLabel>Semantic Search</SectionLabel>
@@ -109,11 +107,11 @@ export function SemanticSearchSubsection({ draft, onChange }: Props): React.Reac
         Index your codebase for semantic search. Powers @codebase mentions in chat.
       </p>
       <SemanticToggle enabled={enabled}
-        onChange={(v) => set('embeddingsEnabled' as keyof AppConfig, v as never)} />
+        onChange={(v) => onChange('embeddingsEnabled', v)} />
       {enabled && <ProviderDropdown value={providerValue}
-        onChange={(v) => set('embeddingProvider' as keyof AppConfig, v as never)} />}
+        onChange={(v) => onChange('embeddingProvider', v as 'local' | 'voyage')} />}
       {enabled && providerValue === 'voyage' && <VoyageKeyInput value={voyageKey}
-        onChange={(v) => set('voyageApiKey' as keyof AppConfig, v as never)} />}
+        onChange={(v) => onChange('voyageApiKey', v)} />}
       {enabled && status && <StatusDisplay status={status} />}
       {enabled && <ReindexButton reindexing={reindexing} onClick={handleReindex} />}
     </section>

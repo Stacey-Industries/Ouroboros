@@ -253,44 +253,12 @@ export function registerShellHistoryHandlers(channels: ChannelList): void {
   );
 }
 
-const GRAPH_SYMBOL_TYPES = new Set(['function', 'class', 'interface', 'type_alias']);
-
-async function runGraphSearch(query: string): Promise<Array<{
-  name: string; type: string; filePath: string; line: number; endLine?: number;
-}>> {
-  const { getGraphController } = await import('../codebaseGraph/graphController');
-  const controller = getGraphController();
-  if (!controller) return [];
-  const results = controller.searchGraph(query, 50);
-  return results
-    .filter((r) => GRAPH_SYMBOL_TYPES.has(r.node.type))
-    .map((r) => ({
-      name: r.node.name,
-      type: r.node.type,
-      filePath: r.node.filePath,
-      line: r.node.line,
-      endLine: r.node.endLine,
-    }));
-}
-
 export function registerSymbolHandlers(channels: ChannelList): void {
   registerChannel(channels, 'symbol:search', async (event: IpcMainInvokeEvent, root: string) => {
     const denied = assertPathAllowed(event, root);
     if (denied) return denied;
     return runQuery(async () => ({ symbols: await searchSymbols(root) }));
   });
-  registerChannel(
-    channels,
-    'symbol:graphSearch',
-    async (_event, query: string) => {
-      try {
-        const results = await runGraphSearch(query);
-        return { success: true, results };
-      } catch (error) {
-        return { success: false, error: String(error), results: [] };
-      }
-    },
-  );
 }
 
 export { registerExtensionHandlers, registerWindowHandlers };

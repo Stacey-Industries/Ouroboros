@@ -120,6 +120,22 @@ const GENERAL_ENTRIES = createEntries('general', 'General', [
     'Set a password for mobile/remote login instead of the auto-generated access token.',
   ],
   ['Web Access Port', 'Port for the web remote access server (requires restart). Default: 7890.'],
+  [
+    'Developer Flags',
+    'Advanced utility-process feature flags: PTY host, extension host, MCP host. Require restart.',
+  ],
+  [
+    'PTY Host Process',
+    'Route terminal PTY sessions through a dedicated PtyHost utility process. Requires restart.',
+  ],
+  [
+    'Extension Host Process',
+    'Load VS Code extensions in an isolated ExtensionHost utility process. Requires restart.',
+  ],
+  [
+    'MCP Host Process',
+    'Run the internal MCP server in a dedicated McpHost utility process. Requires restart.',
+  ],
 ]);
 
 const APPEARANCE_ENTRIES = createEntries('appearance', 'Appearance', [
@@ -144,6 +160,10 @@ const TERMINAL_ENTRIES = createEntries('terminal', 'Terminal', [
   [
     'Custom Prompt (PS1)',
     'Enter a custom PS1 string to use as the shell prompt in terminal sessions.',
+  ],
+  [
+    'Persist Terminal Sessions',
+    'Save open terminal sessions to disk and restore them after restarting the app.',
   ],
 ]);
 
@@ -188,6 +208,18 @@ const AGENT_ENTRIES = createEntries('agent', 'Agent', [
   [
     'Auto-summarize Modules',
     'Use the Anthropic API (Haiku) to generate natural-language descriptions of each module.',
+  ],
+  [
+    'Streaming Inline Edit',
+    'Stream token-by-token diffs during Ctrl+K inline edits instead of displaying results when complete.',
+  ],
+  [
+    'Background Jobs Concurrency',
+    'Maximum number of background agent jobs that can run in parallel (1–8). Applies on next restart.',
+  ],
+  [
+    'LLM Judge Sample Rate',
+    'Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.',
   ],
 ]);
 

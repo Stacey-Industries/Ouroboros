@@ -17,6 +17,7 @@ const mockFormatSummary = vi.fn(() => 'app-ready=10ms first-render=200ms')
 const mockGetStartupTimings = vi.fn(() => [])
 const mockGetLatestPerfMetrics = vi.fn(() => null)
 const mockAppendRecord = vi.fn()
+const mockReadRecentStartups = vi.fn()
 const mockLogInfo = vi.fn()
 
 vi.mock('electron', () => ({
@@ -48,6 +49,7 @@ vi.mock('../perfMetrics', () => ({
 
 vi.mock('../perfStartupLog', () => ({
   appendStartupRecord: mockAppendRecord,
+  readRecentStartups: mockReadRecentStartups,
 }))
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ describe('registerPerfHandlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers all 6 expected channels', () => {
+  it('registers all 7 expected channels', () => {
     const channels: string[] = []
     mockHandle.mockImplementation((ch: string) => channels.push(ch))
 
@@ -107,6 +109,7 @@ describe('registerPerfHandlers', () => {
         'perf:markFirstRender',
         'perf:getStartupTimings',
         'perf:getRuntimeMetrics',
+        'perf:getStartupHistory',
       ]),
     )
   })
@@ -154,5 +157,27 @@ describe('registerPerfHandlers', () => {
     mockGetLatestPerfMetrics.mockReturnValue(sample as never)
     const result = handlers['perf:getRuntimeMetrics']?.({} as never, ...([] as never[]))
     expect(result).toMatchObject({ success: true, metrics: sample })
+  })
+
+  it('perf:getStartupHistory returns records from readRecentStartups', async () => {
+    const fakeRecords = [
+      { ts: '2026-01-01T00:00:00.000Z', timings: [], platform: 'linux', version: '1.0.0' },
+    ]
+    mockReadRecentStartups.mockResolvedValue(fakeRecords as never)
+    const result = await handlers['perf:getStartupHistory']?.({} as never, {} as never)
+    expect(result).toMatchObject({ success: true, records: fakeRecords })
+    expect(mockReadRecentStartups).toHaveBeenCalledWith(20)
+  })
+
+  it('perf:getStartupHistory clamps limit to 100', async () => {
+    mockReadRecentStartups.mockResolvedValue([] as never)
+    await handlers['perf:getStartupHistory']?.({} as never, { limit: 999 } as never)
+    expect(mockReadRecentStartups).toHaveBeenCalledWith(100)
+  })
+
+  it('perf:getStartupHistory uses default limit when none provided', async () => {
+    mockReadRecentStartups.mockResolvedValue([] as never)
+    await handlers['perf:getStartupHistory']?.({} as never, {} as never)
+    expect(mockReadRecentStartups).toHaveBeenCalledWith(20)
   })
 })

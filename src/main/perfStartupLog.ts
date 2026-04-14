@@ -8,6 +8,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import readline from 'node:readline'
 
 import { app } from 'electron'
 
@@ -31,6 +32,14 @@ interface StartupTimingRecord {
   ts: string
   timings: SerializedMark[]
   platform: NodeJS.Platform
+  version: string
+}
+
+/** Public record shape returned by readRecentStartups. */
+export interface StartupRecord {
+  ts: string
+  timings: SerializedMark[]
+  platform: string
   version: string
 }
 
@@ -98,4 +107,61 @@ export function appendStartupRecord(timings: StartupMark[]): void {
   } catch (err) {
     log.warn('[perf] Failed to append startup-timings.jsonl:', err)
   }
+}
+
+// ─── Read helpers ─────────────────────────────────────────────────────────────
+
+/** Read all parseable records from a single JSONL file using a readline stream. */
+async function readJsonlFile(filePath: string): Promise<StartupRecord[]> {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
+  if (!fs.existsSync(filePath)) return []
+
+  const records: StartupRecord[] = []
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- filePath derived from app.getPath('userData'), a trusted internal path
+  const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
+
+  for await (const line of rl) {
+    const trimmed = line.trim()
+    if (trimmed.length === 0) continue
+    try {
+      const parsed = JSON.parse(trimmed) as StartupRecord
+      records.push(parsed)
+    } catch {
+      log.warn('[perf] readRecentStartups: skipping malformed line in startup-timings.jsonl')
+    }
+  }
+
+  return records
+}
+
+/**
+ * Read the last `limit` startup records from the JSONL log.
+ *
+ * Reads the primary file first; if fewer than `limit` records are found,
+ * continues reading from the rotation file (`.1.jsonl`) for continuity.
+ * Malformed lines are skipped. Read errors return whatever was parsed.
+ */
+export async function readRecentStartups(limit: number): Promise<StartupRecord[]> {
+  const logPath = resolveLogPath()
+  const rotatedPath = `${logPath}.1.jsonl`
+
+  let records: StartupRecord[] = []
+
+  try {
+    records = await readJsonlFile(logPath)
+  } catch (err) {
+    log.warn('[perf] readRecentStartups: error reading primary file:', err)
+  }
+
+  if (records.length < limit) {
+    try {
+      const rotated = await readJsonlFile(rotatedPath)
+      records = [...rotated, ...records]
+    } catch (err) {
+      log.warn('[perf] readRecentStartups: error reading rotation file:', err)
+    }
+  }
+
+  return records.slice(-limit)
 }

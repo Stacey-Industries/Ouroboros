@@ -56,6 +56,7 @@ function useCustomCSS(css: string): void {
 interface InnerAppProps {
   initialRecentProjects: string[];
   keybindings: Record<string, string>;
+  persistTerminalSessions: boolean;
 }
 
 interface InnerAppUiState {
@@ -90,6 +91,7 @@ interface InnerAppLayoutArgs {
   recentIds: ReturnType<typeof useCommandRegistry>['recentIds'];
   handleExecute: (command: Command) => Promise<void>;
   uiState: InnerAppUiState;
+  persistTerminalSessions: boolean;
 }
 
 function useInnerAppUiState(): InnerAppUiState {
@@ -151,6 +153,7 @@ function buildInnerAppLayoutProps({
   recentIds,
   handleExecute,
   uiState,
+  persistTerminalSessions,
 }: InnerAppLayoutArgs): InnerAppLayoutProps {
   return {
     projectRoot: ctx.projectRoot,
@@ -173,10 +176,11 @@ function buildInnerAppLayoutProps({
     symbolSearchOpen: uiState.symbolSearchOpen,
     setSymbolSearchOpen: uiState.setSymbolSearchOpen,
     perfOverlayVisible: uiState.perfOverlayVisible,
+    persistTerminalSessions,
   };
 }
 
-function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.ReactElement {
+function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<string, string>) {
   const { setTheme } = useTheme();
   const ctx = useProject();
   const palette = useCommandPalette();
@@ -186,39 +190,32 @@ function InnerApp({ initialRecentProjects, keybindings }: InnerAppProps): React.
   const project = useProjectManagement(initialRecentProjects, ctx.setProjectRoot);
   const uiState = useInnerAppUiState();
   const handleExecute = useCommandExecution(execute);
-
-  // Register extension themes at startup so they're available before opening settings
   useExtensionThemes();
-
-  // Sync LSP diagnostic events into the file tree store for per-file badges
   useLspDiagnosticsSync();
-
-  // On first launch with no providers authenticated, open Settings → Accounts
   useFirstLaunchAuth();
+  useInnerAppLifecycle({ ctx, layouts, palette, project, registerCommand, setTheme, terminal, uiState, keybindings });
+  return { ctx, palette, commands, recentIds, layouts, terminal, project, uiState, handleExecute };
+}
 
-  useInnerAppLifecycle({
-    ctx,
-    layouts,
-    palette,
-    project,
-    registerCommand,
-    setTheme,
-    terminal,
-    uiState,
-    keybindings,
-  });
+function InnerApp({
+  initialRecentProjects,
+  keybindings,
+  persistTerminalSessions,
+}: InnerAppProps): React.ReactElement {
+  const hooks = useInnerAppHooks(initialRecentProjects, keybindings);
 
   return <InnerAppLayout {...buildInnerAppLayoutProps({
-    ctx,
-    project,
+    ctx: hooks.ctx,
+    project: hooks.project,
     keybindings,
-    layouts,
-    terminal,
-    palette,
-    commands,
-    recentIds,
-    handleExecute,
-    uiState,
+    layouts: hooks.layouts,
+    terminal: hooks.terminal,
+    palette: hooks.palette,
+    commands: hooks.commands,
+    recentIds: hooks.recentIds,
+    handleExecute: hooks.handleExecute,
+    uiState: hooks.uiState,
+    persistTerminalSessions,
   })}
   />;
 }
@@ -246,9 +243,16 @@ interface ConfiguredAppProps {
   initialRecents: string[];
   keybindings: Record<string, string>;
   customCSS: string;
+  persistTerminalSessions: boolean;
 }
 
-function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: ConfiguredAppProps): React.ReactElement {
+function ConfiguredApp({
+  initialRoot,
+  initialRecents,
+  keybindings,
+  customCSS,
+  persistTerminalSessions,
+}: ConfiguredAppProps): React.ReactElement {
   useCustomCSS(customCSS);
 
   return (
@@ -257,7 +261,11 @@ function ConfiguredApp({ initialRoot, initialRecents, keybindings, customCSS }: 
         <AgentEventsProvider>
           <ApprovalProvider>
             <ProjectProvider initialRoot={initialRoot}>
-              <InnerApp initialRecentProjects={initialRecents} keybindings={keybindings} />
+              <InnerApp
+                initialRecentProjects={initialRecents}
+                keybindings={keybindings}
+                persistTerminalSessions={persistTerminalSessions}
+              />
             </ProjectProvider>
           </ApprovalProvider>
         </AgentEventsProvider>
@@ -286,6 +294,7 @@ export default function App(): React.ReactElement {
       : {};
   const customCSS: string =
     typeof config.customCSS === 'string' ? config.customCSS : '';
+  const persistTerminalSessions: boolean = config.persistTerminalSessions === true;
 
   return (
     <ConfiguredApp
@@ -293,6 +302,7 @@ export default function App(): React.ReactElement {
       initialRecents={initialRecents}
       keybindings={keybindings}
       customCSS={customCSS}
+      persistTerminalSessions={persistTerminalSessions}
     />
   );
 }

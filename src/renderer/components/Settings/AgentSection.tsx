@@ -2,6 +2,7 @@
  * AgentSection.tsx — Settings controls for agent chat and context layer configuration.
  */
 
+import type { CSSProperties } from 'react';
 import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
@@ -13,6 +14,9 @@ import {
 } from './claudeSectionContentStyles';
 import { SelectSection, ToggleSection } from './ClaudeSectionControls';
 import { SectionLabel } from './settingsStyles';
+
+const BACKGROUND_JOBS_MIN = 1;
+const BACKGROUND_JOBS_MAX = 8;
 
 interface AgentSectionProps {
   draft: AppConfig;
@@ -30,6 +34,7 @@ const DEFAULT_ROUTER_SETTINGS: RouterSettings = {
   layer3Enabled: true,
   layer2ConfidenceThreshold: 0.6,
   paranoidMode: false,
+  llmJudgeSampleRate: 0,
 };
 
 function AgentChatSettingsGroup({
@@ -118,6 +123,46 @@ function RouterThresholdSection({
   );
 }
 
+function LlmJudgeSampleRateSection({
+  settings,
+  updateSetting,
+}: {
+  settings: RouterSettings;
+  updateSetting: RouterUpdateFn;
+}): React.ReactElement {
+  const rate = settings.llmJudgeSampleRate ?? 0;
+  const label = rate === 0 ? 'Disabled' : `${Math.round(rate * 100)}%`;
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    const parsed = Number.parseFloat(event.target.value);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    updateSetting('llmJudgeSampleRate', Math.min(1, Math.max(0, parsed)));
+  }
+
+  return (
+    <section>
+      <SectionLabel>LLM Judge Sample Rate</SectionLabel>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        Fraction of agent responses sampled by the LLM judge for quality evaluation. 0 = disabled.
+        Currently:{' '}
+        <span className="text-text-semantic-primary">{label}</span>
+      </p>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={rate}
+        onChange={handleChange}
+        aria-label="LLM judge sample rate"
+        style={sliderStyle}
+      />
+    </section>
+  );
+}
+
 function RouterToggles({
   settings,
   updateSetting,
@@ -131,6 +176,7 @@ function RouterToggles({
       <RouterThresholdSection settings={settings} updateSetting={updateSetting} />
       <ToggleSection checked={settings.layer3Enabled} description="Reserved for the future async fallback layer. The current synchronous router path does not use this yet." label="Enable layer 3 fallback" title="Router Layer 3" onChange={(value) => updateSetting('layer3Enabled', value)} />
       <ToggleSection checked={settings.paranoidMode} description="Force Opus for all Agent Chat requests regardless of prompt classification." label="Enable paranoid mode" title="Router Paranoid Mode" onChange={(value) => updateSetting('paranoidMode', value)} />
+      <LlmJudgeSampleRateSection settings={settings} updateSetting={updateSetting} />
     </>
   );
 }
@@ -178,7 +224,59 @@ export function AgentSection({
       <AgentChatSettingsGroup settings={agentChatSettings} updateSetting={updateAgentChat} />
       <RouterSettingsGroup settings={routerSettings} updateSetting={updateRouterSettings} />
       <ContextLayerSettingsGroup settings={contextLayerSettings} updateSetting={updateContextLayer} />
+      <AgentFeaturesGroup draft={draft} onChange={onChange} />
     </div>
+  );
+}
+
+function BackgroundJobsSection({ draft, onChange }: AgentSectionProps): React.ReactElement {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    const parsed = Number.parseInt(event.target.value, 10);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    onChange('backgroundJobsMaxConcurrent', Math.min(BACKGROUND_JOBS_MAX, Math.max(BACKGROUND_JOBS_MIN, parsed)));
+  }
+
+  return (
+    <section>
+      <SectionLabel>Background Jobs Concurrency</SectionLabel>
+      <p className="text-text-semantic-muted" style={claudeSectionSectionDescriptionStyle}>
+        Maximum number of background agent jobs that can run in parallel (1–8).
+      </p>
+      <div style={concurrencyRowStyle}>
+        <input
+          type="number"
+          min={BACKGROUND_JOBS_MIN}
+          max={BACKGROUND_JOBS_MAX}
+          step={1}
+          value={draft.backgroundJobsMaxConcurrent ?? 2}
+          onChange={handleChange}
+          aria-label="Background jobs max concurrency"
+          className="text-text-semantic-primary"
+          style={claudeSectionBudgetInputStyle}
+        />
+        <span className="text-text-semantic-faint" style={restartHintStyle}>
+          Applies on next restart
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function AgentFeaturesGroup({ draft, onChange }: AgentSectionProps): React.ReactElement {
+  return (
+    <>
+      <SectionLabel style={{ marginTop: '8px' }}>Inline Edit &amp; Jobs</SectionLabel>
+      <ToggleSection
+        checked={draft.streamingInlineEdit ?? false}
+        description="Stream token-by-token diffs during Ctrl+K inline edits instead of displaying results when complete."
+        label="Streaming inline edit"
+        title="Streaming Inline Edit"
+        onChange={(value) => onChange('streamingInlineEdit', value)}
+      />
+      <BackgroundJobsSection draft={draft} onChange={onChange} />
+    </>
   );
 }
 
@@ -193,3 +291,18 @@ function updateRouterThreshold(
   const clamped = Math.min(1, Math.max(0, parsed));
   updateSetting('layer2ConfidenceThreshold', clamped);
 }
+
+const sliderStyle: CSSProperties = {
+  width: '100%',
+  accentColor: 'var(--interactive-accent)',
+};
+
+const concurrencyRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+};
+
+const restartHintStyle: CSSProperties = {
+  fontSize: '11px',
+};

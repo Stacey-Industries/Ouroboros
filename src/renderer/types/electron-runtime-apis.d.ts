@@ -49,6 +49,16 @@ export interface PtyShellStateResult extends IpcResult {
   isExecuting?: boolean;
 }
 
+export interface PersistedSessionInfo {
+  id: string;
+  cwd: string;
+  shellPath: string | null;
+  cols: number;
+  rows: number;
+  createdAt: number;
+  lastSeenAt: number;
+}
+
 export interface PtyAPI {
   spawn: (
     id: string,
@@ -101,6 +111,9 @@ export interface PtyAPI {
     callback: (info: { reason: string; exitCode: number; scrollback: string[] }) => void,
   ) => () => void;
   getShellState: (id: string) => Promise<PtyShellStateResult>;
+  listPersistedSessions: () => Promise<PersistedSessionInfo[]>;
+  restoreSession: (id: string) => Promise<IpcResult>;
+  discardPersistedSessions: () => Promise<IpcResult>;
 }
 
 export interface CodexAPI {

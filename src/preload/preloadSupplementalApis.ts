@@ -120,12 +120,11 @@ export const supplementalApis: SupplementalApis = {
     markFirstRender: () => ipcRenderer.invoke('perf:markFirstRender'),
     getStartupTimings: () => ipcRenderer.invoke('perf:getStartupTimings'),
     getRuntimeMetrics: () => ipcRenderer.invoke('perf:getRuntimeMetrics'),
+    getStartupHistory: (limit?: number) => ipcRenderer.invoke('perf:getStartupHistory', { limit }),
   },
 
   symbol: {
     search: (root) => ipcRenderer.invoke('symbol:search', root),
-    graphSearch: (query, projectRoot) =>
-      ipcRenderer.invoke('symbol:graphSearch', query, projectRoot),
   },
 
   lsp: {

@@ -26,6 +26,7 @@ import {
   type TerminalSectionContentProps,
   textInputStyle,
 } from './terminalSectionShared';
+import { ToggleSwitch } from './ToggleSwitch';
 
 function FontSizeControls({ fontSize, onChange }: FontSizeSectionProps): React.ReactElement {
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -217,6 +218,23 @@ function PreviewSection({ fontSize }: { fontSize: number }): React.ReactElement 
 
 export { getDefaultShellForPlatform } from './terminalSectionShared';
 
+function PersistSessionsSection({
+  draft,
+  onChange,
+}: Pick<TerminalSectionContentProps, 'draft' | 'onChange'>): React.ReactElement {
+  return (
+    <section>
+      <SectionLabel>Session Persistence</SectionLabel>
+      <ToggleSwitch
+        checked={draft.persistTerminalSessions ?? false}
+        onChange={(value) => onChange('persistTerminalSessions', value)}
+        label="Persist terminal sessions"
+        description="Save open terminal sessions to disk and restore them after restarting the app."
+      />
+    </section>
+  );
+}
+
 export function TerminalSectionContent({
   draft,
   onChange,
@@ -244,6 +262,7 @@ export function TerminalSectionContent({
         onPresetChange={(value) => onChange('promptPreset', value)}
       />
       <PreviewSection fontSize={fontSize} />
+      <PersistSessionsSection draft={draft} onChange={onChange} />
     </div>
   );
 }
