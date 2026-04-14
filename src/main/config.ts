@@ -322,6 +322,8 @@ export interface AppConfig {
   streamingInlineEdit: boolean;
   /** Wave 6 (#103) — max concurrent background agent jobs (default: 2) */
   backgroundJobsMaxConcurrent: number;
+  /** Wave 8 (#115) — persist PTY session descriptors to SQLite for cross-restart restore */
+  persistTerminalSessions: boolean;
   /** Workspace trust list — paths approved for hooks, extensions, MCP writes */
   trustedWorkspaces: string[];
   /** Whether to auto-create workspace snapshots at session boundaries */

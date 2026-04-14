@@ -1,9 +1,9 @@
 import { BrowserWindow } from 'electron';
-import fs from 'fs/promises';
 import * as pty from 'node-pty';
 
 import { getConfigValue } from './config';
 import { dispatchActivationEvent } from './extensions';
+import { resolvePtyCwd } from './ptyCwdResolver';
 import { electronBatcher } from './ptyElectronBatcher';
 import {
   buildShellEnvWithIntegration,
@@ -28,6 +28,8 @@ import {
   stopRecordingViaPtyHost,
 } from './ptyHost/ptyHostProxyRecording';
 import { terminalOutputBuffer } from './ptyOutputBuffer';
+import type { PtyPersistence } from './ptyPersistence';
+import { createPtyPersistence } from './ptyPersistence';
 import {
   type RecordingState,
   startPtyRecording as startRecording,
@@ -47,6 +49,18 @@ import { broadcastToWebClients } from './web/webServer';
 /** Feature flag — route PTY operations through PtyHost utility process. */
 function ptyHostEnabled(): boolean {
   return getConfigValue('usePtyHost') === true;
+}
+
+/**
+ * Singleton PTY persistence store — created once at module load.
+ * When persistTerminalSessions is false, this is a no-op instance
+ * (isEnabled() returns false, all methods are zero-overhead stubs).
+ * When ptyHost is active, main-side does NOT double-write; the host owns persistence.
+ */
+let _persistence: PtyPersistence | null = null;
+function getPersistence(): PtyPersistence {
+  if (!_persistence) _persistence = createPtyPersistence();
+  return _persistence;
 }
 
 export interface PtySession {
@@ -162,6 +176,41 @@ export function escapePowerShellArg(arg: string): string {
   return `'${arg.replace(/'/g, "''")}'`;
 }
 
+interface SpawnDirectOpts {
+  id: string;
+  win: BrowserWindow;
+  shell: string;
+  finalArgs: string[];
+  shellEnv: Record<string, string>;
+  cwd: string;
+  cols: number;
+  rows: number;
+  startupCommand?: string;
+}
+
+function spawnDirect(opts: SpawnDirectOpts): { success: boolean; error?: string } {
+  const { id, win, shell, finalArgs, shellEnv, cwd, cols, rows, startupCommand } = opts;
+  try {
+    const proc = pty.spawn(shell, finalArgs, {
+      name: 'xterm-256color', cols, rows, cwd, env: shellEnv,
+    });
+    registerSession({ id, proc, cwd, shell, win });
+    if (startupCommand) scheduleStartupCommand(id, proc, startupCommand);
+    notifyTerminalCreated(id, cwd);
+    const persistence = getPersistence();
+    if (persistence.isEnabled()) {
+      persistence.saveSession({
+        id, cwd, shellPath: shell, shellArgs: finalArgs, cols, rows,
+        windowId: win.id, envHash: '', createdAt: Date.now(), lastSeenAt: Date.now(),
+      });
+    }
+    return { success: true };
+  } catch (error) {
+    cleanupSession(id);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export function spawnPty(
   id: string,
   win: BrowserWindow,
@@ -170,36 +219,19 @@ export function spawnPty(
   if (sessions.has(id)) {
     return { success: false, error: `Session ${id} already exists` };
   }
-
   const shell = (getConfigValue('shell') as string) || getDefaultShell();
   const { cwd, cols, rows } = resolveSpawnOptions(options);
   const { env: shellEnv, shellArgs } = buildShellEnvWithIntegration(shell, options.env);
   const finalArgs = shellArgs ?? getDefaultArgs(shell);
-
   if (ptyHostEnabled()) {
-    return spawnViaPtyHost(
-      { id, shell, args: finalArgs, env: shellEnv, cwd, cols, rows, windowId: win.id, ...(options.startupCommand ? { startupCommand: options.startupCommand } : {}) },
-      win,
-    ).then((res) => {
+    const inst = { id, shell, args: finalArgs, env: shellEnv, cwd, cols, rows, windowId: win.id,
+      ...(options.startupCommand ? { startupCommand: options.startupCommand } : {}) };
+    return spawnViaPtyHost(inst, win).then((res) => {
       if (res.success) notifyTerminalCreated(id, cwd);
       return res;
     });
   }
-
-  try {
-    const proc = pty.spawn(shell, finalArgs, {
-      name: 'xterm-256color', cols, rows, cwd, env: shellEnv,
-    });
-    registerSession({ id, proc, cwd, shell, win });
-    if (options.startupCommand) {
-      scheduleStartupCommand(id, proc, options.startupCommand);
-    }
-    notifyTerminalCreated(id, cwd);
-    return { success: true };
-  } catch (error) {
-    cleanupSession(id);
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
-  }
+  return spawnDirect({ id, win, shell, finalArgs, shellEnv, cwd, cols, rows, startupCommand: options.startupCommand });
 }
 
 export function writeToPty(id: string, data: string): { success: boolean; error?: string } {
@@ -224,6 +256,10 @@ export function resizePty(
   if (!session) return { success: false, error: `Session ${id} not found` };
   try {
     session.process.resize(cols, rows);
+    const persistence = getPersistence();
+    if (persistence.isEnabled()) {
+      persistence.updateSession(id, { cols, rows, lastSeenAt: Date.now() });
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -239,6 +275,10 @@ export function killPty(
   try {
     session.process.kill();
     cleanupSession(id);
+    const persistence = getPersistence();
+    if (persistence.isEnabled()) {
+      persistence.removeSession(id);
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -278,14 +318,8 @@ export async function getPtyCwd(
   if (ptyHostEnabled()) return getCwdViaPtyHost(id);
   const session = sessions.get(id);
   if (!session) return { success: false, error: `Session ${id} not found` };
-  if (process.platform !== 'linux') return { success: true, cwd: session.cwd };
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path uses process PID, not user input
-    const link = await fs.readlink(`/proc/${session.process.pid}/cwd`);
-    return { success: true, cwd: link };
-  } catch {
-    return { success: true, cwd: session.cwd };
-  }
+  const cwd = await resolvePtyCwd(session.process.pid ?? 0, session.cwd);
+  return { success: true, cwd };
 }
 
 export function startPtyRecording(

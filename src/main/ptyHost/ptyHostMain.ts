@@ -10,9 +10,11 @@
  * shellState, killAll, killForWindow + data/exit/shellStateChanged events.
  */
 
-import fs from 'fs/promises';
 import * as pty from 'node-pty';
 
+import { resolvePtyCwd } from '../ptyCwdResolver';
+import type { PtyPersistence } from '../ptyPersistence';
+import { createPtyPersistence } from '../ptyPersistence';
 import type { ShellState } from '../ptyShellIntegration';
 import {
   initShellState,
@@ -40,6 +42,16 @@ interface PtyHostSession {
 }
 
 const sessions = new Map<string, PtyHostSession>();
+
+/**
+ * PTY persistence — created once at module load. No-op when
+ * persistTerminalSessions config flag is off (isEnabled() → false).
+ */
+let _persistence: PtyPersistence | null = null;
+function getPersistence(): PtyPersistence {
+  if (!_persistence) _persistence = createPtyPersistence();
+  return _persistence;
+}
 
 // ── Posting helpers ──
 
@@ -79,6 +91,15 @@ function handleSpawn(requestId: string, inst: PtySpawnInstruction): void {
     attachListeners(session);
     if (inst.startupCommand) {
       writeOnShellReady(inst.id, proc, inst.startupCommand, sessions);
+    }
+    const persistence = getPersistence();
+    if (persistence.isEnabled()) {
+      persistence.saveSession({
+        id: inst.id, cwd: inst.cwd, shellPath: inst.shell,
+        shellArgs: inst.args, cols: inst.cols, rows: inst.rows,
+        windowId: inst.windowId, envHash: '',
+        createdAt: Date.now(), lastSeenAt: Date.now(),
+      });
     }
     post({ type: 'spawned', requestId, id: inst.id, pid: proc.pid });
   } catch (err) {
@@ -125,6 +146,10 @@ function handleResize(id: string, cols: number, rows: number): void {
   if (!session) return;
   try {
     session.proc.resize(cols, rows);
+    const persistence = getPersistence();
+    if (persistence.isEnabled()) {
+      persistence.updateSession(id, { cols, rows, lastSeenAt: Date.now() });
+    }
   } catch {
     // Ignore resize errors on dying processes.
   }
@@ -143,6 +168,10 @@ function handleKill(requestId: string, id: string): void {
   }
   sessions.delete(id);
   removeShellState(id);
+  const persistence = getPersistence();
+  if (persistence.isEnabled()) {
+    persistence.removeSession(id);
+  }
   post({ type: 'killed', requestId, id });
 }
 
@@ -152,17 +181,8 @@ async function handleGetCwd(requestId: string, id: string): Promise<void> {
     postError(requestId, `Session ${id} not found`);
     return;
   }
-  if (process.platform !== 'linux') {
-    post({ type: 'cwd', requestId, id, cwd: session.cwd });
-    return;
-  }
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path uses process PID, not user input
-    const link = await fs.readlink(`/proc/${session.proc.pid}/cwd`);
-    post({ type: 'cwd', requestId, id, cwd: link });
-  } catch {
-    post({ type: 'cwd', requestId, id, cwd: session.cwd });
-  }
+  const cwd = await resolvePtyCwd(session.proc.pid ?? 0, session.cwd);
+  post({ type: 'cwd', requestId, id, cwd });
 }
 
 function handleListSessions(requestId: string): void {

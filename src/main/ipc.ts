@@ -39,6 +39,7 @@ import {
   registerMcpStoreHandlers,
   registerMiscHandlers,
   registerPtyHandlers,
+  registerPtyPersistenceHandlers,
   registerRouterStatsHandlers,
   registerRulesAndSkillsHandlers,
   registerSearchHandlers,
@@ -49,6 +50,7 @@ import log from './logger';
 import { getAllProviders } from './providers';
 import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
 import { resolveCodexThreadId } from './ptyCodexCapture';
+import { createPtyPersistence } from './ptyPersistence';
 import { clearRegistry } from './web/handlerRegistry';
 
 /** Resolve the BrowserWindow that sent an IPC event. */
@@ -68,8 +70,10 @@ function safeRegister(name: string, fn: () => string[]): string[] {
 }
 
 function registerDomainHandlers(win: BrowserWindow): string[] {
+  const ptyStore = createPtyPersistence();
   return [
     ...safeRegister('pty', () => registerPtyHandlers(senderWindow)),
+    ...safeRegister('ptyPersistence', () => registerPtyPersistenceHandlers(senderWindow, ptyStore)),
     ...safeRegister('config', () => registerConfigHandlers(senderWindow)),
     ...safeRegister('files', () => registerFileHandlers(senderWindow)),
     ...safeRegister('git', () => registerGitHandlers(senderWindow)),

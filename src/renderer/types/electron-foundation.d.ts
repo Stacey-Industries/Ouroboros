@@ -207,6 +207,8 @@ export interface AppConfig {
   streamingInlineEdit: boolean;
   /** Wave 6 (issue 103) — max concurrent background agent jobs. Default: 2. */
   backgroundJobsMaxConcurrent: number;
+  /** Wave 8 (issue 115) — persist PTY session descriptors to SQLite for cross-restart restore. Default: false. */
+  persistTerminalSessions: boolean;
 }
 
 export interface ContextLayerConfig {

@@ -254,4 +254,9 @@ export const tailSchema = {
     maximum: 10,
     default: 2,
   },
+  /** Wave 8 (#115) — persist PTY session descriptors to SQLite for cross-restart restore. Default off. */
+  persistTerminalSessions: {
+    type: 'boolean',
+    default: false,
+  },
 };

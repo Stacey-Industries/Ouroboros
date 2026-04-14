@@ -23,6 +23,7 @@ export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';
 export { registerPtyHandlers } from './pty';
+export { registerPtyPersistenceHandlers } from './ptyPersistence';
 export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';
