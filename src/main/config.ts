@@ -339,6 +339,8 @@ export interface AppConfig {
   authOnboardingDismissed: boolean;
   /** Codebase graph settings (GC, etc.) */
   codebaseGraph: CodebaseGraphSettings;
+  /** Wave 15 — structured telemetry feature flag and retention policy */
+  telemetry?: { structured?: boolean; retentionDays?: number };
 }
 
 export const store = new Store<AppConfig>({

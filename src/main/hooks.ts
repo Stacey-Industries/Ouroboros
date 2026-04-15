@@ -29,6 +29,7 @@ import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './h
 import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
 import log from './logger';
 import { shadowRouteHookEvent } from './router/routerShadow';
+import { getTelemetryStore } from './telemetry';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -65,6 +66,8 @@ export interface HookPayload {
   internal?: boolean;
   /** True when the event originates from a Claude Code process spawned inside the IDE (terminal or agent PTY). */
   ideSpawned?: boolean;
+  /** Correlation ID for linking related events (e.g. pre_tool_use → post_tool_use). */
+  correlationId?: string;
   /** Catch-all for event-specific data forwarded from Claude Code stdin JSON. */
   data?: Record<string, unknown>;
 }
@@ -249,6 +252,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   }
 
   shadowRouteHookEvent(rawPayload);
+  getTelemetryStore()?.record(rawPayload);
   trackSessionLifecycle(rawPayload);
   const payload = inferSessionId(rawPayload);
 

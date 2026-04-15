@@ -83,14 +83,23 @@ interface StoreState {
 let singleton: TelemetryStore | null = null;
 let flagEnabledOverride: boolean | null = null;
 
-// ─── Flag wiring (Phase A stub; Phase B replaces with real config check) ──────
+// ─── Flag wiring (Phase B: real config check with override for tests) ─────────
+
+/** Optional config reader injected at startup; absent in test environments. */
+let configReader: (() => boolean) | null = null;
+
+/** Called by initTelemetryStore to wire the real config flag. */
+export function setConfigReader(reader: () => boolean): void {
+  configReader = reader;
+}
 
 export function setFlagEnabledOverride(enabled: boolean | null): void {
   flagEnabledOverride = enabled;
 }
 
 function isFlagEnabled(): boolean {
-  return flagEnabledOverride ?? true;
+  if (flagEnabledOverride !== null) return flagEnabledOverride;
+  return configReader?.() ?? false;
 }
 
 // ─── Internal flush ───────────────────────────────────────────────────────────
@@ -266,6 +275,12 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
 
 export function initTelemetryStore(userDataDir: string): void {
   if (singleton) return;
+  try {
+    const { getConfigValue } = require('../config') as typeof import('../config'); // eslint-disable-line @typescript-eslint/no-require-imports
+    setConfigReader(() => getConfigValue('telemetry')?.structured ?? false);
+  } catch {
+    // Config not available (e.g. test environment) — flag stays off
+  }
   singleton = openTelemetryStore(userDataDir);
   log.info('[telemetry] store initialised');
 }

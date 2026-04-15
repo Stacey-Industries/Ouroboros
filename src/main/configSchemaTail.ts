@@ -272,4 +272,12 @@ export const tailSchema = {
       gcDaysThreshold: 90,
     },
   },
+  /** Wave 15 — structured telemetry feature flag and retention policy */
+  telemetry: {
+    type: 'object',
+    properties: {
+      structured: { type: 'boolean', default: false },
+      retentionDays: { type: 'number', default: 30 },
+    },
+  },
 };

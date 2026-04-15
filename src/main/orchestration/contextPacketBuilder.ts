@@ -338,6 +338,8 @@ export async function buildContextPacket(options: {
   liveIdeState?: LiveIdeState;
   model?: string;
   repoSnapshot?: RepoIndexSnapshot;
+  /** Wave 15: routing trace ID — join key for orchestration_traces rows (Wave 24 populates). */
+  traceId?: string;
 }): Promise<ContextPacketBuildResult> {
   const cacheKey = options.request.workspaceRoots.slice().sort().join('|');
   const fingerprint = computeContextFingerprint(

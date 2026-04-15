@@ -59,6 +59,7 @@ import {
   stopObserving as stopRetrainObserver,
 } from './router/retrainTrigger';
 import { runAllMigrations } from './storage/migrate';
+import { closeTelemetryStore, initTelemetryStore } from './telemetry';
 import { startWebServer, stopWebServer } from './web';
 import { installHandlerCapture } from './web/handlerRegistry';
 import { getOrCreateWebToken } from './web/webAuth';
@@ -234,6 +235,7 @@ async function initializeApplication(): Promise<void> {
   markStartup('app-ready');
   const defaultRoot = getConfigValue('defaultProjectRoot') as string | undefined;
   runAllMigrations(defaultRoot);
+  await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   await migrateSecretsIfNeeded();
   setTokenFilePath(app.getPath('userData'));
   generatePipeTokens();
@@ -286,6 +288,7 @@ app.on('window-all-closed', async () => {
 // Handlers are removed here (not in window-all-closed) so that in-flight
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
+  closeTelemetryStore();
   stopRetrainObserver();
   clearQualityTimers();
   await stopClaudeUsagePoller();
