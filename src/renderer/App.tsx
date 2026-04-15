@@ -13,6 +13,7 @@
 import React, { useCallback, useState } from 'react';
 
 import type { Command } from './components/CommandPalette/types';
+import { System2IndexProgress } from './components/System2IndexProgress';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
 import { WebFolderBrowser } from './components/FileBrowser';
@@ -271,6 +272,7 @@ function ConfiguredApp({
         </AgentEventsProvider>
       </FocusProvider>
       <WebFolderBrowser />
+      <System2IndexProgress />
     </ToastProvider>
   );
 }

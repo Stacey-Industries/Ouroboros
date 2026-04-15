@@ -36,6 +36,7 @@ import type {
   ThemeAPI,
 } from './electron-runtime-apis';
 import type { SpecAPI } from './electron-spec';
+import type { System2API } from './electron-system2';
 
 export interface McpServerConfig {
   command?: string;
@@ -270,6 +271,7 @@ export interface ElectronAPI {
   agentConflict: AgentConflictAPI;
   checkpoint: CheckpointAPI;
   spec: SpecAPI;
+  system2: System2API;
 }
 
 export interface WorkspaceAPI {

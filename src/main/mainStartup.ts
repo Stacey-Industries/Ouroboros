@@ -154,8 +154,82 @@ export async function seedGithubTokenWithRetry(maxAttempts = 3): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Codebase graph initialization
+// Codebase graph initialization — System 2
 // ---------------------------------------------------------------------------
+
+type IndexReason = 'first-launch' | 'hash-mismatch' | 'post-gc'
+
+interface System2IndexProgressEvent {
+  kind: 'start' | 'progress' | 'complete' | 'error'
+  projectName: string
+  projectRoot?: string
+  reason?: IndexReason
+  phase?: string
+  filesProcessed?: number
+  filesTotal?: number
+  elapsedMs?: number
+  filesIndexed?: number
+  nodesCreated?: number
+  durationMs?: number
+  message?: string
+}
+
+function sendIndexProgress(event: System2IndexProgressEvent): void {
+  broadcastToActiveWindows('system2:indexProgress', event)
+}
+
+interface InitialIndexArgs {
+  workerClient: import('./codebaseGraph/indexingWorkerClient').IndexingWorkerClient
+  db: import('./codebaseGraph/graphDatabase').GraphDatabase
+  projectRoot: string
+  projectName: string
+  reason: IndexReason
+}
+
+async function runInitialIndex(args: InitialIndexArgs): Promise<void> {
+  const { workerClient, db, projectRoot, projectName, reason } = args
+  sendIndexProgress({ kind: 'start', projectName, projectRoot, reason })
+  const result = await workerClient.runIndex({
+    projectRoot,
+    projectName,
+    incremental: false,
+    onProgress: (p) => {
+      sendIndexProgress({
+        kind: 'progress', projectName,
+        phase: p.phase, filesProcessed: p.filesProcessed,
+        filesTotal: p.filesTotal, elapsedMs: p.elapsedMs,
+      })
+    },
+  })
+  if (result.success) {
+    db.writeCatalogHash(projectName)
+    sendIndexProgress({
+      kind: 'complete', projectName,
+      filesIndexed: result.filesIndexed, nodesCreated: result.nodesCreated,
+      durationMs: result.durationMs,
+    })
+    log.info(`[system2] initial index complete: ${result.filesIndexed} files, ${result.nodesCreated} nodes`)
+  } else {
+    const message = result.errors.join('; ')
+    sendIndexProgress({ kind: 'error', projectName, message })
+    log.warn('[system2] initial index failed:', message)
+  }
+}
+
+function resolveIndexReason(
+  db: import('./codebaseGraph/graphDatabase').GraphDatabase,
+  projectName: string,
+  gcPrunedNames: string[],
+): IndexReason | null {
+  if (gcPrunedNames.includes(projectName)) return 'post-gc'
+  const hashOk = db.verifyCatalogHash(projectName)
+  if (!hashOk) {
+    log.info('[system2] catalog hash mismatch, triggering full rebuild')
+    return 'hash-mismatch'
+  }
+  if (db.getNodeCount(projectName) === 0) return 'first-launch'
+  return null
+}
 
 async function initCodebaseGraphSystem2(projectRoot: string): Promise<void> {
   const { GraphDatabase } = await import('./codebaseGraph/graphDatabase');
@@ -178,16 +252,20 @@ async function initCodebaseGraphSystem2(projectRoot: string): Promise<void> {
 
   const projectName = path.basename(projectRoot);
   const gcConfig = getConfigValue('codebaseGraph');
+  let gcPrunedNames: string[] = []
   if (gcConfig?.gcEnabled) {
     const report = pruneExpiredProjects(db, gcConfig.gcDaysThreshold);
     if (report.prunedCount > 0) {
       log.info(`[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`);
+      gcPrunedNames = report.prunedProjects
     }
   }
 
-  const hashOk = db.verifyCatalogHash(projectName);
-  if (!hashOk) {
-    log.info('[system2] catalog hash mismatch, triggering full rebuild');
+  const reason = resolveIndexReason(db, projectName, gcPrunedNames)
+  if (reason !== null) {
+    runInitialIndex({ workerClient, db, projectRoot, projectName, reason }).catch((err: Error) => {
+      log.error('[system2] initial index failed:', err)
+    })
   }
 
   const parser = new TreeSitterParser();

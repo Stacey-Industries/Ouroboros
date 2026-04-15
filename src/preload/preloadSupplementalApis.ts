@@ -20,6 +20,7 @@ import type {
   LspDiagnostic,
   LspServerStatus,
   PerfMetrics,
+  System2IndexProgressEvent,
   UpdaterEvent,
 } from '../renderer/types/electron';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
@@ -50,7 +51,8 @@ type SupplementalApiKey =
   | 'router'
   | 'rulesAndSkills'
   | 'ai' | 'embedding'
-  | 'workspace';
+  | 'workspace'
+  | 'system2';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -334,5 +336,10 @@ export const supplementalApis: SupplementalApis = {
     trustLevel: (roots: string[]) => ipcRenderer.invoke('workspace:trustLevel', roots),
     trust: (p: string) => ipcRenderer.invoke('workspace:trust', p),
     untrust: (p: string) => ipcRenderer.invoke('workspace:untrust', p),
+  },
+
+  system2: {
+    onIndexProgress: (callback) =>
+      onChannel<System2IndexProgressEvent>('system2:indexProgress', callback),
   },
 };
