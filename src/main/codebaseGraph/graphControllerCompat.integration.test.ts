@@ -203,6 +203,7 @@ beforeAll(async () => {
   // Create temp fixture directory and write source files
   fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'compat-integration-'))
   for (const [filename, content] of Object.entries(FIXTURE_FILES)) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture write to os.tmpdir()
     fs.writeFileSync(path.join(fixtureDir, filename), content, 'utf8')
   }
 

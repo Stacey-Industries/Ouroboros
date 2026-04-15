@@ -5,7 +5,6 @@
  * Handles streaming, completion, cancellation, and failure progress events.
  */
 
-import log from '../logger';
 import type { ProviderProgressEvent } from '../orchestration/types';
 import {
   emitMonitorSessionEnd,
@@ -22,42 +21,14 @@ import {
   persistFailedTurnNoContent,
   persistFailedTurnWithContent,
 } from './chatOrchestrationBridgePersist';
+import {
+  findContextForProgress,
+  logFirstChunk,
+} from './chatOrchestrationBridgeProgressHelpers';
 import { applySubToolToAccumulatedBlock, buildSubToolStreamChunk } from './chatOrchestrationBridgeSubTools';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatContentBlock, AgentChatSubToolActivity } from './types';
-
-// ---------------------------------------------------------------------------
-// Timing
-// ---------------------------------------------------------------------------
-
-function logFirstChunk(ctx: ActiveStreamContext): void {
-  if (ctx.firstChunkLogged) return;
-  ctx.firstChunkLogged = true;
-  if (typeof ctx.sendStartedAt === 'number') {
-    log.info('[chat-perf] time-to-first-chunk:', Date.now() - ctx.sendStartedAt, 'ms', 'thread:', ctx.threadId);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Context lookup
-// ---------------------------------------------------------------------------
-
-function findContextForProgress(
-  activeSends: AgentChatBridgeRuntime['activeSends'],
-  progress: ProviderProgressEvent,
-): ActiveStreamContext | undefined {
-  for (const [, entry] of activeSends) {
-    if (
-      progress.session?.sessionId === entry.sessionId ||
-      progress.session?.externalTaskId === entry.taskId ||
-      progress.session?.requestId?.includes(entry.taskId)
-    ) {
-      return entry;
-    }
-  }
-  return undefined;
-}
 
 // ---------------------------------------------------------------------------
 // Session ID / link population

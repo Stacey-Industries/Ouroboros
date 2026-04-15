@@ -46,13 +46,21 @@ function toHandle(entry: RegistryEntry): SystemTwoHandle {
 
 // ─── Watcher construction helpers ────────────────────────────────────────────
 
-function buildWatcherOpts(
-  projectRoot: string,
-  projectName: string,
-  db: GraphDatabase,
-  pipeline: IndexingPipeline,
-  entry: RegistryEntry,
-): AutoSyncOptions {
+interface BuildWatcherOptsArgs {
+  projectRoot: string;
+  projectName: string;
+  db: GraphDatabase;
+  pipeline: IndexingPipeline;
+  entry: RegistryEntry;
+}
+
+function buildWatcherOpts({
+  projectRoot,
+  projectName,
+  db,
+  pipeline,
+  entry,
+}: BuildWatcherOptsArgs): AutoSyncOptions {
   return {
     projectRoot,
     projectName,
@@ -101,7 +109,7 @@ export async function acquire(
   }
   registry.set(key, entry)
 
-  const opts = buildWatcherOpts(projectRoot, projectName, db, pipeline, entry)
+  const opts = buildWatcherOpts({ projectRoot, projectName, db, pipeline, entry })
   const watcher = new AutoSyncWatcher(opts)
   entry.watcher = watcher
 

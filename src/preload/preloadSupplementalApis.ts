@@ -23,6 +23,7 @@ import type {
   System2IndexProgressEvent,
   UpdaterEvent,
 } from '../renderer/types/electron';
+import { aiApi, embeddingApi } from './preloadSupplementalAiApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 
 type SupplementalApiKey =
@@ -316,20 +317,9 @@ export const supplementalApis: SupplementalApis = {
 
   rulesAndSkills: rulesAndSkillsApi,
 
-  ai: {
-    inlineCompletion: (request) => ipcRenderer.invoke('ai:inline-completion', request),
-    generateCommitMessage: (request) => ipcRenderer.invoke('ai:generate-commit-message', request),
-    inlineEdit: (request) => ipcRenderer.invoke('ai:inline-edit', request),
-  },
+  ai: aiApi,
 
-  embedding: {
-    search: (query: string, projectRoot: string, topK?: number) =>
-      ipcRenderer.invoke('embedding:search', query, projectRoot, topK),
-    getStatus: (projectRoot: string) =>
-      ipcRenderer.invoke('embedding:status', projectRoot),
-    reindex: (projectRoot: string) =>
-      ipcRenderer.invoke('embedding:reindex', projectRoot),
-  },
+  embedding: embeddingApi,
 
   workspace: {
     isTrusted: (p: string) => ipcRenderer.invoke('workspace:isTrusted', p),

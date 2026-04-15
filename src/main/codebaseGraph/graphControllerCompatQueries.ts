@@ -166,13 +166,21 @@ export function compatGetGraphSchema(
 
 // ─── searchCode (port from System 1 graphQuery.ts) ────────────────────────────
 
-export async function compatSearchCode(
-  projectRoot: string,
-  db: GraphDatabase,
-  projectName: string,
-  pattern: string,
-  opts?: { fileGlob?: string; maxResults?: number },
-): Promise<Array<{ filePath: string; line: number; match: string }>> {
+export interface CompatSearchCodeOptions {
+  projectRoot: string;
+  db: GraphDatabase;
+  projectName: string;
+  pattern: string;
+  opts?: { fileGlob?: string; maxResults?: number };
+}
+
+export async function compatSearchCode({
+  projectRoot,
+  db,
+  projectName,
+  pattern,
+  opts,
+}: CompatSearchCodeOptions): Promise<Array<{ filePath: string; line: number; match: string }>> {
   const maxResults = opts?.maxResults ?? 100
   const results: Array<{ filePath: string; line: number; match: string }> = []
 
@@ -192,7 +200,7 @@ export async function compatSearchCode(
     const filePath = (fileNode.props as Record<string, unknown>).path as string
     if (!filePath) continue
     if (fileGlob && !matchGlob(filePath, fileGlob)) continue
-    await searchFileLines(projectRoot, filePath, regex, maxResults, results)
+    await searchFileLines({ projectRoot, filePath, regex, maxResults, results })
   }
 
   return results
@@ -215,13 +223,21 @@ function matchGlob(filePath: string, glob: string): boolean {
   }
 }
 
-async function searchFileLines(
-  projectRoot: string,
-  filePath: string,
-  regex: RegExp,
-  maxResults: number,
-  results: Array<{ filePath: string; line: number; match: string }>,
-): Promise<void> {
+interface SearchFileLinesOptions {
+  projectRoot: string;
+  filePath: string;
+  regex: RegExp;
+  maxResults: number;
+  results: Array<{ filePath: string; line: number; match: string }>;
+}
+
+async function searchFileLines({
+  projectRoot,
+  filePath,
+  regex,
+  maxResults,
+  results,
+}: SearchFileLinesOptions): Promise<void> {
   const fullPath = path.join(projectRoot, filePath)
   let content: string
   try {

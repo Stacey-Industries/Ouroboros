@@ -47,6 +47,7 @@ const LABEL_TO_S1: Record<string, S1NodeType> = {
 }
 
 function mapLabel(label: string): S1NodeType {
+  // eslint-disable-next-line security/detect-object-injection -- label is a DB-sourced node label, not user input
   return LABEL_TO_S1[label] ?? 'variable'
 }
 
@@ -78,6 +79,7 @@ const EDGE_TO_S1: Record<string, S1EdgeType> = {
 }
 
 function mapEdgeType(type: EdgeType | string): S1EdgeType {
+  // eslint-disable-next-line security/detect-object-injection -- type is a DB-sourced edge type, not user input
   return EDGE_TO_S1[type] ?? 'depends_on'
 }
 
@@ -108,6 +110,7 @@ export function toSystem1NodeId(s2Node: S2GraphNode): string {
  * by toSystem1NodeId. If the id is not in S1 format, treat it as a S2 id
  * directly (allows callers to pass S2 ids through unchanged).
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- _projectName reserved for future DB-assisted round-trip lookup
 export function toSystem2NodeId(s1Id: string, _projectName: string): string {
   // If the id contains '::' it was produced by toSystem1NodeId.
   // Reconstruct the S2 qualified_name via a lookup-by-file+name+line is not

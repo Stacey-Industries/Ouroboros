@@ -339,13 +339,13 @@ describe('compatGetIndexStatus', () => {
 describe('compatSearchCode', () => {
   it('returns empty array for invalid regex pattern', async () => {
     const db = makeDb({ getNodesByLabel: vi.fn(() => []) })
-    const results = await compatSearchCode('/root', db, 'proj', '[invalid(', {})
+    const results = await compatSearchCode({ projectRoot: '/root', db, projectName: 'proj', pattern: '[invalid(', opts: {} })
     expect(results).toEqual([])
   })
 
   it('returns empty array when no file nodes exist', async () => {
     const db = makeDb({ getNodesByLabel: vi.fn(() => []) })
-    const results = await compatSearchCode('/root', db, 'proj', 'foo')
+    const results = await compatSearchCode({ projectRoot: '/root', db, projectName: 'proj', pattern: 'foo' })
     expect(results).toEqual([])
   })
 
@@ -354,7 +354,7 @@ describe('compatSearchCode', () => {
     // so we just verify the empty-file path is handled gracefully
     const fileNode = makeS2Node({ label: 'File', name: 'foo.ts', props: { path: 'src/foo.ts' } })
     const db = makeDb({ getNodesByLabel: vi.fn(() => [fileNode]) })
-    const results = await compatSearchCode('/nonexistent', db, 'proj', 'test')
+    const results = await compatSearchCode({ projectRoot: '/nonexistent', db, projectName: 'proj', pattern: 'test' })
     // readFile will throw for /nonexistent/src/foo.ts — should return []
     expect(Array.isArray(results)).toBe(true)
   })

@@ -197,13 +197,13 @@ export class GraphControllerCompat {
     pattern: string,
     opts?: { fileGlob?: string; maxResults?: number },
   ): Promise<Array<{ filePath: string; line: number; match: string }>> {
-    return compatSearchCode(
-      this.handle.projectRoot,
-      this.handle.db,
-      this.handle.projectName,
+    return compatSearchCode({
+      projectRoot: this.handle.projectRoot,
+      db: this.handle.db,
+      projectName: this.handle.projectName,
       pattern,
       opts,
-    )
+    })
   }
 
   // ─── Pass-through helpers ────────────────────────────────────────────────

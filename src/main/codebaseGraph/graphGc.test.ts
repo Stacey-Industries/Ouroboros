@@ -63,15 +63,22 @@ describe('pruneExpiredProjects', () => {
   })
 
   it('keeps a project whose last_opened_at is exactly at the threshold boundary', () => {
-    // Exactly thresholdDays old — should be kept (strictly less-than required to prune)
-    const boundaryTimestamp = Date.now() - 90 * DAY_MS
-    seedProject(db, 'boundary-project', boundaryTimestamp)
+    // Freeze time so Date.now() at seed and Date.now() inside pruneExpiredProjects
+    // are identical; otherwise the few-ms gap pushes cutoff past the seed timestamp.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-15T00:00:00Z'))
+    try {
+      const boundaryTimestamp = Date.now() - 90 * DAY_MS
+      seedProject(db, 'boundary-project', boundaryTimestamp)
 
-    const report = pruneExpiredProjects(db, 90)
+      const report = pruneExpiredProjects(db, 90)
 
-    // >= cutoff means kept (boundary is not strictly older)
-    expect(report.keptCount).toBe(1)
-    expect(report.prunedCount).toBe(0)
+      // >= cutoff means kept (boundary is not strictly older)
+      expect(report.keptCount).toBe(1)
+      expect(report.prunedCount).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('preserves projects with last_opened_at === 0 (never opened under new schema)', () => {

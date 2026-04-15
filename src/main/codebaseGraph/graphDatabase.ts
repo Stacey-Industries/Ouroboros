@@ -360,6 +360,10 @@ export class GraphDatabase {
     } catch { return true }
   }
 
+  private collectInboundNeighbours(id: string, next: Set<string>): void {
+    for (const e of this.getInboundEdges(id)) next.add(e.source_id)
+  }
+
   private expandCallers(seedIds: Set<string>, maxHops: number): Map<string, ChangedSymbol> {
     const result = new Map<string, ChangedSymbol>()
     let frontier = seedIds
@@ -370,9 +374,7 @@ export class GraphDatabase {
         const node = this.getNode(id)
         if (!node) continue
         result.set(id, { id: node.id, name: node.name, label: node.label, filePath: node.file_path, startLine: node.start_line, hopDepth: hop })
-        if (hop < maxHops) {
-          for (const e of this.getInboundEdges(id)) next.add(e.source_id)
-        }
+        if (hop < maxHops) this.collectInboundNeighbours(id, next)
       }
       frontier = next
       if (frontier.size === 0) break

@@ -30,6 +30,7 @@ describe('hashFileContent', () => {
   })
 
   it('returns a 32-char hex string for known content (regression vector)', async () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture write to os.tmpdir()
     await fs.writeFile(tmpFile, 'hello', 'utf-8')
     const hash = await hashFileContent(tmpFile)
     // Deterministic xxh3-128 result for "hello" — lock regression value
@@ -38,6 +39,7 @@ describe('hashFileContent', () => {
   })
 
   it('returns the same hash for identical content on repeated calls', async () => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture write to os.tmpdir()
     await fs.writeFile(tmpFile, 'deterministic content', 'utf-8')
     const h1 = await hashFileContent(tmpFile)
     const h2 = await hashFileContent(tmpFile)
@@ -47,7 +49,9 @@ describe('hashFileContent', () => {
   it('returns different hashes for different content', async () => {
     const fileA = path.join(tmpDir, 'a.txt')
     const fileB = path.join(tmpDir, 'b.txt')
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture write to os.tmpdir()
     await fs.writeFile(fileA, 'content A', 'utf-8')
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture write to os.tmpdir()
     await fs.writeFile(fileB, 'content B', 'utf-8')
     const hA = await hashFileContent(fileA)
     const hB = await hashFileContent(fileB)
