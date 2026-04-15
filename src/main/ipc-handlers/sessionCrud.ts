@@ -18,7 +18,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import log from '../logger';
-import type { Session } from '../session/session';
+import type { AgentMonitorSettings, Session } from '../session/session';
 import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
 import { createChatWindow } from '../windowManager';
@@ -118,6 +118,26 @@ function handleDelete(args: unknown): HandlerResult<object> {
   return ok({});
 }
 
+function handleUpdateAgentMonitorSettings(args: unknown): HandlerResult<object> {
+  const { sessionId, settings } = (args ?? {}) as {
+    sessionId?: string;
+    settings?: AgentMonitorSettings;
+  };
+  if (typeof sessionId !== 'string' || !sessionId) {
+    return fail('sessionId is required');
+  }
+  if (!settings || typeof settings !== 'object') {
+    return fail('settings is required');
+  }
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  const session = store.getById(sessionId);
+  if (!session) return fail(`session not found: ${sessionId}`);
+  store.upsert({ ...session, agentMonitorSettings: settings });
+  broadcastChanged();
+  return ok({});
+}
+
 function handleOpenChatWindow(args: unknown): HandlerResult<{ windowId: number }> {
   const { sessionId } = (args ?? {}) as { sessionId?: string };
   if (typeof sessionId !== 'string' || !sessionId) {
@@ -154,6 +174,9 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:archive', (_e, args) => handleArchive(args));
   reg('sessionCrud:delete', (_e, args) => handleDelete(args));
   reg('sessionCrud:openChatWindow', (_e, args) => handleOpenChatWindow(args));
+  reg('sessionCrud:updateAgentMonitorSettings', (_e, args) =>
+    handleUpdateAgentMonitorSettings(args),
+  );
 
   registeredChannels = channels;
   return channels;

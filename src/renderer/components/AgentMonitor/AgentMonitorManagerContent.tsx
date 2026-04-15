@@ -1,11 +1,13 @@
 import React, { memo, useMemo } from 'react';
 
+import type { AgentMonitorViewMode } from '../../types/electron';
 import { MultiSessionLauncher, MultiSessionMonitor } from '../MultiSession';
 import { AgentCard } from './AgentCard';
 import { ComparePanel, EmptyState, PreviousSessionsSection } from './AgentMonitorManagerPanels';
 import { AgentTree } from './AgentTree';
 import { CostDashboard } from './CostDashboard';
 import type { AgentSession } from './types';
+import { isEventTypeVisible } from './viewModeFilter';
 
 /** Build a map of sessionId -> number of direct children for the given sessions. */
 function buildChildCountMap(sessions: AgentSession[]): Map<string, number> {
@@ -35,8 +37,26 @@ interface AgentMonitorManagerContentProps {
   multiSessionMode: 'off' | 'launcher' | 'monitor';
   updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
   useTree: boolean;
+  viewMode?: AgentMonitorViewMode;
   visibleCurrentSessions: AgentSession[];
   visibleHistoricalSessions: AgentSession[];
+}
+
+/** Map AgentSession status to a hook event type string for viewMode filtering. */
+function sessionStatusToEventType(status: AgentSession['status']): string {
+  if (status === 'error') return 'post_tool_use_failure';
+  if (status === 'running') return 'pre_tool_use';
+  return 'session_end';
+}
+
+function applyViewModeToSessions(
+  sessions: AgentSession[],
+  viewMode: AgentMonitorViewMode,
+): AgentSession[] {
+  if (viewMode === 'verbose') return sessions;
+  return sessions.filter((s) =>
+    isEventTypeVisible(sessionStatusToEventType(s.status), viewMode),
+  );
 }
 
 interface SessionCardListProps {
@@ -218,6 +238,15 @@ function resolveMultiSessionContent(
 }
 
 function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactElement<unknown> {
+  const mode = props.viewMode ?? 'normal';
+  const filteredCurrent = useMemo(
+    () => applyViewModeToSessions(props.visibleCurrentSessions, mode),
+    [props.visibleCurrentSessions, mode],
+  );
+  const filteredHistorical = useMemo(
+    () => applyViewModeToSessions(props.visibleHistoricalSessions, mode),
+    [props.visibleHistoricalSessions, mode],
+  );
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <NormalMonitorPane
@@ -227,8 +256,8 @@ function NormalModeWrapper(props: AgentMonitorManagerContentProps): React.ReactE
         handleReviewChanges={props.handleReviewChanges}
         updateNotes={props.updateNotes}
         useTree={props.useTree}
-        visibleCurrentSessions={props.visibleCurrentSessions}
-        visibleHistoricalSessions={props.visibleHistoricalSessions}
+        visibleCurrentSessions={filteredCurrent}
+        visibleHistoricalSessions={filteredHistorical}
       />
     </div>
   );

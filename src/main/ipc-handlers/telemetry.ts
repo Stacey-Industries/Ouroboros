@@ -92,6 +92,27 @@ function handleQueryTraces(args: unknown): HandlerResult<{ traces: unknown[] }> 
   return ok({ traces });
 }
 
+// ─── Record UI event ─────────────────────────────────────────────────────────
+
+interface RecordEventArgs {
+  kind: string;
+  data?: unknown;
+}
+
+function handleRecordEvent(args: unknown): HandlerResult<object> {
+  const { kind, data } = (args ?? {}) as RecordEventArgs;
+  if (typeof kind !== 'string' || !kind) return fail('kind is required');
+  const store = getTelemetryStore();
+  if (!store) return ok({});
+  store.record({
+    type: `ui.${kind}`,
+    sessionId: 'ui',
+    timestamp: Date.now(),
+    data: data as Record<string, unknown> | undefined,
+  } as Parameters<typeof store.record>[0]);
+  return ok({});
+}
+
 // ─── Export trace ─────────────────────────────────────────────────────────────
 
 interface ExportTraceArgs {
@@ -141,6 +162,7 @@ export function registerTelemetryHandlers(): string[] {
   register(channels, 'telemetry:queryEvents', handleQueryEvents);
   register(channels, 'telemetry:queryOutcomes', handleQueryOutcomes);
   register(channels, 'telemetry:queryTraces', handleQueryTraces);
+  register(channels, 'telemetry:record', handleRecordEvent);
   register(channels, 'observability:exportTrace', handleExportTrace);
   registeredChannels = channels;
   return channels;

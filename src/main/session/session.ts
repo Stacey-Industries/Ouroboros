@@ -2,6 +2,18 @@ import { randomUUID } from 'node:crypto';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
+export type AgentMonitorViewMode = 'verbose' | 'normal' | 'summary';
+
+export interface AgentMonitorSettings {
+  viewMode: AgentMonitorViewMode;
+  inlineEventTypes: string[];
+}
+
+export const DEFAULT_AGENT_MONITOR_SETTINGS: AgentMonitorSettings = {
+  viewMode: 'normal',
+  inlineEventTypes: [],
+};
+
 export interface SessionCostRollup {
   totalUsd: number;
   inputTokens: number;
@@ -48,6 +60,8 @@ export interface Session {
   pinnedContext?: unknown[];
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
+  /** Wave 20 Phase C — AgentMonitor view mode + inline event preferences */
+  agentMonitorSettings?: AgentMonitorSettings;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -65,5 +79,6 @@ export function makeSession(projectRoot: string): Session {
     activeTerminalIds: [],
     costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },
     telemetry: { correlationIds: [], telemetrySessionId: id },
+    agentMonitorSettings: { ...DEFAULT_AGENT_MONITOR_SETTINGS },
   };
 }

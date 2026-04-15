@@ -26,6 +26,7 @@ export const telemetryApi: TelemetryApi = {
   queryEvents: (opts) => ipcRenderer.invoke('telemetry:queryEvents', opts),
   queryOutcomes: (eventId) => ipcRenderer.invoke('telemetry:queryOutcomes', eventId),
   queryTraces: (opts) => ipcRenderer.invoke('telemetry:queryTraces', opts),
+  record: (opts) => ipcRenderer.invoke('telemetry:record', opts),
 };
 
 export const observabilityApi: ObservabilityApi = {

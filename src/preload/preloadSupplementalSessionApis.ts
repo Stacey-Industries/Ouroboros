@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron';
 
-import type { ElectronAPI, SessionRecord } from '../renderer/types/electron';
+import type { AgentMonitorSettings, ElectronAPI, SessionRecord } from '../renderer/types/electron';
 
 type SessionCrudApiType = ElectronAPI['sessionCrud'];
 
@@ -19,6 +19,8 @@ export const sessionCrudApi: SessionCrudApiType = {
   delete: (sessionId: string) => ipcRenderer.invoke('sessionCrud:delete', { sessionId }),
   openChatWindow: (sessionId: string) =>
     ipcRenderer.invoke('sessionCrud:openChatWindow', { sessionId }),
+  updateAgentMonitorSettings: (sessionId: string, settings: AgentMonitorSettings) =>
+    ipcRenderer.invoke('sessionCrud:updateAgentMonitorSettings', { sessionId, settings }),
   onChanged: (callback: (sessions: SessionRecord[]) => void) =>
     onChannel<SessionRecord[]>('sessionCrud:changed', callback),
 };

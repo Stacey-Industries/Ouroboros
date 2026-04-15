@@ -13,8 +13,10 @@ import { AgentSummaryBar } from './AgentSummaryBar';
 import { hasTreeStructure } from './AgentTree';
 import type { AgentSession } from './types';
 import { type AgentMonitorModes, useAgentMonitorModes } from './useAgentMonitorModes';
+import { useAgentMonitorSettings } from './useAgentMonitorSettings';
 import { useAgentMonitorTemplates } from './useAgentMonitorTemplates';
 import { useCompletionNotifications } from './useCompletionNotifications';
+import { ViewModeSelector } from './ViewModeSelector';
 
 /**
  * Show ALL agent sessions in the monitor. Main agent sessions are tagged
@@ -140,6 +142,7 @@ function useAgentMonitorState() {
     projectRoot,
     toast,
   });
+  const monitorSettings = useAgentMonitorSettings();
   useCostTracking(agents);
   useCompletionNotifications(agents, toast);
   return {
@@ -148,6 +151,7 @@ function useAgentMonitorState() {
     dismiss,
     executeTemplate,
     modes,
+    monitorSettings,
     templates,
     updateNotes,
     ...derived,
@@ -167,6 +171,7 @@ interface MonitorBodyProps {
   useTree: boolean;
   visibleCurrentSessions: AgentSession[];
   visibleHistoricalSessions: AgentSession[];
+  monitorSettings: ReturnType<typeof useAgentMonitorSettings>;
 }
 
 const MonitorContent = memo(function MonitorContent(
@@ -190,15 +195,38 @@ const MonitorContent = memo(function MonitorContent(
       multiSessionMode={p.modes.multiSessionMode}
       updateNotes={p.updateNotes}
       useTree={p.useTree}
+      viewMode={p.monitorSettings.viewMode}
       visibleCurrentSessions={p.visibleCurrentSessions}
       visibleHistoricalSessions={p.visibleHistoricalSessions}
     />
   );
 });
 
+function MonitorViewModeBar({
+  monitorSettings,
+}: {
+  monitorSettings: ReturnType<typeof useAgentMonitorSettings>;
+}): React.ReactElement<unknown> {
+  return (
+    <div
+      className="flex items-center justify-end px-2 py-1 flex-shrink-0"
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
+    >
+      <ViewModeSelector
+        value={monitorSettings.viewMode}
+        onChange={(mode) => void monitorSettings.updateSettings({
+          viewMode: mode,
+          inlineEventTypes: monitorSettings.inlineEventTypes,
+        })}
+      />
+    </div>
+  );
+}
+
 const MonitorBody = memo(function MonitorBody(p: MonitorBodyProps): React.ReactElement<unknown> {
   return (
     <div className="flex flex-col h-full min-h-0">
+      <MonitorViewModeBar monitorSettings={p.monitorSettings} />
       <QuickActionBar templates={p.templates} onExecuteTemplate={p.executeTemplate} />
       {p.agents.length > 0 ? (
         <div className="flex-shrink-0">

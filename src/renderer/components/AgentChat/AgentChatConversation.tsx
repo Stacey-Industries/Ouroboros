@@ -2,6 +2,7 @@ import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
 import React, { useMemo } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
+import { useAgentMonitorSettings } from '../AgentMonitor/useAgentMonitorSettings';
 import { ComposerSection, ConversationBody } from './AgentChatConversationBody';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
 import { QueuedMessageBanner } from './AgentChatMessageComponents';
@@ -15,6 +16,8 @@ import {
   useAgentChatThread,
 } from './agentChatSelectors';
 import { buildThreadModelUsage } from './ChatControlsBarSupport';
+import { InlineEventCard } from './InlineEventCard';
+import { buildInlineEvents } from './inlineEventsSupport';
 import { useAgentChatStreaming } from './useAgentChatStreaming';
 
 /** Per-model context usage entry. */
@@ -105,6 +108,31 @@ function ConversationComposer({ streaming }: { streaming: ReturnType<typeof useA
   );
 }
 
+/* ── Inline event strip (shown above composer when inlineEventTypes is set) ── */
+
+const MAX_INLINE_EVENTS = 5;
+
+function InlineEventStrip(): React.ReactElement | null {
+  const { agents } = useAgentEventsContext();
+  const { inlineEventTypes } = useAgentMonitorSettings();
+  const events = useMemo(
+    () => buildInlineEvents(agents, inlineEventTypes).slice(-MAX_INLINE_EVENTS),
+    [agents, inlineEventTypes],
+  );
+  if (events.length === 0) return null;
+  return (
+    <div
+      className="flex-shrink-0 flex flex-col gap-0.5 py-1"
+      style={{ borderTop: '1px solid var(--border-subtle)' }}
+      aria-label="Recent agent events"
+    >
+      {events.map((event) => (
+        <InlineEventCard key={event.id} event={event} />
+      ))}
+    </div>
+  );
+}
+
 /* ── Main conversation component ─────────────────────────────────────────── */
 
 export function AgentChatConversation(): React.ReactElement {
@@ -122,6 +150,7 @@ export function AgentChatConversation(): React.ReactElement {
         pendingUserMessage={thread.pendingUserMessage} onSelectThread={actions.onSelectThread}
         onDraftChange={actions.onDraftChange}
       />
+      <InlineEventStrip />
       <ConversationQueue />
       <ConversationComposer streaming={streaming} />
       <ConversationDrawer />

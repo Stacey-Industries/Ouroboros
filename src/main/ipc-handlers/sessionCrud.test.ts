@@ -103,7 +103,7 @@ describe('registerSessionCrudHandlers', () => {
     cleanupSessionCrudHandlers();
   });
 
-  it('registers all 7 channels', () => {
+  it('registers all 8 channels', () => {
     const channels = mockHandle.mock.calls.map(([ch]) => ch as string);
     expect(channels).toContain('sessionCrud:list');
     expect(channels).toContain('sessionCrud:active');
@@ -112,6 +112,7 @@ describe('registerSessionCrudHandlers', () => {
     expect(channels).toContain('sessionCrud:archive');
     expect(channels).toContain('sessionCrud:delete');
     expect(channels).toContain('sessionCrud:openChatWindow');
+    expect(channels).toContain('sessionCrud:updateAgentMonitorSettings');
   });
 
   it('sessionCrud:list returns empty array when store has no sessions', async () => {
@@ -224,9 +225,53 @@ describe('registerSessionCrudHandlers', () => {
     expect(result.error).toMatch(/sessionId/);
   });
 
+  it('sessionCrud:updateAgentMonitorSettings persists settings to the session', async () => {
+    const s = makeSession('/projects/theta');
+    store.upsert(s);
+    const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
+    const settings = { viewMode: 'summary' as const, inlineEventTypes: ['pre_tool_use'] };
+    const result = await handler?.(makeEvent(), { sessionId: s.id, settings }) as {
+      success: boolean;
+    };
+    expect(result.success).toBe(true);
+    const updated = store.getById(s.id);
+    expect(updated?.agentMonitorSettings?.viewMode).toBe('summary');
+    expect(updated?.agentMonitorSettings?.inlineEventTypes).toEqual(['pre_tool_use']);
+  });
+
+  it('sessionCrud:updateAgentMonitorSettings fails without sessionId', async () => {
+    const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
+    const result = await handler?.(makeEvent(), {
+      settings: { viewMode: 'normal', inlineEventTypes: [] },
+    }) as { success: boolean; error: string };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/sessionId/);
+  });
+
+  it('sessionCrud:updateAgentMonitorSettings fails without settings', async () => {
+    const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
+    const result = await handler?.(makeEvent(), { sessionId: 'no-settings' }) as {
+      success: boolean; error: string;
+    };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/settings/);
+  });
+
+  it('sessionCrud:updateAgentMonitorSettings broadcasts changed', async () => {
+    const s = makeSession('/projects/iota');
+    store.upsert(s);
+    mockSend.mockClear();
+    const handler = captureHandler('sessionCrud:updateAgentMonitorSettings');
+    await handler?.(makeEvent(), {
+      sessionId: s.id,
+      settings: { viewMode: 'verbose', inlineEventTypes: [] },
+    });
+    expect(mockSend).toHaveBeenCalledWith('sessionCrud:changed', expect.any(Array));
+  });
+
   it('cleanupSessionCrudHandlers calls removeHandler for each channel', () => {
     mockRemoveHandler.mockClear();
     cleanupSessionCrudHandlers();
-    expect(mockRemoveHandler).toHaveBeenCalledTimes(7);
+    expect(mockRemoveHandler).toHaveBeenCalledTimes(8);
   });
 });

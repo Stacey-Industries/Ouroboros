@@ -1,6 +1,6 @@
 import type { AppConfig, WindowSession } from '../config';
 import log from '../logger';
-import { makeSession, type Session } from './session';
+import { DEFAULT_AGENT_MONITOR_SETTINGS, makeSession, type Session } from './session';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,6 +9,10 @@ type SetConfig = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => voi
 
 export interface MigrationResult {
   migrated: number;
+}
+
+export interface AgentMonitorMigrationResult {
+  patched: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,4 +56,27 @@ export async function migrateWindowSessionsToSessions(
   // NOTE: windowSessions key is intentionally preserved as a deprecated fallback
   // for two releases per Wave 16 migration plan §4.
   return { migrated: sessions.length };
+}
+
+// ─── Wave 20 Phase C — add agentMonitorSettings to existing sessions ──────────
+
+export function migrateAgentMonitorSettings(
+  getConfig: GetConfig,
+  setConfig: SetConfig,
+): AgentMonitorMigrationResult {
+  const existing = (getConfig('sessionsData') as Session[] | undefined) ?? [];
+  if (!Array.isArray(existing) || existing.length === 0) {
+    return { patched: 0 };
+  }
+  let patched = 0;
+  const updated = existing.map((session) => {
+    if (session.agentMonitorSettings !== undefined) return session;
+    patched += 1;
+    return { ...session, agentMonitorSettings: { ...DEFAULT_AGENT_MONITOR_SETTINGS } };
+  });
+  if (patched > 0) {
+    setConfig('sessionsData', updated as never);
+    log.info(`[sessionMigration] patched agentMonitorSettings on ${patched} session(s)`);
+  }
+  return { patched };
 }

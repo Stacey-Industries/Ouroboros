@@ -76,6 +76,8 @@ export interface TelemetryAPI {
   queryEvents(opts: QueryEventsOptions): Promise<QueryEventsResult>;
   queryOutcomes(eventId: string): Promise<QueryOutcomesResult>;
   queryTraces(opts: { sessionId: string; limit?: number }): Promise<QueryTracesResult>;
+  /** Record a free-form UI telemetry event (e.g. preference changes). */
+  record(opts: { kind: string; data?: unknown }): Promise<{ success: boolean; error?: string }>;
 }
 
 export interface ObservabilityAPI {

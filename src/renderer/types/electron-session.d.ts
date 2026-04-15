@@ -8,6 +8,15 @@
 
 import type { IpcResult } from './electron-foundation';
 
+// ─── AgentMonitor settings ────────────────────────────────────────────────────
+
+export type AgentMonitorViewMode = 'verbose' | 'normal' | 'summary';
+
+export interface AgentMonitorSettings {
+  viewMode: AgentMonitorViewMode;
+  inlineEventTypes: string[];
+}
+
 // ─── Session type (structural mirror of src/main/session/session.ts) ──────────
 
 export interface SessionCostRollup {
@@ -39,6 +48,7 @@ export interface SessionRecord {
   activeTerminalIds: string[];
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
+  agentMonitorSettings?: AgentMonitorSettings;
 }
 
 // ─── Result shapes ────────────────────────────────────────────────────────────
@@ -72,6 +82,11 @@ export interface SessionCrudAPI {
   delete: (sessionId: string) => Promise<IpcResult>;
   /** Open a dedicated chat BrowserWindow for the given session. */
   openChatWindow: (sessionId: string) => Promise<IpcResult & { windowId?: number }>;
+  /** Update the agentMonitorSettings for a session. */
+  updateAgentMonitorSettings: (
+    sessionId: string,
+    settings: AgentMonitorSettings,
+  ) => Promise<IpcResult>;
   /** Subscribe to store mutation events. Returns cleanup fn. */
   onChanged: (callback: (sessions: SessionRecord[]) => void) => () => void;
 }
