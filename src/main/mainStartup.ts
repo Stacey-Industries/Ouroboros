@@ -15,9 +15,14 @@ import {
   initCompatRegistry,
 } from './codebaseGraph/graphControllerCompatRegistry';
 import { setGraphController, setSystem2Db } from './codebaseGraph/graphControllerSupport';
-import { pruneExpiredProjects } from './codebaseGraph/graphGc';
+import { pruneExpiredProjects, purgeSkippedNodes } from './codebaseGraph/graphGc';
 import { getConfigValue } from './config';
 import log from './logger';
+import {
+  closeEditProvenance as closeEP,
+  initEditProvenance,
+} from './orchestration/editProvenance';
+export { initEditProvenance };
 import { setGithubTokenForPty } from './ptyEnv';
 import { getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
@@ -227,6 +232,20 @@ function resolveIndexReason(
   return null
 }
 
+function runGraphGcPasses(db: import('./codebaseGraph/graphDatabase').GraphDatabase): string[] {
+  const gcConfig = getConfigValue('codebaseGraph');
+  let prunedNames: string[] = []
+  if (gcConfig?.gcEnabled) {
+    const report = pruneExpiredProjects(db, gcConfig.gcDaysThreshold);
+    if (report.prunedCount > 0) {
+      log.info(`[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`);
+      prunedNames = report.prunedProjects
+    }
+  }
+  purgeSkippedNodes(db); // one-time migration: evict .claude/worktrees nodes
+  return prunedNames
+}
+
 async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   const { GraphDatabase } = await import('./codebaseGraph/graphDatabase');
   const { IndexingPipeline } = await import('./codebaseGraph/indexingPipeline');
@@ -247,15 +266,7 @@ async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   });
 
   const projectName = path.basename(projectRoot);
-  const gcConfig = getConfigValue('codebaseGraph');
-  let gcPrunedNames: string[] = []
-  if (gcConfig?.gcEnabled) {
-    const report = pruneExpiredProjects(db, gcConfig.gcDaysThreshold);
-    if (report.prunedCount > 0) {
-      log.info(`[system2] GC pruned ${report.prunedCount} stale project(s): ${report.prunedProjects.join(', ')}`);
-      gcPrunedNames = report.prunedProjects
-    }
-  }
+  const gcPrunedNames = runGraphGcPasses(db);
 
   const reason = resolveIndexReason(db, projectName, gcPrunedNames)
   if (reason !== null) {
@@ -349,4 +360,9 @@ export function ensureSingleInstance(): void {
     app.quit();
     process.exit(0);
   }
+}
+
+/** Close edit provenance store on app shutdown. */
+export function closeEditProvenance(): void {
+  closeEP()
 }

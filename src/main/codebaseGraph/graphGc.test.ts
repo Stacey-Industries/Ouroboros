@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GraphDatabase } from './graphDatabase'
-import { pruneExpiredProjects } from './graphGc'
+import { pruneExpiredProjects, purgeSkippedNodes } from './graphGc'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,5 +106,78 @@ describe('pruneExpiredProjects', () => {
     expect(report.prunedProjects).toContain('expired-b')
     expect(db.getProject('fresh')).not.toBeNull()
     expect(db.getProject('never-opened')).not.toBeNull()
+  })
+})
+
+// ─── purgeSkippedNodes ────────────────────────────────────────────────────────
+
+describe('purgeSkippedNodes', () => {
+  let db: GraphDatabase
+
+  beforeEach(() => {
+    db = new GraphDatabase(':memory:')
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    db.upsertProject({ name: 'proj', root_path: '/repo', indexed_at: Date.now(), node_count: 0, edge_count: 0 })
+  })
+
+  afterEach(() => {
+    db.close()
+    vi.restoreAllMocks()
+  })
+
+  function insertNode(id: string, filePath: string): void {
+    db.insertNode({
+      id, project: 'proj', label: 'Function', name: id,
+      qualified_name: `proj::${id}`, file_path: filePath,
+      start_line: 1, end_line: 5, props: {},
+    })
+  }
+
+  it('evicts nodes whose file_path contains .claude/worktrees/', () => {
+    insertNode('stale1', '/repo/.claude/worktrees/abc/src/foo.ts')
+    insertNode('clean1', '/repo/src/bar.ts')
+
+    const report = purgeSkippedNodes(db)
+
+    expect(report.alreadyDone).toBe(false)
+    expect(report.totalPurged).toBe(1)
+    expect(db.getNode('stale1')).toBeNull()
+    expect(db.getNode('clean1')).not.toBeNull()
+  })
+
+  it('is idempotent — second call returns alreadyDone=true without touching DB', () => {
+    insertNode('node-a', '/repo/.claude/worktrees/def/x.ts')
+
+    purgeSkippedNodes(db) // first pass — purges
+    insertNode('node-b', '/repo/.claude/worktrees/def/y.ts') // re-insert after pass
+
+    const report = purgeSkippedNodes(db) // second pass — should be no-op
+
+    expect(report.alreadyDone).toBe(true)
+    expect(report.totalPurged).toBe(0)
+    // node-b still exists because the second pass was skipped
+    expect(db.getNode('node-b')).not.toBeNull()
+  })
+
+  it('preserves all nodes when no worktree paths exist', () => {
+    insertNode('f1', '/repo/src/a.ts')
+    insertNode('f2', '/repo/lib/b.ts')
+
+    const report = purgeSkippedNodes(db)
+
+    expect(report.totalPurged).toBe(0)
+    expect(db.getNode('f1')).not.toBeNull()
+    expect(db.getNode('f2')).not.toBeNull()
+  })
+
+  it('handles multiple projects in a single pass', () => {
+    db.upsertProject({ name: 'other', root_path: '/other', indexed_at: Date.now(), node_count: 0, edge_count: 0 })
+    db.insertNode({ id: 'w1', project: 'proj', label: 'Function', name: 'w1', qualified_name: 'proj::w1', file_path: '/proj/.claude/worktrees/x/a.ts', start_line: 1, end_line: 1, props: {} })
+    db.insertNode({ id: 'w2', project: 'other', label: 'Function', name: 'w2', qualified_name: 'other::w2', file_path: '/other/.claude/worktrees/y/b.ts', start_line: 1, end_line: 1, props: {} })
+
+    const report = purgeSkippedNodes(db)
+
+    expect(report.totalPurged).toBe(2)
+    expect(report.projectsScanned).toBe(2)
   })
 })

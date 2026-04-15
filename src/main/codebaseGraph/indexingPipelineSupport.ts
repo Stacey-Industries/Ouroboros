@@ -56,6 +56,21 @@ export const ALWAYS_IGNORE_EXTENSIONS = new Set([
   'wasm',
 ])
 
+// ─── Skip-path predicate (used by GC and incremental reindex) ─────────────────
+
+/** Pattern matching `.claude/worktrees/` subtrees — indexing these creates stale hotspot noise. */
+const WORKTREE_RE = /[/\\]\.claude[/\\]worktrees[/\\]/
+
+/**
+ * Returns true when an absolute or relative file path should never be indexed.
+ * Combines ALWAYS_IGNORE_DIRS segment membership with the worktree path regex.
+ */
+export function isPathSkipped(filePath: string): boolean {
+  if (WORKTREE_RE.test(filePath)) return true
+  const segments = filePath.replace(/\\/g, '/').split('/')
+  return segments.some((seg) => ALWAYS_IGNORE_DIRS.has(seg))
+}
+
 // ─── .gitignore / .cbmignore loading ─────────────────────────────────────────
 
 export async function loadIgnoreRules(

@@ -160,6 +160,18 @@ export class GraphDatabase {
     this.stmts.deleteNodesByFile.run(project, filePath)
   }
 
+  /**
+   * Delete all nodes for a project whose file_path contains the given substring.
+   * Used by the GC pass to bulk-evict nodes matching skip rules (e.g. worktree paths).
+   * Returns the count of deleted nodes.
+   */
+  deleteNodesByFilePathSubstring(project: string, substring: string): number {
+    const result = this.db
+      .prepare("DELETE FROM nodes WHERE project = ? AND file_path LIKE ? ESCAPE '\\'")
+      .run(project, `%${substring.replace(/[%_\\]/g, '\\$&')}%`)
+    return result.changes
+  }
+
   updateNodeProps(id: string, props: Record<string, unknown>): void {
     this.stmts.updateNodeProps.run({ id, props: JSON.stringify(props) })
   }

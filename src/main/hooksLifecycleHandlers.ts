@@ -13,6 +13,7 @@ import type { PermissionContext } from '@shared/types/permissionContext';
 import { getGraphController } from './codebaseGraph/graphControllerSupport';
 import { getContextLayerController } from './contextLayer/contextLayerController';
 import log from './logger';
+import { getEditProvenanceStore } from './orchestration/editProvenance';
 
 // ---------------------------------------------------------------------------
 // Permission context cache — keyed by `sessionId:toolName`.
@@ -109,11 +110,24 @@ export function handleCwdChanged(
 /**
  * Handle a file_changed event: notify the context layer and graph controller
  * that files may have changed on disk (lighter signal than onGitCommit).
+ * Also marks user edits for provenance tracking when no recent agent edit exists.
  */
-export function handleFileChanged(payload: { internal?: boolean }): void {
+export function handleFileChanged(
+  payload: { internal?: boolean; data?: Record<string, unknown> },
+): void {
   if (payload.internal) return;
   getContextLayerController()?.onFileChanged?.();
   getGraphController()?.onFileChange?.([]);
+  const filePath = payload.data?.['file'] as string | undefined;
+  if (filePath) {
+    setImmediate(() => {
+      try {
+        getEditProvenanceStore()?.markUserEdit(filePath);
+      } catch (err) {
+        log.warn('[editProvenance] markUserEdit error:', err);
+      }
+    });
+  }
 }
 
 /**

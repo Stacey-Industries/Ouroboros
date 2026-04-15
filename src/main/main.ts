@@ -33,10 +33,10 @@ import {
   bootstrapApp,
   bootstrapCrashReporter,
   bootstrapProcessHandlers,
-  configureAutoUpdater,
+  closeEditProvenance, configureAutoUpdater,
   disposeCodebaseGraph,
   ensureSingleInstance,
-  initCodebaseGraph,
+  initCodebaseGraph, initEditProvenance,
   seedGithubTokenWithRetry,
   writeCrashLog,
 } from './mainStartup';
@@ -245,6 +245,7 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
+  initEditProvenance(app.getPath('userData')); // Wave 18: edit provenance tracking
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
   await migrateSecretsIfNeeded();
@@ -300,8 +301,7 @@ app.on('window-all-closed', async () => {
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
   closeSessionServices();
-  closeOutcomeObserver();
-  closeTelemetryStore();
+  closeOutcomeObserver(); closeTelemetryStore(); closeEditProvenance();
   stopRetrainObserver();
   clearQualityTimers();
   await stopClaudeUsagePoller();

@@ -28,6 +28,7 @@ import {
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
 import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
 import log from './logger';
+import { getEditProvenanceStore } from './orchestration/editProvenance';
 import { shadowRouteHookEvent } from './router/routerShadow';
 import { getOutcomeObserver, getTelemetryStore } from './telemetry';
 import { broadcastToWebClients } from './web/webServer';
@@ -242,6 +243,22 @@ function tapConflictMonitor(payload: HookPayload): void {
   });
 }
 
+function tapEditProvenance(payload: HookPayload): void {
+  if (payload.type !== 'post_tool_use') return;
+  if (!payload.toolName || !CONFLICT_EDIT_TOOLS.has(payload.toolName)) return;
+  const filePath =
+    (payload.input as Record<string, unknown> | undefined)?.file_path as string | undefined ??
+    (payload.input as Record<string, unknown> | undefined)?.path as string | undefined;
+  if (!filePath) return;
+  setImmediate(() => {
+    try {
+      getEditProvenanceStore()?.markAgentEdit(filePath, payload.correlationId);
+    } catch (err) {
+      log.warn('[editProvenance] markAgentEdit error:', err);
+    }
+  });
+}
+
 function dispatchToRenderer(rawPayload: HookPayload): void {
   if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
     log.info(
@@ -278,6 +295,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   handleApprovalRequest(payload);
   clearApprovalRulesForEndedSession(payload);
   tapConflictMonitor(payload);
+  tapEditProvenance(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -329,6 +347,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
   tapConflictMonitor(payload);
+  tapEditProvenance(payload);
 }
 
 export function getHooksAddress(): string | null {
