@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { ipcOn, ipcRemoveListener } = vi.hoisted(() => ({
+const { ipcOn, ipcRemoveListener, ipcInvoke } = vi.hoisted(() => ({
   ipcOn: vi.fn(),
   ipcRemoveListener: vi.fn(),
+  // Phase-0 stubs delegate to main-process IPC handlers that uniformly return
+  // not-yet-implemented until Wave 6 ships. Simulate that contract here.
+  ipcInvoke: vi.fn().mockResolvedValue({ success: false, error: 'not-yet-implemented' }),
 }));
 
 vi.mock('electron', () => ({
   ipcRenderer: {
     on: ipcOn,
     removeListener: ipcRemoveListener,
-    invoke: vi.fn(),
+    invoke: ipcInvoke,
   },
 }));
 

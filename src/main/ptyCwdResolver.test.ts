@@ -29,7 +29,7 @@ vi.mock('node:child_process', () => ({
 }));
 
 vi.mock('./logger', () => ({
-  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ describe('resolvePtyCwd', () => {
   it('win32: returns fallback and logs once', async () => {
     setPlatform('win32');
     const log = (await import('./logger')).default;
-    const spy = vi.spyOn(log, 'info');
+    const spy = vi.spyOn(log, 'debug');
     const { resolvePtyCwd } = await import('./ptyCwdResolver');
     const result = await resolvePtyCwd(99, 'C:\\Users\\dev\\project');
     expect(result).toBe('C:\\Users\\dev\\project');

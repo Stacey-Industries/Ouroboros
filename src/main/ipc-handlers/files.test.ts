@@ -48,24 +48,30 @@ const { mockBroadcastFileChange } = vi.hoisted(() => ({
 }));
 vi.mock('./filesHelpers', () => ({
   broadcastFileChange: mockBroadcastFileChange,
+  createDirItem: vi.fn(),
   createExclusiveFile: vi.fn(),
+  createSelectFolderHandler: vi.fn(() => vi.fn()),
   ensureDirExists: vi.fn(),
+  flushFileChangesOnShutdown: vi.fn(),
+  handleShowImageDialog: vi.fn(),
   handleSoftDeleteOp: vi.fn(),
   isTempDeletionPath: vi.fn(),
   listDirectoryItems: vi.fn(),
   loadBinaryContent: vi.fn(),
   loadImageAttachment: vi.fn(),
   loadTextContent: vi.fn(),
+  mimeTypeForImage: vi.fn(() => 'image/png'),
   movePath: vi.fn(),
   pathExists: vi.fn(),
   readFileWithLimit: vi.fn(),
+  MAX_READ_BYTES: 100 * 1024 * 1024,
+  toErrorMessage: vi.fn((err: unknown) => (err instanceof Error ? err.message : String(err))),
   toErrorResult: vi.fn((err: unknown) => ({
     success: false,
     error: err instanceof Error ? err.message : String(err),
   })),
   writeBinaryFile: vi.fn(),
   writeTextFile: vi.fn(),
-  flushFileChangesOnShutdown: vi.fn(),
 }));
 
 // ── @parcel/watcher stub via ../watchers ───────────────────────────────────────

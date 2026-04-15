@@ -13,8 +13,8 @@ vi.mock('./logger', () => ({
 }));
 vi.mock('./pipeAuth', () => ({
   getToolServerToken: vi.fn(() => 'test-token'),
-  validatePipeAuth: vi.fn((_line: string, token: string) => {
-    try { return JSON.parse(_line).auth === token; } catch { return false; }
+  validatePipeAuthWithGrace: vi.fn((_line: string) => {
+    try { return JSON.parse(_line).auth === 'test-token'; } catch { return false; }
   }),
 }));
 
