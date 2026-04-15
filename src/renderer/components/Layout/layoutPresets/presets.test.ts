@@ -80,8 +80,9 @@ describe('chatPrimaryPreset', () => {
     expect(chatPrimaryPreset.id).toBe('chat-primary');
   });
 
-  it('is a scaffold — slots are empty pending Wave 20', () => {
-    expect(Object.keys(chatPrimaryPreset.slots)).toHaveLength(0);
+  it('is populated in Wave 20 — slots include chat + session sidebar', () => {
+    const slotKeys = Object.keys(chatPrimaryPreset.slots);
+    expect(slotKeys.length).toBeGreaterThan(0);
   });
 });
 

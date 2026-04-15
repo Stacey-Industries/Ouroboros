@@ -5,7 +5,7 @@
 import { useCallback,useEffect } from 'react';
 
 import type { WorkspaceLayout } from '../types/electron';
-import { OPEN_USAGE_PANEL_EVENT } from './appEventNames';
+import { OPEN_USAGE_PANEL_EVENT, TOGGLE_LAYOUT_MODE_EVENT } from './appEventNames';
 
 interface KeyboardShortcutsDeps {
   keybindings: Record<string, string>
@@ -66,10 +66,20 @@ function handleUsagePanelShortcut(e: KeyboardEvent): boolean {
   return false;
 }
 
+function handleLayoutModeToggle(e: KeyboardEvent): boolean {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toUpperCase() === 'L') {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent(TOGGLE_LAYOUT_MODE_EVENT));
+    return true;
+  }
+  return false;
+}
+
 export function useKeyboardShortcuts(deps: KeyboardShortcutsDeps): void {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (handleUsagePanelShortcut(e)) return;
+      if (handleLayoutModeToggle(e)) return;
       const reverseMap = buildReverseMap(deps.keybindings);
       const combo = buildComboFromEvent(e);
       const action = reverseMap.get(combo);

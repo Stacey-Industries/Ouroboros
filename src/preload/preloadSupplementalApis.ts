@@ -25,36 +25,16 @@ import type {
 } from '../renderer/types/electron';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
+import { sessionCrudApi } from './preloadSupplementalSessionApis';
 
 type SupplementalApiKey =
-  | 'approval'
-  | 'sessions'
-  | 'cost'
-  | 'usage'
-  | 'shellHistory'
-  | 'updater'
-  | 'crash'
-  | 'perf'
-  | 'symbol'
-  | 'lsp'
-  | 'window'
-  | 'extensions'
-  | 'mcp'
-  | 'mcpStore'
-  | 'extensionStore'
-  | 'context'
-  | 'ideTools'
-  | 'codemode'
-  | 'agentChat'
-  | 'orchestration'
-  | 'contextLayer'
-  | 'claudeMd'
-  | 'router'
-  | 'rulesAndSkills'
-  | 'ai' | 'embedding'
-  | 'telemetry' | 'observability'
-  | 'workspace'
-  | 'system2';
+  | 'approval' | 'sessions' | 'cost' | 'usage' | 'shellHistory'
+  | 'updater' | 'crash' | 'perf' | 'symbol' | 'lsp'
+  | 'window' | 'extensions' | 'mcp' | 'mcpStore' | 'extensionStore'
+  | 'context' | 'ideTools' | 'codemode' | 'agentChat' | 'orchestration'
+  | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
+  | 'ai' | 'embedding' | 'telemetry' | 'observability'
+  | 'workspace' | 'system2' | 'sessionCrud';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -315,26 +295,20 @@ export const supplementalApis: SupplementalApis = {
   },
 
   router: { getStats: () => ipcRenderer.invoke('router:getStats') },
-
   rulesAndSkills: rulesAndSkillsApi,
-
   ai: aiApi,
-
   embedding: embeddingApi,
-
   telemetry: telemetryApi,
-
   observability: observabilityApi,
-
   workspace: {
     isTrusted: (p: string) => ipcRenderer.invoke('workspace:isTrusted', p),
     trustLevel: (roots: string[]) => ipcRenderer.invoke('workspace:trustLevel', roots),
     trust: (p: string) => ipcRenderer.invoke('workspace:trust', p),
     untrust: (p: string) => ipcRenderer.invoke('workspace:untrust', p),
   },
-
   system2: {
     onIndexProgress: (callback) =>
       onChannel<System2IndexProgressEvent>('system2:indexProgress', callback),
   },
+  sessionCrud: sessionCrudApi,
 };

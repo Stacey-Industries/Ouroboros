@@ -35,6 +35,7 @@ import type {
   ShellAPI,
   ThemeAPI,
 } from './electron-runtime-apis';
+import type { SessionCrudAPI } from './electron-session';
 import type { SpecAPI } from './electron-spec';
 import type { System2API } from './electron-system2';
 import type { ObservabilityAPI, TelemetryAPI } from './electron-telemetry';
@@ -275,6 +276,7 @@ export interface ElectronAPI {
   checkpoint: CheckpointAPI;
   spec: SpecAPI;
   system2: System2API;
+  sessionCrud: SessionCrudAPI;
 }
 
 export interface WorkspaceAPI {

@@ -53,12 +53,26 @@ export const idePrimaryPreset: LayoutPreset = {
 export const chatPrimaryPreset: LayoutPreset = {
   id: 'chat-primary',
   name: 'Chat',
-  // TODO(Wave 20): slot assignments — chat component in editorContent, AgentCards in drawer
-  slots: {},
-  // TODO(Wave 20): wider right sidebar default
-  panelSizes: {},
-  // TODO(Wave 20): hide leftSidebar by default in chat mode
-  visiblePanels: {},
+  slots: {
+    sidebarHeader: { componentKey: 'ProjectPicker' },
+    sidebarContent: { componentKey: 'SessionSidebar' },
+    editorTabBar: { componentKey: 'EditorTabBar' },
+    editorContent: { componentKey: 'AgentChatWorkspace' },
+    agentCards: { componentKey: 'AgentSidebarContent' },
+    terminalContent: { componentKey: 'TerminalManager' },
+  },
+  // Wider left sidebar for session list; wider right for chat column.
+  panelSizes: {
+    leftSidebar: 260,
+    rightSidebar: 480,
+    terminal: 200,
+  },
+  // Terminal collapsed by default — chat is the primary surface.
+  visiblePanels: {
+    leftSidebar: true,
+    rightSidebar: true,
+    terminal: false,
+  },
 };
 
 // ---------------------------------------------------------------------------

@@ -28,3 +28,5 @@ export const GO_BACK_EVENT = 'agent-ide:go-back';
 export const GO_FORWARD_EVENT = 'agent-ide:go-forward';
 export const REFRESH_FILE_TREE_EVENT = 'agent-ide:refresh-files';
 export const SWITCH_SIDEBAR_VIEW_EVENT = 'agent-ide:switch-sidebar-view';
+export const TOGGLE_LAYOUT_MODE_EVENT = 'agent-ide:toggle-layout-mode';
+export const SESSION_SWITCH_EVENT = 'agent-ide:session-switch';
