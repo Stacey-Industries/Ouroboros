@@ -1,5 +1,6 @@
 import log from '../logger';
 import type { Session } from './session';
+import { emitSessionActivated, emitSessionArchived, emitSessionCreated } from './sessionLifecycle';
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -29,12 +30,15 @@ let singleton: SessionStore | null = null;
 function applyUpsert(adaptor: StoreAdaptor, session: Session): void {
   const all = adaptor.read();
   const idx = all.findIndex((s) => s.id === session.id);
-  if (idx >= 0) {
-    all.splice(idx, 1, session);
-  } else {
+  const isNew = idx < 0;
+  if (isNew) {
     all.push(session);
+  } else {
+    all.splice(idx, 1, session);
   }
   adaptor.write(all);
+  if (isNew) emitSessionCreated(session);
+  else emitSessionActivated(session);
 }
 
 function applyArchive(adaptor: StoreAdaptor, id: string): void {
@@ -49,6 +53,7 @@ function applyArchive(adaptor: StoreAdaptor, id: string): void {
   const updated = { ...existing, archivedAt: new Date().toISOString() };
   all.splice(idx, 1, updated);
   adaptor.write(all);
+  emitSessionArchived(updated);
 }
 
 function applyDelete(adaptor: StoreAdaptor, id: string): void {

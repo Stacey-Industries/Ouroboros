@@ -4,9 +4,16 @@
  * Uses openSessionStore() with an in-memory adaptor — no electron-store needed.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./sessionLifecycle', () => ({
+  emitSessionCreated: vi.fn(),
+  emitSessionActivated: vi.fn(),
+  emitSessionArchived: vi.fn(),
+}));
 
 import { makeSession } from './session';
+import { emitSessionActivated, emitSessionArchived, emitSessionCreated } from './sessionLifecycle';
 import { openSessionStore } from './sessionStore';
 
 // ─── In-memory adaptor factory ────────────────────────────────────────────────
@@ -200,5 +207,40 @@ describe('round-trip persistence', () => {
     // Open a second store instance over the same adaptor to verify persistence
     const store2 = openSessionStore(adaptor);
     expect(store2.getById(s.id)).toEqual(s);
+  });
+});
+
+describe('lifecycle emission', () => {
+  it('emits sessionCreated on first upsert of a new id', () => {
+    vi.clearAllMocks();
+    const store = openSessionStore(makeAdaptor());
+    const s = makeSession('/projects/foo');
+    store.upsert(s);
+    expect(emitSessionCreated).toHaveBeenCalledWith(s);
+    expect(emitSessionActivated).not.toHaveBeenCalled();
+  });
+
+  it('emits sessionActivated on subsequent upsert of an existing id', () => {
+    vi.clearAllMocks();
+    const store = openSessionStore(makeAdaptor());
+    const s = makeSession('/projects/foo');
+    store.upsert(s);
+    vi.clearAllMocks();
+    store.upsert({ ...s, tags: ['updated'] });
+    expect(emitSessionActivated).toHaveBeenCalledTimes(1);
+    expect(emitSessionCreated).not.toHaveBeenCalled();
+  });
+
+  it('emits sessionArchived on archive', () => {
+    vi.clearAllMocks();
+    const store = openSessionStore(makeAdaptor());
+    const s = makeSession('/projects/foo');
+    store.upsert(s);
+    vi.clearAllMocks();
+    store.archive(s.id);
+    expect(emitSessionArchived).toHaveBeenCalledTimes(1);
+    const emitted = vi.mocked(emitSessionArchived).mock.calls[0][0];
+    expect(emitted.id).toBe(s.id);
+    expect(emitted.archivedAt).toBeDefined();
   });
 });
