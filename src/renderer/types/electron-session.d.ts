@@ -76,8 +76,10 @@ export interface SessionCrudAPI {
   create: (projectRoot: string) => Promise<SessionCreateResult>;
   /** Set the active session for this window. */
   activate: (sessionId: string) => Promise<IpcResult>;
-  /** Archive a session by id (marks archivedAt). */
+  /** Archive a session by id (marks archivedAt and writes trash file). */
   archive: (sessionId: string) => Promise<IpcResult>;
+  /** Restore an archived session from the trash directory. */
+  restore: (sessionId: string) => Promise<IpcResult>;
   /** Delete a session by id. */
   delete: (sessionId: string) => Promise<IpcResult>;
   /** Open a dedicated chat BrowserWindow for the given session. */

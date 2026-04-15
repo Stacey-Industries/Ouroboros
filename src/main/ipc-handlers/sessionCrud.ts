@@ -6,7 +6,8 @@
  *   sessionCrud:active   — current window's active session id
  *   sessionCrud:create   — create + upsert + return new session
  *   sessionCrud:activate — set activeSessionId for a window
- *   sessionCrud:archive  — archive a session by id
+ *   sessionCrud:archive  — archive session by id (writes trash file)
+ *   sessionCrud:restore  — restore archived session from trash
  *   sessionCrud:delete   — delete a session by id
  *
  * Emits sessionCrud:changed to all renderer windows on every mutation.
@@ -21,6 +22,7 @@ import log from '../logger';
 import type { AgentMonitorSettings, Session } from '../session/session';
 import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
+import { restoreFromTrash, writeToTrash } from '../session/sessionTrash';
 import { createChatWindow } from '../windowManager';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
@@ -94,7 +96,7 @@ function handleActivate(event: IpcMainInvokeEvent, args: unknown): HandlerResult
   return ok({});
 }
 
-function handleArchive(args: unknown): HandlerResult<object> {
+async function handleArchive(args: unknown): Promise<HandlerResult<object>> {
   const { sessionId } = (args ?? {}) as { sessionId?: string };
   if (typeof sessionId !== 'string' || !sessionId) {
     return fail('sessionId is required');
@@ -102,6 +104,21 @@ function handleArchive(args: unknown): HandlerResult<object> {
   const store = getSessionStore();
   if (!store) return fail('sessionStore not initialised');
   store.archive(sessionId);
+  const archived = store.getById(sessionId);
+  if (archived) await writeToTrash(archived);
+  broadcastChanged();
+  return ok({});
+}
+
+async function handleRestore(args: unknown): Promise<HandlerResult<object>> {
+  const { sessionId } = (args ?? {}) as { sessionId?: string };
+  if (typeof sessionId !== 'string' || !sessionId) {
+    return fail('sessionId is required');
+  }
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  const restored = await restoreFromTrash(sessionId, (s) => store.upsert(s));
+  if (!restored) return fail(`no trash file found for session: ${sessionId}`);
   broadcastChanged();
   return ok({});
 }
@@ -172,6 +189,7 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:create', (_e, args) => handleCreate(args));
   reg('sessionCrud:activate', (e, args) => handleActivate(e, args));
   reg('sessionCrud:archive', (_e, args) => handleArchive(args));
+  reg('sessionCrud:restore', (_e, args) => handleRestore(args));
   reg('sessionCrud:delete', (_e, args) => handleDelete(args));
   reg('sessionCrud:openChatWindow', (_e, args) => handleOpenChatWindow(args));
   reg('sessionCrud:updateAgentMonitorSettings', (_e, args) =>

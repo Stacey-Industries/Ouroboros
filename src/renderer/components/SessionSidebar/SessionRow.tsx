@@ -5,7 +5,7 @@
  * status pill, and archived indicator.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import type { SessionRecord } from '../../types/electron';
 
@@ -52,6 +52,7 @@ export interface SessionRowProps {
   session: SessionRecord;
   isActive: boolean;
   onClick: (sessionId: string) => void;
+  onRestored?: () => void;
 }
 
 interface SessionRowBodyProps { session: SessionRecord }
@@ -80,7 +81,38 @@ function SessionRowBody({ session }: SessionRowBodyProps): React.ReactElement {
   );
 }
 
-export function SessionRow({ session, isActive, onClick }: SessionRowProps): React.ReactElement {
+// ─── RestoreButton ────────────────────────────────────────────────────────────
+
+interface RestoreButtonProps { sessionId: string; onRestored?: () => void }
+
+function RestoreButton({ sessionId, onRestored }: RestoreButtonProps): React.ReactElement {
+  const [restoring, setRestoring] = useState(false);
+  const handleRestore = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.electronAPI) return;
+    setRestoring(true);
+    await window.electronAPI.sessionCrud.restore(sessionId);
+    setRestoring(false);
+    onRestored?.();
+  }, [sessionId, onRestored]);
+  return (
+    <button
+      type="button"
+      disabled={restoring}
+      onClick={handleRestore}
+      className="mt-1 self-start text-xs px-2 py-0.5 rounded bg-interactive-muted
+        text-text-semantic-secondary hover:bg-interactive-hover transition-colors"
+    >
+      {restoring ? 'Restoring…' : 'Restore'}
+    </button>
+  );
+}
+
+// ─── SessionRow ───────────────────────────────────────────────────────────────
+
+export function SessionRow({
+  session, isActive, onClick, onRestored,
+}: SessionRowProps): React.ReactElement {
   const handleClick = useCallback(() => onClick(session.id), [onClick, session.id]);
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') onClick(session.id); },
@@ -101,6 +133,7 @@ export function SessionRow({ session, isActive, onClick }: SessionRowProps): Rea
     >
       <div role="gridcell" className="flex flex-col gap-0.5 min-w-0">
         <SessionRowBody session={session} />
+        {session.archivedAt && <RestoreButton sessionId={session.id} onRestored={onRestored} />}
       </div>
     </div>
   );

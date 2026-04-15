@@ -60,6 +60,15 @@ vi.mock('../session/sessionLifecycle', () => ({
 const mockCreateChatWindow = vi.hoisted(() => vi.fn(() => ({ id: 42 })));
 vi.mock('../windowManager', () => ({ createChatWindow: mockCreateChatWindow }));
 
+// ─── sessionTrash mock ────────────────────────────────────────────────────────
+
+const mockWriteToTrash = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockRestoreFromTrash = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+vi.mock('../session/sessionTrash', () => ({
+  writeToTrash: mockWriteToTrash,
+  restoreFromTrash: mockRestoreFromTrash,
+}));
+
 // ─── Subject under test ───────────────────────────────────────────────────────
 
 import { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessionCrud';
@@ -103,13 +112,14 @@ describe('registerSessionCrudHandlers', () => {
     cleanupSessionCrudHandlers();
   });
 
-  it('registers all 8 channels', () => {
+  it('registers all 9 channels', () => {
     const channels = mockHandle.mock.calls.map(([ch]) => ch as string);
     expect(channels).toContain('sessionCrud:list');
     expect(channels).toContain('sessionCrud:active');
     expect(channels).toContain('sessionCrud:create');
     expect(channels).toContain('sessionCrud:activate');
     expect(channels).toContain('sessionCrud:archive');
+    expect(channels).toContain('sessionCrud:restore');
     expect(channels).toContain('sessionCrud:delete');
     expect(channels).toContain('sessionCrud:openChatWindow');
     expect(channels).toContain('sessionCrud:updateAgentMonitorSettings');
@@ -169,6 +179,37 @@ describe('registerSessionCrudHandlers', () => {
     const activeHandler = captureHandler('sessionCrud:active');
     const result = await activeHandler?.(makeEvent(42)) as { success: boolean; sessionId: string };
     expect(result.sessionId).toBe(s.id);
+  });
+
+  it('sessionCrud:restore restores a session from trash', async () => {
+    const s = makeSession('/projects/restore-me');
+    store.upsert({ ...s, archivedAt: new Date().toISOString() });
+    mockRestoreFromTrash.mockImplementationOnce(
+      (_id: string, onRestore: (session: Session) => void) => {
+        onRestore({ ...s, archivedAt: undefined });
+        return Promise.resolve(true);
+      },
+    );
+    const handler = captureHandler('sessionCrud:restore');
+    const result = await handler?.(makeEvent(), { sessionId: s.id }) as { success: boolean };
+    expect(result.success).toBe(true);
+  });
+
+  it('sessionCrud:restore fails when no trash file exists', async () => {
+    mockRestoreFromTrash.mockResolvedValueOnce(false);
+    const handler = captureHandler('sessionCrud:restore');
+    const result = await handler?.(makeEvent(), { sessionId: 'ghost-id' }) as {
+      success: boolean; error: string;
+    };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/trash/);
+  });
+
+  it('sessionCrud:restore fails without sessionId', async () => {
+    const handler = captureHandler('sessionCrud:restore');
+    const result = await handler?.(makeEvent(), {}) as { success: boolean; error: string };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/sessionId/);
   });
 
   it('sessionCrud:archive marks session as archived', async () => {
@@ -272,6 +313,6 @@ describe('registerSessionCrudHandlers', () => {
   it('cleanupSessionCrudHandlers calls removeHandler for each channel', () => {
     mockRemoveHandler.mockClear();
     cleanupSessionCrudHandlers();
-    expect(mockRemoveHandler).toHaveBeenCalledTimes(8);
+    expect(mockRemoveHandler).toHaveBeenCalledTimes(9);
   });
 });

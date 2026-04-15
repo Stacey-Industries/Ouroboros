@@ -279,11 +279,11 @@ export const tailSchema = {
     properties: { worktreePerSession: { type: 'boolean', default: false } },
     default: { worktreePerSession: false },
   },
-  /** Wave 17 — layout preset engine feature flags */
+  /** Wave 17/20 — layout preset engine + chat-primary feature flags */
   layout: {
     type: 'object',
-    properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: false } }, default: { v2: false } } },
-    default: { presets: { v2: false } },
+    properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: true } }, default: { v2: true } }, chatPrimary: { type: 'boolean', default: true } },
+    default: { presets: { v2: true }, chatPrimary: true },
   },
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking: { type: 'boolean', default: true },

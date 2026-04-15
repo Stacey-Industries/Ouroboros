@@ -20,6 +20,12 @@ vi.mock('./sessionMigration', () => ({
   migrateWindowSessionsToSessions: (...args: unknown[]) => migrateMock(...args),
 }));
 
+const runSessionGcMock = vi.fn().mockResolvedValue({ purged: 0 });
+vi.mock('./sessionGc', () => ({
+  runSessionGc: (...args: unknown[]) => runSessionGcMock(...args),
+  SEVEN_DAYS_MS: 604_800_000,
+}));
+
 import { closeSessionServices, initSessionServices } from './sessionStartup';
 
 describe('sessionStartup', () => {
@@ -40,6 +46,15 @@ describe('sessionStartup', () => {
     await initSessionServices({ get, set });
     expect(initSessionStoreMock).toHaveBeenCalledTimes(1);
     expect(migrateMock).toHaveBeenCalledWith(get, set);
+  });
+
+  it('initSessionServices triggers GC at startup', async () => {
+    runSessionGcMock.mockClear();
+    await initSessionServices({ get, set });
+    // GC fires async (void) — give microtasks a tick
+    await Promise.resolve();
+    expect(runSessionGcMock).toHaveBeenCalledTimes(1);
+    closeSessionServices(); // clear interval
   });
 
   it('closeSessionServices delegates to closeSessionStore', () => {

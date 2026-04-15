@@ -364,8 +364,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17 — layout preset engine feature flags */
-  layout?: { presets?: { v2?: boolean } };
+  /** Wave 17/20 — layout preset engine + chat-primary feature flags */
+  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */

@@ -16,6 +16,7 @@ export const sessionCrudApi: SessionCrudApiType = {
   create: (projectRoot: string) => ipcRenderer.invoke('sessionCrud:create', { projectRoot }),
   activate: (sessionId: string) => ipcRenderer.invoke('sessionCrud:activate', { sessionId }),
   archive: (sessionId: string) => ipcRenderer.invoke('sessionCrud:archive', { sessionId }),
+  restore: (sessionId: string) => ipcRenderer.invoke('sessionCrud:restore', { sessionId }),
   delete: (sessionId: string) => ipcRenderer.invoke('sessionCrud:delete', { sessionId }),
   openChatWindow: (sessionId: string) =>
     ipcRenderer.invoke('sessionCrud:openChatWindow', { sessionId }),

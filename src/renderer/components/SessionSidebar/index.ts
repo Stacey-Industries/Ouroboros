@@ -1,9 +1,15 @@
 export type { NewSessionButtonProps } from './NewSessionButton';
 export { NewSessionButton } from './NewSessionButton';
+export type { SessionFilterBarProps } from './SessionFilterBar';
+export { SessionFilterBar } from './SessionFilterBar';
+export type { FilterState, StatusFilter, WorktreeFilter } from './sessionFilters';
+export { applyFilters,DEFAULT_FILTER_STATE } from './sessionFilters';
 export type { SessionGroupHeaderProps } from './SessionGroupHeader';
 export { SessionGroupHeader } from './SessionGroupHeader';
 export type { SessionRowProps } from './SessionRow';
 export { SessionRow } from './SessionRow';
 export { SessionSidebar } from './SessionSidebar';
+export type { SessionVirtualListProps } from './SessionVirtualList';
+export { SessionVirtualList } from './SessionVirtualList';
 export type { UseSessionsResult } from './useSessions';
 export { useSessions } from './useSessions';
