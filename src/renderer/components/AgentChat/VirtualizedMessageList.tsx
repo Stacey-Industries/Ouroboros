@@ -1,9 +1,11 @@
 /**
- * VirtualizedMessageList.tsx — Virtualized message rendering for long conversations.
+ * VirtualizedMessageList.tsx — Chat message list.
  *
- * Uses @tanstack/react-virtual for dynamic-height virtualization.
- * The streaming message (last item if actively streaming) is rendered OUTSIDE
- * the virtualizer to avoid constant re-measurement during streaming.
+ * Renders all messages (persisted + streaming) in a single in-flow list. This
+ * matches the Cursor / VS Code Chat / Vercel AI pattern: one component per
+ * message, streaming lives in the same DOM flow as prior messages, so the live
+ * render can never overlap persisted content during the streaming→persisted
+ * handoff. React Compiler (Wave 4) handles memoization.
  */
 
 import React from 'react';
@@ -66,40 +68,8 @@ function renderCard(
   );
 }
 
-function VirtualizedItems({
-  virtualizer,
-  virtualizedMessages,
-  props,
-}: {
-  virtualizer: ReturnType<typeof useVirtualScroll>['virtualizer'];
-  virtualizedMessages: AgentChatMessageRecord[];
-  props: VirtualizedMessageListProps;
-}): React.ReactElement {
-  return (
-    <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-      {virtualizer.getVirtualItems().map((vi) => (
-        <div
-          key={vi.key}
-          data-index={vi.index}
-          ref={virtualizer.measureElement}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            transform: `translateY(${vi.start}px)`,
-          }}
-        >
-          <div className="pb-4">{renderCard(virtualizedMessages[vi.index], props)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function VirtualizedMessageList(props: VirtualizedMessageListProps): React.ReactElement {
-  const { scrollRef, handleScroll, virtualizer, virtualizedMessages, streamingMessage } =
-    useVirtualScroll(props.messagesWithStreaming);
+function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement {
+  const { scrollRef, handleScroll } = useVirtualScroll(props.messagesWithStreaming);
 
   return (
     <div
@@ -118,12 +88,11 @@ export function VirtualizedMessageList(props: VirtualizedMessageListProps): Reac
             />
           </div>
         )}
-        <VirtualizedItems
-          virtualizer={virtualizer}
-          virtualizedMessages={virtualizedMessages}
-          props={props}
-        />
-        {streamingMessage && <div className="pb-4">{renderCard(streamingMessage, props)}</div>}
+        {props.messagesWithStreaming.map((message) => (
+          <div key={message.id} className="pb-4">
+            {renderCard(message, props)}
+          </div>
+        ))}
         {props.pendingUserMessage && props.isSending && (
           <div className="pb-4">
             <PendingUserBubble text={props.pendingUserMessage} />
@@ -134,4 +103,10 @@ export function VirtualizedMessageList(props: VirtualizedMessageListProps): Reac
       </div>
     </div>
   );
+}
+
+export function VirtualizedMessageList(props: VirtualizedMessageListProps): React.ReactElement {
+  // Flat in-flow list (Cursor/VS Code pattern): streaming message lives in the same
+  // DOM flow as persisted messages, so it can never overlap them during the handoff.
+  return <FlatMessageList {...props} />;
 }
