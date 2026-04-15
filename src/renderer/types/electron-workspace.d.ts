@@ -37,6 +37,7 @@ import type {
 } from './electron-runtime-apis';
 import type { SpecAPI } from './electron-spec';
 import type { System2API } from './electron-system2';
+import type { ObservabilityAPI, TelemetryAPI } from './electron-telemetry';
 
 export interface McpServerConfig {
   command?: string;
@@ -266,6 +267,8 @@ export interface ElectronAPI {
   ai: AiAPI;
   aiStream: AiStreamAPI;
   embedding: EmbeddingAPI;
+  telemetry: TelemetryAPI;
+  observability: ObservabilityAPI;
   workspace: WorkspaceAPI;
   backgroundJobs: BackgroundJobsAPI;
   agentConflict: AgentConflictAPI;

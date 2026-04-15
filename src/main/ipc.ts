@@ -16,6 +16,7 @@ import {
   cleanupAgentChatHandlers,
   cleanupConfigWatcher,
   cleanupFileWatchers,
+  cleanupTelemetryHandlers,
   closeEmbeddingStore,
   ensureSchedulerInit,
   lspStopAll,
@@ -45,6 +46,7 @@ import {
   registerSearchHandlers,
   registerSessionHandlers,
   registerSpecHandlers,
+  registerTelemetryHandlers,
 } from './ipc-handlers';
 import log from './logger';
 import { markStartup } from './perfMetrics';
@@ -99,6 +101,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('checkpoint', () => registerCheckpointHandlers()),
     ...safeRegister('backgroundJobs', () => registerBackgroundJobsHandlers()),
     ...safeRegister('agentConflict', () => registerAgentConflictHandlers()),
+    ...safeRegister('telemetry', () => registerTelemetryHandlers()),
   ];
 }
 
@@ -249,6 +252,7 @@ export function cleanupIpcHandlers(): void {
   cleanupConfigWatcher();
 
   cleanupAgentChatHandlers();
+  cleanupTelemetryHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 

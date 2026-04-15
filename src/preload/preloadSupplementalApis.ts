@@ -23,7 +23,7 @@ import type {
   System2IndexProgressEvent,
   UpdaterEvent,
 } from '../renderer/types/electron';
-import { aiApi, embeddingApi } from './preloadSupplementalAiApis';
+import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 
 type SupplementalApiKey =
@@ -52,6 +52,7 @@ type SupplementalApiKey =
   | 'router'
   | 'rulesAndSkills'
   | 'ai' | 'embedding'
+  | 'telemetry' | 'observability'
   | 'workspace'
   | 'system2';
 
@@ -320,6 +321,10 @@ export const supplementalApis: SupplementalApis = {
   ai: aiApi,
 
   embedding: embeddingApi,
+
+  telemetry: telemetryApi,
+
+  observability: observabilityApi,
 
   workspace: {
     isTrusted: (p: string) => ipcRenderer.invoke('workspace:isTrusted', p),

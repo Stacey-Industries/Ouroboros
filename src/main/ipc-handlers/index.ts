@@ -29,3 +29,4 @@ export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';
 export { registerSessionHandlers } from './sessions';
 export { registerSpecHandlers } from './specScaffold';
+export { cleanupTelemetryHandlers, registerTelemetryHandlers } from './telemetry';
