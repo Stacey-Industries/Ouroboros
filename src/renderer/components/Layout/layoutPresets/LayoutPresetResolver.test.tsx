@@ -20,9 +20,9 @@ function TestConsumer(): React.ReactElement {
   return <div data-testid="preset-id">{preset.id}</div>;
 }
 
-function renderWithProvider(props: { sessionPresetId?: string }): void {
+function renderWithProvider(props: { sessionPresetId?: string; forcePresetId?: string }): void {
   render(
-    <LayoutPresetResolverProvider sessionPresetId={props.sessionPresetId}>
+    <LayoutPresetResolverProvider sessionPresetId={props.sessionPresetId} forcePresetId={props.forcePresetId}>
       <TestConsumer />
     </LayoutPresetResolverProvider>,
   );
@@ -111,6 +111,23 @@ describe('LayoutPresetResolverProvider', () => {
     renderWithProvider({ sessionPresetId: 'nonexistent-preset' });
     await waitFor(() => {
       expect(screen.getByTestId('preset-id').textContent).toBe('ide-primary');
+    });
+  });
+
+  it('forcePresetId bypasses the feature flag and returns the forced preset', async () => {
+    // Flag is off — normally would return ide-primary — but forcePresetId overrides.
+    mockElectronAPI({ layout: { presets: { v2: false } } });
+    renderWithProvider({ forcePresetId: 'chat-primary' });
+    await waitFor(() => {
+      expect(screen.getByTestId('preset-id').textContent).toBe(chatPrimaryPreset.id);
+    });
+  });
+
+  it('forcePresetId takes precedence over sessionPresetId when both set', async () => {
+    mockElectronAPI({ layout: { presets: { v2: true } } });
+    renderWithProvider({ sessionPresetId: 'ide-primary', forcePresetId: 'chat-primary' });
+    await waitFor(() => {
+      expect(screen.getByTestId('preset-id').textContent).toBe(chatPrimaryPreset.id);
     });
   });
 

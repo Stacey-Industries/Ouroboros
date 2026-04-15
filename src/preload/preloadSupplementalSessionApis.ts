@@ -17,6 +17,8 @@ export const sessionCrudApi: SessionCrudApiType = {
   activate: (sessionId: string) => ipcRenderer.invoke('sessionCrud:activate', { sessionId }),
   archive: (sessionId: string) => ipcRenderer.invoke('sessionCrud:archive', { sessionId }),
   delete: (sessionId: string) => ipcRenderer.invoke('sessionCrud:delete', { sessionId }),
+  openChatWindow: (sessionId: string) =>
+    ipcRenderer.invoke('sessionCrud:openChatWindow', { sessionId }),
   onChanged: (callback: (sessions: SessionRecord[]) => void) =>
     onChannel<SessionRecord[]>('sessionCrud:changed', callback),
 };

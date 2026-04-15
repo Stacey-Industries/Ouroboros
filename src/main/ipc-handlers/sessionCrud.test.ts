@@ -55,6 +55,11 @@ vi.mock('../session/sessionLifecycle', () => ({
   emitSessionArchived: vi.fn(),
 }));
 
+// ─── windowManager mock — createChatWindow returns a fake window ──────────────
+
+const mockCreateChatWindow = vi.hoisted(() => vi.fn(() => ({ id: 42 })));
+vi.mock('../windowManager', () => ({ createChatWindow: mockCreateChatWindow }));
+
 // ─── Subject under test ───────────────────────────────────────────────────────
 
 import { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessionCrud';
@@ -98,7 +103,7 @@ describe('registerSessionCrudHandlers', () => {
     cleanupSessionCrudHandlers();
   });
 
-  it('registers all 6 channels', () => {
+  it('registers all 7 channels', () => {
     const channels = mockHandle.mock.calls.map(([ch]) => ch as string);
     expect(channels).toContain('sessionCrud:list');
     expect(channels).toContain('sessionCrud:active');
@@ -106,6 +111,7 @@ describe('registerSessionCrudHandlers', () => {
     expect(channels).toContain('sessionCrud:activate');
     expect(channels).toContain('sessionCrud:archive');
     expect(channels).toContain('sessionCrud:delete');
+    expect(channels).toContain('sessionCrud:openChatWindow');
   });
 
   it('sessionCrud:list returns empty array when store has no sessions', async () => {
@@ -200,9 +206,27 @@ describe('registerSessionCrudHandlers', () => {
     expect(result.sessions).toHaveLength(0);
   });
 
+  it('sessionCrud:openChatWindow calls createChatWindow and returns windowId', async () => {
+    mockCreateChatWindow.mockClear();
+    const handler = captureHandler('sessionCrud:openChatWindow');
+    const result = await handler?.(makeEvent(), { sessionId: 'sess-xyz' }) as {
+      success: boolean; windowId: number;
+    };
+    expect(result.success).toBe(true);
+    expect(result.windowId).toBe(42);
+    expect(mockCreateChatWindow).toHaveBeenCalledWith('sess-xyz');
+  });
+
+  it('sessionCrud:openChatWindow fails without sessionId', async () => {
+    const handler = captureHandler('sessionCrud:openChatWindow');
+    const result = await handler?.(makeEvent(), {}) as { success: boolean; error: string };
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/sessionId/);
+  });
+
   it('cleanupSessionCrudHandlers calls removeHandler for each channel', () => {
     mockRemoveHandler.mockClear();
     cleanupSessionCrudHandlers();
-    expect(mockRemoveHandler).toHaveBeenCalledTimes(6);
+    expect(mockRemoveHandler).toHaveBeenCalledTimes(7);
   });
 });

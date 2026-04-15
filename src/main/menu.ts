@@ -1,7 +1,7 @@
-import { app, BrowserWindow, dialog,Menu, MenuItemConstructorOptions, shell } from 'electron'
+import { app, BrowserWindow, dialog, Menu, MenuItemConstructorOptions, shell } from 'electron'
 
 import { broadcastToWebClients } from './web/webServer'
-import { createWindow, setWindowProjectRoot } from './windowManager'
+import { createChatWindow, createWindow, getAllWindows, setWindowProjectRoot } from './windowManager'
 
 function sendMenuEvent(win: BrowserWindow, channel: string): void {
   win.webContents.send(channel)
@@ -70,6 +70,17 @@ function buildEditMenu(isMac: boolean): MenuItemConstructorOptions {
   }
 }
 
+function openDedicatedChat(win: BrowserWindow): void {
+  const focused = BrowserWindow.getFocusedWindow() ?? win;
+  const managed = getAllWindows().find((mw) => mw.win.id === focused.id);
+  const sessionId = managed?.activeSessionId;
+  if (sessionId) {
+    createChatWindow(sessionId);
+  } else {
+    sendMenuEvent(focused, 'menu:open-chat-window-no-session');
+  }
+}
+
 function buildViewMenu(win: BrowserWindow): MenuItemConstructorOptions {
   return {
     label: 'View',
@@ -85,6 +96,8 @@ function buildViewMenu(win: BrowserWindow): MenuItemConstructorOptions {
       { role: 'togglefullscreen' as const },
       { type: 'separator' as const },
       { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendMenuEvent(win, 'menu:command-palette') },
+      { type: 'separator' },
+      { label: 'Open Dedicated Chat', accelerator: 'CommandOrControl+Shift+O', click: () => openDedicatedChat(win) },
       { type: 'separator' },
       { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => sendMenuEvent(win, 'menu:settings') }
     ]

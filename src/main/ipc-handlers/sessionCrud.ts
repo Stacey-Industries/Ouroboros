@@ -21,6 +21,7 @@ import log from '../logger';
 import type { Session } from '../session/session';
 import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
+import { createChatWindow } from '../windowManager';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
 
@@ -117,6 +118,15 @@ function handleDelete(args: unknown): HandlerResult<object> {
   return ok({});
 }
 
+function handleOpenChatWindow(args: unknown): HandlerResult<{ windowId: number }> {
+  const { sessionId } = (args ?? {}) as { sessionId?: string };
+  if (typeof sessionId !== 'string' || !sessionId) {
+    return fail('sessionId is required');
+  }
+  const win = createChatWindow(sessionId);
+  return ok({ windowId: win.id });
+}
+
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 let registeredChannels: string[] = [];
@@ -143,6 +153,7 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:activate', (e, args) => handleActivate(e, args));
   reg('sessionCrud:archive', (_e, args) => handleArchive(args));
   reg('sessionCrud:delete', (_e, args) => handleDelete(args));
+  reg('sessionCrud:openChatWindow', (_e, args) => handleOpenChatWindow(args));
 
   registeredChannels = channels;
   return channels;

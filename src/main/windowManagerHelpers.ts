@@ -11,6 +11,7 @@ import type { WindowBounds } from './config';
 import { getConfigValue, setConfigValue } from './config';
 import { describeFdPressure } from './fdPressureDiagnostics';
 import log from './logger';
+import { markStartup } from './perfMetrics';
 
 // mica-electron: native Windows DWM acrylic/mica effects.
 // Wrapped in try/catch because mica-electron calls app.commandLine at module
@@ -210,6 +211,31 @@ function buildConnectSources(isDev: boolean): string {
   }
 
   return `'self' ${sources.join(' ')}`;
+}
+
+// ─── Window show / dev-tools ─────────────────────────────────────────────────
+
+export function openDevToolsInDevelopment(win: BrowserWindow): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  win.webContents.openDevTools({ mode: 'detach' });
+}
+
+export function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
+  win.once('ready-to-show', () => {
+    markStartup('window-ready');
+    if (state.isFirst && state.savedBounds?.isMaximized) win.maximize();
+    win.show();
+    openDevToolsInDevelopment(win);
+  });
+}
+
+export function loadWindowContent(win: BrowserWindow): void {
+  const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
+  if (rendererUrl) {
+    void win.loadURL(rendererUrl);
+    return;
+  }
+  void win.loadFile(path.join(outMainDir, '../renderer/index.html'));
 }
 
 export function ensureCSP(): void {

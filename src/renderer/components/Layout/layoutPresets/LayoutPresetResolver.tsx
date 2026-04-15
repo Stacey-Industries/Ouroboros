@@ -33,6 +33,12 @@ export interface LayoutPresetResolverProps {
    * Wave 20 will wire this from the session store.
    */
   sessionPresetId?: string;
+  /**
+   * Forces a specific preset id, bypassing the feature-flag check.
+   * Used by dedicated chat windows (Wave 20 Phase B) where `?mode=chat`
+   * must render the `chat-primary` preset regardless of `layout.presets.v2`.
+   */
+  forcePresetId?: string;
   children: React.ReactNode;
 }
 
@@ -61,6 +67,7 @@ async function readPresetsFlag(): Promise<boolean> {
 
 export function LayoutPresetResolverProvider({
   sessionPresetId,
+  forcePresetId,
   children,
 }: LayoutPresetResolverProps): React.ReactElement {
   const [flagOn, setFlagOn] = useState(false);
@@ -74,9 +81,10 @@ export function LayoutPresetResolverProvider({
   }, []);
 
   const preset = useMemo<LayoutPreset>(() => {
+    if (forcePresetId) return resolveBuiltInPreset(forcePresetId);
     if (!flagOn) return idePrimaryPreset;
     return resolveBuiltInPreset(sessionPresetId);
-  }, [flagOn, sessionPresetId]);
+  }, [flagOn, forcePresetId, sessionPresetId]);
 
   return (
     <LayoutPresetContext.Provider value={preset}>

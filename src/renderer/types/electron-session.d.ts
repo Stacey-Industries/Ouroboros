@@ -70,6 +70,8 @@ export interface SessionCrudAPI {
   archive: (sessionId: string) => Promise<IpcResult>;
   /** Delete a session by id. */
   delete: (sessionId: string) => Promise<IpcResult>;
+  /** Open a dedicated chat BrowserWindow for the given session. */
+  openChatWindow: (sessionId: string) => Promise<IpcResult & { windowId?: number }>;
   /** Subscribe to store mutation events. Returns cleanup fn. */
   onChanged: (callback: (sessions: SessionRecord[]) => void) => () => void;
 }

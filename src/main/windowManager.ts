@@ -12,7 +12,6 @@ import { acquireGraphController, releaseGraphController } from './codebaseGraph/
 import { getConfigValue, setConfigValue, type WindowSession } from './config';
 import { acquireContextLayer, releaseContextLayer } from './contextLayer/contextLayerController';
 import { registerIpcHandlers } from './ipc';
-import { markStartup } from './perfMetrics';
 import { killPtySessionsForWindow } from './pty';
 import { makeSession } from './session/session';
 import { getSessionStore } from './session/sessionStore';
@@ -20,16 +19,19 @@ import {
   clearWindowActiveSession,
   setWindowActiveSession,
 } from './session/windowManagerSessionHelpers';
+import { buildChatWindowBounds, loadChatWindowContent } from './windowManagerChatWindow';
 import {
   applyMicaEffect,
   createBoundsSaveHandler,
   ensureCSP,
   getInitialWindowPlacement,
   getInitialWindowSize,
+  loadWindowContent,
   markWindowMaximized,
   MicaBrowserWindow,
   outMainDir,
   saveWindowBounds,
+  setupReadyToShow,
   validateBounds,
   type WindowCreationState,
 } from './windowManagerHelpers';
@@ -42,6 +44,7 @@ export interface ManagedWindow {
   projectRoot: string | null;
   projectRoots: string[];
   activeSessionId: string | null;
+  kind: 'main' | 'chat';
 }
 
 export interface WindowInfo {
@@ -124,33 +127,11 @@ function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number
     activeSessionId = session.id;
     setWindowActiveSession(winId, session.id);
   }
-  windows.set(winId, { id: winId, win, projectRoot: root, projectRoots: roots, activeSessionId });
+  windows.set(winId, { id: winId, win, projectRoot: root, projectRoots: roots, activeSessionId, kind: 'main' });
   windowCleanups.set(winId, registerIpcHandlers(win));
   return winId;
 }
 
-function loadWindowContent(win: BrowserWindow): void {
-  const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
-  if (rendererUrl) {
-    win.loadURL(rendererUrl);
-    return;
-  }
-  win.loadFile(path.join(outMainDir, '../renderer/index.html'));
-}
-
-function openDevToolsInDevelopment(win: BrowserWindow): void {
-  if (process.env.NODE_ENV !== 'development') return;
-  win.webContents.openDevTools({ mode: 'detach' });
-}
-
-function setupReadyToShow(win: BrowserWindow, state: WindowCreationState): void {
-  win.once('ready-to-show', () => {
-    markStartup('window-ready');
-    if (state.isFirst && state.savedBounds?.isMaximized) win.maximize();
-    win.show();
-    openDevToolsInDevelopment(win);
-  });
-}
 
 function clearBoundsTimer(winId: number): void {
   const timer = boundsTimers.get(winId);
@@ -217,6 +198,25 @@ export function createWindow(projectRoot?: string): BrowserWindow {
   const win = createBrowserWindow(preloadPath, state);
   const winId = registerManagedWindow(win, projectRoot);
   loadWindowContent(win);
+  setupWindowLifecycle(win, winId, state);
+  return win;
+}
+
+/**
+ * Opens a secondary BrowserWindow dedicated to chat for the given session.
+ * The renderer detects the `?mode=chat&sessionId=` query param and forces
+ * the chat-primary layout preset regardless of the feature flag.
+ */
+export function createChatWindow(sessionId: string): BrowserWindow {
+  ensureCSP();
+  const { width, height } = buildChatWindowBounds();
+  const preloadPath = path.join(outMainDir, '../preload/index.js');
+  const state: WindowCreationState = { isFirst: false, savedBounds: null, width, height };
+  const win = createBrowserWindow(preloadPath, state);
+  const winId = win.id;
+  windows.set(winId, { id: winId, win, projectRoot: null, projectRoots: [], activeSessionId: sessionId, kind: 'chat' });
+  windowCleanups.set(winId, registerIpcHandlers(win));
+  loadChatWindowContent(win, sessionId, process.env['ELECTRON_RENDERER_URL'], path.join(outMainDir, '../renderer/index.html'));
   setupWindowLifecycle(win, winId, state);
   return win;
 }
