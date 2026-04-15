@@ -89,7 +89,7 @@ export const ViewModeSelector = memo(function ViewModeSelector({
       className="flex items-center gap-px rounded"
       style={{ border: '1px solid var(--border-subtle)', padding: '1px' }}
       role="group"
-      aria-label="AgentMonitor view mode"
+      aria-label="Agent monitor view mode"
     >
       {OPTIONS.map((option) => (
         <ModeButton

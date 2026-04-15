@@ -24,6 +24,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['./vitest.setup.ts'],
     globals: false,
     // Fork-per-file isolation: forcibly kills each file's process after tests
     // complete, eliminating hangs from leaked handles (Worker threads, file

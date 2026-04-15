@@ -63,7 +63,7 @@ function SessionRowBody({ session }: SessionRowBodyProps): React.ReactElement {
         <span className="text-sm font-medium text-text-semantic-primary truncate">
           {projectBasename(session.projectRoot)}
         </span>
-        <span className="text-xs text-text-semantic-faint shrink-0" aria-label="last used">
+        <span className="text-xs text-text-semantic-faint shrink-0">
           {relativeTime(session.lastUsedAt)}
         </span>
       </div>
@@ -97,9 +97,11 @@ export function SessionRow({ session, isActive, onClick }: SessionRowProps): Rea
       className={`flex flex-col gap-0.5 px-3 py-2 cursor-pointer transition-colors ${activeCls}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      aria-label={`Session ${session.id.slice(0, 8)} — ${projectBasename(session.projectRoot)}`}
+      aria-label={`${projectBasename(session.projectRoot)}, last used ${relativeTime(session.lastUsedAt)}`}
     >
-      <SessionRowBody session={session} />
+      <div role="gridcell" className="flex flex-col gap-0.5 min-w-0">
+        <SessionRowBody session={session} />
+      </div>
     </div>
   );
 }

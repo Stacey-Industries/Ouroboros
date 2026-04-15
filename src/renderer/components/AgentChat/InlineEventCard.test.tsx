@@ -96,4 +96,16 @@ describe('InlineEventCard — aria-label', () => {
     const card = screen.getByRole('status');
     expect(card.getAttribute('aria-label')).toContain('My custom event');
   });
+
+  it('includes timestamp in aria-label', () => {
+    render(<InlineEventCard event={makeEvent({ type: 'pre_tool_use' })} />);
+    const card = screen.getByRole('status');
+    expect(card.getAttribute('aria-label')).toMatch(/at \d{2}:\d{2}:\d{2}/);
+  });
+
+  it('has aria-live polite for screen-reader announcements', () => {
+    render(<InlineEventCard event={makeEvent()} />);
+    const card = screen.getByRole('status');
+    expect(card.getAttribute('aria-live')).toBe('polite');
+  });
 });

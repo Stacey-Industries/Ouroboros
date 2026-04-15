@@ -90,7 +90,8 @@ export const InlineEventCard = memo(function InlineEventCard({
       className="flex items-center gap-2 px-3 py-1 mx-4 my-0.5 rounded"
       style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-subtle)' }}
       role="status"
-      aria-label={`Agent event: ${describeEvent(event.type, event.description)}`}
+      aria-live="polite"
+      aria-label={`Agent event: ${describeEvent(event.type, event.description)} at ${formatTime(event.timestamp)}`}
     >
       <EventIcon type={event.type} />
       <span

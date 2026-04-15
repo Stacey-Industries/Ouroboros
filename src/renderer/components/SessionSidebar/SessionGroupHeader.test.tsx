@@ -31,9 +31,9 @@ describe('SessionGroupHeader', () => {
     expect(screen.getByLabelText('4 sessions')).toBeTruthy();
   });
 
-  it('has a group aria-label containing the project name', () => {
+  it('has a rowheader aria-label containing the project name', () => {
     render(<SessionGroupHeader projectName="delta" count={2} />);
-    expect(screen.getByRole('rowgroup', { name: /delta/i })).toBeTruthy();
+    expect(screen.getByRole('rowheader', { name: /delta/i })).toBeTruthy();
   });
 
   it('sets title on the name span for overflow tooltip', () => {

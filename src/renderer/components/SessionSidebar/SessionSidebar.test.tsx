@@ -124,13 +124,13 @@ describe('SessionSidebar', () => {
       sessions: [makeSession('click-id', '/projects/alpha')],
     });
     render(<SessionSidebar />);
-    await waitFor(() => expect(screen.getAllByRole('row').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getByRole('row', { name: /alpha.*last used/i })).toBeTruthy());
 
     const dispatched: CustomEvent[] = [];
     const listener = (e: Event): void => { dispatched.push(e as CustomEvent); };
     window.addEventListener('agent-ide:session-switch', listener);
 
-    fireEvent.click(screen.getAllByRole('row')[0]);
+    fireEvent.click(screen.getByRole('row', { name: /alpha.*last used/i }));
     window.removeEventListener('agent-ide:session-switch', listener);
 
     expect(dispatched).toHaveLength(1);
@@ -155,13 +155,17 @@ describe('SessionSidebar', () => {
       ],
     });
     render(<SessionSidebar />);
-    await waitFor(() => expect(screen.getAllByRole('row').length).toBeGreaterThanOrEqual(2));
+    // Wait for session rows (tabindex=0) to appear — skip the non-focusable header row
+    await waitFor(() => {
+      const focusable = document.querySelectorAll('[role="row"][tabindex="0"]');
+      expect(focusable.length).toBeGreaterThanOrEqual(2);
+    });
 
-    const rows = screen.getAllByRole('row');
-    rows[0].focus();
-    const list = rows[0].closest('[class*="overflow-y"]') as HTMLElement;
+    const sessionRows = [...document.querySelectorAll<HTMLElement>('[role="row"][tabindex="0"]')];
+    sessionRows[0].focus();
+    const list = sessionRows[0].closest('[class*="overflow-y"]') as HTMLElement;
     fireEvent.keyDown(list, { key: 'ArrowDown' });
-    await waitFor(() => expect(document.activeElement).toBe(rows[1]));
+    await waitFor(() => expect(document.activeElement).toBe(sessionRows[1]));
   });
 
   it('renders the New session button', async () => {

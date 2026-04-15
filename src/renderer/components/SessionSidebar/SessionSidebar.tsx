@@ -63,11 +63,29 @@ interface SessionListProps {
 
 function SessionList({ groups, activeSessionId, isLoading, onSessionClick, onKeyDown, listRef }: SessionListProps): React.ReactElement {
   return (
-    <div ref={listRef} className="flex-1 overflow-y-auto" onKeyDown={onKeyDown}>
-      {isLoading && <div className="px-3 py-4 text-xs text-text-semantic-muted">Loading…</div>}
+    <div
+      ref={listRef}
+      role="grid"
+      aria-label="Session list"
+      className="flex-1 overflow-y-auto"
+      onKeyDown={onKeyDown}
+    >
+      {isLoading && (
+        <div role="rowgroup">
+          <div role="row">
+            <div role="gridcell" aria-live="polite" className="px-3 py-4 text-xs text-text-semantic-muted">
+              Loading…
+            </div>
+          </div>
+        </div>
+      )}
       {!isLoading && groups.length === 0 && (
-        <div className="px-3 py-4 text-xs text-text-semantic-muted">
-          No sessions yet. Click <strong>New</strong> to start one.
+        <div role="rowgroup">
+          <div role="row">
+            <div role="gridcell" className="px-3 py-4 text-xs text-text-semantic-muted">
+              No sessions yet. Click <strong>New</strong> to start one.
+            </div>
+          </div>
         </div>
       )}
       {!isLoading && groups.map((group) => (
@@ -98,7 +116,7 @@ export function SessionSidebar(): React.ReactElement | null {
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
-    const rows = listRef.current?.querySelectorAll<HTMLElement>('[role="row"]');
+    const rows = listRef.current?.querySelectorAll<HTMLElement>('[role="row"][tabindex="0"]');
     if (!rows || rows.length === 0) return;
     const idx = [...rows].indexOf(document.activeElement as HTMLElement);
     if (e.key === 'ArrowDown') rows[Math.min(idx + 1, rows.length - 1)]?.focus();
@@ -108,7 +126,7 @@ export function SessionSidebar(): React.ReactElement | null {
   if (!flagEnabled) return null;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-surface-panel" aria-label="Sessions" role="table">
+    <div className="flex flex-col h-full overflow-hidden bg-surface-panel">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle shrink-0">
         <span className="text-sm font-semibold text-text-semantic-primary">Sessions</span>
         <NewSessionButton onCreated={refresh} />

@@ -53,7 +53,7 @@ export function NewSessionButton({ onCreated }: NewSessionButtonProps): React.Re
     <button
       type="button"
       disabled={busy}
-      aria-label="New session"
+      aria-label="Create new session"
       aria-busy={busy}
       onClick={() => void handleClick()}
       className={[

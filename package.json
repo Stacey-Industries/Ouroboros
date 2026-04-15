@@ -121,6 +121,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.0.0",
+    "axe-core": "^4.11.3",
     "babel-plugin-react-compiler": "^1.0.0",
     "depcheck": "^1.4.7",
     "electron": "^41.0.0",
@@ -143,7 +144,8 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.57.0",
     "vite-plugin-monaco-editor": "^1.1.0",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0",
+    "vitest-axe": "^0.1.0"
   },
   "build": {
     "appId": "com.arcflow.ouroboros",
