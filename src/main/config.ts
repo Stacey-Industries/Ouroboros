@@ -142,6 +142,24 @@ export interface CodebaseGraphSettings {
   gcDaysThreshold: number;
 }
 
+export interface PageRankSeedWeights {
+  /** Weight for pinned files in the personalization vector (default 0.5). */
+  pinned: number;
+  /** Weight for keyword-matched files in the personalization vector (default 0.3). */
+  symbol: number;
+  /** Weight for recently user-edited files in the personalization vector (default 0.2). */
+  user_edit: number;
+}
+
+export interface ContextScoringSettings {
+  /** Enable provenance-aware weight split (recent_user_edit / recent_agent_edit). Default on. */
+  provenanceWeights: boolean;
+  /** Enable PageRank-based retrieval. Default on. */
+  pagerank: boolean;
+  /** Tunable seed weights for personalized PageRank (Q10 rec). */
+  pagerankSeeds: PageRankSeedWeights;
+}
+
 export interface RouterSettings {
   /** Master toggle — when false, router is bypassed entirely. */
   enabled: boolean;
@@ -348,6 +366,10 @@ export interface AppConfig {
   sessions?: { worktreePerSession?: boolean };
   /** Wave 17 — layout preset engine feature flags */
   layout?: { presets?: { v2?: boolean } };
+  /** Wave 18 — edit provenance tracking feature flag */
+  provenanceTracking?: boolean;
+  /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
+  context?: ContextScoringSettings;
 }
 
 export const store = new Store<AppConfig>({

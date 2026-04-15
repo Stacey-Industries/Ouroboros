@@ -1,6 +1,9 @@
 import fs from 'fs/promises'
 import path from 'path'
 
+import { getGraphController } from '../codebaseGraph/graphControllerSupport'
+import { computePageRank, normalizePageRankScores } from '../codebaseGraph/graphPageRank'
+import { store } from '../config'
 import {
   collectLiveIdeState,
   type ContextFileSnapshot,
@@ -26,6 +29,8 @@ import {
   resolveDiffFiles,
   resolveRecentEdits,
 } from './contextSelectorHelpers'
+import { isDiffAgentAuthored, isRecentUserEdit, resolveEditReasonKind } from './contextSelectorProvenance'
+import { getEditProvenanceStore } from './editProvenance'
 import type {
   ContextReasonKind,
   GitDiffHunk,
@@ -66,24 +71,31 @@ const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
   ['open_file', 0],
   ['dirty_buffer', 68],
   ['test_companion', 38],
+  // Wave 19: recent_edit preserved as fallback weight when provenance unavailable
   ['recent_edit', 32],
+  // Wave 19: provenance-split weights
+  ['recent_user_edit', 32],
+  ['recent_agent_edit', 4],
+  // Wave 19: git_diff default weight (agent-authored path: AGENT_DIFF_WEIGHT)
   ['git_diff', 56],
   ['diagnostic', 52],
   ['keyword_match', 26],
   ['import_adjacency', 22],
   ['dependency', 12],
-  ['semantic_match', 45],
+  // Wave 19: semantic_match removed — no active code path. See Wave 40 for replacement.
+  ['semantic_match', 0],
+  // Wave 19: pagerank weight is dynamic (normalizedRank × 40)
+  ['pagerank', 40],
 ])
+
+const AGENT_DIFF_WEIGHT = 12
+const PAGERANK_SCALE = 40
 
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'be', 'build', 'by', 'current', 'do', 'edit', 'feature', 'file', 'files',
   'fix', 'for', 'from', 'in', 'into', 'is', 'it', 'make', 'mode', 'new', 'of', 'on', 'or', 'plan',
   'task', 'that', 'the', 'this', 'to', 'update', 'with', 'without', 'you', 'your',
 ])
-
-function addWeightedReason(candidate: MutableCandidate, kind: ContextReasonKind, detail: string): void {
-  addReason(candidate, kind, detail, REASON_WEIGHTS.get(kind) ?? 0)
-}
 
 function addCandidateFactory(
   candidates: Map<string, MutableCandidate>,
@@ -94,11 +106,15 @@ function addCandidateFactory(
   return (filePath, kind, detail) => {
     if (!filePath) return
     if (excludedKeys.has(toPathKey(filePath))) return void pushOmitted(omittedCandidates, omittedKeys, filePath, 'Excluded by request')
-    addWeightedReason(getOrCreateCandidate(candidates, filePath), kind, detail)
+    addReason(getOrCreateCandidate(candidates, filePath), kind, detail, REASON_WEIGHTS.get(kind) ?? 0)
   }
 }
 
-function addBaseCandidates(addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void, selection: NormalizedSelection, liveIdeState: LiveIdeState): void {
+function addBaseCandidates(
+  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void,
+  selection: NormalizedSelection,
+  liveIdeState: LiveIdeState,
+): void {
   for (const filePath of selection.selectedFiles) addCandidate(filePath, 'user_selected', 'Explicitly selected for this task')
   for (const filePath of selection.pinnedFiles) addCandidate(filePath, 'pinned', 'Pinned into the context set')
   for (const filePath of selection.includedFiles) addCandidate(filePath, 'included', 'Included by request context settings')
@@ -107,24 +123,60 @@ function addBaseCandidates(addCandidate: (filePath: string, kind: ContextReasonK
   for (const filePath of liveIdeState.dirtyFiles) addCandidate(filePath, 'dirty_buffer', 'Unsaved editor changes are present')
 }
 
-async function addRepoFactCandidates(
-  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void,
+// ─── Provenance-aware edit and diff reasons ───────────────────────────────────
+
+type GetProv = (p: string) => { lastAgentEditAt: number; lastUserEditAt: number } | null
+
+const makeGetProv = (enabled: boolean): GetProv => { const s = enabled ? getEditProvenanceStore() : null; return s ? (p) => s.getEditProvenance(p) : () => null }
+
+function applyProvenanceEditReasons(
+  candidates: Map<string, MutableCandidate>,
+  recentEdits: string[],
+  provenanceEnabled: boolean,
+): void {
+  const getProv = makeGetProv(provenanceEnabled)
+  for (const filePath of recentEdits) {
+    const kind = resolveEditReasonKind(filePath, getProv)
+    addReason(getOrCreateCandidate(candidates, filePath), kind, 'Recently edited in the workspace', REASON_WEIGHTS.get(kind) ?? 32)
+  }
+}
+
+function applyProvenanceDiffReasons(
+  candidates: Map<string, MutableCandidate>,
+  diffFiles: string[],
   repoFacts: RepoFacts,
-  workspaceRoots: string[],
-): Promise<{ recentEdits: string[]; diffFiles: string[]; diagnosticFiles: string[] }> {
+  provenanceEnabled: boolean,
+): void {
+  const getProv = makeGetProv(provenanceEnabled)
+  for (const filePath of diffFiles) {
+    const weight = isDiffAgentAuthored(filePath, repoFacts, getProv) ? AGENT_DIFF_WEIGHT : (REASON_WEIGHTS.get('git_diff') ?? 56)
+    addReason(getOrCreateCandidate(candidates, filePath), 'git_diff', 'Present in the current git diff', weight)
+  }
+}
+
+interface RepoCandidateOpts {
+  candidates: Map<string, MutableCandidate>
+  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void
+  repoFacts: RepoFacts
+  workspaceRoots: string[]
+  provenanceEnabled: boolean
+}
+
+async function addRepoFactCandidates(opts: RepoCandidateOpts): Promise<{ recentEdits: string[]; diffFiles: string[]; diagnosticFiles: string[] }> {
+  const { candidates, addCandidate, repoFacts, workspaceRoots, provenanceEnabled } = opts
   const [recentEdits, diffFiles, diagnosticFiles] = await Promise.all([
     resolveRecentEdits(repoFacts, workspaceRoots),
     resolveDiffFiles(repoFacts, workspaceRoots),
     resolveDiagnosticFiles(repoFacts, workspaceRoots),
   ])
-  for (const filePath of recentEdits) addCandidate(filePath, 'recent_edit', 'Recently edited in the workspace')
-  for (const filePath of diffFiles) addCandidate(filePath, 'git_diff', 'Present in the current git diff')
+  applyProvenanceEditReasons(candidates, recentEdits, provenanceEnabled)
+  applyProvenanceDiffReasons(candidates, diffFiles, repoFacts, provenanceEnabled)
   for (const file of repoFacts.diagnostics.files) {
     addCandidate(await resolveWorkspaceFile(file.filePath, workspaceRoots), 'diagnostic', `Diagnostics: ${file.errors} errors, ${file.warnings} warnings`)
   }
   for (const root of repoFacts.roots) {
-    for (const entryPoint of root.entryPoints) {
-      addCandidate(await resolveWorkspaceFile(entryPoint, workspaceRoots, root.rootPath), 'dependency', `Workspace entry point for ${path.basename(root.rootPath)}`)
+    for (const ep of root.entryPoints) {
+      addCandidate(await resolveWorkspaceFile(ep, workspaceRoots, root.rootPath), 'dependency', `Workspace entry point for ${path.basename(root.rootPath)}`)
     }
   }
   return { recentEdits, diffFiles, diagnosticFiles }
@@ -144,11 +196,7 @@ async function applyKeywordReasons(candidates: Map<string, MutableCandidate>, sn
   }
 }
 
-function applyImportAdjacency(
-  candidates: Map<string, MutableCandidate>,
-  snapshots: Map<string, ContextFileSnapshot>,
-  seedFiles: string[],
-): void {
+function applyImportAdjacency(candidates: Map<string, MutableCandidate>, snapshots: Map<string, ContextFileSnapshot>, seedFiles: string[]): void {
   const iaWeight = REASON_WEIGHTS.get('import_adjacency') ?? 22
   for (const candidate of candidates.values()) {
     const related = findRelatedSeeds(candidate, snapshots, seedFiles)
@@ -157,67 +205,100 @@ function applyImportAdjacency(
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath)
-    return true
-  } catch {
-    return false
-  }
+  try { await fs.access(filePath); return true } catch { return false }
 }
 
 async function addTestCompanions(
   candidates: Map<string, MutableCandidate>,
   addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void,
 ): Promise<void> {
-  const candidatePaths = Array.from(candidates.keys()).map(key => candidates.get(key)!.filePath)
-  for (const candidatePath of candidatePaths) {
-    const normalized = path.normalize(candidatePath)
-    const ext = path.extname(normalized)
-    const base = path.basename(normalized, ext)
+  const paths = Array.from(candidates.keys()).map((k) => candidates.get(k)!.filePath)
+  for (const p of paths) {
+    const norm = path.normalize(p)
+    const ext = path.extname(norm)
+    const base = path.basename(norm, ext)
     if (base.endsWith('.test') || base.endsWith('.spec')) continue
-    const dir = path.dirname(normalized)
-    const testPatterns = [
-      path.join(dir, `${base}.test${ext}`),
-      path.join(dir, `${base}.spec${ext}`),
-      path.join(dir, '__tests__', `${base}${ext}`),
-      path.join(dir, '__tests__', `${base}.test${ext}`),
+    const dir = path.dirname(norm)
+    const patterns = [
+      path.join(dir, `${base}.test${ext}`), path.join(dir, `${base}.spec${ext}`),
+      path.join(dir, '__tests__', `${base}${ext}`), path.join(dir, '__tests__', `${base}.test${ext}`),
     ]
-    for (const testPath of testPatterns) {
-      if (await fileExists(testPath)) addCandidate(testPath, 'test_companion', `Test file for ${base}${ext}`)
+    for (const tp of patterns) {
+      if (await fileExists(tp)) addCandidate(tp, 'test_companion', `Test file for ${base}${ext}`)
     }
   }
 }
 
-function buildDiffHunksMap(repoFacts: RepoFacts): Map<string, GitDiffHunk[]> {
-  const diffHunksMap = new Map<string, GitDiffHunk[]>()
-  for (const file of repoFacts.gitDiff.changedFiles) {
-    if (file.hunks?.length) diffHunksMap.set(toPathKey(file.filePath), file.hunks)
+// ─── PageRank ────────────────────────────────────────────────────────────────
+
+function buildPageRankSeeds(
+  selection: NormalizedSelection,
+  candidates: Map<string, MutableCandidate>,
+  provenanceEnabled: boolean,
+): Array<{ id: string; weight: number }> {
+  const cfg = store.get('context')
+  const sw = cfg?.pagerankSeeds ?? { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }
+  const getProv = makeGetProv(provenanceEnabled)
+  const seeds: Array<{ id: string; weight: number }> = []
+  for (const f of selection.pinnedFiles) seeds.push({ id: f, weight: sw.pinned })
+  for (const c of candidates.values()) {
+    if (c.reasons.some((r) => r.kind === 'keyword_match')) seeds.push({ id: c.filePath, weight: sw.symbol })
+    if (isRecentUserEdit(c.filePath, getProv)) seeds.push({ id: c.filePath, weight: sw.user_edit })
   }
-  return diffHunksMap
+  return seeds
 }
 
-function buildResult(options: {
+function tryApplyPageRank(
+  candidates: Map<string, MutableCandidate>,
+  selection: NormalizedSelection,
+  workspaceRoots: string[],
+  provenanceEnabled: boolean,
+): void {
+  const gc = getGraphController()
+  if (!gc) return
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- access internal db from compat shim
+    const db = (gc as any)._db ?? (gc as any).db
+    if (!db) return
+    const seeds = buildPageRankSeeds(selection, candidates, provenanceEnabled)
+    const project = workspaceRoots[0] ?? ''
+    const prResult = computePageRank(db, { project, seeds, graphVersion: String(Date.now()) })
+    const normalized = normalizePageRankScores(prResult.scores)
+    for (const [filePath, score] of normalized) {
+      if (score <= 0) continue
+      const weight = Math.round(score * PAGERANK_SCALE)
+      if (weight > 0) addReason(getOrCreateCandidate(candidates, filePath), 'pagerank', `PageRank score: ${score.toFixed(3)}`, weight)
+    }
+  } catch {
+    // PageRank is best-effort — never fail context selection
+  }
+}
+
+interface BuildResultOpts {
   selection: NormalizedSelection; liveIdeState: LiveIdeState; recentEdits: string[]; diffFiles: string[]
   diagnosticFiles: string[]; keywords: string[]; candidates: Map<string, MutableCandidate>
-  omittedCandidates: OmittedContextCandidate[]; snapshots: Map<string, ContextFileSnapshot>; diffHunksMap: Map<string, GitDiffHunk[]>
-}): ContextSelectionResult {
-  const { selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, diffHunksMap } = options
-  const rankedFiles = rankCandidates(candidates)
-  for (const ranked of rankedFiles) {
-    const hunks = diffHunksMap.get(toPathKey(ranked.filePath))
-    if (hunks) ranked.hunks = hunks
+  omittedCandidates: OmittedContextCandidate[]; snapshots: Map<string, ContextFileSnapshot>; repoFacts: RepoFacts
+}
+
+function buildResult(o: BuildResultOpts): ContextSelectionResult {
+  const hunksMap = new Map<string, GitDiffHunk[]>()
+  for (const file of o.repoFacts.gitDiff.changedFiles) {
+    if (file.hunks?.length) hunksMap.set(toPathKey(file.filePath), file.hunks)
   }
+  const rankedFiles = rankCandidates(o.candidates)
+  for (const ranked of rankedFiles) { const h = hunksMap.get(toPathKey(ranked.filePath)); if (h) ranked.hunks = h }
   return {
-    liveIdeState,
+    liveIdeState: o.liveIdeState,
     rankingInputs: {
-      userSelectedFiles: selection.selectedFiles, pinnedFiles: selection.pinnedFiles,
-      includedFiles: selection.includedFiles, excludedFiles: selection.excludedFiles,
-      activeFile: liveIdeState.activeFile, openFiles: liveIdeState.openFiles,
-      dirtyFiles: liveIdeState.dirtyFiles, recentEdits, diffFiles, diagnosticFiles, keywordMatches: keywords,
+      userSelectedFiles: o.selection.selectedFiles, pinnedFiles: o.selection.pinnedFiles,
+      includedFiles: o.selection.includedFiles, excludedFiles: o.selection.excludedFiles,
+      activeFile: o.liveIdeState.activeFile, openFiles: o.liveIdeState.openFiles,
+      dirtyFiles: o.liveIdeState.dirtyFiles, recentEdits: o.recentEdits, diffFiles: o.diffFiles,
+      diagnosticFiles: o.diagnosticFiles, keywordMatches: o.keywords,
     },
     rankedFiles,
-    omittedCandidates,
-    snapshots: Object.fromEntries(Array.from(snapshots.values()).map((snapshot) => [toPathKey(snapshot.filePath), snapshot])),
+    omittedCandidates: o.omittedCandidates,
+    snapshots: Object.fromEntries(Array.from(o.snapshots.values()).map((s) => [toPathKey(s.filePath), s])),
   }
 }
 
@@ -227,21 +308,25 @@ export async function selectContextFiles(options: {
   liveIdeState?: LiveIdeState
 }): Promise<ContextSelectionResult> {
   const { request, repoFacts } = options
+  const cfg = store.get('context')
+  const provenanceEnabled = cfg?.provenanceWeights !== false
+  const pagerankEnabled = cfg?.pagerank !== false
   const workspaceRoots = uniqueFiles(request.workspaceRoots.length > 0 ? request.workspaceRoots : repoFacts.workspaceRoots)
   const selection = await normalizeSelection(request, workspaceRoots)
   const excludedKeys = new Set(selection.excludedFiles.map(toPathKey))
   const omittedCandidates: OmittedContextCandidate[] = []
   const omittedKeys = new Set<string>()
-  for (const filePath of selection.excludedFiles) pushOmitted(omittedCandidates, omittedKeys, filePath, 'Excluded by request')
+  for (const fp of selection.excludedFiles) pushOmitted(omittedCandidates, omittedKeys, fp, 'Excluded by request')
   const snapshots = new Map<string, ContextFileSnapshot>(getPersistentSnapshotCache())
   const liveIdeState = options.liveIdeState ?? await collectLiveIdeState(workspaceRoots, selection.selectedFiles, snapshots)
   const candidates = new Map<string, MutableCandidate>()
   const addCandidate = addCandidateFactory(candidates, excludedKeys, omittedCandidates, omittedKeys)
   addBaseCandidates(addCandidate, selection, liveIdeState)
-  const { recentEdits, diffFiles, diagnosticFiles } = await addRepoFactCandidates(addCandidate, repoFacts, workspaceRoots)
+  const { recentEdits, diffFiles, diagnosticFiles } = await addRepoFactCandidates({ candidates, addCandidate, repoFacts, workspaceRoots, provenanceEnabled })
   await addTestCompanions(candidates, addCandidate)
   const keywords = extractKeywords(request.goal, STOP_WORDS)
   await applyKeywordReasons(candidates, snapshots, keywords)
   applyImportAdjacency(candidates, snapshots, buildSeedFiles(selection, liveIdeState, diffFiles, diagnosticFiles))
-  return buildResult({ selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, diffHunksMap: buildDiffHunksMap(repoFacts) })
+  if (pagerankEnabled) tryApplyPageRank(candidates, selection, workspaceRoots, provenanceEnabled)
+  return buildResult({ selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, repoFacts })
 }

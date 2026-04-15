@@ -28,13 +28,16 @@ export type ContextReasonKind =
   | 'open_file'
   | 'dirty_buffer'
   | 'recent_edit'
+  | 'recent_user_edit'
+  | 'recent_agent_edit'
   | 'git_diff'
   | 'diagnostic'
   | 'keyword_match'
   | 'import_adjacency'
   | 'dependency'
   | 'test_companion'
-  | 'semantic_match';
+  | 'semantic_match'
+  | 'pagerank';
 
 export type ContextConfidence = 'high' | 'medium' | 'low';
 

@@ -255,10 +255,7 @@ export const tailSchema = {
     default: 2,
   },
   /** Wave 8 (#115) — persist PTY session descriptors to SQLite for cross-restart restore. Default off. */
-  persistTerminalSessions: {
-    type: 'boolean',
-    default: false,
-  },
+  persistTerminalSessions: { type: 'boolean', default: false },
   /** Wave 14 (Package 4) — codebase graph GC settings */
   codebaseGraph: {
     type: 'object',
@@ -267,31 +264,19 @@ export const tailSchema = {
       gcEnabled: { type: 'boolean', default: true },
       gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 },
     },
-    default: {
-      gcEnabled: true,
-      gcDaysThreshold: 90,
-    },
+    default: { gcEnabled: true, gcDaysThreshold: 90 },
   },
   /** Wave 15 — structured telemetry feature flag and retention policy */
   telemetry: {
     type: 'object',
-    properties: {
-      structured: { type: 'boolean', default: false },
-      retentionDays: { type: 'number', default: 30 },
-    },
+    properties: { structured: { type: 'boolean', default: false }, retentionDays: { type: 'number', default: 30 } },
   },
   /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */
-  sessionsData: {
-    type: 'array',
-    items: { type: 'object' },
-    default: [],
-  },
+  sessionsData: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 16 — session feature flags */
   sessions: {
     type: 'object',
-    properties: {
-      worktreePerSession: { type: 'boolean', default: false },
-    },
+    properties: { worktreePerSession: { type: 'boolean', default: false } },
     default: { worktreePerSession: false },
   },
   /** Wave 17 — layout preset engine feature flags */
@@ -299,5 +284,27 @@ export const tailSchema = {
     type: 'object',
     properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: false } }, default: { v2: false } } },
     default: { presets: { v2: false } },
+  },
+  /** Wave 18 — edit provenance tracking feature flag */
+  provenanceTracking: { type: 'boolean', default: true },
+  /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
+  context: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      provenanceWeights: { type: 'boolean', default: true },
+      pagerank: { type: 'boolean', default: true },
+      pagerankSeeds: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          pinned: { type: 'number', default: 0.5 },
+          symbol: { type: 'number', default: 0.3 },
+          user_edit: { type: 'number', default: 0.2 },
+        },
+        default: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 },
+      },
+    },
+    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 } },
   },
 };
