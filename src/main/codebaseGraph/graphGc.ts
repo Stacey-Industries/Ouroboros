@@ -7,7 +7,6 @@
  */
 
 import log from '../logger'
-
 import type { GraphDatabase } from './graphDatabase'
 
 export interface PruneReport {

@@ -354,7 +354,7 @@ export class GraphDatabase {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs') as typeof import('fs')
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+       
       const stat = fs.statSync(relPath)
       return stat.mtimeMs * 1e6 > stored.mtime_ns
     } catch { return true }

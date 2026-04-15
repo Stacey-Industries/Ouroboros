@@ -5,11 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { GraphDatabase } from './graphDatabase'
-import type { GraphNode as S2GraphNode } from './graphDatabaseTypes'
-import type { QueryEngine } from './queryEngine'
 import type { CypherEngine } from './cypherEngine'
-import type { DetectChangesResult, TraceResult } from './queryEngineTypes'
 import {
   compatDetectChanges,
   compatDetectChangesForSession,
@@ -22,6 +18,10 @@ import {
   compatSearchGraph,
   compatTraceCallPath,
 } from './graphControllerCompatQueries'
+import type { GraphDatabase } from './graphDatabase'
+import type { GraphNode as S2GraphNode } from './graphDatabaseTypes'
+import type { QueryEngine } from './queryEngine'
+import type { TraceResult } from './queryEngineTypes'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

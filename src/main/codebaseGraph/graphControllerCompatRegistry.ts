@@ -7,9 +7,9 @@
  */
 
 import log from '../logger'
-import { GraphControllerCompat } from './graphControllerCompat'
-import type { CompatHandle } from './graphControllerCompat'
 import type { CypherEngine } from './cypherEngine'
+import type { CompatHandle } from './graphControllerCompat'
+import { GraphControllerCompat } from './graphControllerCompat'
 import type { GraphDatabase } from './graphDatabase'
 import type { IndexingWorkerClient } from './indexingWorkerClient'
 import type { QueryEngine } from './queryEngine'

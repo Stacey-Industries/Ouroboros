@@ -10,6 +10,7 @@ import fs from 'fs/promises'
 import path from 'path'
 
 import log from '../logger'
+import type { CypherEngine } from './cypherEngine'
 import {
   toSystem1ArchitectureView,
   toSystem1CallPathResult,
@@ -20,9 +21,7 @@ import {
   toSystem1GraphSchema,
   toSystem1SearchResult,
 } from './graphControllerCompatAdapters'
-import type { CypherEngine } from './cypherEngine'
 import type { GraphDatabase } from './graphDatabase'
-import type { QueryEngine } from './queryEngine'
 import type {
   CallPathResult,
   ChangeDetectionResult,
@@ -31,6 +30,7 @@ import type {
   SearchResult,
 } from './graphTypes'
 import type { ArchitectureView } from './graphTypes'
+import type { QueryEngine } from './queryEngine'
 
 // ─── M3 — searchGraph ────────────────────────────────────────────────────────
 

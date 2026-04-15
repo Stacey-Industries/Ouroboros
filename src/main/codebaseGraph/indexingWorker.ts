@@ -61,11 +61,11 @@ async function handleMessage(msg: IndexingWorkerRequest): Promise<void> {
         await handleIndexRepository(msg)
         break
       default: {
-        const exhaustive: never = msg
+        const unknownMsg = msg as IndexingWorkerRequest
         post({
           type: 'error',
-          requestId: (exhaustive as IndexingWorkerRequest).requestId,
-          message: `Unknown request type: ${String((exhaustive as IndexingWorkerRequest).type)}`,
+          requestId: unknownMsg.requestId,
+          message: `Unknown request type: ${String(unknownMsg.type)}`,
         })
       }
     }

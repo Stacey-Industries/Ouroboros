@@ -10,9 +10,8 @@
 import path from 'path'
 
 import log from '../logger'
-import {
-  toSystem1GraphNode,
-} from './graphControllerCompatAdapters'
+import type { AutoSyncWatcher } from './autoSync'
+import type { CypherEngine } from './cypherEngine'
 import {
   compatDetectChanges,
   compatDetectChangesForSession,
@@ -25,10 +24,7 @@ import {
   compatSearchGraph,
   compatTraceCallPath,
 } from './graphControllerCompatQueries'
-import type { CypherEngine } from './cypherEngine'
 import type { GraphDatabase } from './graphDatabase'
-import type { IndexingWorkerClient } from './indexingWorkerClient'
-import type { QueryEngine } from './queryEngine'
 import type {
   ArchitectureView,
   CallPathResult,
@@ -39,7 +35,8 @@ import type {
   IndexStatus,
   SearchResult,
 } from './graphTypes'
-import type { AutoSyncWatcher } from './autoSync'
+import type { IndexingWorkerClient } from './indexingWorkerClient'
+import type { QueryEngine } from './queryEngine'
 
 // ─── Handle type (subset of what registry tracks) ─────────────────────────────
 

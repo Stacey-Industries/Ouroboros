@@ -29,7 +29,6 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 // ─── Module mocks — must appear before any transitive import of logger/electron ─
@@ -51,29 +50,29 @@ vi.mock('../ipc-handlers/gitOperations', () => ({
   gitTrimmed: vi.fn(async () => ''),
 }))
 
-import { GraphControllerCompat } from './graphControllerCompat'
+import type { AutoSyncWatcher } from './autoSync'
+import { CypherEngine } from './cypherEngine'
 import type { CompatHandle } from './graphControllerCompat'
+import { GraphControllerCompat } from './graphControllerCompat'
 import {
   getGraphController,
   getGraphControllerForRoot,
   setGraphController,
 } from './graphControllerCompatRegistry'
-import { CypherEngine } from './cypherEngine'
 import { GraphDatabase } from './graphDatabase'
 import { IndexingPipeline } from './indexingPipeline'
+import { callResolutionPass } from './indexingPipelineCallResolution'
 import {
   definitionPass,
   importPass,
   parsePass,
   structurePass,
 } from './indexingPipelinePasses'
-import { callResolutionPass } from './indexingPipelineCallResolution'
 import { loadIgnoreRules, walkDirectory } from './indexingPipelineSupport'
-import { QueryEngine } from './queryEngine'
-import { TreeSitterParser } from './treeSitterParser'
 import type { DiscoveredFile, IndexedFile, IndexingResult } from './indexingPipelineTypes'
 import type { IndexingWorkerClient } from './indexingWorkerClient'
-import type { AutoSyncWatcher } from './autoSync'
+import { QueryEngine } from './queryEngine'
+import { TreeSitterParser } from './treeSitterParser'
 
 // ─── Fixture source files ─────────────────────────────────────────────────────
 

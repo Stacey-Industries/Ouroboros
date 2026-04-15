@@ -5,15 +5,15 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { GraphControllerCompat } from './graphControllerCompat'
+import type { AutoSyncWatcher } from './autoSync'
+import type { CypherEngine } from './cypherEngine'
 import type { CompatHandle } from './graphControllerCompat'
+import { GraphControllerCompat } from './graphControllerCompat'
 import type { GraphDatabase } from './graphDatabase'
 import type { GraphNode as S2GraphNode } from './graphDatabaseTypes'
-import type { QueryEngine } from './queryEngine'
-import type { CypherEngine } from './cypherEngine'
-import type { IndexingWorkerClient } from './indexingWorkerClient'
-import type { AutoSyncWatcher } from './autoSync'
 import type { IndexingResult } from './indexingPipelineTypes'
+import type { IndexingWorkerClient } from './indexingWorkerClient'
+import type { QueryEngine } from './queryEngine'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

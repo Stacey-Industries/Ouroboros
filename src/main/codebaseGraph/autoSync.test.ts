@@ -8,8 +8,8 @@
 import path from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AutoSyncWatcher } from './autoSync'
 import type { AutoSyncOptions } from './autoSync'
+import { AutoSyncWatcher } from './autoSync'
 import type { GraphDatabase } from './graphDatabase'
 import type { IndexingPipeline } from './indexingPipeline'
 

@@ -13,13 +13,13 @@
 import React, { useCallback, useState } from 'react';
 
 import type { Command } from './components/CommandPalette/types';
-import { System2IndexProgress } from './components/System2IndexProgress';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
 import { WebFolderBrowser } from './components/FileBrowser';
 import type { InnerAppLayoutProps } from './components/Layout/InnerAppLayout';
 import { InnerAppLayout } from './components/Layout/InnerAppLayout';
 import { LoadingScreen } from './components/Layout/LoadingScreen';
+import { System2IndexProgress } from './components/System2IndexProgress';
 import { AgentEventsProvider } from './contexts/AgentEventsContext';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { FocusProvider } from './contexts/FocusContext';

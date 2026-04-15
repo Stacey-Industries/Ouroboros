@@ -3,11 +3,10 @@
  * indexingPipeline.ts to keep the main file under the 300-line limit.
  */
 
+import { xxh3 } from '@node-rs/xxhash'
 import fs from 'fs/promises'
 import ignore from 'ignore'
 import path from 'path'
-
-import { xxh3 } from '@node-rs/xxhash'
 
 import { mapConcurrent } from './concurrency'
 import type { DiscoveredFile, IndexedFile } from './indexingPipelineTypes'

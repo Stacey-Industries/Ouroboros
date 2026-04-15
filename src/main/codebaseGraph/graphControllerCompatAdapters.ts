@@ -14,12 +14,6 @@ import type {
   GraphNode as S2GraphNode,
 } from './graphDatabaseTypes'
 import type {
-  ArchitectureResult,
-  DetectChangesResult,
-  GraphSchemaResult,
-  TraceResult,
-} from './queryEngineTypes'
-import type {
   ArchitectureView,
   CallPathResult,
   ChangeDetectionResult,
@@ -29,6 +23,12 @@ import type {
   GraphSchema,
   SearchResult,
 } from './graphTypes'
+import type {
+  ArchitectureResult,
+  DetectChangesResult,
+  GraphSchemaResult,
+  TraceResult,
+} from './queryEngineTypes'
 
 // ─── Node label mapping ───────────────────────────────────────────────────────
 

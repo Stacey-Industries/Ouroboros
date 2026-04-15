@@ -7,8 +7,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import type { DiscoveredFile } from './indexingPipelineTypes'
 import { parsePass } from './indexingPipelinePasses'
+import type { DiscoveredFile } from './indexingPipelineTypes'
 import type { TreeSitterParser } from './treeSitterParser'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

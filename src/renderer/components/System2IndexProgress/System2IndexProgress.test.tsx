@@ -12,23 +12,25 @@
  * - hides on 'error' event
  */
 
-import { cleanup, render, screen, act } from '@testing-library/react';
+import { act,cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { System2IndexProgressEvent } from '../../types/electron';
 import { System2IndexProgress } from './System2IndexProgress';
 
+type ProgressCallback = (event: System2IndexProgressEvent) => void;
+type OnIndexProgress = (cb: ProgressCallback) => () => void;
+type WindowRecord = Record<string, unknown>;
+
 afterEach(() => {
   cleanup();
-  delete (window as Record<string, unknown>).electronAPI;
+  delete (window as unknown as WindowRecord).electronAPI;
 });
 
-type ProgressCallback = (event: System2IndexProgressEvent) => void;
-
-function makeElectronAPI(onIndexProgress?: (cb: ProgressCallback) => () => void) {
+function makeElectronAPI(onIndexProgress?: OnIndexProgress) {
   return {
     system2: {
-      onIndexProgress: onIndexProgress ?? vi.fn(() => vi.fn()),
+      onIndexProgress: onIndexProgress ?? (vi.fn(() => vi.fn()) as unknown as OnIndexProgress),
     },
   };
 }
@@ -40,10 +42,11 @@ describe('System2IndexProgress', () => {
   beforeEach(() => {
     capturedCallback = null;
     unsubscribeSpy = vi.fn();
-    (window as Record<string, unknown>).electronAPI = makeElectronAPI((cb) => {
+    const onIndexProgress: OnIndexProgress = (cb) => {
       capturedCallback = cb;
-      return unsubscribeSpy;
-    });
+      return unsubscribeSpy as unknown as () => void;
+    };
+    (window as unknown as WindowRecord).electronAPI = makeElectronAPI(onIndexProgress);
   });
 
   it('renders nothing when no progress event has been received', () => {
@@ -150,7 +153,7 @@ describe('System2IndexProgress', () => {
   });
 
   it('renders nothing when system2 API is absent (system2.enabled=false)', () => {
-    (window as Record<string, unknown>).electronAPI = {};
+    (window as unknown as WindowRecord).electronAPI = {};
     const { container } = render(<System2IndexProgress />);
     expect(container.firstChild).toBeNull();
   });
