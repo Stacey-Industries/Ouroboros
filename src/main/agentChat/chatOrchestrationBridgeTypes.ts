@@ -59,6 +59,10 @@ export interface ActiveStreamContext {
   estimatedHistoryTokens?: number;
   /** Skill execution records accumulated from hook events during this send. */
   skillExecutions?: SkillExecutionRecord[];
+  /** Wall-clock send start (Date.now()) — used to log true time-to-first-chunk and total turn duration. */
+  sendStartedAt?: number;
+  /** Set once the first streaming chunk has been emitted; gates the TTFC log. */
+  firstChunkLogged?: boolean;
 }
 
 export interface AgentChatBridgeRuntime {

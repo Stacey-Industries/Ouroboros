@@ -7,7 +7,7 @@
  * MCP server needed.
  */
 
-import { getGraphController } from '../codebaseGraph/graphController';
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import log from '../logger';
 
 const MAX_HOTSPOTS = 20;

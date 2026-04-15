@@ -8,7 +8,7 @@
 import { BrowserWindow } from 'electron';
 import path from 'path';
 
-import { acquireGraphController, releaseGraphController } from './codebaseGraph/graphController';
+import { acquireGraphController, releaseGraphController } from './codebaseGraph/graphControllerSupport';
 import { getConfigValue, setConfigValue, type WindowSession } from './config';
 import { acquireContextLayer, releaseContextLayer } from './contextLayer/contextLayerController';
 import { registerIpcHandlers } from './ipc';

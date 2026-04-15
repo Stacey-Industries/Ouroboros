@@ -109,7 +109,7 @@ vi.mock('./pty', () => ({
   killPtySessionsForWindow: mocks.killPtySessionsForWindow,
 }));
 
-vi.mock('./codebaseGraph/graphController', () => ({
+vi.mock('./codebaseGraph/graphControllerSupport', () => ({
   acquireGraphController: mocks.acquireGraphController,
   releaseGraphController: mocks.releaseGraphController,
 }));

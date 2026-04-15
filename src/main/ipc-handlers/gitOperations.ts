@@ -9,7 +9,7 @@ import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { getGraphController } from '../codebaseGraph/graphController';
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchActivationEvent } from '../extensions';
 import log from '../logger';

@@ -6,7 +6,7 @@
 
 import { ipcMain } from 'electron';
 
-import { getGraphController } from '../codebaseGraph/graphController';
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 
 type ChannelList = string[];
 type IpcHandler = Parameters<typeof ipcMain.handle>[1];

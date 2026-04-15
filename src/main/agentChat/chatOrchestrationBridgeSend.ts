@@ -139,6 +139,7 @@ export function buildStreamContext(
   created: CreateTaskResult & { taskId: string; session: NonNullable<CreateTaskResult['session']> },
   link: AgentChatOrchestrationLink,
   assistantMessageId: string,
+  sendStartedAt?: number,
 ): ActiveStreamContext {
   const userPrompt = pending.thread.messages.find((m) => m.role === 'user')?.content;
   return {
@@ -160,6 +161,7 @@ export function buildStreamContext(
       (sum, m) => sum + tokenCalibrationStore.calibrate(m.content.length / 4),
       0,
     ),
+    sendStartedAt,
   };
 }
 
@@ -316,7 +318,7 @@ export async function executePendingSend(args: {
     args.runtime.createId,
     validCreated.session.id,
   );
-  const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId);
+  const streamCtx = buildStreamContext(args.pending, validCreated, linked.link, assistantMessageId, et0);
   args.runtime.activeSends.set(validCreated.taskId, streamCtx);
 
   // Signal hooks.ts to suppress lifecycle events until synthetic agent_start fires.

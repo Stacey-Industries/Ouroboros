@@ -9,7 +9,7 @@
  */
 // Part of the unwired internalMcp module — see index.ts for deprecation notice.
 
-import { getGraphController } from '../codebaseGraph/graphController'
+import { getGraphController } from '../codebaseGraph/graphControllerSupport'
 import { createGraphMcpTools } from '../codebaseGraph/mcpToolHandlers'
 import {
   detectChangesTool,

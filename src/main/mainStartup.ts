@@ -11,14 +11,10 @@ import path from 'path';
 import { initConflictMonitor } from './agentConflict/conflictMonitor';
 import { getCredential } from './auth/credentialStore';
 import {
-  GraphController,
-  setGraphController,
-} from './codebaseGraph/graphController';
-import {
-  initCompatRegistry,
   acquireGraphController as acquireCompatController,
+  initCompatRegistry,
 } from './codebaseGraph/graphControllerCompatRegistry';
-import { setSystem2Db } from './codebaseGraph/graphControllerSupport';
+import { setGraphController, setSystem2Db } from './codebaseGraph/graphControllerSupport';
 import { pruneExpiredProjects } from './codebaseGraph/graphGc';
 import { getConfigValue } from './config';
 import log from './logger';
@@ -231,7 +227,7 @@ function resolveIndexReason(
   return null
 }
 
-async function initCodebaseGraphSystem2(projectRoot: string): Promise<void> {
+async function initCodebaseGraphImpl(projectRoot: string): Promise<void> {
   const { GraphDatabase } = await import('./codebaseGraph/graphDatabase');
   const { IndexingPipeline } = await import('./codebaseGraph/indexingPipeline');
   const { TreeSitterParser } = await import('./codebaseGraph/treeSitterParser');
@@ -277,22 +273,10 @@ async function initCodebaseGraphSystem2(projectRoot: string): Promise<void> {
   log.info(`[system2] controller initialized for ${projectName}`);
 }
 
-/**
- * Dispose the active graph controller on app shutdown.
- *
- * When System 2 is enabled, calls disposeAllCompat() so the compat registry
- * cleans up its watcher and System 2 resources.
- * When System 1 is active, falls through to the standard dispose().
- */
+/** Dispose all graph controllers on app shutdown. */
 export async function disposeCodebaseGraph(): Promise<void> {
-  const s2Config = getConfigValue('system2');
-  if (s2Config?.enabled) {
-    const { disposeAllCompat } = await import('./codebaseGraph/graphControllerCompatRegistry');
-    await disposeAllCompat();
-    return;
-  }
-  const { getGraphController } = await import('./codebaseGraph/graphController');
-  await getGraphController()?.dispose();
+  const { disposeAllCompat } = await import('./codebaseGraph/graphControllerCompatRegistry');
+  await disposeAllCompat();
 }
 
 export async function initCodebaseGraph(): Promise<void> {
@@ -302,20 +286,10 @@ export async function initCodebaseGraph(): Promise<void> {
     return;
   }
 
-  const s2Config = getConfigValue('system2');
-  const useSystem2 = s2Config?.enabled === true;
-
   try {
-    if (useSystem2) {
-      await initCodebaseGraphSystem2(defaultRoot);
-    } else {
-      const controller = new GraphController(defaultRoot);
-      await controller.initialize();
-      setGraphController(controller);
-      log.info('Controller initialized successfully');
-    }
+    await initCodebaseGraphImpl(defaultRoot);
   } catch (err) {
-    log.warn('Failed to start:', err);
+    log.warn('Failed to start graph:', err);
   }
 
   // Initialize conflict monitor after graph (operates in file-only mode if graph is cold)

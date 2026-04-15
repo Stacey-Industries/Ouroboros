@@ -2,14 +2,14 @@
  * codebaseGraph/index.ts -- Barrel export for the codebase graph subsystem.
  */
 
-// ---- Controller (Phase 8) ---------------------------------------------------
+// ---- Controller registry ----------------------------------------------------
+export type { GraphControllerLike } from './graphControllerSupport';
 export {
   acquireGraphController,
   getGraphController,
   getGraphControllerForRoot,
-  GraphController,
   releaseGraphController,
-} from './graphController';
+} from './graphControllerSupport';
 
 // ---- Database (Phase 1) -----------------------------------------------------
 export { GraphDatabase } from './graphDatabase';

@@ -10,7 +10,7 @@
 
 import type { PermissionContext } from '@shared/types/permissionContext';
 
-import { getGraphController } from './codebaseGraph/graphController';
+import { getGraphController } from './codebaseGraph/graphControllerSupport';
 import { getContextLayerController } from './contextLayer/contextLayerController';
 import log from './logger';
 

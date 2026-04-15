@@ -5,7 +5,7 @@
 
 import type { AgentConflictReport } from '@shared/types/agentConflict';
 
-import { getGraphControllerForRoot } from '../codebaseGraph/graphController';
+import { getGraphControllerForRoot } from '../codebaseGraph/graphControllerSupport';
 import type { GraphNode } from '../codebaseGraph/graphTypes';
 import log from '../logger';
 

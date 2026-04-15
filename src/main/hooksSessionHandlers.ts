@@ -7,7 +7,7 @@
  */
 
 import { generateClaudeMd } from './claudeMdGenerator';
-import { getGraphController } from './codebaseGraph/graphController';
+import { getGraphController } from './codebaseGraph/graphControllerSupport';
 import { getConfigValue } from './config';
 import { getContextLayerController } from './contextLayer/contextLayerController';
 import { dispatchActivationEvent } from './extensions';

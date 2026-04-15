@@ -51,6 +51,9 @@ export function emitStreamChunk(
 // ---------------------------------------------------------------------------
 
 export function stopIncrementalFlush(ctx: ActiveStreamContext): void {
+  if (!ctx.streamEnded && typeof ctx.sendStartedAt === 'number') {
+    log.info('[chat-perf] total-turn-wallclock:', Date.now() - ctx.sendStartedAt, 'ms', 'thread:', ctx.threadId);
+  }
   ctx.streamEnded = true;
   if (ctx.flushTimer) {
     clearInterval(ctx.flushTimer);

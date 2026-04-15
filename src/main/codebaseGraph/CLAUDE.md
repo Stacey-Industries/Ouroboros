@@ -1,195 +1,123 @@
-<!-- claude-md-auto:start -->
-I have a full picture of the subsystem. The existing `CLAUDE.md` is already present (shown in the last file read's system-reminder), and it's well-structured. Here's the generated content, refined from what I found:
-
-`★ Insight ─────────────────────────────────────`
-- The graph engine uses a **two-pass edge resolution** strategy: per-file parsing produces placeholder IDs (`__file::`, `__unresolved::`), then `resolveEdgeReferences()` links them in bulk after all files are parsed. This avoids any parse-ordering dependency.
-- `TreeCache` must call `.delete()` on evicted `web-tree-sitter` Trees — they live in WASM linear memory outside V8's GC, so forgetting to free them is a real memory leak.
-- The worker thread (`graphWorker.ts`) owns all WASM memory and tree cache to keep the Electron event loop responsive during 15-20s full-repo indexing runs.
-`─────────────────────────────────────────────────`
-
----
-
 # codebaseGraph — In-process codebase knowledge graph engine
 
-Indexes source code into a graph of symbols and relationships. Native replacement for the external `codebase-memory` MCP server — runs entirely in the main process with no external dependencies beyond tree-sitter WASM.
+Indexes source code into a graph of symbols and relationships. Runs entirely in
+the main process with no external dependencies beyond tree-sitter WASM and
+SQLite (better-sqlite3).
+
+**Phase E complete**: System 1 (worker-thread + JSON store) has been removed.
+System 2 (SQLite + indexing worker client + Cypher query engine) is the only
+implementation. `GraphControllerCompat` is the permanent consumer API layer —
+callers use `getGraphController()` and receive a `GraphControllerLike`.
 
 ## Key Files
 
-| File                       | Role                                                                                                                                                                                               |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `graphController.ts`       | Singleton facade — owns store + query engine, exposes 14 tool methods mirroring MCP server, handles init/dispose and debounced file-change reindexing with concurrency guard                       |
-| `graphStore.ts`            | In-memory `Map<id, GraphNode>` + `GraphEdge[]` with JSON persistence to `.ouroboros/graph.json`. No SQLite.                                                                                        |
-| `graphQuery.ts`            | Query engine — fuzzy search (exact/prefix/substring/fuzzy scoring), BFS call-path tracing, architecture views (hotspots, modules, file tree), mtime-based change detection, simplified Cypher parser |
-| `graphQuerySupport.ts`     | Cypher-like query parser extracted from `graphQuery.ts` — handles MATCH/WHERE/RETURN/LIMIT for node and edge queries                                                                               |
-| `graphQueryArchitecture.ts`| Builds `ArchitectureView` sub-structures: `buildFileTree()`, `buildHotspots()`, `buildModules()`                                                                                                   |
-| `graphParser.ts`           | Public parsing API — routes files to AST or regex parser, `resolveEdgeReferences()` resolves `__file::`/`__unresolved::` placeholders after all files parsed                                      |
-| `graphParserAst.ts`        | Tree-sitter AST extraction for TS/JS — functions, classes, interfaces, type aliases, imports, exports, containment edges                                                                           |
-| `graphParserCallGraph.ts`  | Call graph edges — walks function bodies for `call_expression` nodes, maps to local symbols or `__unresolved::` placeholders. Filters `BUILTIN_CALLEES`.                                           |
-| `graphParserRegex.ts`      | Regex fallback for TS/JS when tree-sitter unavailable — patterns for functions, arrow functions, classes, methods, interfaces, types, imports                                                      |
-| `graphParserRegexExtended.ts` | Extended regex patterns for additional TS/JS constructs not covered by the base regex parser                                                                                                    |
-| `graphParserGeneric.ts`    | Pluggable tree-sitter extraction for Python, Go, Rust, Java, C/C++ via `LanguageExtractorConfig` objects                                                                                          |
-| `graphParserShared.ts`     | Shared constants (`SKIP_DIRS`, `BUILTIN_CALLEES`, `MAX_FILE_SIZE`), helpers (`makeNodeId`, `resolveImportPath`, `findDescendantsOfType`), types (`ParseResult`, `SymbolExtractionContext`)         |
-| `treeSitterLoader.ts`      | WASM runtime init + grammar loading with concurrent-load dedup. Maps 30+ extensions to grammar names. Grammars sourced from `tree-sitter-wasms` npm package.                                       |
-| `graphIndexing.ts`         | Full/incremental indexing, single-file reindex, mtime stamping, `TreeCache` (FIFO eviction, max 200 entries)                                                                                       |
-| `graphWorker.ts`           | Worker thread entry — CPU-bound tree-sitter parsing runs off the main thread. Owns `TreeCache` and all WASM memory. Responds to `indexAll`, `reindexFiles`, `reindexSingle` messages.              |
-| `graphWorkerTypes.ts`      | `WorkerRequest` / `WorkerResponse` discriminated union types for the worker thread message protocol                                                                                                |
-| `graphTypes.ts`            | All shared interfaces: `GraphNode`, `GraphEdge`, `SearchResult`, `CallPathResult`, `ArchitectureView`, `ChangeDetectionResult`, `GraphSchema`, `GraphToolContext`                                  |
-| `graphControllerSupport.ts`| Extracted controller helpers — `applyFullIndexToStore`, `applyReindexToStore`, `ingestTracesIntoStore`, `manageAdrAction`, `resolveWorkerPath`, singleton get/set                                  |
-| `graphStore.test.ts`       | Unit tests for `GraphStore` CRUD and persistence                                                                                                                                                   |
+| File | Role |
+|------|------|
+| `graphControllerSupport.ts` | Per-root registry (`setGraphController`, `getGraphController`, `getGraphControllerForRoot`, `acquireGraphController`, `releaseGraphController`). Defines `GraphControllerLike` — the stable consumer interface. |
+| `graphControllerCompatRegistry.ts` | Multi-root acquire/release that wraps System 2 registry entries in `GraphControllerCompat` instances. Called by `graphControllerSupport.acquireGraphController`. |
+| `graphControllerCompat.ts` | `GraphControllerCompat` — compat shim that implements `GraphControllerLike` over System 2 internals. The permanent consumer API boundary. |
+| `graphControllerCompatAdapters.ts` | Adapter helpers used by `GraphControllerCompat` to bridge System 2 query results to the `GraphControllerLike` shape. |
+| `graphControllerCompatQueries.ts` | Query implementations for `GraphControllerCompat`: `searchGraph`, `searchCode`, `queryGraph`, `traceCallPath`, `getArchitecture`, `getCodeSnippet`. |
+| `graphDatabase.ts` | SQLite-backed graph database (better-sqlite3). Tables: `nodes`, `edges`, per-project catalog hash. All operations synchronous. |
+| `graphDatabaseHelpers.ts` | Node/edge insert helpers, row mappers, schema migration utilities. |
+| `graphDatabaseSchema.ts` | DDL constants and schema migration runner. |
+| `graphDatabaseTraversal.ts` | BFS/DFS traversal helpers over the graph DB. |
+| `graphDatabaseTypes.ts` | `GraphNode`, `GraphEdge`, `NodeLabel`, `EdgeType`, `ProjectRecord`, and related type definitions used by System 2. |
+| `graphStore.ts` | SQLite-backed `GraphStore` implementing `IGraphStore`. Used by `graphController`-level tests that validate node/edge CRUD via the shared interface. |
+| `graphStoreTypes.ts` | `IGraphStore` interface — implemented by `GraphStore`. |
+| `graphTypes.ts` | Legacy shared types: `GraphNode`, `GraphEdge`, `IndexStatus`, `ArchitectureView`, `SearchResult`, `CallPathResult`, `ChangeDetectionResult`, `GraphSchema`, `GraphToolContext`. Still used by `GraphControllerLike` surface and some consumers. |
+| `indexingPipeline.ts` | Orchestrates a full or incremental index run: file discovery → tree-sitter parse → DB upsert. |
+| `indexingPipelineCallResolution.ts` | Post-parse call-edge resolution pass. |
+| `indexingPipelinePasses.ts` | Pluggable pipeline passes (enrichment, git co-change, HTTP links, test detection). |
+| `indexingPipelineStructure.ts` | File structure analysis helpers for the pipeline. |
+| `indexingPipelineSupport.ts` | Shared utilities for the pipeline (file hash, mtime, path normalization). |
+| `indexingPipelineTypes.ts` | `IndexingOptions`, `IndexingProgress`, `IndexingResult`, `DiscoveredFile`, `IndexedFile`. |
+| `indexingWorker.ts` | Worker thread entry point for CPU-bound tree-sitter parsing. Receives messages from `IndexingWorkerClient`. |
+| `indexingWorkerClient.ts` | Main-thread client — spawns the worker, sends `runIndex` jobs, relays `onProgress` callbacks. |
+| `indexingWorkerTypes.ts` | Worker message protocol types (`WorkerRequest`, `WorkerResponse`). |
+| `queryEngine.ts` | `QueryEngine` — search, trace, architecture, change-detection over the graph DB. |
+| `queryEngineSupport.ts` | Query helpers shared by `QueryEngine` and `CypherEngine`. |
+| `queryEngineTypes.ts` | Query result types: `SearchResult`, `TraceResult`, `ArchitectureResult`, `DetectChangesResult`, etc. |
+| `cypherEngine.ts` | `CypherEngine` — executes simplified Cypher-like queries against the graph DB. |
+| `cypherEngineParser.ts` | Cypher query string parser. |
+| `cypherEngineSupport.ts` | Execution helpers for `CypherEngine`. |
+| `cypherEngineVarpath.ts` | Variable-path traversal for Cypher relationship patterns. |
+| `treeSitterParser.ts` | `TreeSitterParser` — wraps tree-sitter WASM for TS/JS/Python/Go/Rust/Java/C++. |
+| `treeSitterLanguageConfigs.ts` | Per-language extraction configs (node types, scope rules). |
+| `treeSitterParserCalls.ts` | Call-edge extraction from tree-sitter ASTs. |
+| `treeSitterParserDefs.ts` | Definition extraction (functions, classes, interfaces, etc.). |
+| `treeSitterParserImports.ts` | Import/export extraction. |
+| `treeSitterParserSupport.ts` | Shared cursor-walk helpers (`findDescendantsOfType`). |
+| `treeSitterTypes.ts` | Extraction result types. |
+| `autoSync.ts` | `AutoSyncWatcher` — chokidar watcher that triggers incremental reindex on file changes. |
+| `systemTwoRegistry.ts` | Core acquire/release registry keyed by root path, ref-counted. Manages watcher lifecycle. |
+| `systemTwoRegistryTypes.ts` | Registry handle and config types. |
+| `concurrency.ts` | Async mutex / concurrency helpers used by the pipeline. |
+| `graphGc.ts` | GC: prunes stale project graphs from the DB based on last-opened timestamp. |
+| `mcpToolHandlers.ts` | MCP tool implementations exposed to Claude Code via the internal MCP server. |
+| `mcpToolHandlerDefs.ts` | Tool definition objects (name, description, input schema). |
+| `mcpToolHandlerHelpers.ts` | Shared formatting helpers for MCP tool responses. |
+| `detectChangesForSessionTypes.ts` | Types for per-session change detection results. |
+| `passes/` | Enrichment passes run after initial indexing (git co-change, HTTP links, test detection). |
 
 ## Architecture
 
 ```
-GraphController (singleton via getGraphController() / setGraphController())
-  ├── GraphStore          (in-memory nodes/edges + JSON persistence)
-  ├── GraphQueryEngine    (search, trace, architecture, Cypher)
-  └── Worker thread (graphWorker.ts)
-       ├── TreeCache      (FIFO cache of tree-sitter Trees, max 200)
-       └── Parsing pipeline:
-            parseFile() → tree-sitter AST available?
-              ├─ TS/JS → extractSymbolsFromTree() + extractCallEdges()
-              ├─ Py/Go/Rust/Java/C/C++ → extractSymbolsGeneric(config)
-              └─ No grammar → parseFileRegex() (regex fallback)
-            → resolveEdgeReferences() (cross-file link resolution)
+initCodebaseGraph() (mainStartup.ts)
+  └── initCompatRegistry(db, queryEngine, cypherEngine, workerClient)
+  └── GraphControllerCompatRegistry.acquireGraphController(root, pipeline)
+       └── SystemTwoRegistry.acquire(root, db, pipeline)
+            └── AutoSyncWatcher (chokidar) → incremental reindex on changes
+       └── new GraphControllerCompat(handle)
+            ├── QueryEngine    (search, trace, architecture, detect-changes)
+            ├── CypherEngine   (queryGraph — simplified Cypher subset)
+            └── IndexingWorkerClient → IndexingWorker (worker thread)
+                 └── TreeSitterParser → GraphDatabase (better-sqlite3)
+
+Consumers call getGraphController() → GraphControllerLike
 ```
 
-## Node ID Format
+## Consumer API (`GraphControllerLike`)
 
-`{relativePath}::{symbolName}::{type}::{lineNumber}` — e.g. `src/main/config.ts::getConfig::function::42`
+The stable interface that all consumers depend on. Defined in `graphControllerSupport.ts`, implemented by `GraphControllerCompat`:
 
-## Edge Types
+| Method | Description |
+|--------|-------------|
+| `searchGraph(query, limit?)` | Fuzzy symbol search |
+| `traceCallPath(fromId, toId, maxDepth?)` | BFS call-path between two symbols |
+| `getArchitecture(aspects?)` | Hotspots, modules, file tree |
+| `getCodeSnippet(symbolId)` | Source snippet + dependencies for a symbol |
+| `queryGraph(query)` | Simplified Cypher query |
+| `searchCode(pattern, opts?)` | Regex search across source files |
+| `detectChanges()` | Files changed since last index |
+| `detectChangesForSession(sessionId, files)` | Per-session blast radius |
+| `indexRepository(opts)` | Trigger explicit re-index |
+| `onSessionStart() / onGitCommit() / onFileChange(paths)` | Event hooks for incremental sync |
+| `getStatus()` / `indexStatus()` | Index health info |
+| `manageAdr(action, id?)` | ADR stub (file-system redirects) |
+| `ingestTraces(traces)` | Ingest external call traces |
 
-| Type         | Meaning                     |
-| ------------ | --------------------------- |
-| `contains`   | File → symbol it defines    |
-| `exports`    | File → exported symbol      |
-| `imports`    | File → imported file        |
-| `calls`      | Function → called function  |
-| `extends`    | Class → superclass          |
-| `implements` | Class → interface           |
-| `depends_on` | Generic dependency          |
+## Startup Sequence
 
-## Reindexing
-
-- **Full**: On first init (no persisted graph) or explicit `incremental: false`
-- **Incremental**: On file changes (debounced 2s), session start, git commit — compares `mtime` metadata on file nodes vs `fs.stat()`
-- **Concurrency guard**: `indexingInProgress` flag queues changes into `pendingReindex`, drained via `drainPendingReindex()` after the current index completes
-- **Delete handling**: If file is no longer accessible, `reindexSingleFile` clears its nodes/edges and evicts its `TreeCache` entry
-
-## Cypher-like Query Syntax
-
-`queryGraph()` supports a simplified subset:
-
-```
-MATCH (n:function) WHERE n.name CONTAINS 'config' RETURN n LIMIT 10
-MATCH (a)-[:calls]->(b) WHERE a.name = 'initialize' RETURN a, b
-```
-
-WHERE operators: `CONTAINS`, `=`, `STARTS WITH`
+1. `mainStartup.initCodebaseGraph()` is called from `main.ts` after app is ready.
+2. A shared `GraphDatabase` is created and injected via `setSystem2Db()`.
+3. `initCompatRegistry(deps)` stores the shared DB, query/cypher engine factories, and worker client.
+4. `acquireCompatController(root, pipeline)` creates the default-root `GraphControllerCompat`.
+5. `setGraphController(compat)` registers it as the default root in `graphControllerSupport`.
+6. Background: `IndexingWorkerClient.runIndex()` fires if the catalog hash is stale or node count is zero.
 
 ## Gotchas
 
-- **WASM init is async** — `initTreeSitter()` must complete before parsing. Controller calls it in `initialize()`. Failure causes silent regex fallback for all files.
-- **`web-tree-sitter` has no `descendantsOfType()`** — use `findDescendantsOfType()` from `graphParserShared.ts` (manual cursor walk).
-- **Two-pass edge resolution** — `__file::` and `__unresolved::` placeholder IDs are created during per-file parsing and resolved in bulk by `resolveEdgeReferences()`. This decouples parse order from edge linking.
-- **TreeCache must `.delete()` evicted Trees** — `web-tree-sitter` Trees live in WASM linear memory, not V8-managed. Forgetting `.delete()` leaks WASM memory permanently.
-- **Max file size**: 500KB (`MAX_FILE_SIZE`) — larger files are silently skipped.
-- **SKIP_DIRS**: `node_modules`, `dist`, `build`, `out`, `.git`, `.ouroboros`.
-- **Persistence path**: `{projectRoot}/.ouroboros/graph.json`, directory auto-created on first save.
-- **Grammar dedup**: `treeSitterLoader.ts` uses `pendingLanguageLoads` Map to prevent concurrent loads of the same grammar WASM. Init failure resets the promise so retries work.
-- **Regex parser ESLint overrides**: `graphParserRegex.ts` has many `eslint-disable-next-line security/detect-unsafe-regex` — the patterns are intentionally complex for multiline matching, not bugs.
-- **Controller is a module singleton** — `getGraphController()` / `setGraphController()` at module scope (no DI). Created in main process boot sequence.
-- **Worker path resolution**: `resolveWorkerPath()` in `graphControllerSupport.ts` must handle both dev (source) and packaged (asar) paths correctly.
+- **`getGraphController()` may return null** at startup if the graph hasn't initialized yet. All consumers must handle `null`.
+- **`acquireGraphController(root)`** is called per window from `windowManager.ts`. It reuses the shared DB via `_system2Db`. First window uses startup-injected DB; subsequent windows reuse it.
+- **`initCompatRegistry()` must be called first** — `acquireGraphController` will throw `[compat-registry] initCompatRegistry() not called` if the registry hasn't been initialized.
+- **`graphStore.ts` is System 2** — it's the SQLite-backed `IGraphStore` implementation used by test utilities. Not the old in-memory JSON store.
+- **`graphTypes.ts` is legacy** — defines `GraphNode` / `GraphEdge` / etc. as used by the `GraphControllerLike` surface. `graphDatabaseTypes.ts` defines the System 2 DB-layer types (different shape). Some adapters bridge between the two.
+- **`GraphControllerCompat` is permanent** — it's the abstraction boundary. Do not bypass it to call System 2 internals from consumers.
+- **Worker path** — `indexingWorkerClient.ts` resolves the worker path using `__dirname` with an `endsWith('chunks')` check for asar packaging. Same pattern as the old `resolveWorkerPath` from System 1.
+- **GC runs at startup** — `graphGc.pruneExpiredProjects()` fires before the initial index if `codebaseGraph.gcEnabled` is true. Pruned project names are tracked to force a full reindex.
 
 ## Dependencies
 
-- **Runtime**: `web-tree-sitter` (WASM parser engine), `tree-sitter-wasms` (pre-built grammar WASM files for 30+ languages)
-- **Consumed by**: `src/main/orchestration/graphSummaryBuilder.ts` (passive context injection), `src/main/ipc-handlers/` (IPC exposure to renderer), `codebase-memory` MCP tool handlers
-<!-- claude-md-auto:end -->
-
-<!-- claude-md-manual:preserved -->
-# codebaseGraph — In-process codebase knowledge graph engine
-
-Indexes source code into a graph of symbols and relationships. Native replacement for the external `codebase-memory` MCP server — runs entirely in the main process with no external dependencies beyond tree-sitter WASM.
-
-## Key Files
-
-| File                      | Role                                                                                                                                                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `graphController.ts`      | Singleton facade — owns store + query engine, exposes 14 tool methods mirroring MCP server, handles init/dispose and debounced file-change reindexing with concurrency guard                         |
-| `graphStore.ts`           | In-memory `Map<id, GraphNode>` + `GraphEdge[]` with JSON persistence to `.ouroboros/graph.json`. No SQLite.                                                                                          |
-| `graphQuery.ts`           | Query engine — fuzzy search (exact/prefix/substring/fuzzy scoring), BFS call-path tracing, architecture views (hotspots, modules, file tree), mtime-based change detection, simplified Cypher parser |
-| `graphParser.ts`          | Public parsing API — routes files to AST or regex parser, `resolveEdgeReferences()` resolves `__file::`/`__unresolved::` placeholders after all files parsed                                         |
-| `graphParserAst.ts`       | Tree-sitter AST extraction for TS/JS — functions, classes, interfaces, type aliases, imports, exports, containment edges                                                                             |
-| `graphParserCallGraph.ts` | Call graph edges — walks function bodies for `call_expression` nodes, maps to local symbols or `__unresolved::` placeholders. Filters `BUILTIN_CALLEES`.                                             |
-| `graphParserRegex.ts`     | Regex fallback for TS/JS when tree-sitter unavailable — patterns for functions, arrow functions, classes, methods, interfaces, types, imports                                                        |
-| `graphParserGeneric.ts`   | Pluggable tree-sitter extraction for Python, Go, Rust, Java, C/C++ via `LanguageExtractorConfig` objects                                                                                             |
-| `graphParserShared.ts`    | Shared constants (`SKIP_DIRS`, `BUILTIN_CALLEES`, `MAX_FILE_SIZE`), helpers (`makeNodeId`, `resolveImportPath`, `findDescendantsOfType`), types (`ParseResult`, `SymbolExtractionContext`)           |
-| `treeSitterLoader.ts`     | WASM runtime init + grammar loading with concurrent-load dedup. Maps 30+ extensions to grammar names. Grammars from `tree-sitter-wasms` npm package.                                                 |
-| `graphIndexing.ts`        | Full/incremental indexing, single-file reindex, mtime stamping, `TreeCache` (FIFO eviction, max 200 entries)                                                                                         |
-| `graphTypes.ts`           | All shared interfaces: `GraphNode`, `GraphEdge`, `SearchResult`, `CallPathResult`, `ArchitectureView`, `ChangeDetectionResult`, `GraphSchema`                                                        |
-| `graphStore.test.ts`      | Unit tests for GraphStore CRUD and persistence                                                                                                                                                       |
-
-## Architecture
-
-```
-GraphController (singleton via get/setGraphController())
-  ├── GraphStore (in-memory nodes/edges + JSON persistence)
-  ├── GraphQueryEngine (search, trace, architecture, Cypher)
-  ├── TreeCache (FIFO cache of tree-sitter Trees, max 200)
-  └── Parsing pipeline:
-       parseFile() → tree-sitter AST available?
-         ├─ TS/JS → extractSymbolsFromTree() + extractCallEdges()
-         ├─ Py/Go/Rust/Java/C/C++ → extractSymbolsGeneric(config)
-         └─ No grammar → parseFileRegex() (regex fallback)
-       → resolveEdgeReferences() (cross-file link resolution)
-```
-
-## Node ID Format
-
-`{relativePath}::{symbolName}::{type}::{lineNumber}` — e.g. `src/main/config.ts::getConfig::function::42`
-
-## Edge Types
-
-| Type         | Meaning                    |
-| ------------ | -------------------------- |
-| `contains`   | File → symbol it defines   |
-| `exports`    | File → exported symbol     |
-| `imports`    | File → imported file       |
-| `calls`      | Function → called function |
-| `extends`    | Class → superclass         |
-| `implements` | Class → interface          |
-| `depends_on` | Generic dependency         |
-
-## Reindexing
-
-- **Full**: On first init (no persisted graph) or explicit `incremental: false`
-- **Incremental**: On file changes (debounced 2s in controller), session start, git commit — compares `mtime` metadata on file nodes vs `fs.stat()`
-- **Concurrency**: `indexingInProgress` flag queues changes into `pendingReindex` array, drained via `drainPendingReindex()` after current index completes
-- **Delete handling**: If file no longer accessible, `reindexSingleFile` clears its nodes/edges and evicts its tree cache entry
-
-## Cypher-like Query Syntax
-
-`queryGraph()` supports a simplified subset:
-
-- `MATCH (n:function) WHERE n.name CONTAINS 'config' RETURN n LIMIT 10`
-- `MATCH (a)-[:calls]->(b) WHERE a.name = 'initialize' RETURN a, b`
-- WHERE operators: `CONTAINS`, `=`, `STARTS WITH`
-
-## Gotchas
-
-- **WASM init is async** — `initTreeSitter()` must complete before parsing. Controller calls it in `initialize()`. If it fails, all parsing falls back to regex silently.
-- **`web-tree-sitter` has no `descendantsOfType()`** — use `findDescendantsOfType()` from `graphParserShared.ts` (manual cursor walk).
-- **Two-pass edge resolution** — `__file::` (import targets) and `__unresolved::` (call targets) are placeholder IDs created during per-file parsing, resolved in bulk by `resolveEdgeReferences()`. This avoids requiring parse order.
-- **TreeCache must `.delete()` evicted Trees** — `web-tree-sitter` Trees live in WASM linear memory, not GC'd by V8. Forgetting causes memory leaks.
-- **Max file size**: 500KB (`MAX_FILE_SIZE`) — larger files silently skipped.
-- **SKIP_DIRS**: `node_modules`, `dist`, `build`, `out`, `.git`, `.ouroboros`.
-- **Persistence path**: `{projectRoot}/.ouroboros/graph.json`, directory auto-created on save.
-- **Regex parser ESLint overrides** — `graphParserRegex.ts` has many `eslint-disable-next-line security/detect-unsafe-regex` comments; the patterns are intentionally complex for multiline matching.
-- **Grammar dedup** — `treeSitterLoader.ts` prevents concurrent loads of the same grammar via `pendingLanguageLoads` Map. Init failure resets the promise so retry works.
-- **Controller is a module singleton** — `getGraphController()` / `setGraphController()` at module scope (no DI). Created in `main.ts` boot sequence.
-
-## Dependencies
-
-- **Runtime**: `web-tree-sitter` (WASM parser), `tree-sitter-wasms` (pre-built grammars for 30+ languages)
-- **Consumed by**: `src/main/orchestration/graphSummaryBuilder.ts` (passive context injection), `src/main/ipc-handlers/` (IPC exposure to renderer), `codebase-memory` MCP tool handlers
+- **Runtime**: `better-sqlite3` (graph DB), `web-tree-sitter` (WASM parser), `tree-sitter-wasms` (pre-built grammars for 30+ languages)
+- **Consumed by**: `src/main/orchestration/graphSummaryBuilder.ts`, `src/main/ipc-handlers/graphHandlers.ts`, `src/main/ipc-handlers/filesHelpers.ts`, `src/main/ipc-handlers/gitOperations.ts`, `src/main/hooksLifecycleHandlers.ts`, `src/main/hooksSessionHandlers.ts`, `src/main/agentConflict/conflictMonitorSupport.ts`, `src/main/windowManager.ts`, `src/main/internalMcp/`

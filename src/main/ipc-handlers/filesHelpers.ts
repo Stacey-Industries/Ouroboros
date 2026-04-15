@@ -11,7 +11,7 @@ import fs from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
-import { getGraphController } from '../codebaseGraph/graphController';
+import { getGraphController } from '../codebaseGraph/graphControllerSupport';
 import { getContextLayerController } from '../contextLayer/contextLayerController';
 import { dispatchFileOpenEvent } from '../extensions';
 import log from '../logger';

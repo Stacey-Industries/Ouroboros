@@ -17,7 +17,7 @@ vi.mock('./contextLayer/contextLayerController', () => ({
   }),
 }));
 
-vi.mock('./codebaseGraph/graphController', () => ({
+vi.mock('./codebaseGraph/graphControllerSupport', () => ({
   getGraphController: () => ({
     onFileChange: mockGraphOnFileChange,
   }),

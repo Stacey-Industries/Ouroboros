@@ -272,15 +272,4 @@ export const tailSchema = {
       gcDaysThreshold: 90,
     },
   },
-  /** Phase C — System 2 graph engine feature flag. Default OFF: System 1 runs the show. */
-  system2: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      enabled: { type: 'boolean', default: false },
-    },
-    default: {
-      enabled: false,
-    },
-  },
 };

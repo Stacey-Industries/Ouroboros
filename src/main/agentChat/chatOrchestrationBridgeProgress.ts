@@ -5,6 +5,7 @@
  * Handles streaming, completion, cancellation, and failure progress events.
  */
 
+import log from '../logger';
 import type { ProviderProgressEvent } from '../orchestration/types';
 import {
   emitMonitorSessionEnd,
@@ -25,6 +26,18 @@ import { applySubToolToAccumulatedBlock, buildSubToolStreamChunk } from './chatO
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatContentBlock, AgentChatSubToolActivity } from './types';
+
+// ---------------------------------------------------------------------------
+// Timing
+// ---------------------------------------------------------------------------
+
+function logFirstChunk(ctx: ActiveStreamContext): void {
+  if (ctx.firstChunkLogged) return;
+  ctx.firstChunkLogged = true;
+  if (typeof ctx.sendStartedAt === 'number') {
+    log.info('[chat-perf] time-to-first-chunk:', Date.now() - ctx.sendStartedAt, 'ms', 'thread:', ctx.threadId);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Context lookup
@@ -210,6 +223,7 @@ function handleContentBlock(
   } else if (blockType === 'tool_use' && toolActivity) {
     handleToolBlock(handlerArgs, toolActivity);
   }
+  logFirstChunk(ctx);
   ctx.firstChunkEmitted = true;
 }
 
@@ -237,6 +251,7 @@ function handleLegacyMessage(
     },
     ctx,
   );
+  logFirstChunk(ctx);
   ctx.firstChunkEmitted = true;
 }
 

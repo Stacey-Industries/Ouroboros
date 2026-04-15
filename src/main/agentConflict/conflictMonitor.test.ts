@@ -17,7 +17,7 @@ vi.mock('../logger', () => ({
 const mockDetectChangesForSession = vi.fn();
 const mockGetStatus = vi.fn(() => ({ initialized: true }));
 
-vi.mock('../codebaseGraph/graphController', () => ({
+vi.mock('../codebaseGraph/graphControllerSupport', () => ({
   getGraphControllerForRoot: vi.fn(() => ({
     getStatus: mockGetStatus,
     detectChangesForSession: mockDetectChangesForSession,
