@@ -228,6 +228,8 @@ export interface AppConfig {
   useMcpHost: boolean;
   /** @internal — do not expose in Settings UI */
   routerLastRetrainCount: number;
+  /** Wave 17 — layout preset engine feature flags */
+  layout?: { presets?: { v2?: boolean } };
 }
 
 export interface ContextLayerConfig {

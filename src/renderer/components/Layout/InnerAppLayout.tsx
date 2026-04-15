@@ -22,6 +22,7 @@ import { CentrePaneConnected } from './CentrePaneConnected';
 import { IdeToolBridge } from './IdeToolBridge';
 import { AgentSidebarContent } from './InnerAppLayout.agent';
 import { LayoutOverlays } from './InnerAppLayout.overlays';
+import { LayoutPresetResolverProvider } from './layoutPresets';
 import { SidebarSections } from './SidebarSections';
 
 export interface InnerAppLayoutProps {
@@ -183,9 +184,11 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
 
 export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
   return (
-    <LayoutProviders projectRoot={props.projectRoot}>
-      <LayoutChrome {...props} />
-      <LayoutOverlays {...props} />
-    </LayoutProviders>
+    <LayoutPresetResolverProvider>
+      <LayoutProviders projectRoot={props.projectRoot}>
+        <LayoutChrome {...props} />
+        <LayoutOverlays {...props} />
+      </LayoutProviders>
+    </LayoutPresetResolverProvider>
   );
 }

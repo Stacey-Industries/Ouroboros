@@ -346,6 +346,8 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
+  /** Wave 17 — layout preset engine feature flags */
+  layout?: { presets?: { v2?: boolean } };
 }
 
 export const store = new Store<AppConfig>({

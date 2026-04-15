@@ -294,4 +294,10 @@ export const tailSchema = {
     },
     default: { worktreePerSession: false },
   },
+  /** Wave 17 — layout preset engine feature flags */
+  layout: {
+    type: 'object',
+    properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: false } }, default: { v2: false } } },
+    default: { presets: { v2: false } },
+  },
 };
