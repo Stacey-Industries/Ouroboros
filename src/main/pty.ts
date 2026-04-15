@@ -43,6 +43,7 @@ import {
   removeShellState,
 } from './ptyShellIntegration';
 import { writeOnShellReady } from './ptyShellReady';
+import { recordPtyStart, reportPtyExit } from './ptyTimings';
 import { ptyBatcher } from './web/ptyBatcher';
 import { broadcastToWebClients } from './web/webServer';
 
@@ -111,10 +112,9 @@ export function cleanupSession(id: string): void {
 }
 
 function handleSessionExit(id: string, win: BrowserWindow, exitCode: number, signal: number): void {
-  if (!sessions.has(id)) {
-    return;
-  }
+  if (!sessions.has(id)) return;
 
+  reportPtyExit(id, sessions.get(id)?.cwd ?? '', exitCode);
   cleanupSession(id);
   try {
     if (!win.isDestroyed()) {
@@ -152,6 +152,7 @@ export function registerSession(registration: SessionRegistration): void {
     shell: registration.shell,
   });
   sessionWindowMap.set(registration.id, registration.win.id);
+  recordPtyStart(registration.id);
   initShellState(registration.id, registration.cwd);
   attachSessionListeners(registration.id, registration.proc, registration.win);
 }
@@ -349,5 +350,4 @@ export function getShellState(id: string): ShellState | null {
 
 export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent';
 export { spawnAgentPty } from './ptyAgent';
-export type { ShellState } from './ptyShellIntegration';
 export { spawnClaudePty, spawnCodexPty } from './ptySpawn';

@@ -29,7 +29,7 @@ import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './h
 import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
 import log from './logger';
 import { shadowRouteHookEvent } from './router/routerShadow';
-import { getTelemetryStore } from './telemetry';
+import { getOutcomeObserver, getTelemetryStore } from './telemetry';
 import { broadcastToWebClients } from './web/webServer';
 import { getAllActiveWindows } from './windowManager';
 
@@ -253,6 +253,13 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
 
   shadowRouteHookEvent(rawPayload);
   getTelemetryStore()?.record(rawPayload);
+  if (rawPayload.type === 'post_tool_use') {
+    getOutcomeObserver()?.noteToolUseEvent(
+      rawPayload.sessionId,
+      rawPayload.correlationId ?? '',
+      rawPayload.timestamp,
+    );
+  }
   trackSessionLifecycle(rawPayload);
   const payload = inferSessionId(rawPayload);
 
@@ -293,6 +300,14 @@ export function stopHooksServer(): Promise<void> {
 /** Dispatch a synthetic hook event (from chat orchestration). Skips approval — chat sessions manage permissions. */
 export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   const payload: HookPayload = { ...rawPayload, ideSpawned: true };
+  getTelemetryStore()?.record(payload);
+  if (payload.type === 'post_tool_use') {
+    getOutcomeObserver()?.noteToolUseEvent(
+      payload.sessionId,
+      payload.correlationId ?? '',
+      payload.timestamp,
+    );
+  }
   trackSessionLifecycle(payload);
 
   if (payload.type === 'agent_start') syntheticSessionIds.add(payload.sessionId);
