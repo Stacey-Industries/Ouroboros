@@ -30,3 +30,4 @@ export { registerSearchHandlers } from './search';
 export { registerSessionHandlers } from './sessions';
 export { registerSpecHandlers } from './specScaffold';
 export { cleanupTelemetryHandlers, registerTelemetryHandlers } from './telemetry';
+export { cleanupWorktreeHandlers, registerWorktreeHandlers } from './worktree';

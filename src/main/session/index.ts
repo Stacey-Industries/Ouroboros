@@ -13,3 +13,7 @@ export {
   initSessionStore,
   openSessionStore,
 } from './sessionStore';
+export type { WorktreeManager, WorktreeRecord } from './worktreeManager';
+export { LowDiskError } from './worktreeManager';
+export { closeWorktreeManager, createWorktreeManager, getWorktreeManager } from './worktreeManager';
+export { WorktreePathError } from './worktreeManagerHelpers';
