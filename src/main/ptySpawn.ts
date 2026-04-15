@@ -17,7 +17,7 @@ import {
   sessions,
   type SpawnOptions,
 } from './pty';
-import { buildClaudeArgs } from './ptyClaude';
+import { buildClaudeArgs, resolveClaudeCwd } from './ptyClaude';
 import { buildCodexArgs, buildCodexLaunchArgs } from './ptyCodex';
 import { buildBaseEnv, buildProviderEnv, resolveSpawnOptions } from './ptyEnv';
 
@@ -48,7 +48,8 @@ export function spawnClaudePty(
 ): { success: boolean; error?: string } {
   if (sessions.has(id)) return { success: false, error: `Session ${id} already exists` };
 
-  const { cwd, cols, rows } = resolveSpawnOptions(options);
+  const { cwd: defaultCwd, cols, rows } = resolveSpawnOptions(options);
+  const cwd = resolveClaudeCwd(win.id, defaultCwd);
   const launch = buildClaudeLaunchArgs(buildClaudeArgs(settings), options.resumeMode);
   log.debug(
     `[pty] spawnClaude id=${id} shell=${launch.shell} args=${JSON.stringify(launch.args)} cwd=${cwd}`,

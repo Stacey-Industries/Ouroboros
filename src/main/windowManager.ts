@@ -14,6 +14,12 @@ import { acquireContextLayer, releaseContextLayer } from './contextLayer/context
 import { registerIpcHandlers } from './ipc';
 import { markStartup } from './perfMetrics';
 import { killPtySessionsForWindow } from './pty';
+import { makeSession } from './session/session';
+import { getSessionStore } from './session/sessionStore';
+import {
+  clearWindowActiveSession,
+  setWindowActiveSession,
+} from './session/windowManagerSessionHelpers';
 import {
   applyMicaEffect,
   createBoundsSaveHandler,
@@ -35,6 +41,7 @@ export interface ManagedWindow {
   win: BrowserWindow;
   projectRoot: string | null;
   projectRoots: string[];
+  activeSessionId: string | null;
 }
 
 export interface WindowInfo {
@@ -46,23 +53,14 @@ export interface WindowInfo {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 const windows = new Map<number, ManagedWindow>();
-
-// Per-window IPC cleanup functions
-const windowCleanups = new Map<number, () => void>();
-
-// Per-window bounds-save timers
-const boundsTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const windowCleanups = new Map<number, () => void>(); // Per-window IPC cleanup
+const boundsTimers = new Map<number, ReturnType<typeof setTimeout>>(); // Per-window bounds-save
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
-function getSavedWindowBounds(isFirst: boolean) {
-  if (!isFirst) return null;
-  return getConfigValue('windowBounds');
-}
-
 function getWindowCreationState(): WindowCreationState {
   const isFirst = windows.size === 0;
-  const savedBounds = getSavedWindowBounds(isFirst);
+  const savedBounds = isFirst ? getConfigValue('windowBounds') : null;
   const validatedBounds = savedBounds ? validateBounds(savedBounds) : null;
   const size = getInitialWindowSize(validatedBounds);
   const placement = getInitialWindowPlacement(validatedBounds, isFirst, windows.size);
@@ -103,14 +101,11 @@ function createBrowserWindow(preloadPath: string, state: WindowCreationState): B
 
 function seedProjectRoots(projectRoot: string | undefined): string[] {
   if (projectRoot) return [projectRoot];
-  // First window: migrate from global multiRoots config if present
   if (windows.size === 0) {
     try {
       const saved = getConfigValue('multiRoots') ?? [];
       if (Array.isArray(saved) && saved.length > 0) return saved as string[];
-    } catch {
-      /* config not ready yet */
-    }
+    } catch { /* config not ready yet */ }
   }
   return [];
 }
@@ -118,12 +113,18 @@ function seedProjectRoots(projectRoot: string | undefined): string[] {
 function registerManagedWindow(win: BrowserWindow, projectRoot?: string): number {
   const winId = win.id;
   const roots = seedProjectRoots(projectRoot);
-  windows.set(winId, {
-    id: winId,
-    win,
-    projectRoot: roots[0] ?? null,
-    projectRoots: roots,
-  });
+  const root = roots[0] ?? null;
+  // Assign or create a session for this window's project root.
+  let activeSessionId: string | null = null;
+  if (root) {
+    const store = getSessionStore();
+    const existing = store?.listByProjectRoot(root).find((s) => !s.archivedAt);
+    const session = existing ?? makeSession(root);
+    if (!existing) store?.upsert(session);
+    activeSessionId = session.id;
+    setWindowActiveSession(winId, session.id);
+  }
+  windows.set(winId, { id: winId, win, projectRoot: root, projectRoots: roots, activeSessionId });
   windowCleanups.set(winId, registerIpcHandlers(win));
   return winId;
 }
@@ -191,6 +192,7 @@ function setupWindowCloseHandler(win: BrowserWindow, winId: number): void {
       void releaseContextLayer(managed.projectRoot);
       void releaseGraphController(managed.projectRoot);
     }
+    clearWindowActiveSession(winId);
     cleanupIpcHandlers(winId);
     windows.delete(winId);
   });
@@ -228,11 +230,9 @@ export function getAllWindows(): ManagedWindow[] {
 }
 
 export function getWindowInfos(): WindowInfo[] {
-  return Array.from(windows.values()).map((mw) => ({
-    id: mw.id,
-    projectRoot: mw.projectRoot,
-    projectRoots: mw.projectRoots,
-  }));
+  return Array.from(windows.values()).map(
+    ({ id, projectRoot, projectRoots }) => ({ id, projectRoot, projectRoots }),
+  );
 }
 
 export function setWindowProjectRoot(winId: number, projectRoot: string): void {
@@ -242,14 +242,12 @@ export function setWindowProjectRoot(winId: number, projectRoot: string): void {
     managed.projectRoot = projectRoot;
     managed.projectRoots = [projectRoot];
   }
-  // Swap per-root services: release old root, acquire new
   if (oldRoot && oldRoot !== projectRoot) {
     void releaseContextLayer(oldRoot);
     void releaseGraphController(oldRoot);
   }
   void acquireContextLayer(projectRoot);
   void acquireGraphController(projectRoot);
-  // Start context refresh for the new project root (timer may already be running for another root).
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic require avoids circular import during early startup
     const { startContextRefreshTimer } = require('./ipc-handlers/agentChat');
@@ -265,7 +263,6 @@ export function setWindowProjectRoots(winId: number, roots: string[]): void {
     managed.projectRoots = roots;
     managed.projectRoot = newRoot;
   }
-  // Swap per-root services if primary root changed
   if (oldRoot && oldRoot !== newRoot) {
     void releaseContextLayer(oldRoot);
     void releaseGraphController(oldRoot);
@@ -341,24 +338,15 @@ function collectWindowSessions(): WindowSession[] {
 }
 
 export function persistWindowSessions(): void {
-  try {
-    setConfigValue('windowSessions', collectWindowSessions());
-  } catch {
-    /* best-effort */
-  }
+  try { setConfigValue('windowSessions', collectWindowSessions()); } catch { /* best-effort */ }
 }
 
 function applySessionBounds(win: BrowserWindow, bounds: WindowSession['bounds']): void {
   if (!bounds) return;
-  const validated = validateBounds(bounds);
-  if (!validated) return;
-  win.setBounds({
-    x: validated.x,
-    y: validated.y,
-    width: validated.width,
-    height: validated.height,
-  });
-  if (validated.isMaximized) win.maximize();
+  const v = validateBounds(bounds);
+  if (!v) return;
+  win.setBounds({ x: v.x, y: v.y, width: v.width, height: v.height });
+  if (v.isMaximized) win.maximize();
 }
 
 function restoreOneSession(session: WindowSession): BrowserWindow | null {

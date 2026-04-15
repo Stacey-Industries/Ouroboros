@@ -106,12 +106,31 @@ export function getGraphControllerForRoot(root: string): GraphControllerLike | n
   return registry.get(normalizeRoot(root))?.controller ?? null;
 }
 
+/** Resolves the effective root — worktreePath when session has an active worktree. */
+async function resolveEffectiveRoot(root: string, sessionId: string | undefined): Promise<string> {
+  if (!sessionId) return root;
+  try {
+    const { getSessionStore } = await import('../session/sessionStore');
+    const session = getSessionStore()?.getById(sessionId);
+    if (session?.worktree && session.worktreePath) return session.worktreePath;
+  } catch { /* session store not available */ }
+  return root;
+}
+
 /**
  * Acquire a GraphControllerCompat for root. Increments ref-count if already
  * acquired. Always delegates to graphControllerCompatRegistry (System 2).
+ *
+ * opts.sessionId: when provided the session's worktreePath (if active) is used
+ * as the registry key so the graph is indexed against the isolated worktree
+ * rather than the main project root.
  */
-export async function acquireGraphController(root: string): Promise<GraphControllerLike> {
-  const key = normalizeRoot(root);
+export async function acquireGraphController(
+  root: string,
+  opts?: { sessionId?: string },
+): Promise<GraphControllerLike> {
+  const effectiveRoot = await resolveEffectiveRoot(root, opts?.sessionId);
+  const key = normalizeRoot(effectiveRoot);
   const existing = registry.get(key);
   if (existing) {
     existing.refCount++;
@@ -129,7 +148,7 @@ export async function acquireGraphController(root: string): Promise<GraphControl
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- _system2Db stored as any to avoid eager import at module init
   const db: any = (_system2Db as any) ?? new GraphDatabase();
   const pipeline = new IndexingPipeline(db, parser);
-  const compat = await compatRegistry.acquireGraphController(root, pipeline);
+  const compat = await compatRegistry.acquireGraphController(effectiveRoot, pipeline);
   registry.set(key, { controller: compat, refCount: 1 });
   if (!defaultRoot) defaultRoot = key;
   return compat;

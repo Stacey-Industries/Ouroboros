@@ -28,6 +28,17 @@ export function pickLaunchValue(...values: Array<string | undefined>): string | 
   return undefined;
 }
 
+/** Returns worktreePath when the task's session has an active worktree, else root. */
+function resolveTaskCwd(root: string, sessionId: string | undefined): string {
+  if (!sessionId) return root;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getSessionStore } = require('../../session/sessionStore') as typeof import('../../session/sessionStore');
+    const wt = getSessionStore()?.getById(sessionId);
+    return wt?.worktree && wt.worktreePath ? wt.worktreePath : root;
+  } catch { return root; }
+}
+
 export function resolveEffectiveSettings(
   context: ProviderLaunchContext | ProviderResumeContext,
   settings: ClaudeCliSettings,
@@ -142,15 +153,8 @@ interface BuildCompletionArgsOptions {
 }
 
 function buildCompletionArgs(opts: BuildCompletionArgsOptions): CompletionArgs {
-  return {
-    taskId: opts.context.taskId,
-    sessionRef: opts.sessionRef,
-    sink: opts.sink,
-    invocationTempPaths: opts.invocationTempPaths,
-    resolvedModel: opts.resolvedModel,
-    getNextGlobalBlockIndex: opts.getNextGlobalBlockIndex,
-    getCumulativeUsage: opts.getCumulativeUsage,
-  };
+  const { context, sessionRef, sink, invocationTempPaths, resolvedModel, getNextGlobalBlockIndex, getCumulativeUsage } = opts;
+  return { taskId: context.taskId, sessionRef, sink, invocationTempPaths, resolvedModel, getNextGlobalBlockIndex, getCumulativeUsage };
 }
 
 function setupLaunchSession(
@@ -184,51 +188,24 @@ interface BuildLaunchScheduleArgsOpts {
 }
 
 function buildLaunchScheduleArgs(opts: BuildLaunchScheduleArgsOpts): ScheduleClaudeLaunchArgs {
-  const {
-    context,
-    cwd,
-    sessionRef,
-    sink,
-    resolved,
-    effectiveResumeSessionId,
-    eventHandler,
-    getCancelledBeforeLaunch,
-    invocationTempPaths,
-  } = opts;
+  const { context, cwd, sessionRef, sink, resolved, effectiveResumeSessionId, eventHandler, getCancelledBeforeLaunch, invocationTempPaths } = opts;
   return {
-    context,
-    cwd,
-    sessionRef,
-    sink,
-    invocationTempPaths,
-    resolvedModel: resolved.resolvedModel,
-    effectiveResumeSessionId,
-    effectiveSettings: resolved.effectiveSettings,
-    eventHandler,
-    effort: resolved.effort,
-    providerEnv: resolved.providerEnv,
-    isProviderRouted: resolved.isProviderRouted,
-    getCancelledBeforeLaunch,
+    context, cwd, sessionRef, sink, invocationTempPaths,
+    resolvedModel: resolved.resolvedModel, effectiveResumeSessionId,
+    effectiveSettings: resolved.effectiveSettings, eventHandler,
+    effort: resolved.effort, providerEnv: resolved.providerEnv,
+    isProviderRouted: resolved.isProviderRouted, getCancelledBeforeLaunch,
   };
 }
 
 function emitLaunchQueued(sink: ProviderProgressSink): void {
-  sink.emit({
-    provider: 'claude-code',
-    status: 'queued',
-    message: 'Launching Claude Code session',
-    timestamp: Date.now(),
-  });
+  sink.emit({ provider: 'claude-code', status: 'queued', message: 'Launching Claude Code session', timestamp: Date.now() });
 }
 
-function buildLaunchResult(
-  sessionRef: ReturnType<typeof createProviderSessionReference>,
-): ProviderLaunchResult {
+function buildLaunchResult(sessionRef: ReturnType<typeof createProviderSessionReference>): ProviderLaunchResult {
   return {
     session: sessionRef,
-    artifact: createProviderArtifact({
-      provider: 'claude-code', status: 'streaming', session: sessionRef, submittedAt: Date.now(),
-    }),
+    artifact: createProviderArtifact({ provider: 'claude-code', status: 'streaming', session: sessionRef, submittedAt: Date.now() }),
   };
 }
 
@@ -284,7 +261,7 @@ export function launchClaude(
 ): ProviderLaunchResult {
   const requestId = `orchestration-${context.attemptId}`;
   const settings = getConfigValue('claudeCliSettings') as ClaudeCliSettings;
-  const cwd = context.request.workspaceRoots[0];
+  const cwd = resolveTaskCwd(context.request.workspaceRoots[0], context.request.sessionId);
   const resolved = resolveEffectiveSettings(context, settings);
   const effectiveResumeSessionId =
     resumeSessionId || context.request.resumeFromSessionId || undefined;

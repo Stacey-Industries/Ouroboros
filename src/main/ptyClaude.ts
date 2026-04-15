@@ -1,4 +1,5 @@
 import type { ClaudeCliSettings } from './config'
+import { resolveActiveSessionCwd } from './session/windowManagerSessionHelpers'
 
 function pushStringFlag(args: string[], value: string, flag: string, defaultValue = ''): void {
   if (value && value !== defaultValue) {
@@ -39,4 +40,14 @@ function quoteCommandArg(arg: string): string {
 
 export function buildClaudeCommand(settings: ClaudeCliSettings): string {
   return ['claude', ...buildClaudeArgs(settings).map(quoteCommandArg)].join(' ')
+}
+
+/**
+ * Returns the effective working directory for a Claude PTY session.
+ * When a window has an active session with worktree: true and a resolved
+ * worktreePath, that path is used as the cwd so Claude Code operates on the
+ * isolated worktree branch.  Falls back to the provided default cwd.
+ */
+export function resolveClaudeCwd(winId: number, defaultCwd: string): string {
+  return resolveActiveSessionCwd(winId) ?? defaultCwd
 }

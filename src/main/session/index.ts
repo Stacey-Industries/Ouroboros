@@ -13,6 +13,15 @@ export {
   initSessionStore,
   openSessionStore,
 } from './sessionStore';
+export {
+  buildWorktreeCwd,
+  clearWindowActiveSession,
+  getProjectRootForWindow,
+  getProjectRootsForWindow,
+  getSessionForWindow,
+  resolveActiveSessionCwd,
+  setWindowActiveSession,
+} from './windowManagerSessionHelpers';
 export type { WorktreeManager, WorktreeRecord } from './worktreeManager';
 export { LowDiskError } from './worktreeManager';
 export { closeWorktreeManager, createWorktreeManager, getWorktreeManager } from './worktreeManager';
