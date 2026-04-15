@@ -280,4 +280,18 @@ export const tailSchema = {
       retentionDays: { type: 'number', default: 30 },
     },
   },
+  /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */
+  sessionsData: {
+    type: 'array',
+    items: { type: 'object' },
+    default: [],
+  },
+  /** Wave 16 — session feature flags */
+  sessions: {
+    type: 'object',
+    properties: {
+      worktreePerSession: { type: 'boolean', default: false },
+    },
+    default: { worktreePerSession: false },
+  },
 };

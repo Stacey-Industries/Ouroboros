@@ -8,7 +8,7 @@ import { migrateSecretsIfNeeded } from './auth/secretMigration';
 import { startTokenRefreshManager, stopTokenRefreshManager } from './auth/tokenRefreshManager';
 import { initClaudeMdGenerator } from './claudeMdGenerator';
 import { startClaudeUsagePoller, stopClaudeUsagePoller } from './claudeUsagePoller';
-import { getConfigValue } from './config';
+import { getConfigValue, setConfigValue } from './config';
 import { initContextLayer } from './contextLayer/contextLayerController';
 import { closeCostHistoryDb } from './costHistory';
 import { initExtensions } from './extensions';
@@ -58,6 +58,7 @@ import {
   observeDatasetGrowth,
   stopObserving as stopRetrainObserver,
 } from './router/retrainTrigger';
+import { closeSessionServices, initSessionServices } from './session/sessionStartup';
 import { runAllMigrations } from './storage/migrate';
 import {
   closeOutcomeObserver,
@@ -244,6 +245,8 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
+  const cfg = { get: getConfigValue, set: setConfigValue };
+  await runStartupStep('[main] session services', () => initSessionServices(cfg));
   await migrateSecretsIfNeeded();
   setTokenFilePath(app.getPath('userData'));
   generatePipeTokens();
@@ -296,6 +299,7 @@ app.on('window-all-closed', async () => {
 // Handlers are removed here (not in window-all-closed) so that in-flight
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
+  closeSessionServices();
   closeOutcomeObserver();
   closeTelemetryStore();
   stopRetrainObserver();

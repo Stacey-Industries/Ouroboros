@@ -1,0 +1,64 @@
+/**
+ * sessionStartup.test.ts — Smoke tests for the session startup wrapper.
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../logger', () => ({
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
+const initSessionStoreMock = vi.fn();
+const closeSessionStoreMock = vi.fn();
+vi.mock('./sessionStore', () => ({
+  initSessionStore: (...args: unknown[]) => initSessionStoreMock(...args),
+  closeSessionStore: (...args: unknown[]) => closeSessionStoreMock(...args),
+}));
+
+const migrateMock = vi.fn().mockResolvedValue({ migrated: 0 });
+vi.mock('./sessionMigration', () => ({
+  migrateWindowSessionsToSessions: (...args: unknown[]) => migrateMock(...args),
+}));
+
+import { closeSessionServices, initSessionServices } from './sessionStartup';
+
+describe('sessionStartup', () => {
+  const get = vi.fn().mockReturnValue(undefined);
+  const set = vi.fn();
+
+  beforeEach(() => {
+    initSessionStoreMock.mockClear();
+    closeSessionStoreMock.mockClear();
+    migrateMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('initSessionServices calls initSessionStore then migration', async () => {
+    await initSessionServices({ get, set });
+    expect(initSessionStoreMock).toHaveBeenCalledTimes(1);
+    expect(migrateMock).toHaveBeenCalledWith(get, set);
+  });
+
+  it('closeSessionServices delegates to closeSessionStore', () => {
+    closeSessionServices();
+    expect(closeSessionStoreMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('initSessionServices awaits migration completion', async () => {
+    let resolved = false;
+    migrateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolved = true;
+            resolve({ migrated: 3 });
+          }, 5);
+        }),
+    );
+    await initSessionServices({ get, set });
+    expect(resolved).toBe(true);
+  });
+});

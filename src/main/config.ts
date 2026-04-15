@@ -3,6 +3,7 @@ import Store from 'electron-store';
 import type { AgentChatSettings } from './agentChat/types';
 import { schema } from './configSchema';
 import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
+import type { Session } from './session';
 
 export interface PanelSizes {
   leftSidebar: number;
@@ -341,6 +342,10 @@ export interface AppConfig {
   codebaseGraph: CodebaseGraphSettings;
   /** Wave 15 — structured telemetry feature flag and retention policy */
   telemetry?: { structured?: boolean; retentionDays?: number };
+  /** Wave 16 — persisted Session records */
+  sessionsData?: Session[];
+  /** Wave 16 — session feature flags */
+  sessions?: { worktreePerSession?: boolean };
 }
 
 export const store = new Store<AppConfig>({
