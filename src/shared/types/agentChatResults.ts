@@ -136,6 +136,15 @@ export interface AgentChatAPI {
     workspaceRoot: string,
     memoryId: string,
   ) => Promise<{ success: boolean; error?: string }>;
+  /** Get tags for a thread. Returns [] if thread not found. */
+  getThreadTags: (
+    threadId: string,
+  ) => Promise<{ success: boolean; tags?: string[]; error?: string }>;
+  /** Persist tags for a thread (replaces existing tags). */
+  setThreadTags: (
+    threadId: string,
+    tags: string[],
+  ) => Promise<{ success: boolean; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

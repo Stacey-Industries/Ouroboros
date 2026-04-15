@@ -18,6 +18,7 @@ import {
 } from '../storage/database';
 import {
   parseJsonField,
+  parseTagsField,
   type RawMessageRow,
   type RawThreadRow,
   rowToMessage,
@@ -147,6 +148,20 @@ export class ThreadStoreSqliteRuntime {
     });
   }
 
+  async getTags(threadId: string): Promise<string[]> {
+    const db = this.getDb();
+    const row = db.prepare('SELECT tags FROM threads WHERE id = ?').get(threadId) as
+      | { tags: string | null }
+      | undefined;
+    return row ? parseTagsField(row.tags) : [];
+  }
+
+  async setTags(threadId: string, tags: string[]): Promise<void> {
+    const db = this.getDb();
+    const encoded = tags.length > 0 ? JSON.stringify(tags) : null;
+    db.prepare('UPDATE threads SET tags = ? WHERE id = ?').run(encoded, threadId);
+  }
+
   private mutationQueue: Promise<unknown> = Promise.resolve();
 
   runMutation<T>(action: () => Promise<T>): Promise<T> {
@@ -186,6 +201,13 @@ export class ThreadStoreSqliteRuntime {
               this.db!.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
             }
           }
+          if (currentVersion >= 3) {
+            // v3→v4: add tags column to threads table (JSON-encoded string[])
+            const cols = this.db!.pragma('table_info(threads)') as { name: string }[];
+            if (!cols.some((c) => c.name === 'tags')) {
+              this.db!.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
+            }
+          }
           setSchemaVersion(this.db!, SCHEMA_VERSION);
         });
       }
@@ -215,13 +237,15 @@ export class ThreadStoreSqliteRuntime {
       messages,
       latestOrchestration: parseJsonField(row.latestOrchestration),
       branchInfo: parseJsonField(row.branchInfo),
+      tags: parseTagsField(row.tags),
     };
   }
 
   private upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
     db.prepare(
-      `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO threads
+         (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo, tags)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          workspaceRoot = excluded.workspaceRoot,
          createdAt = excluded.createdAt,
@@ -229,7 +253,8 @@ export class ThreadStoreSqliteRuntime {
          title = excluded.title,
          status = excluded.status,
          latestOrchestration = excluded.latestOrchestration,
-         branchInfo = excluded.branchInfo`,
+         branchInfo = excluded.branchInfo,
+         tags = excluded.tags`,
     ).run(
       thread.id,
       thread.workspaceRoot,
@@ -239,6 +264,7 @@ export class ThreadStoreSqliteRuntime {
       thread.status,
       thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
       thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
+      thread.tags && thread.tags.length > 0 ? JSON.stringify(thread.tags) : null,
     );
   }
 

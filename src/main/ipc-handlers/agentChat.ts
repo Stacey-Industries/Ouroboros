@@ -230,6 +230,26 @@ function registerMemoryHandlers(channels: string[]): void {
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, handleDeleteMemory);
 }
 
+function registerTagHandlers(channels: string[], svc: AgentChatService): void {
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.getThreadTags, async (threadId: unknown) => {
+    const id = requireValidString(threadId, 'threadId');
+    const tags = await svc.threadStore.getTags(id);
+    return { success: true, tags };
+  });
+  register(
+    channels,
+    AGENT_CHAT_INVOKE_CHANNELS.setThreadTags,
+    async (threadId: unknown, tags: unknown) => {
+      const id = requireValidString(threadId, 'threadId');
+      if (!Array.isArray(tags)) {
+        throw new Error('Invalid tags: expected array');
+      }
+      await svc.threadStore.setTags(id, tags as string[]);
+      return { success: true };
+    },
+  );
+}
+
 // ─── Session event projection ─────────────────────────────────────────────────
 
 type SafeSend = (channel: string | undefined, data: unknown) => void;
@@ -313,6 +333,7 @@ export function registerAgentChatHandlers(): string[] {
   registerThreadHandlers(channels, svc);
   registerMessageHandlers(channels, svc);
   registerMemoryHandlers(channels);
+  registerTagHandlers(channels, svc);
 
   registerEventForwarders(svc);
 

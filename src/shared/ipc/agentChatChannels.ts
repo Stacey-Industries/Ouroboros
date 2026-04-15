@@ -26,6 +26,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   createMemory: 'agentChat:createMemory',
   updateMemory: 'agentChat:updateMemory',
   deleteMemory: 'agentChat:deleteMemory',
+  getThreadTags: 'agentChat:getThreadTags',
+  setThreadTags: 'agentChat:setThreadTags',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

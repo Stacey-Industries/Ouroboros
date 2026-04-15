@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { openDatabase, runTransaction, setSchemaVersion } from '../storage/database';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
@@ -222,6 +223,100 @@ describe('ThreadStoreSqliteRuntime', () => {
       expect(m.tokenUsage).toEqual({ inputTokens: 100, outputTokens: 50 });
       expect(m.model).toBe('claude-opus-4-6');
       expect(m.toolsSummary).toBe('3 tools used');
+    });
+  });
+
+  describe('tags — getTags / setTags', () => {
+    it('returns empty array for a thread with no tags', async () => {
+      await runtime.writeThread(makeThread('t1'));
+      expect(await runtime.getTags('t1')).toEqual([]);
+    });
+
+    it('returns empty array for a missing thread', async () => {
+      expect(await runtime.getTags('nonexistent')).toEqual([]);
+    });
+
+    it('persists and retrieves tags', async () => {
+      await runtime.writeThread(makeThread('t1'));
+      await runtime.setTags('t1', ['auto:typescript', 'frontend']);
+      const tags = await runtime.getTags('t1');
+      expect(tags).toEqual(['auto:typescript', 'frontend']);
+    });
+
+    it('replaces tags on second setTags call', async () => {
+      await runtime.writeThread(makeThread('t1'));
+      await runtime.setTags('t1', ['auto:typescript']);
+      await runtime.setTags('t1', ['auto:python', 'backend']);
+      expect(await runtime.getTags('t1')).toEqual(['auto:python', 'backend']);
+    });
+
+    it('clears tags when passed empty array', async () => {
+      await runtime.writeThread(makeThread('t1'));
+      await runtime.setTags('t1', ['auto:typescript']);
+      await runtime.setTags('t1', []);
+      expect(await runtime.getTags('t1')).toEqual([]);
+    });
+
+    it('round-trips tags through writeThread', async () => {
+      await runtime.writeThread(makeThread('t1', { tags: ['auto:go', 'manual-tag'] }));
+      const loaded = await runtime.readThread('t1');
+      expect(loaded!.tags).toEqual(['auto:go', 'manual-tag']);
+    });
+  });
+
+  describe('schema v3→v4 migration', () => {
+    it('adds tags column to an existing v3 database and preserves data', async () => {
+      const dbPath = path.join(tmpDir, 'threads.db');
+
+      // Build a v3 fixture: threads table without tags column
+      const db = openDatabase(dbPath);
+      runTransaction(db, () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS threads (
+            id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
+            createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+            title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
+            latestOrchestration TEXT, branchInfo TEXT
+          );
+          CREATE TABLE IF NOT EXISTS messages (
+            id TEXT NOT NULL, threadId TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+            role TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', createdAt INTEGER NOT NULL,
+            statusKind TEXT, orchestration TEXT, contextSummary TEXT,
+            verificationPreview TEXT, error TEXT, toolsSummary TEXT,
+            costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
+            model TEXT, checkpointCommit TEXT,
+            PRIMARY KEY (id, threadId)
+          );
+        `);
+        db.prepare(
+          `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        ).run('existing-thread', '/workspace', 1000, 2000, 'Old Thread', 'idle');
+        setSchemaVersion(db, 3);
+      });
+      db.close();
+
+      // Open via runtime — should trigger v3→v4 migration
+      const migrated = new ThreadStoreSqliteRuntime({
+        maxThreads: 100,
+        now: () => tick(),
+        threadsDir: tmpDir,
+      });
+
+      try {
+        // Existing data is preserved
+        const thread = await migrated.readThread('existing-thread');
+        expect(thread).not.toBeNull();
+        expect(thread!.title).toBe('Old Thread');
+        // tags column now exists and defaults to empty
+        expect(thread!.tags).toEqual([]);
+
+        // New tags can be set on the migrated DB
+        await migrated.setTags('existing-thread', ['auto:typescript']);
+        expect(await migrated.getTags('existing-thread')).toEqual(['auto:typescript']);
+      } finally {
+        migrated.close();
+      }
     });
   });
 });

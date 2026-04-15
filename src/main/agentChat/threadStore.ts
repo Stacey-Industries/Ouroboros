@@ -74,6 +74,10 @@ export interface AgentChatThreadStore {
   ) => Promise<AgentChatThreadRecord | null>;
   branchThread: (threadId: string, fromMessageId: string) => Promise<AgentChatThreadRecord>;
   getStorageDirectory: () => string;
+  /** Retrieve current tags for a thread. Returns [] if thread not found. */
+  getTags: (threadId: string) => Promise<string[]>;
+  /** Persist tags for a thread. JSON-encodes internally. */
+  setTags: (threadId: string, tags: string[]) => Promise<void>;
 }
 
 function buildThreadRecord(args: {
@@ -294,6 +298,8 @@ function buildThreadStoreApi(args: {
         branchThreadFrom({ createId, now, runtime, threadId: id, fromMessageId: mid }),
       ),
     getStorageDirectory: () => runtime.getStorageDirectory(),
+    getTags: (id) => runtime.getTags(id),
+    setTags: (id, tags) => runtime.setTags(id, tags),
   };
 }
 

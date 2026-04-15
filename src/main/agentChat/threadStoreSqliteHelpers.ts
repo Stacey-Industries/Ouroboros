@@ -9,7 +9,7 @@ import type { AgentChatMessageRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -20,7 +20,7 @@ export const SCHEMA_SQL = `
     id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
     createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
     title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
-    latestOrchestration TEXT, branchInfo TEXT
+    latestOrchestration TEXT, branchInfo TEXT, tags TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_threads_workspace ON threads(workspaceRoot);
   CREATE INDEX IF NOT EXISTS idx_threads_updated   ON threads(updatedAt DESC);
@@ -47,6 +47,7 @@ export interface RawThreadRow {
   status: string;
   latestOrchestration: string | null;
   branchInfo: string | null;
+  tags: string | null;
 }
 
 export interface RawMessageRow {
@@ -70,6 +71,16 @@ export interface RawMessageRow {
 }
 
 // ── Parse / convert helpers ──────────────────────────────────────────
+
+export function parseTagsField(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function parseJsonField<T>(raw: string | null): T | undefined {
   if (!raw) return undefined;

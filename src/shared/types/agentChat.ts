@@ -244,6 +244,11 @@ export interface AgentChatThreadRecord {
   compactionCount?: number;
   /** Running count of user turns sent on this thread (used for adaptive budget scaling) */
   turnCount?: number;
+  /**
+   * Tags for this thread. Auto-tags are prefixed `auto:` (e.g. `auto:typescript`).
+   * Manual tags have no prefix. JSON-encoded in SQLite as TEXT.
+   */
+  tags?: string[];
 }
 
 export interface AgentChatSettings {

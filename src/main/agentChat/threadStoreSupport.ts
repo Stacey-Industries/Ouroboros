@@ -155,7 +155,7 @@ export function normalizeThreadRecord(
   const threadId = isNonEmptyString(thread.id) ? thread.id : randomUUID();
   const messages = normalizeMessages(thread.messages, now, threadId);
 
-  return {
+  const normalized: AgentChatThreadRecord = {
     version: 1,
     id: threadId,
     workspaceRoot: isNonEmptyString(thread.workspaceRoot) ? thread.workspaceRoot : '',
@@ -166,6 +166,13 @@ export function normalizeThreadRecord(
     messages,
     latestOrchestration: normalizeLink(thread.latestOrchestration) ?? findLatestLink(messages),
   };
+
+  if (thread.branchInfo) normalized.branchInfo = thread.branchInfo;
+  if (thread.compactionCount !== undefined) normalized.compactionCount = thread.compactionCount;
+  if (thread.turnCount !== undefined) normalized.turnCount = thread.turnCount;
+  if (thread.tags !== undefined) normalized.tags = thread.tags;
+
+  return normalized;
 }
 
 export function upsertMessage(options: {
