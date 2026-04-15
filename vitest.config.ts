@@ -25,6 +25,16 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
     globals: false,
+    // Fork-per-file isolation: forcibly kills each file's process after tests
+    // complete, eliminating hangs from leaked handles (Worker threads, file
+    // watchers, SQLite connections, setInterval in imported modules).
+    // Threads pool would keep workers alive waiting for open handles to close.
+    pool: 'forks',
+    // Hang safety: cap per-test and per-teardown time so a stuck test fails
+    // fast instead of consuming CI minutes.
+    testTimeout: 20000,
+    hookTimeout: 20000,
+    teardownTimeout: 3000,
     server: {
       deps: {
         // Force mica-electron through Vite's transform pipeline so the

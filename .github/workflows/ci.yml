@@ -8,6 +8,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +33,7 @@ jobs:
         run: npm run lint
 
       - name: Test
+        timeout-minutes: 10
         run: npm run test -- --reporter=verbose
 
       - name: Build
