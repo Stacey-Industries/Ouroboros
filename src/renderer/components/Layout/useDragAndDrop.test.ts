@@ -17,12 +17,23 @@ vi.mock('../../hooks/useConfig', () => ({
 }));
 
 // Mock @dnd-kit/core so tests don't need a DOM with pointer events
+const capturedSensors: unknown[] = [];
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: React.PropsWithChildren) => children,
+  DragOverlay: () => null,
+  PointerSensor: class PointerSensor {},
+  TouchSensor: class TouchSensor {},
+  useSensor: vi.fn((Cls, opts?: unknown) => ({ sensor: Cls, options: opts ?? {} })),
+  useSensors: vi.fn((...sensors: unknown[]) => {
+    capturedSensors.length = 0;
+    capturedSensors.push(...sensors);
+    return sensors;
+  }),
 }));
 
+import { PointerSensor, TouchSensor, useSensor } from '@dnd-kit/core';
 import { useConfig } from '../../hooks/useConfig';
-import { useDragAndDrop } from './useDragAndDrop';
+import { useDragAndDrop, useLayoutSensors } from './useDragAndDrop';
 
 const mockUseConfig = vi.mocked(useConfig);
 
@@ -95,5 +106,31 @@ describe('useDragAndDrop', () => {
 
     const { result } = renderHook(() => useDragAndDrop());
     expect(result.current.enabled).toBe(true);
+  });
+});
+
+describe('useLayoutSensors', () => {
+  const mockUseSensor = vi.mocked(useSensor);
+
+  it('includes both PointerSensor and TouchSensor', () => {
+    renderHook(() => useLayoutSensors());
+    const sensorClasses = mockUseSensor.mock.calls.map((call) => call[0]);
+    expect(sensorClasses).toContain(PointerSensor);
+    expect(sensorClasses).toContain(TouchSensor);
+  });
+
+  it('configures TouchSensor with 500ms delay', () => {
+    renderHook(() => useLayoutSensors());
+    const touchCall = mockUseSensor.mock.calls.find((call) => call[0] === TouchSensor);
+    expect(touchCall).toBeDefined();
+    const opts = touchCall?.[1] as { activationConstraint: { delay: number; tolerance: number } };
+    expect(opts.activationConstraint.delay).toBe(500);
+  });
+
+  it('configures TouchSensor with 5px tolerance for finger jitter', () => {
+    renderHook(() => useLayoutSensors());
+    const touchCall = mockUseSensor.mock.calls.find((call) => call[0] === TouchSensor);
+    const opts = touchCall?.[1] as { activationConstraint: { delay: number; tolerance: number } };
+    expect(opts.activationConstraint.tolerance).toBe(5);
   });
 });

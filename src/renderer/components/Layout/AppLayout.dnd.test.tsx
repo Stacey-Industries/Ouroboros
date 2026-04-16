@@ -46,6 +46,11 @@ vi.mock('./AppLayout.mobile', () => ({
 }));
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  DragOverlay: () => null,
+  PointerSensor: class PointerSensor {},
+  TouchSensor: class TouchSensor {},
+  useSensor: vi.fn((Cls) => ({ sensor: Cls })),
+  useSensors: vi.fn((...s: unknown[]) => s),
   useDroppable: vi.fn(() => ({ setNodeRef: vi.fn(), isOver: false })),
   useDraggable: vi.fn(() => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn(), isDragging: false })),
 }));

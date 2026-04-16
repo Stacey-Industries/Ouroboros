@@ -24,6 +24,7 @@ import { IdeToolBridge } from './IdeToolBridge';
 import { AgentSidebarContent } from './InnerAppLayout.agent';
 import { LayoutOverlays } from './InnerAppLayout.overlays';
 import { LayoutPresetResolverProvider } from './layoutPresets';
+import { NoDragZone } from './NoDragZone';
 import { SidebarSections } from './SidebarSections';
 
 export interface InnerAppLayoutProps {
@@ -178,7 +179,7 @@ function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
       sidebarContent={<ErrorBoundary label="File Tree"><SidebarSections /></ErrorBoundary>}
       editorContent={<CentrePaneConnected />}
       agentCards={<AgentSidebarContent projectRoot={props.projectRoot} />}
-      terminalContent={<TerminalPanelContent {...props} />}
+      terminalContent={<NoDragZone><TerminalPanelContent {...props} /></NoDragZone>}
     />
   );
 }
