@@ -229,8 +229,9 @@ export interface AppConfig {
   useMcpHost: boolean;
   /** @internal — do not expose in Settings UI */
   routerLastRetrainCount: number;
-  /** Wave 17 — layout preset engine feature flags */
-  layout?: { presets?: { v2?: boolean } };
+  /** Wave 17 — layout preset engine feature flags
+   *  Wave 28 — dragAndDrop: enable drag-and-drop pane rearrangement */
+  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean };
   /** Wave 22 Phase B/E — chat message density + desktop notification settings. */
   chat?: {
     density?: 'comfortable' | 'compact';

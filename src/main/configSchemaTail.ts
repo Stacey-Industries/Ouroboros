@@ -264,12 +264,8 @@ export const tailSchema = {
   sessionsData: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 16 — session feature flags */
   sessions: { type: 'object', properties: { worktreePerSession: { type: 'boolean', default: false } }, default: { worktreePerSession: false } },
-  /** Wave 17/20 — layout preset engine + chat-primary feature flags */
-  layout: {
-    type: 'object',
-    properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: true } }, default: { v2: true } }, chatPrimary: { type: 'boolean', default: true } },
-    default: { presets: { v2: true }, chatPrimary: true },
-  },
+  /** Wave 17/20 — layout preset engine + chat-primary. Wave 28 — dragAndDrop flag. */
+  layout: { type: 'object', properties: { presets: { type: 'object', properties: { v2: { type: 'boolean', default: true } }, default: { v2: true } }, chatPrimary: { type: 'boolean', default: true }, dragAndDrop: { type: 'boolean', default: true } }, default: { presets: { v2: true }, chatPrimary: true, dragAndDrop: true } },
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking: { type: 'boolean', default: true },
   /** Wave 21 Phase D — user-created session folders */

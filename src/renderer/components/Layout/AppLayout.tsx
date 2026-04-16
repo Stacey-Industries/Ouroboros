@@ -6,6 +6,8 @@ import { FOCUS_AGENT_CHAT_EVENT, FOCUS_TERMINAL_SESSION_EVENT, OPEN_AGENT_CHAT_P
 import type { WorkspaceLayout } from '../../types/electron';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
 import { AgentMonitorPane } from './AgentMonitorPane';
+import type { MobilePanel } from './AppLayout.mobile';
+import { MobileNavBar } from './AppLayout.mobile';
 import { CentrePane } from './CentrePane';
 import { ResizeDivider } from './ResizeDivider';
 import { Sidebar } from './Sidebar';
@@ -13,6 +15,7 @@ import type { StatusBarLayoutProps, StatusBarProps } from './StatusBar';
 import { StatusBar } from './StatusBar';
 import { TerminalPane } from './TerminalPane';
 import { TitleBar } from './TitleBar';
+import { DragAndDropProvider } from './useDragAndDrop';
 import { type CollapseTarget, usePanelCollapse } from './usePanelCollapse';
 import { useResizable } from './useResizable';
 
@@ -157,91 +160,6 @@ function usePanelEventHandlers(args: PanelEventHandlerArgs): void {
   }, [args, expand, setFocusedPanel, toggle, activateTerminalSession, focusOrCreate]);
 }
 
-export type MobilePanel = 'chat' | 'editor' | 'terminal' | 'files';
-
-const MOBILE_NAV_ITEMS: { id: MobilePanel; label: string }[] = [
-  { id: 'files', label: 'Files' },
-  { id: 'editor', label: 'Editor' },
-  { id: 'terminal', label: 'Terminal' },
-  { id: 'chat', label: 'Chat' },
-];
-
-function MobileNavIcon({ id }: { id: MobilePanel }): React.ReactElement {
-  if (id === 'files') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <rect x="5" y="2" width="10" height="13" rx="1.5" />
-        <rect x="3" y="5" width="10" height="13" rx="1.5" fill="var(--surface-panel)" />
-      </svg>
-    );
-  }
-  if (id === 'editor') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-        <polyline points="7,5 3,10 7,15" /><polyline points="13,5 17,10 13,15" /><line x1="11" y1="3" x2="9" y2="17" />
-      </svg>
-    );
-  }
-  if (id === 'terminal') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="3" width="16" height="14" rx="2" />
-        <polyline points="6,8 9,11 6,14" />
-        <line x1="11" y1="14" x2="15" y2="14" />
-      </svg>
-    );
-  }
-  // chat
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4h12a2 2 0 012 2v6a2 2 0 01-2 2H8l-4 3v-3a2 2 0 01-2-2V6a2 2 0 012-2z" />
-    </svg>
-  );
-}
-
-const MOBILE_NAV_STYLE: React.CSSProperties = {
-  display: 'none', flexShrink: 0, minHeight: '56px',
-  alignItems: 'stretch', justifyContent: 'space-around',
-  paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-};
-
-function mobileNavButtonStyle(isActive: boolean): React.CSSProperties {
-  return {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    flex: 1, gap: '3px', border: 'none', fontSize: '10px', cursor: 'pointer', padding: '6px 0',
-    fontFamily: 'var(--font-ui, sans-serif)', position: 'relative',
-    background: isActive ? 'rgba(255, 255, 255, 0.06)' : 'none',
-    color: isActive ? 'var(--interactive-accent)' : 'var(--text-secondary)',
-    fontWeight: isActive ? 600 : 400,
-    transition: 'color 100ms ease, background-color 100ms ease',
-  };
-}
-
-const ACTIVE_INDICATOR_STYLE: React.CSSProperties = {
-  position: 'absolute', top: 0, left: '25%', right: '25%',
-  height: '2px', borderRadius: '1px', backgroundColor: 'var(--interactive-accent)',
-};
-
-function MobileNavButton({ item, isActive, onSwitch }: { item: { id: MobilePanel; label: string }; isActive: boolean; onSwitch: (p: MobilePanel) => void }): React.ReactElement {
-  return (
-    <button key={item.id} onClick={() => onSwitch(item.id)} style={mobileNavButtonStyle(isActive)}>
-      <MobileNavIcon id={item.id} />
-      <span>{item.label}</span>
-      {isActive && <span style={ACTIVE_INDICATOR_STYLE} />}
-    </button>
-  );
-}
-
-function MobileNavBar({ active, onSwitch }: { active: MobilePanel; onSwitch: (p: MobilePanel) => void }): React.ReactElement {
-  return (
-    <nav data-layout="mobile-nav" className="web-mobile-only" style={MOBILE_NAV_STYLE}>
-      {MOBILE_NAV_ITEMS.map((item) => (
-        <MobileNavButton key={item.id} item={item} isActive={item.id === active} onSwitch={onSwitch} />
-      ))}
-    </nav>
-  );
-}
-
 function useAppLayoutState(props: AppLayoutProps) {
   const { sizes, startResize, resetSize, applySizes } = useResizable();
   const { collapsed, toggle, expand, collapse, applyState } = usePanelCollapse({ keybindings: props.keybindings });
@@ -285,32 +203,34 @@ export function AppLayout(props: AppLayoutProps): React.ReactElement {
     : undefined;
 
   return (
-    <div data-layout="app" data-mobile-active={s.mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
-      <a href="#editor-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-2 focus:bg-interactive-accent focus:text-text-semantic-on-accent">Skip to editor</a>
-      <TitleBar collapsed={s.collapsed} onTogglePanel={s.toggle} />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {!s.collapsed.leftSidebar && (
-          <>
-            <div data-panel="sidebar" className="contents"><Sidebar width={s.sizes.leftSidebar} collapsed={false} onToggleCollapse={() => s.toggle('leftSidebar')} header={props.sidebarHeader} focusStyle={s.pfs('sidebar')} onFocus={() => s.setFocusedPanel('sidebar')}>{props.sidebarContent}</Sidebar></div>
-            <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
-          </>
-        )}
-        <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
-          {!s.collapsed.editor && (
+    <DragAndDropProvider>
+      <div data-layout="app" data-mobile-active={s.mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+        <a href="#editor-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-2 focus:bg-interactive-accent focus:text-text-semantic-on-accent">Skip to editor</a>
+        <TitleBar collapsed={s.collapsed} onTogglePanel={s.toggle} />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {!s.collapsed.leftSidebar && (
             <>
-              <div id="editor-main" data-panel="editor" className="contents"><CentrePane tabBar={props.editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{props.editorContent}</CentrePane></div>
-              <ResizeDivider direction="horizontal" onPointerDown={s.mkResize('terminal', 'horizontal')} onDoubleClick={() => s.resetSize('terminal')} label="Resize terminal" />
+              <div data-panel="sidebar" className="contents"><Sidebar width={s.sizes.leftSidebar} collapsed={false} onToggleCollapse={() => s.toggle('leftSidebar')} header={props.sidebarHeader} focusStyle={s.pfs('sidebar')} onFocus={() => s.setFocusedPanel('sidebar')}>{props.sidebarContent}</Sidebar></div>
+              <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
             </>
           )}
-          <div data-panel="terminal" className="contents"><TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{props.terminalContent}</TerminalPane></div>
+          <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
+            {!s.collapsed.editor && (
+              <>
+                <div id="editor-main" data-panel="editor" className="contents"><CentrePane tabBar={props.editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{props.editorContent}</CentrePane></div>
+                <ResizeDivider direction="horizontal" onPointerDown={s.mkResize('terminal', 'horizontal')} onDoubleClick={() => s.resetSize('terminal')} label="Resize terminal" />
+              </>
+            )}
+            <div data-panel="terminal" className="contents"><TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{props.terminalContent}</TerminalPane></div>
+          </div>
+          {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
+          <div data-panel="agent-monitor" style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
+            <AgentMonitorPane width={s.sizes.rightSidebar} collapsed={false} onToggleCollapse={() => s.toggle('rightSidebar')} focusStyle={s.pfs('agentMonitor')} onFocus={() => s.setFocusedPanel('agentMonitor')}>{props.agentCards}</AgentMonitorPane>
+          </div>
         </div>
-        {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
-        <div data-panel="agent-monitor" style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
-          <AgentMonitorPane width={s.sizes.rightSidebar} collapsed={false} onToggleCollapse={() => s.toggle('rightSidebar')} focusStyle={s.pfs('agentMonitor')} onFocus={() => s.setFocusedPanel('agentMonitor')}>{props.agentCards}</AgentMonitorPane>
-        </div>
+        <MobileNavBar active={s.mobileActivePanel} onSwitch={s.handleMobilePanelSwitch} />
+        <div data-layout="status-bar"><StatusBar {...props.statusBar} layout={statusLayout} /></div>
       </div>
-      <MobileNavBar active={s.mobileActivePanel} onSwitch={s.handleMobilePanelSwitch} />
-      <div data-layout="status-bar"><StatusBar {...props.statusBar} layout={statusLayout} /></div>
-    </div>
+    </DragAndDropProvider>
   );
 }
