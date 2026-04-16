@@ -69,6 +69,8 @@ export interface PtySession {
   process: pty.IPty;
   cwd: string;
   shell: string;
+  /** Thread ID this terminal is linked to, if any. */
+  threadId?: string;
 }
 
 export interface SpawnOptions {
@@ -100,6 +102,7 @@ export interface SessionRegistration {
   cwd: string;
   shell: string;
   win: BrowserWindow;
+  threadId?: string;
 }
 
 export function cleanupSession(id: string): void {
@@ -150,6 +153,7 @@ export function registerSession(registration: SessionRegistration): void {
     process: registration.proc,
     cwd: registration.cwd,
     shell: registration.shell,
+    threadId: registration.threadId,
   });
   sessionWindowMap.set(registration.id, registration.win.id);
   recordPtyStart(registration.id);
@@ -157,36 +161,20 @@ export function registerSession(registration: SessionRegistration): void {
   attachSessionListeners(registration.id, registration.proc, registration.win);
 }
 
+// Splits (line-limit): thread-link helpers → ptyThreadLink.ts
+export { getLinkedSessionIds, getLinkedThread, linkSessionToThread } from './ptyThreadLink';
+
 export function notifyTerminalCreated(id: string, cwd: string): void {
   dispatchActivationEvent('onTerminalCreate', { id, cwd }).catch(() => {});
 }
 
-/**
- * Escape a single argument for safe use inside a PowerShell command string.
- * Handles all PowerShell metacharacters — not just backticks — to prevent
- * command injection via crafted CLI arguments (e.g. appendSystemPrompt).
- *
- * Security: wraps every argument in single-quotes and doubles any embedded
- * single-quotes, which is the only safe quoting strategy for PowerShell.
- * Single-quoted strings in PowerShell are literal — no variable expansion,
- * no backtick escapes, no subexpression evaluation.
- */
-export function escapePowerShellArg(arg: string): string {
-  // In PowerShell single-quoted strings, the only special character is
-  // the single-quote itself, which is escaped by doubling it.
-  return `'${arg.replace(/'/g, "''")}'`;
-}
+// Extracted to ptyArgEscape.ts (line-limit split)
+export { escapePowerShellArg } from './ptyArgEscape';
 
 interface SpawnDirectOpts {
-  id: string;
-  win: BrowserWindow;
-  shell: string;
-  finalArgs: string[];
-  shellEnv: Record<string, string>;
-  cwd: string;
-  cols: number;
-  rows: number;
-  startupCommand?: string;
+  id: string; win: BrowserWindow; shell: string;
+  finalArgs: string[]; shellEnv: Record<string, string>;
+  cwd: string; cols: number; rows: number; startupCommand?: string;
 }
 
 function spawnDirect(opts: SpawnDirectOpts): { success: boolean; error?: string } {
@@ -348,6 +336,6 @@ export function getShellState(id: string): ShellState | null {
   return getDirectShellState(id);
 }
 
-export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent';
-export { spawnAgentPty } from './ptyAgent';
+export type { AgentPtyOptions, AgentPtyResult } from './ptyAgent'; 
+export { spawnAgentPty } from './ptyAgent'; 
 export { spawnClaudePty, spawnCodexPty } from './ptySpawn';

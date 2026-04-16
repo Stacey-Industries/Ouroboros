@@ -347,6 +347,7 @@ export type {
   AgentChatEventBase,
   AgentChatLinkedDetailsResult,
   AgentChatLinkedTerminalResult,
+  AgentChatLinkedTerminalsResult,
   AgentChatMessageUpdatedEvent,
   AgentChatRevertResult,
   AgentChatSearchPayload,

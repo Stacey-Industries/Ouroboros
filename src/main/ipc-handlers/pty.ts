@@ -8,9 +8,12 @@ import { getConfigValue } from '../config';
 import { resolveModelEnv } from '../providers';
 import {
   getActiveSessions,
+  getLinkedSessionIds,
+  getLinkedThread,
   getPtyCwd,
   getShellState,
   killPty,
+  linkSessionToThread,
   resizePty,
   spawnClaudePty,
   spawnCodexPty,
@@ -120,6 +123,24 @@ function registerSessionHandlers(channels: string[]): void {
   channels.push('pty:shellState');
 }
 
+function registerThreadLinkHandlers(channels: string[]): void {
+  ipcMain.handle('pty:linkToThread', (_event, sessionId: string, threadId: string) =>
+    linkSessionToThread(sessionId, threadId),
+  );
+  channels.push('pty:linkToThread');
+
+  ipcMain.handle('pty:getLinkedThread', (_event, sessionId: string) =>
+    getLinkedThread(sessionId),
+  );
+  channels.push('pty:getLinkedThread');
+
+  ipcMain.handle('pty:getLinkedSessionIds', (_event, threadId: string) => ({
+    success: true,
+    sessionIds: getLinkedSessionIds(threadId),
+  }));
+  channels.push('pty:getLinkedSessionIds');
+}
+
 function registerRecordingHandlers(channels: string[], senderWindow: SenderWindow): void {
   ipcMain.handle('pty:startRecording', (event, id: string) =>
     startPtyRecording(id, senderWindow(event)),
@@ -136,6 +157,7 @@ export function registerPtyHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
   registerSpawnHandlers(channels, senderWindow);
   registerSessionHandlers(channels);
+  registerThreadLinkHandlers(channels);
   registerRecordingHandlers(channels, senderWindow);
   return channels;
 }

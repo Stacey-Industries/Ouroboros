@@ -85,6 +85,11 @@ export interface AgentChatLinkedTerminalResult extends OperationResult {
   linkedTerminalId?: string | null;
 }
 
+/** Wave 21 Phase G — session IDs linked to a chat thread via pty:linkToThread. */
+export interface AgentChatLinkedTerminalsResult extends OperationResult {
+  sessionIds?: string[];
+}
+
 export interface AgentChatRevertResult extends OperationResult {
   /** Files that were restored to their pre-agent state. */
   revertedFiles?: string[];
@@ -224,6 +229,8 @@ export interface AgentChatAPI {
   getGlobalCostRollup: (
     payload?: AgentChatGlobalCostRequest,
   ) => Promise<AgentChatGlobalCostResult>;
+  /** Wave 21 Phase G — return PTY session IDs linked to this thread. */
+  getLinkedTerminals: (threadId: string) => Promise<AgentChatLinkedTerminalsResult>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

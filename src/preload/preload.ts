@@ -37,6 +37,10 @@ const ptyAPI: ElectronAPI['pty'] = {
   listPersistedSessions: () => ipcRenderer.invoke('pty:listPersistedSessions'),
   restoreSession: (id) => ipcRenderer.invoke('pty:restoreSession', id),
   discardPersistedSessions: () => ipcRenderer.invoke('pty:discardPersistedSessions'),
+  linkToThread: (sessionId, threadId) =>
+    ipcRenderer.invoke('pty:linkToThread', sessionId, threadId),
+  getLinkedThread: (sessionId) => ipcRenderer.invoke('pty:getLinkedThread', sessionId),
+  getLinkedSessionIds: (threadId) => ipcRenderer.invoke('pty:getLinkedSessionIds', threadId),
 
   onData: (id, callback) => {
     const channel = `pty:data:${id}`;

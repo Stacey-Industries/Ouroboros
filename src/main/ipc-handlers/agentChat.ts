@@ -20,6 +20,7 @@ import type {
   AgentChatOrchestrationLink,
   AgentChatSendMessageRequest,
 } from '../agentChat/types';
+import { getLinkedSessionIds } from '../pty';
 import {
   invalidateSnapshotCache,
   loadPersistedContextCache,
@@ -161,6 +162,10 @@ function registerMessageHandlers(channels: string[], svc: AgentChatService): voi
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminal, (threadId: unknown) =>
     getLinkedTerminalHandler(svc, requireValidString(threadId, 'threadId')),
   );
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminals, (threadId: unknown) => ({
+    success: true,
+    sessionIds: getLinkedSessionIds(requireValidString(threadId, 'threadId')),
+  }));
 }
 
 function extractLinkFields(link: AgentChatOrchestrationLink | null | undefined) {

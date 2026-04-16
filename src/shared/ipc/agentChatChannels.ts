@@ -36,6 +36,7 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   importThread: 'agentChat:importThread',
   getThreadCostRollup: 'agentChat:getThreadCostRollup',
   getGlobalCostRollup: 'agentChat:getGlobalCostRollup',
+  getLinkedTerminals: 'agentChat:getLinkedTerminals',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

@@ -81,6 +81,8 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getThreadCostRollup, payload),
   getGlobalCostRollup: (payload) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getGlobalCostRollup, payload),
+  getLinkedTerminals: (threadId) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getLinkedTerminals, threadId),
   onThreadUpdate: (callback) =>
     onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
   onMessageUpdate: (callback) =>

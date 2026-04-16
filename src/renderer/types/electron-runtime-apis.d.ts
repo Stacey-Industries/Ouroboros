@@ -49,6 +49,14 @@ export interface PtyShellStateResult extends IpcResult {
   isExecuting?: boolean;
 }
 
+export interface PtyLinkedThreadResult extends IpcResult {
+  threadId?: string | null;
+}
+
+export interface PtyLinkedSessionsResult extends IpcResult {
+  sessionIds?: string[];
+}
+
 export interface PersistedSessionInfo {
   id: string;
   cwd: string;
@@ -114,6 +122,12 @@ export interface PtyAPI {
   listPersistedSessions: () => Promise<PersistedSessionInfo[]>;
   restoreSession: (id: string) => Promise<IpcResult>;
   discardPersistedSessions: () => Promise<IpcResult>;
+  /** Wave 21 Phase G — link a running terminal to a chat thread. */
+  linkToThread: (sessionId: string, threadId: string) => Promise<IpcResult>;
+  /** Wave 21 Phase G — get the thread ID linked to a terminal, or null. */
+  getLinkedThread: (sessionId: string) => Promise<PtyLinkedThreadResult>;
+  /** Wave 21 Phase G — get all session IDs linked to a thread. */
+  getLinkedSessionIds: (threadId: string) => Promise<PtyLinkedSessionsResult>;
 }
 
 export interface CodexAPI {
