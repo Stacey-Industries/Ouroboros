@@ -3,9 +3,10 @@
  *
  * Drop-in replacement for AgentChatThreadStoreRuntime (threadStoreRuntimeSupport.ts).
  * Tables:  threads + messages (FK → threads.id ON DELETE CASCADE)
+ *
+ * FTS5 helpers are in threadStoreSqliteFts.ts (extracted to stay under 300 lines).
  */
 
-import type BetterSqlite3 from 'better-sqlite3';
 import path from 'path';
 
 import type { Database } from '../storage/database';
@@ -16,16 +17,26 @@ import {
   runTransaction,
   setSchemaVersion,
 } from '../storage/database';
+import type { SearchOptions, SearchResult } from './threadStoreSearch';
+import { searchThreads } from './threadStoreSearch';
+import {
+  applyFtsMigration,
+  ensureFtsTable,
+  refreshFtsForThread,
+} from './threadStoreSqliteFts';
 import {
   parseJsonField,
   parseTagsField,
+  prepareInsertMessage,
   type RawMessageRow,
   type RawThreadRow,
   rowToMessage,
+  runInsertMessage,
   SCHEMA_SQL,
   SCHEMA_VERSION,
   summarizeForTitle,
   titleMatchesUserMessage,
+  upsertThreadRow,
 } from './threadStoreSqliteHelpers';
 import { normalizeThreadRecord } from './threadStoreSupport';
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
@@ -40,6 +51,9 @@ export interface ThreadStoreSqliteRuntimeOptions {
 
 export class ThreadStoreSqliteRuntime {
   private db: Database | null = null;
+
+  /** Whether FTS5 is available in this SQLite build — checked once at open time. */
+  private fts5Available = false;
 
   constructor(private readonly options: ThreadStoreSqliteRuntimeOptions) {}
 
@@ -82,10 +96,11 @@ export class ThreadStoreSqliteRuntime {
     const normalized = normalizeThreadRecord(thread, this.options.now);
     const db = this.getDb();
     runTransaction(db, () => {
-      this.upsertThreadRow(db, normalized);
+      upsertThreadRow(db, normalized);
       db.prepare('DELETE FROM messages WHERE threadId = ?').run(normalized.id);
-      const stmt = this.prepareInsertMessage(db);
-      for (const msg of normalized.messages) this.runInsertMessage(stmt, normalized.id, msg);
+      const stmt = prepareInsertMessage(db);
+      for (const msg of normalized.messages) runInsertMessage(stmt, normalized.id, msg);
+      if (this.fts5Available) refreshFtsForThread(db, normalized);
     });
     this.pruneOldThreads();
     return normalized;
@@ -97,8 +112,9 @@ export class ThreadStoreSqliteRuntime {
   ): Promise<void> {
     const db = this.getDb();
     runTransaction(db, () => {
-      this.upsertThreadRow(db, thread);
-      this.runInsertMessage(this.prepareInsertMessage(db), thread.id, message);
+      upsertThreadRow(db, thread);
+      runInsertMessage(prepareInsertMessage(db), thread.id, message);
+      if (this.fts5Available) refreshFtsForThread(db, thread);
     });
   }
 
@@ -160,6 +176,20 @@ export class ThreadStoreSqliteRuntime {
     const db = this.getDb();
     const encoded = tags.length > 0 ? JSON.stringify(tags) : null;
     db.prepare('UPDATE threads SET tags = ? WHERE id = ?').run(encoded, threadId);
+    if (this.fts5Available) {
+      try {
+        db.prepare('UPDATE thread_fts SET tags = ? WHERE threadId = ?').run(
+          tags.join(' '),
+          threadId,
+        );
+      } catch {
+        // FTS errors are non-fatal
+      }
+    }
+  }
+
+  searchThreads(query: string, opts?: SearchOptions): SearchResult[] {
+    return searchThreads(this.getDb(), query, opts);
   }
 
   private mutationQueue: Promise<unknown> = Promise.resolve();
@@ -183,36 +213,21 @@ export class ThreadStoreSqliteRuntime {
   private getDb(): Database {
     if (!this.db) {
       this.db = openDatabase(path.join(this.options.threadsDir, 'threads.db'));
-      const currentVersion = getSchemaVersion(this.db);
-      if (currentVersion < SCHEMA_VERSION) {
-        runTransaction(this.db, () => {
-          this.db!.exec(SCHEMA_SQL);
-          if (currentVersion >= 1) {
-            // v1→v2: add model column to existing messages table
-            const cols = this.db!.pragma('table_info(messages)') as { name: string }[];
-            if (!cols.some((c) => c.name === 'model')) {
-              this.db!.exec('ALTER TABLE messages ADD COLUMN model TEXT');
-            }
-          }
-          if (currentVersion >= 2) {
-            // v2→v3: add checkpointCommit column to existing messages table
-            const cols = this.db!.pragma('table_info(messages)') as { name: string }[];
-            if (!cols.some((c) => c.name === 'checkpointCommit')) {
-              this.db!.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
-            }
-          }
-          if (currentVersion >= 3) {
-            // v3→v4: add tags column to threads table (JSON-encoded string[])
-            const cols = this.db!.pragma('table_info(threads)') as { name: string }[];
-            if (!cols.some((c) => c.name === 'tags')) {
-              this.db!.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
-            }
-          }
-          setSchemaVersion(this.db!, SCHEMA_VERSION);
-        });
-      }
+      this.initSchema(this.db);
+      this.fts5Available = ensureFtsTable(this.db);
     }
     return this.db;
+  }
+
+  private initSchema(db: Database): void {
+    const currentVersion = getSchemaVersion(db);
+    if (currentVersion >= SCHEMA_VERSION) return;
+    runTransaction(db, () => {
+      db.exec(SCHEMA_SQL);
+      applyColumnMigrations(db, currentVersion);
+      if (currentVersion >= 4) applyFtsMigration(db);
+      setSchemaVersion(db, SCHEMA_VERSION);
+    });
   }
 
   private loadMessages(db: Database, threadId: string): AgentChatMessageRecord[] {
@@ -241,69 +256,6 @@ export class ThreadStoreSqliteRuntime {
     };
   }
 
-  private upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
-    db.prepare(
-      `INSERT INTO threads
-         (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo, tags)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         workspaceRoot = excluded.workspaceRoot,
-         createdAt = excluded.createdAt,
-         updatedAt = excluded.updatedAt,
-         title = excluded.title,
-         status = excluded.status,
-         latestOrchestration = excluded.latestOrchestration,
-         branchInfo = excluded.branchInfo,
-         tags = excluded.tags`,
-    ).run(
-      thread.id,
-      thread.workspaceRoot,
-      thread.createdAt,
-      thread.updatedAt,
-      thread.title,
-      thread.status,
-      thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
-      thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
-      thread.tags && thread.tags.length > 0 ? JSON.stringify(thread.tags) : null,
-    );
-  }
-
-  private prepareInsertMessage(db: Database): BetterSqlite3.Statement {
-    return db.prepare(
-      `INSERT OR REPLACE INTO messages (id, threadId, role, content, createdAt, statusKind, orchestration,
-        contextSummary, verificationPreview, error, toolsSummary, costSummary, durationSummary, tokenUsage,
-        blocks, model, checkpointCommit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-  }
-
-  private runInsertMessage(
-    stmt: BetterSqlite3.Statement,
-    threadId: string,
-    msg: AgentChatMessageRecord,
-  ): void {
-    const s = (v: unknown) => (v ? JSON.stringify(v) : null);
-    stmt.run(
-      msg.id,
-      threadId,
-      msg.role,
-      msg.content,
-      msg.createdAt,
-      msg.statusKind ?? null,
-      s(msg.orchestration),
-      s(msg.contextSummary),
-      s(msg.verificationPreview),
-      s(msg.error),
-      msg.toolsSummary ?? null,
-      msg.costSummary ?? null,
-      msg.durationSummary ?? null,
-      s(msg.tokenUsage),
-      s(msg.blocks),
-      msg.model ?? null,
-      msg.checkpointCommit ?? null,
-    );
-  }
-
   private pruneOldThreads(): void {
     if (this.options.maxThreads <= 0) return;
     const db = this.getDb();
@@ -316,7 +268,32 @@ export class ThreadStoreSqliteRuntime {
   }
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────
+// ── Module helpers ──────────────────────────────────────────────────
+
+/**
+ * Apply stepwise ALTER TABLE migrations for v1→v2, v2→v3, v3→v4.
+ * Called inside the migration transaction in initSchema().
+ */
+function applyColumnMigrations(db: Database, currentVersion: number): void {
+  if (currentVersion >= 1) {
+    const cols = db.pragma('table_info(messages)') as { name: string }[];
+    if (!cols.some((c) => c.name === 'model')) {
+      db.exec('ALTER TABLE messages ADD COLUMN model TEXT');
+    }
+  }
+  if (currentVersion >= 2) {
+    const cols = db.pragma('table_info(messages)') as { name: string }[];
+    if (!cols.some((c) => c.name === 'checkpointCommit')) {
+      db.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
+    }
+  }
+  if (currentVersion >= 3) {
+    const cols = db.pragma('table_info(threads)') as { name: string }[];
+    if (!cols.some((c) => c.name === 'tags')) {
+      db.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
+    }
+  }
+}
 
 function buildMetadataPatchQuery(patch: {
   title?: string;

@@ -24,6 +24,8 @@ export type {
   AgentChatMessageStatusKind,
   AgentChatMessageUpdatedEvent,
   AgentChatOrchestrationLink,
+  AgentChatSearchPayload,
+  AgentChatSearchResult,
   AgentChatSendMessageMetadata,
   AgentChatSendMessageOverrides,
   AgentChatSendMessageRequest,

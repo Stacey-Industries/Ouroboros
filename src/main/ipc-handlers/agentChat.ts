@@ -3,31 +3,23 @@
  *
  * Wires the AgentChatService to ipcMain.handle() for all
  * agentChat invoke channels, and forwards events to the renderer.
+ *
+ * Event forwarding + session projection live in agentChatEventForwarders.ts.
  */
 
 import { ipcMain } from 'electron';
 
 import {
-  AGENT_CHAT_EVENT_CHANNELS,
   AGENT_CHAT_INVOKE_CHANNELS,
   type AgentChatService,
   createAgentChatService,
 } from '../agentChat';
-import {
-  buildAgentChatOrchestrationLink,
-  mapOrchestrationStatusToAgentChatStatus,
-} from '../agentChat/chatOrchestrationBridgeSupport';
-import { projectAgentChatSession } from '../agentChat/eventProjector';
 import { type SessionMemoryEntry, sessionMemoryStore } from '../agentChat/sessionMemory';
-import { agentChatThreadStore } from '../agentChat/threadStore';
 import type {
   AgentChatCreateThreadRequest,
   AgentChatOrchestrationLink,
   AgentChatSendMessageRequest,
 } from '../agentChat/types';
-import log from '../logger';
-import { broadcastToWebClients } from '../web/webServer';
-import { getAllActiveWindows } from '../windowManager';
 import {
   invalidateSnapshotCache,
   loadPersistedContextCache,
@@ -36,6 +28,7 @@ import {
   terminateContextWorker,
   warmSnapshotCache,
 } from './agentChatContext';
+import { registerEventForwarders } from './agentChatEventForwarders';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
 
 // Re-export public API consumed by other modules (files.ts, git.ts, etc.)
@@ -140,23 +133,6 @@ function registerThreadHandlers(channels: string[], svc: AgentChatService): void
   );
 }
 
-async function getLinkedTerminalHandler(svc: AgentChatService, threadId: string) {
-  const result = await svc.loadThread(threadId);
-  if (!result.success || !result.thread)
-    return { success: false, error: result.error ?? 'Thread not found' };
-  const link = result.thread.latestOrchestration;
-  return { success: true, ...formatLinkedTerminal(link) };
-}
-
-function formatLinkedTerminal(link: AgentChatOrchestrationLink | null | undefined) {
-  return {
-    provider: link?.provider ?? null,
-    claudeSessionId: link?.claudeSessionId ?? null,
-    codexThreadId: link?.codexThreadId ?? null,
-    linkedTerminalId: link?.linkedTerminalId ?? null,
-  };
-}
-
 function registerMessageHandlers(channels: string[], svc: AgentChatService): void {
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.sendMessage, (request: unknown) => {
     const obj = requireValidObject(request, 'sendMessage request');
@@ -185,7 +161,32 @@ function registerMessageHandlers(channels: string[], svc: AgentChatService): voi
   );
 }
 
-// ─── Memory handler helpers ───────────────────────────────────────────────────
+function extractLinkFields(link: AgentChatOrchestrationLink | null | undefined) {
+  if (!link) return { provider: null, claudeSessionId: null, codexThreadId: null, linkedTerminalId: null };
+  return {
+    provider: link.provider ?? null,
+    claudeSessionId: link.claudeSessionId ?? null,
+    codexThreadId: link.codexThreadId ?? null,
+    linkedTerminalId: link.linkedTerminalId ?? null,
+  };
+}
+
+async function getLinkedTerminalHandler(svc: AgentChatService, threadId: string) {
+  const result = await svc.loadThread(threadId);
+  if (!result.success || !result.thread)
+    return { success: false, error: result.error ?? 'Thread not found' };
+  return { success: true, ...extractLinkFields(result.thread.latestOrchestration) };
+}
+
+function registerMemoryHandlers(channels: string[]): void {
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.listMemories, async (workspaceRoot: unknown) => {
+    const root = requireValidString(workspaceRoot, 'workspaceRoot');
+    return { success: true, memories: await sessionMemoryStore.loadMemories(root) };
+  });
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.createMemory, handleCreateMemory);
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.updateMemory, handleUpdateMemory);
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, handleDeleteMemory);
+}
 
 async function handleCreateMemory(workspaceRoot: unknown, entry: unknown) {
   const root = requireValidString(workspaceRoot, 'workspaceRoot');
@@ -220,16 +221,6 @@ async function handleDeleteMemory(workspaceRoot: unknown, memoryId: unknown) {
   return { success: true };
 }
 
-function registerMemoryHandlers(channels: string[]): void {
-  register(channels, AGENT_CHAT_INVOKE_CHANNELS.listMemories, async (workspaceRoot: unknown) => {
-    const root = requireValidString(workspaceRoot, 'workspaceRoot');
-    return { success: true, memories: await sessionMemoryStore.loadMemories(root) };
-  });
-  register(channels, AGENT_CHAT_INVOKE_CHANNELS.createMemory, handleCreateMemory);
-  register(channels, AGENT_CHAT_INVOKE_CHANNELS.updateMemory, handleUpdateMemory);
-  register(channels, AGENT_CHAT_INVOKE_CHANNELS.deleteMemory, handleDeleteMemory);
-}
-
 function registerTagHandlers(channels: string[], svc: AgentChatService): void {
   register(channels, AGENT_CHAT_INVOKE_CHANNELS.getThreadTags, async (threadId: unknown) => {
     const id = requireValidString(threadId, 'threadId');
@@ -241,82 +232,19 @@ function registerTagHandlers(channels: string[], svc: AgentChatService): void {
     AGENT_CHAT_INVOKE_CHANNELS.setThreadTags,
     async (threadId: unknown, tags: unknown) => {
       const id = requireValidString(threadId, 'threadId');
-      if (!Array.isArray(tags)) {
-        throw new Error('Invalid tags: expected array');
-      }
+      if (!Array.isArray(tags)) throw new Error('Invalid tags: expected array');
       await svc.threadStore.setTags(id, tags as string[]);
       return { success: true };
     },
   );
-}
-
-// ─── Session event projection ─────────────────────────────────────────────────
-
-type SafeSend = (channel: string | undefined, data: unknown) => void;
-
-async function projectAndSendSessionUpdate(
-  svc: AgentChatService,
-  session: Parameters<Parameters<MinimalOrchestration['onSessionUpdate']>[0]>[0],
-  safeSend: SafeSend,
-): Promise<void> {
-  const threadId =
-    svc.bridge.findThreadIdForSession(session.id) ??
-    svc.bridge.findThreadIdForSession(session.taskId);
-  if (!threadId) return;
-  const threadResult = await svc.loadThread(threadId);
-  const linkedThread = threadResult.success ? threadResult.thread : undefined;
-  if (!linkedThread) return;
-
-  const activeThreadIds = svc.bridge.getActiveThreadIds();
-  const isActivelyStreaming = activeThreadIds.includes(linkedThread.id);
-
-  const projected = await projectAgentChatSession({
-    session,
-    thread: linkedThread,
-    threadStore: agentChatThreadStore,
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.searchThreads, (payload: unknown) => {
+    const obj = requireValidObject(payload, 'searchThreads payload');
+    const query = requireValidString(obj.query, 'query');
+    const limit = typeof obj.limit === 'number' ? obj.limit : undefined;
+    const threadId = typeof obj.threadId === 'string' ? obj.threadId : undefined;
+    const results = svc.threadStore.searchThreads(query, { limit, threadId });
+    return { success: true, results };
   });
-
-  if (projected.changed && !isActivelyStreaming) {
-    safeSend(AGENT_CHAT_EVENT_CHANNELS.thread, projected.thread);
-  }
-
-  const link = buildAgentChatOrchestrationLink(session);
-  safeSend(AGENT_CHAT_EVENT_CHANNELS.status, {
-    threadId: linkedThread.id,
-    workspaceRoot: linkedThread.workspaceRoot,
-    status: mapOrchestrationStatusToAgentChatStatus(session.status),
-    latestMessageId: projected.latestMessageId,
-    latestOrchestration: link,
-    updatedAt: projected.thread.updatedAt,
-  });
-}
-
-function registerEventForwarders(svc: AgentChatService): void {
-  const safeSend: SafeSend = (channel, data) => {
-    if (!channel) return;
-    for (const win of getAllActiveWindows()) {
-      if (!win.isDestroyed()) win.webContents.send(channel, data);
-    }
-    broadcastToWebClients(channel, data);
-  };
-
-  const orch = getOrchestration();
-  cleanupFns.push(
-    orch.onSessionUpdate((session) => {
-      void (async () => {
-        try {
-          await projectAndSendSessionUpdate(svc, session, safeSend);
-        } catch (error) {
-          log.error('session-update projection failed:', error);
-        }
-      })();
-    }),
-  );
-  cleanupFns.push(
-    svc.bridge.onStreamChunk((chunk) => {
-      safeSend(AGENT_CHAT_EVENT_CHANNELS.stream, chunk);
-    }),
-  );
 }
 
 // ─── Main registration entry point ───────────────────────────────────────────
@@ -334,8 +262,7 @@ export function registerAgentChatHandlers(): string[] {
   registerMessageHandlers(channels, svc);
   registerMemoryHandlers(channels);
   registerTagHandlers(channels, svc);
-
-  registerEventForwarders(svc);
+  registerEventForwarders(svc, getOrchestration(), cleanupFns);
 
   registeredChannels = channels;
   return channels;
@@ -349,9 +276,7 @@ export function cleanupAgentChatHandlers(): void {
   stopContextRefreshTimer();
   terminateContextWorker();
   // NOTE: service and orchestration are intentionally preserved across window
-  // close/reopen. The chat bridge's activeSends map holds buffered stream chunks
-  // for running agents, and the orchestration's onProviderEvent subscription
-  // (set inside the bridge) keeps accumulating chunks during the gap. On reopen,
-  // registerAgentChatHandlers re-attaches IPC forwarders to the surviving bridge,
-  // and the renderer replays buffered chunks via getBufferedChunks().
+  // close/reopen to keep the bridge's buffered stream chunks + onProviderEvent
+  // subscription alive. registerAgentChatHandlers re-attaches IPC forwarders on
+  // reopen; the renderer replays buffered chunks via getBufferedChunks().
 }

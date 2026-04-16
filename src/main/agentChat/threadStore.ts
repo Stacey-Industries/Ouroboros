@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { app } from 'electron';
 import * as path from 'path';
 
+import type { SearchOptions, SearchResult } from './threadStoreSearch';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
 import {
   DEFAULT_THREAD_TITLE,
@@ -78,6 +79,8 @@ export interface AgentChatThreadStore {
   getTags: (threadId: string) => Promise<string[]>;
   /** Persist tags for a thread. JSON-encodes internally. */
   setTags: (threadId: string, tags: string[]) => Promise<void>;
+  /** Full-text search across thread messages, tags, and file paths. */
+  searchThreads: (query: string, opts?: SearchOptions) => SearchResult[];
 }
 
 function buildThreadRecord(args: {
@@ -300,6 +303,7 @@ function buildThreadStoreApi(args: {
     getStorageDirectory: () => runtime.getStorageDirectory(),
     getTags: (id) => runtime.getTags(id),
     setTags: (id, tags) => runtime.setTags(id, tags),
+    searchThreads: (query, opts) => runtime.searchThreads(query, opts),
   };
 }
 

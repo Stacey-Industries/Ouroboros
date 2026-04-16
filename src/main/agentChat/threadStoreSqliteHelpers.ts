@@ -3,13 +3,16 @@
  * for the SQLite-backed thread store runtime.
  */
 
+import type BetterSqlite3 from 'better-sqlite3';
+
 import log from '../logger';
+import type { Database } from '../storage/database';
 import { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle } from './chatTitleDerivation';
-import type { AgentChatMessageRecord } from './types';
+import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -34,6 +37,20 @@ export const SCHEMA_SQL = `
     PRIMARY KEY (id, threadId)
   );
   CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
+`;
+
+/**
+ * FTS5 virtual table DDL, kept separate so callers can skip it gracefully
+ * when the SQLite build lacks ENABLE_FTS5 (e.g. some Linux system packages).
+ */
+export const FTS_SCHEMA_SQL = `
+  CREATE VIRTUAL TABLE IF NOT EXISTS thread_fts USING fts5(
+    threadId UNINDEXED,
+    content,
+    tags,
+    filePaths,
+    tokenize = 'porter unicode61'
+  );
 `;
 
 // ── Row types ────────────────────────────────────────────────────────
@@ -123,6 +140,74 @@ export function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
   return base;
 }
 
+// ── FTS helpers ──────────────────────────────────────────────────────
+
+type Db = import('../storage/database').Database;
+
+/**
+ * Check whether the SQLite build supports FTS5 by inspecting compile options.
+ * Returns false gracefully if the PRAGMA itself fails.
+ */
+export function isFts5Available(db: Db): boolean {
+  try {
+    const rows = db.pragma('compile_options') as { compile_options: string }[];
+    return rows.some((r) => r.compile_options === 'ENABLE_FTS5');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extract plain-text file paths from a message's blocks JSON field.
+ * Returns a space-separated string suitable for FTS5 indexing.
+ */
+export function extractFilePathsFromBlocks(blocksJson: string | null): string {
+  if (!blocksJson) return '';
+  try {
+    const blocks = JSON.parse(blocksJson) as unknown[];
+    const paths: string[] = [];
+    for (const block of blocks) {
+      if (
+        block !== null &&
+        typeof block === 'object' &&
+        'filePath' in block &&
+        typeof (block as Record<string, unknown>).filePath === 'string'
+      ) {
+        paths.push((block as Record<string, unknown>).filePath as string);
+      }
+    }
+    return paths.join(' ');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Backfill the thread_fts table from all existing threads + messages.
+ * Called inside the v4→v5 migration transaction.
+ */
+export function backfillFts(db: Db): void {
+  const threads = db.prepare('SELECT id, tags FROM threads').all() as {
+    id: string;
+    tags: string | null;
+  }[];
+  const insertFts = db.prepare(
+    'INSERT INTO thread_fts(threadId, content, tags, filePaths) VALUES (?, ?, ?, ?)',
+  );
+  for (const thread of threads) {
+    const messages = db
+      .prepare('SELECT content, blocks FROM messages WHERE threadId = ?')
+      .all(thread.id) as { content: string; blocks: string | null }[];
+    const content = messages.map((m) => m.content).join(' ');
+    const tagsText = thread.tags ? (JSON.parse(thread.tags) as string[]).join(' ') : '';
+    const filePaths = messages
+      .map((m) => extractFilePathsFromBlocks(m.blocks))
+      .filter(Boolean)
+      .join(' ');
+    insertFts.run(thread.id, content, tagsText, filePaths);
+  }
+}
+
 // ── Title helpers ────────────────────────────────────────────────────
 
 export function titleMatchesUserMessage(title: string, content: string): boolean {
@@ -134,4 +219,60 @@ export function titleMatchesUserMessage(title: string, content: string): boolean
       .find((l) => l.length > 0) ?? '';
   if (title === trimmed || title === firstLine) return true;
   return trimmed.length > 79 && title === `${firstLine.slice(0, 79).trimEnd()}\u2026`;
+}
+
+// ── Write helpers (used by ThreadStoreSqliteRuntime) ─────────────────────────
+
+const UPSERT_THREAD_SQL = `
+  INSERT INTO threads
+    (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo, tags)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(id) DO UPDATE SET
+    workspaceRoot = excluded.workspaceRoot,
+    createdAt = excluded.createdAt,
+    updatedAt = excluded.updatedAt,
+    title = excluded.title,
+    status = excluded.status,
+    latestOrchestration = excluded.latestOrchestration,
+    branchInfo = excluded.branchInfo,
+    tags = excluded.tags`;
+
+export function upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
+  db.prepare(UPSERT_THREAD_SQL).run(
+    thread.id,
+    thread.workspaceRoot,
+    thread.createdAt,
+    thread.updatedAt,
+    thread.title,
+    thread.status,
+    thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
+    thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
+    thread.tags && thread.tags.length > 0 ? JSON.stringify(thread.tags) : null,
+  );
+}
+
+const INSERT_MESSAGE_SQL = `
+  INSERT OR REPLACE INTO messages
+    (id, threadId, role, content, createdAt, statusKind, orchestration,
+     contextSummary, verificationPreview, error, toolsSummary, costSummary,
+     durationSummary, tokenUsage, blocks, model, checkpointCommit)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+export function prepareInsertMessage(db: Database): BetterSqlite3.Statement {
+  return db.prepare(INSERT_MESSAGE_SQL);
+}
+
+export function runInsertMessage(
+  stmt: BetterSqlite3.Statement,
+  threadId: string,
+  msg: AgentChatMessageRecord,
+): void {
+  const s = (v: unknown) => (v ? JSON.stringify(v) : null);
+  stmt.run(
+    msg.id, threadId, msg.role, msg.content, msg.createdAt,
+    msg.statusKind ?? null, s(msg.orchestration), s(msg.contextSummary),
+    s(msg.verificationPreview), s(msg.error),
+    msg.toolsSummary ?? null, msg.costSummary ?? null, msg.durationSummary ?? null,
+    s(msg.tokenUsage), s(msg.blocks), msg.model ?? null, msg.checkpointCommit ?? null,
+  );
 }

@@ -92,6 +92,21 @@ export interface AgentChatRevertResult extends OperationResult {
   restoredToHash?: string;
 }
 
+// ─── Search ──────────────────────────────────────────────────────────────────
+
+export interface AgentChatSearchResult {
+  threadId: string;
+  score: number;
+  snippet: string;
+  messageId?: string;
+}
+
+export interface AgentChatSearchPayload {
+  query: string;
+  limit?: number;
+  threadId?: string;
+}
+
 // ─── API surface ─────────────────────────────────────────────────────────────
 
 export interface AgentChatAPI {
@@ -145,6 +160,10 @@ export interface AgentChatAPI {
     threadId: string,
     tags: string[],
   ) => Promise<{ success: boolean; error?: string }>;
+  /** Full-text search across thread messages, tags, and file paths. */
+  searchThreads: (
+    payload: AgentChatSearchPayload,
+  ) => Promise<{ success: boolean; results?: AgentChatSearchResult[]; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

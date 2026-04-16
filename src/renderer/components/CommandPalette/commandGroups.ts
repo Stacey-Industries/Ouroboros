@@ -1,4 +1,8 @@
-import { OPEN_SETTINGS_PANEL_EVENT, SPLIT_EDITOR_EVENT } from '../../hooks/appEventNames';
+import {
+  OPEN_SETTINGS_PANEL_EVENT,
+  OPEN_THREAD_SEARCH_EVENT,
+  SPLIT_EDITOR_EVENT,
+} from '../../hooks/appEventNames';
 import type { Command } from './types';
 
 interface DispatchCommandConfig {
@@ -255,6 +259,22 @@ function gitCommands(): Command[] {
   ];
 }
 
+/** Thread / search commands (flat). */
+function threadCommands(): Command[] {
+  return [
+    {
+      id: 'threads:search',
+      label: 'Search Threads',
+      category: 'app',
+      shortcut: 'Ctrl+Shift+F',
+      icon: '\u{1F50D}',
+      action: () => {
+        dispatchIdeEvent(OPEN_THREAD_SEARCH_EVENT);
+      },
+    },
+  ];
+}
+
 /**
  * Build the complete list of built-in commands.
  * Each group function returns a focused subset.
@@ -267,5 +287,6 @@ export function buildBuiltinCommands(): Command[] {
     ...fileCommands(),
     ...appCommands(),
     ...gitCommands(),
+    ...threadCommands(),
   ];
 }

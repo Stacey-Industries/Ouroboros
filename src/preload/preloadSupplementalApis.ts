@@ -258,6 +258,8 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.getThreadTags, threadId),
     setThreadTags: (threadId, tags) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setThreadTags, threadId, tags),
+    searchThreads: (payload) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.searchThreads, payload),
     onThreadUpdate: (callback) =>
       onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
     onMessageUpdate: (callback) =>

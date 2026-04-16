@@ -10,6 +10,7 @@ import { AboutModal } from '../AboutModal';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SymbolSearch } from '../CommandPalette/SymbolSearch';
 import type { Command } from '../CommandPalette/types';
+import { ThreadSearchModal } from '../Search/ThreadSearchModal';
 import { PerformanceOverlay } from '../shared/PerformanceOverlay';
 import { FilePickerConnected } from './FilePickerConnected';
 import { LazyPanelFallback } from './LazyPanelFallback';
@@ -92,6 +93,7 @@ function LazyPanels({ persistTerminalSessions }: { persistTerminalSessions: bool
   return (
     <>
       <AboutModal />
+      <ThreadSearchModal />
       <React.Suspense fallback={<LazyPanelFallback />}>
         <BackgroundJobsPanel />
       </React.Suspense>

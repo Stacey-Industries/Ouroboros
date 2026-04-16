@@ -30,3 +30,4 @@ export const REFRESH_FILE_TREE_EVENT = 'agent-ide:refresh-files';
 export const SWITCH_SIDEBAR_VIEW_EVENT = 'agent-ide:switch-sidebar-view';
 export const TOGGLE_LAYOUT_MODE_EVENT = 'agent-ide:toggle-layout-mode';
 export const SESSION_SWITCH_EVENT = 'agent-ide:session-switch';
+export const OPEN_THREAD_SEARCH_EVENT = 'agent-ide:open-thread-search';
