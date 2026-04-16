@@ -23,7 +23,9 @@ import {
 import { useDensity } from './DensityContext';
 import { MessageActions } from './MessageActions';
 import { MessageMarkdown } from './MessageMarkdown';
+import { ReactionBar } from './ReactionBar';
 import { StreamingStatusMessage } from './streamingUtils';
+import { useSelectionQuote } from './useSelectionQuote';
 
 // ── Collapse threshold ────────────────────────────────────────────────────────
 
@@ -134,12 +136,14 @@ interface HeaderProps {
   hidden: boolean;
   showRaw: boolean;
   onToggleRaw: () => void;
+  onQuote: () => void;
   onBranch: (m: AgentChatMessageRecord) => void;
   onRevert?: (m: AgentChatMessageRecord) => void;
 }
 
 function AssistantMessageHeader(props: HeaderProps): React.ReactElement | null {
   if (props.hidden) return null;
+  const reactions = props.message.reactions ?? [];
   return (
     <div className="mb-1 flex items-center gap-1">
       <span
@@ -157,6 +161,10 @@ function AssistantMessageHeader(props: HeaderProps): React.ReactElement | null {
         content={props.message.content ?? ''}
         showRaw={props.showRaw}
         onToggleRaw={props.onToggleRaw}
+        onQuote={props.onQuote}
+        reactionsSlot={
+          <ReactionBar messageId={props.message.id} reactions={reactions} />
+        }
       />
     </div>
   );
@@ -213,6 +221,11 @@ export const AssistantMessage = React.memo(function AssistantMessage(
   const onToggleRaw = useCallback(() => setShowRaw((v) => !v), []);
   const [collapsed, toggleCollapsed] = useCollapseState(props.message);
 
+  const { quoteMessage } = useSelectionQuote({
+    messageContent: props.message.content ?? '',
+    attribution: { role: 'assistant', timestamp: props.message.createdAt },
+  });
+
   const { density } = useDensity();
   const paddingClass = density === 'compact' ? 'py-0.5' : 'py-1';
   const isLong = !streaming.isStreaming && (props.message.content?.length ?? 0) >= COLLAPSE_THRESHOLD;
@@ -223,6 +236,7 @@ export const AssistantMessage = React.memo(function AssistantMessage(
         <AssistantMessageHeader
           message={props.message} hidden={streaming.hiddenHeader}
           showRaw={showRaw} onToggleRaw={onToggleRaw}
+          onQuote={quoteMessage}
           onBranch={props.onBranch} onRevert={props.onRevert}
         />
         {!collapsed && (

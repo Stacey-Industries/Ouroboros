@@ -12,7 +12,9 @@ import { ContextSummaryRow } from './AgentChatMessageComponents.rows';
 import { AgentChatToolGroup } from './AgentChatToolGroup';
 import { StreamingChangeSummaryBar } from './ChangeSummaryBar';
 import { MessageMarkdown } from './MessageMarkdown';
+import { ReactionBar } from './ReactionBar';
 import { StreamingStatusMessage } from './streamingUtils';
+import { useSelectionQuote } from './useSelectionQuote';
 
 const USER_BUBBLE_STYLE: React.CSSProperties = {
   backgroundColor: 'color-mix(in srgb, var(--surface-overlay) 38%, transparent)',
@@ -91,20 +93,20 @@ function UserMessageEditMode(props: EditModeProps): React.ReactElement {
   );
 }
 
-export const UserMessage = React.memo(function UserMessage(
-  props: UserMessageProps,
-): React.ReactElement {
-  if (props.isEditing)
-    return (
-      <UserMessageEditMode
-        editDraft={props.editDraft}
-        onEditDraftChange={props.onEditDraftChange}
-        onEditSubmit={props.onEditSubmit}
-        onCancelEdit={props.onCancelEdit}
-      />
-    );
+// ── UserMessage sub-components ────────────────────────────────────────────────
+
+interface UserBubbleProps {
+  message: AgentChatMessageRecord;
+  isLastUserMessage: boolean;
+  threadStatus: string;
+  onEdit: UserMessageProps['onEdit'];
+  onRetry: UserMessageProps['onRetry'];
+  onBranch: UserMessageProps['onBranch'];
+}
+
+function UserMessageBubble(props: UserBubbleProps): React.ReactElement {
   return (
-    <div className="group flex justify-end gap-1.5">
+    <div className="flex items-end justify-end gap-1.5 w-full">
       <UserMessageActions
         message={props.message}
         isLastUserMessage={props.isLastUserMessage}
@@ -128,6 +130,67 @@ export const UserMessage = React.memo(function UserMessage(
           {formatTimestamp(props.message.createdAt)}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface UserFooterProps {
+  messageId: string;
+  reactions: import('../../types/electron').Reaction[];
+  onQuote: () => void;
+}
+
+function UserMessageFooter(props: UserFooterProps): React.ReactElement {
+  return (
+    <div className="flex items-center gap-1 opacity-0 transition-opacity duration-100 group-hover:opacity-100 pr-0.5">
+      <button
+        type="button"
+        title="Quote selection in composer"
+        onClick={props.onQuote}
+        className="rounded px-1.5 py-0.5 text-[11px] text-text-semantic-muted hover:bg-surface-hover hover:text-text-semantic-primary transition-colors duration-100"
+      >
+        Quote
+      </button>
+      <ReactionBar messageId={props.messageId} reactions={props.reactions} />
+    </div>
+  );
+}
+
+// ── UserMessage ───────────────────────────────────────────────────────────────
+
+export const UserMessage = React.memo(function UserMessage(
+  props: UserMessageProps,
+): React.ReactElement {
+  const { quoteMessage } = useSelectionQuote({
+    messageContent: props.message.content ?? '',
+    attribution: { role: 'user', timestamp: props.message.createdAt },
+  });
+
+  if (props.isEditing)
+    return (
+      <UserMessageEditMode
+        editDraft={props.editDraft}
+        onEditDraftChange={props.onEditDraftChange}
+        onEditSubmit={props.onEditSubmit}
+        onCancelEdit={props.onCancelEdit}
+      />
+    );
+
+  return (
+    <div className="group flex flex-col items-end gap-0.5">
+      <UserMessageBubble
+        message={props.message}
+        isLastUserMessage={props.isLastUserMessage}
+        threadStatus={props.threadStatus}
+        onEdit={props.onEdit}
+        onRetry={props.onRetry}
+        onBranch={props.onBranch}
+      />
+      <UserMessageFooter
+        messageId={props.message.id}
+        reactions={props.message.reactions ?? []}
+        onQuote={quoteMessage}
+      />
     </div>
   );
 });

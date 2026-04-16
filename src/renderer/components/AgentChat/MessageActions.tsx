@@ -98,7 +98,9 @@ export interface MessageActionsProps {
   showRaw: boolean;
   /** Toggle raw markdown view. */
   onToggleRaw: () => void;
-  /** Placeholder slot for Phase C reactions. Pass null to omit. */
+  /** Called when the user clicks the Quote button. */
+  onQuote?: () => void;
+  /** Phase C reactions bar. Pass null to omit. */
   reactionsSlot?: React.ReactNode;
 }
 
@@ -129,6 +131,11 @@ export function MessageActions(props: MessageActionsProps): React.ReactElement {
       >
         <span>Raw</span>
       </ActionBtn>
+      {props.onQuote != null && (
+        <ActionBtn title="Quote selection in composer" onClick={props.onQuote}>
+          <span>Quote</span>
+        </ActionBtn>
+      )}
       {props.reactionsSlot ?? null}
     </div>
   );
