@@ -49,8 +49,13 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke('approval:respond', requestId, decision, reason),
     alwaysAllow: (sessionId, toolName) =>
       ipcRenderer.invoke('approval:alwaysAllow', sessionId, toolName),
+    remember: (toolName, key, decision) =>
+      ipcRenderer.invoke('approval:remember', toolName, key, decision),
+    listMemory: () => ipcRenderer.invoke('approval:listMemory'),
+    forget: (hash) => ipcRenderer.invoke('approval:forget', hash),
     onRequest: (callback) => onChannel<ApprovalRequest>('approval:request', callback),
     onResolved: (callback) => onChannel<ApprovalResolved>('approval:resolved', callback),
+    onMemoryChanged: (callback) => onChannel<void>('approval:memoryChanged', callback),
   },
 
   sessions: {

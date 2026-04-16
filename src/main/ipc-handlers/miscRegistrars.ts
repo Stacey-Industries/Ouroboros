@@ -8,6 +8,7 @@ import path from 'path';
 
 import { getErrorMessage } from '../agentChat/utils';
 import { addAlwaysAllowRule, respondToApproval } from '../approvalManager';
+import { forget, listAll, rememberAllow, rememberDeny } from '../approvalMemory';
 import { getLatestClaudeUsageSnapshot } from '../claudeRateLimits';
 import { getLatestCodexUsageSnapshot } from '../codexRateLimits';
 import { clearCostHistory, type CostEntry, getCostHistory, saveCostEntry } from '../costHistory';
@@ -281,6 +282,21 @@ export function registerApprovalHandlers(channels: ChannelList): void {
     'approval:alwaysAllow',
     async (_event, sessionId: string, toolName: string) =>
       runAction(() => addAlwaysAllowRule(sessionId, toolName)),
+  );
+  registerChannel(
+    channels,
+    'approval:remember',
+    async (_event, toolName: string, key: string, decision: 'allow' | 'deny') =>
+      runAction(() => {
+        if (decision === 'allow') rememberAllow(toolName, key);
+        else rememberDeny(toolName, key);
+      }),
+  );
+  registerChannel(channels, 'approval:listMemory', async () =>
+    runQuery(() => ({ entries: listAll() })),
+  );
+  registerChannel(channels, 'approval:forget', async (_event, hash: string) =>
+    runAction(() => forget(hash)),
   );
 }
 

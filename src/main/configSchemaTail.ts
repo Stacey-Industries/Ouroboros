@@ -257,12 +257,7 @@ export const tailSchema = {
   /** Wave 8 (#115) — persist PTY session descriptors to SQLite for cross-restart restore. Default off. */
   persistTerminalSessions: { type: 'boolean', default: false },
   /** Wave 14 (Package 4) — codebase graph GC settings */
-  codebaseGraph: {
-    type: 'object',
-    additionalProperties: false,
-    properties: { gcEnabled: { type: 'boolean', default: true }, gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 } },
-    default: { gcEnabled: true, gcDaysThreshold: 90 },
-  },
+  codebaseGraph: { type: 'object', additionalProperties: false, properties: { gcEnabled: { type: 'boolean', default: true }, gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 } }, default: { gcEnabled: true, gcDaysThreshold: 90 } },
   /** Wave 15 — structured telemetry feature flag and retention policy */
   telemetry: { type: 'object', properties: { structured: { type: 'boolean', default: false }, retentionDays: { type: 'number', default: 30 } } },
   /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */
@@ -300,6 +295,8 @@ export const tailSchema = {
   profiles: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 26 Phase A — per-project default profile: projectRoot → profileId */
   workspaceProfileDefaults: { type: 'object', additionalProperties: { type: 'string' }, default: {} },
+  /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
+  approvalMemory: { type: 'object', properties: { alwaysAllow: { type: 'array', items: { type: 'object' }, default: [] }, alwaysDeny: { type: 'array', items: { type: 'object' }, default: [] } }, default: { alwaysAllow: [], alwaysDeny: [] } },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,

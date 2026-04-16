@@ -230,6 +230,21 @@ export interface ApprovalResolved {
   decision: 'approve' | 'reject';
 }
 
+export interface ApprovalMemoryEntry {
+  hash: string;
+  toolName: string;
+  keyPreview: string;
+}
+
+export interface ApprovalMemoryStore {
+  alwaysAllow: ApprovalMemoryEntry[];
+  alwaysDeny: ApprovalMemoryEntry[];
+}
+
+export interface ApprovalListMemoryResult extends IpcResult {
+  entries?: ApprovalMemoryStore;
+}
+
 export interface ApprovalAPI {
   respond: (
     requestId: string,
@@ -237,8 +252,16 @@ export interface ApprovalAPI {
     reason?: string,
   ) => Promise<IpcResult>;
   alwaysAllow: (sessionId: string, toolName: string) => Promise<IpcResult>;
+  /** Wave 26 Phase E — persist a per-user allow/deny decision for a (toolName, key) pair. */
+  remember: (toolName: string, key: string, decision: 'allow' | 'deny') => Promise<IpcResult>;
+  /** Wave 26 Phase E — list all remembered allow/deny entries (for Settings UI). */
+  listMemory: () => Promise<ApprovalListMemoryResult>;
+  /** Wave 26 Phase E — revoke a remembered entry by hash. */
+  forget: (hash: string) => Promise<IpcResult>;
   onRequest: (callback: (request: ApprovalRequest) => void) => () => void;
   onResolved: (callback: (resolved: ApprovalResolved) => void) => () => void;
+  /** Wave 26 Phase E — fires when the approval memory store changes. */
+  onMemoryChanged: (callback: () => void) => () => void;
 }
 
 export type MenuEvent =

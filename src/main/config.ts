@@ -377,6 +377,8 @@ export interface AppConfig {
   profiles?: import('@shared/types/profile').Profile[];
   /** Wave 26 Phase A — per-project default profile: projectRoot → profileId */
   workspaceProfileDefaults?: Record<string, string>;
+  /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
+  approvalMemory?: import('./approvalMemory').ApprovalMemoryStore;
 }
 
 export const store = new Store<AppConfig>({

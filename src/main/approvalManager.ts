@@ -16,6 +16,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { broadcastApprovalRequest, scheduleAutoApproveTimeout } from './approvalManagerHelpers';
+import { check as checkMemory } from './approvalMemory';
 import { notifyWaiters } from './approvalWaiterRegistry';
 import { getConfigValue } from './config';
 import { describeFdPressure } from './fdPressureDiagnostics';
@@ -160,48 +162,45 @@ export function toolRequiresApproval(toolName: string, sessionId: string): boole
 }
 
 /**
+ * Derive a stable command key from a tool-input record.
+ * Used as the identity for approval-memory hashing.
+ */
+export function getCommandKey(toolName: string, toolInput: Record<string, unknown>): string {
+  if (toolName === 'Bash') return String(toolInput.command ?? '');
+  // Write, Edit, MultiEdit — use file_path; fallback to stable JSON
+  const filePath = toolInput.file_path ?? toolInput.path;
+  return filePath !== undefined ? String(filePath) : JSON.stringify(toolInput);
+}
+
+/** Apply memory check: auto-respond if a remembered decision exists. Returns true if handled. */
+function applyMemoryCheck(request: ApprovalRequest): boolean {
+  const commandKey = getCommandKey(request.toolName, request.toolInput);
+  const memorized = checkMemory(request.toolName, commandKey);
+  if (!memorized) return false;
+
+  const decision = memorized === 'allow' ? 'approve' : 'reject';
+  const reason = memorized === 'allow' ? 'remembered allow' : 'remembered deny';
+  log.info(`[approval] auto-${memorized} from memory: ${request.toolName} id=${request.requestId}`);
+  void respondToApproval(request.requestId, { decision, reason });
+  return true;
+}
+
+/**
  * Handle an incoming pre_tool_use event that requires approval.
- * Sends the approval request to all renderer windows and sets up auto-approve timeout.
+ * Checks the persistent approval memory first; only enqueues if no memory exists.
  */
 export function requestApproval(request: ApprovalRequest): void {
-  // Attach enriched context cached from the earlier permission_request event (evicts on read).
   request.permissionContext = getPermissionContext(request.sessionId, request.toolName);
+  if (applyMemoryCheck(request)) return;
 
   pendingRequests.set(request.requestId, request);
-
-  // Notify all renderer windows
-  const windows = getAllActiveWindows();
-  for (const win of windows) {
-    if (!win.isDestroyed()) {
-      try {
-        win.webContents.mainFrame.send('approval:request', request);
-      } catch {
-        // Render frame disposed — silently skip this window
-      }
-    }
-  }
-  broadcastToWebClients('approval:request', request);
-
-  // Flash taskbar on Windows to draw attention
-  for (const win of windows) {
-    if (!win.isDestroyed() && !win.isFocused()) {
-      win.flashFrame(true);
-    }
-  }
-
-  // Set up auto-approve timeout if configured
-  const timeoutSec = getConfigValue('approvalTimeout') as number | undefined;
-  if (timeoutSec && timeoutSec > 0) {
-    const timer = setTimeout(() => {
-      if (pendingRequests.has(request.requestId)) {
-        void respondToApproval(request.requestId, {
-          decision: 'approve',
-          reason: 'auto-approved (timeout)',
-        });
-      }
-    }, timeoutSec * 1000);
-    autoApproveTimers.set(request.requestId, timer);
-  }
+  broadcastApprovalRequest(request);
+  const timer = scheduleAutoApproveTimeout(
+    request,
+    (id) => pendingRequests.has(id),
+    respondToApproval,
+  );
+  if (timer) autoApproveTimers.set(request.requestId, timer);
 }
 
 const EMFILE_MAX_RETRIES = 2;
