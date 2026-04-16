@@ -289,6 +289,8 @@ export const tailSchema = {
   provenanceTracking: { type: 'boolean', default: true },
   /** Wave 21 Phase D — user-created session folders */
   sessionFolders: { type: 'array', items: { type: 'object' }, default: [] },
+  /** Wave 22 Phase B — chat message density setting */
+  chat: { type: 'object', additionalProperties: false, default: { density: 'comfortable' }, properties: { density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' } } },
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
   context: {
     type: 'object',

@@ -18,6 +18,7 @@ import {
   type OptionItem,
   resolveActiveModel,
 } from './ChatControlsBarSupport';
+import { useDensity } from './DensityContext';
 import { RulesActivityBadge } from './RulesActivityBadge';
 import { SelectPill } from './SelectPill';
 
@@ -178,6 +179,37 @@ function RoutedByBadge(props: { routedBy?: string }): React.ReactElement | null 
   );
 }
 
+function DensityToggle(): React.ReactElement {
+  const { density, setDensity } = useDensity();
+  const isCompact = density === 'compact';
+  return (
+    <button
+      type="button"
+      title={isCompact ? 'Switch to comfortable density' : 'Switch to compact density'}
+      onClick={() => setDensity(isCompact ? 'comfortable' : 'compact')}
+      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-text-semantic-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text-semantic-primary"
+      style={{ fontFamily: 'var(--font-ui)' }}
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        {isCompact ? (
+          <>
+            <line x1="1" y1="3" x2="11" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="1" y1="9" x2="11" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <line x1="1" y1="2.5" x2="11" y2="2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="1" y1="9.5" x2="11" y2="9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </>
+        )}
+      </svg>
+      <span>{isCompact ? 'Compact' : 'Comfortable'}</span>
+    </button>
+  );
+}
+
 function ContextUsageSection(props: {
   usage: ModelUsageEntry[];
   codexModels?: CodexModelOption[];
@@ -222,6 +254,7 @@ export function ChatControlsBar(props: ChatControlsBarProps): React.ReactElement
         onChange={(permissionMode) => props.onChange({ ...props.overrides, permissionMode })}
       />
       <RulesActivityBadge rules={loadedRules} />
+      <DensityToggle />
       <ContextUsageSection
         usage={displayUsage}
         codexModels={props.codexModels}

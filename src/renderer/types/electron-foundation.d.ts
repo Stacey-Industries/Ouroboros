@@ -230,6 +230,8 @@ export interface AppConfig {
   routerLastRetrainCount: number;
   /** Wave 17 — layout preset engine feature flags */
   layout?: { presets?: { v2?: boolean } };
+  /** Wave 22 Phase B — chat message density. Default: 'comfortable'. */
+  chat?: { density?: 'comfortable' | 'compact' };
 }
 
 export interface ContextLayerConfig {

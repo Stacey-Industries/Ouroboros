@@ -6,6 +6,7 @@ import { SWITCH_SIDEBAR_VIEW_EVENT } from '../../hooks/appEventNames';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
+import { DensityProvider } from './DensityContext';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
@@ -212,9 +213,11 @@ export function AgentChatWorkspace({
 
   return (
     <AgentChatStoreContext.Provider value={store}>
-      <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
-        <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
-      </div>
+      <DensityProvider>
+        <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
+          <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
+        </div>
+      </DensityProvider>
     </AgentChatStoreContext.Provider>
   );
 }
