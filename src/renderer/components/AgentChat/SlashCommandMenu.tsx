@@ -132,6 +132,8 @@ export interface SlashCommandContext {
   onOpenMemories?: () => void;
   onSpec?: (featureName: string) => void;
   commands?: CommandDefinition[];
+  /** Wave 25 Phase C — true when the research.explicit feature flag is on. */
+  researchEnabled?: boolean;
 }
 
 function buildCommandSlashCommands(commands: CommandDefinition[]): SlashCommand[] {
@@ -144,6 +146,34 @@ function buildCommandSlashCommands(commands: CommandDefinition[]): SlashCommand[
     clearDraft: false,
   }));
 }
+
+const RESEARCH_COMMANDS: SlashCommand[] = [
+  {
+    id: 'research',
+    label: 'Research',
+    description: 'Research a library or topic and pin the artifact as context',
+    icon: '⬡',
+    // Intercepted by useResearchIntercept in the composer — action is never called.
+    action: () => {},
+    clearDraft: true,
+  },
+  {
+    id: 'spec-with-research',
+    label: 'Spec with Research',
+    description: 'Research first, then generate a spec',
+    icon: '✦',
+    action: () => {},
+    clearDraft: true,
+  },
+  {
+    id: 'implement-with-research',
+    label: 'Implement with Research',
+    description: 'Research first, then implement',
+    icon: '▶',
+    action: () => {},
+    clearDraft: true,
+  },
+];
 
 export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[] {
   const builtIn: SlashCommand[] = [
@@ -161,6 +191,7 @@ export function buildChatSlashCommands(ctx: SlashCommandContext): SlashCommand[]
     { id: 'memories', label: 'Memories', description: 'View stored session memories', icon: '≡', action: () => ctx.onOpenMemories?.(), clearDraft: true },
     { id: 'spec', label: 'Spec', description: 'Scaffold requirements/design/tasks for a feature', icon: '✦', action: () => {}, clearDraft: true },
   ];
+  const researchEntries = ctx.researchEnabled !== false ? RESEARCH_COMMANDS : [];
   const commandEntries = buildCommandSlashCommands(ctx.commands ?? []);
-  return [...builtIn, ...commandEntries];
+  return [...builtIn, ...researchEntries, ...commandEntries];
 }

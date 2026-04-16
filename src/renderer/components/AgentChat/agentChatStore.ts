@@ -61,7 +61,7 @@ const DEFAULT_MODEL: AgentChatModelState = {
 };
 
 const DEFAULT_QUEUE: AgentChatQueueState = { queuedMessages: [] };
-const DEFAULT_SLASH: AgentChatSlashState = { slashCommandContext: null };
+const DEFAULT_SLASH: AgentChatSlashState = { slashCommandContext: null, activeSessionId: null };
 
 /* ── No-op actions ────────────────────────────────── */
 

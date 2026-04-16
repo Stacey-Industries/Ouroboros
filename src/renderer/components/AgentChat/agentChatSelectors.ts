@@ -75,6 +75,7 @@ export function useAgentChatQueue(): AgentChatQueueState {
 export function useAgentChatSlash(): AgentChatSlashState {
   return useAgentChatStoreContext(useShallow((s) => ({
     slashCommandContext: s.slashCommandContext,
+    activeSessionId: s.activeSessionId,
   })));
 }
 

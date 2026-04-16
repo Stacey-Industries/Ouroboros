@@ -234,10 +234,13 @@ function useWorkspaceSlashCmd(
   onOpenMemories: () => void,
   onSpec: (name: string) => void,
 ): SlashCommandContext {
+  // Wave 25 Phase C — research.explicit defaults to true.
+  // Phase E will wire this to config.research?.explicit once that key is added.
   return useMemo<SlashCommandContext>(
     () => ({
       onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
       onRemember, onOpenMemories, onSpec, commands: model.commands,
+      researchEnabled: true,
     }),
     [model, onRemember, onOpenMemories, onSpec],
   );
@@ -253,6 +256,7 @@ interface WorkspaceWiringArgs {
   onRemember: (c: string) => Promise<void>;
   onOpenMemories: () => void;
   onSpec: (n: string) => void;
+  activeSessionId?: string | null;
 }
 
 function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
@@ -263,6 +267,8 @@ function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
   const slashCmd = useWorkspaceSlashCmd(model, onRemember, onOpenMemories, onSpec);
   useWorkspaceStoreSync(store, model, context, slashCmd);
+  const { activeSessionId } = args;
+  useEffect(() => { store.setState({ activeSessionId: activeSessionId ?? null }); }, [store, activeSessionId]);
 }
 
 function useWorkspaceActions(
@@ -296,7 +302,7 @@ export function AgentChatWorkspace({
   const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
   const { compareState, closeCompare } = useBranchCompare();
   const { onRemember, onSpec, onOpenMemories, onCloseTab } = useWorkspaceActions(projectRoot, sideChat, setIsDrawerOpen);
-  useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec });
+  useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec, activeSessionId });
 
   return (
     <AgentChatStoreContext.Provider value={store}>

@@ -103,7 +103,7 @@ function ConversationComposer({ streaming }: { streaming: ReturnType<typeof useA
       threadModelUsage={threadModelUsage} streamingTokenUsage={streaming.streamingTokenUsage}
       isStreaming={streaming.isStreaming} routedBy={thread.activeThread?.latestOrchestration?.routedBy}
       slashCommandContext={slash.slashCommandContext ?? undefined} attachments={ctx.attachments}
-      onAttachmentsChange={actions.onAttachmentsChange}
+      onAttachmentsChange={actions.onAttachmentsChange} activeSessionId={slash.activeSessionId}
     />
   );
 }

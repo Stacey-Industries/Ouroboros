@@ -80,6 +80,8 @@ export interface AgentChatQueueState {
 
 export interface AgentChatSlashState {
   slashCommandContext: SlashCommandContext | null;
+  /** Wave 25 Phase C — active session ID for research pin; null when no session is active. */
+  activeSessionId: string | null;
 }
 
 /* ── Actions (stable references — never cause re-renders) */
