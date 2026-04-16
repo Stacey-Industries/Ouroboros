@@ -125,6 +125,19 @@ if (Test-Path $debounceFile) {
 # Touch debounce file BEFORE running (so concurrent hooks also skip)
 Set-Content -Path $debounceFile -Value '' -Force -ErrorAction SilentlyContinue
 
+# -- Sweep stale vitest processes from prior aborted runs ----------------------
+# Prior hook invocations whose PowerShell host was killed mid-wait leave
+# Start-Process-spawned vitest trees orphaned. Left unchecked they starve
+# workers within the session's worker cap. Fail-open — any error is ignored.
+$killScript = Join-Path $projectRoot 'scripts\kill-stale-vitest.mjs'
+if (Test-Path $killScript) {
+    try {
+        & node $killScript 2>&1 | Out-Null
+    } catch {
+        # Intentional: cleanup must never block the test run.
+    }
+}
+
 # -- Verify npx is available ---------------------------------------------------
 $npxCmd = Get-Command npx -ErrorAction SilentlyContinue
 if (-not $npxCmd) {

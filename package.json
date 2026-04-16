@@ -22,7 +22,7 @@
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "pretest": "node scripts/install-sqlite-fresh.mjs",
+    "pretest": "node scripts/kill-stale-vitest.mjs && node scripts/install-sqlite-fresh.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
