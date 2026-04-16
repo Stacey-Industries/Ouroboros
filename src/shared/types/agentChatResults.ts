@@ -153,6 +153,19 @@ export interface AgentChatReactionsResult extends OperationResult {
   reactions?: Reaction[];
 }
 
+// ─── Wave 23 Phase D — Merge side chat result ────────────────────────────────
+
+export interface AgentChatMergeSideChatRequest {
+  sideChatId: string;
+  mainThreadId: string;
+  summary: string;
+  includeMessageIds?: string[];
+}
+
+export interface AgentChatMergeSideChatResult extends OperationResult {
+  systemMessageId?: string;
+}
+
 // ─── Wave 23 Phase A — Branch tree result ────────────────────────────────────
 
 export interface AgentChatBranchesResult extends OperationResult {
@@ -287,6 +300,13 @@ export interface AgentChatAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   /** Wave 23 Phase A — list the branch tree rooted at rootThreadId. */
   listBranches: (rootThreadId: string) => Promise<AgentChatBranchesResult>;
+  /**
+   * Wave 23 Phase D — append a system-role summary message from a side chat into the main thread.
+   * Multiple merges are allowed; each call appends a new system message.
+   */
+  mergeSideChat: (
+    request: AgentChatMergeSideChatRequest,
+  ) => Promise<AgentChatMergeSideChatResult>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

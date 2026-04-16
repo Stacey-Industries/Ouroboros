@@ -22,6 +22,8 @@ export type {
   AgentChatLinkedDetailsResult,
   AgentChatLinkedTerminalResult,
   AgentChatLinkedTerminalsResult,
+  AgentChatMergeSideChatRequest,
+  AgentChatMergeSideChatResult,
   AgentChatMessageRecord,
   AgentChatMessageRole,
   AgentChatMessageSource,

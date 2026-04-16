@@ -8,6 +8,7 @@ import { useStreamCompletionNotifications } from '../../hooks/useStreamCompletio
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
+import { BranchCompareModal, useBranchCompare } from './AgentChatWorkspace.compare';
 import { DensityProvider } from './DensityContext';
 import { SideChatDrawer } from './SideChatDrawer';
 import type { SlashCommandContext } from './SlashCommandMenu';
@@ -272,6 +273,7 @@ export function AgentChatWorkspace({
   useWorkspaceNotifications();
 
   const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
+  const { compareState, closeCompare } = useBranchCompare();
   const onRemember = useRememberAction(projectRoot, toast);
   const onSpec = useSpecAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
@@ -297,6 +299,7 @@ export function AgentChatWorkspace({
             if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
           }}
         />
+        {compareState && <BranchCompareModal compareState={compareState} onClose={closeCompare} />}
       </DensityProvider>
     </AgentChatStoreContext.Provider>
   );

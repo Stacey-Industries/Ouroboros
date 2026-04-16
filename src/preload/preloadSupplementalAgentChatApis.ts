@@ -14,6 +14,7 @@ import { ipcRenderer } from 'electron';
 import type {
   AgentChatAPI,
   AgentChatEvent,
+  AgentChatMergeSideChatRequest,
   AgentChatMessageRecord,
   AgentChatStreamChunk,
   AgentChatThreadRecord,
@@ -99,6 +100,8 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.renameBranch, { threadId, name }),
   listBranches: (rootThreadId) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listBranches, { rootThreadId }),
+  mergeSideChat: (request: AgentChatMergeSideChatRequest) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.mergeSideChat, request),
   onThreadUpdate: (callback) =>
     onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
   onMessageUpdate: (callback) =>

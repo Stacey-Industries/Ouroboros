@@ -48,6 +48,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   forkThread: 'agentChat:forkThread',
   renameBranch: 'agentChat:renameBranch',
   listBranches: 'agentChat:listBranches',
+  // Wave 23 Phase D — merge side chat into main thread
+  mergeSideChat: 'agentChat:mergeSideChat',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

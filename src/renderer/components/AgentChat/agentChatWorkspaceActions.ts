@@ -94,7 +94,33 @@ async function resolveLinkedSessionId(link: AgentChatOrchestrationLink): Promise
 export function useSendMessageAction(args: SendMessageArgs): () => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async () => { await sendComposerMessage(argsRef.current); }, []); }
 export function useOpenLinkedDetailsAction(setError: Dispatch<SetStateAction<string | null>>): (link?: AgentChatOrchestrationLink) => Promise<void> { return useCallback(async (link?: AgentChatOrchestrationLink): Promise<void> => { if (!link || !hasElectronAPI()) return; setError(null); try { const sessionId = await resolveLinkedSessionId(link); if (!sessionId) throw new Error('The linked orchestration session is unavailable.'); } catch (detailsError) { setError(getErrorMessage(detailsError)); } }, [setError]); }
 export function useDeleteThreadAction(setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>, setError: Dispatch<SetStateAction<string | null>>): (threadId: string) => Promise<void> { return useCallback(async (threadId: string): Promise<void> => { if (!hasElectronAPI()) return; try { const result = await window.electronAPI.agentChat.deleteThread(threadId); if (!result.success) throw new Error(result.error ?? 'Unable to delete the chat thread.'); setThreads((currentThreads) => currentThreads.filter((thread) => thread.id !== threadId)); setActiveThreadId((currentId) => (currentId === threadId ? null : currentId)); } catch (deleteError) { setError(getErrorMessage(deleteError)); } }, [setActiveThreadId, setError, setThreads]); }
-export function useEditAndResendAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await sendResentMessage(argsRef.current, message, 'edit'); }, []); }
+async function forkAndSendEdit(args: AgentChatActionArgs, message: AgentChatMessageRecord, content: string): Promise<void> {
+  const forkResult = await window.electronAPI.agentChat.forkThread({
+    sourceThreadId: message.threadId,
+    fromMessageId: message.id,
+    includeHistory: true,
+    isSideChat: false,
+  });
+  if (!forkResult.success || !forkResult.thread) throw new Error(forkResult.error ?? 'Unable to create branch for edit.');
+  mergeReturnedThread(forkResult.thread, args.setThreads, args.setActiveThreadId);
+  const branchArgs = { ...args, activeThreadId: forkResult.thread.id };
+  await saveAllDirtyBuffers();
+  const sendResult = await sendAgentChatRequest(buildResendRequest(branchArgs, content, 'edit'), 'Unable to send the edited message.');
+  applyResendSuccess(branchArgs, sendResult, 'edit');
+}
+async function editAndResendOnBranch(args: AgentChatActionArgs, message: AgentChatMessageRecord): Promise<void> {
+  if (!args.projectRoot || !hasElectronAPI()) return void args.setError('Open a project before chatting with the agent.');
+  const content = message.content.trim();
+  if (!content || args.isSending) return;
+  const threadStatus = args.activeThread?.status;
+  if (threadStatus === 'running' || threadStatus === 'submitting') return void args.setError('The agent is still working. Wait for it to finish or stop it first.');
+  args.setIsSending(true);
+  args.setError(null);
+  try { await forkAndSendEdit(args, message, content); }
+  catch (editError) { applyResendFailure(args, editError); }
+  finally { args.setIsSending(false); }
+}
+export function useEditAndResendAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await editAndResendOnBranch(argsRef.current, message); }, []); }
 export function useRetryMessageAction(args: AgentChatActionArgs): (message: AgentChatMessageRecord) => Promise<void> { const argsRef = useRef(args); argsRef.current = args; return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { await sendResentMessage(argsRef.current, message, 'retry'); }, []); }
 export function useBranchFromMessageAction(setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>, setError: Dispatch<SetStateAction<string | null>>): (message: AgentChatMessageRecord) => Promise<void> { return useCallback(async (message: AgentChatMessageRecord): Promise<void> => { if (!hasElectronAPI()) return; try { const result = await window.electronAPI.agentChat.branchThread(message.threadId, message.id); if (!result.success) throw new Error(result.error ?? 'Unable to branch the conversation.'); mergeReturnedThread(result.thread, setThreads, setActiveThreadId); } catch (branchError) { setError(getErrorMessage(branchError)); } }, [setActiveThreadId, setError, setThreads]); }
 function markThreadCancelled(a: AgentChatActionArgs, threadId: string): void {

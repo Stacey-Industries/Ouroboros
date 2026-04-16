@@ -1,11 +1,13 @@
 /**
- * BranchTreeView.tsx — Wave 23 Phase B
+ * BranchTreeView.tsx — Wave 23 Phase B / Phase E
  *
  * Indented tree of all threads rooted at a given thread.
  * Fetched via window.electronAPI.agentChat.listBranches(rootThreadId).
+ * Phase E: adds "Compare to active" row action for non-active branches.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { OPEN_BRANCH_COMPARE_EVENT } from '../../hooks/appEventNames';
 import type { BranchNode } from '../../types/electron';
 
 export interface BranchTreeViewProps {
@@ -59,6 +61,35 @@ interface TreeNodeProps {
   onSelect: (threadId: string) => void;
 }
 
+function dispatchCompare(leftThreadId: string, rightThreadId: string): void {
+  window.dispatchEvent(
+    new CustomEvent(OPEN_BRANCH_COMPARE_EVENT, {
+      detail: { leftThreadId, rightThreadId },
+    }),
+  );
+}
+
+function NodeSelectButton({
+  node, isActive, label, onSelect,
+}: { node: BranchNode; isActive: boolean; label: string; onSelect: (id: string) => void }): React.ReactElement {
+  return (
+    <button
+      className={[
+        'flex flex-1 items-center gap-1.5 rounded px-2 py-1 text-left text-xs transition-colors duration-75',
+        isActive
+          ? 'bg-interactive-accent-subtle text-interactive-accent font-medium'
+          : 'text-text-semantic-primary hover:bg-surface-raised',
+      ].join(' ')}
+      onClick={() => onSelect(node.id)}
+      aria-current={isActive ? 'true' : undefined}
+      title={label}
+    >
+      {node.isSideChat ? <SideChatIcon /> : <BranchNodeIcon />}
+      <span className="flex-1 truncate">{label}</span>
+    </button>
+  );
+}
+
 function TreeNodeRow({ node, activeThreadId, depth, onSelect }: TreeNodeProps): React.ReactElement {
   const isActive = node.id === activeThreadId;
   const label = node.branchName ?? node.id.slice(0, 8);
@@ -66,29 +97,21 @@ function TreeNodeRow({ node, activeThreadId, depth, onSelect }: TreeNodeProps): 
 
   return (
     <>
-      <button
-        className={[
-          'flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs transition-colors duration-75',
-          isActive
-            ? 'bg-interactive-accent-subtle text-interactive-accent font-medium'
-            : 'text-text-semantic-primary hover:bg-surface-raised',
-        ].join(' ')}
-        style={{ paddingLeft: 8 + indent }}
-        onClick={() => onSelect(node.id)}
-        aria-current={isActive ? 'true' : undefined}
-        title={label}
-      >
-        {node.isSideChat ? <SideChatIcon /> : <BranchNodeIcon />}
-        <span className="flex-1 truncate">{label}</span>
-      </button>
+      <div className="group relative flex items-center" style={{ paddingLeft: 8 + indent }}>
+        <NodeSelectButton node={node} isActive={isActive} label={label} onSelect={onSelect} />
+        {!isActive && (
+          <button
+            className="ml-1 hidden shrink-0 rounded px-1 py-0.5 text-[10px] text-text-semantic-muted hover:bg-surface-raised hover:text-text-semantic-primary group-hover:flex"
+            onClick={() => dispatchCompare(activeThreadId, node.id)}
+            aria-label={`Compare ${label} to active branch`}
+            title="Compare to active"
+          >
+            Compare
+          </button>
+        )}
+      </div>
       {node.children.map((child) => (
-        <TreeNodeRow
-          key={child.id}
-          node={child}
-          activeThreadId={activeThreadId}
-          depth={depth + 1}
-          onSelect={onSelect}
-        />
+        <TreeNodeRow key={child.id} node={child} activeThreadId={activeThreadId} depth={depth + 1} onSelect={onSelect} />
       ))}
     </>
   );

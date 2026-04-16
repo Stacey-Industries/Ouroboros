@@ -385,6 +385,8 @@ export type {
   AgentChatLinkedDetailsResult,
   AgentChatLinkedTerminalResult,
   AgentChatLinkedTerminalsResult,
+  AgentChatMergeSideChatRequest,
+  AgentChatMergeSideChatResult,
   AgentChatMessageUpdatedEvent,
   AgentChatReactionsResult,
   AgentChatRevertResult,

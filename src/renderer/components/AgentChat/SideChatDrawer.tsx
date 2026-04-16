@@ -6,9 +6,10 @@
  * wrapping a per-side-chat store instance.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
+import { MergeToMainDialog } from './MergeToMainDialog';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ export interface SideChatDrawerProps {
   onClose: () => void;
   sideChats: string[];
   activeSideChatId: string | null;
+  /** The root/main thread that side chats can be merged into. */
+  parentThreadId: string | null;
   onSelect: (threadId: string) => void;
   onCloseTab: (threadId: string) => void;
 }
@@ -105,20 +108,36 @@ function SideChatBackdrop({ onClose }: BackdropProps): React.ReactElement {
 
 // ── Drawer header ─────────────────────────────────────────────────────────────
 
-interface HeaderProps { onClose: () => void }
+interface HeaderProps {
+  onClose: () => void;
+  canMerge: boolean;
+  onMerge: () => void;
+}
 
-function SideChatDrawerHeader({ onClose }: HeaderProps): React.ReactElement {
+function SideChatDrawerHeader({ onClose, canMerge, onMerge }: HeaderProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border-semantic flex-shrink-0">
       <span className="text-sm font-medium text-text-semantic-primary">Side Chats</span>
-      <button
-        type="button"
-        className="rounded p-1 text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover"
-        aria-label="Close side chat drawer"
-        onClick={onClose}
-      >
-        ✕
-      </button>
+      <div className="flex items-center gap-2">
+        {canMerge && (
+          <button
+            type="button"
+            className="rounded px-2 py-1 text-xs text-text-semantic-secondary hover:text-text-semantic-primary hover:bg-surface-hover"
+            aria-label="Merge into main thread"
+            onClick={onMerge}
+          >
+            Merge into main
+          </button>
+        )}
+        <button
+          type="button"
+          className="rounded p-1 text-text-semantic-muted hover:text-text-semantic-primary hover:bg-surface-hover"
+          aria-label="Close side chat drawer"
+          onClick={onClose}
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }
@@ -183,21 +202,33 @@ function SideChatDrawerContent({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Merge dialog state ────────────────────────────────────────────────────────
 
-export function SideChatDrawer({
-  isOpen,
-  onClose,
-  sideChats,
-  activeSideChatId,
-  onSelect,
-  onCloseTab,
-}: SideChatDrawerProps): React.ReactElement | null {
-  const activeStore = usePerTabStore(activeSideChatId);
-  useEscapeToDismiss(isOpen, onClose);
+function useMergeDialogState(
+  activeSideChatId: string | null,
+  parentThreadId: string | null,
+): { canMerge: boolean; mergeOpen: boolean; openMerge: () => void; closeMerge: () => void } {
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const openMerge = useCallback(() => setMergeOpen(true), []);
+  const closeMerge = useCallback(() => setMergeOpen(false), []);
+  const canMerge = activeSideChatId !== null && parentThreadId !== null;
+  return { canMerge, mergeOpen, openMerge, closeMerge };
+}
 
-  if (!isOpen) return null;
+// ── Drawer panel ─────────────────────────────────────────────────────────────
 
+interface DrawerPanelProps extends SideChatDrawerProps {
+  activeStore: ReturnType<typeof createAgentChatStore> | null;
+  canMerge: boolean;
+  mergeOpen: boolean;
+  openMerge: () => void;
+  closeMerge: () => void;
+}
+
+function DrawerPanel({
+  onClose, sideChats, activeSideChatId, parentThreadId,
+  onSelect, onCloseTab, activeStore, canMerge, mergeOpen, openMerge, closeMerge,
+}: DrawerPanelProps): React.ReactElement {
   return (
     <>
       <SideChatBackdrop onClose={onClose} />
@@ -208,7 +239,7 @@ export function SideChatDrawer({
         className="fixed right-0 top-0 z-50 flex h-full flex-col bg-surface-panel shadow-xl"
         style={{ width: '480px', borderLeft: '1px solid var(--border-semantic)' }}
       >
-        <SideChatDrawerHeader onClose={onClose} />
+        <SideChatDrawerHeader onClose={onClose} canMerge={canMerge} onMerge={openMerge} />
         <SideChatDrawerContent
           sideChats={sideChats}
           activeSideChatId={activeSideChatId}
@@ -217,6 +248,37 @@ export function SideChatDrawer({
           onCloseTab={onCloseTab}
         />
       </div>
+      {canMerge && mergeOpen && activeSideChatId && parentThreadId && (
+        <MergeToMainDialog
+          sideChatId={activeSideChatId}
+          parentThreadId={parentThreadId}
+          isOpen={mergeOpen}
+          onClose={closeMerge}
+        />
+      )}
     </>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function SideChatDrawer(props: SideChatDrawerProps): React.ReactElement | null {
+  const { isOpen, onClose, activeSideChatId, parentThreadId } = props;
+  const activeStore = usePerTabStore(activeSideChatId);
+  const { canMerge, mergeOpen, openMerge, closeMerge } = useMergeDialogState(
+    activeSideChatId, parentThreadId,
+  );
+  useEscapeToDismiss(isOpen, onClose);
+
+  if (!isOpen) return null;
+  return (
+    <DrawerPanel
+      {...props}
+      activeStore={activeStore}
+      canMerge={canMerge}
+      mergeOpen={mergeOpen}
+      openMerge={openMerge}
+      closeMerge={closeMerge}
+    />
   );
 }

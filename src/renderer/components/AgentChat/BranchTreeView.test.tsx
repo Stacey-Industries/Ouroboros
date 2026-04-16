@@ -138,10 +138,11 @@ describe('BranchTreeView', () => {
       />,
     );
     await waitFor(() => screen.getByText('Child branch'));
-    const parentBtn = screen.getByText('Parent branch').closest('button');
-    const childBtn = screen.getByText('Child branch').closest('button');
-    const parentIndent = parseInt(parentBtn?.style.paddingLeft ?? '0', 10);
-    const childIndent = parseInt(childBtn?.style.paddingLeft ?? '0', 10);
+    // Indent is on the wrapping div (group container), not the button itself
+    const parentRow = screen.getByText('Parent branch').closest('[class*="group"]') as HTMLElement | null;
+    const childRow = screen.getByText('Child branch').closest('[class*="group"]') as HTMLElement | null;
+    const parentIndent = parseInt(parentRow?.style.paddingLeft ?? '0', 10);
+    const childIndent = parseInt(childRow?.style.paddingLeft ?? '0', 10);
     expect(childIndent).toBeGreaterThan(parentIndent);
   });
 
