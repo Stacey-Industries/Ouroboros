@@ -20,6 +20,7 @@ export { cleanupFileWatchers, registerFileHandlers } from './files';
 export { cleanupFolderCrudHandlers, registerFolderCrudHandlers } from './folderCrud';
 export { registerGitHandlers } from './git';
 export { registerIdeToolsHandlers } from './ideTools';
+export { cleanupLayoutHandlers, registerLayoutHandlers } from './layout';
 export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';

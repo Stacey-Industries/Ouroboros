@@ -13,6 +13,7 @@ export * from './electron-extensions';
 export * from './electron-folder';
 export * from './electron-foundation';
 export * from './electron-git';
+export * from './electron-layout';
 export * from './electron-mcp-store';
 export * from './electron-observability';
 export * from './electron-orchestration';

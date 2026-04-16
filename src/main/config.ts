@@ -368,8 +368,18 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17/20 — layout preset engine + chat-primary feature flags */
-  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean };
+  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. */
+  layout?: {
+    presets?: { v2?: boolean };
+    chatPrimary?: boolean;
+    dragAndDrop?: boolean;
+    /** sessionId → SerializedSlotTree. Capped at 100 entries via LRU pruning. */
+    customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>;
+    /** MRU order of sessionIds for LRU pruning (oldest first). */
+    customLayoutsMru?: string[];
+    /** User-promoted global custom presets. Capped at 20. */
+    globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[];
+  };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */

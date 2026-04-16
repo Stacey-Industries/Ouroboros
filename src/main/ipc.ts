@@ -17,6 +17,7 @@ import {
   cleanupConfigWatcher,
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
+  cleanupLayoutHandlers,
   cleanupPinnedContextHandlers,
   cleanupProfileCrudHandlers,
   cleanupResearchHandlers,
@@ -44,6 +45,7 @@ import {
   registerFolderCrudHandlers,
   registerGitHandlers,
   registerIdeToolsHandlers,
+  registerLayoutHandlers,
   registerMcpHandlers,
   registerMcpStoreHandlers,
   registerMiscHandlers,
@@ -87,7 +89,7 @@ function safeRegister(name: string, fn: () => string[]): string[] {
   }
 }
 
-function registerDomainHandlers(win: BrowserWindow): string[] {
+function registerCoreDomainHandlers(win: BrowserWindow): string[] {
   const ptyStore = createPtyPersistence();
   return [
     ...safeRegister('pty', () => registerPtyHandlers(senderWindow)),
@@ -108,6 +110,11 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('mcpStore', () => registerMcpStoreHandlers(senderWindow)),
     ...safeRegister('extensionStore', () => registerExtensionStoreHandlers(senderWindow)),
     ...safeRegister('context', () => registerContextHandlers(senderWindow)),
+  ];
+}
+
+function registerAuxDomainHandlers(): string[] {
+  return [
     ...safeRegister('ideTools', () => registerIdeToolsHandlers(senderWindow)),
     ...safeRegister('claudeMd', () => registerClaudeMdHandlers(senderWindow)),
     ...safeRegister('rulesAndSkills', () => registerRulesAndSkillsHandlers(senderWindow)),
@@ -125,7 +132,12 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('worktree', () => registerWorktreeHandlers()),
     ...safeRegister('workspaceReadList', () => registerWorkspaceReadListHandlers()),
     ...safeRegister('subagent', () => registerSubagentHandlers()),
+    ...safeRegister('layout', () => registerLayoutHandlers()),
   ];
+}
+
+function registerDomainHandlers(win: BrowserWindow): string[] {
+  return [...registerCoreDomainHandlers(win), ...registerAuxDomainHandlers()];
 }
 
 async function withCodeModeManager<T>(
@@ -283,6 +295,7 @@ export function cleanupIpcHandlers(): void {
   cleanupTelemetryHandlers();
   cleanupWorktreeHandlers();
   cleanupWorkspaceReadListHandlers();
+  cleanupLayoutHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 

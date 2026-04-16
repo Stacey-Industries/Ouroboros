@@ -5,6 +5,7 @@
 import React, { useCallback,useEffect, useRef, useState } from 'react';
 
 import type { WorkspaceLayout } from '../../types/electron';
+import { LayoutActionsFooter } from './LayoutActionsFooter';
 import { LayoutListItem } from './LayoutListItem';
 import { LayoutSaveInput } from './LayoutSaveInput';
 
@@ -46,6 +47,7 @@ export function LayoutSwitcher({ layouts, activeLayoutName, onSelect, onSave, on
           <LayoutListItem key={layout.name} layout={layout} isActive={layout.name === activeLayoutName} onSelect={onSelect} onUpdate={onUpdate} onDelete={onDelete} />
         ))}
       </div>
+      <LayoutActionsFooter />
       <div className="border-t border-border-semantic text-text-semantic-faint" style={{ padding: '5px 10px', fontSize: '10px', flexShrink: 0 }}>
         Ctrl+Alt+1/2/3 to quick-switch
       </div>

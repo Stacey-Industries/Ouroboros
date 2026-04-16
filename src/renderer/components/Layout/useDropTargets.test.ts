@@ -26,6 +26,10 @@ function makeSwapSpy() {
     slotTree: { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } },
     swapSlots,
     splitSlot: vi.fn(),
+    undoLayout: vi.fn(),
+    canUndo: false,
+    resetLayout: vi.fn(),
+    promoteToGlobal: vi.fn(),
   });
   return swapSlots;
 }
