@@ -9,7 +9,7 @@
  * On toggle, calls sessionCrud.setMcpOverrides and invokes onChange.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Profile } from '../../types/electron';
 
@@ -97,14 +97,41 @@ interface UseMcpTogglesOpts {
 
 function useMcpTogglesState(opts: UseMcpTogglesOpts): { enabled: string[]; toggle: (name: string) => void } {
   const { sessionId, profile, mcpServerOverrides, onChange, allServers } = opts;
-  const [enabled, setEnabled] = useState<string[]>([]);
+
+  // Extract the profile field that drives resolution so we can use it as a
+  // stable, non-optional-chained dep in useMemo and useEffect below.
+  const profileMcpServers = profile?.mcpServers;
+
+  // Derive the initial resolved set synchronously via useMemo so it is ready
+  // on the same render that allServers first arrives. This eliminates the
+  // extra render cycle caused by useEffect → setState, which made the checked
+  // state stale immediately after checkboxes appeared.
+  const derived = useMemo(
+    () => (allServers.length > 0 ? resolveInitial(allServers, mcpServerOverrides, profile) : null),
+    [allServers, mcpServerOverrides, profile],
+  );
+
+  // Keep a ref so the toggle callback always reads the latest derived value
+  // without needing to be recreated (avoids stale-closure bugs).
+  const derivedRef = useRef(derived);
+  derivedRef.current = derived;
+
+  // `override` holds user-toggled state. null means "use derived".
+  const [override, setOverride] = useState<string[] | null>(null);
+
+  // Reset the user override when the controlling props change (e.g. a new
+  // session is opened with different overrides or a different profile).
   useEffect(() => {
-    if (allServers.length === 0) return;
-    setEnabled(resolveInitial(allServers, mcpServerOverrides, profile));
-  }, [allServers, mcpServerOverrides, profile]);
+    setOverride(null);
+  }, [mcpServerOverrides, profileMcpServers]);
+
+  const enabled = override ?? derived ?? [];
+
   const toggle = useCallback((name: string) => {
-    setEnabled((prev) => {
-      const next = prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name];
+    setOverride((prev) => {
+      // Seed from derivedRef if no user override exists yet.
+      const base = prev ?? derivedRef.current ?? [];
+      const next = base.includes(name) ? base.filter((n) => n !== name) : [...base, name];
       void window.electronAPI.sessionCrud.setMcpOverrides(sessionId, next).catch(() => undefined);
       onChange(next);
       return next;
