@@ -105,3 +105,19 @@ export const MCP_ENTRIES = createEntries('integrations', 'Integrations', [
     'Global servers are available in all projects. Project servers are specific to the current project.',
   ],
 ]);
+
+export const AGENT_PROFILES_ENTRIES = createEntries('agentProfiles', 'Agent Profiles', [
+  ['Agent Profiles', 'Create, edit, and manage named agent profiles for Claude Code sessions.'],
+  ['New Profile', 'Create a new agent profile with custom model, effort, and tool settings.'],
+  ['Import Profile', 'Import an agent profile from a JSON string.'],
+  ['Export Profile', 'Export an agent profile as JSON to share or back up.'],
+  ['Duplicate Profile', 'Create a copy of an existing agent profile.'],
+  ['Delete Profile', 'Remove a user-defined agent profile (built-in profiles cannot be deleted).'],
+  ['Default Profile', 'Set the default agent profile for the current project.'],
+  ['Profile Model', 'Override the model used when this profile is active.'],
+  ['Profile Effort', 'Set the effort level (low/medium/high) for this profile.'],
+  ['Profile Permission Mode', 'Set the permission mode (normal/plan/bypass) for this profile.'],
+  ['Profile Tools', 'Choose which tools are enabled when this profile is active.'],
+  ['Profile MCP Servers', 'Choose which MCP servers are active for this profile.'],
+  ['System Prompt Addendum', 'Extra instructions appended to the system prompt for this profile.'],
+]);

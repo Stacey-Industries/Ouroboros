@@ -17,6 +17,7 @@ import type { FileEntry } from '../FileTree/FileListItem';
 import { AgentChatComposer } from './AgentChatComposer';
 import type { ModelContextUsage } from './AgentChatConversation';
 import type { ChatOverrides } from './ChatControlsBar';
+import { ComposerProfile } from './ComposerProfile';
 import type { MentionItem } from './MentionAutocomplete';
 import {
   buildFollowupPrompt,
@@ -177,6 +178,35 @@ function ComposerInner(props: ComposerInnerProps): React.ReactElement {
   return <AgentChatComposer {...buildComposerProps(props)} />;
 }
 
+// ─── Session profile hook ─────────────────────────────────────────────────────
+
+function useSessionProfile(sessionId: string | null | undefined): {
+  profileId: string | null;
+  setProfileId: (id: string) => void;
+} {
+  const [profileId, setProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionId) { setProfileId(null); return; }
+    window.electronAPI.sessionCrud.list()
+      .then((res) => {
+        if (!res.success || !res.sessions) return;
+        const s = res.sessions.find((x) => x.id === sessionId);
+        setProfileId(s?.profileId ?? null);
+      })
+      .catch(() => undefined);
+  }, [sessionId]);
+
+  const setAndPersist = useCallback((id: string) => {
+    setProfileId(id);
+    if (sessionId) {
+      void window.electronAPI.sessionCrud.setProfile(sessionId, id);
+    }
+  }, [sessionId]);
+
+  return { profileId, setProfileId: setAndPersist };
+}
+
 // ─── ComposerSection ──────────────────────────────────────────────────────────
 
 export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
@@ -188,11 +218,15 @@ export function ComposerSection(props: ComposerSectionProps): React.ReactElement
     onDraftChange: props.onDraftChange,
     onSend: props.onSend,
   });
+  const { profileId, setProfileId } = useSessionProfile(props.activeSessionId);
   return (
     <>
       {isResearching && (
         <ResearchIndicator topic={researchTopic} onCancel={handleCancel} />
       )}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0' }}>
+        <ComposerProfile activeProfileId={profileId} onSwitch={setProfileId} />
+      </div>
       <ComposerInner
         {...props}
         wrappedOnSend={wrappedOnSend}

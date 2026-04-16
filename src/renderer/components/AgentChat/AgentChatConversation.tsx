@@ -1,7 +1,8 @@
 import type { SkillExecutionRecord } from '@shared/types/ruleActivity';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
+import type { Profile } from '../../types/electron';
 import { useAgentMonitorSettings } from '../AgentMonitor/useAgentMonitorSettings';
 import { ComposerSection, ConversationBody } from './AgentChatConversationBody';
 import { AgentChatDetailsDrawer } from './AgentChatDetailsDrawer';
@@ -16,8 +17,11 @@ import {
   useAgentChatThread,
 } from './agentChatSelectors';
 import { buildThreadModelUsage } from './ChatControlsBarSupport';
+import type { ProfileSwitchedDetail } from './ComposerProfile';
+import { PROFILE_SWITCHED_EVENT } from './ComposerProfile';
 import { InlineEventCard } from './InlineEventCard';
 import { buildInlineEvents } from './inlineEventsSupport';
+import { ProfileDiffCard } from './ProfileDiffCard';
 import { useAgentChatStreaming } from './useAgentChatStreaming';
 
 /** Per-model context usage entry. */
@@ -108,6 +112,48 @@ function ConversationComposer({ streaming }: { streaming: ReturnType<typeof useA
   );
 }
 
+/* ── Profile diff banner (shown above composer after a mid-thread switch) ─── */
+
+interface ProfileDiffState {
+  oldProfile: Profile;
+  newProfile: Profile;
+}
+
+function useProfileDiffBanner(): {
+  diff: ProfileDiffState | null;
+  dismiss: () => void;
+} {
+  const [diff, setDiff] = useState<ProfileDiffState | null>(null);
+
+  useEffect(() => {
+    async function handleSwitch(e: Event): Promise<void> {
+      const { oldProfileId, newProfileId } = (e as CustomEvent<ProfileSwitchedDetail>).detail;
+      if (!oldProfileId) return;
+      const res = await window.electronAPI.profileCrud.list();
+      if (!res.success || !res.profiles) return;
+      const oldP = res.profiles.find((p) => p.id === oldProfileId);
+      const newP = res.profiles.find((p) => p.id === newProfileId);
+      if (oldP && newP) setDiff({ oldProfile: oldP, newProfile: newP });
+    }
+    window.addEventListener(PROFILE_SWITCHED_EVENT, (e) => void handleSwitch(e));
+    return () => window.removeEventListener(PROFILE_SWITCHED_EVENT, (e) => void handleSwitch(e));
+  }, []);
+
+  return { diff, dismiss: () => setDiff(null) };
+}
+
+function ProfileDiffBanner(): React.ReactElement | null {
+  const { diff, dismiss } = useProfileDiffBanner();
+  if (!diff) return null;
+  return (
+    <ProfileDiffCard
+      oldProfile={diff.oldProfile}
+      newProfile={diff.newProfile}
+      onDismiss={dismiss}
+    />
+  );
+}
+
 /* ── Inline event strip (shown above composer when inlineEventTypes is set) ── */
 
 const MAX_INLINE_EVENTS = 5;
@@ -151,6 +197,7 @@ export function AgentChatConversation(): React.ReactElement {
         onDraftChange={actions.onDraftChange} onRerunSuccess={actions.onRerunSuccess}
       />
       <InlineEventStrip />
+      <ProfileDiffBanner />
       <ConversationQueue />
       <ConversationComposer streaming={streaming} />
       <ConversationDrawer />

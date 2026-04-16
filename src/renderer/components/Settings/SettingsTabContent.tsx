@@ -6,6 +6,7 @@ import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
 import { AccountsSection } from './AccountsSection';
+import { AgentProfilesSection } from './AgentProfilesSection';
 import { AgentSection } from './AgentSection';
 import { AppearanceSection } from './AppearanceSection';
 import { ClaudeSection } from './ClaudeSection';
@@ -53,6 +54,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   keybindings: ({ draft, onChange }) => <KeybindingsSection draft={draft} onChange={onChange} />,
   hooks: ({ draft, onChange }) => <HooksSection draft={draft} onChange={onChange} />,
   profiles: ({ draft, onChange }) => <ProfilesSection draft={draft} onChange={onChange} />,
+  agentProfiles: ({ draft }) => <AgentProfilesSection draft={draft} />,
   files: ({ draft, onChange }) => <FileFilterSection draft={draft} onChange={onChange} />,
   integrations: () => <IntegrationsSection />,
   codemode: () => <CodeModeSection />,

@@ -196,6 +196,19 @@ function handleRestoreDeleted(args: unknown): HandlerResult<object> {
   return ok({});
 }
 
+function handleSetProfile(args: unknown): HandlerResult<object> {
+  const { sessionId, profileId } = (args ?? {}) as { sessionId?: string; profileId?: string };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  if (typeof profileId !== 'string' || !profileId) return fail('profileId is required');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  const session = store.getById(sessionId);
+  if (!session) return fail(`session not found: ${sessionId}`);
+  store.upsert({ ...session, profileId });
+  broadcastChanged();
+  return ok({});
+}
+
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 let registeredChannels: string[] = [];
@@ -230,6 +243,7 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:pin', (_e, args) => handlePin(args));
   reg('sessionCrud:softDelete', (_e, args) => handleSoftDelete(args));
   reg('sessionCrud:restoreDeleted', (_e, args) => handleRestoreDeleted(args));
+  reg('sessionCrud:setProfile', (_e, args) => handleSetProfile(args));
 
   registeredChannels = channels;
   return channels;

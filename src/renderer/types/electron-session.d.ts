@@ -53,6 +53,8 @@ export interface SessionRecord {
   activeTerminalIds: string[];
   /** Wave 25 — pinned context items for this session */
   pinnedContext?: PinnedContextItem[];
+  /** Wave 26 — active agent profile id for this session; null when using defaults. */
+  profileId?: string;
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
   agentMonitorSettings?: AgentMonitorSettings;
@@ -102,6 +104,8 @@ export interface SessionCrudAPI {
   softDelete: (sessionId: string) => Promise<IpcResult>;
   /** Wave 21 Phase C — restore a soft-deleted session (clears deletedAt). */
   restoreDeleted: (sessionId: string) => Promise<IpcResult>;
+  /** Wave 26 — update the active profile for a session. */
+  setProfile: (sessionId: string, profileId: string) => Promise<IpcResult>;
   /** Subscribe to store mutation events. Returns cleanup fn. */
   onChanged: (callback: (sessions: SessionRecord[]) => void) => () => void;
 }

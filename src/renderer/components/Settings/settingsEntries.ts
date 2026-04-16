@@ -10,6 +10,7 @@
  */
 
 import {
+  AGENT_PROFILES_ENTRIES,
   CODE_MODE_ENTRIES,
   CONTEXT_DOCS_ENTRIES,
   EXTENSION_ENTRIES,
@@ -38,6 +39,7 @@ export interface SettingsEntry {
     | 'keybindings'
     | 'hooks'
     | 'profiles'
+    | 'agentProfiles'
     | 'files'
     | 'integrations'
     | 'codemode'
@@ -318,5 +320,6 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ...CODE_MODE_ENTRIES,
   ...MCP_ENTRIES,
   ...CONTEXT_DOCS_ENTRIES,
+  ...AGENT_PROFILES_ENTRIES,
   ...PERFORMANCE_ENTRIES,
 ];

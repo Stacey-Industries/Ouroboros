@@ -28,6 +28,8 @@ export const sessionCrudApi: SessionCrudApiType = {
     ipcRenderer.invoke('sessionCrud:softDelete', { sessionId }),
   restoreDeleted: (sessionId: string) =>
     ipcRenderer.invoke('sessionCrud:restoreDeleted', { sessionId }),
+  setProfile: (sessionId: string, profileId: string) =>
+    ipcRenderer.invoke('sessionCrud:setProfile', { sessionId, profileId }),
   onChanged: (callback: (sessions: SessionRecord[]) => void) =>
     onChannel<SessionRecord[]>('sessionCrud:changed', callback),
 };

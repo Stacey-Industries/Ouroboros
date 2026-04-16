@@ -18,6 +18,7 @@ export type TabId =
   | 'keybindings'
   | 'hooks'
   | 'profiles'
+  | 'agentProfiles'
   | 'files'
   | 'integrations'
   | 'codemode'
@@ -44,6 +45,7 @@ export const TABS: Tab[] = [
   { id: 'keybindings', label: 'Keybindings' },
   { id: 'hooks', label: 'Hooks' },
   { id: 'profiles', label: 'Profiles' },
+  { id: 'agentProfiles', label: 'Agent Profiles' },
   { id: 'files', label: 'Files' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'codemode', label: 'Code Mode' },
@@ -71,7 +73,7 @@ export const MAIN_TABS: MainTab[] = [
   { id: 'account',        label: 'Account',           subtabs: ['accounts', 'providers'] },
   { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
   { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
-  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'codemode', 'contextDocs', 'workspaceReadList'] },
+  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'agentProfiles', 'codemode', 'contextDocs', 'workspaceReadList'] },
   { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance'] },
 ];
 
