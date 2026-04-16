@@ -12,6 +12,7 @@ import {
   OPEN_EXTENSION_STORE_EVENT,
   OPEN_MCP_STORE_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
+  OPEN_USAGE_DASHBOARD_EVENT,
 } from '../../hooks/appEventNames';
 import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
 import { useDiffReview } from '../DiffReview';
@@ -41,6 +42,9 @@ const SettingsPanel = React.lazy(() =>
 const UsagePanel = React.lazy(() =>
   import('../UsageModal/UsagePanel').then((m) => ({ default: m.UsagePanel })),
 );
+const UsageDashboard = React.lazy(() =>
+  import('../UsageDashboard').then((m) => ({ default: m.UsageDashboard })),
+);
 const TimeTravelPanelConnected = React.lazy(() =>
   import('./TimeTravelPanelConnected').then((m) => ({ default: m.TimeTravelPanelConnected })),
 );
@@ -54,6 +58,7 @@ const SPECIAL_VIEW_EVENTS: Array<[string, SpecialViewType]> = [
   ['agent-ide:open-time-travel', 'time-travel'],
   [OPEN_EXTENSION_STORE_EVENT, 'extensions'],
   [OPEN_MCP_STORE_EVENT, 'mcp'],
+  [OPEN_USAGE_DASHBOARD_EVENT, 'usage-dashboard'],
 ];
 
 // ── Hooks ───────────────────────────────────────────────────────────────────
@@ -140,6 +145,7 @@ function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projec
     case 'time-travel': return <React.Suspense fallback={fallback}><TimeTravelPanelConnected onClose={noop} /></React.Suspense>;
     case 'extensions': return <React.Suspense fallback={fallback}><ExtensionStorePage /></React.Suspense>;
     case 'mcp': return <React.Suspense fallback={fallback}><McpStorePage /></React.Suspense>;
+    case 'usage-dashboard': return <React.Suspense fallback={fallback}><UsageDashboard /></React.Suspense>;
     default: return null;
   }
 }

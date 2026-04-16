@@ -17,6 +17,7 @@ import {
   useAgentTemplateCommands,
   useLayoutCommands,
   useMultiSessionCommand,
+  useUsageDashboardCommand,
 } from './useCommandRegistrations';
 import { useErrorCapture } from './useErrorCapture';
 import { useUpdater } from './useUpdater';
@@ -62,6 +63,7 @@ function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
     handleSaveLayout: deps.handleSaveLayout,
   });
   useMultiSessionCommand(deps.registerCommand);
+  useUsageDashboardCommand(deps.registerCommand);
 }
 
 export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {

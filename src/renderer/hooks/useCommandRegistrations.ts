@@ -13,6 +13,7 @@ import { resolveTemplate } from '../utils/templateResolver';
 import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
+  OPEN_USAGE_DASHBOARD_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
 } from './appEventNames';
 
@@ -168,5 +169,21 @@ export function useAgentChatCommands(
       },
     });
   }, [projectRoot, registerCommand]);
+}
+
+export function useUsageDashboardCommand(
+  registerCommand: (cmd: Command) => void,
+): void {
+  useEffect(() => {
+    registerCommand({
+      id: 'usage:dashboard',
+      label: 'Open Usage Dashboard',
+      category: 'view',
+      icon: '◫',
+      action: () => {
+        dispatchDomEvent(OPEN_USAGE_DASHBOARD_EVENT);
+      },
+    });
+  }, [registerCommand]);
 }
 

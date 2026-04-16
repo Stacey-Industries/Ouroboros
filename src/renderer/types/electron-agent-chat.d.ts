@@ -6,6 +6,12 @@ export type {
 export type {
   AgentChatAPI,
   AgentChatBranchInfo,
+  AgentChatCostRollupRequest,
+  AgentChatGlobalCostRequest,
+  AgentChatGlobalCostResult,
+  AgentChatThreadCostResult,
+  GlobalCostRollupRecord,
+  ThreadCostRollupRecord,
   AgentChatContentBlock,
   AgentChatContextBehavior,
   AgentChatContextSummary,

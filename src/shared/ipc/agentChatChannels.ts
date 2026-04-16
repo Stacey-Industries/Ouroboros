@@ -34,6 +34,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   restoreDeletedThread: 'agentChat:restoreDeletedThread',
   exportThread: 'agentChat:exportThread',
   importThread: 'agentChat:importThread',
+  getThreadCostRollup: 'agentChat:getThreadCostRollup',
+  getGlobalCostRollup: 'agentChat:getGlobalCostRollup',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

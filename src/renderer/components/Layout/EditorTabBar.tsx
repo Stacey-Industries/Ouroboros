@@ -36,7 +36,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SpecialViewType = 'settings' | 'usage' | 'context-builder' | 'time-travel' | 'extensions' | 'mcp';
+type SpecialViewType = 'settings' | 'usage' | 'context-builder' | 'time-travel' | 'extensions' | 'mcp' | 'usage-dashboard';
 
 export type { SpecialViewType };
 
@@ -56,6 +56,7 @@ const SPECIAL_VIEW_META: Record<SpecialViewType, { label: string; icon: string }
   'time-travel': { label: 'Time Travel', icon: '\u21B7' },
   'extensions': { label: 'Extensions', icon: '\u2B29' },
   'mcp': { label: 'MCP Servers', icon: '\u2B21' },
+  'usage-dashboard': { label: 'Usage Dashboard', icon: '\u25A4' },
 };
 
 function SpecialViewTab({ specialView, isActive, onClick, onClose }: {

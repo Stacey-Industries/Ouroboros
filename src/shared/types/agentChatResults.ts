@@ -107,6 +107,39 @@ export interface AgentChatSearchPayload {
   threadId?: string;
 }
 
+// ─── Wave 21 Phase F — Cost rollup types ─────────────────────────────────────
+
+export interface ThreadCostRollupRecord {
+  threadId: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalUsd: number;
+}
+
+export interface GlobalCostRollupRecord {
+  totalUsd: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  threadCount: number;
+}
+
+export interface AgentChatCostRollupRequest {
+  threadId: string;
+}
+
+export interface AgentChatGlobalCostRequest {
+  timeRange?: { from: number; to: number };
+}
+
+export interface AgentChatThreadCostResult extends OperationResult {
+  rollup?: ThreadCostRollupRecord;
+}
+
+export interface AgentChatGlobalCostResult extends OperationResult {
+  rollup?: GlobalCostRollupRecord;
+  threads?: ThreadCostRollupRecord[];
+}
+
 // ─── API surface ─────────────────────────────────────────────────────────────
 
 export interface AgentChatAPI {
@@ -183,6 +216,14 @@ export interface AgentChatAPI {
     content: string,
     format: 'json' | 'transcript',
   ) => Promise<{ success: boolean; threadId?: string; error?: string }>;
+  /** Wave 21 Phase F — per-thread token/cost rollup. */
+  getThreadCostRollup: (
+    payload: AgentChatCostRollupRequest,
+  ) => Promise<AgentChatThreadCostResult>;
+  /** Wave 21 Phase F — global cost rollup across all threads, with optional time range. */
+  getGlobalCostRollup: (
+    payload?: AgentChatGlobalCostRequest,
+  ) => Promise<AgentChatGlobalCostResult>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

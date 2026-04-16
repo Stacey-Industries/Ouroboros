@@ -28,6 +28,7 @@ import {
   terminateContextWorker,
   warmSnapshotCache,
 } from './agentChatContext';
+import { registerCostRollupHandlers } from './agentChatCost';
 import { registerEventForwarders } from './agentChatEventForwarders';
 import { registerExportImportHandlers } from './agentChatExportImport';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
@@ -298,6 +299,7 @@ export function registerAgentChatHandlers(): string[] {
   registerMemoryHandlers(channels);
   registerTagHandlers(channels, svc);
   registerPinDeleteHandlers(channels, svc);
+  registerCostRollupHandlers({ channels, svc, register, requireValidString, requireValidObject });
   registerExportImportHandlers({
     channels, svc, register, requireValidString,
     exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread,
