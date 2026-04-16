@@ -18,6 +18,7 @@ import type {
 import { agentChatApi } from './preloadSupplementalAgentChatApis';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import { folderCrudApi } from './preloadSupplementalFolderApis';
+import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 import { sessionCrudApi } from './preloadSupplementalSessionApis';
 
@@ -28,7 +29,7 @@ type SupplementalApiKey =
   | 'context' | 'ideTools' | 'codemode' | 'agentChat' | 'orchestration'
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
-  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud';
+  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -266,4 +267,5 @@ export const supplementalApis: SupplementalApis = {
   },
   sessionCrud: sessionCrudApi,
   folderCrud: folderCrudApi,
+  pinnedContext: pinnedContextApi,
 };

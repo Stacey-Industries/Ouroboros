@@ -10,6 +10,7 @@ import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import { BranchCompareModal, useBranchCompare } from './AgentChatWorkspace.compare';
 import { DensityProvider } from './DensityContext';
+import { PinnedContextBar } from './PinnedContextBar';
 import { SideChatDrawer } from './SideChatDrawer';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
@@ -19,6 +20,8 @@ import { useSideChat } from './useSideChat';
 
 export interface AgentChatWorkspaceProps {
   projectRoot: string | null;
+  /** Wave 25 — session ID for pinned context; null hides the bar. */
+  activeSessionId?: string | null;
   onModelReady?: (model: AgentChatWorkspaceModel) => void;
 }
 
@@ -262,30 +265,44 @@ function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
   useWorkspaceStoreSync(store, model, context, slashCmd);
 }
 
-export function AgentChatWorkspace({
-  projectRoot,
-  onModelReady,
-}: AgentChatWorkspaceProps): React.ReactElement {
-  const model = useAgentChatWorkspace(projectRoot);
-  const context = useAgentChatContext(projectRoot, model.activeThreadId);
+function useWorkspaceActions(
+  projectRoot: string | null,
+  sideChat: ReturnType<typeof useSideChat>,
+  setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>,
+): { onRemember: (c: string) => Promise<void>; onSpec: (n: string) => void; onOpenMemories: () => void; onCloseTab: (id: string) => void } {
   const { toast } = useToastContext();
-  const store = useRef(createAgentChatStore()).current;
-  useWorkspaceNotifications();
-
-  const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
-  const { compareState, closeCompare } = useBranchCompare();
   const onRemember = useRememberAction(projectRoot, toast);
   const onSpec = useSpecAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
     window.dispatchEvent(new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }));
   }, []);
+  const onCloseTab = useCallback((id: string) => {
+    sideChat.closeSideChat(id);
+    if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
+  }, [sideChat, setIsDrawerOpen]);
+  return { onRemember, onSpec, onOpenMemories, onCloseTab };
+}
 
+export function AgentChatWorkspace({
+  projectRoot,
+  activeSessionId = null,
+  onModelReady,
+}: AgentChatWorkspaceProps): React.ReactElement {
+  const model = useAgentChatWorkspace(projectRoot);
+  const context = useAgentChatContext(projectRoot, model.activeThreadId);
+  const store = useRef(createAgentChatStore()).current;
+  useWorkspaceNotifications();
+
+  const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
+  const { compareState, closeCompare } = useBranchCompare();
+  const { onRemember, onSpec, onOpenMemories, onCloseTab } = useWorkspaceActions(projectRoot, sideChat, setIsDrawerOpen);
   useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec });
 
   return (
     <AgentChatStoreContext.Provider value={store}>
       <DensityProvider>
         <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
+          <PinnedContextBar activeSessionId={activeSessionId} />
           <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
         </div>
         <SideChatDrawer
@@ -294,10 +311,7 @@ export function AgentChatWorkspace({
           sideChats={sideChat.sideChats}
           activeSideChatId={sideChat.activeSideChatId}
           onSelect={sideChat.setActive}
-          onCloseTab={(id) => {
-            sideChat.closeSideChat(id);
-            if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
-          }}
+          onCloseTab={onCloseTab}
         />
         {compareState && <BranchCompareModal compareState={compareState} onClose={closeCompare} />}
       </DensityProvider>

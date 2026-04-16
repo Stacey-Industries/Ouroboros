@@ -7,6 +7,7 @@
  */
 
 import type { IpcResult } from './electron-foundation';
+import type { PinnedContextItem } from './electron-pinned-context';
 
 // ─── AgentMonitor settings ────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ export interface SessionRecord {
   tags: string[];
   layoutPresetId?: string;
   activeTerminalIds: string[];
+  /** Wave 25 — pinned context items for this session */
+  pinnedContext?: PinnedContextItem[];
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
   agentMonitorSettings?: AgentMonitorSettings;

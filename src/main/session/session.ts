@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { PinnedContextItem } from '@shared/types/pinnedContext';
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export type AgentMonitorViewMode = 'verbose' | 'normal' | 'summary';
@@ -60,8 +62,8 @@ export interface Session {
   /** Wave 26 populates */
   profileId?: string;
   activeTerminalIds: string[];
-  /** Wave 25 populates */
-  pinnedContext?: unknown[];
+  /** Wave 25 — pinned context items for this session */
+  pinnedContext: PinnedContextItem[];
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
   /** Wave 20 Phase C — AgentMonitor view mode + inline event preferences */
@@ -82,6 +84,7 @@ export function makeSession(projectRoot: string): Session {
     pinned: false,
     tags: [],
     activeTerminalIds: [],
+    pinnedContext: [],
     costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },
     telemetry: { correlationIds: [], telemetrySessionId: id },
     agentMonitorSettings: { ...DEFAULT_AGENT_MONITOR_SETTINGS },

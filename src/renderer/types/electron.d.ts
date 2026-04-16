@@ -16,6 +16,7 @@ export * from './electron-git';
 export * from './electron-mcp-store';
 export * from './electron-observability';
 export * from './electron-orchestration';
+export * from './electron-pinned-context';
 export * from './electron-rules-skills';
 export * from './electron-runtime-apis';
 export * from './electron-session';

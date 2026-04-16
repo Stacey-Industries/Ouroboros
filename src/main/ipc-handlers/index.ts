@@ -23,6 +23,7 @@ export { registerIdeToolsHandlers } from './ideTools';
 export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';
+export { cleanupPinnedContextHandlers, registerPinnedContextHandlers } from './pinnedContext';
 export { registerPtyHandlers } from './pty';
 export { registerPtyPersistenceHandlers } from './ptyPersistence';
 export { registerRouterStatsHandlers } from './routerStats';

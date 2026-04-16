@@ -17,6 +17,7 @@ import {
   cleanupConfigWatcher,
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
+  cleanupPinnedContextHandlers,
   cleanupSessionCrudHandlers,
   cleanupTelemetryHandlers,
   cleanupWorktreeHandlers,
@@ -43,6 +44,7 @@ import {
   registerMcpHandlers,
   registerMcpStoreHandlers,
   registerMiscHandlers,
+  registerPinnedContextHandlers,
   registerPtyHandlers,
   registerPtyPersistenceHandlers,
   registerRouterStatsHandlers,
@@ -90,6 +92,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('agentChat', () => registerAgentChatHandlers()),
     ...safeRegister('sessionCrud', () => registerSessionCrudHandlers()),
     ...safeRegister('folderCrud', () => registerFolderCrudHandlers()),
+    ...safeRegister('pinnedContext', () => registerPinnedContextHandlers()),
     ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
     ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
     ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),
@@ -263,6 +266,7 @@ export function cleanupIpcHandlers(): void {
   cleanupAgentChatHandlers();
   cleanupSessionCrudHandlers();
   cleanupFolderCrudHandlers();
+  cleanupPinnedContextHandlers();
   cleanupTelemetryHandlers();
   cleanupWorktreeHandlers();
   closeEmbeddingStore();
