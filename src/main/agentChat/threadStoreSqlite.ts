@@ -256,6 +256,14 @@ export class ThreadStoreSqliteRuntime {
       .run(threadId);
   }
 
+  // ── Wave 23 Phase A — branch rename ─────────────────────────────────────
+
+  renameBranchSql(threadId: string, name: string | null): void {
+    this.getDb()
+      .prepare('UPDATE threads SET branchName = ? WHERE id = ?')
+      .run(name, threadId);
+  }
+
   // ── Wave 22 Phase A — reactions + collapsedByDefault ────────────────────
 
   async getMessageReactions(messageId: string): Promise<Reaction[]> {
@@ -298,6 +306,10 @@ export class ThreadStoreSqliteRuntime {
     if (row.deletedAt !== null && row.deletedAt !== undefined) {
       record.deletedAt = row.deletedAt;
     }
+    if (row.branchName) record.branchName = row.branchName;
+    if (row.forkOfMessageId) record.forkOfMessageId = row.forkOfMessageId;
+    if (row.parentThreadId) record.parentThreadId = row.parentThreadId;
+    if (row.isSideChat) record.isSideChat = row.isSideChat === 1;
     return record;
   }
 

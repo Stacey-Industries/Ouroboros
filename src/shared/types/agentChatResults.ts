@@ -11,6 +11,7 @@ import type {
   AgentChatStreamChunk,
   AgentChatThreadRecord,
   AgentChatThreadStatusSnapshot,
+  BranchNode,
   Reaction,
   SessionMemoryEntry,
 } from './agentChat';
@@ -152,6 +153,19 @@ export interface AgentChatReactionsResult extends OperationResult {
   reactions?: Reaction[];
 }
 
+// ─── Wave 23 Phase A — Branch tree result ────────────────────────────────────
+
+export interface AgentChatBranchesResult extends OperationResult {
+  branches?: BranchNode[];
+}
+
+export interface AgentChatForkThreadRequest {
+  sourceThreadId: string;
+  fromMessageId: string;
+  includeHistory: boolean;
+  isSideChat?: boolean;
+}
+
 // ─── API surface ─────────────────────────────────────────────────────────────
 
 export interface AgentChatAPI {
@@ -260,6 +274,19 @@ export interface AgentChatAPI {
     messageId: string,
     overrides?: { model?: string; effort?: string; permissionMode?: string },
   ) => Promise<AgentChatThreadResult>;
+  /**
+   * Wave 23 Phase A — fork a thread, creating a new branch from a given message.
+   * If includeHistory, copies messages up to and including fromMessageId.
+   * Otherwise only copies system prompt messages.
+   */
+  forkThread: (request: AgentChatForkThreadRequest) => Promise<AgentChatThreadResult>;
+  /** Wave 23 Phase A — set a user-visible label for a branch thread. */
+  renameBranch: (
+    threadId: string,
+    name: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** Wave 23 Phase A — list the branch tree rooted at rootThreadId. */
+  listBranches: (rootThreadId: string) => Promise<AgentChatBranchesResult>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

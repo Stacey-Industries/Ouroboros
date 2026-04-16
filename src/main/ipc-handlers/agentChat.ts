@@ -32,6 +32,7 @@ import {
 import { registerCostRollupHandlers } from './agentChatCost';
 import { registerEventForwarders } from './agentChatEventForwarders';
 import { registerExportImportHandlers } from './agentChatExportImport';
+import { registerForkHandlers } from './agentChatFork';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
 import { registerReactionHandlers } from './agentChatReactions';
 
@@ -324,11 +325,8 @@ export function registerAgentChatHandlers(): string[] {
   registerPinDeleteHandlers(channels, svc);
   registerCostRollupHandlers({ channels, svc, register, requireValidString, requireValidObject });
   registerReactionHandlers({ channels, svc, register, requireValidString });
-  registerExportImportHandlers({
-    channels, svc, register, requireValidString,
-    exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread,
-    importChannel: AGENT_CHAT_INVOKE_CHANNELS.importThread,
-  });
+  registerForkHandlers({ channels, svc, register, requireValidString, requireValidObject });
+  registerExportImportHandlers({ channels, svc, register, requireValidString, exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread, importChannel: AGENT_CHAT_INVOKE_CHANNELS.importThread });
   registerEventForwarders(svc, getOrchestration(), cleanupFns);
 
   registeredChannels = channels;

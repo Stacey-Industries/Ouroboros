@@ -12,7 +12,7 @@ import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -24,7 +24,9 @@ export const SCHEMA_SQL = `
     createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
     title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
     latestOrchestration TEXT, branchInfo TEXT, tags TEXT,
-    pinned INTEGER DEFAULT 0, deletedAt INTEGER
+    pinned INTEGER DEFAULT 0, deletedAt INTEGER,
+    branchName TEXT, forkOfMessageId TEXT, parentThreadId TEXT,
+    isSideChat INTEGER DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_threads_workspace ON threads(workspaceRoot);
   CREATE INDEX IF NOT EXISTS idx_threads_updated   ON threads(updatedAt DESC);
@@ -71,6 +73,14 @@ export interface RawThreadRow {
   pinned: number | null;
   /** Wave 21 Phase C — epoch ms or NULL. */
   deletedAt: number | null;
+  /** Wave 23 Phase A — user-set label for a branch. */
+  branchName: string | null;
+  /** Wave 23 Phase A — the message this thread was forked from (nullable). */
+  forkOfMessageId: string | null;
+  /** Wave 23 Phase A — parent thread for fork/branch relationship (nullable). */
+  parentThreadId: string | null;
+  /** Wave 23 Phase A — 1 if this thread is a side chat (lightweight fork). */
+  isSideChat: number | null;
 }
 
 export interface RawMessageRow {
@@ -238,8 +248,9 @@ export function titleMatchesUserMessage(title: string, content: string): boolean
 const UPSERT_THREAD_SQL = `
   INSERT INTO threads
     (id, workspaceRoot, createdAt, updatedAt, title, status,
-     latestOrchestration, branchInfo, tags, pinned, deletedAt)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     latestOrchestration, branchInfo, tags, pinned, deletedAt,
+     branchName, forkOfMessageId, parentThreadId, isSideChat)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(id) DO UPDATE SET
     workspaceRoot = excluded.workspaceRoot,
     createdAt = excluded.createdAt,
@@ -250,22 +261,29 @@ const UPSERT_THREAD_SQL = `
     branchInfo = excluded.branchInfo,
     tags = excluded.tags,
     pinned = excluded.pinned,
-    deletedAt = excluded.deletedAt`;
+    deletedAt = excluded.deletedAt,
+    branchName = excluded.branchName,
+    forkOfMessageId = excluded.forkOfMessageId,
+    parentThreadId = excluded.parentThreadId,
+    isSideChat = excluded.isSideChat`;
+
+function threadRowParams(t: AgentChatThreadRecord): unknown[] {
+  return [
+    t.id, t.workspaceRoot, t.createdAt, t.updatedAt, t.title, t.status,
+    t.latestOrchestration ? JSON.stringify(t.latestOrchestration) : null,
+    t.branchInfo ? JSON.stringify(t.branchInfo) : null,
+    t.tags && t.tags.length > 0 ? JSON.stringify(t.tags) : null,
+    t.pinned ? 1 : 0,
+    t.deletedAt ?? null,
+    t.branchName ?? null,
+    t.forkOfMessageId ?? null,
+    t.parentThreadId ?? null,
+    t.isSideChat ? 1 : 0,
+  ];
+}
 
 export function upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
-  db.prepare(UPSERT_THREAD_SQL).run(
-    thread.id,
-    thread.workspaceRoot,
-    thread.createdAt,
-    thread.updatedAt,
-    thread.title,
-    thread.status,
-    thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
-    thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
-    thread.tags && thread.tags.length > 0 ? JSON.stringify(thread.tags) : null,
-    thread.pinned ? 1 : 0,
-    thread.deletedAt ?? null,
-  );
+  db.prepare(UPSERT_THREAD_SQL).run(...threadRowParams(thread));
 }
 
 const INSERT_MESSAGE_SQL = `
@@ -333,6 +351,16 @@ function migrateV6(db: Database): void {
   }
 }
 
+function migrateV8(db: Database): void {
+  const c = thdCols(db);
+  if (!hasCol(c, 'branchName')) db.exec('ALTER TABLE threads ADD COLUMN branchName TEXT');
+  if (!hasCol(c, 'forkOfMessageId')) db.exec('ALTER TABLE threads ADD COLUMN forkOfMessageId TEXT');
+  if (!hasCol(c, 'parentThreadId')) db.exec('ALTER TABLE threads ADD COLUMN parentThreadId TEXT');
+  if (!hasCol(c, 'isSideChat')) {
+    db.exec('ALTER TABLE threads ADD COLUMN isSideChat INTEGER DEFAULT 0');
+  }
+}
+
 /** Apply stepwise ALTER TABLE migrations for all schema versions up to SCHEMA_VERSION. */
 export function applyColumnMigrations(db: Database, currentVersion: number): void {
   if (currentVersion >= 1) migrateV1(db);
@@ -340,4 +368,5 @@ export function applyColumnMigrations(db: Database, currentVersion: number): voi
   if (currentVersion >= 3) migrateV3(db);
   if (currentVersion >= 5) migrateV5(db);
   if (currentVersion >= 6) migrateV6(db);
+  if (currentVersion >= 7) migrateV8(db);
 }

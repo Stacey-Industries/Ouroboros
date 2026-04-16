@@ -268,6 +268,26 @@ export interface AgentChatThreadRecord {
   pinned?: boolean;
   /** Wave 21 Phase C — epoch ms when this thread was soft-deleted (30-day grace). */
   deletedAt?: number;
+  /** Wave 23 Phase A — user-set label for this branch (distinct from auto-generated title). */
+  branchName?: string;
+  /** Wave 23 Phase A — the message ID this thread was forked from (nullable). */
+  forkOfMessageId?: string;
+  /** Wave 23 Phase A — the parent thread ID for fork/branch relationship (nullable). */
+  parentThreadId?: string;
+  /** Wave 23 Phase A — true if this thread is a side chat (lightweight fork). */
+  isSideChat?: boolean;
+}
+
+// ─── Wave 23 Phase A — Branch tree ───────────────────────────────────────────
+
+/** A node in the branch tree for a root thread and all its descendants. */
+export interface BranchNode {
+  id: string;
+  branchName?: string;
+  parentThreadId?: string;
+  forkOfMessageId?: string;
+  isSideChat: boolean;
+  children: BranchNode[];
 }
 
 export interface AgentChatSettings {
@@ -357,9 +377,11 @@ export interface AgentChatStreamChunk {
 
 export type {
   AgentChatAPI,
+  AgentChatBranchesResult,
   AgentChatDeleteResult,
   AgentChatEvent,
   AgentChatEventBase,
+  AgentChatForkThreadRequest,
   AgentChatLinkedDetailsResult,
   AgentChatLinkedTerminalResult,
   AgentChatLinkedTerminalsResult,

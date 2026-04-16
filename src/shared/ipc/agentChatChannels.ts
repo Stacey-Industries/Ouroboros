@@ -44,6 +44,10 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   setMessageCollapsed: 'agentChat:setMessageCollapsed',
   // Wave 22 Phase F — re-run from message (always branches)
   reRunFromMessage: 'agentChat:reRunFromMessage',
+  // Wave 23 Phase A — thread fork/branch
+  forkThread: 'agentChat:forkThread',
+  renameBranch: 'agentChat:renameBranch',
+  listBranches: 'agentChat:listBranches',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

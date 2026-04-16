@@ -2,6 +2,12 @@ import { randomUUID } from 'crypto';
 import { app } from 'electron';
 import * as path from 'path';
 
+import {
+  forkThreadImpl,
+  type ForkThreadParams,
+  listBranchesOfThreadImpl,
+  renameBranchImpl,
+} from './threadStoreFork';
 import { branchThreadFrom, reRunFromMessageImpl } from './threadStoreRerun';
 import type { SearchOptions, SearchResult } from './threadStoreSearch';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
@@ -12,6 +18,7 @@ import {
   normalizeMessages,
   upsertMessage,
 } from './threadStoreSupport';
+export type { ForkThreadParams } from './threadStoreFork';
 export type {
   AgentChatMessagePatch,
   AgentChatThreadPatch,
@@ -28,6 +35,7 @@ import type {
   AgentChatCreateThreadRequest,
   AgentChatMessageRecord,
   AgentChatThreadRecord,
+  BranchNode,
   Reaction,
 } from './types';
 
@@ -87,6 +95,12 @@ export interface AgentChatThreadStore {
   setMessageReactions: (messageId: string, reactions: Reaction[]) => Promise<void>;
   /** Wave 22 Phase A — set the collapsedByDefault flag for a message. */
   setMessageCollapsed: (messageId: string, collapsed: boolean) => Promise<void>;
+  /** Wave 23 Phase A — fork a thread, optionally carrying history. */
+  forkThread: (params: ForkThreadParams) => Promise<AgentChatThreadRecord>;
+  /** Wave 23 Phase A — set a user-visible label for a branch thread. */
+  renameBranch: (threadId: string, name: string) => Promise<void>;
+  /** Wave 23 Phase A — list the branch tree rooted at rootThreadId. */
+  listBranches: (rootThreadId: string) => Promise<BranchNode[]>;
 }
 
 function buildThreadRecord(args: {
@@ -288,7 +302,7 @@ function buildCoreApi(args: StoreApiArgs): Pick<
 }
 
 function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
-  const { runtime } = args;
+  const { runtime, createId, now } = args;
   return {
     ...buildCoreApi(args),
     getTags: (id) => runtime.getTags(id),
@@ -300,6 +314,13 @@ function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
     getMessageReactions: (mid) => runtime.getMessageReactions(mid),
     setMessageReactions: (mid, reactions) => runtime.setMessageReactions(mid, reactions),
     setMessageCollapsed: (mid, collapsed) => runtime.setMessageCollapsed(mid, collapsed),
+    forkThread: (params) =>
+      runtime.runMutation(() =>
+        forkThreadImpl({ createId, now, params, runtime }),
+      ),
+    renameBranch: (id, name) =>
+      runtime.runMutation(async () => renameBranchImpl(runtime, id, name)),
+    listBranches: (rootThreadId) => listBranchesOfThreadImpl(runtime, rootThreadId),
   };
 }
 

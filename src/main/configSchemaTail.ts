@@ -279,14 +279,19 @@ export const tailSchema = {
   provenanceTracking: { type: 'boolean', default: true },
   /** Wave 21 Phase D — user-created session folders */
   sessionFolders: { type: 'array', items: { type: 'object' }, default: [] },
-  /** Wave 22 Phase B/E — chat message density + desktop notifications (Phase E) */
+  /** Wave 22 Phase B/E — chat message density + desktop notifications (Phase E)
+   *  Wave 23 Phase A — sideChats + branchingPolish feature flags */
   chat: {
     type: 'object',
     additionalProperties: false,
-    default: { density: 'comfortable', desktopNotifications: true },
+    default: { density: 'comfortable', desktopNotifications: true, sideChats: true, branchingPolish: true },
     properties: {
       density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' },
       desktopNotifications: { type: 'boolean', default: true },
+      /** Gates the SideChatDrawer + Ctrl+; shortcut. */
+      sideChats: { type: 'boolean', default: true },
+      /** Gates BranchIndicator, BranchTreeView, and branch comparison. */
+      branchingPolish: { type: 'boolean', default: true },
     },
   },
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
