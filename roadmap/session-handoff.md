@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-16
+# Roadmap Session Handoff — 2026-04-16 (updated 2026-04-17)
 
-> Continuation doc for a brand-new Claude Code session. Earlier session hit context compaction mid-Wave 27. This file is the canonical handoff — read it first, then resume.
+> Continuation doc for a brand-new Claude Code session. Read this first, then resume from Phase B.
 
 ---
 
@@ -30,17 +30,12 @@ A **26-wave roadmap** (Waves 15 → 40). Each wave is a self-contained feature s
 ### Current branch state (confirmed at handoff time)
 
 ```
-Last commit on master: e2d89f3 feat: Wave 26 Phase E — command approval memory + revoke UI
-
-Uncommitted (Wave 27 Phase A partial, from a rate-limited subagent):
-  ?? roadmap/wave-27-plan.md                              32 lines
-  ?? src/main/agentChat/subagentTracker.ts                271 lines
-  ?? src/main/agentChat/subagentTracker.test.ts           250 lines
-  ?? src/main/ipc-handlers/subagent.ts                    142 lines
-  ?? src/main/ipc-handlers/subagent.test.ts               205 lines
+Last commit on master: dcd9b2b feat: Wave 27 Phase A — subagent tracker + IPC
+Previous:              6a5df23 fix: repair 19 pre-existing test failures on master
+Previous:              e2d89f3 feat: Wave 26 Phase E — command approval memory + revoke UI
 ```
 
-### What's done (Waves 15–26, fully committed + pushed)
+### What's done (Waves 15–27 Phase A, fully committed)
 
 Every wave below closed with commits landed on master. Don't redo.
 
@@ -56,26 +51,28 @@ Every wave below closed with commits landed on master. Don't redo.
 - **Wave 24** — Context decision JSONL logging (A), per-turn outcome aggregation (B), Haiku reranker (C) — **reranker flag off by default** because Claude CLI cold-start ~1–3s exceeds 500ms target.
 - **Wave 25** — Pinned context primitive (A), research subagent + TTL cache (B), research slash commands + composer interception (C), packet pin injection + outcome correlation (D), workspace read-list + research cancel UI (E).
 - **Wave 26** — Profile abstraction: store + role presets + IPC (A), Settings UI + composer pill + diff card (B), inference controls + tool toggles + profile lint (C+D), command approval memory + revoke UI (E).
+- **Wave 27 Phase A** — Subagent tracker: in-memory store + IPC handlers + preload bridge + shared types + hooks tap. Commit `dcd9b2b`.
+- **Test fix** — 19 pre-existing test failures repaired (config mock patterns, channel counts, Monaco jsdom isolation). Commit `6a5df23`.
 
-### Wave 27 — IN FLIGHT
+### Wave 27 — IN FLIGHT (Phase A done, Phase B next)
 
-Plan lives at `roadmap/wave-27-plan.md` (uncommitted). Phase breakdown:
+Plan lives at `roadmap/wave-27-plan.md`. Phase breakdown:
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **A** | Subagent tracker — main-process lifecycle, IPC, live count + cost rollup | **~80% on disk, uncommitted.** Verify before committing. |
-| B | `SubagentPanel` transcript view + "Open subagent chat" link + sidebar live-count chip + `ToolCallCard.tsx` integration | Not started |
+| **A** | Subagent tracker — main-process lifecycle, IPC, preload bridge, hooks tap | **✅ Done.** Committed at `dcd9b2b`. |
+| B | `SubagentPanel` transcript view + "Open subagent chat" link + sidebar live-count chip + `ToolCallCard.tsx` integration | **Not started — next up** |
 | C | Cancellation wiring (real PTY kill, not stub) + `UsageDashboard` parent+child rollup | Not started |
 
 **Feature flag:** `agentic.subagentUx` (default `true`).
 
 ### Immediate next step
 
-1. Run `git status` to confirm the five `??` files still match the snapshot above.
-2. Run `npm run typecheck && npm run lint src/main/agentChat/subagentTracker.ts src/main/agentChat/subagentTracker.test.ts src/main/ipc-handlers/subagent.ts src/main/ipc-handlers/subagent.test.ts && npm test -- subagentTracker subagent` — scoped to the Phase A files so you get fast signal.
-3. If any of the four Phase A files are missing, broken, or incomplete: **re-spawn a Sonnet subagent** to finish Phase A (schema for SubagentRecord already on disk, see §4 below).
-4. If clean: wire `registerSubagentHandlers` into `src/main/ipc.ts` (the subagent hasn't done this yet — verify), run full `npm run typecheck && npm run lint && npm test`, then commit as `feat: Wave 27 Phase A — subagent tracker + IPC`.
-5. Proceed to Phase B, then C, then Wave 28.
+1. Read `roadmap/wave-27-plan.md`.
+2. Implement Phase B (SubagentPanel UI + sidebar chip).
+3. Implement Phase C (cancellation + cost dashboard integration).
+4. `npm run typecheck && npm run lint && npm test` before each commit.
+5. After Wave 27 closes, proceed to Wave 28.
 
 ### What remains after Wave 27
 
@@ -97,67 +94,35 @@ For each wave: read the corresponding `roadmap/wave-NN-plan.md` (create one if i
 
 ---
 
-## 4. Wave 27 Phase A — concrete state on disk
+## 4. Wave 27 Phase A — committed (dcd9b2b)
 
-### `src/main/agentChat/subagentTracker.ts` (271 lines, uncommitted)
+All Phase A deliverables are committed. Key files:
 
-Exports the canonical types and the in-memory tracker API:
+### `src/main/agentChat/subagentTracker.ts` (242 lines)
 
-```ts
-export interface SubagentMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  at: number;
-}
+In-memory subagent lifecycle tracker with EventEmitter. Manages spawn → heartbeat → exit lifecycle, parent-child tree, cost rollup.
 
-export interface SubagentRecord {
-  id: string;
-  parentSessionId: string;
-  parentThreadId?: string;
-  toolCallId?: string;
-  taskLabel?: string;
-  status: 'running' | 'completed' | 'cancelled' | 'failed';
-  startedAt: number;
-  endedAt?: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-  usdCost: number;
-  messages: SubagentMessage[];
-}
+### `src/main/hooksSubagentTap.ts` (27 lines)
 
-export interface SubagentCostRollup {
-  inputTokens: number;
-  outputTokens: number;
-  usdCost: number;
-  childCount: number;
-}
-```
+Wires named-pipe hook events (`subagent:spawn`, `subagent:heartbeat`, `subagent:exit`) to the SubagentTracker.
 
-Public API (verify all are implemented + exported — the IPC file imports `countLive, get, listForParent, recordEnd, rollupCostForParent`):
-- `recordStart(params)` — idempotent; tolerant of out-of-order delivery
-- `recordMessage(...)` + `recordUsage(...)` — buffer into pending map if record missing
-- `recordEnd(id, status)` — creates stub if none exists, then finalises
-- `get(id)` / `listForParent(parentSessionId)` / `countLive(parentSessionId)` / `rollupCostForParent(parentSessionId)`
-- Pricing pulled via `getPricing` from `@shared/pricing`
+### `src/main/ipc-handlers/subagent.ts` (140 lines)
 
-### `src/main/ipc-handlers/subagent.ts` (142 lines, uncommitted)
+Registers channels: `subagent:list`, `subagent:get`, `subagent:liveCount`, `subagent:costRollup`, `subagent:kill`, `subagent:tree`.
 
-Registers channels:
-- `subagent:list`, `subagent:get`, `subagent:liveCount`, `subagent:costRollup`, `subagent:cancel`
-- Push: `subagent:updated` (per-parent broadcast to all active windows)
+### `src/preload/preloadSupplementalSubagentApis.ts` (30 lines)
 
-Cancel is currently a **stub** — marks record cancelled in tracker. Phase C will wire real PTY kill via agent cancel mechanism. **Keep the stub** for Phase A.
+contextBridge API surface for renderer access.
 
-### Phase A work NOT yet done (subagent ran out of tokens before finishing)
+### `src/shared/types/subagent.ts` + `src/renderer/types/electron-subagent.d.ts`
 
-1. **Hook pipeline integration** — wire `recordStart/recordMessage/recordUsage/recordEnd` into `src/main/hooks.ts` + `src/main/agentChat/` so Task-tool subagent events actually flow in.
-2. **IPC registration** — add `registerSubagentHandlers` to `src/main/ipc.ts` (follow the existing registrar pattern; also re-export from `src/main/ipc-handlers/index.ts`).
-3. **Preload bridge** — add `subagent.*` methods to `src/preload/preload.ts` + type declarations in `src/renderer/types/electron.d.ts`.
-4. **Feature flag** — add `agentic.subagentUx` (default `true`) to `configSchema.ts` / `configSchemaMiddle.ts` / `configSchemaTail.ts` (pick the appropriate file to stay under 300-line cap).
+Shared types (SubagentInfo, SubagentTree, SubagentIpcApi) + IPC type declarations.
 
-⚠️ **Verify steps 1–4 yourself.** The subagent claimed it'd do them but may not have. Check `git diff` vs master if in doubt.
+### Phase A items NOT yet done (deferred to later phases)
+
+1. **IPC registration wiring** — `registerSubagentHandlers` is NOT yet called from `src/main/ipc.ts`. Wire it when integrating Phase B.
+2. **Feature flag** — `agentic.subagentUx` not yet added to config schema. Add when Phase B UI lands.
+3. **Real cancellation** — `subagent:kill` is a stub. Phase C will wire real PTY kill.
 
 ---
 
@@ -179,9 +144,26 @@ Cancel is currently a **stub** — marks record cancelled in tracker. Phase C wi
 
 ---
 
-## 6. Test infrastructure — permanent fixes (do not undo)
+## 7. Test infrastructure — notes
 
-The earlier session burned ~45 minutes on test hangs. Two fixes are now in place — **do not remove or weaken them**:
+### Full suite is green
+
+All 379 test files (4272 tests) pass as of commit `dcd9b2b`. The test fix commit (`6a5df23`) repaired 19 pre-existing failures caused by:
+- **Config schema validation at import time** — `config.ts:384` creates `new Store<AppConfig>()` at module scope. Any test that transitively imports it crashes. Fix: mock upstream modules (e.g., `vi.mock('../config', ...)`).
+- **Channel count drift** — new IPC channels added without updating test assertions.
+- **PtyPersistence interface change** — mock methods didn't match interface.
+- **Monaco + jsdom** — `document.queryCommandSupported` not implemented in jsdom; `pdfjs-dist` needs `DOMMatrix`. Fix: mock `./ContentRouter` and `./PdfViewer` to cut off heavy native deps.
+
+### Pre-existing lint errors (3 remaining, NOT introduced by test fixes)
+
+```
+agentChatCost.test.ts:56     security/detect-object-injection  (pre-existing)
+profileCrud.test.ts:91-92    security/detect-object-injection  (pre-existing)
+```
+
+These are in unmodified code and do not block commits (no pre-commit hooks exist). Fix opportunistically if touching those files.
+
+### Permanent test infra (do not undo)
 
 ### Fix 1 — Global `electron-log/renderer` mock
 
@@ -350,19 +332,19 @@ Track these but only touch them if a wave explicitly covers them.
 
 ```
 [ ] Read this handoff (you're doing it)
-[ ] git log --oneline -10          # confirm last commit is e2d89f3
-[ ] git status                      # confirm 5 untracked Wave 27 files
+[ ] git log --oneline -10          # confirm last commit is dcd9b2b (Phase A)
+[ ] git status                      # confirm clean working tree
 [ ] Read roadmap/wave-27-plan.md
-[ ] Read src/main/agentChat/subagentTracker.ts (spot-check exports)
-[ ] Read src/main/ipc-handlers/subagent.ts (spot-check registration)
-[ ] npm run typecheck
-[ ] npm run lint
-[ ] npm test -- subagentTracker subagent
-[ ] If green: wire into src/main/ipc.ts + preload + feature flag, re-run full test, commit Phase A
-[ ] Launch Sonnet subagent for Phase B (SubagentPanel UI)
-[ ] Continue through Wave 27 → Wave 28 → … → Wave 40
+[ ] Implement Phase B (SubagentPanel UI + sidebar chip)
+[ ] npm run typecheck && npm run lint && npm test
+[ ] Commit: feat: Wave 27 Phase B — SubagentPanel UI + live-count chip
+[ ] Implement Phase C (cancellation + cost dashboard rollup)
+[ ] npm run typecheck && npm run lint && npm test
+[ ] Commit: feat: Wave 27 Phase C — cancel + cost rollup
+[ ] Push all commits
+[ ] Continue to Wave 28 → … → Wave 40
 ```
 
 ---
 
-*Handoff authored at commit `e2d89f3`, 2026-04-16. Delete this file after Wave 40 closes.*
+*Handoff updated at commit `dcd9b2b`, 2026-04-17. Delete this file after Wave 40 closes.*
