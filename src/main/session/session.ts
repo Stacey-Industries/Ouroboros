@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type { PinnedContextItem } from '@shared/types/pinnedContext';
 
+import { getProfileStore } from '../profiles/profileStore';
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export type AgentMonitorViewMode = 'verbose' | 'normal' | 'summary';
@@ -75,6 +77,8 @@ export interface Session {
 export function makeSession(projectRoot: string): Session {
   const id = randomUUID();
   const now = new Date().toISOString();
+  const profileStore = getProfileStore();
+  const defaultProfileId = profileStore?.getDefaultProfile(projectRoot) ?? undefined;
   return {
     id,
     createdAt: now,
@@ -88,5 +92,6 @@ export function makeSession(projectRoot: string): Session {
     costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },
     telemetry: { correlationIds: [], telemetrySessionId: id },
     agentMonitorSettings: { ...DEFAULT_AGENT_MONITOR_SETTINGS },
+    profileId: defaultProfileId,
   };
 }

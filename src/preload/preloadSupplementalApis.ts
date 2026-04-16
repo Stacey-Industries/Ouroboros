@@ -19,6 +19,7 @@ import { agentChatApi } from './preloadSupplementalAgentChatApis';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import { folderCrudApi } from './preloadSupplementalFolderApis';
 import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
+import { profileCrudApi } from './preloadSupplementalProfileApis';
 import { researchApi } from './preloadSupplementalResearchApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 import { sessionCrudApi } from './preloadSupplementalSessionApis';
@@ -31,8 +32,8 @@ type SupplementalApiKey =
   | 'context' | 'ideTools' | 'codemode' | 'agentChat' | 'orchestration'
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
-  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'research'
-  | 'workspaceReadList';
+  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
+  | 'research' | 'workspaceReadList';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -271,6 +272,7 @@ export const supplementalApis: SupplementalApis = {
   sessionCrud: sessionCrudApi,
   folderCrud: folderCrudApi,
   pinnedContext: pinnedContextApi,
+  profileCrud: profileCrudApi,
   research: researchApi,
   workspaceReadList: workspaceReadListApi,
 };

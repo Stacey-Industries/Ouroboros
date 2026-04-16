@@ -373,6 +373,10 @@ export interface AppConfig {
   context?: ContextScoringSettings;
   /** Wave 21 Phase D — user-created session folders */
   sessionFolders?: SessionFolder[];
+  /** Wave 26 Phase A — user profiles (built-ins merged at read time) */
+  profiles?: import('@shared/types/profile').Profile[];
+  /** Wave 26 Phase A — per-project default profile: projectRoot → profileId */
+  workspaceProfileDefaults?: Record<string, string>;
 }
 
 export const store = new Store<AppConfig>({

@@ -296,6 +296,10 @@ export const tailSchema = {
   },
   /** Wave 25 Phase E — workspace read-list: project root → file paths auto-pinned at session open */
   workspaceReadLists: { type: 'object', additionalProperties: { type: 'array', items: { type: 'string' } }, default: {} },
+  /** Wave 26 Phase A — user profiles (built-ins are merged at read time, never stored) */
+  profiles: { type: 'array', items: { type: 'object' }, default: [] },
+  /** Wave 26 Phase A — per-project default profile: projectRoot → profileId */
+  workspaceProfileDefaults: { type: 'object', additionalProperties: { type: 'string' }, default: {} },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,
