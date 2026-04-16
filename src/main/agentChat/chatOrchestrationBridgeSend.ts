@@ -170,6 +170,7 @@ export function buildStreamContext({
       0,
     ),
     sendStartedAt,
+    outcomeTraceId: pending.outcomeTraceId ?? undefined,
   };
 }
 

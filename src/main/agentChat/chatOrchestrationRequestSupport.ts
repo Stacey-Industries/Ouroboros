@@ -30,6 +30,12 @@ export interface PreparedSend {
   thread: AgentChatThreadRecord;
   /** How the model was selected for this send ('rule', 'classifier', 'user', etc.). */
   routedBy?: string;
+  /**
+   * Router traceId for this send — populated when the router fires and a
+   * context packet is built. Forwarded to ActiveStreamContext.outcomeTraceId
+   * so the Phase B outcome observer can correlate tool-call touches.
+   */
+  outcomeTraceId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +187,8 @@ export function resolveSendOptions(
 
   const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
   if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);
+  // Carry traceId forward so the bridge can populate ActiveStreamContext.outcomeTraceId
+  if (traceId) resolved.outcomeTraceId = traceId;
   return resolved;
 }
 
@@ -220,6 +228,7 @@ export async function preparePendingSend(args: {
     }),
     thread,
     routedBy: args.resolved.routedBy,
+    outcomeTraceId: args.resolved.outcomeTraceId,
   };
 }
 

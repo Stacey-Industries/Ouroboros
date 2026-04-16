@@ -38,6 +38,11 @@ export interface ResolvedSendOptions {
   permissionMode: string;
   /** How the model was selected: 'rule', 'classifier', 'llm', 'user', or undefined (provider default). */
   routedBy?: string;
+  /**
+   * Router traceId for this send, forwarded from applyRouterOverride.
+   * Used by the Phase B context outcome observer to link decisions ↔ outcomes.
+   */
+  outcomeTraceId?: string;
 }
 
 const DEFAULT_MODE: OrchestrationMode = 'edit';

@@ -6,6 +6,7 @@
  * ESLint limit. Called once per packet build with the final ranked file list.
  */
 
+import { recordTurnStart } from './contextOutcomeObserver';
 import type { ContextSelectionResult } from './contextSelector';
 import { emitContextDecisions } from './contextSignalCollector';
 import type { RankedContextFile } from './types';
@@ -14,6 +15,9 @@ import type { RankedContextFile } from './types';
  * Derive ContextFeatures + FinalDecision pairs from the selector result and
  * the set of files that made it into the packet, then hand them to the
  * contextSignalCollector for JSONL writing.
+ *
+ * Also registers the turn with the outcome observer so that subsequent tool
+ * calls can be tracked against the included-file set (Phase B).
  *
  * No-op when traceId is absent (cache-hit paths re-use the original trace).
  */
@@ -41,4 +45,10 @@ export function emitDecisionsForPacket(
   }));
 
   emitContextDecisions(traceId, features, final);
+
+  // Phase B — register the included files so the outcome observer can
+  // classify tool-call touches during this turn.
+  // turnId = traceId; tool events will be routed via sessionId → traceId map.
+  const includedFiles = files.map((f) => ({ fileId: f.filePath, path: f.filePath }));
+  recordTurnStart(traceId, traceId, includedFiles);
 }

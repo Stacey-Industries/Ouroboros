@@ -7,6 +7,7 @@
 import type { HookPayload } from '../hooks';
 import { dispatchSyntheticHookEvent, endChatSessionLaunch } from '../hooks';
 import log from '../logger';
+import { registerSessionTrace } from '../orchestration/contextOutcomeObserver';
 import type {
   ActiveStreamContext,
   AgentChatBridgeRuntime,
@@ -78,6 +79,11 @@ export function ensureMonitorSessionStarted(ctx: ActiveStreamContext, now: numbe
   if (!ctx.providerSessionId) return;
   ctx.monitorStartEmitted = true;
   endChatSessionLaunch();
+  // Register the sessionId → traceId mapping so the hooks tap can route
+  // post_tool_use events to the correct outcome observer turn.
+  if (ctx.outcomeTraceId) {
+    registerSessionTrace(ctx.threadId, ctx.outcomeTraceId);
+  }
   dispatchSyntheticHookEvent({
     type: 'agent_start',
     sessionId: ctx.threadId,

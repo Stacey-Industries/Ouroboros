@@ -63,6 +63,13 @@ export interface ActiveStreamContext {
   sendStartedAt?: number;
   /** Set once the first streaming chunk has been emitted; gates the TTFC log. */
   firstChunkLogged?: boolean;
+  /**
+   * Router traceId for the context packet built for this turn. Used by the
+   * Phase B context outcome observer to link tool-call touches back to the
+   * decisions JSONL (join key: traceId on decisions ↔ traceId on outcomes).
+   * Absent when the router is disabled or no packet was built.
+   */
+  outcomeTraceId?: string;
 }
 
 export interface AgentChatBridgeRuntime {

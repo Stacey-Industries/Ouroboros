@@ -10,6 +10,7 @@ import {
   toolRequiresApproval,
 } from './approvalManager';
 import { getChatLaunchesInFlight } from './hooksChatLaunch';
+import { tapContextOutcomeObserver } from './hooksContextOutcome';
 import {
   drainQueue,
   evictOrphanedSessions as evictOrphanedSessionsLogic,
@@ -296,6 +297,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   clearApprovalRulesForEndedSession(payload);
   tapConflictMonitor(payload);
   tapEditProvenance(payload);
+  tapContextOutcomeObserver(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -348,6 +350,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   dispatchLifecycleEvent(payload);
   tapConflictMonitor(payload);
   tapEditProvenance(payload);
+  tapContextOutcomeObserver(payload);
 }
 
 export function getHooksAddress(): string | null {

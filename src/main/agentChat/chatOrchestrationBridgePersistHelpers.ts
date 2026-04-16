@@ -6,6 +6,7 @@
  * finally-block patterns that are common across all four persist functions.
  */
 
+import { recordTurnEnd } from '../orchestration/contextOutcomeObserver';
 import { emitMonitorSessionEnd, emitStreamChunk } from './chatOrchestrationBridgeMonitor';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
 import type { AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord } from './types';
@@ -89,6 +90,8 @@ export function emitTurnComplete(
   });
   emitMonitorSessionEnd(ctx, Date.now(), monitorLabel);
   runtime.activeSends.delete(ctx.taskId);
+  // Phase B: close out the outcome observer turn for this traceId.
+  if (ctx.outcomeTraceId) recordTurnEnd(ctx.outcomeTraceId);
 }
 
 /** Emit error chunk + monitor end + remove from activeSends (used by failed turns). */
@@ -106,4 +109,6 @@ export function emitTurnError(
   });
   emitMonitorSessionEnd(ctx, Date.now(), errorMessage);
   runtime.activeSends.delete(ctx.taskId);
+  // Phase B: close out the outcome observer turn for this traceId.
+  if (ctx.outcomeTraceId) recordTurnEnd(ctx.outcomeTraceId);
 }

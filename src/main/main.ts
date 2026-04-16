@@ -42,6 +42,7 @@ import {
 } from './mainStartup';
 import { buildApplicationMenu } from './menu';
 import { closeDecisionWriter, initDecisionWriter } from './orchestration/contextDecisionWriter';
+import { closeOutcomeWriter, initOutcomeWriter } from './orchestration/contextOutcomeWriter';
 import { buildRepoIndexSnapshot } from './orchestration/repoIndexer';
 import {
   cleanupPerfSubscriber,
@@ -242,7 +243,7 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
-  initDecisionWriter(app.getPath('userData')); // Wave 24: context decision JSONL writer
+  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); // Wave 24
   initEditProvenance(app.getPath('userData')); // Wave 18: edit provenance tracking
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
@@ -300,10 +301,9 @@ app.on('window-all-closed', async () => {
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
   closeSessionServices();
-  await closeDecisionWriter();
+  await closeDecisionWriter(); await closeOutcomeWriter();
   closeOutcomeObserver(); closeTelemetryStore(); closeEditProvenance();
-  stopRetrainObserver();
-  clearQualityTimers();
+  stopRetrainObserver(); clearQualityTimers();
   await stopClaudeUsagePoller();
   cleanupIpcHandlers();
   closeCostHistoryDb();
