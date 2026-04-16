@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import log from '../logger';
 import { cacheKey, getResearchCache, ttlForLibrary } from './researchCache';
+import { getResearchCorrelationStore } from './researchCorrelation';
 import { buildResearchPrompt } from './researchPrompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,6 +31,8 @@ export interface ResearchInput {
   topic: string;
   library?: string;
   version?: string;
+  /** Wave 25 Phase D: chat session (thread) ID for outcome correlation. */
+  sessionId?: string;
 }
 
 export interface SpawnClaudeDeps {
@@ -201,7 +204,11 @@ export async function runResearch(
   const cache = getResearchCache(path.join(userDataPath, 'research-cache.db'));
 
   const hit = cache.get(key);
-  if (hit) return { ...hit, cached: true };
+  if (hit) {
+    const hitArtifact = { ...hit, cached: true };
+    recordCorrelation(hitArtifact.correlationId, input);
+    return hitArtifact;
+  }
 
   const spawnResult = await spawnResearchClaude(buildResearchPrompt(input), deps);
   if (!spawnResult.success || !spawnResult.output) {
@@ -213,5 +220,15 @@ export async function runResearch(
   if (!artifact) return failureArtifact(input, id);
 
   persistArtifact(cache, key, artifact, input.library ?? '');
+  recordCorrelation(artifact.correlationId, input);
   return artifact;
+}
+
+function recordCorrelation(correlationId: string, input: ResearchInput): void {
+  if (!input.sessionId) return;
+  try {
+    getResearchCorrelationStore().recordInvocation(correlationId, input.sessionId, input.topic);
+  } catch (err) {
+    log.warn('[research] Failed to record correlation:', err);
+  }
 }

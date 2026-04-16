@@ -15,6 +15,7 @@
  */
 
 import log from '../logger';
+import { attributeResearchOutcome } from './contextOutcomeObserverResearch';
 import type { ContextOutcomeWriter } from './contextOutcomeWriter';
 import { getOutcomeWriter } from './contextOutcomeWriter';
 import type { ContextOutcome } from './contextTypes';
@@ -198,6 +199,8 @@ export function observeToolCall(
  * Route a tool-use event from a hook sessionId to the correct active turn.
  * Uses the sessionId → traceId map populated by `registerSessionTrace`.
  * No-op if the session has no registered traceId or the turn is not active.
+ *
+ * Also calls research outcome correlation (Wave 25 Phase D) for Edit/Write tools.
  */
 export function observeToolCallBySession(
   sessionId: string,
@@ -207,6 +210,11 @@ export function observeToolCallBySession(
   const traceId = sessionTraceMap.get(sessionId);
   if (!traceId) return;
   observeToolCall(traceId, toolName, args);
+  // Wave 25 Phase D: attribute file-touching tools to research invocations.
+  if (isFileTouchingTool(toolName)) {
+    const filePath = extractPath(args);
+    if (filePath) attributeResearchOutcome(sessionId, toolName, filePath);
+  }
 }
 
 /**

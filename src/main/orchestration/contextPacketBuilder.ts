@@ -4,6 +4,7 @@ import log from '../logger';
 import { emitDecisionsForPacket } from './contextPacketBuilderDecisions';
 import { buildFilePayload } from './contextPacketBuilderHelpers';
 import { extractGoalKeywords } from './contextPacketBuilderKeywords';
+import { injectPinnedContext } from './contextPacketBuilderPins';
 import {
   buildBudgetSummary,
   DEFAULT_MAX_BYTES,
@@ -317,7 +318,7 @@ async function buildFullContextPacket(options: {
   liveIdeState?: LiveIdeState;
   model?: string;
   repoSnapshot?: RepoIndexSnapshot;
-  traceId?: string;
+  traceId?: string; sessionId?: string;
 }): Promise<ContextPacketBuildResult> {
   const { selection, files, omittedCandidates, budget } = await selectAndBuildFiles(options);
   emitDecisionsForPacket(options.traceId, selection, files);
@@ -332,6 +333,7 @@ async function buildFullContextPacket(options: {
     omittedCandidates,
     budget,
   };
+  if (options.sessionId) packet = injectPinnedContext(packet, options.sessionId, budget);
   packet = await enrichPacket(packet, options.request);
   return { selection, packet };
 }
@@ -344,13 +346,11 @@ export async function buildContextPacket(options: {
   repoSnapshot?: RepoIndexSnapshot;
   /** Wave 15: routing trace ID — join key for orchestration_traces rows (Wave 24 populates). */
   traceId?: string;
+  /** Wave 25 Phase D: chat session ID for pinned context injection. */
+  sessionId?: string;
 }): Promise<ContextPacketBuildResult> {
   const cacheKey = options.request.workspaceRoots.slice().sort().join('|');
-  const fingerprint = computeContextFingerprint(
-    options.request,
-    options.repoFacts,
-    options.liveIdeState,
-  );
+  const fingerprint = computeContextFingerprint(options.request, options.repoFacts, options.liveIdeState);
   const cachedResult = checkContextPacketCache(cacheKey, fingerprint, options.request);
   if (cachedResult) return cachedResult;
 

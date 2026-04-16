@@ -154,6 +154,9 @@ export function buildBaseTaskRequest(args: {
   resumeSessionId: string | undefined;
 }): TaskRequest {
   return {
+    // Wave 25 Phase D: carry thread ID as sessionId so the context packet builder
+    // can query pinnedContextStore for this chat session.
+    sessionId: args.thread.id,
     workspaceRoots: [args.thread.workspaceRoot],
     goal: args.content,
     mode: args.resolved.mode,

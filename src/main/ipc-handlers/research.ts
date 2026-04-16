@@ -1,15 +1,17 @@
 /**
  * ipc-handlers/research.ts — IPC handler registrar for the research subagent
- * (Wave 25 Phase B).
+ * (Wave 25 Phase B/D).
  *
- * Channel:
- *   research:invoke  { topic, library?, version? } → { success, artifact? }
+ * Channels:
+ *   research:invoke             { topic, library?, version? } → { success, artifact? }
+ *   research:getSessionOutcomes { sessionId }                 → { success, correlations? }
  */
 
 import type { ResearchArtifact } from '@shared/types/research';
 import { ipcMain } from 'electron';
 
 import log from '../logger';
+import { getResearchCorrelationStore, type SessionCorrelationSummary } from '../research/researchCorrelation';
 import { runResearch } from '../research/researchSubagent';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
@@ -26,7 +28,7 @@ function fail(err: unknown): FailResult {
   return { success: false, error: msg };
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
+// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 interface InvokeArgs {
   topic?: string;
@@ -47,6 +49,21 @@ async function handleInvoke(
     version: typeof version === 'string' ? version : undefined,
   });
   return ok({ artifact });
+}
+
+interface GetSessionOutcomesArgs {
+  sessionId?: string;
+}
+
+function handleGetSessionOutcomes(
+  args: unknown,
+): OkResult<{ correlations: SessionCorrelationSummary[] }> | FailResult {
+  const { sessionId } = (args ?? {}) as GetSessionOutcomesArgs;
+  if (typeof sessionId !== 'string' || !sessionId.trim()) {
+    return fail('sessionId is required');
+  }
+  const correlations = getResearchCorrelationStore().summarizeSession(sessionId.trim());
+  return ok({ correlations });
 }
 
 // ─── Registration ─────────────────────────────────────────────────────────────
@@ -73,6 +90,7 @@ export function registerResearchHandlers(): string[] {
   }
 
   reg('research:invoke', (args) => handleInvoke(args));
+  reg('research:getSessionOutcomes', async (args) => handleGetSessionOutcomes(args));
 
   registeredChannels = channels;
   return channels;

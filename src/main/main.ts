@@ -55,6 +55,7 @@ import {
 import { deleteTokenFile, generatePipeTokens, setTokenFilePath } from './pipeAuth';
 import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandler';
 import { killAllPtySessions } from './pty';
+import { closeResearchOutcomeWriter, initResearchOutcomeWriter } from './research/researchOutcomeWriter';
 import { clearQualityTimers } from './router/qualitySignalCollector';
 import {
   loadRetrainedWeightsIfAvailable,
@@ -243,8 +244,7 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
-  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); // Wave 24
-  initEditProvenance(app.getPath('userData')); // Wave 18: edit provenance tracking
+  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initEditProvenance(_ud); // Wave 18/24/25
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
   await migrateSecretsIfNeeded();
@@ -301,7 +301,7 @@ app.on('window-all-closed', async () => {
 // renderer IPC calls dispatched during beforeunload can still resolve.
 app.on('will-quit', async () => {
   closeSessionServices();
-  await closeDecisionWriter(); await closeOutcomeWriter();
+  await closeDecisionWriter(); await closeOutcomeWriter(); await closeResearchOutcomeWriter();
   closeOutcomeObserver(); closeTelemetryStore(); closeEditProvenance();
   stopRetrainObserver(); clearQualityTimers();
   await stopClaudeUsagePoller();

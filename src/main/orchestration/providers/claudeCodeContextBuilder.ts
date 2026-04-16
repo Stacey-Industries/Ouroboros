@@ -135,6 +135,8 @@ export function buildXmlContextBlock(context: ProviderLaunchContext | ProviderRe
   const packet = context.contextPacket
   if (!packet) return ''
   const sections: string[] = []
+  // Pinned context injected first — prefix-cacheable, appears before file candidates
+  if (packet.pinnedContext) sections.push('<pinned_context>\n' + packet.pinnedContext + '</pinned_context>')
   sections.push('<ide_context>')
   sections.push(buildCurrentFocusSection(packet))
   sections.push(buildWorkspaceStateSection(packet))

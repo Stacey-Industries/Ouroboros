@@ -209,4 +209,10 @@ export interface ContextPacket {
   systemInstructions?: string;
   /** Expanded skill body — injected as hidden context alongside system instructions */
   skillInstructions?: string;
+  /**
+   * Wave 25 Phase D: rendered pinned context sections (one per non-dismissed pin).
+   * Each section is `=== [Pin: <title>] ===\n<content>\n`. Injected before file
+   * candidates so they are prefix-cacheable.
+   */
+  pinnedContext?: string;
 }

@@ -9,6 +9,7 @@
 import { formatMemoriesForContext } from '../agentChat/memoryExtractor';
 import { sessionMemoryStore } from '../agentChat/sessionMemory';
 import log from '../logger';
+import { injectPinnedContext } from '../orchestration/contextPacketBuilderPins';
 import { formatGraphSummary } from '../orchestration/graphSummaryBuilder';
 import { createClaudeCodeAdapter } from '../orchestration/providers/claudeCodeAdapter';
 import { createCodexAdapter } from '../orchestration/providers/codexAdapter';
@@ -128,10 +129,18 @@ async function createTask(
   const taskId = request.taskId ?? createId('task');
   const sessionId = request.sessionId ?? createId('session');
 
-  const contextPacket = resolveContextPacket(request);
+  let contextPacket = resolveContextPacket(request);
   await injectMemories(contextPacket ?? ({} as ContextPacket), request.workspaceRoots);
   if (request.skillExpansion && contextPacket)
     contextPacket.skillInstructions = request.skillExpansion;
+  // Wave 25 Phase D: inject pinned context for this chat session (thread ID).
+  if (contextPacket && request.sessionId) {
+    contextPacket = injectPinnedContext(
+      contextPacket,
+      request.sessionId,
+      contextPacket.budget,
+    );
+  }
 
   const session: TaskSessionRecord = {
     version: 1,
