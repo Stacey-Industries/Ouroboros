@@ -1,5 +1,6 @@
 import {
   OPEN_SETTINGS_PANEL_EVENT,
+  OPEN_THREAD_EVENT,
   OPEN_THREAD_SEARCH_EVENT,
   SPLIT_EDITOR_EVENT,
 } from '../../hooks/appEventNames';
@@ -259,6 +260,38 @@ function gitCommands(): Command[] {
   ];
 }
 
+/**
+ * Parse a user-supplied thread navigation target into `{ threadId, messageId? }`.
+ * Accepts `thread://<id>#msg=<msgId>` permalinks or a bare thread id.
+ * Returns null for empty input.
+ */
+function parseThreadGotoInput(raw: string): { threadId: string; messageId?: string } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith('thread://')) return { threadId: trimmed };
+  const body = trimmed.slice('thread://'.length);
+  const hashIdx = body.indexOf('#');
+  const rawThreadId = hashIdx === -1 ? body : body.slice(0, hashIdx);
+  const fragment = hashIdx === -1 ? '' : body.slice(hashIdx + 1);
+  try {
+    const threadId = decodeURIComponent(rawThreadId);
+    if (!threadId) return null;
+    const msgMatch = fragment.startsWith('msg=') ? decodeURIComponent(fragment.slice(4)) : '';
+    return msgMatch ? { threadId, messageId: msgMatch } : { threadId };
+  } catch {
+    return null;
+  }
+}
+
+function runGotoThread(): void {
+  if (typeof window === 'undefined') return;
+  const input = window.prompt('Go to thread (thread://<id> or plain ID):');
+  if (input == null) return;
+  const parsed = parseThreadGotoInput(input);
+  if (!parsed) return;
+  window.dispatchEvent(new CustomEvent(OPEN_THREAD_EVENT, { detail: parsed }));
+}
+
 /** Thread / search commands (flat). */
 function threadCommands(): Command[] {
   return [
@@ -271,6 +304,13 @@ function threadCommands(): Command[] {
       action: () => {
         dispatchIdeEvent(OPEN_THREAD_SEARCH_EVENT);
       },
+    },
+    {
+      id: 'threads:goto',
+      label: 'Go to Thread\u2026',
+      category: 'app',
+      icon: '\u{1F517}',
+      action: runGotoThread,
     },
   ];
 }

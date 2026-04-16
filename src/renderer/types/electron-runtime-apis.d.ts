@@ -289,6 +289,8 @@ export interface AppAPI {
   zoomReset: () => Promise<IpcResult>;
   /** Subscribe to startup failure notifications for critical services */
   onStartupWarning: (callback: (payload: { name: string; message: string }) => void) => () => void;
+  /** Subscribe to thread:// permalink navigation events from main. */
+  onNavigateToPermalink: (callback: (payload: { threadId: string; messageId?: string }) => void) => () => void;
 }
 
 export interface ShellAPI {

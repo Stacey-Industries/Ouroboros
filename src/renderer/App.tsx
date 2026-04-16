@@ -30,6 +30,7 @@ import { useExtensionThemes } from './hooks/useExtensionThemes';
 import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
 import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
+import { usePermalinkBridge } from './hooks/usePermalinkBridge';
 import { useProjectManagement } from './hooks/useProjectManagement';
 import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
@@ -194,6 +195,7 @@ function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<s
   useExtensionThemes();
   useLspDiagnosticsSync();
   useFirstLaunchAuth();
+  usePermalinkBridge();
   useInnerAppLifecycle({ ctx, layouts, palette, project, registerCommand, setTheme, terminal, uiState, keybindings });
   return { ctx, palette, commands, recentIds, layouts, terminal, project, uiState, handleExecute };
 }

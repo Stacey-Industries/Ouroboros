@@ -224,6 +224,15 @@ const appAPI: ElectronAPI['app'] = {
     ipcRenderer.on('app:startupWarning', handler);
     return () => ipcRenderer.removeListener('app:startupWarning', handler);
   },
+
+  onNavigateToPermalink: (callback) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: { threadId: string; messageId?: string },
+    ) => callback(payload);
+    ipcRenderer.on('app:navigateToPermalink', handler);
+    return () => ipcRenderer.removeListener('app:navigateToPermalink', handler);
+  },
 };
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

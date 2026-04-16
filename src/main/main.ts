@@ -51,6 +51,7 @@ import {
   stopPerfMetrics as stopManagedPerfMetrics,
 } from './perfMetrics';
 import { deleteTokenFile, generatePipeTokens, setTokenFilePath } from './pipeAuth';
+import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandler';
 import { killAllPtySessions } from './pty';
 import { clearQualityTimers } from './router/qualitySignalCollector';
 import {
@@ -103,16 +104,10 @@ function notifyStartupFailure(name: string, err: unknown): void {
 }
 
 async function runStartupStep(
-  errorMessage: string,
-  step: () => Promise<unknown> | unknown,
-  critical = false,
+  errorMessage: string, step: () => Promise<unknown> | unknown, critical = false,
 ): Promise<void> {
-  try {
-    await step();
-  } catch (err) {
-    log.error(errorMessage, err);
-    if (critical) notifyStartupFailure(errorMessage, err);
-  }
+  try { await step(); }
+  catch (err) { log.error(errorMessage, err); if (critical) notifyStartupFailure(errorMessage, err); }
 }
 
 async function startIdeTools(): Promise<void> {
@@ -178,20 +173,21 @@ function registerRenderProcessCrashLogging(): void {
   });
 }
 
+function focusLastWindow(): void {
+  const windows = getAllActiveWindows();
+  if (windows.length === 0) return;
+  const win = windows[windows.length - 1];
+  if (win.isMinimized()) win.restore();
+  win.focus();
+}
+
 function registerWindowLifecycleHandlers(): void {
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
   });
-
-  app.on('second-instance', () => {
-    const windows = getAllActiveWindows();
-    if (windows.length > 0) {
-      const win = windows[windows.length - 1];
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
+  app.on('second-instance', (_event, argv) => {
+    focusLastWindow();
+    dispatchPermalinkFromArgv(argv);
   });
 }
 
@@ -276,6 +272,7 @@ async function initializeApplication(): Promise<void> {
   markStartup('services-ready');
 }
 
+setupThreadProtocol();
 app.whenReady().then(initializeApplication);
 
 app.on('window-all-closed', async () => {
