@@ -25,6 +25,7 @@ import type {
 } from './electron-observability';
 import type { OrchestrationAPI } from './electron-orchestration';
 import type { PinnedContextAPI } from './electron-pinned-context';
+import type { ResearchAPI } from './electron-research';
 import type { RulesAndSkillsAPI } from './electron-rules-skills';
 import type {
   AppAPI,
@@ -281,6 +282,7 @@ export interface ElectronAPI {
   sessionCrud: SessionCrudAPI;
   folderCrud: FolderCrudAPI;
   pinnedContext: PinnedContextAPI;
+  research: ResearchAPI;
 }
 
 export interface WorkspaceAPI {
