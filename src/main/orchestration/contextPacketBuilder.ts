@@ -11,6 +11,7 @@ import {
   getFileTier,
   getModelBudgets,
 } from './contextPacketBuilderSupport';
+import { rerankRankedFiles } from './contextReranker';
 import { type ContextFileSnapshot } from './contextSelectionSupport';
 import { type ContextSelectionResult, selectContextFiles } from './contextSelector';
 import type { RepoIndexSnapshot } from './repoIndexer';
@@ -168,8 +169,7 @@ async function enrichPacketWithContextLayer(
   return packet;
 }
 
-type OmittedCandidates = ContextPacket['omittedCandidates'];
-type PacketBudget = ReturnType<typeof buildBudgetSummary>;
+type OmittedCandidates = ContextPacket['omittedCandidates']; type PacketBudget = ReturnType<typeof buildBudgetSummary>;
 
 interface BuildFilesOptions {
   selection: ContextSelectionResult;
@@ -298,7 +298,8 @@ async function selectAndBuildFiles(
   input: SelectAndBuildInput,
 ): Promise<{ selection: ContextSelectionResult; files: RankedContextFile[]; omittedCandidates: OmittedCandidates; budget: PacketBudget }> {
   const modelBudgets = getModelBudgets(input.model ?? '');
-  const selection = await selectContextFiles(input);
+  const rawSelection = await selectContextFiles(input);
+  const selection: ContextSelectionResult = { ...rawSelection, rankedFiles: await rerankRankedFiles(input.request.goal, rawSelection.rankedFiles) };
   const snapshotCache = new Map(Object.entries(selection.snapshots));
   const budget = buildBudgetSummary(
     input.request.budget?.maxBytes ?? modelBudgets.maxBytes,

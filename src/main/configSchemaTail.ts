@@ -294,7 +294,7 @@ export const tailSchema = {
       branchingPolish: { type: 'boolean', default: true },
     },
   },
-  /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging */
+  /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,
     properties: {
@@ -303,15 +303,12 @@ export const tailSchema = {
       pagerankSeeds: {
         type: 'object',
         additionalProperties: false,
-        properties: {
-          pinned: { type: 'number', default: 0.5 },
-          symbol: { type: 'number', default: 0.3 },
-          user_edit: { type: 'number', default: 0.2 },
-        },
+        properties: { pinned: { type: 'number', default: 0.5 }, symbol: { type: 'number', default: 0.3 }, user_edit: { type: 'number', default: 0.2 } },
         default: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 },
       },
       decisionLogging: { type: 'boolean', default: true }, // Wave 24 Phase A
+      rerankerEnabled: { type: 'boolean', default: false }, // Wave 24 Phase C — off by default; Claude CLI cold-start ~1-3s exceeds the 500ms target. Opt-in via config.
     },
-    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true },
+    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true, rerankerEnabled: false },
   },
 };
