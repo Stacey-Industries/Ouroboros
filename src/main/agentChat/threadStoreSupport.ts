@@ -4,9 +4,35 @@ import type {
   AgentChatMessageRecord,
   AgentChatOrchestrationLink,
   AgentChatThreadRecord,
+  AgentChatThreadStatus,
 } from './types';
 import { isNonEmptyString } from './utils';
 export { isNonEmptyString } from './utils';
+
+// ── Thread store option / patch types (used by threadStore.ts + consumers) ───
+
+export interface CreateAgentChatThreadOptions {
+  status?: AgentChatThreadStatus;
+  messages?: AgentChatMessageRecord[];
+  latestOrchestration?: AgentChatOrchestrationLink;
+}
+
+export interface AgentChatThreadPatch {
+  title?: string;
+  status?: AgentChatThreadStatus;
+  latestOrchestration?: AgentChatOrchestrationLink;
+}
+
+export type AgentChatMessagePatch = Partial<
+  Omit<AgentChatMessageRecord, 'id' | 'threadId' | 'createdAt'>
+>;
+
+export interface AgentChatThreadStoreOptions {
+  createId?: () => string;
+  maxThreads?: number;
+  now?: () => number;
+  threadsDir?: string;
+}
 
 export const DEFAULT_THREAD_TITLE = 'New Chat';
 

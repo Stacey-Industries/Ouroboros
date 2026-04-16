@@ -28,6 +28,7 @@ export type {
   AgentChatMessageStatusKind,
   AgentChatMessageUpdatedEvent,
   AgentChatOrchestrationLink,
+  AgentChatReactionsResult,
   AgentChatSearchPayload,
   AgentChatSearchResult,
   AgentChatSendMessageMetadata,
@@ -50,6 +51,7 @@ export type {
   GlobalCostRollupRecord,
   ImageAttachment,
   ImageMimeType,
+  Reaction,
   SessionMemoryEntry,
   ThreadCostRollupRecord,
 } from '@shared/types/agentChat';

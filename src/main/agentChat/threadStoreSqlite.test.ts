@@ -264,6 +264,78 @@ describe('ThreadStoreSqliteRuntime', () => {
     });
   });
 
+  describe('schema v6→v7 migration', () => {
+    it('adds reactions and collapsedByDefault columns and preserves data', async () => {
+      const dbPath = path.join(tmpDir, 'threads.db');
+
+      // Build a v6 fixture — threads + messages without the v7 columns
+      const db = openDatabase(dbPath);
+      runTransaction(db, () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS threads (
+            id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
+            createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+            title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
+            latestOrchestration TEXT, branchInfo TEXT, tags TEXT,
+            pinned INTEGER DEFAULT 0, deletedAt INTEGER
+          );
+          CREATE TABLE IF NOT EXISTS messages (
+            id TEXT NOT NULL, threadId TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+            role TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', createdAt INTEGER NOT NULL,
+            statusKind TEXT, orchestration TEXT, contextSummary TEXT,
+            verificationPreview TEXT, error TEXT, toolsSummary TEXT,
+            costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
+            model TEXT, checkpointCommit TEXT,
+            PRIMARY KEY (id, threadId)
+          );
+        `);
+        db.prepare(
+          `INSERT INTO threads (id, workspaceRoot, createdAt, updatedAt, title, status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        ).run('v6-thread', '/workspace', 1000, 2000, 'Old Thread v6', 'idle');
+        db.prepare(
+          `INSERT INTO messages (id, threadId, role, content, createdAt)
+           VALUES (?, ?, ?, ?, ?)`,
+        ).run('v6-msg-1', 'v6-thread', 'user', 'Hello from v6', 3000);
+        setSchemaVersion(db, 6);
+      });
+      db.close();
+
+      // Open via runtime — triggers v6→v7 migration
+      const migrated = new ThreadStoreSqliteRuntime({
+        maxThreads: 100,
+        now: () => tick(),
+        threadsDir: tmpDir,
+      });
+
+      try {
+        // Verify existing thread and message data are preserved
+        const thread = await migrated.readThread('v6-thread');
+        expect(thread).not.toBeNull();
+        expect(thread!.title).toBe('Old Thread v6');
+        expect(thread!.messages).toHaveLength(1);
+        expect(thread!.messages[0].content).toBe('Hello from v6');
+
+        // Verify new columns exist and default correctly by round-tripping through the runtime
+        const reactions = await migrated.getMessageReactions('v6-msg-1');
+        expect(reactions).toEqual([]);
+
+        // Verify we can write and read reactions on the migrated message
+        await migrated.setMessageReactions('v6-msg-1', [{ kind: '+1', at: 9999 }]);
+        const updated = await migrated.getMessageReactions('v6-msg-1');
+        expect(updated).toHaveLength(1);
+        expect(updated[0].kind).toBe('+1');
+
+        // Verify collapsedByDefault round-trips
+        await migrated.setMessageCollapsed('v6-msg-1', true);
+        const loaded = await migrated.readThread('v6-thread');
+        expect(loaded!.messages[0].collapsedByDefault).toBe(true);
+      } finally {
+        migrated.close();
+      }
+    });
+  });
+
   describe('schema v3→v4 migration', () => {
     it('adds tags column to an existing v3 database and preserves data', async () => {
       const dbPath = path.join(tmpDir, 'threads.db');

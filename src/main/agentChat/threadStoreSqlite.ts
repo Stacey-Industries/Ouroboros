@@ -25,6 +25,7 @@ import {
   refreshFtsForThread,
 } from './threadStoreSqliteFts';
 import {
+  applyColumnMigrations,
   parseJsonField,
   parseTagsField,
   prepareInsertMessage,
@@ -38,8 +39,13 @@ import {
   titleMatchesUserMessage,
   upsertThreadRow,
 } from './threadStoreSqliteHelpers';
+import {
+  getMessageReactionsSql,
+  setMessageCollapsedSql,
+  setMessageReactionsSql,
+} from './threadStoreSqliteReactions';
 import { normalizeThreadRecord } from './threadStoreSupport';
-import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
+import type { AgentChatMessageRecord, AgentChatThreadRecord, Reaction } from './types';
 
 // ── SQLite Runtime ──────────────────────────────────────────────────
 
@@ -250,6 +256,20 @@ export class ThreadStoreSqliteRuntime {
       .run(threadId);
   }
 
+  // ── Wave 22 Phase A — reactions + collapsedByDefault ────────────────────
+
+  async getMessageReactions(messageId: string): Promise<Reaction[]> {
+    return getMessageReactionsSql(this.getDb(), messageId);
+  }
+
+  async setMessageReactions(messageId: string, reactions: Reaction[]): Promise<void> {
+    setMessageReactionsSql(this.getDb(), messageId, reactions);
+  }
+
+  async setMessageCollapsed(messageId: string, collapsed: boolean): Promise<void> {
+    setMessageCollapsedSql(this.getDb(), messageId, collapsed);
+  }
+
   private loadMessages(db: Database, threadId: string): AgentChatMessageRecord[] {
     const rows = db
       .prepare('SELECT * FROM messages WHERE threadId = ? ORDER BY createdAt ASC, id ASC')
@@ -294,40 +314,6 @@ export class ThreadStoreSqliteRuntime {
 }
 
 // ── Module helpers ──────────────────────────────────────────────────
-
-/**
- * Apply stepwise ALTER TABLE migrations for v1→v2, v2→v3, v3→v4.
- * Called inside the migration transaction in initSchema().
- */
-function applyColumnMigrations(db: Database, currentVersion: number): void {
-  if (currentVersion >= 1) {
-    const cols = db.pragma('table_info(messages)') as { name: string }[];
-    if (!cols.some((c) => c.name === 'model')) {
-      db.exec('ALTER TABLE messages ADD COLUMN model TEXT');
-    }
-  }
-  if (currentVersion >= 2) {
-    const cols = db.pragma('table_info(messages)') as { name: string }[];
-    if (!cols.some((c) => c.name === 'checkpointCommit')) {
-      db.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
-    }
-  }
-  if (currentVersion >= 3) {
-    const cols = db.pragma('table_info(threads)') as { name: string }[];
-    if (!cols.some((c) => c.name === 'tags')) {
-      db.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
-    }
-  }
-  if (currentVersion >= 5) {
-    const cols = db.pragma('table_info(threads)') as { name: string }[];
-    if (!cols.some((c) => c.name === 'pinned')) {
-      db.exec('ALTER TABLE threads ADD COLUMN pinned INTEGER DEFAULT 0');
-    }
-    if (!cols.some((c) => c.name === 'deletedAt')) {
-      db.exec('ALTER TABLE threads ADD COLUMN deletedAt INTEGER');
-    }
-  }
-}
 
 function buildMetadataPatchQuery(patch: {
   title?: string;

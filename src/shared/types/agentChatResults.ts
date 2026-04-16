@@ -11,6 +11,7 @@ import type {
   AgentChatStreamChunk,
   AgentChatThreadRecord,
   AgentChatThreadStatusSnapshot,
+  Reaction,
   SessionMemoryEntry,
 } from './agentChat';
 import type {
@@ -145,6 +146,12 @@ export interface AgentChatGlobalCostResult extends OperationResult {
   threads?: ThreadCostRollupRecord[];
 }
 
+// ─── Wave 22 Phase A — Reaction result ──────────────────────────────────────
+
+export interface AgentChatReactionsResult extends OperationResult {
+  reactions?: Reaction[];
+}
+
 // ─── API surface ─────────────────────────────────────────────────────────────
 
 export interface AgentChatAPI {
@@ -231,6 +238,17 @@ export interface AgentChatAPI {
   ) => Promise<AgentChatGlobalCostResult>;
   /** Wave 21 Phase G — return PTY session IDs linked to this thread. */
   getLinkedTerminals: (threadId: string) => Promise<AgentChatLinkedTerminalsResult>;
+  /** Wave 22 Phase A — get current reactions for a message. */
+  getMessageReactions: (messageId: string) => Promise<AgentChatReactionsResult>;
+  /** Wave 22 Phase A — add a reaction; returns updated list. */
+  addMessageReaction: (messageId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  /** Wave 22 Phase A — remove a reaction; returns updated list. */
+  removeMessageReaction: (messageId: string, kind: string) => Promise<AgentChatReactionsResult>;
+  /** Wave 22 Phase A — set collapsedByDefault flag for a message. */
+  setMessageCollapsed: (
+    messageId: string,
+    collapsed: boolean,
+  ) => Promise<{ success: boolean; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

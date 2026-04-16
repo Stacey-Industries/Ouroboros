@@ -37,6 +37,17 @@ export interface ImageAttachment {
   sizeBytes: number;
 }
 
+// ─── Wave 22 Phase A — Reaction ──────────────────────────────────────────────
+
+export interface Reaction {
+  /** Reaction kind — '+1', '-1', or a custom string (e.g. emoji shortcode). */
+  kind: '+1' | '-1' | (string & {});
+  /** Identity of the reactor (optional — undefined means current user). */
+  by?: string;
+  /** Epoch ms when the reaction was added. */
+  at: number;
+}
+
 // ─── Thread / message primitives ──────────────────────────────────────────────
 
 export type AgentChatThreadStatus =
@@ -213,6 +224,10 @@ export interface AgentChatMessageRecord {
    * Present only on assistant messages that had a checkpoint created.
    */
   checkpointCommit?: string;
+  /** Wave 22 Phase A — emoji/thumbs reactions on this message. */
+  reactions?: Reaction[];
+  /** Wave 22 Phase A — when true, the renderer should render this message folded/collapsed. */
+  collapsedByDefault?: boolean;
 }
 
 export interface AgentChatBranchInfo {
@@ -349,6 +364,7 @@ export type {
   AgentChatLinkedTerminalResult,
   AgentChatLinkedTerminalsResult,
   AgentChatMessageUpdatedEvent,
+  AgentChatReactionsResult,
   AgentChatRevertResult,
   AgentChatSearchPayload,
   AgentChatSearchResult,

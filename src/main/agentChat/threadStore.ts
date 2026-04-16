@@ -11,12 +11,23 @@ import {
   normalizeMessages,
   upsertMessage,
 } from './threadStoreSupport';
+export type {
+  AgentChatMessagePatch,
+  AgentChatThreadPatch,
+  AgentChatThreadStoreOptions,
+  CreateAgentChatThreadOptions,
+} from './threadStoreSupport';
+import type {
+  AgentChatMessagePatch,
+  AgentChatThreadPatch,
+  AgentChatThreadStoreOptions,
+  CreateAgentChatThreadOptions,
+} from './threadStoreSupport';
 import type {
   AgentChatCreateThreadRequest,
   AgentChatMessageRecord,
-  AgentChatOrchestrationLink,
   AgentChatThreadRecord,
-  AgentChatThreadStatus,
+  Reaction,
 } from './types';
 
 export const DEFAULT_AGENT_CHAT_THREAD_STORE_DIR = path.join(
@@ -26,29 +37,6 @@ export const DEFAULT_AGENT_CHAT_THREAD_STORE_DIR = path.join(
 );
 
 const DEFAULT_MAX_AGENT_CHAT_THREADS = 100;
-
-export interface CreateAgentChatThreadOptions {
-  status?: AgentChatThreadStatus;
-  messages?: AgentChatMessageRecord[];
-  latestOrchestration?: AgentChatOrchestrationLink;
-}
-
-export interface AgentChatThreadPatch {
-  title?: string;
-  status?: AgentChatThreadStatus;
-  latestOrchestration?: AgentChatOrchestrationLink;
-}
-
-export type AgentChatMessagePatch = Partial<
-  Omit<AgentChatMessageRecord, 'id' | 'threadId' | 'createdAt'>
->;
-
-export interface AgentChatThreadStoreOptions {
-  createId?: () => string;
-  maxThreads?: number;
-  now?: () => number;
-  threadsDir?: string;
-}
 
 export interface AgentChatThreadStore {
   createThread: (
@@ -87,6 +75,12 @@ export interface AgentChatThreadStore {
   softDeleteThread: (threadId: string) => Promise<void>;
   /** Wave 21 Phase C — clear deletedAt, restoring thread from soft-delete. */
   restoreDeletedThread: (threadId: string) => Promise<void>;
+  /** Wave 22 Phase A — get reactions for a message. Returns [] if none. */
+  getMessageReactions: (messageId: string) => Promise<Reaction[]>;
+  /** Wave 22 Phase A — persist reactions for a message (replaces existing). */
+  setMessageReactions: (messageId: string, reactions: Reaction[]) => Promise<void>;
+  /** Wave 22 Phase A — set the collapsedByDefault flag for a message. */
+  setMessageCollapsed: (messageId: string, collapsed: boolean) => Promise<void>;
 }
 
 function buildThreadRecord(args: {
@@ -313,6 +307,9 @@ function buildThreadStoreApi(args: {
     pinThread: (id, pinned) => runtime.pinThread(id, pinned),
     softDeleteThread: (id) => runtime.softDeleteThread(id),
     restoreDeletedThread: (id) => runtime.restoreDeletedThread(id),
+    getMessageReactions: (mid) => runtime.getMessageReactions(mid),
+    setMessageReactions: (mid, reactions) => runtime.setMessageReactions(mid, reactions),
+    setMessageCollapsed: (mid, collapsed) => runtime.setMessageCollapsed(mid, collapsed),
   };
 }
 

@@ -37,6 +37,11 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   getThreadCostRollup: 'agentChat:getThreadCostRollup',
   getGlobalCostRollup: 'agentChat:getGlobalCostRollup',
   getLinkedTerminals: 'agentChat:getLinkedTerminals',
+  // Wave 22 Phase A — reactions + collapsed
+  getMessageReactions: 'agentChat:getMessageReactions',
+  addMessageReaction: 'agentChat:addMessageReaction',
+  removeMessageReaction: 'agentChat:removeMessageReaction',
+  setMessageCollapsed: 'agentChat:setMessageCollapsed',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

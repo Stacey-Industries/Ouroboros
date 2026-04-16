@@ -12,7 +12,7 @@ import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -35,6 +35,7 @@ export const SCHEMA_SQL = `
     verificationPreview TEXT, error TEXT, toolsSummary TEXT,
     costSummary TEXT, durationSummary TEXT, tokenUsage TEXT, blocks TEXT,
     model TEXT, checkpointCommit TEXT,
+    reactions TEXT, collapsedByDefault INTEGER DEFAULT 0,
     PRIMARY KEY (id, threadId)
   );
   CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(threadId, createdAt ASC);
@@ -90,6 +91,10 @@ export interface RawMessageRow {
   blocks: string | null;
   model: string | null;
   checkpointCommit: string | null;
+  /** Wave 22 Phase A — JSON array of Reaction objects. NULL = no reactions. */
+  reactions: string | null;
+  /** Wave 22 Phase A — 1 when the message should render collapsed by default. */
+  collapsedByDefault: number | null;
 }
 
 // ── Parse / convert helpers ──────────────────────────────────────────
@@ -130,6 +135,8 @@ function applyOptionalStringFields(base: AgentChatMessageRecord, row: RawMessage
   if (row.durationSummary) base.durationSummary = row.durationSummary;
   if (row.model) base.model = row.model;
   if (row.checkpointCommit) base.checkpointCommit = row.checkpointCommit;
+  if (row.reactions) base.reactions = parseJsonField(row.reactions);
+  if (row.collapsedByDefault) base.collapsedByDefault = row.collapsedByDefault === 1;
 }
 
 export function rowToMessage(row: RawMessageRow): AgentChatMessageRecord {
@@ -265,8 +272,9 @@ const INSERT_MESSAGE_SQL = `
   INSERT OR REPLACE INTO messages
     (id, threadId, role, content, createdAt, statusKind, orchestration,
      contextSummary, verificationPreview, error, toolsSummary, costSummary,
-     durationSummary, tokenUsage, blocks, model, checkpointCommit)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+     durationSummary, tokenUsage, blocks, model, checkpointCommit,
+     reactions, collapsedByDefault)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function prepareInsertMessage(db: Database): BetterSqlite3.Statement {
   return db.prepare(INSERT_MESSAGE_SQL);
@@ -284,5 +292,52 @@ export function runInsertMessage(
     s(msg.verificationPreview), s(msg.error),
     msg.toolsSummary ?? null, msg.costSummary ?? null, msg.durationSummary ?? null,
     s(msg.tokenUsage), s(msg.blocks), msg.model ?? null, msg.checkpointCommit ?? null,
+    msg.reactions && msg.reactions.length > 0 ? JSON.stringify(msg.reactions) : null,
+    msg.collapsedByDefault ? 1 : null,
   );
+}
+
+// ── Column migrations (Wave v1→v7) ───────────────────────────────────────────
+
+type ColList = { name: string }[];
+function msgCols(db: Database): ColList { return db.pragma('table_info(messages)') as ColList; }
+function thdCols(db: Database): ColList { return db.pragma('table_info(threads)') as ColList; }
+function hasCol(cols: ColList, n: string): boolean { return cols.some((c) => c.name === n); }
+
+function migrateV1(db: Database): void {
+  const c = msgCols(db);
+  if (!hasCol(c, 'model')) db.exec('ALTER TABLE messages ADD COLUMN model TEXT');
+}
+
+function migrateV2(db: Database): void {
+  const c = msgCols(db);
+  if (!hasCol(c, 'checkpointCommit')) db.exec('ALTER TABLE messages ADD COLUMN checkpointCommit TEXT');
+}
+
+function migrateV3(db: Database): void {
+  const c = thdCols(db);
+  if (!hasCol(c, 'tags')) db.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
+}
+
+function migrateV5(db: Database): void {
+  const c = thdCols(db);
+  if (!hasCol(c, 'pinned')) db.exec('ALTER TABLE threads ADD COLUMN pinned INTEGER DEFAULT 0');
+  if (!hasCol(c, 'deletedAt')) db.exec('ALTER TABLE threads ADD COLUMN deletedAt INTEGER');
+}
+
+function migrateV6(db: Database): void {
+  const c = msgCols(db);
+  if (!hasCol(c, 'reactions')) db.exec('ALTER TABLE messages ADD COLUMN reactions TEXT');
+  if (!hasCol(c, 'collapsedByDefault')) {
+    db.exec('ALTER TABLE messages ADD COLUMN collapsedByDefault INTEGER DEFAULT 0');
+  }
+}
+
+/** Apply stepwise ALTER TABLE migrations for all schema versions up to SCHEMA_VERSION. */
+export function applyColumnMigrations(db: Database, currentVersion: number): void {
+  if (currentVersion >= 1) migrateV1(db);
+  if (currentVersion >= 2) migrateV2(db);
+  if (currentVersion >= 3) migrateV3(db);
+  if (currentVersion >= 5) migrateV5(db);
+  if (currentVersion >= 6) migrateV6(db);
 }

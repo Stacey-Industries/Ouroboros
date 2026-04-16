@@ -33,6 +33,7 @@ import { registerCostRollupHandlers } from './agentChatCost';
 import { registerEventForwarders } from './agentChatEventForwarders';
 import { registerExportImportHandlers } from './agentChatExportImport';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
+import { registerReactionHandlers } from './agentChatReactions';
 
 // Re-export public API consumed by other modules (files.ts, git.ts, etc.)
 export {
@@ -305,6 +306,7 @@ export function registerAgentChatHandlers(): string[] {
   registerTagHandlers(channels, svc);
   registerPinDeleteHandlers(channels, svc);
   registerCostRollupHandlers({ channels, svc, register, requireValidString, requireValidObject });
+  registerReactionHandlers({ channels, svc, register, requireValidString });
   registerExportImportHandlers({
     channels, svc, register, requireValidString,
     exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread,
