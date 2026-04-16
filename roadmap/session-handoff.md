@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-16 (updated 2026-04-17)
+# Roadmap Session Handoff — 2026-04-16 (updated 2026-04-17, Wave 27 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first, then resume from Phase B.
+> Continuation doc for a brand-new Claude Code session. Read this first, then begin Wave 28.
 
 ---
 
@@ -30,12 +30,16 @@ A **26-wave roadmap** (Waves 15 → 40). Each wave is a self-contained feature s
 ### Current branch state (confirmed at handoff time)
 
 ```
-Last commit on master: dcd9b2b feat: Wave 27 Phase A — subagent tracker + IPC
+Last commit on master: ec508f0 feat: Wave 27 Phase C — subagent cancel + cost dashboard rollup
+Previous:              5b22279 fix: resolve all 95 pre-existing TypeScript compiler errors (web + node)
+Previous:              97e6fd8 fix: Wave 27 Phase B — repair SubagentPanel virtualization test mock
+Previous:              564bf95 fix: sweep stale vitest process trees before each test run
+Previous:              5f192d5 feat: Wave 27 Phase B — SubagentPanel UI + sidebar live-count chip
+Previous:              dcd9b2b feat: Wave 27 Phase A — subagent tracker + IPC
 Previous:              6a5df23 fix: repair 19 pre-existing test failures on master
-Previous:              e2d89f3 feat: Wave 26 Phase E — command approval memory + revoke UI
 ```
 
-### What's done (Waves 15–27 Phase A, fully committed)
+### What's done (Waves 15–27 complete, fully committed)
 
 Every wave below closed with commits landed on master. Don't redo.
 
@@ -51,28 +55,27 @@ Every wave below closed with commits landed on master. Don't redo.
 - **Wave 24** — Context decision JSONL logging (A), per-turn outcome aggregation (B), Haiku reranker (C) — **reranker flag off by default** because Claude CLI cold-start ~1–3s exceeds 500ms target.
 - **Wave 25** — Pinned context primitive (A), research subagent + TTL cache (B), research slash commands + composer interception (C), packet pin injection + outcome correlation (D), workspace read-list + research cancel UI (E).
 - **Wave 26** — Profile abstraction: store + role presets + IPC (A), Settings UI + composer pill + diff card (B), inference controls + tool toggles + profile lint (C+D), command approval memory + revoke UI (E).
-- **Wave 27 Phase A** — Subagent tracker: in-memory store + IPC handlers + preload bridge + shared types + hooks tap. Commit `dcd9b2b`.
-- **Test fix** — 19 pre-existing test failures repaired (config mock patterns, channel counts, Monaco jsdom isolation). Commit `6a5df23`.
+- **Wave 27** — Subagent UX, complete: tracker + IPC + preload bridge + hooks tap (A, `dcd9b2b`); SubagentPanel transcript + sidebar chip + ToolCallCard integration (B, `5f192d5` + virtualizer mock fix `97e6fd8`); cancellation via real PTY kill + cost dashboard parent+child rollup behind `agentic.subagentUx` flag (C, `ec508f0`).
+- **Test fix (Wave 26→27 bridge)** — 19 pre-existing test failures repaired at `6a5df23`; 95 pre-existing tsc errors (web+node) repaired at `5b22279` (unblocked Phase C commit); stale-vitest sweeper at `564bf95` to end worker starvation.
 
-### Wave 27 — IN FLIGHT (Phase A done, Phase B next)
+### Wave 27 — DONE
 
-Plan lives at `roadmap/wave-27-plan.md`. Phase breakdown:
+Plan at `roadmap/wave-27-plan.md`. All three phases committed and pushed.
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **A** | Subagent tracker — main-process lifecycle, IPC, preload bridge, hooks tap | **✅ Done.** Committed at `dcd9b2b`. |
-| B | `SubagentPanel` transcript view + "Open subagent chat" link + sidebar live-count chip + `ToolCallCard.tsx` integration | **Not started — next up** |
-| C | Cancellation wiring (real PTY kill, not stub) + `UsageDashboard` parent+child rollup | Not started |
+| A | Subagent tracker + IPC | ✅ `dcd9b2b` |
+| B | SubagentPanel + sidebar chip | ✅ `5f192d5` (+ mock fix `97e6fd8`) |
+| C | Cancellation + dashboard rollup | ✅ `ec508f0` |
 
 **Feature flag:** `agentic.subagentUx` (default `true`).
 
 ### Immediate next step
 
-1. Read `roadmap/wave-27-plan.md`.
-2. Implement Phase B (SubagentPanel UI + sidebar chip).
-3. Implement Phase C (cancellation + cost dashboard integration).
-4. `npm run typecheck && npm run lint && npm test` before each commit.
-5. After Wave 27 closes, proceed to Wave 28.
+1. Draft `roadmap/wave-28-plan.md` (not yet written). Scope in `roadmap/roadmap.md` § Wave 28 — Drag-and-Drop Pane Composition.
+2. Target release `v1.9.0`. Feature flag `layout.dragAndDrop` (default on).
+3. Implement phases top-down, one commit per phase, push after each.
+4. Pre-commit hook blocks on tsc (web + node) + prettier + eslint + new hardcoded colors. All must be green.
 
 ### What remains after Wave 27
 
