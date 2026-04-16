@@ -55,9 +55,10 @@ interface DrawerProps {
   record: ResolvedSubagent | null;
   toolCallId: string;
   onClose: () => void;
+  showCancel: boolean;
 }
 
-function SubagentDrawer({ record, toolCallId, onClose }: DrawerProps): React.ReactElement {
+function SubagentDrawer({ record, toolCallId, onClose, showCancel }: DrawerProps): React.ReactElement {
   return (
     <div
       className="fixed inset-y-0 right-0 z-50 flex flex-col w-80 bg-surface-base border-l border-border-semantic shadow-lg"
@@ -70,6 +71,7 @@ function SubagentDrawer({ record, toolCallId, onClose }: DrawerProps): React.Rea
           subagentId={record.subagentId}
           parentSessionId={record.parentSessionId}
           onClose={onClose}
+          showCancel={showCancel}
         />
       ) : (
         <UnresolvableState toolCallId={toolCallId} onClose={onClose} />
@@ -119,9 +121,10 @@ interface OverlayProps {
   resolved: ResolvedSubagent | null;
   toolCallId: string;
   onClose: () => void;
+  showCancel: boolean;
 }
 
-function SubagentOverlay({ resolved, toolCallId, onClose }: OverlayProps): React.ReactElement {
+function SubagentOverlay({ resolved, toolCallId, onClose, showCancel }: OverlayProps): React.ReactElement {
   return (
     <>
       {/* Backdrop */}
@@ -131,7 +134,7 @@ function SubagentOverlay({ resolved, toolCallId, onClose }: OverlayProps): React
         onClick={onClose}
         aria-hidden="true"
       />
-      <SubagentDrawer record={resolved} toolCallId={toolCallId} onClose={onClose} />
+      <SubagentDrawer record={resolved} toolCallId={toolCallId} onClose={onClose} showCancel={showCancel} />
     </>
   );
 }
@@ -176,5 +179,12 @@ export function SubagentPanelHost({
   }, [enabled, handleOpen]);
 
   if (!enabled || !open) return null;
-  return <SubagentOverlay resolved={resolved} toolCallId={toolCallId} onClose={handleClose} />;
+  return (
+    <SubagentOverlay
+      resolved={resolved}
+      toolCallId={toolCallId}
+      onClose={handleClose}
+      showCancel={enabled}
+    />
+  );
 }

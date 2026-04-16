@@ -185,6 +185,19 @@ export function get(subagentId: string): SubagentRecord | undefined {
   return records.get(subagentId);
 }
 
+/**
+ * Associate a PTY session ID with a subagent record so the cancel handler
+ * can issue a real process kill. No-op when the record does not exist yet
+ * (the cancel path handles the not-found case gracefully).
+ */
+export function setPtySessionId(subagentId: string, ptySessionId: string): void {
+  const rec = records.get(subagentId);
+  if (rec) {
+    rec.ptySessionId = ptySessionId;
+    log.info(`[subagentTracker] ptySessionId set id=${subagentId} pty=${ptySessionId}`);
+  }
+}
+
 export function listForParent(parentSessionId: string): SubagentRecord[] {
   const result: SubagentRecord[] = [];
   for (const rec of records.values()) {

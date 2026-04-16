@@ -23,12 +23,21 @@ vi.mock('../logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+// Mock pty module for PTY kill tests
+const mockKillPty = vi.fn();
+const mockSessions = new Map<string, unknown>();
+vi.mock('../pty', () => ({
+  get sessions() { return mockSessions; },
+  killPty: (id: string) => mockKillPty(id),
+}));
+
 import {
   _clearAll,
   get,
   recordEnd,
   recordStart,
   recordUsage,
+  setPtySessionId,
 } from '../agentChat/subagentTracker';
 // Import after mocks are set up
 import { registerSubagentHandlers } from './subagent';
@@ -36,19 +45,24 @@ import { registerSubagentHandlers } from './subagent';
 // ─── Capture handlers registered with ipcMain ─────────────────────────────────
 
 type IpcHandler = (_event: unknown, args: unknown) => Promise<unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFn = (...args: any[]) => any;
 
 async function getHandlers(): Promise<Map<string, IpcHandler>> {
   const { ipcMain } = await import('electron');
   const captured = new Map<string, IpcHandler>();
-  vi.mocked(ipcMain.handle).mockImplementation((channel: string, fn: unknown) => {
-    captured.set(channel, fn as IpcHandler);
-  });
+  (vi.mocked(ipcMain.handle) as unknown as { mockImplementation: (fn: AnyFn) => void })
+    .mockImplementation((channel: string, fn: IpcHandler) => {
+      captured.set(channel as string, fn);
+    });
   registerSubagentHandlers();
   return captured;
 }
 
 beforeEach(async () => {
   _clearAll();
+  mockSessions.clear();
+  mockKillPty.mockReset();
   vi.clearAllMocks();
 });
 
@@ -145,7 +159,7 @@ describe('subagent:costRollup', () => {
 // ─── subagent:cancel ──────────────────────────────────────────────────────────
 
 describe('subagent:cancel', () => {
-  it('marks a running subagent as cancelled', async () => {
+  it('marks a running subagent as cancelled (state-only, no ptySessionId)', async () => {
     recordStart({ id: 'can-1', parentSessionId: 'p1' });
 
     const handlers = await getHandlers();
@@ -153,9 +167,36 @@ describe('subagent:cancel', () => {
     const result = await handler(null, { subagentId: 'can-1' }) as { success: boolean };
     expect(result.success).toBe(true);
     expect(get('can-1')?.status).toBe('cancelled');
+    expect(mockKillPty).not.toHaveBeenCalled();
   });
 
-  it('succeeds silently if subagent is already completed', async () => {
+  it('kills PTY session when ptySessionId is bound and session exists', async () => {
+    recordStart({ id: 'can-pty-1', parentSessionId: 'p1' });
+    setPtySessionId('can-pty-1', 'pty-session-abc');
+    mockSessions.set('pty-session-abc', {});
+    mockKillPty.mockReturnValue({ success: true });
+
+    const handlers = await getHandlers();
+    const handler = handlers.get('subagent:cancel')!;
+    const result = await handler(null, { subagentId: 'can-pty-1' }) as { success: boolean };
+    expect(result.success).toBe(true);
+    expect(mockKillPty).toHaveBeenCalledWith('pty-session-abc');
+    expect(get('can-pty-1')?.status).toBe('cancelled');
+  });
+
+  it('falls back to state-only cancel when ptySessionId is bound but PTY not found', async () => {
+    recordStart({ id: 'can-pty-2', parentSessionId: 'p1' });
+    setPtySessionId('can-pty-2', 'pty-gone');
+    // mockSessions does NOT contain 'pty-gone'
+
+    const handlers = await getHandlers();
+    const handler = handlers.get('subagent:cancel')!;
+    const result = await handler(null, { subagentId: 'can-pty-2' }) as { success: boolean };
+    expect(result.success).toBe(true);
+    expect(get('can-pty-2')?.status).toBe('cancelled');
+  });
+
+  it('succeeds silently if subagent is already completed (idempotent)', async () => {
     recordStart({ id: 'can-2', parentSessionId: 'p1' });
     recordEnd('can-2', 'completed');
 

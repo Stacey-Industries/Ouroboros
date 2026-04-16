@@ -17,6 +17,8 @@ import type { AgentSession } from './types';
 
 interface CostDashboardProps {
   sessions: AgentSession[];
+  /** When true, shows parent+subagent combined cost in the session table. */
+  subagentUxEnabled?: boolean;
 }
 
 function sessionToCostEntry(session: AgentSession): CostEntry | null {
@@ -127,6 +129,7 @@ function useCostHistory(sessions: AgentSession[]): {
 
 export const CostDashboard = memo(function CostDashboard({
   sessions,
+  subagentUxEnabled,
 }: CostDashboardProps): React.ReactElement<unknown> {
   const { allEntries, filteredEntries, range, isLoading, setRange, handleClearHistory } =
     useCostHistory(sessions);
@@ -149,7 +152,7 @@ export const CostDashboard = memo(function CostDashboard({
       />
       <SummaryCards entries={allEntries} />
       <DailyChart entries={allEntries} days={range === '7d' ? 7 : 14} />
-      <SessionTable entries={filteredEntries} />
+      <SessionTable entries={filteredEntries} subagentUxEnabled={subagentUxEnabled} />
     </div>
   );
 });

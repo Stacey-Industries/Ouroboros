@@ -6,7 +6,8 @@
  *   subagent:get         — get a single subagent record by id
  *   subagent:liveCount   — count running subagents for a parent session
  *   subagent:costRollup  — aggregated cost/token rollup for a parent session
- *   subagent:cancel      — stub cancel; marks record cancelled (Phase C wires real PTY kill)
+ *   subagent:cancel      — cancels the subagent: real PTY kill when a ptySessionId
+ *                          is bound; graceful state-only cancel otherwise.
  *
  * Push channel:
  *   subagent:updated     — broadcast to all windows on lifecycle change
@@ -92,18 +93,42 @@ function handleCostRollup(args: unknown): HandlerOk<object> | HandlerFail {
   return ok({ rollup: rollupCostForParent(parentSessionId) });
 }
 
-function handleCancel(args: unknown): HandlerOk<object> | HandlerFail {
+async function tryKillPty(ptySessionId: string): Promise<boolean> {
+  try {
+    const { killPty, sessions } = await import('../pty');
+    if (!sessions.has(ptySessionId)) return false;
+    const result = await Promise.resolve(killPty(ptySessionId));
+    return result.success;
+  } catch {
+    return false;
+  }
+}
+
+async function handleCancel(args: unknown): Promise<HandlerOk<object> | HandlerFail> {
   const { subagentId } = (args ?? {}) as CancelArgs;
   if (typeof subagentId !== 'string' || !subagentId) {
     return fail('subagentId is required');
   }
-  // Phase A stub: mark cancelled in the tracker.
-  // Phase C will wire real PTY kill via the agent cancel mechanism.
   const rec = get(subagentId);
   if (!rec) return fail(`subagent not found: ${subagentId}`);
+  // Idempotent: already terminated — treat kill of dead agent as success.
   if (rec.status !== 'running') return ok({});
+
+  // Phase C: attempt real PTY kill when a ptySessionId is bound.
+  // Race handling: if the subagent is mid-tool-call, the parent will receive
+  // a tool-failure event after the kill — treated as a normal tool failure.
+  if (rec.ptySessionId) {
+    const killed = await tryKillPty(rec.ptySessionId);
+    if (killed) {
+      log.info(`[subagent:cancel] PTY killed id=${subagentId} pty=${rec.ptySessionId}`);
+    } else {
+      log.warn(`[subagent:cancel] PTY not found id=${subagentId} pty=${rec.ptySessionId} — state-only cancel`);
+    }
+  } else {
+    log.info(`[subagent:cancel] no ptySessionId — state-only cancel id=${subagentId}`);
+  }
+
   recordEnd(subagentId, 'cancelled');
-  log.info(`[subagent:cancel] stub cancel id=${subagentId}`);
   broadcastSubagentUpdated(rec.parentSessionId);
   return ok({});
 }

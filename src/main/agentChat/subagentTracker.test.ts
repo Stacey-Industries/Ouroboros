@@ -24,6 +24,7 @@ import {
   recordStart,
   recordUsage,
   rollupCostForParent,
+  setPtySessionId,
 } from './subagentTracker';
 
 beforeEach(() => {
@@ -268,5 +269,33 @@ describe('hook tap lifecycle', () => {
     recordEnd('child-s1', 'completed');
     expect(get('child-s1')?.status).toBe('completed');
     expect(get('child-s1')?.endedAt).toBeGreaterThan(0);
+  });
+});
+
+// ─── setPtySessionId ──────────────────────────────────────────────────────────
+
+describe('setPtySessionId', () => {
+  it('associates a ptySessionId with an existing record', () => {
+    recordStart({ id: 'pty-sub-1', parentSessionId: 'p1' });
+    setPtySessionId('pty-sub-1', 'pty-abc-123');
+    expect(get('pty-sub-1')?.ptySessionId).toBe('pty-abc-123');
+  });
+
+  it('is a no-op when record does not exist', () => {
+    // Should not throw even when record is missing
+    expect(() => setPtySessionId('nonexistent', 'pty-xyz')).not.toThrow();
+    expect(get('nonexistent')).toBeUndefined();
+  });
+
+  it('kill transition: running → cancelled updates status and preserves ptySessionId', () => {
+    recordStart({ id: 'pty-sub-2', parentSessionId: 'p2' });
+    setPtySessionId('pty-sub-2', 'pty-def-456');
+    expect(get('pty-sub-2')?.ptySessionId).toBe('pty-def-456');
+
+    recordEnd('pty-sub-2', 'cancelled');
+    const rec = get('pty-sub-2');
+    expect(rec?.status).toBe('cancelled');
+    expect(rec?.ptySessionId).toBe('pty-def-456');
+    expect(rec?.endedAt).toBeGreaterThan(0);
   });
 });

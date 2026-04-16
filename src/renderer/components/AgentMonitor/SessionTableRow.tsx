@@ -1,5 +1,9 @@
 /**
  * SessionTableRow.tsx — Single row in the session cost history table.
+ *
+ * Phase C: accepts an optional `combinedCost` prop from CostDashboard when
+ * agentic.subagentUx is enabled. When present, the Cost cell shows the combined
+ * total and expanded detail includes a rollup disclosure line.
  */
 
 import React, { memo, useCallback } from 'react';
@@ -7,11 +11,15 @@ import React, { memo, useCallback } from 'react';
 import type { CostEntry } from '../../types/electron';
 import { formatCost, formatTokenCount } from './costCalculator';
 import { formatDateShort } from './costHelpers';
+import type { CombinedCost } from './subagentCostAggregator';
+import { formatRollupDisclosure } from './subagentCostAggregator';
 
 interface SessionTableRowProps {
   entry: CostEntry;
   isExpanded: boolean;
   onToggle: (id: string) => void;
+  /** Combined parent + subagent cost. Undefined when subagentUx flag is off. */
+  combinedCost?: CombinedCost;
 }
 
 function shortModel(model: string): string {
@@ -35,7 +43,14 @@ const ROW_BUTTON_STYLE: React.CSSProperties = {
   padding: '4px 0',
 };
 
-function SessionRowCells({ entry }: { entry: CostEntry }): React.ReactElement<unknown> {
+interface RowCellsProps {
+  entry: CostEntry;
+  combinedCost?: CombinedCost;
+}
+
+function SessionRowCells({ entry, combinedCost }: RowCellsProps): React.ReactElement<unknown> {
+  const displayCost = combinedCost ? combinedCost.totalUsd : entry.estimatedCost;
+  const hasChildren = (combinedCost?.childCount ?? 0) > 0;
   return (
     <>
       <span style={{ width: '52px', flexShrink: 0, color: 'var(--text-muted)' }}>
@@ -57,8 +72,10 @@ function SessionRowCells({ entry }: { entry: CostEntry }): React.ReactElement<un
       <span
         className="text-interactive-accent"
         style={{ width: '52px', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}
+        title={hasChildren ? formatRollupDisclosure(combinedCost!) ?? undefined : undefined}
       >
-        {formatCost(entry.estimatedCost)}
+        {formatCost(displayCost)}
+        {hasChildren && <span style={{ fontSize: '8px', marginLeft: '2px', opacity: 0.7 }}>+sub</span>}
       </span>
     </>
   );
@@ -68,6 +85,7 @@ export const SessionTableRow = memo(function SessionTableRow({
   entry,
   isExpanded,
   onToggle,
+  combinedCost,
 }: SessionTableRowProps): React.ReactElement<unknown> {
   const handleClick = useCallback(() => onToggle(entry.sessionId), [onToggle, entry.sessionId]);
 
@@ -85,9 +103,9 @@ export const SessionTableRow = memo(function SessionTableRow({
         onClick={handleClick}
         title={entry.taskLabel}
       >
-        <SessionRowCells entry={entry} />
+        <SessionRowCells entry={entry} combinedCost={combinedCost} />
       </button>
-      {isExpanded && <ExpandedDetails entry={entry} />}
+      {isExpanded && <ExpandedDetails entry={entry} combinedCost={combinedCost} />}
     </div>
   );
 });
@@ -118,7 +136,11 @@ function ExpandedDetailsFields({ entry }: { entry: CostEntry }): React.ReactElem
   );
 }
 
-function ExpandedDetails({ entry }: { entry: CostEntry }): React.ReactElement<unknown> {
+function ExpandedDetails({
+  entry,
+  combinedCost,
+}: { entry: CostEntry; combinedCost?: CombinedCost }): React.ReactElement<unknown> {
+  const disclosure = combinedCost ? formatRollupDisclosure(combinedCost) : null;
   return (
     <div
       className="py-1.5 px-2 text-[10px] bg-surface-raised"
@@ -128,6 +150,9 @@ function ExpandedDetails({ entry }: { entry: CostEntry }): React.ReactElement<un
       <div className="mt-1 text-text-semantic-faint">
         Task: <span className="text-text-semantic-primary">{entry.taskLabel}</span>
       </div>
+      {disclosure && (
+        <div className="mt-0.5 text-text-semantic-faint italic">{disclosure}</div>
+      )}
     </div>
   );
 }

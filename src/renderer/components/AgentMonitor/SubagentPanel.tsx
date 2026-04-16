@@ -1,8 +1,11 @@
 /**
- * SubagentPanel.tsx — Wave 27 Phase B
+ * SubagentPanel.tsx — Wave 27 Phase B + C
  *
  * Transcript view for a single subagent session. Shows spawn time, cost,
  * status, parent linkage, and a virtualized message list.
+ *
+ * Phase C adds: Cancel button (shown when status=running and showCancel=true),
+ * wired to subagent:cancel IPC with toast feedback via useToastContext.
  *
  * Subscribe to subagent:updated IPC to stay live.
  */
@@ -10,6 +13,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useToastContext } from '../../contexts/ToastContext';
 import type { SubagentRecord } from '../../types/electron';
 import { SubagentStatusChip } from './SubagentStatusChip';
 
@@ -19,6 +23,8 @@ export interface SubagentPanelProps {
   subagentId: string;
   parentSessionId: string;
   onClose?: () => void;
+  /** When true, shows Cancel button for running subagents (agentic.subagentUx gate). */
+  showCancel?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,9 +51,33 @@ function formatDuration(startedAt: number, endedAt: number | undefined): string 
 interface HeaderProps {
   record: SubagentRecord;
   onClose?: () => void;
+  onCancel?: () => void;
+  cancelling?: boolean;
 }
 
-function SubagentPanelHeader({ record, onClose }: HeaderProps): React.ReactElement {
+interface CancelBtnProps { onCancel: () => void; cancelling?: boolean }
+
+function CancelButton({ onCancel, cancelling }: CancelBtnProps): React.ReactElement {
+  return (
+    <button
+      className="text-[10px] px-1.5 py-0.5 rounded transition-colors text-status-error"
+      onClick={onCancel}
+      aria-label="Cancel subagent"
+      disabled={cancelling}
+      style={{
+        background: 'var(--status-error-subtle)',
+        border: '1px solid var(--status-error)',
+        cursor: cancelling ? 'not-allowed' : 'pointer',
+        opacity: cancelling ? 0.6 : 1,
+      }}
+    >
+      {cancelling ? 'Cancelling…' : 'Cancel'}
+    </button>
+  );
+}
+
+function SubagentPanelHeader({ record, onClose, onCancel, cancelling }: HeaderProps): React.ReactElement {
+  const canCancel = onCancel && record.status === 'running';
   return (
     <div className="flex items-start gap-2 px-3 py-2 border-b border-border-semantic flex-shrink-0">
       <div className="flex-1 min-w-0">
@@ -59,16 +89,19 @@ function SubagentPanelHeader({ record, onClose }: HeaderProps): React.ReactEleme
         </div>
         <SubagentMetaRow record={record} />
       </div>
-      {onClose && (
-        <button
-          className="shrink-0 text-text-semantic-muted hover:text-text-semantic-primary transition-colors"
-          onClick={onClose}
-          aria-label="Close subagent panel"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
-        >
-          ✕
-        </button>
-      )}
+      <div className="flex items-center gap-1 shrink-0">
+        {canCancel && <CancelButton onCancel={onCancel} cancelling={cancelling} />}
+        {onClose && (
+          <button
+            className="text-text-semantic-muted hover:text-text-semantic-primary transition-colors"
+            onClick={onClose}
+            aria-label="Close subagent panel"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -244,14 +277,68 @@ function useSubagentData(
   return { record, loading, error };
 }
 
+// ─── Cancel hook ──────────────────────────────────────────────────────────────
+
+function useSubagentCancel(subagentId: string): {
+  cancelling: boolean;
+  handleCancel: () => void;
+} {
+  const [cancelling, setCancelling] = useState(false);
+  const { toast } = useToastContext();
+
+  const handleCancel = useCallback(() => {
+    setCancelling(true);
+    window.electronAPI.subagent.cancel({ subagentId })
+      .then((result) => {
+        if (result.success) {
+          toast('Subagent cancelled', 'success');
+        } else {
+          toast(result.error ?? 'Failed to cancel subagent', 'error');
+        }
+      })
+      .catch(() => { toast('Failed to cancel subagent', 'error'); })
+      .finally(() => { setCancelling(false); });
+  }, [subagentId, toast]);
+
+  return { cancelling, handleCancel };
+}
+
+// ─── Panel body ───────────────────────────────────────────────────────────────
+
+interface PanelBodyProps {
+  subagentId: string;
+  loading: boolean;
+  error: string | null;
+  record: SubagentRecord | null;
+  onClose?: () => void;
+  onCancel?: () => void;
+  cancelling: boolean;
+}
+
+function SubagentPanelBody({
+  subagentId, loading, error, record, onClose, onCancel, cancelling,
+}: PanelBodyProps): React.ReactElement {
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState error={error} />;
+  if (!record) return <ErrorState error={`Subagent '${subagentId}' not found.`} />;
+  return (
+    <>
+      <SubagentPanelHeader record={record} onClose={onClose} onCancel={onCancel} cancelling={cancelling} />
+      <SubagentMessageList messages={record.messages} />
+    </>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SubagentPanel({
   subagentId,
   parentSessionId,
   onClose,
+  showCancel,
 }: SubagentPanelProps): React.ReactElement {
   const { record, loading, error } = useSubagentData(subagentId, parentSessionId);
+  const { cancelling, handleCancel } = useSubagentCancel(subagentId);
 
   return (
     <div
@@ -259,17 +346,15 @@ export function SubagentPanel({
       aria-label="Subagent transcript"
       role="region"
     >
-      {loading && <LoadingState />}
-      {!loading && error && <ErrorState error={error} />}
-      {!loading && !error && record && (
-        <>
-          <SubagentPanelHeader record={record} onClose={onClose} />
-          <SubagentMessageList messages={record.messages} />
-        </>
-      )}
-      {!loading && !error && !record && (
-        <ErrorState error={`Subagent '${subagentId}' not found.`} />
-      )}
+      <SubagentPanelBody
+        subagentId={subagentId}
+        loading={loading}
+        error={error}
+        record={record}
+        onClose={onClose}
+        onCancel={showCancel ? handleCancel : undefined}
+        cancelling={cancelling}
+      />
     </div>
   );
 }

@@ -21,6 +21,12 @@ export interface SubagentRecord {
   cacheWriteTokens: number;
   usdCost: number;
   messages: SubagentMessage[];
+  /**
+   * PTY session ID if the subagent was spawned as a tracked PTY session.
+   * Populated when a hook event correlates the Claude session to a PTY.
+   * Used by the cancel handler to issue a real process kill.
+   */
+  ptySessionId?: string;
 }
 
 /** Aggregated cost totals for all subagents under a parent session. */

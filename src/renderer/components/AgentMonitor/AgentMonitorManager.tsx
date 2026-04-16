@@ -3,6 +3,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
 import { useProject } from '../../contexts/ProjectContext';
 import { useToastContext } from '../../contexts/ToastContext';
+import { useConfig } from '../../hooks/useConfig';
 import { useCostTracking } from '../../hooks/useCostTracking';
 import { useDiffSnapshots } from '../../hooks/useDiffSnapshots';
 import type { AgentTemplate } from '../../types/electron';
@@ -125,6 +126,8 @@ function useAgentMonitorState() {
     useAgentEventsContext();
   const { toast } = useToastContext();
   const { projectRoot } = useProject();
+  const { config } = useConfig();
+  const subagentUxEnabled = config?.agentic?.subagentUx !== false;
   const { getSnapshotHash } = useDiffSnapshots();
   const getSnapshotHashForEnrich = useCallback(
     (sessionId: string) => getSnapshotHash(sessionId) ?? undefined,
@@ -152,6 +155,7 @@ function useAgentMonitorState() {
     executeTemplate,
     modes,
     monitorSettings,
+    subagentUxEnabled,
     templates,
     updateNotes,
     ...derived,
@@ -166,12 +170,13 @@ interface MonitorBodyProps {
   handleReplay: (sessionId: string) => void;
   handleReviewChanges: (sessionId: string) => void;
   modes: AgentMonitorModes;
+  monitorSettings: ReturnType<typeof useAgentMonitorSettings>;
+  subagentUxEnabled: boolean;
   templates: AgentTemplate[];
   updateNotes?: (id: string, notes: string, bookmarked?: boolean) => void;
   useTree: boolean;
   visibleCurrentSessions: AgentSession[];
   visibleHistoricalSessions: AgentSession[];
-  monitorSettings: ReturnType<typeof useAgentMonitorSettings>;
 }
 
 const MonitorContent = memo(function MonitorContent(
@@ -193,6 +198,7 @@ const MonitorContent = memo(function MonitorContent(
       handleSelectCompareB={p.modes.handleSelectCompareB}
       multiBatchLabels={p.modes.multiBatchLabels}
       multiSessionMode={p.modes.multiSessionMode}
+      subagentUxEnabled={p.subagentUxEnabled}
       updateNotes={p.updateNotes}
       useTree={p.useTree}
       viewMode={p.monitorSettings.viewMode}

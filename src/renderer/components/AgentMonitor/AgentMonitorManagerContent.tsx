@@ -28,6 +28,7 @@ interface AgentMonitorManagerContentProps {
   dismiss: (id: string) => void;
   filterQuery: string;
   handleMultiSessionClose: () => void;
+  subagentUxEnabled?: boolean;
   handleMultiSessionLaunched: (labels: string[]) => void;
   handleReplay: (sessionId: string) => void;
   handleReviewChanges: (sessionId: string) => void;
@@ -272,7 +273,7 @@ const ResolvedModeContent = memo(function ResolvedModeContent(
   if (props.costMode)
     return (
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <CostDashboard sessions={props.agents} />
+        <CostDashboard sessions={props.agents} subagentUxEnabled={props.subagentUxEnabled} />
       </div>
     );
   if (props.compareMode)

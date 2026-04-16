@@ -60,10 +60,16 @@ type OnUpdatedCb = (event: { parentSessionId: string }) => void;
 let onUpdatedCallback: OnUpdatedCb | null = null;
 
 const mockGet = vi.fn();
+const mockCancel = vi.fn();
 const mockOnUpdated = vi.fn((cb: OnUpdatedCb) => {
   onUpdatedCallback = cb;
   return vi.fn();
 });
+
+const mockToast = vi.fn();
+vi.mock('../../contexts/ToastContext', () => ({
+  useToastContext: () => ({ toast: mockToast }),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -73,6 +79,7 @@ beforeEach(() => {
     value: {
       subagent: {
         get: mockGet,
+        cancel: mockCancel,
         onUpdated: mockOnUpdated,
       },
     },
@@ -166,6 +173,51 @@ describe('SubagentPanel — error states', () => {
     mockGet.mockRejectedValue(new Error('Network failure'));
     render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" />);
     await waitFor(() => expect(screen.getByText(/network failure/i)).toBeTruthy());
+  });
+});
+
+describe('SubagentPanel — cancel button', () => {
+  it('shows Cancel button when showCancel=true and status=running', async () => {
+    const record = makeRecord({ status: 'running' });
+    mockGet.mockResolvedValue({ success: true, record });
+    render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" showCancel />);
+    await waitFor(() => expect(screen.getByLabelText(/cancel subagent/i)).toBeTruthy());
+  });
+
+  it('hides Cancel button when showCancel=false', async () => {
+    const record = makeRecord({ status: 'running' });
+    mockGet.mockResolvedValue({ success: true, record });
+    render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" showCancel={false} />);
+    await waitFor(() => expect(screen.queryByLabelText(/cancel subagent/i)).toBeNull());
+  });
+
+  it('hides Cancel button when status=completed even with showCancel=true', async () => {
+    const record = makeRecord({ status: 'completed' });
+    mockGet.mockResolvedValue({ success: true, record });
+    render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" showCancel />);
+    await waitFor(() => expect(screen.getByText(/completed/i)).toBeTruthy());
+    expect(screen.queryByLabelText(/cancel subagent/i)).toBeNull();
+  });
+
+  it('calls cancel IPC and shows success toast on click', async () => {
+    const record = makeRecord({ status: 'running' });
+    mockGet.mockResolvedValue({ success: true, record });
+    mockCancel.mockResolvedValue({ success: true });
+    render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" showCancel />);
+    await waitFor(() => expect(screen.getByLabelText(/cancel subagent/i)).toBeTruthy());
+    screen.getByLabelText(/cancel subagent/i).click();
+    await waitFor(() => expect(mockCancel).toHaveBeenCalledWith({ subagentId: 'sub-1' }));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Subagent cancelled', 'success'));
+  });
+
+  it('shows error toast when cancel IPC fails', async () => {
+    const record = makeRecord({ status: 'running' });
+    mockGet.mockResolvedValue({ success: true, record });
+    mockCancel.mockResolvedValue({ success: false, error: 'Not found' });
+    render(<SubagentPanel subagentId="sub-1" parentSessionId="parent-1" showCancel />);
+    await waitFor(() => expect(screen.getByLabelText(/cancel subagent/i)).toBeTruthy());
+    screen.getByLabelText(/cancel subagent/i).click();
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Not found', 'error'));
   });
 });
 
