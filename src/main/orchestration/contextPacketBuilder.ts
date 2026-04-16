@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
 
 import log from '../logger';
+import { emitDecisionsForPacket } from './contextPacketBuilderDecisions';
 import { buildFilePayload } from './contextPacketBuilderHelpers';
 import { extractGoalKeywords } from './contextPacketBuilderKeywords';
 import {
@@ -315,8 +316,10 @@ async function buildFullContextPacket(options: {
   liveIdeState?: LiveIdeState;
   model?: string;
   repoSnapshot?: RepoIndexSnapshot;
+  traceId?: string;
 }): Promise<ContextPacketBuildResult> {
   const { selection, files, omittedCandidates, budget } = await selectAndBuildFiles(options);
+  emitDecisionsForPacket(options.traceId, selection, files);
   let packet: ContextPacket = {
     version: 1,
     id: randomUUID(),

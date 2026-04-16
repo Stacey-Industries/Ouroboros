@@ -294,10 +294,9 @@ export const tailSchema = {
       branchingPolish: { type: 'boolean', default: true },
     },
   },
-  /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
+  /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging */
   context: {
-    type: 'object',
-    additionalProperties: false,
+    type: 'object', additionalProperties: false,
     properties: {
       provenanceWeights: { type: 'boolean', default: true },
       pagerank: { type: 'boolean', default: true },
@@ -311,7 +310,8 @@ export const tailSchema = {
         },
         default: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 },
       },
+      decisionLogging: { type: 'boolean', default: true }, // Wave 24 Phase A
     },
-    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 } },
+    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true },
   },
 };
