@@ -130,6 +130,7 @@ interface MessageListProps {
   onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onSelectThread?: (threadId: string) => void;
+  onRerunSuccess?: (newThreadId: string) => void;
   pendingUserMessage?: string | null;
   isSending: boolean;
   error: string | null;
@@ -157,6 +158,7 @@ function MessageCards(props: MessageListProps): React.ReactElement {
           onBranch={props.onBranch}
           onRevert={props.onRevert}
           onOpenLinkedDetails={props.onOpenLinkedDetails}
+          onRerunSuccess={props.onRerunSuccess}
         />
       ))}
     </>
@@ -208,6 +210,7 @@ export interface ConversationBodyProps {
   pendingUserMessage?: string | null;
   onSelectThread?: (threadId: string) => void;
   onDraftChange?: (value: string) => void;
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 function useConversationBodyState(props: ConversationBodyProps) {
@@ -267,6 +270,7 @@ function ConversationBodyWithThread(
         onRevert={props.onRevert}
         onOpenLinkedDetails={props.onOpenLinkedDetails}
         onSelectThread={props.onSelectThread}
+        onRerunSuccess={props.onRerunSuccess}
         pendingUserMessage={props.pendingUserMessage}
         isSending={props.isSending}
         error={props.error}

@@ -91,6 +91,8 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.removeMessageReaction, messageId, kind),
   setMessageCollapsed: (messageId, collapsed) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed, messageId, collapsed),
+  reRunFromMessage: (threadId, messageId, overrides) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage, threadId, messageId, overrides),
   onThreadUpdate: (callback) =>
     onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
   onMessageUpdate: (callback) =>

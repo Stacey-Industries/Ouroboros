@@ -70,6 +70,7 @@ const NOOP_ACTIONS: AgentChatActions = {
   onRetry: async () => undefined,
   onBranch: async () => undefined,
   onRevert: async () => undefined,
+  onRerunSuccess: () => undefined,
   onOpenLinkedDetails: async () => undefined,
   onOpenLinkedTask: () => undefined,
   onSend: async () => undefined,

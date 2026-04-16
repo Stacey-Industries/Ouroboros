@@ -135,6 +135,23 @@ function registerThreadHandlers(channels: string[], svc: AgentChatService): void
         requireValidString(messageId, 'messageId'),
       ),
   );
+  registerReRunHandler(channels, svc);
+}
+
+type RerunOv = { model?: string; effort?: string; permissionMode?: string };
+
+function castRerunOverrides(v: unknown): RerunOv | undefined {
+  return v != null && typeof v === 'object' && !Array.isArray(v) ? (v as RerunOv) : undefined;
+}
+
+function registerReRunHandler(channels: string[], svc: AgentChatService): void {
+  register(channels, AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage,
+    (threadId: unknown, messageId: unknown, overrides: unknown) => svc.reRunFromMessage(
+      requireValidString(threadId, 'threadId'),
+      requireValidString(messageId, 'messageId'),
+      castRerunOverrides(overrides),
+    ),
+  );
 }
 
 function registerMessageHandlers(channels: string[], svc: AgentChatService): void {

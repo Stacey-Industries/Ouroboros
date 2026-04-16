@@ -39,6 +39,7 @@ export interface VirtualizedMessageListProps {
   onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
   onSelectThread?: (threadId: string) => void;
+  onRerunSuccess?: (newThreadId: string) => void;
   pendingUserMessage?: string | null;
   isSending: boolean;
   error: string | null;
@@ -64,6 +65,7 @@ function renderCard(
       onBranch={p.onBranch}
       onRevert={p.onRevert}
       onOpenLinkedDetails={p.onOpenLinkedDetails}
+      onRerunSuccess={p.onRerunSuccess}
     />
   );
 }

@@ -85,6 +85,7 @@ function useSyncActionsIntoStore(
       onRetry: model.retryMessage,
       onBranch: model.branchFromMessage,
       onRevert: model.revertMessage,
+      onRerunSuccess: model.selectThread,
       onOpenLinkedDetails: model.openLinkedDetails,
       onOpenLinkedTask: model.openDetailsInOrchestration,
       onSend: model.sendMessage,

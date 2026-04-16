@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { app } from 'electron';
 import * as path from 'path';
 
+import { branchThreadFrom, reRunFromMessageImpl } from './threadStoreRerun';
 import type { SearchOptions, SearchResult } from './threadStoreSearch';
 import { ThreadStoreSqliteRuntime } from './threadStoreSqlite';
 import {
@@ -62,6 +63,11 @@ export interface AgentChatThreadStore {
     assistantContent: string,
   ) => Promise<AgentChatThreadRecord | null>;
   branchThread: (threadId: string, fromMessageId: string) => Promise<AgentChatThreadRecord>;
+  /** Wave 22 Phase F — branch at the user msg preceding messageId, return {branch, userMessage}. */
+  reRunFromMessage: (
+    threadId: string,
+    messageId: string,
+  ) => Promise<{ branch: AgentChatThreadRecord; userMessage: AgentChatMessageRecord }>;
   getStorageDirectory: () => string;
   /** Retrieve current tags for a thread. Returns [] if thread not found. */
   getTags: (threadId: string) => Promise<string[]>;
@@ -242,41 +248,14 @@ async function appendMessageToThread(args: {
   return updatedThread;
 }
 
-async function branchThreadFrom(args: {
-  createId: () => string;
-  now: () => number;
-  runtime: ThreadStoreSqliteRuntime;
-  threadId: string;
-  fromMessageId: string;
-}): Promise<AgentChatThreadRecord> {
-  const sourceThread = await args.runtime.requireThread(args.threadId);
-  const idx = sourceThread.messages.findIndex((m) => m.id === args.fromMessageId);
-  if (idx === -1) throw new Error(`Message not found: ${args.fromMessageId}`);
+type StoreApiArgs = { createId: () => string; now: () => number; runtime: ThreadStoreSqliteRuntime };
 
-  const timestamp = args.now();
-  const newId = args.createId();
-  const title = sourceThread.title.startsWith('Branch of ')
-    ? sourceThread.title
-    : `Branch of ${sourceThread.title}`;
-
-  return args.runtime.writeThread({
-    version: 1,
-    id: newId,
-    workspaceRoot: sourceThread.workspaceRoot,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    title,
-    status: 'idle',
-    messages: sourceThread.messages.slice(0, idx + 1).map((m) => ({ ...m, threadId: newId })),
-    latestOrchestration: undefined,
-  });
-}
-
-function buildThreadStoreApi(args: {
-  createId: () => string;
-  now: () => number;
-  runtime: ThreadStoreSqliteRuntime;
-}): AgentChatThreadStore {
+function buildCoreApi(args: StoreApiArgs): Pick<
+  AgentChatThreadStore,
+  | 'createThread' | 'deleteThread' | 'loadThread' | 'listThreads' | 'loadLatestThread'
+  | 'updateThread' | 'appendMessage' | 'updateMessage' | 'updateTitleFromResponse'
+  | 'branchThread' | 'reRunFromMessage' | 'getStorageDirectory'
+> {
   const { runtime, now, createId } = args;
   return {
     createThread: createThreadMethod(args),
@@ -300,7 +279,18 @@ function buildThreadStoreApi(args: {
       runtime.runMutation(() =>
         branchThreadFrom({ createId, now, runtime, threadId: id, fromMessageId: mid }),
       ),
+    reRunFromMessage: (id, mid) =>
+      runtime.runMutation(() =>
+        reRunFromMessageImpl({ createId, now, runtime, threadId: id, messageId: mid }),
+      ),
     getStorageDirectory: () => runtime.getStorageDirectory(),
+  };
+}
+
+function buildThreadStoreApi(args: StoreApiArgs): AgentChatThreadStore {
+  const { runtime } = args;
+  return {
+    ...buildCoreApi(args),
     getTags: (id) => runtime.getTags(id),
     setTags: (id, tags) => runtime.setTags(id, tags),
     searchThreads: (query, opts) => runtime.searchThreads(query, opts),

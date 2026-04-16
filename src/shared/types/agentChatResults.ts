@@ -249,6 +249,17 @@ export interface AgentChatAPI {
     messageId: string,
     collapsed: boolean,
   ) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Wave 22 Phase F — re-run from a message.
+   * Branches the thread at the user message preceding messageId, then sends
+   * that user message on the new branch with the given overrides.
+   * Always creates a new branch — original thread is never modified.
+   */
+  reRunFromMessage: (
+    threadId: string,
+    messageId: string,
+    overrides?: { model?: string; effort?: string; permissionMode?: string },
+  ) => Promise<AgentChatThreadResult>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

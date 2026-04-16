@@ -85,6 +85,7 @@ export function useAgentChatActions(): AgentChatActions {
     onRetry: s.onRetry,
     onBranch: s.onBranch,
     onRevert: s.onRevert,
+    onRerunSuccess: s.onRerunSuccess,
     onOpenLinkedDetails: s.onOpenLinkedDetails,
     onOpenLinkedTask: s.onOpenLinkedTask,
     onSend: s.onSend,

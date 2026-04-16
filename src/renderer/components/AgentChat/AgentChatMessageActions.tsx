@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 
 import type { AgentChatMessageRecord } from '../../types/electron';
+import { RerunMenu } from './RerunMenu';
 
 export interface MessageActionsProps {
   message: AgentChatMessageRecord;
@@ -9,6 +10,7 @@ export interface MessageActionsProps {
   onEdit: (message: AgentChatMessageRecord) => void;
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 function ActionButton(props: {
@@ -161,6 +163,7 @@ export function UserMessageActions({
   onEdit,
   onRetry,
   onBranch,
+  onRerunSuccess,
 }: MessageActionsProps): React.ReactElement {
   const isThreadBusy = threadStatus === 'submitting' || threadStatus === 'running';
   const { copied, copy } = useCopyMessage(message.content);
@@ -181,6 +184,11 @@ export function UserMessageActions({
       <ActionButton title="Branch from here" onClick={() => onBranch(message)}>
         <BranchIcon />
       </ActionButton>
+      <RerunMenu
+        messageId={message.id}
+        threadId={message.threadId}
+        onSuccess={onRerunSuccess}
+      />
     </div>
   );
 }
@@ -201,6 +209,7 @@ export interface AssistantMessageActionsProps {
   onBranch: (message: AgentChatMessageRecord) => void;
   onRevert?: (message: AgentChatMessageRecord) => void;
   onRewind?: (message: AgentChatMessageRecord) => void;
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 function RewindButton({ onClick }: { onClick: () => void }): React.ReactElement {
@@ -238,6 +247,7 @@ export function AssistantMessageActions({
   onBranch,
   onRevert,
   onRewind,
+  onRerunSuccess,
 }: AssistantMessageActionsProps): React.ReactElement {
   const { copied, copy } = useCopyMessage(message.content);
   const hasSnapshot = !!message.orchestration?.preSnapshotHash;
@@ -259,6 +269,11 @@ export function AssistantMessageActions({
           <span className="text-[10px] font-medium">Fork</span>
         </div>
       </button>
+      <RerunMenu
+        messageId={message.id}
+        threadId={message.threadId}
+        onSuccess={onRerunSuccess}
+      />
     </div>
   );
 }

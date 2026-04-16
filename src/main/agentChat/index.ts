@@ -11,6 +11,7 @@ import type {
   AgentChatCreateThreadRequest,
   AgentChatDeleteResult,
   AgentChatRevertResult,
+  AgentChatSendMessageRequest,
   AgentChatStreamChunk,
   AgentChatThreadRecord,
   AgentChatThreadResult,
@@ -38,6 +39,7 @@ export interface AgentChatService extends Pick<
   | 'resumeLatestThread'
   | 'getLinkedDetails'
   | 'branchThread'
+  | 'reRunFromMessage'
 > {
   bridge: AgentChatOrchestrationBridge;
   threadStore: AgentChatThreadStore;
@@ -170,6 +172,43 @@ async function branchThreadResult(
   }
 }
 
+type RerunOverrides = { model?: string; effort?: string; permissionMode?: string };
+
+function buildRerunSendOverrides(overrides?: RerunOverrides): Record<string, string> | undefined {
+  if (!overrides) return undefined;
+  const out: Record<string, string> = {};
+  if (overrides.model) out.model = overrides.model;
+  if (overrides.effort) out.effort = overrides.effort;
+  if (overrides.permissionMode) out.permissionMode = overrides.permissionMode;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+async function reRunFromMessageResult(args: {
+  threadStore: AgentChatThreadStore;
+  bridge: AgentChatOrchestrationBridge;
+  threadId: string;
+  messageId: string;
+  overrides?: RerunOverrides;
+}): Promise<AgentChatThreadResult> {
+  try {
+    const { branch, userMessage } = await args.threadStore.reRunFromMessage(
+      args.threadId, args.messageId,
+    );
+    const request: AgentChatSendMessageRequest = {
+      threadId: branch.id,
+      workspaceRoot: branch.workspaceRoot,
+      content: userMessage.content,
+      overrides: buildRerunSendOverrides(args.overrides),
+      metadata: { source: 'retry' },
+    };
+    const sendResult = await args.bridge.sendMessage(request);
+    if (!sendResult.success) return { success: false, error: sendResult.error };
+    return { success: true, thread: sendResult.thread ?? branch };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export function createAgentChatService(deps: AgentChatServiceDeps): AgentChatService {
   const threadStore = deps.threadStore ?? agentChatThreadStore;
   const bridge = createAgentChatOrchestrationBridge({
@@ -195,6 +234,8 @@ export function createAgentChatService(deps: AgentChatServiceDeps): AgentChatSer
     getLinkedDetails: (link) => bridge.getLinkedDetails(link),
     branchThread: (threadId, fromMessageId) =>
       branchThreadResult(threadStore, threadId, fromMessageId),
+    reRunFromMessage: (threadId, messageId, overrides) =>
+      reRunFromMessageResult({ threadStore, bridge, threadId, messageId, overrides }),
   };
 }
 

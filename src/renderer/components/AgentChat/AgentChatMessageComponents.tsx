@@ -91,6 +91,7 @@ export interface MessageCardProps {
   onBranch: (message: AgentChatMessageRecord) => void;
   onRevert?: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 export const MessageCard = React.memo(function MessageCard(
@@ -111,6 +112,7 @@ export const MessageCard = React.memo(function MessageCard(
         onRetry={props.onRetry}
         onBranch={props.onBranch}
         onOpenLinkedDetails={props.onOpenLinkedDetails}
+        onRerunSuccess={props.onRerunSuccess}
       />
     ) : props.message.role === 'assistant' ? (
       <AssistantMessage
@@ -119,6 +121,7 @@ export const MessageCard = React.memo(function MessageCard(
         onOpenLinkedDetails={props.onOpenLinkedDetails}
         onBranch={props.onBranch}
         onRevert={props.onRevert}
+        onRerunSuccess={props.onRerunSuccess}
       />
     ) : (
       <StatusMessage message={props.message} />

@@ -37,6 +37,7 @@ export interface UserMessageProps {
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
   onOpenLinkedDetails: (link?: AgentChatOrchestrationLink) => Promise<void>;
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 type EditModeProps = Pick<
@@ -102,6 +103,7 @@ interface UserBubbleProps {
   onEdit: UserMessageProps['onEdit'];
   onRetry: UserMessageProps['onRetry'];
   onBranch: UserMessageProps['onBranch'];
+  onRerunSuccess?: (newThreadId: string) => void;
 }
 
 function UserMessageBubble(props: UserBubbleProps): React.ReactElement {
@@ -114,6 +116,7 @@ function UserMessageBubble(props: UserBubbleProps): React.ReactElement {
         onEdit={props.onEdit}
         onRetry={props.onRetry}
         onBranch={props.onBranch}
+        onRerunSuccess={props.onRerunSuccess}
       />
       <div
         className="max-w-[85%] rounded-xl rounded-br-sm px-3.5 py-2.5 text-text-semantic-primary"
@@ -185,6 +188,7 @@ export const UserMessage = React.memo(function UserMessage(
         onEdit={props.onEdit}
         onRetry={props.onRetry}
         onBranch={props.onBranch}
+        onRerunSuccess={props.onRerunSuccess}
       />
       <UserMessageFooter
         messageId={props.message.id}

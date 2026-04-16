@@ -42,6 +42,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   addMessageReaction: 'agentChat:addMessageReaction',
   removeMessageReaction: 'agentChat:removeMessageReaction',
   setMessageCollapsed: 'agentChat:setMessageCollapsed',
+  // Wave 22 Phase F — re-run from message (always branches)
+  reRunFromMessage: 'agentChat:reRunFromMessage',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

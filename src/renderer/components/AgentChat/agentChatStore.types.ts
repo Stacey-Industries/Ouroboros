@@ -88,6 +88,8 @@ export interface AgentChatActions {
   onRetry: (message: AgentChatMessageRecord) => void;
   onBranch: (message: AgentChatMessageRecord) => void;
   onRevert: (message: AgentChatMessageRecord) => void;
+  /** Wave 22 Phase F — called when a re-run branch succeeds; navigates to the new thread. */
+  onRerunSuccess: (newThreadId: string) => void;
   onOpenLinkedDetails: (
     link?: AgentChatOrchestrationLink,
   ) => Promise<void>;

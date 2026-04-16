@@ -148,7 +148,7 @@ export function AgentChatConversation(): React.ReactElement {
         onEdit={actions.onEdit} onRetry={actions.onRetry} onBranch={actions.onBranch}
         onRevert={actions.onRevert} onOpenLinkedDetails={actions.onOpenLinkedDetails} onStop={actions.onStop}
         pendingUserMessage={thread.pendingUserMessage} onSelectThread={actions.onSelectThread}
-        onDraftChange={actions.onDraftChange}
+        onDraftChange={actions.onDraftChange} onRerunSuccess={actions.onRerunSuccess}
       />
       <InlineEventStrip />
       <ConversationQueue />
