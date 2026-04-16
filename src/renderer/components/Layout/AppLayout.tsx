@@ -9,13 +9,15 @@ import { AgentMonitorPane } from './AgentMonitorPane';
 import type { MobilePanel } from './AppLayout.mobile';
 import { MobileNavBar } from './AppLayout.mobile';
 import { CentrePane } from './CentrePane';
+import { DroppableSlot } from './DroppableSlot';
 import { ResizeDivider } from './ResizeDivider';
 import { Sidebar } from './Sidebar';
 import type { StatusBarLayoutProps, StatusBarProps } from './StatusBar';
 import { StatusBar } from './StatusBar';
 import { TerminalPane } from './TerminalPane';
 import { TitleBar } from './TitleBar';
-import { DragAndDropProvider } from './useDragAndDrop';
+import { DragAndDropProvider, useDragAndDrop } from './useDragAndDrop';
+import { useDropTargets } from './useDropTargets';
 import { type CollapseTarget, usePanelCollapse } from './usePanelCollapse';
 import { useResizable } from './useResizable';
 
@@ -195,42 +197,74 @@ function useAppLayoutState(props: AppLayoutProps) {
   return { sizes, resetSize, collapsed, toggle, setFocusedPanel, mobileActivePanel, handleMobilePanelSwitch, pfs, mkResize };
 }
 
-export function AppLayout(props: AppLayoutProps): React.ReactElement {
+import type { SlotName } from './layoutPresets/types';
+
+/** Conditionally wraps children in a DroppableSlot when DnD is enabled. */
+function MaybeDroppable({ slot, enabled, children }: { slot: SlotName; enabled: boolean; children: React.ReactNode }): React.ReactElement {
+  if (!enabled) return <>{children}</>;
+  return <DroppableSlot slotName={slot}>{children}</DroppableSlot>;
+}
+
+interface CentreColumnProps { s: ReturnType<typeof useAppLayoutState>; tc: TerminalPaneControl; dndEnabled: boolean; terminalContent?: React.ReactNode; editorTabBar?: React.ReactNode; editorContent?: React.ReactNode; }
+
+function CentreColumn({ s, tc, dndEnabled, terminalContent, editorTabBar, editorContent }: CentreColumnProps): React.ReactElement {
+  return (
+    <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
+      {!s.collapsed.editor && (
+        <>
+          <MaybeDroppable slot="editorContent" enabled={dndEnabled}>
+            <div id="editor-main" data-panel="editor" className="contents"><CentrePane tabBar={editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{editorContent}</CentrePane></div>
+          </MaybeDroppable>
+          <ResizeDivider direction="horizontal" onPointerDown={s.mkResize('terminal', 'horizontal')} onDoubleClick={() => s.resetSize('terminal')} label="Resize terminal" />
+        </>
+      )}
+      <MaybeDroppable slot="terminalContent" enabled={dndEnabled}>
+        <div data-panel="terminal" className="contents"><TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{terminalContent}</TerminalPane></div>
+      </MaybeDroppable>
+    </div>
+  );
+}
+
+function AppLayoutShell(props: AppLayoutProps): React.ReactElement {
   const s = useAppLayoutState(props);
   const { terminalControl: tc, layoutProps } = props;
+  const { enabled: dndEnabled } = useDragAndDrop();
   const statusLayout = layoutProps
     ? { ...layoutProps, currentPanelSizes: s.sizes, currentVisiblePanels: { leftSidebar: !s.collapsed.leftSidebar, rightSidebar: !s.collapsed.rightSidebar, terminal: !s.collapsed.terminal } }
     : undefined;
 
   return (
-    <DragAndDropProvider>
-      <div data-layout="app" data-mobile-active={s.mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
-        <a href="#editor-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-2 focus:bg-interactive-accent focus:text-text-semantic-on-accent">Skip to editor</a>
-        <TitleBar collapsed={s.collapsed} onTogglePanel={s.toggle} />
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {!s.collapsed.leftSidebar && (
-            <>
+    <div data-layout="app" data-mobile-active={s.mobileActivePanel} className="flex flex-col w-screen h-screen overflow-hidden bg-surface-base text-text-semantic-primary" style={{ fontFamily: 'var(--font-ui, var(--font-mono, monospace))', backgroundImage: 'var(--bg-gradient, none)' }}>
+      <a href="#editor-main" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:p-2 focus:bg-interactive-accent focus:text-text-semantic-on-accent">Skip to editor</a>
+      <TitleBar collapsed={s.collapsed} onTogglePanel={s.toggle} />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {!s.collapsed.leftSidebar && (
+          <>
+            <MaybeDroppable slot="sidebarContent" enabled={dndEnabled}>
               <div data-panel="sidebar" className="contents"><Sidebar width={s.sizes.leftSidebar} collapsed={false} onToggleCollapse={() => s.toggle('leftSidebar')} header={props.sidebarHeader} focusStyle={s.pfs('sidebar')} onFocus={() => s.setFocusedPanel('sidebar')}>{props.sidebarContent}</Sidebar></div>
-              <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
-            </>
-          )}
-          <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
-            {!s.collapsed.editor && (
-              <>
-                <div id="editor-main" data-panel="editor" className="contents"><CentrePane tabBar={props.editorTabBar} focusStyle={s.pfs('editor')} onFocus={() => s.setFocusedPanel('editor')}>{props.editorContent}</CentrePane></div>
-                <ResizeDivider direction="horizontal" onPointerDown={s.mkResize('terminal', 'horizontal')} onDoubleClick={() => s.resetSize('terminal')} label="Resize terminal" />
-              </>
-            )}
-            <div data-panel="terminal" className="contents"><TerminalPane height={s.sizes.terminal} collapsed={s.collapsed.terminal} onToggleCollapse={() => s.toggle('terminal')} fillContainer={s.collapsed.editor} sessions={tc.sessions} activeSessionId={tc.activeSessionId} onActivate={tc.onActivate} onClose={tc.onClose} onNew={tc.onNew} onNewClaude={tc.onNewClaude} onNewCodex={tc.onNewCodex} onReorder={tc.onReorder} focusStyle={s.pfs('terminal')} onFocus={() => s.setFocusedPanel('terminal')}>{props.terminalContent}</TerminalPane></div>
-          </div>
-          {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
+            </MaybeDroppable>
+            <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
+          </>
+        )}
+        <CentreColumn s={s} tc={tc} dndEnabled={dndEnabled} terminalContent={props.terminalContent} editorTabBar={props.editorTabBar} editorContent={props.editorContent} />
+        {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
+        <MaybeDroppable slot="agentCards" enabled={dndEnabled}>
           <div data-panel="agent-monitor" style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
             <AgentMonitorPane width={s.sizes.rightSidebar} collapsed={false} onToggleCollapse={() => s.toggle('rightSidebar')} focusStyle={s.pfs('agentMonitor')} onFocus={() => s.setFocusedPanel('agentMonitor')}>{props.agentCards}</AgentMonitorPane>
           </div>
-        </div>
-        <MobileNavBar active={s.mobileActivePanel} onSwitch={s.handleMobilePanelSwitch} />
-        <div data-layout="status-bar"><StatusBar {...props.statusBar} layout={statusLayout} /></div>
+        </MaybeDroppable>
       </div>
+      <MobileNavBar active={s.mobileActivePanel} onSwitch={s.handleMobilePanelSwitch} />
+      <div data-layout="status-bar"><StatusBar {...props.statusBar} layout={statusLayout} /></div>
+    </div>
+  );
+}
+
+export function AppLayout(props: AppLayoutProps): React.ReactElement {
+  const { onDragEnd } = useDropTargets();
+  return (
+    <DragAndDropProvider onDragEnd={onDragEnd}>
+      <AppLayoutShell {...props} />
     </DragAndDropProvider>
   );
 }

@@ -16,7 +16,7 @@ import { chatPrimaryPreset, idePrimaryPreset } from './presets';
 // ---------------------------------------------------------------------------
 
 function TestConsumer(): React.ReactElement {
-  const preset = useLayoutPreset();
+  const { preset } = useLayoutPreset();
   return <div data-testid="preset-id">{preset.id}</div>;
 }
 
@@ -153,7 +153,7 @@ describe('useLayoutPreset (default context value)', () => {
   it('returns ide-primary as the context default outside a provider', () => {
     // Calling the hook outside a provider returns the createContext default.
     function Bare(): React.ReactElement {
-      const preset = useLayoutPreset();
+      const { preset } = useLayoutPreset();
       return <span data-testid="bare">{preset.id}</span>;
     }
     render(<Bare />);
