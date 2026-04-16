@@ -22,6 +22,7 @@ import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
 import { researchApi } from './preloadSupplementalResearchApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 import { sessionCrudApi } from './preloadSupplementalSessionApis';
+import { workspaceReadListApi } from './preloadSupplementalWorkspaceReadListApis';
 
 type SupplementalApiKey =
   | 'approval' | 'sessions' | 'cost' | 'usage' | 'shellHistory'
@@ -30,7 +31,8 @@ type SupplementalApiKey =
   | 'context' | 'ideTools' | 'codemode' | 'agentChat' | 'orchestration'
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
-  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'research';
+  | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'research'
+  | 'workspaceReadList';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -270,4 +272,5 @@ export const supplementalApis: SupplementalApis = {
   folderCrud: folderCrudApi,
   pinnedContext: pinnedContextApi,
   research: researchApi,
+  workspaceReadList: workspaceReadListApi,
 };

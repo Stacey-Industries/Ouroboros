@@ -22,7 +22,8 @@ export type TabId =
   | 'integrations'
   | 'codemode'
   | 'contextDocs'
-  | 'performance';
+  | 'performance'
+  | 'workspaceReadList';
 
 export interface Tab {
   id: TabId;
@@ -48,6 +49,7 @@ export const TABS: Tab[] = [
   { id: 'codemode', label: 'Code Mode' },
   { id: 'contextDocs', label: 'Context Docs' },
   { id: 'performance', label: 'Performance' },
+  { id: 'workspaceReadList', label: 'Read-List' },
 ];
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
@@ -69,7 +71,7 @@ export const MAIN_TABS: MainTab[] = [
   { id: 'account',        label: 'Account',           subtabs: ['accounts', 'providers'] },
   { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
   { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
-  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'codemode', 'contextDocs'] },
+  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'codemode', 'contextDocs', 'workspaceReadList'] },
   { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance'] },
 ];
 

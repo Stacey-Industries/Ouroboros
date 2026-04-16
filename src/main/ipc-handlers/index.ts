@@ -24,9 +24,9 @@ export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';
 export { cleanupPinnedContextHandlers, registerPinnedContextHandlers } from './pinnedContext';
-export { cleanupResearchHandlers, registerResearchHandlers } from './research';
 export { registerPtyHandlers } from './pty';
 export { registerPtyPersistenceHandlers } from './ptyPersistence';
+export { cleanupResearchHandlers, registerResearchHandlers } from './research';
 export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';
@@ -34,4 +34,8 @@ export { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessi
 export { registerSessionHandlers } from './sessions';
 export { registerSpecHandlers } from './specScaffold';
 export { cleanupTelemetryHandlers, registerTelemetryHandlers } from './telemetry';
+export {
+  cleanupWorkspaceReadListHandlers,
+  registerWorkspaceReadListHandlers,
+} from './workspaceReadList';
 export { cleanupWorktreeHandlers, registerWorktreeHandlers } from './worktree';

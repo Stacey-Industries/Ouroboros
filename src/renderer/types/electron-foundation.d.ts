@@ -236,6 +236,8 @@ export interface AppConfig {
     /** Wave 22 Phase E — fire desktop notification on stream completion (unfocused only). Default: true. */
     desktopNotifications?: boolean;
   };
+  /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */
+  workspaceReadLists?: Record<string, string[]>;
 }
 
 export interface ContextLayerConfig {

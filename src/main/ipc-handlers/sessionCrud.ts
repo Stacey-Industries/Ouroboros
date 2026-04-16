@@ -19,6 +19,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
 import log from '../logger';
+import { applyToSession } from '../orchestration/workspaceReadList';
 import type { AgentMonitorSettings, Session } from '../session/session';
 import { makeSession } from '../session/session';
 import { getSessionStore } from '../session/sessionStore';
@@ -82,6 +83,7 @@ function handleCreate(args: unknown): HandlerResult<{ session: Session }> {
   if (!store) return fail('sessionStore not initialised');
   const session = makeSession(projectRoot);
   store.upsert(session);
+  applyToSession(session.id, projectRoot);
   broadcastChanged();
   return ok({ session });
 }

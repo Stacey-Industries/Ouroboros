@@ -4,9 +4,9 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ResearchIndicator } from './ResearchIndicator';
 
@@ -34,5 +34,38 @@ describe('ResearchIndicator', () => {
     expect(screen.getByText('first topic')).toBeTruthy();
     rerender(<ResearchIndicator topic="second topic" />);
     expect(screen.getByText('second topic')).toBeTruthy();
+  });
+
+  it('renders the spinner element', () => {
+    render(<ResearchIndicator topic="tailwind" />);
+    expect(screen.getByTestId('research-spinner')).toBeTruthy();
+  });
+
+  it('renders a Cancel button', () => {
+    render(<ResearchIndicator topic="react" />);
+    expect(screen.getByTestId('research-cancel-btn')).toBeTruthy();
+  });
+
+  it('calls onCancel prop and fires DOM event when Cancel is clicked', () => {
+    const onCancel = vi.fn();
+    const dispatched: Event[] = [];
+    window.addEventListener('agent-ide:cancel-research', (e) => dispatched.push(e));
+
+    render(<ResearchIndicator topic="react" onCancel={onCancel} />);
+    fireEvent.click(screen.getByTestId('research-cancel-btn'));
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0].type).toBe('agent-ide:cancel-research');
+  });
+
+  it('fires DOM cancel event even without onCancel prop', () => {
+    const dispatched: Event[] = [];
+    window.addEventListener('agent-ide:cancel-research', (e) => dispatched.push(e));
+
+    render(<ResearchIndicator topic="prisma" />);
+    fireEvent.click(screen.getByTestId('research-cancel-btn'));
+
+    expect(dispatched).toHaveLength(1);
   });
 });

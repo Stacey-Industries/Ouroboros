@@ -21,6 +21,7 @@ import {
   cleanupResearchHandlers,
   cleanupSessionCrudHandlers,
   cleanupTelemetryHandlers,
+  cleanupWorkspaceReadListHandlers,
   cleanupWorktreeHandlers,
   closeEmbeddingStore,
   ensureSchedulerInit,
@@ -47,8 +48,8 @@ import {
   registerMiscHandlers,
   registerPinnedContextHandlers,
   registerPtyHandlers,
-  registerResearchHandlers,
   registerPtyPersistenceHandlers,
+  registerResearchHandlers,
   registerRouterStatsHandlers,
   registerRulesAndSkillsHandlers,
   registerSearchHandlers,
@@ -56,6 +57,7 @@ import {
   registerSessionHandlers,
   registerSpecHandlers,
   registerTelemetryHandlers,
+  registerWorkspaceReadListHandlers,
   registerWorktreeHandlers,
 } from './ipc-handlers';
 import log from './logger';
@@ -117,6 +119,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('agentConflict', () => registerAgentConflictHandlers()),
     ...safeRegister('telemetry', () => registerTelemetryHandlers()),
     ...safeRegister('worktree', () => registerWorktreeHandlers()),
+    ...safeRegister('workspaceReadList', () => registerWorkspaceReadListHandlers()),
   ];
 }
 
@@ -273,6 +276,7 @@ export function cleanupIpcHandlers(): void {
   cleanupResearchHandlers();
   cleanupTelemetryHandlers();
   cleanupWorktreeHandlers();
+  cleanupWorkspaceReadListHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 

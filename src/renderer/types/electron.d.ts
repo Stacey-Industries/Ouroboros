@@ -25,6 +25,7 @@ export * from './electron-spec';
 export * from './electron-system2';
 export * from './electron-telemetry';
 export * from './electron-workspace';
+export * from './electron-workspace-read-list';
 
 declare global {
   interface Window {

@@ -294,6 +294,8 @@ export const tailSchema = {
       branchingPolish: { type: 'boolean', default: true },
     },
   },
+  /** Wave 25 Phase E — workspace read-list: project root → file paths auto-pinned at session open */
+  workspaceReadLists: { type: 'object', additionalProperties: { type: 'array', items: { type: 'string' } }, default: {} },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,

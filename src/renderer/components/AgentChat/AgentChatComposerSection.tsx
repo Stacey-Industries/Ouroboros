@@ -5,7 +5,7 @@
  * Wave 25 Phase C: intercepts /research, /spec-with-research, /implement-with-research
  * before the normal send path when researchEnabled is true.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type {
   AgentChatThreadRecord,
@@ -85,27 +85,44 @@ interface ResearchInterceptResult {
   isResearching: boolean;
   researchTopic: string;
   wrappedOnSend: () => Promise<void>;
+  handleCancel: () => void;
 }
 
 function useResearchIntercept(opts: ResearchInterceptOpts): ResearchInterceptResult {
   const { draft, activeSessionId, researchEnabled, onDraftChange, onSend } = opts;
   const [isResearching, setIsResearching] = useState(false);
   const [researchTopic, setResearchTopic] = useState('');
+  const cancelledRef = useRef(false);
+
+  // Listen for DOM cancel event (fired by ResearchIndicator cancel button).
+  useEffect(() => {
+    function onCancelEvent(): void { cancelledRef.current = true; setIsResearching(false); }
+    window.addEventListener('agent-ide:cancel-research', onCancelEvent);
+    return () => window.removeEventListener('agent-ide:cancel-research', onCancelEvent);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    cancelledRef.current = true;
+    setIsResearching(false);
+    setResearchTopic('');
+  }, []);
 
   const wrappedOnSend = useCallback(async () => {
     const parsed = researchEnabled ? parseResearchCommand(draft) : null;
     if (!parsed || !activeSessionId) { return onSend(); }
+    cancelledRef.current = false;
     setIsResearching(true);
     setResearchTopic(parsed.topic);
     onDraftChange('');
     await runResearchAndPin({ sessionId: activeSessionId, topic: parsed.topic });
+    if (cancelledRef.current) { setResearchTopic(''); return; }
     setIsResearching(false);
     setResearchTopic('');
     const followup = buildFollowupPrompt(parsed.cmd, parsed.topic);
     if (followup) { onDraftChange(followup); await onSend(); }
   }, [draft, activeSessionId, researchEnabled, onDraftChange, onSend]);
 
-  return { isResearching, researchTopic, wrappedOnSend };
+  return { isResearching, researchTopic, wrappedOnSend, handleCancel };
 }
 
 // ─── Composer render helper ───────────────────────────────────────────────────
@@ -113,6 +130,7 @@ function useResearchIntercept(opts: ResearchInterceptOpts): ResearchInterceptRes
 type ComposerInnerProps = ComposerSectionProps & {
   wrappedOnSend: () => Promise<void>;
   isResearching: boolean;
+  handleCancel: () => void;
 };
 
 function buildComposerProps(props: ComposerInnerProps): React.ComponentProps<typeof AgentChatComposer> {
@@ -163,7 +181,7 @@ function ComposerInner(props: ComposerInnerProps): React.ReactElement {
 
 export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
   const researchEnabled = props.slashCommandContext?.researchEnabled !== false;
-  const { isResearching, researchTopic, wrappedOnSend } = useResearchIntercept({
+  const { isResearching, researchTopic, wrappedOnSend, handleCancel } = useResearchIntercept({
     draft: props.draft,
     activeSessionId: props.activeSessionId,
     researchEnabled,
@@ -172,8 +190,15 @@ export function ComposerSection(props: ComposerSectionProps): React.ReactElement
   });
   return (
     <>
-      {isResearching && <ResearchIndicator topic={researchTopic} />}
-      <ComposerInner {...props} wrappedOnSend={wrappedOnSend} isResearching={isResearching} />
+      {isResearching && (
+        <ResearchIndicator topic={researchTopic} onCancel={handleCancel} />
+      )}
+      <ComposerInner
+        {...props}
+        wrappedOnSend={wrappedOnSend}
+        isResearching={isResearching}
+        handleCancel={handleCancel}
+      />
     </>
   );
 }

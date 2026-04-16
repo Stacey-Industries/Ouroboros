@@ -23,6 +23,7 @@ import { ProvidersSection } from './ProvidersSection';
 import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
 import { TerminalSection } from './TerminalSection';
+import { WorkspaceReadListSection } from './WorkspaceReadListSection';
 
 interface SettingsTabContentProps {
   activeTab: TabId;
@@ -57,6 +58,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   codemode: () => <CodeModeSection />,
   contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
   performance: () => <SettingsPerformancePanel />,
+  workspaceReadList: ({ draft }) => <WorkspaceReadListSection draft={draft} />,
 };
 
 export function SettingsTabContent({

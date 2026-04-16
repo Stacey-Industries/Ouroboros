@@ -42,6 +42,7 @@ import type { SessionCrudAPI } from './electron-session';
 import type { SpecAPI } from './electron-spec';
 import type { System2API } from './electron-system2';
 import type { ObservabilityAPI, TelemetryAPI } from './electron-telemetry';
+import type { WorkspaceReadListAPI } from './electron-workspace-read-list';
 
 export interface McpServerConfig {
   command?: string;
@@ -283,6 +284,7 @@ export interface ElectronAPI {
   folderCrud: FolderCrudAPI;
   pinnedContext: PinnedContextAPI;
   research: ResearchAPI;
+  workspaceReadList: WorkspaceReadListAPI;
 }
 
 export interface WorkspaceAPI {
