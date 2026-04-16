@@ -31,6 +31,13 @@ export default defineConfig({
     // watchers, SQLite connections, setInterval in imported modules).
     // Threads pool would keep workers alive waiting for open handles to close.
     pool: 'forks',
+    // Windows: orphan node processes from killed/rate-limited runs accumulate
+    // under the default num-cpus fork count and starve subsequent runs
+    // (observed: 121 orphans → vitest hangs with no output). Capping at 2
+    // preserves parallelism while keeping the process graph manageable.
+    // Vitest 4 deprecated test.poolOptions — top-level `forks` options now.
+    maxWorkers: 2,
+    minWorkers: 1,
     // Hang safety: cap per-test and per-teardown time so a stuck test fails
     // fast instead of consuming CI minutes.
     testTimeout: 20000,

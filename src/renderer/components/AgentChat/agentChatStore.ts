@@ -24,6 +24,7 @@ import type {
 
 const DEFAULT_THREAD: AgentChatThreadState = {
   activeThread: null,
+  threads: [],
   canSend: false,
   draft: '',
   error: null,

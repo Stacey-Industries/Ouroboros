@@ -34,3 +34,4 @@ export const OPEN_THREAD_SEARCH_EVENT = 'agent-ide:open-thread-search';
 export const OPEN_THREAD_EVENT = 'agent-ide:open-thread';
 export const OPEN_USAGE_DASHBOARD_EVENT = 'agent-ide:open-usage-dashboard';
 export const OPEN_FILE_EVENT = 'agent-ide:open-file';
+export const TOGGLE_SIDE_CHAT_EVENT = 'agent-ide:toggle-side-chat';

@@ -93,6 +93,12 @@ export const agentChatApi: AgentChatAPI = {
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setMessageCollapsed, messageId, collapsed),
   reRunFromMessage: (threadId, messageId, overrides) =>
     ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.reRunFromMessage, threadId, messageId, overrides),
+  forkThread: (request) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.forkThread, request),
+  renameBranch: (threadId, name) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.renameBranch, { threadId, name }),
+  listBranches: (rootThreadId) =>
+    ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.listBranches, { rootThreadId }),
   onThreadUpdate: (callback) =>
     onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
   onMessageUpdate: (callback) =>

@@ -8,7 +8,7 @@
  * handoff. React Compiler (Wave 4) handles memoization.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import type {
   AgentChatMessageRecord,
@@ -22,10 +22,14 @@ import {
   MessageCard,
   PendingUserBubble,
 } from './AgentChatMessageComponents';
+import type { BranchForkEntry } from './BranchIndicator';
+import { BranchIndicator } from './BranchIndicator';
 import { useVirtualScroll } from './useVirtualScroll';
 
 export interface VirtualizedMessageListProps {
   activeThread: AgentChatThreadRecord;
+  /** All workspace threads — used to compute per-message branch fork indicators. */
+  allThreads?: AgentChatThreadRecord[];
   messagesWithStreaming: AgentChatMessageRecord[];
   lastUserMessageId: string | null;
   editingMessageId: string | null;
@@ -43,6 +47,26 @@ export interface VirtualizedMessageListProps {
   pendingUserMessage?: string | null;
   isSending: boolean;
   error: string | null;
+}
+
+/** Build a map of messageId → branch forks for the current thread's children. */
+function useForksByMessageId(
+  activeThreadId: string,
+  allThreads: AgentChatThreadRecord[] | undefined,
+): Map<string, BranchForkEntry[]> {
+  return useMemo(() => {
+    const map = new Map<string, BranchForkEntry[]>();
+    if (!allThreads) return map;
+    for (const t of allThreads) {
+      if (t.parentThreadId !== activeThreadId) continue;
+      if (!t.forkOfMessageId) continue;
+      const label = t.branchName ?? t.title;
+      const existing = map.get(t.forkOfMessageId) ?? [];
+      existing.push({ threadId: t.id, branchName: label });
+      map.set(t.forkOfMessageId, existing);
+    }
+    return map;
+  }, [activeThreadId, allThreads]);
 }
 
 function renderCard(
@@ -70,8 +94,43 @@ function renderCard(
   );
 }
 
+function MessageRows({
+  messagesWithStreaming,
+  forksByMessageId,
+  activeThreadId,
+  onSelectThread,
+  props,
+}: {
+  messagesWithStreaming: AgentChatMessageRecord[];
+  forksByMessageId: Map<string, BranchForkEntry[]>;
+  activeThreadId: string;
+  onSelectThread?: (id: string) => void;
+  props: VirtualizedMessageListProps;
+}): React.ReactElement {
+  return (
+    <>
+      {messagesWithStreaming.map((message) => {
+        const forks = forksByMessageId.get(message.id);
+        return (
+          <div key={message.id} className="pb-4">
+            {renderCard(message, props)}
+            {forks && onSelectThread && (
+              <BranchIndicator
+                forks={forks}
+                currentThreadId={activeThreadId}
+                onSelect={onSelectThread}
+              />
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement {
   const { scrollRef, handleScroll } = useVirtualScroll(props.messagesWithStreaming);
+  const forksByMessageId = useForksByMessageId(props.activeThread.id, props.allThreads);
 
   return (
     <div
@@ -90,11 +149,13 @@ function FlatMessageList(props: VirtualizedMessageListProps): React.ReactElement
             />
           </div>
         )}
-        {props.messagesWithStreaming.map((message) => (
-          <div key={message.id} className="pb-4">
-            {renderCard(message, props)}
-          </div>
-        ))}
+        <MessageRows
+          messagesWithStreaming={props.messagesWithStreaming}
+          forksByMessageId={forksByMessageId}
+          activeThreadId={props.activeThread.id}
+          onSelectThread={props.onSelectThread}
+          props={props}
+        />
         {props.pendingUserMessage && props.isSending && (
           <div className="pb-4">
             <PendingUserBubble text={props.pendingUserMessage} />

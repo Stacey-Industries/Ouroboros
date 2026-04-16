@@ -25,6 +25,7 @@ import type {
 export function useAgentChatThread(): AgentChatThreadState {
   return useAgentChatStoreContext(useShallow((s) => ({
     activeThread: s.activeThread,
+    threads: s.threads,
     canSend: s.canSend,
     draft: s.draft,
     error: s.error,

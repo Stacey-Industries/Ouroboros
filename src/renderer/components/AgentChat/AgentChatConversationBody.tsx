@@ -25,6 +25,7 @@ import {
   MissingProjectState,
   PendingUserBubble,
 } from './AgentChatMessageComponents';
+import { useAgentChatThread } from './agentChatSelectors';
 import { dispatchDiffReviewEvent } from './AgentChatStreamingHelpers';
 import { AgentConflictBanner } from './AgentConflictBanner';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
@@ -252,11 +253,13 @@ function ConversationBodyWithThread(
   props: ConversationBodyProps &
     BodyState & { activeThread: NonNullable<ConversationBodyProps['activeThread']> },
 ): React.ReactElement {
+  const { threads } = useAgentChatThread();
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <ConflictBanners activeThread={props.activeThread} />
       <VirtualizedMessageList
         activeThread={props.activeThread}
+        allThreads={threads}
         messagesWithStreaming={props.messagesWithStreaming}
         lastUserMessageId={findLastUserMessageId(props.activeThread.messages)}
         editingMessageId={props.editingMessageId}

@@ -1,18 +1,20 @@
 import log from 'electron-log/renderer';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
-import { SWITCH_SIDEBAR_VIEW_EVENT } from '../../hooks/appEventNames';
+import { SWITCH_SIDEBAR_VIEW_EVENT, TOGGLE_SIDE_CHAT_EVENT } from '../../hooks/appEventNames';
 import { useConfig } from '../../hooks/useConfig';
 import { useStreamCompletionNotifications } from '../../hooks/useStreamCompletionNotifications';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
 import { DensityProvider } from './DensityContext';
+import { SideChatDrawer } from './SideChatDrawer';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { buildMentionRanges, useAgentChatContext } from './useAgentChatContext';
 import type { AgentChatWorkspaceModel } from './useAgentChatWorkspace';
 import { useAgentChatWorkspace } from './useAgentChatWorkspace';
+import { useSideChat } from './useSideChat';
 
 export interface AgentChatWorkspaceProps {
   projectRoot: string | null;
@@ -29,6 +31,7 @@ function useSyncStateIntoStore(
   useEffect(() => {
     store.setState({
       activeThread: model.activeThread,
+      threads: model.threads,
       canSend: model.canSend,
       draft: model.draft,
       error: model.error,
@@ -178,11 +181,84 @@ function useWorkspaceStoreSync(
   useSyncActionsIntoStore(store, model, context);
 }
 
-/* ���─ Workspace component ─────────���───────────────────────���───────────────── */
+/* ── Workspace helpers ───────────────────────────────────────────────────── */
 
 function useWorkspaceNotifications(): void {
   const { config } = useConfig();
   useStreamCompletionNotifications(config);
+}
+
+function useLastMessageId(model: AgentChatWorkspaceModel): string {
+  const messages = model.activeThread?.messages ?? [];
+  const last = messages[messages.length - 1];
+  return last?.id ?? '';
+}
+
+interface SideChatDrawerState {
+  sideChat: ReturnType<typeof useSideChat>;
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function useSideChatDrawer(model: AgentChatWorkspaceModel): SideChatDrawerState {
+  const sideChat = useSideChat();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const lastMessageId = useLastMessageId(model);
+
+  const handleToggle = useCallback(() => {
+    if (!isDrawerOpen) {
+      setIsDrawerOpen(true);
+      if (sideChat.sideChats.length === 0 && model.activeThreadId) {
+        void sideChat.openSideChat(model.activeThreadId, lastMessageId, false);
+      }
+    } else {
+      setIsDrawerOpen(false);
+    }
+  }, [isDrawerOpen, sideChat, model.activeThreadId, lastMessageId]);
+
+  useEffect(() => {
+    window.addEventListener(TOGGLE_SIDE_CHAT_EVENT, handleToggle);
+    return () => window.removeEventListener(TOGGLE_SIDE_CHAT_EVENT, handleToggle);
+  }, [handleToggle]);
+
+  return { sideChat, isDrawerOpen, setIsDrawerOpen };
+}
+
+function useWorkspaceSlashCmd(
+  model: AgentChatWorkspaceModel,
+  onRemember: (content: string) => Promise<void>,
+  onOpenMemories: () => void,
+  onSpec: (name: string) => void,
+): SlashCommandContext {
+  return useMemo<SlashCommandContext>(
+    () => ({
+      onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
+      onRemember, onOpenMemories, onSpec, commands: model.commands,
+    }),
+    [model, onRemember, onOpenMemories, onSpec],
+  );
+}
+
+/* ── Workspace component ─────────────────────────────────────────────────── */
+
+interface WorkspaceWiringArgs {
+  model: AgentChatWorkspaceModel;
+  context: ReturnType<typeof useAgentChatContext>;
+  store: ReturnType<typeof createAgentChatStore>;
+  onModelReady: AgentChatWorkspaceProps['onModelReady'];
+  onRemember: (c: string) => Promise<void>;
+  onOpenMemories: () => void;
+  onSpec: (n: string) => void;
+}
+
+function useWorkspaceWiring(args: WorkspaceWiringArgs): void {
+  const { model, context, store, onModelReady, onRemember, onOpenMemories, onSpec } = args;
+  const { setContextFilePaths, setMentionRanges } = model;
+  useEffect(() => { setContextFilePaths(context.filePaths); }, [context.filePaths, setContextFilePaths]);
+  useEffect(() => { setMentionRanges(buildMentionRanges(context.mentions)); }, [context.mentions, setMentionRanges]);
+  useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
+  const slashCmd = useWorkspaceSlashCmd(model, onRemember, onOpenMemories, onSpec);
+  useWorkspaceStoreSync(store, model, context, slashCmd);
 }
 
 export function AgentChatWorkspace({
@@ -195,30 +271,14 @@ export function AgentChatWorkspace({
   const store = useRef(createAgentChatStore()).current;
   useWorkspaceNotifications();
 
+  const { sideChat, isDrawerOpen, setIsDrawerOpen } = useSideChatDrawer(model);
   const onRemember = useRememberAction(projectRoot, toast);
   const onSpec = useSpecAction(projectRoot, toast);
   const onOpenMemories = useCallback(() => {
-    window.dispatchEvent(
-      new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }),
-    );
+    window.dispatchEvent(new CustomEvent(SWITCH_SIDEBAR_VIEW_EVENT, { detail: { view: 'memory' } }));
   }, []);
 
-  const { setContextFilePaths, setMentionRanges } = model;
-  useEffect(() => { setContextFilePaths(context.filePaths); }, [context.filePaths, setContextFilePaths]);
-  useEffect(() => {
-    setMentionRanges(buildMentionRanges(context.mentions));
-  }, [context.mentions, setMentionRanges]);
-  useEffect(() => { onModelReady?.(model); }, [model, onModelReady]);
-
-  const slashCmd = useMemo<SlashCommandContext>(
-    () => ({
-      onClearChat: model.reloadThreads, onNewThread: model.startNewChat,
-      onRemember, onOpenMemories, onSpec, commands: model.commands,
-    }),
-    [model, onRemember, onOpenMemories, onSpec],
-  );
-
-  useWorkspaceStoreSync(store, model, context, slashCmd);
+  useWorkspaceWiring({ model, context, store, onModelReady, onRemember, onOpenMemories, onSpec });
 
   return (
     <AgentChatStoreContext.Provider value={store}>
@@ -226,6 +286,17 @@ export function AgentChatWorkspace({
         <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
           <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
         </div>
+        <SideChatDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          sideChats={sideChat.sideChats}
+          activeSideChatId={sideChat.activeSideChatId}
+          onSelect={sideChat.setActive}
+          onCloseTab={(id) => {
+            sideChat.closeSideChat(id);
+            if (sideChat.sideChats.length <= 1) setIsDrawerOpen(false);
+          }}
+        />
       </DensityProvider>
     </AgentChatStoreContext.Provider>
   );

@@ -98,6 +98,7 @@ function buildViewMenu(win: BrowserWindow): MenuItemConstructorOptions {
       { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendMenuEvent(win, 'menu:command-palette') },
       { type: 'separator' },
       { label: 'Open Dedicated Chat', accelerator: 'CommandOrControl+Shift+O', click: () => openDedicatedChat(win) },
+      { label: 'Open Side Chat', accelerator: 'CmdOrCtrl+;', click: () => sendMenuEvent(win, 'menu:toggle-side-chat') },
       { type: 'separator' },
       { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => sendMenuEvent(win, 'menu:settings') }
     ]

@@ -1,15 +1,85 @@
 /**
  * AgentChatTabBarParts.tsx — Sub-components for AgentChatTabBar.
  * Extracted to keep AgentChatTabBar.tsx under the 300-line limit.
+ * Overflow exports live in AgentChatTabBarParts.extra.tsx.
  */
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { OPEN_CHAT_IN_TERMINAL_EVENT } from '../../hooks/appEventNames';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import type { LinkedSession } from './AgentChatTabBarHooks';
 export { resolveLinkedProvider, useLinkedSessionId } from './AgentChatTabBarHooks';
 export type { LinkedSession };
+export { BranchTreeButton } from './AgentChatBranchTreeButton';
+export { OpenInTerminalButton, resolveRootThread } from './AgentChatTabBarParts.extra';
+
+// ── Tab sub-components (used by AgentChatTabBar) ──────────────────────────────
+
+export function TabCloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
+  return (
+    <span
+      role="button"
+      tabIndex={-1}
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+      className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
+    >
+      &times;
+    </span>
+  );
+}
+
+export type TabProps = {
+  branchMessageIndex?: number;
+  branchParentTitle?: string;
+  isActive: boolean;
+  isBranch: boolean;
+  onClose: () => void;
+  onRename?: () => void;
+  onSelect: () => void;
+  title: string;
+};
+
+function BranchMenuButton({ onRename }: { onRename: () => void }): React.ReactElement {
+  return (
+    <span
+      role="button"
+      tabIndex={-1}
+      onClick={(e) => { e.stopPropagation(); onRename(); }}
+      className="ml-0.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-[9px] leading-none opacity-0 text-text-semantic-muted transition-opacity duration-75 group-hover:opacity-60 hover:!opacity-100"
+      title="Rename branch"
+    >
+      &hellip;
+    </span>
+  );
+}
+
+export function Tab(props: TabProps): React.ReactElement {
+  return (
+    <button
+      onClick={props.onSelect}
+      className={`group relative flex shrink-0 items-center gap-1 rounded-t px-2.5 py-1 text-[11px] transition-colors duration-100 ${props.isActive ? 'bg-surface-base text-text-semantic-primary' : 'text-text-semantic-muted'}`}
+      style={{ borderBottom: props.isActive ? '2px solid var(--interactive-accent)' : '2px solid transparent' }}
+    >
+      {props.isBranch && (
+        <BranchTabIcon parentTitle={props.branchParentTitle ?? ''} messageIndex={props.branchMessageIndex ?? 0} />
+      )}
+      <span className="max-w-[120px] truncate">{props.title}</span>
+      {props.isBranch && props.onRename && <BranchMenuButton onRename={props.onRename} />}
+      <TabCloseButton onClose={props.onClose} />
+    </button>
+  );
+}
+
+export function useScrollActiveThreadIntoView(
+  scrollRef: React.RefObject<HTMLDivElement | null>,
+  activeThreadId: string | null,
+): void {
+  useEffect(() => {
+    if (!scrollRef.current || !activeThreadId) return;
+    const activeTab = scrollRef.current.querySelector(`[data-thread-id="${activeThreadId}"]`);
+    if (activeTab) activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activeThreadId, scrollRef]);
+}
 
 export const THREAD_DROPDOWN_STYLE: React.CSSProperties = {
   position: 'fixed',
@@ -211,52 +281,3 @@ export function ThreadDropdown({
   );
 }
 
-function TerminalIcon(): React.ReactElement {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="4 17 10 11 4 5" />
-      <line x1="12" y1="19" x2="20" y2="19" />
-    </svg>
-  );
-}
-
-export function OpenInTerminalButton({
-  linkedSession,
-  threadModel,
-}: {
-  linkedSession: LinkedSession;
-  threadModel: string | null | undefined;
-}): React.ReactElement | null {
-  const handleClick = useCallback(() => {
-    if (!linkedSession.provider || !linkedSession.sessionId) return;
-    window.dispatchEvent(
-      new CustomEvent(OPEN_CHAT_IN_TERMINAL_EVENT, {
-        detail: {
-          provider: linkedSession.provider,
-          sessionId: linkedSession.sessionId,
-          model: threadModel ?? undefined,
-        },
-      }),
-    );
-  }, [linkedSession.provider, linkedSession.sessionId, threadModel]);
-  if (!linkedSession.sessionId) return null;
-  return (
-    <button
-      onClick={handleClick}
-      className="flex shrink-0 items-center gap-1 px-2 py-1.5 text-xs text-text-semantic-muted transition-colors duration-100 hover:text-interactive-accent"
-      title="Resume this chat session in an interactive terminal"
-    >
-      <TerminalIcon />
-      <span>Terminal</span>
-    </button>
-  );
-}

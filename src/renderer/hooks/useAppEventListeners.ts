@@ -21,6 +21,7 @@ import {
   OPEN_SETTINGS_PANEL_EVENT,
   OPEN_USAGE_PANEL_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+  TOGGLE_SIDE_CHAT_EVENT,
 } from './appEventNames';
 
 function hasElectronAPI(): boolean {
@@ -188,6 +189,8 @@ export function useMenuEvents(
         void spawnSession();
       } else if (event === 'menu:settings') {
         emitSettingsPanel();
+      } else if (event === 'menu:toggle-side-chat') {
+        window.dispatchEvent(new CustomEvent(TOGGLE_SIDE_CHAT_EVENT));
       }
     });
   }, [handleProjectChange, openPalette, spawnSession]);

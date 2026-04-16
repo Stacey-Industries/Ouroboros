@@ -27,6 +27,8 @@ import type { QueuedMessage } from './useAgentChatWorkspace';
 
 export interface AgentChatThreadState {
   activeThread: AgentChatThreadRecord | null;
+  /** All threads for the current workspace — used for branch indicators. */
+  threads: AgentChatThreadRecord[];
   canSend: boolean;
   draft: string;
   error: string | null;
