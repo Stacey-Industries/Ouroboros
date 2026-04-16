@@ -260,25 +260,15 @@ export const tailSchema = {
   codebaseGraph: {
     type: 'object',
     additionalProperties: false,
-    properties: {
-      gcEnabled: { type: 'boolean', default: true },
-      gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 },
-    },
+    properties: { gcEnabled: { type: 'boolean', default: true }, gcDaysThreshold: { type: 'number', minimum: 1, maximum: 3650, default: 90 } },
     default: { gcEnabled: true, gcDaysThreshold: 90 },
   },
   /** Wave 15 — structured telemetry feature flag and retention policy */
-  telemetry: {
-    type: 'object',
-    properties: { structured: { type: 'boolean', default: false }, retentionDays: { type: 'number', default: 30 } },
-  },
+  telemetry: { type: 'object', properties: { structured: { type: 'boolean', default: false }, retentionDays: { type: 'number', default: 30 } } },
   /** Wave 16 — persisted Session records (loose schema; TS interface enforces shape) */
   sessionsData: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 16 — session feature flags */
-  sessions: {
-    type: 'object',
-    properties: { worktreePerSession: { type: 'boolean', default: false } },
-    default: { worktreePerSession: false },
-  },
+  sessions: { type: 'object', properties: { worktreePerSession: { type: 'boolean', default: false } }, default: { worktreePerSession: false } },
   /** Wave 17/20 — layout preset engine + chat-primary feature flags */
   layout: {
     type: 'object',
@@ -289,8 +279,16 @@ export const tailSchema = {
   provenanceTracking: { type: 'boolean', default: true },
   /** Wave 21 Phase D — user-created session folders */
   sessionFolders: { type: 'array', items: { type: 'object' }, default: [] },
-  /** Wave 22 Phase B — chat message density setting */
-  chat: { type: 'object', additionalProperties: false, default: { density: 'comfortable' }, properties: { density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' } } },
+  /** Wave 22 Phase B/E — chat message density + desktop notifications (Phase E) */
+  chat: {
+    type: 'object',
+    additionalProperties: false,
+    default: { density: 'comfortable', desktopNotifications: true },
+    properties: {
+      density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' },
+      desktopNotifications: { type: 'boolean', default: true },
+    },
+  },
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
   context: {
     type: 'object',

@@ -230,8 +230,12 @@ export interface AppConfig {
   routerLastRetrainCount: number;
   /** Wave 17 — layout preset engine feature flags */
   layout?: { presets?: { v2?: boolean } };
-  /** Wave 22 Phase B — chat message density. Default: 'comfortable'. */
-  chat?: { density?: 'comfortable' | 'compact' };
+  /** Wave 22 Phase B/E — chat message density + desktop notification settings. */
+  chat?: {
+    density?: 'comfortable' | 'compact';
+    /** Wave 22 Phase E — fire desktop notification on stream completion (unfocused only). Default: true. */
+    desktopNotifications?: boolean;
+  };
 }
 
 export interface ContextLayerConfig {

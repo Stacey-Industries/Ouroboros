@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { AppConfig, getConfigValue, setConfigValue } from '../config';
+import { showStreamCompletionNotification } from '../notifications';
 import { broadcastToWebClients } from '../web/webServer';
 import { assertPathAllowed } from './pathSecurity';
 
@@ -143,6 +144,12 @@ function registerAppMetadataHandlers(channels: string[]): void {
   channels.push('app:getPlatform');
 }
 
+interface StreamCompletionNotifyIpc {
+  title: string;
+  body: string;
+  threadId?: string;
+}
+
 function registerAppInteractionHandlers(channels: string[]): void {
   ipcMain.handle('app:openExternal', (_event, url: string) => openExternalUrl(url));
   channels.push('app:openExternal');
@@ -151,6 +158,19 @@ function registerAppInteractionHandlers(channels: string[]): void {
     showNotification(options),
   );
   channels.push('app:notify');
+
+  ipcMain.handle(
+    'app:showStreamCompletionNotification',
+    (_event, opts: StreamCompletionNotifyIpc) => {
+      try {
+        showStreamCompletionNotification(opts);
+        return { success: true };
+      } catch (err) {
+        return toErrorResult(err);
+      }
+    },
+  );
+  channels.push('app:showStreamCompletionNotification');
 }
 
 function registerThemeHandlers(channels: string[]): void {

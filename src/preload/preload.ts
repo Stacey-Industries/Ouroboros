@@ -170,6 +170,9 @@ const appAPI: ElectronAPI['app'] = {
 
   notify: (options) => ipcRenderer.invoke('app:notify', options),
 
+  showStreamCompletionNotification: (options) =>
+    ipcRenderer.invoke('app:showStreamCompletionNotification', options),
+
   rebuildAndRestart: () => ipcRenderer.invoke('app:rebuildAndRestart'),
   rebuildWeb: () => ipcRenderer.invoke('app:rebuildWeb'),
 

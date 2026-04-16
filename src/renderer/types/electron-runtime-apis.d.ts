@@ -258,6 +258,12 @@ export interface NotifyResult extends IpcResult {
   skipped?: boolean;
 }
 
+export interface StreamCompletionNotifyOptions {
+  title: string;
+  body: string;
+  threadId?: string;
+}
+
 export interface SystemInfo {
   electron: string;
   chrome: string;
@@ -271,6 +277,10 @@ export interface AppAPI {
   openExternal: (url: string) => Promise<IpcResult>;
   setTitleBarOverlay: (color: string, symbolColor: string) => Promise<IpcResult>;
   notify: (options: NotifyOptions) => Promise<NotifyResult>;
+  /** Wave 22 Phase E — desktop notification on chat stream completion (unfocused-only). */
+  showStreamCompletionNotification: (
+    options: StreamCompletionNotifyOptions,
+  ) => Promise<IpcResult>;
   rebuildAndRestart: () => Promise<IpcResult>;
   rebuildWeb: () => Promise<IpcResult>;
   onMenuEvent: (callback: (event: MenuEvent) => void) => () => void;

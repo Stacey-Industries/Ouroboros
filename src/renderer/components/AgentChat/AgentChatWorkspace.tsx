@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
 import { SWITCH_SIDEBAR_VIEW_EVENT } from '../../hooks/appEventNames';
+import { useConfig } from '../../hooks/useConfig';
+import { useStreamCompletionNotifications } from '../../hooks/useStreamCompletionNotifications';
 import type { ToastType } from '../../hooks/useToast';
 import { AgentChatConversation } from './AgentChatConversation';
 import { AgentChatStoreContext, createAgentChatStore } from './agentChatStore';
@@ -177,6 +179,11 @@ function useWorkspaceStoreSync(
 
 /* ���─ Workspace component ─────────���───────────────────────���───────────────── */
 
+function useWorkspaceNotifications(): void {
+  const { config } = useConfig();
+  useStreamCompletionNotifications(config);
+}
+
 export function AgentChatWorkspace({
   projectRoot,
   onModelReady,
@@ -185,6 +192,7 @@ export function AgentChatWorkspace({
   const context = useAgentChatContext(projectRoot, model.activeThreadId);
   const { toast } = useToastContext();
   const store = useRef(createAgentChatStore()).current;
+  useWorkspaceNotifications();
 
   const onRemember = useRememberAction(projectRoot, toast);
   const onSpec = useSpecAction(projectRoot, toast);
