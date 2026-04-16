@@ -32,6 +32,8 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   pinThread: 'agentChat:pinThread',
   softDeleteThread: 'agentChat:softDeleteThread',
   restoreDeletedThread: 'agentChat:restoreDeletedThread',
+  exportThread: 'agentChat:exportThread',
+  importThread: 'agentChat:importThread',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {

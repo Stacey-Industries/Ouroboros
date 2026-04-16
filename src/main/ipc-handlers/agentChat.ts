@@ -29,6 +29,7 @@ import {
   warmSnapshotCache,
 } from './agentChatContext';
 import { registerEventForwarders } from './agentChatEventForwarders';
+import { registerExportImportHandlers } from './agentChatExportImport';
 import { createMinimalOrchestration, type MinimalOrchestration } from './agentChatOrchestration';
 
 // Re-export public API consumed by other modules (files.ts, git.ts, etc.)
@@ -297,6 +298,11 @@ export function registerAgentChatHandlers(): string[] {
   registerMemoryHandlers(channels);
   registerTagHandlers(channels, svc);
   registerPinDeleteHandlers(channels, svc);
+  registerExportImportHandlers({
+    channels, svc, register, requireValidString,
+    exportChannel: AGENT_CHAT_INVOKE_CHANNELS.exportThread,
+    importChannel: AGENT_CHAT_INVOKE_CHANNELS.importThread,
+  });
   registerEventForwarders(svc, getOrchestration(), cleanupFns);
 
   registeredChannels = channels;

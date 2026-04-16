@@ -173,6 +173,16 @@ export interface AgentChatAPI {
   softDeleteThread: (threadId: string) => Promise<{ success: boolean; error?: string }>;
   /** Wave 21 Phase C — restore a soft-deleted thread (clears deletedAt). */
   restoreDeletedThread: (threadId: string) => Promise<{ success: boolean; error?: string }>;
+  /** Wave 21 Phase E — export a thread to markdown, JSON, or HTML. */
+  exportThread: (
+    threadId: string,
+    format: 'markdown' | 'json' | 'html',
+  ) => Promise<{ success: boolean; content?: string; error?: string }>;
+  /** Wave 21 Phase E — import a thread from JSON or transcript text. */
+  importThread: (
+    content: string,
+    format: 'json' | 'transcript',
+  ) => Promise<{ success: boolean; threadId?: string; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

@@ -267,6 +267,10 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.softDeleteThread, { threadId }),
     restoreDeletedThread: (threadId) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.restoreDeletedThread, { threadId }),
+    exportThread: (threadId, format) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.exportThread, threadId, format),
+    importThread: (content, format) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.importThread, content, format),
     onThreadUpdate: (callback) =>
       onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
     onMessageUpdate: (callback) =>
