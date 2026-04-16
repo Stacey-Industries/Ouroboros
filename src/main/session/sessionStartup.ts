@@ -12,6 +12,7 @@
  */
 
 import type { AppConfig } from '../config';
+import { closeFolderStore, initFolderStore } from './folderStore';
 import { runSessionGc, SEVEN_DAYS_MS } from './sessionGc';
 import { migrateWindowSessionsToSessions } from './sessionMigration';
 import { closeSessionStore, getSessionStore, initSessionStore } from './sessionStore';
@@ -48,6 +49,7 @@ function runAllGc(): void {
  */
 export async function initSessionServices(config: ConfigAccess): Promise<void> {
   initSessionStore();
+  initFolderStore();
   await migrateWindowSessionsToSessions(config.get, config.set);
   // Run GC once at startup, then weekly (interval covers both 7-day and 30-day passes).
   runAllGc();
@@ -61,4 +63,5 @@ export function closeSessionServices(): void {
     gcInterval = null;
   }
   closeSessionStore();
+  closeFolderStore();
 }

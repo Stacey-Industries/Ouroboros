@@ -17,6 +17,7 @@ export { registerContextHandlers } from './context';
 export { closeEmbeddingStore, registerEmbeddingHandlers } from './embeddingHandlers';
 export { registerExtensionStoreHandlers } from './extensionStore';
 export { cleanupFileWatchers, registerFileHandlers } from './files';
+export { cleanupFolderCrudHandlers, registerFolderCrudHandlers } from './folderCrud';
 export { registerGitHandlers } from './git';
 export { registerIdeToolsHandlers } from './ideTools';
 export { registerMcpHandlers } from './mcp';

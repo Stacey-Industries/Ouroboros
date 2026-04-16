@@ -287,6 +287,8 @@ export const tailSchema = {
   },
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking: { type: 'boolean', default: true },
+  /** Wave 21 Phase D — user-created session folders */
+  sessionFolders: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
   context: {
     type: 'object',

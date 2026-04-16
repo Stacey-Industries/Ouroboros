@@ -4,6 +4,7 @@ import type { AgentChatSettings } from './agentChat/types';
 import { schema } from './configSchema';
 import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
+import type { SessionFolder } from './session/folderStore';
 
 export interface PanelSizes {
   leftSidebar: number;
@@ -370,6 +371,8 @@ export interface AppConfig {
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
   context?: ContextScoringSettings;
+  /** Wave 21 Phase D — user-created session folders */
+  sessionFolders?: SessionFolder[];
 }
 
 export const store = new Store<AppConfig>({

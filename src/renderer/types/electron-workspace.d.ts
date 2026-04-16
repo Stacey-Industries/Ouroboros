@@ -9,6 +9,7 @@ import type { ClaudeMdAPI } from './electron-claude-md';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type { ExtensionsAPI } from './electron-extensions';
+import type { FolderCrudAPI } from './electron-folder';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { McpStoreAPI } from './electron-mcp-store';
@@ -277,6 +278,7 @@ export interface ElectronAPI {
   spec: SpecAPI;
   system2: System2API;
   sessionCrud: SessionCrudAPI;
+  folderCrud: FolderCrudAPI;
 }
 
 export interface WorkspaceAPI {

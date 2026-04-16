@@ -10,6 +10,7 @@ export * from './electron-claude-md';
 export * from './electron-embedding';
 export * from './electron-extension-store';
 export * from './electron-extensions';
+export * from './electron-folder';
 export * from './electron-foundation';
 export * from './electron-git';
 export * from './electron-mcp-store';
