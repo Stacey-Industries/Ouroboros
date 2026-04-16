@@ -5,7 +5,33 @@
 import React, { useCallback, useState } from 'react';
 import type { Components } from 'streamdown';
 
+import { linkifyFileRefs } from './FileRefLinker';
 import { useCodeHighlight } from './useCodeHighlight';
+
+// ── linkify helper ────────────────────────────────────────────────────────────
+
+/**
+ * Walk a ReactNode tree, applying linkifyFileRefs only to bare string leaves.
+ * React elements (e.g. <code>, <a>) are passed through unchanged so we never
+ * linkify inside code spans or existing links.
+ */
+function linkifyChildren(children: React.ReactNode): React.ReactNode {
+  if (typeof children === 'string') {
+    return linkifyFileRefs(children);
+  }
+  if (Array.isArray(children)) {
+    return children.map((child, i) => {
+      if (typeof child === 'string') {
+        const linked = linkifyFileRefs(child);
+        // If nothing changed, return original string to avoid wrapping
+        if (linked.length === 1 && linked[0] === child) return child;
+        return <React.Fragment key={i}>{linked}</React.Fragment>;
+      }
+      return child;
+    });
+  }
+  return children;
+}
 
 // Module-scope regex — avoids re-allocation on every render.
 // g flag used; reset lastIndex before each call.
@@ -200,6 +226,7 @@ export function MarkdownLink({
 export function MarkdownParagraph({ children }: { children: React.ReactNode }): React.ReactElement {
   const text = getMarkdownText(children);
   if (isTreeLikeText(text)) {
+    // Tree-like paragraphs render verbatim — no linkification
     return (
       <pre
         className="text-text-semantic-muted"
@@ -218,7 +245,7 @@ export function MarkdownParagraph({ children }: { children: React.ReactNode }): 
       </pre>
     );
   }
-  return <p style={{ margin: '0.4em 0' }}>{children}</p>;
+  return <p style={{ margin: '0.4em 0' }}>{linkifyChildren(children)}</p>;
 }
 
 export function MarkdownBlockquote({
@@ -282,7 +309,7 @@ export function MarkdownList({
 export function MarkdownListItem({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <li className="text-text-semantic-primary" style={{ margin: '0.15em 0' }}>
-      {children}
+      {linkifyChildren(children)}
     </li>
   );
 }
