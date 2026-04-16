@@ -1,9 +1,12 @@
 /**
- * DroppableSlot.tsx — Wave 28 Phase B
+ * DroppableSlot.tsx — Wave 28 Phase B + Phase C
  *
  * Wraps a named layout slot region in a dnd-kit drop target.
- * Shows a 2px accent outline when an active drag is hovering over the slot.
- * Passes children through unchanged otherwise.
+ * Phase B: shows a 2px accent outline when an active drag hovers the slot center.
+ * Phase C: renders four invisible edge zones (N/S/E/W) for split-on-drop.
+ *
+ * Center area (middle 50%×50%) retains Phase B swap behaviour.
+ * Edge zones use composite IDs: `{slotName}:edge:{north|south|east|west}`.
  *
  * Only rendered when the DnD flag is on — callers guard with useDragAndDrop.
  */
@@ -11,6 +14,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import React from 'react';
 
+import { EdgeDropZones } from './EdgeDropZones';
 import type { SlotName } from './layoutPresets/types';
 
 export interface DroppableSlotProps {
@@ -21,9 +25,11 @@ export interface DroppableSlotProps {
 /**
  * DroppableSlot — registers the slot as a dnd-kit drop target.
  *
- * The wrapper div uses `position:relative` + `overflow:hidden` so the
- * drop indicator outline (an absolutely-positioned inset element) never
- * bleeds outside the slot region.
+ * The wrapper div uses `position:relative` so the drop indicator outline
+ * and edge zones (all absolutely-positioned) stay clipped to the slot region.
+ *
+ * Phase C adds EdgeDropZones inside the wrapper. The center-area swap target
+ * continues to use the plain slotName droppable ID (Phase B).
  */
 export function DroppableSlot({ slotName, children }: DroppableSlotProps): React.ReactElement {
   const { setNodeRef, isOver } = useDroppable({ id: slotName });
@@ -39,9 +45,11 @@ export function DroppableSlot({ slotName, children }: DroppableSlotProps): React
       {isOver && (
         <div
           aria-hidden="true"
+          data-drop-indicator="center"
           className="pointer-events-none absolute inset-0 z-50 rounded-sm border-2 border-border-accent"
         />
       )}
+      <EdgeDropZones slotName={slotName} />
     </div>
   );
 }

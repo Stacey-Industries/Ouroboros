@@ -64,7 +64,7 @@ describe('DroppableSlot', () => {
       </DroppableSlot>,
     );
 
-    const indicator = container.querySelector('[aria-hidden="true"]');
+    const indicator = container.querySelector('[data-drop-indicator="center"]');
     expect(indicator).not.toBeNull();
     expect(indicator?.className).toContain('border-border-accent');
   });
@@ -85,7 +85,7 @@ describe('DroppableSlot', () => {
       </DroppableSlot>,
     );
 
-    const indicator = container.querySelector('[aria-hidden="true"]');
+    const indicator = container.querySelector('[data-drop-indicator="center"]');
     expect(indicator).toBeNull();
   });
 

@@ -23,7 +23,9 @@ function makeSwapSpy() {
   const swapSlots = vi.fn();
   mockUseLayoutPreset.mockReturnValue({
     preset: { id: 'ide-primary', name: 'IDE', slots: {}, panelSizes: {}, visiblePanels: {} },
+    slotTree: { kind: 'leaf', slotName: 'editorContent', component: { componentKey: 'editorContent' } },
     swapSlots,
+    splitSlot: vi.fn(),
   });
   return swapSlots;
 }
