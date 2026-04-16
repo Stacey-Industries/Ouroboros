@@ -3,7 +3,7 @@ import { type Dispatch, type SetStateAction, useCallback, useRef } from 'react';
 import type { CommandDefinition } from '../../../shared/types/claudeConfig';
 import type { UserSelectedFileRange } from '../../../shared/types/orchestrationDomain';
 import { SAVE_ALL_DIRTY_EVENT } from '../../hooks/appEventNames';
-import type { AgentChatLinkedDetailsResult, AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatThreadRecord, CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
+import type { AgentChatLinkedDetailsResult, AgentChatMessageRecord, AgentChatOrchestrationLink, AgentChatSendMessageOverrides, AgentChatThreadRecord, CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import { mergeThreadCollection, useThreadSelectionActions } from './agentChatWorkspaceSupport';
 import type { ChatOverrides } from './ChatControlsBar';
 import { isAnthropicAutoModel } from './ChatControlsBarSupport';
@@ -49,16 +49,20 @@ function applyModelOverride(overrides: Record<string, string>, model: string, co
   overrides.provider = isCodexModel(model, codexModels) ? 'codex' : 'claude-code';
   overrides.model = model;
 }
-function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[] }): Record<string, string> | undefined {
-  const overrides: Record<string, string> = {};
-  const selectedModel = args.chatOverrides?.model;
-  if (selectedModel) applyModelOverride(overrides, selectedModel, args.codexModels);
-  if (args.chatOverrides?.effort) overrides.effort = args.chatOverrides.effort;
-  if (args.chatOverrides?.permissionMode && args.chatOverrides.permissionMode !== 'default') overrides.permissionMode = args.chatOverrides.permissionMode;
+function applyScalarOverrides(overrides: AgentChatSendMessageOverrides, chatOverrides: ChatOverrides): void {
+  if (chatOverrides.effort) overrides.effort = chatOverrides.effort;
+  if (chatOverrides.permissionMode && chatOverrides.permissionMode !== 'default') overrides.permissionMode = chatOverrides.permissionMode;
+  if (chatOverrides.toolOverrides !== undefined) overrides.toolOverrides = chatOverrides.toolOverrides;
+}
+function buildChatOverrides(args: { chatOverrides?: ChatOverrides; codexModels?: CodexModelOption[] }): AgentChatSendMessageOverrides | undefined {
+  if (!args.chatOverrides) return undefined;
+  const overrides: AgentChatSendMessageOverrides = {};
+  if (args.chatOverrides.model) applyModelOverride(overrides as Record<string, string>, args.chatOverrides.model, args.codexModels);
+  applyScalarOverrides(overrides, args.chatOverrides);
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 function mergeReturnedThread(resultThread: AgentChatThreadRecord | null | undefined, setThreads: Dispatch<SetStateAction<AgentChatThreadRecord[]>>, setActiveThreadId: Dispatch<SetStateAction<string | null>>): void { if (!resultThread) return; setThreads((currentThreads) => mergeThreadCollection(currentThreads, resultThread)); setActiveThreadId(resultThread.id); }
-async function sendAgentChatRequest(request: { threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[]; contextSelection?: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] }; overrides?: Record<string, string>; metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean }; skillExpansion?: string }, failureMessage: string): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> { const result = await window.electronAPI.agentChat.sendMessage(request); if (!result.success) throw new Error(result.error ?? failureMessage); return result; }
+async function sendAgentChatRequest(request: { threadId?: string; workspaceRoot: string; content: string; attachments?: ImageAttachment[]; contextSelection?: { userSelectedFiles: string[]; userSelectedRanges?: UserSelectedFileRange[] }; overrides?: AgentChatSendMessageOverrides; metadata: { source: 'composer' | 'edit' | 'retry'; usedAdvancedControls: boolean }; skillExpansion?: string }, failureMessage: string): Promise<{ success: boolean; error?: string; thread?: AgentChatThreadRecord | null }> { const result = await window.electronAPI.agentChat.sendMessage(request); if (!result.success) throw new Error(result.error ?? failureMessage); return result; }
 function buildComposerRequest(args: SendMessageArgs, content: string, skillExpansion?: string): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: getThreadIdForSend(args.activeThreadId), workspaceRoot: args.projectRoot as string, content, attachments: args.attachments?.length ? args.attachments : undefined, contextSelection: buildContextSelection(args.contextFilePaths, args.mentionRanges), overrides: buildChatOverrides({ chatOverrides: args.chatOverrides, codexModels: args.codexModels }), metadata: { source: 'composer', usedAdvancedControls: Boolean(args.contextFilePaths?.length) }, skillExpansion }; }
 function buildResendRequest(args: AgentChatActionArgs, content: string, source: 'edit' | 'retry'): Parameters<typeof sendAgentChatRequest>[0] { return { threadId: args.activeThreadId ?? undefined, workspaceRoot: args.projectRoot as string, content, metadata: { source, usedAdvancedControls: false } }; }
 function applyComposerSuccess(args: SendMessageArgs, result: Awaited<ReturnType<typeof sendAgentChatRequest>>): void { args.setAttachments?.([]); mergeReturnedThread(result.thread, args.setThreads, args.setActiveThreadId); args.setPendingUserMessage(null); clearPersistedDraft(result.thread?.id ?? args.activeThreadId); if (isDraftThreadId(args.activeThreadId) && result.thread) clearPersistedDraft(args.activeThreadId); }

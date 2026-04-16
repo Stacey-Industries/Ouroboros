@@ -63,6 +63,10 @@ export interface Session {
   layoutPresetId?: string;
   /** Wave 26 populates */
   profileId?: string;
+  /** Wave 26 Phase D — per-session tool whitelist override (null = use profile/global default). */
+  toolOverrides?: string[];
+  /** Wave 26 Phase D — per-session MCP server override (null = use profile/global default). */
+  mcpServerOverrides?: string[];
   activeTerminalIds: string[];
   /** Wave 25 — pinned context items for this session */
   pinnedContext: PinnedContextItem[];

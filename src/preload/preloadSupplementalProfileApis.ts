@@ -25,6 +25,10 @@ export const profileCrudApi: ProfileApiType = {
     ipcRenderer.invoke('profileCrud:export', { profileId }),
   import: (json: string) =>
     ipcRenderer.invoke('profileCrud:import', { json }),
+  estimate: ({ profileId, contextTokens }: { profileId: string; contextTokens: number }) =>
+    ipcRenderer.invoke('profileCrud:estimate', { profileId, contextTokens }),
+  lint: ({ profile }: { profile: Profile }) =>
+    ipcRenderer.invoke('profileCrud:lint', { profile }),
   onChanged: (callback: (profiles: Profile[]) => void) =>
     onChannel<Profile[]>('profileCrud:changed', callback),
 };

@@ -9,10 +9,12 @@ import React from 'react';
 
 import type { CodexModelOption, ImageAttachment, ModelProvider } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
+import { AdvancedInferenceControls } from './AdvancedInferenceControls';
 import type { ModelContextUsage } from './AgentChatConversation';
 import { ChatControlsBar, type ChatOverrides } from './ChatControlsBar';
 import { resolveActiveModel } from './ChatControlsBarSupport';
 import { ContextUsageBar } from './ContextUsageBar';
+import { EffortEstimate } from './EffortEstimate';
 import type { MentionItem } from './MentionAutocomplete';
 import { MentionAutocomplete } from './MentionAutocomplete';
 import type { SlashCommand } from './SlashCommandMenu';
@@ -256,23 +258,39 @@ export type ComposerFooterProps = {
   streamingTokenUsage?: { inputTokens: number; outputTokens: number };
   threadModelUsage?: ModelContextUsage[];
   isStreaming?: boolean;
+  /** Estimated context tokens — used to drive the EffortEstimate pill. */
+  contextTokens?: number;
 };
 
 export function ComposerFooter(props: ComposerFooterProps): React.ReactElement | null {
   if (!props.chatOverrides || !props.onChatOverridesChange) return null;
   return (
-    <ChatControlsBar
-      overrides={props.chatOverrides}
-      onChange={props.onChatOverridesChange}
-      settingsModel={props.settingsModel}
-      codexSettingsModel={props.codexSettingsModel}
-      defaultProvider={props.defaultProvider}
-      providers={props.modelProviders}
-      codexModels={props.codexModels}
-      threadModelUsage={props.threadModelUsage}
-      streamingTokenUsage={props.streamingTokenUsage}
-      isStreaming={props.isStreaming}
-      routedBy={props.routedBy}
-    />
+    <div className="flex items-center">
+      <div className="flex-1">
+        <ChatControlsBar
+          overrides={props.chatOverrides}
+          onChange={props.onChatOverridesChange}
+          settingsModel={props.settingsModel}
+          codexSettingsModel={props.codexSettingsModel}
+          defaultProvider={props.defaultProvider}
+          providers={props.modelProviders}
+          codexModels={props.codexModels}
+          threadModelUsage={props.threadModelUsage}
+          streamingTokenUsage={props.streamingTokenUsage}
+          isStreaming={props.isStreaming}
+          routedBy={props.routedBy}
+        />
+      </div>
+      <div className="flex items-center gap-1.5 pr-2">
+        <EffortEstimate
+          profileId={props.chatOverrides.profileId}
+          contextTokens={props.contextTokens ?? 0}
+        />
+        <AdvancedInferenceControls
+          overrides={props.chatOverrides}
+          onChange={props.onChatOverridesChange}
+        />
+      </div>
+    </div>
   );
 }

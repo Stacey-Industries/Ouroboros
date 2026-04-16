@@ -33,6 +33,22 @@ export interface ProfileGetDefaultResult extends IpcResult {
   profileId?: string | null;
 }
 
+export interface ProfileEstimateResult extends IpcResult {
+  estimatedMs?: number;
+  estimatedUsd?: number;
+}
+
+// ─── Lint types ───────────────────────────────────────────────────────────────
+
+export interface ProfileLintItem {
+  severity: 'warn' | 'error';
+  message: string;
+}
+
+export interface ProfileLintResult extends IpcResult {
+  lints?: ProfileLintItem[];
+}
+
 // ─── API interface ────────────────────────────────────────────────────────────
 
 export interface ProfileAPI {
@@ -56,6 +72,18 @@ export interface ProfileAPI {
 
   /** Import a profile from a JSON string. Validates shape before saving. */
   import(json: string): Promise<ProfileImportResult>;
+
+  /**
+   * Estimate turn latency and cost for a profile at a given context token count.
+   * Returns heuristic values — useful for the composer estimate pill.
+   */
+  estimate(args: { profileId: string; contextTokens: number }): Promise<ProfileEstimateResult>;
+
+  /**
+   * Lint a profile for incoherent settings.
+   * Returns a list of warn/error diagnostics — does not mutate the store.
+   */
+  lint(args: { profile: Profile }): Promise<ProfileLintResult>;
 
   /**
    * Subscribe to profile store mutation events.

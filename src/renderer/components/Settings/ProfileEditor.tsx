@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import type { EffortLevel, PermissionMode, Profile } from '../../types/electron';
+import { LintWarnings, useProfileLint } from './profileEditorLint';
 import {
   cancelBtnStyle,
   checkItemStyle,
@@ -302,6 +303,7 @@ function ProfileEditorFields({ draft, mcpServers, set }: FieldsProps): React.Rea
 export function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps): React.ReactElement {
   const { draft, saving, error, set, handleSave } = useEditorState(profile, onSave);
   const mcpServers = useMcpServers();
+  const lints = useProfileLint(draft);
   const canSave = Boolean(draft.name?.trim()) && !saving;
 
   return (
@@ -311,6 +313,7 @@ export function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps)
       </div>
       {error && <div className="text-status-error" style={errorStyle}>{error}</div>}
       <ProfileEditorFields draft={draft} mcpServers={mcpServers} set={set} />
+      <LintWarnings lints={lints} />
       <div style={footerStyle}>
         <button type="button" onClick={onCancel} disabled={saving}
           className="text-text-semantic-muted" style={cancelBtnStyle}>

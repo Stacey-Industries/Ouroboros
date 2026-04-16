@@ -56,6 +56,10 @@ export function resolveEffectiveSettings(
   const providerEnv =
     resolvedModel && resolvedModel.includes(':') ? resolveModelEnv(resolvedModel) : {};
   const isProviderRouted = Object.keys(providerEnv).length > 0;
+  // Wave 26 Phase D: per-session/profile tool whitelist overrides the global setting.
+  const requestAllowedTools = context.request.allowedTools;
+  const effectiveAllowedTools =
+    requestAllowedTools !== undefined ? requestAllowedTools : settings.allowedTools;
   return {
     resolvedModel,
     effort,
@@ -63,6 +67,7 @@ export function resolveEffectiveSettings(
       ...settings,
       model: isProviderRouted ? '' : (resolvedModel ?? ''),
       permissionMode,
+      allowedTools: effectiveAllowedTools,
     },
     providerEnv,
     isProviderRouted,

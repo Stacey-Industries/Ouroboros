@@ -28,6 +28,20 @@ export interface ChatOverrides {
   model: string;
   effort: string;
   permissionMode: string;
+  // Wave 26 Phase C — per-request inference controls (not persisted to profile)
+  temperature?: number;
+  maxTokens?: number;
+  stopSequences?: string[];
+  /** null = explicitly disable structured mode; undefined = use profile/provider default */
+  jsonSchema?: string | null;
+  /** Active profile ID — used by bridge to merge profile defaults. */
+  profileId?: string;
+  // ── Wave 26 Phase D tool toggles ──
+  /**
+   * Per-session tool whitelist. When set, overrides the profile's enabledTools for this send.
+   * undefined = use profile/global default.
+   */
+  toolOverrides?: string[];
 }
 
 export function resolveChatControlProvider(

@@ -55,6 +55,10 @@ export interface SessionRecord {
   pinnedContext?: PinnedContextItem[];
   /** Wave 26 — active agent profile id for this session; null when using defaults. */
   profileId?: string;
+  /** Wave 26 Phase D — per-session tool whitelist override; absent = use profile/global default. */
+  toolOverrides?: string[];
+  /** Wave 26 Phase D — per-session MCP server override; absent = use profile/global default. */
+  mcpServerOverrides?: string[];
   costRollup: SessionCostRollup;
   telemetry: SessionTelemetry;
   agentMonitorSettings?: AgentMonitorSettings;
@@ -106,6 +110,10 @@ export interface SessionCrudAPI {
   restoreDeleted: (sessionId: string) => Promise<IpcResult>;
   /** Wave 26 — update the active profile for a session. */
   setProfile: (sessionId: string, profileId: string) => Promise<IpcResult>;
+  /** Wave 26 Phase D — update the per-session tool overrides. */
+  setToolOverrides: (sessionId: string, toolOverrides: string[]) => Promise<IpcResult>;
+  /** Wave 26 Phase D — update the per-session MCP server overrides. */
+  setMcpOverrides: (sessionId: string, mcpServerOverrides: string[]) => Promise<IpcResult>;
   /** Subscribe to store mutation events. Returns cleanup fn. */
   onChanged: (callback: (sessions: SessionRecord[]) => void) => () => void;
 }

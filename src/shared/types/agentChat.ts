@@ -316,6 +316,23 @@ export interface AgentChatSendMessageOverrides {
   effort?: string;
   /** Per-message permission mode override ('acceptEdits' | 'plan' | 'auto' | 'bypassPermissions') */
   permissionMode?: string;
+  // ── Wave 26 Phase C advanced inference controls (per-request, not persisted to profile) ──
+  /** Sampling temperature (0.0 – 1.0). Pass-through to provider. */
+  temperature?: number;
+  /** Maximum output tokens. Pass-through to provider. */
+  maxTokens?: number;
+  /** Stop sequences. Pass-through to provider. */
+  stopSequences?: string[];
+  /** JSON schema string for structured output. null disables structured mode. */
+  jsonSchema?: string | null;
+  /** Active profile ID — used by bridge to merge profile defaults. */
+  profileId?: string;
+  /**
+   * Wave 26 Phase D — per-session tool whitelist.
+   * When present, overrides the profile's enabledTools for this send.
+   * Array of tool names; empty array = no tools allowed.
+   */
+  toolOverrides?: string[];
 }
 
 export interface AgentChatSendMessageMetadata {

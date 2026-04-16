@@ -140,4 +140,22 @@ export interface TaskRequest {
   goalAttachments?: ImageAttachment[];
   /** Expanded skill body — injected into context, not shown as user message */
   skillExpansion?: string;
+  // ── Wave 26 Phase C inference controls (pass-through to provider adapter) ──
+  /** Sampling temperature (0.0 – 1.0). Provider ignores if unsupported. */
+  temperature?: number;
+  /** Maximum output tokens. Provider ignores if unsupported. */
+  maxTokens?: number;
+  /** Stop sequences. Provider ignores if unsupported. */
+  stopSequences?: string[];
+  /** Top-p sampling. Provider ignores if unsupported. */
+  topP?: number;
+  /** Top-k sampling. Provider ignores if unsupported. */
+  topK?: number;
+  /** JSON schema string for structured output. null disables structured mode. */
+  jsonSchema?: string | null;
+  /**
+   * Wave 26 Phase D — comma-separated tool whitelist for the provider.
+   * Empty string = provider default (all tools). Non-empty = restrict to listed tools.
+   */
+  allowedTools?: string;
 }

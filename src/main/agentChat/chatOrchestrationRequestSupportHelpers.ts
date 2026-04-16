@@ -15,6 +15,7 @@ import type {
   TaskRequestContextSelection,
   TaskRequestMetadata,
 } from '../orchestration/types';
+import { getProfileStore } from '../profiles/profileStore';
 import { buildConversationHistory, getAdaptiveBudgets } from './chatOrchestrationHistorySupport';
 import type { ResolvedAgentChatSettings } from './settingsResolver';
 import { isNonEmptyString } from './threadStoreSupport';
@@ -43,6 +44,25 @@ export interface ResolvedSendOptions {
    * Used by the Phase B context outcome observer to link decisions ↔ outcomes.
    */
   outcomeTraceId?: string;
+  // ── Wave 26 Phase C inference controls ──
+  /** Sampling temperature (0.0 – 1.0). Pass-through to provider. */
+  temperature?: number;
+  /** Maximum output tokens. Pass-through to provider. */
+  maxTokens?: number;
+  /** Stop sequences. Pass-through to provider. */
+  stopSequences?: string[];
+  /** Top-p sampling. Pass-through to provider. */
+  topP?: number;
+  /** Top-k sampling. Pass-through to provider. */
+  topK?: number;
+  /** JSON schema string for structured output. */
+  jsonSchema?: string | null;
+  // ── Wave 26 Phase D tool toggles ──
+  /**
+   * Comma-separated allowedTools string for the Claude Code CLI.
+   * Resolved from: session toolOverrides > profile enabledTools > undefined (all tools).
+   */
+  allowedTools?: string;
 }
 
 const DEFAULT_MODE: OrchestrationMode = 'edit';
@@ -143,6 +163,21 @@ function applyBudgetCap(
   };
 }
 
+// Wave 26 Phase C: inference control fields extracted to keep buildBaseTaskRequest under 40 lines
+function pickInferenceFields(
+  resolved: ResolvedSendOptions,
+): Pick<TaskRequest, 'temperature' | 'maxTokens' | 'stopSequences' | 'topP' | 'topK' | 'jsonSchema' | 'allowedTools'> {
+  return {
+    temperature: resolved.temperature,
+    maxTokens: resolved.maxTokens,
+    stopSequences: resolved.stopSequences,
+    topP: resolved.topP,
+    topK: resolved.topK,
+    jsonSchema: resolved.jsonSchema,
+    allowedTools: resolved.allowedTools || undefined,
+  };
+}
+
 export function buildBaseTaskRequest(args: {
   content: string;
   request: AgentChatSendMessageRequest;
@@ -154,8 +189,6 @@ export function buildBaseTaskRequest(args: {
   resumeSessionId: string | undefined;
 }): TaskRequest {
   return {
-    // Wave 25 Phase D: carry thread ID as sessionId so the context packet builder
-    // can query pinnedContextStore for this chat session.
     sessionId: args.thread.id,
     workspaceRoots: [args.thread.workspaceRoot],
     goal: args.content,
@@ -178,6 +211,7 @@ export function buildBaseTaskRequest(args: {
       label: args.thread.title,
       requestedAt: args.requestedAt,
     },
+    ...pickInferenceFields(args.resolved),
   };
 }
 
@@ -288,6 +322,29 @@ function resolveEffortAndPermission(
   };
 }
 
+type InferenceControlFields = Pick<
+  ResolvedSendOptions,
+  'temperature' | 'maxTokens' | 'stopSequences' | 'topP' | 'topK' | 'jsonSchema' | 'allowedTools'
+>;
+type ProfileInferenceDefaults = {
+  temperature?: number; maxTokens?: number; stopSequences?: string[];
+  topP?: number; topK?: number; jsonSchema?: string | null; enabledTools?: string[];
+};
+function lookupProfile(id: string | undefined): ProfileInferenceDefaults {
+  return id ? (getProfileStore()?.listAll().find((p) => p.id === id) ?? {}) : {};
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyOverrides = Record<string, any>;
+function resolveInferenceControls(ov: AnyOverrides, p: ProfileInferenceDefaults): InferenceControlFields {
+  const toolList: string[] | undefined = ov['toolOverrides'] ?? p.enabledTools;
+  const allowedTools = Array.isArray(toolList) ? toolList.join(',') : undefined;
+  const jsonSchema = 'jsonSchema' in ov ? (ov['jsonSchema'] as string | null | undefined) : p.jsonSchema;
+  const temperature = ov['temperature'] !== undefined ? ov['temperature'] : p.temperature;
+  const maxTokens = ov['maxTokens'] !== undefined ? ov['maxTokens'] : p.maxTokens;
+  const stopSequences = ov['stopSequences'] !== undefined ? ov['stopSequences'] : p.stopSequences;
+  return { temperature, maxTokens, stopSequences, topP: p.topP, topK: p.topK, jsonSchema, allowedTools };
+}
+
 export function buildResolvedOptions(
   settings: ResolvedAgentChatSettings,
   provider: AgentChatSettings['defaultProvider'],
@@ -298,5 +355,7 @@ export function buildResolvedOptions(
   const mode = overrides?.mode ?? DEFAULT_MODE;
   const model = resolveModelWithSlot(overrides?.model, settings, provider, Boolean(overrides?.provider));
   const { effort, permissionMode } = resolveEffortAndPermission(settings, provider, overrides);
-  return { provider, verificationProfile, mode, model, effort, permissionMode };
+  const ovMap = (overrides ?? {}) as AnyOverrides;
+  const inference = resolveInferenceControls(ovMap, lookupProfile(overrides?.profileId));
+  return { provider, verificationProfile, mode, model, effort, permissionMode, ...inference };
 }

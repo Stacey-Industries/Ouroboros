@@ -12,12 +12,15 @@ import type {
   CodexModelOption,
   ImageAttachment,
   ModelProvider,
+  Profile,
+  SessionRecord,
 } from '../../types/electron';
 import type { FileEntry } from '../FileTree/FileListItem';
 import { AgentChatComposer } from './AgentChatComposer';
 import type { ModelContextUsage } from './AgentChatConversation';
 import type { ChatOverrides } from './ChatControlsBar';
 import { ComposerProfile } from './ComposerProfile';
+import { McpChatToggles } from './McpChatToggles';
 import type { MentionItem } from './MentionAutocomplete';
 import {
   buildFollowupPrompt,
@@ -26,6 +29,7 @@ import {
 } from './researchCommands';
 import { ResearchIndicator } from './ResearchIndicator';
 import type { SlashCommandContext } from './SlashCommandMenu';
+import { ToolToggles } from './ToolToggles';
 import type { PinnedFile } from './useAgentChatContext';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
 
@@ -178,33 +182,144 @@ function ComposerInner(props: ComposerInnerProps): React.ReactElement {
   return <AgentChatComposer {...buildComposerProps(props)} />;
 }
 
-// ─── Session profile hook ─────────────────────────────────────────────────────
+// ─── Session data hook ────────────────────────────────────────────────────────
 
-function useSessionProfile(sessionId: string | null | undefined): {
+interface SessionData {
   profileId: string | null;
+  toolOverrides: string[] | undefined;
+  mcpServerOverrides: string[] | undefined;
   setProfileId: (id: string) => void;
-} {
-  const [profileId, setProfileId] = useState<string | null>(null);
+}
+
+function useSessionData(sessionId: string | null | undefined): SessionData {
+  const [session, setSession] = useState<SessionRecord | null>(null);
 
   useEffect(() => {
-    if (!sessionId) { setProfileId(null); return; }
-    window.electronAPI.sessionCrud.list()
+    if (!sessionId) { setSession(null); return; }
+    void window.electronAPI.sessionCrud.list()
       .then((res) => {
         if (!res.success || !res.sessions) return;
-        const s = res.sessions.find((x) => x.id === sessionId);
-        setProfileId(s?.profileId ?? null);
+        setSession(res.sessions.find((x) => x.id === sessionId) ?? null);
+      }).catch(() => undefined);
+    return window.electronAPI.sessionCrud.onChanged((sessions) => {
+      setSession(sessions.find((x) => x.id === sessionId) ?? null);
+    });
+  }, [sessionId]);
+
+  const setProfileId = useCallback((id: string) => {
+    setSession((prev) => prev ? { ...prev, profileId: id } : prev);
+    if (sessionId) void window.electronAPI.sessionCrud.setProfile(sessionId, id);
+  }, [sessionId]);
+
+  return {
+    profileId: session?.profileId ?? null,
+    toolOverrides: session?.toolOverrides,
+    mcpServerOverrides: session?.mcpServerOverrides,
+    setProfileId,
+  };
+}
+
+function useActiveProfile(profileId: string | null): Profile | null {
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    if (!profileId) { setProfile(null); return; }
+    window.electronAPI.profileCrud.list()
+      .then((res) => {
+        if (!res.success || !res.profiles) return;
+        setProfile(res.profiles.find((p) => p.id === profileId) ?? null);
       })
       .catch(() => undefined);
-  }, [sessionId]);
+  }, [profileId]);
 
-  const setAndPersist = useCallback((id: string) => {
-    setProfileId(id);
-    if (sessionId) {
-      void window.electronAPI.sessionCrud.setProfile(sessionId, id);
-    }
-  }, [sessionId]);
+  return profile;
+}
 
-  return { profileId, setProfileId: setAndPersist };
+// ─── Toggle button style ──────────────────────────────────────────────────────
+
+const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
+  fontSize: '11px',
+  padding: '2px 8px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-semantic)',
+  background: active ? 'var(--interactive-accent-subtle)' : 'transparent',
+  cursor: 'pointer',
+  marginLeft: '4px',
+});
+
+const togglePanelStyle: React.CSSProperties = {
+  border: '1px solid var(--border-subtle)',
+  borderRadius: '6px',
+  margin: '2px 8px',
+  background: 'var(--surface-inset)',
+};
+
+// ─── Toggle state + sync hook ─────────────────────────────────────────────────
+
+interface ToggleState {
+  showTools: boolean; showMcp: boolean;
+  setShowTools: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowMcp: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function useComposerToggleState(
+  toolOverrides: string[] | undefined,
+  chatOverrides: ChatOverrides | undefined,
+  onChatOverridesChange: ((o: ChatOverrides) => void) | undefined,
+): ToggleState {
+  const [showTools, setShowTools] = useState(false);
+  const [showMcp, setShowMcp] = useState(false);
+  useEffect(() => {
+    if (!onChatOverridesChange || !chatOverrides) return;
+    if (chatOverrides.toolOverrides === toolOverrides) return;
+    onChatOverridesChange({ ...chatOverrides, toolOverrides });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolOverrides]);
+  return { showTools, setShowTools, showMcp, setShowMcp };
+}
+
+// ─── Toggle panels sub-component ─────────────────────────────────────────────
+
+interface TogglePanelsProps {
+  sessionId: string;
+  profile: Profile | null;
+  toolOverrides: string[] | undefined;
+  mcpServerOverrides: string[] | undefined;
+  profileId: string | null;
+  setProfileId: (id: string) => void;
+  toggle: ToggleState;
+  chatOverrides: ChatOverrides | undefined;
+  onChatOverridesChange: ((o: ChatOverrides) => void) | undefined;
+}
+
+function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
+  const { toggle } = p;
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0' }}>
+        <ComposerProfile activeProfileId={p.profileId} onSwitch={p.setProfileId} />
+        {p.sessionId && (
+          <>
+            <button type="button" style={toggleBtnStyle(toggle.showTools)} className="text-text-semantic-muted"
+              onClick={() => { toggle.setShowTools((v) => !v); toggle.setShowMcp(false); }}>Tools</button>
+            <button type="button" style={toggleBtnStyle(toggle.showMcp)} className="text-text-semantic-muted"
+              onClick={() => { toggle.setShowMcp((v) => !v); toggle.setShowTools(false); }}>MCP</button>
+          </>
+        )}
+      </div>
+      {toggle.showTools && p.sessionId && (
+        <div style={togglePanelStyle}>
+          <ToolToggles sessionId={p.sessionId} profile={p.profile} toolOverrides={p.toolOverrides}
+            onChange={(enabled) => { if (p.onChatOverridesChange && p.chatOverrides) p.onChatOverridesChange({ ...p.chatOverrides, toolOverrides: enabled }); }} />
+        </div>
+      )}
+      {toggle.showMcp && p.sessionId && (
+        <div style={togglePanelStyle}>
+          <McpChatToggles sessionId={p.sessionId} profile={p.profile} mcpServerOverrides={p.mcpServerOverrides} onChange={() => undefined} />
+        </div>
+      )}
+    </>
+  );
 }
 
 // ─── ComposerSection ──────────────────────────────────────────────────────────
@@ -212,27 +327,21 @@ function useSessionProfile(sessionId: string | null | undefined): {
 export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
   const researchEnabled = props.slashCommandContext?.researchEnabled !== false;
   const { isResearching, researchTopic, wrappedOnSend, handleCancel } = useResearchIntercept({
-    draft: props.draft,
-    activeSessionId: props.activeSessionId,
-    researchEnabled,
-    onDraftChange: props.onDraftChange,
-    onSend: props.onSend,
+    draft: props.draft, activeSessionId: props.activeSessionId,
+    researchEnabled, onDraftChange: props.onDraftChange, onSend: props.onSend,
   });
-  const { profileId, setProfileId } = useSessionProfile(props.activeSessionId);
+  const { profileId, toolOverrides, mcpServerOverrides, setProfileId } =
+    useSessionData(props.activeSessionId);
+  const profile = useActiveProfile(profileId);
+  const toggle = useComposerToggleState(toolOverrides, props.chatOverrides, props.onChatOverridesChange);
+  const sessionId = props.activeSessionId ?? '';
   return (
     <>
-      {isResearching && (
-        <ResearchIndicator topic={researchTopic} onCancel={handleCancel} />
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0' }}>
-        <ComposerProfile activeProfileId={profileId} onSwitch={setProfileId} />
-      </div>
-      <ComposerInner
-        {...props}
-        wrappedOnSend={wrappedOnSend}
-        isResearching={isResearching}
-        handleCancel={handleCancel}
-      />
+      {isResearching && <ResearchIndicator topic={researchTopic} onCancel={handleCancel} />}
+      <ComposerTogglePanels sessionId={sessionId} profile={profile} toolOverrides={toolOverrides}
+        mcpServerOverrides={mcpServerOverrides} profileId={profileId} setProfileId={setProfileId}
+        toggle={toggle} chatOverrides={props.chatOverrides} onChatOverridesChange={props.onChatOverridesChange} />
+      <ComposerInner {...props} wrappedOnSend={wrappedOnSend} isResearching={isResearching} handleCancel={handleCancel} />
     </>
   );
 }

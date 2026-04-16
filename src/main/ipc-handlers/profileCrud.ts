@@ -9,6 +9,8 @@
  *   profileCrud:getDefault { projectRoot }    → { success, profileId }
  *   profileCrud:export    { profileId }       → { success, json }
  *   profileCrud:import    { json }            → { success, profile }
+ *   profileCrud:estimate  { profileId, contextTokens } → { success, estimatedMs, estimatedUsd }
+ *   profileCrud:lint      { profile }                  → { success, lints }
  *
  * Emits profileCrud:changed to all renderer windows on every mutation.
  */
@@ -17,6 +19,9 @@ import type { Profile } from '@shared/types/profile';
 import { BrowserWindow, ipcMain } from 'electron';
 
 import log from '../logger';
+import { estimateTurnCost } from '../profiles/effortEstimator';
+import type { ProfileLint } from '../profiles/profileLint';
+import { lintProfile } from '../profiles/profileLint';
 import { getProfileStore } from '../profiles/profileStore';
 
 // ─── Response helpers ─────────────────────────────────────────────────────────
@@ -119,6 +124,29 @@ function handleExport(args: unknown): HandlerResult<{ json: string }> {
   return ok({ json: JSON.stringify(profile, null, 2) });
 }
 
+function handleEstimate(
+  args: unknown,
+): HandlerResult<{ estimatedMs: number; estimatedUsd: number }> {
+  const { profileId, contextTokens } = (args ?? {}) as {
+    profileId?: string;
+    contextTokens?: number;
+  };
+  if (typeof profileId !== 'string' || !profileId) return fail('profileId is required');
+  if (typeof contextTokens !== 'number') return fail('contextTokens must be a number');
+  const store = getProfileStore();
+  if (!store) return ok({ estimatedMs: 0, estimatedUsd: 0 });
+  const all = store.listAll();
+  const profile = all.find((p) => p.id === profileId);
+  if (!profile) return fail(`profile not found: ${profileId}`);
+  return ok(estimateTurnCost(profile, contextTokens));
+}
+
+function handleLint(args: unknown): HandlerResult<{ lints: ProfileLint[] }> {
+  const { profile } = (args ?? {}) as { profile?: unknown };
+  if (!isValidProfile(profile)) return fail('profile is missing required fields (id, name)');
+  return ok({ lints: lintProfile(profile) });
+}
+
 function handleImport(args: unknown): HandlerResult<{ profile: Profile }> {
   const { json } = (args ?? {}) as { json?: string };
   if (typeof json !== 'string' || !json) return fail('json is required');
@@ -165,6 +193,8 @@ export function registerProfileCrudHandlers(): string[] {
   reg('profileCrud:getDefault', (args) => handleGetDefault(args));
   reg('profileCrud:export', (args) => handleExport(args));
   reg('profileCrud:import', (args) => handleImport(args));
+  reg('profileCrud:estimate', (args) => handleEstimate(args));
+  reg('profileCrud:lint', (args) => handleLint(args));
 
   registeredChannels = channels;
   return channels;

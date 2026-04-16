@@ -30,6 +30,10 @@ export const sessionCrudApi: SessionCrudApiType = {
     ipcRenderer.invoke('sessionCrud:restoreDeleted', { sessionId }),
   setProfile: (sessionId: string, profileId: string) =>
     ipcRenderer.invoke('sessionCrud:setProfile', { sessionId, profileId }),
+  setToolOverrides: (sessionId: string, toolOverrides: string[]) =>
+    ipcRenderer.invoke('sessionCrud:setToolOverrides', { sessionId, toolOverrides }),
+  setMcpOverrides: (sessionId: string, mcpServerOverrides: string[]) =>
+    ipcRenderer.invoke('sessionCrud:setMcpOverrides', { sessionId, mcpServerOverrides }),
   onChanged: (callback: (sessions: SessionRecord[]) => void) =>
     onChannel<SessionRecord[]>('sessionCrud:changed', callback),
 };

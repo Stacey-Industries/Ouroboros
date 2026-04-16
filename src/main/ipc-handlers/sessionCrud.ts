@@ -209,6 +209,38 @@ function handleSetProfile(args: unknown): HandlerResult<object> {
   return ok({});
 }
 
+function handleSetToolOverrides(args: unknown): HandlerResult<object> {
+  const { sessionId, toolOverrides } = (args ?? {}) as {
+    sessionId?: string;
+    toolOverrides?: string[];
+  };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  if (!Array.isArray(toolOverrides)) return fail('toolOverrides must be an array');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  const session = store.getById(sessionId);
+  if (!session) return fail(`session not found: ${sessionId}`);
+  store.upsert({ ...session, toolOverrides });
+  broadcastChanged();
+  return ok({});
+}
+
+function handleSetMcpOverrides(args: unknown): HandlerResult<object> {
+  const { sessionId, mcpServerOverrides } = (args ?? {}) as {
+    sessionId?: string;
+    mcpServerOverrides?: string[];
+  };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  if (!Array.isArray(mcpServerOverrides)) return fail('mcpServerOverrides must be an array');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  const session = store.getById(sessionId);
+  if (!session) return fail(`session not found: ${sessionId}`);
+  store.upsert({ ...session, mcpServerOverrides });
+  broadcastChanged();
+  return ok({});
+}
+
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 let registeredChannels: string[] = [];
@@ -244,6 +276,8 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:softDelete', (_e, args) => handleSoftDelete(args));
   reg('sessionCrud:restoreDeleted', (_e, args) => handleRestoreDeleted(args));
   reg('sessionCrud:setProfile', (_e, args) => handleSetProfile(args));
+  reg('sessionCrud:setToolOverrides', (_e, args) => handleSetToolOverrides(args));
+  reg('sessionCrud:setMcpOverrides', (_e, args) => handleSetMcpOverrides(args));
 
   registeredChannels = channels;
   return channels;
