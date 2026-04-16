@@ -9,21 +9,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SubagentRecord } from '../../types/electron';
 import { SubagentPanel } from './SubagentPanel';
 
-// @tanstack/react-virtual renders 0 items in jsdom (zero container height).
-// Provide a minimal stub that maps all items directly.
+// jsdom has no layout engine, so the real useVirtualizer would report
+// clientHeight=0 and yield an empty getVirtualItems() — the transcript list
+// stays blank and assertions like `getByText('Hello subagent')` time out.
+// Mirror the canonical pattern used in SessionVirtualList.test.tsx.
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: (opts: { count: number; getScrollElement: () => Element | null; estimateSize: (i: number) => number }) => ({
-    getVirtualItems: () =>
-      Array.from({ length: opts.count }, (_, i) => ({
-        index: i,
-        key: i,
-        start: i * opts.estimateSize(i),
-        size: opts.estimateSize(i),
-        lane: 0,
-      })),
-    getTotalSize: () => opts.count * 40,
-    measureElement: () => undefined,
-  }),
+  useVirtualizer: ({
+    count,
+    estimateSize,
+  }: {
+    count: number;
+    estimateSize: (i: number) => number;
+  }) => {
+    let offset = 0;
+    const items = Array.from({ length: count }, (_, i) => {
+      const size = estimateSize(i);
+      const item = { index: i, key: i, start: offset, size };
+      offset += size;
+      return item;
+    });
+    return {
+      getVirtualItems: () => items,
+      getTotalSize: () => offset,
+      measureElement: () => undefined,
+    };
+  },
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
