@@ -23,6 +23,7 @@ import { profileCrudApi } from './preloadSupplementalProfileApis';
 import { researchApi } from './preloadSupplementalResearchApis';
 import { rulesAndSkillsApi } from './preloadSupplementalRulesSkills';
 import { sessionCrudApi } from './preloadSupplementalSessionApis';
+import { subagentApi } from './preloadSupplementalSubagentApis';
 import { workspaceReadListApi } from './preloadSupplementalWorkspaceReadListApis';
 
 type SupplementalApiKey =
@@ -33,7 +34,7 @@ type SupplementalApiKey =
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
-  | 'research' | 'workspaceReadList';
+  | 'research' | 'workspaceReadList' | 'subagent';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -280,4 +281,5 @@ export const supplementalApis: SupplementalApis = {
   profileCrud: profileCrudApi,
   research: researchApi,
   workspaceReadList: workspaceReadListApi,
+  subagent: subagentApi,
 };

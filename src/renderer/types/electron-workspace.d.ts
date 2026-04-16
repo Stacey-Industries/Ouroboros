@@ -41,6 +41,7 @@ import type {
 } from './electron-runtime-apis';
 import type { SessionCrudAPI } from './electron-session';
 import type { SpecAPI } from './electron-spec';
+import type { SubagentAPI } from './electron-subagent';
 import type { System2API } from './electron-system2';
 import type { ObservabilityAPI, TelemetryAPI } from './electron-telemetry';
 import type { WorkspaceReadListAPI } from './electron-workspace-read-list';
@@ -287,6 +288,7 @@ export interface ElectronAPI {
   profileCrud: ProfileAPI;
   research: ResearchAPI;
   workspaceReadList: WorkspaceReadListAPI;
+  subagent: SubagentAPI;
 }
 
 export interface WorkspaceAPI {

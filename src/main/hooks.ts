@@ -28,6 +28,7 @@ import {
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
 import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
+import { tapSubagentTracker } from './hooksSubagentTap';
 import log from './logger';
 import { getEditProvenanceStore } from './orchestration/editProvenance';
 import { shadowRouteHookEvent } from './router/routerShadow';
@@ -298,6 +299,7 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   tapConflictMonitor(payload);
   tapEditProvenance(payload);
   tapContextOutcomeObserver(payload);
+  tapSubagentTracker(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -351,6 +353,7 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   tapConflictMonitor(payload);
   tapEditProvenance(payload);
   tapContextOutcomeObserver(payload);
+  tapSubagentTracker(payload);
 }
 
 export function getHooksAddress(): string | null {

@@ -23,6 +23,7 @@ export * from './electron-rules-skills';
 export * from './electron-runtime-apis';
 export * from './electron-session';
 export * from './electron-spec';
+export * from './electron-subagent';
 export * from './electron-system2';
 export * from './electron-telemetry';
 export * from './electron-workspace';

@@ -2,10 +2,42 @@
  * ToolCallRow.tsx — Expandable tool call row showing header + output.
  */
 
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 
+import { OPEN_SUBAGENT_PANEL_EVENT } from '../../hooks/appEventNames';
 import { ToolCallRowHeader } from './ToolCallRowHeader';
 import type { SubToolCallEvent, ToolCallEvent } from './types';
+
+// ─── Subagent link ─────────────────────────────────────────────────────────────
+
+/** Re-export so consumers that only import from ToolCallRow still work. */
+export const OPEN_SUBAGENT_EVENT = OPEN_SUBAGENT_PANEL_EVENT;
+
+interface OpenSubagentPanelDetail {
+  toolCallId: string;
+}
+
+function OpenSubagentLink({ toolCallId }: { toolCallId: string }): React.ReactElement<unknown> {
+  const handleClick = useCallback(() => {
+    const detail: OpenSubagentPanelDetail = { toolCallId };
+    window.dispatchEvent(new CustomEvent(OPEN_SUBAGENT_EVENT, { detail }));
+  }, [toolCallId]);
+
+  return (
+    <div className="mx-3 mb-2 ml-8">
+      <button
+        className="text-[11px] underline transition-colors"
+        style={{ color: 'var(--interactive-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        onClick={handleClick}
+        aria-label="Open subagent transcript"
+      >
+        Open subagent chat
+      </button>
+    </div>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ToolCallRowProps {
   call: ToolCallEvent;
@@ -14,8 +46,10 @@ interface ToolCallRowProps {
 }
 
 function ExpandedSection({ call }: { call: ToolCallEvent }): React.ReactElement<unknown> | null {
+  const isTask = call.toolName === 'Task';
   const hasOutput = call.output !== undefined && call.output.length > 0;
   const hasSubTools = call.subTools !== undefined && call.subTools.length > 0;
+  if (isTask) return <OpenSubagentLink toolCallId={call.id} />;
   if (hasOutput) return <ExpandedOutput call={call} />;
   if (hasSubTools) return <SubToolList subTools={call.subTools!} />;
   if (call.status !== 'pending') return <EmptyOutput />;
@@ -28,7 +62,8 @@ export const ToolCallRow = memo(function ToolCallRow({
   onToggle,
 }: ToolCallRowProps): React.ReactElement<unknown> {
   const hasOutput = call.output !== undefined && call.output.length > 0;
-  const isExpandable = hasOutput || call.subTools?.length || call.status !== 'pending';
+  const isTask = call.toolName === 'Task';
+  const isExpandable = isTask || hasOutput || call.subTools?.length || call.status !== 'pending';
   return (
     <div>
       <ToolCallRowHeader call={call} expanded={expanded} isExpandable={!!isExpandable} onToggle={onToggle} />

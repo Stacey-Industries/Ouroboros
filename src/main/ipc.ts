@@ -58,6 +58,7 @@ import {
   registerSessionCrudHandlers,
   registerSessionHandlers,
   registerSpecHandlers,
+  registerSubagentHandlers,
   registerTelemetryHandlers,
   registerWorkspaceReadListHandlers,
   registerWorktreeHandlers,
@@ -123,6 +124,7 @@ function registerDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('telemetry', () => registerTelemetryHandlers()),
     ...safeRegister('worktree', () => registerWorktreeHandlers()),
     ...safeRegister('workspaceReadList', () => registerWorkspaceReadListHandlers()),
+    ...safeRegister('subagent', () => registerSubagentHandlers()),
   ];
 }
 

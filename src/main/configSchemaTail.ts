@@ -297,6 +297,8 @@ export const tailSchema = {
   workspaceProfileDefaults: { type: 'object', additionalProperties: { type: 'string' }, default: {} },
   /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
   approvalMemory: { type: 'object', properties: { alwaysAllow: { type: 'array', items: { type: 'object' }, default: [] }, alwaysDeny: { type: 'array', items: { type: 'object' }, default: [] } }, default: { alwaysAllow: [], alwaysDeny: [] } },
+  /** Wave 27 — subagent UX feature flags */
+  agentic: { type: 'object', additionalProperties: false, properties: { subagentUx: { type: 'boolean', default: true } }, default: { subagentUx: true } },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,

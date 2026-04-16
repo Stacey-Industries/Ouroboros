@@ -238,6 +238,8 @@ export interface AppConfig {
   };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */
   workspaceReadLists?: Record<string, string[]>;
+  /** Wave 27 — subagent UX feature flags */
+  agentic?: { subagentUx?: boolean };
 }
 
 export interface ContextLayerConfig {
