@@ -12,6 +12,12 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
 }));
 
+vi.mock('../config', () => ({
+  store: { get: vi.fn(), set: vi.fn(), onDidChange: vi.fn(() => ({ dispose: vi.fn() })) },
+  getConfigValue: vi.fn(),
+  setConfigValue: vi.fn(),
+}));
+
 import type { AgentChatService } from '../agentChat';
 import { registerCostRollupHandlers } from './agentChatCost';
 

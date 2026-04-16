@@ -22,6 +22,9 @@ vi.mock('./moduleDetector');
 vi.mock('./summarizationQueue');
 vi.mock('./contextInjector');
 vi.mock('./contextLayerGC');
+vi.mock('../web/broadcast', () => ({
+  broadcast: vi.fn(),
+}));
 
 // Import mocked modules
 import { injectContextLayer } from './contextInjector';

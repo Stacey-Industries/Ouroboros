@@ -33,6 +33,21 @@ vi.mock('../agentChat/threadStore', () => ({
   agentChatThreadStore: null,
 }));
 
+vi.mock('../orchestration/pinnedContextStore', () => ({
+  initPinnedContextStore: vi.fn(),
+  closePinnedContextStore: vi.fn(),
+}));
+
+vi.mock('../profiles/profileStore', () => ({
+  initProfileStore: vi.fn(),
+  closeProfileStore: vi.fn(),
+}));
+
+vi.mock('./folderStore', () => ({
+  initFolderStore: vi.fn(),
+  closeFolderStore: vi.fn(),
+}));
+
 const runSoftDeleteGcMock = vi.fn().mockResolvedValue({ purgedSessions: 0, purgedThreads: 0 });
 vi.mock('./softDeleteGc', () => ({
   runSoftDeleteGc: (...args: unknown[]) => runSoftDeleteGcMock(...args),

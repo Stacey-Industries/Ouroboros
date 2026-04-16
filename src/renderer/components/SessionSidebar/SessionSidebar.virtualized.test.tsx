@@ -68,6 +68,10 @@ const mockApi = {
   config: {
     getAll: vi.fn().mockResolvedValue({ layout: { chatPrimary: true } }),
   },
+  folderCrud: {
+    list: vi.fn().mockResolvedValue({ success: true, folders: [] }),
+    onChanged: vi.fn(() => vi.fn()),
+  },
 };
 
 beforeEach(() => {

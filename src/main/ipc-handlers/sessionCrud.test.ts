@@ -33,6 +33,10 @@ vi.mock('electron', () => ({
 
 vi.mock('../logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
+vi.mock('../orchestration/workspaceReadList', () => ({
+  applyToSession: vi.fn((_store: unknown, session: unknown) => session),
+}));
+
 // ─── Session store — use real openSessionStore with in-memory adaptor ─────────
 
 import type { Session } from '../session/session';
@@ -112,7 +116,7 @@ describe('registerSessionCrudHandlers', () => {
     cleanupSessionCrudHandlers();
   });
 
-  it('registers all 12 channels', () => {
+  it('registers all 15 channels', () => {
     const channels = mockHandle.mock.calls.map(([ch]) => ch as string);
     expect(channels).toContain('sessionCrud:list');
     expect(channels).toContain('sessionCrud:active');
@@ -126,6 +130,9 @@ describe('registerSessionCrudHandlers', () => {
     expect(channels).toContain('sessionCrud:pin');
     expect(channels).toContain('sessionCrud:softDelete');
     expect(channels).toContain('sessionCrud:restoreDeleted');
+    expect(channels).toContain('sessionCrud:setProfile');
+    expect(channels).toContain('sessionCrud:setToolOverrides');
+    expect(channels).toContain('sessionCrud:setMcpOverrides');
   });
 
   it('sessionCrud:list returns empty array when store has no sessions', async () => {
@@ -316,6 +323,6 @@ describe('registerSessionCrudHandlers', () => {
   it('cleanupSessionCrudHandlers calls removeHandler for each channel', () => {
     mockRemoveHandler.mockClear();
     cleanupSessionCrudHandlers();
-    expect(mockRemoveHandler).toHaveBeenCalledTimes(12);
+    expect(mockRemoveHandler).toHaveBeenCalledTimes(15);
   });
 });

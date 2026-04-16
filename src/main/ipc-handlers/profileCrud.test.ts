@@ -41,6 +41,7 @@ vi.mock('../logger', () => ({
 // ─── Profile store mock ───────────────────────────────────────────────────────
 
 import type { Profile } from '@shared/types/profile';
+
 import type { ProfileStore } from '../profiles/profileStore';
 import { BUILT_IN_PROFILES } from '../profiles/rolePresets';
 
@@ -71,7 +72,7 @@ function makeUserProfile(overrides: Partial<Profile> = {}): Profile {
 
 function makeInMemoryStore(): ProfileStore {
   let profiles: Profile[] = [];
-  let defaults: Record<string, string> = {};
+  const defaults: Record<string, string> = {};
   return {
     listAll: () => [...BUILT_IN_PROFILES, ...profiles],
     upsert: (p) => {
@@ -276,10 +277,10 @@ describe('profileCrud IPC handlers', () => {
   // ── cleanupProfileCrudHandlers ────────────────────────────────────────────
 
   describe('cleanupProfileCrudHandlers()', () => {
-    it('removes all 7 registered channels', () => {
+    it('removes all 9 registered channels', () => {
       mockRemoveHandler.mockClear();
       cleanupProfileCrudHandlers();
-      expect(mockRemoveHandler).toHaveBeenCalledTimes(7);
+      expect(mockRemoveHandler).toHaveBeenCalledTimes(9);
     });
   });
 });

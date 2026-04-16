@@ -73,6 +73,10 @@ vi.mock('../agentChat', () => ({
   })),
 }));
 
+vi.mock('../pty', () => ({
+  getLinkedSessionIds: vi.fn(() => []),
+}));
+
 vi.mock('../agentChat/sessionMemory', () => ({
   sessionMemoryStore: {
     loadMemories: vi.fn(async () => []),

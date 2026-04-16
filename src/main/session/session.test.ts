@@ -2,7 +2,11 @@
  * session.test.ts — Unit tests for session primitive and makeSession factory.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../profiles/profileStore', () => ({
+  getProfileStore: vi.fn(() => null),
+}));
 
 import { makeSession, type Session } from './session';
 
@@ -78,7 +82,6 @@ describe('makeSession', () => {
     expect(s.bounds).toBeUndefined();
     expect(s.layoutPresetId).toBeUndefined();
     expect(s.profileId).toBeUndefined();
-    expect(s.pinnedContext).toBeUndefined();
   });
 
   it('accepts empty string projectRoot', () => {

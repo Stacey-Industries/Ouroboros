@@ -50,6 +50,18 @@ function createMockProc(): MockProc {
   return proc;
 }
 
+vi.mock('../ptyPersistence', () => ({
+  createPtyPersistence: vi.fn(() => ({
+    isEnabled: vi.fn(() => false),
+    saveSession: vi.fn(),
+    updateSession: vi.fn(),
+    removeSession: vi.fn(),
+    listSessions: vi.fn(() => []),
+    clearAll: vi.fn(),
+    close: vi.fn(),
+  })),
+}));
+
 vi.mock('node-pty', () => ({
   spawn: vi.fn(() => {
     const proc = createMockProc();

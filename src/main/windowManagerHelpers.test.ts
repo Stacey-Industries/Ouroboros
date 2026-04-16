@@ -43,6 +43,10 @@ vi.mock('./logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock('./perfMetrics', () => ({
+  markStartup: vi.fn(),
+}));
+
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 
 import { screen } from 'electron';

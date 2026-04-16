@@ -1,7 +1,13 @@
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../config', () => ({
+  store: { get: vi.fn(), set: vi.fn(), onDidChange: vi.fn(() => ({ dispose: vi.fn() })) },
+  getConfigValue: vi.fn(),
+  setConfigValue: vi.fn(),
+}))
 
 import { filePathToUri } from '../lspHelpers'
 import { servers } from '../lspState'

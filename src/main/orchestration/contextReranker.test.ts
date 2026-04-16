@@ -15,6 +15,12 @@ vi.mock('./contextRerankerSpawn', () => ({
   spawnHaikuForRerank: vi.fn(),
 }));
 
+vi.mock('../config', () => ({
+  store: { get: vi.fn(), set: vi.fn(), onDidChange: vi.fn(() => ({ dispose: vi.fn() })) },
+  getConfigValue: vi.fn(),
+  setConfigValue: vi.fn(),
+}));
+
 import log from '../logger';
 import {
   buildRerankPrompt,

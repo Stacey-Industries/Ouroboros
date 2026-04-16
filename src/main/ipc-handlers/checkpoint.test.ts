@@ -29,6 +29,14 @@ vi.mock('electron', () => ({
   },
 }));
 
+vi.mock('./pathSecurity', () => ({
+  assertPathAllowed: vi.fn(),
+}));
+
+vi.mock('./gitOperationsExtended', () => ({
+  gitRestoreSnapshot: vi.fn(),
+}));
+
 // ── Now import the module under test ─────────────────────────────────────
 
 import { CheckpointStore } from '../agentChat/checkpointStore';

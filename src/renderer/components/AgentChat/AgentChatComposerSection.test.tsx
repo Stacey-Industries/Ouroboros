@@ -41,6 +41,18 @@ vi.mock('./researchCommands', () => ({
   buildFollowupPrompt: vi.fn(),
 }));
 
+vi.mock('./ComposerProfile', () => ({
+  ComposerProfile: () => null,
+}));
+
+vi.mock('./McpChatToggles', () => ({
+  McpChatToggles: () => null,
+}));
+
+vi.mock('./ToolToggles', () => ({
+  ToolToggles: () => null,
+}));
+
 // ─── Import after mocks ───────────────────────────────────────────────────────
 
 import { ComposerSection } from './AgentChatComposerSection';
@@ -49,6 +61,19 @@ import {
   parseResearchCommand,
   runResearchAndPin,
 } from './researchCommands';
+
+// ─── electronAPI mock ─────────────────────────────────────────────────────────
+
+const mockElectronAPI = {
+  sessionCrud: {
+    list: vi.fn().mockResolvedValue({ success: true, sessions: [] }),
+    onChanged: vi.fn(() => vi.fn()),
+    setProfile: vi.fn().mockResolvedValue({ success: true }),
+  },
+  profileCrud: {
+    list: vi.fn().mockResolvedValue({ success: true, profiles: [] }),
+  },
+};
 
 // ─── Minimal props factory ────────────────────────────────────────────────────
 
@@ -74,6 +99,14 @@ function makeProps(overrides?: Partial<Parameters<typeof ComposerSection>[0]>) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  Object.defineProperty(window, 'electronAPI', {
+    value: mockElectronAPI,
+    writable: true,
+    configurable: true,
+  });
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

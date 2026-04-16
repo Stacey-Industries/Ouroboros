@@ -174,8 +174,8 @@ describe('registerTelemetryHandlers', () => {
     expect(result.error).toMatch(/sessionId/i);
   });
 
-  it('cleanupTelemetryHandlers removes all 4 channels', () => {
-    expect(mockHandlers.size).toBe(4);
+  it('cleanupTelemetryHandlers removes all 5 channels', () => {
+    expect(mockHandlers.size).toBe(5);
     cleanupTelemetryHandlers();
     expect(mockHandlers.size).toBe(0);
   });

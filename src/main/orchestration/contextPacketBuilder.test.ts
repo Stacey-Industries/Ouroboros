@@ -3,6 +3,12 @@ import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../config', () => ({
+  store: { get: vi.fn(), set: vi.fn(), onDidChange: vi.fn(() => ({ dispose: vi.fn() })) },
+  getConfigValue: vi.fn(),
+  setConfigValue: vi.fn(),
+}));
+
 vi.mock('./contextSelectionSupport', async () => {
   const actual = await vi.importActual<typeof import('./contextSelectionSupport')>(
     './contextSelectionSupport',
