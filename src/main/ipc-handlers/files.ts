@@ -11,6 +11,7 @@ import { watchRecursive, type WatchSubscription } from '../watchers';
 import {
   broadcastFileChange,
   createExclusiveFile,
+  createOpenFileHandler,
   createSelectFolderHandler,
   ensureDirExists,
   handleShowImageDialog,
@@ -330,6 +331,7 @@ export function registerFileHandlers(senderWindow: SenderWindow): string[] {
     ['files:delete', handleDelete],
     ['files:softDelete', handleSoftDelete],
     ['files:restoreDeleted', handleRestoreDeleted],
+    ['files:openFile', createOpenFileHandler(senderWindow)],
     ['files:selectFolder', createSelectFolderHandler(senderWindow)],
     ['files:showImageDialog', handleShowImageDialog],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

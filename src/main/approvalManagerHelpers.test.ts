@@ -2,6 +2,7 @@
  * approvalManagerHelpers.test.ts — Unit tests for approval broadcast + timeout helpers.
  */
 
+import type { BrowserWindow } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -43,13 +44,13 @@ const mockBroadcastToWebClients = vi.mocked(broadcastToWebClients);
 const mockSend = vi.fn();
 const mockFlashFrame = vi.fn();
 
-function makeWindow(opts: { destroyed?: boolean; focused?: boolean } = {}): object {
+function makeWindow(opts: { destroyed?: boolean; focused?: boolean } = {}): BrowserWindow {
   return {
     isDestroyed: vi.fn(() => opts.destroyed ?? false),
     isFocused: vi.fn(() => opts.focused ?? false),
     webContents: { mainFrame: { send: mockSend } },
     flashFrame: mockFlashFrame,
-  };
+  } as unknown as BrowserWindow;
 }
 
 // ─── Import SUT after mocks ───────────────────────────────────────────────────

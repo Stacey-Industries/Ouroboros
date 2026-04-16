@@ -199,6 +199,7 @@ export interface FilesAPI {
   watchDir: (dirPath: string) => Promise<IpcResult>;
   unwatchDir: (dirPath: string) => Promise<IpcResult>;
   selectFolder: () => Promise<SelectFolderResult>;
+  openFile: () => Promise<SelectFolderResult>;
   createFile: (filePath: string, content?: string) => Promise<IpcResult>;
   mkdir: (dirPath: string) => Promise<IpcResult>;
   rename: (oldPath: string, newPath: string) => Promise<IpcResult>;

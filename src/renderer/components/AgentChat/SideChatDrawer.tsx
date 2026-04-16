@@ -19,14 +19,14 @@ export interface SideChatDrawerProps {
   sideChats: string[];
   activeSideChatId: string | null;
   /** The root/main thread that side chats can be merged into. */
-  parentThreadId: string | null;
+  parentThreadId?: string | null;
   onSelect: (threadId: string) => void;
   onCloseTab: (threadId: string) => void;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function buildTabLabel(threadId: string, index: number): string {
+function buildTabLabel(_threadId: string, index: number): string {
   return `Side chat ${(index + 1).toString()}`;
 }
 
@@ -266,7 +266,7 @@ export function SideChatDrawer(props: SideChatDrawerProps): React.ReactElement |
   const { isOpen, onClose, activeSideChatId, parentThreadId } = props;
   const activeStore = usePerTabStore(activeSideChatId);
   const { canMerge, mergeOpen, openMerge, closeMerge } = useMergeDialogState(
-    activeSideChatId, parentThreadId,
+    activeSideChatId, parentThreadId ?? null,
   );
   useEscapeToDismiss(isOpen, onClose);
 

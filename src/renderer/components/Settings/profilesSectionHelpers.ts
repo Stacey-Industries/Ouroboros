@@ -110,7 +110,7 @@ export const emptyStateStyle: React.CSSProperties = {
 };
 
 export function getProfiles(draft: AppConfig): ProfileMap {
-  return (draft.profiles as ProfileMap) ?? {};
+  return (draft.profiles as unknown as ProfileMap) ?? {};
 }
 
 export function snapshotConfig(config: AppConfig): ProfileSnapshot {
@@ -136,13 +136,13 @@ export function buildSavedProfiles(
   draft: AppConfig,
   name: string,
 ): AppConfig['profiles'] {
-  return { ...profiles, [name]: snapshotConfig(draft) } as AppConfig['profiles'];
+  return { ...profiles, [name]: snapshotConfig(draft) } as unknown as AppConfig['profiles'];
 }
 
 export function buildRemainingProfiles(profiles: ProfileMap, name: string): AppConfig['profiles'] {
   const nextProfiles = { ...profiles };
   delete nextProfiles[name];
-  return nextProfiles as AppConfig['profiles'];
+  return nextProfiles as unknown as AppConfig['profiles'];
 }
 
 export function getSaveButtonStyle(enabled: boolean): React.CSSProperties {

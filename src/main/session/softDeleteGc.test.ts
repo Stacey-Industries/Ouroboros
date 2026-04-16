@@ -37,6 +37,7 @@ function makeSession(id: string, deletedAt?: number): Session {
     activeTerminalIds: [],
     costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },
     telemetry: { correlationIds: [], telemetrySessionId: id },
+    pinnedContext: [],
     deletedAt,
   };
 }

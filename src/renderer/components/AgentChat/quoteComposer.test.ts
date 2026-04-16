@@ -94,6 +94,6 @@ describe('dispatchQuoteEvent', () => {
     dispatchQuoteEvent(text);
 
     window.removeEventListener(QUOTE_EVENT_NAME, handler);
-    expect(detail?.text).toBe(text);
+    expect((detail as { text: string } | null)?.text).toBe(text);
   });
 });

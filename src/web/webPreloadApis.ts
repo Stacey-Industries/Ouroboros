@@ -106,6 +106,7 @@ export function buildFilesApi(t: WebSocketTransport) {
     readDir: (dirPath: string) => t.invoke('files:readDir', dirPath),
     watchDir: (dirPath: string) => t.invoke('files:watchDir', dirPath),
     unwatchDir: (dirPath: string) => t.invoke('files:unwatchDir', dirPath),
+    openFile: desktopOnlyStub('files:openFile'),
     selectFolder: async () => {
       const result = await requestFolderSelection();
       return { success: true, cancelled: result.cancelled, path: result.path };

@@ -277,6 +277,18 @@ export function createSelectFolderHandler(senderWindow: SenderWindowFn): FileHan
   };
 }
 
+export function createOpenFileHandler(senderWindow: SenderWindowFn): FileHandlerFn {
+  return async (event) => {
+    const result = await dialog.showOpenDialog(senderWindow(event), {
+      properties: ['openFile'],
+      title: 'Select File',
+    });
+    return result.canceled || result.filePaths.length === 0
+      ? { success: true, cancelled: true, path: null }
+      : { success: true, cancelled: false, path: result.filePaths[0] };
+  };
+}
+
 export async function handleShowImageDialog(event: IpcMainInvokeEvent): Promise<unknown> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getOwnerBrowserWindow is available at runtime
   const win = ((event.sender as any).getOwnerBrowserWindow?.() ?? BrowserWindow.getFocusedWindow())!;

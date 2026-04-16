@@ -146,7 +146,7 @@ export function initProfileStore(): void {
   const { getConfigValue, setConfigValue } = require('../config') as typeof import('../config');
   const adaptor: ProfileStoreAdaptor = {
     readProfiles: () => {
-      const stored = getConfigValue('profiles') as Profile[] | undefined;
+      const stored = getConfigValue('profiles') as unknown as Profile[] | undefined;
       return Array.isArray(stored) ? stored : [];
     },
     writeProfiles: (profiles) => {

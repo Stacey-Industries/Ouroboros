@@ -40,8 +40,8 @@ type IpcHandler = (_event: unknown, args: unknown) => Promise<unknown>;
 async function getHandlers(): Promise<Map<string, IpcHandler>> {
   const { ipcMain } = await import('electron');
   const captured = new Map<string, IpcHandler>();
-  vi.mocked(ipcMain.handle).mockImplementation((channel: string, fn: IpcHandler) => {
-    captured.set(channel as string, fn as IpcHandler);
+  vi.mocked(ipcMain.handle).mockImplementation((channel: string, fn: unknown) => {
+    captured.set(channel, fn as IpcHandler);
   });
   registerSubagentHandlers();
   return captured;

@@ -39,10 +39,11 @@ function makeThread(title: string, lastAssistantText: string) {
     id: 'thread-1',
     title,
     messages: [
-      { role: 'user', content: [{ kind: 'text', text: 'Hello' }] },
+      { role: 'user', content: 'Hello', blocks: [{ kind: 'text', content: 'Hello' }] },
       {
         role: 'assistant',
-        content: [{ kind: 'text', text: lastAssistantText }],
+        content: lastAssistantText,
+        blocks: [{ kind: 'text', content: lastAssistantText }],
       },
     ],
   };

@@ -109,7 +109,7 @@ function handleRecordEvent(args: unknown): HandlerResult<object> {
     sessionId: 'ui',
     timestamp: Date.now(),
     data: data as Record<string, unknown> | undefined,
-  } as Parameters<typeof store.record>[0]);
+  } as unknown as Parameters<typeof store.record>[0]);
   return ok({});
 }
 

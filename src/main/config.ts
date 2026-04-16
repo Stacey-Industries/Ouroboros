@@ -159,6 +159,8 @@ export interface ContextScoringSettings {
   pagerank: boolean;
   /** Tunable seed weights for personalized PageRank (Q10 rec). */
   pagerankSeeds: PageRankSeedWeights;
+  /** Enable LLM-based context reranking via Haiku subprocess. Default on. */
+  rerankerEnabled?: boolean;
 }
 
 export interface RouterSettings {
@@ -243,7 +245,8 @@ export interface AppConfig {
   bookmarks: string[];
   /** Extra ignore patterns (exact names or glob-like prefixes) merged with the hardcoded list */
   fileTreeIgnorePatterns: string[];
-  profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>;
+  /** Wave 26 Phase A — user profiles (built-ins are merged at read time, never stored) */
+  profiles?: import('@shared/types/profile').Profile[];
   /** All open project roots for multi-root workspace support (deprecated — use per-window roots) */
   multiRoots: string[];
   /** Per-window session state for restore on relaunch */
@@ -373,8 +376,8 @@ export interface AppConfig {
   context?: ContextScoringSettings;
   /** Wave 21 Phase D — user-created session folders */
   sessionFolders?: SessionFolder[];
-  /** Wave 26 Phase A — user profiles (built-ins merged at read time) */
-  profiles?: import('@shared/types/profile').Profile[];
+  /** Wave 25 Phase E — always-pinned files per project root: projectRoot → filePaths[] */
+  workspaceReadLists?: Record<string, string[]>;
   /** Wave 26 Phase A — per-project default profile: projectRoot → profileId */
   workspaceProfileDefaults?: Record<string, string>;
   /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */

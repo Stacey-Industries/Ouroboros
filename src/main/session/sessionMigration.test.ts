@@ -246,13 +246,14 @@ describe('migrateAgentMonitorSettings — patching', () => {
   });
 
   it('does not write to store when nothing needs patching', () => {
-    const sessions = [
+    type SessionLike = { id: string; agentMonitorSettings: { viewMode: string; inlineEventTypes: string[] } };
+    const sessions: SessionLike[] = [
       { id: 's1', agentMonitorSettings: { viewMode: 'summary', inlineEventTypes: [] } },
-    ] as never;
-    const cfg = makeConfigStore({ sessionsData: sessions });
+    ];
+    const cfg = makeConfigStore({ sessionsData: sessions as unknown as AppConfig['sessionsData'] });
     migrateAgentMonitorSettings(cfg.getConfig, cfg.setConfig);
     // sessions array identity should be unchanged (same reference is fine, values match)
-    const snap = cfg.snapshot().sessionsData as typeof sessions;
+    const snap = cfg.snapshot().sessionsData as unknown as SessionLike[];
     expect(snap[0].agentMonitorSettings.viewMode).toBe('summary');
   });
 });

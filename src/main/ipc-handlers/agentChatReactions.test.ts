@@ -5,11 +5,11 @@
  * with a stub AgentChatService and a stub register function.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-
-import type { Reaction } from '@shared/types/agentChat';
 import { AGENT_CHAT_INVOKE_CHANNELS } from '@shared/ipc/agentChatChannels';
-import { registerReactionHandlers, type ReactionHandlerDeps } from './agentChatReactions';
+import type { Reaction } from '@shared/types/agentChat';
+import { describe, expect, it } from 'vitest';
+
+import { type ReactionHandlerDeps,registerReactionHandlers } from './agentChatReactions';
 
 // ── Stubs ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ function makeStubs(initial: Reaction[] = []) {
   } = {
     data: [...initial],
     collapsedState: new Map(),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getMessageReactions(_id: string) { return [...store.data]; },
     async setMessageReactions(_id: string, r: Reaction[]) { store.data = [...r]; },
     async setMessageCollapsed(id: string, c: boolean) { store.collapsedState.set(id, c); },

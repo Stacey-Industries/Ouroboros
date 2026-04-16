@@ -11,7 +11,7 @@
  *   - folderCrud:changed broadcast reconciles final state.
  */
 
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   closestCenter,
   DndContext,
@@ -287,7 +287,7 @@ export function FolderTree({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter}
       onDragStart={(e: DragStartEvent) => setDraggingId(String(e.active.id))}
-      onDragOver={(e: { over: { id: string } | null }) => setOverBucketId(e.over ? String(e.over.id) : null)}
+      onDragOver={(e: DragOverEvent) => setOverBucketId(e.over ? String(e.over.id) : null)}
       onDragEnd={(e: DragEndEvent) => { const sid = String(e.active.id); const to = e.over ? String(e.over.id) : null; setDraggingId(null); setOverBucketId(null); if (to) resolveMove(sid, to, folders); }}
     >
       <FolderBucket {...shared} bucketId={UNCATEGORIZED_ID} label="Uncategorized" sessions={uncategorized} />

@@ -26,7 +26,7 @@ function truncate(text: string, max: number): string {
 
 function firstTextInBlocks(blocks: AgentChatContentBlock[]): string {
   for (const block of blocks) {
-    if (block.kind === 'text' && block.text) return block.text.split('\n')[0].trim();
+    if (block.kind === 'text' && block.content) return block.content.split('\n')[0].trim();
   }
   return '';
 }
@@ -34,7 +34,7 @@ function firstTextInBlocks(blocks: AgentChatContentBlock[]): string {
 function extractLastAssistantLine(messages: AgentChatMessageRecord[]): string {
   for (const msg of [...messages].reverse()) {
     if (msg.role !== 'assistant') continue;
-    const line = firstTextInBlocks(msg.content);
+    const line = msg.blocks ? firstTextInBlocks(msg.blocks) : msg.content.split('\n')[0].trim();
     if (line) return line;
   }
   return '';

@@ -5,7 +5,6 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FOCUS_TERMINAL_SESSION_EVENT } from '../../hooks/appEventNames';

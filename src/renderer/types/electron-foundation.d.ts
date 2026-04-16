@@ -150,7 +150,8 @@ export interface AppConfig {
   customCSS: string;
   bookmarks: string[];
   fileTreeIgnorePatterns: string[];
-  profiles: Record<string, Partial<Omit<AppConfig, 'profiles'>>>;
+  /** Wave 26 Phase A — user profiles (built-ins are merged at read time, never stored) */
+  profiles?: import('@shared/types/profile').Profile[];
   multiRoots: string[];
   customPrompt: string;
   promptPreset: string;

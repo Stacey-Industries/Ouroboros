@@ -4,8 +4,12 @@
  * All tests use a mock spawnFn — the real Claude CLI is never invoked.
  */
 
+import type { spawn as SpawnType } from 'child_process';
 import { EventEmitter } from 'events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// SpawnMock gives us both the vi.fn() `.mock` property and assignability to typeof SpawnType.
+type SpawnMock = ReturnType<typeof vi.fn> & typeof SpawnType;
 
 vi.mock('../logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -39,8 +43,8 @@ function makeMockChild(): MockChild {
   return child;
 }
 
-function makeSpawnFn(child: MockChild): ReturnType<typeof vi.fn> {
-  return vi.fn(() => child);
+function makeSpawnFn(child: MockChild): SpawnMock {
+  return vi.fn(() => child) as SpawnMock;
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────

@@ -69,8 +69,8 @@ describe('restoreFromTrash', () => {
     const result = await restoreFromTrash(session.id, (s) => { restored = s; }, adaptor);
     expect(result).toBe(true);
     expect(restored).not.toBeNull();
-    expect((restored as Session).id).toBe(session.id);
-    expect((restored as Session).archivedAt).toBeUndefined();
+    expect((restored as unknown as Session).id).toBe(session.id);
+    expect((restored as unknown as Session).archivedAt).toBeUndefined();
   });
 
   it('deletes the trash file after restore', async () => {

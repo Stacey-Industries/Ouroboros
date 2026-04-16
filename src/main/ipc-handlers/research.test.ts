@@ -34,7 +34,7 @@ vi.mock('../logger', () => ({
 const mockRunResearch = vi.fn<() => Promise<ResearchArtifact>>();
 
 vi.mock('../research/researchSubagent', () => ({
-  runResearch: (...args: unknown[]) => mockRunResearch(...args),
+  runResearch: (...args: unknown[]) => mockRunResearch(...args as Parameters<typeof mockRunResearch>),
 }));
 
 // ─── Test artifact ────────────────────────────────────────────────────────────

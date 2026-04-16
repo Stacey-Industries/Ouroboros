@@ -84,7 +84,7 @@ describe('OpenInTerminalButton', () => {
   it('renders the Terminal button when sessionId is set', () => {
     render(
       <OpenInTerminalButton
-        linkedSession={{ provider: 'claude', sessionId: 'sess-123' }}
+        linkedSession={{ provider: 'claude-code', sessionId: 'sess-123' }}
         threadModel={null}
       />,
     );
@@ -95,7 +95,7 @@ describe('OpenInTerminalButton', () => {
   it('dispatches open-in-terminal event with correct detail on click', () => {
     render(
       <OpenInTerminalButton
-        linkedSession={{ provider: 'claude', sessionId: 'sess-123' }}
+        linkedSession={{ provider: 'claude-code', sessionId: 'sess-123' }}
         threadModel="claude-sonnet-4-5"
       />,
     );
@@ -104,7 +104,7 @@ describe('OpenInTerminalButton', () => {
     const event = (window.dispatchEvent as ReturnType<typeof vi.spyOn>).mock
       .calls[0][0] as CustomEvent;
     expect(event.detail.sessionId).toBe('sess-123');
-    expect(event.detail.provider).toBe('claude');
+    expect(event.detail.provider).toBe('claude-code');
     expect(event.detail.model).toBe('claude-sonnet-4-5');
   });
 });

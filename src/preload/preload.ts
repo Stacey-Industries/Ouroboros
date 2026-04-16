@@ -110,6 +110,7 @@ const filesAPI: ElectronAPI['files'] = {
   readDir: (dirPath) => ipcRenderer.invoke('files:readDir', dirPath),
   watchDir: (dirPath) => ipcRenderer.invoke('files:watchDir', dirPath),
   unwatchDir: (dirPath) => ipcRenderer.invoke('files:unwatchDir', dirPath),
+  openFile: () => ipcRenderer.invoke('files:openFile'),
   selectFolder: () => ipcRenderer.invoke('files:selectFolder'),
   createFile: (filePath, content) => ipcRenderer.invoke('files:createFile', filePath, content),
   mkdir: (dirPath) => ipcRenderer.invoke('files:mkdir', dirPath),

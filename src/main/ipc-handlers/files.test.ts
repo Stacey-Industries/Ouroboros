@@ -50,6 +50,7 @@ vi.mock('./filesHelpers', () => ({
   broadcastFileChange: mockBroadcastFileChange,
   createDirItem: vi.fn(),
   createExclusiveFile: vi.fn(),
+  createOpenFileHandler: vi.fn(() => vi.fn()),
   createSelectFolderHandler: vi.fn(() => vi.fn()),
   ensureDirExists: vi.fn(),
   flushFileChangesOnShutdown: vi.fn(),

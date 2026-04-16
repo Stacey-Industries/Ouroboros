@@ -39,7 +39,8 @@ describe('usePermalinkBridge', () => {
 
     renderHook(() => usePermalinkBridge());
     expect(ipcCallback).not.toBeNull();
-    ipcCallback?.({ threadId: 'abc', messageId: 'm1' });
+     
+    ipcCallback!({ threadId: 'abc', messageId: 'm1' });
 
     window.removeEventListener(OPEN_THREAD_EVENT, listener);
     expect(dispatched).toHaveLength(1);

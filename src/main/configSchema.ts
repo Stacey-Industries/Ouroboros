@@ -138,10 +138,6 @@ export const schema: Record<string, unknown> = {
     items: { type: 'string' },
     default: [],
   },
-  profiles: {
-    type: 'object',
-    default: {},
-  },
   // @deprecated — multiRoots is a legacy global config key superseded by per-window
   // projectRoots (stored in windowSessions). New code should read per-window roots via
   // windowManager. This key is retained for:

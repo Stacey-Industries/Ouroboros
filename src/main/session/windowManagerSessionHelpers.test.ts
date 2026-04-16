@@ -25,6 +25,22 @@ function makeTestSession(projectRoot: string, overrides?: Partial<Session>): Ses
   return { ...makeSession(projectRoot), ...overrides };
 }
 
+function makeStore(partial: Partial<SessionStore>): SessionStore {
+  return {
+    getById: () => undefined,
+    listAll: () => [],
+    listByProjectRoot: () => [],
+    listActive: () => [],
+    upsert: () => undefined,
+    archive: () => undefined,
+    delete: () => undefined,
+    pin: () => undefined,
+    softDelete: () => undefined,
+    restoreDeleted: () => undefined,
+    ...partial,
+  };
+}
+
 // ─── Mock sessionStore module ─────────────────────────────────────────────────
 
 vi.mock('./sessionStore', () => ({
@@ -61,29 +77,16 @@ describe('windowManagerSessionHelpers', () => {
 
     it('returns the session when store has a matching record', () => {
       const session = makeTestSession('/projects/app');
-      mockStore = {
+      mockStore = makeStore({
         getById: (id) => (id === session.id ? session : undefined),
         listAll: () => [session],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      });
       setWindowActiveSession(1, session.id);
       expect(getSessionForWindow(1)).toEqual(session);
     });
 
     it('returns null when session id is not found in store', () => {
-      mockStore = {
-        getById: () => undefined,
-        listAll: () => [],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      mockStore = makeStore({});
       setWindowActiveSession(1, 'ghost-session-id');
       expect(getSessionForWindow(1)).toBeNull();
     });
@@ -120,15 +123,7 @@ describe('windowManagerSessionHelpers', () => {
 
     it('returns projectRoot from the active session', () => {
       const session = makeTestSession('/projects/app');
-      mockStore = {
-        getById: (id) => (id === session.id ? session : undefined),
-        listAll: () => [],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      mockStore = makeStore({ getById: (id) => (id === session.id ? session : undefined) });
       setWindowActiveSession(2, session.id);
       expect(getProjectRootForWindow(2)).toBe('/projects/app');
     });
@@ -141,15 +136,7 @@ describe('windowManagerSessionHelpers', () => {
 
     it('returns [projectRoot] from the active session', () => {
       const session = makeTestSession('/projects/app');
-      mockStore = {
-        getById: (id) => (id === session.id ? session : undefined),
-        listAll: () => [],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      mockStore = makeStore({ getById: (id) => (id === session.id ? session : undefined) });
       setWindowActiveSession(2, session.id);
       expect(getProjectRootsForWindow(2)).toEqual(['/projects/app']);
     });
@@ -164,15 +151,7 @@ describe('windowManagerSessionHelpers', () => {
 
     it('returns projectRoot for a non-worktree session', () => {
       const session = makeTestSession('/projects/app', { worktree: false });
-      mockStore = {
-        getById: (id) => (id === session.id ? session : undefined),
-        listAll: () => [],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      mockStore = makeStore({ getById: (id) => (id === session.id ? session : undefined) });
       setWindowActiveSession(1, session.id);
       expect(resolveActiveSessionCwd(1)).toBe('/projects/app');
     });
@@ -182,15 +161,7 @@ describe('windowManagerSessionHelpers', () => {
         worktree: true,
         worktreePath: '/tmp/wt/session-abc',
       });
-      mockStore = {
-        getById: (id) => (id === session.id ? session : undefined),
-        listAll: () => [],
-        listByProjectRoot: () => [],
-        listActive: () => [],
-        upsert: () => undefined,
-        archive: () => undefined,
-        delete: () => undefined,
-      };
+      mockStore = makeStore({ getById: (id) => (id === session.id ? session : undefined) });
       setWindowActiveSession(1, session.id);
       expect(resolveActiveSessionCwd(1)).toBe('/tmp/wt/session-abc');
     });

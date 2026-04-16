@@ -26,6 +26,7 @@
     "src/shared/**/*",
     "src/renderer/types/**/*",
     "src/web/**/*",
+    "src/test-utils/**/*",
     "src/main/orchestration/types.ts",
     "src/main/orchestration/typesContext.ts",
     "src/main/orchestration/typesDomain.ts",
