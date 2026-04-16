@@ -31,6 +31,10 @@ export interface Session {
   createdAt: string;
   lastUsedAt: string;
   archivedAt?: string;
+  /** Wave 21 Phase C — epoch ms when this session was soft-deleted (30-day grace). */
+  deletedAt?: number;
+  /** Wave 21 Phase C — pinned sessions sort to top of sidebar in all views. */
+  pinned?: boolean;
 
   // Project location
   projectRoot: string;
@@ -75,6 +79,7 @@ export function makeSession(projectRoot: string): Session {
     lastUsedAt: now,
     projectRoot,
     worktree: false,
+    pinned: false,
     tags: [],
     activeTerminalIds: [],
     costRollup: { totalUsd: 0, inputTokens: 0, outputTokens: 0 },

@@ -1,13 +1,21 @@
 /**
- * SessionRow — single session entry in the session sidebar (Wave 20 Phase A).
+ * SessionRow — single session entry in the session sidebar.
  *
- * Shows: relative last-used time, project basename, worktree badge (if active),
- * status pill, and archived indicator.
+ * Shows: relative last-used time, project basename, worktree badge,
+ * status pill, and action buttons (pin, archive restore, delete restore).
+ *
+ * Wave 21 Phase C additions:
+ *   - Star/pin icon button (toggles pinned state)
+ *   - "Deleted — restore in N days" badge + Restore button for soft-deleted sessions
  */
 
 import React, { useCallback, useState } from 'react';
 
 import type { SessionRecord } from '../../types/electron';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const THIRTY_DAYS_MS = 30 * 24 * 3600 * 1000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,8 +34,14 @@ function projectBasename(root: string): string {
 }
 
 function statusLabel(session: SessionRecord): string {
+  if (session.deletedAt) return 'trash';
   if (session.archivedAt) return 'archived';
   return 'active';
+}
+
+function daysUntilPurge(deletedAt: number): number {
+  const expiresAt = deletedAt + THIRTY_DAYS_MS;
+  return Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 3600 * 1000)));
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -35,10 +49,10 @@ function statusLabel(session: SessionRecord): string {
 interface StatusPillProps { label: string }
 
 function StatusPill({ label }: StatusPillProps): React.ReactElement {
-  const isArchived = label === 'archived';
-  const cls = isArchived
-    ? 'bg-status-warning-subtle text-status-warning'
-    : 'bg-status-success-subtle text-status-success';
+  const cls =
+    label === 'archived' ? 'bg-status-warning-subtle text-status-warning' :
+    label === 'trash'    ? 'bg-status-error-subtle text-status-error' :
+    'bg-status-success-subtle text-status-success';
   return (
     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${cls}`}>
       {label}
@@ -46,27 +60,97 @@ function StatusPill({ label }: StatusPillProps): React.ReactElement {
   );
 }
 
-// ─── SessionRow ───────────────────────────────────────────────────────────────
+interface PinButtonProps { sessionId: string; pinned: boolean; onToggled?: () => void }
 
-export interface SessionRowProps {
-  session: SessionRecord;
-  isActive: boolean;
-  onClick: (sessionId: string) => void;
-  onRestored?: () => void;
+function PinButton({ sessionId, pinned, onToggled }: PinButtonProps): React.ReactElement {
+  const [busy, setBusy] = useState(false);
+  const handle = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.electronAPI) return;
+    setBusy(true);
+    await window.electronAPI.sessionCrud.pin(sessionId, !pinned);
+    setBusy(false);
+    onToggled?.();
+  }, [sessionId, pinned, onToggled]);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={handle}
+      aria-label={pinned ? 'Unpin session' : 'Pin session'}
+      className={`shrink-0 text-sm leading-none transition-colors
+        ${pinned ? 'text-interactive-accent' : 'text-text-semantic-faint hover:text-interactive-accent'}`}
+    >
+      {pinned ? '★' : '☆'}
+    </button>
+  );
 }
 
-interface SessionRowBodyProps { session: SessionRecord }
+interface RestoreButtonProps { sessionId: string; label: string; onRestored?: () => void }
 
-function SessionRowBody({ session }: SessionRowBodyProps): React.ReactElement {
+function RestoreButton({ sessionId, label, onRestored }: RestoreButtonProps): React.ReactElement {
+  const [busy, setBusy] = useState(false);
+  const handle = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.electronAPI) return;
+    setBusy(true);
+    await window.electronAPI.sessionCrud.restore(sessionId);
+    setBusy(false);
+    onRestored?.();
+  }, [sessionId, onRestored]);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={handle}
+      className="mt-1 self-start text-xs px-2 py-0.5 rounded bg-interactive-muted
+        text-text-semantic-secondary hover:bg-interactive-hover transition-colors"
+    >
+      {busy ? 'Restoring…' : label}
+    </button>
+  );
+}
+
+interface RestoreDeletedButtonProps { sessionId: string; onRestored?: () => void }
+
+function RestoreDeletedButton({ sessionId, onRestored }: RestoreDeletedButtonProps): React.ReactElement {
+  const [busy, setBusy] = useState(false);
+  const handle = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.electronAPI) return;
+    setBusy(true);
+    await window.electronAPI.sessionCrud.restoreDeleted(sessionId);
+    setBusy(false);
+    onRestored?.();
+  }, [sessionId, onRestored]);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={handle}
+      className="mt-1 self-start text-xs px-2 py-0.5 rounded bg-interactive-muted
+        text-text-semantic-secondary hover:bg-interactive-hover transition-colors"
+    >
+      {busy ? 'Restoring…' : 'Restore'}
+    </button>
+  );
+}
+
+// ─── SessionRowBody ───────────────────────────────────────────────────────────
+
+interface SessionRowBodyProps { session: SessionRecord; onToggled?: () => void }
+
+function SessionRowBody({ session, onToggled }: SessionRowBodyProps): React.ReactElement {
   return (
     <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-text-semantic-primary truncate">
           {projectBasename(session.projectRoot)}
         </span>
-        <span className="text-xs text-text-semantic-faint shrink-0">
-          {relativeTime(session.lastUsedAt)}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <PinButton sessionId={session.id} pinned={Boolean(session.pinned)} onToggled={onToggled} />
+          <span className="text-xs text-text-semantic-faint">{relativeTime(session.lastUsedAt)}</span>
+        </div>
       </div>
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-text-semantic-muted font-mono">{session.id.slice(0, 8)}</span>
@@ -81,34 +165,31 @@ function SessionRowBody({ session }: SessionRowBodyProps): React.ReactElement {
   );
 }
 
-// ─── RestoreButton ────────────────────────────────────────────────────────────
+// ─── Inline badges ────────────────────────────────────────────────────────────
 
-interface RestoreButtonProps { sessionId: string; onRestored?: () => void }
+interface DeletedBadgeProps { session: SessionRecord; onRestored?: () => void }
 
-function RestoreButton({ sessionId, onRestored }: RestoreButtonProps): React.ReactElement {
-  const [restoring, setRestoring] = useState(false);
-  const handleRestore = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.electronAPI) return;
-    setRestoring(true);
-    await window.electronAPI.sessionCrud.restore(sessionId);
-    setRestoring(false);
-    onRestored?.();
-  }, [sessionId, onRestored]);
+function DeletedBadge({ session, onRestored }: DeletedBadgeProps): React.ReactElement | null {
+  if (!session.deletedAt) return null;
+  const days = daysUntilPurge(session.deletedAt);
   return (
-    <button
-      type="button"
-      disabled={restoring}
-      onClick={handleRestore}
-      className="mt-1 self-start text-xs px-2 py-0.5 rounded bg-interactive-muted
-        text-text-semantic-secondary hover:bg-interactive-hover transition-colors"
-    >
-      {restoring ? 'Restoring…' : 'Restore'}
-    </button>
+    <div className="mt-1 flex flex-col gap-0.5">
+      <span className="text-xs text-status-error">
+        Deleted — purged in {days} day{days !== 1 ? 's' : ''}
+      </span>
+      <RestoreDeletedButton sessionId={session.id} onRestored={onRestored} />
+    </div>
   );
 }
 
 // ─── SessionRow ───────────────────────────────────────────────────────────────
+
+export interface SessionRowProps {
+  session: SessionRecord;
+  isActive: boolean;
+  onClick: (sessionId: string) => void;
+  onRestored?: () => void;
+}
 
 export function SessionRow({
   session, isActive, onClick, onRestored,
@@ -132,8 +213,11 @@ export function SessionRow({
       aria-label={`${projectBasename(session.projectRoot)}, last used ${relativeTime(session.lastUsedAt)}`}
     >
       <div role="gridcell" className="flex flex-col gap-0.5 min-w-0">
-        <SessionRowBody session={session} />
-        {session.archivedAt && <RestoreButton sessionId={session.id} onRestored={onRestored} />}
+        <SessionRowBody session={session} onToggled={onRestored} />
+        {session.archivedAt && !session.deletedAt && (
+          <RestoreButton sessionId={session.id} label="Restore" onRestored={onRestored} />
+        )}
+        {session.deletedAt && <DeletedBadge session={session} onRestored={onRestored} />}
       </div>
     </div>
   );

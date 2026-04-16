@@ -22,6 +22,12 @@ export const sessionCrudApi: SessionCrudApiType = {
     ipcRenderer.invoke('sessionCrud:openChatWindow', { sessionId }),
   updateAgentMonitorSettings: (sessionId: string, settings: AgentMonitorSettings) =>
     ipcRenderer.invoke('sessionCrud:updateAgentMonitorSettings', { sessionId, settings }),
+  pin: (sessionId: string, pinned: boolean) =>
+    ipcRenderer.invoke('sessionCrud:pin', { sessionId, pinned }),
+  softDelete: (sessionId: string) =>
+    ipcRenderer.invoke('sessionCrud:softDelete', { sessionId }),
+  restoreDeleted: (sessionId: string) =>
+    ipcRenderer.invoke('sessionCrud:restoreDeleted', { sessionId }),
   onChanged: (callback: (sessions: SessionRecord[]) => void) =>
     onChannel<SessionRecord[]>('sessionCrud:changed', callback),
 };

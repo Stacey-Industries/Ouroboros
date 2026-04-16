@@ -164,6 +164,36 @@ function handleOpenChatWindow(args: unknown): HandlerResult<{ windowId: number }
   return ok({ windowId: win.id });
 }
 
+function handlePin(args: unknown): HandlerResult<object> {
+  const { sessionId, pinned } = (args ?? {}) as { sessionId?: string; pinned?: boolean };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  store.pin(sessionId, Boolean(pinned));
+  broadcastChanged();
+  return ok({});
+}
+
+function handleSoftDelete(args: unknown): HandlerResult<object> {
+  const { sessionId } = (args ?? {}) as { sessionId?: string };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  store.softDelete(sessionId);
+  broadcastChanged();
+  return ok({});
+}
+
+function handleRestoreDeleted(args: unknown): HandlerResult<object> {
+  const { sessionId } = (args ?? {}) as { sessionId?: string };
+  if (typeof sessionId !== 'string' || !sessionId) return fail('sessionId is required');
+  const store = getSessionStore();
+  if (!store) return fail('sessionStore not initialised');
+  store.restoreDeleted(sessionId);
+  broadcastChanged();
+  return ok({});
+}
+
 // ─── Registration ─────────────────────────────────────────────────────────────
 
 let registeredChannels: string[] = [];
@@ -195,6 +225,9 @@ export function registerSessionCrudHandlers(): string[] {
   reg('sessionCrud:updateAgentMonitorSettings', (_e, args) =>
     handleUpdateAgentMonitorSettings(args),
   );
+  reg('sessionCrud:pin', (_e, args) => handlePin(args));
+  reg('sessionCrud:softDelete', (_e, args) => handleSoftDelete(args));
+  reg('sessionCrud:restoreDeleted', (_e, args) => handleRestoreDeleted(args));
 
   registeredChannels = channels;
   return channels;

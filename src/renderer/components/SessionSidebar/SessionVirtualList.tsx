@@ -39,9 +39,22 @@ export interface SessionGroup {
   sessions: SessionRecord[];
 }
 
+/**
+ * Flatten groups into a typed flat-row array for the virtualizer.
+ *
+ * Within each group, sessions are already sorted by `applyFilters` (pinned
+ * first). Across groups, groups that contain at least one pinned session sort
+ * before groups that contain none — preserving "pinned items to the top"
+ * across the entire list.
+ */
 export function flattenGroups(groups: SessionGroup[]): FlatRow[] {
+  const sorted = [...groups].sort((a, b) => {
+    const ap = a.sessions.some((s) => s.pinned) ? 1 : 0;
+    const bp = b.sessions.some((s) => s.pinned) ? 1 : 0;
+    return bp - ap;
+  });
   const rows: FlatRow[] = [];
-  for (const g of groups) {
+  for (const g of sorted) {
     rows.push({ kind: 'header', projectRoot: g.projectRoot, label: g.label, count: g.sessions.length });
     for (const s of g.sessions) {
       rows.push({ kind: 'row', session: s });

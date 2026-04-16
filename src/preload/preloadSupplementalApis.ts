@@ -260,6 +260,12 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.setThreadTags, threadId, tags),
     searchThreads: (payload) =>
       ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.searchThreads, payload),
+    pinThread: (threadId, pinned) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.pinThread, { threadId, pinned }),
+    softDeleteThread: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.softDeleteThread, { threadId }),
+    restoreDeletedThread: (threadId) =>
+      ipcRenderer.invoke(AGENT_CHAT_INVOKE_CHANNELS.restoreDeletedThread, { threadId }),
     onThreadUpdate: (callback) =>
       onChannel<AgentChatThreadRecord>(AGENT_CHAT_EVENT_CHANNELS.thread, callback),
     onMessageUpdate: (callback) =>

@@ -230,6 +230,26 @@ export class ThreadStoreSqliteRuntime {
     });
   }
 
+  // ── Wave 21 Phase C methods ───────────────────────────────────────────────
+
+  async pinThread(threadId: string, pinned: boolean): Promise<void> {
+    this.getDb()
+      .prepare('UPDATE threads SET pinned = ? WHERE id = ?')
+      .run(pinned ? 1 : 0, threadId);
+  }
+
+  async softDeleteThread(threadId: string): Promise<void> {
+    this.getDb()
+      .prepare('UPDATE threads SET deletedAt = ? WHERE id = ?')
+      .run(this.options.now(), threadId);
+  }
+
+  async restoreDeletedThread(threadId: string): Promise<void> {
+    this.getDb()
+      .prepare('UPDATE threads SET deletedAt = NULL WHERE id = ?')
+      .run(threadId);
+  }
+
   private loadMessages(db: Database, threadId: string): AgentChatMessageRecord[] {
     const rows = db
       .prepare('SELECT * FROM messages WHERE threadId = ? ORDER BY createdAt ASC, id ASC')
@@ -241,7 +261,7 @@ export class ThreadStoreSqliteRuntime {
     row: RawThreadRow,
     messages: AgentChatMessageRecord[],
   ): AgentChatThreadRecord {
-    return {
+    const record: AgentChatThreadRecord = {
       version: 1,
       id: row.id,
       workspaceRoot: row.workspaceRoot,
@@ -253,7 +273,12 @@ export class ThreadStoreSqliteRuntime {
       latestOrchestration: parseJsonField(row.latestOrchestration),
       branchInfo: parseJsonField(row.branchInfo),
       tags: parseTagsField(row.tags),
+      pinned: Boolean(row.pinned),
     };
+    if (row.deletedAt !== null && row.deletedAt !== undefined) {
+      record.deletedAt = row.deletedAt;
+    }
+    return record;
   }
 
   private pruneOldThreads(): void {
@@ -291,6 +316,15 @@ function applyColumnMigrations(db: Database, currentVersion: number): void {
     const cols = db.pragma('table_info(threads)') as { name: string }[];
     if (!cols.some((c) => c.name === 'tags')) {
       db.exec('ALTER TABLE threads ADD COLUMN tags TEXT');
+    }
+  }
+  if (currentVersion >= 5) {
+    const cols = db.pragma('table_info(threads)') as { name: string }[];
+    if (!cols.some((c) => c.name === 'pinned')) {
+      db.exec('ALTER TABLE threads ADD COLUMN pinned INTEGER DEFAULT 0');
+    }
+    if (!cols.some((c) => c.name === 'deletedAt')) {
+      db.exec('ALTER TABLE threads ADD COLUMN deletedAt INTEGER');
     }
   }
 }

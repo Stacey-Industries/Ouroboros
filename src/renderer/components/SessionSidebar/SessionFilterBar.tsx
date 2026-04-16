@@ -21,7 +21,9 @@ export interface SessionFilterBarProps {
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
+  { value: 'pinned', label: 'Pinned' },
   { value: 'archived', label: 'Archived' },
+  { value: 'deleted', label: 'Trash' },
   { value: 'queued', label: 'Queued' },
   { value: 'errored', label: 'Errored' },
 ];

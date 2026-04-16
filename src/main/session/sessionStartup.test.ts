@@ -10,9 +10,11 @@ vi.mock('../logger', () => ({
 
 const initSessionStoreMock = vi.fn();
 const closeSessionStoreMock = vi.fn();
+const getSessionStoreMock = vi.fn().mockReturnValue(null);
 vi.mock('./sessionStore', () => ({
   initSessionStore: (...args: unknown[]) => initSessionStoreMock(...args),
   closeSessionStore: (...args: unknown[]) => closeSessionStoreMock(...args),
+  getSessionStore: (...args: unknown[]) => getSessionStoreMock(...args),
 }));
 
 const migrateMock = vi.fn().mockResolvedValue({ migrated: 0 });
@@ -24,6 +26,16 @@ const runSessionGcMock = vi.fn().mockResolvedValue({ purged: 0 });
 vi.mock('./sessionGc', () => ({
   runSessionGc: (...args: unknown[]) => runSessionGcMock(...args),
   SEVEN_DAYS_MS: 604_800_000,
+}));
+
+// Prevent the lazy require inside runAllGc from calling electron app.getPath
+vi.mock('../agentChat/threadStore', () => ({
+  agentChatThreadStore: null,
+}));
+
+const runSoftDeleteGcMock = vi.fn().mockResolvedValue({ purgedSessions: 0, purgedThreads: 0 });
+vi.mock('./softDeleteGc', () => ({
+  runSoftDeleteGc: (...args: unknown[]) => runSoftDeleteGcMock(...args),
 }));
 
 import { closeSessionServices, initSessionServices } from './sessionStartup';

@@ -249,6 +249,10 @@ export interface AgentChatThreadRecord {
    * Manual tags have no prefix. JSON-encoded in SQLite as TEXT.
    */
   tags?: string[];
+  /** Wave 21 Phase C — pinned threads sort to top of sidebar. SQLite: INTEGER 0/1. */
+  pinned?: boolean;
+  /** Wave 21 Phase C — epoch ms when this thread was soft-deleted (30-day grace). */
+  deletedAt?: number;
 }
 
 export interface AgentChatSettings {

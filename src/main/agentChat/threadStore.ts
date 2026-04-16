@@ -81,6 +81,12 @@ export interface AgentChatThreadStore {
   setTags: (threadId: string, tags: string[]) => Promise<void>;
   /** Full-text search across thread messages, tags, and file paths. */
   searchThreads: (query: string, opts?: SearchOptions) => SearchResult[];
+  /** Wave 21 Phase C — toggle pinned state (persists to SQLite). */
+  pinThread: (threadId: string, pinned: boolean) => Promise<void>;
+  /** Wave 21 Phase C — mark thread as soft-deleted (deletedAt = now). */
+  softDeleteThread: (threadId: string) => Promise<void>;
+  /** Wave 21 Phase C — clear deletedAt, restoring thread from soft-delete. */
+  restoreDeletedThread: (threadId: string) => Promise<void>;
 }
 
 function buildThreadRecord(args: {
@@ -304,6 +310,9 @@ function buildThreadStoreApi(args: {
     getTags: (id) => runtime.getTags(id),
     setTags: (id, tags) => runtime.setTags(id, tags),
     searchThreads: (query, opts) => runtime.searchThreads(query, opts),
+    pinThread: (id, pinned) => runtime.pinThread(id, pinned),
+    softDeleteThread: (id) => runtime.softDeleteThread(id),
+    restoreDeletedThread: (id) => runtime.restoreDeletedThread(id),
   };
 }
 

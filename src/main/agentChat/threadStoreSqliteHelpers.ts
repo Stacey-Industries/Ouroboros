@@ -12,7 +12,7 @@ import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ── Constants ────────────────────────────────────────────────────────
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export { findFirstMeaningfulLine, isDecorativeLine, summarizeForTitle };
 
@@ -23,7 +23,8 @@ export const SCHEMA_SQL = `
     id TEXT PRIMARY KEY, workspaceRoot TEXT NOT NULL,
     createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
     title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'idle',
-    latestOrchestration TEXT, branchInfo TEXT, tags TEXT
+    latestOrchestration TEXT, branchInfo TEXT, tags TEXT,
+    pinned INTEGER DEFAULT 0, deletedAt INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_threads_workspace ON threads(workspaceRoot);
   CREATE INDEX IF NOT EXISTS idx_threads_updated   ON threads(updatedAt DESC);
@@ -65,6 +66,10 @@ export interface RawThreadRow {
   latestOrchestration: string | null;
   branchInfo: string | null;
   tags: string | null;
+  /** Wave 21 Phase C — SQLite stores as INTEGER 0/1. */
+  pinned: number | null;
+  /** Wave 21 Phase C — epoch ms or NULL. */
+  deletedAt: number | null;
 }
 
 export interface RawMessageRow {
@@ -225,8 +230,9 @@ export function titleMatchesUserMessage(title: string, content: string): boolean
 
 const UPSERT_THREAD_SQL = `
   INSERT INTO threads
-    (id, workspaceRoot, createdAt, updatedAt, title, status, latestOrchestration, branchInfo, tags)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, workspaceRoot, createdAt, updatedAt, title, status,
+     latestOrchestration, branchInfo, tags, pinned, deletedAt)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(id) DO UPDATE SET
     workspaceRoot = excluded.workspaceRoot,
     createdAt = excluded.createdAt,
@@ -235,7 +241,9 @@ const UPSERT_THREAD_SQL = `
     status = excluded.status,
     latestOrchestration = excluded.latestOrchestration,
     branchInfo = excluded.branchInfo,
-    tags = excluded.tags`;
+    tags = excluded.tags,
+    pinned = excluded.pinned,
+    deletedAt = excluded.deletedAt`;
 
 export function upsertThreadRow(db: Database, thread: AgentChatThreadRecord): void {
   db.prepare(UPSERT_THREAD_SQL).run(
@@ -248,6 +256,8 @@ export function upsertThreadRow(db: Database, thread: AgentChatThreadRecord): vo
     thread.latestOrchestration ? JSON.stringify(thread.latestOrchestration) : null,
     thread.branchInfo ? JSON.stringify(thread.branchInfo) : null,
     thread.tags && thread.tags.length > 0 ? JSON.stringify(thread.tags) : null,
+    thread.pinned ? 1 : 0,
+    thread.deletedAt ?? null,
   );
 }
 

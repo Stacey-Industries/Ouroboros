@@ -151,3 +151,69 @@ describe('applyFilters — AND composition', () => {
     expect(result[0].id).toBe('an');
   });
 });
+
+describe('applyFilters — pinned filter', () => {
+  const pinned = makeSession({ id: 'p', pinned: true });
+  const notPinned = makeSession({ id: 'np', pinned: false });
+  const deletedPinned = makeSession({ id: 'dp', pinned: true, deletedAt: 1_700_000_000_000 });
+
+  it('status:pinned returns only pinned non-deleted sessions', () => {
+    const result = applyFilters([pinned, notPinned, deletedPinned], filters({ status: 'pinned' }));
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('p');
+  });
+
+  it('status:all puts pinned sessions first', () => {
+    const sessions = [notPinned, pinned];
+    const result = applyFilters(sessions, DEFAULT_FILTER_STATE);
+    expect(result[0].id).toBe('p');
+    expect(result[1].id).toBe('np');
+  });
+
+  it('status:active puts pinned sessions first', () => {
+    const result = applyFilters([notPinned, pinned], filters({ status: 'active' }));
+    expect(result[0].id).toBe('p');
+  });
+
+  it('status:archived does NOT sort pinned to top', () => {
+    const archivedPinned = makeSession({
+      id: 'ap', pinned: true, archivedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const archivedPlain = makeSession({ id: 'apl', archivedAt: '2026-01-01T00:00:00.000Z' });
+    const result = applyFilters([archivedPlain, archivedPinned], filters({ status: 'archived' }));
+    // Order should be unchanged (insertion order preserved, no pin sort)
+    expect(result.map((s) => s.id)).toEqual(['apl', 'ap']);
+  });
+});
+
+describe('applyFilters — deleted filter', () => {
+  const active = makeSession({ id: 'a' });
+  const deleted = makeSession({ id: 'd', deletedAt: 1_700_000_000_000 });
+  const archivedDeleted = makeSession({
+    id: 'ad', archivedAt: '2026-01-01T00:00:00.000Z', deletedAt: 1_700_000_000_000,
+  });
+
+  it('status:deleted returns sessions with deletedAt set', () => {
+    const result = applyFilters([active, deleted, archivedDeleted], filters({ status: 'deleted' }));
+    expect(result.map((s) => s.id).sort()).toEqual(['ad', 'd']);
+  });
+
+  it('status:all hides deleted sessions', () => {
+    const result = applyFilters([active, deleted], DEFAULT_FILTER_STATE);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('a');
+  });
+
+  it('status:active hides deleted sessions', () => {
+    const result = applyFilters([active, deleted], filters({ status: 'active' }));
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('a');
+  });
+
+  it('status:deleted does NOT sort pinned to top', () => {
+    const d1 = makeSession({ id: 'd1', deletedAt: 1_700_000_000_000 });
+    const d2 = makeSession({ id: 'd2', pinned: true, deletedAt: 1_700_000_000_000 });
+    const result = applyFilters([d1, d2], filters({ status: 'deleted' }));
+    expect(result.map((s) => s.id)).toEqual(['d1', 'd2']);
+  });
+});

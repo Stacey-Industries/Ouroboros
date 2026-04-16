@@ -247,6 +247,40 @@ function registerTagHandlers(channels: string[], svc: AgentChatService): void {
   });
 }
 
+function registerPinDeleteHandlers(channels: string[], svc: AgentChatService): void {
+  register(
+    channels,
+    AGENT_CHAT_INVOKE_CHANNELS.pinThread,
+    async (payload: unknown) => {
+      const obj = requireValidObject(payload, 'pinThread payload');
+      const id = requireValidString(obj.threadId, 'threadId');
+      const pinned = Boolean(obj.pinned);
+      await svc.threadStore.pinThread(id, pinned);
+      return { success: true };
+    },
+  );
+  register(
+    channels,
+    AGENT_CHAT_INVOKE_CHANNELS.softDeleteThread,
+    async (payload: unknown) => {
+      const obj = requireValidObject(payload, 'softDeleteThread payload');
+      const id = requireValidString(obj.threadId, 'threadId');
+      await svc.threadStore.softDeleteThread(id);
+      return { success: true };
+    },
+  );
+  register(
+    channels,
+    AGENT_CHAT_INVOKE_CHANNELS.restoreDeletedThread,
+    async (payload: unknown) => {
+      const obj = requireValidObject(payload, 'restoreDeletedThread payload');
+      const id = requireValidString(obj.threadId, 'threadId');
+      await svc.threadStore.restoreDeletedThread(id);
+      return { success: true };
+    },
+  );
+}
+
 // ─── Main registration entry point ───────────────────────────────────────────
 
 export function registerAgentChatHandlers(): string[] {
@@ -262,6 +296,7 @@ export function registerAgentChatHandlers(): string[] {
   registerMessageHandlers(channels, svc);
   registerMemoryHandlers(channels);
   registerTagHandlers(channels, svc);
+  registerPinDeleteHandlers(channels, svc);
   registerEventForwarders(svc, getOrchestration(), cleanupFns);
 
   registeredChannels = channels;

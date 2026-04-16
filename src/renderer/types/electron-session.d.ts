@@ -39,6 +39,10 @@ export interface SessionRecord {
   createdAt: string;
   lastUsedAt: string;
   archivedAt?: string;
+  /** Wave 21 Phase C — epoch ms when soft-deleted; absent when not deleted. */
+  deletedAt?: number;
+  /** Wave 21 Phase C — when true, session sorts to top in all sidebar views. */
+  pinned?: boolean;
   projectRoot: string;
   worktreePath?: string;
   worktree: boolean;
@@ -89,6 +93,12 @@ export interface SessionCrudAPI {
     sessionId: string,
     settings: AgentMonitorSettings,
   ) => Promise<IpcResult>;
+  /** Wave 21 Phase C — toggle pinned state for a session. */
+  pin: (sessionId: string, pinned: boolean) => Promise<IpcResult>;
+  /** Wave 21 Phase C — soft-delete a session (sets deletedAt, 30-day grace). */
+  softDelete: (sessionId: string) => Promise<IpcResult>;
+  /** Wave 21 Phase C — restore a soft-deleted session (clears deletedAt). */
+  restoreDeleted: (sessionId: string) => Promise<IpcResult>;
   /** Subscribe to store mutation events. Returns cleanup fn. */
   onChanged: (callback: (sessions: SessionRecord[]) => void) => () => void;
 }

@@ -164,6 +164,15 @@ export interface AgentChatAPI {
   searchThreads: (
     payload: AgentChatSearchPayload,
   ) => Promise<{ success: boolean; results?: AgentChatSearchResult[]; error?: string }>;
+  /** Wave 21 Phase C — toggle pinned state for a thread. */
+  pinThread: (
+    threadId: string,
+    pinned: boolean,
+  ) => Promise<{ success: boolean; error?: string }>;
+  /** Wave 21 Phase C — soft-delete a thread (sets deletedAt; 30-day grace). */
+  softDeleteThread: (threadId: string) => Promise<{ success: boolean; error?: string }>;
+  /** Wave 21 Phase C — restore a soft-deleted thread (clears deletedAt). */
+  restoreDeletedThread: (threadId: string) => Promise<{ success: boolean; error?: string }>;
   onThreadUpdate: (callback: (thread: AgentChatThreadRecord) => void) => () => void;
   onMessageUpdate: (callback: (message: AgentChatMessageRecord) => void) => () => void;
   onStatusChange: (callback: (status: AgentChatThreadStatusSnapshot) => void) => () => void;

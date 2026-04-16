@@ -29,6 +29,9 @@ export const AGENT_CHAT_INVOKE_CHANNELS = {
   getThreadTags: 'agentChat:getThreadTags',
   setThreadTags: 'agentChat:setThreadTags',
   searchThreads: 'agentChat:searchThreads',
+  pinThread: 'agentChat:pinThread',
+  softDeleteThread: 'agentChat:softDeleteThread',
+  restoreDeletedThread: 'agentChat:restoreDeletedThread',
 } as const;
 
 export const AGENT_CHAT_EVENT_CHANNELS = {
