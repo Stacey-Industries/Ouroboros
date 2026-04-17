@@ -295,6 +295,8 @@ export const tailSchema = {
   approvalMemory: { type: 'object', properties: { alwaysAllow: { type: 'array', items: { type: 'object' }, default: [] }, alwaysDeny: { type: 'array', items: { type: 'object' }, default: [] } }, default: { alwaysAllow: [], alwaysDeny: [] } },
   /** Wave 27 — subagent UX feature flags */
   agentic: { type: 'object', additionalProperties: false, properties: { subagentUx: { type: 'boolean', default: true } }, default: { subagentUx: true } },
+  /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
+  review: { type: 'object', additionalProperties: false, properties: { enhanced: { type: 'boolean', default: true } }, default: { enhanced: true } },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,

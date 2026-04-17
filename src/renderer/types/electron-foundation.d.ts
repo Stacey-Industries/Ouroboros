@@ -242,6 +242,8 @@ export interface AppConfig {
   workspaceReadLists?: Record<string, string[]>;
   /** Wave 27 — subagent UX feature flags */
   agentic?: { subagentUx?: boolean };
+  /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
+  review?: { enhanced?: boolean };
 }
 
 export interface ContextLayerConfig {

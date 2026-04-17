@@ -5,25 +5,29 @@
  * dual line-number gutters and action buttons per hunk.
  */
 
-import React, { type CSSProperties,memo, useState } from 'react';
+import React, { type CSSProperties, memo, useState } from 'react';
 
+import {
+  acceptedBadgeStyle,
+  actionBarStyle,
+  buildDisplayLines,
+  diffLinesStyle,
+  type DiffLineType,
+  type DisplayLine,
+  gutterBg,
+  hunkHeaderStyle,
+  lineBg,
+  lineContentStyle,
+  markerColor,
+  rejectedBadgeStyle,
+} from './hunkViewHelpers';
 import type { HunkDecision, ReviewHunk } from './types';
 
 interface HunkViewProps {
   hunk: ReviewHunk;
+  isFocused?: boolean;
   onAccept: () => void;
   onReject: () => void;
-}
-
-type DiffLineType = ReturnType<typeof lineTypeFromPrefix>;
-
-interface DisplayLine {
-  id: string;
-  leftNo: number | null;
-  marker: string;
-  rightNo: number | null;
-  text: string;
-  type: DiffLineType;
 }
 
 interface HunkHeaderProps {
@@ -56,87 +60,6 @@ interface ActionBtnProps {
   onClick: () => void;
 }
 
-const hunkHeaderStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '2px 8px',
-  backgroundColor: 'var(--interactive-accent-subtle)',
-  borderBottom: '1px solid var(--border-subtle)',
-  color: 'var(--interactive-accent)',
-  fontSize: '0.75rem',
-  fontFamily: 'var(--font-mono)',
-  userSelect: 'none',
-};
-
-const diffLinesStyle: CSSProperties = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: '0.8125rem',
-  lineHeight: '1.6',
-};
-
-const lineContentStyle: CSSProperties = {
-  flex: 1,
-  margin: 0,
-  padding: '0 12px',
-  fontFamily: 'inherit',
-  fontSize: 'inherit',
-  lineHeight: 'inherit',
-  whiteSpace: 'pre',
-  color: 'var(--text-primary)',
-  overflowX: 'visible',
-};
-
-const actionBarStyle: CSSProperties = {
-  display: 'flex',
-  gap: '4px',
-  padding: '4px 8px',
-  background: 'var(--surface-raised)',
-  borderTop: '1px solid var(--border-subtle)',
-};
-
-const acceptedBadgeStyle: CSSProperties = {
-  color: 'var(--status-success)',
-  fontWeight: 600,
-  fontSize: '0.75rem',
-};
-
-const rejectedBadgeStyle: CSSProperties = {
-  color: 'var(--status-error)',
-  fontWeight: 600,
-  fontSize: '0.75rem',
-};
-
-function lineTypeFromPrefix(line: string): 'added' | 'removed' | 'context' {
-  if (line.startsWith('+')) return 'added';
-  if (line.startsWith('-')) return 'removed';
-  return 'context';
-}
-
-function lineBg(type: DiffLineType): string {
-  switch (type) {
-    case 'added': return 'var(--diff-add-bg)';
-    case 'removed': return 'var(--diff-del-bg)';
-    default: return 'transparent';
-  }
-}
-
-function gutterBg(type: DiffLineType): string {
-  switch (type) {
-    case 'added': return 'var(--diff-add-bg)';
-    case 'removed': return 'var(--diff-del-bg)';
-    default: return 'var(--surface-base)';
-  }
-}
-
-function markerColor(type: DiffLineType): string {
-  switch (type) {
-    case 'added': return 'var(--status-success)';
-    case 'removed': return 'var(--status-error)';
-    default: return 'var(--text-faint)';
-  }
-}
-
 function decisionBorder(decision: HunkDecision): string {
   switch (decision) {
     case 'accepted': return '3px solid var(--status-success)';
@@ -145,11 +68,13 @@ function decisionBorder(decision: HunkDecision): string {
   }
 }
 
-function containerStyle(decision: HunkDecision): CSSProperties {
+function containerStyle(decision: HunkDecision, isFocused?: boolean): CSSProperties {
   return {
     borderLeft: decisionBorder(decision),
     marginBottom: '2px',
-    transition: 'border-color 0.15s',
+    transition: 'border-color 0.15s, outline 0.1s',
+    outline: isFocused ? '2px solid var(--border-accent)' : 'none',
+    outlineOffset: '-2px',
   };
 }
 
@@ -202,23 +127,6 @@ function buttonStyle(color: string, hovered: boolean, disabled?: boolean): CSSPr
     transition: 'background 0.1s, color 0.1s',
     opacity: disabled ? 0.4 : 1,
   };
-}
-
-function buildDisplayLines(hunk: ReviewHunk): DisplayLine[] {
-  let oldLine = hunk.oldStart;
-  let newLine = hunk.newStart;
-
-  return hunk.lines.map((line, index) => {
-    const type = lineTypeFromPrefix(line);
-    return {
-      id: `${hunk.id}-${index}`,
-      leftNo: type === 'added' ? null : oldLine++,
-      marker: line[0] === ' ' ? ' ' : line[0],
-      rightNo: type === 'removed' ? null : newLine++,
-      text: line.slice(1),
-      type,
-    };
-  });
 }
 
 function DecisionBadge({ decision }: DecisionBadgeProps): React.ReactElement | null {
@@ -295,11 +203,11 @@ function HunkActions({ decision, onAccept, onReject }: HunkActionsProps): React.
   );
 }
 
-export const HunkView = memo(function HunkView({ hunk, onAccept, onReject }: HunkViewProps): React.ReactElement {
+export const HunkView = memo(function HunkView({ hunk, isFocused, onAccept, onReject }: HunkViewProps): React.ReactElement {
   const lines = buildDisplayLines(hunk);
 
   return (
-    <div style={containerStyle(hunk.decision)}>
+    <div style={containerStyle(hunk.decision, isFocused)}>
       <HunkHeader decision={hunk.decision} header={hunk.header} />
       <HunkLines lines={lines} />
       <HunkActions decision={hunk.decision} onAccept={onAccept} onReject={onReject} />

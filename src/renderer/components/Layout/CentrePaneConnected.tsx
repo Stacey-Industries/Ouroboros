@@ -14,6 +14,7 @@ import {
   OPEN_SETTINGS_PANEL_EVENT,
   OPEN_USAGE_DASHBOARD_EVENT,
 } from '../../hooks/appEventNames';
+import { useConfig } from '../../hooks/useConfig';
 import type { AgentSession as AgentMonitorSession } from '../AgentMonitor/types';
 import { useDiffReview } from '../DiffReview';
 import { CentrePane } from './CentrePane';
@@ -274,8 +275,9 @@ function LazySessionReplay({
 // ── Main connected component ─────────────────────────────────────────────────
 
 export function CentrePaneConnected(): React.ReactElement {
-  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll } = useDiffReview();
+  const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback } = useDiffReview();
   const { projectRoot } = useProject();
+  const enhancedEnabled = useConfig().config?.review?.enhanced ?? true;
   const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);
 
   useDiffReviewEvents(openReview, setReplaySession, setActiveView);
@@ -288,12 +290,15 @@ export function CentrePaneConnected(): React.ReactElement {
     return (
       <LazyDiffReview
         state={state}
+        canRollback={canRollback}
+        enhancedEnabled={enhancedEnabled}
         onAcceptHunk={acceptHunk}
         onRejectHunk={rejectHunk}
         onAcceptAllFile={acceptAllFile}
         onRejectAllFile={rejectAllFile}
         onAcceptAll={acceptAll}
         onRejectAll={rejectAll}
+        onRollback={rollback}
         onClose={closeReview}
       />
     );

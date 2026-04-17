@@ -34,4 +34,6 @@ export interface DiffReviewState {
   files: ReviewFile[];
   loading: boolean;
   error: string | null;
+  /** Hunk IDs from the most recently user-initiated accept action. Null means no rollback available. */
+  lastAcceptedBatch: string[] | null;
 }

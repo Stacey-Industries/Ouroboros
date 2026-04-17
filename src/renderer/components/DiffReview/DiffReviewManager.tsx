@@ -6,12 +6,14 @@ import {
   diffReviewReducer,
   useBulkReviewActions,
   useReviewLifecycleActions,
+  useRollbackAction,
   useSingleHunkActions,
 } from './diffReviewState';
 import type { DiffReviewState } from './types';
 
 export interface DiffReviewContextValue extends DiffReviewActions {
   state: DiffReviewState | null;
+  canRollback: boolean;
 }
 
 const DiffReviewContext = createContext<DiffReviewContextValue | null>(null);
@@ -83,9 +85,10 @@ function useDiffReviewContextValue(): DiffReviewContextValue {
     { acceptHunk: baseAcceptHunk, acceptAllFile: baseAcceptAllFile, acceptAll: baseAcceptAll },
     checkpoint,
   );
+  const { canRollback, rollback } = useRollbackAction(state, dispatch);
   return useMemo<DiffReviewContextValue>(
-    () => ({ state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll }),
-    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll],
+    () => ({ state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback }),
+    [state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback],
   );
 }
 

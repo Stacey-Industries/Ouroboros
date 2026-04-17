@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 
+import { DiffReviewHeaderActions } from './DiffReviewHeaderActions';
 import type { DiffReviewStats } from './DiffReviewPanelState';
 import { FileListSidebar } from './FileListSidebar';
 import { HunkView } from './HunkView';
@@ -8,9 +9,13 @@ interface DiffReviewLayoutProps {
   files: ReviewFile[];
   selectedFileIdx: number;
   stats: DiffReviewStats;
+  canRollback: boolean;
+  enhancedEnabled: boolean;
+  focusedHunkId: string | null;
   onClose: () => void;
   onAcceptAll: () => void;
   onRejectAll: () => void;
+  onRollback: () => void;
   onAcceptAllFile: (fileIdx: number) => void;
   onRejectAllFile: (fileIdx: number) => void;
   onSelectFile: (idx: number) => void;
@@ -20,32 +25,26 @@ interface DiffReviewLayoutProps {
 }
 const panelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--surface-base)' };
 const headerStyle: React.CSSProperties = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--surface-panel)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', userSelect: 'none' };
-export function DiffReviewLayout({
-  files,
-  selectedFileIdx,
-  stats,
-  onClose,
-  onAcceptAll,
-  onRejectAll,
-  onAcceptAllFile,
-  onRejectAllFile,
-  onSelectFile,
-  onAcceptHunk,
-  onRejectHunk,
-  setFileRef,
-}: DiffReviewLayoutProps): React.ReactElement {
+export function DiffReviewLayout(props: DiffReviewLayoutProps): React.ReactElement {
+  const { files, selectedFileIdx, stats, canRollback, enhancedEnabled, focusedHunkId } = props;
+  const { onClose, onAcceptAll, onRejectAll, onRollback } = props;
+  const { onAcceptAllFile, onRejectAllFile, onSelectFile, onAcceptHunk, onRejectHunk, setFileRef } = props;
   return (
     <div style={panelStyle}>
       <DiffReviewHeader
         stats={stats}
         allDecided={stats.decidedHunks === stats.totalHunks}
+        canRollback={canRollback}
+        enhancedEnabled={enhancedEnabled}
         onAcceptAll={onAcceptAll}
         onRejectAll={onRejectAll}
+        onRollback={onRollback}
         onClose={onClose}
       />
       <DiffReviewBody
         files={files}
         selectedFileIdx={selectedFileIdx}
+        focusedHunkId={focusedHunkId}
         onAcceptAllFile={onAcceptAllFile}
         onRejectAllFile={onRejectAllFile}
         onSelectFile={onSelectFile}
@@ -57,16 +56,19 @@ export function DiffReviewLayout({
   );
 }
 
+type DiffReviewBodyProps = Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll' | 'canRollback' | 'enhancedEnabled' | 'onRollback'>;
+
 function DiffReviewBody({
   files,
   selectedFileIdx,
+  focusedHunkId,
   onAcceptAllFile,
   onRejectAllFile,
   onSelectFile,
   onAcceptHunk,
   onRejectHunk,
   setFileRef,
-}: Omit<DiffReviewLayoutProps, 'stats' | 'onClose' | 'onAcceptAll' | 'onRejectAll'>): React.ReactElement {
+}: DiffReviewBodyProps): React.ReactElement {
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       <FileListSidebar
@@ -86,6 +88,7 @@ function DiffReviewBody({
             file={file}
             fileIdx={fileIdx}
             isSelected={fileIdx === selectedFileIdx}
+            focusedHunkId={focusedHunkId}
             onAcceptHunk={onAcceptHunk}
             onRejectHunk={onRejectHunk}
           />
@@ -98,14 +101,20 @@ function DiffReviewBody({
 function DiffReviewHeader({
   stats,
   allDecided,
+  canRollback,
+  enhancedEnabled,
   onAcceptAll,
   onRejectAll,
+  onRollback,
   onClose,
 }: {
   stats: DiffReviewStats;
   allDecided: boolean;
+  canRollback: boolean;
+  enhancedEnabled: boolean;
   onAcceptAll: () => void;
   onRejectAll: () => void;
+  onRollback: () => void;
   onClose: () => void;
 }): React.ReactElement {
   return (
@@ -113,8 +122,11 @@ function DiffReviewHeader({
       <DiffReviewHeaderStats stats={stats} />
       <DiffReviewHeaderActions
         allDecided={allDecided}
+        canRollback={canRollback}
+        enhancedEnabled={enhancedEnabled}
         onAcceptAll={onAcceptAll}
         onRejectAll={onRejectAll}
+        onRollback={onRollback}
         onClose={onClose}
       />
     </div>
@@ -136,30 +148,6 @@ function DiffReviewHeaderStats({ stats }: { stats: DiffReviewStats }): React.Rea
   );
 }
 
-function DiffReviewHeaderActions({
-  allDecided,
-  onAcceptAll,
-  onRejectAll,
-  onClose,
-}: {
-  allDecided: boolean;
-  onAcceptAll: () => void;
-  onRejectAll: () => void;
-  onClose: () => void;
-}): React.ReactElement {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      {!allDecided && (
-        <>
-          <HeaderBtn label="Accept All" color="var(--status-success)" onClick={onAcceptAll} />
-          <HeaderBtn label="Reject All" color="var(--status-error)" onClick={onRejectAll} />
-        </>
-      )}
-      <HeaderBtn label={allDecided ? 'Done' : 'Close'} color="var(--interactive-accent)" onClick={onClose} />
-    </div>
-  );
-}
-
 function ReviewStat({
   count,
   color,
@@ -176,6 +164,7 @@ function ReviewStat({
 interface FileSectionProps {
   file: ReviewFile;
   fileIdx: number;
+  focusedHunkId: string | null;
   isSelected: boolean;
   onAcceptHunk: (fileIdx: number, hunkIdx: number) => void;
   onRejectHunk: (fileIdx: number, hunkIdx: number) => void;
@@ -183,7 +172,7 @@ interface FileSectionProps {
 }
 
 function FileSection(
-  { file, fileIdx, isSelected, onAcceptHunk, onRejectHunk, ref }: FileSectionProps,
+  { file, fileIdx, focusedHunkId, isSelected, onAcceptHunk, onRejectHunk, ref }: FileSectionProps,
 ): React.ReactElement {
   return (
     <div ref={ref} style={{ borderBottom: '2px solid var(--border-default)' }}>
@@ -192,6 +181,7 @@ function FileSection(
         <HunkView
           key={hunk.id}
           hunk={hunk}
+          isFocused={hunk.id === focusedHunkId}
           onAccept={() => onAcceptHunk(fileIdx, hunkIdx)}
           onReject={() => onRejectHunk(fileIdx, hunkIdx)}
         />
@@ -265,36 +255,3 @@ function getStatusMeta(status: ReviewFile['status']): { color: string; label: st
   return { color: 'var(--status-warning)', label: 'M' };
 }
 
-function HeaderBtn({
-  label,
-  color,
-  onClick,
-}: {
-  label: string;
-  color: string;
-  onClick: () => void;
-}): React.ReactElement {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: '2px 10px',
-        fontSize: '0.6875rem',
-        fontFamily: 'var(--font-ui)',
-        fontWeight: 500,
-        border: `1px solid ${color}`,
-        borderRadius: '4px',
-        background: hovered ? color : 'transparent',
-        color: hovered ? 'var(--text-on-accent)' : color,
-        cursor: 'pointer',
-        lineHeight: '1.5',
-        transition: 'background 0.1s, color 0.1s',
-      }}
-    >
-      {label}
-    </button>
-  );
-}

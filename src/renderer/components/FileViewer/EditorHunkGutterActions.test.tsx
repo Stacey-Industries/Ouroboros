@@ -57,6 +57,8 @@ function makeDiffReview(
     rejectAllFile: vi.fn(),
     acceptAll: vi.fn(),
     rejectAll: vi.fn(),
+    canRollback: false,
+    rollback: vi.fn(),
     ...overrides,
   };
 }
