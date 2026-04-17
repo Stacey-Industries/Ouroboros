@@ -94,7 +94,7 @@ try {
         }
     }
 
-    # -- Check eslint ----------------------------------------------------------
+    # -- Check eslint on staged files (fast feedback) --------------------------
     try {
         $eslintOut = & npx eslint --no-warn-ignored @fileList 2>&1 | Out-String
         $eslintExit = $LASTEXITCODE
@@ -106,6 +106,26 @@ try {
     if ($eslintExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($eslintOut)) {
         $eslintLines = $eslintOut -split "`n" | Where-Object { $_.Trim() -ne '' }
         foreach ($line in $eslintLines) {
+            $violations += "  $line"
+        }
+    }
+
+    # -- Check eslint on full src/ (mirrors CI; catches accumulated errors) ----
+    # Pre-existing errors in files outside this commit still block — keeps the
+    # tree green so GitHub Actions cannot surprise us later.
+    try {
+        $eslintFullOut = & npx eslint src/ --no-warn-ignored --quiet 2>&1 | Out-String
+        $eslintFullExit = $LASTEXITCODE
+    } catch {
+        [Console]::Error.WriteLine("pre_commit_lint: full-project eslint failed: $_")
+        $eslintFullExit = 0
+    }
+
+    if ($eslintFullExit -ne 0 -and -not [string]::IsNullOrWhiteSpace($eslintFullOut)) {
+        $fullLines = $eslintFullOut -split "`n" | Where-Object { $_.Trim() -ne '' }
+        $violations += ""
+        $violations += "  [full-project lint] errors outside staged files also block commit:"
+        foreach ($line in $fullLines) {
             $violations += "  $line"
         }
     }
