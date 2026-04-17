@@ -88,12 +88,7 @@ export function clearContextPacketCache(): void {
 export interface ContextPacketBuildResult {
   packet: ContextPacket;
   selection: ContextSelectionResult;
-  /**
-   * Wave 29.5 Phase B — traceId that scoped this packet build.
-   * Always present: either the caller's supplied id or a freshly minted UUID.
-   * Callers should stamp this onto the outgoing TaskRequest and any downstream
-   * decision-outcome joins (e.g. ActiveStreamContext.outcomeTraceId).
-   */
+  /** Wave 29.5 Phase B (H1) — always minted; callers stamp onto outcomeTraceId. */
   traceId: string;
 }
 
@@ -312,10 +307,7 @@ async function selectAndBuildFiles(
   const rawSelection = await selectContextFiles(input);
   const selection: ContextSelectionResult = { ...rawSelection, rankedFiles: await rerankRankedFiles(input.request.goal, rawSelection.rankedFiles) };
   const snapshotCache = new Map(Object.entries(selection.snapshots));
-  const budget = buildBudgetSummary(
-    input.request.budget?.maxBytes ?? modelBudgets.maxBytes,
-    input.request.budget?.maxTokens ?? modelBudgets.maxTokens,
-  );
+  const budget = buildBudgetSummary(input.request.budget?.maxBytes ?? modelBudgets.maxBytes, input.request.budget?.maxTokens ?? modelBudgets.maxTokens);
   const { files, omittedCandidates } = await buildPacketFiles(
     resolveFilesOptions({ request: input.request, modelBudgets, budget, selection, snapshotCache }),
   );
