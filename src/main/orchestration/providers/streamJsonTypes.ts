@@ -109,4 +109,8 @@ export interface StreamJsonSpawnOptions {
   effort?: string
   env?: Record<string, string>
   onEvent?: (event: StreamJsonEvent) => void
+  /** Optional trace ID for orchestration_traces telemetry. Generated internally if omitted. */
+  traceId?: string
+  /** Optional session ID for orchestration_traces telemetry. Defaults to 'unknown' until stream provides one. */
+  telemetrySessionId?: string
 }

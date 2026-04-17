@@ -4,8 +4,14 @@
  * session within the correlation window.
  */
 
+import crypto from 'node:crypto';
+
 import log from '../logger';
 import type { TelemetryStore } from './telemetryStore';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STDERR_RING_CAP = 4 * 1024; // 4 KB tail per session
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +24,8 @@ export interface OutcomeObserver {
   noteToolUseEvent(sessionId: string, rowId: string, correlationId: string, timestamp: number): void;
   onPtyExit(args: PtyExitArgs): void;
   onConflictSignal(args: ConflictSignalArgs): void;
+  /** Append stderr bytes to the rolling 4KB tail for a session. */
+  appendStderr(sessionId: string, data: string): void;
   close(): void;
 }
 
@@ -82,8 +90,14 @@ function implNoteToolUse(
   map.set(sessionId, entry);
 }
 
+function hashStderrTail(tail: string): string | null {
+  if (!tail) return null;
+  return crypto.createHash('sha256').update(tail).digest('hex').slice(0, 16);
+}
+
 function implOnPtyExit(
   map: Map<string, RecentToolUse>,
+  stderrRing: Map<string, string>,
   store: TelemetryStore,
   args: PtyExitArgs,
 ): void {
@@ -92,9 +106,13 @@ function implOnPtyExit(
   if (!recent) return;
   const deltaMs = Date.now() - recent.timestamp;
   const confidence = computeConfidence(deltaMs);
+  const stderrTail = stderrRing.get(sessionId) ?? '';
+  const stderrHash = hashStderrTail(stderrTail);
+  stderrRing.delete(sessionId);
   log.info(
     `[outcomeObserver] exit corr session=${sessionId} eventId=${recent.eventId} ` +
-    `correlationId=${recent.correlationId} delta=${deltaMs}ms confidence=${confidence}`,
+    `correlationId=${recent.correlationId} delta=${deltaMs}ms confidence=${confidence}` +
+    (stderrHash ? ` stderrHash=${stderrHash}` : ''),
   );
   try {
     store.recordOutcome({
@@ -102,6 +120,7 @@ function implOnPtyExit(
       kind: 'exit',
       exitCode: exitCode ?? null,
       durationMs,
+      stderrHash,
       signals: signal != null ? [signal] : [],
       confidence,
     });
@@ -123,16 +142,24 @@ function implOnConflictSignal(store: TelemetryStore, args: ConflictSignalArgs): 
   }
 }
 
+function implAppendStderr(ring: Map<string, string>, sessionId: string, data: string): void {
+  const prev = ring.get(sessionId) ?? '';
+  const combined = prev + data;
+  ring.set(sessionId, combined.length > STDERR_RING_CAP ? combined.slice(-STDERR_RING_CAP) : combined);
+}
+
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function createOutcomeObserver(store: TelemetryStore): OutcomeObserver {
   const lastToolUse = new Map<string, RecentToolUse>();
+  const stderrRing = new Map<string, string>();
   return {
     noteToolUseEvent: (sid, rowId, correlationId, ts) =>
       implNoteToolUse(lastToolUse, sid, { eventId: rowId, correlationId, timestamp: ts }),
-    onPtyExit: (args) => implOnPtyExit(lastToolUse, store, args),
+    onPtyExit: (args) => implOnPtyExit(lastToolUse, stderrRing, store, args),
     onConflictSignal: (args) => implOnConflictSignal(store, args),
-    close: () => lastToolUse.clear(),
+    appendStderr: (sid, data) => implAppendStderr(stderrRing, sid, data),
+    close: () => { lastToolUse.clear(); stderrRing.clear(); },
   };
 }
 

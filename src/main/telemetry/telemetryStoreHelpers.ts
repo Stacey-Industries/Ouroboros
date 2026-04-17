@@ -66,23 +66,9 @@ CREATE TABLE IF NOT EXISTS research_invocations (
 CREATE INDEX IF NOT EXISTS idx_research_sess ON research_invocations(session_id);
 CREATE INDEX IF NOT EXISTS idx_research_ts   ON research_invocations(timestamp DESC);
 
-CREATE TABLE IF NOT EXISTS context_decisions (
-  id          TEXT    NOT NULL PRIMARY KEY,
-  trace_id    TEXT    NOT NULL,
-  file_id     TEXT    NOT NULL,
-  features    TEXT    NOT NULL DEFAULT '{}',
-  score       REAL    NOT NULL DEFAULT 0,
-  included    INTEGER NOT NULL DEFAULT 0
-) STRICT;
-
-CREATE INDEX IF NOT EXISTS idx_cdec_trace ON context_decisions(trace_id);
-
-CREATE TABLE IF NOT EXISTS context_outcomes (
-  decision_id TEXT    NOT NULL REFERENCES context_decisions(id) ON DELETE CASCADE,
-  kind        TEXT    NOT NULL,
-  tool_used   TEXT,
-  PRIMARY KEY (decision_id, kind)
-) STRICT;
+-- Note: context_decisions and context_outcomes tables were removed from DDL in Wave 29.5
+-- Phase I (C2). Wave 31 trains over JSONL, not SQLite, so these tables are dead weight.
+-- Existing databases will retain them as orphaned tables until manually cleaned up.
 
 CREATE TABLE IF NOT EXISTS schema_meta (
   key   TEXT NOT NULL PRIMARY KEY,

@@ -39,7 +39,7 @@ describe('TELEMETRY_SCHEMA_SQL', () => {
     expect(() => openMemDb()).not.toThrow();
   });
 
-  it('creates all 7 expected tables', () => {
+  it('creates all 5 expected tables (context_decisions and context_outcomes removed in C2)', () => {
     const db = openMemDb();
     const tables = (
       db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as Array<{
@@ -50,9 +50,9 @@ describe('TELEMETRY_SCHEMA_SQL', () => {
     expect(tables).toContain('outcomes');
     expect(tables).toContain('orchestration_traces');
     expect(tables).toContain('research_invocations');
-    expect(tables).toContain('context_decisions');
-    expect(tables).toContain('context_outcomes');
     expect(tables).toContain('schema_meta');
+    expect(tables).not.toContain('context_decisions');
+    expect(tables).not.toContain('context_outcomes');
   });
 
   it('schema_meta insert is idempotent (re-running DDL does not duplicate)', () => {

@@ -228,6 +228,78 @@ describe('createOutcomeObserver', () => {
       expect(store.recordOutcome).not.toHaveBeenCalled();
     });
   });
+
+  describe('appendStderr + stderrHash (M1)', () => {
+    it('passes non-null stderrHash when stderr was appended before exit', () => {
+      const store = makeMockStore();
+      const obs = createOutcomeObserver(store);
+
+      vi.setSystemTime(1000);
+      obs.noteToolUseEvent('sess-stderr', 'evt-s', 'corr-s', 1000);
+      obs.appendStderr('sess-stderr', 'Error: something went wrong\n');
+
+      vi.setSystemTime(2000);
+      obs.onPtyExit(makePtyExitArgs('sess-stderr'));
+
+      expect(store.recordOutcome).toHaveBeenCalledOnce();
+      const call = (store.recordOutcome as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.stderrHash).not.toBeNull();
+      expect(typeof call.stderrHash).toBe('string');
+      expect(call.stderrHash).toHaveLength(16);
+    });
+
+    it('passes null stderrHash when no stderr was appended', () => {
+      const store = makeMockStore();
+      const obs = createOutcomeObserver(store);
+
+      vi.setSystemTime(1000);
+      obs.noteToolUseEvent('sess-nostderr', 'evt-ns', 'corr-ns', 1000);
+
+      vi.setSystemTime(1500);
+      obs.onPtyExit(makePtyExitArgs('sess-nostderr'));
+
+      expect(store.recordOutcome).toHaveBeenCalledOnce();
+      const call = (store.recordOutcome as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.stderrHash).toBeNull();
+    });
+
+    it('caps stderr ring at 4 KB and hashes the tail', () => {
+      const store = makeMockStore();
+      const obs = createOutcomeObserver(store);
+
+      vi.setSystemTime(1000);
+      obs.noteToolUseEvent('sess-cap', 'evt-cap', 'corr-cap', 1000);
+      // Append 5 KB — ring should cap at 4 KB tail
+      obs.appendStderr('sess-cap', 'A'.repeat(5120));
+
+      vi.setSystemTime(1500);
+      obs.onPtyExit(makePtyExitArgs('sess-cap'));
+
+      expect(store.recordOutcome).toHaveBeenCalledOnce();
+      const call = (store.recordOutcome as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.stderrHash).not.toBeNull();
+    });
+
+    it('clears the stderr ring after exit so subsequent exits do not re-use it', () => {
+      const store = makeMockStore();
+      const obs = createOutcomeObserver(store);
+
+      vi.setSystemTime(1000);
+      obs.noteToolUseEvent('sess-clr', 'evt-clr', 'corr-clr', 1000);
+      obs.appendStderr('sess-clr', 'some error\n');
+      obs.onPtyExit(makePtyExitArgs('sess-clr'));
+
+      // Re-register and exit again without appending more stderr
+      (store.recordOutcome as ReturnType<typeof vi.fn>).mockClear();
+      obs.noteToolUseEvent('sess-clr', 'evt-clr2', 'corr-clr2', 1500);
+      vi.setSystemTime(2000);
+      obs.onPtyExit(makePtyExitArgs('sess-clr'));
+
+      expect(store.recordOutcome).toHaveBeenCalledOnce();
+      const call = (store.recordOutcome as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.stderrHash).toBeNull();
+    });
+  });
 });
 
 describe('singleton API', () => {

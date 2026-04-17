@@ -1,6 +1,22 @@
 import { EventEmitter } from 'events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// Mock telemetry dependencies added by C5/M1 — avoid real DB and batcher timer in tests.
+// vi.hoisted ensures the refs are available when vi.mock factory runs (which is hoisted).
+const { mockEnqueueTrace, mockAppendStderr } = vi.hoisted(() => ({
+  mockEnqueueTrace: vi.fn(),
+  mockAppendStderr: vi.fn(),
+}))
+
+vi.mock('../../telemetry/traceBatcher', () => ({
+  enqueueTrace: mockEnqueueTrace,
+  redactArgv: (argv: string[]) => argv,
+  redactHead: (s: string) => s,
+}))
+vi.mock('../../telemetry', () => ({
+  getOutcomeObserver: () => ({ appendStderr: mockAppendStderr }),
+}))
+
 import { buildStreamJsonArgs, spawnStreamJsonProcess } from './claudeStreamJsonRunner'
 import type { StreamJsonEvent, StreamJsonSpawnOptions } from './streamJsonTypes'
 
@@ -284,9 +300,75 @@ function registerSpawnTests(): void {
   registerProcessSpawnTests()
 }
 
+function registerTraceTests(): void {
+  it('enqueues a spawn trace on process creation', () => {
+    mockEnqueueTrace.mockClear()
+    spawnStreamJsonProcess(defaultOptions({ telemetrySessionId: 'tsess-1' }))
+    const spawnCall = mockEnqueueTrace.mock.calls.find((c) => c[0].kind === 'spawn')
+    expect(spawnCall).toBeDefined()
+    expect(spawnCall![0]).toMatchObject({
+      kind: 'spawn',
+      sessionId: 'tsess-1',
+    })
+    expect(spawnCall![0].payload).toHaveProperty('argv')
+    expect(spawnCall![0].payload).toHaveProperty('cwdHash')
+  })
+
+  it('enqueues a stdin trace when stdin is written', () => {
+    mockEnqueueTrace.mockClear()
+    spawnStreamJsonProcess(defaultOptions({ prompt: 'my prompt', telemetrySessionId: 'tsess-2' }))
+    const stdinCall = mockEnqueueTrace.mock.calls.find((c) => c[0].kind === 'stdin')
+    expect(stdinCall).toBeDefined()
+    expect(stdinCall![0]).toMatchObject({ kind: 'stdin', sessionId: 'tsess-2' })
+    expect(stdinCall![0].payload.head).toBe('my prompt')
+  })
+
+  it('enqueues a stdout trace when stdout data arrives', async () => {
+    mockEnqueueTrace.mockClear()
+    const handle = spawnStreamJsonProcess(defaultOptions({ telemetrySessionId: 'tsess-3' }))
+    sendStdout('{"type":"result","subtype":"success","is_error":false,"result":"ok"}\n')
+    closeProcess(0)
+    await handle.result
+    const stdoutCall = mockEnqueueTrace.mock.calls.find((c) => c[0].kind === 'stdout')
+    expect(stdoutCall).toBeDefined()
+    expect(stdoutCall![0].payload).toHaveProperty('bytes')
+  })
+
+  it('redacts argv values after sensitive flags (via redactArgv pass-through)', () => {
+    // redactArgv is mocked as identity, but spawn trace argv should contain command + cliArgs
+    mockEnqueueTrace.mockClear()
+    spawnStreamJsonProcess(defaultOptions())
+    const spawnCall = mockEnqueueTrace.mock.calls.find((c) => c[0].kind === 'spawn')
+    expect(Array.isArray(spawnCall![0].payload.argv)).toBe(true)
+  })
+}
+
+function registerStderrM1Tests(): void {
+  it('calls appendStderr on outcome observer when stderr data arrives', async () => {
+    mockAppendStderr.mockClear()
+    const handle = spawnStreamJsonProcess(defaultOptions({ telemetrySessionId: 'tsess-m1' }))
+    sendStderr('Error: something bad happened')
+    sendStdout('{"type":"result","subtype":"success","is_error":false,"result":"ok"}\n')
+    closeProcess(0)
+    await handle.result
+    expect(mockAppendStderr).toHaveBeenCalledWith('tsess-m1', 'Error: something bad happened')
+  })
+
+  it('does not call appendStderr when no stderr arrives', async () => {
+    mockAppendStderr.mockClear()
+    const handle = spawnStreamJsonProcess(defaultOptions({ telemetrySessionId: 'tsess-m1b' }))
+    sendStdout('{"type":"result","subtype":"success","is_error":false,"result":"ok"}\n')
+    closeProcess(0)
+    await handle.result
+    expect(mockAppendStderr).not.toHaveBeenCalled()
+  })
+}
+
 describe('claudeStreamJsonRunner', () => {
   beforeEach(() => {
     fakeChild = new FakeChildProcess()
+    mockEnqueueTrace.mockClear()
+    mockAppendStderr.mockClear()
   })
 
   afterEach(() => {
@@ -295,4 +377,6 @@ describe('claudeStreamJsonRunner', () => {
 
   describe('buildStreamJsonArgs', registerArgTests)
   describe('spawnStreamJsonProcess', registerSpawnTests)
+  describe('trace telemetry (C5)', registerTraceTests)
+  describe('stderr ring buffer (M1)', registerStderrM1Tests)
 })
