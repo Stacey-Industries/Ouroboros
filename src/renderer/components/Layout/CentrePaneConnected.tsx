@@ -49,6 +49,9 @@ const UsageDashboard = React.lazy(() =>
 const TimeTravelPanelConnected = React.lazy(() =>
   import('./TimeTravelPanelConnected').then((m) => ({ default: m.TimeTravelPanelConnected })),
 );
+const LazyGraphPanel = React.lazy(() =>
+  import('./GraphPanel/GraphPanel').then((m) => ({ default: m.GraphPanel })),
+);
 
 // ── Event → view mapping ────────────────────────────────────────────────────
 
@@ -61,6 +64,8 @@ const SPECIAL_VIEW_EVENTS: Array<[string, SpecialViewType]> = [
   [OPEN_MCP_STORE_EVENT, 'mcp'],
   [OPEN_USAGE_DASHBOARD_EVENT, 'usage-dashboard'],
 ];
+
+const GRAPH_PANEL_EVENT = 'agent-ide:open-graph-panel';
 
 // ── Hooks ───────────────────────────────────────────────────────────────────
 
@@ -115,6 +120,18 @@ function useSpecialViewEvents(
   }, [openAndActivate]);
 }
 
+function useGraphPanelEvent(
+  openAndActivate: (view: SpecialViewType) => void,
+  enabled: boolean,
+): void {
+  useEffect(() => {
+    if (!enabled) return;
+    const handler = () => openAndActivate('graph-panel');
+    window.addEventListener(GRAPH_PANEL_EVENT, handler);
+    return () => window.removeEventListener(GRAPH_PANEL_EVENT, handler);
+  }, [openAndActivate, enabled]);
+}
+
 function useFileTabClicksSwitchToEditor(
   setActiveView: (v: 'editor') => void,
 ): void {
@@ -147,6 +164,7 @@ function SpecialViewPanel({ view, projectRoot }: { view: SpecialViewType; projec
     case 'extensions': return <React.Suspense fallback={fallback}><ExtensionStorePage /></React.Suspense>;
     case 'mcp': return <React.Suspense fallback={fallback}><McpStorePage /></React.Suspense>;
     case 'usage-dashboard': return <React.Suspense fallback={fallback}><UsageDashboard /></React.Suspense>;
+    case 'graph-panel': return <React.Suspense fallback={fallback}><LazyGraphPanel /></React.Suspense>;
     default: return null;
   }
 }
@@ -274,32 +292,42 @@ function LazySessionReplay({
 
 // ── Main connected component ─────────────────────────────────────────────────
 
+interface CentrePaneWiringArgs {
+  closeReview: () => void;
+  openAndActivate: (v: SpecialViewType) => void;
+  setReplaySession: (s: AgentMonitorSession | null) => void;
+  setActiveView: (v: 'editor') => void;
+  openReview: (sessionId: string, snapshotHash: string, projectRoot: string, filePaths?: string[]) => void;
+  projectRoot: string | null;
+  enhancedEnabled: boolean;
+}
+
+function useCentrePaneWiring(args: CentrePaneWiringArgs): void {
+  const { closeReview, openAndActivate, setReplaySession, setActiveView, openReview, projectRoot, enhancedEnabled } = args;
+  useDiffReviewEvents(openReview, setReplaySession, setActiveView);
+  useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
+  useSpecialViewEvents(openAndActivate);
+  useGraphPanelEvent(openAndActivate, enhancedEnabled);
+  useFileTabClicksSwitchToEditor(setActiveView);
+  useGlobalReviewEvents(openReview, projectRoot, setReplaySession, setActiveView);
+}
+
 export function CentrePaneConnected(): React.ReactElement {
   const { state, openReview, closeReview, acceptHunk, rejectHunk, acceptAllFile, rejectAllFile, acceptAll, rejectAll, canRollback, rollback } = useDiffReview();
   const { projectRoot } = useProject();
   const enhancedEnabled = useConfig().config?.review?.enhanced ?? true;
   const { openViews, activeView, replaySession, setReplaySession, setActiveView, openAndActivate, closeView } = useCentrePaneState(closeReview);
 
-  useDiffReviewEvents(openReview, setReplaySession, setActiveView);
-  useSessionReplayEvents(closeReview, setReplaySession, setActiveView);
-  useSpecialViewEvents(openAndActivate);
-  useFileTabClicksSwitchToEditor(setActiveView);
-  useGlobalReviewEvents(openReview, projectRoot, setReplaySession, setActiveView);
+  useCentrePaneWiring({ closeReview, openAndActivate, setReplaySession, setActiveView, openReview, projectRoot, enhancedEnabled });
 
   if (state) {
     return (
       <LazyDiffReview
-        state={state}
-        canRollback={canRollback}
-        enhancedEnabled={enhancedEnabled}
-        onAcceptHunk={acceptHunk}
-        onRejectHunk={rejectHunk}
-        onAcceptAllFile={acceptAllFile}
-        onRejectAllFile={rejectAllFile}
-        onAcceptAll={acceptAll}
-        onRejectAll={rejectAll}
-        onRollback={rollback}
-        onClose={closeReview}
+        state={state} canRollback={canRollback} enhancedEnabled={enhancedEnabled}
+        onAcceptHunk={acceptHunk} onRejectHunk={rejectHunk}
+        onAcceptAllFile={acceptAllFile} onRejectAllFile={rejectAllFile}
+        onAcceptAll={acceptAll} onRejectAll={rejectAll}
+        onRollback={rollback} onClose={closeReview}
       />
     );
   }
@@ -309,12 +337,7 @@ export function CentrePaneConnected(): React.ReactElement {
   }
 
   return (
-    <EditorViewContent
-      activeView={activeView}
-      openViews={openViews}
-      projectRoot={projectRoot}
-      openAndActivate={openAndActivate}
-      closeView={closeView}
-    />
+    <EditorViewContent activeView={activeView} openViews={openViews}
+      projectRoot={projectRoot} openAndActivate={openAndActivate} closeView={closeView} />
   );
 }

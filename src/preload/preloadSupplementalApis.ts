@@ -18,6 +18,7 @@ import type {
 import { agentChatApi } from './preloadSupplementalAgentChatApis';
 import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSupplementalAiApis';
 import { folderCrudApi } from './preloadSupplementalFolderApis';
+import { graphApi } from './preloadSupplementalGraphApis';
 import { layoutApi } from './preloadSupplementalLayoutApis';
 import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
 import { profileCrudApi } from './preloadSupplementalProfileApis';
@@ -35,7 +36,7 @@ type SupplementalApiKey =
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
-  | 'research' | 'workspaceReadList' | 'subagent' | 'layout';
+  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -284,4 +285,5 @@ export const supplementalApis: SupplementalApis = {
   workspaceReadList: workspaceReadListApi,
   subagent: subagentApi,
   layout: layoutApi,
+  graph: graphApi,
 };

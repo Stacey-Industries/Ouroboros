@@ -12,6 +12,7 @@ import type { ExtensionsAPI } from './electron-extensions';
 import type { FolderCrudAPI } from './electron-folder';
 import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-foundation';
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
+import type { GraphAPI } from './electron-graph';
 import type { LayoutAPI } from './electron-layout';
 import type { McpStoreAPI } from './electron-mcp-store';
 import type {
@@ -290,6 +291,7 @@ export interface ElectronAPI {
   research: ResearchAPI;
   workspaceReadList: WorkspaceReadListAPI;
   subagent: SubagentAPI;
+  graph: GraphAPI;
   layout: LayoutAPI;
 }
 
