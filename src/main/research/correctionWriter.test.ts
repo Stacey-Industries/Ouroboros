@@ -11,10 +11,10 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  createCorrectionWriter,
   type CorrectionRecord,
   type CorrectionWriter,
   type CorrectionWriterDeps,
+  createCorrectionWriter,
 } from './correctionWriter';
 
 // ─── Test deps factory ────────────────────────────────────────────────────────

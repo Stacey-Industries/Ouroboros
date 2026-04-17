@@ -25,8 +25,8 @@ vi.mock('./logger', () => ({
 
 // ─── Import under test (after mocks) ─────────────────────────────────────────
 
-import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
 import type { HookPayload } from './hooks';
+import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

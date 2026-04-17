@@ -7,6 +7,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useToastContext } from '../../contexts/ToastContext';
 import type {
   AgentChatThreadRecord,
   CodexModelOption,
@@ -28,10 +29,12 @@ import {
   runResearchAndPin,
 } from './researchCommands';
 import { ResearchIndicator } from './ResearchIndicator';
+import { ResearchModeToggle } from './ResearchModeToggle';
 import type { SlashCommandContext } from './SlashCommandMenu';
 import { ToolToggles } from './ToolToggles';
 import type { PinnedFile } from './useAgentChatContext';
 import type { AgentChatStreamingState } from './useAgentChatStreaming';
+import { useResearchModeShortcut } from './useResearchModeShortcut';
 
 export interface ComposerSectionProps {
   activeThread: AgentChatThreadRecord | null;
@@ -296,7 +299,7 @@ function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
   const { toggle } = p;
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '2px 8px 0', gap: '6px' }}>
         <ComposerProfile activeProfileId={p.profileId} onSwitch={p.setProfileId} />
         {p.sessionId && (
           <>
@@ -306,6 +309,7 @@ function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
               onClick={() => { toggle.setShowMcp((v) => !v); toggle.setShowTools(false); }}>MCP</button>
           </>
         )}
+        <ResearchModeToggle sessionId={p.sessionId || null} />
       </div>
       {toggle.showTools && p.sessionId && (
         <div style={togglePanelStyle}>
@@ -325,6 +329,7 @@ function ComposerTogglePanels(p: TogglePanelsProps): React.ReactElement {
 // ─── ComposerSection ──────────────────────────────────────────────────────────
 
 export function ComposerSection(props: ComposerSectionProps): React.ReactElement {
+  useResearchModeShortcut({ sessionId: props.activeSessionId, toast: useToastContext().toast });
   const researchEnabled = props.slashCommandContext?.researchEnabled !== false;
   const { isResearching, researchTopic, wrappedOnSend, handleCancel } = useResearchIntercept({
     draft: props.draft, activeSessionId: props.activeSessionId,

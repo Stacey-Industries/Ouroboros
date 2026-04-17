@@ -244,6 +244,8 @@ export interface AppConfig {
   agentic?: { subagentUx?: boolean };
   /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
   review?: { enhanced?: boolean };
+  /** Wave 30 Phase G — research auto-firing global defaults */
+  researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive' };
 }
 
 export interface ContextLayerConfig {

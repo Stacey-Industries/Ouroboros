@@ -307,9 +307,7 @@ app.on('will-quit', async () => {
   stopRetrainObserver(); clearQualityTimers();
   await stopClaudeUsagePoller();
   cleanupIpcHandlers();
-  closeCostHistoryDb();
-  closeThreadStore();
-  deleteTokenFile(); // best-effort; ignore errors
+  closeCostHistoryDb(); closeThreadStore(); deleteTokenFile(); // best-effort; ignore errors
   try { await disposeCodebaseGraph(); }
   catch (err) { log.warn('Dispose error during shutdown:', err); }
   try { await (await import('./extensionHost/extensionHostProxy')).shutdownExtensionHost(); }

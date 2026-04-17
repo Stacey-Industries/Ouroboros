@@ -19,11 +19,11 @@
  * closeResearchOutcomeObserverSignals() on app shutdown.
  */
 
-import log from '../logger';
 import { registerRevertListener } from '../agentChat/chatOrchestrationBridgeGit';
+import log from '../logger';
 import { getResearchCorrelationStore } from '../research/researchCorrelation';
-import { getResearchOutcomeWriter } from '../research/researchOutcomeWriter';
 import type { ResearchOutcomeSignal } from '../research/researchOutcomeWriter';
+import { getResearchOutcomeWriter } from '../research/researchOutcomeWriter';
 import { deriveResearchToolKind } from '../telemetry/toolKindMap';
 
 // ─── Per-session signal state ─────────────────────────────────────────────────

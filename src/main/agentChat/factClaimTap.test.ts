@@ -23,8 +23,8 @@ vi.mock('./chatOrchestrationBridgeMonitor', () => ({
 
 import { maybePauseForFactClaim } from '../research/factClaimPauseOrchestrator';
 import { emitStreamChunk } from './chatOrchestrationBridgeMonitor';
-import { tapTextDeltaForFactClaims } from './factClaimTap';
 import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';
+import { tapTextDeltaForFactClaims } from './factClaimTap';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

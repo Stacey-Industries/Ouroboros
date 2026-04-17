@@ -28,6 +28,7 @@ import type { RankedContextFile } from './types';
  * @param sessionId     Chat session / thread ID forwarded to the outcome observer.
  * @param workspaceRoot Absolute workspace root for fileId normalisation.
  */
+// eslint-disable-next-line max-params
 export function emitDecisionsForPacket(
   traceId: string | undefined,
   selection: ContextSelectionResult,

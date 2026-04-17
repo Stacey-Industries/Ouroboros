@@ -392,6 +392,11 @@ export interface AppConfig {
   workspaceProfileDefaults?: Record<string, string>;
   /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
   approvalMemory?: import('./approvalMemory').ApprovalMemoryStore;
+  /** Wave 30 Phase G — research auto-firing global defaults */
+  researchSettings?: {
+    globalEnabled?: boolean;
+    defaultMode?: 'off' | 'conservative' | 'aggressive';
+  };
 }
 
 export const store = new Store<AppConfig>({

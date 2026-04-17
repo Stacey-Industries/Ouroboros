@@ -75,6 +75,7 @@ function createSession(): TaskSessionRecord {
         {
           filePath: 'src/App.tsx',
           score: 98.2,
+          pagerank_score: 0.85,
           confidence: 'high',
           reasons: [
             {

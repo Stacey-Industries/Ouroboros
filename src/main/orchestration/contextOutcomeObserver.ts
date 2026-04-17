@@ -145,6 +145,7 @@ function normalisePath(p: string): string {
  * @param sessionId     Chat session / thread ID for group-by-session queries.
  * @param workspaceRoot Absolute path to the workspace root for fileId normalisation.
  */
+// eslint-disable-next-line max-params
 export function recordTurnStart(
   turnId: string,
   traceId: string,

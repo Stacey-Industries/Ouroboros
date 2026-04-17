@@ -29,6 +29,10 @@ export { cleanupProfileCrudHandlers, registerProfileCrudHandlers } from './profi
 export { registerPtyHandlers } from './pty';
 export { registerPtyPersistenceHandlers } from './ptyPersistence';
 export { cleanupResearchHandlers, registerResearchHandlers } from './research';
+export {
+  cleanupResearchControlHandlers,
+  registerResearchControlHandlers,
+} from './researchControl';
 export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';

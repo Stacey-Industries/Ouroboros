@@ -22,8 +22,9 @@
 | G | **User controls — per-session toggle + Settings** — chat composer gets a tri-state toggle: Off / Conservative / Aggressive. Settings exposes global default. Keyboard shortcut toggles current session. | `src/renderer/components/chat/ComposerFooter.tsx` or similar (tri-state toggle), `src/renderer/components/Settings/ResearchSettings.tsx` (new), IPC wiring, config schema extension |
 | H | **Weekly dashboard** — dev-facing metrics page. Queries `research_invocations`, `research-outcomes-*.jsonl` (via Wave 29.5 Phase G's globbed readers), `corrections-*.jsonl`. Renders fired count, outcome-correlated count, false-positive rate, false-negative rate. Renderer-side, no IPC retrofits needed if telemetry exposes read accessors. | `src/renderer/components/Observability/ResearchDashboard.tsx` (new), `src/main/ipc-handlers/researchDashboardHandlers.ts` (new), test |
 | I | **Threshold tuning knobs in Settings** — expose `staleness.confidenceFloor`, `factClaim.minPatternConfidence`, `preEdit.dryRunOnly` so thresholds are adjustable without code changes. | `src/main/configSchemaTail.ts` (or appropriate schema slice), `src/renderer/components/Settings/ResearchSettings.tsx` (extend Phase G) |
+| J | **Per-model training cutoffs** — replace the single `TRAINING_CUTOFF_DATE` constant with a per-model registry keyed by `ModelId`. Compile-time enforcement via `Record<ModelId, ModelTrainingInfo>` so adding a new model without a cutoff fails `tsc`. Runtime fallback for unknown/user-supplied model IDs: log-once warning + `today − 180d` default. Unit test asserts every provider-registry `ModelId` has an entry. `evaluateTrigger` + `isStale` take the session's active model's cutoff instead of the global constant. | `src/main/research/modelTrainingCutoffs.ts` (new), `src/main/research/stalenessMatrix.ts` (accept `modelCutoffDate` param), `src/main/research/triggerEvaluator.ts` (thread active modelId → cutoff), `src/main/research/modelTrainingCutoffs.test.ts` (registry completeness + fallback) |
 
-**Phase order rationale:** A→B is the rule-layer foundation. C + D + E are parallel-safe after B lands (different entry points). F is stream-taps — independent. G + H + I are UI and can land after the main process is instrumented.
+**Phase order rationale:** A→B is the rule-layer foundation. C + D + E are parallel-safe after B lands (different entry points). F is stream-taps — independent. G + H + I are UI and can land after the main process is instrumented. J retrofits A/B for multi-model correctness — can land any time after B; before launch is ideal so the soak runs against model-relative staleness, not a single-constant approximation.
 
 **Soak gate:** After all phases commit, run `research.auto` flag **off** by default for 2 weeks. Collect telemetry via Wave 29.5's persistence. Flip to `on` after measured FP-rate < 15% and subjective annoyance ≤ 2/10.
 
@@ -94,6 +95,14 @@ Pure function. `cacheCheck` is injected — tests pass a stub. Production uses t
 - Reads via IPC: `research:getDashboardMetrics(range: '7d' | '30d' | 'all')`. Handler in `src/main/ipc-handlers/researchDashboardHandlers.ts` queries SQLite + globbed JSONL.
 - Metrics computed server-side (main process) — renderer just displays. Server returns a pre-aggregated shape.
 - Chart library: no new dependency — use existing (check if Recharts or similar is already installed). If none, use inline SVG.
+
+**Per-model training cutoffs (Phase J):**
+- `Record<ModelId, ModelTrainingInfo>` in `src/main/research/modelTrainingCutoffs.ts`. `ModelId` sourced from the existing provider registry (`src/main/providers.ts`) to keep a single source of truth.
+- Compile-time catch: adding a new `ModelId` without an entry fails `tsc` via the mapped-type requirement.
+- Runtime catch: unknown IDs (OpenRouter-style custom configs) log a one-time warning and fall back to `today − 180d` — conservative enough to still fire research, not so aggressive it fires on every import.
+- Test catch: vitest assertion that every provider-registry `ModelId` has a `MODEL_TRAINING_CUTOFFS` entry.
+- `evaluateTrigger` receives the active `modelId` via `TriggerContext` and resolves the cutoff before calling `isStale`. `isStale(library, importedVersion?, modelCutoffDate?)` compares per-library `cutoffDate` against the model's cutoff: library released after model cutoff → stale.
+- The legacy global `TRAINING_CUTOFF_DATE` constant in `stalenessMatrixData.ts` remains as a documented fallback when no model ID is threaded through (e.g., non-session contexts), but is deprecated; remove in a follow-up wave once all call sites pass modelId.
 
 **Threshold knobs (Phase I):**
 - Schema additions to `configSchemaTail.ts`: `research.auto.staleness.confidenceFloor` (0.0–1.0), `research.auto.factClaim.enabled` (bool), `research.auto.preEdit.dryRunOnly` (bool), `research.auto.maxLatencyMs` (number, default 800).

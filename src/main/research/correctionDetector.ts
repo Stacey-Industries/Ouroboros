@@ -141,6 +141,7 @@ export function detectCorrection(userMessage: string): CorrectionHit | null {
     const phrasingMatch = match[0];
 
     // Try to get library from capture group first (high confidence path)
+    // eslint-disable-next-line security/detect-object-injection
     const captured = libGroup !== null ? match[libGroup] : undefined;
     if (captured) {
       const library = resolveFromCapture(captured);

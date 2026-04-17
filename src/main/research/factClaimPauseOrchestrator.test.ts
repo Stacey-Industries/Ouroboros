@@ -55,15 +55,15 @@ vi.mock('electron', () => ({
 
 // ─── Imports (after mocks) ────────────────────────────────────────────────────
 
-import { detectFactClaims } from './factClaimDetector';
-import { getResearchMode } from './researchSessionState';
-import { getModelCutoffDate } from './modelTrainingCutoffs';
-import { isStale } from './stalenessMatrix';
-import * as researchSubagent from './researchSubagent';
-import { getResearchCache, cacheKey } from './researchCache';
-import { getTelemetryStore } from '../telemetry';
 import { getConfigValue } from '../config';
+import { getTelemetryStore } from '../telemetry';
+import { detectFactClaims } from './factClaimDetector';
 import { maybePauseForFactClaim, resetInFlightForTests } from './factClaimPauseOrchestrator';
+import { getModelCutoffDate } from './modelTrainingCutoffs';
+import { cacheKey,getResearchCache } from './researchCache';
+import { getResearchMode } from './researchSessionState';
+import * as researchSubagent from './researchSubagent';
+import { isStale } from './stalenessMatrix';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

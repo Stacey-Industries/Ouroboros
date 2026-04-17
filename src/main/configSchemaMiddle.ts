@@ -101,4 +101,14 @@ export const middleSchema: Record<string, unknown> = {
       },
     ],
   },
+  /** Wave 30 Phase G — research auto-firing global defaults */
+  researchSettings: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      globalEnabled: { type: 'boolean', default: false },
+      defaultMode: { type: 'string', enum: ['off', 'conservative', 'aggressive'], default: 'conservative' },
+    },
+    default: { globalEnabled: false, defaultMode: 'conservative' },
+  },
 };

@@ -1,6 +1,6 @@
 /**
  * preloadSupplementalResearchApis.ts — contextBridge slice for the research
- * subagent IPC (Wave 25 Phase B).
+ * subagent IPC (Wave 25 Phase B) and research mode controls (Wave 30 Phase G).
  *
  * No business logic — just relays calls to main process.
  */
@@ -13,4 +13,14 @@ type ResearchApiType = ElectronAPI['research'];
 
 export const researchApi: ResearchApiType = {
   invoke: (input) => ipcRenderer.invoke('research:invoke', input),
+
+  // ── Wave 30 Phase G — per-session mode + global default controls ──────────
+  getSessionMode: (sessionId) =>
+    ipcRenderer.invoke('research:getSessionMode', { sessionId }),
+  setSessionMode: (sessionId, mode) =>
+    ipcRenderer.invoke('research:setSessionMode', { sessionId, mode }),
+  getGlobalDefault: () =>
+    ipcRenderer.invoke('research:getGlobalDefault', {}),
+  setGlobalDefault: (globalEnabled, defaultMode) =>
+    ipcRenderer.invoke('research:setGlobalDefault', { globalEnabled, defaultMode }),
 };

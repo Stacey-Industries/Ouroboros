@@ -6,6 +6,7 @@
  * tests faithful to the contract. Fake timers are not needed — dates are
  * injected explicitly.
  */
+/* eslint-disable security/detect-non-literal-fs-filename */
 
 import fs from 'node:fs/promises';
 import os from 'node:os';

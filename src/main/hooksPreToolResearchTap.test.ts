@@ -20,8 +20,8 @@ vi.mock('./logger', () => ({
 
 // ─── Import under test (after mocks) ─────────────────────────────────────────
 
-import { tapPreToolResearch } from './hooksPreToolResearchTap';
 import type { HookPayload } from './hooks';
+import { tapPreToolResearch } from './hooksPreToolResearchTap';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

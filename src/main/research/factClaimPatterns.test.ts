@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { FACT_CLAIM_PATTERNS } from './factClaimPatterns';
 import type { FactClaimPattern } from './factClaimPatterns';
+import { FACT_CLAIM_PATTERNS } from './factClaimPatterns';
 
 const VALID_CONFIDENCE = new Set<FactClaimPattern['confidence']>(['high', 'medium', 'low']);
 

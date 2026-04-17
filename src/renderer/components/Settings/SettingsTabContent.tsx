@@ -21,6 +21,7 @@ import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { ProfilesSection } from './ProfilesSection';
 import { ProvidersSection } from './ProvidersSection';
+import { ResearchSettings } from './ResearchSettings';
 import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
 import { TerminalSection } from './TerminalSection';
@@ -61,6 +62,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   contextDocs: ({ draft, onChange }) => <ContextDocsSection draft={draft} onChange={onChange} />,
   performance: () => <SettingsPerformancePanel />,
   workspaceReadList: ({ draft }) => <WorkspaceReadListSection draft={draft} />,
+  research: ({ draft, onChange }) => <ResearchSettings draft={draft} onChange={onChange} />,
 };
 
 export function SettingsTabContent({

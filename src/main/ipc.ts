@@ -20,6 +20,7 @@ import {
   cleanupLayoutHandlers,
   cleanupPinnedContextHandlers,
   cleanupProfileCrudHandlers,
+  cleanupResearchControlHandlers,
   cleanupResearchHandlers,
   cleanupSessionCrudHandlers,
   cleanupTelemetryHandlers,
@@ -53,6 +54,7 @@ import {
   registerProfileCrudHandlers,
   registerPtyHandlers,
   registerPtyPersistenceHandlers,
+  registerResearchControlHandlers,
   registerResearchHandlers,
   registerRouterStatsHandlers,
   registerRulesAndSkillsHandlers,
@@ -104,6 +106,7 @@ function registerCoreDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('pinnedContext', () => registerPinnedContextHandlers()),
     ...safeRegister('profileCrud', () => registerProfileCrudHandlers()),
     ...safeRegister('research', () => registerResearchHandlers()),
+    ...safeRegister('researchControl', () => registerResearchControlHandlers()),
     ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
     ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
     ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),
@@ -292,6 +295,7 @@ export function cleanupIpcHandlers(): void {
   cleanupPinnedContextHandlers();
   cleanupProfileCrudHandlers();
   cleanupResearchHandlers();
+  cleanupResearchControlHandlers();
   cleanupTelemetryHandlers();
   cleanupWorktreeHandlers();
   cleanupWorkspaceReadListHandlers();
