@@ -325,6 +325,8 @@ export interface AppAPI {
   onStartupWarning: (callback: (payload: { name: string; message: string }) => void) => () => void;
   /** Subscribe to thread:// permalink navigation events from main. */
   onNavigateToPermalink: (callback: (payload: { threadId: string; messageId?: string }) => void) => () => void;
+  /** Wave 29 Phase B — open a native save dialog and write content to the chosen path. */
+  saveFileDialog: (defaultName: string, content: string) => Promise<IpcResult & { cancelled?: boolean; filePath?: string }>;
 }
 
 export interface ShellAPI {

@@ -3,7 +3,7 @@
  */
 
 import { exec, spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, Notification, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, IpcMainInvokeEvent, Notification, shell } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -256,6 +256,33 @@ function registerRebuildHandlers(channels: string[]): void {
   channels.push('app:rebuildWeb');
 }
 
+export async function handleSaveFileDialog(
+  event: IpcMainInvokeEvent,
+  defaultName: string,
+  content: string,
+): Promise<{ success: boolean; cancelled?: boolean; filePath?: string; error?: string }> {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const opts = {
+    defaultPath: defaultName,
+    filters: [{ name: 'Markdown', extensions: ['md'] }, { name: 'All Files', extensions: ['*'] }],
+    title: 'Save PR Description',
+  };
+  const result = win ? await dialog.showSaveDialog(win, opts) : await dialog.showSaveDialog(opts);
+  if (result.canceled || !result.filePath) return { success: false, cancelled: true };
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path from native showSaveDialog (user-chosen)
+    await fs.writeFile(result.filePath, content, 'utf-8');
+    return { success: true, filePath: result.filePath };
+  } catch (err) {
+    return toErrorResult(err);
+  }
+}
+
+function registerDialogHandlers(channels: string[]): void {
+  ipcMain.handle('dialog:saveFile', handleSaveFileDialog);
+  channels.push('dialog:saveFile');
+}
+
 export function registerAppHandlers(senderWindow: SenderWindow): string[] {
   const channels: string[] = [];
   registerShellHandlers(channels);
@@ -264,5 +291,6 @@ export function registerAppHandlers(senderWindow: SenderWindow): string[] {
   registerThemeHandlers(channels);
   registerTitlebarHandlers(channels, senderWindow);
   registerRebuildHandlers(channels);
+  registerDialogHandlers(channels);
   return channels;
 }

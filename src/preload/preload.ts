@@ -237,6 +237,9 @@ const appAPI: ElectronAPI['app'] = {
     ipcRenderer.on('app:navigateToPermalink', handler);
     return () => ipcRenderer.removeListener('app:navigateToPermalink', handler);
   },
+
+  saveFileDialog: (defaultName, content) =>
+    ipcRenderer.invoke('dialog:saveFile', defaultName, content),
 };
 
 // â”€â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

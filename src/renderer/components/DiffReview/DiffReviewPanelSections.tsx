@@ -23,6 +23,7 @@ interface DiffReviewLayoutProps {
   onRejectHunk: (fileIdx: number, hunkIdx: number) => void;
   setFileRef: (idx: number, element: HTMLDivElement | null) => void;
 }
+
 const panelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--surface-base)' };
 const headerStyle: React.CSSProperties = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border-default)', backgroundColor: 'var(--surface-panel)', fontSize: '0.8125rem', fontFamily: 'var(--font-ui)', userSelect: 'none' };
 export function DiffReviewLayout(props: DiffReviewLayoutProps): React.ReactElement {
@@ -36,6 +37,7 @@ export function DiffReviewLayout(props: DiffReviewLayoutProps): React.ReactEleme
         allDecided={stats.decidedHunks === stats.totalHunks}
         canRollback={canRollback}
         enhancedEnabled={enhancedEnabled}
+        files={files}
         onAcceptAll={onAcceptAll}
         onRejectAll={onRejectAll}
         onRollback={onRollback}
@@ -103,6 +105,7 @@ function DiffReviewHeader({
   allDecided,
   canRollback,
   enhancedEnabled,
+  files,
   onAcceptAll,
   onRejectAll,
   onRollback,
@@ -112,6 +115,7 @@ function DiffReviewHeader({
   allDecided: boolean;
   canRollback: boolean;
   enhancedEnabled: boolean;
+  files: ReviewFile[];
   onAcceptAll: () => void;
   onRejectAll: () => void;
   onRollback: () => void;
@@ -124,6 +128,7 @@ function DiffReviewHeader({
         allDecided={allDecided}
         canRollback={canRollback}
         enhancedEnabled={enhancedEnabled}
+        files={files}
         onAcceptAll={onAcceptAll}
         onRejectAll={onRejectAll}
         onRollback={onRollback}
