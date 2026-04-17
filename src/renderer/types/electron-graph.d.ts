@@ -91,10 +91,52 @@ export interface GraphStatusResult extends IpcResult {
   };
 }
 
+// ── Neighbourhood result shapes ───────────────────────────────────────────────
+
+export interface GraphNeighbourhoodResult extends IpcResult {
+  symbol?: RawGraphNode;
+  callers?: RawGraphNode[];
+  callees?: RawGraphNode[];
+  imports?: RawGraphNode[];
+}
+
+// ── Blast-radius result shapes ────────────────────────────────────────────────
+
+export type BlastRadiusCriticality = 'critical' | 'high' | 'medium' | 'low';
+
+export interface BlastRadiusEntry {
+  node: RawGraphNode;
+  distance: number;
+  criticality: BlastRadiusCriticality;
+}
+
+export interface GraphBlastRadiusResult extends IpcResult {
+  symbol?: RawGraphNode;
+  affectedSymbols?: BlastRadiusEntry[];
+}
+
+// ── @symbol: bare-form disambiguation result ──────────────────────────────────
+
+export interface SymbolDisambiguationItem {
+  /** Full pinned-context key: @symbol:filePath::name::line */
+  key: string;
+  name: string;
+  type: string;
+  filePath: string;
+  line: number;
+  endLine?: number;
+}
+
+export interface SymbolDisambiguationResult extends IpcResult {
+  items?: SymbolDisambiguationItem[];
+}
+
 // ── API surface ───────────────────────────────────────────────────────────────
 
 export interface GraphAPI {
   searchGraph: (query: string, limit?: number) => Promise<GraphSearchResult>;
   getArchitecture: (aspects?: string[]) => Promise<GraphArchitectureResult>;
   getStatus: () => Promise<GraphStatusResult>;
+  getNeighbourhood: (symbolId: string, depth?: number) => Promise<GraphNeighbourhoodResult>;
+  getBlastRadius: (symbolId: string, depth?: number) => Promise<GraphBlastRadiusResult>;
 }

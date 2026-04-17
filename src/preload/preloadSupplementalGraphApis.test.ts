@@ -60,4 +60,24 @@ describe('graphApi preload bridge', () => {
     const result = await graphApi.searchGraph('test');
     expect(result).toBe(expected);
   });
+
+  it('getNeighbourhood invokes graph:getNeighbourhood with symbolId and depth', async () => {
+    await graphApi.getNeighbourhood('myFunc', 1);
+    expect(mockInvoke).toHaveBeenCalledWith('graph:getNeighbourhood', 'myFunc', 1);
+  });
+
+  it('getNeighbourhood passes undefined depth when omitted', async () => {
+    await graphApi.getNeighbourhood('sym');
+    expect(mockInvoke).toHaveBeenCalledWith('graph:getNeighbourhood', 'sym', undefined);
+  });
+
+  it('getBlastRadius invokes graph:getBlastRadius with symbolId and depth', async () => {
+    await graphApi.getBlastRadius('someClass', 2);
+    expect(mockInvoke).toHaveBeenCalledWith('graph:getBlastRadius', 'someClass', 2);
+  });
+
+  it('getBlastRadius passes undefined depth when omitted', async () => {
+    await graphApi.getBlastRadius('fn');
+    expect(mockInvoke).toHaveBeenCalledWith('graph:getBlastRadius', 'fn', undefined);
+  });
 });

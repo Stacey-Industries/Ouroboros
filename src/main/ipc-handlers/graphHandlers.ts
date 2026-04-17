@@ -7,6 +7,7 @@
 import { ipcMain } from 'electron';
 
 import { getGraphController } from '../codebaseGraph/graphControllerSupport';
+import { registerGraphNeighbourhoodChannels } from './graphHandlersNeighbourhood';
 
 type ChannelList = string[];
 type IpcHandler = Parameters<typeof ipcMain.handle>[1];
@@ -97,4 +98,5 @@ export function registerGraphHandlers(channels: ChannelList): void {
   });
   registerGraphQueryChannels(channels);
   registerGraphReadChannels(channels);
+  registerGraphNeighbourhoodChannels(channels);
 }
