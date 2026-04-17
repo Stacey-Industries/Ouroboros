@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { logRouterOverride, logRoutingDecision, routePromptSync } from '../router';
@@ -175,20 +177,24 @@ export function resolveSendOptions(
   previousAssistantMessage?: string,
 ): ResolvedSendOptions {
   const provider = request.overrides?.provider ?? settings.defaultProvider;
-  const { overrides, routedBy, tier, traceId } = applyRouterOverride(
+  const { overrides, routedBy, tier, traceId: routerTraceId } = applyRouterOverride(
     request,
     previousAssistantMessage,
   );
 
-  if (traceId) {
-    trackChatTurn({ traceId, threadId: request.threadId, prompt: request.content });
+  if (routerTraceId) {
+    trackChatTurn({ traceId: routerTraceId, threadId: request.threadId, prompt: request.content });
     flushAnnotations();
   }
 
+  // Wave 29.5 Phase B (H1): outcomeTraceId is always set so every send produces
+  // training rows regardless of router state. Router-on path uses the router's id
+  // (already logged via logRoutingDecision); router-off path mints a fresh UUID.
+  const outcomeTraceId = routerTraceId ?? randomUUID();
+
   const resolved = { ...buildResolvedOptions(settings, provider, overrides), routedBy };
   if (resolved.effort === 'auto') resolved.effort = resolveAutoEffort(tier, resolved.model);
-  // Carry traceId forward so the bridge can populate ActiveStreamContext.outcomeTraceId
-  if (traceId) resolved.outcomeTraceId = traceId;
+  resolved.outcomeTraceId = outcomeTraceId;
   return resolved;
 }
 

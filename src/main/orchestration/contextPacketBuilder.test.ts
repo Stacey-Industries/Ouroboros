@@ -9,6 +9,13 @@ vi.mock('../config', () => ({
   setConfigValue: vi.fn(),
 }));
 
+// Wave 29.5 Phase B (H1): spy on emitDecisionsForPacket to verify it is
+// always called with a non-empty traceId, even when no traceId is supplied.
+// vi.mock is hoisted, so the spy must be defined inside the factory.
+vi.mock('./contextPacketBuilderDecisions', () => ({
+  emitDecisionsForPacket: vi.fn(),
+}));
+
 vi.mock('./contextSelectionSupport', async () => {
   const actual = await vi.importActual<typeof import('./contextSelectionSupport')>(
     './contextSelectionSupport',
@@ -101,6 +108,7 @@ function createLiveIdeState(): LiveIdeState {
 }
 
 import { clearContextPacketCache } from './contextPacketBuilder';
+import { emitDecisionsForPacket } from './contextPacketBuilderDecisions';
 
 afterEach(async () => {
   clearContextPacketCache();
@@ -268,6 +276,70 @@ describe('contextPacketBuilder', () => {
     // Short content is returned unchanged
     const short = 'a\nb\nc';
     expect(truncateToSignatures(short, 20)).toBe(short);
+  });
+
+  // Wave 29.5 Phase B (H1): traceId is always present in the result
+  it('returns a non-empty traceId even when no traceId is supplied', async () => {
+    const root = await createTempRoot();
+    const file1 = path.join(root, 'src', 'a.ts');
+    await writeFile(file1, 'export const a = 1;\n');
+
+    vi.mocked(emitDecisionsForPacket).mockReset();
+
+    const result = await buildContextPacket({
+      request: {
+        workspaceRoots: [root],
+        goal: 'traceId unconditional test',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        budget: { maxFiles: 5, maxBytes: 50_000, maxTokens: 10_000 },
+        contextSelection: { includedFiles: ['src/a.ts'] },
+      },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+      // No traceId supplied — builder must mint one
+    });
+
+    expect(typeof result.traceId).toBe('string');
+    expect(result.traceId.length).toBeGreaterThan(0);
+    // emitDecisionsForPacket must have been called with the minted traceId
+    expect(vi.mocked(emitDecisionsForPacket)).toHaveBeenCalledWith(
+      result.traceId,
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('uses caller-supplied traceId and passes it to emitDecisionsForPacket', async () => {
+    const root = await createTempRoot();
+    const file1 = path.join(root, 'src', 'b.ts');
+    await writeFile(file1, 'export const b = 2;\n');
+
+    vi.mocked(emitDecisionsForPacket).mockReset();
+    const callerTraceId = 'caller-supplied-trace-id-for-test';
+
+    const result = await buildContextPacket({
+      request: {
+        workspaceRoots: [root],
+        goal: 'caller traceId passthrough test',
+        mode: 'edit',
+        provider: 'codex',
+        verificationProfile: 'fast',
+        budget: { maxFiles: 5, maxBytes: 50_000, maxTokens: 10_000 },
+        contextSelection: { includedFiles: ['src/b.ts'] },
+      },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+      traceId: callerTraceId,
+    });
+
+    expect(result.traceId).toBe(callerTraceId);
+    expect(vi.mocked(emitDecisionsForPacket)).toHaveBeenCalledWith(
+      callerTraceId,
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('backward compatibility: small packets include all files unchanged', async () => {

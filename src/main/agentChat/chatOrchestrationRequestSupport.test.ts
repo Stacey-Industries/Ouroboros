@@ -273,4 +273,53 @@ describe('resolveSendOptions', () => {
     const result = resolveSendOptions(createSettings(), createRequest({ effort: 'low' }));
     expect(result.effort).toBe('low');
   });
+
+  // Wave 29.5 Phase B (H1): outcomeTraceId must be populated even when the
+  // router is disabled so every send contributes training rows.
+  it('produces outcomeTraceId when router is disabled', () => {
+    // getConfigValue returns undefined → routerConfig is undefined → router off
+    getConfigValueMock.mockReturnValue(undefined as never);
+
+    const result = resolveSendOptions(createSettings(), createRequest());
+
+    expect(result.outcomeTraceId).toBeDefined();
+    expect(typeof result.outcomeTraceId).toBe('string');
+    expect(result.outcomeTraceId!.length).toBeGreaterThan(0);
+    // Router decision log must NOT be called when disabled
+    expect(logRoutingDecisionMock).not.toHaveBeenCalled();
+  });
+
+  it('produces a distinct outcomeTraceId per call when router is disabled', () => {
+    getConfigValueMock.mockReturnValue(undefined as never);
+
+    const r1 = resolveSendOptions(createSettings(), createRequest());
+    const r2 = resolveSendOptions(createSettings(), createRequest());
+
+    expect(r1.outcomeTraceId).not.toBe(r2.outcomeTraceId);
+  });
+
+  it('uses the router traceId as outcomeTraceId when the router is enabled', () => {
+    getConfigValueMock.mockImplementation((key) => {
+      if (key === 'routerSettings') {
+        return {
+          enabled: true,
+          layer1Enabled: true,
+          layer2Enabled: true,
+          layer3Enabled: true,
+          layer2ConfidenceThreshold: 0.6,
+          paranoidMode: false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any;
+      }
+      return undefined as never;
+    });
+    const fixedTraceId = 'fixed-trace-id-from-router';
+    logRoutingDecisionMock.mockReturnValue(fixedTraceId);
+    routePromptSyncMock.mockReturnValue(null);
+
+    const result = resolveSendOptions(createSettings(), createRequest());
+
+    expect(result.outcomeTraceId).toBe(fixedTraceId);
+    expect(logRoutingDecisionMock).toHaveBeenCalled();
+  });
 });

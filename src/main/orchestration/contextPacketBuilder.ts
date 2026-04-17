@@ -88,6 +88,13 @@ export function clearContextPacketCache(): void {
 export interface ContextPacketBuildResult {
   packet: ContextPacket;
   selection: ContextSelectionResult;
+  /**
+   * Wave 29.5 Phase B — traceId that scoped this packet build.
+   * Always present: either the caller's supplied id or a freshly minted UUID.
+   * Callers should stamp this onto the outgoing TaskRequest and any downstream
+   * decision-outcome joins (e.g. ActiveStreamContext.outcomeTraceId).
+   */
+  traceId: string;
 }
 
 function buildPacketTask(request: TaskRequest): ContextPacket['task'] {
@@ -120,7 +127,10 @@ function checkContextPacketCache(
     createdAt: Date.now(),
     task: buildPacketTask(request),
   };
-  return { selection: cached.result.selection, packet: updatedPacket };
+  // Mint a fresh traceId for the cache-hit send so the caller can stamp
+  // outcomeTraceId; decisions are NOT re-emitted (they were written on the
+  // original build). The traceId here is send-scoped, not packet-scoped.
+  return { selection: cached.result.selection, packet: updatedPacket, traceId: randomUUID() };
 }
 
 async function enrichPacketWithSystemInstructions(
@@ -320,8 +330,12 @@ async function buildFullContextPacket(options: {
   repoSnapshot?: RepoIndexSnapshot;
   traceId?: string; sessionId?: string;
 }): Promise<ContextPacketBuildResult> {
+  // Wave 29.5 Phase B (H1): Mint traceId unconditionally so every packet build
+  // produces a training sample regardless of router state. The caller may supply
+  // its own id (router-annotated path); if absent we generate one here.
+  const traceId = options.traceId ?? randomUUID();
   const { selection, files, omittedCandidates, budget } = await selectAndBuildFiles(options);
-  emitDecisionsForPacket(options.traceId, selection, files);
+  emitDecisionsForPacket(traceId, selection, files);
   let packet: ContextPacket = {
     version: 1,
     id: randomUUID(),
@@ -335,7 +349,7 @@ async function buildFullContextPacket(options: {
   };
   if (options.sessionId) packet = injectPinnedContext(packet, options.sessionId, budget);
   packet = await enrichPacket(packet, options.request);
-  return { selection, packet };
+  return { selection, packet, traceId };
 }
 
 export async function buildContextPacket(options: {
