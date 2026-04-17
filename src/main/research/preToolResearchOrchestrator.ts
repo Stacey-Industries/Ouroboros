@@ -12,6 +12,7 @@ import path from 'path';
 
 import { getConfigValue } from '../config';
 import { getTelemetryStore } from '../telemetry';
+import { type CorrectionStore, getCorrectionStore } from './correctionStore';
 import { extractImports } from './importExtractor';
 import { cacheKey, getResearchCache } from './researchCache';
 import { getSnapshot } from './researchSessionState';
@@ -126,35 +127,65 @@ interface OrchestratorDeps {
   cacheCheck?: (library: string) => boolean;
   runResearch?: typeof researchSubagent.runResearch;
   globalFlag?: boolean;
+  /** Injected for tests — defaults to the module-level getCorrectionStore() singleton. */
+  correctionStore?: Pick<CorrectionStore, 'getLibraries'>;
+}
+
+function mergeEnhancedLibraries(
+  sessionId: string,
+  stateLibraries: ReadonlySet<string>,
+  store: Pick<CorrectionStore, 'getLibraries'>,
+): Set<string> {
+  const merged = new Set<string>(stateLibraries);
+  for (const lib of store.getLibraries(sessionId)) {
+    merged.add(lib);
+  }
+  return merged;
+}
+
+interface ResolvedDeps {
+  readFile: (p: string) => Promise<string | null>;
+  cacheCheckFn: (library: string) => boolean;
+  runResearch: typeof researchSubagent.runResearch;
+  globalFlag: boolean;
+  store: Pick<CorrectionStore, 'getLibraries'>;
+}
+
+function resolveDeps(deps: OrchestratorDeps): ResolvedDeps {
+  const dbPath = resolveDbPath();
+  return {
+    readFile: deps.readFile ?? readFileSafe,
+    cacheCheckFn: deps.cacheCheck ?? buildCacheCheck(dbPath),
+    runResearch: deps.runResearch ?? researchSubagent.runResearch,
+    globalFlag: deps.globalFlag ?? resolveGlobalFlag(),
+    store: deps.correctionStore ?? getCorrectionStore(),
+  };
 }
 
 export async function _runOrchestration(
   input: PreToolResearchInput,
   deps: OrchestratorDeps = {},
 ): Promise<unknown> {
-  const readFile = deps.readFile ?? readFileSafe;
-  const dbPath = resolveDbPath();
-  const cacheCheckFn = deps.cacheCheck ?? buildCacheCheck(dbPath);
-  const runResearch = deps.runResearch ?? researchSubagent.runResearch;
-  const globalFlag = deps.globalFlag ?? resolveGlobalFlag();
+  const { readFile, cacheCheckFn, runResearch, globalFlag, store } = resolveDeps(deps);
 
   const content = await readFile(input.filePath);
   if (content === null) return null;
 
   const imports = extractImports(content);
   const sessionFlags = getSnapshot(input.sessionId);
+  const enhancedLibraries = mergeEnhancedLibraries(
+    input.sessionId,
+    sessionFlags.enhancedLibraries,
+    store,
+  );
 
   const ctx = {
     dirtyFiles: [{ path: input.filePath, imports }],
-    sessionFlags: {
-      mode: sessionFlags.mode,
-      enhancedLibraries: new Set(sessionFlags.enhancedLibraries) as Set<string>,
-    },
+    // TODO(wave-30-J): thread modelId from session state once exposed.
+    modelId: input.modelId,
+    sessionFlags: { mode: sessionFlags.mode, enhancedLibraries },
     cacheCheck: cacheCheckFn,
     globalFlag,
-    // TODO(wave-30-J): thread active modelId from session state once the
-    // session state store exposes it. Falls back to today-180d via getModelCutoffDate.
-    modelId: input.modelId,
   };
 
   const decision = evaluateTrigger(ctx);
@@ -163,14 +194,7 @@ export async function _runOrchestration(
   const library = decision.library ?? '';
   recordTraceSafe(decision, library, input.correlationId);
 
-  const artifact = await runResearch({
-    topic: library,
-    library,
-    sessionId: input.sessionId,
-    triggerReason: 'hook',
-  });
-
-  return artifact;
+  return runResearch({ topic: library, library, sessionId: input.sessionId, triggerReason: 'hook' });
 }
 
 // ─── Public entry point ───────────────────────────────────────────────────────

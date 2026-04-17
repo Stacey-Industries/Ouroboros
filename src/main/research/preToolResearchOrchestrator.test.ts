@@ -1,8 +1,12 @@
 /**
- * preToolResearchOrchestrator.test.ts — Unit tests for Wave 30 Phase D.
+ * preToolResearchOrchestrator.test.ts — Unit tests for Wave 30 Phase D + E.
  *
  * All I/O and external dependencies are injected via OrchestratorDeps — no
  * real filesystem reads, no real research spawns, no real telemetry writes.
+ *
+ * Phase E tests (bottom section): correction store libraries are merged into
+ * enhancedLibraries and fire with reason:'enhanced-library' regardless of
+ * whether the library is in the staleness matrix.
  */
 
 import type { ResearchArtifact } from '@shared/types/research';
@@ -186,5 +190,145 @@ describe('maybeFireResearchForPreTool', () => {
     maybeFireResearchForPreTool(baseInput);
     resetPendingForTests();
     expect(getPendingResearchForTests(baseInput.sessionId)).toEqual([]);
+  });
+});
+
+// ─── Phase E: correction → enhanced-library trigger ───────────────────────────
+
+describe('_runOrchestration Phase E — correction store merge', () => {
+  const SESSION = 'sess-phase-e';
+
+  const baseInput = {
+    sessionId: SESSION,
+    toolUseId: 'tool-e1',
+    filePath: '/workspace/schema.ts',
+    correlationId: 'corr-e',
+  };
+
+  /**
+   * Build a minimal CorrectionStore stub that returns a fixed Set.
+   */
+  function makeStoreStub(libs: string[]): { getLibraries: (sid: string) => Set<string> } {
+    return {
+      getLibraries: (sid: string) => (sid === SESSION ? new Set(libs) : new Set<string>()),
+    };
+  }
+
+  it('fires enhanced-library when zod is in correction store and file imports zod', async () => {
+    const artifact = makeArtifact();
+    const runResearch = vi.fn(async () => artifact);
+    const correctionStore = makeStoreStub(['zod', 'react-query']);
+
+    const result = await _runOrchestration(
+      { ...baseInput, filePath: '/workspace/schema.ts' },
+      {
+        readFile: makeReadFile(`import { z } from 'zod';`),
+        cacheCheck: cacheCheckMiss,
+        runResearch,
+        globalFlag: true,
+        correctionStore,
+      },
+    );
+
+    expect(result).toBe(artifact);
+    expect(runResearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        library: 'zod',
+        triggerReason: 'hook',
+        sessionId: SESSION,
+      }),
+    );
+  });
+
+  it('fires enhanced-library for react-query even when not in staleness matrix', async () => {
+    // react-query may not be in the curated staleness matrix, but corrections force it.
+    const artifact = makeArtifact();
+    const runResearch = vi.fn(async () => artifact);
+    const correctionStore = makeStoreStub(['react-query']);
+
+    const result = await _runOrchestration(
+      { ...baseInput, toolUseId: 'tool-e2' },
+      {
+        // react-query import — not in staleness matrix curated set
+        readFile: makeReadFile(`import { useQuery } from 'react-query';`),
+        cacheCheck: cacheCheckMiss,
+        runResearch,
+        globalFlag: true,
+        correctionStore,
+      },
+    );
+
+    expect(result).toBe(artifact);
+    expect(runResearch).toHaveBeenCalledWith(
+      expect.objectContaining({ library: 'react-query' }),
+    );
+  });
+
+  it('does not fire for a library that has no correction and no staleness match when globalFlag=true', async () => {
+    const runResearch = vi.fn();
+    // 'some-internal-lib' is neither corrected nor in the staleness matrix
+    const correctionStore = makeStoreStub(['zod']); // corrections for zod, not our import
+
+    const result = await _runOrchestration(
+      { ...baseInput, toolUseId: 'tool-e3' },
+      {
+        readFile: makeReadFile(`import { helper } from 'some-internal-lib';`),
+        cacheCheck: cacheCheckMiss,
+        runResearch,
+        globalFlag: true,
+        correctionStore,
+      },
+    );
+
+    expect(result).toBeNull();
+    expect(runResearch).not.toHaveBeenCalled();
+  });
+
+  it('no cross-session leakage — correction for sess-other does not affect SESSION', async () => {
+    const runResearch = vi.fn();
+    // Store stub returns corrections only for a DIFFERENT session
+    const correctionStore = {
+      getLibraries: (sid: string) =>
+        sid === 'sess-other' ? new Set(['zod']) : new Set<string>(),
+    };
+
+    const result = await _runOrchestration(
+      { ...baseInput, toolUseId: 'tool-e4' },
+      {
+        // zod import, but no correction for SESSION
+        readFile: makeReadFile(`import { z } from 'zod';`),
+        cacheCheck: (lib) => lib === 'zod', // cache hit for zod → won't fire staleness either
+        runResearch,
+        globalFlag: true,
+        correctionStore,
+      },
+    );
+
+    // zod is a staleness-match candidate but we said cache hit → no fire
+    // and no correction for this session → definitely no fire
+    expect(result).toBeNull();
+    expect(runResearch).not.toHaveBeenCalled();
+  });
+
+  it('empty correction store does not affect existing enhancedLibraries from session state', async () => {
+    // getSnapshot mock returns empty enhancedLibraries by default
+    // correctionStore also returns empty → no enhanced-library fires
+    const runResearch = vi.fn();
+    const correctionStore = makeStoreStub([]);
+
+    // some-stable-lib — not stale, not corrected
+    const result = await _runOrchestration(
+      { ...baseInput, toolUseId: 'tool-e5' },
+      {
+        readFile: makeReadFile(`import { x } from 'some-stable-lib';`),
+        cacheCheck: cacheCheckMiss,
+        runResearch,
+        globalFlag: true,
+        correctionStore,
+      },
+    );
+
+    expect(result).toBeNull();
+    expect(runResearch).not.toHaveBeenCalled();
   });
 });
