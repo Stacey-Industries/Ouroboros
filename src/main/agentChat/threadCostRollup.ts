@@ -6,6 +6,7 @@
  */
 
 import { getPricing } from '@shared/pricing';
+
 import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

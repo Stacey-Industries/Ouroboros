@@ -8,8 +8,8 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openDatabase, runTransaction } from '../storage/database';
 import type { Database } from '../storage/database';
+import { openDatabase, runTransaction } from '../storage/database';
 import {
   getMessageReactionsSql,
   setMessageCollapsedSql,

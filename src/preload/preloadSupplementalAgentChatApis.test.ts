@@ -17,6 +17,7 @@ vi.mock('electron', () => ({
 }));
 
 import { ipcRenderer } from 'electron';
+
 import { agentChatApi } from './preloadSupplementalAgentChatApis';
 
 const mockInvoke = ipcRenderer.invoke as ReturnType<typeof vi.fn>;

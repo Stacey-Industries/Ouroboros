@@ -6,6 +6,8 @@
  * then invokes them with synthetic args. No Electron bootstrap required.
  */
 
+/* eslint-disable security/detect-object-injection */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Mock electron ────────────────────────────────────────────────────────────

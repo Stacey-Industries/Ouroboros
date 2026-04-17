@@ -4,13 +4,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { AgentChatMessageRecord } from './types';
 import {
   computeGlobalCostRollup,
   computeThreadCostRollup,
   rollupFromThread,
   type ThreadCostRollup,
 } from './threadCostRollup';
+import type { AgentChatMessageRecord } from './types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

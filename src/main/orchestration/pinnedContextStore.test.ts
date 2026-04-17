@@ -11,13 +11,14 @@ vi.mock('../logger', () => ({
 }));
 
 import type { PinnedContextItem } from '@shared/types/pinnedContext';
+
 import type { Session } from '../session/session';
 import { makeSession } from '../session/session';
-import { openSessionStore } from '../session/sessionStore';
 import type { SessionStore } from '../session/sessionStore';
+import { openSessionStore } from '../session/sessionStore';
 import {
-  MAX_ACTIVE_PINS,
   buildPinnedContextStore,
+  MAX_ACTIVE_PINS,
 } from './pinnedContextStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

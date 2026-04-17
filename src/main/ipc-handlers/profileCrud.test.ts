@@ -4,6 +4,8 @@
  * Mocks electron, logger, and profileStore so no Electron runtime is needed.
  */
 
+/* eslint-disable security/detect-object-injection */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Hoisted mock fns (available inside vi.mock factories) ────────────────────

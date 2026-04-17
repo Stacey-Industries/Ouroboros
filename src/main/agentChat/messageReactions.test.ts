@@ -2,16 +2,16 @@
  * messageReactions.test.ts — unit tests for Wave 22 Phase A reaction helpers.
  */
 
+import type { Reaction } from '@shared/types/agentChat';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { Reaction } from '@shared/types/agentChat';
 import {
   addReaction,
   addReactionToList,
   getReactions,
+  type ReactionStore,
   removeReaction,
   removeReactionFromList,
-  type ReactionStore,
 } from './messageReactions';
 
 // ── Stub store ────────────────────────────────────────────────────────────────
@@ -19,10 +19,12 @@ import {
 function makeStore(initial: Reaction[] = []): ReactionStore & { data: Reaction[] } {
   const store = {
     data: [...initial],
-    async getMessageReactions(_id: string): Promise<Reaction[]> {
+    // Stub implementation — parameter satisfies the interface signature but is unused.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async getMessageReactions(_messageId: string): Promise<Reaction[]> {
       return [...store.data];
     },
-    async setMessageReactions(_id: string, reactions: Reaction[]): Promise<void> {
+    async setMessageReactions(_messageId: string, reactions: Reaction[]): Promise<void> {
       store.data = [...reactions];
     },
   };

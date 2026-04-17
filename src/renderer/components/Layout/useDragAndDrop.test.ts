@@ -32,6 +32,7 @@ vi.mock('@dnd-kit/core', () => ({
 }));
 
 import { PointerSensor, TouchSensor, useSensor } from '@dnd-kit/core';
+
 import { useConfig } from '../../hooks/useConfig';
 import { useDragAndDrop, useLayoutSensors } from './useDragAndDrop';
 

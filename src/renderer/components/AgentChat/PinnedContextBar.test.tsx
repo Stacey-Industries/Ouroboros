@@ -7,9 +7,10 @@
  * without wiring real IPC.
  */
 
-import type { PinnedContextItem } from '../../types/electron';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { PinnedContextItem } from '../../types/electron';
 
 // ─── Mock usePinnedContext ────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ const mockRemove = vi.fn();
 let mockItems: PinnedContextItem[] = [];
 
 vi.mock('../../hooks/usePinnedContext', () => ({
+  // Stub — parameter satisfies the hook type signature but is unused in mock.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   usePinnedContext: (_sessionId: string | null) => ({
     items: mockItems,
     dismiss: mockDismiss,

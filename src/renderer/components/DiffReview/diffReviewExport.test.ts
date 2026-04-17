@@ -4,8 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildPrDescriptionMarkdown } from './diffReviewExport';
 import type { ExportableState } from './diffReviewExport';
+import { buildPrDescriptionMarkdown } from './diffReviewExport';
 import type { ReviewFile } from './types';
 
 function makeHunk(

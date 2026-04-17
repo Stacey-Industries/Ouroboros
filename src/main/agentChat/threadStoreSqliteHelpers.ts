@@ -267,12 +267,18 @@ const UPSERT_THREAD_SQL = `
     parentThreadId = excluded.parentThreadId,
     isSideChat = excluded.isSideChat`;
 
-function threadRowParams(t: AgentChatThreadRecord): unknown[] {
+function threadRowJsonFields(t: AgentChatThreadRecord): unknown[] {
   return [
-    t.id, t.workspaceRoot, t.createdAt, t.updatedAt, t.title, t.status,
     t.latestOrchestration ? JSON.stringify(t.latestOrchestration) : null,
     t.branchInfo ? JSON.stringify(t.branchInfo) : null,
     t.tags && t.tags.length > 0 ? JSON.stringify(t.tags) : null,
+  ];
+}
+
+function threadRowParams(t: AgentChatThreadRecord): unknown[] {
+  return [
+    t.id, t.workspaceRoot, t.createdAt, t.updatedAt, t.title, t.status,
+    ...threadRowJsonFields(t),
     t.pinned ? 1 : 0,
     t.deletedAt ?? null,
     t.branchName ?? null,

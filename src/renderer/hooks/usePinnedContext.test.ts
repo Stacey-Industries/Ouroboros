@@ -4,10 +4,10 @@
  * usePinnedContext.test.ts — Unit tests for the usePinnedContext hook.
  */
 
-import type { PinnedContextItem } from '../types/electron';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PinnedContextItem } from '../types/electron';
 import { usePinnedContext } from './usePinnedContext';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────

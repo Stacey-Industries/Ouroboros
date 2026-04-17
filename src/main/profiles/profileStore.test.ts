@@ -11,8 +11,9 @@ vi.mock('../logger', () => ({
 }));
 
 import type { Profile } from '@shared/types/profile';
-import { MAX_USER_PROFILES, buildProfileStore } from './profileStore';
+
 import type { ProfileStoreAdaptor } from './profileStore';
+import { buildProfileStore,MAX_USER_PROFILES } from './profileStore';
 import { BUILT_IN_PROFILES } from './rolePresets';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

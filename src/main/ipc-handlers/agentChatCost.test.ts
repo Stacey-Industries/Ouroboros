@@ -4,6 +4,8 @@
  * Tests the two handler functions directly without spinning up ipcMain.
  */
 
+/* eslint-disable security/detect-object-injection */
+
 import { describe, expect, it, vi } from 'vitest';
 
 // Stub electron app so module-level calls to app.getPath() don't throw.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SessionFolder, FolderStoreAdaptor } from './folderStore';
+import type { FolderStoreAdaptor,SessionFolder } from './folderStore';
 import { openFolderStore } from './folderStore';
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────

@@ -25,11 +25,9 @@ vi.mock('electron', () => ({
 
 // ─── Subject ──────────────────────────────────────────────────────────────────
 
-import { profileCrudApi } from './preloadSupplementalProfileApis';
-
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
-
 import type { Profile } from '../renderer/types/electron';
+import { profileCrudApi } from './preloadSupplementalProfileApis';
 
 const PROFILE: Profile = {
   id: 'user-test-1',

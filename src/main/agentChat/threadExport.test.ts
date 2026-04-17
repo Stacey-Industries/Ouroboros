@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 import { exportToHtml, exportToJson, exportToMarkdown } from './threadExport';
+import type { AgentChatMessageRecord, AgentChatThreadRecord } from './types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

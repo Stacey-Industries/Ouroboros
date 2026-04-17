@@ -4,10 +4,10 @@
  * PinnedContextCard.test.tsx — Unit tests for the collapsible pinned context card.
  */
 
-import type { PinnedContextItem, PinnedContextType } from '../../types/electron';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { PinnedContextItem, PinnedContextType } from '../../types/electron';
 import { PinnedContextCard } from './PinnedContextCard';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────

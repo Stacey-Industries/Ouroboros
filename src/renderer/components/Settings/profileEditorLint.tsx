@@ -24,7 +24,7 @@ export function useProfileLint(draft: Partial<Profile>): ProfileLintItem[] {
         .catch(() => undefined);
     }, 300);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [draft]);
 
   return lints;
