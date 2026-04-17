@@ -30,6 +30,7 @@ import {
   resolveRecentEdits,
 } from './contextSelectorHelpers'
 import { isDiffAgentAuthored, isRecentUserEdit, resolveEditReasonKind } from './contextSelectorProvenance'
+import { classifierRankCandidates, runShadowMode } from './contextSelectorRanker'
 import { getEditProvenanceStore } from './editProvenance'
 import type {
   ContextReasonKind,
@@ -56,11 +57,8 @@ export interface ContextRankingInputs {
 }
 
 export interface ContextSelectionResult {
-  liveIdeState: LiveIdeState
-  rankingInputs: ContextRankingInputs
-  rankedFiles: RankedContextFile[]
-  omittedCandidates: OmittedContextCandidate[]
-  snapshots: Record<string, ContextFileSnapshot>
+  liveIdeState: LiveIdeState; rankingInputs: ContextRankingInputs; rankedFiles: RankedContextFile[]
+  omittedCandidates: OmittedContextCandidate[]; snapshots: Record<string, ContextFileSnapshot>
 }
 
 const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
@@ -91,11 +89,7 @@ const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
 const AGENT_DIFF_WEIGHT = 12
 const PAGERANK_SCALE = 40
 
-const STOP_WORDS = new Set([
-  'a', 'an', 'and', 'are', 'be', 'build', 'by', 'current', 'do', 'edit', 'feature', 'file', 'files',
-  'fix', 'for', 'from', 'in', 'into', 'is', 'it', 'make', 'mode', 'new', 'of', 'on', 'or', 'plan',
-  'task', 'that', 'the', 'this', 'to', 'update', 'with', 'without', 'you', 'your',
-])
+const STOP_WORDS = new Set(['a', 'an', 'and', 'are', 'be', 'build', 'by', 'current', 'do', 'edit', 'feature', 'file', 'files', 'fix', 'for', 'from', 'in', 'into', 'is', 'it', 'make', 'mode', 'new', 'of', 'on', 'or', 'plan', 'task', 'that', 'the', 'this', 'to', 'update', 'with', 'without', 'you', 'your'])
 
 function addCandidateFactory(
   candidates: Map<string, MutableCandidate>,
@@ -155,11 +149,8 @@ function applyProvenanceDiffReasons(
 }
 
 interface RepoCandidateOpts {
-  candidates: Map<string, MutableCandidate>
-  addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void
-  repoFacts: RepoFacts
-  workspaceRoots: string[]
-  provenanceEnabled: boolean
+  candidates: Map<string, MutableCandidate>; addCandidate: (filePath: string, kind: ContextReasonKind, detail: string) => void
+  repoFacts: RepoFacts; workspaceRoots: string[]; provenanceEnabled: boolean
 }
 
 async function addRepoFactCandidates(opts: RepoCandidateOpts): Promise<{ recentEdits: string[]; diffFiles: string[]; diagnosticFiles: string[] }> {
@@ -280,6 +271,8 @@ interface BuildResultOpts {
   selection: NormalizedSelection; liveIdeState: LiveIdeState; recentEdits: string[]; diffFiles: string[]
   diagnosticFiles: string[]; keywords: string[]; candidates: Map<string, MutableCandidate>
   omittedCandidates: OmittedContextCandidate[]; snapshots: Map<string, ContextFileSnapshot>; repoFacts: RepoFacts
+  /** When provided, used instead of additive rankCandidates output. */
+  rankedFilesOverride?: RankedContextFile[]
 }
 
 function buildResult(o: BuildResultOpts): ContextSelectionResult {
@@ -287,7 +280,7 @@ function buildResult(o: BuildResultOpts): ContextSelectionResult {
   for (const file of o.repoFacts.gitDiff.changedFiles) {
     if (file.hunks?.length) hunksMap.set(toPathKey(file.filePath), file.hunks)
   }
-  const rankedFiles = rankCandidates(o.candidates)
+  const rankedFiles = o.rankedFilesOverride ?? rankCandidates(o.candidates)
   for (const ranked of rankedFiles) { const h = hunksMap.get(toPathKey(ranked.filePath)); if (h) ranked.hunks = h }
   return {
     liveIdeState: o.liveIdeState,
@@ -330,5 +323,11 @@ export async function selectContextFiles(options: {
   await applyKeywordReasons(candidates, snapshots, keywords)
   applyImportAdjacency(candidates, snapshots, buildSeedFiles(selection, liveIdeState, diffFiles, diagnosticFiles))
   if (pagerankEnabled) tryApplyPageRank(candidates, selection, workspaceRoots, provenanceEnabled)
-  return buildResult({ selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, repoFacts })
+  const baseOpts = { selection, liveIdeState, recentEdits, diffFiles, diagnosticFiles, keywords, candidates, omittedCandidates, snapshots, repoFacts }
+  if (cfg?.learnedRanker === true) {
+    return buildResult({ ...baseOpts, rankedFilesOverride: classifierRankCandidates(candidates, request) })
+  }
+  const additiveRanked = rankCandidates(candidates)
+  runShadowMode(additiveRanked, candidates, request)
+  return buildResult({ ...baseOpts, rankedFilesOverride: additiveRanked })
 }

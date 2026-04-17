@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./contextSelectionSupport', async () => {
   const actual = await vi.importActual<typeof import('./contextSelectionSupport')>(
@@ -61,6 +61,16 @@ vi.mock('./editProvenance', () => ({
   getEditProvenanceStore: vi.fn(() => ({
     getEditProvenance: (filePath: string) => mockProvenance.get(path.normalize(filePath)) ?? null,
   })),
+}));
+
+// ─── Mock contextSelectorRanker ──────────────────────────────────────────────
+
+const mockRunShadowMode = vi.fn();
+const mockClassifierRankCandidates = vi.fn();
+
+vi.mock('./contextSelectorRanker', () => ({
+  runShadowMode: (...args: unknown[]) => mockRunShadowMode(...args),
+  classifierRankCandidates: (...args: unknown[]) => mockClassifierRankCandidates(...args),
 }));
 
 import { selectContextFiles } from './contextSelector';
@@ -326,5 +336,112 @@ describe('contextSelector — Wave 19 semantic_match weight', () => {
     // We test behaviour: if a candidate only had semantic_match it contributes 0.
     // Direct weight-map import not needed — we verify the spec comment is honoured.
     expect(true).toBe(true); // Placeholder — weight verified in integration below
+  });
+});
+
+// ─── Wave 31 Phase D: learnedRanker flag ─────────────────────────────────────
+
+import { store } from '../config';
+
+function makeCfg(overrides: Record<string, unknown> = {}) {
+  return {
+    provenanceWeights: true,
+    pagerank: false,
+    pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 },
+    learnedRanker: false,
+    ...overrides,
+  };
+}
+
+describe('contextSelector — Wave 31 Phase D: learnedRanker flag off', () => {
+  beforeEach(() => {
+    mockRunShadowMode.mockClear();
+    mockClassifierRankCandidates.mockClear();
+    vi.mocked(store.get).mockReturnValue(makeCfg({ learnedRanker: false }));
+  });
+
+  afterEach(() => {
+    vi.mocked(store.get).mockReturnValue(makeCfg());
+  });
+
+  it('uses additive path (classifierRankCandidates not called) when flag is off', async () => {
+    const root = await createTempRoot();
+    const file = path.join(root, 'foo.ts');
+    await writeFile(file, 'export const x = 1\n');
+
+    await selectContextFiles({
+      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['foo.ts'] } },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+    });
+
+    expect(mockClassifierRankCandidates).not.toHaveBeenCalled();
+  });
+
+  it('calls runShadowMode (shadow logging) when flag is off', async () => {
+    const root = await createTempRoot();
+    const file = path.join(root, 'foo.ts');
+    await writeFile(file, 'export const x = 1\n');
+
+    await selectContextFiles({
+      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['foo.ts'] } },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+    });
+
+    expect(mockRunShadowMode).toHaveBeenCalledOnce();
+  });
+});
+
+describe('contextSelector — Wave 31 Phase D: learnedRanker flag on', () => {
+  beforeEach(() => {
+    mockRunShadowMode.mockClear();
+    mockClassifierRankCandidates.mockClear();
+    vi.mocked(store.get).mockReturnValue(makeCfg({ learnedRanker: true }));
+  });
+
+  afterEach(() => {
+    vi.mocked(store.get).mockReturnValue(makeCfg());
+  });
+
+  it('calls classifierRankCandidates (not additive) when flag is on', async () => {
+    const root = await createTempRoot();
+    const file = path.join(root, 'bar.ts');
+    await writeFile(file, 'export const y = 2\n');
+
+    mockClassifierRankCandidates.mockReturnValue([
+      { filePath: file, score: 0.9, confidence: 'high', reasons: [], snippets: [], truncationNotes: [], pagerank_score: null },
+    ]);
+
+    const result = await selectContextFiles({
+      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['bar.ts'] } },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+    });
+
+    expect(mockClassifierRankCandidates).toHaveBeenCalledOnce();
+    expect(result.rankedFiles[0]?.filePath).toBe(file);
+  });
+
+  it('does not call runShadowMode when flag is on', async () => {
+    const root = await createTempRoot();
+    const file = path.join(root, 'baz.ts');
+    await writeFile(file, 'export const z = 3\n');
+
+    mockClassifierRankCandidates.mockReturnValue([
+      { filePath: file, score: 0.9, confidence: 'high', reasons: [], snippets: [], truncationNotes: [], pagerank_score: null },
+    ]);
+
+    await selectContextFiles({
+      request: { workspaceRoots: [root], goal: 'fix', mode: 'edit', provider: 'codex', verificationProfile: 'fast',
+        contextSelection: { includedFiles: ['baz.ts'] } },
+      repoFacts: createRepoFacts(root),
+      liveIdeState: createLiveIdeState(),
+    });
+
+    expect(mockRunShadowMode).not.toHaveBeenCalled();
   });
 });
