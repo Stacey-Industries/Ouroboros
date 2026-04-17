@@ -124,12 +124,29 @@ export interface ContextGenerateResult extends IpcResult {
   context?: ProjectContext;
 }
 
+export interface ContextRankerFeature {
+  name: string;
+  weight: number;
+}
+
+export interface ContextRankerDashboard {
+  version: string;
+  trainedAt: string;
+  auc: number | null;
+  topFeatures: ContextRankerFeature[];
+}
+
+export type ContextRankerDashboardResult =
+  | { success: true; dashboard: ContextRankerDashboard }
+  | { success: false; error: string };
+
 export interface ContextAPI {
   scan: (projectRoot: string) => Promise<ContextScanResult>;
   generate: (
     projectRoot: string,
     options?: ContextGenerateOptions,
   ) => Promise<ContextGenerateResult>;
+  getRankerDashboard: () => Promise<ContextRankerDashboardResult>;
 }
 
 export interface IdeToolQuery {

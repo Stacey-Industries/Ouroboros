@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 
 import { useAgentEventsContext } from '../../contexts/AgentEventsContext';
+import { ContextRankerCard } from './ContextRankerCard';
 import { InspectorDecisionTab } from './InspectorDecisionTab';
 import { exportTraceAsHar } from './InspectorExport';
 import { InspectorTimelineTab } from './InspectorTimelineTab';
@@ -17,13 +18,14 @@ import { ResearchDashboard } from './ResearchDashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'traffic' | 'timeline' | 'decisions' | 'research';
+type TabId = 'traffic' | 'timeline' | 'decisions' | 'research' | 'context-ranker';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'traffic', label: 'Traffic' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'decisions', label: 'Decisions' },
   { id: 'research', label: 'Research' },
+  { id: 'context-ranker', label: 'Context Ranker' },
 ];
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
@@ -115,6 +117,7 @@ export function OrchestrationInspector({
         {activeTab === 'timeline' && <InspectorTimelineTab sessionId={sessionId} />}
         {activeTab === 'decisions' && <InspectorDecisionTab />}
         {activeTab === 'research' && <ResearchDashboard />}
+        {activeTab === 'context-ranker' && <ContextRankerCard />}
       </div>
     </div>
   );

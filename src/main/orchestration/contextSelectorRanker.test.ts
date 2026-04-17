@@ -151,7 +151,7 @@ describe('runShadowMode', () => {
     runShadowMode(additiveRanked, candidates, makeRequest());
 
     const call = vi.mocked(log.info).mock.calls.find(
-      (c) => c[0] === '[context-ranker] shadow',
+      (c: unknown[]) => c[0] === '[context-ranker] shadow',
     );
     expect(call).toBeDefined();
     expect((call![1] as { overlap: number }).overlap).toBeGreaterThanOrEqual(0);
@@ -184,7 +184,7 @@ describe('runShadowMode', () => {
     runShadowMode(additiveRanked, candidates, makeRequest());
 
     const errorCalls = vi.mocked(log.info).mock.calls.filter(
-      (c) => String(c[0]).includes('shadow classifier error'),
+      (c: unknown[]) => String(c[0]).includes('shadow classifier error'),
     );
     expect(errorCalls.length).toBe(1);
 

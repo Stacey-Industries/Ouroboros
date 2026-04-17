@@ -214,6 +214,7 @@ export const supplementalApis: SupplementalApis = {
     scan: (projectRoot) => ipcRenderer.invoke('context:scan', projectRoot),
     generate: (projectRoot, options) =>
       ipcRenderer.invoke('context:generate', projectRoot, options),
+    getRankerDashboard: () => ipcRenderer.invoke('context:getRankerDashboard'),
   },
 
   ideTools: {

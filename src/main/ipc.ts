@@ -15,6 +15,7 @@ import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
   cleanupConfigWatcher,
+  cleanupContextRankerDashboardHandlers,
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
   cleanupLayoutHandlers,
@@ -41,6 +42,7 @@ import {
   registerClaudeMdHandlers,
   registerConfigHandlers,
   registerContextHandlers,
+  registerContextRankerDashboardHandlers,
   registerEmbeddingHandlers,
   registerExtensionStoreHandlers,
   registerFileHandlers,
@@ -110,6 +112,7 @@ function registerCoreDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('research', () => registerResearchHandlers()),
     ...safeRegister('researchControl', () => registerResearchControlHandlers()),
     ...safeRegister('researchDashboard', () => registerResearchDashboardHandlers()),
+    ...safeRegister('contextRankerDashboard', () => registerContextRankerDashboardHandlers()),
     ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
     ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
     ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),
@@ -300,6 +303,7 @@ export function cleanupIpcHandlers(): void {
   cleanupResearchHandlers();
   cleanupResearchControlHandlers();
   cleanupResearchDashboardHandlers();
+  cleanupContextRankerDashboardHandlers();
   cleanupTelemetryHandlers();
   cleanupWorktreeHandlers();
   cleanupWorkspaceReadListHandlers();

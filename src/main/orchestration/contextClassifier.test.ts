@@ -7,7 +7,18 @@
  * tests always pass an explicit path to avoid touching the electron stub.
  */
 
+import fsPromises from 'node:fs/promises';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { ContextFeatureVec, ContextRankerWeights } from './contextClassifier';
+import {
+  getActiveWeights,
+  reloadContextWeights,
+  resetForTests,
+  score,
+} from './contextClassifier';
+import { BUNDLED_CONTEXT_WEIGHTS } from './contextClassifierDefaults';
 
 // Mock logger before importing classifier
 vi.mock('../logger', () => ({
@@ -19,17 +30,6 @@ vi.mock('node:fs/promises', () => ({
   default: { readFile: vi.fn() },
   readFile: vi.fn(),
 }));
-
-import fsPromises from 'node:fs/promises';
-
-import { BUNDLED_CONTEXT_WEIGHTS } from './contextClassifierDefaults';
-import {
-  getActiveWeights,
-  reloadContextWeights,
-  resetForTests,
-  score,
-} from './contextClassifier';
-import type { ContextFeatureVec, ContextRankerWeights } from './contextClassifier';
 
 const mockReadFile = vi.mocked(fsPromises.readFile);
 

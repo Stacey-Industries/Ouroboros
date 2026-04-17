@@ -14,6 +14,10 @@ export { registerCheckpointHandlers } from './checkpoint';
 export { registerClaudeMdHandlers } from './claudeMd';
 export { cleanupConfigWatcher, registerConfigHandlers } from './config';
 export { registerContextHandlers } from './context';
+export {
+  cleanupContextRankerDashboardHandlers,
+  registerContextRankerDashboardHandlers,
+} from './contextRankerDashboardHandlers';
 export { closeEmbeddingStore, registerEmbeddingHandlers } from './embeddingHandlers';
 export { registerExtensionStoreHandlers } from './extensionStore';
 export { cleanupFileWatchers, registerFileHandlers } from './files';
