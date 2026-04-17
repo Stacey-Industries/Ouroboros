@@ -10,7 +10,12 @@ import type { TelemetryStore } from './telemetryStore';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface OutcomeObserver {
-  noteToolUseEvent(sessionId: string, eventId: string, timestamp: number): void;
+  /**
+   * Record a post_tool_use event for correlation.
+   * @param rowId     The `events.id` returned by `store.record()` — used as FK in outcomes.
+   * @param correlationId The paired correlationId for cross-channel joins.
+   */
+  noteToolUseEvent(sessionId: string, rowId: string, correlationId: string, timestamp: number): void;
   onPtyExit(args: PtyExitArgs): void;
   onConflictSignal(args: ConflictSignalArgs): void;
   close(): void;
@@ -27,11 +32,15 @@ export interface PtyExitArgs {
 export interface ConflictSignalArgs {
   sessionId: string;
   filePath: string;
+  /** The actual events.id row id (not a correlationId) for the FK reference. */
+  eventId: string;
   correlationId: string;
 }
 
 interface RecentToolUse {
+  /** Actual events.id row — valid FK for outcomes.event_id. */
   eventId: string;
+  correlationId: string;
   timestamp: number;
 }
 
@@ -67,11 +76,10 @@ function evictOldestEntry(map: Map<string, RecentToolUse>): void {
 function implNoteToolUse(
   map: Map<string, RecentToolUse>,
   sessionId: string,
-  eventId: string,
-  timestamp: number,
+  entry: RecentToolUse,
 ): void {
   if (map.size >= MAX_ENTRIES) evictOldestEntry(map);
-  map.set(sessionId, { eventId, timestamp });
+  map.set(sessionId, entry);
 }
 
 function implOnPtyExit(
@@ -84,7 +92,10 @@ function implOnPtyExit(
   if (!recent) return;
   const deltaMs = Date.now() - recent.timestamp;
   const confidence = computeConfidence(deltaMs);
-  log.info(`[outcomeObserver] exit corr session=${sessionId} eventId=${recent.eventId} delta=${deltaMs}ms confidence=${confidence}`);
+  log.info(
+    `[outcomeObserver] exit corr session=${sessionId} eventId=${recent.eventId} ` +
+    `correlationId=${recent.correlationId} delta=${deltaMs}ms confidence=${confidence}`,
+  );
   try {
     store.recordOutcome({
       eventId: recent.eventId,
@@ -95,18 +106,20 @@ function implOnPtyExit(
       confidence,
     });
   } catch (err) {
-    log.error('[outcomeObserver] recordOutcome error (exit):', err);
+    log.warn('[outcomeObserver] recordOutcome error (exit):', err);
   }
   map.delete(sessionId);
 }
 
 function implOnConflictSignal(store: TelemetryStore, args: ConflictSignalArgs): void {
-  const { filePath, correlationId } = args;
-  log.info(`[outcomeObserver] conflict corr correlationId=${correlationId} file=${filePath}`);
+  const { filePath, eventId, correlationId } = args;
+  log.info(
+    `[outcomeObserver] conflict corr eventId=${eventId} correlationId=${correlationId} file=${filePath}`,
+  );
   try {
-    store.recordOutcome({ eventId: correlationId, kind: 'conflict', signals: [filePath], confidence: 'high' });
+    store.recordOutcome({ eventId, kind: 'conflict', signals: [filePath], confidence: 'high' });
   } catch (err) {
-    log.error('[outcomeObserver] recordOutcome error (conflict):', err);
+    log.warn('[outcomeObserver] recordOutcome error (conflict):', err);
   }
 }
 
@@ -115,7 +128,8 @@ function implOnConflictSignal(store: TelemetryStore, args: ConflictSignalArgs): 
 export function createOutcomeObserver(store: TelemetryStore): OutcomeObserver {
   const lastToolUse = new Map<string, RecentToolUse>();
   return {
-    noteToolUseEvent: (sid, eid, ts) => implNoteToolUse(lastToolUse, sid, eid, ts),
+    noteToolUseEvent: (sid, rowId, correlationId, ts) =>
+      implNoteToolUse(lastToolUse, sid, { eventId: rowId, correlationId, timestamp: ts }),
     onPtyExit: (args) => implOnPtyExit(lastToolUse, store, args),
     onConflictSignal: (args) => implOnConflictSignal(store, args),
     close: () => lastToolUse.clear(),

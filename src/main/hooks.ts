@@ -11,6 +11,7 @@ import {
 } from './approvalManager';
 import { getChatLaunchesInFlight } from './hooksChatLaunch';
 import { tapContextOutcomeObserver } from './hooksContextOutcome';
+import { pairCorrelationId } from './hooksCorrelationPairing';
 import {
   drainQueue,
   evictOrphanedSessions as evictOrphanedSessionsLogic,
@@ -270,11 +271,13 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
     return;
   }
 
+  pairCorrelationId(rawPayload);
   shadowRouteHookEvent(rawPayload);
-  getTelemetryStore()?.record(rawPayload);
+  const rowId = getTelemetryStore()?.record(rawPayload) ?? '';
   if (rawPayload.type === 'post_tool_use') {
     getOutcomeObserver()?.noteToolUseEvent(
       rawPayload.sessionId,
+      rowId,
       rawPayload.correlationId ?? '',
       rawPayload.timestamp,
     );
@@ -322,10 +325,11 @@ export function stopHooksServer(): Promise<void> {
 /** Dispatch a synthetic hook event (from chat orchestration). Skips approval — chat sessions manage permissions. */
 export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   const payload: HookPayload = { ...rawPayload, ideSpawned: true };
-  getTelemetryStore()?.record(payload);
+  const rowId = getTelemetryStore()?.record(payload) ?? '';
   if (payload.type === 'post_tool_use') {
     getOutcomeObserver()?.noteToolUseEvent(
       payload.sessionId,
+      rowId,
       payload.correlationId ?? '',
       payload.timestamp,
     );

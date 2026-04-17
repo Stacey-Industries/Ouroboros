@@ -56,7 +56,8 @@ export interface QueryEventsOpts {
 }
 
 export interface TelemetryStore {
-  record(payload: HookPayload): void;
+  /** Records a hook event and returns the generated row id. Callers that don't need it may ignore it. */
+  record(payload: HookPayload): string;
   recordOutcome(opts: RecordOutcomeOpts): void;
   recordTrace(opts: RecordTraceOpts): void;
   queryEvents(opts?: QueryEventsOpts): TelemetryEvent[];
@@ -134,19 +135,19 @@ function startFlushInterval(state: StoreState): void {
 
 // ─── Record helpers ───────────────────────────────────────────────────────────
 
-function enqueueEvent(state: StoreState, payload: HookPayload): void {
-  if (!isFlagEnabled()) return;
-  const correlationId =
-    (payload as HookPayload & { correlationId?: string }).correlationId ??
-    crypto.randomUUID();
+function enqueueEvent(state: StoreState, payload: HookPayload): string {
+  const id = crypto.randomUUID();
+  if (!isFlagEnabled()) return id;
+  const correlationId = payload.correlationId ?? crypto.randomUUID();
   state.queue.push({
-    id: crypto.randomUUID(),
+    id,
     type: payload.type,
     sessionId: payload.sessionId,
     correlationId,
     timestamp: payload.timestamp,
     payload: JSON.stringify(payload),
   });
+  return id;
 }
 
 function writeOutcome(state: StoreState, opts: RecordOutcomeOpts): void {
@@ -164,7 +165,7 @@ function writeOutcome(state: StoreState, opts: RecordOutcomeOpts): void {
       opts.confidence ?? 'low',
     );
   } catch (err) {
-    log.error('[telemetry] recordOutcome error', err);
+    log.warn('[telemetry] outcome insert failed', err);
   }
 }
 
@@ -261,7 +262,7 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
   clearInterval(state.intervalHandle);
   startFlushInterval(state);
   return {
-    record: (payload) => enqueueEvent(state, payload),
+    record: (payload) => enqueueEvent(state, payload), // returns row id
     recordOutcome: (opts) => writeOutcome(state, opts),
     recordTrace: (opts) => writeTrace(state, opts),
     queryEvents: (opts = {}) => runQueryEvents(state, opts),

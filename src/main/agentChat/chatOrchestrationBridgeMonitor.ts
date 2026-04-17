@@ -6,6 +6,7 @@
 
 import type { HookPayload } from '../hooks';
 import { dispatchSyntheticHookEvent, endChatSessionLaunch } from '../hooks';
+import { mintCorrelationId, resolveCorrelationId } from '../hooksCorrelationPairing';
 import log from '../logger';
 import { registerSessionTrace } from '../orchestration/contextOutcomeObserver';
 import type {
@@ -105,11 +106,14 @@ export function emitMonitorToolStart(
   const input: Record<string, unknown> = {};
   if (toolActivity.filePath) input.file_path = toolActivity.filePath;
   if (toolActivity.inputSummary) input.description = toolActivity.inputSummary;
+  const toolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+  const correlationId = mintCorrelationId(ctx.threadId, toolCallId);
   dispatchSyntheticHookEvent({
     type: 'pre_tool_use',
     sessionId: ctx.threadId,
     toolName: toolActivity.name,
-    toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
+    toolCallId,
+    correlationId,
     input,
     timestamp: now,
   } as HookPayload);
@@ -121,11 +125,14 @@ export function emitMonitorToolEnd(
   opts: { toolName: string; now: number; output?: string },
 ): void {
   if (!ctx.monitorStartEmitted) return;
+  const toolCallId = `stream-${ctx.sessionId}-${blockIndex}`;
+  const correlationId = resolveCorrelationId(ctx.threadId, toolCallId);
   dispatchSyntheticHookEvent({
     type: 'post_tool_use',
     sessionId: ctx.threadId,
     toolName: opts.toolName,
-    toolCallId: `stream-${ctx.sessionId}-${blockIndex}`,
+    toolCallId,
+    correlationId,
     timestamp: opts.now,
     output: opts.output ? { content: opts.output } : undefined,
   } as HookPayload);
@@ -151,11 +158,15 @@ export function emitMonitorSubTool(
   const input: Record<string, unknown> = {};
   if (sub.filePath) input.file_path = sub.filePath;
   if (sub.inputSummary) input.description = sub.inputSummary;
+  const correlationId = type === 'pre_tool_use'
+    ? mintCorrelationId(ctx.threadId, toolCallId)
+    : resolveCorrelationId(ctx.threadId, toolCallId);
   dispatchSyntheticHookEvent({
     type,
     sessionId: ctx.threadId,
     toolName: sub.name || 'Tool',
     toolCallId,
+    correlationId,
     input: type === 'pre_tool_use' ? input : undefined,
     output: sub.output ? { content: sub.output } : undefined,
     timestamp: now,
