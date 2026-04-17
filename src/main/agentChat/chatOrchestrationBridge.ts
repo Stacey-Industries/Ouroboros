@@ -2,6 +2,9 @@ import { randomUUID } from 'crypto';
 
 import { getConfigValue } from '../config';
 import log from '../logger';
+import { detectCorrection } from '../research/correctionDetector';
+import { getCorrectionStore } from '../research/correctionStore';
+import { getCorrectionWriter } from '../research/correctionWriter';
 import { revertToSnapshotWithBridge } from './chatOrchestrationBridgeGit';
 import { stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
 import { handleProviderProgress } from './chatOrchestrationBridgeProgress';
@@ -118,6 +121,20 @@ function buildEarlyReturnResult(
   } as AgentChatSendResult;
 }
 
+/** Fire-and-forget correction capture — no control-flow impact on the send. */
+function captureCorrection(userMessage: string, sessionId: string): void {
+  const hit = detectCorrection(userMessage);
+  if (!hit) return;
+  getCorrectionStore().noteCorrection(sessionId, hit.library);
+  getCorrectionWriter()?.append({
+    library: hit.library,
+    userCorrectionText: userMessage,
+    sessionId,
+    phrasingMatch: hit.phrasingMatch,
+    confidence: hit.confidence,
+  });
+}
+
 async function sendMessageWithBridge(
   runtime: AgentChatBridgeRuntime,
   request: AgentChatSendMessageRequest,
@@ -138,6 +155,8 @@ async function sendMessageWithBridge(
       resolved: resolveSendOptions(runtime.getSettings(), request, prevAssistant),
       threadStore: runtime.threadStore,
     });
+
+    captureCorrection(request.content.trim(), pending.thread.id);
 
     void executePendingSend({
       orchestration: runtime.orchestration,

@@ -373,7 +373,7 @@ export function closeEditProvenance(): void {
  * does not block window creation (Wave 29.5 M2).
  */
 export function scheduleJsonlRetentionPurge(userDataPath: string): void {
-  const basenames = ['context-decisions', 'context-outcomes', 'research-outcomes'];
+  const basenames = ['context-decisions', 'context-outcomes', 'research-outcomes', 'corrections'];
   setImmediate(() => {
     for (const base of basenames) {
       migrateLegacyJsonl(userDataPath, base)
