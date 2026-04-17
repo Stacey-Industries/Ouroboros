@@ -9,6 +9,7 @@
  * All functions are pure — no I/O, no side effects.
  */
 
+import { getConfigValue } from '../config';
 import { getModelCutoffDate } from './modelTrainingCutoffs';
 import { isStale } from './stalenessMatrix';
 import type { TriggerContext, TriggerDecision } from './triggerEvaluator';
@@ -67,6 +68,27 @@ export function evaluateCorrectionLayer(library: string, ctx: TriggerContext): L
   return { fire: true, reason: 'enhanced-library', triggerSource: 'correction', library };
 }
 
+// ─── Confidence floor ─────────────────────────────────────────────────────────
+
+/** Numeric map for confidence string comparison. */
+const CONFIDENCE_VALUE: Record<'high' | 'medium' | 'low', number> = {
+  high: 1.0,
+  medium: 0.5,
+  low: 0.25,
+};
+
+/** Read the staleness confidence floor from config at call time. */
+function resolveConfidenceFloor(): number {
+  try {
+    const cfg = getConfigValue('researchSettings' as keyof import('../config').AppConfig) as
+      | { stalenessConfidenceFloor?: number }
+      | undefined;
+    return cfg?.stalenessConfidenceFloor ?? 0.0;
+  } catch {
+    return 0.0;
+  }
+}
+
 // ─── Rule layer ───────────────────────────────────────────────────────────────
 
 /**
@@ -76,6 +98,9 @@ export function evaluateCorrectionLayer(library: string, ctx: TriggerContext): L
  * Stale + cached  → cache-hit (don't fire; caller aggregates)
  * Stale + !cached → fire with reason:'staleness-match', triggerSource:'rule'
  * Not stale       → undefined (no opinion)
+ *
+ * Phase I: curated entries whose confidence maps below the config
+ * `stalenessConfidenceFloor` are treated as not-stale.
  */
 export function evaluateRuleLayer(
   library: string,
@@ -85,6 +110,15 @@ export function evaluateRuleLayer(
   const result = isStale(library, undefined, modelCutoffDate);
   if (!result.stale) {
     return undefined;
+  }
+  const floor = resolveConfidenceFloor();
+  if (floor > 0.0 && result.entry !== null) {
+    const confidence = result.entry.confidence as 'high' | 'medium' | 'low';
+    // eslint-disable-next-line security/detect-object-injection -- confidence is a string literal from the type union
+    const confidenceValue = CONFIDENCE_VALUE[confidence] ?? 0.25;
+    if (confidenceValue < floor) {
+      return undefined; // below floor — treat as not-stale
+    }
   }
   if (ctx.cacheCheck(library)) {
     return { fire: false, reason: 'cache-hit', triggerSource: 'none', library };

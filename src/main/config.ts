@@ -392,10 +392,21 @@ export interface AppConfig {
   workspaceProfileDefaults?: Record<string, string>;
   /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
   approvalMemory?: import('./approvalMemory').ApprovalMemoryStore;
-  /** Wave 30 Phase G — research auto-firing global defaults */
+  /** Wave 30 Phase G — research auto-firing global defaults.
+   *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {
     globalEnabled?: boolean;
     defaultMode?: 'off' | 'conservative' | 'aggressive';
+    /** Staleness confidence floor (0.0–1.0). Default 0.0 (include all). */
+    stalenessConfidenceFloor?: number;
+    /** When false, factClaimPauseOrchestrator short-circuits. Default true. */
+    factClaimEnabled?: boolean;
+    /** Minimum pattern confidence for detectFactClaims. Default 'medium'. */
+    factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
+    /** When true, preToolResearchOrchestrator is telemetry-only. Default false. */
+    preEditDryRunOnly?: boolean;
+    /** Promise.race timeout ms for factClaimPauseOrchestrator. Default 800. */
+    maxLatencyMs?: number;
   };
 }
 

@@ -91,6 +91,29 @@ function resolveGlobalFlag(): boolean {
   }
 }
 
+function resolveResearchSettings(): {
+  factClaimEnabled: boolean;
+  factClaimMinPatternConfidence: 'high' | 'medium' | 'low';
+  maxLatencyMs: number;
+} {
+  try {
+    const cfg = getConfigValue('researchSettings' as keyof import('../config').AppConfig) as
+      | {
+          factClaimEnabled?: boolean;
+          factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
+          maxLatencyMs?: number;
+        }
+      | undefined;
+    return {
+      factClaimEnabled: cfg?.factClaimEnabled ?? true,
+      factClaimMinPatternConfidence: cfg?.factClaimMinPatternConfidence ?? 'medium',
+      maxLatencyMs: cfg?.maxLatencyMs ?? 800,
+    };
+  } catch {
+    return { factClaimEnabled: true, factClaimMinPatternConfidence: 'medium', maxLatencyMs: 800 };
+  }
+}
+
 function recordTraceSafe(
   eventType: string,
   payload: Record<string, unknown>,
@@ -180,6 +203,28 @@ async function handleMatch(
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+async function processMatches(
+  input: FactClaimPauseInput,
+  knobs: ReturnType<typeof resolveResearchSettings>,
+  effectiveLatency: number,
+  deps: MatchHandlerDeps,
+): Promise<void> {
+  const { sessionId, modelId, chunk, emitStatusChunk } = input;
+  const matches = detectFactClaims(chunk, knobs.factClaimMinPatternConfidence);
+  for (const match of matches) {
+    const modelCutoff = getModelCutoffDate(modelId);
+    const staleness = isStale(match.library, undefined, modelCutoff);
+    if (!staleness.stale) continue;
+    if (isCached(match.library)) continue;
+    if (isInFlight(sessionId, match.library)) continue;
+    await handleMatch(
+      { sessionId, modelId, library: match.library, confidence: match.confidence, offset: match.offset, emitStatusChunk, maxLatencyMs: effectiveLatency },
+      deps,
+    );
+    return; // only one match per chunk
+  }
+}
+
 /**
  * Check a streamed text chunk for fact-shaped claims. If a stale, uncached,
  * not-in-flight library is detected, emits a status chunk and awaits research
@@ -190,44 +235,20 @@ async function handleMatch(
  */
 export async function maybePauseForFactClaim(input: FactClaimPauseInput): Promise<void> {
   try {
-    const { sessionId, modelId, chunk, emitStatusChunk, maxLatencyMs = 800 } = input;
+    const { sessionId } = input;
+    const knobs = resolveResearchSettings();
+    const effectiveLatency = input.maxLatencyMs ?? knobs.maxLatencyMs;
+    const mode = getResearchMode(sessionId);
 
-    const matches = detectFactClaims(chunk);
-    if (matches.length === 0) return;
+    if (mode === 'off') return;
+    if (!knobs.factClaimEnabled && mode !== 'aggressive') {
+      recordTraceSafe('fact-claim-disabled', { sessionId }, sessionId);
+      return;
+    }
 
     const globalFlag = resolveGlobalFlag();
-
-    const deps: MatchHandlerDeps = {
-      runResearch: researchSubagent.runResearch,
-      isCachedFn: isCached,
-      globalFlag,
-    };
-
-    // Process only the first match per chunk to avoid fan-out latency accumulation
-    for (const match of matches) {
-      const mode = getResearchMode(sessionId);
-      if (mode === 'off') return;
-
-      const modelCutoff = getModelCutoffDate(modelId);
-      const staleness = isStale(match.library, undefined, modelCutoff);
-      if (!staleness.stale) continue;
-      if (isCached(match.library)) continue;
-      if (isInFlight(sessionId, match.library)) continue;
-
-      await handleMatch(
-        {
-          sessionId,
-          modelId,
-          library: match.library,
-          confidence: match.confidence,
-          offset: match.offset,
-          emitStatusChunk,
-          maxLatencyMs,
-        },
-        deps,
-      );
-      return; // only one match per chunk
-    }
+    const deps: MatchHandlerDeps = { runResearch: researchSubagent.runResearch, isCachedFn: isCached, globalFlag };
+    await processMatches(input, knobs, effectiveLatency, deps);
   } catch (e) {
     console.warn('[fact-claim]', e);
   }

@@ -15,6 +15,7 @@ import {
   claudeSectionSectionDescriptionStyle,
 } from './claudeSectionContentStyles';
 import { ToggleSection } from './ClaudeSectionControls';
+import { ResearchSettingsAdvanced } from './ResearchSettingsAdvanced';
 import { SectionLabel } from './settingsStyles';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -162,6 +163,11 @@ export function ResearchSettings({ draft, onChange }: ResearchSettingsProps): Re
           Note: per-session Aggressive mode (Ctrl+Alt+R in chat) can enable research for a single session even when the global toggle is off.
         </p>
       )}
+
+      <ResearchSettingsAdvanced
+        settings={settings}
+        onUpdate={(patch) => updateSettings(patch)}
+      />
     </div>
   );
 }

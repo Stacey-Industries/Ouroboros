@@ -244,8 +244,8 @@ export interface AppConfig {
   agentic?: { subagentUx?: boolean };
   /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
   review?: { enhanced?: boolean };
-  /** Wave 30 Phase G — research auto-firing global defaults */
-  researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive' };
+  /** Wave 30 Phases G+I — research auto-firing defaults + threshold knobs. */
+  researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
 }
 
 export interface ContextLayerConfig {

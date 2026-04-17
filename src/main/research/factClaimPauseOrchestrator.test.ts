@@ -322,3 +322,137 @@ describe('maybePauseForFactClaim', () => {
     expect(emitStatusChunk).not.toHaveBeenCalled();
   });
 });
+
+// ─── Phase I: threshold knob tests ───────────────────────────────────────────
+
+describe('maybePauseForFactClaim — Phase I knobs', () => {
+  beforeEach(() => {
+    resetInFlightForTests();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    resetInFlightForTests();
+  });
+
+  /**
+   * Set up mocks where factClaimEnabled and maxLatencyMs come from researchSettings,
+   * while globalFlag comes from research.auto.
+   */
+  function setupWithKnobs(opts: {
+    globalFlag?: boolean;
+    mode?: 'off' | 'conservative' | 'aggressive';
+    factClaimEnabled?: boolean;
+    maxLatencyMs?: number;
+  }) {
+    const {
+      globalFlag = true,
+      mode = 'conservative',
+      factClaimEnabled = true,
+      maxLatencyMs = 800,
+    } = opts;
+
+    vi.mocked(detectFactClaims).mockReturnValue([makeMatch()]);
+    vi.mocked(getResearchMode).mockReturnValue(mode);
+    vi.mocked(getModelCutoffDate).mockReturnValue('2025-09-01');
+
+    // getConfigValue is called with 'research' key for globalFlag
+    // and with 'researchSettings' key for knobs.
+    // The mock can't distinguish keys, so we return an object that satisfies both.
+    vi.mocked(getConfigValue).mockReturnValue({
+      auto: globalFlag,
+      factClaimEnabled,
+      factClaimMinPatternConfidence: 'medium',
+      maxLatencyMs,
+    } as never);
+
+    mockStaleLibrary();
+    mockCacheMiss();
+  }
+
+  it('factClaimEnabled=false + conservative → records fact-claim-disabled, no fire', async () => {
+    setupWithKnobs({ globalFlag: true, mode: 'conservative', factClaimEnabled: false });
+    const { recordTrace } = mockTelemetry();
+    const emitStatusChunk = vi.fn();
+
+    await maybePauseForFactClaim({
+      sessionId: 'knob-session-1',
+      modelId: 'claude-sonnet-4-6',
+      chunk: 'z.string()',
+      emitStatusChunk,
+    });
+
+    expect(researchSubagent.runResearch).not.toHaveBeenCalled();
+    expect(emitStatusChunk).not.toHaveBeenCalled();
+    expect(recordTrace).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'fact-claim-disabled' }),
+    );
+  });
+
+  it('factClaimEnabled=false + aggressive → still fires (aggressive overrides disabled)', async () => {
+    setupWithKnobs({ globalFlag: true, mode: 'aggressive', factClaimEnabled: false });
+    mockTelemetry();
+    vi.mocked(researchSubagent.runResearch).mockResolvedValue({ summary: 'ok' } as never);
+
+    const emitStatusChunk = vi.fn();
+    await maybePauseForFactClaim({
+      sessionId: 'knob-session-2',
+      modelId: 'claude-sonnet-4-6',
+      chunk: 'z.string()',
+      emitStatusChunk,
+    });
+
+    expect(researchSubagent.runResearch).toHaveBeenCalled();
+    expect(emitStatusChunk).toHaveBeenCalledWith('_checking zod…_');
+  });
+
+  it('maxLatencyMs=100 from config → honors the 100ms deadline', async () => {
+    setupWithKnobs({ globalFlag: true, mode: 'conservative', maxLatencyMs: 100 });
+    const { recordTrace } = mockTelemetry();
+
+    // Research takes 300ms — well over the 100ms deadline
+    vi.mocked(researchSubagent.runResearch).mockReturnValue(
+      new Promise((resolve) => setTimeout(() => resolve({ summary: 'late' } as never), 300)),
+    );
+
+    const start = Date.now();
+    const emitStatusChunk = vi.fn();
+    await maybePauseForFactClaim({
+      sessionId: 'knob-session-3',
+      modelId: 'claude-sonnet-4-6',
+      chunk: 'z.string()',
+      emitStatusChunk,
+    });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(250); // well within with margin
+    expect(recordTrace).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'fact-claim-timeout' }),
+    );
+  }, 2000);
+
+  it('caller-supplied maxLatencyMs overrides config value', async () => {
+    // Config says 800ms, caller passes 50ms
+    setupWithKnobs({ globalFlag: true, mode: 'conservative', maxLatencyMs: 800 });
+    const { recordTrace } = mockTelemetry();
+
+    vi.mocked(researchSubagent.runResearch).mockReturnValue(
+      new Promise((resolve) => setTimeout(() => resolve({ summary: 'late' } as never), 300)),
+    );
+
+    const start = Date.now();
+    await maybePauseForFactClaim({
+      sessionId: 'knob-session-4',
+      modelId: 'claude-sonnet-4-6',
+      chunk: 'z.string()',
+      emitStatusChunk: vi.fn(),
+      maxLatencyMs: 50, // caller override
+    });
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(200);
+    expect(recordTrace).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'fact-claim-timeout' }),
+    );
+  }, 2000);
+});

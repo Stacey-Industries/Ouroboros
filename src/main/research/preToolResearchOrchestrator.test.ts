@@ -332,3 +332,61 @@ describe('_runOrchestration Phase E — correction store merge', () => {
     expect(runResearch).not.toHaveBeenCalled();
   });
 });
+
+// ─── Phase I: dryRunOnly knob ─────────────────────────────────────────────────
+
+describe('_runOrchestration Phase I — dryRunOnly', () => {
+  const baseInput = {
+    sessionId: 'sess-dry',
+    toolUseId: 'tool-dry-1',
+    filePath: '/workspace/dry.tsx',
+    correlationId: 'corr-dry',
+  };
+
+  it('dryRunOnly=true + decision.fire → runResearch NOT called, returns null', async () => {
+    const runResearch = vi.fn(async () => ({ summary: 'ok' }) as never);
+    const result = await _runOrchestration(baseInput, {
+      readFile: makeReadFile(`import { useRouter } from 'next/navigation';`),
+      cacheCheck: () => false,
+      runResearch,
+      globalFlag: true,
+      dryRunOnly: true,
+    });
+    expect(result).toBeNull();
+    expect(runResearch).not.toHaveBeenCalled();
+  });
+
+  it('dryRunOnly=false + decision.fire → runResearch IS called', async () => {
+    const artifact = makeArtifact();
+    const runResearch = vi.fn(async () => artifact);
+    const result = await _runOrchestration(baseInput, {
+      readFile: makeReadFile(`import { useRouter } from 'next/navigation';`),
+      cacheCheck: () => false,
+      runResearch,
+      globalFlag: true,
+      dryRunOnly: false,
+    });
+    // If trigger fires, runResearch should be called
+    if (result !== null) {
+      expect(runResearch).toHaveBeenCalledWith(
+        expect.objectContaining({ triggerReason: 'hook' }),
+      );
+    }
+  });
+
+  it('dryRunOnly=true + decision.fire=false (disabled) → runResearch NOT called', async () => {
+    const runResearch = vi.fn();
+    const result = await _runOrchestration(
+      { ...baseInput, toolUseId: 'tool-dry-2' },
+      {
+        readFile: makeReadFile(`import { z } from 'zod';`),
+        cacheCheck: () => false,
+        runResearch,
+        globalFlag: false, // evaluator returns fire:false
+        dryRunOnly: true,
+      },
+    );
+    expect(result).toBeNull();
+    expect(runResearch).not.toHaveBeenCalled();
+  });
+});

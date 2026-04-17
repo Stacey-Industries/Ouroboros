@@ -6,6 +6,8 @@
  * indicated. Never blocks the tool call. Never throws.
  */
 
+import crypto from 'node:crypto';
+
 import { app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
@@ -120,6 +122,17 @@ function resolveGlobalFlag(): boolean {
   }
 }
 
+function resolveDryRunOnly(): boolean {
+  try {
+    const cfg = getConfigValue('researchSettings' as keyof import('../config').AppConfig) as
+      | { preEditDryRunOnly?: boolean }
+      | undefined;
+    return cfg?.preEditDryRunOnly ?? false;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Core logic (separated for testability) ───────────────────────────────────
 
 interface OrchestratorDeps {
@@ -129,6 +142,8 @@ interface OrchestratorDeps {
   globalFlag?: boolean;
   /** Injected for tests — defaults to the module-level getCorrectionStore() singleton. */
   correctionStore?: Pick<CorrectionStore, 'getLibraries'>;
+  /** Phase I: when true, records dry-run telemetry but skips runResearch. */
+  dryRunOnly?: boolean;
 }
 
 function mergeEnhancedLibraries(
@@ -149,6 +164,7 @@ interface ResolvedDeps {
   runResearch: typeof researchSubagent.runResearch;
   globalFlag: boolean;
   store: Pick<CorrectionStore, 'getLibraries'>;
+  dryRunOnly: boolean;
 }
 
 function resolveDeps(deps: OrchestratorDeps): ResolvedDeps {
@@ -159,14 +175,35 @@ function resolveDeps(deps: OrchestratorDeps): ResolvedDeps {
     runResearch: deps.runResearch ?? researchSubagent.runResearch,
     globalFlag: deps.globalFlag ?? resolveGlobalFlag(),
     store: deps.correctionStore ?? getCorrectionStore(),
+    dryRunOnly: deps.dryRunOnly ?? resolveDryRunOnly(),
   };
+}
+
+function recordDryRunTrace(
+  input: PreToolResearchInput,
+  library: string,
+  decision: TriggerDecision,
+): void {
+  try {
+    const store2 = getTelemetryStore();
+    if (!store2) return;
+    store2.recordTrace({
+      id: crypto.randomUUID(),
+      traceId: input.correlationId ?? crypto.randomUUID(),
+      sessionId: input.sessionId,
+      phase: 'pre-tool-research-dryrun',
+      payload: { library, decision },
+    });
+  } catch {
+    // swallow — telemetry must never affect the hook pipeline
+  }
 }
 
 export async function _runOrchestration(
   input: PreToolResearchInput,
   deps: OrchestratorDeps = {},
 ): Promise<unknown> {
-  const { readFile, cacheCheckFn, runResearch, globalFlag, store } = resolveDeps(deps);
+  const { readFile, cacheCheckFn, runResearch, globalFlag, store, dryRunOnly } = resolveDeps(deps);
 
   const content = await readFile(input.filePath);
   if (content === null) return null;
@@ -181,7 +218,6 @@ export async function _runOrchestration(
 
   const ctx = {
     dirtyFiles: [{ path: input.filePath, imports }],
-    // TODO(wave-30-J): thread modelId from session state once exposed.
     modelId: input.modelId,
     sessionFlags: { mode: sessionFlags.mode, enhancedLibraries },
     cacheCheck: cacheCheckFn,
@@ -192,8 +228,13 @@ export async function _runOrchestration(
   if (!decision.fire) return null;
 
   const library = decision.library ?? '';
-  recordTraceSafe(decision, library, input.correlationId);
 
+  if (dryRunOnly) {
+    recordDryRunTrace(input, library, decision);
+    return null;
+  }
+
+  recordTraceSafe(decision, library, input.correlationId);
   return runResearch({ topic: library, library, sessionId: input.sessionId, triggerReason: 'hook' });
 }
 
