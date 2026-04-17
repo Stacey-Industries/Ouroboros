@@ -6,6 +6,8 @@ import type { CSSProperties } from 'react';
 import React from 'react';
 
 import type { AppConfig } from '../../types/electron';
+import type { ContextSettings } from './AgentContextPacketSection';
+import { AgentContextPacketSection } from './AgentContextPacketSection';
 import {
   claudeSectionBudgetInputStyle,
   claudeSectionHeaderTextStyle,
@@ -208,6 +210,7 @@ export function AgentSection({
 }: AgentSectionProps): React.ReactElement {
   const agentChatSettings = draft.agentChatSettings ?? {};
   const contextLayerSettings = draft.contextLayer ?? {};
+  const contextSettings = draft.context ?? {};
   const routerSettings = { ...DEFAULT_ROUTER_SETTINGS, ...(draft.routerSettings ?? {}) };
   const updateAgentChat = <K extends keyof AgentChatSettings>(field: K, value: AgentChatSettings[K]) => {
     onChange('agentChatSettings', { ...agentChatSettings, [field]: value });
@@ -218,12 +221,16 @@ export function AgentSection({
   const updateRouterSettings = <K extends keyof RouterSettings>(field: K, value: RouterSettings[K]) => {
     onChange('routerSettings', { ...routerSettings, [field]: value });
   };
+  const updateContext = <K extends keyof ContextSettings>(field: K, value: ContextSettings[K]) => {
+    onChange('context', { ...contextSettings, [field]: value });
+  };
 
   return (
     <div style={claudeSectionRootStyle}>
       <AgentChatSettingsGroup settings={agentChatSettings} updateSetting={updateAgentChat} />
       <RouterSettingsGroup settings={routerSettings} updateSetting={updateRouterSettings} />
       <ContextLayerSettingsGroup settings={contextLayerSettings} updateSetting={updateContextLayer} />
+      <AgentContextPacketSection contextSettings={contextSettings} updateContext={updateContext} />
       <AgentFeaturesGroup draft={draft} onChange={onChange} />
     </div>
   );

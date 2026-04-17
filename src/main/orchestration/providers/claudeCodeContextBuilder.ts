@@ -4,10 +4,13 @@
  */
 import path from 'path'
 
+import { getConfigValue } from '../../config'
 import { getModelBudgets } from '../contextPacketBuilderSupport'
 import type { ContextPacket } from '../types'
 import type { ProviderLaunchContext, ProviderResumeContext } from './providerAdapter'
 import type { StreamJsonToolUseBlock } from './streamJsonTypes'
+
+const LEAN_MAX_FILES = 6
 
 export function buildCurrentFocusSection(packet: ContextPacket): string {
   const ide = packet.liveIdeState
@@ -54,11 +57,12 @@ export function buildWorkspaceStateSection(packet: ContextPacket): string {
   return lines.join('\n')
 }
 
-export function buildRelevantCodeSection(packet: ContextPacket, model: string): string {
+export function buildRelevantCodeSection(packet: ContextPacket, model: string, maxFilesOverride?: number): string {
   const budgets = getModelBudgets(model)
   const maxSnippetChars = model.includes('opus') ? 4000 : 2000
+  const fileLimit = maxFilesOverride !== undefined ? maxFilesOverride : budgets.maxFiles
   const lines: string[] = ['<relevant_code>']
-  for (const file of packet.files.slice(0, budgets.maxFiles)) {
+  for (const file of packet.files.slice(0, fileLimit)) {
     const reasons = file.reasons.map((r) => r.detail).slice(0, 3).join('; ')
     lines.push(`<file path="${file.filePath}" score="${file.score}" confidence="${file.confidence}" reasons="${reasons}">`)
     for (const snippet of file.snippets) {
@@ -131,20 +135,30 @@ export function buildTerminalSection(packet: ContextPacket): string {
   return lines.join('\n')
 }
 
-export function buildXmlContextBlock(context: ProviderLaunchContext | ProviderResumeContext, model: string): string {
-  const packet = context.contextPacket
-  if (!packet) return ''
-  const sections: string[] = []
-  // Pinned context injected first — prefix-cacheable, appears before file candidates
-  if (packet.pinnedContext) sections.push('<pinned_context>\n' + packet.pinnedContext + '</pinned_context>')
-  sections.push('<ide_context>')
+function resolvePacketMode(): 'full' | 'lean' {
+  return getConfigValue('context')?.packetMode ?? 'full'
+}
+
+function buildXmlSections(packet: ContextPacket, model: string, isLean: boolean): string[] {
+  const sections: string[] = ['<ide_context>']
   sections.push(buildCurrentFocusSection(packet))
   sections.push(buildWorkspaceStateSection(packet))
-  sections.push(buildRelevantCodeSection(packet, model))
-  sections.push(buildProjectStructureSection(packet))
+  sections.push(buildRelevantCodeSection(packet, model, isLean ? LEAN_MAX_FILES : undefined))
+  if (!isLean) sections.push(buildProjectStructureSection(packet))
   sections.push(buildDiagnosticsSection(packet))
   sections.push(buildTerminalSection(packet))
   sections.push('</ide_context>')
+  return sections
+}
+
+export function buildXmlContextBlock(context: ProviderLaunchContext | ProviderResumeContext, model: string): string {
+  const packet = context.contextPacket
+  if (!packet) return ''
+  const isLean = resolvePacketMode() === 'lean'
+  const sections: string[] = []
+  // Pinned context injected first — prefix-cacheable, appears before file candidates
+  if (packet.pinnedContext) sections.push('<pinned_context>\n' + packet.pinnedContext + '</pinned_context>')
+  sections.push(...buildXmlSections(packet, model, isLean))
   let output = sections.filter(Boolean).join('\n\n')
   if (packet.graphSummary) output += '\n\n' + packet.graphSummary
   if (packet.sessionMemories) output += '\n\n' + packet.sessionMemories

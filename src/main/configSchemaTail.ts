@@ -311,7 +311,9 @@ export const tailSchema = {
       },
       decisionLogging: { type: 'boolean', default: true }, // Wave 24 Phase A
       rerankerEnabled: { type: 'boolean', default: false }, // Wave 24 Phase C — off by default; Claude CLI cold-start ~1-3s exceeds the 500ms target. Opt-in via config.
+      /** Wave 31 Phase E — lean packet mode: drop project_structure, cap relevant_code to 6 files. */
+      packetMode: { type: 'string', enum: ['full', 'lean'], default: 'full' },
     },
-    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true, rerankerEnabled: false },
+    default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true, rerankerEnabled: false, packetMode: 'full' },
   },
 };

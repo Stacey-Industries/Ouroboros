@@ -246,6 +246,8 @@ export interface AppConfig {
   review?: { enhanced?: boolean };
   /** Wave 30 Phases G+I — research auto-firing defaults + threshold knobs. */
   researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
+  /** Wave 19/24/31 — context scoring feature flags. Wave 31 Phase E adds packetMode. */
+  context?: { provenanceWeights?: boolean; pagerank?: boolean; pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number }; decisionLogging?: boolean; rerankerEnabled?: boolean; packetMode?: 'full' | 'lean' };
 }
 
 export interface ContextLayerConfig {

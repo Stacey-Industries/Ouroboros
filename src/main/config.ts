@@ -161,6 +161,8 @@ export interface ContextScoringSettings {
   pagerankSeeds: PageRankSeedWeights;
   /** Enable LLM-based context reranking via Haiku subprocess. Default on. */
   rerankerEnabled?: boolean;
+  /** Wave 31 Phase E — lean packet mode: drop project_structure, cap relevant_code to 6 files. */
+  packetMode?: 'full' | 'lean';
 }
 
 export interface RouterSettings {
