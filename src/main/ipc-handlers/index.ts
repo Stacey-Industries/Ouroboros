@@ -33,6 +33,10 @@ export {
   cleanupResearchControlHandlers,
   registerResearchControlHandlers,
 } from './researchControl';
+export {
+  cleanupResearchDashboardHandlers,
+  registerResearchDashboardHandlers,
+} from './researchDashboardHandlers';
 export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';

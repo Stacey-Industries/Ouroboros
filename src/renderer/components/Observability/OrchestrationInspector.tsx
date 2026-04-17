@@ -13,15 +13,17 @@ import { InspectorDecisionTab } from './InspectorDecisionTab';
 import { exportTraceAsHar } from './InspectorExport';
 import { InspectorTimelineTab } from './InspectorTimelineTab';
 import { InspectorTrafficTab } from './InspectorTrafficTab';
+import { ResearchDashboard } from './ResearchDashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'traffic' | 'timeline' | 'decisions';
+type TabId = 'traffic' | 'timeline' | 'decisions' | 'research';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'traffic', label: 'Traffic' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'decisions', label: 'Decisions' },
+  { id: 'research', label: 'Research' },
 ];
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
@@ -112,6 +114,7 @@ export function OrchestrationInspector({
         {activeTab === 'traffic' && <InspectorTrafficTab sessionId={sessionId} />}
         {activeTab === 'timeline' && <InspectorTimelineTab sessionId={sessionId} />}
         {activeTab === 'decisions' && <InspectorDecisionTab />}
+        {activeTab === 'research' && <ResearchDashboard />}
       </div>
     </div>
   );

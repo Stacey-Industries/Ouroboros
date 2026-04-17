@@ -1,6 +1,7 @@
 /**
  * electron-research.d.ts — IPC type contract for the research subagent
- * (Wave 25 Phase B) and research mode controls (Wave 30 Phase G).
+ * (Wave 25 Phase B), research mode controls (Wave 30 Phase G), and the
+ * research metrics dashboard (Wave 30 Phase H).
  *
  * ResearchArtifact is re-exported from @shared/types/research so main
  * process and renderer share a single definition.
@@ -58,4 +59,45 @@ export interface ResearchAPI {
 
   /** Persist the global auto-research enabled flag and default mode to config. */
   setGlobalDefault(globalEnabled: boolean, defaultMode: ResearchMode): Promise<IpcResult>;
+
+  // ── Wave 30 Phase H — research metrics dashboard ──────────────────────────
+
+  /** Fetch pre-aggregated research metrics for the given time range. */
+  getDashboardMetrics(
+    range: '7d' | '30d' | 'all',
+  ): Promise<
+    | { success: true; metrics: ResearchDashboardMetrics }
+    | { success: false; error: string }
+  >;
+}
+
+// ─── Dashboard metrics shape ──────────────────────────────────────────────────
+
+export interface ResearchDashboardMetrics {
+  range: '7d' | '30d' | 'all';
+  window: { fromIso: string; toIso: string };
+  invocations: {
+    total: number;
+    byTrigger: Record<'hook' | 'fact-claim' | 'slash' | 'correction' | 'other', number>;
+    cacheHitRate: number;
+    avgLatencyMs: number;
+    p95LatencyMs: number;
+  };
+  outcomes: {
+    total: number;
+    accepted: number;
+    reverted: number;
+    unknown: number;
+    acceptanceRate: number;
+  };
+  correlated: {
+    firedCount: number;
+    outcomeCorrelatedCount: number;
+    falsePositiveCount: number;
+    falsePositiveRate: number;
+  };
+  corrections: {
+    total: number;
+    enhancedLibrariesCount: number;
+  };
 }
