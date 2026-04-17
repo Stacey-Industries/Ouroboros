@@ -13,6 +13,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Heavy dep mocks ──────────────────────────────────────────────────────────
 
+vi.mock('../../contexts/ToastContext', () => ({
+  useToastContext: () => ({ toast: vi.fn() }),
+}));
+
+vi.mock('./ResearchModeToggle', () => ({
+  ResearchModeToggle: () => <div data-testid="mock-research-toggle" />,
+}));
+
+vi.mock('./useResearchModeShortcut', () => ({
+  useResearchModeShortcut: () => undefined,
+}));
+
 vi.mock('./AgentChatComposer', () => ({
   AgentChatComposer: (props: {
     onSubmit: () => Promise<void>;

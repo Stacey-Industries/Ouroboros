@@ -7,6 +7,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Mock ../config so importing the support module (which reads config at call
+// time) does not instantiate a real ElectronStore against the user's on-disk
+// settings.json during test collection.
+vi.mock('../config', () => ({
+  getConfigValue: vi.fn(() => undefined),
+}));
+
 // Mock resolveModelCutoffDate to return an early baseline date by default,
 // so all curated entries appear stale (entry.cutoffDate > '2024-01-01' is true
 // for all entries). The 'modelId — per-model' describe block overrides this
