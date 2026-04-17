@@ -23,7 +23,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.ts'],
     setupFiles: ['./vitest.setup.ts'],
     globals: false,
     // Fork-per-file isolation: forcibly kills each file's process after tests
