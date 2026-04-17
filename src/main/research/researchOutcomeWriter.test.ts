@@ -1,9 +1,13 @@
 /**
  * researchOutcomeWriter.test.ts — Unit tests for ResearchOutcomeWriter
- * (Wave 25 Phase D, extended Wave 29.5 Phase F).
+ * (Wave 25 Phase D, extended Wave 29.5 Phase F+G).
+ *
+ * Phase G additions: asserts writes go to date-stamped paths.
  */
 
-import { beforeEach,describe, expect, it } from 'vitest';
+import path from 'node:path';
+
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   createResearchOutcomeWriter,
@@ -14,8 +18,12 @@ import {
 
 // ─── Test deps factory ────────────────────────────────────────────────────────
 
+const TEST_DIR = '/fake';
+const TODAY = '2026-04-16';
+const DATED_PATH = path.join(TEST_DIR, `research-outcomes-${TODAY}.jsonl`);
+
 interface FakeDepsState {
-  written: string[];
+  written: Array<{ fp: string; line: string }>;
   fileSize: number;
   rotations: Array<{ src: string; dst: string }>;
   unlinked: string[];
@@ -27,11 +35,12 @@ function makeFakeDeps(overrides: Partial<ResearchOutcomeWriterDeps> = {}): {
 } {
   const state: FakeDepsState = { written: [], fileSize: 0, rotations: [], unlinked: [] };
   const deps: ResearchOutcomeWriterDeps = {
-    getPath: () => '/fake/research-outcomes.jsonl',
+    getDir: () => TEST_DIR,
     readSize: async () => state.fileSize,
-    appendLine: async (_fp, line) => { state.written.push(line); },
+    appendLine: async (fp, line) => { state.written.push({ fp, line }); },
     rotate: async (src, dst) => { state.rotations.push({ src, dst }); },
     unlink: async (fp) => { state.unlinked.push(fp); },
+    todayStamp: () => TODAY,
     ...overrides,
   };
   return { deps, state };
@@ -39,9 +48,9 @@ function makeFakeDeps(overrides: Partial<ResearchOutcomeWriterDeps> = {}): {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseLines(written: string[]): ResearchOutcomeRecord[] {
+function parseLines(written: Array<{ fp: string; line: string }>): ResearchOutcomeRecord[] {
   return written
-    .flatMap((chunk) => chunk.split('\n').filter(Boolean))
+    .flatMap((w) => w.line.split('\n').filter(Boolean))
     .map((line) => JSON.parse(line) as ResearchOutcomeRecord);
 }
 
@@ -82,6 +91,36 @@ describe('ResearchOutcomeWriter', () => {
     expect(records[0].schemaVersion).toBe(2);
     expect(typeof records[0].id).toBe('string');
     expect(typeof records[0].timestamp).toBe('number');
+  });
+
+  it('writes to the date-stamped path (Phase G)', async () => {
+    writer.recordOutcome({
+      correlationId: 'cid-1',
+      sessionId: 'sess-1',
+      topic: 't',
+      toolName: 'Edit',
+      toolKind: 'edit',
+      filePath: '/a.ts',
+      outcomeSignal: 'accepted',
+      followupTestExit: null,
+    });
+    await writer.flushPendingWrites();
+    expect(state.written[0].fp).toBe(DATED_PATH);
+    expect(state.written[0].fp).not.toContain('research-outcomes.jsonl');
+  });
+
+  it('two writes on the same day go to the same file (Phase G)', async () => {
+    writer.recordOutcome({
+      correlationId: 'cid-1', sessionId: 's', topic: 't', toolName: 'Edit',
+      toolKind: 'edit', filePath: '/a.ts', outcomeSignal: 'accepted', followupTestExit: null,
+    });
+    await writer.flushPendingWrites();
+    writer.recordOutcome({
+      correlationId: 'cid-2', sessionId: 's', topic: 't', toolName: 'Edit',
+      toolKind: 'edit', filePath: '/b.ts', outcomeSignal: 'accepted', followupTestExit: null,
+    });
+    await writer.flushPendingWrites();
+    expect(state.written[0].fp).toBe(state.written[1].fp);
   });
 
   it('serialises outcomeSignal: "reverted" correctly', async () => {
@@ -197,6 +236,9 @@ describe('ResearchOutcomeWriter', () => {
     });
     await rotatingWriter.flushPendingWrites();
     expect(rotState.rotations.length).toBeGreaterThan(0);
+    // The primary current→.1 rotation appears somewhere in the list
+    const hasPrimary = rotState.rotations.some((r) => r.src === DATED_PATH);
+    expect(hasPrimary).toBe(true);
   });
 
   it('does not rotate when file is under 10 MB', async () => {

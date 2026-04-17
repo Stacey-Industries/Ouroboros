@@ -3,6 +3,8 @@
  *
  * All I/O is injected via OutcomeWriterDeps — no real filesystem touched.
  * Uses vi.useFakeTimers() to control the 50 ms flush timer deterministically.
+ *
+ * Phase G (Wave 29.5 M2): asserts writes go to a date-stamped path.
  */
 
 import path from 'node:path';
@@ -40,31 +42,28 @@ function makeOutcome(overrides: Partial<ContextOutcome> = {}): ContextOutcome {
   };
 }
 
-const BASE_PATH = path.join(path.sep + 'userData', 'context-outcomes.jsonl');
+const TEST_DIR = path.sep + 'userData';
+const TODAY = '2026-04-16';
+const DATED_FILENAME = `context-outcomes-${TODAY}.jsonl`;
+const DATED_PATH = path.join(TEST_DIR, DATED_FILENAME);
 
-function makeDeps(fileSize = 0): {
+function makeDeps(fileSize = 0, stamp = TODAY): {
   deps: OutcomeWriterDeps;
-  appended: string[];
+  appended: Array<{ fp: string; line: string }>;
   rotated: string[][];
   unlinked: string[];
 } {
-  const appended: string[] = [];
+  const appended: Array<{ fp: string; line: string }> = [];
   const rotated: string[][] = [];
   const unlinked: string[] = [];
 
   const deps: OutcomeWriterDeps = {
-    getPath: () => BASE_PATH,
+    getDir: () => TEST_DIR,
     readSize: vi.fn(async () => fileSize),
-    appendLine: vi.fn(async (_fp, line) => {
-      appended.push(line);
-    }),
-    rotate: vi.fn(async (src, dst) => {
-      rotated.push([src, dst]);
-    }),
-    unlink: vi.fn(async (fp) => {
-      unlinked.push(fp);
-    }),
-    listDir: vi.fn(async () => []),
+    appendLine: vi.fn(async (fp, line) => { appended.push({ fp, line }); }),
+    rotate: vi.fn(async (src, dst) => { rotated.push([src, dst]); }),
+    unlink: vi.fn(async (fp) => { unlinked.push(fp); }),
+    todayStamp: () => stamp,
   };
 
   return { deps, appended, rotated, unlinked };
@@ -73,12 +72,8 @@ function makeDeps(fileSize = 0): {
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('createOutcomeWriter — flush timer', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it('batches multiple outcomes in one appendLine call after 50 ms', async () => {
     const { deps, appended } = makeDeps();
@@ -92,7 +87,7 @@ describe('createOutcomeWriter — flush timer', () => {
     await vi.advanceTimersByTimeAsync(50);
 
     expect(appended).toHaveLength(1);
-    const lines = appended[0].split('\n').filter(Boolean);
+    const lines = appended[0].line.split('\n').filter(Boolean);
     expect(lines).toHaveLength(2);
     expect(JSON.parse(lines[0])).toMatchObject({ fileId: 'src/a.ts' });
     expect(JSON.parse(lines[1])).toMatchObject({ fileId: 'src/b.ts' });
@@ -111,12 +106,8 @@ describe('createOutcomeWriter — flush timer', () => {
 });
 
 describe('createOutcomeWriter — flushPendingWrites', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it('force-flushes before timer fires', async () => {
     const { deps, appended } = makeDeps();
@@ -126,7 +117,7 @@ describe('createOutcomeWriter — flushPendingWrites', () => {
     await writer.flushPendingWrites();
 
     expect(appended).toHaveLength(1);
-    const parsed = JSON.parse(appended[0].trim());
+    const parsed = JSON.parse(appended[0].line.trim());
     expect(parsed).toMatchObject({ fileId: 'src/a.ts', kind: 'used' });
   });
 
@@ -140,12 +131,8 @@ describe('createOutcomeWriter — flushPendingWrites', () => {
 });
 
 describe('createOutcomeWriter — closeOutcomeWriter', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it('flushes pending queue on close', async () => {
     const { deps, appended } = makeDeps();
@@ -155,7 +142,7 @@ describe('createOutcomeWriter — closeOutcomeWriter', () => {
     await writer.closeOutcomeWriter();
 
     expect(appended).toHaveLength(1);
-    expect(JSON.parse(appended[0].trim())).toMatchObject({ fileId: 'src/pre-close.ts' });
+    expect(JSON.parse(appended[0].line.trim())).toMatchObject({ fileId: 'src/pre-close.ts' });
   });
 
   it('ignores recordOutcome calls after close', async () => {
@@ -170,13 +157,39 @@ describe('createOutcomeWriter — closeOutcomeWriter', () => {
   });
 });
 
-describe('createOutcomeWriter — rotation', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+describe('createOutcomeWriter — date-stamped filename (Phase G)', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('writes to the date-stamped path, not the legacy undated path', async () => {
+    const { deps, appended } = makeDeps();
+    const writer = createOutcomeWriter(deps);
+
+    writer.recordOutcome(makeOutcome());
+    await writer.flushPendingWrites();
+
+    expect(appended).toHaveLength(1);
+    expect(appended[0].fp).toBe(DATED_PATH);
+    expect(appended[0].fp).not.toContain('context-outcomes.jsonl');
   });
-  afterEach(() => {
-    vi.useRealTimers();
+
+  it('two writes on the same day go to the same file', async () => {
+    const { deps, appended } = makeDeps();
+    const writer = createOutcomeWriter(deps);
+
+    writer.recordOutcome(makeOutcome({ fileId: 'src/a.ts' }));
+    await writer.flushPendingWrites();
+    writer.recordOutcome(makeOutcome({ fileId: 'src/b.ts' }));
+    await writer.flushPendingWrites();
+
+    expect(appended).toHaveLength(2);
+    expect(appended[0].fp).toBe(appended[1].fp);
   });
+});
+
+describe('createOutcomeWriter — rotation (intraday)', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it('does not rotate when file is under 10 MB', async () => {
     const { deps, rotated } = makeDeps(1024);
@@ -188,40 +201,25 @@ describe('createOutcomeWriter — rotation', () => {
     expect(rotated).toHaveLength(0);
   });
 
-  it('rotates current file to .1 when size exceeds 10 MB', async () => {
+  it('rotates current dated file to .1 when size exceeds 10 MB', async () => {
     const { deps, rotated } = makeDeps(11 * 1024 * 1024);
     const writer = createOutcomeWriter(deps);
 
     writer.recordOutcome(makeOutcome());
     await writer.flushPendingWrites();
 
-    const dir = path.dirname(BASE_PATH);
     const hasPrimaryRotation = rotated.some(
       ([src, dst]) =>
-        src === BASE_PATH && dst === path.join(dir, 'context-outcomes.1.jsonl'),
+        src === DATED_PATH &&
+        dst === path.join(TEST_DIR, `context-outcomes-${TODAY}.1.jsonl`),
     );
     expect(hasPrimaryRotation).toBe(true);
-  });
-
-  it('unlinks the .3 rotation (purge oldest) when rotating over 10 MB', async () => {
-    const { deps, unlinked } = makeDeps(11 * 1024 * 1024);
-    const writer = createOutcomeWriter(deps);
-
-    writer.recordOutcome(makeOutcome());
-    await writer.flushPendingWrites();
-
-    const dir = path.dirname(BASE_PATH);
-    expect(unlinked).toContain(path.join(dir, 'context-outcomes.3.jsonl'));
   });
 });
 
 describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it('emits traceId, fileId, sessionId, timestamp, toolKind, schemaVersion: 2', async () => {
     const { deps, appended } = makeDeps();
@@ -239,7 +237,7 @@ describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
     writer.recordOutcome(outcome);
     await writer.flushPendingWrites();
 
-    const parsed = JSON.parse(appended[0].trim());
+    const parsed = JSON.parse(appended[0].line.trim());
     expect(parsed.traceId).toBe('trace-xyz');
     expect(parsed.fileId).toBe('src/foo.ts');
     expect(parsed.sessionId).toBe('sess-abc');
@@ -256,7 +254,7 @@ describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
     writer.recordOutcome(makeOutcome());
     await writer.flushPendingWrites();
 
-    const parsed = JSON.parse(appended[0].trim());
+    const parsed = JSON.parse(appended[0].line.trim());
     expect(parsed.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
@@ -267,7 +265,7 @@ describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
     writer.recordOutcome(makeOutcome({ kind: 'unused', toolKind: 'other', toolUsed: undefined }));
     await writer.flushPendingWrites();
 
-    const parsed = JSON.parse(appended[0].trim());
+    const parsed = JSON.parse(appended[0].line.trim());
     expect(parsed.kind).toBe('unused');
     expect(parsed.toolKind).toBe('other');
     expect(parsed.toolUsed).toBeUndefined();
@@ -281,7 +279,7 @@ describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
     writer.recordOutcome(makeOutcome({ decisionId: 'dec-legacy' }));
     await writer.flushPendingWrites();
 
-    const parsed = JSON.parse(appended[0].trim());
+    const parsed = JSON.parse(appended[0].line.trim());
     expect(parsed.decisionId).toBe('dec-legacy');
   });
 });

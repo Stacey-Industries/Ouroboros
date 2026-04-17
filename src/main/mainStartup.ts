@@ -23,6 +23,7 @@ import {
   initEditProvenance,
 } from './orchestration/editProvenance';
 export { initEditProvenance };
+import { migrateLegacyJsonl, purgeOlderThan } from './orchestration/jsonlRetention';
 import { setGithubTokenForPty } from './ptyEnv';
 import { getAutoUpdater, setUpdaterGitHubToken } from './updater';
 import { broadcastToWebClients } from './web';
@@ -365,4 +366,20 @@ export function ensureSingleInstance(): void {
 /** Close edit provenance store on app shutdown. */
 export function closeEditProvenance(): void {
   closeEP()
+}
+
+/**
+ * Schedule JSONL migration + 30-day retention purge via setImmediate so it
+ * does not block window creation (Wave 29.5 M2).
+ */
+export function scheduleJsonlRetentionPurge(userDataPath: string): void {
+  const basenames = ['context-decisions', 'context-outcomes', 'research-outcomes'];
+  setImmediate(() => {
+    for (const base of basenames) {
+      migrateLegacyJsonl(userDataPath, base)
+        .then(() => purgeOlderThan(userDataPath, base, 30))
+        .then((n) => { if (n > 0) console.warn(`[jsonlRetention] purged ${n} old files for ${base}`); })
+        .catch((err) => log.error('[jsonlRetention] purge error', err));
+    }
+  });
 }

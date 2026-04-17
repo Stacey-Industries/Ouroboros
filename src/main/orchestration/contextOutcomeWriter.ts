@@ -1,9 +1,14 @@
 /**
  * contextOutcomeWriter.ts — Async-batched JSONL writer for context outcomes.
  *
- * Writes one JSON line per ContextOutcome to `{userData}/context-outcomes.jsonl`.
- * Rotates at 10 MB, keeping the last 3 rotations (context-outcomes.1.jsonl,
- * context-outcomes.2.jsonl) and purging older ones.
+ * Writes one JSON line per ContextOutcome to
+ * `{userData}/context-outcomes-YYYY-MM-DD.jsonl` (UTC date, Wave 29.5 M2).
+ * A new file is opened each UTC day; the handle is cached per-day and closed
+ * when the date changes.
+ *
+ * Intraday size-rotation fires at 10 MB as a safety valve, producing files
+ * like `context-outcomes-2026-04-16.1.jsonl`. 30-day retention is enforced
+ * at startup via `purgeOlderThan` (called from main.ts, not here).
  *
  * Mirrors the Phase A contextDecisionWriter.ts API exactly, but for ContextOutcome
  * records. Singleton lifecycle: initOutcomeWriter / getOutcomeWriter / closeOutcomeWriter.
@@ -22,16 +27,15 @@ import type { ContextOutcome } from './contextTypes';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const OUTCOME_FILENAME = 'context-outcomes.jsonl';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_ROTATIONS = 3;
+const OUTCOME_BASENAME = 'context-outcomes';
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB intraday safety valve
 const FLUSH_INTERVAL_MS = 50;
 
 // ─── Adapter (deps injection) ─────────────────────────────────────────────────
 
 export interface OutcomeWriterDeps {
-  /** Resolve `{userData}/context-outcomes.jsonl`. */
-  getPath: () => string;
+  /** Return the directory where JSONL files are written. */
+  getDir: () => string;
   /** Return file size in bytes, or 0 if missing. */
   readSize: (filePath: string) => Promise<number>;
   /** Append a newline-terminated string to the file. */
@@ -40,16 +44,15 @@ export interface OutcomeWriterDeps {
   rotate: (src: string, dst: string) => Promise<void>;
   /** Delete a file (best-effort). */
   unlink: (filePath: string) => Promise<void>;
-  /** List files in a directory, returning names. */
-  listDir: (dir: string) => Promise<string[]>;
+  /** Return today's UTC date stamp (YYYY-MM-DD). Injected for testability. */
+  todayStamp: () => string;
 }
 
 // ─── Production adapter ───────────────────────────────────────────────────────
 
 function makeProductionDeps(userDataPath: string): OutcomeWriterDeps {
-  const filePath = path.join(userDataPath, OUTCOME_FILENAME);
   return {
-    getPath: () => filePath,
+    getDir: () => userDataPath,
     async readSize(fp) {
       try {
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted internal path
@@ -75,43 +78,27 @@ function makeProductionDeps(userDataPath: string): OutcomeWriterDeps {
         // Best-effort
       }
     },
-    async listDir(dir) {
-      try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted internal path
-        return await fs.readdir(dir);
-      } catch {
-        return [];
-      }
-    },
+    todayStamp: () => new Date().toISOString().slice(0, 10),
   };
 }
 
-// ─── Rotation helpers ─────────────────────────────────────────────────────────
+// ─── Intraday size-rotation helpers ──────────────────────────────────────────
 
 function rotationPath(base: string, n: number): string {
   const ext = path.extname(base);
-  const stem = path.basename(base, ext);
-  return path.join(path.dirname(base), `${stem}.${n}${ext}`);
+  const stem = base.slice(0, -ext.length);
+  return `${stem}.${n}${ext}`;
 }
 
-async function rotateIfNeeded(deps: OutcomeWriterDeps): Promise<void> {
-  const filePath = deps.getPath();
+async function rotateIfNeeded(filePath: string, deps: OutcomeWriterDeps): Promise<void> {
   const size = await deps.readSize(filePath);
   if (size <= MAX_BYTES) return;
 
-  // Keep .1 .2 .3 — purge .3, shift .2→.3, .1→.2, current→.1
-  await deps.unlink(rotationPath(filePath, MAX_ROTATIONS));
-
-  for (let i = MAX_ROTATIONS - 1; i >= 1; i--) {
+  for (let i = 2; i >= 1; i--) {
     const src = rotationPath(filePath, i);
     const dst = rotationPath(filePath, i + 1);
-    try {
-      await deps.rotate(src, dst);
-    } catch {
-      // May not exist — skip
-    }
+    try { await deps.rotate(src, dst); } catch { /* may not exist */ }
   }
-
   await deps.rotate(filePath, rotationPath(filePath, 1));
 }
 
@@ -134,6 +121,8 @@ interface WriterState {
   queue: ContextOutcomeRecord[];
   timer: ReturnType<typeof setTimeout> | null;
   closed: boolean;
+  /** Stamp active when the handle was last resolved (YYYY-MM-DD). */
+  activeStamp: string;
 }
 
 async function flush(state: WriterState, deps: OutcomeWriterDeps): Promise<void> {
@@ -143,12 +132,18 @@ async function flush(state: WriterState, deps: OutcomeWriterDeps): Promise<void>
   }
   if (state.queue.length === 0) return;
 
+  const stamp = deps.todayStamp();
+  if (stamp !== state.activeStamp) {
+    state.activeStamp = stamp;
+  }
+  const filePath = path.join(deps.getDir(), `${OUTCOME_BASENAME}-${stamp}.jsonl`);
+
   const batch = state.queue.splice(0);
-  await rotateIfNeeded(deps);
+  await rotateIfNeeded(filePath, deps);
 
   const lines = batch.map((o) => JSON.stringify(o)).join('\n') + '\n';
   try {
-    await deps.appendLine(deps.getPath(), lines);
+    await deps.appendLine(filePath, lines);
   } catch (err) {
     log.error('[contextOutcomeWriter] appendLine error', err);
   }
@@ -165,7 +160,12 @@ function scheduleFlush(state: WriterState, deps: OutcomeWriterDeps): void {
 }
 
 export function createOutcomeWriter(deps: OutcomeWriterDeps): ContextOutcomeWriter {
-  const state: WriterState = { queue: [], timer: null, closed: false };
+  const state: WriterState = {
+    queue: [],
+    timer: null,
+    closed: false,
+    activeStamp: deps.todayStamp(),
+  };
 
   return {
     recordOutcome(outcome) {

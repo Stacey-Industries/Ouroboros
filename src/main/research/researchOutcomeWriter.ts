@@ -1,11 +1,13 @@
 /**
  * researchOutcomeWriter.ts — Async-batched JSONL writer for research outcome records
- * (Wave 25 Phase D).
+ * (Wave 25 Phase D, Wave 29.5 Phase G).
  *
- * Writes one JSON line per ResearchOutcomeRecord to `{userData}/research-outcomes.jsonl`.
- * Rotates at 10 MB, keeping the last 3 rotations.
+ * Writes one JSON line per ResearchOutcomeRecord to
+ * `{userData}/research-outcomes-YYYY-MM-DD.jsonl` (UTC date, Wave 29.5 M2).
+ * A new file is opened each UTC day. Intraday size-rotation fires at 10 MB.
+ * 30-day retention enforced at startup via `purgeOlderThan` (main.ts).
  *
- * Mirrors the Phase A contextDecisionWriter.ts / contextOutcomeWriter.ts pattern exactly.
+ * Mirrors the contextDecisionWriter / contextOutcomeWriter pattern exactly.
  * Separate from context-outcomes.jsonl — research attribution is a distinct signal.
  *
  * Singleton lifecycle: initResearchOutcomeWriter / getResearchOutcomeWriter / closeResearchOutcomeWriter.
@@ -50,27 +52,28 @@ export interface ResearchOutcomeRecord {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const OUTCOME_FILENAME = 'research-outcomes.jsonl';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_ROTATIONS = 3;
+const OUTCOME_BASENAME = 'research-outcomes';
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB intraday safety valve
 const FLUSH_INTERVAL_MS = 50;
 
 // ─── Deps injection ───────────────────────────────────────────────────────────
 
 export interface ResearchOutcomeWriterDeps {
-  getPath: () => string;
+  /** Return the directory where JSONL files are written. */
+  getDir: () => string;
   readSize: (filePath: string) => Promise<number>;
   appendLine: (filePath: string, line: string) => Promise<void>;
   rotate: (src: string, dst: string) => Promise<void>;
   unlink: (filePath: string) => Promise<void>;
+  /** Return today's UTC date stamp (YYYY-MM-DD). Injected for testability. */
+  todayStamp: () => string;
 }
 
 // ─── Production deps ──────────────────────────────────────────────────────────
 
 function makeProductionDeps(userDataPath: string): ResearchOutcomeWriterDeps {
-  const filePath = path.join(userDataPath, OUTCOME_FILENAME);
   return {
-    getPath: () => filePath,
+    getDir: () => userDataPath,
     async readSize(fp) {
       try {
         // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted internal path
@@ -96,34 +99,27 @@ function makeProductionDeps(userDataPath: string): ResearchOutcomeWriterDeps {
         // Best-effort
       }
     },
+    todayStamp: () => new Date().toISOString().slice(0, 10),
   };
 }
 
-// ─── Rotation helpers ─────────────────────────────────────────────────────────
+// ─── Intraday size-rotation helpers ──────────────────────────────────────────
 
 function rotationPath(base: string, n: number): string {
   const ext = path.extname(base);
-  const stem = path.basename(base, ext);
-  return path.join(path.dirname(base), `${stem}.${n}${ext}`);
+  const stem = base.slice(0, -ext.length);
+  return `${stem}.${n}${ext}`;
 }
 
-async function rotateIfNeeded(deps: ResearchOutcomeWriterDeps): Promise<void> {
-  const filePath = deps.getPath();
+async function rotateIfNeeded(filePath: string, deps: ResearchOutcomeWriterDeps): Promise<void> {
   const size = await deps.readSize(filePath);
   if (size <= MAX_BYTES) return;
 
-  await deps.unlink(rotationPath(filePath, MAX_ROTATIONS));
-
-  for (let i = MAX_ROTATIONS - 1; i >= 1; i--) {
+  for (let i = 2; i >= 1; i--) {
     const src = rotationPath(filePath, i);
     const dst = rotationPath(filePath, i + 1);
-    try {
-      await deps.rotate(src, dst);
-    } catch {
-      // May not exist — skip
-    }
+    try { await deps.rotate(src, dst); } catch { /* may not exist */ }
   }
-
   await deps.rotate(filePath, rotationPath(filePath, 1));
 }
 
@@ -150,6 +146,8 @@ interface WriterState {
   queue: ResearchOutcomeRecord[];
   timer: ReturnType<typeof setTimeout> | null;
   closed: boolean;
+  /** Stamp active when the handle was last resolved (YYYY-MM-DD). */
+  activeStamp: string;
 }
 
 async function flush(state: WriterState, deps: ResearchOutcomeWriterDeps): Promise<void> {
@@ -159,12 +157,18 @@ async function flush(state: WriterState, deps: ResearchOutcomeWriterDeps): Promi
   }
   if (state.queue.length === 0) return;
 
+  const stamp = deps.todayStamp();
+  if (stamp !== state.activeStamp) {
+    state.activeStamp = stamp;
+  }
+  const filePath = path.join(deps.getDir(), `${OUTCOME_BASENAME}-${stamp}.jsonl`);
+
   const batch = state.queue.splice(0);
-  await rotateIfNeeded(deps);
+  await rotateIfNeeded(filePath, deps);
 
   const lines = batch.map((r) => JSON.stringify(r)).join('\n') + '\n';
   try {
-    await deps.appendLine(deps.getPath(), lines);
+    await deps.appendLine(filePath, lines);
   } catch (err) {
     log.error('[researchOutcomeWriter] appendLine error', err);
   }
@@ -181,7 +185,12 @@ function scheduleFlush(state: WriterState, deps: ResearchOutcomeWriterDeps): voi
 }
 
 export function createResearchOutcomeWriter(deps: ResearchOutcomeWriterDeps): ResearchOutcomeWriter {
-  const state: WriterState = { queue: [], timer: null, closed: false };
+  const state: WriterState = {
+    queue: [],
+    timer: null,
+    closed: false,
+    activeStamp: deps.todayStamp(),
+  };
 
   return {
     recordOutcome({ correlationId, sessionId, topic, toolName, toolKind, filePath, outcomeSignal, followupTestExit }) {

@@ -37,6 +37,7 @@ import {
   disposeCodebaseGraph,
   ensureSingleInstance,
   initCodebaseGraph, initEditProvenance,
+  scheduleJsonlRetentionPurge,
   seedGithubTokenWithRetry,
   writeCrashLog,
 } from './mainStartup';
@@ -114,8 +115,8 @@ async function runStartupStep(
 }
 
 async function startIdeTools(): Promise<void> {
-  const toolAddr = await startIdeToolServer();
-  if (toolAddr) log.info(`IDE tool server started at ${toolAddr.address}`);
+  const addr = await startIdeToolServer();
+  if (addr) log.info(`IDE tool server started at ${addr.address}`);
 }
 
 async function startInternalMcp(): Promise<void> {
@@ -180,8 +181,7 @@ function focusLastWindow(): void {
   const windows = getAllActiveWindows();
   if (windows.length === 0) return;
   const win = windows[windows.length - 1];
-  if (win.isMinimized()) win.restore();
-  win.focus();
+  if (win.isMinimized()) win.restore(); win.focus();
 }
 
 function registerWindowLifecycleHandlers(): void {
@@ -244,7 +244,7 @@ async function initializeApplication(): Promise<void> {
   await runStartupStep('[main] telemetry store init', () => initTelemetryStore(app.getPath('userData')));
   const store = getTelemetryStore();
   if (store) initOutcomeObserver(store);
-  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initEditProvenance(_ud); // Wave 18/24/25
+  const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initEditProvenance(_ud); scheduleJsonlRetentionPurge(_ud); // Wave 18/24/25/G
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
   await migrateSecretsIfNeeded();
