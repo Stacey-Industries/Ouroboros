@@ -9,6 +9,7 @@ import { revertToSnapshotWithBridge } from './chatOrchestrationBridgeGit';
 import { stopIncrementalFlush } from './chatOrchestrationBridgeMonitor';
 import { handleProviderProgress } from './chatOrchestrationBridgeProgress';
 import { executePendingSend } from './chatOrchestrationBridgeSend';
+import { dispatchSlashCommand } from './chatOrchestrationBridgeSlashCommands';
 import {
   buildAgentChatOrchestrationLink,
   buildSendFailureResult,
@@ -141,6 +142,9 @@ async function sendMessageWithBridge(
 ): Promise<AgentChatSendResult> {
   const validationError = validateSendRequest(request);
   if (validationError) return buildSendFailureResult({ error: validationError });
+
+  const slashResult = dispatchSlashCommand(request.content.trim(), { sessionId: request.threadId ?? '' });
+  if (slashResult) return slashResult;
 
   const conflictError = findActiveThreadConflict(runtime.activeSends, request.threadId);
   if (conflictError) return buildSendFailureResult({ error: conflictError });
