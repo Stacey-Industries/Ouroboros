@@ -30,6 +30,12 @@ vi.mock('./researchCache', () => ({
   cacheKey: vi.fn((...args: string[]) => args.join('::')),
 }));
 
+// Return early model cutoff so all curated entries appear stale in trigger evaluation.
+vi.mock('./triggerEvaluatorSupport', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./triggerEvaluatorSupport')>();
+  return { ...real, resolveModelCutoffDate: vi.fn(() => '2024-01-01') };
+});
+
 // ─── Imports after mocks ──────────────────────────────────────────────────────
 
 import {

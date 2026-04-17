@@ -28,6 +28,12 @@ export interface PreToolResearchInput {
   filePath: string;
   /** Optional Wave 29.5 trace linkage. */
   correlationId?: string;
+  /**
+   * Active model ID for the session (e.g. 'claude-sonnet-4-6').
+   * Used to resolve per-model training cutoff (Phase J).
+   * When absent, getModelCutoffDate falls back to today-180d.
+   */
+  modelId?: string;
 }
 
 // ─── Pending promise registry ─────────────────────────────────────────────────
@@ -146,6 +152,9 @@ export async function _runOrchestration(
     },
     cacheCheck: cacheCheckFn,
     globalFlag,
+    // TODO(wave-30-J): thread active modelId from session state once the
+    // session state store exposes it. Falls back to today-180d via getModelCutoffDate.
+    modelId: input.modelId,
   };
 
   const decision = evaluateTrigger(ctx);

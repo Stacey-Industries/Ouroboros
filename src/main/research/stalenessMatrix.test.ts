@@ -6,67 +6,72 @@ import { describe, expect, it } from 'vitest';
 
 import { getAllCuratedLibraries, isStale } from './stalenessMatrix';
 
+// Early model cutoff used in tests that assert stale:true.
+// All curated entries have cutoffDate after 2024-01-01, so any entry with
+// cutoffDate > EARLY_CUTOFF → stale:true for a model trained before that date.
+const EARLY_CUTOFF = '2024-01-01';
+
 // ─── isStale — curated hits ───────────────────────────────────────────────────
 
 describe('isStale — curated library match', () => {
-  it('flags next as stale with curated-match reason', () => {
-    const result = isStale('next');
+  it('flags next as stale with curated-match reason (early-cutoff model)', () => {
+    const result = isStale('next', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
     expect(result.entry?.kind).toBe('curated');
     expect(result.entry?.library).toBe('next');
   });
 
-  it('flags react as stale', () => {
-    const result = isStale('react');
+  it('flags react as stale (early-cutoff model)', () => {
+    const result = isStale('react', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags zod as stale', () => {
-    const result = isStale('zod');
+  it('flags zod as stale (early-cutoff model)', () => {
+    const result = isStale('zod', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags tailwindcss as stale', () => {
-    const result = isStale('tailwindcss');
+  it('flags tailwindcss as stale (early-cutoff model)', () => {
+    const result = isStale('tailwindcss', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags electron as stale', () => {
-    const result = isStale('electron');
+  it('flags electron as stale (early-cutoff model)', () => {
+    const result = isStale('electron', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags vite as stale', () => {
-    const result = isStale('vite');
+  it('flags vite as stale (early-cutoff model)', () => {
+    const result = isStale('vite', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags ai (Vercel AI SDK) as stale', () => {
-    const result = isStale('ai');
+  it('flags ai (Vercel AI SDK) as stale (early-cutoff model)', () => {
+    const result = isStale('ai', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags @trpc/server as stale', () => {
-    const result = isStale('@trpc/server');
+  it('flags @trpc/server as stale (early-cutoff model)', () => {
+    const result = isStale('@trpc/server', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags @tanstack/react-query as stale', () => {
-    const result = isStale('@tanstack/react-query');
+  it('flags @tanstack/react-query as stale (early-cutoff model)', () => {
+    const result = isStale('@tanstack/react-query', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
   it('returns the curated entry with cutoffVersion and cutoffDate fields', () => {
-    const result = isStale('next');
+    const result = isStale('next', undefined, EARLY_CUTOFF);
     expect(result.entry).not.toBeNull();
     if (result.entry?.kind === 'curated') {
       expect(typeof result.entry.cutoffVersion).toBe('string');
@@ -80,21 +85,21 @@ describe('isStale — curated library match', () => {
 // ─── isStale — prefix-based curated hits ─────────────────────────────────────
 
 describe('isStale — curated prefix match', () => {
-  it('flags @radix-ui/react-dialog as stale via prefix', () => {
-    const result = isStale('@radix-ui/react-dialog');
+  it('flags @radix-ui/react-dialog as stale via prefix (early-cutoff model)', () => {
+    const result = isStale('@radix-ui/react-dialog', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
     expect(result.entry?.kind).toBe('curated');
   });
 
-  it('flags @radix-ui/react-dropdown-menu as stale via prefix', () => {
-    const result = isStale('@radix-ui/react-dropdown-menu');
+  it('flags @radix-ui/react-dropdown-menu as stale via prefix (early-cutoff model)', () => {
+    const result = isStale('@radix-ui/react-dropdown-menu', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
 
-  it('flags @deno/std as stale via prefix', () => {
-    const result = isStale('@deno/std');
+  it('flags @deno/std as stale via prefix (early-cutoff model)', () => {
+    const result = isStale('@deno/std', undefined, EARLY_CUTOFF);
     expect(result.stale).toBe(true);
     expect(result.reason).toBe('curated-match');
   });
@@ -170,6 +175,56 @@ describe('isStale — unknown library (no data)', () => {
 
   it('accepts an optional importedVersion without throwing', () => {
     expect(() => isStale('unknown-lib', '1.2.3')).not.toThrow();
+  });
+});
+
+// ─── isStale — model-relative cutoff (Phase J) ───────────────────────────────
+
+describe('isStale — modelCutoffDate parameter', () => {
+  // 'next' has entry cutoffDate '2024-10-21' in the curated list
+
+  it('flags next as stale for a model with cutoff before entry date', () => {
+    // Model cutoff 2024-06-01 < entry cutoffDate 2024-10-21 → stale
+    const result = isStale('next', undefined, '2024-06-01');
+    expect(result.stale).toBe(true);
+    expect(result.reason).toBe('curated-match');
+  });
+
+  it('flags next as NOT stale for a model with cutoff after entry date', () => {
+    // Model cutoff 2025-09-01 > entry cutoffDate 2024-10-21 → not stale
+    const result = isStale('next', undefined, '2025-09-01');
+    expect(result.stale).toBe(false);
+    expect(result.reason).toBe('curated-match');
+    expect(result.entry).not.toBeNull();
+  });
+
+  it('uses TRAINING_CUTOFF_DATE when modelCutoffDate is omitted (backward compat)', () => {
+    // Without the param, existing behaviour should be preserved
+    const withParam = isStale('next', undefined, '2025-06-01');
+    const withoutParam = isStale('next');
+    expect(withParam.stale).toBe(withoutParam.stale);
+  });
+
+  it('denylist short-circuits regardless of model cutoff', () => {
+    const result = isStale('lodash', undefined, '2020-01-01');
+    expect(result.stale).toBe(false);
+    expect(result.reason).toBe('denylist');
+  });
+
+  it('unknown library returns no-data regardless of model cutoff', () => {
+    const result = isStale('some-random-pkg-xyz', undefined, '2024-01-01');
+    expect(result.stale).toBe(false);
+    expect(result.reason).toBe('no-data');
+  });
+
+  it('tailwindcss (cutoffDate 2025-01-22) is NOT stale for late-2025 model', () => {
+    const result = isStale('tailwindcss', undefined, '2025-09-01');
+    expect(result.stale).toBe(false);
+  });
+
+  it('tailwindcss (cutoffDate 2025-01-22) IS stale for model with 2024-12-01 cutoff', () => {
+    const result = isStale('tailwindcss', undefined, '2024-12-01');
+    expect(result.stale).toBe(true);
   });
 });
 

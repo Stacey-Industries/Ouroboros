@@ -19,6 +19,11 @@ import type { StalenessEntry } from './stalenessMatrix';
 /**
  * Claude model training cutoff baseline used by the heuristic layer.
  * Quarterly review should advance this when a new model generation ships.
+ *
+ * @deprecated Use `getModelCutoffDate(modelId)` from `modelTrainingCutoffs.ts`
+ * instead. Retained as fallback for non-session contexts (e.g. prefix-match
+ * synthetic entries, CLI tools without a session). A follow-up wave removes
+ * this constant when every call site threads modelId.
  */
 export const TRAINING_CUTOFF_DATE = '2025-06-01';
 

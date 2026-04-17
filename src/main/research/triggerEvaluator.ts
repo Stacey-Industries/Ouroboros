@@ -17,6 +17,7 @@ import {
   evaluateCorrectionLayer,
   evaluateRuleLayer,
   normalizeImportToLibrary,
+  resolveModelCutoffDate,
 } from './triggerEvaluatorSupport';
 
 export { normalizeImportToLibrary };
@@ -28,6 +29,8 @@ export interface TriggerContext {
   sessionFlags: { mode: 'off' | 'conservative' | 'aggressive'; enhancedLibraries: Set<string> };
   cacheCheck: (library: string) => boolean;
   globalFlag: boolean;
+  /** Active session model ID. Used to resolve per-model training cutoff (Phase J). */
+  modelId?: string;
 }
 
 export interface TriggerDecision {
@@ -43,26 +46,30 @@ function disabledResult(triggerSource: TriggerDecision['triggerSource']): Trigge
   return { fire: false, reason: 'disabled', triggerSource };
 }
 
-function evaluateImport(library: string, ctx: TriggerContext): LayerResult {
+function evaluateImport(library: string, ctx: TriggerContext, modelCutoff: string): LayerResult {
   const correction = evaluateCorrectionLayer(library, ctx);
   if (correction !== undefined) {
     return correction;
   }
-  return evaluateRuleLayer(library, ctx);
+  return evaluateRuleLayer(library, ctx, modelCutoff);
 }
 
 function collectImports(dirtyFiles: TriggerContext['dirtyFiles']): string[] {
   return dirtyFiles.flatMap((f) => f.imports);
 }
 
-function scanImports(imports: string[], ctx: TriggerContext): TriggerDecision | null {
+function scanImports(
+  imports: string[],
+  ctx: TriggerContext,
+  modelCutoff: string,
+): TriggerDecision | null {
   let hadCacheHit = false;
   for (const raw of imports) {
     const library = normalizeImportToLibrary(raw);
     if (library === '') {
       continue;
     }
-    const result = evaluateImport(library, ctx);
+    const result = evaluateImport(library, ctx, modelCutoff);
     if (result === undefined) {
       continue;
     }
@@ -84,6 +91,9 @@ function scanImports(imports: string[], ctx: TriggerContext): TriggerDecision | 
 /**
  * Evaluate whether research should be auto-fired for the current context.
  * Pure function — no network, no filesystem access.
+ *
+ * Phase J: resolves per-model training cutoff from context.modelId so that
+ * staleness is model-relative rather than using a single global baseline.
  */
 export function evaluateTrigger(context: TriggerContext): TriggerDecision {
   const { globalFlag, sessionFlags } = context;
@@ -96,8 +106,9 @@ export function evaluateTrigger(context: TriggerContext): TriggerDecision {
     return disabledResult('slash');
   }
 
+  const modelCutoff = resolveModelCutoffDate(context);
   const imports = collectImports(context.dirtyFiles);
-  const found = scanImports(imports, context);
+  const found = scanImports(imports, context, modelCutoff);
   if (found !== null) {
     return found;
   }

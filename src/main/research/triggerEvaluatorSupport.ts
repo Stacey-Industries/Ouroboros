@@ -9,6 +9,7 @@
  * All functions are pure — no I/O, no side effects.
  */
 
+import { getModelCutoffDate } from './modelTrainingCutoffs';
 import { isStale } from './stalenessMatrix';
 import type { TriggerContext, TriggerDecision } from './triggerEvaluator';
 
@@ -69,14 +70,19 @@ export function evaluateCorrectionLayer(library: string, ctx: TriggerContext): L
 // ─── Rule layer ───────────────────────────────────────────────────────────────
 
 /**
- * Checks whether `library` is stale according to the staleness matrix.
+ * Checks whether `library` is stale according to the staleness matrix,
+ * relative to the session model's training cutoff (Phase J).
  *
  * Stale + cached  → cache-hit (don't fire; caller aggregates)
  * Stale + !cached → fire with reason:'staleness-match', triggerSource:'rule'
  * Not stale       → undefined (no opinion)
  */
-export function evaluateRuleLayer(library: string, ctx: TriggerContext): LayerResult {
-  const result = isStale(library);
+export function evaluateRuleLayer(
+  library: string,
+  ctx: TriggerContext,
+  modelCutoffDate?: string,
+): LayerResult {
+  const result = isStale(library, undefined, modelCutoffDate);
   if (!result.stale) {
     return undefined;
   }
@@ -84,4 +90,12 @@ export function evaluateRuleLayer(library: string, ctx: TriggerContext): LayerRe
     return { fire: false, reason: 'cache-hit', triggerSource: 'none', library };
   }
   return { fire: true, reason: 'staleness-match', triggerSource: 'rule', library };
+}
+
+/**
+ * Resolve the model cutoff date for a TriggerContext.
+ * Exported so triggerEvaluator.ts can resolve once and pass to evaluateRuleLayer.
+ */
+export function resolveModelCutoffDate(ctx: TriggerContext): string {
+  return getModelCutoffDate(ctx.modelId);
 }

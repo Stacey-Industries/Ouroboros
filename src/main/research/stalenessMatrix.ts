@@ -11,6 +11,7 @@
 import {
   CURATED_STALE_PREFIXES,
   CURATED_STALENESS_ENTRIES,
+  TRAINING_CUTOFF_DATE,
 } from './stalenessMatrixData';
 import {
   HEURISTIC_DENYLIST,
@@ -69,11 +70,21 @@ function buildDenylistResult(library: string): StalenessLookup {
   return { library, stale: false, entry: null, reason: 'denylist' };
 }
 
+function isCuratedStaleForModel(entry: StalenessEntry, modelCutoffDate: string): boolean {
+  if (entry.kind !== 'curated') return true;
+  // Library is stale for a given model when:
+  //   entry.cutoffDate > modelCutoffDate
+  // i.e. the library's known-version was released after the model's training
+  // window closed — the model has an outdated picture of this library.
+  return entry.cutoffDate > modelCutoffDate;
+}
+
 function buildCuratedResult(
   library: string,
-  entry: StalenessEntry
+  entry: StalenessEntry,
+  stale: boolean,
 ): StalenessLookup {
-  return { library, stale: true, entry, reason: 'curated-match' };
+  return { library, stale, entry, reason: 'curated-match' };
 }
 
 function buildNoDataResult(library: string): StalenessLookup {
@@ -83,26 +94,39 @@ function buildNoDataResult(library: string): StalenessLookup {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Look up whether a library is considered stale relative to the training
+ * Look up whether a library is considered stale relative to a model's training
  * cutoff. Pure function — no network, no filesystem access.
  *
  * Resolution order:
  *   1. Denylist (exact name or internal-package prefix) → stale: false
- *   2. Curated list (exact name) → stale: true
- *   3. Curated prefix patterns → stale: true
- *   4. No data → stale: false, reason: 'no-data'
+ *   2. Curated list (exact name or prefix) → stale determined by model cutoff
+ *   3. No data → stale: false, reason: 'no-data'
  *
- * @param library        npm package name (e.g. 'next', '@tanstack/react-query')
+ * Staleness rule: a curated entry is stale for a given model when
+ *   entry.cutoffDate > modelCutoffDate
+ * i.e. the library's last-well-known version was released after the model's
+ * training window closed — the model has an outdated picture of this library.
+ *
+ * @param library         npm package name (e.g. 'next', '@tanstack/react-query')
  * @param importedVersion reserved for future version-range checks (Phase B+)
+ * @param modelCutoffDate ISO 8601 date — the session model's training cutoff.
+ *   Falls back to {@link TRAINING_CUTOFF_DATE} when omitted, preserving
+ *   backward compatibility for non-session callers.
  */
-export function isStale(library: string, importedVersion?: string): StalenessLookup {
+export function isStale(
+  library: string,
+  importedVersion?: string,
+  modelCutoffDate?: string,
+): StalenessLookup {
   void importedVersion; // reserved — version-range comparison deferred to Phase B
+  const cutoff = modelCutoffDate ?? TRAINING_CUTOFF_DATE;
   if (isInDenylist(library)) {
     return buildDenylistResult(library);
   }
   const entry = findCuratedEntry(library);
   if (entry !== null) {
-    return buildCuratedResult(library, entry);
+    const stale = isCuratedStaleForModel(entry, cutoff);
+    return buildCuratedResult(library, entry, stale);
   }
   return buildNoDataResult(library);
 }
