@@ -7,6 +7,8 @@
  * Feature flag (`telemetry.structured`) is added to the config schema in
  * Phase B; this Phase A module assumes enabled. Phase B wires `isFlagEnabled()`
  * against the real config.
+ *
+ * Query helpers live in telemetryStoreQueries.ts (split to stay under 300 lines).
  */
 
 import crypto from 'node:crypto';
@@ -18,16 +20,24 @@ import type { HookPayload } from '../hooks';
 import log from '../logger';
 import { openDatabase } from '../storage/database';
 import {
+  type InvocationRow,
   type OutcomeRow,
-  rowToOrchestrationTrace,
-  rowToOutcome,
-  rowToTelemetryEvent,
   TELEMETRY_SCHEMA_SQL,
   type TelemetryEvent,
   type TraceRow,
 } from './telemetryStoreHelpers';
+import {
+  queryEvents,
+  type QueryEventsOpts,
+  queryInvocations,
+  type QueryInvocationsFilter,
+  queryOutcomes,
+  queryTraces,
+} from './telemetryStoreQueries';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export type { QueryEventsOpts, QueryInvocationsFilter };
 
 export interface RecordOutcomeOpts {
   eventId: string;
@@ -48,11 +58,15 @@ export interface RecordTraceOpts {
   payload?: unknown;
 }
 
-export interface QueryEventsOpts {
-  sessionId?: string;
-  type?: string;
-  limit?: number;
-  offset?: number;
+export interface RecordInvocationOpts {
+  correlationId: string;
+  sessionId: string;
+  topic: string;
+  triggerReason: 'slash-command' | 'hook' | 'explicit' | 'auto' | 'other';
+  hitCache: boolean;
+  latencyMs: number;
+  artifactHash: string | null;
+  timestamp?: number;
 }
 
 export interface TelemetryStore {
@@ -60,9 +74,11 @@ export interface TelemetryStore {
   record(payload: HookPayload): string;
   recordOutcome(opts: RecordOutcomeOpts): void;
   recordTrace(opts: RecordTraceOpts): void;
+  recordInvocation(opts: RecordInvocationOpts): void;
   queryEvents(opts?: QueryEventsOpts): TelemetryEvent[];
   queryOutcomes(eventId: string): OutcomeRow[];
   queryTraces(sessionId: string, limit?: number): TraceRow[];
+  queryInvocations(filter?: QueryInvocationsFilter): InvocationRow[];
   close(): void;
 }
 
@@ -133,7 +149,7 @@ function startFlushInterval(state: StoreState): void {
   }
 }
 
-// ─── Record helpers ───────────────────────────────────────────────────────────
+// ─── Write helpers ────────────────────────────────────────────────────────────
 
 function enqueueEvent(state: StoreState, payload: HookPayload): string {
   const id = crypto.randomUUID();
@@ -187,52 +203,27 @@ function writeTrace(state: StoreState, opts: RecordTraceOpts): void {
   }
 }
 
-// ─── Query helpers ────────────────────────────────────────────────────────────
-
-function buildQueryEvents(
-  db: DatabaseType,
-  opts: { sessionId?: string; type?: string; limit: number; offset: number },
-): Record<string, unknown>[] {
-  const { sessionId, type, limit, offset } = opts;
-  if (sessionId !== undefined && type !== undefined) {
-    return db
-      .prepare('SELECT * FROM events WHERE session_id = ? AND type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?')
-      .all(sessionId, type, limit, offset) as Record<string, unknown>[];
+function writeInvocation(state: StoreState, opts: RecordInvocationOpts): void {
+  if (!isFlagEnabled()) return;
+  try {
+    state.db.prepare(
+      `INSERT INTO research_invocations
+        (id, correlation_id, session_id, topic, trigger_reason, artifact_hash, hit_cache, latency_ms, timestamp)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+    ).run(
+      crypto.randomUUID(),
+      opts.correlationId,
+      opts.sessionId,
+      opts.topic,
+      opts.triggerReason,
+      opts.artifactHash ?? null,
+      opts.hitCache ? 1 : 0,
+      opts.latencyMs,
+      opts.timestamp ?? Date.now(),
+    );
+  } catch (err) {
+    console.warn('[telemetry] invocation insert failed', err);
   }
-  if (sessionId !== undefined) {
-    return db
-      .prepare('SELECT * FROM events WHERE session_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?')
-      .all(sessionId, limit, offset) as Record<string, unknown>[];
-  }
-  if (type !== undefined) {
-    return db
-      .prepare('SELECT * FROM events WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?')
-      .all(type, limit, offset) as Record<string, unknown>[];
-  }
-  return db
-    .prepare('SELECT * FROM events ORDER BY timestamp DESC LIMIT ? OFFSET ?')
-    .all(limit, offset) as Record<string, unknown>[];
-}
-
-function runQueryEvents(state: StoreState, opts: QueryEventsOpts): TelemetryEvent[] {
-  const limit = Math.min(opts.limit ?? 100, 1000);
-  const offset = opts.offset ?? 0;
-  const rows = buildQueryEvents(state.db, { sessionId: opts.sessionId, type: opts.type, limit, offset });
-  return rows.map(rowToTelemetryEvent);
-}
-
-function runQueryOutcomes(state: StoreState, eventId: string): OutcomeRow[] {
-  const rows = state.db
-    .prepare('SELECT * FROM outcomes WHERE event_id = ?')
-    .all(eventId) as Record<string, unknown>[];
-  return rows.map(rowToOutcome);
-}
-
-function runQueryTraces(state: StoreState, sessionId: string, limit: number): TraceRow[] {
-  const rows = state.db
-    .prepare('SELECT * FROM orchestration_traces WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?')
-    .all(sessionId, limit) as Record<string, unknown>[];
-  return rows.map(rowToOrchestrationTrace);
 }
 
 function closeStore(state: StoreState): void {
@@ -262,12 +253,14 @@ export function openTelemetryStore(userDataDir: string): TelemetryStore {
   clearInterval(state.intervalHandle);
   startFlushInterval(state);
   return {
-    record: (payload) => enqueueEvent(state, payload), // returns row id
+    record: (payload) => enqueueEvent(state, payload),
     recordOutcome: (opts) => writeOutcome(state, opts),
     recordTrace: (opts) => writeTrace(state, opts),
-    queryEvents: (opts = {}) => runQueryEvents(state, opts),
-    queryOutcomes: (eventId) => runQueryOutcomes(state, eventId),
-    queryTraces: (sessionId, limit = 100) => runQueryTraces(state, sessionId, limit),
+    recordInvocation: (opts) => writeInvocation(state, opts),
+    queryEvents: (opts = {}) => queryEvents(state.db, opts),
+    queryOutcomes: (eventId) => queryOutcomes(state.db, eventId),
+    queryTraces: (sessionId, limit = 100) => queryTraces(state.db, sessionId, limit),
+    queryInvocations: (filter = {}) => queryInvocations(state.db, filter),
     close: () => closeStore(state),
   };
 }

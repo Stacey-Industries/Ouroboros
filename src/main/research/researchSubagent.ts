@@ -13,6 +13,8 @@
  * security/detect-child-process does not apply here.
  */
 
+import crypto from 'node:crypto';
+
 import type { ResearchArtifact } from '@shared/types/research';
 import type { ChildProcess } from 'child_process';
 import { spawn } from 'child_process';
@@ -21,11 +23,14 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 import log from '../logger';
+import { getTelemetryStore } from '../telemetry/telemetryStore';
 import { cacheKey, getResearchCache, ttlForLibrary } from './researchCache';
 import { getResearchCorrelationStore } from './researchCorrelation';
 import { buildResearchPrompt } from './researchPrompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export type TriggerReason = 'slash-command' | 'hook' | 'explicit' | 'auto' | 'other';
 
 export interface ResearchInput {
   topic: string;
@@ -33,6 +38,8 @@ export interface ResearchInput {
   version?: string;
   /** Wave 25 Phase D: chat session (thread) ID for outcome correlation. */
   sessionId?: string;
+  /** Wave 29.5 Phase E: why this invocation was triggered. */
+  triggerReason?: TriggerReason;
 }
 
 export interface SpawnClaudeDeps {
@@ -183,6 +190,39 @@ function persistArtifact(
   }
 }
 
+// ─── Telemetry helpers ────────────────────────────────────────────────────────
+
+function artifactHash(summary: string): string {
+  return crypto.createHash('sha1').update(summary).digest('hex');
+}
+
+interface TelemetryInvocationOpts {
+  correlationId: string;
+  input: ResearchInput;
+  hitCache: boolean;
+  latencyMs: number;
+  summary: string | null;
+}
+
+function recordTelemetryInvocation(opts: TelemetryInvocationOpts): void {
+  const store = getTelemetryStore();
+  if (!store) return;
+  const { correlationId, input, hitCache, latencyMs, summary } = opts;
+  try {
+    store.recordInvocation({
+      correlationId,
+      sessionId: input.sessionId ?? '',
+      topic: input.topic,
+      triggerReason: input.triggerReason ?? 'other',
+      hitCache,
+      latencyMs,
+      artifactHash: summary !== null ? artifactHash(summary) : null,
+    });
+  } catch (err) {
+    console.warn('[telemetry] invocation insert failed', err);
+  }
+}
+
 // ─── Main entry ───────────────────────────────────────────────────────────────
 
 /**
@@ -193,6 +233,8 @@ function persistArtifact(
  *   2. Spawn `claude --print --model sonnet` with crafted prompt via stdin.
  *   3. Parse JSON from stdout, store in cache, return artifact.
  *   4. On timeout or parse failure — return minimal failure artifact (never throws).
+ *
+ * Wave 29.5 Phase E: every path records to research_invocations via telemetryStore.
  */
 export async function runResearch(
   input: ResearchInput,
@@ -207,20 +249,29 @@ export async function runResearch(
   if (hit) {
     const hitArtifact = { ...hit, cached: true };
     recordCorrelation(hitArtifact.correlationId, input);
+    recordTelemetryInvocation({ correlationId: hitArtifact.correlationId, input, hitCache: true, latencyMs: 0, summary: hitArtifact.summary });
     return hitArtifact;
   }
 
+  const spawnStart = Date.now();
   const spawnResult = await spawnResearchClaude(buildResearchPrompt(input), deps);
+  const latencyMs = Date.now() - spawnStart;
+
   if (!spawnResult.success || !spawnResult.output) {
     log.warn('[research] Subagent spawn failed:', spawnResult.error);
+    recordTelemetryInvocation({ correlationId: id, input, hitCache: false, latencyMs, summary: null });
     return failureArtifact(input, id);
   }
 
   const artifact = parseSubagentOutput(spawnResult.output, input, id);
-  if (!artifact) return failureArtifact(input, id);
+  if (!artifact) {
+    recordTelemetryInvocation({ correlationId: id, input, hitCache: false, latencyMs, summary: null });
+    return failureArtifact(input, id);
+  }
 
   persistArtifact(cache, key, artifact, input.library ?? '');
   recordCorrelation(artifact.correlationId, input);
+  recordTelemetryInvocation({ correlationId: artifact.correlationId, input, hitCache: false, latencyMs, summary: artifact.summary });
   return artifact;
 }
 

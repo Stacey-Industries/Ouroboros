@@ -35,9 +35,11 @@ function makeMockStore(): TelemetryStore {
     record: vi.fn(() => 'mock-row-id'),
     recordOutcome: vi.fn(),
     recordTrace: vi.fn(),
+    recordInvocation: vi.fn(),
     queryEvents: vi.fn(() => []),
     queryOutcomes: vi.fn(() => []),
     queryTraces: vi.fn(() => []),
+    queryInvocations: vi.fn(() => []),
     close: vi.fn(),
   };
 }

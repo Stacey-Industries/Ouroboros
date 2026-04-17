@@ -186,6 +186,118 @@ describe('feature flag off', () => {
   });
 });
 
+describe('recordInvocation → queryInvocations round-trip', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = makeTmpDir();
+    setFlagEnabledOverride(true);
+  });
+
+  afterEach(() => {
+    cleanTmpDir(tmpDir);
+    setFlagEnabledOverride(null);
+  });
+
+  it('persists an invocation and reads it back', () => {
+    const store = openTelemetryStore(tmpDir);
+    store.recordInvocation({
+      correlationId: 'corr-abc',
+      sessionId: 'sess-inv',
+      topic: 'react suspense',
+      triggerReason: 'explicit',
+      hitCache: false,
+      latencyMs: 800,
+      artifactHash: 'deadbeef',
+    });
+    const rows = store.queryInvocations({ sessionId: 'sess-inv' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].correlationId).toBe('corr-abc');
+    expect(rows[0].topic).toBe('react suspense');
+    expect(rows[0].triggerReason).toBe('explicit');
+    expect(rows[0].hitCache).toBe(false);
+    expect(rows[0].latencyMs).toBe(800);
+    expect(rows[0].artifactHash).toBe('deadbeef');
+    store.close();
+  });
+
+  it('round-trips hit_cache = true correctly', () => {
+    const store = openTelemetryStore(tmpDir);
+    store.recordInvocation({
+      correlationId: 'corr-hit',
+      sessionId: 'sess-hit',
+      topic: 'next.js routing',
+      triggerReason: 'auto',
+      hitCache: true,
+      latencyMs: 0,
+      artifactHash: null,
+    });
+    const rows = store.queryInvocations({ sessionId: 'sess-hit' });
+    expect(rows[0].hitCache).toBe(true);
+    expect(rows[0].latencyMs).toBe(0);
+    expect(rows[0].artifactHash).toBeNull();
+    store.close();
+  });
+
+  it('preserves latency_ms numeric value precisely', () => {
+    const store = openTelemetryStore(tmpDir);
+    store.recordInvocation({
+      correlationId: 'corr-lat',
+      sessionId: 'sess-lat',
+      topic: 'prisma queries',
+      triggerReason: 'hook',
+      hitCache: false,
+      latencyMs: 12345,
+      artifactHash: null,
+    });
+    const rows = store.queryInvocations({});
+    const row = rows.find((r) => r.correlationId === 'corr-lat');
+    expect(row?.latencyMs).toBe(12345);
+    store.close();
+  });
+
+  it('filters by since + until', () => {
+    const store = openTelemetryStore(tmpDir);
+    const base = 1_700_000_000_000;
+    store.recordInvocation({
+      correlationId: 'c1', sessionId: 's1', topic: 't1',
+      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      timestamp: base,
+    });
+    store.recordInvocation({
+      correlationId: 'c2', sessionId: 's1', topic: 't2',
+      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      timestamp: base + 5000,
+    });
+    store.recordInvocation({
+      correlationId: 'c3', sessionId: 's1', topic: 't3',
+      triggerReason: 'other', hitCache: false, latencyMs: 0, artifactHash: null,
+      timestamp: base + 10_000,
+    });
+    const rows = store.queryInvocations({ since: base + 1000, until: base + 9000 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].correlationId).toBe('c2');
+    store.close();
+  });
+
+  it('is a no-op when flag is disabled', () => {
+    setFlagEnabledOverride(false);
+    const store = openTelemetryStore(tmpDir);
+    store.recordInvocation({
+      correlationId: 'corr-flag-off',
+      sessionId: 'sess-flag-off',
+      topic: 'anything',
+      triggerReason: 'other',
+      hitCache: false,
+      latencyMs: 0,
+      artifactHash: null,
+    });
+    const rows = store.queryInvocations({ sessionId: 'sess-flag-off' });
+    expect(rows).toHaveLength(0);
+    store.close();
+  });
+});
+
 describe('auto-correlationId', () => {
   let tmpDir: string;
 

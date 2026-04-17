@@ -14,6 +14,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetResearchCacheForTests } from './researchCache';
 import { runResearch } from './researchSubagent';
 
+// ─── Telemetry mock ───────────────────────────────────────────────────────────
+
+const mockRecordInvocation = vi.fn();
+
+vi.mock('../telemetry/telemetryStore', () => ({
+  getTelemetryStore: () => ({ recordInvocation: mockRecordInvocation }),
+}));
+
 // ─── Spawn mock helpers ───────────────────────────────────────────────────────
 
 interface FakeChild extends EventEmitter {
@@ -89,7 +97,7 @@ const VALID_JSON: ResearchArtifact = {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-beforeEach(() => { resetResearchCacheForTests(); });
+beforeEach(() => { resetResearchCacheForTests(); mockRecordInvocation.mockClear(); });
 afterEach(() => { resetResearchCacheForTests(); vi.useRealTimers(); });
 
 describe('runResearch — successful spawn', () => {
@@ -224,5 +232,62 @@ describe('runResearch — no library', () => {
     const { spawnFn } = spawnSuccess(JSON.stringify({ ...VALID_JSON, library: undefined }));
     const result = await runResearch({ topic: 'general typescript tips' }, baseDeps(spawnFn));
     expect(result.topic).toBe('general typescript tips');
+  });
+});
+
+describe('runResearch — telemetry recordInvocation', () => {
+  it('calls recordInvocation with non-null artifactHash on successful spawn', async () => {
+    const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
+    await runResearch(
+      { topic: 'app router', library: 'next', sessionId: 'sess-telem', triggerReason: 'explicit' },
+      baseDeps(spawnFn),
+    );
+    expect(mockRecordInvocation).toHaveBeenCalledTimes(1);
+    const call = mockRecordInvocation.mock.calls[0][0];
+    expect(call.sessionId).toBe('sess-telem');
+    expect(call.topic).toBe('app router');
+    expect(call.triggerReason).toBe('explicit');
+    expect(call.hitCache).toBe(false);
+    expect(call.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(call.artifactHash).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it('calls recordInvocation with null artifactHash on spawn failure', async () => {
+    const deps = baseDeps(spawnFailure('cli error'));
+    await runResearch({ topic: 'routing', library: 'next' }, deps);
+    expect(mockRecordInvocation).toHaveBeenCalledTimes(1);
+    const call = mockRecordInvocation.mock.calls[0][0];
+    expect(call.hitCache).toBe(false);
+    expect(call.artifactHash).toBeNull();
+  });
+
+  it('calls recordInvocation with hitCache:true on cache hit', async () => {
+    const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
+    const deps = baseDeps(spawnFn);
+    // first call populates cache
+    await runResearch({ topic: 'app router', library: 'next', version: '15.2.0' }, deps);
+    mockRecordInvocation.mockClear();
+    // second call is a cache hit
+    await runResearch({ topic: 'app router', library: 'next', version: '15.2.0' }, deps);
+    expect(mockRecordInvocation).toHaveBeenCalledTimes(1);
+    const call = mockRecordInvocation.mock.calls[0][0];
+    expect(call.hitCache).toBe(true);
+    expect(call.latencyMs).toBe(0);
+    expect(call.artifactHash).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it('defaults triggerReason to "other" when omitted', async () => {
+    const { spawnFn } = spawnSuccess(JSON.stringify(VALID_JSON));
+    await runResearch({ topic: 'app router', library: 'next' }, baseDeps(spawnFn));
+    const call = mockRecordInvocation.mock.calls[0][0];
+    expect(call.triggerReason).toBe('other');
+  });
+
+  it('calls recordInvocation with null artifactHash on malformed JSON', async () => {
+    const { spawnFn } = spawnSuccess('not valid json }{');
+    await runResearch({ topic: 'routing', library: 'next' }, baseDeps(spawnFn));
+    expect(mockRecordInvocation).toHaveBeenCalledTimes(1);
+    const call = mockRecordInvocation.mock.calls[0][0];
+    expect(call.artifactHash).toBeNull();
   });
 });

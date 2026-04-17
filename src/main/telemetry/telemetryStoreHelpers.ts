@@ -53,15 +53,18 @@ CREATE INDEX IF NOT EXISTS idx_orch_sess   ON orchestration_traces(session_id, t
 
 CREATE TABLE IF NOT EXISTS research_invocations (
   id             TEXT    NOT NULL PRIMARY KEY,
+  correlation_id TEXT    NOT NULL DEFAULT '',
   session_id     TEXT    NOT NULL,
+  topic          TEXT    NOT NULL DEFAULT '',
   trigger_reason TEXT    NOT NULL DEFAULT '',
-  topics         TEXT    NOT NULL DEFAULT '[]',
   artifact_hash  TEXT,
   hit_cache      INTEGER NOT NULL DEFAULT 0,
-  latency_ms     INTEGER
+  latency_ms     INTEGER NOT NULL DEFAULT 0,
+  timestamp      INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS idx_research_sess ON research_invocations(session_id);
+CREATE INDEX IF NOT EXISTS idx_research_ts   ON research_invocations(timestamp DESC);
 
 CREATE TABLE IF NOT EXISTS context_decisions (
   id          TEXT    NOT NULL PRIMARY KEY,
@@ -160,6 +163,34 @@ export function rowToOrchestrationTrace(row: Record<string, unknown>): TraceRow 
     phase: row.phase as string,
     timestamp: row.timestamp as number,
     payload: parseJson(row.payload),
+  };
+}
+
+// ─── Invocation row type + mapper ────────────────────────────────────────────
+
+export interface InvocationRow {
+  id: string;
+  correlationId: string;
+  sessionId: string;
+  topic: string;
+  triggerReason: string;
+  artifactHash: string | null;
+  hitCache: boolean;
+  latencyMs: number;
+  timestamp: number;
+}
+
+export function rowToInvocation(row: Record<string, unknown>): InvocationRow {
+  return {
+    id: row.id as string,
+    correlationId: row.correlation_id as string,
+    sessionId: row.session_id as string,
+    topic: row.topic as string,
+    triggerReason: row.trigger_reason as string,
+    artifactHash: (row.artifact_hash as string | null) ?? null,
+    hitCache: (row.hit_cache as number) !== 0,
+    latencyMs: row.latency_ms as number,
+    timestamp: row.timestamp as number,
   };
 }
 
