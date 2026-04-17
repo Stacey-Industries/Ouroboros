@@ -178,6 +178,39 @@ async function executeGitRevert(
   return { revertedFiles: [...filesToRestore, ...filesToRemove] };
 }
 
+// ---------------------------------------------------------------------------
+// Revert signal — lightweight observer hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Callback invoked after a successful revert with the absolute paths of all
+ * files that were rolled back. Observers (e.g. the research outcome writer)
+ * register via `registerRevertListener` and are called synchronously after
+ * the revert succeeds.
+ *
+ * Do not import concrete observers here — callers inject via registration so
+ * this file stays decoupled from the research package.
+ */
+export type RevertListener = (revertedPaths: string[]) => void;
+
+const revertListeners = new Set<RevertListener>();
+
+/** Register a listener that fires on every successful revert. */
+export function registerRevertListener(fn: RevertListener): () => void {
+  revertListeners.add(fn);
+  return () => { revertListeners.delete(fn); };
+}
+
+function notifyRevertListeners(revertedPaths: string[]): void {
+  for (const fn of revertListeners) {
+    try {
+      fn(revertedPaths);
+    } catch (err) {
+      log.warn('[chatOrchestrationBridgeGit] revert listener error:', err);
+    }
+  }
+}
+
 export async function revertToSnapshotWithBridge(
   threadStore: AgentChatThreadStore,
   activeSends: Map<string, ActiveStreamContext>,
@@ -200,6 +233,7 @@ export async function revertToSnapshotWithBridge(
   }
   try {
     const { revertedFiles } = await executeGitRevert(thread.workspaceRoot, snapshotHash);
+    if (revertedFiles.length > 0) notifyRevertListeners(revertedFiles);
     return { success: true, revertedFiles, restoredToHash: snapshotHash };
   } catch (error) {
     return { success: false, error: `Revert failed: ${getErrorMessage(error)}` };

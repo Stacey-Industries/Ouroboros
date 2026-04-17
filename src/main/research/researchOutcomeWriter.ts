@@ -16,8 +16,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import log from '../logger';
+import type { ResearchToolKind } from '../telemetry/toolKindMap';
 
 // ─── Wire format ──────────────────────────────────────────────────────────────
+
+/** Signal indicating whether the research-attributed file touch was accepted. */
+export type ResearchOutcomeSignal = 'accepted' | 'reverted' | 'unknown';
 
 export interface ResearchOutcomeRecord {
   id: string;
@@ -25,8 +29,23 @@ export interface ResearchOutcomeRecord {
   sessionId: string;
   topic: string;
   toolName: string;
+  /** Coarse tool-kind bucket — Wave 31 training uses this to weight Edit > Read. */
+  toolKind: ResearchToolKind;
   filePath: string;
   timestamp: number;
+  /**
+   * Whether the file touch was accepted (Edit/Write that stuck), reverted
+   * (checkpoint rolled it back), or unknown (only Reads or no signal within
+   * the attribution window).
+   */
+  outcomeSignal: ResearchOutcomeSignal;
+  /**
+   * Exit code of the next PTY session exit in the same session within the
+   * attribution window. Null if no PTY exit occurred.
+   */
+  followupTestExit: number | null;
+  /** Schema version — Wave 31 training scripts filter on schemaVersion === 2. */
+  schemaVersion: 2;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -115,7 +134,10 @@ export interface RecordOutcomeArgs {
   sessionId: string;
   topic: string;
   toolName: string;
+  toolKind: ResearchToolKind;
   filePath: string;
+  outcomeSignal: ResearchOutcomeSignal;
+  followupTestExit: number | null;
 }
 
 export interface ResearchOutcomeWriter {
@@ -162,7 +184,7 @@ export function createResearchOutcomeWriter(deps: ResearchOutcomeWriterDeps): Re
   const state: WriterState = { queue: [], timer: null, closed: false };
 
   return {
-    recordOutcome({ correlationId, sessionId, topic, toolName, filePath }) {
+    recordOutcome({ correlationId, sessionId, topic, toolName, toolKind, filePath, outcomeSignal, followupTestExit }) {
       if (state.closed) return;
       const record: ResearchOutcomeRecord = {
         id: randomUUID(),
@@ -170,8 +192,12 @@ export function createResearchOutcomeWriter(deps: ResearchOutcomeWriterDeps): Re
         sessionId,
         topic,
         toolName,
+        toolKind,
         filePath,
         timestamp: Date.now(),
+        outcomeSignal,
+        followupTestExit,
+        schemaVersion: 2,
       };
       state.queue.push(record);
       scheduleFlush(state, deps);

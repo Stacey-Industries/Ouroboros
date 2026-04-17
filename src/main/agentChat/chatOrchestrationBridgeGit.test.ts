@@ -24,6 +24,7 @@ import { join } from 'path';
 import {
   captureHeadHash,
   gitExecSimple,
+  registerRevertListener,
   revertToSnapshotWithBridge,
 } from './chatOrchestrationBridgeGit';
 import type { ActiveStreamContext } from './chatOrchestrationBridgeTypes';
@@ -528,5 +529,99 @@ describe('revertToSnapshotWithBridge — error handling', () => {
     const result = await revertToSnapshotWithBridge(store, new Map(), 'thread-1', 'msg-1');
     // The unlink failure is a warning, not a hard error — revert itself succeeds
     expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// registerRevertListener — revert hook (Wave 29.5 Phase F)
+// ---------------------------------------------------------------------------
+
+describe('registerRevertListener — revert hook fires with reverted paths', () => {
+  const WORKSPACE = '/workspace/project';
+  const SNAPSHOT = 'abc123';
+
+  beforeEach(() => {
+    execFileMock.mockReset();
+    unlinkMock.mockReset();
+  });
+
+  it('calls the registered listener with reverted file paths after a successful revert', async () => {
+    const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
+    const store = makeMockThreadStore(thread);
+    const received: string[][] = [];
+    const unregister = registerRevertListener((paths) => { received.push(paths); });
+
+    execFileMock.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
+        if (args[0] === 'diff') cb(null, 'M\tsrc/changed.ts\n', '');
+        else cb(null, '', '');
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+
+    const result = await revertToSnapshotWithBridge(store, new Map(), 'thread-1', 'msg-1');
+    unregister();
+
+    expect(result.success).toBe(true);
+    expect(received).toHaveLength(1);
+    expect(received[0]).toContain('src/changed.ts');
+  });
+
+  it('does not call the listener when revert succeeds with no files changed', async () => {
+    const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
+    const store = makeMockThreadStore(thread);
+    const received: string[][] = [];
+    const unregister = registerRevertListener((paths) => { received.push(paths); });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
+      cb(null, '', ''); // empty diff
+      return {} as ReturnType<typeof execFile>;
+    });
+
+    await revertToSnapshotWithBridge(store, new Map(), 'thread-1', 'msg-1');
+    unregister();
+
+    expect(received).toHaveLength(0);
+  });
+
+  it('does not call the listener when revert fails', async () => {
+    const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
+    const store = makeMockThreadStore(thread);
+    const received: string[][] = [];
+    const unregister = registerRevertListener((paths) => { received.push(paths); });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileMock.mockImplementation((_cmd: any, _args: any, _opts: any, cb: any) => {
+      cb(new Error('git error'), '', '');
+      return {} as ReturnType<typeof execFile>;
+    });
+
+    const result = await revertToSnapshotWithBridge(store, new Map(), 'thread-1', 'msg-1');
+    unregister();
+
+    expect(result.success).toBe(false);
+    expect(received).toHaveLength(0);
+  });
+
+  it('unregister() stops the listener from receiving future reverts', async () => {
+    const thread = makeThread('thread-1', WORKSPACE, [makeMessage('msg-1', SNAPSHOT)]);
+    const store = makeMockThreadStore(thread);
+    const received: string[][] = [];
+    const unregister = registerRevertListener((paths) => { received.push(paths); });
+    unregister(); // unregister immediately
+
+    execFileMock.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (_cmd: any, args: any, _opts: any, cb: any) => {
+        if (args[0] === 'diff') cb(null, 'M\tsrc/file.ts\n', '');
+        else cb(null, '', '');
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+
+    await revertToSnapshotWithBridge(store, new Map(), 'thread-1', 'msg-1');
+    expect(received).toHaveLength(0);
   });
 });
