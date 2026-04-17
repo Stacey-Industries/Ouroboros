@@ -2,7 +2,6 @@
 
 import { BrowserWindow } from 'electron';
 
-import { getConflictMonitor } from './agentConflict/conflictMonitor';
 import {
   clearSessionRules,
   requestApproval,
@@ -20,6 +19,7 @@ import {
   trackSessionLifecycle as trackSessionLifecycleLogic,
   truncatePayloadForDispatch,
 } from './hooksDispatchLogic';
+import { tapConflictMonitor, tapEditProvenance } from './hooksEditTap';
 import {
   enrichFromPermissionRequest,
   handleConfigChange,
@@ -28,10 +28,10 @@ import {
   type HookEventType,
 } from './hooksLifecycleHandlers';
 import { getHooksNetAddress, startHooksNetServer, stopHooksNetServer } from './hooksNet';
+import { tapPreToolResearch } from './hooksPreToolResearchTap';
 import { handleSessionEnd, handleSessionStart, handleSessionStop } from './hooksSessionHandlers';
 import { tapSubagentTracker } from './hooksSubagentTap';
 import log from './logger';
-import { getEditProvenanceStore } from './orchestration/editProvenance';
 import { shadowRouteHookEvent } from './router/routerShadow';
 import { getOutcomeObserver, getTelemetryStore } from './telemetry';
 import { broadcastToWebClients } from './web/webServer';
@@ -223,45 +223,6 @@ function clearApprovalRulesForEndedSession(payload: HookPayload): void {
   }
 }
 
-const CONFLICT_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit']);
-
-function tapConflictMonitor(payload: HookPayload): void {
-  if (payload.type !== 'post_tool_use') return;
-  if (!payload.toolName || !CONFLICT_EDIT_TOOLS.has(payload.toolName)) return;
-  const filePath =
-    (payload.input as Record<string, unknown> | undefined)?.file_path as string | undefined ??
-    (payload.input as Record<string, unknown> | undefined)?.path as string | undefined;
-  if (!filePath) return;
-  const cwd = sessionCwdMap.get(payload.sessionId) ?? '';
-  log.info(
-    `[trace:conflict] emission session=${payload.sessionId} tool=${payload.toolName} file=${filePath}`,
-  );
-  // Detach from hook pipe response — must not block the named-pipe handler
-  setImmediate(() => {
-    try {
-      getConflictMonitor().recordEdit(cwd, payload.sessionId, filePath);
-    } catch (err) {
-      log.warn('[conflictMonitor] recordEdit error:', err);
-    }
-  });
-}
-
-function tapEditProvenance(payload: HookPayload): void {
-  if (payload.type !== 'post_tool_use') return;
-  if (!payload.toolName || !CONFLICT_EDIT_TOOLS.has(payload.toolName)) return;
-  const filePath =
-    (payload.input as Record<string, unknown> | undefined)?.file_path as string | undefined ??
-    (payload.input as Record<string, unknown> | undefined)?.path as string | undefined;
-  if (!filePath) return;
-  setImmediate(() => {
-    try {
-      getEditProvenanceStore()?.markAgentEdit(filePath, payload.correlationId);
-    } catch (err) {
-      log.warn('[editProvenance] markAgentEdit error:', err);
-    }
-  });
-}
-
 function dispatchToRenderer(rawPayload: HookPayload): void {
   if (getChatLaunchesInFlight() > 0 || syntheticSessionIds.size > 0) {
     log.info(
@@ -299,10 +260,11 @@ function dispatchToRenderer(rawPayload: HookPayload): void {
   dispatchLifecycleEvent(payload);
   handleApprovalRequest(payload);
   clearApprovalRulesForEndedSession(payload);
-  tapConflictMonitor(payload);
+  tapConflictMonitor(payload, sessionCwdMap);
   tapEditProvenance(payload);
   tapContextOutcomeObserver(payload);
   tapSubagentTracker(payload);
+  tapPreToolResearch(payload);
 }
 
 function evictOrphanedSessions(): void {
@@ -354,10 +316,11 @@ export function dispatchSyntheticHookEvent(rawPayload: HookPayload): void {
   flushPendingQueue(windows);
   sendPayload(windows, payload);
   dispatchLifecycleEvent(payload);
-  tapConflictMonitor(payload);
+  tapConflictMonitor(payload, sessionCwdMap);
   tapEditProvenance(payload);
   tapContextOutcomeObserver(payload);
   tapSubagentTracker(payload);
+  tapPreToolResearch(payload);
 }
 
 export function getHooksAddress(): string | null {
