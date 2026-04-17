@@ -267,7 +267,9 @@ function tryApplyPageRank(
     for (const [filePath, score] of normalized) {
       if (score <= 0) continue
       const weight = Math.round(score * PAGERANK_SCALE)
-      if (weight > 0) addReason(getOrCreateCandidate(candidates, filePath), 'pagerank', `PageRank score: ${score.toFixed(3)}`, weight)
+      const candidate = getOrCreateCandidate(candidates, filePath)
+      candidate.pagerank_score = score
+      if (weight > 0) addReason(candidate, 'pagerank', `PageRank score: ${score.toFixed(3)}`, weight)
     }
   } catch {
     // PageRank is best-effort — never fail context selection

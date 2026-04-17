@@ -21,6 +21,8 @@ import type {
 export interface MutableCandidate {
   filePath: string
   reasons: ContextSelectionReason[]
+  /** Wave 29.5 Phase D: PageRank score set by tryApplyPageRank; null until graph runs. */
+  pagerank_score?: number | null
 }
 
 export interface NormalizedSelection {
@@ -101,7 +103,7 @@ export function rankCandidates(candidates: Map<string, MutableCandidate>): Ranke
     .map((candidate) => {
       const reasons = sortReasons(candidate.reasons)
       const score = scoreCandidate(reasons)
-      return { filePath: candidate.filePath, score, confidence: confidenceFor(reasons, score), reasons, snippets: [], truncationNotes: [] } satisfies RankedContextFile
+      return { filePath: candidate.filePath, score, confidence: confidenceFor(reasons, score), reasons, snippets: [], truncationNotes: [], pagerank_score: candidate.pagerank_score ?? null } satisfies RankedContextFile
     })
     .sort((left, right) => {
       if (right.score !== left.score) return right.score - left.score

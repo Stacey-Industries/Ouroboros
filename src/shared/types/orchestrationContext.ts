@@ -68,6 +68,8 @@ export interface RankedContextFile {
   snippets: ContextSnippet[];
   truncationNotes: ContextTruncationNote[];
   hunks?: GitDiffHunk[];
+  /** Wave 19 PageRank score in [0, 1] (normalised). Null for files outside the graph. */
+  pagerank_score: number | null;
 }
 
 export interface OmittedContextCandidate {

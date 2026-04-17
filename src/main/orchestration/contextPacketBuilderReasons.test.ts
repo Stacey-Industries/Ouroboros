@@ -12,6 +12,7 @@ function makeFile(reasons: RankedContextFile['reasons']): RankedContextFile {
     reasons,
     snippets: [],
     truncationNotes: [],
+    pagerank_score: null,
   };
 }
 

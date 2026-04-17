@@ -93,6 +93,7 @@ function createContextFiles(): ContextPacket['files'] {
       reasons: [{ kind: 'user_selected', weight: 1, detail: 'Selected by user' }],
       snippets: [],
       truncationNotes: [],
+      pagerank_score: null,
     },
   ];
 }

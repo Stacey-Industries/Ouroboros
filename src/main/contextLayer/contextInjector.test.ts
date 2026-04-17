@@ -108,6 +108,7 @@ function createMockRankedFile(filePath: string): RankedContextFile {
     reasons: [{ kind: 'user_selected', weight: 10, detail: 'user selected' }],
     snippets: [],
     truncationNotes: [],
+    pagerank_score: null,
   }
 }
 

@@ -40,6 +40,7 @@ function makeRankedFile(filePath: string, score: number): RankedContextFile {
     reasons: [{ kind: 'git_diff', weight: score }],
     confidence: 'high',
     snippets: [],
+    pagerank_score: null,
   } as unknown as RankedContextFile;
 }
 
@@ -145,6 +146,18 @@ describe('emitDecisionsForPacket', () => {
 
     const [, features] = mockEmitContextDecisions.mock.calls[0];
     expect(features[0].pagerank_score).toBeNull();
+  });
+
+  it('passes non-null pagerank_score when the ranked file has one', () => {
+    const file: RankedContextFile = {
+      ...makeRankedFile('src/h2.ts', 40),
+      pagerank_score: 0.42,
+    } as unknown as RankedContextFile;
+    const selection = makeSelection([file]);
+    emitDecisionsForPacket('trace-6b', selection, [file]);
+
+    const [, features] = mockEmitContextDecisions.mock.calls[0];
+    expect(features[0].pagerank_score).toBe(0.42);
   });
 
   it('calls recordTurnStart with normalised includedFiles and sessionId', () => {

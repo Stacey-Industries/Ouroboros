@@ -43,7 +43,7 @@ export function emitDecisionsForPacket(
   const features = allRanked.map((rf) => ({
     score: rf.score,
     reasons: rf.reasons.map((r) => ({ kind: r.kind, weight: r.weight })),
-    pagerank_score: (rf as unknown as Record<string, unknown>)['pagerank_score'] as number | null ?? null,
+    pagerank_score: rf.pagerank_score,
     included: includedPaths.has(rf.filePath),
   }));
 
