@@ -60,11 +60,39 @@ export type ContextOutcomeKind =
   | 'unused' // in packet, not touched
   | 'missed'; // agent Read/Edited a file NOT in the packet
 
+/** Coarse bucket derived from the raw tool name. Used by Wave 31 ranker. */
+export type ToolKind = 'read' | 'edit' | 'write' | 'other';
+
 export interface ContextOutcome {
-  decisionId: string;
+  /**
+   * Router trace ID that links this outcome to its ContextDecision row.
+   * Required — Phase B guarantees every packet build mints a traceId.
+   */
+  traceId: string;
+  /**
+   * Normalised absolute path (lowercase, forward-slash, workspace-relative
+   * when inside the workspace). Identical normalisation on both the decision
+   * and outcome sides so the Wave 31 (traceId, fileId) join is symmetric.
+   */
+  fileId: string;
+  /** Chat session / thread ID for group-by-session soak metrics. */
+  sessionId: string;
+  /** Unix ms at flush time. Enables time-slice queries over the training set. */
+  timestamp: number;
   kind: ContextOutcomeKind;
-  /** Which tool used the file, if kind === 'used'. */
+  /** Coarse tool-kind bucket derived from toolUsed. */
+  toolKind: ToolKind;
+  /** Raw tool name as reported by the provider, if a file-touching tool fired. */
   toolUsed?: string;
+  /**
+   * Legacy decision id — kept for readback / debugging.
+   * For `used`/`unused` entries this is `file.fileId`; for `missed` entries
+   * it was previously the normalised path key. Superseded by `fileId` for
+   * join purposes. Optional so downstream readers can handle old records.
+   */
+  decisionId?: string;
+  /** Schema version — Wave 31 training scripts filter on schemaVersion === 2. */
+  schemaVersion: 2;
 }
 
 // ─── Edit provenance (Wave 18 populates; scaffold here) ──────────────────────

@@ -27,9 +27,15 @@ import type { ContextOutcome } from './contextTypes';
 
 function makeOutcome(overrides: Partial<ContextOutcome> = {}): ContextOutcome {
   return {
-    decisionId: 'dec-1',
+    traceId: 'trace-1',
+    fileId: 'src/a.ts',
+    sessionId: 'sess-1',
+    timestamp: 1_700_000_000_000,
     kind: 'used',
+    toolKind: 'read',
     toolUsed: 'Read',
+    schemaVersion: 2,
+    decisionId: 'dec-1',
     ...overrides,
   };
 }
@@ -78,8 +84,8 @@ describe('createOutcomeWriter — flush timer', () => {
     const { deps, appended } = makeDeps();
     const writer = createOutcomeWriter(deps);
 
-    writer.recordOutcome(makeOutcome({ decisionId: 'dec-1' }));
-    writer.recordOutcome(makeOutcome({ decisionId: 'dec-2' }));
+    writer.recordOutcome(makeOutcome({ fileId: 'src/a.ts' }));
+    writer.recordOutcome(makeOutcome({ fileId: 'src/b.ts' }));
 
     expect(appended).toHaveLength(0); // not yet flushed
 
@@ -88,8 +94,8 @@ describe('createOutcomeWriter — flush timer', () => {
     expect(appended).toHaveLength(1);
     const lines = appended[0].split('\n').filter(Boolean);
     expect(lines).toHaveLength(2);
-    expect(JSON.parse(lines[0])).toMatchObject({ decisionId: 'dec-1' });
-    expect(JSON.parse(lines[1])).toMatchObject({ decisionId: 'dec-2' });
+    expect(JSON.parse(lines[0])).toMatchObject({ fileId: 'src/a.ts' });
+    expect(JSON.parse(lines[1])).toMatchObject({ fileId: 'src/b.ts' });
   });
 
   it('does not double-flush when timer fires then flushPendingWrites is called', async () => {
@@ -121,7 +127,7 @@ describe('createOutcomeWriter — flushPendingWrites', () => {
 
     expect(appended).toHaveLength(1);
     const parsed = JSON.parse(appended[0].trim());
-    expect(parsed).toMatchObject({ decisionId: 'dec-1', kind: 'used' });
+    expect(parsed).toMatchObject({ fileId: 'src/a.ts', kind: 'used' });
   });
 
   it('is a no-op when queue is empty', async () => {
@@ -145,11 +151,11 @@ describe('createOutcomeWriter — closeOutcomeWriter', () => {
     const { deps, appended } = makeDeps();
     const writer = createOutcomeWriter(deps);
 
-    writer.recordOutcome(makeOutcome({ decisionId: 'pre-close' }));
+    writer.recordOutcome(makeOutcome({ fileId: 'src/pre-close.ts' }));
     await writer.closeOutcomeWriter();
 
     expect(appended).toHaveLength(1);
-    expect(JSON.parse(appended[0].trim())).toMatchObject({ decisionId: 'pre-close' });
+    expect(JSON.parse(appended[0].trim())).toMatchObject({ fileId: 'src/pre-close.ts' });
   });
 
   it('ignores recordOutcome calls after close', async () => {
@@ -209,7 +215,7 @@ describe('createOutcomeWriter — rotation', () => {
   });
 });
 
-describe('createOutcomeWriter — outcome shape', () => {
+describe('createOutcomeWriter — outcome shape (schemaVersion 2)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -217,12 +223,16 @@ describe('createOutcomeWriter — outcome shape', () => {
     vi.useRealTimers();
   });
 
-  it('writes decisionId, kind, and toolUsed fields', async () => {
+  it('emits traceId, fileId, sessionId, timestamp, toolKind, schemaVersion: 2', async () => {
     const { deps, appended } = makeDeps();
     const writer = createOutcomeWriter(deps);
     const outcome = makeOutcome({
-      decisionId: 'dec-xyz',
-      kind: 'missed',
+      traceId: 'trace-xyz',
+      fileId: 'src/foo.ts',
+      sessionId: 'sess-abc',
+      timestamp: 1_700_000_001_000,
+      kind: 'used',
+      toolKind: 'edit',
       toolUsed: 'Edit',
     });
 
@@ -230,9 +240,13 @@ describe('createOutcomeWriter — outcome shape', () => {
     await writer.flushPendingWrites();
 
     const parsed = JSON.parse(appended[0].trim());
-    expect(parsed.decisionId).toBe('dec-xyz');
-    expect(parsed.kind).toBe('missed');
+    expect(parsed.traceId).toBe('trace-xyz');
+    expect(parsed.fileId).toBe('src/foo.ts');
+    expect(parsed.sessionId).toBe('sess-abc');
+    expect(parsed.timestamp).toBe(1_700_000_001_000);
+    expect(parsed.toolKind).toBe('edit');
     expect(parsed.toolUsed).toBe('Edit');
+    expect(parsed.schemaVersion).toBe(2);
   });
 
   it('assigns a generated UUID id on every written record', async () => {
@@ -246,16 +260,29 @@ describe('createOutcomeWriter — outcome shape', () => {
     expect(parsed.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('writes unused outcomes without toolUsed field', async () => {
+  it('writes unused outcomes with toolKind=other when no toolUsed', async () => {
     const { deps, appended } = makeDeps();
     const writer = createOutcomeWriter(deps);
 
-    writer.recordOutcome({ decisionId: 'dec-u', kind: 'unused' });
+    writer.recordOutcome(makeOutcome({ kind: 'unused', toolKind: 'other', toolUsed: undefined }));
     await writer.flushPendingWrites();
 
     const parsed = JSON.parse(appended[0].trim());
     expect(parsed.kind).toBe('unused');
+    expect(parsed.toolKind).toBe('other');
     expect(parsed.toolUsed).toBeUndefined();
+    expect(parsed.schemaVersion).toBe(2);
+  });
+
+  it('writes decisionId field when present (legacy/debug)', async () => {
+    const { deps, appended } = makeDeps();
+    const writer = createOutcomeWriter(deps);
+
+    writer.recordOutcome(makeOutcome({ decisionId: 'dec-legacy' }));
+    await writer.flushPendingWrites();
+
+    const parsed = JSON.parse(appended[0].trim());
+    expect(parsed.decisionId).toBe('dec-legacy');
   });
 });
 

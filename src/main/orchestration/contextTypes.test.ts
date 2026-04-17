@@ -55,12 +55,21 @@ describe('contextTypes shapes compile as values', () => {
   });
 
   it('ContextOutcome kind narrows to the three documented values', () => {
-    const used: ContextOutcome = { decisionId: 'd1', kind: 'used', toolUsed: 'Edit' };
-    const unused: ContextOutcome = { decisionId: 'd2', kind: 'unused' };
-    const missed: ContextOutcome = { decisionId: 'd3', kind: 'missed' };
+    const base = {
+      traceId: 'trace-1',
+      fileId: 'src/a.ts',
+      sessionId: 'sess-1',
+      timestamp: 1_700_000_000_000,
+      toolKind: 'read' as const,
+      schemaVersion: 2 as const,
+    };
+    const used: ContextOutcome = { ...base, kind: 'used', toolUsed: 'Edit', toolKind: 'edit' };
+    const unused: ContextOutcome = { ...base, kind: 'unused' };
+    const missed: ContextOutcome = { ...base, kind: 'missed' };
     expect(used.kind).toBe('used');
     expect(unused.kind).toBe('unused');
     expect(missed.kind).toBe('missed');
+    expect(used.schemaVersion).toBe(2);
   });
 
   it('EditProvenance captures sessionId, editedAt, editTool, correlationId', () => {

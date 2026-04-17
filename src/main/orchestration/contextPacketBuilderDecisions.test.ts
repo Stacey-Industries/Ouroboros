@@ -18,6 +18,15 @@ vi.mock('./contextSignalCollector', () => ({
   emitContextDecisions: mockEmitContextDecisions,
 }));
 
+// Also mock the outcome observer so recordTurnStart side-effects are visible
+const { mockRecordTurnStart } = vi.hoisted(() => ({
+  mockRecordTurnStart: vi.fn(),
+}));
+
+vi.mock('./contextOutcomeObserver', () => ({
+  recordTurnStart: mockRecordTurnStart,
+}));
+
 import { emitDecisionsForPacket } from './contextPacketBuilderDecisions';
 import type { ContextSelectionResult } from './contextSelector';
 import type { RankedContextFile } from './types';
@@ -48,12 +57,14 @@ function makeSelection(rankedFiles: RankedContextFile[]): ContextSelectionResult
 describe('emitDecisionsForPacket', () => {
   beforeEach(() => {
     mockEmitContextDecisions.mockClear();
+    mockRecordTurnStart.mockClear();
   });
 
   it('is a no-op when traceId is undefined', () => {
     const selection = makeSelection([makeRankedFile('src/a.ts', 50)]);
     emitDecisionsForPacket(undefined, selection, []);
     expect(mockEmitContextDecisions).not.toHaveBeenCalled();
+    expect(mockRecordTurnStart).not.toHaveBeenCalled();
   });
 
   it('is a no-op when traceId is empty string', () => {
@@ -95,13 +106,15 @@ describe('emitDecisionsForPacket', () => {
     expect(final[0].included).toBe(false);
   });
 
-  it('passes correct fileId and score in the final array', () => {
-    const file = makeRankedFile('src/d.ts', 88);
+  it('passes normalised fileId (lowercase, forward-slash) in the final array', () => {
+    const file = makeRankedFile('src/D.ts', 88);
     const selection = makeSelection([file]);
     emitDecisionsForPacket('trace-3', selection, [file]);
 
     const [, , final] = mockEmitContextDecisions.mock.calls[0];
-    expect(final[0]).toMatchObject({ fileId: 'src/d.ts', score: 88 });
+    // normaliseFileId with no workspace root: just lowercase + forward-slash
+    expect(final[0].fileId).toBe('src/d.ts');
+    expect(final[0].score).toBe(88);
   });
 
   it('maps reasons into feature vectors', () => {
@@ -132,5 +145,29 @@ describe('emitDecisionsForPacket', () => {
 
     const [, features] = mockEmitContextDecisions.mock.calls[0];
     expect(features[0].pagerank_score).toBeNull();
+  });
+
+  it('calls recordTurnStart with normalised includedFiles and sessionId', () => {
+    const file = makeRankedFile('src/I.ts', 60);
+    const selection = makeSelection([file]);
+    emitDecisionsForPacket('trace-7', selection, [file], 'sess-99', '/workspace');
+
+    expect(mockRecordTurnStart).toHaveBeenCalledWith(
+      'trace-7',
+      'trace-7',
+      [{ fileId: 'src/i.ts', path: 'src/I.ts' }],
+      'sess-99',
+      '/workspace',
+    );
+  });
+
+  it('normalises fileId using the workspace root when provided', () => {
+    const file = makeRankedFile('/workspace/src/J.ts', 50);
+    const selection = makeSelection([file]);
+    emitDecisionsForPacket('trace-8', selection, [file], '', '/workspace');
+
+    const [, , final] = mockEmitContextDecisions.mock.calls[0];
+    // /workspace/src/j.ts with root /workspace → src/j.ts
+    expect(final[0].fileId).toBe('src/j.ts');
   });
 });

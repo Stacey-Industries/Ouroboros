@@ -4,7 +4,7 @@
  * Tracks which files the agent Read/Edited during a turn and compares them against
  * the files that were included in the context packet for that turn, then classifies:
  *   used   — in packet AND touched by a file-touching tool
- *   missed — touched by a file-touching tool but NOT in packet (we should have included it)
+ *   missed — touched by a file-touching tool but NOT in packet
  *   unused — in packet AND not touched during the turn
  *
  * Outcomes are written to context-outcomes.jsonl via the ContextOutcomeWriter singleton.
@@ -16,6 +16,7 @@
 
 import log from '../logger';
 import { attributeResearchOutcome } from './contextOutcomeObserverResearch';
+import { buildOutcomeBase } from './contextOutcomeObserverSupport';
 import type { ContextOutcomeWriter } from './contextOutcomeWriter';
 import { getOutcomeWriter } from './contextOutcomeWriter';
 import type { ContextOutcome } from './contextTypes';
@@ -109,6 +110,8 @@ interface IncludedFile {
 
 interface TurnState {
   traceId: string;
+  sessionId: string;
+  workspaceRoot: string;
   includedFiles: IncludedFile[];
   /** Normalised paths touched by file-touching tools → tool name used. */
   touchedPaths: Map<string, string>;
@@ -137,44 +140,45 @@ function normalisePath(p: string): string {
  *
  * @param turnId        Stable identifier for this turn. Equals traceId when called
  *                      from contextPacketBuilderDecisions.ts.
- * @param traceId       Router trace ID that scoped the packet build — links
- *                      Phase A decisions to Phase B outcomes via join key.
+ * @param traceId       Router trace ID — links Phase A decisions to Phase B outcomes.
  * @param includedFiles Files that were included in the context packet for this turn.
+ * @param sessionId     Chat session / thread ID for group-by-session queries.
+ * @param workspaceRoot Absolute path to the workspace root for fileId normalisation.
  */
 export function recordTurnStart(
   turnId: string,
   traceId: string,
   includedFiles: IncludedFile[],
+  sessionId = '',
+  workspaceRoot = '',
 ): void {
   activeTurns.set(turnId, {
     traceId,
+    sessionId,
+    workspaceRoot,
     includedFiles,
     touchedPaths: new Map(),
   });
-  log.info(`[contextOutcomeObserver] turn start turnId=${turnId} traceId=${traceId} includedFiles=${includedFiles.length}`);
+  log.info(
+    `[contextOutcomeObserver] turn start turnId=${turnId} traceId=${traceId} ` +
+      `includedFiles=${includedFiles.length}`,
+  );
 }
 
 /**
  * Associate a hook sessionId with a traceId so that `observeToolCallBySession`
  * can route tool events to the correct active turn.
- *
- * Called from the bridge monitor when an `agent_start` fires for a chat session
- * that has an active context outcome turn. The sessionId is the chat threadId
- * (used by synthetic hook events); the traceId is the one passed to
- * `recordTurnStart` from `contextPacketBuilderDecisions`.
  */
 export function registerSessionTrace(sessionId: string, traceId: string): void {
   sessionTraceMap.set(sessionId, traceId);
-  log.info(`[contextOutcomeObserver] session trace registered sessionId=${sessionId} traceId=${traceId}`);
+  log.info(
+    `[contextOutcomeObserver] session trace registered sessionId=${sessionId} traceId=${traceId}`,
+  );
 }
 
 /**
  * Called when a tool-use event arrives during a turn. Ignores non-file-touching
  * tools silently.
- *
- * @param turnId   The turn this event belongs to.
- * @param toolName The tool name as reported by the provider.
- * @param args     Tool input arguments — we look for path/filePath/file_path.
  */
 export function observeToolCall(
   turnId: string,
@@ -191,16 +195,15 @@ export function observeToolCall(
   const key = normalisePath(filePath);
   if (!state.touchedPaths.has(key)) {
     state.touchedPaths.set(key, toolName);
-    log.info(`[contextOutcomeObserver] tool touch turnId=${turnId} tool=${toolName} path=${filePath}`);
+    log.info(
+      `[contextOutcomeObserver] tool touch turnId=${turnId} tool=${toolName} path=${filePath}`,
+    );
   }
 }
 
 /**
  * Route a tool-use event from a hook sessionId to the correct active turn.
- * Uses the sessionId → traceId map populated by `registerSessionTrace`.
- * No-op if the session has no registered traceId or the turn is not active.
- *
- * Also calls research outcome correlation (Wave 25 Phase D) for Edit/Write tools.
+ * Also calls research outcome correlation (Wave 25 Phase D) for file-touching tools.
  */
 export function observeToolCallBySession(
   sessionId: string,
@@ -210,7 +213,6 @@ export function observeToolCallBySession(
   const traceId = sessionTraceMap.get(sessionId);
   if (!traceId) return;
   observeToolCall(traceId, toolName, args);
-  // Wave 25 Phase D: attribute file-touching tools to research invocations.
   if (isFileTouchingTool(toolName)) {
     const filePath = extractPath(args);
     if (filePath) attributeResearchOutcome(sessionId, toolName, filePath);
@@ -218,12 +220,10 @@ export function observeToolCallBySession(
 }
 
 /**
- * Called at the end of a turn (completed/cancelled/failed). Computes outcomes
- * for all included files plus any missed files, passes them to the writer, and
- * removes the turn state.
+ * Called at the end of a turn. Computes outcomes for all included files plus
+ * any missed files, passes them to the writer, and removes the turn state.
  *
- * @returns The emitted outcomes (for testing / introspection). Empty array when
- *          the flag is off or no turn state exists.
+ * @returns The emitted outcomes (for testing / introspection).
  */
 export function recordTurnEnd(turnId: string): ContextOutcome[] {
   const state = activeTurns.get(turnId);
@@ -238,7 +238,7 @@ export function recordTurnEnd(turnId: string): ContextOutcome[] {
     return [];
   }
 
-  const outcomes: ContextOutcome[] = buildOutcomes(state);
+  const outcomes = buildOutcomes(state);
   for (const outcome of outcomes) {
     writer.recordOutcome(outcome);
   }
@@ -274,18 +274,28 @@ function buildOutcomes(state: TurnState): ContextOutcome[] {
     const key = normalisePath(file.path);
     includedKeys.add(key);
     const toolUsed = state.touchedPaths.get(key);
-    if (toolUsed !== undefined) {
-      outcomes.push({ decisionId: file.fileId, kind: 'used', toolUsed });
-    } else {
-      outcomes.push({ decisionId: file.fileId, kind: 'unused' });
-    }
+    const base = buildOutcomeBase({
+      rawPath: file.path,
+      workspaceRoot: state.workspaceRoot,
+      traceId: state.traceId,
+      sessionId: state.sessionId,
+      kind: toolUsed !== undefined ? 'used' : 'unused',
+      toolUsed,
+    });
+    outcomes.push({ ...base, decisionId: file.fileId });
   }
 
-  // Missed: touched by a tool but not in the included set
   for (const [touchedKey, toolUsed] of state.touchedPaths) {
     if (!includedKeys.has(touchedKey)) {
-      // Use the normalised path as the decisionId for missed files (no packet entry)
-      outcomes.push({ decisionId: touchedKey, kind: 'missed', toolUsed });
+      const base = buildOutcomeBase({
+        rawPath: touchedKey,
+        workspaceRoot: state.workspaceRoot,
+        traceId: state.traceId,
+        sessionId: state.sessionId,
+        kind: 'missed',
+        toolUsed,
+      });
+      outcomes.push({ ...base, decisionId: touchedKey });
     }
   }
 

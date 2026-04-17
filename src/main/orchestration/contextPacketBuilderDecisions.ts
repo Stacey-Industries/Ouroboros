@@ -9,6 +9,7 @@
 import { recordTurnStart } from './contextOutcomeObserver';
 import type { ContextSelectionResult } from './contextSelector';
 import { emitContextDecisions } from './contextSignalCollector';
+import { normaliseFileId } from './fileIdNormalise';
 import type { RankedContextFile } from './types';
 
 /**
@@ -20,11 +21,19 @@ import type { RankedContextFile } from './types';
  * calls can be tracked against the included-file set (Phase B).
  *
  * No-op when traceId is absent (cache-hit paths re-use the original trace).
+ *
+ * @param traceId       Router trace ID — guaranteed non-empty by Phase B.
+ * @param selection     Full ranked file list from the context selector.
+ * @param files         Files that made it into the packet (budget-pruned subset).
+ * @param sessionId     Chat session / thread ID forwarded to the outcome observer.
+ * @param workspaceRoot Absolute workspace root for fileId normalisation.
  */
 export function emitDecisionsForPacket(
   traceId: string | undefined,
   selection: ContextSelectionResult,
   files: RankedContextFile[],
+  sessionId = '',
+  workspaceRoot = '',
 ): void {
   if (!traceId) return;
 
@@ -39,7 +48,7 @@ export function emitDecisionsForPacket(
   }));
 
   const final = allRanked.map((rf) => ({
-    fileId: rf.filePath,
+    fileId: normaliseFileId(rf.filePath, workspaceRoot),
     score: rf.score,
     included: includedPaths.has(rf.filePath),
   }));
@@ -48,7 +57,9 @@ export function emitDecisionsForPacket(
 
   // Phase B — register the included files so the outcome observer can
   // classify tool-call touches during this turn.
-  // turnId = traceId; tool events will be routed via sessionId → traceId map.
-  const includedFiles = files.map((f) => ({ fileId: f.filePath, path: f.filePath }));
-  recordTurnStart(traceId, traceId, includedFiles);
+  const includedFiles = files.map((f) => ({
+    fileId: normaliseFileId(f.filePath, workspaceRoot),
+    path: f.filePath,
+  }));
+  recordTurnStart(traceId, traceId, includedFiles, sessionId, workspaceRoot);
 }

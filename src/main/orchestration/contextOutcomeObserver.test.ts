@@ -62,7 +62,7 @@ describe('recordTurnStart / recordTurnEnd — basic lifecycle', () => {
     const outcomes = recordTurnEnd('turn-1');
 
     expect(outcomes).toHaveLength(1);
-    expect(outcomes[0]).toMatchObject({ decisionId: 'src/foo.ts', kind: 'unused' });
+    expect(outcomes[0]).toMatchObject({ fileId: 'src/foo.ts', kind: 'unused' });
   });
 
   it('returns empty array when turnId was never started', () => {
@@ -95,7 +95,7 @@ describe('outcome kinds — used / unused / missed', () => {
     const outcomes = recordTurnEnd('t');
 
     expect(outcomes).toHaveLength(1);
-    expect(outcomes[0]).toMatchObject({ decisionId: 'src/a.ts', kind: 'used', toolUsed: 'Read' });
+    expect(outcomes[0]).toMatchObject({ fileId: 'src/a.ts', kind: 'used', toolUsed: 'Read' });
     expect(recorded).toHaveLength(1);
   });
 
@@ -120,7 +120,7 @@ describe('outcome kinds — used / unused / missed', () => {
 
     const unused = outcomes.filter((o) => o.kind === 'unused');
     expect(unused).toHaveLength(1);
-    expect(unused[0].decisionId).toBe('src/d.ts');
+    expect(unused[0].fileId).toBe('src/d.ts');
   });
 
   it('classifies a touched file as missed when not in included set', () => {
@@ -148,6 +148,167 @@ describe('outcome kinds — used / unused / missed', () => {
 
     const kinds = outcomes.map((o) => o.kind).sort();
     expect(kinds).toEqual(['missed', 'unused', 'used']);
+  });
+});
+
+describe('new required fields — traceId, fileId, sessionId, timestamp, toolKind, schemaVersion', () => {
+  it('every outcome carries traceId matching the turn', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'trace-999', makeIncludedFiles(['src/a.ts']), 'sess-1');
+    observeToolCall('t', 'Read', { path: 'src/a.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].traceId).toBe('trace-999');
+  });
+
+  it('every outcome carries sessionId passed to recordTurnStart', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']), 'sess-42');
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].sessionId).toBe('sess-42');
+  });
+
+  it('every outcome carries a numeric timestamp', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']));
+    const outcomes = recordTurnEnd('t');
+
+    expect(typeof outcomes[0].timestamp).toBe('number');
+    expect(outcomes[0].timestamp).toBeGreaterThan(0);
+  });
+
+  it('every outcome carries schemaVersion: 2', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']));
+    observeToolCall('t', 'Edit', { path: 'src/a.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    for (const o of outcomes) {
+      expect(o.schemaVersion).toBe(2);
+    }
+  });
+
+  it('toolKind is "read" for a Read tool', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']));
+    observeToolCall('t', 'Read', { path: 'src/a.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].toolKind).toBe('read');
+  });
+
+  it('toolKind is "edit" for an Edit tool', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']));
+    observeToolCall('t', 'Edit', { path: 'src/a.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].toolKind).toBe('edit');
+  });
+
+  it('toolKind is "other" for unused files (no tool fired)', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/a.ts']));
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].kind).toBe('unused');
+    expect(outcomes[0].toolKind).toBe('other');
+  });
+
+  it('toolKind is "write" for a Write tool on a missed file', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/known.ts']));
+    observeToolCall('t', 'Write', { path: 'src/new.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    const missed = outcomes.find((o) => o.kind === 'missed');
+    expect(missed?.toolKind).toBe('write');
+  });
+});
+
+describe('fileId normalisation — symmetric across used / unused / missed', () => {
+  it('fileId is normalised (lowercase, forward-slash) for a used file', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/A.ts']), '', '');
+    observeToolCall('t', 'Read', { path: 'SRC\\A.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].kind).toBe('used');
+    expect(outcomes[0].fileId).toBe('src/a.ts');
+  });
+
+  it('fileId is normalised for an unused file', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/B.ts']), '', '');
+    const outcomes = recordTurnEnd('t');
+
+    expect(outcomes[0].kind).toBe('unused');
+    expect(outcomes[0].fileId).toBe('src/b.ts');
+  });
+
+  it('fileId for missed entries uses the same normaliser as used/unused', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    recordTurnStart('t', 'tr', makeIncludedFiles(['src/known.ts']), '', '');
+    observeToolCall('t', 'Read', { path: 'src/UNKNOWN.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    const missed = outcomes.find((o) => o.kind === 'missed');
+    expect(missed?.fileId).toBe('src/unknown.ts');
+  });
+
+  it('used, unused, and missed fileIds all use the same normalised form', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    // included: src/A.ts, src/B.ts
+    // touched: src/A.ts (used), src/C.ts (missed); src/B.ts → unused
+    recordTurnStart(
+      't',
+      'tr',
+      makeIncludedFiles(['src/A.ts', 'src/B.ts']),
+      'sess',
+      '',
+    );
+    observeToolCall('t', 'Edit', { path: 'SRC\\A.ts' });
+    observeToolCall('t', 'Read', { path: 'SRC\\C.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    const used = outcomes.find((o) => o.kind === 'used');
+    const unused = outcomes.find((o) => o.kind === 'unused');
+    const missed = outcomes.find((o) => o.kind === 'missed');
+
+    // All must be lowercase forward-slash
+    expect(used?.fileId).toMatch(/^[a-z/]+\.ts$/);
+    expect(unused?.fileId).toMatch(/^[a-z/]+\.ts$/);
+    expect(missed?.fileId).toMatch(/^[a-z/]+\.ts$/);
+
+    // Confirm the actual values
+    expect(used?.fileId).toBe('src/a.ts');
+    expect(unused?.fileId).toBe('src/b.ts');
+    expect(missed?.fileId).toBe('src/c.ts');
   });
 });
 
@@ -304,5 +465,24 @@ describe('multiple concurrent turns', () => {
 
     expect(o1[0]).toMatchObject({ kind: 'used' });
     expect(o2[0]).toMatchObject({ kind: 'unused' });
+  });
+});
+
+describe('join symmetry — (traceId, fileId) tuple matches across decision and outcome', () => {
+  it('outcome fileId equals normalised decision fileId for the same path', () => {
+    const { writer } = makeMockWriter();
+    initContextOutcomeObserver(writer);
+
+    // Decision writer would normalise 'src/Foo.ts' → 'src/foo.ts'
+    const decisionFileId = 'src/foo.ts';
+
+    // Observer receives the raw path; must normalise to the same form
+    recordTurnStart('t', 'trace-join', makeIncludedFiles(['src/Foo.ts']), 'sess', '');
+    observeToolCall('t', 'Edit', { path: 'src\\Foo.ts' });
+    const outcomes = recordTurnEnd('t');
+
+    const used = outcomes.find((o) => o.kind === 'used');
+    expect(used?.traceId).toBe('trace-join');
+    expect(used?.fileId).toBe(decisionFileId);
   });
 });
