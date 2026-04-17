@@ -27,6 +27,7 @@ import {
 } from './chatOrchestrationBridgeProgressHelpers';
 import { applySubToolToAccumulatedBlock, buildSubToolStreamChunk } from './chatOrchestrationBridgeSubTools';
 import type { ActiveStreamContext, AgentChatBridgeRuntime } from './chatOrchestrationBridgeTypes';
+import { tapTextDeltaForFactClaims } from './factClaimTap';
 import { tokenCalibrationStore } from './tokenCalibration';
 import type { AgentChatContentBlock, AgentChatSubToolActivity } from './types';
 
@@ -88,6 +89,11 @@ function handleTextBlock(args: BlockHandlerArgs, textDelta: string): void {
     },
     ctx,
   );
+  // Wave 30 Phase F: tap text deltas through the fact-claim detector.
+  // Fire-and-forget — the provider event callback is synchronous; the 800ms
+  // latency budget is honoured inside maybePauseForFactClaim but does not
+  // block the current chunk from being emitted to listeners above.
+  void tapTextDeltaForFactClaims(ctx, listeners, textDelta, now);
 }
 
 function handleThinkingBlock(args: BlockHandlerArgs, textDelta: string): void {
