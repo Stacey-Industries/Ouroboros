@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 33b complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 34 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, and 33b are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 34 (Cross-Device Session Dispatch) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, and 34 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 35 (Theme Import & Customization) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,31 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `1a816ef`. Working tree is clean. Full vitest: 6027/6027 passing.
+`origin/master` is caught up to `d16f34b`. Working tree is clean. Full vitest: 6328/6328 passing.
+
+### Wave 34 key primitives introduced
+
+- **Config:** `sessionDispatch.{enabled, maxConcurrent, jobTimeoutMs, queue, fcmServiceAccountPath}`. Default off.
+- **Queue + persistence:** `src/main/session/sessionDispatchQueue.ts`. FIFO, persisted to config, restart-aware (running jobs on boot → marked failed).
+- **Runner:** `sessionDispatchRunner.ts` + `sessionDispatchRunnerLifecycle.ts` + `sessionDispatchRunnerStatus.ts` + `sessionSpawnAdapter.ts`. Polls queue, enforces concurrency, per-job timeout, cancel hook.
+- **IPC:** `sessions:dispatchTask`, `sessions:listDispatchJobs`, `sessions:cancelDispatchJob`, `sessions:onDispatchStatus`, `sessions:onDispatchNotification`. All classified in Wave 33a channel catalog (dispatch = paired-write/long, list = paired-read/short, cancel = paired-write/short).
+- **Path validation:** `validateProjectPath` in `sessionDispatchHandlers.ts` — paths must match a configured project root; no FS access (security/detect-non-literal-fs-filename clean).
+- **Push notifications:** `@capacitor/push-notifications` + `nativePushNotifications` bridge + `mobileAccess:registerPushToken` handler. `sessionDispatchNotifier` uses FCM when configured, in-app banner otherwise. FCM adapter is a stub until `google-auth-library` is wired in a future wave.
+- **Offline queue:** `src/web/offlineDispatchQueue.ts` — cap 10, persisted via Wave 33b tokenStorage, idempotent via `clientRequestId` (`sessionDispatchHandlers` rejects duplicates). `useDispatchReconnectDrain` drains on reconnect.
+- **Connection state:** `useWebConnectionState` hook + transport `subscribeConnectionState` broadcast + `app.onConnectionState` preload.
+- **Renderer UI:** `src/renderer/components/Dispatch/` — `DispatchScreen` + `DispatchForm` + `DispatchQueueList` + `DispatchJobDetail` + styles + `DispatchNotificationBanner`. Reachable via AgentChat secondary-views dropdown OR `agent-ide:open-dispatch` DOM event; gated on `sessionDispatch.enabled || mobileAccess.enabled`. On mobile, renders via Wave 32 MobileBottomSheet.
+- **DispatchBadge:** pill in AgentMonitor session list showing dispatched/running/error states.
+- **Docs:** `docs/mobile-dispatch.md` + extended `mobile-overview.md`.
+
+### Wave 34 gotchas for next agent
+
+- **tsconfig.web.json** now excludes `**/*.test.{ts,tsx}` + `**/*.spec.{ts,tsx}` — test files should not be part of the web build typecheck. Phase E surfaced this as a latent issue.
+- **New Dispatch tests MUST use `@vitest-environment jsdom` pragma + `cleanup()` in `afterEach`** — Wave 34 capstone fix (`d16f34b`). The Dispatch tests initially used jest-dom matchers that aren't installed; native vitest assertions (`.textContent`, `.not.toBeNull()`) are the convention.
+- **sessionDispatchRunner tests must mock `sessionDispatchNotifier`** — notifier calls `BrowserWindow.getAllWindows()` which is undefined in node test env.
+- **FCM adapter is a stub.** When you wire real FCM, install `google-auth-library` (not `firebase-admin` — too heavy), implement JWT-signed HTTPS to FCM v1 API, and fill in `fcmServiceAccountPath` in config.
+- **Offline drain idempotency** relies on `clientRequestId` being included in the dispatch request. Any client path that bypasses the offline queue must still pass `clientRequestId` to benefit from dedup.
+- **DispatchForm function size** had to be split (Phase G fix: `useDispatchFormState` hook + `buildSubmitHandler` factory). The file is near the 300-line cap — adding fields needs further extraction.
+- **webPreloadTransport.ts** was 310 lines — extracted `webPreloadOverlay.ts`. Don't add connection-overlay logic back in the transport module.
 
 ### Wave 33b key primitives introduced
 
@@ -140,11 +164,12 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 - **Waves 15–30** — see git log; scope per `roadmap/wave-NN-plan.md`.
 - **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off.
 - **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off.
-- **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access. All 6027 vitest tests green at push time.
+- **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access.
+- **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off. All 6328 vitest tests green at push time.
 
-### Plans queued (draft-only, not yet implemented)
+### Plans queued
 
-- `roadmap/wave-34-plan.md` — Cross-Device Session Dispatch. **Next to implement.**
+- None currently drafted. Wave 35 (Theme Import & Customization) is next — draft plan before implementing.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
