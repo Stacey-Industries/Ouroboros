@@ -21,6 +21,7 @@ import {
   OPEN_SETTINGS_PANEL_EVENT,
   OPEN_USAGE_PANEL_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
+  SHOW_SYSTEM_PROMPT_EVENT,
   TOGGLE_SIDE_CHAT_EVENT,
 } from './appEventNames';
 
@@ -67,6 +68,10 @@ function emitUsagePanel(): void {
 
 function emitSettingsPanel(): void {
   window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_PANEL_EVENT));
+}
+
+function emitSystemPromptPanel(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_PANEL_EVENT, { detail: 'systemPrompt' }));
 }
 
 function registerWindowEvents(events: WindowEventEntry[]): () => void {
@@ -170,6 +175,7 @@ function createDomEventEntries(args: {
     ['agent-ide:spawn-claude-template', createClaudeTemplateHandler(spawnClaudeSession)],
     [RESUME_LATEST_AGENT_CHAT_THREAD_EVENT, createResumeLatestAgentChatThreadHandler({ projectRoot, toast })],
     [OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT, createOpenLatestAgentChatDetailsHandler({ projectRoot, toast })],
+    [SHOW_SYSTEM_PROMPT_EVENT, emitSystemPromptPanel],
   ];
 }
 

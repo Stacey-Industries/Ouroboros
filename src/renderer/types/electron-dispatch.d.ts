@@ -86,6 +86,12 @@ export type CancelDispatchJobResult =
   | { success: true }
   | { success: false; reason?: string };
 
+// ── SystemPromptResult (Wave 37 Phase A) ─────────────────────────────────────
+
+export type SystemPromptResult =
+  | { success: true; text: string; capturedAt: number }
+  | { success: false; reason: 'not-yet-captured' | 'unknown-session' };
+
 // ── SessionsAPI ───────────────────────────────────────────────────────────────
 
 export interface SessionsAPI {
@@ -100,6 +106,8 @@ export interface SessionsAPI {
   ) => Promise<DispatchTaskResult>;
   listDispatchJobs: () => Promise<ListDispatchJobsResult>;
   cancelDispatchJob: (jobId: string) => Promise<CancelDispatchJobResult>;
+  /** Wave 37 Phase A — resolved system prompt for a PTY session. */
+  getSystemPrompt: (sessionId: string) => Promise<SystemPromptResult>;
   /** Wave 34 Phase D — live status push. Returns cleanup function. */
   onDispatchStatus: (callback: (job: DispatchJob) => void) => () => void;
   /** Wave 34 Phase F — in-app banner fallback when FCM is not configured. Returns cleanup fn. */

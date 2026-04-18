@@ -29,6 +29,7 @@ export function buildTransactionApis(t: WebSocketTransport) {
       t.invoke('sessions:dispatchTask', request, deviceId),
     listDispatchJobs: () => t.invoke('sessions:listDispatchJobs'),
     cancelDispatchJob: (jobId: string) => t.invoke('sessions:cancelDispatchJob', jobId),
+    getSystemPrompt: (sessionId: string) => t.invoke('sessions:getSystemPrompt', sessionId),
     onDispatchStatus: (cb: (job: unknown) => void) =>
       t.on('sessionDispatch:status', cb),
     onDispatchNotification: (cb: (payload: unknown) => void) =>

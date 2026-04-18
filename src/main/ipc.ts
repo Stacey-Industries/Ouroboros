@@ -28,6 +28,7 @@ import {
   cleanupResearchDashboardHandlers,
   cleanupResearchHandlers,
   cleanupSessionCrudHandlers,
+  cleanupSystemPromptHandlers,
   cleanupTelemetryHandlers,
   cleanupWorkspaceReadListHandlers,
   cleanupWorktreeHandlers,
@@ -73,6 +74,7 @@ import {
   registerSessionHandlers,
   registerSpecHandlers,
   registerSubagentHandlers,
+  registerSystemPromptHandlers,
   registerTelemetryHandlers,
   registerWorkspaceReadListHandlers,
   registerWorktreeHandlers,
@@ -123,6 +125,7 @@ function registerCoreDomainHandlers(win: BrowserWindow): string[] {
     ...safeRegister('researchDashboard', () => registerResearchDashboardHandlers()),
     ...safeRegister('contextRankerDashboard', () => registerContextRankerDashboardHandlers()),
     ...safeRegister('sessions', () => registerSessionHandlers(senderWindow)),
+    ...safeRegister('systemPrompt', () => registerSystemPromptHandlers()),
     ...safeRegister('misc', () => registerMiscHandlers(senderWindow, win)),
     ...safeRegister('mcp', () => registerMcpHandlers(senderWindow)),
     ...safeRegister('mcpStore', () => registerMcpStoreHandlers(senderWindow)),
@@ -335,6 +338,7 @@ export function cleanupIpcHandlers(): void {
   cleanupLayoutHandlers();
   cleanupPairingHandlers();
   cleanupDispatchHandlers();
+  cleanupSystemPromptHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 

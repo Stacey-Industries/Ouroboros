@@ -87,6 +87,51 @@ function tryParseEvent(line: string): StreamJsonEvent | null {
   }
 }
 
+// ---- System-prompt cache (Wave 37 Phase A) --------------------------------
+//
+// Caches the first `system` stream-json event per PTY session so the
+// IPC handler can serve it without re-parsing logs.  The text may contain
+// sensitive project context — NEVER log it.
+
+export interface SystemPromptEntry {
+  text: string
+  at: number
+}
+
+const systemPromptCache = new Map<string, SystemPromptEntry>()
+
+/**
+ * Return the cached system prompt for a session, or null if not yet captured.
+ */
+export function getSystemPromptForSession(sessionId: string): SystemPromptEntry | null {
+  return systemPromptCache.get(sessionId) ?? null
+}
+
+/**
+ * Remove the cached system prompt for a session (call on session close).
+ */
+export function clearSystemPromptForSession(sessionId: string): void {
+  systemPromptCache.delete(sessionId)
+}
+
+// ---- Factory helpers -------------------------------------------------------
+
+/**
+ * Attempt to cache the system prompt from a system/init event.
+ * Only runs once per session (first init wins).
+ * NEVER log the text — may contain sensitive project context.
+ */
+function maybeCacheSystemPrompt(sessionId: string, event: StreamJsonEvent): void {
+  if (event.type !== 'system' || event.subtype !== 'init') return
+  if (systemPromptCache.has(sessionId)) return
+  const raw = event as Record<string, unknown>
+  const text =
+    typeof raw['system_prompt'] === 'string'
+      ? raw['system_prompt']
+      : JSON.stringify(event)
+  systemPromptCache.set(sessionId, { text, at: Date.now() })
+}
+
 // ---- Factory --------------------------------------------------------------
 
 export function createAgentBridge(options: AgentBridgeOptions): AgentBridgeHandle {
@@ -100,11 +145,11 @@ export function createAgentBridge(options: AgentBridgeOptions): AgentBridgeHandl
     const event = tryParseEvent(line)
     if (!event) return
 
-    // Capture result event for onComplete
     if (event.type === 'result') {
       resultEvent = event as StreamJsonResultEvent
     }
 
+    maybeCacheSystemPrompt(options.sessionId, event)
     options.onEvent(event)
     publishToSubscribers(options.sessionId, event)
   }

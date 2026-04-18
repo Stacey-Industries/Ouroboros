@@ -25,6 +25,7 @@ import { ProvidersSection } from './ProvidersSection';
 import { ResearchSettings } from './ResearchSettings';
 import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
+import { SystemPromptPane } from './SystemPromptPane';
 import { TerminalSection } from './TerminalSection';
 import { WorkspaceReadListSection } from './WorkspaceReadListSection';
 
@@ -65,6 +66,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   workspaceReadList: ({ draft }) => <WorkspaceReadListSection draft={draft} />,
   research: ({ draft, onChange }) => <ResearchSettings draft={draft} onChange={onChange} />,
   mobileAccess: ({ draft, onChange }) => <MobileAccessPane draft={draft} onChange={onChange} />,
+  systemPrompt: () => <SystemPromptPane />,
 };
 
 export function SettingsTabContent({

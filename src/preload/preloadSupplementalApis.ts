@@ -72,6 +72,7 @@ export const supplementalApis: SupplementalApis = {
       ipcRenderer.invoke('sessions:dispatchTask', request, deviceId),
     listDispatchJobs: () => ipcRenderer.invoke('sessions:listDispatchJobs'),
     cancelDispatchJob: (jobId) => ipcRenderer.invoke('sessions:cancelDispatchJob', jobId),
+    getSystemPrompt: (sessionId) => ipcRenderer.invoke('sessions:getSystemPrompt', sessionId),
     onDispatchStatus: (callback) =>
       onChannel<import('../renderer/types/electron-dispatch').DispatchJob>(
         'sessionDispatch:status',
