@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 37 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 38 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35, 36, 37 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 38 (Platform & Onboarding) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35, 36, 37, 38 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 39 (Research Classifier — **contingent**, may be skipped) or Wave 40 (System Cleanup) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,30 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `7011dd3`. Working tree is clean. Full vitest: 6857/6857 passing.
+`origin/master` is caught up to `598b115`. Working tree is clean. Full vitest: 7052/7052 passing.
+
+### Wave 38 key primitives introduced
+
+- **Config slice:** `platform.{onboarding.completed, dismissedEmptyStates, language, updateChannel, crashReports.{enabled,webhookUrl}, lastSeenVersion}`.
+- **i18n framework:** `src/renderer/i18n/` — `t()` + `setLocale`/`getLocale` + `useLocale` hook. EN canonical, ES pilot (~60 keys). Fallback chain: ES → EN → key name. No deps.
+- **First-run tour:** `FirstRunTour.tsx` (5 steps) + `TourStep.tsx` + `useAnchorPosition` (ResizeObserver reposition). Anchors via `data-tour-anchor` attrs on AgentChatWorkspace, RightSidebarTabs, ProjectPicker, TitleBar settings button. `FirstRunTourGate` mounted in `App.tsx` alongside other overlays.
+- **Empty states:** `EmptyStateMessage` + `useEmptyStateDismiss` primitive with session/persistent dismiss modes. Mounted in chat, FileTree, Terminal panes.
+- **Command palette:** `rankCommands` in `commandSearch.ts` — weighted name (1.0×) / description (0.5×) / tags (0.25×) with stable sort + fuzzy substring + subsequence matching. `Command` type extended with optional `description`/`tags`. `matchedField` badge in palette UI.
+- **Changelog drawer:** `docs/CHANGELOG.md` (Keep-a-Changelog). `tools/build-changelog.js` parses → `src/renderer/generated/changelog.ts` (gitignored). `ChangelogDrawer` opens when `lastSeenVersion !== currentVersion`. Build step chained into `build:web` + `postinstall`.
+- **Auto-update:** `updater.ts` reads `platform.updateChannel` (stable|beta), `isDowngrade` guard rejects lower versions. Settings UI toggle in `PlatformSection`.
+- **Crash reporter:** `crashReporter.ts` handles uncaughtException + unhandledRejection. `crashReporterStorage.ts` writes JSON to `~/.ouroboros/crash-reports/`. Path redaction (home, Windows drives, `/Users/` regex). Opt-in webhook POST. Chat/config never included. `platform:openCrashReportsDir` IPC.
+- **Language picker:** `PlatformLanguageSection` dropdown in Settings. Swaps all `t()` consumers live via `useLocale` + `useConfig`.
+- **CI:** `.github/workflows/ci.yml` now runs 3-OS matrix (ubuntu-latest + windows-latest + macos-latest) with native-build-prereqs step + `npm rebuild` for Linux. `docs/platform-linux.md` covers Ubuntu + Fedora manual test plan.
+
+### Wave 38 gotchas for next agent
+
+- **`src/renderer/generated/` is gitignored.** Built by `tools/build-changelog.js`. `build:web` + `postinstall` run it. If the generated module is missing at dev time, `ChangelogDrawer` shows an inline warning (not a crash).
+- **`config.ts` + `electron-foundation.d.ts` compressed** during Phase A to stay under 300 lines. Future config additions may need similar compression.
+- **Crash reporter path redaction is best-effort.** Documented limit. Users who care should keep webhook disabled.
+- **i18n `t()` is dot-path lookup.** Missing key returns the key itself (obvious-missing). Brand names ("Ouroboros", "Claude", "Claude Code", "Beta") intentionally preserved untranslated in ES.
+- **Command palette match-origin badge.** If you add tags/descriptions to existing commands, expect search results to start showing "desc" / "tag" badges — this is intentional.
+- **Changelog parser is forgiving.** Non-conforming sections emit stderr warnings but don't block the build.
+- **Linux native build.** Ubuntu CI now runs `npm rebuild` after install. If future waves add another native dep, it should Just Work; if it doesn't, check the libnss/libatk apt list.
 
 ### Wave 37 key primitives introduced
 
@@ -232,11 +255,13 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 - **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off.
 - **Wave 35** — Theme Import & Customization (7 phases A–G, v2.3.1). Flag `theming.vsCodeImport` default on.
 - **Wave 36** — Multi-Provider Optionality (7 phases A–G, v2.4.0). Flag `providers.multiProvider` default off.
-- **Wave 37** — Ecosystem Moat (6 phases A–F, v2.4.1). Flag `ecosystem.moat` default on. All 6857 vitest tests green at push time.
+- **Wave 37** — Ecosystem Moat (6 phases A–F, v2.4.1). Flag `ecosystem.moat` default on.
+- **Wave 38** — Platform & Onboarding (9 phases A–I, v2.5.0). Flag `platform.onboarding` default on. All 7052 vitest tests green at push time.
 
 ### Plans queued
 
-- None currently drafted. Wave 38 (Platform & Onboarding) is next — draft plan before implementing.
+- None currently drafted. **Wave 39 is CONTINGENT** per roadmap.md:1833 — "skipped if Wave 30 telemetry shows rules + cache sufficient". Evaluate telemetry before deciding whether to draft a plan.
+- Wave 40 (System Cleanup & Deprecation) is the final wave. Draft when ready.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
