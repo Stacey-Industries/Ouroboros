@@ -28,12 +28,36 @@ npm run cap:build:android
 npm run cap:android
 ```
 
-## Dev-server mode (Phase B)
+## Dev workflow — live web server
 
-Phase B will add a `CAPACITOR_SERVER_URL` env var that, when set, points the
-Capacitor WebView at a running `npm run build:web` dev server instead of the
-bundled `out/web/` directory. This avoids a full `build:web` round-trip during
-active development.
+For a fast edit-debug cycle on the Android emulator or a physical phone:
+
+1. Start the web server: `npm run dev:web` (or whichever script serves `out/web/` over HTTP on a port reachable from the phone — typically 4173 for `vite preview`).
+2. Note your desktop's LAN IP (e.g. `192.168.1.50`).
+3. Sync Capacitor pointing at the live server:
+   ```
+   CAPACITOR_SERVER_URL=http://192.168.1.50:4173 npm run cap:sync
+   ```
+4. Open the Android project: `npm run cap:android` (or `npx cap run android --target <device-id>`).
+
+Changes to the web renderer are picked up on app refresh (no rebuild of the Android shell needed). Only native-plugin changes require `cap sync` + reinstall.
+
+## Release workflow
+
+For release APK/AAB builds, **do not** set `CAPACITOR_SERVER_URL`. Capacitor bundles `out/web/` into the APK:
+
+```
+npm run build:web
+npm run cap:sync
+# Then sign + build in Android Studio or via Gradle (see docs/mobile-release.md — Phase H)
+```
+
+## Key Reminders
+
+- `CAPACITOR_SERVER_URL=http://...` requires `cleartext: true` (Android blocks non-HTTPS by default). Set automatically by `capacitor.config.ts` when the URL starts with `http://`.
+- Phone must be on the same LAN (or tailscale / equivalent) to reach the dev server.
+- Desktop firewall may need to allow inbound on the dev port from LAN.
+- Never ship a release build with `CAPACITOR_SERVER_URL` set — defense-in-depth: `capacitor.config.ts` reads from env at build time, so a clean build environment (no leaked env var) produces a bundled build.
 
 ## Project identifiers
 

@@ -1,12 +1,14 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const serverUrl = process.env.CAPACITOR_SERVER_URL;
+
 const config: CapacitorConfig = {
   appId: 'com.stacey.ouroboros',
   appName: 'Ouroboros',
   webDir: 'out/web',
   server: {
-    // Phase B will extend this for dev-server mode via env var.
     androidScheme: 'https',
+    ...(serverUrl ? { url: serverUrl, cleartext: serverUrl.startsWith('http://') } : {}),
   },
   android: {
     allowMixedContent: false,
