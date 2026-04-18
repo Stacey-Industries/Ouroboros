@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 35 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 36 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 36 (Multi-Provider Optionality) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35, 36 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 37 (Ecosystem Moat) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,29 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `77fba3c`. Working tree is clean. Full vitest: 6483/6483 passing.
+`origin/master` is caught up to `dbe3833`. Working tree is clean. Full vitest: 6629/6629 passing.
+
+### Wave 36 key primitives introduced
+
+- **SessionProvider abstraction:** `src/main/providers/sessionProvider.ts` — interface with `spawn/send/cancel/onEvent/checkAvailability`. `providerRegistry.ts` maps `'claude'|'codex'|'gemini'` → instance. NOT to be confused with existing `ModelProvider` in `src/main/providers.ts` (different namespace).
+- **Adapters (all thin facades):**
+  - `claudeSessionProvider.ts` — wraps `spawnAgentPty` + existing pty/bridge. Zero-change refactor.
+  - `codexSessionProvider.ts` — wraps `spawnCodexExecProcess` (NDJSON exec, not interactive PTY). Single-turn; `send()` is a documented no-op.
+  - `geminiSessionProvider.ts` — spawns `gemini --prompt ... --yolo`. Heuristic NDJSON. Documented gaps: no tool-use, single-turn, no cost metadata.
+- **Bridge extension:** `ptyAgentBridge.ts` gained `subscribeSessionEvents(sessionId, cb)` (module-level subscriber map). Only modification to existing pty code.
+- **Profile integration:** `Profile.providerId` optional (`'claude'` default). `profileSpawnHelper.ts::spawnForProfile()` routes through registry. Profile UI: `ProfileEditorProviderPicker.tsx` with live availability badges. Gated on `providers.multiProvider` flag (default off).
+- **Compare mode:** `CompareProviders.tsx` + sub-components + `useCompareSession.ts` hook. `compareProviders:start/cancel` IPC + `compareProviders:event` push channel. Per-word diff via `wordDiff.ts` (pure LCS, no deps). Desktop modal / mobile MobileBottomSheet.
+- **Catalog additions (Wave 33a channelCatalog):** `compareProviders:start` paired-write/long, `:cancel` paired-write/short, `:event` paired-read/short.
+- **Docs:** `docs/providers.md` covers enabling, CLI prereqs, compare mode, known gaps per provider, auth caveat.
+
+### Wave 36 gotchas for next agent
+
+- **Codex exec path ≠ interactive PTY path.** Codex adapter uses `spawnCodexExecProcess` (`codex exec --json`) from `orchestration/providers/codexExecRunner.ts`. It bypasses `ptyAgentBridge.subscribeSessionEvents` — events come back via its own onEvent callback. If you wire Codex somewhere new, use the provider's `onEvent` not the bridge subscribe.
+- **`spawnForProfile` vs direct `provider.spawn`.** Phase F's compare mode calls `provider.spawn()` directly with synthetic ProfileSnapshots. `spawnForProfile` expects a full `Profile` — heavier. Pick based on caller context.
+- **No API-key management.** Explicit non-scope. Auth is the CLI's responsibility (Claude OAuth, GEMINI_API_KEY, Codex env/config).
+- **Compare mode doubles cost.** Phase F shows a session-remembered warning before Run. Keep it.
+- **Event fan-out uses one shared channel.** `compareProviders:event` with `{ compareId, providerId, event }` payload. Renderer filters by `compareId` and routes by `providerId`. Don't add per-session channels — catalog would grow unbounded.
+- **Gemini CLI flag assumption.** `--yolo` is the non-interactive flag per current docs. If a user reports it not working, check their Gemini CLI version and update `buildCliArgs` in `geminiSessionProvider.ts`.
 
 ### Wave 35 key primitives introduced
 
@@ -186,11 +208,12 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 - **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off.
 - **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access.
 - **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off.
-- **Wave 35** — Theme Import & Customization (7 phases A–G, v2.3.1). Flag `theming.vsCodeImport` default on. All 6483 vitest tests green at push time.
+- **Wave 35** — Theme Import & Customization (7 phases A–G, v2.3.1). Flag `theming.vsCodeImport` default on.
+- **Wave 36** — Multi-Provider Optionality (7 phases A–G, v2.4.0). Flag `providers.multiProvider` default off. All 6629 vitest tests green at push time.
 
 ### Plans queued
 
-- None currently drafted. Wave 36 (Multi-Provider Optionality) is next — draft plan before implementing.
+- None currently drafted. Wave 37 (Ecosystem Moat) is next — draft plan before implementing.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
