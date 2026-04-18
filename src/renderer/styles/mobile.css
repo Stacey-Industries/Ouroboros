@@ -334,6 +334,28 @@
   .web-mode [data-mobile-active='terminal'] > div:nth-child(2) > div:last-child {
     display: none !important;
   }
+
+  /* ── Phase E: hover-reveal alternatives ──────────────────────────────────── */
+
+  /* FileTree root-section header: remove button is always visible on phone.
+     Desktop shows it on hover via onMouseEnter; on phone that never fires. */
+  .web-mode [data-layout='app'] [aria-label='Left sidebar'] button[aria-label*='Remove'] {
+    opacity: 1 !important;
+    color: var(--text-muted) !important;
+  }
+
+  /* EditorTabBar / FileViewer tab close X: always visible on phone.
+     Desktop uses isTabHovered state to fade in; on phone always show. */
+  .web-mode [role='tablist'] button[aria-label*='Close'],
+  .web-mode [role='tablist'] button[aria-label*='close'] {
+    opacity: 1 !important;
+  }
+
+  /* Chat message UserMessageFooter (Quote + ReactionBar):
+     opacity-0 group-hover:opacity-100 — make always visible on phone. */
+  .web-mode .group .opacity-0 {
+    opacity: 1 !important;
+  }
 }
 
 /* ─── Tablet layout (768px - 1024px) ─────────────────────────────────────── */

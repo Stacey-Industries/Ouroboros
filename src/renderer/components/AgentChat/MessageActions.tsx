@@ -10,6 +10,8 @@
 import React, { useCallback, useState } from 'react';
 
 import { useToastContext } from '../../contexts/ToastContext';
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
+import { MobileOverflowMenu } from './MobileOverflowMenu';
 
 // ── Plain-text stripping ──────────────────────────────────────────────────────
 
@@ -104,39 +106,52 @@ export interface MessageActionsProps {
   reactionsSlot?: React.ReactNode;
 }
 
-export function MessageActions(props: MessageActionsProps): React.ReactElement {
-  const mdCopy = useCopyAction(props.content, 'MD');
-  const plainCopy = useCopyAction(stripMarkdown(props.content), 'plain');
+type CopyPair = { copied: boolean; copy: () => void };
 
+interface MessageActionsInnerProps extends MessageActionsProps {
+  mdCopy: CopyPair;
+  plainCopy: CopyPair;
+}
+
+function MessageActionsDesktop({
+  showRaw, onToggleRaw, onQuote, reactionsSlot, mdCopy, plainCopy,
+}: MessageActionsInnerProps): React.ReactElement {
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-hover:opacity-100">
-      <ActionBtn
-        title={mdCopy.copied ? 'Copied!' : 'Copy as Markdown'}
-        onClick={mdCopy.copy}
-      >
+      <ActionBtn title={mdCopy.copied ? 'Copied!' : 'Copy as Markdown'} onClick={mdCopy.copy}>
         {mdCopy.copied ? <CheckIcon /> : <CopyIcon />}
         <span>MD</span>
       </ActionBtn>
-      <ActionBtn
-        title={plainCopy.copied ? 'Copied!' : 'Copy as plain text'}
-        onClick={plainCopy.copy}
-      >
+      <ActionBtn title={plainCopy.copied ? 'Copied!' : 'Copy as plain text'} onClick={plainCopy.copy}>
         {plainCopy.copied ? <CheckIcon /> : <CopyIcon />}
         <span>Plain</span>
       </ActionBtn>
-      <ActionBtn
-        title={props.showRaw ? 'Show rendered markdown' : 'Show raw markdown'}
-        active={props.showRaw}
-        onClick={props.onToggleRaw}
-      >
+      <ActionBtn title={showRaw ? 'Show rendered markdown' : 'Show raw markdown'} active={showRaw} onClick={onToggleRaw}>
         <span>Raw</span>
       </ActionBtn>
-      {props.onQuote != null && (
-        <ActionBtn title="Quote selection in composer" onClick={props.onQuote}>
-          <span>Quote</span>
-        </ActionBtn>
-      )}
-      {props.reactionsSlot ?? null}
+      {onQuote != null && <ActionBtn title="Quote selection in composer" onClick={onQuote}><span>Quote</span></ActionBtn>}
+      {reactionsSlot ?? null}
     </div>
   );
+}
+
+function MessageActionsPhone({
+  showRaw, onToggleRaw, onQuote, reactionsSlot, mdCopy, plainCopy,
+}: MessageActionsInnerProps): React.ReactElement {
+  const actions = [
+    { label: mdCopy.copied ? 'Copied (MD)!' : 'Copy as Markdown', onClick: mdCopy.copy },
+    { label: plainCopy.copied ? 'Copied!' : 'Copy as plain text', onClick: plainCopy.copy },
+    { label: showRaw ? 'Show rendered' : 'Show raw', onClick: onToggleRaw },
+    ...(onQuote != null ? [{ label: 'Quote selection', onClick: onQuote }] : []),
+  ];
+  return <><MobileOverflowMenu actions={actions} />{reactionsSlot ?? null}</>;
+}
+
+export function MessageActions(props: MessageActionsProps): React.ReactElement {
+  const breakpoint = useViewportBreakpoint();
+  const mdCopy = useCopyAction(props.content, 'MD');
+  const plainCopy = useCopyAction(stripMarkdown(props.content), 'plain');
+  const inner = { ...props, mdCopy, plainCopy };
+  if (breakpoint === 'phone') return <MessageActionsPhone {...inner} />;
+  return <MessageActionsDesktop {...inner} />;
 }
