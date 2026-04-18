@@ -7,6 +7,7 @@
 import React from 'react';
 import { RichTextarea } from 'rich-textarea';
 
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import { getTextareaStyle } from './AgentChatComposerSupport';
 
 /* ---------- SendButton ---------- */
@@ -102,6 +103,7 @@ function renderHighlights(value: string): React.ReactNode {
 
 function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
   const baseStyle = getTextareaStyle(Boolean(props.onPickImage));
+  const breakpoint = useViewportBreakpoint();
   return (
     <div className="w-full">
       <RichTextarea
@@ -125,6 +127,9 @@ function ComposerTextarea(props: ComposerInputProps): React.ReactElement {
         onFocus={(e) => {
           e.currentTarget.style.borderColor = 'var(--interactive-accent)';
           e.currentTarget.style.boxShadow = '0 0 0 2px var(--interactive-muted)';
+          if (breakpoint === 'phone') {
+            e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
         }}
         onBlurCapture={(e) => {
           e.currentTarget.style.borderColor = 'var(--border-subtle, var(--border-default))';

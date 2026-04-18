@@ -311,6 +311,7 @@ export function AgentChatComposer(composerProps: AgentChatComposerProps): React.
     composerProps;
   return (
     <div
+      data-layout="agent-chat-composer"
       className={getComposerRootClassName(attachmentHandlers.isDragging)}
       onDragOver={attachmentHandlers.handleDragOver}
       onDragLeave={attachmentHandlers.handleDragLeave}

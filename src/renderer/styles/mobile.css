@@ -237,6 +237,13 @@
     min-height: 48px !important;
   }
 
+  /* ── Phase G: composer floats above soft keyboard ── */
+  /* padding-bottom = max(safe-area notch inset, virtual keyboard inset).
+     --keyboard-inset is set by useVisualViewportInsets on visualViewport resize. */
+  .web-mode [data-layout='agent-chat-composer'] {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--keyboard-inset, 0px));
+  }
+
   /* ── Title bar: frosted glass on mobile web ── */
   /* z-index + position create a stacking context above page content so that
      dropdown menus (hamburger, overflow) escape the backdrop-filter stacking
@@ -366,7 +373,7 @@
 
 /* Scrim: dim the screen behind the drawer / sheet */
 .web-mode [role='presentation'] {
-  background-color: rgba(0, 0, 0, 0.45); /* opacity scrim — non-semantic intentional */
+  background-color: rgba(0, 0, 0, 0.45); /* hardcoded: opacity scrim — non-semantic overlay, no design token equivalent */
 }
 
 /* Drawer panel: frosted glass to match other mobile surfaces */

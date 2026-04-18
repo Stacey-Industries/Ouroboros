@@ -35,6 +35,7 @@ import { useProjectManagement } from './hooks/useProjectManagement';
 import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
+import { useVisualViewportInsets } from './hooks/useVisualViewportInsets';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 
 
@@ -285,6 +286,7 @@ export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
   useThemeRuntimeBootstrap(config);
   useStreamingInlineEditFlag(config);
+  useVisualViewportInsets();
 
   if (configLoading || !config) return <LoadingScreen />;
 
