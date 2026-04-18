@@ -1,0 +1,16 @@
+{
+  "name": "Test Dark Theme",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e1e",
+    "editor.foreground": "#d4d4d4",
+    "editor.selectionBackground": "#264f78",
+    "editorCursor.foreground": "#aeafad",
+    "activityBar.background": "#333333",
+    "sideBar.background": "#252526",
+    "button.background": "#0e639c",
+    "input.background": "#3c3c3c",
+    "focusBorder": "#007fd4",
+    "tab.inactiveForeground": "#969696"
+  }
+}
