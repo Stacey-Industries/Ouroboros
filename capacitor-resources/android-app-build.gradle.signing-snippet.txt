@@ -1,0 +1,41 @@
+// ============================================================
+// Ouroboros — Android release signing snippet
+// ============================================================
+// WHEN TO USE:
+//   After running `npx cap add android`, open
+//   android/app/build.gradle and paste this block inside the
+//   existing `android { ... }` closure (before or after the
+//   `defaultConfig` block — either position works).
+//
+// ENVIRONMENT VARIABLES (set before running Gradle):
+//   ANDROID_KEYSTORE_PATH     — absolute path to ouroboros-release.jks
+//   ANDROID_KEYSTORE_PASSWORD — keystore password
+//   ANDROID_KEY_ALIAS         — key alias (e.g. "ouroboros")
+//   ANDROID_KEY_PASSWORD      — key password
+//
+// For CI, these are injected by the workflow decode step.
+// For local builds, use `npm run cap:build:android:release`
+// (which validates env vars before calling Gradle).
+//
+// WARNING: NEVER commit the .jks file or hardcode passwords here.
+// ============================================================
+
+android {
+    signingConfigs {
+        release {
+            if (System.getenv('ANDROID_KEYSTORE_PATH')) {
+                storeFile file(System.getenv('ANDROID_KEYSTORE_PATH'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}

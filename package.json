@@ -39,6 +39,8 @@
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "cap:build:android": "npm run build:web && cap sync android",
+    "cap:build:android:release": "node ./tools/build-android-release.js",
+    "cap:build:android:debug": "npm run build:web && cap sync android",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
     "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty"
   },

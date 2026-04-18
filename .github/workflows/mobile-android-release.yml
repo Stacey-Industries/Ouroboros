@@ -1,0 +1,126 @@
+name: Mobile — Android Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build web assets
+        run: npm run build:web
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-out
+          path: out/web/
+          retention-days: 1
+
+  build-android:
+    runs-on: ubuntu-latest
+    needs: build-web
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-out
+          path: out/web/
+
+      - name: Scaffold Android platform
+        run: npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Decode keystore (signed build)
+        if: >
+          secrets.ANDROID_KEYSTORE_BASE64 != '' &&
+          secrets.ANDROID_KEYSTORE_PASSWORD != '' &&
+          secrets.ANDROID_KEY_ALIAS != '' &&
+          secrets.ANDROID_KEY_PASSWORD != ''
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode \
+            > /tmp/ouroboros-release.jks
+          echo "ANDROID_KEYSTORE_PATH=/tmp/ouroboros-release.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
+
+      - name: Set debug fallback
+        if: >
+          secrets.ANDROID_KEYSTORE_BASE64 == '' ||
+          secrets.ANDROID_KEYSTORE_PASSWORD == '' ||
+          secrets.ANDROID_KEY_ALIAS == '' ||
+          secrets.ANDROID_KEY_PASSWORD == ''
+        run: echo "SIGNING_MODE=debug" >> "$GITHUB_ENV"
+
+      - name: Build signed APK + AAB (release)
+        if: env.SIGNING_MODE == 'release'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file="$ANDROID_KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - name: Build unsigned debug APK (fallback — no signing secrets)
+        if: env.SIGNING_MODE == 'debug'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          echo "WARNING: built as debug-only (signing secrets not present)" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release APK + AAB
+        if: env.SIGNING_MODE == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Upload debug APK (debug-only fallback)
+        if: env.SIGNING_MODE == 'debug'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-only
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
