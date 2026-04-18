@@ -9,6 +9,9 @@ import crypto from 'crypto';
 
 import { getSecureKeySync, setSecureKey } from '../auth/secureKeyStore';
 import { getConfigValue } from '../config';
+import { consumePairingTicket } from '../mobileAccess/pairingHandlers';
+import { findByTokenHash } from '../mobileAccess/tokenStore';
+import type { PairedDevice } from '../mobileAccess/types';
 
 // ─── Token Management ────────────────────────────────────────────────────────
 
@@ -205,6 +208,59 @@ export function getWsTicketStats(): { active: number } {
     if (now < entry.expiresAt) active++;
   }
   return { active };
+}
+
+// ─── Mobile Device Verification ─────────────────────────────────────────────
+
+/**
+ * Verifies a raw device refresh token against the persisted device list.
+ *
+ * If the mobileAccess feature flag is off, returns { device: null, reason }
+ * immediately — the caller must fall through to the legacy single-token path.
+ * NEVER logs the raw token.
+ */
+export function verifyRefreshToken(
+  rawToken: string,
+): { device: PairedDevice | null; reason?: string } {
+  const mobileAccess = getConfigValue('mobileAccess');
+  if (!mobileAccess?.enabled) {
+    return { device: null, reason: 'mobile-access-disabled' };
+  }
+  if (!rawToken || typeof rawToken !== 'string') {
+    return { device: null, reason: 'missing-token' };
+  }
+  const device = findByTokenHash(rawToken);
+  if (!device) return { device: null, reason: 'token-not-found' };
+  return { device };
+}
+
+/** Input shape for verifyPairingHandshake. */
+export interface PairingHandshakeInput {
+  ticketCode: string;
+  deviceLabel: string;
+  clientFingerprint: string;
+  ip: string;
+}
+
+/** Result shape for verifyPairingHandshake. */
+export interface PairingHandshakeResult {
+  device?: PairedDevice;
+  refreshToken?: string;
+  error?: string;
+}
+
+/**
+ * Wraps Phase B's consumePairingTicket for use in the WS handshake path.
+ * Returns the device + refreshToken on success, or an error reason on failure.
+ * NEVER logs the raw refreshToken.
+ */
+export function verifyPairingHandshake(
+  input: PairingHandshakeInput,
+): PairingHandshakeResult {
+  const { ticketCode, deviceLabel, clientFingerprint, ip } = input;
+  const result = consumePairingTicket(ticketCode, deviceLabel, clientFingerprint, ip);
+  if ('error' in result) return { error: result.error };
+  return { device: result.device, refreshToken: result.refreshToken };
 }
 
 // ─── Login Page ──────────────────────────────────────────────────────────────

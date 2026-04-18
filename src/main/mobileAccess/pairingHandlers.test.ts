@@ -39,8 +39,11 @@ vi.mock('../web/webServer', () => ({
   getWebServerPort: vi.fn().mockReturnValue(7890),
 }));
 
-vi.mock('./bridgeDisconnectStub', () => ({
+vi.mock('./bridgeDisconnect', () => ({
   disconnectDevice: vi.fn(),
+  registerConnection: vi.fn(),
+  unregisterConnection: vi.fn(),
+  getTrackedConnectionCount: vi.fn(() => 0),
 }));
 
 vi.mock('./pairingTickets', () => ({
@@ -59,7 +62,7 @@ vi.mock('./tokenStore', () => ({
 
 import { getConfigValue, setConfigValue } from '../config';
 import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
-import { disconnectDevice } from './bridgeDisconnectStub';
+import { disconnectDevice } from './bridgeDisconnect';
 import { consumePairingTicket, registerPairingHandlers } from './pairingHandlers';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
 import { addDevice, listDevices, removeDevice } from './tokenStore';

@@ -17,7 +17,7 @@ import { getConfigValue, setConfigValue } from '../config';
 import log from '../logger';
 import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
 import { getWebServerPort } from '../web/webServer';
-import { disconnectDevice } from './bridgeDisconnectStub';
+import { disconnectDevice } from './bridgeDisconnect';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
 import { addDevice, hashToken, listDevices, removeDevice } from './tokenStore';
 import type { PairedDevice, QrPayload } from './types';

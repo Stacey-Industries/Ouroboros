@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mockGetSecureKeySync = vi.fn();
 const mockSetSecureKey = vi.fn();
 const mockGetConfigValue = vi.fn();
+const mockConsumePairingTicket = vi.fn();
+const mockFindByTokenHash = vi.fn();
 
 vi.mock('../auth/secureKeyStore', () => ({
   getSecureKeySync: (...args: unknown[]) => mockGetSecureKeySync(...args),
@@ -11,6 +13,14 @@ vi.mock('../auth/secureKeyStore', () => ({
 
 vi.mock('../config', () => ({
   getConfigValue: (...args: unknown[]) => mockGetConfigValue(...args),
+}));
+
+vi.mock('../mobileAccess/pairingHandlers', () => ({
+  consumePairingTicket: (...args: unknown[]) => mockConsumePairingTicket(...args),
+}));
+
+vi.mock('../mobileAccess/tokenStore', () => ({
+  findByTokenHash: (...args: unknown[]) => mockFindByTokenHash(...args),
 }));
 
 // Import after mocks are declared
@@ -26,6 +36,8 @@ const {
   validateCredential,
   validatePassword,
   validateToken,
+  verifyRefreshToken,
+  verifyPairingHandshake,
 } = await import('./webAuth');
 
 // Helper to clear the module-level failedAttempts map between tests.
@@ -374,5 +386,129 @@ describe('getWsTicketStats', () => {
     // second ticket is expired — stats should not count it
     expect(getWsTicketStats().active).toBe(0);
     vi.useRealTimers();
+  });
+});
+
+// ─── verifyRefreshToken ──────────────────────────────────────────────────────
+
+describe('verifyRefreshToken', () => {
+  const fakeDevice = {
+    id: 'dev-1',
+    label: 'Phone',
+    refreshTokenHash: 'hash',
+    fingerprint: 'fp',
+    capabilities: ['paired-read'],
+    issuedAt: new Date().toISOString(),
+    lastSeenAt: new Date().toISOString(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns device:null with reason mobile-access-disabled when flag is off', () => {
+    mockGetConfigValue.mockReturnValue({ enabled: false, pairedDevices: [] });
+    const result = verifyRefreshToken('any-token');
+    expect(result.device).toBeNull();
+    expect(result.reason).toBe('mobile-access-disabled');
+    expect(mockFindByTokenHash).not.toHaveBeenCalled();
+  });
+
+  it('returns device:null with reason mobile-access-disabled when config missing', () => {
+    mockGetConfigValue.mockReturnValue(undefined);
+    const result = verifyRefreshToken('any-token');
+    expect(result.device).toBeNull();
+    expect(result.reason).toBe('mobile-access-disabled');
+  });
+
+  it('returns device:null with reason missing-token for empty string', () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true, pairedDevices: [] });
+    const result = verifyRefreshToken('');
+    expect(result.device).toBeNull();
+    expect(result.reason).toBe('missing-token');
+  });
+
+  it('returns device:null with reason token-not-found when hash has no match', () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true, pairedDevices: [] });
+    mockFindByTokenHash.mockReturnValue(undefined);
+    const result = verifyRefreshToken('unknown-raw-token');
+    expect(result.device).toBeNull();
+    expect(result.reason).toBe('token-not-found');
+  });
+
+  it('returns the matched device when token hash is found', () => {
+    mockGetConfigValue.mockReturnValue({ enabled: true, pairedDevices: [fakeDevice] });
+    mockFindByTokenHash.mockReturnValue(fakeDevice);
+    const result = verifyRefreshToken('valid-raw-token');
+    expect(result.device).toBe(fakeDevice);
+    expect(result.reason).toBeUndefined();
+  });
+});
+
+// ─── verifyPairingHandshake ──────────────────────────────────────────────────
+
+describe('verifyPairingHandshake', () => {
+  const fakeDevice = {
+    id: 'dev-2',
+    label: 'Tablet',
+    refreshTokenHash: 'hash2',
+    fingerprint: 'fp2',
+    capabilities: ['paired-read', 'paired-write'],
+    issuedAt: new Date().toISOString(),
+    lastSeenAt: new Date().toISOString(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns error when consumePairingTicket returns rate-limited', () => {
+    mockConsumePairingTicket.mockReturnValue({ error: 'rate-limited' });
+    const result = verifyPairingHandshake({
+      ticketCode: '123456', deviceLabel: 'Phone',
+      clientFingerprint: 'fp', ip: '10.0.0.1',
+    });
+    expect(result.error).toBe('rate-limited');
+    expect(result.device).toBeUndefined();
+  });
+
+  it('returns error when consumePairingTicket returns invalid', () => {
+    mockConsumePairingTicket.mockReturnValue({ error: 'invalid' });
+    const result = verifyPairingHandshake({
+      ticketCode: 'bad', deviceLabel: 'Phone',
+      clientFingerprint: 'fp', ip: '10.0.0.1',
+    });
+    expect(result.error).toBe('invalid');
+  });
+
+  it('returns error when consumePairingTicket returns expired', () => {
+    mockConsumePairingTicket.mockReturnValue({ error: 'expired' });
+    const result = verifyPairingHandshake({
+      ticketCode: '000000', deviceLabel: 'Phone',
+      clientFingerprint: 'fp', ip: '10.0.0.1',
+    });
+    expect(result.error).toBe('expired');
+  });
+
+  it('returns device and refreshToken on success', () => {
+    mockConsumePairingTicket.mockReturnValue({ device: fakeDevice, refreshToken: 'new-rt' });
+    const result = verifyPairingHandshake({
+      ticketCode: '654321', deviceLabel: 'Tablet',
+      clientFingerprint: 'fp2', ip: '10.0.0.2',
+    });
+    expect(result.device).toBe(fakeDevice);
+    expect(result.refreshToken).toBe('new-rt');
+    expect(result.error).toBeUndefined();
+  });
+
+  it('forwards code, label, fingerprint, ip to consumePairingTicket', () => {
+    mockConsumePairingTicket.mockReturnValue({ error: 'invalid' });
+    verifyPairingHandshake({
+      ticketCode: '111111', deviceLabel: 'My Device',
+      clientFingerprint: 'fp-xyz', ip: '192.168.1.99',
+    });
+    expect(mockConsumePairingTicket).toHaveBeenCalledWith(
+      '111111', 'My Device', 'fp-xyz', '192.168.1.99',
+    );
   });
 });
