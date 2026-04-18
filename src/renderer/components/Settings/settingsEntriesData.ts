@@ -16,6 +16,16 @@ function createEntries(
   return definitions.map(([label, description]) => ({ label, description, section, sectionLabel }));
 }
 
+export const MOBILE_ACCESS_ENTRIES = createEntries('mobileAccess', 'Mobile Access', [
+  ['Enable Mobile Access', 'Allow paired mobile devices to connect to the IDE over the local network.'],
+  ['Pairing Code', 'Generate a 6-digit code and QR code to pair a new mobile device.'],
+  ['Generate Pairing Code', 'Create a 60-second one-time code for pairing a mobile device via QR scan.'],
+  ['Paired Devices', 'List, view, and revoke paired mobile devices.'],
+  ['Revoke Device', 'Remove a previously paired mobile device and close its connection.'],
+  ['Diagnostics', 'View per-class timeout counters (short/normal/long) from the WebSocket bridge.'],
+  ['Mobile', 'Connect a phone or tablet to the IDE wirelessly.'],
+]);
+
 export const KEYBINDING_ENTRIES = createEntries('keybindings', 'Keybindings', [
   ['Open Settings', 'Keyboard shortcut to open the Settings dialog. Default: Ctrl+,'],
   ['Command Palette', 'Keyboard shortcut to open the Command Palette. Default: Ctrl+Shift+P'],

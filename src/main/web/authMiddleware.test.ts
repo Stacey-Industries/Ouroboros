@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetConfigValue = vi.fn();
 vi.mock('../config', () => ({
-  getConfigValue: (...args: unknown[]) => mockGetConfigValue(...args),
+  getConfigValue: mockGetConfigValue,
 }));
 
 const mockIsRateLimited = vi.fn(() => false);
@@ -24,11 +24,11 @@ const mockVerifyRefreshToken = vi.fn();
 const mockGetLoginPageHtml = vi.fn(() => '<html>login</html>');
 
 vi.mock('./webAuth', () => ({
-  isRateLimited: (...args: unknown[]) => mockIsRateLimited(...args),
-  recordFailedAttempt: (...args: unknown[]) => mockRecordFailedAttempt(...args),
-  validateToken: (...args: unknown[]) => mockValidateToken(...args),
-  verifyRefreshToken: (...args: unknown[]) => mockVerifyRefreshToken(...args),
-  getLoginPageHtml: () => mockGetLoginPageHtml(),
+  isRateLimited: mockIsRateLimited,
+  recordFailedAttempt: mockRecordFailedAttempt,
+  validateToken: mockValidateToken,
+  verifyRefreshToken: mockVerifyRefreshToken,
+  getLoginPageHtml: mockGetLoginPageHtml,
 }));
 
 vi.mock('../logger', () => ({

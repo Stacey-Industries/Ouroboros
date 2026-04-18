@@ -25,7 +25,8 @@ export type TabId =
   | 'contextDocs'
   | 'performance'
   | 'workspaceReadList'
-  | 'research';
+  | 'research'
+  | 'mobileAccess';
 
 export interface Tab {
   id: TabId;
@@ -54,6 +55,7 @@ export const TABS: Tab[] = [
   { id: 'performance', label: 'Performance' },
   { id: 'workspaceReadList', label: 'Read-List' },
   { id: 'research', label: 'Research' },
+  { id: 'mobileAccess', label: 'Mobile Access' },
 ];
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
@@ -76,7 +78,7 @@ export const MAIN_TABS: MainTab[] = [
   { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
   { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
   { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'agentProfiles', 'codemode', 'contextDocs', 'workspaceReadList', 'research'] },
-  { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance'] },
+  { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance', 'mobileAccess'] },
 ];
 
 const SUBTAB_LABELS = new Map<TabId, string>(

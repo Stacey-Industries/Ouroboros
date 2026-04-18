@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetConfigValue = vi.fn();
 vi.mock('../config', () => ({
-  getConfigValue: (...args: unknown[]) => mockGetConfigValue(...args),
+  getConfigValue: mockGetConfigValue,
 }));
 
 vi.mock('../logger', () => ({
@@ -52,7 +52,7 @@ async function callHandler(
   } as unknown as Response;
 
   await new Promise<void>((resolve) => {
-    router.handle(req, res, () => resolve());
+    (router as unknown as { handle: (req: Request, res: Response, next: () => void) => void }).handle(req, res, () => resolve());
     // If the route matched and responded, ctx will be set synchronously —
     // resolve on next tick so the handler has a chance to call res.json().
     setTimeout(resolve, 10);

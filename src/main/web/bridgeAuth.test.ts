@@ -18,10 +18,10 @@ const mockVerifyRefreshToken = vi.fn();
 const mockVerifyPairingHandshake = vi.fn();
 
 vi.mock('./webAuth', () => ({
-  isRateLimited: (...args: unknown[]) => mockIsRateLimited(...args),
-  recordFailedAttempt: (...args: unknown[]) => mockRecordFailedAttempt(...args),
-  verifyRefreshToken: (...args: unknown[]) => mockVerifyRefreshToken(...args),
-  verifyPairingHandshake: (...args: unknown[]) => mockVerifyPairingHandshake(...args),
+  isRateLimited: mockIsRateLimited,
+  recordFailedAttempt: mockRecordFailedAttempt,
+  verifyRefreshToken: mockVerifyRefreshToken,
+  verifyPairingHandshake: mockVerifyPairingHandshake,
 }));
 
 vi.mock('../logger', () => ({

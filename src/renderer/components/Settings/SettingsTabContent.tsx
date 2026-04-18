@@ -19,6 +19,7 @@ import { GeneralSection } from './GeneralSection';
 import { HooksSection } from './HooksSection';
 import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
+import { MobileAccessPane } from './MobileAccessPane';
 import { ProfilesSection } from './ProfilesSection';
 import { ProvidersSection } from './ProvidersSection';
 import { ResearchSettings } from './ResearchSettings';
@@ -63,6 +64,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   performance: () => <SettingsPerformancePanel />,
   workspaceReadList: ({ draft }) => <WorkspaceReadListSection draft={draft} />,
   research: ({ draft, onChange }) => <ResearchSettings draft={draft} onChange={onChange} />,
+  mobileAccess: ({ draft, onChange }) => <MobileAccessPane draft={draft} onChange={onChange} />,
 };
 
 export function SettingsTabContent({
