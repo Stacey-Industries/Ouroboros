@@ -55,6 +55,7 @@ import {
 } from './perfMetrics';
 import { deleteTokenFile, generatePipeTokens, setTokenFilePath } from './pipeAuth';
 import { dispatchPermalinkFromArgv, setupThreadProtocol } from './protocolHandler';
+import { registerBuiltinProviders } from './providerBootstrap';
 import { killAllPtySessions } from './pty';
 import { closeCorrectionWriter, initCorrectionWriter } from './research/correctionWriter';
 import { closeResearchOutcomeWriter, initResearchOutcomeWriter } from './research/researchOutcomeWriter';
@@ -248,7 +249,7 @@ async function initializeApplication(): Promise<void> {
   const _ud = app.getPath('userData'); initDecisionWriter(_ud); initOutcomeWriter(_ud); initResearchOutcomeWriter(_ud); initCorrectionWriter(_ud); initEditProvenance(_ud); scheduleJsonlRetentionPurge(_ud); // Wave 18/24/25/G/H
   const cfg = { get: getConfigValue, set: setConfigValue };
   await runStartupStep('[main] session services', () => initSessionServices(cfg));
-  await migrateSecretsIfNeeded();
+  registerBuiltinProviders(); await migrateSecretsIfNeeded();
   setTokenFilePath(app.getPath('userData'));
   generatePipeTokens();
   installHandlerCapture();

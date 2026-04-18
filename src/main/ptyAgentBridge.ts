@@ -11,6 +11,46 @@ import type {
   StreamJsonResultEvent,
 } from './orchestration/providers/streamJsonTypes'
 
+// ---- Session event subscriber bus (Wave 36 Phase B) -----------------------
+//
+// Allows post-spawn consumers (e.g. ClaudeSessionProvider) to subscribe to
+// events emitted by an existing bridge without modifying createAgentBridge's
+// callback signature.
+
+type SessionEventCallback = (event: StreamJsonEvent) => void
+
+const sessionSubscribers = new Map<string, Set<SessionEventCallback>>()
+
+/**
+ * Subscribe to StreamJsonEvents for a given PTY session.
+ * Returns a cleanup function — call it to unsubscribe.
+ */
+export function subscribeSessionEvents(
+  sessionId: string,
+  cb: SessionEventCallback,
+): () => void {
+  let subs = sessionSubscribers.get(sessionId)
+  if (!subs) {
+    subs = new Set()
+    sessionSubscribers.set(sessionId, subs)
+  }
+  subs.add(cb)
+  return () => {
+    const s = sessionSubscribers.get(sessionId)
+    if (s) {
+      s.delete(cb)
+      if (s.size === 0) sessionSubscribers.delete(sessionId)
+    }
+  }
+}
+
+/** @internal Publish an event to all subscribers for a session. */
+function publishToSubscribers(sessionId: string, event: StreamJsonEvent): void {
+  const subs = sessionSubscribers.get(sessionId)
+  if (!subs) return
+  for (const cb of subs) cb(event)
+}
+
 // ---- Types ----------------------------------------------------------------
 
 export interface AgentBridgeOptions {
@@ -66,6 +106,7 @@ export function createAgentBridge(options: AgentBridgeOptions): AgentBridgeHandl
     }
 
     options.onEvent(event)
+    publishToSubscribers(options.sessionId, event)
   }
 
   function feed(data: string): void {
