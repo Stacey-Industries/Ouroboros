@@ -27,7 +27,8 @@ export type TabId =
   | 'workspaceReadList'
   | 'research'
   | 'mobileAccess'
-  | 'systemPrompt';
+  | 'systemPrompt'
+  | 'promptDiff';
 
 export interface Tab {
   id: TabId;
@@ -58,6 +59,7 @@ export const TABS: Tab[] = [
   { id: 'research', label: 'Research' },
   { id: 'mobileAccess', label: 'Mobile Access' },
   { id: 'systemPrompt', label: 'System Prompt' },
+  { id: 'promptDiff', label: 'Prompt Diff' },
 ];
 
 /* ── Two-level tab hierarchy ─────────────────────────────── */
@@ -79,7 +81,7 @@ export const MAIN_TABS: MainTab[] = [
   { id: 'account',        label: 'Account',           subtabs: ['accounts', 'providers'] },
   { id: 'appearance',     label: 'Appearance',        subtabs: ['appearance', 'fonts', 'profiles'] },
   { id: 'terminalEditor', label: 'Terminal & Editor',  subtabs: ['terminal', 'keybindings', 'files'] },
-  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'agentProfiles', 'codemode', 'contextDocs', 'workspaceReadList', 'research', 'systemPrompt'] },
+  { id: 'aiAgents',       label: 'AI Agents',         subtabs: ['agent', 'claude', 'codex', 'agentProfiles', 'codemode', 'contextDocs', 'workspaceReadList', 'research', 'systemPrompt', 'promptDiff'] },
   { id: 'general',        label: 'General',           subtabs: ['general', 'hooks', 'integrations', 'performance', 'mobileAccess'] },
 ];
 

@@ -272,19 +272,7 @@ export const tailSchema = {
   sessionFolders: { type: 'array', items: { type: 'object' }, default: [] },
   /** Wave 22 Phase B/E — chat message density + desktop notifications (Phase E)
    *  Wave 23 Phase A — sideChats + branchingPolish feature flags */
-  chat: {
-    type: 'object',
-    additionalProperties: false,
-    default: { density: 'comfortable', desktopNotifications: true, sideChats: true, branchingPolish: true },
-    properties: {
-      density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' },
-      desktopNotifications: { type: 'boolean', default: true },
-      /** Gates the SideChatDrawer + Ctrl+; shortcut. */
-      sideChats: { type: 'boolean', default: true },
-      /** Gates BranchIndicator, BranchTreeView, and branch comparison. */
-      branchingPolish: { type: 'boolean', default: true },
-    },
-  },
+  chat: { type: 'object', additionalProperties: false, default: { density: 'comfortable', desktopNotifications: true, sideChats: true, branchingPolish: true }, properties: { density: { type: 'string', enum: ['comfortable', 'compact'], default: 'comfortable' }, desktopNotifications: { type: 'boolean', default: true }, sideChats: { type: 'boolean', default: true }, branchingPolish: { type: 'boolean', default: true } } },
   /** Wave 25 Phase E — workspace read-list: project root → file paths auto-pinned at session open */
   workspaceReadLists: { type: 'object', additionalProperties: { type: 'array', items: { type: 'string' } }, default: {} },
   /** Wave 26 Phase A — user profiles (built-ins are merged at read time, never stored) */
@@ -327,6 +315,6 @@ export const tailSchema = {
   },
   /** Wave 35 Phase A — per-user theming overrides (accent, verbs, fonts, custom tokens). Applied after theme bootstrap. */
   theming: { type: 'object', additionalProperties: false, properties: { accentOverride: { type: 'string' }, verbOverride: { type: 'string' }, thinkingVerbs: { type: 'array', items: { type: 'string' } }, spinnerChars: { type: 'string' }, fonts: { type: 'object', properties: { editor: { type: 'string' }, chat: { type: 'string' }, terminal: { type: 'string' } }, default: {} }, customTokens: { type: 'object', additionalProperties: { type: 'string' }, default: {} } }, default: {} },
-  /** Wave 36 Phase A — gates whether profile picker surfaces non-Claude session providers. Default false (opt-in). */
-  providers: { type: 'object', additionalProperties: false, properties: { multiProvider: { type: 'boolean', default: false } }, default: { multiProvider: false } },
+  /** Wave 36 Phase A — non-Claude session providers. Default false. */ providers: { type: 'object', additionalProperties: false, properties: { multiProvider: { type: 'boolean', default: false } }, default: { multiProvider: false } },
+  /** Wave 37 Phase B — ecosystem moat: prompt-diff snapshot. */ ecosystem: { type: 'object', additionalProperties: false, properties: { lastSeenSnapshot: { type: 'object', properties: { cliVersion: { type: 'string' }, capturedAt: { type: 'number' }, promptHash: { type: 'string' }, promptText: { type: 'string' } } } }, default: {} },
 };

@@ -12,6 +12,7 @@ import type {
   StreamJsonEvent,
   StreamJsonResultEvent,
 } from './orchestration/providers/streamJsonTypes';
+import { watchSessionForPromptDiff } from './promptDiffScheduler';
 import {
   cleanupSession,
   escapePowerShellArg,
@@ -163,6 +164,7 @@ function spawnAgentPtyDirect(r: ResolvedAgentSpawn): AgentPtyResult {
       }
     }, 150);
     notifyTerminalCreated(r.id, r.cwd);
+    watchSessionForPromptDiff(r.id);
     return { success: true, sessionId: r.id, bridge, result };
   } catch (error) {
     cleanupSession(r.id);
@@ -180,6 +182,7 @@ async function spawnAgentPtyProxy(r: ResolvedAgentSpawn): Promise<AgentPtyResult
   );
   if (!res.success) return { success: false, ...(res.error ? { error: res.error } : {}) };
   notifyTerminalCreated(r.id, r.cwd);
+  watchSessionForPromptDiff(r.id);
   return {
     success: true, sessionId: r.id,
     ...(res.bridge ? { bridge: res.bridge } : {}),

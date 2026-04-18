@@ -21,6 +21,7 @@ import { IntegrationsSection } from './IntegrationsSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { MobileAccessPane } from './MobileAccessPane';
 import { ProfilesSection } from './ProfilesSection';
+import { PromptDiffView } from './PromptDiffView';
 import { ProvidersSection } from './ProvidersSection';
 import { ResearchSettings } from './ResearchSettings';
 import { SettingsPerformancePanel } from './SettingsPerformancePanel';
@@ -67,6 +68,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   research: ({ draft, onChange }) => <ResearchSettings draft={draft} onChange={onChange} />,
   mobileAccess: ({ draft, onChange }) => <MobileAccessPane draft={draft} onChange={onChange} />,
   systemPrompt: () => <SystemPromptPane />,
+  promptDiff: () => <PromptDiffView />,
 };
 
 export function SettingsTabContent({

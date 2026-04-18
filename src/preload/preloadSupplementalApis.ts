@@ -38,7 +38,7 @@ type SupplementalApiKey =
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
   | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess'
-  | 'compareProviders';
+  | 'compareProviders' | 'ecosystem';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -317,5 +317,14 @@ export const supplementalApis: SupplementalApis = {
     cancel: (compareId) => ipcRenderer.invoke('compareProviders:cancel', { compareId }),
     onEvent: (callback) =>
       onChannel<CompareProvidersEventPayload>('compareProviders:event', callback),
+  },
+
+  // Wave 37 Phase B — ecosystem moat: prompt diff push event
+  ecosystem: {
+    onPromptDiff: (callback) =>
+      onChannel<import('../renderer/types/electron-ecosystem').PromptDiffPayload>(
+        'ecosystem:promptDiff',
+        callback,
+      ),
   },
 };

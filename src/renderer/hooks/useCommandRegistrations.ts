@@ -188,6 +188,22 @@ export function useUsageDashboardCommand(
   }, [registerCommand]);
 }
 
+export function usePromptDiffCommand(
+  registerCommand: (cmd: Command) => void,
+): void {
+  useEffect(() => {
+    registerCommand({
+      id: 'ecosystem:prompt-diff',
+      label: 'Show Claude Prompt Diff',
+      category: 'view',
+      icon: '\u00B1',
+      action: () => {
+        dispatchDomEvent('agent-ide:open-settings', 'promptDiff');
+      },
+    });
+  }, [registerCommand]);
+}
+
 export function useCompareProvidersCommand(
   registerCommand: (cmd: Command) => void,
   multiProvider: boolean,

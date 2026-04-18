@@ -17,6 +17,7 @@ import {
   useAgentTemplateCommands,
   useLayoutCommands,
   useMultiSessionCommand,
+  usePromptDiffCommand,
   useUsageDashboardCommand,
 } from './useCommandRegistrations';
 import { useErrorCapture } from './useErrorCapture';
@@ -52,6 +53,26 @@ function useStartupWarningToast(): void {
   }, [toast]);
 }
 
+function usePromptDiffToast(): void {
+  const { toast } = useToastContext();
+  useEffect(() => {
+    if (!window.electronAPI?.ecosystem?.onPromptDiff) return undefined;
+    return window.electronAPI.ecosystem.onPromptDiff(() => {
+      toast('Claude Code system prompt changed since last release.', 'info', {
+        duration: 8000,
+        action: {
+          label: 'View diff',
+          onClick: () => {
+            window.dispatchEvent(
+              new CustomEvent('agent-ide:open-settings', { detail: 'promptDiff' }),
+            );
+          },
+        },
+      });
+    });
+  }, [toast]);
+}
+
 function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
   useAgentChatCommands(deps.projectRoot, deps.registerCommand);
   useAgentTemplateCommands(deps.projectRoot, deps.registerCommand);
@@ -64,12 +85,14 @@ function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
   });
   useMultiSessionCommand(deps.registerCommand);
   useUsageDashboardCommand(deps.registerCommand);
+  usePromptDiffCommand(deps.registerCommand);
 }
 
 export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {
   useUpdater();
   useErrorCapture();
   useStartupWarningToast();
+  usePromptDiffToast();
 
   useRegisteredCommands(deps);
 

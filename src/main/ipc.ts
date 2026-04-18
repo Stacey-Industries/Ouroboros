@@ -49,6 +49,7 @@ import {
   registerContextHandlers,
   registerContextRankerDashboardHandlers,
   registerDispatchHandlers,
+  registerEcosystemHandlers,
   registerEmbeddingHandlers,
   registerExtensionStoreHandlers,
   registerFileHandlers,
@@ -157,6 +158,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('mobileAccessPairing', () => registerPairingHandlers()),
     ...safeRegister('sessionDispatch', () => registerDispatchHandlers()),
     ...safeRegister('compareProviders', () => registerCompareProvidersHandlers()),
+    ...safeRegister('ecosystem', () => registerEcosystemHandlers()),
   ];
 }
 

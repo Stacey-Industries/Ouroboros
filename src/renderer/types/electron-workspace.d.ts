@@ -8,6 +8,7 @@ import type { CheckpointAPI } from './electron-checkpoint';
 import type { ClaudeMdAPI } from './electron-claude-md';
 import type { CompareProvidersAPI } from './electron-compare-providers';
 import type { SessionsAPI } from './electron-dispatch';
+import type { EcosystemAPI } from './electron-ecosystem';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type { ExtensionsAPI } from './electron-extensions';
@@ -276,6 +277,7 @@ export interface ElectronAPI {
   theme: ThemeAPI;
   git: GitAPI;
   sessions: SessionsAPI;
+  ecosystem: EcosystemAPI;
   cost: CostAPI;
   usage: UsageAPI;
   shellHistory: ShellHistoryAPI;

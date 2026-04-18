@@ -23,6 +23,7 @@ export {
   cleanupContextRankerDashboardHandlers,
   registerContextRankerDashboardHandlers,
 } from './contextRankerDashboardHandlers';
+export { registerEcosystemHandlers } from './ecosystemHandlers';
 export { closeEmbeddingStore, registerEmbeddingHandlers } from './embeddingHandlers';
 export { registerExtensionStoreHandlers } from './extensionStore';
 export { cleanupFileWatchers, registerFileHandlers } from './files';
