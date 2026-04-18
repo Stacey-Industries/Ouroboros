@@ -19,6 +19,7 @@ import {
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
   cleanupLayoutHandlers,
+  cleanupPairingHandlers,
   cleanupPinnedContextHandlers,
   cleanupProfileCrudHandlers,
   cleanupResearchControlHandlers,
@@ -53,6 +54,7 @@ import {
   registerMcpHandlers,
   registerMcpStoreHandlers,
   registerMiscHandlers,
+  registerPairingHandlers,
   registerPinnedContextHandlers,
   registerProfileCrudHandlers,
   registerPtyHandlers,
@@ -142,6 +144,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('workspaceReadList', () => registerWorkspaceReadListHandlers()),
     ...safeRegister('subagent', () => registerSubagentHandlers()),
     ...safeRegister('layout', () => registerLayoutHandlers()),
+    ...safeRegister('mobileAccessPairing', () => registerPairingHandlers()),
   ];
 }
 
@@ -308,6 +311,7 @@ export function cleanupIpcHandlers(): void {
   cleanupWorktreeHandlers();
   cleanupWorkspaceReadListHandlers();
   cleanupLayoutHandlers();
+  cleanupPairingHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 

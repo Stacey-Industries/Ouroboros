@@ -266,3 +266,18 @@ export function buildOrchestrationApis(t: WebSocketTransport) {
 export function buildAgentApis(t: WebSocketTransport) {
   return { agentChatAPI: buildAgentChatApi(t), ...buildOrchestrationApis(t) };
 }
+
+// ─── Mobile Access API ────────────────────────────────────────────────────────
+// Pairing handlers only have meaning when served from the desktop renderer.
+// In pure web-mode the server has no local display to show the QR code on,
+// so these route through the WS transport as normal — the Settings pane (Phase G)
+// will surface them in the desktop build; web clients will receive an IPC error.
+
+export function buildMobileAccessApi(t: WebSocketTransport) {
+  return {
+    generatePairingCode: () => t.invoke('mobileAccess:generatePairingCode'),
+    listPairedDevices: () => t.invoke('mobileAccess:listPairedDevices'),
+    revokePairedDevice: (deviceId: string) =>
+      t.invoke('mobileAccess:revokePairedDevice', deviceId),
+  };
+}

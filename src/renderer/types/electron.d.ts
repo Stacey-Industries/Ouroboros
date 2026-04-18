@@ -16,6 +16,7 @@ export * from './electron-git';
 export * from './electron-graph';
 export * from './electron-layout';
 export * from './electron-mcp-store';
+export * from './electron-mobile-access';
 export * from './electron-observability';
 export * from './electron-orchestration';
 export * from './electron-pinned-context';

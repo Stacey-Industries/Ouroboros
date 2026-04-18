@@ -25,6 +25,7 @@ import {
   buildAgentChatApi,
   buildLspApi,
   buildMcpApis,
+  buildMobileAccessApi,
   buildMonitorApis,
   buildOrchestrationApis,
   buildStoreContextApis,
@@ -89,6 +90,7 @@ const authAPI = buildAuthApi(transport);
 const providersAPI = buildProvidersApi(transport);
 const claudeMdAPI = buildClaudeMdApi(transport);
 const rulesAndSkillsAPI = buildRulesAndSkillsApi(transport);
+const mobileAccessAPI = buildMobileAccessApi(transport);
 
 const electronAPI = {
   pty: ptyAPI,
@@ -125,6 +127,7 @@ const electronAPI = {
   providers: providersAPI,
   claudeMd: claudeMdAPI,
   rulesAndSkills: rulesAndSkillsAPI,
+  mobileAccess: mobileAccessAPI,
 };
 
 // ─── Expose Globally ─────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
  * calls them, collects channel names, and handles cleanup.
  */
 
+export { cleanupPairingHandlers, registerPairingHandlers } from '../mobileAccess/pairingHandlers';
 export { cleanupAgentChatHandlers, registerAgentChatHandlers } from './agentChat';
 export { registerAgentConflictHandlers } from './agentConflict';
 export { registerAiHandlers } from './aiHandlers';

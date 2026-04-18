@@ -297,8 +297,8 @@ export const tailSchema = {
   agentic: { type: 'object', additionalProperties: false, properties: { subagentUx: { type: 'boolean', default: true } }, default: { subagentUx: true } },
   /** Wave 29 Phase A — diff review enhanced UX (keyboard shortcuts + rollback) */
   review: { type: 'object', additionalProperties: false, properties: { enhanced: { type: 'boolean', default: true } }, default: { enhanced: true } },
-  /** Wave 33a Phase A — mobile client pairing + device registry. Default off. */
-  mobileAccess: { type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean', default: false }, pairedDevices: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, refreshTokenHash: { type: 'string' }, fingerprint: { type: 'string' }, capabilities: { type: 'array', items: { type: 'string' } }, issuedAt: { type: 'string' }, lastSeenAt: { type: 'string' } } }, default: [] } }, default: { enabled: false, pairedDevices: [] } },
+  /** Wave 33a Phase A+B — mobile client pairing + device registry. Default off. */
+  mobileAccess: { type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean', default: false }, pairedDevices: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, refreshTokenHash: { type: 'string' }, fingerprint: { type: 'string' }, capabilities: { type: 'array', items: { type: 'string' } }, issuedAt: { type: 'string' }, lastSeenAt: { type: 'string' } } }, default: [] }, desktopFingerprint: { type: 'string' } }, default: { enabled: false, pairedDevices: [] } },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,

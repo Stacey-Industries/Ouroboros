@@ -15,6 +15,7 @@ import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { GraphAPI } from './electron-graph';
 import type { LayoutAPI } from './electron-layout';
 import type { McpStoreAPI } from './electron-mcp-store';
+import type { MobileAccessAPI } from './electron-mobile-access';
 import type {
   ContextLayerAPI,
   CostAPI,
@@ -310,6 +311,7 @@ export interface ElectronAPI {
   subagent: SubagentAPI;
   graph: GraphAPI;
   layout: LayoutAPI;
+  mobileAccess: MobileAccessAPI;
 }
 
 export interface WorkspaceAPI {

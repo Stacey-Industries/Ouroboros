@@ -36,7 +36,7 @@ type SupplementalApiKey =
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
-  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph';
+  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -287,4 +287,10 @@ export const supplementalApis: SupplementalApis = {
   subagent: subagentApi,
   layout: layoutApi,
   graph: graphApi,
+  mobileAccess: {
+    generatePairingCode: () => ipcRenderer.invoke('mobileAccess:generatePairingCode'),
+    listPairedDevices: () => ipcRenderer.invoke('mobileAccess:listPairedDevices'),
+    revokePairedDevice: (deviceId: string) =>
+      ipcRenderer.invoke('mobileAccess:revokePairedDevice', deviceId),
+  },
 };

@@ -21,6 +21,8 @@ export interface PairedDeviceRecord {
 export interface MobileAccessConfig {
   enabled: boolean;
   pairedDevices: PairedDeviceRecord[];
+  /** Wave 33a Phase B — stable random desktop install fingerprint for QR MITM detection. */
+  desktopFingerprint?: string;
 }
 
 export interface PanelSizes {

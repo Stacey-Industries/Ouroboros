@@ -325,3 +325,15 @@ export function broadcastToWebClients(channel: string, payload: unknown): void {
 export function getWebClientCount(): number {
   return wsClients.size;
 }
+
+/**
+ * Returns the TCP port the HTTP server is currently listening on, or null
+ * if the server has not yet started. Used by pairingHandlers to populate the
+ * QR payload host/port without tight coupling to WebServerOptions.
+ */
+export function getWebServerPort(): number | null {
+  if (!httpServer) return null;
+  const addr = httpServer.address();
+  if (!addr || typeof addr === 'string') return null;
+  return addr.port;
+}
