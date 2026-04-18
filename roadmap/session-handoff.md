@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 34 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 35 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, and 34 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 35 (Theme Import & Customization) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 36 (Multi-Provider Optionality) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,27 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `d16f34b`. Working tree is clean. Full vitest: 6328/6328 passing.
+`origin/master` is caught up to `77fba3c`. Working tree is clean. Full vitest: 6483/6483 passing.
+
+### Wave 35 key primitives introduced
+
+- **Config:** `theming.{accentOverride, verbOverride, thinkingVerbs, spinnerChars, fonts: {editor,chat,terminal}, customTokens}`.
+- **Runtime:** `useTokenOverrides` hook applies theming overrides as CSS custom properties on `<html>` AFTER `useThemeRuntimeBootstrap`. Overrides win over theme defaults.
+- **VS Code import:** `src/renderer/themes/vsCodeImport.ts` + `vsCodeImport.colorMap.ts` — parses VS Code theme JSON into Ouroboros token overrides. 43 mappings. `ThemeImportModal` in Settings with paste/upload, live preview, keep/cancel/reset.
+- **Accent picker:** `AccentPicker` with native `<input type="color">` + hex text, 16ms debounced. Resets by deleting the key.
+- **Thinking-verb + spinner:** `thinkingDefaults.ts` (SPINNER_PRESETS: braille/dots/line/arc/pulse/square), `ThinkingVerbPicker` + sub-components. `AgentChatThinkingBlock` reads from config.
+- **Per-pane fonts:** `fontPickerOptions.ts` (curated mono + ui lists), `PaneFontPicker` + `FontDropdown`. Monaco integration in `MonacoEditor.tsx` (reads `--font-editor`, `updateOptions` on change). xterm integration in `TerminalInstanceUiState.ts` (`useFontSync` hook, calls `fit()` after font change).
+- **Chat root:** `AgentChatWorkspace.tsx` uses `var(--font-chat, var(--font-ui, sans-serif))`.
+- **Docs:** `docs/theming.md` covers import, accent, verbs, fonts, supported keys, known limits.
+
+### Wave 35 gotchas for next agent
+
+- **VS Code `tokenColors` not supported** — only the `colors` field. Syntax-highlighting theme import is a future wave.
+- **Alpha colors stripped** — VS Code uses `#RRGGBBAA`; Ouroboros tokens don't support per-token alpha this wave. Parser emits a warning per stripped alpha.
+- **Monaco doesn't read CSS vars** — font changes require `editor.updateOptions({ fontFamily })`. `useTokenOverrides` sets the CSS var; Monaco reads it via computed style.
+- **xterm font change requires `fit()`** — character cell dimensions change; terminal must be re-fit.
+- **Schema compression pattern:** `ThemingConfig` added pressure to `config.ts` 300-line cap; compressed to one line. Future config additions may need similar compression.
+- **Accent override undefined:** use destructuring `const { accentOverride: _drop, ...rest } = theming` to explicitly omit the key when resetting.
 
 ### Wave 34 key primitives introduced
 
@@ -165,11 +185,12 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 - **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off.
 - **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off.
 - **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access.
-- **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off. All 6328 vitest tests green at push time.
+- **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off.
+- **Wave 35** — Theme Import & Customization (7 phases A–G, v2.3.1). Flag `theming.vsCodeImport` default on. All 6483 vitest tests green at push time.
 
 ### Plans queued
 
-- None currently drafted. Wave 35 (Theme Import & Customization) is next — draft plan before implementing.
+- None currently drafted. Wave 36 (Multi-Provider Optionality) is next — draft plan before implementing.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
