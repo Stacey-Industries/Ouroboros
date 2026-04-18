@@ -233,12 +233,8 @@ export interface AppConfig {
    *  Wave 28 — dragAndDrop: enable drag-and-drop pane rearrangement
    *  Wave 32 — mobilePrimary: enable mobile-primary preset when viewport < 768px */
   layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; mobilePrimary?: boolean };
-  /** Wave 22 Phase B/E — chat message density + desktop notification settings. */
-  chat?: {
-    density?: 'comfortable' | 'compact';
-    /** Wave 22 Phase E — fire desktop notification on stream completion (unfocused only). Default: true. */
-    desktopNotifications?: boolean;
-  };
+  /** Wave 22 Phase B/E — chat message density + desktop notification settings. Wave 22 Phase E adds desktopNotifications. */
+  chat?: { density?: 'comfortable' | 'compact'; desktopNotifications?: boolean };
   /** Wave 25 Phase E — workspace read-list: projectRoot → string[] of file paths auto-pinned at session open */
   workspaceReadLists?: Record<string, string[]>;
   /** Wave 27 — subagent UX feature flags */
@@ -249,6 +245,8 @@ export interface AppConfig {
   researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
   /** Wave 19/24/31 — context scoring feature flags. Wave 31 Phase E adds packetMode. */
   context?: { provenanceWeights?: boolean; pagerank?: boolean; pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number }; decisionLogging?: boolean; rerankerEnabled?: boolean; packetMode?: 'full' | 'lean' };
+  /** Wave 33a Phase A — mobile client pairing + device registry. */
+  mobileAccess?: { enabled: boolean; pairedDevices: Array<{ id: string; label: string; refreshTokenHash: string; fingerprint: string; capabilities: string[]; issuedAt: string; lastSeenAt: string }> };
 }
 
 export interface ContextLayerConfig {

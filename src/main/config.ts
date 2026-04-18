@@ -6,6 +6,23 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
+/** Wave 33a Phase A — a device that has completed the pairing flow. */
+export interface PairedDeviceRecord {
+  id: string;
+  label: string;
+  refreshTokenHash: string;
+  fingerprint: string;
+  capabilities: string[];
+  issuedAt: string;
+  lastSeenAt: string;
+}
+
+/** Wave 33a Phase A — mobileAccess config slice. */
+export interface MobileAccessConfig {
+  enabled: boolean;
+  pairedDevices: PairedDeviceRecord[];
+}
+
 export interface PanelSizes {
   leftSidebar: number;
   rightSidebar: number;
@@ -398,6 +415,8 @@ export interface AppConfig {
   workspaceProfileDefaults?: Record<string, string>;
   /** Wave 26 Phase E — persisted approval memory (allow/deny patterns) */
   approvalMemory?: import('./approvalMemory').ApprovalMemoryStore;
+  /** Wave 33a Phase A — mobile client pairing and device registry. */
+  mobileAccess?: MobileAccessConfig;
   /** Wave 30 Phase G — research auto-firing global defaults.
    *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {
