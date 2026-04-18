@@ -64,6 +64,16 @@ export function checkCapability(
 }
 
 /**
+ * Returns true when a channel's class is resumable (paired-read or paired-write).
+ * 'always' and 'desktop-only' channels are fire-and-reject on disconnect.
+ * Wave 33a Phase E.
+ */
+export function isResumable(channel: string): boolean {
+  const entry = CATALOG_LOOKUP.get(channel);
+  return entry?.class === 'paired-read' || entry?.class === 'paired-write';
+}
+
+/**
  * Returns the timeout in milliseconds for the channel's timeout class.
  * Defaults to 'normal' (30 s) for unclassified channels — the gate will
  * reject them anyway, but callers may need a timeout value for logging.

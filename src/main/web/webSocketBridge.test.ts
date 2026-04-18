@@ -13,6 +13,35 @@ vi.mock('../windowManager', () => ({
   getAllActiveWindows: vi.fn(() => []),
 }));
 
+vi.mock('../config', () => ({
+  getConfigValue: vi.fn(() => ({ resumeTtlSec: 300 })),
+}));
+
+// Channel catalog: all test channels default to 'always' so bridge skips resume
+vi.mock('../mobileAccess/channelCatalog', () => ({
+  CATALOG_LOOKUP: new Map([
+    ['files:read',    { class: 'always', timeoutClass: 'normal' }],
+    ['pty:write',     { class: 'always', timeoutClass: 'normal' }],
+    ['ping',          { class: 'always', timeoutClass: 'short'  }],
+    ['foo',           { class: 'always', timeoutClass: 'normal' }],
+    ['sync:method',   { class: 'always', timeoutClass: 'normal' }],
+    ['boom',          { class: 'always', timeoutClass: 'normal' }],
+    ['async:boom',    { class: 'always', timeoutClass: 'normal' }],
+    ['string:throw',  { class: 'always', timeoutClass: 'normal' }],
+    ['buf:read',      { class: 'always', timeoutClass: 'normal' }],
+    ['uint8:read',    { class: 'always', timeoutClass: 'normal' }],
+    ['obj:read',      { class: 'always', timeoutClass: 'normal' }],
+    ['arr:read',      { class: 'always', timeoutClass: 'normal' }],
+    ['null:method',   { class: 'always', timeoutClass: 'normal' }],
+    ['undef:method',  { class: 'always', timeoutClass: 'normal' }],
+    ['num:method',    { class: 'always', timeoutClass: 'normal' }],
+    ['deep:read',     { class: 'always', timeoutClass: 'normal' }],
+    ['test',          { class: 'always', timeoutClass: 'normal' }],
+    ['test:one',      { class: 'always', timeoutClass: 'normal' }],
+    ['test:two',      { class: 'always', timeoutClass: 'normal' }],
+  ]),
+}));
+
 // Use vi.hoisted so the Map is created before vi.mock factories run
 const mockHandlerRegistry = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>());
 vi.mock('./handlerRegistry', () => ({

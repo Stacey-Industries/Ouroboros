@@ -19,6 +19,7 @@ import { registerConnection, unregisterConnection } from '../mobileAccess/bridge
 import { authMiddleware, parseCookies } from './authMiddleware';
 import { authenticatePairingHandshake, authenticateUpgrade } from './bridgeAuth';
 import type { MobileAccessMeta } from './bridgeCapabilityGate';
+import { detachDevice } from './bridgeResume';
 import { createPairingRouter } from './pairingMiddleware';
 import {
   consumeWsTicket,
@@ -145,6 +146,8 @@ function attachWsListeners(ws: WebSocket): void {
     handleJsonRpcMessage(ws, typeof data === 'string' ? data : data.toString('utf-8'), meta);
   });
   ws.on('close', () => {
+    const closingMeta = wsMeta.get(ws);
+    if (closingMeta?.deviceId) detachDevice(closingMeta.deviceId);
     unregisterConnection(ws);
     wsMeta.delete(ws);
     wsClients.delete(ws);

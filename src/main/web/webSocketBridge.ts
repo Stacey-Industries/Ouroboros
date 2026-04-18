@@ -4,6 +4,8 @@
  * Parses incoming JSON-RPC messages from WebSocket clients, looks up the
  * corresponding handler in the shared IPC handler registry, calls it with
  * a mock IpcMainInvokeEvent, and returns the result as a JSON-RPC response.
+ *
+ * Wave 33a Phase E: resume handshake dispatched via bridgeResume.ts.
  */
 
 import { WebSocket } from 'ws';
@@ -11,6 +13,7 @@ import { WebSocket } from 'ws';
 import log from '../logger';
 import { getAllActiveWindows } from '../windowManager';
 import { enforceCapabilityOrRespond, type MobileAccessMeta } from './bridgeCapabilityGate';
+import { type DispatchContext,dispatchResumable, handleResumeFrame } from './bridgeResume';
 import { ipcHandlerRegistry } from './handlerRegistry';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -31,32 +34,23 @@ interface JsonRpcResponse {
     message: string;
     data?: unknown;
   };
+  meta?: { resumeToken: string };
 }
 
 // JSON-RPC 2.0 error codes
 const ERROR_PARSE = -32700;
 const ERROR_INVALID_REQUEST = -32600;
 const ERROR_METHOD_NOT_FOUND = -32601;
-const ERROR_INTERNAL = -32603;
 
 // ─── Mock IPC event ─────────────────────────────────────────────────────────
 
-/**
- * Creates a minimal mock IpcMainInvokeEvent for web clients.
- *
- * Most handlers use `event` only to get the sender window (via event.sender).
- * We return the first active BrowserWindow as the sender, which is safe
- * because web clients share the same workspace context.
- */
 function createMockIpcEvent(): Electron.IpcMainInvokeEvent {
   const windows = getAllActiveWindows();
   const win = windows.length > 0 ? windows[0] : null;
 
-  // Build a minimal sender shim that satisfies what handlers expect
   const senderShim = win
     ? win.webContents
     : {
-        // Fallback shim if no windows are open — should be rare
         id: -1,
         getOwnerBrowserWindow: () => null,
         send: () => {},
@@ -64,7 +58,6 @@ function createMockIpcEvent(): Electron.IpcMainInvokeEvent {
 
   return {
     sender: senderShim,
-    // These properties exist on IpcMainInvokeEvent but are rarely used
     processId: process.pid,
     frameId: 0,
     ports: [],
@@ -74,10 +67,6 @@ function createMockIpcEvent(): Electron.IpcMainInvokeEvent {
 
 // ─── Binary encoding ────────────────────────────────────────────────────────
 
-/**
- * Recursively encodes Buffer/Uint8Array values to base64 strings
- * for safe JSON serialization over WebSocket.
- */
 function encodeForTransport(value: unknown): unknown {
   if (value === null || value === undefined) return value;
 
@@ -96,7 +85,7 @@ function encodeForTransport(value: unknown): unknown {
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      // eslint-disable-next-line security/detect-object-injection -- k comes from Object.entries, not user input
+      // eslint-disable-next-line security/detect-object-injection -- k from Object.entries, not user input
       result[k] = encodeForTransport(v);
     }
     return result;
@@ -105,11 +94,19 @@ function encodeForTransport(value: unknown): unknown {
   return value;
 }
 
-// ─── Message handling ───────────────────────────────────────────────────────
+// ─── Response helper ─────────────────────────────────────────────────────────
 
-/**
- * Validates that a parsed message conforms to JSON-RPC 2.0 request format.
- */
+function sendResponse(ws: WebSocket, response: JsonRpcResponse): void {
+  if (ws.readyState !== WebSocket.OPEN) return;
+  try {
+    ws.send(JSON.stringify(response));
+  } catch (err) {
+    log.error('Failed to send response:', err);
+  }
+}
+
+// ─── Message parsing ─────────────────────────────────────────────────────────
+
 function isValidJsonRpcRequest(msg: unknown): msg is JsonRpcRequest {
   if (typeof msg !== 'object' || msg === null) return false;
   const obj = msg as Record<string, unknown>;
@@ -118,18 +115,6 @@ function isValidJsonRpcRequest(msg: unknown): msg is JsonRpcRequest {
     (typeof obj.id === 'number' || typeof obj.id === 'string') &&
     typeof obj.method === 'string'
   );
-}
-
-/**
- * Sends a JSON-RPC response to a WebSocket client.
- */
-function sendResponse(ws: WebSocket, response: JsonRpcResponse): void {
-  if (ws.readyState !== WebSocket.OPEN) return;
-  try {
-    ws.send(JSON.stringify(response));
-  } catch (err) {
-    log.error('Failed to send response:', err);
-  }
 }
 
 function parseJsonRpcMessage(ws: WebSocket, raw: string): JsonRpcRequest | null {
@@ -155,46 +140,32 @@ function parseJsonRpcMessage(ws: WebSocket, raw: string): JsonRpcRequest | null 
   return parsed;
 }
 
-function dispatchHandler(
+// ─── Resume handshake ─────────────────────────────────────────────────────────
+
+interface ResumeParams { tokens?: unknown }
+
+function handleResume(
   ws: WebSocket,
   request: JsonRpcRequest,
-  handler: (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown,
+  connectionMeta: MobileAccessMeta | null,
 ): void {
-  const mockEvent = createMockIpcEvent();
-  const params = Array.isArray(request.params) ? request.params : [];
-  Promise.resolve()
-    .then(() => handler(mockEvent, ...params))
-    .then((result: unknown) => {
-      sendResponse(ws, { jsonrpc: '2.0', id: request.id, result: encodeForTransport(result) });
-    })
-    .catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack : undefined;
-      log.error(`Handler error for ${request.method}:`, message);
-      sendResponse(ws, {
-        jsonrpc: '2.0',
-        id: request.id,
-        error: {
-          code: ERROR_INTERNAL,
-          message: `Handler error: ${message}`,
-          data: process.env.NODE_ENV === 'development' ? { stack } : undefined,
-        },
-      });
-    });
+  const p = (Array.isArray(request.params) ? request.params[0] : request.params) as ResumeParams;
+  const tokens = Array.isArray(p?.tokens) ? (p.tokens as string[]) : [];
+  const deviceId = connectionMeta?.deviceId ?? null;
+  const send = (msg: unknown) => sendResponse(ws, msg as JsonRpcResponse);
+  const { resumed, lost } = handleResumeFrame(tokens, deviceId, send);
+  sendResponse(ws, { jsonrpc: '2.0', id: request.id, result: { resumed, lost } });
 }
+
+// ─── Public entry point ───────────────────────────────────────────────────────
 
 /**
  * Handles an incoming raw WebSocket message — parses JSON-RPC 2.0 and routes
- * to the handler registry, with an optional capability gate for mobile clients.
+ * to the handler registry, with capability gate and streaming-resume support.
  *
  * @param ws             - The WebSocket connection.
  * @param raw            - Raw message string from the client.
- * @param connectionMeta - mobileAccess metadata if the connection was
- *                         authenticated via the Phase D device-token path,
- *                         or null for legacy desktop single-token connections.
- *                         PHASE D NOTE: Once Phase D wires token verification,
- *                         every connection will carry metadata and the null
- *                         fallback in enforceCapabilityOrRespond can be removed.
+ * @param connectionMeta - mobileAccess metadata (Phase D) or null for legacy.
  */
 export function handleJsonRpcMessage(
   ws: WebSocket,
@@ -204,9 +175,13 @@ export function handleJsonRpcMessage(
   const request = parseJsonRpcMessage(ws, raw);
   if (!request) return;
 
-  // ── Capability gate (Phase C seam) ────────────────────────────────────────
-  // enforceCapabilityOrRespond sends the error and returns false if denied.
-  // When connectionMeta is null (legacy desktop path) it is a no-op.
+  // ── Resume handshake (Phase E) ────────────────────────────────────────────
+  if (request.method === 'resume') {
+    handleResume(ws, request, connectionMeta);
+    return;
+  }
+
+  // ── Capability gate (Phase C) ─────────────────────────────────────────────
   const proceed = enforceCapabilityOrRespond(
     request,
     connectionMeta,
@@ -228,5 +203,12 @@ export function handleJsonRpcMessage(
     return;
   }
 
-  dispatchHandler(ws, request, handler);
+  // ── Dispatch (Phase E: resumable for paired-read/write on mobile) ─────────
+  const ctx: DispatchContext = {
+    handler,
+    createEvent: createMockIpcEvent,
+    encode: encodeForTransport,
+    sendResponse,
+  };
+  dispatchResumable(ws, request, connectionMeta, ctx);
 }
