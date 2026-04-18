@@ -1,81 +1,82 @@
 /**
  * es.ts — Spanish string table (pilot locale).
- * Wave 38 Phase A: English strings used as placeholders; Phase G will translate.
+ * Wave 38 Phase G: full translations. Brand names (Ouroboros, Claude Code, Claude)
+ * are intentionally preserved in English as they are non-translatable proper nouns.
  */
 export const ES_STRINGS = {
   onboarding: {
     step1: {
-      title: 'Welcome to Ouroboros',
-      body: 'Your AI-powered IDE for running and monitoring Claude Code sessions.',
+      title: 'Bienvenido a Ouroboros',
+      body: 'Tu IDE con IA para ejecutar y monitorear sesiones de Claude Code.',
     },
     step2: {
-      title: 'Your Sessions',
-      body: 'Each terminal tab is an independent Claude Code session. Switch between them freely.',
+      title: 'Tus sesiones',
+      body: 'Cada pestaña de terminal es una sesión independiente de Claude Code. Cambia entre ellas libremente.',
     },
     step3: {
-      title: 'Context Awareness',
-      body: 'Open a project folder so Claude can read your codebase and give better answers.',
+      title: 'Conciencia del contexto',
+      body: 'Abre una carpeta de proyecto para que Claude pueda leer tu código fuente y darte mejores respuestas.',
     },
     step4: {
-      title: 'Command Palette',
-      body: 'Press Cmd+Shift+P (or Ctrl+Shift+P) to access every command in the IDE.',
+      title: 'Paleta de comandos',
+      body: 'Pulsa Cmd+Shift+P (o Ctrl+Shift+P) para acceder a todos los comandos del IDE.',
     },
     step5: {
-      title: 'Settings',
-      body: 'Reach Settings from the status bar at any time to customise your experience.',
+      title: 'Configuración',
+      body: 'Accede a la configuración desde la barra de estado en cualquier momento para personalizar tu experiencia.',
     },
   },
   emptyState: {
     chat: {
-      primary: 'Start a conversation or try a sample prompt',
-      dismiss: 'Got it',
+      primary: 'Inicia una conversación o prueba un mensaje de ejemplo',
+      dismiss: 'Entendido',
     },
     fileTree: {
-      primary: 'Open a project folder to browse files',
-      action: 'Open folder',
-      dismiss: 'Dismiss',
+      primary: 'Abre una carpeta de proyecto para explorar los archivos',
+      action: 'Abrir carpeta',
+      dismiss: 'Descartar',
     },
     terminal: {
-      primary: 'Press + to open a terminal or start a Claude session',
-      action: 'New terminal',
-      dismiss: 'Dismiss',
+      primary: 'Pulsa + para abrir un terminal o iniciar una sesión de Claude',
+      action: 'Nuevo terminal',
+      dismiss: 'Descartar',
     },
   },
   settings: {
     updateChannel: {
-      label: 'Update channel',
-      stable: 'Stable',
+      label: 'Canal de actualización',
+      stable: 'Estable',
       beta: 'Beta',
     },
     language: {
-      label: 'Language',
+      label: 'Idioma',
       english: 'English',
-      spanish: 'Spanish',
+      spanish: 'Español',
     },
     crashReports: {
-      label: 'Crash reports',
-      enableOptIn: 'Send anonymous crash reports to help improve Ouroboros',
-      webhookLabel: 'Crash report webhook URL',
+      label: 'Informes de errores',
+      enableOptIn: 'Enviar informes de errores anónimos para ayudar a mejorar Ouroboros',
+      webhookLabel: 'URL del webhook para informes de errores',
     },
   },
   changelog: {
     drawer: {
-      title: "What's new",
-      dismissAll: 'Dismiss all',
+      title: 'Novedades',
+      dismissAll: 'Descartar todo',
     },
   },
   tour: {
-    next: 'Next',
-    back: 'Back',
-    skip: 'Skip tour',
-    done: 'Done',
+    next: 'Siguiente',
+    back: 'Atrás',
+    skip: 'Omitir tour',
+    done: 'Hecho',
   },
   common: {
-    close: 'Close',
-    cancel: 'Cancel',
-    save: 'Save',
-    ok: 'OK',
-    loading: 'Loading…',
-    error: 'Something went wrong',
+    close: 'Cerrar',
+    cancel: 'Cancelar',
+    save: 'Guardar',
+    ok: 'Aceptar',
+    loading: 'Cargando…',
+    error: 'Algo salió mal',
   },
 };

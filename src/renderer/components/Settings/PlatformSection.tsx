@@ -1,5 +1,5 @@
 /**
- * PlatformSection.tsx — Wave 38 Phase F: auto-update channel + crash reporter settings.
+ * PlatformSection.tsx — Wave 38 Phase F/G: auto-update channel + crash reporter + language.
  *
  * Inline-style convention used throughout this directory (no Tailwind).
  */
@@ -7,6 +7,7 @@
 import React from 'react';
 
 import type { AppConfig, PlatformConfig } from '../../types/electron';
+import { PlatformLanguageSection } from './PlatformLanguageSection';
 import { SectionLabel } from './settingsStyles';
 import { ToggleSwitch } from './ToggleSwitch';
 
@@ -156,6 +157,7 @@ function CrashReporterSubsection({ draft, onChange }: Props): React.ReactElement
 export function PlatformSection({ draft, onChange }: Props): React.ReactElement {
   return (
     <div style={rootStyle}>
+      <PlatformLanguageSection />
       <UpdateChannelSubsection draft={draft} onChange={onChange} />
       <CrashReporterSubsection draft={draft} onChange={onChange} />
     </div>
