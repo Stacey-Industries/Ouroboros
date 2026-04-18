@@ -327,4 +327,6 @@ export const tailSchema = {
   },
   /** Wave 35 Phase A — per-user theming overrides (accent, verbs, fonts, custom tokens). Applied after theme bootstrap. */
   theming: { type: 'object', additionalProperties: false, properties: { accentOverride: { type: 'string' }, verbOverride: { type: 'string' }, thinkingVerbs: { type: 'array', items: { type: 'string' } }, spinnerChars: { type: 'string' }, fonts: { type: 'object', properties: { editor: { type: 'string' }, chat: { type: 'string' }, terminal: { type: 'string' } }, default: {} }, customTokens: { type: 'object', additionalProperties: { type: 'string' }, default: {} } }, default: {} },
+  /** Wave 36 Phase A — gates whether profile picker surfaces non-Claude session providers. Default false (opt-in). */
+  providers: { type: 'object', additionalProperties: false, properties: { multiProvider: { type: 'boolean', default: false } }, default: { multiProvider: false } },
 };

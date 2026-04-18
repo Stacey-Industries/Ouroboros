@@ -422,6 +422,8 @@ export interface AppConfig {
   sessionDispatch?: SessionDispatchConfig;
   /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
   theming?: ThemingConfig;
+  /** Wave 36 Phase A — gates whether profile picker surfaces non-Claude session providers. */
+  providers?: { multiProvider?: boolean };
   /** Wave 30 Phase G — research auto-firing global defaults.
    *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {
