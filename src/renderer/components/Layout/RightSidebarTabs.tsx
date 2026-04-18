@@ -19,6 +19,7 @@ import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_DISPATCH_EVENT,
 } from '../../hooks/appEventNames';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import type { AgentChatThreadRecord } from '../../types/electron';
@@ -28,7 +29,7 @@ import { MobileBottomSheet } from './MobileBottomSheet';
 import { ChatPanelHeader } from './RightSidebarTabs.header';
 import { RecentThreadTabs, SecondaryViewHeader } from './RightSidebarTabs.panels';
 
-export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics' | 'memory' | 'rules';
+export type RightSidebarView = 'chat' | 'monitor' | 'git' | 'analytics' | 'memory' | 'rules' | 'dispatch';
 
 export interface RightSidebarTabsProps {
   chatContent: React.ReactNode;
@@ -37,6 +38,8 @@ export interface RightSidebarTabsProps {
   analyticsContent?: React.ReactNode;
   memoryContent?: React.ReactNode;
   rulesContent?: React.ReactNode;
+  dispatchContent?: React.ReactNode;
+  showDispatch?: boolean;
   threads?: AgentChatThreadRecord[];
   activeThreadId?: string | null;
   onSelectThread?: (threadId: string | null) => void;
@@ -76,11 +79,14 @@ function useDraftTabs(activeThreadId: string | null, threads: AgentChatThreadRec
 function useAgentChatViewFocus(setActiveView: React.Dispatch<React.SetStateAction<RightSidebarView>>): void {
   useEffect(() => {
     function focusChat(): void { setActiveView('chat'); }
+    function openDispatch(): void { setActiveView('dispatch'); }
     window.addEventListener(OPEN_AGENT_CHAT_PANEL_EVENT, focusChat);
     window.addEventListener(FOCUS_AGENT_CHAT_EVENT, focusChat);
+    window.addEventListener(OPEN_DISPATCH_EVENT, openDispatch);
     return () => {
       window.removeEventListener(OPEN_AGENT_CHAT_PANEL_EVENT, focusChat);
       window.removeEventListener(FOCUS_AGENT_CHAT_EVENT, focusChat);
+      window.removeEventListener(OPEN_DISPATCH_EVENT, openDispatch);
     };
   }, [setActiveView]);
 }
@@ -105,7 +111,7 @@ function resolveNextThread({ id, activeThreadId, threads, draftTabs, dismissedTa
 // ── RightSidebarTabs ──────────────────────────────────────────────────────────
 
 const VIEW_LABELS: Record<RightSidebarView, string> = {
-  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory', rules: 'Claude Config',
+  chat: 'Chat', monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics', memory: 'Memory', rules: 'Claude Config', dispatch: 'Dispatch',
 };
 
 function useSidebarPanelState() {
@@ -119,7 +125,7 @@ function useSidebarPanelState() {
   return { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView };
 }
 
-const ALL_VIEWS = ['chat', 'monitor', 'git', 'analytics', 'memory', 'rules'] as const;
+const ALL_VIEWS = ['chat', 'monitor', 'git', 'analytics', 'memory', 'rules', 'dispatch'] as const;
 
 function SidebarContentArea({ activeView, historyOpen, viewContent, threads, activeThreadId, setHistoryOpen, onSelectThread, onDeleteThread }: {
   activeView: RightSidebarView; historyOpen: boolean;
@@ -175,7 +181,7 @@ function useSidebarHandlers(args: SidebarHandlersArgs) {
 
 const SHEET_VIEW_LABELS: Record<string, string> = {
   monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics',
-  memory: 'Memory', rules: 'Claude Config',
+  memory: 'Memory', rules: 'Claude Config', dispatch: 'Dispatch',
 };
 
 function MobileSecondarySheet({ viewContent }: { viewContent: Record<RightSidebarView, React.ReactNode> }): React.ReactElement | null {
@@ -189,10 +195,17 @@ function MobileSecondarySheet({ viewContent }: { viewContent: Record<RightSideba
   );
 }
 
-export const RightSidebarTabs = memo(function RightSidebarTabs({
-  chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent,
-  threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
-}: RightSidebarTabsProps): React.ReactElement {
+function buildViewContent(props: RightSidebarTabsProps): Record<RightSidebarView, React.ReactNode> {
+  const { chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent, dispatchContent } = props;
+  return {
+    chat: chatContent, monitor: monitorContent, git: gitContent,
+    analytics: analyticsContent ?? null, memory: memoryContent ?? null,
+    rules: rulesContent ?? null, dispatch: dispatchContent ?? null,
+  };
+}
+
+export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSidebarTabsProps): React.ReactElement {
+  const { threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat, showDispatch = false } = props;
   const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
   const { draftTabs, setDraftTabs } = useDraftTabs(activeThreadId, threads);
   const { handleNewChat, handleBackToChat, handleCloseTab } = useSidebarHandlers({
@@ -201,20 +214,16 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
   });
   const isPhone = useViewportBreakpoint() === 'phone';
   useAgentChatViewFocus(setActiveView);
-
-  const viewContent: Record<RightSidebarView, React.ReactNode> = {
-    chat: chatContent, monitor: monitorContent, git: gitContent,
-    analytics: analyticsContent ?? null, memory: memoryContent ?? null,
-    rules: rulesContent ?? null,
-  };
-
+  const viewContent = buildViewContent(props);
+  const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {activeView === 'chat' ? (
-        <ChatPanelHeader activeThread={threads.find((t) => t.id === activeThreadId) ?? null}
+        <ChatPanelHeader activeThread={activeThread}
           threadCount={threads.length} historyOpen={historyOpen} onToggleHistory={toggleHistory}
           onNewChat={handleNewChat} viewDropdownOpen={viewDropdownOpen}
-          onToggleViewDropdown={toggleViewDropdown} activeView={activeView} onSwitchView={switchView} />
+          onToggleViewDropdown={toggleViewDropdown} activeView={activeView} onSwitchView={switchView}
+          showDispatch={showDispatch} />
       ) : (
         <SecondaryViewHeader label={VIEW_LABELS[activeView]} onBackToChat={handleBackToChat} />
       )}

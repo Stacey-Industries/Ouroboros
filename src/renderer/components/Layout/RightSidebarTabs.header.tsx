@@ -203,15 +203,21 @@ function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement
 
 // ── Desktop view switcher (dropdown) ─────────────────────────────────────────
 
-function DesktopViewSwitcher({ viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView }: {
+function DesktopViewSwitcher({ viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView, showDispatch }: {
   viewDropdownOpen: boolean; onToggleViewDropdown: () => void;
   activeView: RightSidebarView; onSwitchView: (view: RightSidebarView) => void;
+  showDispatch: boolean;
 }): React.ReactElement {
   return (
     <>
       <ViewSwitcherButton viewDropdownOpen={viewDropdownOpen} onToggle={onToggleViewDropdown} />
       {viewDropdownOpen && (
-        <ViewSwitcherDropdown activeView={activeView} onSwitchView={onSwitchView} onClose={onToggleViewDropdown} />
+        <ViewSwitcherDropdown
+          activeView={activeView}
+          onSwitchView={onSwitchView}
+          onClose={onToggleViewDropdown}
+          showDispatch={showDispatch}
+        />
       )}
     </>
   );
@@ -229,11 +235,12 @@ type ChatPanelHeaderProps = {
   onToggleViewDropdown: () => void;
   activeView: RightSidebarView;
   onSwitchView: (view: RightSidebarView) => void;
+  showDispatch?: boolean;
 };
 
 export function ChatPanelHeader({
   activeThread, threadCount, historyOpen, onToggleHistory, onNewChat,
-  viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView,
+  viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView, showDispatch = false,
 }: ChatPanelHeaderProps): React.ReactElement {
   const isPhone = useViewportBreakpoint() === 'phone';
   return (
@@ -252,6 +259,7 @@ export function ChatPanelHeader({
           onToggleViewDropdown={onToggleViewDropdown}
           activeView={activeView}
           onSwitchView={onSwitchView}
+          showDispatch={showDispatch}
         />
       )}
     </div>

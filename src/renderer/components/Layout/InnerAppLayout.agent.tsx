@@ -16,6 +16,7 @@ import { ClaudeConfigPanel } from '../AgentChat/ClaudeConfigPanel';
 import { SessionMemoryPanel } from '../AgentChat/SessionMemoryPanel';
 import type { AgentChatWorkspaceModel } from '../AgentChat/useAgentChatWorkspace';
 import { SubagentPanelHost } from '../AgentMonitor/SubagentPanelHost';
+import { DispatchScreen } from '../Dispatch/DispatchScreen';
 import { GitPanel } from '../GitPanel';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { LazyPanelFallback } from './LazyPanelFallback';
@@ -105,29 +106,48 @@ function openSettings(tab?: string): void {
   window.dispatchEvent(new CustomEvent('agent-ide:open-settings', tab ? { detail: tab } : undefined));
 }
 
-export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
-  const { chatModel, handleModelReady } = useAgentSidebarModel();
-  const { rules, commands, isLoading, createRule } = useRulesAndSkills(projectRoot);
-  const { config } = useConfig();
-  const subagentUxEnabled = config?.agentic?.subagentUx !== false;
+function useAgentSidebarCallbacks(createRule: (type: 'claude-md' | 'agents-md') => Promise<string | null>) {
   const handleOpenFile = useCallback((f: string) => openFileInEditor(f), []);
   const handleOpenHooks = useCallback(() => openSettings('hooks'), []);
-  const handleCreateRule = useCallback(async (type: 'claude-md' | 'agents-md') => { const fp = await createRule(type); if (fp) openFileInEditor(fp); }, [createRule]);
+  const handleCreateRule = useCallback(async (type: 'claude-md' | 'agents-md') => {
+    const fp = await createRule(type);
+    if (fp) openFileInEditor(fp);
+  }, [createRule]);
+  return { handleOpenFile, handleOpenHooks, handleCreateRule };
+}
+
+function AgentRightSidebarTabs({ projectRoot, dispatchEnabled }: { projectRoot: string | null; dispatchEnabled: boolean }): React.ReactElement {
+  const { chatModel, handleModelReady } = useAgentSidebarModel();
+  const { rules, commands, isLoading, createRule } = useRulesAndSkills(projectRoot);
+  const { handleOpenFile, handleOpenHooks, handleCreateRule } = useAgentSidebarCallbacks(createRule);
+  const threads = chatModel?.threads;
+  const activeThreadId = chatModel?.activeThreadId;
+  return (
+    <RightSidebarTabs
+      chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
+      monitorContent={<ErrorBoundary label="Agent Monitor"><React.Suspense fallback={<LazyPanelFallback />}><AgentMonitorManager /></React.Suspense></ErrorBoundary>}
+      gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
+      analyticsContent={<AnalyticsSuspense />}
+      memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
+      rulesContent={<ErrorBoundary label="Claude Config"><ClaudeConfigPanel rules={rules} commands={commands} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onOpenHooksSettings={handleOpenHooks} projectRoot={projectRoot} /></ErrorBoundary>}
+      dispatchContent={dispatchEnabled ? <ErrorBoundary label="Dispatch"><DispatchScreen /></ErrorBoundary> : null}
+      showDispatch={dispatchEnabled}
+      threads={threads}
+      activeThreadId={activeThreadId}
+      onSelectThread={chatModel?.selectThread}
+      onDeleteThread={chatModel ? (id) => void chatModel.deleteThread(id) : undefined}
+      onNewChat={chatModel?.startNewChat}
+    />
+  );
+}
+
+export function AgentSidebarContent({ projectRoot }: { projectRoot: string | null }): React.ReactElement {
+  const { config } = useConfig();
+  const subagentUxEnabled = config?.agentic?.subagentUx !== false;
+  const dispatchEnabled = config?.sessionDispatch?.enabled === true || config?.mobileAccess?.enabled === true;
   return (
     <>
-      <RightSidebarTabs
-        chatContent={<ChatErrorBoundary><AgentChatWorkspace projectRoot={projectRoot} onModelReady={handleModelReady} /></ChatErrorBoundary>}
-        monitorContent={<ErrorBoundary label="Agent Monitor"><React.Suspense fallback={<LazyPanelFallback />}><AgentMonitorManager /></React.Suspense></ErrorBoundary>}
-        gitContent={<ErrorBoundary label="Git Panel"><GitPanel /></ErrorBoundary>}
-        analyticsContent={<AnalyticsSuspense />}
-        memoryContent={<ErrorBoundary label="Memory"><SessionMemoryPanel workspaceRoot={projectRoot} /></ErrorBoundary>}
-        rulesContent={<ErrorBoundary label="Claude Config"><ClaudeConfigPanel rules={rules} commands={commands} isLoading={isLoading} onOpenFile={handleOpenFile} onCreateRule={handleCreateRule} onOpenHooksSettings={handleOpenHooks} projectRoot={projectRoot} /></ErrorBoundary>}
-        threads={chatModel?.threads}
-        activeThreadId={chatModel?.activeThreadId}
-        onSelectThread={chatModel?.selectThread}
-        onDeleteThread={chatModel ? (id) => void chatModel.deleteThread(id) : undefined}
-        onNewChat={chatModel?.startNewChat}
-      />
+      <AgentRightSidebarTabs projectRoot={projectRoot} dispatchEnabled={dispatchEnabled} />
       <SubagentPanelHost enabled={subagentUxEnabled} />
     </>
   );

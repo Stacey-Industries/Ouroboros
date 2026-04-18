@@ -10,6 +10,7 @@ import type { RightSidebarView } from './RightSidebarTabs';
 import {
   AnalyticsIcon,
   BackArrowIcon,
+  DispatchIcon,
   GitIcon,
   MemoryIcon,
   MonitorIcon,
@@ -19,7 +20,7 @@ export { RecentThreadTabs, ThreadStatusIcon } from './RightSidebarTabs.tabs';
 
 // ── ViewSwitcherDropdown ──────────────────────────────────────────────────────
 
-const SECONDARY_VIEWS: Array<{
+const BASE_SECONDARY_VIEWS: Array<{
   id: RightSidebarView;
   label: string;
   Icon: () => React.ReactElement;
@@ -30,6 +31,8 @@ const SECONDARY_VIEWS: Array<{
   { id: 'memory', label: 'Memory', Icon: MemoryIcon },
   { id: 'rules' as RightSidebarView, label: 'Claude Config', Icon: RulesIcon },
 ];
+
+const DISPATCH_VIEW = { id: 'dispatch' as RightSidebarView, label: 'Dispatch', Icon: DispatchIcon };
 
 function viewSwitcherItemStyle(isActive: boolean): React.CSSProperties {
   return {
@@ -140,20 +143,23 @@ export function ViewSwitcherDropdown({
   activeView,
   onSwitchView,
   onClose,
+  showDispatch = false,
 }: {
   activeView: RightSidebarView;
   onSwitchView: (view: RightSidebarView) => void;
   onClose: () => void;
+  showDispatch?: boolean;
 }): React.ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   useDropdownDismiss(ref, onClose);
+  const views = showDispatch ? [...BASE_SECONDARY_VIEWS, DISPATCH_VIEW] : BASE_SECONDARY_VIEWS;
   return (
     <div
       ref={ref}
       className="absolute right-1 z-50 bg-surface-overlay border border-border-semantic backdrop-blur-xl"
       style={DROPDOWN_PANEL_STYLE}
     >
-      {SECONDARY_VIEWS.map(({ id, label, Icon }) => (
+      {views.map(({ id, label, Icon }) => (
         <ViewSwitcherItem
           key={id}
           id={id}

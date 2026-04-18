@@ -130,6 +130,20 @@ export function MemoryIcon(): React.ReactElement {
   );
 }
 
+export function DispatchIcon(): React.ReactElement {
+  return (
+    <ProductIcon
+      iconId="send"
+      size={13}
+      fallback={
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2L8 8M14 2L9 14L8 8L2 6L14 2Z" />
+        </svg>
+      }
+    />
+  );
+}
+
 export function RulesIcon(): React.ReactElement {
   return (
     <ProductIcon
