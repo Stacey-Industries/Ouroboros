@@ -117,7 +117,7 @@ function CodeBody({
   const wrapStyle = { whiteSpace: wordWrap ? 'pre-wrap' as const : 'pre' as const, wordBreak: wordWrap ? 'break-all' as const : 'normal' as const };
 
   return (
-    <div className="flex overflow-x-auto p-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+    <div className="flex overflow-x-auto p-3" style={{ maxHeight: '500px', overflowY: 'auto' }} data-no-swipe="">
       {showLineNumbers && <LineNumbers count={lineCount} />}
       {html ? (
         <div

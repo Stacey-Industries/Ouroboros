@@ -250,7 +250,7 @@ export const MonacoEditor = memo(function MonacoEditor(props: MonacoEditorProps)
   return (
     <div className={className} style={frameStyle}>
       <div style={shellStyle} onMouseEnter={() => setIsEditorHovered(true)} onMouseLeave={() => setIsEditorHovered(false)}>
-        <div ref={containerRef} style={canvasStyle} onClick={() => editorRef.current?.focus()} />
+        <div ref={containerRef} style={canvasStyle} onClick={() => editorRef.current?.focus()} data-no-swipe="" />
         <ScrollIndicator {...scrollMetrics} isHovered={isEditorHovered} isScrolling={isScrolling} />
       </div>
       {keybindingMode === 'vim' && <div ref={vimStatusRef} className="text-text-semantic-muted" style={vimStatusStyle} />}

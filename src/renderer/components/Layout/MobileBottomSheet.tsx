@@ -4,61 +4,22 @@
  * Used on phone viewports to surface AgentMonitor secondary views (monitor,
  * git, analytics, memory, rules) without leaving the chat surface. Composes
  * MobileOverlayShell primitives for scrim, focus trap, and body scroll lock.
- * Includes a local swipe-down-to-dismiss pointer handler (Phase I will refactor
- * this to useSwipeNavigation once that hook lands).
+ * Swipe-down-to-dismiss is handled by the shared useSwipeNavigation hook
+ * (Wave 32 Phase I refactor of the inline pointer handler from Phase F).
  *
  * Wave 32 Phase F — mobile drawer + bottom sheet primitives.
+ * Wave 32 Phase I — refactored swipe-down to use useSwipeNavigation.
  */
 
 import React, { useRef } from 'react';
 
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import {
   Scrim,
   useBodyScrollLock,
   useEscapeKey,
   useFocusTrap,
 } from './MobileOverlayShell';
-
-// ── Swipe-down dismiss ────────────────────────────────────────────────────────
-
-const SWIPE_THRESHOLD = 80;
-
-function useSwipeDownDismiss(
-  ref: React.RefObject<HTMLElement | null>,
-  onClose: () => void,
-): void {
-  const startY = useRef<number | null>(null);
-
-  // Attach imperatively so we can use non-passive listeners if needed.
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    function onPointerDown(e: PointerEvent): void {
-      startY.current = e.clientY;
-    }
-
-    function onPointerUp(e: PointerEvent): void {
-      if (startY.current === null) return;
-      const delta = e.clientY - startY.current;
-      startY.current = null;
-      if (delta > SWIPE_THRESHOLD) onClose();
-    }
-
-    function onPointerCancel(): void {
-      startY.current = null;
-    }
-
-    el.addEventListener('pointerdown', onPointerDown);
-    el.addEventListener('pointerup', onPointerUp);
-    el.addEventListener('pointercancel', onPointerCancel);
-    return () => {
-      el.removeEventListener('pointerdown', onPointerDown);
-      el.removeEventListener('pointerup', onPointerUp);
-      el.removeEventListener('pointercancel', onPointerCancel);
-    };
-  });
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +87,7 @@ export function MobileBottomSheet({
   useFocusTrap(panelRef, isOpen);
   useBodyScrollLock(isOpen);
   useEscapeKey(isOpen, onClose);
-  useSwipeDownDismiss(panelRef, onClose);
+  useSwipeNavigation(panelRef, { axis: 'y', onSwipeDown: onClose, threshold: 80, enabled: isOpen });
 
   if (!isOpen) return null;
 

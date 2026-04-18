@@ -266,6 +266,7 @@ export function TerminalInstanceView({
         style={CONTAINER_STYLE}
         aria-label="Terminal"
         data-session-id={controller.sessionId}
+        data-no-swipe=""
       />
       <TerminalProgressBarLayer controller={controller} />
       <TerminalCommandBlocks controller={controller} />

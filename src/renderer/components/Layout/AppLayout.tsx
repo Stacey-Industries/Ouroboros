@@ -1,14 +1,16 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 
 import type { FocusPanel } from '../../contexts/FocusContext';
 import { useFocusPanel } from '../../contexts/FocusContext';
 import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import { FOCUS_AGENT_CHAT_EVENT, FOCUS_TERMINAL_SESSION_EVENT, OPEN_AGENT_CHAT_PANEL_EVENT, OPEN_CHAT_IN_TERMINAL_EVENT } from '../../hooks/appEventNames';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import type { WorkspaceLayout } from '../../types/electron';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
 import { AgentMonitorPane } from './AgentMonitorPane';
 import type { MobilePanel } from './AppLayout.mobile';
-import { MobileNavBar } from './AppLayout.mobile';
+import { MOBILE_NAV_ITEMS, MobileNavBar } from './AppLayout.mobile';
 import { CentrePane } from './CentrePane';
 import { DroppableSlot } from './DroppableSlot';
 import { ResizeDivider } from './ResizeDivider';
@@ -206,11 +208,11 @@ function MaybeDroppable({ slot, enabled, children }: { slot: SlotName; enabled: 
   return <DroppableSlot slotName={slot}>{children}</DroppableSlot>;
 }
 
-interface CentreColumnProps { s: ReturnType<typeof useAppLayoutState>; tc: TerminalPaneControl; dndEnabled: boolean; terminalContent?: React.ReactNode; editorTabBar?: React.ReactNode; editorContent?: React.ReactNode; }
+interface CentreColumnProps { s: ReturnType<typeof useAppLayoutState>; tc: TerminalPaneControl; dndEnabled: boolean; terminalContent?: React.ReactNode; editorTabBar?: React.ReactNode; editorContent?: React.ReactNode; columnRef?: React.RefObject<HTMLDivElement | null>; }
 
-function CentreColumn({ s, tc, dndEnabled, terminalContent, editorTabBar, editorContent }: CentreColumnProps): React.ReactElement {
+function CentreColumn({ s, tc, dndEnabled, terminalContent, editorTabBar, editorContent, columnRef }: CentreColumnProps): React.ReactElement {
   return (
-    <div data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
+    <div ref={columnRef} data-layout="centre-column" className="flex flex-col flex-1 min-w-0 min-h-0">
       {!s.collapsed.editor && (
         <>
           <MaybeDroppable slot="editorContent" enabled={dndEnabled}>
@@ -226,10 +228,36 @@ function CentreColumn({ s, tc, dndEnabled, terminalContent, editorTabBar, editor
   );
 }
 
+function useCentreColumnSwipe(
+  handleMobilePanelSwitch: (p: MobilePanel) => void,
+  mobileActivePanel: MobilePanel,
+  viewport: ReturnType<typeof useViewportBreakpoint>,
+): React.RefObject<HTMLDivElement | null> {
+  const columnRef = useRef<HTMLDivElement>(null);
+  const ids = MOBILE_NAV_ITEMS.map((i) => i.id);
+
+  const onSwipeLeft = useCallback(() => {
+    const cur = ids.indexOf(mobileActivePanel);
+    const next = ids[(cur + 1) % ids.length] as MobilePanel;
+    handleMobilePanelSwitch(next);
+  }, [ids, mobileActivePanel, handleMobilePanelSwitch]);
+
+  const onSwipeRight = useCallback(() => {
+    const cur = ids.indexOf(mobileActivePanel);
+    const next = ids[(cur - 1 + ids.length) % ids.length] as MobilePanel;
+    handleMobilePanelSwitch(next);
+  }, [ids, mobileActivePanel, handleMobilePanelSwitch]);
+
+  useSwipeNavigation(columnRef, { onSwipeLeft, onSwipeRight, enabled: viewport === 'phone' });
+  return columnRef;
+}
+
 function AppLayoutShell(props: AppLayoutProps): React.ReactElement {
   const s = useAppLayoutState(props);
   const { terminalControl: tc, layoutProps } = props;
   const { enabled: dndEnabled } = useDragAndDrop();
+  const viewport = useViewportBreakpoint();
+  const columnRef = useCentreColumnSwipe(s.handleMobilePanelSwitch, s.mobileActivePanel, viewport);
   const statusLayout = layoutProps
     ? { ...layoutProps, currentPanelSizes: s.sizes, currentVisiblePanels: { leftSidebar: !s.collapsed.leftSidebar, rightSidebar: !s.collapsed.rightSidebar, terminal: !s.collapsed.terminal } }
     : undefined;
@@ -247,7 +275,7 @@ function AppLayoutShell(props: AppLayoutProps): React.ReactElement {
             <ResizeDivider direction="vertical" onPointerDown={s.mkResize('leftSidebar', 'vertical')} onDoubleClick={() => s.resetSize('leftSidebar')} label="Resize left sidebar" />
           </>
         )}
-        <CentreColumn s={s} tc={tc} dndEnabled={dndEnabled} terminalContent={props.terminalContent} editorTabBar={props.editorTabBar} editorContent={props.editorContent} />
+        <CentreColumn s={s} tc={tc} dndEnabled={dndEnabled} terminalContent={props.terminalContent} editorTabBar={props.editorTabBar} editorContent={props.editorContent} columnRef={columnRef} />
         {!s.collapsed.rightSidebar && <ResizeDivider direction="vertical" onPointerDown={s.mkResize('rightSidebar', 'vertical')} onDoubleClick={() => s.resetSize('rightSidebar')} label="Resize right sidebar" />}
         <MaybeDroppable slot="agentCards" enabled={dndEnabled}>
           <div data-panel="agent-monitor" style={{ display: s.collapsed.rightSidebar ? 'none' : undefined }}>
