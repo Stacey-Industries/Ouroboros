@@ -152,6 +152,19 @@ The flag exists to keep the desktop default boring during dogfood. Once the soak
 
 When flipping the flag default, also: bump `roadmap/session-handoff.md` notes, add a follow-up to remove the flag entirely in Wave 33 cleanup, and record the new default in `MEMORY.md`.
 
+**Soak workflow (Phase J lands first, dogfood second):**
+
+Phase J must be committed and the CI suite green **before** any phone dogfood begins.
+The correct sequence is:
+
+1. Phase J commits merge → CI runs `npm run test:mobile` against a fresh `npm run build:web` output.
+2. Parent verifies `mobileWeb-iphone` and `mobileWeb-pixel` projects both pass.
+3. Only after step 2 passes does the 1-week phone dogfood clock start.
+4. Dogfood uses the same `out/web/` build served over LAN (`vite preview --host`).
+5. After the full 1-week soak and gates 1–4 above, the flag default is flipped and Wave 33 cleanup is scheduled.
+
+Do NOT start the dogfood clock before Phase J CI passes — the spec suite is the baseline that the manual soak is intended to validate against real devices.
+
 ---
 
 ## Per-phase commit message format
