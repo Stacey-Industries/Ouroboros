@@ -1,22 +1,16 @@
 /**
- * DispatchQueueList.test.tsx — tests for the dispatch job queue list.
+ * @vitest-environment jsdom
  *
- * Covers (per spec):
- * - Renders jobs from the jobs array
- * - Cancel button present only on queued / running jobs
- * - Cancel button absent on completed / failed / canceled jobs
- * - Tapping a card fires onSelect with the job id
- * - Tapping cancel fires onCancel with the job id (not onSelect)
- * - Empty state renders when jobs array is empty
+ * DispatchQueueList.test.tsx — tests for the dispatch job queue list.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { DispatchJob } from '../../types/electron-dispatch';
 import { DispatchQueueList } from './DispatchQueueList';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
+afterEach(() => { cleanup(); });
 
 function makeJob(overrides: Partial<DispatchJob> = {}): DispatchJob {
   return {
@@ -46,21 +40,17 @@ function renderList(jobs: DispatchJob[], selectedJobId: string | null = null) {
   return { onSelect, onCancel };
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-
 describe('DispatchQueueList — empty state', () => {
   it('shows empty state message when jobs array is empty', () => {
     renderList([]);
-    expect(screen.getByText(/no dispatch jobs yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no dispatch jobs yet/i)).not.toBeNull();
   });
 
   it('does not render any job cards when empty', () => {
     renderList([]);
-    expect(screen.queryByTestId('job-card-job-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('job-card-job-1')).toBeNull();
   });
 });
-
-// ── Job rendering ─────────────────────────────────────────────────────────────
 
 describe('DispatchQueueList — job rendering', () => {
   it('renders a card for each job', () => {
@@ -69,29 +59,27 @@ describe('DispatchQueueList — job rendering', () => {
       makeJob({ id: 'job-2', request: { title: 'Task B', prompt: 'p', projectPath: '/b' } }),
     ];
     renderList(jobs);
-    expect(screen.getByTestId('job-card-job-1')).toBeInTheDocument();
-    expect(screen.getByTestId('job-card-job-2')).toBeInTheDocument();
+    expect(screen.getByTestId('job-card-job-1')).not.toBeNull();
+    expect(screen.getByTestId('job-card-job-2')).not.toBeNull();
   });
 
   it('shows the job title in the card', () => {
     renderList([makeJob({ request: { title: 'My important task', prompt: 'p', projectPath: '/x' } })]);
-    expect(screen.getByText('My important task')).toBeInTheDocument();
+    expect(screen.getByText('My important task')).not.toBeNull();
   });
 
   it('shows the status pill for each job', () => {
     renderList([makeJob({ id: 'job-1', status: 'running' })]);
-    expect(screen.getByTestId('job-status-job-1')).toHaveTextContent('running');
+    expect(screen.getByTestId('job-status-job-1').textContent).toContain('running');
   });
 });
-
-// ── Cancel button visibility ──────────────────────────────────────────────────
 
 describe('DispatchQueueList — cancel button', () => {
   it.each(['queued', 'running'] as const)(
     'cancel button is present for status "%s"',
     (status) => {
       renderList([makeJob({ id: 'job-1', status })]);
-      expect(screen.getByTestId('job-cancel-job-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-cancel-job-1')).not.toBeNull();
     },
   );
 
@@ -99,12 +87,10 @@ describe('DispatchQueueList — cancel button', () => {
     'cancel button is absent for terminal status "%s"',
     (status) => {
       renderList([makeJob({ id: 'job-1', status })]);
-      expect(screen.queryByTestId('job-cancel-job-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('job-cancel-job-1')).toBeNull();
     },
   );
 });
-
-// ── Interactions ──────────────────────────────────────────────────────────────
 
 describe('DispatchQueueList — interactions', () => {
   it('clicking a card fires onSelect with the job id', () => {
@@ -134,26 +120,24 @@ describe('DispatchQueueList — interactions', () => {
 
   it('selected card has aria-pressed=true', () => {
     renderList([makeJob({ id: 'job-1' })], 'job-1');
-    expect(screen.getByTestId('job-card-job-1')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('job-card-job-1').getAttribute('aria-pressed')).toBe('true');
   });
 
   it('non-selected card has aria-pressed=false', () => {
     renderList([makeJob({ id: 'job-1' })], null);
-    expect(screen.getByTestId('job-card-job-1')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('job-card-job-1').getAttribute('aria-pressed')).toBe('false');
   });
 });
-
-// ── Section grouping ──────────────────────────────────────────────────────────
 
 describe('DispatchQueueList — section grouping', () => {
   it('shows "Active" section heading for queued/running jobs', () => {
     renderList([makeJob({ status: 'queued' })]);
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Active')).not.toBeNull();
   });
 
   it('shows "Completed" section heading for terminal jobs', () => {
     renderList([makeJob({ status: 'completed' })]);
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.getByText('Completed')).not.toBeNull();
   });
 
   it('shows both sections when both types exist', () => {
@@ -161,7 +145,7 @@ describe('DispatchQueueList — section grouping', () => {
       makeJob({ id: 'job-1', status: 'running' }),
       makeJob({ id: 'job-2', status: 'failed' }),
     ]);
-    expect(screen.getByText('Active')).toBeInTheDocument();
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.getByText('Active')).not.toBeNull();
+    expect(screen.getByText('Completed')).not.toBeNull();
   });
 });

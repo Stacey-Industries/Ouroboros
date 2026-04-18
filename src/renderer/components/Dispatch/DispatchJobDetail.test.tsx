@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * DispatchJobDetail.test.tsx — tests for the job detail view.
  *
  * Covers (per spec):
@@ -11,8 +13,10 @@
  * - onClose fires when back button is clicked
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+afterEach(() => { cleanup(); });
 
 import type { DispatchJob } from '../../types/electron-dispatch';
 import { DispatchJobDetail } from './DispatchJobDetail';
@@ -46,37 +50,37 @@ function renderDetail(job: DispatchJob) {
 describe('DispatchJobDetail — static fields', () => {
   it('shows the job title', () => {
     renderDetail(makeJob());
-    expect(screen.getByTestId('detail-title')).toHaveTextContent('Refactor auth module');
+    expect(screen.getByTestId('detail-title').textContent).toContain('Refactor auth module');
   });
 
   it('shows a prompt preview', () => {
     renderDetail(makeJob());
-    expect(screen.getByTestId('detail-prompt')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-prompt')).not.toBeNull();
   });
 
   it('shows the project path', () => {
     renderDetail(makeJob());
-    expect(screen.getByTestId('detail-project')).toHaveTextContent('/home/user/my-project');
+    expect(screen.getByTestId('detail-project').textContent).toContain('/home/user/my-project');
   });
 
   it('shows the job status', () => {
     renderDetail(makeJob({ status: 'completed' }));
-    expect(screen.getByTestId('detail-status')).toHaveTextContent('completed');
+    expect(screen.getByTestId('detail-status').textContent).toContain('completed');
   });
 
   it('shows createdAt timestamp', () => {
     renderDetail(makeJob());
-    expect(screen.getByTestId('detail-created')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-created')).not.toBeNull();
   });
 
   it('shows worktree name when present', () => {
     renderDetail(makeJob({ request: { title: 'T', prompt: 'p', projectPath: '/x', worktreeName: 'feat/branch' } }));
-    expect(screen.getByTestId('detail-worktree')).toHaveTextContent('feat/branch');
+    expect(screen.getByTestId('detail-worktree').textContent).toContain('feat/branch');
   });
 
   it('omits worktree row when not present', () => {
     renderDetail(makeJob());
-    expect(screen.queryByTestId('detail-worktree')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('detail-worktree')).toBeNull();
   });
 });
 
@@ -85,7 +89,7 @@ describe('DispatchJobDetail — static fields', () => {
 describe('DispatchJobDetail — log tail stub', () => {
   it('renders the log streaming stub notice', () => {
     renderDetail(makeJob());
-    expect(screen.getByTestId('detail-log-stub')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-log-stub')).not.toBeNull();
   });
 });
 
@@ -96,7 +100,7 @@ describe('DispatchJobDetail — cancel button', () => {
     'cancel button is visible for status "%s"',
     (status) => {
       renderDetail(makeJob({ status }));
-      expect(screen.getByTestId('detail-cancel-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-cancel-btn')).not.toBeNull();
     },
   );
 
@@ -104,7 +108,7 @@ describe('DispatchJobDetail — cancel button', () => {
     'cancel button is absent for terminal status "%s"',
     (status) => {
       renderDetail(makeJob({ status }));
-      expect(screen.queryByTestId('detail-cancel-btn')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-cancel-btn')).toBeNull();
     },
   );
 

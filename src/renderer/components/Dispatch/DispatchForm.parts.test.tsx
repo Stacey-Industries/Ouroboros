@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * DispatchForm.parts.test.tsx — tests for WorktreeFields sub-component.
  *
  * Covers:
@@ -9,8 +11,10 @@
  * - Name input disabled-state: rendered only when enabled
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+afterEach(() => { cleanup(); });
 
 import { WorktreeFields } from './DispatchForm.parts';
 
@@ -31,7 +35,7 @@ function renderWorktree(enabled = false, name = '') {
 describe('WorktreeFields', () => {
   it('renders the worktree toggle checkbox', () => {
     renderWorktree();
-    expect(screen.getByTestId('dispatch-worktree-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('dispatch-worktree-toggle')).not.toBeNull();
   });
 
   it('checkbox is unchecked when enabled=false', () => {
@@ -48,12 +52,12 @@ describe('WorktreeFields', () => {
 
   it('name input is NOT rendered when toggle is off', () => {
     renderWorktree(false);
-    expect(screen.queryByTestId('dispatch-worktree-name-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dispatch-worktree-name-input')).toBeNull();
   });
 
   it('name input IS rendered when toggle is on', () => {
     renderWorktree(true, '');
-    expect(screen.getByTestId('dispatch-worktree-name-input')).toBeInTheDocument();
+    expect(screen.getByTestId('dispatch-worktree-name-input')).not.toBeNull();
   });
 
   it('name input shows the current name value', () => {
@@ -84,6 +88,6 @@ describe('WorktreeFields', () => {
 
   it('renders the label "Create git worktree"', () => {
     renderWorktree();
-    expect(screen.getByText('Create git worktree')).toBeInTheDocument();
+    expect(screen.getByText('Create git worktree')).not.toBeNull();
   });
 });

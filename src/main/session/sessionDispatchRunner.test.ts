@@ -80,6 +80,10 @@ vi.mock('./sessionSpawnAdapter', () => ({
   killSession: (...a: any[]) => (mockKillSession as any)(...a),
 }));
 
+vi.mock('./sessionDispatchNotifier', () => ({
+  notifyJobTransition: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 import type { DispatchJob } from './sessionDispatch';
