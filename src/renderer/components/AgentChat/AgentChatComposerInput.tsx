@@ -7,6 +7,7 @@
 import React from 'react';
 import { RichTextarea } from 'rich-textarea';
 
+import { hapticImpact } from '../../../web/capacitor';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import { getTextareaStyle } from './AgentChatComposerSupport';
 
@@ -39,9 +40,13 @@ export function SendButton(props: {
   onClick: () => void;
 }): React.ReactElement {
   const label = props.willQueue ? 'Queue message' : 'Send message';
+  function handleClick(): void {
+    void hapticImpact('light');
+    props.onClick();
+  }
   return (
     <button
-      onClick={props.onClick}
+      onClick={handleClick}
       disabled={!props.canSend}
       title={label}
       aria-busy={props.isSending}

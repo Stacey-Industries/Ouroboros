@@ -180,7 +180,7 @@ export const UserMessage = React.memo(function UserMessage(
     );
 
   return (
-    <div className="group flex flex-col items-end gap-0.5">
+    <div className="group flex flex-col items-end gap-0.5" data-user-select="text">
       <UserMessageBubble
         message={props.message}
         isLastUserMessage={props.isLastUserMessage}

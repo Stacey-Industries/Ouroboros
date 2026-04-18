@@ -13,6 +13,28 @@
   height: 100dvh;
 }
 
+/* ─── Phase G: user-select chrome lockdown ───────────────────────────────────
+ * Disable text selection on all app chrome so the app does not feel like a
+ * browser document. Re-enable for content areas where selection is meaningful:
+ * chat message bubbles (data-user-select="text"), code blocks, inputs.
+ * Applies only in web mode — Electron has no touch chrome to protect.        */
+.web-mode [data-layout='app'] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.web-mode [data-layout='app'] [data-user-select='text'],
+.web-mode [data-layout='app'] pre,
+.web-mode [data-layout='app'] code,
+.web-mode [data-layout='app'] [contenteditable='true'],
+.web-mode [data-layout='app'] textarea,
+.web-mode [data-layout='app'] input {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* ─── Dark base background for glass on web ───────────────────────────────
  * Electron provides a dark window chrome behind transparent surfaces.
  * Web mode has no OS chrome, so the html element needs a dark base
@@ -238,10 +260,19 @@
   }
 
   /* ── Phase G: composer floats above soft keyboard ── */
-  /* padding-bottom = max(safe-area notch inset, virtual keyboard inset).
-     --keyboard-inset is set by useVisualViewportInsets on visualViewport resize. */
+  /* padding-bottom = max of three sources:
+     1. env(safe-area-inset-bottom) — notch/home-bar clearance.
+     2. --native-keyboard-height — set by nativeKeyboard.ts (Capacitor Keyboard plugin).
+        Fires reliably on Android/iOS; dominates on native.
+     3. --keyboard-inset — set by useVisualViewportInsets (visualViewport API).
+        Applies on web/browser where Capacitor keyboard events are absent.
+     Both vars default to 0px so this is safe on desktop. */
   .web-mode [data-layout='agent-chat-composer'] {
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--keyboard-inset, 0px));
+    padding-bottom: max(
+      env(safe-area-inset-bottom, 0px),
+      var(--native-keyboard-height, 0px),
+      var(--keyboard-inset, 0px)
+    );
   }
 
   /* ── Title bar: frosted glass on mobile web ── */

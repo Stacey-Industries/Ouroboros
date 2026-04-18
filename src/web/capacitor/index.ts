@@ -12,6 +12,7 @@ export { hapticImpact, hapticSelection } from './nativeHaptics';
 export { initKeyboardListeners } from './nativeKeyboard';
 export type { ShareOptions } from './nativeShare';
 export { nativeShare } from './nativeShare';
+export { hideSplashScreen } from './nativeSplashScreen';
 export { setStatusBarColor, setStatusBarStyle } from './nativeStatusBar';
 export { getSecureValue, removeSecureValue, setSecureValue } from './nativeStorage';
 

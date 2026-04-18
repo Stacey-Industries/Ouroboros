@@ -9,6 +9,7 @@ import React, { useCallback } from 'react';
 
 import { MobileLayoutProvider } from '../../contexts/MobileLayoutContext';
 import { useChatWindowMode } from '../../hooks/useChatWindowMode';
+import { useSystemBack } from '../../hooks/useSystemBack';
 import type { WorkspaceLayout } from '../../types/electron';
 import type { Command } from '../CommandPalette/types';
 import { DiffReviewProvider } from '../DiffReview';
@@ -170,6 +171,8 @@ function ProjectPickerSlot({
 }
 
 function LayoutChrome(props: InnerAppLayoutProps): React.ReactElement {
+  // Mounted inside MobileLayoutProvider — context is available.
+  useSystemBack();
   return (
     <AppLayoutConnected
       terminalControl={props.terminalControl}

@@ -53,6 +53,7 @@
     "@capacitor/keyboard": "6.0.4",
     "@capacitor/preferences": "6.0.4",
     "@capacitor/share": "6.0.4",
+    "@capacitor/splash-screen": "6.0.2",
     "@capacitor/status-bar": "6.0.3",
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.2",

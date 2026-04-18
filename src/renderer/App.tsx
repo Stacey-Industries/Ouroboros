@@ -10,8 +10,9 @@
  * - InnerAppLayout — main render tree
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
+import { hideSplashScreen, initKeyboardListeners, isNative } from '../web/capacitor';
 import type { Command } from './components/CommandPalette/types';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
@@ -30,6 +31,7 @@ import { useExtensionThemes } from './hooks/useExtensionThemes';
 import { useFirstLaunchAuth } from './hooks/useFirstLaunchAuth';
 import { useInnerAppEffects } from './hooks/useInnerAppEffects';
 import { useLspDiagnosticsSync } from './hooks/useLspDiagnosticsSync';
+import { useNativeStatusBar } from './hooks/useNativeStatusBar';
 import { usePermalinkBridge } from './hooks/usePermalinkBridge';
 import { useProjectManagement } from './hooks/useProjectManagement';
 import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
@@ -38,6 +40,20 @@ import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
 import { useVisualViewportInsets } from './hooks/useVisualViewportInsets';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 
+
+// ─── useNativeBootstrap ───────────────────────────────────────
+// Runs once after config is resolved. On native: hides the splash screen and
+// starts the Capacitor Keyboard height listener. No-op on web.
+
+function useNativeBootstrap(): void {
+  useEffect(() => {
+    if (!isNative()) return;
+    void hideSplashScreen();
+    let cleanup: (() => void) | null = null;
+    void initKeyboardListeners().then((fn: () => void) => { cleanup = fn; });
+    return () => { cleanup?.(); };
+  }, []);
+}
 
 // ─── useCustomCSS ─────────────────────────────────────────────
 
@@ -193,6 +209,7 @@ function useInnerAppHooks(initialRecentProjects: string[], keybindings: Record<s
   const project = useProjectManagement(initialRecentProjects, ctx.setProjectRoot);
   const uiState = useInnerAppUiState();
   const handleExecute = useCommandExecution(execute);
+  useNativeStatusBar();
   useExtensionThemes();
   useLspDiagnosticsSync();
   useFirstLaunchAuth();
@@ -258,6 +275,7 @@ function ConfiguredApp({
   persistTerminalSessions,
 }: ConfiguredAppProps): React.ReactElement {
   useCustomCSS(customCSS);
+  useNativeBootstrap();
 
   return (
     <ToastProvider>

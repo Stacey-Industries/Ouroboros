@@ -3,10 +3,22 @@
  *
  * AppLayout.mobile — smoke tests for the MobileNavBar and related primitives
  * extracted from AppLayout.tsx in Wave 28 Phase A.
+ *
+ * Phase G additions: hapticSelection is called on MobileNavButton click.
  */
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// ─── Phase G: haptics mock ────────────────────────────────────────────────────
+// vi.hoisted() ensures the variable is available when vi.mock factory runs
+// (vi.mock is hoisted to the top of the file by vitest's transformer).
+const { mockHapticSelection } = vi.hoisted(() => ({
+  mockHapticSelection: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../../web/capacitor', () => ({
+  hapticSelection: mockHapticSelection,
+}));
 
 import {
   ACTIVE_INDICATOR_STYLE,
@@ -75,6 +87,20 @@ describe('MobileNavButton', () => {
     );
     fireEvent.click(screen.getByRole('button'));
     expect(onSwitch).toHaveBeenCalledWith('terminal');
+  });
+
+  it('calls hapticSelection on click (Phase G)', () => {
+    mockHapticSelection.mockClear();
+    const onSwitch = vi.fn();
+    render(
+      <MobileNavButton
+        item={{ id: 'files', label: 'Files' }}
+        isActive={false}
+        onSwitch={onSwitch}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+    expect(mockHapticSelection).toHaveBeenCalledOnce();
   });
 
   it('renders the active indicator when isActive is true', () => {

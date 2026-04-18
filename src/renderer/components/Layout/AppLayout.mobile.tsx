@@ -7,6 +7,8 @@
 
 import React from 'react';
 
+import { hapticSelection } from '../../../web/capacitor';
+
 export type MobilePanel = 'chat' | 'editor' | 'terminal' | 'files';
 
 export const MOBILE_NAV_ITEMS: { id: MobilePanel; label: string }[] = [
@@ -78,8 +80,12 @@ interface MobileNavButtonProps {
 }
 
 export function MobileNavButton({ item, isActive, onSwitch }: MobileNavButtonProps): React.ReactElement {
+  function handleClick(): void {
+    void hapticSelection();
+    onSwitch(item.id);
+  }
   return (
-    <button key={item.id} onClick={() => onSwitch(item.id)} style={mobileNavButtonStyle(isActive)}>
+    <button key={item.id} onClick={handleClick} style={mobileNavButtonStyle(isActive)}>
       <MobileNavIcon id={item.id} />
       <span>{item.label}</span>
       {isActive && <span style={ACTIVE_INDICATOR_STYLE} />}
