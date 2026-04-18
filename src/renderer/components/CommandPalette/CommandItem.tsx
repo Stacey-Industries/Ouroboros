@@ -10,6 +10,7 @@ export interface CommandItemProps {
   command: Command;
   isSelected: boolean;
   matchIndices: number[];
+  matchedField?: 'name' | 'description' | 'tags';
   onSelect: (command: Command) => void;
   onMouseEnter: (command: Command) => void;
 }
@@ -18,6 +19,7 @@ export const CommandItem = memo(function CommandItem({
   command,
   isSelected,
   matchIndices,
+  matchedField,
   onSelect,
   onMouseEnter,
 }: CommandItemProps): React.ReactElement {
@@ -40,6 +42,9 @@ export const CommandItem = memo(function CommandItem({
         />
       )}
       <ItemLabel command={command} isSelected={isSelected} matchIndices={matchIndices} />
+      {matchedField !== undefined && matchedField !== 'name' && (
+        <MatchOriginBadge field={matchedField} isSelected={isSelected} />
+      )}
       <RightIndicator command={command} isSelected={isSelected} hasChildren={hasChildren} />
     </div>
   );
@@ -118,6 +123,35 @@ function ItemLabel({
       >
         <CharHighlight text={command.label} matchIndices={isSelected ? [] : matchIndices} />
       </span>
+    </span>
+  );
+}
+
+function MatchOriginBadge({
+  field,
+  isSelected,
+}: {
+  field: 'description' | 'tags';
+  isSelected: boolean;
+}): React.ReactElement {
+  const label = field === 'description' ? 'desc' : 'tag';
+  return (
+    <span
+      aria-label={`matched via ${field}`}
+      style={{
+        flexShrink: 0,
+        fontSize: '10px',
+        fontFamily: 'var(--font-mono)',
+        padding: '1px 4px',
+        borderRadius: '3px',
+        opacity: isSelected ? 0.65 : 0.45,
+        backgroundColor: isSelected ? 'rgba(0,0,0,0.12)' : 'var(--surface-raised)',
+        color: isSelected ? 'var(--text-on-accent)' : 'var(--text-muted)',
+        border: '1px solid transparent',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
     </span>
   );
 }

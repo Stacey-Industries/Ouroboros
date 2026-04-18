@@ -1,4 +1,5 @@
 import {
+  OPEN_MARKETPLACE_EVENT,
   OPEN_ORCHESTRATION_PANEL_EVENT,
   OPEN_SETTINGS_PANEL_EVENT,
 } from '../../hooks/appEventNames';
@@ -258,6 +259,21 @@ function buildBackgroundJobsCommand(): Command {
   });
 }
 
+function buildMarketplaceCommand(): Command {
+  return {
+    ...createDomCommand({
+      id: 'marketplace:open',
+      label: 'Open Marketplace',
+      category: 'extension',
+      icon: 'M',
+      productIconId: 'extensions',
+      eventName: OPEN_MARKETPLACE_EVENT,
+    }),
+    description: 'Browse and install curated agent bundles, extensions, and docs packs',
+    tags: ['extensions', 'plugins', 'bundles', 'docs', 'install'],
+  };
+}
+
 export function buildBuiltinCommands(): Command[] {
   return [
     buildThemeMenu(),
@@ -268,5 +284,6 @@ export function buildBuiltinCommands(): Command[] {
     ...buildAppCommands(),
     buildTimeTravelCommand(),
     buildBackgroundJobsCommand(),
+    buildMarketplaceCommand(),
   ];
 }

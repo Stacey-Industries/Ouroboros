@@ -12,6 +12,10 @@ export interface Command {
   shortcut?: string;
   icon?: string;
   productIconId?: string;
+  /** Human-readable description of what the command does. Indexed by search. */
+  description?: string;
+  /** Additional search keywords. Each tag is matched independently. */
+  tags?: readonly string[];
   action: () => void | Promise<void>;
   when?: () => boolean;
   /**
@@ -26,4 +30,6 @@ export interface CommandMatch {
   /** Indices of matched characters in the label (for highlight rendering) */
   matchIndices: number[];
   score: number;
+  /** Which field produced the best score — used for UI match-origin hint. */
+  matchedField?: 'name' | 'description' | 'tags';
 }

@@ -177,6 +177,7 @@ function CommandRow({
         command={match.command}
         isSelected={index === selectedIndex}
         matchIndices={match.matchIndices}
+        matchedField={match.matchedField}
         onSelect={onExecute}
         onMouseEnter={onMouseEnter}
       />

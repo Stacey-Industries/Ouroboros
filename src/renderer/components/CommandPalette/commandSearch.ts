@@ -101,6 +101,97 @@ function expandIndices(indices: readonly RangeTuple[] | undefined): number[] {
   return result;
 }
 
+// ─── Weighted rank-based search (description + tags) ─────────────────────────
+
+export interface RankedCommand<T> {
+  command: T;
+  score: number;
+  matchedField: 'name' | 'description' | 'tags';
+}
+
+const SCORE_EXACT_PREFIX = 100;
+const SCORE_CONTAINS = 60;
+const SCORE_FUZZY = 20;
+const DESC_WEIGHT = 0.5;
+const TAGS_WEIGHT = 0.25;
+
+function substringScore(haystack: string, needle: string): number {
+  const lower = haystack.toLowerCase();
+  const q = needle.toLowerCase();
+  if (lower === q) return SCORE_EXACT_PREFIX + 1;
+  if (lower.startsWith(q)) return SCORE_EXACT_PREFIX;
+  if (lower.includes(q)) return SCORE_CONTAINS;
+  return fuzzyScore(lower, q);
+}
+
+function fuzzyScore(haystack: string, needle: string): number {
+  let hi = 0;
+  for (let ni = 0; ni < needle.length; ni++) {
+    const found = haystack.indexOf(needle[ni], hi);
+    if (found === -1) return 0;
+    hi = found + 1;
+  }
+  return SCORE_FUZZY;
+}
+
+function tagsScore(tags: readonly string[] | undefined, query: string): number {
+  if (!tags || tags.length === 0) return 0;
+  let best = 0;
+  for (const tag of tags) {
+    const s = substringScore(tag, query);
+    if (s > best) best = s;
+  }
+  return best;
+}
+
+export function rankCommands<T extends {
+  label: string;
+  description?: string;
+  tags?: readonly string[];
+}>(commands: readonly T[], query: string): RankedCommand<T>[] {
+  const q = query.trim();
+  if (q === '') {
+    return commands.map((command) => ({ command, score: 0, matchedField: 'name' as const }));
+  }
+
+  const results: RankedCommand<T>[] = [];
+
+  for (const command of commands) {
+    const nameRaw = substringScore(command.label, q);
+    const descRaw = substringScore(command.description ?? '', q);
+    const tagsRaw = tagsScore(command.tags, q);
+
+    const nameScore = nameRaw;
+    const descScore = descRaw > 0 ? Math.round(descRaw * DESC_WEIGHT) : 0;
+    const tagsScore_ = tagsRaw > 0 ? Math.round(tagsRaw * TAGS_WEIGHT) : 0;
+
+    const best = Math.max(nameScore, descScore, tagsScore_);
+    if (best === 0) continue;
+
+    const matchedField = resolveMatchedField(nameScore, descScore, tagsScore_);
+    results.push({ command, score: best, matchedField });
+  }
+
+  return stableSort(results);
+}
+
+function resolveMatchedField(
+  nameScore: number,
+  descScore: number,
+  tagsScore_: number,
+): 'name' | 'description' | 'tags' {
+  if (nameScore >= descScore && nameScore >= tagsScore_) return 'name';
+  if (descScore >= tagsScore_) return 'description';
+  return 'tags';
+}
+
+function stableSort<T>(results: RankedCommand<T>[]): RankedCommand<T>[] {
+  return results
+    .map((item, idx) => ({ item, idx }))
+    .sort((a, b) => b.item.score - a.item.score || a.idx - b.idx)
+    .map(({ item }) => item);
+}
+
 // ─── Category grouping ───────────────────────────────────────────────────────
 
 export interface GroupedSection {
