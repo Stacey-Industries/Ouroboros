@@ -5,8 +5,9 @@
  * Adds: per-session persistence, undo stack (depth 10), reset, and promote-to-global.
  */
 
-import React, { useCallback, useEffect,useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useViewportBreakpoint } from '../../../hooks/useViewportBreakpoint';
 import type { SerializedSlotNode } from '../../../types/electron-layout';
 import { useCustomLayoutPersistence } from '../useCustomLayoutPersistence';
 import { useLayoutUndoStack } from '../useLayoutUndoStack';
@@ -20,6 +21,7 @@ import {
   buildInitialTree,
   buildSwapOverrides,
   LayoutPresetContext,
+  useMobilePrimaryFlag,
   usePresetsFlag,
   useResolvedPreset,
   useSplitSlotCallback,
@@ -27,6 +29,26 @@ import {
 import type { SlotNode } from './slotTree';
 import { isSplit } from './slotTree';
 import type { LayoutPreset } from './types';
+
+// ---------------------------------------------------------------------------
+// Wave 32 Phase B — mobile-primary override helper
+// ---------------------------------------------------------------------------
+
+/**
+ * When mobilePrimaryOn is true and the viewport is at phone width, returns
+ * 'mobile-primary' as the effective force preset ID — this bypasses the
+ * layout.presets.v2 flag and the session preset, matching the plan spec.
+ * An explicit forcePresetId from the caller takes precedence.
+ */
+function resolveMobileForcePreset(
+  mobilePrimaryOn: boolean,
+  breakpoint: import('../../../hooks/useViewportBreakpoint').ViewportBreakpoint,
+  callerForcePresetId: string | undefined,
+): string | undefined {
+  if (callerForcePresetId) return callerForcePresetId;
+  if (mobilePrimaryOn && breakpoint === 'phone') return 'mobile-primary';
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Phase D aux hook — undo, reset, promote-to-global
@@ -69,7 +91,7 @@ function usePhaseDAux({
 }
 
 // ---------------------------------------------------------------------------
-// Provider
+// Provider — state hook (extracted to stay under 40-line function limit)
 // ---------------------------------------------------------------------------
 
 const DEFAULT_LEAF: SlotNode = {
@@ -78,19 +100,29 @@ const DEFAULT_LEAF: SlotNode = {
   component: { componentKey: 'editorContent' },
 };
 
-export function LayoutPresetResolverProvider({
-  sessionPresetId,
-  forcePresetId,
-  sessionId = '',
-  children,
-}: LayoutPresetResolverProps): React.ReactElement {
+interface ProviderCore {
+  basePreset: LayoutPreset;
+  preset: LayoutPreset;
+  setSlotOverrides: React.Dispatch<React.SetStateAction<Partial<Record<import('./types').SlotName, import('./types').ComponentDescriptor>>>>;
+  slotTree: SlotNode;
+  setSlotTree: React.Dispatch<React.SetStateAction<SlotNode>>;
+  persistence: ReturnType<typeof useCustomLayoutPersistence>;
+  undoStack: ReturnType<typeof useLayoutUndoStack>;
+}
+
+function useProviderCore(
+  sessionPresetId: string | undefined,
+  forcePresetId: string | undefined,
+  sessionId: string,
+): ProviderCore {
   const flagOn = usePresetsFlag();
-  const [basePreset, preset, setSlotOverrides] = useResolvedPreset(flagOn, sessionPresetId, forcePresetId);
+  const mobilePrimaryOn = useMobilePrimaryFlag();
+  const breakpoint = useViewportBreakpoint();
+  const effectiveForcePresetId = resolveMobileForcePreset(mobilePrimaryOn, breakpoint, forcePresetId);
+  const [basePreset, preset, setSlotOverrides] = useResolvedPreset(flagOn, sessionPresetId, effectiveForcePresetId);
   const [slotTree, setSlotTree] = useState<SlotNode>(DEFAULT_LEAF);
   const persistence = useCustomLayoutPersistence(sessionId);
   const undoStack = useLayoutUndoStack();
-
-  // Hydrate from saved tree (precedence: saved > preset derive).
   useEffect(() => {
     if (persistence.savedTree) {
       setSlotTree(persistence.savedTree as SlotNode);
@@ -99,6 +131,21 @@ export function LayoutPresetResolverProvider({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basePreset]);
+  return { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack };
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+export function LayoutPresetResolverProvider({
+  sessionPresetId,
+  forcePresetId,
+  sessionId = '',
+  children,
+}: LayoutPresetResolverProps): React.ReactElement {
+  const { basePreset, preset, setSlotOverrides, slotTree, setSlotTree, persistence, undoStack } =
+    useProviderCore(sessionPresetId, forcePresetId, sessionId);
 
   const state: ProviderState = { preset, slotTree, setSlotOverrides, setSlotTree };
 

@@ -76,22 +76,42 @@ export const chatPrimaryPreset: LayoutPreset = {
 };
 
 // ---------------------------------------------------------------------------
-// mobile-primary — SCAFFOLD for Wave 32
+// mobile-primary — Wave 32 (populated Phase B)
 //
-// TODO(Wave 32): Populate slots for single-column mobile layout.
-// TODO(Wave 32): Add breakpoints rule (minWidth:768 → ide-primary fallback).
-// TODO(Wave 32): Hide leftSidebar + rightSidebar; terminal collapsed to header.
+// Single-column layout for phone viewports. All panels are mounted (state
+// preservation) but sidebars are hidden and terminal is collapsed to its
+// 32px header strip. The active surface is switched by the MobileNavBar
+// via `data-mobile-active` attribute + mobile.css — the preset just records
+// intent; CSS does the work.
+//
+// Breakpoint rule: when viewport widens past 768px, fall back to ide-primary.
 // ---------------------------------------------------------------------------
 
 export const mobilePrimaryPreset: LayoutPreset = {
   id: 'mobile-primary',
   name: 'Mobile',
-  // TODO(Wave 32): slot assignments for single-column layout
-  slots: {},
-  panelSizes: {},
-  // TODO(Wave 32): visiblePanels — all sidebars hidden, terminal collapsed
-  visiblePanels: {},
-  // TODO(Wave 32): breakpoints — minWidth:768, fallbackPresetId:'ide-primary'
+  slots: {
+    sidebarHeader: { componentKey: 'ProjectPicker' },
+    sidebarContent: { componentKey: 'SidebarSections' },
+    editorTabBar: { componentKey: 'EditorTabBar' },
+    editorContent: { componentKey: 'CentrePaneConnected' },
+    agentCards: { componentKey: 'AgentSidebarContent' },
+    terminalContent: { componentKey: 'TerminalManager' },
+  },
+  panelSizes: {
+    leftSidebar: 0,
+    rightSidebar: 0,
+    terminal: 32,
+  },
+  visiblePanels: {
+    leftSidebar: false,
+    rightSidebar: false,
+    terminal: false,
+  },
+  breakpoints: {
+    minWidth: 768,
+    fallbackPresetId: 'ide-primary',
+  },
 };
 
 // ---------------------------------------------------------------------------

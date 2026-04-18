@@ -91,8 +91,29 @@ describe('mobilePrimaryPreset', () => {
     expect(mobilePrimaryPreset.id).toBe('mobile-primary');
   });
 
-  it('is a scaffold — slots are empty pending Wave 32', () => {
-    expect(Object.keys(mobilePrimaryPreset.slots)).toHaveLength(0);
+  it('populates all 6 slots (Wave 32)', () => {
+    for (const slot of ALL_SLOTS) {
+      expect(mobilePrimaryPreset.slots[slot]).toBeDefined();
+      expect(typeof mobilePrimaryPreset.slots[slot]?.componentKey).toBe('string');
+    }
+  });
+
+  it('has panelSizes with sidebars at 0 and terminal at 32', () => {
+    expect(mobilePrimaryPreset.panelSizes.leftSidebar).toBe(0);
+    expect(mobilePrimaryPreset.panelSizes.rightSidebar).toBe(0);
+    expect(mobilePrimaryPreset.panelSizes.terminal).toBe(32);
+  });
+
+  it('hides both sidebars and terminal in visiblePanels', () => {
+    expect(mobilePrimaryPreset.visiblePanels.leftSidebar).toBe(false);
+    expect(mobilePrimaryPreset.visiblePanels.rightSidebar).toBe(false);
+    expect(mobilePrimaryPreset.visiblePanels.terminal).toBe(false);
+  });
+
+  it('has a breakpoints rule with minWidth 768 and ide-primary fallback', () => {
+    expect(mobilePrimaryPreset.breakpoints).toBeDefined();
+    expect(mobilePrimaryPreset.breakpoints?.minWidth).toBe(768);
+    expect(mobilePrimaryPreset.breakpoints?.fallbackPresetId).toBe('ide-primary');
   });
 });
 

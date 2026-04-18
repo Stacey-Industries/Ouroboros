@@ -94,6 +94,17 @@ export async function readPresetsFlag(): Promise<boolean> {
   }
 }
 
+export async function readMobilePrimaryFlag(): Promise<boolean> {
+  if (!hasElectronAPI()) return false;
+  try {
+    const cfg = await window.electronAPI.config.getAll();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (cfg as any)?.layout?.mobilePrimary === true;
+  } catch {
+    return false;
+  }
+}
+
 export function resolveBasePreset(
   flagOn: boolean,
   sessionPresetId?: string,
@@ -176,6 +187,16 @@ export function usePresetsFlag(): boolean {
   useEffect(() => {
     let cancelled = false;
     void readPresetsFlag().then((v) => { if (!cancelled) setFlagOn(v); });
+    return () => { cancelled = true; };
+  }, []);
+  return flagOn;
+}
+
+export function useMobilePrimaryFlag(): boolean {
+  const [flagOn, setFlagOn] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void readMobilePrimaryFlag().then((v) => { if (!cancelled) setFlagOn(v); });
     return () => { cancelled = true; };
   }, []);
   return flagOn;
