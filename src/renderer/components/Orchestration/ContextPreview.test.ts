@@ -84,9 +84,9 @@ function createSession(): TaskSessionRecord {
               detail: 'Modified in the active diff for this task.',
             },
             {
-              kind: 'open_file',
+              kind: 'dirty_buffer',
               weight: 0.6,
-              detail: 'Currently open in the editor.',
+              detail: 'Unsaved editor changes are present.',
             },
           ],
           snippets: [

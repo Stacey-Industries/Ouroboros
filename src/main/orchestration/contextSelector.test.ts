@@ -327,18 +327,6 @@ describe('contextSelector — Wave 19 diff weights', () => {
   });
 });
 
-// ─── Wave 19: semantic_match weight = 0 ──────────────────────────────────────
-
-describe('contextSelector — Wave 19 semantic_match weight', () => {
-  it('semantic_match reason weight is 0 (removed — no active code path)', async () => {
-    // Import the weight map indirectly via a type-only check.
-    // The REASON_WEIGHTS map is not exported, but we can verify via the module.
-    // We test behaviour: if a candidate only had semantic_match it contributes 0.
-    // Direct weight-map import not needed — we verify the spec comment is honoured.
-    expect(true).toBe(true); // Placeholder — weight verified in integration below
-  });
-});
-
 // ─── Wave 31 Phase D: learnedRanker flag ─────────────────────────────────────
 
 import { store } from '../config';

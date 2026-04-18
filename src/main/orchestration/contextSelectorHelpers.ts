@@ -53,7 +53,7 @@ function scoreCandidate(reasons: ContextSelectionReason[]): number {
 }
 
 function confidenceFor(reasons: ContextSelectionReason[], score: number): ContextConfidence {
-  if (reasons.some((reason) => ['user_selected', 'pinned', 'included', 'dirty_buffer', 'active_file'].includes(reason.kind))) return 'high'
+  if (reasons.some((reason) => ['user_selected', 'pinned', 'included', 'dirty_buffer'].includes(reason.kind))) return 'high'
   if (score >= 80 || reasons.some((reason) => ['git_diff', 'diagnostic'].includes(reason.kind))) return 'high'
   return score >= 35 || reasons.length >= 2 ? 'medium' : 'low'
 }

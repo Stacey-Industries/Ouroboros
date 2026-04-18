@@ -24,8 +24,6 @@ export type ContextReasonKind =
   | 'user_selected'
   | 'pinned'
   | 'included'
-  | 'active_file'
-  | 'open_file'
   | 'dirty_buffer'
   | 'recent_edit'
   | 'recent_user_edit'
@@ -36,7 +34,6 @@ export type ContextReasonKind =
   | 'import_adjacency'
   | 'dependency'
   | 'test_companion'
-  | 'semantic_match'
   | 'pagerank';
 
 export type ContextConfidence = 'high' | 'medium' | 'low';

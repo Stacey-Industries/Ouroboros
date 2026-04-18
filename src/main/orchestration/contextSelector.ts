@@ -65,8 +65,6 @@ const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
   ['user_selected', 100],
   ['pinned', 95],
   ['included', 85],
-  ['active_file', 0],
-  ['open_file', 0],
   ['dirty_buffer', 68],
   ['test_companion', 38],
   // Wave 19: recent_edit preserved as fallback weight when provenance unavailable
@@ -80,8 +78,6 @@ const REASON_WEIGHTS = new Map<ContextReasonKind, number>([
   ['keyword_match', 26],
   ['import_adjacency', 22],
   ['dependency', 12],
-  // Wave 19: semantic_match removed — no active code path. See Wave 40 for replacement.
-  ['semantic_match', 0],
   // Wave 19: pagerank weight is dynamic (normalizedRank × 40)
   ['pagerank', 40],
 ])
@@ -112,8 +108,6 @@ function addBaseCandidates(
   for (const filePath of selection.selectedFiles) addCandidate(filePath, 'user_selected', 'Explicitly selected for this task')
   for (const filePath of selection.pinnedFiles) addCandidate(filePath, 'pinned', 'Pinned into the context set')
   for (const filePath of selection.includedFiles) addCandidate(filePath, 'included', 'Included by request context settings')
-  if (liveIdeState.activeFile) addCandidate(liveIdeState.activeFile, 'active_file', 'Currently active editor file')
-  for (const filePath of liveIdeState.openFiles) addCandidate(filePath, 'open_file', 'Currently open in the editor')
   for (const filePath of liveIdeState.dirtyFiles) addCandidate(filePath, 'dirty_buffer', 'Unsaved editor changes are present')
 }
 

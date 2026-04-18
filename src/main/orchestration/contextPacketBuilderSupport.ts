@@ -40,7 +40,7 @@ export interface ContextBudgetProfile {
 export interface TierBudgetConfig {
   /** Tier 1 (user_selected, pinned) can use at most this fraction of total bytes. */
   tier1MaxPercent: number;
-  /** Tier 2 (active_file, dirty_buffer, git_diff) gets at least this fraction guaranteed. */
+  /** Tier 2 (dirty_buffer, git_diff) gets at least this fraction guaranteed. */
   tier2MinPercent: number;
 }
 
@@ -53,7 +53,7 @@ export const DEFAULT_TIER_BUDGET: TierBudgetConfig = {
 const TIER1_REASONS = new Set<string>(['user_selected', 'pinned']);
 
 /** Tier 2 reason kinds — guaranteed at least 25% of budget. */
-const TIER2_REASONS = new Set<string>(['active_file', 'dirty_buffer', 'git_diff']);
+const TIER2_REASONS = new Set<string>(['dirty_buffer', 'git_diff']);
 
 /** Returns which tier a ranked file belongs to, based on its highest-weight reason. */
 export function getFileTier(file: { reasons: Array<{ kind: string; weight: number }> }): number {
