@@ -1,6 +1,10 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 32 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 33a complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31 and 32 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 33 (Mobile Shell & Client-Server Hardening) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, and 33a are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 33b (Capacitor native shell) is next.
+
+## Wave 33a → 33b split — context
+
+Wave 33 in roadmap.md originally had native mobile packaging coupled with auth hardening. The user asked to split so subagents could work on hardening while the framework choice was discussed. **Framework decision: Capacitor 6.** Rationale + "not a wrapper" discipline checklist live in `roadmap/wave-33b-plan.md`. User is on Windows 11 — Android first, iOS deferred until Mac access.
 
 ---
 
@@ -42,7 +46,19 @@ Why the change: at start of this session the user flagged 22 unpushed local comm
 ### Current branch state
 
 ```
-Last pushed commit: cae81f1 test: fix AppLayout.dnd.test for Wave 32 Phase D + I changes
+Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile-access docs
+                    df9f970 feat: Wave 33a Phase H — mobile pairing screen + /api/pair route
+                    2085600 feat: Wave 33a Phase G — Settings → Mobile Access pane
+                    f0be36e feat: Wave 33a Phase F — per-call-class timeouts
+                    374a854 feat: Wave 33a Phase E — streaming resume on reconnect
+                    c3897c2 feat: Wave 33a Phase D — WS auth hardening (per-device refresh tokens)
+                    2522b2a feat: Wave 33a Phase C — capability gate + channel catalog
+                    fbccc45 feat: Wave 33a Phase B — pairing handlers + preload/IPC wiring
+                    043c189 feat: Wave 33a Phase A — mobileAccess module skeleton + config schema
+                    ef38eef docs: Wave 34 implementation plan
+                    b9a0508 docs: Wave 33b implementation plan
+                    f1ade7a docs: Wave 33a implementation plan
+                    cae81f1 test: fix AppLayout.dnd.test for Wave 32 Phase D + I changes
                     49874b3 feat: Wave 32 Phase J — Playwright mobile viewport tests
                     3b0f38f feat: Wave 32 Phase I — swipe gestures
                     49fcff4 feat: Wave 32 Phase H — Monaco mobile fallback
@@ -58,7 +74,29 @@ Last pushed commit: cae81f1 test: fix AppLayout.dnd.test for Wave 32 Phase D + I
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `cae81f1`. Working tree is clean.
+`origin/master` is caught up to `e026c71`. Working tree is clean. Full vitest: 5868/5868 passing.
+
+### Wave 33a key primitives introduced
+
+- `mobileAccess` config slice (`enabled`, `pairedDevices[]`, `resumeTtlSec`, `desktopFingerprint`).
+- `src/main/mobileAccess/` module: `types`, `tokenStore` (SHA-256 at rest), `pairingTickets` (60s TTL, timing-safe compare), `pairingHandlers` (generate / list / revoke / consumePairingTicket), `channelCatalog.*` (4 files: always/read/write/desktop-only, ~300 classified channels), `capabilityGate` (pure check + `getTimeoutMs`/`isResumable`), `bridgeDisconnect` (active-socket close on revoke), `timeoutMetrics` (per-class counters).
+- `src/main/web/` extensions: `authMiddleware.ts`, `pairingMiddleware.ts` (POST /api/pair + test-mode seed route), `bridgeAuth.ts` (upgrade + pairing handshake), `bridgeCapabilityGate.ts` (enforce-or-respond seam), `bridgeResume.ts` (register/detach/reattach + resume handshake frame), `bridgeTimeout.ts` (withTimeout with settled-guard against double-response), `inflightRegistry.ts` (5-min TTL).
+- Client transport (`src/web/webPreloadTransport.ts`): meta-frame-driven resumable classification, per-call-class timeouts (short 10s / normal 30s / long 120s), survives disconnect for resumable channels, sends `resume` frame on reconnect.
+- Renderer: `Settings → Mobile Access` pane (`MobileAccessPane` + 3 sub-sections). QR via `qrcode.react@^4.2.0` (new dep). Mobile pairing screen (`src/renderer/pairingScreen.tsx`) gated on `window.__WEB_PAIRING_REQUIRED__` injected by the server on unauthenticated non-localhost requests.
+- Docs: `docs/mobile-access.md` covers user-facing enable/pair/revoke flow + security model + troubleshooting.
+
+### Wave 33a regressions / gotchas for next agent
+
+- `AppLayout.dnd.test.tsx` needed to wrap in `<MobileLayoutProvider>` (Wave 32 fix). Any future test that renders `AppLayout` directly must do the same.
+- Phase C catalog classifications that the parent flagged as "review if dogfood surfaces issues": `files:writeFile/saveFile`, `pty:write/resize/kill`, `graph:reindex`, `codemode:*`, `orchestration:buildContextPacket` — all classified as `paired-write`. Move to `desktop-only` if mobile abuse becomes a concern.
+- Bearer-token auth cascade order: `authMiddleware.ts` branches on `mobileAccess.enabled && !isLocalhost`. Localhost always bypasses mobile path. Legacy `webAccessToken` cookie/query continues to work when flag off.
+- `pairingMiddleware.ts` mounts BEFORE `authMiddleware` so unauthenticated mobile requests get the pairing screen, not a 401.
+- Resumable-timeout semantics: end-to-end clock (not paused during disconnect). 5-min registry TTL and per-call-class budget both run; whichever fires first wins.
+
+### Wave 33a flag state
+
+- `mobileAccess.enabled` default `false`. Flip default-on is BLOCKED on Wave 33b shipping a native mobile client — until then, there's nothing to pair.
+- No soak gate for the flag itself; user opts in from desktop Settings per install.
 
 ### Wave 32 feature flags (both default off)
 
@@ -77,10 +115,16 @@ Last pushed commit: cae81f1 test: fix AppLayout.dnd.test for Wave 32 Phase D + I
 - Touch-target scanner — `src/renderer/styles/mobile-touch-targets.test.ts` walks renderer components for `<button>` under 32px and fails with a list. Opt-out via `// touch-target-ok` trailing comment.
 - Multi-project `playwright.config.ts` — `electron` (existing) + `mobileWeb-iphone` + `mobileWeb-pixel`. `test:mobile` script runs the mobile projects. Specs under `e2e/mobile/` auto-skip if `out/web/index.html` is absent.
 
-### Waves done (15–32, all landed on origin/master)
+### Waves done (15–33a, all landed on origin/master)
 
 - **Waves 15–30** — see git log; scope per `roadmap/wave-NN-plan.md`.
-- **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off. Full details in `roadmap/wave-32-plan.md`. All 5555 vitest tests green at push time; lint 0 errors; tsc clean.
+- **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off.
+- **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off. Full details in `roadmap/wave-33a-plan.md`. All 5868 vitest tests green at push time.
+
+### Plans queued (draft-only, not yet implemented)
+
+- `roadmap/wave-33b-plan.md` — Capacitor native shell. **Next to implement.**
+- `roadmap/wave-34-plan.md` — Cross-Device Session Dispatch. Depends on 33a + 33b.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
