@@ -20,6 +20,7 @@ import { WebFolderBrowser } from './components/FileBrowser';
 import type { InnerAppLayoutProps } from './components/Layout/InnerAppLayout';
 import { InnerAppLayout } from './components/Layout/InnerAppLayout';
 import { LoadingScreen } from './components/Layout/LoadingScreen';
+import { FirstRunTourGate } from './components/Onboarding/FirstRunTour';
 import { System2IndexProgress } from './components/System2IndexProgress';
 import { AgentEventsProvider } from './contexts/AgentEventsContext';
 import { ApprovalProvider } from './contexts/ApprovalContext';
@@ -295,6 +296,7 @@ function ConfiguredApp({
       </FocusProvider>
       <WebFolderBrowser />
       <System2IndexProgress />
+      <FirstRunTourGate />
     </ToastProvider>
   );
 }

@@ -213,6 +213,28 @@ function NotificationBell(): React.ReactElement {
   );
 }
 
+// ── TitleBarActionButtons ─────────────────────────────────────────────────────
+
+function TitleBarActionButtons({ actions }: { actions: TitleBarAction[] }): React.ReactElement {
+  return (
+    <>
+      {actions.map((action) => (
+        <button
+          key={action.eventName}
+          className="titlebar-no-drag text-text-semantic-muted"
+          title={action.title}
+          onClick={() => window.dispatchEvent(new CustomEvent(action.eventName))}
+          style={titleButtonStyle}
+          {...(action.eventName === OPEN_SETTINGS_PANEL_EVENT ? { 'data-tour-anchor': 'settings-trigger' } : {})}
+          {...hoverStyle}
+        >
+          <action.Icon />
+        </button>
+      ))}
+    </>
+  );
+}
+
 // ── TitleBar ──────────────────────────────────────────────────────────────────
 
 export interface TitleBarProps {
@@ -238,12 +260,7 @@ export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): Reac
       <div className="web-mobile-hide" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
         <PanelToggleBar collapsed={collapsed} onToggle={onTogglePanel} />
         <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-semantic)', margin: '0 6px', opacity: 0.5 }} />
-        {titleBarActions.map((action) => (
-          <button key={action.eventName} className="titlebar-no-drag text-text-semantic-muted" title={action.title}
-            onClick={() => window.dispatchEvent(new CustomEvent(action.eventName))} style={titleButtonStyle} {...hoverStyle}>
-            <action.Icon />
-          </button>
-        ))}
+        <TitleBarActionButtons actions={titleBarActions} />
         <UsageActions
           UsageIcon={UsageBarIcon}
           onOpenPanel={() => window.dispatchEvent(new CustomEvent(OPEN_USAGE_PANEL_EVENT))}

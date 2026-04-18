@@ -27,7 +27,7 @@ export function ProjectPicker({
   });
 
   return (
-    <div ref={controller.containerRef as React.RefObject<HTMLDivElement | null>} style={{ position: 'relative', width: '100%' }}>
+    <div data-tour-anchor="project-picker" ref={controller.containerRef as React.RefObject<HTMLDivElement | null>} style={{ position: 'relative', width: '100%' }}>
       <ProjectPickerToggle
         busy={controller.busy}
         currentPath={currentPath}

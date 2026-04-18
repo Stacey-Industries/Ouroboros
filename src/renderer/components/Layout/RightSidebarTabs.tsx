@@ -253,7 +253,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
   const { isOpen: compareOpen, close: closeCompare } = useComparePanel(multiProvider);
   const { isOpen: awesomeOpen, close: closeAwesome } = useAwesomeRefPanel();
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div data-tour-anchor="sessions" className="flex flex-col h-full overflow-hidden">
       {activeView === 'chat' ? (
         <ChatPanelHeader activeThread={activeThread}
           threadCount={threads.length} historyOpen={historyOpen} onToggleHistory={toggleHistory}
