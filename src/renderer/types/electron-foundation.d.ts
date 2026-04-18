@@ -251,6 +251,8 @@ export interface AppConfig {
   sessionDispatch?: { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: Array<{ id: string; request: { title: string; prompt: string; projectPath: string; worktreeName?: string }; status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled'; createdAt: string; startedAt?: string; endedAt?: string; sessionId?: string; error?: string; deviceId?: string }> };
   /** Wave 35+36 — per-user theming overrides; providers.multiProvider gates non-Claude session providers. */
   theming?: { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }; providers?: { multiProvider?: boolean };
+  /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata. */
+  ecosystem?: { lastSeenSnapshot?: { cliVersion: string; capturedAt: number; promptHash: string; promptText: string }; lastExport?: { path: string; at: number; rows: number } };
 }
 
 export interface ContextLayerConfig {
@@ -343,12 +345,4 @@ export interface HookPayload {
   data?: Record<string, unknown>;
 }
 
-export type {
-  IpcResult,
-  ReadBinaryFileResult,
-  ReadDirResult,
-  ReadFileResult,
-  SelectFolderResult,
-  ToolCallEvent,
-  ToolCallPayload,
-} from './electron-ipc-results';
+export type { IpcResult, ReadBinaryFileResult, ReadDirResult, ReadFileResult, SelectFolderResult, ToolCallEvent, ToolCallPayload } from './electron-ipc-results';

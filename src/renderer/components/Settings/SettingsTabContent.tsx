@@ -28,6 +28,7 @@ import { SettingsPerformancePanel } from './SettingsPerformancePanel';
 import type { TabId } from './settingsTabs';
 import { SystemPromptPane } from './SystemPromptPane';
 import { TerminalSection } from './TerminalSection';
+import { UsageExportPane } from './UsageExportPane';
 import { WorkspaceReadListSection } from './WorkspaceReadListSection';
 
 interface SettingsTabContentProps {
@@ -69,6 +70,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   mobileAccess: ({ draft, onChange }) => <MobileAccessPane draft={draft} onChange={onChange} />,
   systemPrompt: () => <SystemPromptPane />,
   promptDiff: () => <PromptDiffView />,
+  usageExport: () => <UsageExportPane />,
 };
 
 export function SettingsTabContent({

@@ -319,12 +319,14 @@ export const supplementalApis: SupplementalApis = {
       onChannel<CompareProvidersEventPayload>('compareProviders:event', callback),
   },
 
-  // Wave 37 Phase B — ecosystem moat: prompt diff push event
+  // Wave 37 Phase B+C — ecosystem moat: prompt diff push event + usage exporter
   ecosystem: {
     onPromptDiff: (callback) =>
       onChannel<import('../renderer/types/electron-ecosystem').PromptDiffPayload>(
         'ecosystem:promptDiff',
         callback,
       ),
+    exportUsage: (opts) => ipcRenderer.invoke('ecosystem:exportUsage', opts),
+    lastExportInfo: () => ipcRenderer.invoke('ecosystem:lastExportInfo'),
   },
 };

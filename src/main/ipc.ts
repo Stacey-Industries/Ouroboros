@@ -77,6 +77,7 @@ import {
   registerSubagentHandlers,
   registerSystemPromptHandlers,
   registerTelemetryHandlers,
+  registerUsageExporterHandlers,
   registerWorkspaceReadListHandlers,
   registerWorktreeHandlers,
 } from './ipc-handlers';
@@ -159,6 +160,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('sessionDispatch', () => registerDispatchHandlers()),
     ...safeRegister('compareProviders', () => registerCompareProvidersHandlers()),
     ...safeRegister('ecosystem', () => registerEcosystemHandlers()),
+    ...safeRegister('usageExporter', () => registerUsageExporterHandlers()),
   ];
 }
 

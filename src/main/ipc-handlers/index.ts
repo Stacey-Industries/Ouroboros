@@ -63,6 +63,7 @@ export {
   registerSystemPromptHandlers,
 } from './systemPromptHandlers';
 export { cleanupTelemetryHandlers, registerTelemetryHandlers } from './telemetry';
+export { registerUsageExporterHandlers } from './usageExporterHandlers';
 export {
   cleanupWorkspaceReadListHandlers,
   registerWorkspaceReadListHandlers,

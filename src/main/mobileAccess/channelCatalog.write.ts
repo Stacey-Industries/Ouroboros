@@ -14,6 +14,9 @@ import type { CatalogEntry } from './channelCatalog.always';
  * layout persistence, worktree operations, file writes under project roots.
  */
 export const WRITE_CATALOG: Record<string, CatalogEntry> = {
+  // ── ecosystem (write) ───────────────────────────────────────────────────────
+  'ecosystem:exportUsage':            { class: 'paired-write', timeoutClass: 'long' },
+
   // ── compareProviders (write) ────────────────────────────────────────────────
   'compareProviders:start':           { class: 'paired-write', timeoutClass: 'long' },
   'compareProviders:cancel':          { class: 'paired-write', timeoutClass: 'short' },

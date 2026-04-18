@@ -424,8 +424,8 @@ export interface AppConfig {
   theming?: ThemingConfig;
   /** Wave 36 Phase A — gates whether profile picker surfaces non-Claude session providers. */
   providers?: { multiProvider?: boolean };
-  /** Wave 37 Phase B — ecosystem moat: prompt-diff tracking snapshot. */
-  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot };
+  /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata. */
+  ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number } };
   /** Wave 30 Phase G — research auto-firing global defaults.
    *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {
