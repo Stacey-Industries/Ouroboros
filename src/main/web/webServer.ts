@@ -16,7 +16,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { getConfigValue } from '../config';
 import log from '../logger';
 import { registerConnection, unregisterConnection } from '../mobileAccess/bridgeDisconnect';
-import { authMiddleware, parseCookies } from './authMiddleware';
+import { authMiddleware, extractToken, isLocalhost, parseCookies } from './authMiddleware';
 import { authenticatePairingHandshake, authenticateUpgrade } from './bridgeAuth';
 import type { MobileAccessMeta } from './bridgeCapabilityGate';
 import { detachDevice } from './bridgeResume';
@@ -51,19 +51,73 @@ const wsMeta = new Map<WebSocket, MobileAccessMeta | null>();
 
 // ─── SPA fallback ───────────────────────────────────────────────────────────
 
+/**
+ * Builds the pairing-required script tag injected before </head>.
+ * Includes host + port so the pairing screen can pre-fill the host field.
+ */
+function buildPairingScript(req: express.Request): string {
+  const host = req.hostname ?? 'localhost';
+  // Port comes from the live server address (set after listen); fall back to
+  // the default web port when called before the server is fully started.
+  const port = getWebServerPort() ?? 7890;
+  return (
+    `<script>window.__WEB_PAIRING_REQUIRED__=true;` +
+    `window.__WEB_PAIRING_HOST__='${host}';` +
+    `window.__WEB_PAIRING_PORT__=${port};</script>`
+  );
+}
+
+function readIndexHtml(indexPath: string): string {
+  if (!cachedIndexHtml) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- indexPath from trusted config
+    cachedIndexHtml = fs.readFileSync(indexPath, 'utf-8');
+  }
+  return cachedIndexHtml;
+}
+
+/**
+ * Registers the SPA GET /* fallback that injects runtime globals into index.html.
+ * Must be mounted AFTER static file middleware so it only catches HTML navigations.
+ */
 function registerSpaFallback(app: express.Express, staticDir: string): void {
   const indexPath = path.join(staticDir, 'index.html');
   app.get('/{*path}', (_req, res) => {
     const token = getOrCreateWebToken();
     try {
-      if (!cachedIndexHtml) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- indexPath from trusted config
-        cachedIndexHtml = fs.readFileSync(indexPath, 'utf-8');
-      }
-      const injected = cachedIndexHtml.replace(
+      const html = readIndexHtml(indexPath);
+      const injected = html.replace(
         '</head>',
         `<script>window.__WEB_TOKEN__='${token}'</script></head>`,
       );
+      res.type('html').send(injected);
+    } catch {
+      res.sendFile(indexPath);
+    }
+  });
+}
+
+/**
+ * Pre-auth route: serves index.html with __WEB_PAIRING_REQUIRED__ injected when:
+ *   - mobileAccess is enabled
+ *   - request is NOT from localhost
+ *   - request has no valid auth token (cookie / Bearer)
+ * Falls through (next()) in all other cases so authMiddleware handles them.
+ */
+function registerPairingGate(app: express.Express, indexPath: string): void {
+  app.get('/', (req, res, next) => {
+    const mobileEnabled = Boolean(getConfigValue('mobileAccess')?.enabled);
+    if (!mobileEnabled) { next(); return; }
+
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    if (isLocalhost(ip)) { next(); return; }
+
+    const { token } = extractToken(req);
+    if (token) { next(); return; }
+
+    try {
+      const html = readIndexHtml(indexPath);
+      const pairingScript = buildPairingScript(req);
+      const injected = html.replace('</head>', `${pairingScript}</head>`);
       res.type('html').send(injected);
     } catch {
       res.sendFile(indexPath);
@@ -109,12 +163,20 @@ function buildExpressApp(options: WebServerOptions): express.Express {
   });
   app.use(express.json());
   app.post('/api/login', handleLoginPost);
-  app.use(authMiddleware);
-  app.post('/api/ws-ticket', handleWsTicketPost);
-  // Mount pairing router when flag is on (Phase H completes the handler body)
+
+  // Pairing gate: must be BEFORE authMiddleware so mobile browsers without a
+  // token get the pairing screen HTML rather than a 401 rejection.
+  // POST /api/pair also goes here — mobile client has no token yet.
+  if (options.staticDir) {
+    const indexPath = path.join(options.staticDir, 'index.html');
+    registerPairingGate(app, indexPath);
+  }
   if (getConfigValue('mobileAccess')?.enabled) {
     app.use(createPairingRouter());
   }
+
+  app.use(authMiddleware);
+  app.post('/api/ws-ticket', handleWsTicketPost);
   app.use((_req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');

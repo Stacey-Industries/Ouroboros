@@ -7,10 +7,29 @@ import { Component, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import App from './App';
+import { PairingScreen } from './pairingScreen';
 
-// renderer-bundle-loaded: bundle is parsed, all top-level imports resolved.
-// Fires before React mounts — captures Vite transform + chunk-load time.
-window.electronAPI?.perf?.mark?.('renderer-bundle-loaded').catch(() => void 0);
+// ── Mobile pairing gate ───────────────────────────────────────────────────────
+// When mobileAccess is enabled and the request has no valid token, the server
+// injects window.__WEB_PAIRING_REQUIRED__ = true (and host/port). We render the
+// PairingScreen standalone — the full app bootstrap never runs.
+// On successful pair, PairingScreen stores the refresh token and calls
+// window.location.reload(), at which point this flag is absent and the app
+// bootstraps normally.
+
+function mountPairingScreen(): void {
+  const el = document.getElementById('root');
+  if (!el) return;
+  const host = window.__WEB_PAIRING_HOST__ ?? window.location.hostname;
+  const rawPort = window.__WEB_PAIRING_PORT__;
+  const port = rawPort !== undefined ? rawPort : (Number(window.location.port) || 80);
+  document.getElementById('splash')?.remove();
+  createRoot(el).render(
+    <StrictMode>
+      <PairingScreen host={host} port={port} />
+    </StrictMode>,
+  );
+}
 
 // ── Root error boundary ───────────────────────────────────────────────────────
 // Inline intentionally — must work even if the module graph or CSS has failed.
@@ -105,16 +124,49 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, RootErrorBoun
   }
 }
 
-// ── Prevent Electron's default file-drop navigation ──────────────────────────
-// Without this, dropping a file anywhere on the window causes Electron to
-// navigate to the file URL (like a browser). Individual components (FileTree)
-// handle drop events locally; this just stops the fallback navigation.
-document.addEventListener('dragover', (e) => e.preventDefault());
-document.addEventListener('drop', (e) => e.preventDefault());
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found. Check index.html has <div id="root"></div>');
+function bootstrapApp(): void {
+  // renderer-bundle-loaded: bundle is parsed, all top-level imports resolved.
+  // Fires before React mounts — captures Vite transform + chunk-load time.
+  window.electronAPI?.perf?.mark?.('renderer-bundle-loaded').catch(() => void 0);
+
+  // Prevent Electron's default file-drop navigation. Individual components
+  // (FileTree) handle drop events locally; this just stops the fallback.
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found. Check index.html has <div id="root"></div>');
+  }
+
+  const root =
+    (rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot ??
+    createRoot(rootElement);
+  (rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot = root;
+
+  // react-root-created: createRoot() returned; React tree not yet committed.
+  window.electronAPI?.perf?.mark?.('react-root-created').catch(() => void 0);
+
+  root.render(
+    <StrictMode>
+      <RootErrorBoundary>
+        <App />
+      </RootErrorBoundary>
+    </StrictMode>,
+  );
+
+  // Double-rAF guarantees first frame is committed before marking.
+  // Uses perf.mark('first-render') which also flushes the startup log.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.electronAPI.perf.mark('first-render').catch(() => void 0);
+    });
+  });
+
+  // Dismiss after a brief delay to let the first React frame paint
+  setTimeout(dismissSplash, 300);
 }
 
 // ── Splash screen dismissal ───────────────────────────────────────────────────
@@ -136,29 +188,10 @@ function dismissSplash(): void {
   });
 }
 
-const root =
-  (rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot ??
-  createRoot(rootElement);
-(rootElement as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot = root;
+// ── Entry point ───────────────────────────────────────────────────────────────
 
-// react-root-created: createRoot() returned; React tree not yet committed.
-window.electronAPI?.perf?.mark?.('react-root-created').catch(() => void 0);
-
-root.render(
-  <StrictMode>
-    <RootErrorBoundary>
-      <App />
-    </RootErrorBoundary>
-  </StrictMode>,
-);
-
-// Double-rAF guarantees first frame is committed before marking.
-// Uses perf.mark('first-render') which also flushes the startup log.
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    window.electronAPI.perf.mark('first-render').catch(() => void 0);
-  });
-});
-
-// Dismiss after a brief delay to let the first React frame paint
-setTimeout(dismissSplash, 300);
+if (window.__WEB_PAIRING_REQUIRED__ === true) {
+  mountPairingScreen();
+} else {
+  bootstrapApp();
+}
