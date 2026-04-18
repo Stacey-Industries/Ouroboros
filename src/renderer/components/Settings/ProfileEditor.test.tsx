@@ -14,7 +14,7 @@ afterEach(cleanup);
 
 // ─── Minimal electronAPI stub ─────────────────────────────────────────────────
 
-function mockUpsert(profile: Profile): void {
+function mockUpsert(profile: Profile, multiProvider = false): void {
   Object.assign(window, {
     electronAPI: {
       profileCrud: {
@@ -22,6 +22,15 @@ function mockUpsert(profile: Profile): void {
       },
       mcp: {
         getServers: vi.fn().mockResolvedValue({ success: true, servers: [] }),
+      },
+      config: {
+        getAll: vi.fn().mockResolvedValue({ providers: { multiProvider } }),
+      },
+      providers: {
+        checkAllAvailability: vi.fn().mockResolvedValue({
+          success: true,
+          availability: { claude: true, codex: false, gemini: false },
+        }),
       },
     },
   });
@@ -81,6 +90,12 @@ describe('ProfileEditor', () => {
         mcp: {
           getServers: vi.fn().mockResolvedValue({ success: true, servers: [] }),
         },
+        config: {
+          getAll: vi.fn().mockResolvedValue({ providers: { multiProvider: false } }),
+        },
+        providers: {
+          checkAllAvailability: vi.fn().mockResolvedValue({ success: true, availability: {} }),
+        },
       },
     });
     const onSave = vi.fn();
@@ -101,6 +116,12 @@ describe('ProfileEditor', () => {
         },
         mcp: {
           getServers: vi.fn().mockResolvedValue({ success: true, servers: [] }),
+        },
+        config: {
+          getAll: vi.fn().mockResolvedValue({ providers: { multiProvider: false } }),
+        },
+        providers: {
+          checkAllAvailability: vi.fn().mockResolvedValue({ success: true, availability: {} }),
         },
       },
     });
@@ -135,5 +156,35 @@ describe('ProfileEditor', () => {
     expect(screen.getByText('Read')).toBeTruthy();
     expect(screen.getByText('Write')).toBeTruthy();
     expect(screen.getByText('Bash')).toBeTruthy();
+  });
+
+  // ── Provider picker gating (Wave 36 Phase E) ──────────────────────────────
+
+  it('does not render provider picker when multiProvider flag is off', () => {
+    mockUpsert(BASE_PROFILE, false);
+    render(<ProfileEditor profile={BASE_PROFILE} onSave={vi.fn()} onCancel={vi.fn()} />);
+    // Provider radio buttons must not be present
+    const radios = screen.queryAllByRole('radio');
+    expect(radios.length).toBe(0);
+  });
+
+  it('renders provider picker when multiProvider flag is on', async () => {
+    mockUpsert(BASE_PROFILE, true);
+    render(<ProfileEditor profile={BASE_PROFILE} onSave={vi.fn()} onCancel={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Claude')).toBeTruthy();
+      expect(screen.getByText('Codex')).toBeTruthy();
+      expect(screen.getByText('Gemini')).toBeTruthy();
+    });
+  });
+
+  it('provider picker defaults to claude when profile has no providerId', async () => {
+    mockUpsert(BASE_PROFILE, true);
+    render(<ProfileEditor profile={BASE_PROFILE} onSave={vi.fn()} onCancel={vi.fn()} />);
+    await waitFor(() => {
+      const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+      const claudeRadio = radios.find((r) => r.value === 'claude');
+      expect(claudeRadio?.checked).toBe(true);
+    });
   });
 });

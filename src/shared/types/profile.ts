@@ -7,6 +7,8 @@
 
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type PermissionMode = 'normal' | 'plan' | 'bypass';
+/** Wave 36 Phase E — which session provider to use when spawning from this profile. */
+export type ProfileProviderId = 'claude' | 'codex' | 'gemini';
 
 export interface Profile {
   id: string;
@@ -29,6 +31,12 @@ export interface Profile {
   topK?: number;
   /** JSON schema for structured output; null disables structured mode */
   jsonSchema?: string | null;
+  /**
+   * Wave 36 Phase E — which session provider to use when spawning from this profile.
+   * Absent / undefined is treated as 'claude' at read time for backwards compatibility.
+   * Only surfaced in the UI when `config.providers.multiProvider === true`.
+   */
+  providerId?: ProfileProviderId;
   /** Built-in presets cannot be deleted */
   builtIn?: boolean;
   createdAt: number;

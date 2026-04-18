@@ -204,7 +204,8 @@ describe('onEvent', () => {
     })
     const cb = vi.fn()
     new ClaudeSessionProvider().onEvent(baseHandle, cb)
-    captured?.({
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    captured!({
       type: 'result', subtype: 'success', is_error: false,
       result: 'done', session_id: 'test-session-1',
     })
@@ -222,7 +223,8 @@ describe('onEvent', () => {
     })
     const cb = vi.fn()
     new ClaudeSessionProvider().onEvent(baseHandle, cb)
-    captured?.({
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    captured!({
       type: 'result', subtype: 'success', is_error: false,
       result: 'done', total_cost_usd: 0.005, session_id: 'test-session-1',
     })
@@ -240,7 +242,8 @@ describe('onEvent', () => {
     })
     const cb = vi.fn()
     new ClaudeSessionProvider().onEvent(baseHandle, cb)
-    captured?.({ type: 'assistant', message: { role: 'assistant', content: [] } })
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    captured!({ type: 'assistant', message: { role: 'assistant', content: [] } })
     expect(cb).toHaveBeenCalledWith(expect.objectContaining({ type: 'stdout' }))
   })
 

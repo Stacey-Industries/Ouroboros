@@ -129,17 +129,15 @@ describe('SessionProvider interface (mock satisfies)', () => {
       id: 'claude',
       label: 'Claude Code',
       binary: 'claude',
-      checkAvailability: vi.fn<[], Promise<AvailabilityResult>>().mockResolvedValue({
+      checkAvailability: vi.fn().mockResolvedValue({
         available: true,
         binary: '/usr/bin/claude',
         version: '1.2.3',
       }),
-      spawn: vi.fn<[SpawnOptions], Promise<SessionHandle>>().mockResolvedValue(handle),
-      send: vi.fn<[SessionHandle, string], Promise<void>>().mockResolvedValue(undefined),
-      cancel: vi.fn<[SessionHandle], Promise<void>>().mockResolvedValue(undefined),
-      onEvent: vi.fn<[SessionHandle, (e: SessionEvent) => void], () => void>().mockReturnValue(
-        () => undefined,
-      ),
+      spawn: vi.fn().mockResolvedValue(handle),
+      send: vi.fn().mockResolvedValue(undefined),
+      cancel: vi.fn().mockResolvedValue(undefined),
+      onEvent: vi.fn().mockReturnValue(() => undefined),
     } satisfies SessionProvider;
 
     const avail = await provider.checkAvailability();

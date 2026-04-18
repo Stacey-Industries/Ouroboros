@@ -5,7 +5,7 @@
  * and renderer share a single definition.
  */
 
-export type { EffortLevel, PermissionMode, Profile } from '@shared/types/profile';
+export type { EffortLevel, PermissionMode, Profile, ProfileProviderId } from '@shared/types/profile';
 
 import type { Profile } from '@shared/types/profile';
 

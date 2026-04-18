@@ -71,7 +71,7 @@ function makeMockProcess(): MockProcess {
 }
 
 function setupMockSpawn(proc: MockProcess): void {
-  vi.mocked(spawn).mockReturnValue(proc as ReturnType<typeof spawn>)
+  vi.mocked(spawn).mockReturnValue(proc as unknown as ReturnType<typeof spawn>)
 }
 
 // ---------------------------------------------------------------------------

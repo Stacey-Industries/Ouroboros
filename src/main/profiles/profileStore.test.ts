@@ -154,6 +154,45 @@ describe('profileStore', () => {
     });
   });
 
+  // ── providerId normalisation (Wave 36 Phase E) ────────────────────────────
+
+  describe('providerId normalisation', () => {
+    it('defaults providerId to "claude" when absent on a stored profile', () => {
+      const store = buildProfileStore(adaptor);
+      // Write a profile without providerId directly into the adaptor (simulates legacy data).
+      const raw: Profile = { id: 'u-legacy', name: 'Legacy', createdAt: 0, updatedAt: 0 };
+      adaptor.writeProfiles([raw]);
+      const all = store.listAll();
+      const found = all.find((p) => p.id === 'u-legacy');
+      expect(found?.providerId).toBe('claude');
+    });
+
+    it('preserves an explicit providerId of "codex"', () => {
+      const store = buildProfileStore(adaptor);
+      const p = makeProfile({ id: 'u-codex', providerId: 'codex' });
+      store.upsert(p);
+      const found = store.listAll().find((x) => x.id === 'u-codex');
+      expect(found?.providerId).toBe('codex');
+    });
+
+    it('preserves an explicit providerId of "gemini"', () => {
+      const store = buildProfileStore(adaptor);
+      const p = makeProfile({ id: 'u-gemini', providerId: 'gemini' });
+      store.upsert(p);
+      const found = store.listAll().find((x) => x.id === 'u-gemini');
+      expect(found?.providerId).toBe('gemini');
+    });
+
+    it('normalises built-in profiles to "claude" when providerId is absent', () => {
+      const store = buildProfileStore(adaptor);
+      const all = store.listAll();
+      const builtIns = all.filter((p) => p.builtIn);
+      for (const bi of builtIns) {
+        expect(bi.providerId).toBe('claude');
+      }
+    });
+  });
+
   // ── setDefaultProfile / getDefaultProfile ─────────────────────────────────
 
   describe('setDefaultProfile() / getDefaultProfile()', () => {

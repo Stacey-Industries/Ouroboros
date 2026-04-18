@@ -63,9 +63,18 @@ function isBuiltIn(id: string): boolean {
   return BUILT_IN_PROFILES.some((p) => p.id === id);
 }
 
+/**
+ * Ensure `providerId` is normalised to 'claude' when absent (Wave 36 Phase E).
+ * Applied at read time so legacy stored profiles without the field work correctly.
+ */
+function normaliseProviderId(p: Profile): Profile {
+  if (p.providerId) return p;
+  return { ...p, providerId: 'claude' };
+}
+
 function applyListAll(adaptor: ProfileStoreAdaptor): Profile[] {
-  const user = adaptor.readProfiles();
-  return [...BUILT_IN_PROFILES, ...user];
+  const user = adaptor.readProfiles().map(normaliseProviderId);
+  return [...BUILT_IN_PROFILES.map(normaliseProviderId), ...user];
 }
 
 function applyUpsert(adaptor: ProfileStoreAdaptor, profile: Profile): Profile {

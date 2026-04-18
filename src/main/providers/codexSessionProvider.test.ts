@@ -97,7 +97,7 @@ function setupMockExec(handle: MockExecHandle): void {
   vi.mocked(spawnCodexExecProcess).mockImplementation((opts) => {
     handle.capturedOnEvent = opts.onEvent
     return {
-      kill: handle.kill,
+      kill: handle.kill as unknown as () => void,
       pid: handle.pid,
       get threadId() {
         return handle.threadId

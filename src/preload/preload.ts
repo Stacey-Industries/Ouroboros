@@ -310,6 +310,7 @@ const gitAPI: ElectronAPI['git'] = {
 const providersAPI: ElectronAPI['providers'] = {
   list: () => ipcRenderer.invoke('providers:list'),
   getSlots: () => ipcRenderer.invoke('providers:getSlots'),
+  checkAllAvailability: () => ipcRenderer.invoke('providers:checkAllAvailability'),
 };
 
 // ——— Auth ———————————————————————————————————————————————————————————

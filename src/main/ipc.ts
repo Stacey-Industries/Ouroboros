@@ -78,6 +78,9 @@ import {
 import log from './logger';
 import { markStartup } from './perfMetrics';
 import { getAllProviders } from './providers';
+import { ClaudeSessionProvider } from './providers/claudeSessionProvider';
+import { CodexSessionProvider } from './providers/codexSessionProvider';
+import { GeminiSessionProvider } from './providers/geminiSessionProvider';
 import type { CodexThreadCaptureArgs } from './ptyCodexCapture';
 import { resolveCodexThreadId } from './ptyCodexCapture';
 import { createPtyPersistence } from './ptyPersistence';
@@ -235,6 +238,18 @@ function registerCodeModeHandlers(channels: string[]): void {
   channels.push('codemode:enable', 'codemode:disable', 'codemode:status');
 }
 
+async function handleCheckAllAvailability(): Promise<object> {
+  const [claude, codex, gemini] = await Promise.all([
+    new ClaudeSessionProvider().checkAvailability(),
+    new CodexSessionProvider().checkAvailability(),
+    new GeminiSessionProvider().checkAvailability(),
+  ]);
+  return {
+    success: true,
+    availability: { claude: claude.available, codex: codex.available, gemini: gemini.available },
+  };
+}
+
 function registerProviderHandlers(channels: string[]): void {
   ipcMain.handle('providers:list', async () => {
     const providers = getAllProviders();
@@ -247,9 +262,8 @@ function registerProviderHandlers(channels: string[]): void {
     return mapped;
   });
 
-  ipcMain.handle('providers:getSlots', () => {
-    return getConfigValue('modelSlots');
-  });
+  ipcMain.handle('providers:getSlots', () => getConfigValue('modelSlots'));
+  ipcMain.handle('providers:checkAllAvailability', () => handleCheckAllAvailability());
 
   ipcMain.handle('codex:listModels', () => listCodexModels());
   ipcMain.handle('codex:resolveThreadId', (_event, args: CodexThreadCaptureArgs) =>
@@ -259,6 +273,7 @@ function registerProviderHandlers(channels: string[]): void {
   channels.push(
     'providers:list',
     'providers:getSlots',
+    'providers:checkAllAvailability',
     'codex:listModels',
     'codex:resolveThreadId',
   );

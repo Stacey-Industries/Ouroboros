@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AvailabilityResult, SessionEvent, SessionHandle, SessionProvider, SpawnOptions } from './sessionProvider';
+import type { SessionProvider } from './sessionProvider';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -18,17 +18,17 @@ function makeMockProvider(id: string, label = `Provider ${id}`): SessionProvider
     id,
     label,
     binary: id,
-    checkAvailability: vi.fn<[], Promise<AvailabilityResult>>().mockResolvedValue({ available: true }),
-    spawn: vi.fn<[SpawnOptions], Promise<SessionHandle>>().mockResolvedValue({
+    checkAvailability: vi.fn().mockResolvedValue({ available: true }),
+    spawn: vi.fn().mockResolvedValue({
       id: `h-${id}`,
       providerId: id,
       ptySessionId: `pty-${id}`,
       startedAt: Date.now(),
       status: 'starting',
     }),
-    send: vi.fn<[SessionHandle, string], Promise<void>>().mockResolvedValue(undefined),
-    cancel: vi.fn<[SessionHandle], Promise<void>>().mockResolvedValue(undefined),
-    onEvent: vi.fn<[SessionHandle, (e: SessionEvent) => void], () => void>().mockReturnValue(() => undefined),
+    send: vi.fn().mockResolvedValue(undefined),
+    cancel: vi.fn().mockResolvedValue(undefined),
+    onEvent: vi.fn().mockReturnValue(() => undefined),
   };
 }
 

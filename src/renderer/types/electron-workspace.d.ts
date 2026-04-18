@@ -214,9 +214,17 @@ export interface WindowAPI {
 
 export type { OrchestrationAPI };
 
+/** Wave 36 Phase E — availability result per session-provider id. */
+export interface ProviderAvailabilityResult {
+  success: boolean;
+  availability?: Partial<Record<'claude' | 'codex' | 'gemini', boolean>>;
+}
+
 export interface ProvidersAPI {
   list: () => Promise<ModelProvider[]>;
   getSlots: () => Promise<ModelSlotAssignments>;
+  /** Wave 36 Phase E — check CLI availability for all session providers. */
+  checkAllAvailability: () => Promise<ProviderAvailabilityResult>;
 }
 
 /* ── Layout types (moved from electron-foundation for max-lines) ──── */
