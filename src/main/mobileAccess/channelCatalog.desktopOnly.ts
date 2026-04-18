@@ -1,0 +1,123 @@
+/**
+ * channelCatalog.desktopOnly.ts — desktop-only capability channels.
+ *
+ * Wave 33a Phase C — capability catalog (desktop-only class).
+ * These channels are BLOCKED for all mobile clients regardless of
+ * their capability set. Fail-closed by design.
+ */
+
+import type { CatalogEntry } from './channelCatalog.always';
+
+/**
+ * Channels that are desktop-only — blocked for all mobile clients.
+ *
+ * Criteria: arbitrary filesystem writes/deletes outside project roots,
+ * PTY spawning (arbitrary shell execution), process management,
+ * config reset/import, app quit, window management, dialog pickers,
+ * auth mutations that modify stored credentials, extension installs.
+ */
+export const DESKTOP_ONLY_CATALOG: Record<string, CatalogEntry> = {
+  // ── AI inline (spawn-adjacent) ───────────────────────────────────────────────
+  'ai:generate-commit-message':     { class: 'desktop-only', timeoutClass: 'normal' },
+  'ai:inline-completion':           { class: 'desktop-only', timeoutClass: 'normal' },
+  'ai:inline-edit':                 { class: 'desktop-only', timeoutClass: 'normal' },
+  'ai:streamInlineEdit':            { class: 'desktop-only', timeoutClass: 'long' },
+  'ai:cancelInlineEditStream':      { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── app lifecycle ────────────────────────────────────────────────────────────
+  'app:clearCrashLogs':             { class: 'desktop-only', timeoutClass: 'normal' },
+  'app:getCrashLogs':               { class: 'desktop-only', timeoutClass: 'normal' },
+  'app:logError':                   { class: 'desktop-only', timeoutClass: 'short' },
+  'app:notify':                     { class: 'desktop-only', timeoutClass: 'short' },
+  'app:openCrashLogDir':            { class: 'desktop-only', timeoutClass: 'short' },
+  'app:openExternal':               { class: 'desktop-only', timeoutClass: 'short' },
+  'app:open-logs-folder':           { class: 'desktop-only', timeoutClass: 'short' },
+  'app:rebuildAndRestart':          { class: 'desktop-only', timeoutClass: 'long' },
+  'app:rebuildWeb':                 { class: 'desktop-only', timeoutClass: 'long' },
+  'app:showStreamCompletionNotification': { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── auth mutations (credential storage — desktop-only for security) ──────────
+  'auth:cancelLogin':               { class: 'desktop-only', timeoutClass: 'normal' },
+  'auth:importCliCreds':            { class: 'desktop-only', timeoutClass: 'normal' },
+  'auth:logout':                    { class: 'desktop-only', timeoutClass: 'normal' },
+  'auth:openExternal':              { class: 'desktop-only', timeoutClass: 'short' },
+  'auth:setApiKey':                 { class: 'desktop-only', timeoutClass: 'normal' },
+  'auth:startLogin':                { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── config mutations (full config import/export/reset) ───────────────────────
+  'config:export':                  { class: 'desktop-only', timeoutClass: 'normal' },
+  'config:import':                  { class: 'desktop-only', timeoutClass: 'normal' },
+  'config:openSettingsFile':        { class: 'desktop-only', timeoutClass: 'short' },
+  'config:set':                     { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── dialog (native OS dialogs — desktop-only) ────────────────────────────────
+  'dialog:saveFile':                { class: 'desktop-only', timeoutClass: 'normal' },
+  'files:openFile':                 { class: 'desktop-only', timeoutClass: 'normal' },
+  'files:selectFolder':             { class: 'desktop-only', timeoutClass: 'normal' },
+  'files:showImageDialog':          { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── extensions (install/uninstall mutates disk outside project roots) ─────────
+  'extensions:activate':            { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensions:commandExecuted':     { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensions:disable':             { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensions:enable':              { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensions:install':             { class: 'desktop-only', timeoutClass: 'long' },
+  'extensions:openFolder':          { class: 'desktop-only', timeoutClass: 'short' },
+  'extensions:uninstall':           { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── extensionStore (install — disk writes outside project roots) ─────────────
+  'extensionStore:disableContributions': { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensionStore:enableContributions':  { class: 'desktop-only', timeoutClass: 'normal' },
+  'extensionStore:install':              { class: 'desktop-only', timeoutClass: 'long' },
+  'extensionStore:installMarketplace':   { class: 'desktop-only', timeoutClass: 'long' },
+  'extensionStore:uninstall':            { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── files (destructive — arbitrary path ops) ─────────────────────────────────
+  // files:delete and files:rename can target arbitrary paths outside project roots.
+  'files:delete':                   { class: 'desktop-only', timeoutClass: 'normal' },
+  'files:rename':                   { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── PTY — shell execution (desktop-only: arbitrary code execution) ────────────
+  'pty:spawn':                      { class: 'desktop-only', timeoutClass: 'normal' },
+  'pty:spawnClaude':                { class: 'desktop-only', timeoutClass: 'long' },
+  'pty:spawnCodex':                 { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── sessions (export writes arbitrary file path via dialog) ──────────────────
+  'sessions:export':                { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── sessionCrud (opening new windows is desktop-only) ────────────────────────
+  'sessionCrud:openChatWindow':     { class: 'desktop-only', timeoutClass: 'normal' },
+
+  // ── shell (opens native shell / Finder / Explorer) ───────────────────────────
+  'shell:openExtensionsFolder':     { class: 'desktop-only', timeoutClass: 'short' },
+  'shell:showItemInFolder':         { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── titlebar (desktop window chrome) ─────────────────────────────────────────
+  'titlebar:setOverlayColors':      { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── updater (installs a new app binary) ──────────────────────────────────────
+  'updater:check':                  { class: 'desktop-only', timeoutClass: 'normal' },
+  'updater:download':               { class: 'desktop-only', timeoutClass: 'long' },
+  'updater:install':                { class: 'desktop-only', timeoutClass: 'long' },
+
+  // ── window management (creates / closes / resizes OS windows) ────────────────
+  'window:close':                   { class: 'desktop-only', timeoutClass: 'short' },
+  'window:close-self':              { class: 'desktop-only', timeoutClass: 'short' },
+  'window:focus':                   { class: 'desktop-only', timeoutClass: 'short' },
+  'window:getProjectRoots':         { class: 'desktop-only', timeoutClass: 'short' },
+  'window:getSelf':                 { class: 'desktop-only', timeoutClass: 'short' },
+  'window:list':                    { class: 'desktop-only', timeoutClass: 'short' },
+  'window:maximize-toggle':         { class: 'desktop-only', timeoutClass: 'short' },
+  'window:minimize':                { class: 'desktop-only', timeoutClass: 'short' },
+  'window:new':                     { class: 'desktop-only', timeoutClass: 'normal' },
+  'window:setProjectRoot':          { class: 'desktop-only', timeoutClass: 'short' },
+  'window:setProjectRoots':         { class: 'desktop-only', timeoutClass: 'short' },
+  'window:toggle-devtools':         { class: 'desktop-only', timeoutClass: 'short' },
+  'window:toggle-fullscreen':       { class: 'desktop-only', timeoutClass: 'short' },
+
+  // ── workspace trust (modifies global trust store) ────────────────────────────
+  'workspace:isTrusted':            { class: 'desktop-only', timeoutClass: 'short' },
+  'workspace:trust':                { class: 'desktop-only', timeoutClass: 'short' },
+  'workspace:trustLevel':           { class: 'desktop-only', timeoutClass: 'short' },
+  'workspace:untrust':              { class: 'desktop-only', timeoutClass: 'short' },
+};

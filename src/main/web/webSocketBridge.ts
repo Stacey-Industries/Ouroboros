@@ -10,6 +10,7 @@ import { WebSocket } from 'ws';
 
 import log from '../logger';
 import { getAllActiveWindows } from '../windowManager';
+import { enforceCapabilityOrRespond, type MobileAccessMeta } from './bridgeCapabilityGate';
 import { ipcHandlerRegistry } from './handlerRegistry';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -182,10 +183,36 @@ function dispatchHandler(
     });
 }
 
-/** Handles an incoming raw WebSocket message — parses JSON-RPC 2.0 and routes to the handler registry. */
-export function handleJsonRpcMessage(ws: WebSocket, raw: string): void {
+/**
+ * Handles an incoming raw WebSocket message — parses JSON-RPC 2.0 and routes
+ * to the handler registry, with an optional capability gate for mobile clients.
+ *
+ * @param ws             - The WebSocket connection.
+ * @param raw            - Raw message string from the client.
+ * @param connectionMeta - mobileAccess metadata if the connection was
+ *                         authenticated via the Phase D device-token path,
+ *                         or null for legacy desktop single-token connections.
+ *                         PHASE D NOTE: Once Phase D wires token verification,
+ *                         every connection will carry metadata and the null
+ *                         fallback in enforceCapabilityOrRespond can be removed.
+ */
+export function handleJsonRpcMessage(
+  ws: WebSocket,
+  raw: string,
+  connectionMeta: MobileAccessMeta | null = null,
+): void {
   const request = parseJsonRpcMessage(ws, raw);
   if (!request) return;
+
+  // ── Capability gate (Phase C seam) ────────────────────────────────────────
+  // enforceCapabilityOrRespond sends the error and returns false if denied.
+  // When connectionMeta is null (legacy desktop path) it is a no-op.
+  const proceed = enforceCapabilityOrRespond(
+    request,
+    connectionMeta,
+    (response) => sendResponse(ws, response),
+  );
+  if (!proceed) return;
 
   const handler = ipcHandlerRegistry.get(request.method);
   if (!handler) {
