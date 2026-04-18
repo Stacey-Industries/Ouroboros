@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor';
 import React, { memo, type MutableRefObject,useEffect, useRef, useState } from 'react';
 
+import { useConfig } from '../../hooks/useConfig';
 import type { DiffLineInfo } from '../../types/electron';
 import { EditorHunkGutterActions } from './EditorHunkGutterActions';
 import { registerMonacoEditor, unregisterMonacoEditor } from './editorRegistry';
@@ -134,6 +135,20 @@ function useMonacoEditorContentSync(
   }, [content, editorRef, isDirtyRef, onDirtyChange]);
 }
 
+function resolveEditorFont(): string {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--font-editor').trim();
+  return v || 'var(--font-mono, monospace)';
+}
+
+function useMonacoEditorFontFamily(editorRef: MutableRefObject<monaco.editor.IStandaloneCodeEditor | null>): void {
+  const { config } = useConfig();
+  const editorFont = config?.theming?.fonts?.editor;
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (editor) editor.updateOptions({ fontFamily: resolveEditorFont() });
+  }, [editorRef, editorFont]);
+}
+
 function useMonacoEditorOptions(input: RuntimeInput): void {
   useEffect(() => {
     const editor = input.editorRef.current;
@@ -147,6 +162,7 @@ function useMonacoEditorOptions(input: RuntimeInput): void {
     const editor = input.editorRef.current;
     if (editor && input.showMinimap !== undefined) editor.updateOptions({ minimap: { enabled: input.showMinimap } });
   }, [input.editorRef, input.showMinimap]);
+  useMonacoEditorFontFamily(input.editorRef);
 }
 
 function useMonacoEditorModes(input: RuntimeInput): void {

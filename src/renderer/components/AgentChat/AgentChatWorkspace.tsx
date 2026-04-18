@@ -307,7 +307,7 @@ export function AgentChatWorkspace({
   return (
     <AgentChatStoreContext.Provider value={store}>
       <DensityProvider>
-        <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel">
+        <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-surface-panel" style={{ fontFamily: 'var(--font-chat, var(--font-ui, sans-serif))' }}>
           <PinnedContextBar activeSessionId={activeSessionId} />
           <div className="flex-1 min-h-0 overflow-hidden"><AgentChatConversation /></div>
         </div>

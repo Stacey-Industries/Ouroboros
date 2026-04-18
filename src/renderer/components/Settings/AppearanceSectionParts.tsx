@@ -9,6 +9,7 @@ import {
   BackgroundGradientSection,
   CustomCSSSection,
   GlassOpacitySection,
+  PaneFontPickerSection,
   ThemeEditorSection,
   ThemeGrid,
 } from './AppearanceSectionParts.sections';
@@ -53,6 +54,7 @@ export function AppearanceSectionContent({
       <GlassOpacitySlider draft={draft} onChange={onChange} />
       <AccentPicker />
       <ThinkingVerbPicker />
+      <PaneFontPickerSection />
       <ThemeEditorSection
         activeThemeId={draft.activeTheme}
         draft={draft}

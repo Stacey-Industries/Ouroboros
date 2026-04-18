@@ -16,6 +16,7 @@ import type {
   TerminalInstanceProps,
 } from './TerminalInstanceController.types'
 import {
+  useFontSync,
   useLatestRef,
   useThemeSync,
 } from './TerminalInstanceUiState'
@@ -244,6 +245,7 @@ export function useTerminalSetupBridge(args: SetupBridgeArgs): void {
   const { fit, syncTheme } = useTerminalSetup(createSetupOptions(args))
   useFitOnActive(args.foundation.isActive, fit)
   useThemeSync(syncTheme)
+  useFontSync(args.foundation.terminalRef, fit)
 }
 
 export function useCopyBlockOutput(

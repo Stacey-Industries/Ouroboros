@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 
+import { useConfig } from '../../hooks/useConfig'
 import type { SelectionTooltipState } from './SelectionTooltip'
 import { INITIAL_SELECTION_TOOLTIP } from './SelectionTooltip'
 import type { TerminalContextMenuState } from './TerminalContextMenu'
@@ -14,6 +15,28 @@ export function useLatestRef<T>(value: T): React.MutableRefObject<T> {
     ref.current = value
   }, [value])
   return ref
+}
+
+function resolveTerminalFont(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--font-terminal').trim()
+    || getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()
+    || 'monospace'
+}
+
+export function useFontSync(
+  terminalRef: React.RefObject<Terminal | null>,
+  fit: () => void,
+): void {
+  const { config } = useConfig()
+  const terminalFont = config?.theming?.fonts?.terminal
+  useEffect(() => {
+    const term = terminalRef.current
+    if (!term) return
+    const resolved = resolveTerminalFont()
+    if (term.options.fontFamily === resolved) return
+    term.options = { ...term.options, fontFamily: resolved }
+    fit()
+  }, [terminalRef, terminalFont, fit])
 }
 
 export function useThemeSync(syncTheme: () => void): void {
