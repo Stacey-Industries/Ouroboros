@@ -116,7 +116,7 @@ describe('generatePairingCode handler', () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it('returns success with code, expiresAt, and qrPayload', async () => {
+  it('returns success with code, expiresAt, qrPayload, and qrPairingUrl', async () => {
     registerPairingHandlers();
     const handler = captureHandler('mobileAccess:generatePairingCode');
     expect(handler).toBeDefined();
@@ -125,6 +125,7 @@ describe('generatePairingCode handler', () => {
       code: string;
       expiresAt: number;
       qrPayload: { v: number; host: string; port: number; code: string; fingerprint: string };
+      qrPairingUrl: string;
     };
     expect(result.success).toBe(true);
     expect(result.code).toBe('042819');
@@ -134,6 +135,11 @@ describe('generatePairingCode handler', () => {
     expect(typeof result.qrPayload.host).toBe('string');
     expect(result.qrPayload.code).toBe('042819');
     expect(typeof result.qrPayload.fingerprint).toBe('string');
+    // Phase E: qrPairingUrl is the ouroboros://pair deep-link URL
+    expect(typeof result.qrPairingUrl).toBe('string');
+    expect(result.qrPairingUrl).toMatch(/^ouroboros:\/\/pair\?/);
+    expect(result.qrPairingUrl).toContain('code=042819');
+    expect(result.qrPairingUrl).toContain('port=7890');
   });
 
   it('persists a fingerprint when none exists', async () => {

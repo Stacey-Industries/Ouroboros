@@ -68,6 +68,37 @@ npm run cap:sync
 | Web dir | `out/web`               |
 | Android scheme | `https`        |
 
+## Deep-link setup — Android manifest (one-time)
+
+After `npx cap add android`, edit `android/app/src/main/AndroidManifest.xml`. Inside the
+`<activity android:name=".MainActivity">` block, add:
+
+```xml
+<intent-filter android:autoVerify="false">
+  <action android:name="android.intent.action.VIEW" />
+  <category android:name="android.intent.category.DEFAULT" />
+  <category android:name="android.intent.category.BROWSABLE" />
+  <data android:scheme="ouroboros" android:host="pair" />
+</intent-filter>
+```
+
+This enables `ouroboros://pair?host=...&port=...&code=...&fingerprint=...` deep links.
+Scanning the QR code shown in Desktop → Settings → Mobile Access with any third-party
+QR scanner will launch Ouroboros with the pairing fields pre-filled.
+
+The full XML snippet is also available in `capacitor-resources/android-intent-filter.xml`
+for easy copy-paste.
+
+**Verify after adding:**
+
+```sh
+adb shell am start -a android.intent.action.VIEW \
+  -d "ouroboros://pair?host=192.168.1.50&port=4173&code=123456&fingerprint=abc"
+```
+
+The app should open and the pairing screen should have the fields pre-filled (but NOT
+auto-submitted — always requires the user to tap Pair).
+
 ## Notes
 
 - `android/` is gitignored. Only `android/.gitkeep` is committed.

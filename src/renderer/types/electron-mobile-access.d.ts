@@ -35,6 +35,8 @@ export interface GeneratePairingCodeResult {
   code?: string;
   expiresAt?: number;
   qrPayload?: QrPayload;
+  /** Deep-link URL encoding the same payload — scannable in any QR reader app. */
+  qrPairingUrl?: string;
   error?: string;
 }
 

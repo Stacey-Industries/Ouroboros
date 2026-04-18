@@ -1,0 +1,17 @@
+<!--
+  Android intent-filter for the ouroboros://pair deep-link scheme.
+
+  Add this block inside the <activity android:name=".MainActivity"> element in
+  android/app/src/main/AndroidManifest.xml after running `npx cap add android`.
+
+  See docs/mobile-dev.md — "Deep-link setup — Android manifest (one-time)" for
+  the full setup instructions and adb verification command.
+
+  Wave 33b Phase E.
+-->
+<intent-filter android:autoVerify="false">
+  <action android:name="android.intent.action.VIEW" />
+  <category android:name="android.intent.category.DEFAULT" />
+  <category android:name="android.intent.category.BROWSABLE" />
+  <data android:scheme="ouroboros" android:host="pair" />
+</intent-filter>

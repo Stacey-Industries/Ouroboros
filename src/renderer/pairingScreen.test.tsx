@@ -3,6 +3,7 @@
  * pairingScreen.test.tsx — Unit tests for the PairingScreen component.
  *
  * Wave 33a Phase H — updated for Wave 33b Phase D async token storage.
+ * Wave 33b Phase E — deep-link / URL query prefill (no auto-submit, highlight).
  *
  * Changes from Phase H:
  *  - tokenStorage is mocked (vi.mock) — fingerprint + token no longer go
@@ -11,7 +12,7 @@
  *  - setRefreshToken (not localStorage.setItem) is asserted on success.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -21,6 +22,10 @@ const mocks = vi.hoisted(() => ({
   getDeviceFingerprint: vi.fn(async () => 'test-fingerprint-uuid'),
   getRefreshToken: vi.fn(async () => null as string | null),
   clearRefreshToken: vi.fn(async () => undefined),
+  readPairingQueryParams: vi.fn(() => null as null | {
+    host: string; port: string; code: string; fingerprint: string;
+  }),
+  initDeepLinkListener: vi.fn(async () => () => undefined),
 }));
 
 vi.mock('../web/tokenStorage', () => ({
@@ -28,6 +33,13 @@ vi.mock('../web/tokenStorage', () => ({
   getDeviceFingerprint: mocks.getDeviceFingerprint,
   getRefreshToken: mocks.getRefreshToken,
   clearRefreshToken: mocks.clearRefreshToken,
+}));
+
+vi.mock('../web/capacitor/deepLinks', () => ({
+  readPairingQueryParams: (...args: Parameters<typeof mocks.readPairingQueryParams>) =>
+    mocks.readPairingQueryParams(...args),
+  initDeepLinkListener: (...args: Parameters<typeof mocks.initDeepLinkListener>) =>
+    mocks.initDeepLinkListener(...args),
 }));
 
 const mockFetch = vi.fn();
@@ -44,7 +56,7 @@ vi.stubGlobal('localStorage', mockLocalStorage);
 
 const mockReload = vi.fn();
 Object.defineProperty(window, 'location', {
-  value: { reload: mockReload, hostname: 'localhost', port: '' },
+  value: { reload: mockReload, hostname: 'localhost', port: '', search: '' },
   writable: true,
 });
 
@@ -99,6 +111,9 @@ afterEach(() => {
   vi.clearAllMocks();
   // Reset to default resolved fingerprint after each test
   mocks.getDeviceFingerprint.mockResolvedValue('test-fingerprint-uuid');
+  // Reset deep-link mocks to no-op defaults
+  mocks.readPairingQueryParams.mockReturnValue(null);
+  mocks.initDeepLinkListener.mockResolvedValue(() => undefined);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -298,5 +313,72 @@ describe('PairingScreen fingerprint persistence', () => {
     const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(opts.body as string) as Record<string, string>;
     expect(body.fingerprint).toBe('custom-fp-abc');
+  });
+});
+
+// ─── Phase E: deep-link / URL query prefill ───────────────────────────────────
+
+describe('PairingScreen deep-link prefill (Wave 33b Phase E)', () => {
+  beforeEach(() => {
+    mocks.getDeviceFingerprint.mockResolvedValue('test-fingerprint-uuid');
+    mocks.initDeepLinkListener.mockResolvedValue(() => undefined);
+  });
+
+  it('prefills code from URL query params but does NOT auto-submit', async () => {
+    mocks.readPairingQueryParams.mockReturnValue({
+      host: '192.168.1.50', port: '4173', code: '042819', fingerprint: 'fpX',
+    });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
+    expect(codeInput.value).toBe('042819');
+    // Security requirement: must NOT have auto-submitted
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('applies highlight border on prefill and removes it after 2 s', async () => {
+    // Fake timers must be active BEFORE render so the highlight setTimeout
+    // registers in the fake queue and can be advanced deterministically.
+    vi.useFakeTimers();
+
+    mocks.readPairingQueryParams.mockReturnValue({
+      host: '192.168.1.50', port: '4173', code: '042819', fingerprint: 'fpX',
+    });
+    // getDeviceFingerprint is already a resolved mock — flush with microtasks.
+    mocks.getDeviceFingerprint.mockResolvedValue('test-fingerprint-uuid');
+
+    renderPairing();
+    // Flush React effects + microtask queue (no real timers needed).
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await Promise.resolve(); });
+
+    const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
+    expect(codeInput.value).toBe('042819');
+    const accentRgb = 'rgb(56, 139, 253)'; // hardcoded: test assertion — jsdom normalises #388bfd to rgb(); not a UI color
+    // Highlight is active immediately after prefill
+    expect(codeInput.style.border).toContain(accentRgb);
+
+    // Advance past the 2-second highlight duration (registered in fake queue)
+    await act(async () => { vi.advanceTimersByTime(2100); });
+    expect(codeInput.style.border).not.toContain(accentRgb);
+
+    vi.useRealTimers();
+  });
+
+  it('calls initDeepLinkListener on mount', async () => {
+    renderPairing();
+    await waitForFingerprintReady();
+    expect(mocks.initDeepLinkListener).toHaveBeenCalled();
+  });
+
+  it('does not prefill when query params are absent', async () => {
+    mocks.readPairingQueryParams.mockReturnValue(null);
+    renderPairing();
+    await waitForFingerprintReady();
+
+    const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
+    expect(codeInput.value).toBe('');
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

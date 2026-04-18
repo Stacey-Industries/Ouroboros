@@ -59,12 +59,23 @@ function buildQrPayload(code: string, fingerprint: string): QrPayload {
   return { v: 1, host: detectLocalIp(), port, code, fingerprint };
 }
 
+function buildQrPairingUrl(payload: QrPayload): string {
+  const params = new URLSearchParams({
+    host: payload.host,
+    port: String(payload.port),
+    code: payload.code,
+    fingerprint: payload.fingerprint,
+  });
+  return `ouroboros://pair?${params.toString()}`;
+}
+
 async function handleGeneratePairingCode() {
   try {
     const ticket = issueTicket();
     const fingerprint = getOrCreateFingerprint();
     const qrPayload = buildQrPayload(ticket.code, fingerprint);
-    return { success: true, code: ticket.code, expiresAt: ticket.expiresAt, qrPayload };
+    const qrPairingUrl = buildQrPairingUrl(qrPayload);
+    return { success: true, code: ticket.code, expiresAt: ticket.expiresAt, qrPayload, qrPairingUrl };
   } catch (err) {
     log.error('[pairing] generatePairingCode error:', err);
     return { success: false, error: err instanceof Error ? err.message : String(err) };

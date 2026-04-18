@@ -17,6 +17,8 @@ import { SectionLabel } from './settingsStyles';
 interface PairingState {
   code: string;
   qrPayload: QrPayload;
+  /** ouroboros://pair?... URL — rendered as QR so any scanner can open the app. */
+  qrPairingUrl: string;
   expiresAt: number;
 }
 
@@ -46,8 +48,13 @@ function usePairingGenerator(): PairingGeneratorResult {
     try {
       const result: GeneratePairingCodeResult =
         await window.electronAPI.mobileAccess.generatePairingCode();
-      if (result.success && result.code && result.expiresAt && result.qrPayload) {
-        setPairing({ code: result.code, qrPayload: result.qrPayload, expiresAt: result.expiresAt });
+      if (result.success && result.code && result.expiresAt && result.qrPayload && result.qrPairingUrl) {
+        setPairing({
+          code: result.code,
+          qrPayload: result.qrPayload,
+          qrPairingUrl: result.qrPairingUrl,
+          expiresAt: result.expiresAt,
+        });
       } else {
         setError(result.error ?? 'Failed to generate pairing code');
       }
@@ -104,18 +111,23 @@ function CountdownDisplay({ expiresAt, onExpired }: CountdownProps): React.React
 
 // ── QrBlock ──────────────────────────────────────────────────────────────────
 
-function QrBlock({ payload }: { payload: QrPayload }): React.ReactElement {
-  const payloadJson = JSON.stringify(payload);
+/**
+ * Renders the pairing URL as a QR code.
+ * Using the deep-link URL (ouroboros://pair?...) instead of raw JSON so that
+ * scanning with any third-party QR app opens Ouroboros directly via the
+ * registered URL scheme (Android intent-filter, Wave 33b Phase E).
+ */
+function QrBlock({ pairingUrl }: { pairingUrl: string }): React.ReactElement {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
       <QRCodeSVG
         bgColor="var(--surface-panel)"
         fgColor="var(--text-primary)"
         size={QR_SIZE}
-        value={payloadJson}
+        value={pairingUrl}
       />
-      <span aria-label="QR code payload JSON" className="sr-only">
-        {payloadJson}
+      <span aria-label="QR code pairing URL" className="sr-only">
+        {pairingUrl}
       </span>
     </div>
   );
@@ -138,7 +150,7 @@ function PairingDisplay({ pairing, onExpired }: PairingDisplayProps): React.Reac
         {pairing.code}
       </span>
       <CountdownDisplay expiresAt={pairing.expiresAt} onExpired={onExpired} />
-      <QrBlock payload={pairing.qrPayload} />
+      <QrBlock pairingUrl={pairing.qrPairingUrl} />
     </div>
   );
 }

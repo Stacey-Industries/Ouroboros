@@ -8,12 +8,14 @@
  *
  * Bundle target: < 12 KB gzipped (shipped inside main bundle per Wave 33a plan).
  *
- * Wave 33a Phase H.
+ * Wave 33a Phase H / Wave 33b Phase E (deep-link prefill).
  */
 
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
+import { initDeepLinkListener, readPairingQueryParams } from '../web/capacitor/deepLinks';
 import { getDeviceFingerprint, setRefreshToken } from '../web/tokenStorage';
+import { FIELD_HIGHLIGHT_BORDER, PREFILL_HIGHLIGHT_MS, S } from './pairingScreen.styles';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,115 +35,54 @@ interface PairingFormProps {
   label: string;
   loading: boolean;
   displayHost: string;
+  highlight: boolean;
   codeRef: React.RefObject<HTMLInputElement | null>;
   onCodeChange: (v: string) => void;
   onLabelChange: (v: string) => void;
   onSubmit: (e: FormEvent) => void;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── usePrefill ───────────────────────────────────────────────────────────────
 
-// Token storage is handled by tokenStorage.ts (Keychain/Keystore on native, localStorage on web).
+/**
+ * On mount, reads URL query params for pairing fields and subscribes to the
+ * native deep-link listener. Calls setters when a payload is received.
+ * Does NOT auto-submit — security requirement from Phase H plan.
+ */
+function usePrefill(
+  setCode: (v: string) => void,
+  setHighlight: (v: boolean) => void,
+): void {
+  const setCodeRef = useRef(setCode);
+  const setHighlightRef = useRef(setHighlight);
+  setCodeRef.current = setCode;
+  setHighlightRef.current = setHighlight;
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let deepLinkCleanup: (() => void) | null = null;
+    let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
-// All colors below are intentional — this screen renders before the token system
-// initialises (see file-level DESIGN TOKEN EXCEPTION comment above).
-const S = {
-  root: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#0d1117', // hardcoded: pre-token-system render
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    padding: '16px',
-  },
-  card: {
-    width: '100%',
-    maxWidth: '360px',
-    background: '#161b22', // hardcoded: pre-token-system render
-    border: '1px solid #30363d', // hardcoded: pre-token-system render
-    borderRadius: '12px',
-    padding: '32px 28px',
-  },
-  wordmark: {
-    fontSize: '13px',
-    fontWeight: 600,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase' as const,
-    color: '#8b949e', // hardcoded: pre-token-system render
-    marginBottom: '6px',
-  },
-  heading: {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#e6edf3', // hardcoded: pre-token-system render
-    margin: '0 0 4px',
-  },
-  sub: {
-    fontSize: '13px',
-    color: '#8b949e', // hardcoded: pre-token-system render
-    margin: '0 0 24px',
-  },
-  label: {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: '#8b949e', // hardcoded: pre-token-system render
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase' as const,
-    marginBottom: '6px',
-  },
-  field: {
-    width: '100%',
-    padding: '8px 12px',
-    background: '#0d1117', // hardcoded: pre-token-system render
-    border: '1px solid #30363d', // hardcoded: pre-token-system render
-    borderRadius: '6px',
-    color: '#e6edf3', // hardcoded: pre-token-system render
-    fontSize: '14px',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    fontFamily: 'monospace',
-    letterSpacing: '0.2em',
-    marginBottom: '16px',
-  },
-  fieldReadonly: { opacity: 0.7 },
-  button: {
-    width: '100%',
-    padding: '10px',
-    background: '#238636', // hardcoded: pre-token-system render
-    color: '#fff', // hardcoded: pre-token-system render
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    marginTop: '4px',
-  },
-  buttonDisabled: { opacity: 0.6, cursor: 'not-allowed' as const },
-  error: {
-    marginTop: '12px',
-    padding: '10px 12px',
-    background: '#1c0912', // hardcoded: pre-token-system render
-    border: '1px solid #6e1a2f', // hardcoded: pre-token-system render
-    borderRadius: '6px',
-    color: '#f85149', // hardcoded: pre-token-system render
-    fontSize: '13px',
-  },
-  spinner: {
-    display: 'inline-block',
-    width: '14px',
-    height: '14px',
-    border: '2px solid rgba(255,255,255,0.3)', // hardcoded: pre-token-system render
-    borderTopColor: '#fff', // hardcoded: pre-token-system render
-    borderRadius: '50%',
-    animation: 'spin 0.7s linear infinite',
-    marginRight: '8px',
-    verticalAlign: 'middle',
-  },
-} as const;
+    function applyPrefill(code: string): void {
+      setCodeRef.current(code);
+      setHighlightRef.current(true);
+      highlightTimer = setTimeout(() => setHighlightRef.current(false), PREFILL_HIGHLIGHT_MS);
+    }
+
+    // Browser / web-mode: check URL query params on mount.
+    const queryPayload = readPairingQueryParams(window.location.search);
+    if (queryPayload) applyPrefill(queryPayload.code);
+
+    // Native: subscribe to deep-link open events at runtime.
+    void initDeepLinkListener((payload) => {
+      applyPrefill(payload.code);
+    }).then((cleanup) => { deepLinkCleanup = cleanup; });
+
+    return () => {
+      deepLinkCleanup?.();
+      if (highlightTimer !== null) clearTimeout(highlightTimer);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- setters are stable refs
+}
 
 // ─── Error message normalizer ─────────────────────────────────────────────────
 
@@ -228,18 +169,22 @@ async function submitPairing(opts: SubmitPairingOpts): Promise<void> {
 
 // ─── Pairing form sub-components ─────────────────────────────────────────────
 
-function CodeInput({ codeRef, value, disabled, onChange }: {
+function CodeInput({ codeRef, value, disabled, highlight, onChange }: {
   codeRef: React.RefObject<HTMLInputElement | null>;
   value: string; disabled: boolean;
+  highlight: boolean;
   onChange: (v: string) => void;
 }): React.ReactElement {
+  const fieldStyle = highlight
+    ? { ...S.field, border: FIELD_HIGHLIGHT_BORDER }
+    : S.field;
   return (
     <>
       <label style={S.label} htmlFor="pair-code">Pairing code</label>
       <input
         ref={codeRef}
         id="pair-code"
-        style={S.field}
+        style={fieldStyle}
         type="text"
         inputMode="numeric"
         pattern="\d{6}"
@@ -256,7 +201,7 @@ function CodeInput({ codeRef, value, disabled, onChange }: {
 }
 
 function PairingForm(props: PairingFormProps): React.ReactElement {
-  const { code, label, loading, displayHost, codeRef, onCodeChange, onLabelChange, onSubmit } = props;
+  const { code, label, loading, displayHost, highlight, codeRef, onCodeChange, onLabelChange, onSubmit } = props;
   return (
     <form onSubmit={onSubmit}>
       <label style={S.label} htmlFor="pair-host">Host</label>
@@ -267,7 +212,7 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
         readOnly
         tabIndex={-1}
       />
-      <CodeInput codeRef={codeRef} value={code} disabled={loading} onChange={onCodeChange} />
+      <CodeInput codeRef={codeRef} value={code} disabled={loading} highlight={highlight} onChange={onCodeChange} />
       <label style={S.label} htmlFor="pair-label">Device name (optional)</label>
       <input
         id="pair-label"
@@ -291,27 +236,39 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
   );
 }
 
-// ─── Root component ────────────────────────────────────────────────────────────
+// ─── Root state hook ──────────────────────────────────────────────────────────
 
-export function PairingScreen({ host, port }: PairingScreenProps): React.ReactElement {
+interface ScreenState {
+  code: string; setCode: (v: string) => void;
+  label: string; setLabel: (v: string) => void;
+  highlight: boolean;
+  fingerprint: string;
+  codeRef: React.RefObject<HTMLInputElement | null>;
+}
+
+function usePairingScreenState(): ScreenState {
   const [code, setCode] = useState('');
   const [label, setLabel] = useState('Mobile device');
   const [fingerprint, setFingerprint] = useState('');
+  const [highlight, setHighlight] = useState(false);
   const codeRef = useRef<HTMLInputElement | null>(null);
-  const { loading, errorMsg, handleSubmit } = usePairingSubmit(code, label, fingerprint);
-
+  usePrefill(setCode, setHighlight);
   useEffect(() => { codeRef.current?.focus(); }, []);
-
   useEffect(() => {
     getDeviceFingerprint()
       .then(setFingerprint)
       .catch(() => { setFingerprint('unknown'); });
   }, []);
+  return { code, setCode, label, setLabel, highlight, fingerprint, codeRef };
+}
 
+// ─── Root component ────────────────────────────────────────────────────────────
+
+export function PairingScreen({ host, port }: PairingScreenProps): React.ReactElement {
+  const { code, setCode, label, setLabel, highlight, fingerprint, codeRef } = usePairingScreenState();
+  const { loading, errorMsg, handleSubmit } = usePairingSubmit(code, label, fingerprint);
   const displayHost = port && port !== 80 && port !== 443 ? `${host}:${port}` : host;
-  // Disable the form while fingerprint hasn't resolved yet (async storage read)
   const formBusy = loading || fingerprint === '';
-
   return (
     <div style={S.root}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -326,6 +283,7 @@ export function PairingScreen({ host, port }: PairingScreenProps): React.ReactEl
           label={label}
           loading={formBusy}
           displayHost={displayHost}
+          highlight={highlight}
           codeRef={codeRef}
           onCodeChange={setCode}
           onLabelChange={setLabel}
