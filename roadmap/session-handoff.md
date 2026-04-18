@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 31 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 32 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Wave 31 is fully landed and pushed. The user's last directive was **"do wave 31 and stop after that"** — do not auto-start Wave 32 without new instructions.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31 and 32 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 33 (Mobile Shell & Client-Server Hardening) is next.
 
 ---
 
@@ -42,21 +42,45 @@ Why the change: at start of this session the user flagged 22 unpushed local comm
 ### Current branch state
 
 ```
-Last pushed commit: 98bb859 feat: Wave 31 Phase F — context ranker observability dashboard
-                    20f6c6f feat: Wave 31 Phase D — context selector learned ranker + shadow mode
-                    1ba6495 feat: Wave 31 Phase E — lean packet mode
-                    7b3ed8b feat: Wave 31 Phase C — context retrain trigger
-                    d9abbde feat: Wave 31 Phase B — context classifier module
-                    33410ab feat: Wave 31 Phase A — train-context.py
-                    9cd9bc4 docs: Wave 31 implementation plan
-                    61b1cd7 ← last pre-Wave-31 commit (Wave 30 end)
+Last pushed commit: cae81f1 test: fix AppLayout.dnd.test for Wave 32 Phase D + I changes
+                    49874b3 feat: Wave 32 Phase J — Playwright mobile viewport tests
+                    3b0f38f feat: Wave 32 Phase I — swipe gestures
+                    49fcff4 feat: Wave 32 Phase H — Monaco mobile fallback
+                    853e558 feat: Wave 32 Phase G — virtual keyboard awareness
+                    4ba5c26 feat: Wave 32 Phase F — mobile drawer + bottom sheet primitives
+                    2ad2456 feat: Wave 32 Phase E — hover-reveal alternatives at phone breakpoint
+                    953ef9c feat: Wave 32 Phase D — mobile panel state lifted to context
+                    db18e33 feat: Wave 32 Phase C — touch-target audit + scanner
+                    3190c84 feat: Wave 32 Phase B — mobile-primary preset population + resolver wiring
+                    9ba8788 feat: Wave 32 Phase A — mobile feature flag + viewport breakpoint hook
+                    fe5d29d docs: Wave 32 implementation plan
+                    adb641b ← Wave 31 handoff update
+                    98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `98bb859`. Working tree is clean.
+`origin/master` is caught up to `cae81f1`. Working tree is clean.
 
-### Waves done (15–31, all landed on origin/master)
+### Wave 32 feature flags (both default off)
+
+- `layout.mobilePrimary` (boolean, default `false`). When `true` AND viewport < 768px, LayoutPresetResolver routes to `mobile-primary`. Soak gate: 1-week phone dogfood + Playwright mobile tests green + zero open mobile regressions over last 3 days.
+- All mobile behaviours added this wave (swipe nav, Monaco fallback, drawer, bottom sheet, visual-viewport insets, tap-to-reveal) are gated on this flag combined with `useViewportBreakpoint() === 'phone'`. Desktop paths are untouched.
+
+### Wave 32 key primitives introduced
+
+- `useViewportBreakpoint()` — `'phone' | 'tablet' | 'desktop'`. Returns `'desktop'` in Electron mode (no `.web-mode` class on `<html>`).
+- `MobileLayoutContext` / `MobileLayoutProvider` — owns `activePanel`, drawer state, bottom-sheet state. Mounted inside `LayoutProviders` in `InnerAppLayout.tsx`. **Any test that renders `AppLayout` directly must wrap in `<MobileLayoutProvider>`** — `AppLayout.dnd.test.tsx` landed a post-hoc fix for this.
+- `MobileDrawer` + `MobileBottomSheet` + shared `MobileOverlayShell` (scrim, focus trap, scroll lock). No deps added.
+- `useSwipeNavigation()` — pointer-based, threshold + velocity, `data-no-swipe` opt-out, scrollable-child opt-out. Used by centre column (cycle MOBILE_NAV_ITEMS) and MobileBottomSheet (swipe-down dismiss).
+- `useVisualViewportInsets()` — sets `--keyboard-inset` CSS var (100ms debounce, 50px jitter guard). Mounted once in `App.tsx`, same layer as `useThemeRuntimeBootstrap`.
+- `useTapToReveal()` — phone-only `data-revealed` toggle. Desktop pass-through returns always-revealed.
+- `MonacoMobileFallback` — `<pre>` + `monaco.editor.colorizeElement` for readonly; `<textarea>` with `font-size:16px` for editable. Gated on phone + `layout.mobilePrimary`.
+- Touch-target scanner — `src/renderer/styles/mobile-touch-targets.test.ts` walks renderer components for `<button>` under 32px and fails with a list. Opt-out via `// touch-target-ok` trailing comment.
+- Multi-project `playwright.config.ts` — `electron` (existing) + `mobileWeb-iphone` + `mobileWeb-pixel`. `test:mobile` script runs the mobile projects. Specs under `e2e/mobile/` auto-skip if `out/web/index.html` is absent.
+
+### Waves done (15–32, all landed on origin/master)
 
 - **Waves 15–30** — see git log; scope per `roadmap/wave-NN-plan.md`.
+- **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off. Full details in `roadmap/wave-32-plan.md`. All 5555 vitest tests green at push time; lint 0 errors; tsc clean.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
