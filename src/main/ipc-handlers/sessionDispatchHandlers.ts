@@ -20,6 +20,7 @@ import { getWindowProjectRoots } from '../windowManager';
 
 type DispatchResult =
   | { success: true; jobId: string }
+  | { success: false; error: 'duplicate'; existingJobId: string }
   | { success: false; error: string };
 
 type ListResult =
@@ -103,6 +104,12 @@ function resolveWindowId(event: Electron.IpcMainInvokeEvent): number | undefined
   return (event.sender as any).getOwnerBrowserWindow?.()?.id as number | undefined;
 }
 
+function findDuplicateJob(clientRequestId: string): string | null {
+  const jobs = listJobs();
+  const match = jobs.find((j) => j.request.clientRequestId === clientRequestId);
+  return match?.id ?? null;
+}
+
 async function handleDispatchTask(
   event: Electron.IpcMainInvokeEvent,
   request: unknown,
@@ -110,6 +117,14 @@ async function handleDispatchTask(
 ): Promise<DispatchResult> {
   if (!validateRequest(request)) {
     return { success: false, error: 'invalid-request' };
+  }
+
+  if (request.clientRequestId) {
+    const existingJobId = findDuplicateJob(request.clientRequestId);
+    if (existingJobId) {
+      log.info('[dispatch] duplicate clientRequestId, returning existing job', existingJobId);
+      return { success: false, error: 'duplicate', existingJobId };
+    }
   }
 
   const winId = resolveWindowId(event);

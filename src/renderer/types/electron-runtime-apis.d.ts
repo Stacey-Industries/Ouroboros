@@ -327,6 +327,12 @@ export interface AppAPI {
   onNavigateToPermalink: (callback: (payload: { threadId: string; messageId?: string }) => void) => () => void;
   /** Wave 29 Phase B — open a native save dialog and write content to the chosen path. */
   saveFileDialog: (defaultName: string, content: string) => Promise<IpcResult & { cancelled?: boolean; filePath?: string }>;
+  /**
+   * Wave 34 Phase G — subscribe to WebSocket connection state changes.
+   * Web mode only: fires 'connected' | 'connecting' | 'disconnected'.
+   * In Electron mode this method does not exist on the API object.
+   */
+  onConnectionState?: (callback: (state: 'connected' | 'connecting' | 'disconnected') => void) => () => void;
 }
 
 export interface ShellAPI {

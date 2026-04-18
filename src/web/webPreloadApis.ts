@@ -172,6 +172,10 @@ export function buildAppApi(t: WebSocketTransport) {
       const cleanups = MENU_EVENTS.map((e) => t.on(e, () => cb(e)));
       return () => cleanups.forEach((c) => c());
     },
+    /** Wave 34 Phase G — connection state broadcast for offline dispatch. */
+    onConnectionState: (
+      cb: (state: 'connected' | 'connecting' | 'disconnected') => void,
+    ) => t.subscribeConnectionState(cb as Parameters<typeof t.subscribeConnectionState>[0]),
     minimizeWindow: desktopOnlyNoop(),
     toggleMaximizeWindow: desktopOnlyNoop(),
     closeWindow: desktopOnlyNoop(),

@@ -16,6 +16,8 @@
  *    { resumed, lost }. Lost tokens are rejected with ECONNLOST.
  */
 
+import { hideConnectionOverlay, showConnectionOverlay } from './webPreloadOverlay'
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface PendingRequest {
@@ -43,6 +45,11 @@ interface JsonRpcResponse {
 
 type EventCallback = (...args: unknown[]) => void
 
+// ── Connection State ──────────────────────────────────────────────────────────
+
+/** Public connection state type shared with the renderer hook. */
+export type ConnectionState = 'connected' | 'connecting' | 'disconnected' | 'electron'
+
 // ─── Binary Deserialization ──────────────────────────────────────────────────
 
 interface BinaryEnvelope {
@@ -64,28 +71,6 @@ function deserializeResult(result: unknown): unknown {
     return bytes
   }
   return result
-}
-
-// ─── Connection Overlay ──────────────────────────────────────────────────────
-
-export function showConnectionOverlay(message: string): void {
-  let overlay = document.getElementById('ws-connection-overlay')
-  if (!overlay) {
-    overlay = document.createElement('div')
-    overlay.id = 'ws-connection-overlay'
-    overlay.style.cssText = `
-      position: fixed; top: 0; left: 0; right: 0;
-      background: #f59e0b; color: #000; text-align: center;
-      padding: 4px; font-size: 12px; z-index: 99999;
-      font-family: system-ui, -apple-system, sans-serif;
-    `
-    document.body?.prepend(overlay)
-  }
-  overlay.textContent = message
-}
-
-function hideConnectionOverlay(): void {
-  document.getElementById('ws-connection-overlay')?.remove()
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -148,6 +133,7 @@ export class WebSocketTransport {
   private connected = false
   private connectPromise: Promise<void> | null = null
   private ticketFetcher: (() => Promise<string | null>) | null = null
+  private connectionStateListeners = new Set<(s: ConnectionState) => void>()
 
   constructor(
     private url: string,
@@ -191,6 +177,7 @@ export class WebSocketTransport {
     this.reconnectAttempts = 0
     this.connectPromise = null
     hideConnectionOverlay()
+    this.emitConnectionState('connected')
     this.sendResumeFrame()
     resolve()
   }
@@ -207,6 +194,7 @@ export class WebSocketTransport {
     this.connected = false
     this.connectPromise = null
     showConnectionOverlay('Disconnected — reconnecting...')
+    this.emitConnectionState('disconnected')
     this.rejectNonResumable()
     this.startResumableTimers()
     this.scheduleReconnect()
@@ -261,6 +249,22 @@ export class WebSocketTransport {
     }
     this.eventListeners.get(channel)!.add(callback)
     return () => { this.eventListeners.get(channel)?.delete(callback) }
+  }
+
+  /**
+   * Subscribe to connection state changes. Fires on: WS open → 'connected',
+   * reconnect schedule → 'connecting', WS close → 'disconnected'.
+   * Returns a cleanup function.
+   */
+  subscribeConnectionState(listener: (s: ConnectionState) => void): () => void {
+    this.connectionStateListeners.add(listener)
+    return () => { this.connectionStateListeners.delete(listener) }
+  }
+
+  private emitConnectionState(state: ConnectionState): void {
+    for (const listener of this.connectionStateListeners) {
+      try { listener(state) } catch { /* ignore handler errors */ }
+    }
   }
 
   private handleMessage(data: string): void {
@@ -380,6 +384,7 @@ export class WebSocketTransport {
   private scheduleReconnect(): void {
     const delay = Math.min(1000 * 2 ** this.reconnectAttempts, this.maxReconnectDelay)
     this.reconnectAttempts++
+    this.emitConnectionState('connecting')
     const reconnect = () => {
       if (!this.ticketFetcher) return this.connect().catch(() => {})
       return this.ticketFetcher()

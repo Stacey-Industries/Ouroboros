@@ -5,11 +5,16 @@
  * worktree name. On submit calls sessions.dispatchTask IPC and notifies the
  * parent via onSuccess / onError callbacks.
  *
- * Wave 34 Phase E.
+ * Wave 34 Phase E. Wave 34 Phase G: offline-queue branch.
  */
 
-import React, { useCallback, useId, useState } from 'react';
+import React, { useCallback, useEffect, useId, useState } from 'react';
 
+import {
+  enqueueOfflineDispatch,
+  listOfflineDispatches,
+} from '../../../web/offlineDispatchQueue';
+import { useWebConnectionState } from '../../hooks/useWebConnectionState';
 import type { DispatchRequest } from '../../types/electron-dispatch';
 import { WorktreeFields } from './DispatchForm.parts';
 import {
@@ -64,14 +69,14 @@ function buildRequest(state: FormState): DispatchRequest {
   return req;
 }
 
-// ── Submit handler ────────────────────────────────────────────────────────────
+// ── Submit handler (online) ───────────────────────────────────────────────────
 
 interface SubmitSetters {
   setSubmitting: (v: boolean) => void;
   setInlineError: (v: string | null) => void;
 }
 
-async function submitDispatch(
+async function submitOnline(
   request: DispatchRequest,
   onSuccess: (jobId: string) => void,
   onError: (msg: string) => void,
@@ -98,13 +103,46 @@ async function submitDispatch(
   }
 }
 
-// ── Submit buttons ────────────────────────────────────────────────────────────
+// ── Submit handler (offline) ──────────────────────────────────────────────────
 
-function SubmitArea({ submitting, onCancelSubmit }: { submitting: boolean; onCancelSubmit: () => void }): React.ReactElement {
+async function submitOffline(
+  request: DispatchRequest,
+  setInlineError: (v: string | null) => void,
+  setQueued: (v: boolean) => void,
+  onResetForm: () => void,
+): Promise<void> {
+  const result = await enqueueOfflineDispatch(request);
+  if ('error' in result) {
+    setInlineError('Too many offline dispatches queued — try again later.');
+    return;
+  }
+  setQueued(true);
+  onResetForm();
+}
+
+// ── Submit area ───────────────────────────────────────────────────────────────
+
+interface SubmitAreaProps {
+  submitting: boolean;
+  isOffline: boolean;
+  onCancelSubmit: () => void;
+}
+
+function SubmitArea({ submitting, isOffline, onCancelSubmit }: SubmitAreaProps): React.ReactElement {
+  const label = submitting
+    ? 'Dispatching…'
+    : isOffline
+    ? 'Save — send when online'
+    : 'Dispatch';
   return (
     <>
-      <button type="submit" disabled={submitting} style={{ ...PRIMARY_BUTTON_STYLE, opacity: submitting ? 0.6 : 1 }}>
-        {submitting ? 'Dispatching…' : 'Dispatch'}
+      <button
+        type="submit"
+        disabled={submitting}
+        style={{ ...PRIMARY_BUTTON_STYLE, opacity: submitting ? 0.6 : 1 }}
+        data-testid="dispatch-submit-btn"
+      >
+        {label}
       </button>
       {submitting && (
         <button type="button" onClick={onCancelSubmit} style={{ ...DANGER_BUTTON_STYLE, width: '100%', marginTop: '6px' }}>
@@ -115,39 +153,115 @@ function SubmitArea({ submitting, onCancelSubmit }: { submitting: boolean; onCan
   );
 }
 
-// ── DispatchForm ──────────────────────────────────────────────────────────────
+// ── Offline badge ─────────────────────────────────────────────────────────────
 
-export function DispatchForm({ projectRoots, onSuccess, onError }: DispatchFormProps): React.ReactElement {
+function OfflineBadge({ count }: { count: number }): React.ReactElement | null {
+  if (count === 0) return null;
+  return (
+    <p
+      style={{ fontSize: '11px', marginBottom: '8px', color: 'var(--status-warning)' }}
+      data-testid="offline-queue-badge"
+    >
+      {count} dispatch{count === 1 ? '' : 'es'} queued offline — will send on reconnect
+    </p>
+  );
+}
+
+// ── Form state hook ───────────────────────────────────────────────────────────
+
+interface FormHookResult {
+  id: string;
+  state: FormState;
+  set: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+  resetForm: () => void;
+  submitting: boolean;
+  setSubmitting: (v: boolean) => void;
+  queued: boolean;
+  setQueued: (v: boolean) => void;
+  inlineError: string | null;
+  setInlineError: (v: string | null) => void;
+  offlineCount: number;
+  setOfflineCount: (v: number) => void;
+}
+
+function useDispatchFormState(projectRoots: string[], connState: string): FormHookResult {
   const id = useId();
   const [submitting, setSubmitting] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [offlineCount, setOfflineCount] = useState(0);
   const [state, setState] = useState<FormState>({
     title: '', prompt: '', projectPath: projectRoots[0] ?? '', worktreeEnabled: false, worktreeName: '',
   });
+  const resetForm = useCallback(() => {
+    setState({ title: '', prompt: '', projectPath: projectRoots[0] ?? '', worktreeEnabled: false, worktreeName: '' });
+  }, [projectRoots]);
   const set = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setState((prev) => ({ ...prev, [key]: value }));
   }, []);
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  useEffect(() => {
+    void listOfflineDispatches().then((q) => setOfflineCount(q.length));
+  }, [connState]);
+  return { id, state, set, resetForm, submitting, setSubmitting, queued, setQueued, inlineError, setInlineError, offlineCount, setOfflineCount };
+}
+
+// ── Submit handler factory ────────────────────────────────────────────────────
+
+function buildSubmitHandler(
+  f: FormHookResult,
+  isOffline: boolean,
+  onSuccess: (jobId: string) => void,
+  onError: (msg: string) => void,
+) {
+  return async (e: React.FormEvent) => {
     e.preventDefault();
-    const validationError = validate(state);
-    if (validationError) { setInlineError(validationError); return; }
-    const request = buildRequest(state);
-    await submitDispatch(request, (jobId) => {
-      setState({ title: '', prompt: '', projectPath: projectRoots[0] ?? '', worktreeEnabled: false, worktreeName: '' });
-      onSuccess(jobId);
-    }, onError, { setSubmitting, setInlineError });
-  }, [state, projectRoots, onSuccess, onError]);
+    f.setQueued(false);
+    const validationError = validate(f.state);
+    if (validationError) { f.setInlineError(validationError); return; }
+    const request = buildRequest(f.state);
+    if (isOffline) {
+      await submitOffline(request, f.setInlineError, f.setQueued, f.resetForm);
+      void listOfflineDispatches().then((q) => f.setOfflineCount(q.length));
+      return;
+    }
+    const setters = { setSubmitting: f.setSubmitting, setInlineError: f.setInlineError };
+    await submitOnline(request, (jobId) => { f.resetForm(); onSuccess(jobId); }, onError, setters);
+  };
+}
+
+// ── DispatchForm ──────────────────────────────────────────────────────────────
+
+export function DispatchForm({ projectRoots, onSuccess, onError }: DispatchFormProps): React.ReactElement {
+  const connState = useWebConnectionState();
+  const isOffline = connState !== 'connected' && connState !== 'electron';
+  const f = useDispatchFormState(projectRoots, connState);
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => buildSubmitHandler(f, isOffline, onSuccess, onError)(e),
+    [f, isOffline, onSuccess, onError],
+  );
+
   return (
     <form onSubmit={handleSubmit} style={SCROLLABLE_BODY_STYLE} data-testid="dispatch-form">
-      <TitleField id={`${id}-title`} value={state.title} onChange={(v) => set('title', v)} />
-      <PromptField id={`${id}-prompt`} value={state.prompt} onChange={(v) => set('prompt', v)} />
-      <ProjectField id={`${id}-project`} roots={projectRoots} value={state.projectPath} onChange={(v) => set('projectPath', v)} />
-      <WorktreeFields enabled={state.worktreeEnabled} name={state.worktreeName}
-        onToggle={(v) => set('worktreeEnabled', v)} onNameChange={(v) => set('worktreeName', v)} />
-      {inlineError && (
-        <p role="alert" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-error)' }}>{inlineError}</p>
+      {isOffline && (
+        <p role="status" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-warning)', border: '1px solid var(--status-warning)', backgroundColor: 'var(--status-warning-subtle)', marginBottom: '8px' }}>
+          Desktop offline — your dispatch will send when we reconnect.
+        </p>
       )}
-      <SubmitArea submitting={submitting} onCancelSubmit={() => setSubmitting(false)} />
+      <OfflineBadge count={f.offlineCount} />
+      <TitleField id={`${f.id}-title`} value={f.state.title} onChange={(v) => f.set('title', v)} />
+      <PromptField id={`${f.id}-prompt`} value={f.state.prompt} onChange={(v) => f.set('prompt', v)} />
+      <ProjectField id={`${f.id}-project`} roots={projectRoots} value={f.state.projectPath} onChange={(v) => f.set('projectPath', v)} />
+      <WorktreeFields enabled={f.state.worktreeEnabled} name={f.state.worktreeName}
+        onToggle={(v) => f.set('worktreeEnabled', v)} onNameChange={(v) => f.set('worktreeName', v)} />
+      {f.inlineError && (
+        <p role="alert" style={{ ...ERROR_TEXT_STYLE, color: 'var(--status-error)' }}>{f.inlineError}</p>
+      )}
+      {f.queued && !f.inlineError && (
+        <p role="status" style={{ fontSize: '12px', color: 'var(--status-success)', marginTop: '6px' }} data-testid="queued-confirmation">
+          Queued locally — will dispatch on reconnect.
+        </p>
+      )}
+      <SubmitArea submitting={f.submitting} isOffline={isOffline} onCancelSubmit={() => f.setSubmitting(false)} />
     </form>
   );
 }

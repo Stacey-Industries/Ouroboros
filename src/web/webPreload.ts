@@ -33,7 +33,8 @@ import {
   buildTransactionApis,
   buildWindowExtensionsApis,
 } from './webPreloadApisSupplemental';
-import { showConnectionOverlay, WebSocketTransport } from './webPreloadTransport';
+import { showConnectionOverlay } from './webPreloadOverlay';
+import { WebSocketTransport } from './webPreloadTransport';
 
 // ─── Monaco Environment ──────────────────────────────────────────────────────
 

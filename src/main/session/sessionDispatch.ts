@@ -22,6 +22,11 @@ export interface DispatchRequest {
   projectPath: string;
   /** When present, the runner creates a new git worktree with this name. */
   worktreeName?: string;
+  /**
+   * Wave 34 Phase G — client-generated UUID for idempotency.
+   * Handler returns duplicate error if a job with this id already exists.
+   */
+  clientRequestId?: string;
 }
 
 export interface DispatchJob {
