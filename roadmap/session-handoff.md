@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 36 complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 37 complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35, 36 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 37 (Ecosystem Moat) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, 33b, 34, 35, 36, 37 are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 38 (Platform & Onboarding) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,29 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `dbe3833`. Working tree is clean. Full vitest: 6629/6629 passing.
+`origin/master` is caught up to `7011dd3`. Working tree is clean. Full vitest: 6857/6857 passing.
+
+### Wave 37 key primitives introduced
+
+- **System prompt cache:** `ptyAgentBridge.ts` caches first `system/init` stream-json event per session. Surfaced via `sessions:getSystemPrompt` IPC + `SystemPromptPane` in Settings.
+- **Prompt diff tracking:** `promptDiff.ts` + `promptDiffScheduler.ts` — SHA-256 of resolved prompt, 3-line threshold to avoid spam, `ecosystem:promptDiff` push event with toast + `PromptDiffView` unified diff.
+- **Usage exporter:** `usageExporter.ts` writes JSONL dump of cost history windowed by timestamp. `ecosystem:exportUsage` + `:lastExportInfo` IPC. `UsageExportPane` Settings UI. Generic format (no vendor lock-in).
+- **Signed marketplace:** Ed25519 signature verify via Node `crypto` (no deps). `marketplaceClient.ts` fetches manifest + bundles + verifies sigs before install. `trustedKeys.ts` has PLACEHOLDER pubkey — replace before production. `MarketplacePanel` renderer with offline fallback.
+- **Awesome Ouroboros:** 17 seed entries in `src/renderer/awesomeRef/awesomeEntries.ts` (hooks/slash-commands/mcp-configs/rules/skills). `AwesomeRefPanel` with search + category filter. Rules/skills install via existing `rulesAndSkills` IPC; hooks are manual (path varies).
+- **Docs:** `docs/ecosystem.md` covers all 5 features + security notes.
+
+### Wave 37 gotchas for next agent
+
+- **Marketplace placeholder key always rejects installs.** Tests mock `TRUSTED_PUBLIC_KEY_BASE64` to a test key. Replace `'REPLACE_WITH_PRODUCTION_KEY'` in `src/main/marketplace/trustedKeys.ts` before shipping; losing the matching private key = can't publish new bundles.
+- **`crypto.verify('ed25519', ...)` is Node-version-sensitive.** First argument MUST be `null` (Ed25519 is a one-shot scheme, no separate digest step). Fixed in Phase D.
+- **`lineDiff` emits deletes-before-inserts.** Wave 37 Phase F fix committed (`aa58d52`) — tests expected unified-diff convention; `reorderDeletionsFirst()` post-processing pass enforces.
+- **System prompt text never logged.** Enforce in any future main-process code that touches `systemPromptCache`.
+- **Usage export output path is non-literal-fs:** caller-provided. Wrapped via safe-write helper or lint-disable-with-justification. Don't log the written-row values.
+- **Promptdiff scheduler test isolation:** `mockSubscribe.mockReset()` in `beforeEach` to drain stale `mockImplementationOnce` queue (Phase F fix).
+
+### Pending for actual production use
+- Swap marketplace `TRUSTED_PUBLIC_KEY_BASE64` from placeholder to real key.
+- Host `marketplace/index.json` + revocation list at the documented URL once the first signed bundles exist.
 
 ### Wave 36 key primitives introduced
 
@@ -209,11 +231,12 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 - **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access.
 - **Wave 34** — Cross-Device Session Dispatch (8 phases A–H, v2.3.0). Flag `sessionDispatch.enabled` default off.
 - **Wave 35** — Theme Import & Customization (7 phases A–G, v2.3.1). Flag `theming.vsCodeImport` default on.
-- **Wave 36** — Multi-Provider Optionality (7 phases A–G, v2.4.0). Flag `providers.multiProvider` default off. All 6629 vitest tests green at push time.
+- **Wave 36** — Multi-Provider Optionality (7 phases A–G, v2.4.0). Flag `providers.multiProvider` default off.
+- **Wave 37** — Ecosystem Moat (6 phases A–F, v2.4.1). Flag `ecosystem.moat` default on. All 6857 vitest tests green at push time.
 
 ### Plans queued
 
-- None currently drafted. Wave 37 (Ecosystem Moat) is next — draft plan before implementing.
+- None currently drafted. Wave 38 (Platform & Onboarding) is next — draft plan before implementing.
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
