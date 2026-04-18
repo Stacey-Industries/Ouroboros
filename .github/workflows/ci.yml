@@ -7,8 +7,12 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -17,9 +21,39 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install native build prerequisites (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2t64 || \
+          sudo apt-get install -y build-essential python3 libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
+
       - run: npm ci
 
+      - name: Rebuild native modules (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm rebuild
+
       - name: Install better-sqlite3 for system Node (vitest needs Node ABI, not Electron ABI)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p /tmp/Temp/sqlite-fresh
+          cd /tmp/Temp/sqlite-fresh
+          npm init -y
+          npm install better-sqlite3
+
+      - name: Install better-sqlite3 for system Node (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $dir = "$env:LOCALAPPDATA\Temp\sqlite-fresh"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Set-Location $dir
+          npm init -y
+          npm install better-sqlite3
+
+      - name: Install better-sqlite3 for system Node (macOS)
+        if: matrix.os == 'macos-latest'
         run: |
           mkdir -p /tmp/Temp/sqlite-fresh
           cd /tmp/Temp/sqlite-fresh
@@ -36,5 +70,9 @@ jobs:
         timeout-minutes: 10
         run: npm run test -- --reporter=verbose
 
-      - name: Build
+      - name: Build (Electron)
         run: npm run build
+
+      - name: Smoke-test web build (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build:web
