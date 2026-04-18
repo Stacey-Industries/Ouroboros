@@ -46,3 +46,13 @@ Keystore generation and backup procedure, local release build via
 (`.github/workflows/mobile-android-release.yml`) with signed APK + AAB output, configuring
 GitHub Secrets, triggering a release via git tag, and the unsigned debug fallback. Also covers
 the Store submission gate checklist.
+
+## `docs/mobile-dispatch.md` — Cross-Device Session Dispatch user guide (Wave 34 Phase H)
+
+End-user documentation for the Cross-Device Dispatch feature: what it is, prerequisites (Mobile
+Access paired, `sessionDispatch.enabled = true`, at least one configured project root), step-by-step
+usage from the mobile secondary-views menu, offline behavior (up to 10 locally queued dispatches,
+automatic drain on reconnect, idempotent replay via `clientRequestId`), notification options
+(in-app banner always; FCM push documented as future work), how to cancel queued and running jobs,
+and a troubleshooting section covering the most common failure modes ("project path not allowed",
+queue cap exceeded, duplicate detection, stuck queue, desktop-restart mid-job).
