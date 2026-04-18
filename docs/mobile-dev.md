@@ -108,3 +108,19 @@ auto-submitted — always requires the user to tap Pair).
 - Keystore files (`*.keystore`, `*.jks`) are gitignored. Back up your release
   keystore to a password manager — losing it permanently prevents Play Store updates.
   See `docs/mobile-release.md` (created in Phase H) for the full signing workflow.
+
+---
+
+## iOS — deferred
+
+iOS requires a Mac for building and signing. All Capacitor bridge code is cross-platform; once
+the user has Mac access, the flow is:
+
+1. `npx cap add ios` (creates `ios/` folder).
+2. Open Xcode, select an Apple Developer team.
+3. Configure `Info.plist` with the `CFBundleURLTypes` entry for deep links (snippet:
+   `capacitor-resources/ios-info-plist.deeplink-snippet.txt`).
+4. Build and install via Xcode OR via fastlane.
+5. TestFlight distribution requires App Store Connect access.
+
+Estimated effort once unblocked: 1 week for a first build; 1-2 weeks for TestFlight-ready.
