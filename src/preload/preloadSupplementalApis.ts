@@ -21,6 +21,7 @@ import { aiApi, embeddingApi, observabilityApi, telemetryApi } from './preloadSu
 import { folderCrudApi } from './preloadSupplementalFolderApis';
 import { graphApi } from './preloadSupplementalGraphApis';
 import { layoutApi } from './preloadSupplementalLayoutApis';
+import { marketplaceApi } from './preloadSupplementalMarketplaceApis';
 import { pinnedContextApi } from './preloadSupplementalPinnedContextApis';
 import { profileCrudApi } from './preloadSupplementalProfileApis';
 import { researchApi } from './preloadSupplementalResearchApis';
@@ -38,7 +39,7 @@ type SupplementalApiKey =
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
   | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess'
-  | 'compareProviders' | 'ecosystem';
+  | 'compareProviders' | 'ecosystem' | 'marketplace';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -319,6 +320,7 @@ export const supplementalApis: SupplementalApis = {
       onChannel<CompareProvidersEventPayload>('compareProviders:event', callback),
   },
 
+  marketplace: marketplaceApi,
   // Wave 37 Phase B+C — ecosystem moat: prompt diff push event + usage exporter
   ecosystem: {
     onPromptDiff: (callback) =>

@@ -13,6 +13,10 @@ import type { CatalogEntry } from './channelCatalog.always';
  * scoped to project roots, diagnostics, status queries, and metadata.
  */
 export const READ_CATALOG: Record<string, CatalogEntry> = {
+  // ── marketplace (read) ──────────────────────────────────────────────────────
+  'marketplace:listBundles':          { class: 'paired-read', timeoutClass: 'short' },
+  'marketplace:revokedIds':           { class: 'paired-read', timeoutClass: 'short' },
+
   // ── ecosystem (read) ────────────────────────────────────────────────────────
   'ecosystem:lastExportInfo':         { class: 'paired-read', timeoutClass: 'short' },
 

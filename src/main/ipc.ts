@@ -57,6 +57,7 @@ import {
   registerGitHandlers,
   registerIdeToolsHandlers,
   registerLayoutHandlers,
+  registerMarketplaceHandlers,
   registerMcpHandlers,
   registerMcpStoreHandlers,
   registerMiscHandlers,
@@ -161,6 +162,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('compareProviders', () => registerCompareProvidersHandlers()),
     ...safeRegister('ecosystem', () => registerEcosystemHandlers()),
     ...safeRegister('usageExporter', () => registerUsageExporterHandlers()),
+    ...safeRegister('marketplace', () => registerMarketplaceHandlers()),
   ];
 }
 

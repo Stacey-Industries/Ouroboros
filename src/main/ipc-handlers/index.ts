@@ -31,6 +31,7 @@ export { cleanupFolderCrudHandlers, registerFolderCrudHandlers } from './folderC
 export { registerGitHandlers } from './git';
 export { registerIdeToolsHandlers } from './ideTools';
 export { cleanupLayoutHandlers, registerLayoutHandlers } from './layout';
+export { registerMarketplaceHandlers } from './marketplaceHandlers';
 export { registerMcpHandlers } from './mcp';
 export { registerMcpStoreHandlers } from './mcpStore';
 export { lspStopAll, registerMiscHandlers } from './misc';

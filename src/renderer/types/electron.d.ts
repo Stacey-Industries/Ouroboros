@@ -18,6 +18,7 @@ export * from './electron-foundation';
 export * from './electron-git';
 export * from './electron-graph';
 export * from './electron-layout';
+export * from './electron-marketplace';
 export * from './electron-mcp-store';
 export * from './electron-mobile-access';
 export * from './electron-observability';

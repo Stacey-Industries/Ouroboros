@@ -17,6 +17,7 @@ import type { IpcResult, ModelProvider, ModelSlotAssignments } from './electron-
 import type { GitAPI, ShellHistoryAPI, UpdaterAPI } from './electron-git';
 import type { GraphAPI } from './electron-graph';
 import type { LayoutAPI } from './electron-layout';
+import type { MarketplaceAPI } from './electron-marketplace';
 import type { McpStoreAPI } from './electron-mcp-store';
 import type { MobileAccessAPI } from './electron-mobile-access';
 import type {
@@ -278,6 +279,7 @@ export interface ElectronAPI {
   git: GitAPI;
   sessions: SessionsAPI;
   ecosystem: EcosystemAPI;
+  marketplace: MarketplaceAPI;
   cost: CostAPI;
   usage: UsageAPI;
   shellHistory: ShellHistoryAPI;

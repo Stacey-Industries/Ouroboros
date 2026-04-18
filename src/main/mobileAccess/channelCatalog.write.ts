@@ -14,6 +14,9 @@ import type { CatalogEntry } from './channelCatalog.always';
  * layout persistence, worktree operations, file writes under project roots.
  */
 export const WRITE_CATALOG: Record<string, CatalogEntry> = {
+  // ── marketplace (write) ─────────────────────────────────────────────────────
+  'marketplace:install':              { class: 'paired-write', timeoutClass: 'normal' },
+
   // ── ecosystem (write) ───────────────────────────────────────────────────────
   'ecosystem:exportUsage':            { class: 'paired-write', timeoutClass: 'long' },
 
