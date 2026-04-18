@@ -4,6 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import type { Theme } from '../../themes';
 import type { AppConfig } from '../../types/electron';
 import {
+  AccentPicker,
   AppearanceSectionVsCodeImport,
   BackgroundGradientSection,
   CustomCSSSection,
@@ -49,6 +50,7 @@ export function AppearanceSectionContent({
         onChange={(value) => onChange('showBgGradient', value)}
       />
       <GlassOpacitySlider draft={draft} onChange={onChange} />
+      <AccentPicker />
       <ThemeEditorSection
         activeThemeId={draft.activeTheme}
         draft={draft}

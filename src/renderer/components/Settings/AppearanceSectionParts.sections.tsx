@@ -1,3 +1,4 @@
+export { AccentPicker } from './AccentPicker';
 export { CustomCSSSection } from './AppearanceSectionCustomCSS';
 export {
   BackgroundGradientSection,
