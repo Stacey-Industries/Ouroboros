@@ -6,6 +6,9 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
+/** Wave 38 Phase A — platform-level settings: onboarding, language, update channel, crash reporter, changelog gate. */
+export interface PlatformConfig { onboarding?: { completed?: boolean }; language?: 'en' | 'es'; updateChannel?: 'stable' | 'beta'; crashReports?: { enabled?: boolean; webhookUrl?: string }; lastSeenVersion?: string }
+
 /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
 export interface ThemingConfig { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }
 
@@ -427,22 +430,10 @@ export interface AppConfig {
   /** Wave 37 Phase B+C — ecosystem moat: prompt-diff snapshot + usage export metadata.
    *  Wave 37 Phase D — systemPrompt from marketplace bundle install. */
   ecosystem?: { lastSeenSnapshot?: import('./promptDiff').PromptDiffSnapshot; lastExport?: { path: string; at: number; rows: number }; systemPrompt?: string };
-  /** Wave 30 Phase G — research auto-firing global defaults.
-   *  Wave 30 Phase I — threshold tuning knobs. */
-  researchSettings?: {
-    globalEnabled?: boolean;
-    defaultMode?: 'off' | 'conservative' | 'aggressive';
-    /** Staleness confidence floor (0.0–1.0). Default 0.0 (include all). */
-    stalenessConfidenceFloor?: number;
-    /** When false, factClaimPauseOrchestrator short-circuits. Default true. */
-    factClaimEnabled?: boolean;
-    /** Minimum pattern confidence for detectFactClaims. Default 'medium'. */
-    factClaimMinPatternConfidence?: 'high' | 'medium' | 'low';
-    /** When true, preToolResearchOrchestrator is telemetry-only. Default false. */
-    preEditDryRunOnly?: boolean;
-    /** Promise.race timeout ms for factClaimPauseOrchestrator. Default 800. */
-    maxLatencyMs?: number;
-  };
+  /** Wave 38 Phase A — platform-level settings: onboarding gate, language, update channel, crash reporter, changelog gate. */
+  platform?: PlatformConfig;
+  /** Wave 30 Phase G+I — research auto-firing global defaults + threshold tuning knobs. */
+  researchSettings?: { globalEnabled?: boolean; defaultMode?: 'off' | 'conservative' | 'aggressive'; stalenessConfidenceFloor?: number; factClaimEnabled?: boolean; factClaimMinPatternConfidence?: 'high' | 'medium' | 'low'; preEditDryRunOnly?: boolean; maxLatencyMs?: number };
 }
 
 export const store = new Store<AppConfig>({
