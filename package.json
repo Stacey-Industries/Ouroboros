@@ -35,14 +35,15 @@
     "audit:snapshot": "node scripts/audit-snapshot-safety.mjs",
     "bench:indexer": "node scripts/benchmark-indexer.mjs",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
-    "build:web": "vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
+    "build:changelog": "node tools/build-changelog.js",
+    "build:web": "npm run build:changelog && vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "cap:build:android": "npm run build:web && cap sync android",
     "cap:build:android:release": "node ./tools/build-android-release.js",
     "cap:build:android:debug": "npm run build:web && cap sync android",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty"
+    "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty && node tools/build-changelog.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

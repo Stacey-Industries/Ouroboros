@@ -13,6 +13,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { hideSplashScreen, initKeyboardListeners, isNative } from '../web/capacitor';
+import { ChangelogDrawer } from './components/Changelog/ChangelogDrawer';
 import type { Command } from './components/CommandPalette/types';
 import { useCommandPalette } from './components/CommandPalette/useCommandPalette';
 import { useCommandRegistry } from './components/CommandPalette/useCommandRegistry';
@@ -297,6 +298,7 @@ function ConfiguredApp({
       <WebFolderBrowser />
       <System2IndexProgress />
       <FirstRunTourGate />
+      <ChangelogDrawer />
     </ToastProvider>
   );
 }

@@ -88,6 +88,9 @@ vitest-results.json
 # Scheduled task runtime state
 .claude/scheduled_tasks.lock
 
+# Generated renderer modules (auto-built from source)
+src/renderer/generated/
+
 # Python artifacts (tools/train-router.py syntax-check cache)
 __pycache__/
 *.pyc
