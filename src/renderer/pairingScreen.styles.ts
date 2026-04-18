@@ -93,6 +93,20 @@ export const S = {
     marginTop: '4px',
   },
   buttonDisabled: { opacity: 0.6, cursor: 'not-allowed' as const },
+  /** "Scan QR code" button — native only, secondary style, min 44px touch target. */
+  scanButton: {
+    width: '100%',
+    minHeight: '44px',
+    padding: '10px',
+    background: 'transparent',
+    color: '#388bfd', // hardcoded: pre-token-system render — accent blue
+    border: '1px solid #388bfd', // hardcoded: pre-token-system render — accent blue
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginTop: '8px',
+  },
   error: {
     marginTop: '12px',
     padding: '10px 12px',

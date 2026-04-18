@@ -4,6 +4,7 @@
  *
  * Wave 33a Phase H — updated for Wave 33b Phase D async token storage.
  * Wave 33b Phase E — deep-link / URL query prefill (no auto-submit, highlight).
+ * Wave 33b Phase F — native QR scanner button + scan outcome dispatch.
  *
  * Changes from Phase H:
  *  - tokenStorage is mocked (vi.mock) — fingerprint + token no longer go
@@ -26,6 +27,8 @@ const mocks = vi.hoisted(() => ({
     host: string; port: string; code: string; fingerprint: string;
   }),
   initDeepLinkListener: vi.fn(async () => () => undefined),
+  isNative: vi.fn(() => false),
+  scanPairingQr: vi.fn(async (): Promise<import('../web/capacitor/qrScanner').ScanOutcome> => ({ kind: 'unsupported' })),
 }));
 
 vi.mock('../web/tokenStorage', () => ({
@@ -40,6 +43,14 @@ vi.mock('../web/capacitor/deepLinks', () => ({
     mocks.readPairingQueryParams(...args),
   initDeepLinkListener: (...args: Parameters<typeof mocks.initDeepLinkListener>) =>
     mocks.initDeepLinkListener(...args),
+}));
+
+vi.mock('../web/capacitor/index', () => ({
+  isNative: () => mocks.isNative(),
+}));
+
+vi.mock('../web/capacitor/qrScanner', () => ({
+  scanPairingQr: (...args: []) => mocks.scanPairingQr(...args),
 }));
 
 const mockFetch = vi.fn();
@@ -114,6 +125,9 @@ afterEach(() => {
   // Reset deep-link mocks to no-op defaults
   mocks.readPairingQueryParams.mockReturnValue(null);
   mocks.initDeepLinkListener.mockResolvedValue(() => undefined);
+  // Reset Phase F mocks
+  mocks.isNative.mockReturnValue(false);
+  mocks.scanPairingQr.mockResolvedValue({ kind: 'unsupported' });
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -380,5 +394,126 @@ describe('PairingScreen deep-link prefill (Wave 33b Phase E)', () => {
     const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
     expect(codeInput.value).toBe('');
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Phase F: native QR scanner button ────────────────────────────────────────
+
+describe('PairingScreen QR scanner button (Wave 33b Phase F)', () => {
+  beforeEach(() => {
+    mocks.getDeviceFingerprint.mockResolvedValue('test-fingerprint-uuid');
+    mocks.initDeepLinkListener.mockResolvedValue(() => undefined);
+  });
+
+  it('does NOT render Scan QR button when isNative() is false', async () => {
+    mocks.isNative.mockReturnValue(false);
+    renderPairing();
+    await waitForFingerprintReady();
+    expect(screen.queryByRole('button', { name: /scan qr/i })).toBeNull();
+  });
+
+  it('renders Scan QR button when isNative() is true', async () => {
+    mocks.isNative.mockReturnValue(true);
+    renderPairing();
+    await waitForFingerprintReady();
+    expect(screen.getByRole('button', { name: /scan qr/i })).toBeTruthy();
+  });
+
+  it('disables the scan button and shows "Opening scanner…" while scanning', async () => {
+    mocks.isNative.mockReturnValue(true);
+    // scanPairingQr never resolves during this test
+    mocks.scanPairingQr.mockReturnValue(new Promise(() => undefined));
+    renderPairing();
+    await waitForFingerprintReady();
+
+    const btn = screen.getByRole('button', { name: /scan qr/i }) as HTMLButtonElement;
+    fireEvent.click(btn);
+
+    // aria-label stays "Scan QR code"; text content changes to "Opening scanner…"
+    await waitFor(() => {
+      expect(btn.textContent).toMatch(/opening scanner/i);
+    });
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('fills code field on success outcome — does NOT auto-submit', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.scanPairingQr.mockResolvedValue({
+      kind: 'success' as const,
+      payload: { host: '10.0.0.1', port: '7890', code: '042819', fingerprint: 'fp' },
+      rawValue: 'ouroboros://pair?host=10.0.0.1&port=7890&code=042819&fingerprint=fp',
+    });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    fireEvent.click(screen.getByRole('button', { name: /scan qr/i }));
+
+    await waitFor(() => {
+      const codeInput = screen.getByLabelText(/pairing code/i) as HTMLInputElement;
+      expect(codeInput.value).toBe('042819');
+    });
+    // Security: must NOT auto-submit
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('shows permission error on denied outcome', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.scanPairingQr.mockResolvedValue({ kind: 'denied' as const });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    fireEvent.click(screen.getByRole('button', { name: /scan qr/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toMatch(/camera permission/i);
+    });
+  });
+
+  it('shows no error on cancelled outcome', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.scanPairingQr.mockResolvedValue({ kind: 'cancelled' as const });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    fireEvent.click(screen.getByRole('button', { name: /scan qr/i }));
+
+    // Wait for scan to complete (button re-enables)
+    await waitFor(() => {
+      const btn = screen.getByRole('button', { name: /scan qr/i }) as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows format error on invalid-format outcome', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.scanPairingQr.mockResolvedValue({
+      kind: 'invalid-format' as const,
+      rawValue: 'https://example.com',
+    });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    fireEvent.click(screen.getByRole('button', { name: /scan qr/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toMatch(/valid pairing link/i);
+    });
+  });
+
+  it('shows error message on error outcome', async () => {
+    mocks.isNative.mockReturnValue(true);
+    mocks.scanPairingQr.mockResolvedValue({
+      kind: 'error' as const,
+      message: 'Camera hardware failure',
+    });
+    renderPairing();
+    await waitForFingerprintReady();
+
+    fireEvent.click(screen.getByRole('button', { name: /scan qr/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toMatch(/camera hardware failure/i);
+    });
   });
 });

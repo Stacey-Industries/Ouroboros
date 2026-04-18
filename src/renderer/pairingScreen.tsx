@@ -8,13 +8,16 @@
  *
  * Bundle target: < 12 KB gzipped (shipped inside main bundle per Wave 33a plan).
  *
- * Wave 33a Phase H / Wave 33b Phase E (deep-link prefill).
+ * Wave 33a Phase H / Wave 33b Phase E (deep-link prefill) / Wave 33b Phase F (QR scanner).
  */
 
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import { initDeepLinkListener, readPairingQueryParams } from '../web/capacitor/deepLinks';
+import { isNative } from '../web/capacitor/index';
+import { scanPairingQr } from '../web/capacitor/qrScanner';
 import { getDeviceFingerprint, setRefreshToken } from '../web/tokenStorage';
+import { buildScanOutcomeHandler } from './pairingScreen.scanHandler';
 import { FIELD_HIGHLIGHT_BORDER, PREFILL_HIGHLIGHT_MS, S } from './pairingScreen.styles';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -81,7 +84,7 @@ function usePrefill(
       deepLinkCleanup?.();
       if (highlightTimer !== null) clearTimeout(highlightTimer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- setters are stable refs
+  }, []); // setters are stable refs (useRef + useState setters never change identity)
 }
 
 // ─── Error message normalizer ─────────────────────────────────────────────────
@@ -241,9 +244,12 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
 interface ScreenState {
   code: string; setCode: (v: string) => void;
   label: string; setLabel: (v: string) => void;
-  highlight: boolean;
+  highlight: boolean; setHighlight: (v: boolean) => void;
+  isScanning: boolean; setIsScanning: (v: boolean) => void;
+  errorMsg: string; setErrorMsg: (v: string) => void;
   fingerprint: string;
   codeRef: React.RefObject<HTMLInputElement | null>;
+  highlightTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }
 
 function usePairingScreenState(): ScreenState {
@@ -251,7 +257,10 @@ function usePairingScreenState(): ScreenState {
   const [label, setLabel] = useState('Mobile device');
   const [fingerprint, setFingerprint] = useState('');
   const [highlight, setHighlight] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const codeRef = useRef<HTMLInputElement | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   usePrefill(setCode, setHighlight);
   useEffect(() => { codeRef.current?.focus(); }, []);
   useEffect(() => {
@@ -259,40 +268,98 @@ function usePairingScreenState(): ScreenState {
       .then(setFingerprint)
       .catch(() => { setFingerprint('unknown'); });
   }, []);
-  return { code, setCode, label, setLabel, highlight, fingerprint, codeRef };
+  return {
+    code, setCode, label, setLabel,
+    highlight, setHighlight,
+    isScanning, setIsScanning,
+    errorMsg, setErrorMsg,
+    fingerprint, codeRef, highlightTimeoutRef,
+  };
+}
+
+// ─── Scan QR button ───────────────────────────────────────────────────────────
+
+interface ScanQrButtonProps {
+  isScanning: boolean;
+  onScan: () => void;
+}
+
+function ScanQrButton({ isScanning, onScan }: ScanQrButtonProps): React.ReactElement {
+  return (
+    <button
+      type="button"
+      style={isScanning ? { ...S.scanButton, ...S.buttonDisabled } : S.scanButton}
+      disabled={isScanning}
+      onClick={onScan}
+      aria-label="Scan QR code"
+    >
+      {isScanning ? 'Opening scanner\u2026' : 'Scan QR code'}
+    </button>
+  );
+}
+
+// ─── Scan wiring hook ─────────────────────────────────────────────────────────
+
+function useScanQr(state: ScreenState): () => void {
+  const { setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef } = state;
+  return useCallback(() => {
+    setIsScanning(true);
+    setErrorMsg('');
+    const handler = buildScanOutcomeHandler({
+      setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef,
+    });
+    void scanPairingQr().then(handler);
+  }, [setCode, setHighlight, setErrorMsg, setIsScanning, highlightTimeoutRef]);
+}
+
+// ─── Card body ────────────────────────────────────────────────────────────────
+
+interface PairingCardProps {
+  formProps: PairingFormProps;
+  isScanning: boolean;
+  displayError: string;
+  onScan: () => void;
+}
+
+function PairingCard({ formProps, isScanning, displayError, onScan }: PairingCardProps): React.ReactElement {
+  return (
+    <div style={S.card}>
+      <div style={S.wordmark}>Ouroboros</div>
+      <h1 style={S.heading}>Pair this device</h1>
+      <p style={S.sub}>
+        Enter the 6-digit code shown in Desktop &rarr; Settings &rarr; Mobile Access.
+      </p>
+      <PairingForm {...formProps} />
+      {isNative() && <ScanQrButton isScanning={isScanning} onScan={onScan} />}
+      {displayError && (
+        <div style={S.error} role="alert">{humanizeError(displayError)}</div>
+      )}
+    </div>
+  );
 }
 
 // ─── Root component ────────────────────────────────────────────────────────────
 
 export function PairingScreen({ host, port }: PairingScreenProps): React.ReactElement {
-  const { code, setCode, label, setLabel, highlight, fingerprint, codeRef } = usePairingScreenState();
-  const { loading, errorMsg, handleSubmit } = usePairingSubmit(code, label, fingerprint);
+  const state = usePairingScreenState();
+  const { code, setCode, label, setLabel, highlight, isScanning, errorMsg, fingerprint, codeRef } = state;
+  const { loading, errorMsg: submitError, handleSubmit } = usePairingSubmit(code, label, fingerprint);
   const displayHost = port && port !== 80 && port !== 443 ? `${host}:${port}` : host;
-  const formBusy = loading || fingerprint === '';
+  const handleScan = useScanQr(state);
+  const formProps: PairingFormProps = {
+    code, label, loading: loading || fingerprint === '',
+    displayHost, highlight, codeRef,
+    onCodeChange: setCode, onLabelChange: setLabel, onSubmit: handleSubmit,
+  };
   return (
     <div style={S.root}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={S.card}>
-        <div style={S.wordmark}>Ouroboros</div>
-        <h1 style={S.heading}>Pair this device</h1>
-        <p style={S.sub}>
-          Enter the 6-digit code shown in Desktop &rarr; Settings &rarr; Mobile Access.
-        </p>
-        <PairingForm
-          code={code}
-          label={label}
-          loading={formBusy}
-          displayHost={displayHost}
-          highlight={highlight}
-          codeRef={codeRef}
-          onCodeChange={setCode}
-          onLabelChange={setLabel}
-          onSubmit={handleSubmit}
-        />
-        {errorMsg && (
-          <div style={S.error} role="alert">{humanizeError(errorMsg)}</div>
-        )}
-      </div>
+      <PairingCard
+        formProps={formProps}
+        isScanning={isScanning}
+        displayError={submitError || errorMsg}
+        onScan={handleScan}
+      />
     </div>
   );
 }
