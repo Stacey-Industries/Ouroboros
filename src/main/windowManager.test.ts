@@ -561,42 +561,52 @@ describe('persistWindowSessions', () => {
     vi.resetModules();
   });
 
-  it('writes empty array when no windows are registered', () => {
+  it('does NOT write to windowSessions key (write-path removed)', () => {
     wm.persistWindowSessions();
-    expect(mocks.setConfigValue).toHaveBeenCalledWith('windowSessions', []);
+    const legacyCall = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'windowSessions');
+    expect(legacyCall).toBeUndefined();
   });
 
-  it('skips destroyed windows', () => {
-    wm.createWindow('/proj/a');
-    mocks.isDestroyed.mockReturnValue(true);
-    wm.persistWindowSessions();
-    expect(mocks.setConfigValue).toHaveBeenCalledWith('windowSessions', []);
-  });
-
-  it('skips windows with no project roots', () => {
+  it('does not write sessionsData when no live windows have projectRoot', () => {
     wm.createWindow();
     mocks.isDestroyed.mockReturnValue(false);
     wm.persistWindowSessions();
-    expect(mocks.setConfigValue).toHaveBeenCalledWith('windowSessions', []);
+    const call = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'sessionsData');
+    expect(call).toBeUndefined();
   });
 
-  it('serializes bounds and isMaximized for valid windows', () => {
+  it('updates sessionsData bounds for matching projectRoot', () => {
+    type SessionLike = { projectRoot: string; bounds?: Record<string, unknown> };
+    mocks.getConfigValue.mockImplementation((key: string) => {
+      if (key === 'sessionsData') {
+        return [{ projectRoot: '/proj/real', id: 's1', bounds: undefined }] as SessionLike[];
+      }
+      return undefined;
+    });
     wm.createWindow('/proj/real');
     mocks.isDestroyed.mockReturnValue(false);
     mocks.isMaximized.mockReturnValue(true);
     mocks.getBounds.mockReturnValue({ x: 50, y: 60, width: 1440, height: 900 });
     wm.persistWindowSessions();
-    const sessionCall = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'windowSessions');
-    expect(sessionCall).toBeDefined();
-    type Session = {
-      projectRoots: string[];
-      bounds: { x: number; y: number; width: number; height: number; isMaximized: boolean };
-    };
-    const sessions = sessionCall![1] as Session[];
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0].projectRoots).toEqual(['/proj/real']);
-    expect(sessions[0].bounds.isMaximized).toBe(true);
-    expect(sessions[0].bounds.width).toBe(1440);
+    const call = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'sessionsData');
+    expect(call).toBeDefined();
+    const updated = call![1] as SessionLike[];
+    expect(updated[0].bounds).toMatchObject({ width: 1440, isMaximized: true });
+  });
+
+  it('skips destroyed windows when updating sessionsData', () => {
+    type SessionLike = { projectRoot: string; bounds?: Record<string, unknown> };
+    mocks.getConfigValue.mockImplementation((key: string) => {
+      if (key === 'sessionsData') {
+        return [{ projectRoot: '/proj/a', id: 's1' }] as SessionLike[];
+      }
+      return undefined;
+    });
+    wm.createWindow('/proj/a');
+    mocks.isDestroyed.mockReturnValue(true);
+    wm.persistWindowSessions();
+    const call = mocks.setConfigValue.mock.calls.find((c) => c[0] === 'sessionsData');
+    expect(call).toBeUndefined();
   });
 });
 
@@ -625,35 +635,49 @@ describe('restoreWindowSessions', () => {
     expect(wm.restoreWindowSessions()).toEqual([]);
   });
 
-  it('creates windows for each saved session with roots', () => {
+  it('restores from sessionsData (canonical store) when sessions have bounds', () => {
     mocks.getConfigValue.mockImplementation((key: string) => {
-      if (key === 'windowSessions') {
+      if (key === 'sessionsData') {
         return [
-          { projectRoots: ['/proj/a'], bounds: undefined },
-          { projectRoots: ['/proj/b'], bounds: undefined },
+          { projectRoot: '/proj/a', id: 's1',
+            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false } },
+          { projectRoot: '/proj/b', id: 's2',
+            bounds: { x: 0, y: 0, width: 1280, height: 800, isMaximized: false } },
         ];
       }
       return undefined;
     });
-    const windows = wm.restoreWindowSessions();
-    expect(windows).toHaveLength(2);
+    const wins = wm.restoreWindowSessions();
+    expect(wins).toHaveLength(2);
     expect(wm.getWindowCount()).toBe(2);
   });
 
-  it('sets projectRoots on restored windows', () => {
+  it('falls back to windowSessions when sessionsData has no boundsed sessions', () => {
     mocks.getConfigValue.mockImplementation((key: string) => {
+      if (key === 'sessionsData') return [{ projectRoot: '/proj/a', id: 's1' }];
       if (key === 'windowSessions') {
-        return [{ projectRoots: ['/proj/restored', '/proj/extra'], bounds: undefined }];
+        return [{ projectRoots: ['/proj/legacy'], bounds: undefined }];
       }
       return undefined;
     });
-    wm.restoreWindowSessions();
+    const wins = wm.restoreWindowSessions();
+    expect(wins).toHaveLength(1);
     const managed = wm.getAllWindows()[0];
-    expect(managed.projectRoots).toEqual(['/proj/restored', '/proj/extra']);
-    expect(managed.projectRoot).toBe('/proj/restored');
+    expect(managed.projectRoot).toBe('/proj/legacy');
   });
 
-  it('skips sessions with empty projectRoots', () => {
+  it('skips sessionsData sessions without bounds', () => {
+    mocks.getConfigValue.mockImplementation((key: string) => {
+      if (key === 'sessionsData') {
+        return [{ projectRoot: '/proj/a', id: 's1' }];
+      }
+      return undefined;
+    });
+    const wins = wm.restoreWindowSessions();
+    expect(wins).toHaveLength(0);
+  });
+
+  it('skips sessions with empty projectRoots (legacy path)', () => {
     mocks.getConfigValue.mockImplementation((key: string) => {
       if (key === 'windowSessions') {
         return [
@@ -663,18 +687,19 @@ describe('restoreWindowSessions', () => {
       }
       return undefined;
     });
-    const windows = wm.restoreWindowSessions();
-    expect(windows).toHaveLength(1);
+    const wins = wm.restoreWindowSessions();
+    expect(wins).toHaveLength(1);
   });
 
-  it('applies validated bounds when session has valid bounds', () => {
+  it('applies validated bounds when sessionsData session has valid bounds', () => {
     mocks.getAllDisplays.mockReturnValue([
       { workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
     ]);
     mocks.getConfigValue.mockImplementation((key: string) => {
-      if (key === 'windowSessions') {
+      if (key === 'sessionsData') {
         return [{
-          projectRoots: ['/proj/bounded'],
+          projectRoot: '/proj/bounded',
+          id: 's1',
           bounds: { x: 100, y: 100, width: 1280, height: 800, isMaximized: false },
         }];
       }

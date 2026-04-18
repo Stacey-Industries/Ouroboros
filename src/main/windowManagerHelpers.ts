@@ -7,11 +7,12 @@
 import { BrowserWindow, screen, session } from 'electron';
 import path from 'path';
 
-import type { WindowBounds } from './config';
+import type { WindowBounds, WindowSession } from './config';
 import { getConfigValue, setConfigValue } from './config';
 import { describeFdPressure } from './fdPressureDiagnostics';
 import log from './logger';
 import { markStartup } from './perfMetrics';
+import type { Session } from './session/session';
 
 // mica-electron: native Windows DWM acrylic/mica effects.
 // Wrapped in try/catch because mica-electron calls app.commandLine at module
@@ -263,4 +264,45 @@ export function ensureCSP(): void {
       },
     });
   });
+}
+
+// ─── Session persistence helpers (Wave 40 Phase D) ──────────────────────────
+
+/** Capture current bounds + maximized state from a live BrowserWindow. */
+export function captureWindowBounds(win: BrowserWindow): Session['bounds'] {
+  const b = win.getBounds();
+  return { ...b, isMaximized: win.isMaximized() };
+}
+
+/** Apply persisted bounds to a window, validating against current display geometry. */
+export function applyPersistedBounds(win: BrowserWindow, bounds: WindowSession['bounds']): void {
+  if (!bounds) return;
+  const v = validateBounds(bounds);
+  if (!v) return;
+  win.setBounds({ x: v.x, y: v.y, width: v.width, height: v.height });
+  if (v.isMaximized) win.maximize();
+}
+
+/**
+ * Merge live bounds (keyed by projectRoot) into an existing sessionsData array.
+ * Returns a new array; does not mutate the input.
+ */
+export function mergeBoundsIntoSessions(
+  existing: Session[],
+  byRoot: Map<string, Session['bounds']>,
+): Session[] {
+  return existing.map((s) => {
+    const updated = byRoot.get(s.projectRoot);
+    return updated ? { ...s, bounds: updated } : s;
+  });
+}
+
+/**
+ * Project active Session records that have bounds into WindowSession shape
+ * for use by the window restore path.
+ */
+export function sessionsDataToWindowSessions(sessionsData: Session[]): WindowSession[] {
+  return sessionsData
+    .filter((s) => s.projectRoot && s.bounds)
+    .map((s) => ({ projectRoots: [s.projectRoot], bounds: s.bounds }));
 }

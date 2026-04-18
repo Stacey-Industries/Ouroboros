@@ -13,7 +13,7 @@ import { getConfigValue, setConfigValue, type WindowSession } from './config';
 import { acquireContextLayer, releaseContextLayer } from './contextLayer/contextLayerController';
 import { registerIpcHandlers } from './ipc';
 import { killPtySessionsForWindow } from './pty';
-import { makeSession } from './session/session';
+import { makeSession, type Session } from './session/session';
 import { getSessionStore } from './session/sessionStore';
 import {
   clearWindowActiveSession,
@@ -22,15 +22,19 @@ import {
 import { buildChatWindowBounds, loadChatWindowContent } from './windowManagerChatWindow';
 import {
   applyMicaEffect,
+  applyPersistedBounds,
+  captureWindowBounds,
   createBoundsSaveHandler,
   ensureCSP,
   getInitialWindowPlacement,
   getInitialWindowSize,
   loadWindowContent,
   markWindowMaximized,
+  mergeBoundsIntoSessions,
   MicaBrowserWindow,
   outMainDir,
   saveWindowBounds,
+  sessionsDataToWindowSessions,
   setupReadyToShow,
   validateBounds,
   type WindowCreationState,
@@ -323,30 +327,28 @@ export function getAllActiveWindows(): BrowserWindow[] {
 
 // ─── Session persistence ────────────────────────────────────────────────────
 
-function collectWindowSessions(): WindowSession[] {
-  const sessions: WindowSession[] = [];
+function buildLiveBoundsByRoot(): Map<string, Session['bounds']> {
+  const map = new Map<string, Session['bounds']>();
   for (const managed of windows.values()) {
     if (managed.win.isDestroyed()) continue;
-    if (managed.projectRoots.length === 0) continue;
-    const bounds = managed.win.getBounds();
-    sessions.push({
-      projectRoots: managed.projectRoots,
-      bounds: { ...bounds, isMaximized: managed.win.isMaximized() },
-    });
+    if (!managed.projectRoot) continue;
+    map.set(managed.projectRoot, captureWindowBounds(managed.win));
   }
-  return sessions;
+  return map;
 }
 
+/**
+ * Persist current window bounds into sessionsData (canonical store).
+ * No longer writes to the legacy windowSessions key (Wave 40 Phase D).
+ */
 export function persistWindowSessions(): void {
-  try { setConfigValue('windowSessions', collectWindowSessions()); } catch { /* best-effort */ }
-}
-
-function applySessionBounds(win: BrowserWindow, bounds: WindowSession['bounds']): void {
-  if (!bounds) return;
-  const v = validateBounds(bounds);
-  if (!v) return;
-  win.setBounds({ x: v.x, y: v.y, width: v.width, height: v.height });
-  if (v.isMaximized) win.maximize();
+  try {
+    const existing = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
+    if (!Array.isArray(existing)) return;
+    const byRoot = buildLiveBoundsByRoot();
+    if (byRoot.size === 0) return;
+    setConfigValue('sessionsData', mergeBoundsIntoSessions(existing, byRoot) as never);
+  } catch { /* best-effort */ }
 }
 
 function restoreOneSession(session: WindowSession): BrowserWindow | null {
@@ -357,12 +359,21 @@ function restoreOneSession(session: WindowSession): BrowserWindow | null {
     managed.projectRoots = session.projectRoots;
     managed.projectRoot = session.projectRoots[0] ?? null;
   }
-  applySessionBounds(win, session.bounds);
+  applyPersistedBounds(win, session.bounds);
   return win;
 }
 
+/**
+ * Restore windows on startup.
+ * Reads from sessionsData (canonical store) first; falls back to the legacy
+ * windowSessions key for one-release transition (Wave 40 Phase D).
+ */
 export function restoreWindowSessions(): BrowserWindow[] {
-  const sessions = getConfigValue('windowSessions') ?? [];
-  if (!Array.isArray(sessions) || sessions.length === 0) return [];
-  return sessions.map(restoreOneSession).filter((w): w is BrowserWindow => w !== null);
+  const sessionsData = (getConfigValue('sessionsData') as Session[] | undefined) ?? [];
+  const canonical = Array.isArray(sessionsData) ? sessionsDataToWindowSessions(sessionsData) : [];
+  const source = canonical.length > 0
+    ? canonical
+    : (getConfigValue('windowSessions') as WindowSession[] | undefined) ?? [];
+  if (!Array.isArray(source) || source.length === 0) return [];
+  return source.map(restoreOneSession).filter((w): w is BrowserWindow => w !== null);
 }
