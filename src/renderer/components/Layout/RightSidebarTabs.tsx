@@ -19,6 +19,7 @@ import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_AWESOME_REF_EVENT,
   OPEN_COMPARE_PROVIDERS_EVENT,
   OPEN_DISPATCH_EVENT,
 } from '../../hooks/appEventNames';
@@ -27,6 +28,7 @@ import type { AgentChatThreadRecord } from '../../types/electron';
 import { ChatHistoryPanel } from '../AgentChat/ChatHistoryPanel';
 import { CompareProviders } from '../AgentChat/CompareProviders';
 import { isDraftThreadId } from '../AgentChat/useAgentChatDraftPersistence';
+import { AwesomeRefPanel } from '../AwesomeRef/AwesomeRefPanel';
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { ChatPanelHeader } from './RightSidebarTabs.header';
 import { RecentThreadTabs, SecondaryViewHeader } from './RightSidebarTabs.panels';
@@ -196,6 +198,18 @@ function useComparePanel(multiProvider: boolean) {
   return { isOpen, close: () => setIsOpen(false) };
 }
 
+// ── Awesome Ouroboros panel ───────────────────────────────────────────────────
+
+function useAwesomeRefPanel() {
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    function handleOpen(): void { setIsOpen(true); }
+    window.addEventListener(OPEN_AWESOME_REF_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_AWESOME_REF_EVENT, handleOpen);
+  }, []);
+  return { isOpen, close: () => setIsOpen(false) };
+}
+
 // ── Phone bottom sheet for secondary views ────────────────────────────────────
 
 const SHEET_VIEW_LABELS: Record<string, string> = {
@@ -237,6 +251,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
   const viewContent = buildViewContent(props);
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
   const { isOpen: compareOpen, close: closeCompare } = useComparePanel(multiProvider);
+  const { isOpen: awesomeOpen, close: closeAwesome } = useAwesomeRefPanel();
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {activeView === 'chat' ? (
@@ -258,6 +273,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
         onSelectThread={onSelectThread} onDeleteThread={onDeleteThread} />
       {isPhone && <MobileSecondarySheet viewContent={viewContent} />}
       <CompareProviders isOpen={compareOpen} onClose={closeCompare} projectPath={projectPath} />
+      <AwesomeRefPanel isOpen={awesomeOpen} onClose={closeAwesome} />
     </div>
   );
 });

@@ -12,6 +12,7 @@ import type { AgentTemplate, WorkspaceLayout } from '../types/electron';
 import { resolveTemplate } from '../utils/templateResolver';
 import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_AWESOME_REF_EVENT,
   OPEN_COMPARE_PROVIDERS_EVENT,
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
   OPEN_USAGE_DASHBOARD_EVENT,
@@ -220,5 +221,21 @@ export function useCompareProvidersCommand(
       },
     });
   }, [registerCommand, multiProvider]);
+}
+
+export function useAwesomeRefCommand(
+  registerCommand: (cmd: Command) => void,
+): void {
+  useEffect(() => {
+    registerCommand({
+      id: 'awesome-ref:open',
+      label: 'Awesome Ouroboros — Hooks, Commands & More',
+      category: 'view',
+      icon: '\u2605',
+      action: () => {
+        dispatchDomEvent(OPEN_AWESOME_REF_EVENT);
+      },
+    });
+  }, [registerCommand]);
 }
 

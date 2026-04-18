@@ -15,6 +15,7 @@ import { useKeyboardShortcuts } from './useAppKeyboardShortcuts';
 import {
   useAgentChatCommands,
   useAgentTemplateCommands,
+  useAwesomeRefCommand,
   useLayoutCommands,
   useMultiSessionCommand,
   usePromptDiffCommand,
@@ -86,6 +87,7 @@ function useRegisteredCommands(deps: InnerAppEffectsDeps): void {
   useMultiSessionCommand(deps.registerCommand);
   useUsageDashboardCommand(deps.registerCommand);
   usePromptDiffCommand(deps.registerCommand);
+  useAwesomeRefCommand(deps.registerCommand);
 }
 
 export function useInnerAppEffects(deps: InnerAppEffectsDeps): void {

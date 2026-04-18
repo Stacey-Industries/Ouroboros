@@ -9,6 +9,7 @@ import { AccountsSection } from './AccountsSection';
 import { AgentProfilesSection } from './AgentProfilesSection';
 import { AgentSection } from './AgentSection';
 import { AppearanceSection } from './AppearanceSection';
+import { AwesomeRefSettingsPane } from './AwesomeRefSettingsPane';
 import { ClaudeSection } from './ClaudeSection';
 import { CodeModeSection } from './CodeModeSection';
 import { CodexSection } from './CodexSection';
@@ -71,6 +72,7 @@ const TAB_RENDERERS: Record<TabId, TabRenderer> = {
   systemPrompt: () => <SystemPromptPane />,
   promptDiff: () => <PromptDiffView />,
   usageExport: () => <UsageExportPane />,
+  awesomeRef: () => <AwesomeRefSettingsPane />,
 };
 
 export function SettingsTabContent({

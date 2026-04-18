@@ -41,3 +41,4 @@ export const OPEN_DISPATCH_EVENT = 'agent-ide:open-dispatch';
 export const OPEN_COMPARE_PROVIDERS_EVENT = 'agent-ide:compare-providers';
 export const SHOW_SYSTEM_PROMPT_EVENT = 'agent-ide:show-system-prompt';
 export const OPEN_MARKETPLACE_EVENT = 'agent-ide:open-marketplace';
+export const OPEN_AWESOME_REF_EVENT = 'agent-ide:open-awesome-ref';
