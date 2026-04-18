@@ -37,6 +37,7 @@ import { useProjectManagement } from './hooks/useProjectManagement';
 import { useStreamingInlineEditFlag } from './hooks/useStreamingInlineEditFlag';
 import { useTerminalSessions } from './hooks/useTerminalSessions';
 import { useTheme, useThemeRuntimeBootstrap } from './hooks/useTheme';
+import { useTokenOverrides } from './hooks/useTokenOverrides';
 import { useVisualViewportInsets } from './hooks/useVisualViewportInsets';
 import { useWorkspaceLayouts } from './hooks/useWorkspaceLayouts';
 
@@ -303,6 +304,7 @@ function ConfiguredApp({
 export default function App(): React.ReactElement {
   const { config, isLoading: configLoading } = useConfig();
   useThemeRuntimeBootstrap(config);
+  useTokenOverrides();
   useStreamingInlineEditFlag(config);
   useVisualViewportInsets();
 

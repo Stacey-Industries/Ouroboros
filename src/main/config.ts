@@ -6,6 +6,9 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
+/** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
+export interface ThemingConfig { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> }
+
 /** Wave 34 Phase A — cross-device session dispatch queue + settings.
  *  Phase F adds optional fcmServiceAccountPath for push delivery. */
 export interface SessionDispatchConfig { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: import('./session/sessionDispatch').DispatchJob[]; fcmServiceAccountPath?: string }
@@ -417,6 +420,8 @@ export interface AppConfig {
   mobileAccess?: MobileAccessConfig;
   /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
   sessionDispatch?: SessionDispatchConfig;
+  /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
+  theming?: ThemingConfig;
   /** Wave 30 Phase G — research auto-firing global defaults.
    *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {

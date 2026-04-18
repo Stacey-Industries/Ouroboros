@@ -325,4 +325,6 @@ export const tailSchema = {
     },
     default: { provenanceWeights: true, pagerank: true, pagerankSeeds: { pinned: 0.5, symbol: 0.3, user_edit: 0.2 }, decisionLogging: true, rerankerEnabled: false, packetMode: 'full', learnedRanker: false },
   },
+  /** Wave 35 Phase A — per-user theming overrides (accent, verbs, fonts, custom tokens). Applied after theme bootstrap. */
+  theming: { type: 'object', additionalProperties: false, properties: { accentOverride: { type: 'string' }, verbOverride: { type: 'string' }, thinkingVerbs: { type: 'array', items: { type: 'string' } }, spinnerChars: { type: 'string' }, fonts: { type: 'object', properties: { editor: { type: 'string' }, chat: { type: 'string' }, terminal: { type: 'string' } }, default: {} }, customTokens: { type: 'object', additionalProperties: { type: 'string' }, default: {} } }, default: {} },
 };

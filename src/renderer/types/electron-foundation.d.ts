@@ -249,6 +249,8 @@ export interface AppConfig {
   mobileAccess?: { enabled: boolean; pairedDevices: Array<{ id: string; label: string; refreshTokenHash: string; fingerprint: string; capabilities: string[]; issuedAt: string; lastSeenAt: string }> };
   /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
   sessionDispatch?: { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: Array<{ id: string; request: { title: string; prompt: string; projectPath: string; worktreeName?: string }; status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled'; createdAt: string; startedAt?: string; endedAt?: string; sessionId?: string; error?: string; deviceId?: string }> };
+  /** Wave 35 Phase A — per-user theming overrides applied after theme bootstrap. */
+  theming?: { accentOverride?: string; verbOverride?: string; thinkingVerbs?: string[]; spinnerChars?: string; fonts?: { editor?: string; chat?: string; terminal?: string }; customTokens?: Record<string, string> };
 }
 
 export interface ContextLayerConfig {
