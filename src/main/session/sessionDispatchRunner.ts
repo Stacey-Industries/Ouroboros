@@ -9,6 +9,7 @@
 import { getConfigValue } from '../config';
 import log from '../logger';
 import type { DispatchJob } from './sessionDispatch';
+import { notifyJobTransition } from './sessionDispatchNotifier';
 import {
   nextQueued,
   registerCancelHook,
@@ -66,13 +67,15 @@ function transition(jobId: string, patch: Partial<DispatchJob>): DispatchJob | n
 function markFailed(jobId: string, error: string): void {
   lifecycle = clearJobTimeout(lifecycle, jobId);
   activeHandles.delete(jobId);
-  transition(jobId, { status: 'failed', error, endedAt: new Date().toISOString() });
+  const updated = transition(jobId, { status: 'failed', error, endedAt: new Date().toISOString() });
+  if (updated) void notifyJobTransition(updated);
 }
 
 function markCompleted(jobId: string): void {
   lifecycle = clearJobTimeout(lifecycle, jobId);
   activeHandles.delete(jobId);
-  transition(jobId, { status: 'completed', endedAt: new Date().toISOString() });
+  const updated = transition(jobId, { status: 'completed', endedAt: new Date().toISOString() });
+  if (updated) void notifyJobTransition(updated);
 }
 
 // ── Worktree creation ─────────────────────────────────────────────────────────

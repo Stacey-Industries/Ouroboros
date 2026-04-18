@@ -19,6 +19,7 @@ import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
 import { getWebServerPort } from '../web/webServer';
 import { disconnectDevice } from './bridgeDisconnect';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
+import { cleanupPushTokenHandler, registerPushTokenHandler } from './pushTokenHandlers';
 import { getTimeoutStats } from './timeoutMetrics';
 import { addDevice, hashToken, listDevices, removeDevice } from './tokenStore';
 import type { PairedDevice, QrPayload } from './types';
@@ -203,6 +204,10 @@ export function registerPairingHandlers(): string[] {
   }));
   channels.push('mobileAccess:getTimeoutStats');
 
+  // Wave 34 Phase F — push token registration
+  registerPushTokenHandler();
+  channels.push('mobileAccess:registerPushToken');
+
   registeredChannels = channels;
   return channels;
 }
@@ -213,4 +218,6 @@ export function cleanupPairingHandlers(): void {
     ipcMain.removeHandler(ch);
   }
   registeredChannels = [];
+  // Wave 34 Phase F — also reset push token handler's registration guard
+  cleanupPushTokenHandler();
 }

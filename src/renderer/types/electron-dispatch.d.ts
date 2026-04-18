@@ -95,4 +95,11 @@ export interface SessionsAPI {
   cancelDispatchJob: (jobId: string) => Promise<CancelDispatchJobResult>;
   /** Wave 34 Phase D — live status push. Returns cleanup function. */
   onDispatchStatus: (callback: (job: DispatchJob) => void) => () => void;
+  /** Wave 34 Phase F — in-app banner fallback when FCM is not configured. Returns cleanup fn. */
+  onDispatchNotification: (callback: (payload: {
+    jobId: string;
+    title: string;
+    body: string;
+    status: 'completed' | 'failed';
+  }) => void) => () => void;
 }

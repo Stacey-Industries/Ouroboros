@@ -58,10 +58,27 @@ export interface TimeoutStatsResult {
   error?: string;
 }
 
+/** Args for Wave 34 Phase F push token registration. */
+export interface RegisterPushTokenArgs {
+  deviceId: string;
+  token: string;
+  platform: 'android' | 'ios';
+}
+
+export interface RegisterPushTokenResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface MobileAccessAPI {
   generatePairingCode(): Promise<GeneratePairingCodeResult>;
   listPairedDevices(): Promise<ListPairedDevicesResult>;
   revokePairedDevice(deviceId: string): Promise<RevokePairedDeviceResult>;
   /** Diagnostic: returns timeout counts per class since process start. */
   getTimeoutStats(): Promise<TimeoutStatsResult>;
+  /**
+   * Wave 34 Phase F — registers a device push token for dispatch notifications.
+   * Called by the mobile app after pairing succeeds and a native push token arrives.
+   */
+  registerPushToken(args: RegisterPushTokenArgs): Promise<RegisterPushTokenResult>;
 }

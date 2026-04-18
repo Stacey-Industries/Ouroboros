@@ -31,6 +31,8 @@ export function buildTransactionApis(t: WebSocketTransport) {
     cancelDispatchJob: (jobId: string) => t.invoke('sessions:cancelDispatchJob', jobId),
     onDispatchStatus: (cb: (job: unknown) => void) =>
       t.on('sessionDispatch:status', cb),
+    onDispatchNotification: (cb: (payload: unknown) => void) =>
+      t.on('sessionDispatch:notification', cb),
   };
 
   const costAPI = {
@@ -286,5 +288,7 @@ export function buildMobileAccessApi(t: WebSocketTransport) {
     revokePairedDevice: (deviceId: string) =>
       t.invoke('mobileAccess:revokePairedDevice', deviceId),
     getTimeoutStats: () => t.invoke('mobileAccess:getTimeoutStats'),
+    registerPushToken: (args: { deviceId: string; token: string; platform: string }) =>
+      t.invoke('mobileAccess:registerPushToken', args),
   };
 }

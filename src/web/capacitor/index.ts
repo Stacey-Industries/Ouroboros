@@ -10,6 +10,8 @@
 
 export { hapticImpact, hapticSelection } from './nativeHaptics';
 export { initKeyboardListeners } from './nativeKeyboard';
+export type { PushRegistrationResult } from './nativePushNotifications';
+export { deregisterPushNotifications, registerForPushNotifications } from './nativePushNotifications';
 export type { ShareOptions } from './nativeShare';
 export { nativeShare } from './nativeShare';
 export { hideSplashScreen } from './nativeSplashScreen';

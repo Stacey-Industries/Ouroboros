@@ -6,10 +6,12 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
-/** Wave 34 Phase A — cross-device session dispatch queue + settings. */
-export interface SessionDispatchConfig { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: import('./session/sessionDispatch').DispatchJob[] }
+/** Wave 34 Phase A — cross-device session dispatch queue + settings.
+ *  Phase F adds optional fcmServiceAccountPath for push delivery. */
+export interface SessionDispatchConfig { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: import('./session/sessionDispatch').DispatchJob[]; fcmServiceAccountPath?: string }
 
-/** Wave 33a Phase A — a device that has completed the pairing flow. */
+/** Wave 33a Phase A — a device that has completed the pairing flow.
+ *  Wave 34 Phase F adds pushToken + pushPlatform (server-side only). */
 export interface PairedDeviceRecord {
   id: string;
   label: string;
@@ -18,6 +20,9 @@ export interface PairedDeviceRecord {
   capabilities: string[];
   issuedAt: string;
   lastSeenAt: string;
+  /** Wave 34 Phase F — FCM/APNs push token. Never sent to renderer. */
+  pushToken?: string;
+  pushPlatform?: 'android' | 'ios';
 }
 
 /** Wave 33a Phase A — mobileAccess config slice. */

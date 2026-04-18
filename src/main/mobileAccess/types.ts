@@ -37,6 +37,13 @@ export interface PairedDevice {
   issuedAt: string;
   /** ISO 8601 timestamp of the device's most recent authenticated request. */
   lastSeenAt: string;
+  /**
+   * Wave 34 Phase F — FCM (Android) or APNs (iOS) device push token.
+   * NEVER returned to the renderer. Stored for server-side dispatch notifications only.
+   */
+  pushToken?: string;
+  /** Platform that issued the push token. */
+  pushPlatform?: 'android' | 'ios';
 }
 
 /** Short-lived single-use ticket used during the initial pairing handshake. */

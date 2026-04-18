@@ -75,6 +75,10 @@ export const supplementalApis: SupplementalApis = {
         'sessionDispatch:status',
         callback,
       ),
+    onDispatchNotification: (callback) =>
+      onChannel<{
+        jobId: string; title: string; body: string; status: 'completed' | 'failed';
+      }>('sessionDispatch:notification', callback),
   },
 
   cost: {
@@ -302,5 +306,7 @@ export const supplementalApis: SupplementalApis = {
     revokePairedDevice: (deviceId: string) =>
       ipcRenderer.invoke('mobileAccess:revokePairedDevice', deviceId),
     getTimeoutStats: () => ipcRenderer.invoke('mobileAccess:getTimeoutStats'),
+    registerPushToken: (args: { deviceId: string; token: string; platform: 'android' | 'ios' }) =>
+      ipcRenderer.invoke('mobileAccess:registerPushToken', args),
   },
 };
