@@ -1,10 +1,16 @@
 /**
  * ChatPanelHeader — the header bar for the Chat view in RightSidebarTabs.
  * Extracted to keep RightSidebarTabs.tsx under 300 lines.
+ *
+ * Wave 32 Phase F: on phone viewports the gear/view-switcher dropdown is
+ * replaced by a single button that opens the secondary-view bottom sheet
+ * via MobileLayoutContext.openSheet().
  */
 
 import React from 'react';
 
+import { useMobileLayout } from '../../contexts/MobileLayoutContext';
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import type { RightSidebarView } from './RightSidebarTabs';
 import { GearIcon, HistoryIcon, PlusIcon } from './RightSidebarTabs.icons';
@@ -155,6 +161,23 @@ function ViewSwitcherButton({
   );
 }
 
+// ── Phone-mode: bottom sheet trigger ─────────────────────────────────────────
+
+function SheetTriggerButton(): React.ReactElement {
+  const { openSheet } = useMobileLayout();
+  return (
+    <button
+      onClick={() => openSheet()}
+      className="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors duration-100 text-text-semantic-muted"
+      title="Open views"
+      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
+    >
+      <GearIcon />
+    </button>
+  );
+}
+
 // ── New Chat Button ───────────────────────────────────────────────────────────
 
 function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement {
@@ -178,6 +201,22 @@ function NewChatButton({ onClick }: { onClick: () => void }): React.ReactElement
   );
 }
 
+// ── Desktop view switcher (dropdown) ─────────────────────────────────────────
+
+function DesktopViewSwitcher({ viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView }: {
+  viewDropdownOpen: boolean; onToggleViewDropdown: () => void;
+  activeView: RightSidebarView; onSwitchView: (view: RightSidebarView) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <ViewSwitcherButton viewDropdownOpen={viewDropdownOpen} onToggle={onToggleViewDropdown} />
+      {viewDropdownOpen && (
+        <ViewSwitcherDropdown activeView={activeView} onSwitchView={onSwitchView} onClose={onToggleViewDropdown} />
+      )}
+    </>
+  );
+}
+
 // ── ChatPanelHeader ───────────────────────────────────────────────────────────
 
 type ChatPanelHeaderProps = {
@@ -193,34 +232,26 @@ type ChatPanelHeaderProps = {
 };
 
 export function ChatPanelHeader({
-  activeThread,
-  threadCount,
-  historyOpen,
-  onToggleHistory,
-  onNewChat,
-  viewDropdownOpen,
-  onToggleViewDropdown,
-  activeView,
-  onSwitchView,
+  activeThread, threadCount, historyOpen, onToggleHistory, onNewChat,
+  viewDropdownOpen, onToggleViewDropdown, activeView, onSwitchView,
 }: ChatPanelHeaderProps): React.ReactElement {
+  const isPhone = useViewportBreakpoint() === 'phone';
   return (
     <div
       className="flex-shrink-0 flex items-center h-8 border-b relative bg-surface-panel pl-2"
       style={{ borderColor: 'var(--border-subtle, var(--border-default))' }}
     >
-      <HistoryToggleButton
-        historyOpen={historyOpen}
-        threadCount={threadCount}
-        onToggle={onToggleHistory}
-      />
+      <HistoryToggleButton historyOpen={historyOpen} threadCount={threadCount} onToggle={onToggleHistory} />
       <ThreadTitle activeThread={activeThread} />
       <NewChatButton onClick={onNewChat} />
-      <ViewSwitcherButton viewDropdownOpen={viewDropdownOpen} onToggle={onToggleViewDropdown} />
-      {viewDropdownOpen && (
-        <ViewSwitcherDropdown
+      {isPhone ? (
+        <SheetTriggerButton />
+      ) : (
+        <DesktopViewSwitcher
+          viewDropdownOpen={viewDropdownOpen}
+          onToggleViewDropdown={onToggleViewDropdown}
           activeView={activeView}
           onSwitchView={onSwitchView}
-          onClose={onToggleViewDropdown}
         />
       )}
     </div>

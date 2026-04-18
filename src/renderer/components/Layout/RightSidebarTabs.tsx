@@ -15,13 +15,16 @@
 
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 
+import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
 } from '../../hooks/appEventNames';
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import { ChatHistoryPanel } from '../AgentChat/ChatHistoryPanel';
 import { isDraftThreadId } from '../AgentChat/useAgentChatDraftPersistence';
+import { MobileBottomSheet } from './MobileBottomSheet';
 import { ChatPanelHeader } from './RightSidebarTabs.header';
 import { RecentThreadTabs, SecondaryViewHeader } from './RightSidebarTabs.panels';
 
@@ -141,14 +144,23 @@ function SidebarContentArea({ activeView, historyOpen, viewContent, threads, act
   );
 }
 
-export const RightSidebarTabs = memo(function RightSidebarTabs({
-  chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent,
-  threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
-}: RightSidebarTabsProps): React.ReactElement {
-  const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
-  const { draftTabs, setDraftTabs } = useDraftTabs(activeThreadId, threads);
-  useAgentChatViewFocus(setActiveView);
+// ── Sidebar handlers hook ─────────────────────────────────────────────────────
 
+interface SidebarHandlersArgs {
+  onNewChat?: () => void;
+  setHistoryOpen: (v: boolean) => void;
+  setActiveView: React.Dispatch<React.SetStateAction<RightSidebarView>>;
+  activeThreadId: string | null;
+  threads: AgentChatThreadRecord[];
+  draftTabs: string[];
+  dismissedTabs: Set<string>;
+  onSelectThread?: (id: string | null) => void;
+  setDraftTabs: React.Dispatch<React.SetStateAction<string[]>>;
+  setDismissedTabs: React.Dispatch<React.SetStateAction<Set<string>>>;
+}
+
+function useSidebarHandlers(args: SidebarHandlersArgs) {
+  const { onNewChat, setHistoryOpen, setActiveView, activeThreadId, threads, draftTabs, dismissedTabs, onSelectThread, setDraftTabs, setDismissedTabs } = args;
   const handleNewChat = useCallback(() => { onNewChat?.(); setHistoryOpen(false); }, [onNewChat, setHistoryOpen]);
   const handleBackToChat = useCallback(() => { setActiveView('chat'); }, [setActiveView]);
   const handleCloseTab = useCallback((id: string) => {
@@ -156,6 +168,39 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
     else { setDismissedTabs((prev) => new Set(prev).add(id)); }
     resolveNextThread({ id, activeThreadId, threads, draftTabs, dismissedTabs, onSelectThread });
   }, [activeThreadId, threads, draftTabs, dismissedTabs, onSelectThread, setDraftTabs, setDismissedTabs]);
+  return { handleNewChat, handleBackToChat, handleCloseTab };
+}
+
+// ── Phone bottom sheet for secondary views ────────────────────────────────────
+
+const SHEET_VIEW_LABELS: Record<string, string> = {
+  monitor: 'Monitor', git: 'Git Status', analytics: 'Analytics',
+  memory: 'Memory', rules: 'Claude Config',
+};
+
+function MobileSecondarySheet({ viewContent }: { viewContent: Record<RightSidebarView, React.ReactNode> }): React.ReactElement | null {
+  const { isSheetOpen, activeSheetView, closeSheet } = useMobileLayout();
+  const view = (activeSheetView ?? 'monitor') as RightSidebarView;
+  const label = SHEET_VIEW_LABELS[view] ?? 'Views';
+  return (
+    <MobileBottomSheet isOpen={isSheetOpen} onClose={closeSheet} ariaLabel={label}>
+      {viewContent[view]}
+    </MobileBottomSheet>
+  );
+}
+
+export const RightSidebarTabs = memo(function RightSidebarTabs({
+  chatContent, monitorContent, gitContent, analyticsContent, memoryContent, rulesContent,
+  threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
+}: RightSidebarTabsProps): React.ReactElement {
+  const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
+  const { draftTabs, setDraftTabs } = useDraftTabs(activeThreadId, threads);
+  const { handleNewChat, handleBackToChat, handleCloseTab } = useSidebarHandlers({
+    onNewChat, setHistoryOpen, setActiveView, activeThreadId, threads,
+    draftTabs, dismissedTabs, onSelectThread, setDraftTabs, setDismissedTabs,
+  });
+  const isPhone = useViewportBreakpoint() === 'phone';
+  useAgentChatViewFocus(setActiveView);
 
   const viewContent: Record<RightSidebarView, React.ReactNode> = {
     chat: chatContent, monitor: monitorContent, git: gitContent,
@@ -181,6 +226,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs({
       <SidebarContentArea activeView={activeView} historyOpen={historyOpen} viewContent={viewContent}
         threads={threads} activeThreadId={activeThreadId} setHistoryOpen={setHistoryOpen}
         onSelectThread={onSelectThread} onDeleteThread={onDeleteThread} />
+      {isPhone && <MobileSecondarySheet viewContent={viewContent} />}
     </div>
   );
 });

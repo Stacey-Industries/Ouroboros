@@ -19,7 +19,7 @@ import {
 import { useProgressSubscriptions } from '../../hooks/useProgressSubscriptions';
 import { BellIcon, NotificationBadge, NotificationCenter } from '../shared/NotificationCenter';
 import { ProductIcon } from '../shared/ProductIcon';
-import { MobileHamburgerMenu, MobileOverflowMenu } from './TitleBar.mobile';
+import { MobileFileTreeButton, MobileHamburgerMenu, MobileOverflowMenu } from './TitleBar.mobile';
 import { NavbarMenus } from './TitleBar.navbar';
 import { UsageActions } from './TitleBar.usage';
 import type { CollapseState, CollapseTarget } from './usePanelCollapse';
@@ -227,6 +227,7 @@ export function TitleBar({ collapsed, onTogglePanel }: TitleBarProps = {}): Reac
     <div data-layout="title-bar" className="titlebar-drag flex-shrink-0 flex items-center bg-surface-panel"
       style={{ height: 'var(--titlebar-height, 36px)', borderBottom: '1px solid color-mix(in srgb, var(--border-semantic) 50%, transparent)' }}>
       <MobileHamburgerMenu titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
+      <MobileFileTreeButton titleButtonStyle={titleButtonStyle} hoverStyle={hoverStyle} />
       <img className="titlebar-no-drag select-none" src={ouroborosLogo} alt="Ouroboros"
         style={{ height: '20px', width: '20px', marginLeft: '8px', marginRight: '6px', flexShrink: 0, objectFit: 'contain', opacity: 0.9 }}
         draggable={false} />

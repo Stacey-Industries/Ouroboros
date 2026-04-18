@@ -1,11 +1,16 @@
 /**
- * TitleBar.mobile.tsx — Mobile hamburger and overflow menus.
+ * TitleBar.mobile.tsx — Mobile hamburger, overflow menus, and file-tree trigger.
  * Extracted to keep TitleBar.tsx under 300 lines.
+ *
+ * Wave 32 Phase F: MobileFileTreeButton opens the left-sidebar drawer via
+ * MobileLayoutContext so users can reach the file tree from any panel.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 
+import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import { useToastContext } from '../../contexts/ToastContext';
+import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import { NotificationBadge } from '../shared/NotificationCenter';
 import type { TitleBarAction } from './TitleBar';
 import { getMenuDefinitions } from './TitleBar.menus';
@@ -134,6 +139,37 @@ function MobileOverflowDropdown({ titleBarActions, notifications, unreadCount, o
         </div>
       )}
     </div>
+  );
+}
+
+// ── MobileFileTreeButton ──────────────────────────────────────────────────────
+
+/**
+ * Renders a file-tree icon button in the title bar on phone viewports.
+ * Tapping it opens the left-sidebar drawer so users can browse files from
+ * any active panel without switching the bottom nav to "Files".
+ */
+export function MobileFileTreeButton({ titleButtonStyle, hoverStyle }: {
+  titleButtonStyle: React.CSSProperties;
+  hoverStyle: Pick<React.HTMLAttributes<HTMLButtonElement>, 'onMouseEnter' | 'onMouseLeave'>;
+}): React.ReactElement | null {
+  const breakpoint = useViewportBreakpoint();
+  const { openDrawer } = useMobileLayout();
+  if (breakpoint !== 'phone') return null;
+  return (
+    <button
+      className="titlebar-no-drag web-mobile-only"
+      title="File tree"
+      aria-label="Open file tree"
+      onClick={openDrawer}
+      style={{ ...titleButtonStyle, display: 'flex' }}
+      {...hoverStyle}
+    >
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <rect x="5" y="2" width="10" height="13" rx="1.5" />
+        <rect x="3" y="5" width="10" height="13" rx="1.5" fill="var(--surface-panel)" />
+      </svg>
+    </button>
   );
 }
 

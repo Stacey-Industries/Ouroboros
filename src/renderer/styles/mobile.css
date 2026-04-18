@@ -358,6 +358,46 @@
   }
 }
 
+/* ─── Phase F: Mobile drawer + bottom sheet ──────────────────────────────── */
+
+/* Drawer and sheet overlays use z-index 200 (scrim) / 201 (panel wrapper).
+   The title bar sits at z-index 50; bottom nav at z-index 100. Overlays must
+   stack above both so the scrim dims the entire screen including the nav bar. */
+
+/* Scrim: dim the screen behind the drawer / sheet */
+.web-mode [role='presentation'] {
+  background-color: rgba(0, 0, 0, 0.45); /* opacity scrim — non-semantic intentional */
+}
+
+/* Drawer panel: frosted glass to match other mobile surfaces */
+.web-mode [role='dialog'][aria-label*='file' i],
+.web-mode [role='dialog'][aria-label*='sidebar' i],
+.web-mode [role='dialog'][aria-label*='tree' i] {
+  background-color: var(--surface-overlay) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+}
+
+/* Bottom sheet panel: frosted glass */
+.web-mode [role='dialog'][aria-label*='monitor' i],
+.web-mode [role='dialog'][aria-label*='git' i],
+.web-mode [role='dialog'][aria-label*='analytics' i],
+.web-mode [role='dialog'][aria-label*='memory' i],
+.web-mode [role='dialog'][aria-label*='rules' i],
+.web-mode [role='dialog'][aria-label*='views' i] {
+  background-color: var(--surface-overlay) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+}
+
+/* Touch targets inside overlays */
+@media (max-width: 768px) {
+  .web-mode [role='dialog'] button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* ─── Tablet layout (768px - 1024px) ─────────────────────────────────────── */
 @media (min-width: 769px) and (max-width: 1024px) {
   /* Narrower activity bar */
