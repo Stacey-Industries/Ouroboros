@@ -372,7 +372,7 @@ export interface AppConfig {
   sessionsData?: Session[];
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
-  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. */
+  /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. */
   layout?: {
     presets?: { v2?: boolean };
     chatPrimary?: boolean;
@@ -383,6 +383,8 @@ export interface AppConfig {
     customLayoutsMru?: string[];
     /** User-promoted global custom presets. Capped at 20. */
     globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[];
+    /** Wave 32 Phase A — enable mobile-primary layout when viewport < 768px. Default false (soak gate). */
+    mobilePrimary?: boolean;
   };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
