@@ -12,6 +12,7 @@ import {
   ThemeEditorSection,
   ThemeGrid,
 } from './AppearanceSectionParts.sections';
+import { ThinkingVerbPicker } from './ThinkingVerbPicker';
 
 interface AppearanceSectionContentProps {
   draft: AppConfig;
@@ -51,6 +52,7 @@ export function AppearanceSectionContent({
       />
       <GlassOpacitySlider draft={draft} onChange={onChange} />
       <AccentPicker />
+      <ThinkingVerbPicker />
       <ThemeEditorSection
         activeThemeId={draft.activeTheme}
         draft={draft}

@@ -7,3 +7,4 @@ export {
   ThemeGrid,
 } from './AppearanceSectionThemeControls';
 export { AppearanceSectionVsCodeImport } from './AppearanceSectionVsCodeImport';
+export { ThinkingVerbPicker } from './ThinkingVerbPicker';

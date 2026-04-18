@@ -1,4 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+import { useConfig } from '../../hooks/useConfig';
+import {
+  DEFAULT_SPINNER_CHARS,
+  DEFAULT_THINKING_VERBS,
+} from '../../themes/thinkingDefaults';
 
 export interface AgentChatThinkingBlockProps {
   content: string;
@@ -7,6 +13,53 @@ export interface AgentChatThinkingBlockProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+
+const SPINNER_INTERVAL_MS = 100;
+
+function useSpinnerFrame(chars: string, active: boolean): string {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setFrame((f) => (f + 1) % chars.length), SPINNER_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [active, chars.length]);
+  return chars[frame % chars.length] ?? chars[0];
+}
+
+// ── Verb rotation ─────────────────────────────────────────────────────────────
+
+const VERB_INTERVAL_MS = 3000;
+
+function useThinkingVerb(verbs: readonly string[], active: boolean): string {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (!active || verbs.length <= 1) return;
+    const id = setInterval(() => setIdx((i) => (i + 1) % verbs.length), VERB_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [active, verbs.length]);
+  return verbs[idx % verbs.length] ?? verbs[0];
+}
+
+// ── Resolve config → verbs + spinnerChars ─────────────────────────────────────
+
+function useThinkingConfig(): { verbs: readonly string[]; spinnerChars: string } {
+  const { config } = useConfig();
+  const theming = config?.theming;
+  const spinnerChars = theming?.spinnerChars || DEFAULT_SPINNER_CHARS;
+  let verbs: readonly string[];
+  if (theming?.verbOverride && theming.verbOverride.trim().length > 0) {
+    verbs = [theming.verbOverride.trim()];
+  } else if (theming?.thinkingVerbs && theming.thinkingVerbs.length > 0) {
+    verbs = theming.thinkingVerbs;
+  } else {
+    verbs = DEFAULT_THINKING_VERBS;
+  }
+  return { verbs, spinnerChars };
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function ChevronIcon({ collapsed }: { collapsed: boolean }): React.ReactElement {
   return (
@@ -34,15 +87,27 @@ function DurationBadge({ duration }: { duration: number }): React.ReactElement {
   );
 }
 
-function getThinkingLabel(duration: number | undefined, isStreaming: boolean): string {
-  if (isStreaming) return 'Thinking...';
-  return `Thought${duration !== undefined ? ` for ${duration < 1 ? '<1' : duration}s` : ''}`;
+function StreamingLabel({ verbs, spinnerChars }: {
+  verbs: readonly string[];
+  spinnerChars: string;
+}): React.ReactElement {
+  const verb = useThinkingVerb(verbs, true);
+  const spinChar = useSpinnerFrame(spinnerChars, true);
+  return (
+    <span data-testid="thinking-streaming-label">
+      {spinChar} {verb}…
+    </span>
+  );
 }
 
 function getBorderLeftColor(isStreaming: boolean, isCollapsed: boolean): string {
   if (isStreaming) return 'var(--interactive-accent)';
   if (isCollapsed) return 'transparent';
   return 'var(--border-default)';
+}
+
+function getStaticLabel(duration: number | undefined): string {
+  return `Thought${duration !== undefined ? ` for ${duration < 1 ? '<1' : duration}s` : ''}`;
 }
 
 const THINKING_PULSE_CSS = `
@@ -76,6 +141,8 @@ function ThinkingContent({
   );
 }
 
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock({
   content,
   duration,
@@ -84,7 +151,7 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
   onToggleCollapse,
 }: AgentChatThinkingBlockProps): React.ReactElement {
   const isCollapsed = collapsed && !isStreaming;
-  const label = getThinkingLabel(duration, isStreaming);
+  const { verbs, spinnerChars } = useThinkingConfig();
 
   return (
     <div
@@ -96,7 +163,9 @@ export const AgentChatThinkingBlock = React.memo(function AgentChatThinkingBlock
         className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs text-text-semantic-muted transition-colors duration-100 hover:bg-surface-raised"
       >
         <ChevronIcon collapsed={isCollapsed} />
-        <span>{label}</span>
+        {isStreaming
+          ? <StreamingLabel verbs={verbs} spinnerChars={spinnerChars} />
+          : <span>{getStaticLabel(duration)}</span>}
         {duration !== undefined && !isStreaming && <DurationBadge duration={duration} />}
       </button>
       <ThinkingContent content={content} isStreaming={isStreaming} isCollapsed={isCollapsed} />
