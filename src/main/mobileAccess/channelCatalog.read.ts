@@ -201,6 +201,7 @@ export const READ_CATALOG: Record<string, CatalogEntry> = {
   'sessionCrud:list':               { class: 'paired-read', timeoutClass: 'short' },
 
   // ── sessions (read) ─────────────────────────────────────────────────────────
+  'sessions:listDispatchJobs':      { class: 'paired-read', timeoutClass: 'short' },
   'sessions:load':                  { class: 'paired-read', timeoutClass: 'normal' },
 
   // ── shellHistory (read) ─────────────────────────────────────────────────────

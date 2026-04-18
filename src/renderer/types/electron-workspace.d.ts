@@ -6,6 +6,7 @@ import type { AuthAPI } from './electron-auth';
 import type { BackgroundJobsAPI } from './electron-background-jobs';
 import type { CheckpointAPI } from './electron-checkpoint';
 import type { ClaudeMdAPI } from './electron-claude-md';
+import type { SessionsAPI } from './electron-dispatch';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
 import type { ExtensionsAPI } from './electron-extensions';
@@ -22,7 +23,6 @@ import type {
   CrashAPI,
   LspAPI,
   PerfAPI,
-  SessionsAPI,
   SymbolAPI,
   UsageAPI,
 } from './electron-observability';

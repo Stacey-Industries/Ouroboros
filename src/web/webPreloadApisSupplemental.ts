@@ -25,6 +25,10 @@ export function buildTransactionApis(t: WebSocketTransport) {
     load: () => t.invoke('sessions:load'),
     delete: (sessionId: string) => t.invoke('sessions:delete', sessionId),
     export: (session: unknown, format: string) => t.invoke('sessions:export', session, format),
+    dispatchTask: (request: unknown, deviceId?: string) =>
+      t.invoke('sessions:dispatchTask', request, deviceId),
+    listDispatchJobs: () => t.invoke('sessions:listDispatchJobs'),
+    cancelDispatchJob: (jobId: string) => t.invoke('sessions:cancelDispatchJob', jobId),
   };
 
   const costAPI = {

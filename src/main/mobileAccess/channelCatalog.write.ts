@@ -216,7 +216,9 @@ export const WRITE_CATALOG: Record<string, CatalogEntry> = {
   'sessionCrud:updateAgentMonitorSettings': { class: 'paired-write', timeoutClass: 'normal' },
 
   // ── sessions (write) ────────────────────────────────────────────────────────
+  'sessions:cancelDispatchJob':     { class: 'paired-write', timeoutClass: 'short' },
   'sessions:delete':                { class: 'paired-write', timeoutClass: 'normal' },
+  'sessions:dispatchTask':          { class: 'paired-write', timeoutClass: 'long' },
   'sessions:save':                  { class: 'paired-write', timeoutClass: 'normal' },
 
   // ── spec (write) ────────────────────────────────────────────────────────────

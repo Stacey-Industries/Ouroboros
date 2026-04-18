@@ -66,6 +66,10 @@ export const supplementalApis: SupplementalApis = {
     load: () => ipcRenderer.invoke('sessions:load'),
     delete: (sessionId) => ipcRenderer.invoke('sessions:delete', sessionId),
     export: (session, format) => ipcRenderer.invoke('sessions:export', session, format),
+    dispatchTask: (request, deviceId?) =>
+      ipcRenderer.invoke('sessions:dispatchTask', request, deviceId),
+    listDispatchJobs: () => ipcRenderer.invoke('sessions:listDispatchJobs'),
+    cancelDispatchJob: (jobId) => ipcRenderer.invoke('sessions:cancelDispatchJob', jobId),
   },
 
   cost: {

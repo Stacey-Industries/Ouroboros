@@ -46,6 +46,10 @@ export { registerRouterStatsHandlers } from './routerStats';
 export { registerRulesAndSkillsHandlers } from './rulesAndSkills';
 export { registerSearchHandlers } from './search';
 export { cleanupSessionCrudHandlers, registerSessionCrudHandlers } from './sessionCrud';
+export {
+  cleanupDispatchHandlers,
+  registerDispatchHandlers,
+} from './sessionDispatchHandlers';
 export { registerSessionHandlers } from './sessions';
 export { registerSpecHandlers } from './specScaffold';
 export { registerSubagentHandlers } from './subagent';

@@ -130,25 +130,9 @@ export interface CostAPI {
   clearHistory: () => Promise<IpcResult>
 }
 
-export interface SaveSessionResult extends IpcResult {
-  filePath?: string
-}
-
-export interface LoadSessionsResult extends IpcResult {
-  sessions?: unknown[]
-}
-
-export interface ExportSessionResult extends IpcResult {
-  filePath?: string
-  cancelled?: boolean
-}
-
-export interface SessionsAPI {
-  save: (session: unknown) => Promise<SaveSessionResult>
-  load: () => Promise<LoadSessionsResult>
-  delete: (sessionId: string) => Promise<IpcResult>
-  export: (session: unknown, format: 'json' | 'markdown') => Promise<ExportSessionResult>
-}
+// SessionsAPI and its result types (SaveSessionResult, LoadSessionsResult,
+// ExportSessionResult) live in electron-dispatch.d.ts alongside the Wave 34
+// dispatch types they now depend on. Re-exported via the electron.d.ts barrel.
 
 export interface SymbolEntry {
   name: string

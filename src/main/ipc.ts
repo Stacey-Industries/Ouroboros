@@ -16,6 +16,7 @@ import {
   cleanupAgentChatHandlers,
   cleanupConfigWatcher,
   cleanupContextRankerDashboardHandlers,
+  cleanupDispatchHandlers,
   cleanupFileWatchers,
   cleanupFolderCrudHandlers,
   cleanupLayoutHandlers,
@@ -44,6 +45,7 @@ import {
   registerConfigHandlers,
   registerContextHandlers,
   registerContextRankerDashboardHandlers,
+  registerDispatchHandlers,
   registerEmbeddingHandlers,
   registerExtensionStoreHandlers,
   registerFileHandlers,
@@ -145,6 +147,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('subagent', () => registerSubagentHandlers()),
     ...safeRegister('layout', () => registerLayoutHandlers()),
     ...safeRegister('mobileAccessPairing', () => registerPairingHandlers()),
+    ...safeRegister('sessionDispatch', () => registerDispatchHandlers()),
   ];
 }
 
@@ -312,6 +315,7 @@ export function cleanupIpcHandlers(): void {
   cleanupWorkspaceReadListHandlers();
   cleanupLayoutHandlers();
   cleanupPairingHandlers();
+  cleanupDispatchHandlers();
   closeEmbeddingStore();
   stopApprovalManagerCleanup();
 
