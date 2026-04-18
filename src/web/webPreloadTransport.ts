@@ -147,14 +147,14 @@ export class WebSocketTransport {
   private maxReconnectDelay = 30000
   private connected = false
   private connectPromise: Promise<void> | null = null
-  private ticketFetcher: (() => Promise<string>) | null = null
+  private ticketFetcher: (() => Promise<string | null>) | null = null
 
   constructor(
     private url: string,
     private authToken?: string
   ) {}
 
-  setTicketFetcher(fetcher: () => Promise<string>): void {
+  setTicketFetcher(fetcher: () => Promise<string | null>): void {
     this.ticketFetcher = fetcher
   }
 
@@ -380,14 +380,12 @@ export class WebSocketTransport {
   private scheduleReconnect(): void {
     const delay = Math.min(1000 * 2 ** this.reconnectAttempts, this.maxReconnectDelay)
     this.reconnectAttempts++
-    setTimeout(() => {
-      if (this.ticketFetcher) {
-        this.ticketFetcher()
-          .then((ticket) => this.connectWithTicket(ticket))
-          .catch(() => {})
-      } else {
-        this.connect().catch(() => {})
-      }
-    }, delay)
+    const reconnect = () => {
+      if (!this.ticketFetcher) return this.connect().catch(() => {})
+      return this.ticketFetcher()
+        .then((t) => (t ? this.connectWithTicket(t) : this.connect()))
+        .catch(() => {})
+    }
+    setTimeout(reconnect, delay)
   }
 }

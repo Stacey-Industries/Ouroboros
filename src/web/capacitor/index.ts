@@ -8,12 +8,12 @@
  *   import { isNative, hapticImpact } from 'src/web/capacitor';
  */
 
-export { getSecureValue, removeSecureValue, setSecureValue } from './nativeStorage';
 export { hapticImpact, hapticSelection } from './nativeHaptics';
 export { initKeyboardListeners } from './nativeKeyboard';
-export { nativeShare } from './nativeShare';
 export type { ShareOptions } from './nativeShare';
+export { nativeShare } from './nativeShare';
 export { setStatusBarColor, setStatusBarStyle } from './nativeStatusBar';
+export { getSecureValue, removeSecureValue, setSecureValue } from './nativeStorage';
 
 /**
  * SSR-safe wrapper around Capacitor.isNativePlatform().

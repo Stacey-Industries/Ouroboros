@@ -13,6 +13,8 @@
 
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
+import { getDeviceFingerprint, setRefreshToken } from '../web/tokenStorage';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface PairResponse {
@@ -39,8 +41,7 @@ interface PairingFormProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FINGERPRINT_KEY = 'ouroboros.deviceFingerprint';
-const REFRESH_TOKEN_KEY = 'ouroboros.refreshToken';
+// Token storage is handled by tokenStorage.ts (Keychain/Keystore on native, localStorage on web).
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -142,20 +143,6 @@ const S = {
   },
 } as const;
 
-// ─── Client fingerprint ───────────────────────────────────────────────────────
-
-function getOrCreateFingerprint(): string {
-  try {
-    const existing = localStorage.getItem(FINGERPRINT_KEY);
-    if (existing) return existing;
-    const fp = crypto.randomUUID();
-    localStorage.setItem(FINGERPRINT_KEY, fp);
-    return fp;
-  } catch {
-    return 'unknown';
-  }
-}
-
 // ─── Error message normalizer ─────────────────────────────────────────────────
 
 export function humanizeError(raw: string): string {
@@ -178,14 +165,26 @@ interface UseSubmitResult {
   handleSubmit: (e: FormEvent) => void;
 }
 
-function usePairingSubmit(code: string, label: string): UseSubmitResult {
+interface SubmitPairingOpts {
+  code: string;
+  label: string;
+  fingerprint: string;
+  setErrorMsg: (m: string) => void;
+  setLoading: (v: boolean) => void;
+}
+
+function usePairingSubmit(
+  code: string,
+  label: string,
+  fingerprint: string,
+): UseSubmitResult {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = useCallback(
     (e: FormEvent) => {
       e.preventDefault();
-      if (loading) return;
+      if (loading || !fingerprint) return;
 
       const trimmed = code.replace(/\s/g, '');
       if (trimmed.length !== 6 || !/^\d{6}$/.test(trimmed)) {
@@ -195,21 +194,16 @@ function usePairingSubmit(code: string, label: string): UseSubmitResult {
 
       setLoading(true);
       setErrorMsg('');
-      void submitPairing(trimmed, label, setErrorMsg, setLoading);
+      void submitPairing({ code: trimmed, label, fingerprint, setErrorMsg, setLoading });
     },
-    [code, label, loading],
+    [code, label, fingerprint, loading],
   );
 
   return { loading, errorMsg, handleSubmit };
 }
 
-async function submitPairing(
-  code: string,
-  label: string,
-  setErrorMsg: (m: string) => void,
-  setLoading: (v: boolean) => void,
-): Promise<void> {
-  const fingerprint = getOrCreateFingerprint();
+async function submitPairing(opts: SubmitPairingOpts): Promise<void> {
+  const { code, label, fingerprint, setErrorMsg, setLoading } = opts;
   const body = JSON.stringify({ code, label: label.trim() || 'Mobile device', fingerprint });
   try {
     const res = await fetch('/api/pair', {
@@ -223,7 +217,7 @@ async function submitPairing(
       setErrorMsg(json.error ?? `HTTP ${res.status}`);
       return;
     }
-    localStorage.setItem(REFRESH_TOKEN_KEY, json.refreshToken);
+    await setRefreshToken(json.refreshToken);
     window.location.reload();
   } catch (err) {
     setErrorMsg(err instanceof Error ? err.message : 'Network error — check your connection.');
@@ -302,12 +296,21 @@ function PairingForm(props: PairingFormProps): React.ReactElement {
 export function PairingScreen({ host, port }: PairingScreenProps): React.ReactElement {
   const [code, setCode] = useState('');
   const [label, setLabel] = useState('Mobile device');
+  const [fingerprint, setFingerprint] = useState('');
   const codeRef = useRef<HTMLInputElement | null>(null);
-  const { loading, errorMsg, handleSubmit } = usePairingSubmit(code, label);
+  const { loading, errorMsg, handleSubmit } = usePairingSubmit(code, label, fingerprint);
 
   useEffect(() => { codeRef.current?.focus(); }, []);
 
+  useEffect(() => {
+    getDeviceFingerprint()
+      .then(setFingerprint)
+      .catch(() => { setFingerprint('unknown'); });
+  }, []);
+
   const displayHost = port && port !== 80 && port !== 443 ? `${host}:${port}` : host;
+  // Disable the form while fingerprint hasn't resolved yet (async storage read)
+  const formBusy = loading || fingerprint === '';
 
   return (
     <div style={S.root}>
@@ -321,7 +324,7 @@ export function PairingScreen({ host, port }: PairingScreenProps): React.ReactEl
         <PairingForm
           code={code}
           label={label}
-          loading={loading}
+          loading={formBusy}
           displayHost={displayHost}
           codeRef={codeRef}
           onCodeChange={setCode}

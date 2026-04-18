@@ -9,6 +9,7 @@
  * Must execute synchronously before the React app bootstraps.
  */
 
+import { clearRefreshToken, getRefreshToken } from './tokenStorage';
 import {
   buildAppApi,
   buildConfigApi,
@@ -50,18 +51,6 @@ type MonacoEnv = { getWorkerUrl: (_moduleId: string, label: string) => string };
   },
 };
 
-// ─── Refresh Token (mobile pairing path) ─────────────────────────────────────
-
-const REFRESH_TOKEN_KEY = 'ouroboros.refreshToken';
-
-function getStoredRefreshToken(): string | null {
-  try {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
 // ─── WS Ticket Fetch ─────────────────────────────────────────────────────────
 
 interface WsTicketResponse {
@@ -73,17 +62,18 @@ interface WsTicketResponse {
  * Fetches a short-lived WS ticket from the server.
  *
  * Mobile path (mobileAccess.enabled, non-localhost):
- *   If a refresh token is stored in localStorage from a prior pairing, it is
- *   sent as `Authorization: Bearer <token>` so the server can validate the
- *   device and issue a ticket. If the server rejects (401/403), the stored
- *   token is invalid — clear it and reload so the pairing screen renders.
+ *   If a refresh token is stored (via tokenStorage — Keychain/Keystore on native,
+ *   localStorage on web) from a prior pairing, it is sent as
+ *   `Authorization: Bearer <token>` so the server can validate the device and
+ *   issue a ticket. If the server rejects (401/403) the stored token is invalid
+ *   — clear it and reload so the pairing screen renders.
  *
  * Desktop / legacy path:
  *   No Authorization header — the webAccessToken HttpOnly cookie is sent by
  *   the browser automatically via `credentials: 'same-origin'`.
  */
-async function fetchWsTicket(): Promise<string> {
-  const refreshToken = getStoredRefreshToken();
+async function fetchWsTicket(): Promise<string | null> {
+  const refreshToken = await getRefreshToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (refreshToken) {
     headers['Authorization'] = `Bearer ${refreshToken}`;
@@ -97,8 +87,8 @@ async function fetchWsTicket(): Promise<string> {
 
   if (res.status === 401 || res.status === 403) {
     if (refreshToken) {
-      // Token was rejected — clear and reload so server injects pairing screen.
-      try { localStorage.removeItem(REFRESH_TOKEN_KEY); } catch { /* ignore */ }
+      // Token was rejected — clear from secure storage and reload.
+      await clearRefreshToken();
       window.location.reload();
     }
     throw new Error(`Failed to fetch WS ticket: HTTP ${res.status}`);
@@ -187,7 +177,10 @@ document.documentElement.classList.add('web-mode');
 // ─── Connect ─────────────────────────────────────────────────────────────────
 
 fetchWsTicket()
-  .then((ticket) => transport.connectWithTicket(ticket))
+  .then((ticket) => {
+    if (ticket) return transport.connectWithTicket(ticket);
+    return transport.connect();
+  })
   .catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn('[webPreload] WS ticket fetch failed, connection aborted:', msg);
