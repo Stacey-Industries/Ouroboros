@@ -13,6 +13,9 @@ import type { CatalogEntry } from './channelCatalog.always';
  * scoped to project roots, diagnostics, status queries, and metadata.
  */
 export const READ_CATALOG: Record<string, CatalogEntry> = {
+  // ── compareProviders (subscription) ────────────────────────────────────────
+  'compareProviders:event':           { class: 'paired-read', timeoutClass: 'short' },
+
   // ── agentChat (read) ────────────────────────────────────────────────────────
   'agentChat:getBufferedChunks':    { class: 'paired-read', timeoutClass: 'normal' },
   'agentChat:getGlobalCostRollup':  { class: 'paired-read', timeoutClass: 'normal' },

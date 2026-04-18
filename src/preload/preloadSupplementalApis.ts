@@ -6,6 +6,7 @@ import type {
   ApprovalRequest,
   ApprovalResolved,
   ClaudeMdGenerationStatus,
+  CompareProvidersEventPayload,
   ContextLayerProgress,
   ElectronAPI,
   IdeToolQuery,
@@ -36,7 +37,8 @@ type SupplementalApiKey =
   | 'contextLayer' | 'claudeMd' | 'router' | 'rulesAndSkills'
   | 'ai' | 'embedding' | 'telemetry' | 'observability'
   | 'workspace' | 'system2' | 'sessionCrud' | 'folderCrud' | 'pinnedContext' | 'profileCrud'
-  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess';
+  | 'research' | 'workspaceReadList' | 'subagent' | 'layout' | 'graph' | 'mobileAccess'
+  | 'compareProviders';
 
 type SupplementalApis = Pick<ElectronAPI, SupplementalApiKey>;
 
@@ -308,5 +310,11 @@ export const supplementalApis: SupplementalApis = {
     getTimeoutStats: () => ipcRenderer.invoke('mobileAccess:getTimeoutStats'),
     registerPushToken: (args: { deviceId: string; token: string; platform: 'android' | 'ios' }) =>
       ipcRenderer.invoke('mobileAccess:registerPushToken', args),
+  },
+  compareProviders: {
+    start: (args) => ipcRenderer.invoke('compareProviders:start', args),
+    cancel: (compareId) => ipcRenderer.invoke('compareProviders:cancel', { compareId }),
+    onEvent: (callback) =>
+      onChannel<CompareProvidersEventPayload>('compareProviders:event', callback),
   },
 };

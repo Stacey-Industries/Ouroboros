@@ -6,6 +6,7 @@ import type { AuthAPI } from './electron-auth';
 import type { BackgroundJobsAPI } from './electron-background-jobs';
 import type { CheckpointAPI } from './electron-checkpoint';
 import type { ClaudeMdAPI } from './electron-claude-md';
+import type { CompareProvidersAPI } from './electron-compare-providers';
 import type { SessionsAPI } from './electron-dispatch';
 import type { EmbeddingAPI } from './electron-embedding';
 import type { ExtensionStoreAPI } from './electron-extension-store';
@@ -320,6 +321,7 @@ export interface ElectronAPI {
   graph: GraphAPI;
   layout: LayoutAPI;
   mobileAccess: MobileAccessAPI;
+  compareProviders: CompareProvidersAPI;
 }
 
 export interface WorkspaceAPI {

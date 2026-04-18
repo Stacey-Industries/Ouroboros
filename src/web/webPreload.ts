@@ -24,6 +24,7 @@ import { buildClaudeMdApi } from './webPreloadApisClaudeMd';
 import { buildRulesAndSkillsApi } from './webPreloadApisRulesSkills';
 import {
   buildAgentChatApi,
+  buildCompareProvidersApi,
   buildLspApi,
   buildMcpApis,
   buildMobileAccessApi,
@@ -131,6 +132,7 @@ const providersAPI = buildProvidersApi(transport);
 const claudeMdAPI = buildClaudeMdApi(transport);
 const rulesAndSkillsAPI = buildRulesAndSkillsApi(transport);
 const mobileAccessAPI = buildMobileAccessApi(transport);
+const compareProvidersAPI = buildCompareProvidersApi(transport);
 
 const electronAPI = {
   pty: ptyAPI,
@@ -168,6 +170,7 @@ const electronAPI = {
   claudeMd: claudeMdAPI,
   rulesAndSkills: rulesAndSkillsAPI,
   mobileAccess: mobileAccessAPI,
+  compareProviders: compareProvidersAPI,
 };
 
 // ─── Expose Globally ─────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ import { listCodexModels } from './codex';
 import { getConfigValue } from './config';
 import {
   cleanupAgentChatHandlers,
+  cleanupCompareProvidersHandlers,
   cleanupConfigWatcher,
   cleanupContextRankerDashboardHandlers,
   cleanupDispatchHandlers,
@@ -42,6 +43,7 @@ import {
   registerBackgroundJobsHandlers,
   registerCheckpointHandlers,
   registerClaudeMdHandlers,
+  registerCompareProvidersHandlers,
   registerConfigHandlers,
   registerContextHandlers,
   registerContextRankerDashboardHandlers,
@@ -151,6 +153,7 @@ function registerAuxDomainHandlers(): string[] {
     ...safeRegister('layout', () => registerLayoutHandlers()),
     ...safeRegister('mobileAccessPairing', () => registerPairingHandlers()),
     ...safeRegister('sessionDispatch', () => registerDispatchHandlers()),
+    ...safeRegister('compareProviders', () => registerCompareProvidersHandlers()),
   ];
 }
 
@@ -317,6 +320,7 @@ export function cleanupIpcHandlers(): void {
   cleanupConfigWatcher();
 
   cleanupAgentChatHandlers();
+  cleanupCompareProvidersHandlers();
   cleanupSessionCrudHandlers();
   cleanupFolderCrudHandlers();
   cleanupPinnedContextHandlers();

@@ -13,6 +13,10 @@ export { registerAuthHandlers } from './auth';
 export { ensureSchedulerInit, registerBackgroundJobsHandlers } from './backgroundJobs';
 export { registerCheckpointHandlers } from './checkpoint';
 export { registerClaudeMdHandlers } from './claudeMd';
+export {
+  cleanupCompareProvidersHandlers,
+  registerCompareProvidersHandlers,
+} from './compareProvidersHandlers';
 export { cleanupConfigWatcher, registerConfigHandlers } from './config';
 export { registerContextHandlers } from './context';
 export {

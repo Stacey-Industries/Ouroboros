@@ -14,6 +14,10 @@ import type { CatalogEntry } from './channelCatalog.always';
  * layout persistence, worktree operations, file writes under project roots.
  */
 export const WRITE_CATALOG: Record<string, CatalogEntry> = {
+  // ── compareProviders (write) ────────────────────────────────────────────────
+  'compareProviders:start':           { class: 'paired-write', timeoutClass: 'long' },
+  'compareProviders:cancel':          { class: 'paired-write', timeoutClass: 'short' },
+
   // ── agentChat (write) ───────────────────────────────────────────────────────
   'agentChat:addMessageReaction':   { class: 'paired-write', timeoutClass: 'normal' },
   'agentChat:branchThread':         { class: 'paired-write', timeoutClass: 'normal' },

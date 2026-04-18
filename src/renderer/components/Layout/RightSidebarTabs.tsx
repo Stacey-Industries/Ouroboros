@@ -19,11 +19,13 @@ import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import {
   FOCUS_AGENT_CHAT_EVENT,
   OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_COMPARE_PROVIDERS_EVENT,
   OPEN_DISPATCH_EVENT,
 } from '../../hooks/appEventNames';
 import { useViewportBreakpoint } from '../../hooks/useViewportBreakpoint';
 import type { AgentChatThreadRecord } from '../../types/electron';
 import { ChatHistoryPanel } from '../AgentChat/ChatHistoryPanel';
+import { CompareProviders } from '../AgentChat/CompareProviders';
 import { isDraftThreadId } from '../AgentChat/useAgentChatDraftPersistence';
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { ChatPanelHeader } from './RightSidebarTabs.header';
@@ -45,6 +47,10 @@ export interface RightSidebarTabsProps {
   onSelectThread?: (threadId: string | null) => void;
   onDeleteThread?: (threadId: string) => void;
   onNewChat?: () => void;
+  /** Used by compare-providers panel — defaults to '' when not provided. */
+  projectPath?: string;
+  /** Whether providers.multiProvider is enabled — gates compare panel. */
+  multiProvider?: boolean;
 }
 
 // ── Draft tab tracking ────────────────────────────────────────────────────────
@@ -177,6 +183,19 @@ function useSidebarHandlers(args: SidebarHandlersArgs) {
   return { handleNewChat, handleBackToChat, handleCloseTab };
 }
 
+// ── Compare-providers panel ───────────────────────────────────────────────────
+
+function useComparePanel(multiProvider: boolean) {
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    if (!multiProvider) return;
+    function handleOpen(): void { setIsOpen(true); }
+    window.addEventListener(OPEN_COMPARE_PROVIDERS_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_COMPARE_PROVIDERS_EVENT, handleOpen);
+  }, [multiProvider]);
+  return { isOpen, close: () => setIsOpen(false) };
+}
+
 // ── Phone bottom sheet for secondary views ────────────────────────────────────
 
 const SHEET_VIEW_LABELS: Record<string, string> = {
@@ -205,7 +224,8 @@ function buildViewContent(props: RightSidebarTabsProps): Record<RightSidebarView
 }
 
 export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSidebarTabsProps): React.ReactElement {
-  const { threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat, showDispatch = false } = props;
+  const { threads = [], activeThreadId = null, onSelectThread, onDeleteThread, onNewChat,
+    showDispatch = false, projectPath = '', multiProvider = false } = props;
   const { activeView, setActiveView, historyOpen, setHistoryOpen, viewDropdownOpen, dismissedTabs, setDismissedTabs, toggleHistory, toggleViewDropdown, switchView } = useSidebarPanelState();
   const { draftTabs, setDraftTabs } = useDraftTabs(activeThreadId, threads);
   const { handleNewChat, handleBackToChat, handleCloseTab } = useSidebarHandlers({
@@ -216,6 +236,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
   useAgentChatViewFocus(setActiveView);
   const viewContent = buildViewContent(props);
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
+  const { isOpen: compareOpen, close: closeCompare } = useComparePanel(multiProvider);
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {activeView === 'chat' ? (
@@ -236,6 +257,7 @@ export const RightSidebarTabs = memo(function RightSidebarTabs(props: RightSideb
         threads={threads} activeThreadId={activeThreadId} setHistoryOpen={setHistoryOpen}
         onSelectThread={onSelectThread} onDeleteThread={onDeleteThread} />
       {isPhone && <MobileSecondarySheet viewContent={viewContent} />}
+      <CompareProviders isOpen={compareOpen} onClose={closeCompare} projectPath={projectPath} />
     </div>
   );
 });

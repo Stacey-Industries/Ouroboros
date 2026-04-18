@@ -292,3 +292,13 @@ export function buildMobileAccessApi(t: WebSocketTransport) {
       t.invoke('mobileAccess:registerPushToken', args),
   };
 }
+
+// ─── Compare Providers API ────────────────────────────────────────────────────
+
+export function buildCompareProvidersApi(t: WebSocketTransport) {
+  return {
+    start: (args: unknown) => t.invoke('compareProviders:start', args),
+    cancel: (compareId: string) => t.invoke('compareProviders:cancel', { compareId }),
+    onEvent: (cb: (payload: unknown) => void) => t.on('compareProviders:event', cb),
+  };
+}

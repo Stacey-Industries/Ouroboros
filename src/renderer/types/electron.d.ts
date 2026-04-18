@@ -7,6 +7,7 @@ export * from './electron-auth';
 export * from './electron-background-jobs';
 export * from './electron-checkpoint';
 export * from './electron-claude-md';
+export * from './electron-compare-providers';
 export * from './electron-dispatch';
 export * from './electron-embedding';
 export * from './electron-extension-store';

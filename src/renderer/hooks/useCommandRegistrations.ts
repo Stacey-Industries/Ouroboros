@@ -12,6 +12,7 @@ import type { AgentTemplate, WorkspaceLayout } from '../types/electron';
 import { resolveTemplate } from '../utils/templateResolver';
 import {
   OPEN_AGENT_CHAT_PANEL_EVENT,
+  OPEN_COMPARE_PROVIDERS_EVENT,
   OPEN_LATEST_AGENT_CHAT_DETAILS_EVENT,
   OPEN_USAGE_DASHBOARD_EVENT,
   RESUME_LATEST_AGENT_CHAT_THREAD_EVENT,
@@ -185,5 +186,23 @@ export function useUsageDashboardCommand(
       },
     });
   }, [registerCommand]);
+}
+
+export function useCompareProvidersCommand(
+  registerCommand: (cmd: Command) => void,
+  multiProvider: boolean,
+): void {
+  useEffect(() => {
+    if (!multiProvider) return;
+    registerCommand({
+      id: 'compare-providers:open',
+      label: 'Compare Providers Side-by-Side',
+      category: 'view',
+      icon: '⧉',
+      action: () => {
+        dispatchDomEvent(OPEN_COMPARE_PROVIDERS_EVENT);
+      },
+    });
+  }, [registerCommand, multiProvider]);
 }
 

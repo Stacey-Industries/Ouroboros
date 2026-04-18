@@ -38,3 +38,4 @@ export const TOGGLE_SIDE_CHAT_EVENT = 'agent-ide:toggle-side-chat';
 export const OPEN_BRANCH_COMPARE_EVENT = 'agent-ide:open-branch-compare';
 export const OPEN_SUBAGENT_PANEL_EVENT = 'agent-ide:open-subagent-panel';
 export const OPEN_DISPATCH_EVENT = 'agent-ide:open-dispatch';
+export const OPEN_COMPARE_PROVIDERS_EVENT = 'agent-ide:compare-providers';
