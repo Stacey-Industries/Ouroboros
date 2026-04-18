@@ -49,8 +49,17 @@ export interface RevokePairedDeviceResult {
   error?: string;
 }
 
+/** Per-class timeout counters. Diagnostic only — resets on process restart. */
+export interface TimeoutStatsResult {
+  success: boolean;
+  stats?: { short: number; normal: number; long: number };
+  error?: string;
+}
+
 export interface MobileAccessAPI {
   generatePairingCode(): Promise<GeneratePairingCodeResult>;
   listPairedDevices(): Promise<ListPairedDevicesResult>;
   revokePairedDevice(deviceId: string): Promise<RevokePairedDeviceResult>;
+  /** Diagnostic: returns timeout counts per class since process start. */
+  getTimeoutStats(): Promise<TimeoutStatsResult>;
 }

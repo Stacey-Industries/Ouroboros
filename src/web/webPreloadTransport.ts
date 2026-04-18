@@ -93,6 +93,48 @@ function hideConnectionOverlay(): void {
 /** Client-side TTL for resumable requests while disconnected (matches server default). */
 const RESUME_TTL_MS = 5 * 60 * 1000
 
+/**
+ * Per-call-class invoke timeout budgets (ms).
+ * Must match server-side values in capabilityGate.ts and bridgeTimeout.ts.
+ * Wave 33a Phase F.
+ *
+ * Semantics for resumable flows: the timeout is an END-TO-END clock — it keeps
+ * ticking while the client is disconnected. The simpler model was chosen over
+ * pause/resume to avoid race conditions when reconnect timing overlaps the
+ * budget boundary. If the budget fires while disconnected the RESUME_TTL_MS
+ * guard will fire first (5 min >> 2 min) — the invoke timeout fires only for
+ * non-resumable channels. For resumable channels the 5-min TTL effectively
+ * caps the wall time; the invoke-level timer acts as an earlier catch for
+ * channels whose budget is shorter than the disconnect window.
+ */
+type TimeoutClass = 'short' | 'normal' | 'long'
+
+const CALL_TIMEOUTS: Record<TimeoutClass, number> = {
+  short:  10_000,
+  normal: 30_000,
+  long:   120_000,
+}
+
+/** Short-class pattern — health pings, config reads, metadata-only. */
+const SHORT_PATTERN =
+  /^(health|config:get|config:getAll|app:getVersion|app:getPlatform|app:getSystemInfo|app:ping|perf:ping|mobileAccess:listPairedDevices|providers:list|providers:getSlots|theme:get)$/
+
+/** Long-class pattern — streaming chat, spec scaffold, retrain, heavy compute. */
+const LONG_PATTERN =
+  /(?:[Cc]hat|spec:|retrain|sessions:dispatchTask|orchestration:buildContextPacket|pty:spawn(?:Claude|Codex)?$|observability:exportTrace)/
+
+/**
+ * Derive the timeout class for a channel using the same conventions as
+ * channelCatalog — short for metadata-only reads, long for streamy/heavy
+ * operations, normal for everything else.
+ * Wave 33a Phase F.
+ */
+export function channelTimeoutClass(channel: string): TimeoutClass {
+  if (SHORT_PATTERN.test(channel)) return 'short'
+  if (LONG_PATTERN.test(channel)) return 'long'
+  return 'normal'
+}
+
 // ─── Transport Class ─────────────────────────────────────────────────────────
 
 export class WebSocketTransport {
@@ -201,12 +243,13 @@ export class WebSocketTransport {
     }
     const id = ++this.requestId
     return new Promise<unknown>((resolve, reject) => {
+      const budgetMs = CALL_TIMEOUTS[channelTimeoutClass(channel)]
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id)
           reject(new Error(`IPC timeout: ${channel}`))
         }
-      }, 30000) as unknown as number
+      }, budgetMs) as unknown as number
       this.pendingRequests.set(id, { resolve, reject, timer })
       this.ws!.send(JSON.stringify({ jsonrpc: '2.0', id, method: channel, params: args }))
     })

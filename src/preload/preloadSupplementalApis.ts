@@ -292,5 +292,6 @@ export const supplementalApis: SupplementalApis = {
     listPairedDevices: () => ipcRenderer.invoke('mobileAccess:listPairedDevices'),
     revokePairedDevice: (deviceId: string) =>
       ipcRenderer.invoke('mobileAccess:revokePairedDevice', deviceId),
+    getTimeoutStats: () => ipcRenderer.invoke('mobileAccess:getTimeoutStats'),
   },
 };

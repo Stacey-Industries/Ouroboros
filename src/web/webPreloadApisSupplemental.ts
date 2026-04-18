@@ -279,5 +279,6 @@ export function buildMobileAccessApi(t: WebSocketTransport) {
     listPairedDevices: () => t.invoke('mobileAccess:listPairedDevices'),
     revokePairedDevice: (deviceId: string) =>
       t.invoke('mobileAccess:revokePairedDevice', deviceId),
+    getTimeoutStats: () => t.invoke('mobileAccess:getTimeoutStats'),
   };
 }

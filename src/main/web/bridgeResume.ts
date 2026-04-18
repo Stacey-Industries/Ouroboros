@@ -27,6 +27,7 @@ import { WebSocket } from 'ws';
 import log from '../logger';
 import { CATALOG_LOOKUP } from '../mobileAccess/channelCatalog';
 import type { MobileAccessMeta } from './bridgeCapabilityGate';
+import { TimeoutError, withTimeout } from './bridgeTimeout';
 import {
   detach,
   getSend,
@@ -150,16 +151,18 @@ function runHandler(
 ): void {
   const mockEvent = ctx.createEvent();
   const params = Array.isArray(request.params) ? request.params : [];
-  Promise.resolve()
-    .then(() => ctx.handler(mockEvent, ...params))
+  const handlerPromise = Promise.resolve().then(() => ctx.handler(mockEvent, ...params));
+  withTimeout(handlerPromise, request.method)
     .then((result: unknown) => {
       ctx.sendResponse(ws, { jsonrpc: '2.0', id: request.id, result: ctx.encode(result) });
     })
     .catch((err: unknown) => {
+      const isTimeout = err instanceof TimeoutError;
+      const code = isTimeout ? -32001 : -32603;
       const message = err instanceof Error ? err.message : String(err);
       ctx.sendResponse(ws, {
         jsonrpc: '2.0', id: request.id,
-        error: { code: -32603, message: `Handler error: ${message}` },
+        error: { code, message: isTimeout ? 'timeout' : `Handler error: ${message}` },
       });
     });
 }
@@ -172,8 +175,8 @@ function runResumableHandler(
 ): void {
   const mockEvent = ctx.createEvent();
   const params = Array.isArray(request.params) ? request.params : [];
-  Promise.resolve()
-    .then(() => ctx.handler(mockEvent, ...params))
+  const handlerPromise = Promise.resolve().then(() => ctx.handler(mockEvent, ...params));
+  withTimeout(handlerPromise, request.method)
     .then((result: unknown) => {
       sendViaRegistry(token, ws, ctx, {
         jsonrpc: '2.0', id: request.id, result: ctx.encode(result),
@@ -181,12 +184,16 @@ function runResumableHandler(
       resolve(token);
     })
     .catch((err: unknown) => {
+      const isTimeout = err instanceof TimeoutError;
+      const code = isTimeout ? -32001 : -32603;
       const message = err instanceof Error ? err.message : String(err);
+      // Clean up registry before sending — guards against double-response
+      // if handler resolves after timeout fires (withTimeout discards it).
+      resolve(token);
       sendViaRegistry(token, ws, ctx, {
         jsonrpc: '2.0', id: request.id,
-        error: { code: -32603, message: `Handler error: ${message}` },
+        error: { code, message: isTimeout ? 'timeout' : `Handler error: ${message}` },
       });
-      resolve(token);
     });
 }
 

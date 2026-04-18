@@ -19,6 +19,7 @@ import { isRateLimited, recordFailedAttempt } from '../web/webAuth';
 import { getWebServerPort } from '../web/webServer';
 import { disconnectDevice } from './bridgeDisconnect';
 import { issueTicket, verifyAndConsume } from './pairingTickets';
+import { getTimeoutStats } from './timeoutMetrics';
 import { addDevice, hashToken, listDevices, removeDevice } from './tokenStore';
 import type { PairedDevice, QrPayload } from './types';
 
@@ -168,7 +169,7 @@ export function consumePairingTicket(
 
 let registeredChannels: string[] = [];
 
-/** Registers the three desktop-facing IPC pairing handlers. */
+/** Registers all desktop-facing IPC mobileAccess handlers. Wave 33a Phase F adds getTimeoutStats. */
 export function registerPairingHandlers(): string[] {
   const channels: string[] = [];
 
@@ -183,6 +184,13 @@ export function registerPairingHandlers(): string[] {
   ipcMain.removeHandler('mobileAccess:revokePairedDevice');
   ipcMain.handle('mobileAccess:revokePairedDevice', handleRevokePairedDevice);
   channels.push('mobileAccess:revokePairedDevice');
+
+  ipcMain.removeHandler('mobileAccess:getTimeoutStats');
+  ipcMain.handle('mobileAccess:getTimeoutStats', () => ({
+    success: true,
+    stats: getTimeoutStats(),
+  }));
+  channels.push('mobileAccess:getTimeoutStats');
 
   registeredChannels = channels;
   return channels;

@@ -19,6 +19,8 @@ export {
   issueTicket,
   verifyAndConsume,
 } from './pairingTickets';
+export type { TimeoutStats } from './timeoutMetrics';
+export { getTimeoutStats, incrementTimeout, resetTimeoutStats } from './timeoutMetrics';
 export {
   addDevice,
   findByTokenHash,
