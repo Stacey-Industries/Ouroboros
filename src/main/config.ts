@@ -6,6 +6,9 @@ import type { ContextLayerConfig } from './contextLayer/contextLayerTypes';
 import type { Session } from './session';
 import type { SessionFolder } from './session/folderStore';
 
+/** Wave 34 Phase A — cross-device session dispatch queue + settings. */
+export interface SessionDispatchConfig { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: import('./session/sessionDispatch').DispatchJob[] }
+
 /** Wave 33a Phase A — a device that has completed the pairing flow. */
 export interface PairedDeviceRecord {
   id: string;
@@ -392,19 +395,7 @@ export interface AppConfig {
   /** Wave 16 — session feature flags */
   sessions?: { worktreePerSession?: boolean };
   /** Wave 17/20 — layout preset engine + chat-primary feature flags. Wave 28D — custom layout persistence. Wave 32 — mobilePrimary. */
-  layout?: {
-    presets?: { v2?: boolean };
-    chatPrimary?: boolean;
-    dragAndDrop?: boolean;
-    /** sessionId → SerializedSlotTree. Capped at 100 entries via LRU pruning. */
-    customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>;
-    /** MRU order of sessionIds for LRU pruning (oldest first). */
-    customLayoutsMru?: string[];
-    /** User-promoted global custom presets. Capped at 20. */
-    globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[];
-    /** Wave 32 Phase A — enable mobile-primary layout when viewport < 768px. Default false (soak gate). */
-    mobilePrimary?: boolean;
-  };
+  layout?: { presets?: { v2?: boolean }; chatPrimary?: boolean; dragAndDrop?: boolean; customLayoutsPerSession?: Record<string, import('@shared/types/layout').SerializedSlotTree>; customLayoutsMru?: string[]; globalCustomPresets?: import('@shared/types/layout').SerializedGlobalCustomPreset[]; mobilePrimary?: boolean };
   /** Wave 18 — edit provenance tracking feature flag */
   provenanceTracking?: boolean;
   /** Wave 19 — context scoring feature flags (provenance weights + PageRank) */
@@ -419,6 +410,8 @@ export interface AppConfig {
   approvalMemory?: import('./approvalMemory').ApprovalMemoryStore;
   /** Wave 33a Phase A — mobile client pairing and device registry. */
   mobileAccess?: MobileAccessConfig;
+  /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
+  sessionDispatch?: SessionDispatchConfig;
   /** Wave 30 Phase G — research auto-firing global defaults.
    *  Wave 30 Phase I — threshold tuning knobs. */
   researchSettings?: {

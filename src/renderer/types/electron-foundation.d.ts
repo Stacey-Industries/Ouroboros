@@ -247,6 +247,8 @@ export interface AppConfig {
   context?: { provenanceWeights?: boolean; pagerank?: boolean; pagerankSeeds?: { pinned?: number; symbol?: number; user_edit?: number }; decisionLogging?: boolean; rerankerEnabled?: boolean; packetMode?: 'full' | 'lean' };
   /** Wave 33a Phase A — mobile client pairing + device registry. */
   mobileAccess?: { enabled: boolean; pairedDevices: Array<{ id: string; label: string; refreshTokenHash: string; fingerprint: string; capabilities: string[]; issuedAt: string; lastSeenAt: string }> };
+  /** Wave 34 Phase A — cross-device session dispatch queue + settings. */
+  sessionDispatch?: { enabled: boolean; maxConcurrent: number; jobTimeoutMs: number; queue: Array<{ id: string; request: { title: string; prompt: string; projectPath: string; worktreeName?: string }; status: 'queued' | 'starting' | 'running' | 'completed' | 'failed' | 'canceled'; createdAt: string; startedAt?: string; endedAt?: string; sessionId?: string; error?: string; deviceId?: string }> };
 }
 
 export interface ContextLayerConfig {

@@ -1,5 +1,16 @@
 export type { Session, SessionCostRollup, SessionTelemetry } from './session';
 export { makeSession } from './session';
+export type { DispatchJob, DispatchJobStatus, DispatchRequest } from './sessionDispatch';
+export {
+  cancelJob,
+  enqueue,
+  listJobs,
+  loadQueue,
+  nextQueued,
+  registerCancelHook,
+  removeJob,
+  updateJob,
+} from './sessionDispatchQueue';
 export {
   emitSessionActivated,
   emitSessionArchived,

@@ -300,6 +300,8 @@ export const tailSchema = {
   /** Wave 33a Phase A+B — mobile client pairing + device registry. Default off.
    *  Phase E adds resumeTtlSec: TTL in seconds for orphaned resumable in-flight calls. */
   mobileAccess: { type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean', default: false }, pairedDevices: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, label: { type: 'string' }, refreshTokenHash: { type: 'string' }, fingerprint: { type: 'string' }, capabilities: { type: 'array', items: { type: 'string' } }, issuedAt: { type: 'string' }, lastSeenAt: { type: 'string' } } }, default: [] }, desktopFingerprint: { type: 'string' }, resumeTtlSec: { type: 'number', minimum: 30, maximum: 3600, default: 300 } }, default: { enabled: false, pairedDevices: [], resumeTtlSec: 300 } },
+  /** Wave 34 Phase A — cross-device session dispatch queue + settings. Default off. */
+  sessionDispatch: { type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean', default: false }, maxConcurrent: { type: 'integer', minimum: 1, maximum: 3, default: 1 }, jobTimeoutMs: { type: 'integer', minimum: 0, default: 1_800_000 }, queue: { type: 'array', items: { type: 'object' }, default: [] } }, default: { enabled: false, maxConcurrent: 1, jobTimeoutMs: 1_800_000, queue: [] } },
   /** Wave 19 — context scoring flags; Wave 24 adds decisionLogging + rerankerEnabled */
   context: {
     type: 'object', additionalProperties: false,
