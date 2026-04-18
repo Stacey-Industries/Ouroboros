@@ -222,7 +222,7 @@ function ThreadDeleteButton({ onDelete }: { onDelete: () => void }): React.React
         e.stopPropagation();
         onDelete();
       }}
-      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100"
+      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[10px] text-text-semantic-muted opacity-0 transition-opacity duration-75 group-hover:opacity-70 hover:!opacity-100" // touch-target-ok — hover-revealed; Phase E (useTapToReveal) will handle mobile tap pattern
       title="Delete conversation"
     >
       <svg

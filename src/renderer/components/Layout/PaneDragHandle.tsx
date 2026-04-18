@@ -53,7 +53,7 @@ export function PaneDragHandle({ slotId }: PaneDragHandleProps): React.ReactElem
       aria-label="Drag to rearrange pane"
       className={[
         'inline-flex items-center justify-center',
-        'w-5 h-5 rounded',
+        'w-5 h-5 rounded', // touch-target-ok — drag handles are hidden on mobile ([data-layout='resize-handle'] { display:none } in mobile.css)
         'bg-surface-raised text-text-semantic-muted',
         'border border-border-semantic',
         'hover:text-text-semantic-primary hover:border-border-accent',

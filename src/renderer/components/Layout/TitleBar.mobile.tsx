@@ -126,7 +126,7 @@ function MobileOverflowDropdown({ titleBarActions, notifications, unreadCount, o
           ))}
           {notifications.length > 5 && <div className="text-text-semantic-faint" style={{ padding: '4px 12px', fontSize: '10px' }}>+{notifications.length - 5} more</div>}
           <button onClick={onClearAll} className="text-text-semantic-faint"
-            style={{ ...menuItemRowStyle, fontSize: '11px', height: '28px', borderRadius: '4px', margin: '0 4px', width: 'calc(100% - 8px)' }}
+            style={{ ...menuItemRowStyle, fontSize: '11px', height: '28px', borderRadius: '4px', margin: '0 4px', width: 'calc(100% - 8px)' }} // touch-target-ok — mobile.css [data-layout='title-bar'] button rule sets min-height:44px; CSS min-height beats inline height
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}>
             Clear all

@@ -78,7 +78,7 @@ const SessionDetailHeader = memo(function SessionDetailHeader({
         className="text-text-semantic-muted"
         style={{
           width: '20px',
-          height: '20px',
+          height: '20px', // touch-target-ok — analytics detail panel is a secondary desktop view, not a primary mobile surface
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

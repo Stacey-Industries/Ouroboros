@@ -123,7 +123,8 @@ function ActionButton({ label, onClick, disabled = false, destructive = false }:
 
 function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
   return (
-    <button type="button" onClick={onClose} aria-label="Close orchestration" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', lineHeight: 1 }}>
+    <button type="button" onClick={onClose} aria-label="Close orchestration" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer', lineHeight: 1}} // touch-target-ok — orchestration panel is accessed via centre pane menu, not a primary mobile-active surface
+    >
       x
     </button>
   );

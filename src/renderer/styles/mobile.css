@@ -211,6 +211,27 @@
     min-width: 44px;
   }
 
+  /* ── Touch targets: 44px minimum across all mobile surfaces ── */
+  .web-mode [data-layout='title-bar'] button,
+  .web-mode [data-mobile-active] [aria-label='Left sidebar'] button,
+  .web-mode [data-mobile-active] [aria-label='Agent sidebar'] button,
+  .web-mode [data-mobile-active] [data-layout='centre-column'] button,
+  .web-mode [data-mobile-active] [role='tablist'] [role='tab'] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception: tab-bar close "X" buttons stay compact but get a 32px hit area
+     via ::before padding so they remain tappable on small screens. */
+  .web-mode [data-mobile-active] [role='tablist'] button[aria-label*='close' i] {
+    position: relative;
+  }
+  .web-mode [data-mobile-active] [role='tablist'] button[aria-label*='close' i]::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
   /* ── Chat composer: better mobile UX ── */
   .web-mode textarea {
     min-height: 48px !important;

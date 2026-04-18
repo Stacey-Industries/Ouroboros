@@ -55,8 +55,8 @@ function CloseButton({ onClose }: { onClose: () => void }): React.ReactElement {
       aria-label="Close settings"
       className="text-text-semantic-muted"
       style={{
-        width: '28px',
-        height: '28px',
+        width: '44px',
+        height: '44px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

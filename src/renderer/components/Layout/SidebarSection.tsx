@@ -73,7 +73,7 @@ function SectionHeader({ title, collapsed, onToggle, badge }: {
   return (
     <button
       className="flex items-center gap-1.5 w-full flex-shrink-0 px-2 select-none cursor-pointer border-none outline-hidden bg-surface-panel border-b border-border-semantic"
-      style={{ height: '24px', minHeight: '24px' }}
+      style={{ height: '24px' }} // touch-target-ok — mobile.css overrides min-height to 44px inside [data-mobile-active] [aria-label='Left sidebar']
       onClick={onToggle}
       title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
       aria-expanded={!collapsed}
