@@ -68,6 +68,10 @@ function systemInitEvent(promptText: string): Record<string, unknown> {
 describe('watchSessionForPromptDiff', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset mockSubscribe implementation queue so stale mockImplementationOnce
+    // calls from prior tests (e.g. the "no re-watch" test's second captureSubscriber)
+    // do not pollute subsequent tests.
+    mockSubscribe.mockReset()
     // Default: no windows
     mockGetWindows.mockReturnValue([])
     // Default: no change
@@ -183,6 +187,13 @@ describe('watchSessionForPromptDiff', () => {
 })
 
 describe('clearPromptDiffSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSubscribe.mockReset()
+    mockGetWindows.mockReturnValue([])
+    mockCheckPrompt.mockResolvedValue({ changed: false })
+  })
+
   it('removes session from checked set so it can be re-watched', async () => {
     mockCheckPrompt.mockResolvedValue({ changed: false })
 

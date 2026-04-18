@@ -75,16 +75,46 @@ function traceback({ dp, a, b, i, j }: TraceArgs): DiffLine[] {
   ]
 }
 
+// ── Reorder ───────────────────────────────────────────────────────────────────
+
+/**
+ * Reorder adjacent insert/delete groups so deletes always precede inserts,
+ * matching unified-diff convention. This is a post-processing step because
+ * the LCS traceback can emit inserts before deletes depending on dp tie-breaks.
+ */
+function reorderDeletionsFirst(lines: DiffLine[]): DiffLine[] {
+  const out: DiffLine[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (lines[i].kind === 'equal') {
+      out.push(lines[i++])
+      continue
+    }
+    // Collect a contiguous run of inserts and deletes
+    const deletes: DiffLine[] = []
+    const inserts: DiffLine[] = []
+    while (i < lines.length && lines[i].kind !== 'equal') {
+      if (lines[i].kind === 'delete') deletes.push(lines[i])
+      else inserts.push(lines[i])
+      i++
+    }
+    // Emit deletes before inserts
+    out.push(...deletes, ...inserts)
+  }
+  return out
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Compute a per-line unified diff between two multi-line strings.
- * Returns DiffLine[] in output order (equal, insert, delete interleaved).
+ * Returns DiffLine[] in output order (deletes before inserts within each hunk).
  */
 export function lineDiff(textA: string, textB: string): DiffLine[] {
+  if (textA === '' && textB === '') return []
   const linesA = textA.split('\n')
   const linesB = textB.split('\n')
-  if (linesA.length === 0 && linesB.length === 0) return []
   const dp = buildLcs(linesA, linesB)
-  return traceback({ dp, a: linesA, b: linesB, i: linesA.length, j: linesB.length })
+  const raw = traceback({ dp, a: linesA, b: linesB, i: linesA.length, j: linesB.length })
+  return reorderDeletionsFirst(raw)
 }
