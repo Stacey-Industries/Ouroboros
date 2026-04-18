@@ -1,6 +1,6 @@
-# Roadmap Session Handoff — 2026-04-17 (Wave 33a complete)
+# Roadmap Session Handoff — 2026-04-17 (Wave 33b complete)
 
-> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, and 33a are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 33b (Capacitor native shell) is next.
+> Continuation doc for a brand-new Claude Code session. Read this first. Waves 31, 32, 33a, and 33b are fully landed and pushed. The user's active directive is **"continue with the waves, only stop if I ask"** — Wave 34 (Cross-Device Session Dispatch) is next.
 
 ## Wave 33a → 33b split — context
 
@@ -74,7 +74,27 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
                     98bb859 ← last Wave 31 commit
 ```
 
-`origin/master` is caught up to `e026c71`. Working tree is clean. Full vitest: 5868/5868 passing.
+`origin/master` is caught up to `1a816ef`. Working tree is clean. Full vitest: 6027/6027 passing.
+
+### Wave 33b key primitives introduced
+
+- **Capacitor 6.2.1** installed with Android platform only; iOS deferred (user on Windows). App ID `com.stacey.ouroboros`, webDir `out/web`.
+- **Plugins (pinned 6.x):** `@capacitor/preferences 6.0.4`, `@capacitor/status-bar 6.0.3`, `@capacitor/keyboard 6.0.4`, `@capacitor/haptics 6.0.3`, `@capacitor/share 6.0.4`, `@capacitor/app 6.0.3`, `@capacitor/splash-screen 6.0.2`, `@capacitor-mlkit/barcode-scanning 6.2.0`.
+- **Bridge modules** in `src/web/capacitor/`: `index.ts` (façade with `isNative`), `nativeStorage`, `nativeStatusBar`, `nativeKeyboard`, `nativeHaptics`, `nativeShare`, `nativeSplashScreen`, `deepLinks`, `qrScanner`. All feature-detect `Capacitor.isNativePlatform()` and fall back to web-equivalents (localStorage, navigator.share) or no-ops.
+- **Secure token storage:** `src/web/tokenStorage.ts` — Keychain/Keystore on native, localStorage on web, auto-migration on first native read.
+- **Deep links:** `ouroboros://pair?host=...&port=...&code=...&fingerprint=...` scheme. Snippet at `capacitor-resources/android-intent-filter.xml`. `generatePairingCode` returns both `qrPayload` (JSON) and `qrPairingUrl` (scannable URL — Settings pane renders the URL).
+- **QR scanner:** Phase F wraps MLKit; pairing screen has "Scan QR" button on native only.
+- **Native-feel audit:** `useNativeStatusBar` (theme-aware), `useSystemBack` (Android back → modal → panel cycle → exit), haptic-on-tap in `MobileNavBar` + chat send, splash screen, `user-select: none` on chrome.
+- **Release pipeline:** `.github/workflows/mobile-android-release.yml` + `tools/build-android-release.js` (env-validated local builds). Keystore lives in `ANDROID_KEYSTORE_*` env vars / GitHub Secrets.
+- **Docs suite:** `docs/mobile-overview.md` (index), `mobile-dev.md` (dev setup), `mobile-access.md` (user pairing guide from 33a), `mobile-not-a-wrapper-checklist.md` (Phase G gate), `mobile-testing.md` (manual Android smoke checklist), `mobile-release.md` (release pipeline).
+
+### Wave 33b gotchas for next agent
+
+- **`android/` folder is gitignored** except for `.gitkeep`. User runs `npx cap add android` locally — CI does it too. Subagents MUST NOT attempt `cap add android` (no SDK).
+- **Plugin pinning is intentional** — Capacitor plugin majors drop breaking native changes; `^` would let churn through. Don't relax to `^` without explicit soak.
+- **iOS is deferred** — all bridge code is cross-platform, so Mac access unblocks iOS in ~1 week. `capacitor-resources/ios-info-plist.deeplink-snippet.txt` has the Info.plist XML ready.
+- **Phase I fix (`4b6a477`):** `MobileAccessPairingSection` needed a fallback path when `qrPairingUrl` is absent (old mocks / old IPC builds). Future changes to the pairing payload shape must preserve backward compat.
+- **useSystemBack must mount inside MobileLayoutProvider** — it consumes the context. Placed in `LayoutChrome` inside `InnerAppLayout`.
 
 ### Wave 33a key primitives introduced
 
@@ -119,12 +139,12 @@ Last pushed commit: e026c71 feat: Wave 33a Phase I — E2E pairing spec + mobile
 
 - **Waves 15–30** — see git log; scope per `roadmap/wave-NN-plan.md`.
 - **Wave 32** — Mobile-Responsive Refinement (10 phases A–J). Flag `layout.mobilePrimary` default off.
-- **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off. Full details in `roadmap/wave-33a-plan.md`. All 5868 vitest tests green at push time.
+- **Wave 33a** — Mobile Client-Server Hardening (9 phases A–I, v2.1.1). Flag `mobileAccess.enabled` default off.
+- **Wave 33b** — Capacitor Native Shell (9 phases A–I, v2.2.0). Android-first; iOS deferred until Mac access. All 6027 vitest tests green at push time.
 
 ### Plans queued (draft-only, not yet implemented)
 
-- `roadmap/wave-33b-plan.md` — Capacitor native shell. **Next to implement.**
-- `roadmap/wave-34-plan.md` — Cross-Device Session Dispatch. Depends on 33a + 33b.
+- `roadmap/wave-34-plan.md` — Cross-Device Session Dispatch. **Next to implement.**
 - **Wave 30** — Research Auto-Firing (10 phases A–J). Phase J added per-model training cutoffs via `Record<ModelId, ModelTrainingInfo>` (compile-time enforcement — new models fail tsc without an entry). Feature flag `research.auto` default off; 4-week soak gate.
 - **Wave 31** — Learned Context Ranker + Lean Packet Mode. **Just completed this session.** Details below.
 
