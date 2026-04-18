@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 
 import type { FocusPanel } from '../../contexts/FocusContext';
 import { useFocusPanel } from '../../contexts/FocusContext';
+import { useMobileLayout } from '../../contexts/MobileLayoutContext';
 import { FOCUS_AGENT_CHAT_EVENT, FOCUS_TERMINAL_SESSION_EVENT, OPEN_AGENT_CHAT_PANEL_EVENT, OPEN_CHAT_IN_TERMINAL_EVENT } from '../../hooks/appEventNames';
 import type { WorkspaceLayout } from '../../types/electron';
 import type { TerminalSession } from '../Terminal/TerminalTabs';
@@ -166,7 +167,7 @@ function useAppLayoutState(props: AppLayoutProps) {
   const { sizes, startResize, resetSize, applySizes } = useResizable();
   const { collapsed, toggle, expand, collapse, applyState } = usePanelCollapse({ keybindings: props.keybindings });
   const { setFocusedPanel, focusRingStyle: pfs } = useFocusPanel();
-  const [mobileActivePanel, setMobileActivePanel] = useState<MobilePanel>('chat');
+  const { activePanel: mobileActivePanel, setActivePanel } = useMobileLayout();
   useApplyLayoutEvent(applySizes, applyState);
   usePanelEventHandlers({
     expand, setFocusedPanel, toggle,
@@ -176,7 +177,7 @@ function useAppLayoutState(props: AppLayoutProps) {
     spawnCodexSession: props.terminalControl.onSpawnCodex,
   });
   const handleMobilePanelSwitch = useCallback((panel: MobilePanel) => {
-    setMobileActivePanel(panel);
+    setActivePanel(panel);
     const actions: Record<MobilePanel, () => void> = {
       files: () => { expand('leftSidebar'); collapse('rightSidebar'); },
       chat: () => { collapse('leftSidebar'); expand('rightSidebar'); },
@@ -184,7 +185,7 @@ function useAppLayoutState(props: AppLayoutProps) {
       editor: () => { collapse('leftSidebar'); collapse('rightSidebar'); collapse('terminal'); },
     };
     actions[panel]();
-  }, [expand, collapse]);
+  }, [expand, collapse, setActivePanel]);
   const mkResize = useCallback(
     (panel: 'leftSidebar' | 'rightSidebar' | 'terminal', axis: 'vertical' | 'horizontal') =>
       (e: React.PointerEvent) => {

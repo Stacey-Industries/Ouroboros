@@ -7,6 +7,7 @@
 
 import React, { useCallback } from 'react';
 
+import { MobileLayoutProvider } from '../../contexts/MobileLayoutContext';
 import { useChatWindowMode } from '../../hooks/useChatWindowMode';
 import type { WorkspaceLayout } from '../../types/electron';
 import type { Command } from '../CommandPalette/types';
@@ -189,8 +190,10 @@ export function InnerAppLayout(props: InnerAppLayoutProps): React.ReactElement {
   return (
     <LayoutPresetResolverProvider forcePresetId={isChatWindow ? 'chat-primary' : undefined}>
       <LayoutProviders projectRoot={props.projectRoot}>
-        <LayoutChrome {...props} />
-        <LayoutOverlays {...props} />
+        <MobileLayoutProvider>
+          <LayoutChrome {...props} />
+          <LayoutOverlays {...props} />
+        </MobileLayoutProvider>
       </LayoutProviders>
     </LayoutPresetResolverProvider>
   );
