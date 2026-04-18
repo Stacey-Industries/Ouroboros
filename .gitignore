@@ -91,3 +91,16 @@ vitest-results.json
 # Python artifacts (tools/train-router.py syntax-check cache)
 __pycache__/
 *.pyc
+
+# Capacitor / Android native build artifacts
+android/
+!android/.gitkeep
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+*.keystore
+*.jks
+
+# iOS (deferred — Mac required)
+ios/

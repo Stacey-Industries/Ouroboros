@@ -36,11 +36,17 @@
     "bench:indexer": "node scripts/benchmark-indexer.mjs",
     "validate": "npm run typecheck && npm run format:check && npm run lint && npm run test",
     "build:web": "vite build -c vite.web.config.ts && vite build -c vite.webpreload.config.ts",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:build:android": "npm run build:web && cap sync android",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,node-pty",
     "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@capacitor/android": "6.2.1",
+    "@capacitor/cli": "6.2.1",
+    "@capacitor/core": "6.2.1",
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.2",
     "@codemirror/lang-cpp": "^6.0.3",
